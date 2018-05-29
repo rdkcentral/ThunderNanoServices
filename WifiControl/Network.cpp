@@ -146,4 +146,23 @@ bool Config::IsValid() const {
     return (_comController.IsValid() && _comController->Exists(_ssid));
 }
 
-} } // WPEFramework::WPASupplicant
+void Config::CopyProperties (const Config& copy) {
+    string value = PresharedKey();
+
+    if (value.empty() == false) { PresharedKey(value); }
+
+    value = Hash();
+
+    if (value.empty() == false) { Hash(value); }
+
+    value = Identity();
+
+    if (value.empty() == false) { 
+        string password = Password();
+        Enterprise (value, password); 
+    }
+
+    Mode (Mode()); 
+}
+
+} } // WPEFramework::WPASupplicant 

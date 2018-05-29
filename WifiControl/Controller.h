@@ -15,7 +15,22 @@ public:
     static uint16_t KeyPair(const Core::TextFragment& element, uint32_t& keys);
     static string BSSID(const uint64_t& bssid);
     static uint64_t BSSID(const string& bssid);
- 
+
+public:
+    enum events {
+	CTRL_EVENT_SCAN_STARTED,
+	CTRL_EVENT_SCAN_RESULTS,
+	CTRL_EVENT_CONNECTED,
+	CTRL_EVENT_DISCONNECTED,
+	CTRL_EVENT_BSS_ADDED,
+        CTRL_EVENT_BSS_REMOVED,
+        CTRL_EVENT_TERMINATING,
+        CTRL_EVENT_NETWORK_NOT_FOUND,
+        CTRL_EVENT_NETWORK_CHANGED,
+	WPS_AP_AVAILABLE,
+        AP_ENABLED
+    };
+
 private:
     static constexpr uint32_t MaxConnectionTime = 3000;
 
@@ -305,17 +320,20 @@ private:
     };
     class StatusRequest : public Request {
     private:
+        StatusRequest() = delete;
         StatusRequest(const StatusRequest&) = delete;
         StatusRequest& operator= (const StatusRequest&) = delete;
 
     public:
-        StatusRequest() 
+        StatusRequest(Controller& parent) 
             : Request(string(_TXT("STATUS")))
+            , _parent(parent)
             , _signaled(false,true)
             , _bssid(0)
             , _ssid()
             , _pair(0) 
-            , _key(0) {
+            , _key(0)
+            , _eventReporting(~0) {
         }
         virtual ~StatusRequest () {
         }
@@ -339,6 +357,9 @@ private:
         inline bool Wait(const uint32_t waitTime) const {
             bool result = (_signaled.Lock(waitTime) == Core::ERROR_NONE ? true : false);
             return (result);
+        }
+        inline void Event (const events value) {
+            _eventReporting = value;
         }
 
     private:
@@ -384,6 +405,11 @@ private:
                 }
             }
 
+            if (_eventReporting != static_cast<uint32_t>(~0)) {
+                _parent.Notify(static_cast<events>(_eventReporting));
+                _eventReporting = static_cast<uint32_t>(~0);
+            }
+
             // Reload for the next run...
             Set(string(_TXT("STATUS")));
 
@@ -391,12 +417,14 @@ private:
         }
  
     private:
+        Controller& _parent;
         mutable Core::Event _signaled;
         uint64_t _bssid;
         string _ssid;
         uint16_t _pair;
         uint32_t _key;
         WPASupplicant::Network::mode _mode;
+        uint32_t _eventReporting;
     };
     class DetailRequest : public Request {
     private:
@@ -605,21 +633,6 @@ private:
     typedef std::map<const string, ConfigInfo>  EnabledContainer;
     typedef Core::StreamType<Core::SocketDatagram> BaseClass;
 
-public:
-    enum events {
-	CTRL_EVENT_SCAN_STARTED,
-	CTRL_EVENT_SCAN_RESULTS,
-	CTRL_EVENT_CONNECTED,
-	CTRL_EVENT_DISCONNECTED,
-	CTRL_EVENT_BSS_ADDED,
-        CTRL_EVENT_BSS_REMOVED,
-        CTRL_EVENT_TERMINATING,
-        CTRL_EVENT_NETWORK_NOT_FOUND,
-        CTRL_EVENT_NETWORK_CHANGED,
-	WPS_AP_AVAILABLE,
-        AP_ENABLED
-    };
-
 protected:
     Controller(const string& supplicantBase, const string& interfaceName, const uint16_t waitTime)
         : BaseClass(false, Core::NodeId(), Core::NodeId(), 512, 32768)
@@ -632,7 +645,7 @@ protected:
         , _scanRequest(*this)
         , _detailRequest(*this)
         , _networkRequest(*this)
-        , _statusRequest()
+        , _statusRequest(*this)
     {
         string remoteName(Core::Directory::Normalize(supplicantBase) + interfaceName);
 
@@ -1146,6 +1159,13 @@ private:
     friend class Network;
     friend class Config;
 
+    inline void Notify (const events value) {
+        _adminLock.Lock();
+        if (_callback != nullptr) {
+            _callback->Dispatch(value);
+        }
+        _adminLock.Unlock();
+    }
     inline bool Probe (const uint16_t waitTime) {
 
         uint32_t slices (waitTime * 10);

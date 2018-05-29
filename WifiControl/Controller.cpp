@@ -185,7 +185,10 @@ namespace WPASupplicant {
 
             if (event.IsSet() == true) {
 
+                TRACE(Communication, (_T("Dispatch message: [%s]"), message.c_str()));
+
                 if ( (event == CTRL_EVENT_CONNECTED) || (event == CTRL_EVENT_DISCONNECTED) || (event == WPS_AP_AVAILABLE) ) {
+                    _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
                 }
                 else if ((_networks.size() == 0) && (event.Value() == CTRL_EVENT_SCAN_RESULTS) && (_scanRequest.Set() == true)) {
@@ -209,38 +212,29 @@ namespace WPASupplicant {
                     // now take out the BSSID
                     uint64_t bssid = BSSID(Core::TextFragment(infoLine, index, infoLine.Length() - index).Text());
 
+                    _adminLock.Lock();
+
                     // Let see what we need to do with this BSSID, add or remove :-)
-                    if (event ==  CTRL_EVENT_BSS_ADDED) {
-                        
-                        _adminLock.Lock();
-
-                        if (_detailRequest.Set(bssid) == true) {
-                            // send out a request for detail.
-                            Submit (&_detailRequest);
-                        }
-
-                        _adminLock.Unlock();
+                    if ((event ==  CTRL_EVENT_BSS_ADDED) && (_detailRequest.Set(bssid) == true))  {
+                        // send out a request for detail.
+                        Submit (&_detailRequest);
                     }
                     else if (event ==  CTRL_EVENT_BSS_REMOVED) {
 
-                        _adminLock.Lock();
-                        
                         NetworkInfoContainer::iterator network (_networks.find(bssid));
 
                         if (network != _networks.end()) {
                             _networks.erase(network);
                         }
-
-                        _adminLock.Unlock();
                     }
-                }
+  
+                    if (_callback != nullptr) {
+                        _callback->Dispatch(event.Value());
+                    }
 
-                TRACE(Communication, (_T("Dispatch message: [%s]"), message.c_str()));
-
-                if (_callback != nullptr) {
-                    _callback->Dispatch(event.Value());
+                    _adminLock.Unlock();
                 }
-            }
+           }
             else {
                 TRACE(Communication, (_T("RAW EVENT MESSAGE: [%s]"), message.c_str()));
             }

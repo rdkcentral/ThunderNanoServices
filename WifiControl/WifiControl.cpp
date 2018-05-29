@@ -398,7 +398,7 @@ namespace Plugin {
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_CONNECTED: {
-            string message ("{ \"event\": \"Connected\" }");
+            string message ("{ \"event\": \"Connected\", \"ssid\": \"" + _controller->Current() + "\" }");
             _service->Notify(message);
             break;
         }
