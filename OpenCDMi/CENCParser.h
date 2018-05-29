@@ -9,7 +9,6 @@ namespace Plugin {
 class CommonEncryptionData {
 private:
     CommonEncryptionData() = delete;
-    CommonEncryptionData(const CommonEncryptionData&) = delete;
     CommonEncryptionData& operator= (const CommonEncryptionData&) = delete;
 
     static const uint8_t PSSHeader[];
@@ -102,8 +101,10 @@ public:
     };
 
 public:
-    CommonEncryptionData(const uint8_t data[], const uint16_t length) {
+    CommonEncryptionData(const uint8_t data[], const uint16_t length) : _keyIds() {
         Parse(data, length);
+    }
+    CommonEncryptionData(const CommonEncryptionData& copy) :  _keyIds(copy._keyIds) {
     }
     ~CommonEncryptionData() {
     }
@@ -116,6 +117,24 @@ public:
 
         return (index != _keyIds.end());
     }
+    inline bool IsSupported(const CommonEncryptionData& keys) const {
+
+        bool result = true;
+        std::list<KeyId>::const_iterator requested(keys._keyIds.begin());
+
+        while ((requested != keys._keyIds.end()) && (result == true)) {
+            std::list<KeyId>::const_iterator index(_keyIds.begin());
+
+            while ((index != _keyIds.end()) && (*index != *requested)) { index++; }
+
+            result = (index != _keyIds.end());
+
+            requested++;
+        }
+
+        return (result);
+    }
+
 
 private:
     uint8_t Base64(const uint8_t value[], const uint8_t sourceLength, uint8_t object[], const uint8_t length)
@@ -331,7 +350,6 @@ private:
     }
 
 private:
-    uint16_t _offset;
     std::list<KeyId> _keyIds;
 };
 
