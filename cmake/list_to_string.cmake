@@ -1,0 +1,10 @@
+# Converts a CMake list to a CMake string. Items in the string are separated by spaces.
+# in  input list variable, referenced by name (so X, not S{X} or "S{X}")
+# out resulting string variable, referenced by name (so X, not S{X} or "S{X}")
+function(list_to_string in out)
+    set(tmp "")
+    foreach(VAL ${${in}})
+        string(APPEND tmp "${VAL} ")
+    endforeach()
+    set(${out} "${tmp}" PARENT_SCOPE)
+endfunction()

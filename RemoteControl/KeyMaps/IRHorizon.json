@@ -1,0 +1,18 @@
+[
+        { "code": "0xfe010e86",   "key":  2 },
+        { "code": "0xfd020e86",   "key":  3 },
+        { "code": "0xfc030e86",   "key":  4 },
+        { "code": "0xfb040e86",   "key":  5 },
+        { "code": "0xfa050e86",   "key":  6 },
+        { "code": "0xf9060e86",   "key":  7 },
+        { "code": "0xf8070e86",   "key":  8 },
+        { "code": "0xf7080e86",   "key":  9 },
+        { "code": "0xf6090e86",   "key":  10 },
+        { "code": "0xff000e86",   "key":  11 },
+        { "code": "0xea150e86",   "key":  28 },
+        { "code": "0xee110e86",   "key":  1 },
+        { "code": "0xf40b0e86",   "key":  103 },
+        { "code": "0xf30c0e86",   "key":  108 },
+        { "code": "0xe41b0e86",   "key":  105 },
+        { "code": "0xe31c0e86",   "key":  106 }
+]

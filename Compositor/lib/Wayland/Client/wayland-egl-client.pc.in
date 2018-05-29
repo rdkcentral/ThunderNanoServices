@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include/WPEFramework
+
+Name: compositor_client
+Description: A Wayland EGL client wrapper
+Version: 1.0
+Requires: wayland-client wayland-egl
+Cflags: -I${includedir}
+Libs: -L${libdir} -l@target_lib_name@

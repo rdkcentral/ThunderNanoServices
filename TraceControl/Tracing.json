@@ -1,0 +1,4 @@
+{
+ "locator":"libWPEFrameworkTraceControl.so",
+ "classname":"TraceControl"
+}
