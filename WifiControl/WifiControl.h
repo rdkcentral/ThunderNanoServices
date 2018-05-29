@@ -4,6 +4,9 @@
 #include "Module.h"
 #include "Network.h"
 #include "Controller.h"
+#ifdef USE_WIFI_HAL
+#include "WifiHAL.h"
+#endif
 
 namespace WPEFramework {
 namespace Plugin {
@@ -37,9 +40,9 @@ namespace Plugin {
             WifiDriver& operator= (const WifiDriver&) = delete;
 
        public:
-            WifiDriver () 
+            WifiDriver ()
                 : _interfaceName()
-                , _connector() 
+                , _connector()
                 , _process(true) {
             }
             ~WifiDriver () {
@@ -71,17 +74,17 @@ namespace Plugin {
                 TRACE_L1("Launching %s.", options.Command().c_str());
                 uint32_t result = _process.Launch(options, &_pid);
 
-		if (result == Core::ERROR_NONE) {
+        if (result == Core::ERROR_NONE) {
                     string remoteName(Core::Directory::Normalize(_connector) + _interfaceName);
                     uint32_t slices = (waitTime * 10);
 
                     // Wait till we see the socket being available.
-    		    while ((slices != 0) && (_process.IsActive() == true) && (Core::File(remoteName).Exists() == false)) {
-		        slices--;
+                while ((slices != 0) && (_process.IsActive() == true) && (Core::File(remoteName).Exists() == false)) {
+                slices--;
                         ::SleepMs(100);
                     }
 
-    		    if ((slices == 0) || (_process.IsActive() == false)) {
+                if ((slices == 0) || (_process.IsActive() == false)) {
                         _process.Kill(false);
                         result = Core::ERROR_TIMEDOUT;
                     }
@@ -110,7 +113,7 @@ namespace Plugin {
             Config()
                 : Connector(_T("/var/run/wpa_supplicant"))
                 , Interface(_T("wlan0"))
-		, Application(_T("/usr/sbin/wpa_supplicant"))
+        , Application(_T("/usr/sbin/wpa_supplicant"))
             {
                 Add(_T("connector"), &Connector);
                 Add(_T("interface"), &Interface);
@@ -161,14 +164,14 @@ namespace Plugin {
 
                 public:
                     Pairing()
-                        : Core::JSON::Container() 
+                        : Core::JSON::Container()
                         , Method()
                         , Keys() {
                         Add(_T("method"), &Method);
                         Add(_T("keys"), &Keys);
                     }
                     Pairing(const enum WPASupplicant::Network::pair method, const uint8_t keys)
-                        : Core::JSON::Container() 
+                        : Core::JSON::Container()
                         , Method()
                         , Keys() {
                         Core::JSON::String textKey;
@@ -190,7 +193,7 @@ namespace Plugin {
                         }
                     }
                     Pairing(const Pairing& copy)
-                        : Core::JSON::Container() 
+                        : Core::JSON::Container()
                         , Method(copy.Method)
                         , Keys(copy.Keys) {
                         Add(_T("method"), &Method);
@@ -309,7 +312,7 @@ namespace Plugin {
             void Set (WPASupplicant::Network::Iterator& list) {
                 list.Reset();
                 while (list.Next() == true) {
-                    Networks.Add(Network(list.Current()));    
+                    Networks.Add(Network(list.Current()));
                 }
             }
 
@@ -432,7 +435,7 @@ namespace Plugin {
                     AccessPoint = element.IsAccessPoint();
                     Hidden = element.IsHidden();
                 }
- 
+
             public:
                 Core::JSON::String SSID;
                 Core::JSON::String Identity;
@@ -463,14 +466,14 @@ namespace Plugin {
         public:
             void Set (WPASupplicant::Config::Iterator& list) {
                 while (list.Next() == true) {
-                    Configs.Add(Config(list.Current()));    
+                    Configs.Add(Config(list.Current()));
                 }
             }
 
             Core::JSON::ArrayType<Config> Configs;
         };
 
- 
+
     private:
         WifiControl(const WifiControl&) = delete;
         WifiControl& operator=(const WifiControl&) = delete;
@@ -513,7 +516,11 @@ namespace Plugin {
         string _configurationStore;
         Sink _sink;
         WifiDriver _wpaSupplicant;
+        #ifdef USE_WIFI_HAL
+        Core::ProxyType<WPASupplicant::WifiHAL> _controller;
+        #else
         Core::ProxyType<WPASupplicant::Controller> _controller;
+        #endif
     };
 
 } // namespace Plugin

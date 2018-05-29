@@ -1,26 +1,29 @@
 #include "Network.h"
+#ifdef USE_WIFI_HAL
+#include "WifiHAL.h"
+#endif
 #include "Controller.h"
 
 namespace WPEFramework {
 
 ENUM_CONVERSION_BEGIN(WPASupplicant::Network::key)
 
-	{ WPASupplicant::Network::KEY_PSK,     _TXT("PSK")     },
-	{ WPASupplicant::Network::KEY_EAP,     _TXT("EAP")     },
-	{ WPASupplicant::Network::KEY_CCMP,    _TXT("CCMP")    },
-	{ WPASupplicant::Network::KEY_TKIP,    _TXT("TKIP")    },
-	{ WPASupplicant::Network::KEY_PREAUTH, _TXT("preauth") },
+    { WPASupplicant::Network::KEY_PSK,     _TXT("PSK")     },
+    { WPASupplicant::Network::KEY_EAP,     _TXT("EAP")     },
+    { WPASupplicant::Network::KEY_CCMP,    _TXT("CCMP")    },
+    { WPASupplicant::Network::KEY_TKIP,    _TXT("TKIP")    },
+    { WPASupplicant::Network::KEY_PREAUTH, _TXT("preauth") },
 
 ENUM_CONVERSION_END(WPASupplicant::Network::key);
 
 ENUM_CONVERSION_BEGIN(WPASupplicant::Network::pair)
 
-	{ WPASupplicant::Network::PAIR_WEP,    _TXT("WEP")     },
-	{ WPASupplicant::Network::PAIR_WPA,    _TXT("WPA")     },
-	{ WPASupplicant::Network::PAIR_WPA2,   _TXT("WPA2")    },
-	{ WPASupplicant::Network::PAIR_OPEN,   _TXT("OPEN")    },
-	{ WPASupplicant::Network::PAIR_ESS,    _TXT("ESS")     },
-	{ WPASupplicant::Network::PAIR_WPS,    _TXT("WPS")     },
+    { WPASupplicant::Network::PAIR_WEP,    _TXT("WEP")     },
+    { WPASupplicant::Network::PAIR_WPA,    _TXT("WPA")     },
+    { WPASupplicant::Network::PAIR_WPA2,   _TXT("WPA2")    },
+    { WPASupplicant::Network::PAIR_OPEN,   _TXT("OPEN")    },
+    { WPASupplicant::Network::PAIR_ESS,    _TXT("ESS")     },
+    { WPASupplicant::Network::PAIR_WPS,    _TXT("WPS")     },
 
 ENUM_CONVERSION_END(WPASupplicant::Network::pair);
 
@@ -33,8 +36,8 @@ ENUM_CONVERSION_END(WPASupplicant::Network::mode);
 
 namespace WPASupplicant {
 
-string Network::BSSIDString() const { 
-    return _comController->BSSID(_bssid); 
+string Network::BSSIDString() const {
+    return _comController->BSSID(_bssid);
 }
 
 uint8_t Network::Key(const pair method) const {
@@ -44,8 +47,8 @@ uint8_t Network::Key(const pair method) const {
     if (method != 0) {
         while ((method & mask) == 0) { mask = mask << 1; result += 8; }
 
-        // Get the proper 8 bits out of the uint 32 that make up the keys for this paring method (4 sets) 
-        result = ((_key >> result) & 0xFF); 
+        // Get the proper 8 bits out of the uint 32 that make up the keys for this paring method (4 sets)
+        result = ((_key >> result) & 0xFF);
     }
 
     return (result);
@@ -94,7 +97,7 @@ bool Config::Enterprise (const string& identity, const string& password) {
              (SetKey(IDENTITY, identity)) &&
              (SetKey(PASSWORD, password)) &&
              (SetKey(_T("eap"), _T("PEAP"))) &&
-             (SetKey(_T("phase2"), _T("auth=MSCHAPV2"))) ); 
+             (SetKey(_T("phase2"), _T("auth=MSCHAPV2"))) );
 }
 
 bool Config::Hidden(const bool hidden) {
@@ -143,4 +146,4 @@ bool Config::IsValid() const {
     return (_comController.IsValid() && _comController->Exists(_ssid));
 }
 
-} } // WPEFramework::WPASupplicant 
+} } // WPEFramework::WPASupplicant
