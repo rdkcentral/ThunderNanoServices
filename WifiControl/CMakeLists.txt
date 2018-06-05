@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
+option(WPEFRAMEWORK_PLUGIN_USE_RDK_HAL_WIFI "Enable RDK HAL Wifi" OFF)
 
 set(PLUGIN_NAME WifiControl)
 set(MODULE_NAME WPEFramework${PLUGIN_NAME})
@@ -42,6 +43,10 @@ set(PLUGIN_LINK_OPTIONS)
 set(PLUGIN_DEPENDENCIES
     )
 
+if (WPEFRAMEWORK_PLUGIN_USE_RDK_HAL_WIFI)
+    list(APPEND PLUGIN_DEPENDENCIES wifihal)
+endif()
+
 set(PLUGIN_LIBS
     ${CMAKE_THREAD_LIBS_INIT}
     ${CMAKE_DL_LIBS}
@@ -54,8 +59,14 @@ set(PLUGIN_SOURCES
     Module.cpp
     WifiControl.cpp
     Network.cpp
-    Controller.cpp
     )
+
+if (WPEFRAMEWORK_PLUGIN_USE_RDK_HAL_WIFI)
+    list(APPEND PLUGIN_SOURCES WifiHAL.cpp)
+    list(APPEND PLUGIN_DEFINITIONS USE_WIFI_HAL)
+else ()
+    list(APPEND PLUGIN_SOURCES Controller.cpp)
+endif()
 
 set(PLUGIN_INPUT
     ${PLUGIN_SOURCES}

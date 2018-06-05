@@ -7,6 +7,7 @@ namespace WPEFramework {
 namespace WPASupplicant {
 
 class Controller;
+class WifiHAL;
 
 class Network {
 public:
@@ -15,11 +16,11 @@ public:
         Iterator& operator=(const Iterator&) = delete;
 
     public:
-        Iterator() 
+        Iterator()
             : _list() {
             Reset();
         }
-        Iterator(const Iterator& copy) 
+        Iterator(const Iterator& copy)
             : _list(copy._list)
             , _index(copy._index)
             , _atHead(copy._atHead) {
@@ -39,7 +40,7 @@ public:
         {
             if (_atHead) {
                 _atHead = false;
-            } 
+            }
             else if (_index != _list.end()) {
                 _index++;
             }
@@ -58,11 +59,14 @@ public:
 
     private:
         friend class Controller;
+#ifdef USE_WIFI_HAL
+        friend class WifiHAL;
+#endif
         inline void Insert(const Network& element) {
             _list.push_back(element);
         }
 
-    private: 
+    private:
         std::list<Network> _list;
         std::list<Network>::iterator _index;
         bool _atHead;
@@ -75,7 +79,7 @@ public:
         KEY_EAP            = 0x02,
         KEY_CCMP           = 0x04,
         KEY_TKIP           = 0x08,
-        KEY_PREAUTH        = 0x10, 
+        KEY_PREAUTH        = 0x10,
         KEY_NONE           = 0x00
     };
 
@@ -107,19 +111,24 @@ public:
         , _hidden(true)
     {
     }
+
     inline Network(
-        Core::ProxyType<Controller> comController, 
-        const uint32_t id, 
-        const uint64_t& bssid, 
-        const uint32_t frequency, 
-        const int32_t signal, 
+#ifdef USE_WIFI_HAL
+        Core::ProxyType<WifiHAL> comController,
+#else
+        Core::ProxyType<Controller> comController,
+#endif
+        const uint32_t id,
+        const uint64_t& bssid,
+        const uint32_t frequency,
+        const int32_t signal,
         const uint16_t pair,
-        const uint32_t key, 
+        const uint32_t key,
         const string& ssid,
         const uint32_t throughPut,
-        const bool hidden) 
+        const bool hidden)
         : _comController(comController)
-	, _bssid(bssid)
+        , _bssid(bssid)
         , _frequency(frequency)
         , _signal(signal)
         , _pair(pair)
@@ -127,7 +136,7 @@ public:
         , _ssid(ssid)
         , _id(id)
         , _throughput(~0)
-        , _hidden(hidden) 
+        , _hidden(hidden)
     {
     }
     inline Network(const Network& copy)
@@ -143,7 +152,7 @@ public:
         , _hidden(copy._hidden)
     {
     }
-    inline Network& operator= (const Network& rhs) 
+    inline Network& operator= (const Network& rhs)
     {
         _comController = rhs._comController;
         _bssid = rhs._bssid;
@@ -156,7 +165,7 @@ public:
         _throughput = rhs._throughput;
         _hidden = rhs._hidden;
 
-	return (*this);
+    return (*this);
     }
 
     bool IsValid() const { return (_comController.IsValid()); }
@@ -173,7 +182,11 @@ public:
     string BSSIDString() const;
 
 private:
-    Core::ProxyType<Controller> _comController; 
+#ifdef USE_WIFI_HAL
+        Core::ProxyType<WifiHAL> _comController;
+#else
+    Core::ProxyType<Controller> _comController;
+#endif
     uint64_t _bssid;
     uint32_t _frequency;
     int32_t _signal;
@@ -209,17 +222,22 @@ public:
         };
 
     public:
-        Iterator() 
+        Iterator()
             : _list()
             , _comController() {
             Reset();
         }
-        Iterator(const Core::ProxyType<Controller>& source) 
+#ifdef USE_WIFI_HAL
+        Iterator(const Core::ProxyType<WifiHAL>& source)
+#else
+        Iterator(const Core::ProxyType<Controller>& source)
+
+#endif
             : _list()
             , _comController(source) {
             Reset();
         }
-        Iterator(const Iterator& copy) 
+        Iterator(const Iterator& copy)
             : _list(copy._list)
             , _index(copy._index)
             , _atHead(copy._atHead) {
@@ -239,7 +257,7 @@ public:
         {
             if (_atHead) {
                 _atHead = false;
-            } 
+            }
             else if (_index != _list.end()) {
                 _index++;
             }
@@ -261,6 +279,9 @@ public:
 
    private:
         friend class Controller;
+#ifdef USE_WIFI_HAL
+        friend class WifiHAL;
+#endif
         inline void Insert(const string& ssid, const uint32_t id, const bool enabled, const bool selected) {
             ASSERT (_comController.IsValid() == true);
 
@@ -272,20 +293,30 @@ public:
             _list.push_back(newElement);
         }
 
-    private: 
+    private:
         std::list<Info> _list;
         std::list<Info>::iterator _index;
         bool _atHead;
-        Core::ProxyType<Controller> _comController; 
+#ifdef USE_WIFI_HAL
+        Core::ProxyType<WifiHAL> _comController;
+#else
+        Core::ProxyType<Controller> _comController;
+#endif
     };
 
 
 public:
     Config() : _comController() {
     }
+#ifdef USE_WIFI_HAL
+    Config(const Core::ProxyType<WifiHAL>& controller, const string& ssid) : _comController(controller), _ssid(ssid) {
+        ASSERT(_comController.IsValid() == true);
+    }
+#else
     Config(const Core::ProxyType<Controller>& controller, const string& ssid) : _comController(controller), _ssid(ssid) {
         ASSERT(_comController.IsValid() == true);
     }
+#endif
     Config(const Config& copy) : _comController(copy._comController), _ssid(copy._ssid) {
         ASSERT(_comController.IsValid() == true);
     }
@@ -351,12 +382,16 @@ public:
         return (GetKey (MODE, result) ? Core::NumberType<uint8_t>(result.c_str(), result.length()).Value() : 0);
     }
 
-protected: 
+protected:
     bool GetKey(const string& key, string& value) const;
     bool SetKey(const string& key, const string& value);
 
 private:
-    Core::ProxyType<Controller> _comController; 
+#ifdef USE_WIFI_HAL
+    Core::ProxyType<WifiHAL> _comController;
+#else
+    Core::ProxyType<Controller> _comController;
+#endif
     string _ssid;
 };
 

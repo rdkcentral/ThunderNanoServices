@@ -35,7 +35,7 @@ namespace Plugin {
         else if (settings.PSK.IsSet() == true) {
             // Seems we are in WPA mode !!!
             profile.PresharedKey(settings.PSK.Value());
-        } 
+        }
         else if ((settings.Identity.IsSet() == true) && (settings.Password.IsSet() == true)) {
             // Seems we are in Enterprise mode !!!
             profile.Enterprise (settings.Identity.Value(), settings.Password.Value());
@@ -76,8 +76,13 @@ namespace Plugin {
         _service = service;
 
         TRACE_L1("Starting the application for wifi called: [%s]", config.Application.Value().c_str());
-
-	if ((config.Application.Value().empty() == false) && (::strncmp(config.Application.Value().c_str(), _TXT("null")) != 0)) {
+        #ifdef USE_WIFI_HAL
+            _controller = WPASupplicant::WifiHAL::Create();
+            if ((_controller.IsValid() == true)  && (_controller->IsOperational() == true)) {
+                _controller->Scan();
+            }
+        #else
+        if ((config.Application.Value().empty() == false) && (::strncmp(config.Application.Value().c_str(), _TXT("null")) != 0)) {
             if (_wpaSupplicant.Lauch (config.Connector.Value(), config.Interface.Value(), 15) != Core::ERROR_NONE) {
                 result = _T("Could not start WPA_SUPPLICANT");
             }
@@ -85,7 +90,7 @@ namespace Plugin {
 
         if (result.empty() == true) {
             _controller = WPASupplicant::Controller::Create (config.Connector.Value(), config.Interface.Value(), 10);
-        
+
             if (_controller.IsValid() == true) {
                 if (_controller->IsOperational() == false) {
                     _controller.Release();
@@ -117,6 +122,7 @@ namespace Plugin {
                 }
             }
         }
+        #endif
 
         TRACE_L1("Config path = %s", _configurationStore.c_str());
 
@@ -126,12 +132,14 @@ namespace Plugin {
 
     /* virtual */ void WifiControl::Deinitialize(PluginHost::IShell* service)
     {
+        #ifndef USE_WIFI_HAL
         _controller->Callback(nullptr);
         _controller->Terminate();
         _controller.Release();
 
         _wpaSupplicant.Terminate();
-        
+        #endif
+
         ASSERT(_service == service);
         _service = nullptr;
     }
@@ -192,10 +200,9 @@ namespace Plugin {
         if (index.IsValid() == true) {
             if (index.Next() && index.IsValid()) {
                 if (index.Current().Text() == _T("Networks")) {
-                    
+
                     Core::ProxyType<Web::JSONBodyType<WifiControl::NetworkList> > networks (jsonResponseFactoryNetworkList.Element());
                     WPASupplicant::Network::Iterator list (_controller->Networks());
-
                     networks->Set(list);
 
                     result->ErrorCode = Web::STATUS_OK;
@@ -206,7 +213,6 @@ namespace Plugin {
 
                     Core::ProxyType<Web::JSONBodyType<WifiControl::ConfigList> > configs (jsonResponseFactoryConfigList.Element());
                     WPASupplicant::Config::Iterator list (_controller->Configs());
-
                     configs->Set(list);
 
                     result->ErrorCode = Web::STATUS_OK;
@@ -216,7 +222,6 @@ namespace Plugin {
                 } else if ( (index.Current().Text() == _T("Config")) && (index.Next() == true)) {
 
                     WPASupplicant::Config entry (_controller->Get(SSIDDecode(index.Current().Text())));
-
                     if (entry.IsValid() != true) {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = _T("Empty config.");
@@ -231,7 +236,6 @@ namespace Plugin {
                         result->Body(config);
                     }
                 }
- 
             }
         }
         else {
@@ -242,6 +246,7 @@ namespace Plugin {
 
             status->Connected = _controller->Current();
             status->Scanning = _controller->IsScanning();
+
             result->Body(status);
         }
 
@@ -263,7 +268,7 @@ namespace Plugin {
                         result->Message = _T("Nothing to set in the config.");
                     }
                     else {
-                  
+
                         WPASupplicant::Config settings (_controller->Create(SSIDDecode(config->SSID.Value())));
 
                         Update (settings, *config);
@@ -275,13 +280,13 @@ namespace Plugin {
 
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("Scan started.");
-
                     _controller->Scan();
 
                 } else if (index.Current().Text() == _T("Connect")) {
                     if (index.Next() == true) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Connect started.");
+
                         _controller->Connect(SSIDDecode(index.Current().Text()));
                     }
                 } else if (index.Current().Text() == _T("Store")) {
@@ -304,12 +309,12 @@ namespace Plugin {
 
                 } else if ( (index.Current().Text() == _T("Debug")) && (index.Next() == true)) {
                     string textNumber(index.Current().Text());
-                    uint32_t number (Core::NumberType<uint32_t>(Core::TextFragment(textNumber.c_str(), textNumber.length()))); 
+                    uint32_t number (Core::NumberType<uint32_t>(Core::TextFragment(textNumber.c_str(), textNumber.length())));
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("Debug level set.");
                     _controller->Debug(number);
                 }
-            } 
+            }
         }
         return result;
     }
@@ -327,7 +332,7 @@ namespace Plugin {
                 result->Message = _T("Nothing to set in the config.");
             }
             else {
-                 
+
                 WPASupplicant::Config settings (_controller->Get(SSIDDecode(config->SSID.Value())));
 
                 if (settings.IsValid() == false) {
@@ -370,14 +375,14 @@ namespace Plugin {
                 }
             }
         }
- 
+
         return result;
     }
 
     void WifiControl::WifiEvent (const WPASupplicant::Controller::events& event) {
 
         TRACE(Trace::Information, (_T("WPASupplicant notification: %s"), Core::EnumerateType<WPASupplicant::Controller::events>(event).Data()));
-       
+
         switch (event) {
         case WPASupplicant::Controller::CTRL_EVENT_SCAN_RESULTS: {
             WifiControl::NetworkList networks;
