@@ -37,6 +37,8 @@ namespace Plugin {
     static void onFrameDisplayed(WKViewRef view, const void* clientInfo);
     //static void didSameDocumentNavigation(const OpaqueWKPage* page, const OpaqueWKNavigation* nav, unsigned int count, const void* clientInfo, const void* info);
     static void requestClosure(const void* clientInfo);
+    static void didRequestAutomationSession(WKContextRef context, WKStringRef sessionID, const void* clientInfo);
+    static WKPageRef onAutomationSessionRequestNewPage(WKWebAutomationSessionRef session, const void* clientInfo);
 
     // -----------------------------------------------------------------------------------------------------
     // Hide all NASTY C details that come with the POC libraries !!!!!
@@ -196,6 +198,29 @@ namespace Plugin {
         onFrameDisplayed,
     };
 
+    WKContextAutomationClientV0 _handlerAutomation = {
+        { 0, nullptr },
+        // allowsRemoteAutomation
+        [](WKContextRef, const void*) -> bool {
+            return true;
+        },
+        didRequestAutomationSession,
+        // browserName
+        [](WKContextRef, const void*) -> WKStringRef {
+            return WKStringCreateWithUTF8CString("WPEWebKitBrowser");
+        },
+        // browserVersion
+        [](WKContextRef, const void*) -> WKStringRef {
+            return WKStringCreateWithUTF8CString("1.0");
+        }
+    };
+
+    WKWebAutomationsessionClientV0 _handlerAutomationSession = {
+        { 0, nullptr },
+        // requestNewPage
+        onAutomationSessionRequestNewPage
+    };
+
     /* ---------------------------------------------------------------------------------------------------
 struct CustomLoopHandler
 {
@@ -306,6 +331,7 @@ static GSourceFuncs _handlerIntervention =
                 , AllowWindowClose(false)
                 , NonCompositedWebGLEnabled(false)
                 , EnvironmentOverride(false)
+                , Automation(false)
             {
                 Add(_T("useragent"), &UserAgent);
                 Add(_T("url"), &URL);
@@ -333,7 +359,8 @@ static GSourceFuncs _handlerIntervention =
                 Add(_T("clientidentifier"), &ClientIdentifier);
                 Add(_T("windowclose"), &AllowWindowClose);
                 Add(_T("noncompositedwebgl"), &NonCompositedWebGLEnabled);
-		Add(_T("environmentoverride"), &EnvironmentOverride);
+                Add(_T("environmentoverride"), &EnvironmentOverride);
+                Add(_T("automation"), &Automation);
             }
             ~Config()
             {
@@ -367,6 +394,7 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::Boolean AllowWindowClose;
             Core::JSON::Boolean NonCompositedWebGLEnabled;
             Core::JSON::Boolean EnvironmentOverride;
+            Core::JSON::Boolean Automation;
         };
 
     private:
@@ -389,7 +417,8 @@ static GSourceFuncs _handlerIntervention =
             , _hidden(false)
             , _time(0)
             , _autoStart(false)
-            , _compliant(false)
+            , _compliant(false)    
+            , _automationSession(nullptr)
         {
 
             // Register an @Exit, in case we are killed, with an incorrect ref count !!
@@ -689,8 +718,12 @@ static GSourceFuncs _handlerIntervention =
                 Core::SystemInfo::SetEnvironment(_T("CAIRO_GL_COMPOSITOR"), _config.Compositor.Value(), !environmentOverride);
 
             // WebInspector
-            if (_config.Inspector.Value().empty() == false)
-                Core::SystemInfo::SetEnvironment(_T("WEBKIT_LEGACY_INSPECTOR_SERVER"), _config.Inspector.Value(), !environmentOverride);
+            if (_config.Inspector.Value().empty() == false){
+                if(_config.Automation.Value())
+                    Core::SystemInfo::SetEnvironment(_T("WEBKIT_INSPECTOR_SERVER"), _config.Inspector.Value(), !environmentOverride);
+                else
+                    Core::SystemInfo::SetEnvironment(_T("WEBKIT_LEGACY_INSPECTOR_SERVER"), _config.Inspector.Value(), !environmentOverride);
+            }
 
             // RPI mouse support
             if (_config.Cursor.Value() == true)
@@ -758,6 +791,19 @@ static GSourceFuncs _handlerIntervention =
         string GetWhiteListJsonString() const
         {
             return _config.Whitelist;
+        }
+
+        void OnRequestAutomationSession(WKContextRef context, WKStringRef sessionID)
+        {
+            _automationSession = WKWebAutomationSessionCreate(sessionID);
+            _handlerAutomationSession.base.clientInfo = static_cast<void*>(this);
+            WKWebAutomationSessionSetClient(_automationSession, &_handlerAutomationSession.base);
+            WKContextSetAutomationSession(context, _automationSession);
+        }
+
+        WKPageRef GetPage() const
+        {
+            return _page;
         }
 
         BEGIN_INTERFACE_MAP(WebKitImplementation)
@@ -971,6 +1017,11 @@ static GSourceFuncs _handlerIntervention =
             _handlerInjectedBundle.base.clientInfo = static_cast<void*>(this);
             WKContextSetInjectedBundleClient(context, &_handlerInjectedBundle.base);
 
+            if (_config.Automation.Value()) {
+                _handlerAutomation.base.clientInfo = static_cast<void*>(this);
+                WKContextSetAutomationClient(context, &_handlerAutomation.base);
+            }
+
             WKPageSetPageUIClient(_page, &_handlerPageUI.base);
 
             if (_config.UserAgent.IsSet() == true && _config.UserAgent.Value().empty() == false)
@@ -993,6 +1044,8 @@ static GSourceFuncs _handlerIntervention =
             g_main_loop_run(_loop);
 
             //WKRelease(_page);
+            if (_automationSession)
+                WKRelease(_automationSession);
             WKRelease(_view);
             WKRelease(pageConfiguration);
             WKRelease(pageGroup);
@@ -1028,6 +1081,7 @@ static GSourceFuncs _handlerIntervention =
         uint64_t _time;
         bool _autoStart;
         bool _compliant;
+        WKWebAutomationSessionRef _automationSession;
     };
 
     SERVICE_REGISTRATION(WebKitImplementation, 1, 0);
@@ -1150,6 +1204,18 @@ static GSourceFuncs _handlerIntervention =
             s_frameCount = 0;
             lastDumpTime = time;
         }
+    }
+
+    /* static */ void didRequestAutomationSession(WKContextRef context, WKStringRef sessionID, const void* clientInfo)
+    {
+        WebKitImplementation* browser = const_cast<WebKitImplementation*>(static_cast<const WebKitImplementation*>(clientInfo));
+        browser->OnRequestAutomationSession(context, sessionID);
+    }
+
+    /* static */ WKPageRef onAutomationSessionRequestNewPage(WKWebAutomationSessionRef, const void* clientInfo)
+    {
+        WebKitImplementation* browser = const_cast<WebKitImplementation*>(static_cast<const WebKitImplementation*>(clientInfo));
+        return browser->GetPage();
     }
 
 } // namespace Plugin
