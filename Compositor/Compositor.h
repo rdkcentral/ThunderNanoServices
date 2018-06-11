@@ -125,6 +125,7 @@ namespace Plugin {
                 , Clients()
             {
                 Add(_T("clients"), &Clients);
+                Add(_T("resolution"), &Resolution);
             }
 
             virtual ~Data()
@@ -133,28 +134,9 @@ namespace Plugin {
 
         public:
             Core::JSON::ArrayType<Core::JSON::String> Clients;
+            Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
         };
 
-        class DataResolution : public Core::JSON::Container {
-        private:
-            DataResolution(const DataResolution&) = delete;
-            DataResolution& operator=(const DataResolution&) = delete;
-
-        public:
-            DataResolution()
-                    : Core::JSON::Container()
-                    , Resolution()
-            {
-                Add(_T("resolution"), &Resolution);
-            }
-
-            virtual ~DataResolution()
-            {
-            }
-
-        public:
-            Core::JSON::DecUInt32 Resolution;
-        };
     public:
         Compositor();
         virtual ~Compositor();

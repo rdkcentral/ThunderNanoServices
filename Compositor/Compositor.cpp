@@ -1,12 +1,26 @@
 #include "Compositor.h"
 
 namespace WPEFramework {
+
+ENUM_CONVERSION_BEGIN(Exchange::IComposition::ScreenResolution)
+
+    { Exchange::IComposition::ScreenResolution_Unknown,   _TXT("Unknown")   },
+    { Exchange::IComposition::ScreenResolution_480i,      _TXT("480i")      },
+    { Exchange::IComposition::ScreenResolution_480p,      _TXT("480p")      },
+    { Exchange::IComposition::ScreenResolution_720p,      _TXT("720p")      },
+    { Exchange::IComposition::ScreenResolution_720p50Hz,  _TXT("720p50Hz")  },
+    { Exchange::IComposition::ScreenResolution_1080p24Hz, _TXT("1080p24Hz") },
+    { Exchange::IComposition::ScreenResolution_1080i50Hz, _TXT("1080i50Hz") },
+    { Exchange::IComposition::ScreenResolution_1080p50Hz, _TXT("1080p50Hz") },
+    { Exchange::IComposition::ScreenResolution_1080p60Hz, _TXT("1080p60Hz") },
+
+ENUM_CONVERSION_END(Exchange::IComposition::ScreenResolution)
+
 namespace Plugin {
     SERVICE_REGISTRATION(Compositor, 1, 0);
 
-    static Core::ProxyPoolType<Web::Response> responseFactory(4);
-    static Core::ProxyPoolType<Web::JSONBodyType<Compositor::Data> > jsonResponseFactory(4);
-    static Core::ProxyPoolType<Web::JSONBodyType<Compositor::DataResolution> > jsonResolutionResponseFactory(1);
+    static Core::ProxyPoolType<Web::Response> responseFactory(2);
+    static Core::ProxyPoolType<Web::JSONBodyType<Compositor::Data> > jsonResponseFactory(2);
 
     Compositor::Compositor()
         : _adminLock()
@@ -143,7 +157,7 @@ namespace Plugin {
 
             // http://<ip>/Service/Compositor/Resolution
             else if (index.Current() == "Resolution") {
-                Core::ProxyType<Web::JSONBodyType<DataResolution> > response(jsonResolutionResponseFactory.Element());
+                Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
                 response->Resolution = GetResolution();
                 result->Body(Core::proxy_cast<Web::IBody>(response));
             }
@@ -154,55 +168,72 @@ namespace Plugin {
             Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
 
             if (index.Next() == true) {
-                if (index.Current().Text() == "Resolution") { /* http://<ip>/Service/Compositor/Resolution/3 --> 720p*/
+                if (index.Current() == _T("Resolution")) { /* http://<ip>/Service/Compositor/Resolution/3 --> 720p*/
                     if (index.Next() == true) {
-                        Exchange::IComposition::ScreenResolution format =
-                                                        static_cast<Exchange::IComposition::ScreenResolution>(std::stoi(index.Current().Text()));
-                        SetResolution(format);
+                        Exchange::IComposition::ScreenResolution format (Exchange::IComposition::ScreenResolution_Unknown);
+                        uint32_t number(Core::NumberType<uint32_t>(index.Current()).Value());
+
+                        if ((number != 0) && (number < 100)) {
+                             format = static_cast<Exchange::IComposition::ScreenResolution>(number);
+                        }
+                        else {
+                            Core::EnumerateType<Exchange::IComposition::ScreenResolution> value (index.Current());
+
+                            if (value.IsSet() == true) {
+                                format = value.Value();
+                            }
+                        }
+                        if (format != Exchange::IComposition::ScreenResolution_Unknown) {
+                            SetResolution(format);
+                        }
+                        else {
+                            result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                            result->Message = _T("invalid parameter for resolution: ") + index.Current().Text();
+                        }
                     }
                 }
                 else {
                     string clientName(index.Current().Text());
 
                     if (index.Next() == true) {
-                        if (index.Current().Text() == "Kill") { /* http://<ip>/Service/Compositor/Netflix/Kill */
+                        if (index.Current() == _T("Kill")) { /* http://<ip>/Service/Compositor/Netflix/Kill */
                             Kill(clientName);
                         }
-                        if (index.Current().Text() == "Opacity" &&
+                        if (index.Current() == _T("Opacity") &&
                             index.Next() == true) { /* http://<ip>/Service/Compositor/Netflix/Opacity/128 */
                             const uint32_t opacity(std::stoi(index.Current().Text()));
                             Opacity(clientName, opacity);
                         }
-                        if (index.Current().Text() == "Visible" &&
+                        if (index.Current() == _T("Visible") &&
                             index.Next() == true) { /* http://<ip>/Service/Compositor/Netflix/Visible/Hide */
-                            if (index.Current().Text() == _T("Hide")) {
+                            if (index.Current() == _T("Hide")) {
                                 Visible(clientName, false);
-                            } else if (index.Current().Text() == _T("Show")) {
+                            } else if (index.Current() == _T("Show")) {
                                 Visible(clientName, true);
                             }
                         }
-                        if (index.Current().Text() == "Geometry") { /* http://<ip>/Service/Compositor/Netflix/Geometry/0/0/1280/720 */
+                        if (index.Current() == _T("Geometry")) { /* http://<ip>/Service/Compositor/Netflix/Geometry/0/0/1280/720 */
                             uint32_t x(0), y(0), width(0), height(0);
 
                             if (index.Next() == true) {
-                                x = std::stoi(index.Current().Text());
+                                x = Core::NumberType<uint32_t>(index.Current()).Value();
                             }
                             if (index.Next() == true) {
-                                y = std::stoi(index.Current().Text());
+                                y = Core::NumberType<uint32_t>(index.Current()).Value();
                             }
                             if (index.Next() == true) {
-                                width = std::stoi(index.Current().Text());
+                                width  = Core::NumberType<uint32_t>(index.Current()).Value();
                             }
                             if (index.Next() == true) {
-                                height = std::stoi(index.Current().Text());
+                                height = Core::NumberType<uint32_t>(index.Current()).Value();
                             }
 
                             Geometry(clientName, x, y, width, height);
                         }
-                        if (index.Current().Text() == "Top") { /* http://<ip>/Service/Compositor/Netflix/Top */
+                        if (index.Current() == _T("Top")) { /* http://<ip>/Service/Compositor/Netflix/Top */
                             Top(clientName);
                         }
-                        if (index.Current().Text() == "Input") { /* http://<ip>/Service/Compositor/Netflix/Input */
+                        if (index.Current() == _T("Input")) { /* http://<ip>/Service/Compositor/Netflix/Input */
                             Input(clientName);
                         }
                     }
