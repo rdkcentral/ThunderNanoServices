@@ -2,7 +2,6 @@
 #define __PLUGIN_COMPOSITOR_H
 
 #include "Module.h"
-#include <interfaces/IResourceCenter.h>
 #include <interfaces/IComposition.h>
 
 namespace WPEFramework {
@@ -136,6 +135,26 @@ namespace Plugin {
             Core::JSON::ArrayType<Core::JSON::String> Clients;
         };
 
+        class DataResolution : public Core::JSON::Container {
+        private:
+            DataResolution(const DataResolution&) = delete;
+            DataResolution& operator=(const DataResolution&) = delete;
+
+        public:
+            DataResolution()
+                    : Core::JSON::Container()
+                    , Resolution()
+            {
+                Add(_T("resolution"), &Resolution);
+            }
+
+            virtual ~DataResolution()
+            {
+            }
+
+        public:
+            Core::JSON::DecUInt32 Resolution;
+        };
     public:
         Compositor();
         virtual ~Compositor();
@@ -144,7 +163,6 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(Compositor)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
-        INTERFACE_AGGREGATE(Exchange::IResourceCenter, _resourceCenter)
         INTERFACE_AGGREGATE(Exchange::IComposition, _composition)
         END_INTERFACE_MAP
 
@@ -167,6 +185,8 @@ namespace Plugin {
         void Clients(Core::JSON::ArrayType<Core::JSON::String>& clients) const;
         void Kill(const string& client) const;
         void Opacity(const string& client, const uint32_t value) const;
+        void SetResolution(const Exchange::IComposition::ScreenResolution) const;
+        const Exchange::IComposition::ScreenResolution GetResolution() const;
         void Visible(const string& client, const bool visible) const;
         void Geometry(const string& client, const uint32_t x, const uint32_t y, const uint32_t width, const uint32_t height) const;
         void Top(const string& client) const;
@@ -176,7 +196,6 @@ namespace Plugin {
         mutable Core::CriticalSection _adminLock;
         uint8_t _skipURL;
         Core::Sink<Notification> _notification;
-        Exchange::IResourceCenter* _resourceCenter;
         Exchange::IComposition* _composition;
         PluginHost::IShell* _service;
         uint32_t _pid;

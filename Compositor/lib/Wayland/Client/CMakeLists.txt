@@ -1,47 +1,68 @@
-set(target_lib_name waylandeglclient)
+set(TARGET waylandeglclient)
 
-set(BUILD_SHARED_LIBS ON)
+message("Setup ${TARGET} v${VERSION}...")
 
-find_package(Wayland REQUIRED)
+find_package(WaylandClient REQUIRED)
 find_package(EGL REQUIRED)
 find_package(WaylandEGL REQUIRED)
+find_package(Westeros REQUIRED)
+find_package(Core REQUIRED)
 
-if(WAYLAND_FOUND)
-    message("-- Wayland support detected")
-    include_directories(${WAYLANDSERVER_INCLUDE_DIRS})
-    list(APPEND WPEFRAMEWORK_WAYLAND_CLIENT_LIBS ${WAYLAND_LIBRARIES})
-    include_directories(${WAYLAND_INCLUDE_DIRS})
-endif()
+set(PUBLIC_HEADERS
+        Client.h
+        )
 
-find_package(Westeros)
-if(WESTEROS_FOUND)
-    message("-- Westeros support detected")
-    list(APPEND WPEFRAMEWORK_WAYLAND_CLIENT_SOURCES Westeros.cpp)
-    list(APPEND WPEFRAMEWORK_WAYLAND_CLIENT_LIBS
-            ${EGL_LIBRARIES}
-            ${WAYLAND_EGL_LIBRARIES}
-            westeros_simpleshell_client
-            westeros_simplebuffer_client
-            westeros_compositor)
-    include_directories(${WESTEROS_INCLUDE_DIRS})
-endif()
+add_library(${TARGET} SHARED Westeros.cpp)
 
-install(FILES Client.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/WPEFramework/wayland)
+target_link_libraries(${TARGET}
+            PUBLIC
+            WPEFramework::Core
+            WESTEROS::CLIENT
+            WAYLAND::CLIENT
+            WAYLAND::EGL
+            EGL::EGL
+            )
 
+set_target_properties(${TARGET} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
+        FRAMEWORK FALSE
+        PUBLIC_HEADER "${PUBLIC_HEADERS}" # specify the public headers
+        VERSION ${VERSION}
+        SOVERSION ${VERSION_MAJOR}
+        DEFINE_SYMBOL WPEFRAMEWORK_WAYLAND_EGL_CLIENT
+        )
+
+target_include_directories( ${TARGET}
+        PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<INSTALL_INTERFACE:include/${NAMESPACE}/wayland>
+        $<INSTALL_INTERFACE:include/${NAMESPACE}>
+        )
+
+install(
+        TARGETS ${TARGET}  EXPORT ${TARGET}Targets  # for downstream dependencies
+        ARCHIVE DESTINATION lib COMPONENT libs      # static lib
+        LIBRARY DESTINATION lib COMPONENT libs      # shared lib
+        RUNTIME DESTINATION bin COMPONENT libs      # binaries
+        FRAMEWORK DESTINATION bin COMPONENT libs    # for mac
+        PUBLIC_HEADER DESTINATION include/${NAMESPACE}/wayland COMPONENT devel   # headers for mac (note the different component -> different package)
+        INCLUDES DESTINATION include/${NAMESPACE}/wayland      # headers
+)
+
+# For cmake based consumers
+include (CMakePackageConfigHelpers)
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${TARGET}ConfigVersion.cmake VERSION ${VERSION} COMPATIBILITY SameMajorVersion)
+add_library(${NAMESPACE}::WaylandEGLClient ALIAS ${TARGET})
+install(EXPORT ${TARGET}Targets FILE ${TARGET}Config.cmake NAMESPACE ${NAMESPACE}:: DESTINATION include/cmake)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}ConfigVersion.cmake DESTINATION include/cmake )
+
+# For non-cmake consumers
 configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/wayland-egl-client.pc.in"
         "${CMAKE_BINARY_DIR}/wayland-egl-client.pc"
         @ONLY)
 
 install(FILES ${CMAKE_BINARY_DIR}/wayland-egl-client.pc DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
-
-# add the waylandeglhelper library
-if(WESTEROS_FOUND)
-    add_library(${target_lib_name} ${WPEFRAMEWORK_WAYLAND_CLIENT_SOURCES})
-    target_link_libraries(${target_lib_name} ${WPEFRAMEWORK_WAYLAND_CLIENT_LIBS})
-    set_target_properties(${target_lib_name} PROPERTIES DEFINE_SYMBOL WPEFRAMEWORK_WAYLAND_EGL_CLIENT)
-    target_compile_options(${target_lib_name} PRIVATE  ${WAYLAND_EGL_CFLAGS})
-    install(TARGETS ${target_lib_name} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-endif()
 
 add_subdirectory (test)
