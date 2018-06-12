@@ -342,9 +342,9 @@ namespace Plugin {
                     Sink& operator= (const Sink&) = delete;
 
                 public:
-                    Sink(::OCDM::ISession::ICallback* callback) 
-                        : _callback(callback)
-                        , _key(::OCDM::ISession::StatusPending) {
+                    Sink(SessionImplementation* parent, ::OCDM::ISession::ICallback* callback) 
+                        : _parent(*parent)
+                        , _callback(callback) {
                         _callback->AddRef();
                     }
                     virtual ~Sink() {
@@ -352,9 +352,6 @@ namespace Plugin {
                     }
 
                 public:
-                    inline ::OCDM::ISession::KeyStatus Status() const {
-                        return (_key);
-                    }
                     // Event fired when a key message is successfully created.
                     virtual void OnKeyMessage(
                         const uint8_t *f_pbKeyMessage, //__in_bcount(f_cbKeyMessage)
@@ -383,25 +380,29 @@ namespace Plugin {
                         _callback->OnKeyError(f_nError, f_crSysError, message);
                     }
                     //Event fired on key status update
-                    virtual void OnKeyStatusUpdate(const char* keyMessage) override {
+                    virtual void OnKeyStatusUpdate(const char* keyMessage, const uint8_t buffer[], const uint8_t length) override {
+                        ::OCDM::ISession::KeyStatus key;
+
                         ASSERT(_callback != nullptr);
                         TRACE(Trace::Information, ("OnKeyStatusUpdate(%s)", keyMessage));
 
                         if (::strcmp(keyMessage, "KeyUsable") == 0)
-                            _key = ::OCDM::ISession::Usable;
+                            key = ::OCDM::ISession::Usable;
                         else if (::strcmp(keyMessage, "KeyReleased") == 0)
-                            _key = ::OCDM::ISession::Released;
+                            key = ::OCDM::ISession::Released;
                         else if (::strcmp(keyMessage, "KeyExpired") == 0)
-                            _key = ::OCDM::ISession::Expired;
+                            key = ::OCDM::ISession::Expired;
                         else
-                            _key = ::OCDM::ISession::InternalError;
+                            key = ::OCDM::ISession::InternalError;
 
-                        _callback->OnKeyStatusUpdate(_key);
+                        _parent.UpdateKeyStatus(key, buffer, length);
+
+                        _callback->OnKeyStatusUpdate(key);
                     }
 
                private:
+                    SessionImplementation& _parent;
                     ::OCDM::ISession::ICallback* _callback;
-                    ::OCDM::ISession::KeyStatus _key;
                 };
 
             public:
@@ -419,7 +420,7 @@ namespace Plugin {
                     , _keySystem(keySystem)
                     , _sessionId(mediaKeySession->GetSessionId())
                     , _mediaKeySession(mediaKeySession)
-                    , _sink(callback)
+                    , _sink(this, callback)
                     , _buffer(new DataExchange(mediaKeySession, bufferName, defaultSize))
                     , _cencData(initData, initDataLength) {
 
@@ -449,7 +450,7 @@ namespace Plugin {
                 }
 
                 virtual ::OCDM::ISession::KeyStatus Status() const override {
-                    return (_sink.Status());
+                    return (_cencData.Status());
                 }
                 
                 virtual std::string BufferId() const override {
@@ -485,6 +486,15 @@ namespace Plugin {
                     INTERFACE_ENTRY(::OCDM::ISession)
                 END_INTERFACE_MAP
 
+            private:
+                inline void UpdateKeyStatus(::OCDM::ISession::KeyStatus status, const uint8_t* buffer, const uint8_t length) {
+                    // We assume that these UpdateKeyStatusses do not occure in a multithreaded fashion, otherwise we need to lock it.
+                    CommonEncryptionData::KeyId keyId;
+		    if (buffer != nullptr) {
+                        keyId = CommonEncryptionData::KeyId(CommonEncryptionData::COMMON, buffer, length);
+                    }
+                    _cencData.UpdateKeyStatus(status, keyId);
+                }
 
             private:
                 AccessorOCDM& _parent;

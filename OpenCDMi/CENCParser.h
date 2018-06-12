@@ -2,10 +2,12 @@
 #define __CENCPARSER_H
 
 #include "Module.h"
+#include <ocdm/IOCDM.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
+//This class is not Thread Safe. The user of this class must ensure thread saftey (single thread access) !!!!
 class CommonEncryptionData {
 private:
     CommonEncryptionData() = delete;
@@ -28,17 +30,30 @@ public:
     };
 
     class KeyId {
+    private:
+        static const KeyId InvalidKey;
+
     public:
-        inline KeyId(){
+        inline KeyId()
+            : _systems(0)
+            , _status(::OCDM::ISession::StatusPending) {
             ::memset(_kid, ~0, sizeof(_kid));
         }
-        inline KeyId(const systemType type, const uint8_t kid[]) 
-            : _systems(type) {
-            ::memcpy(_kid, kid, sizeof(_kid));
+        inline KeyId(const systemType type, const uint8_t kid[], const uint8_t length) 
+            : _systems(type)
+            , _status(::OCDM::ISession::StatusPending) {
+            uint8_t copyLength (length > sizeof(_kid) ? sizeof(_kid) : length);
+
+            ::memcpy(_kid, kid, copyLength);
+
+            if (copyLength < sizeof(_kid)) {
+                ::memset(&(_kid[copyLength]), 0, sizeof(_kid) - copyLength);
+            }
         }
         // Microsoft playready XML flavor retrieval of KID
         inline KeyId(const systemType type, const uint32_t a, const uint16_t b, const uint16_t c, const uint8_t d[])
-            : _systems(type) {
+            : _systems(type)
+            , _status(::OCDM::ISession::StatusPending) {
             _kid[0] = a & 0xFF;
             _kid[1] = (a >> 8) & 0xFF;
             _kid[2] = (a >> 16) & 0xFF;
@@ -50,7 +65,8 @@ public:
             ::memcpy(&(_kid[8]), d, 8);
         }
         inline KeyId(const KeyId& copy) 
-            : _systems(copy._systems) {
+            : _systems(copy._systems) 
+            , _status(copy._status) {
             ::memcpy(_kid, copy._kid, sizeof(_kid));
         }
         inline ~KeyId() {
@@ -58,11 +74,15 @@ public:
 
         inline KeyId& operator= (const KeyId& rhs) {
             _systems = rhs._systems;
+            _status = rhs._status;
             ::memcpy(_kid, rhs._kid, sizeof(_kid));
             return (*this);
         }
 
     public:
+        inline bool IsValid () const {
+            return (operator!=(InvalidKey));
+        }
         inline bool operator==(const uint8_t rhs[]) const {
             return (::memcmp(rhs, _kid, sizeof(_kid)) == 0);
         }
@@ -95,10 +115,17 @@ public:
             }
             return (result);
         }
+        void Status (::OCDM::ISession::KeyStatus status) {
+            _status = status;
+        }
+        ::OCDM::ISession::KeyStatus Status () const {
+            return (_status);
+        }
         
     private:
         uint8_t  _kid[16];
         uint32_t _systems;
+        ::OCDM::ISession::KeyStatus _status;
     };
 
 public:
@@ -109,12 +136,50 @@ public:
     }
 
 public:
+    inline ::OCDM::ISession::KeyStatus Status() const {
+        return (_keyIds.size() > 0 ? _keyIds.begin()->Status() : ::OCDM::ISession::StatusPending);
+    }
+    inline ::OCDM::ISession::KeyStatus Status(const KeyId& key) const {
+        ::OCDM::ISession::KeyStatus result (::OCDM::ISession::StatusPending);
+        if (key.IsValid() == true) {
+            std::list<KeyId>::const_iterator index (std::find(_keyIds.begin(), _keyIds.end(), key));
+            if (index != _keyIds.end()) {
+                result = index->Status();
+            }
+        }
+        return (result);
+    }
     inline bool HasKeyId(const uint8_t keyId[]) const {
-        std::list<KeyId>::const_iterator index(_keyIds.begin());
+        return (std::find(_keyIds.begin(), _keyIds.end(), keyId) != _keyIds.end());
+    }
+    inline void AddKeyId(const KeyId& key) {
+       std::list<KeyId>::iterator index (std::find(_keyIds.begin(), _keyIds.end(), key));
 
-        while ((index != _keyIds.end()) && (*index != keyId)) { index++; }
+       if (index == _keyIds.end()) {
+            printf ("Added key: %s for system: %02X\n", key.ToString().c_str(), key.Systems());
+            _keyIds.emplace_back(key);
+        }
+        else {
+            printf ("Updated key: %s for system: %02X\n", key.ToString().c_str(), key.Systems());
+            index->Flag(key.Systems());
+        }
+    }
+    inline void UpdateKeyStatus(::OCDM::ISession::KeyStatus status, const KeyId& key) {
+        if (key.IsValid() == true) {
+            std::list<KeyId>::iterator index (std::find(_keyIds.begin(), _keyIds.end(), key));
 
-        return (index != _keyIds.end());
+            if (index == _keyIds.end()) {
+                _keyIds.emplace_back(key);
+                _keyIds.back().Status(status);
+            }
+            else {
+                index->Status(status);
+            }
+        }
+        else if (_keyIds.size() > 0) {
+            // Just update the first key
+            _keyIds.begin()->Status(status);
+        }
     }
 
 private:
@@ -171,21 +236,6 @@ private:
         }
 
         return (filler);
-    }
-
-    void AddKeyId(const KeyId& key) {
-        std::list<KeyId>::iterator index(_keyIds.begin());
-
-        while ((index != _keyIds.end()) && (*index != key)) { index++; }
-
-        if (index == _keyIds.end()) {
-            printf ("Added key: %s for system: %02X\n", key.ToString().c_str(), key.Systems());
-            _keyIds.emplace_back(key);
-        }
-        else {
-            printf ("Updated key: %s for system: %02X\n", key.ToString().c_str(), key.Systems());
-            index->Flag(key.Systems());
-        }
     }
 
     void Parse(const uint8_t data[], const uint16_t length) {
@@ -259,7 +309,7 @@ private:
         TRACE_L1("Addin %d keys\n", count);
 
         while (count-- != 0) {
-            AddKeyId(KeyId(system, psshData));
+            AddKeyId(KeyId(system, psshData, KeyId::Length()));
             psshData += KeyId::Length();
         }
     }
@@ -331,7 +381,6 @@ private:
     }
 
 private:
-    uint16_t _offset;
     std::list<KeyId> _keyIds;
 };
 
