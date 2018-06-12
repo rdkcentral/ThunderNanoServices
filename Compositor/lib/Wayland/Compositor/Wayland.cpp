@@ -309,6 +309,7 @@ namespace Plugin {
             nexusConfig.FromString(_service->ConfigLine());
 
             _nxserver = new Broadcom::Platform(
+                    &_nxsink,
                     nexusConfig.Authentication.Value(),
                     nexusConfig.HardwareDelay.Value(),
                     nexusConfig.GraphicsHeap.Value(),
@@ -317,10 +318,6 @@ namespace Plugin {
                     );
 
             ASSERT(_nxserver != nullptr);
-
-            if (_nxserver != nullptr) {
-                _nxserver->Callback(&_nxsink);
-            }
 #else
             StartImplementation();
 #endif
