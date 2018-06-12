@@ -413,8 +413,7 @@ namespace Plugin {
                     ::OCDM::ISession::ICallback* callback, 
                     const string bufferName, 
                     const uint32_t defaultSize,
-                    const uint8_t* initData,
-                    const uint16_t initDataLength) 
+                    const CommonEncryptionData* sessionData) 
                     : _parent(*parent)
                     , _refCount(1)
                     , _keySystem(keySystem)
@@ -422,9 +421,10 @@ namespace Plugin {
                     , _mediaKeySession(mediaKeySession)
                     , _sink(this, callback)
                     , _buffer(new DataExchange(mediaKeySession, bufferName, defaultSize))
-                    , _cencData(initData, initDataLength) {
+                    , _cencData(*sessionData) {
 
                     ASSERT (parent != nullptr);
+                    ASSERT (sessionData != nullptr);
                     ASSERT (_mediaKeySession != nullptr);
 
                     _mediaKeySession->Run(&_sink);
@@ -442,6 +442,9 @@ namespace Plugin {
                 }
 
             public:
+                inline bool IsSupported (const CommonEncryptionData& keyIds, const string& keySystem) const {
+                    return ((keySystem == _keySystem) && (_cencData.IsSupported(keyIds) == true));
+                }
                 inline bool HasKeyId(const uint8_t keyId[]) {
                     return (_cencData.HasKeyId(keyId));
                 }
@@ -506,7 +509,7 @@ namespace Plugin {
                 DataExchange* _buffer;
                 CommonEncryptionData _cencData;
             };
-
+ 
         public:
             AccessorOCDM(OCDMImplementation* parent, const string& name, const uint32_t defaultSize) 
                 : _parent(*parent) 
@@ -583,48 +586,57 @@ namespace Plugin {
                 std::string& sessionId,
                 ::OCDM::ISession*& session) override {
 
-                session = nullptr;
-
                 CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
-                CDMi::IMediaKeySession* sessionInterface = nullptr;
 
-                // OKe we got a buffer machanism to transfer the raw data, now create
-                // the session.
-                if ((system != nullptr) && (system->CreateMediaKeySession(
-                    licenseType,
-                    initDataType.c_str(),
-                    initData,
-                    initDataLength,
-                    CDMData,
-                    CDMDataLength,
-                    &sessionInterface) == 0)) {
-
-                    if (sessionInterface != nullptr) {
-
-                        std::string bufferId;
-
-                        // See if there is a buffer available we can use..
-                        if (_administrator.AquireBuffer(bufferId) == true) {
-
-                            SessionImplementation* newEntry = Core::Service<SessionImplementation>::Create<SessionImplementation>(this, keySystem, sessionInterface, callback, bufferId, _defaultSize, initData, initDataLength);
-
-                            session = newEntry;
-                            sessionId = newEntry->SessionId();
-
-                            _adminLock.Lock();
-
-                            _sessionMap.insert (std::pair<std::string, SessionImplementation*>(sessionId, newEntry));
-
-                            _adminLock.Unlock();
-                        }
-                        else {
-                            TRACE_L1("Could not allocate a buffer for session: %s", sessionId.c_str());
-
-                            // TODO: We need to drop the session somehow...
-                        }
-                    }
+                if (system == nullptr) {
+                    session = nullptr;
                 }
                 else {
+                    CDMi::IMediaKeySession* sessionInterface = nullptr;
+                    CommonEncryptionData keyIds (initData, initDataLength);
+
+                    // See if we, for the given keyIds, already got a session, for he given keySystem.
+                    session = FindSession(keyIds, keySystem);
+
+                    // OKe we got a buffer machanism to transfer the raw data, now create
+                    // the session.
+                    if ((session == nullptr) && (system->CreateMediaKeySession(
+                        licenseType,
+                        initDataType.c_str(),
+                        initData,
+                        initDataLength,
+                        CDMData,
+                        CDMDataLength,
+                        &sessionInterface) == 0)) {
+
+                        if (sessionInterface != nullptr) {
+
+                            std::string bufferId;
+
+                            // See if there is a buffer available we can use..
+                            if (_administrator.AquireBuffer(bufferId) == true) {
+
+                                SessionImplementation* newEntry = Core::Service<SessionImplementation>::Create<SessionImplementation>(this, keySystem, sessionInterface, callback, bufferId, _defaultSize, &keyIds);
+
+                                session = newEntry;
+                                sessionId = newEntry->SessionId();
+
+                                _adminLock.Lock();
+
+                                _sessionMap.insert (std::pair<std::string, SessionImplementation*>(sessionId, newEntry));
+
+                                _adminLock.Unlock();
+                            }
+                            else {
+                                TRACE_L1("Could not allocate a buffer for session: %s", sessionId.c_str());
+
+                                // TODO: We need to drop the session somehow...
+                            }
+                        } 
+                    }
+                }
+
+                if (session == nullptr) {
                     TRACE_L1("Could not create a DRM session! [%d]", __LINE__);
                 }
 
@@ -654,6 +666,23 @@ namespace Plugin {
             END_INTERFACE_MAP
 
         private:
+            ::OCDM::ISession* FindSession (const CommonEncryptionData& keyIds, const string& keySystem) const {
+                ::OCDM::ISession* result = nullptr;
+
+                std::map<std::string, SessionImplementation*>::const_iterator index(_sessionMap.begin());
+
+                while ( (index != _sessionMap.end()) && (result == nullptr) ) { 
+
+                    if (index->second->IsSupported(keyIds, keySystem) == true) {
+                        result = index->second;
+                        result->AddRef();
+                    }
+                    else {
+                        index++; 
+                    }
+                }
+                return (result);
+            }
             void Remove(SessionImplementation* session, const string& keySystem, CDMi::IMediaKeySession* mediaKeySession ) {
 
                 TRACE_L1("Clean Server Side Session: %p", session);
