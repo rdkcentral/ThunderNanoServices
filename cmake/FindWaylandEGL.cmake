@@ -4,6 +4,8 @@
 #  WAYLAND_EGL_INCLUDE_DIRS - the wayland-egl include directories
 #  WAYLAND_EGL_LIBRARIES - link these to use wayland-egl.
 #
+#  WAYLAND::EGL, the wayland-egl library
+#
 # Copyright (C) 2015 Igalia S.L.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,7 +32,19 @@
 find_package(PkgConfig)
 pkg_check_modules(WAYLAND_EGL wayland-egl)
 
+find_library(WAYLAND_EGL_LIB NAMES wayland-egl
+        HINTS ${WAYLAND_EGL_LIBDIR} ${WAYLAND_EGL_LIBRARY_DIRS})
+
+if(WAYLAND_EGL_FOUND AND NOT TARGET WAYLAND::EGL)
+    add_library(WAYLAND::EGL UNKNOWN IMPORTED)
+    set_target_properties(WAYLAND::EGL PROPERTIES
+            IMPORTED_LOCATION "${WAYLAND_EGL_LIB}"
+            INTERFACE_LINK_LIBRARIES "${WAYLAND_EGL_LIBRARIES}"
+            INTERFACE_COMPILE_OPTIONS "${WAYLAND_EGL_DEFINITIONS}"
+            INTERFACE_INCLUDE_DIRECTORIES "${WAYLAND_EGL_INCLUDE_DIRS}"
+            )
+endif()
+
 include(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(WAYLAND_EGL DEFAULT_MSG WAYLAND_EGL_FOUND)
-
 mark_as_advanced(WAYLAND_EGL_INCLUDE_DIRS WAYLAND_EGL_LIBRARIES)
