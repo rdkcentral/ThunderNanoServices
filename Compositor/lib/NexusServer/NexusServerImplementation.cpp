@@ -115,6 +115,14 @@ namespace Broadcom {
         if (_instance == nullptr) {
             Trace("Start Nexus server...\n");
 
+            if (boxMode != static_cast<uint8_t>(~0)) {
+                // Set box mode using env var.
+                char stringNumber[10];
+                snprintf(stringNumber, sizeof(stringNumber), "%d", boxMode);
+                ::setenv("B_REFSW_BOXMODE", stringNumber, 1);
+                Trace("Set BoxMode to %d\n", boxMode);
+            }
+
             NxClient_GetDefaultJoinSettings(&(_joinSettings));
             strcpy(_joinSettings.name, "NexusServerLocal");
 
@@ -123,13 +131,8 @@ namespace Broadcom {
             NEXUS_GetDefaultMemoryConfigurationSettings(&(_serverSettings.memConfigSettings));
             NEXUS_GetPlatformCapabilities(&(_platformCapabilities));
 
-            if (boxMode != ~0) {
-                // Set box mode using env var.
-                char stringNumber[10];
-                snprintf(stringNumber, sizeof(stringNumber), "%d", boxMode);
-                ::setenv("B_REFSW_BOXMODE", stringNumber, 1);
-            }
-            if ((graphicsHeap > 0) && (graphicsHeap != ~0)) {
+
+            if ((graphicsHeap > 0) && (graphicsHeap != static_cast<uint16_t>(~0))) {
                 Trace("Set graphics heap to %dMB\n", graphicsHeap);
                 _platformSettings.heap[NEXUS_MEMC0_GRAPHICS_HEAP].size = graphicsHeap * 1024 * 1024;
             }
