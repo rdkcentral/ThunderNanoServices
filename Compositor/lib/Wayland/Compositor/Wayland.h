@@ -10,7 +10,7 @@ namespace WPEFramework {
             virtual ~IServer(){};
         };
 
-        IServer* Create(const string& configuration);
+        IServer* Create(PluginHost::IShell* service);
     }
 }
 }

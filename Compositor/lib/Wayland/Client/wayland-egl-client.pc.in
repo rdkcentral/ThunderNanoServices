@@ -8,4 +8,4 @@ Description: A Wayland EGL client wrapper
 Version: 1.0
 Requires: wayland-client wayland-egl
 Cflags: -I${includedir}
-Libs: -L${libdir} -l@target_lib_name@
+Libs: -L${libdir} -l@TARGET@

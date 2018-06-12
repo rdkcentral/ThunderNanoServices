@@ -1,10 +1,13 @@
 #include "Module.h"
 #include "Wayland.h"
-#include "../Client/Client.h"
-#include <interfaces/IResourceCenter.h>
+#include <Client.h>
 #include <interfaces/IComposition.h>
 
 #include <virtualinput/VirtualKeyboard.h>
+
+#ifdef USE_WPEFRAMEWORK_NXSERVER
+#include <PlatformImplementation.h>
+#endif
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -13,21 +16,16 @@ namespace Plugin {
     /* -------------------------------------------------------------------------------------------------------------
      * This is a singleton. Declare all C accessors to this object here
      * ------------------------------------------------------------------------------------------------------------- */
-    class PlatformImplementation;
+    class CompositorImplementation;
 
-    static PlatformImplementation* _implementation = nullptr;
-    static Core::CriticalSection _resourceClientsLock;
-    static Core::CriticalSection _compositionClientsLock;
+    static CompositorImplementation* g_implementation = nullptr;
+    static Core::CriticalSection g_implementationLock;
 
-    /* -------------------------------------------------------------------------------------------------------------
-     *
-     * ------------------------------------------------------------------------------------------------------------- */
-    class PlatformImplementation : public Exchange::IResourceCenter,
-                                   public Exchange::IComposition,
-                                   public Wayland::Display::IProcess {
+    class CompositorImplementation : public Exchange::IComposition,
+                                     public Wayland::Display::IProcess {
     private:
-        PlatformImplementation(const PlatformImplementation&) = delete;
-        PlatformImplementation& operator=(const PlatformImplementation&) = delete;
+        CompositorImplementation(const CompositorImplementation&) = delete;
+        CompositorImplementation& operator=(const CompositorImplementation&) = delete;
 
         /* -------------------------------------------------------------------------------------------------------------
          *  Get some activity in our Display client
@@ -39,7 +37,7 @@ namespace Plugin {
             Job& operator=(const Job&) = delete;
 
         public:
-            Job(PlatformImplementation& parent)
+            Job(CompositorImplementation& parent)
                 : _parent(parent)
             {
             }
@@ -56,7 +54,7 @@ namespace Plugin {
             }
 
         private:
-            PlatformImplementation& _parent;
+            CompositorImplementation& _parent;
         };
 
         /* -------------------------------------------------------------------------------------------------------------
@@ -84,7 +82,6 @@ namespace Plugin {
                 Entry* result(nullptr);
 
                 display->Get(id, surface);
-
 
                 if (surface.IsValid() == true) {
                     result = Core::Service<Entry>::Create<Entry>(&surface, server);
@@ -145,6 +142,40 @@ namespace Plugin {
             Implementation::IServer* _server;
         };
 
+#ifdef USE_WPEFRAMEWORK_NXSERVER
+        class NexusConfig : public Core::JSON::Container {
+        public:
+            NexusConfig(const NexusConfig&);
+            NexusConfig& operator=(const NexusConfig&);
+
+        public:
+            NexusConfig()
+                : Core::JSON::Container()
+                , HardwareDelay(0)
+                , IRMode(NEXUS_IrInputMode_eCirNec)
+                , Authentication(true)
+                , BoxMode(~0)
+                , GraphicsHeap(~0)
+            {
+                Add(_T("hardwareready"), &HardwareDelay);
+                Add(_T("irmode"), &IRMode);
+                Add(_T("authentication"), &Authentication);
+                Add(_T("boxmode"), &BoxMode);
+                Add(_T("graphicsheap"), &GraphicsHeap);
+            }
+            ~NexusConfig()
+            {
+            }
+
+        public:
+            Core::JSON::DecUInt8 HardwareDelay;
+            Core::JSON::DecUInt16 IRMode;
+            Core::JSON::Boolean Authentication;
+            Core::JSON::DecUInt8 BoxMode;
+            Core::JSON::DecUInt16 GraphicsHeap;
+        };
+#endif
+
         class Config : public Core::JSON::Container {
         public:
             Config(const Config&);
@@ -172,7 +203,7 @@ namespace Plugin {
             Sink() = delete;
 
         public:
-            Sink(PlatformImplementation& parent)
+            Sink(CompositorImplementation& parent)
                 : _parent(parent)
             {
             }
@@ -189,62 +220,74 @@ namespace Plugin {
             }
 
         private:
-            PlatformImplementation& _parent;
+            CompositorImplementation& _parent;
         };
 
     public:
-        PlatformImplementation()
+        CompositorImplementation()
             : _config()
-            , _hardwarestate(Exchange::IResourceCenter::UNITIALIZED)
-            , _resourceClients()
             , _compositionClients()
+            , _clients()
             , _server(nullptr)
             , _controller(nullptr)
             , _job(*this)
             , _sink(*this)
             , _surface(nullptr)
             , _service()
+#ifdef USE_WPEFRAMEWORK_NXSERVER
+            , _nxsink(this)
+            , _nxserver(nullptr)
+#endif
         {
             // Register an @Exit, in case we are killed, with an incorrect ref count !!
             if (atexit(CloseDown) != 0) {
-                TRACE(Trace::Information, (("Could not register @exit handler. Error: %d."), errno));
+                TRACE(Trace::Information, (_T("Could not register @exit handler. Error: %d.\n"), errno));
                 exit(EXIT_FAILURE);
             }
 
-            // Wayland can only be instantiated once (it is a process wide singleton !!!!)
-            ASSERT(_implementation == nullptr);
+            // make sure we have one compositor in the system
+            ASSERT(g_implementation == nullptr);
 
-            _identifier[0] = 0;
-            _implementation = this;
+            g_implementation = this;
         }
 
-        ~PlatformImplementation()
-        {
-            TRACE(Trace::Information, (_T("Stopping Wayland")));
+        ~CompositorImplementation() {
+            TRACE(Trace::Information, (_T("Stopping Wayland\n")));
 
             if (_surface != nullptr) {
                 delete _surface;
             }
 
-            if (_server != nullptr)
+            if (_server != nullptr) {
                 delete _server;
+            }
 
-            if (_controller != nullptr)
+            if (_controller != nullptr) {
                 // Exit Wayland loop
                 _controller->Signal();
-            delete _controller;
+                delete _controller;
+            }
 
-            if (_service != nullptr)
+#ifdef USE_WPEFRAMEWORK_NXSERVER
+            if (_nxserver != nullptr) {
+                delete _nxserver;
+            }
+#endif
+
+            if (_service != nullptr) {
                 _service->Release();
+            }
         }
 
     public:
-        BEGIN_INTERFACE_MAP(PlatformImplementation)
-        INTERFACE_ENTRY(Exchange::IResourceCenter)
+        BEGIN_INTERFACE_MAP(CompositorImplementation)
         INTERFACE_ENTRY(Exchange::IComposition)
         END_INTERFACE_MAP
 
     public:
+        // -------------------------------------------------------------------------------------------------------
+        //   IComposition methods
+        // -------------------------------------------------------------------------------------------------------
         /* virtual */ uint32_t Configure(PluginHost::IShell* service)
         {
             _service = service;
@@ -254,13 +297,214 @@ namespace Plugin {
 
             ASSERT(_server == nullptr);
 
+#ifdef USE_WPEFRAMEWORK_NXSERVER
+            // If we run on a broadcom platform first start the nxserver, then we start the compositor...
+            ASSERT(_nxserver == nullptr);
+
+            if (_nxserver != nullptr) {
+                delete _nxserver;
+            }
+
+            NexusConfig nexusConfig;
+            nexusConfig.FromString(_service->ConfigLine());
+
+            _nxserver = new Broadcom::Platform(
+                    &_nxsink,
+                    nexusConfig.Authentication.Value(),
+                    nexusConfig.HardwareDelay.Value(),
+                    nexusConfig.GraphicsHeap.Value(),
+                    nexusConfig.BoxMode.Value(),
+                    nexusConfig.IRMode.Value()
+                    );
+
+            ASSERT(_nxserver != nullptr);
+#else
+            StartImplementation();
+#endif
+            return ((_server != nullptr) && (_controller != nullptr)) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE;
+        }
+        /* virtual */ void Register(Exchange::IComposition::INotification* notification)
+        {
+            // Do not double register a notification sink.
+            g_implementationLock.Lock();
+            ASSERT(std::find(_compositionClients.begin(), _compositionClients.end(), notification) == _compositionClients.end());
+
+            notification->AddRef();
+
+            _compositionClients.push_back(notification);
+
+            std::list<Entry*>::iterator index(_clients.begin());
+
+            while (index != _clients.end()) {
+
+                if ((*index)->IsActive() == true) {
+                    notification->Attached(*index);
+                }
+                index++;
+            }
+            g_implementationLock.Unlock();
+        }
+        /* virtual */ void Unregister(Exchange::IComposition::INotification* notification)
+        {
+            g_implementationLock.Lock();
+            std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_compositionClients.begin(), _compositionClients.end(), notification));
+
+            // Do not un-register something you did not register.
+            ASSERT(index != _compositionClients.end());
+
+            if (index != _compositionClients.end()) {
+
+                _compositionClients.erase(index);
+
+                notification->Release();
+            }
+            g_implementationLock.Unlock();
+        }
+        /* virtual */ Exchange::IComposition::IClient* Client(const string& name)
+        {
+            Exchange::IComposition::IClient* result = nullptr;
+
+            g_implementationLock.Lock();
+
+            std::list<Entry*>::iterator index(_clients.begin());
+
+            while ((index != _clients.end()) && ((*index)->Name() != name)) {
+                index++;
+            }
+
+            if ((index != _clients.end()) && ((*index)->IsActive() == true)) {
+                result = (*index);
+                result->AddRef();
+            }
+            g_implementationLock.Unlock();
+
+            return (result);
+        }
+        /* virtual */ Exchange::IComposition::IClient* Client(const uint8_t id)
+        {
+            uint8_t modifiableId = id;
+            Exchange::IComposition::IClient* result = nullptr;
+
+            g_implementationLock.Lock();
+            std::list<Entry*>::iterator index(_clients.begin());
+            while ((index != _clients.end()) && (modifiableId != 0)) {
+                if ((*index)->IsActive() == true) {
+
+                    modifiableId--;
+                }
+                index++;
+            }
+            if (index != _clients.end()) {
+                result = (*index);
+                result->AddRef();
+            }
+            g_implementationLock.Unlock();
+
+            return (result);
+        }
+        /* virtual */ void SetResolution(const Exchange::IComposition::ScreenResolution format)
+        {
+            /*TODO: TO BE IMPLEMENTED*/
+        }
+        /* virtual */ const ScreenResolution GetResolution()
+        {
+            /*TODO: TO BE IMPLEMENTED*/
+            return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
+        }
+
+        // -------------------------------------------------------------------------------------------------------
+        //   IProcess methods
+        // -------------------------------------------------------------------------------------------------------
+        /* virtual */ bool Dispatch()
+        {
+            return (true);
+        }
+
+    private:
+        void Add(const uint32_t id)
+        {
+            std::list<Entry*>::iterator index(_clients.begin());
+
+            while ((index != _clients.end()) && (id != (*index)->Id())) {
+                index++;
+            }
+
+            if (index == _clients.end()) {
+                Entry* entry(Entry::Create(_server, _controller, id));
+
+                _clients.push_back(entry);
+                TRACE(Trace::Information, (_T("Added client id[%d] name[%s].\n"), entry->Id(), entry->Name().c_str()));
+
+                if (_compositionClients.size() > 0) {
+
+                    std::list<Exchange::IComposition::INotification*>::iterator index(_compositionClients.begin());
+
+                    while (index != _compositionClients.end()) {
+                        (*index)->Attached(entry);
+                        index++;
+                    }
+                }
+            }
+            else {
+                TRACE(Trace::Information, (_T("[%s:%d] %s Client surface id found I guess we should update the the entry\n"), __FILE__, __LINE__, __PRETTY_FUNCTION__));
+            }
+        }
+        void Remove(const uint32_t id)
+        {
+            std::list<Entry*>::iterator index(_clients.begin());
+
+            while ((index != _clients.end()) && (id != (*index)->Id())) {
+                index++;
+            }
+
+            if (index != _clients.end()) {
+                Entry* entry(*index);
+
+                _clients.erase(index);
+
+                TRACE(Trace::Information, (_T("Removed client id[%d] name[%s].\n"), entry->Id(), entry->Name().c_str()));
+
+                if (_compositionClients.size() > 0) {
+                    std::list<Exchange::IComposition::INotification*>::iterator index(_compositionClients.begin());
+
+                    while (index != _compositionClients.end()) {
+                        (*index)->Detached(entry);
+                        index++;
+                    }
+                }
+
+                entry->Release();
+            }
+        }
+        void Process()
+        {
+            TRACE(Trace::Information, (_T("[%s:%d] Starting wayland loop.\n"), __FILE__, __LINE__));
+            _controller->Process(this);
+            TRACE(Trace::Information, (_T("[%s:%d] Exiting wayland loop.\n"), __FILE__, __LINE__));
+        }
+        static void CloseDown()
+        {
+            // Make sure we get exclusive access to the Destruction of this Resource Center.
+            g_implementationLock.Lock();
+
+            // Seems we are destructed.....If we still have a pointer to the implementation, Kill it..
+            if (g_implementation != nullptr) {
+                delete g_implementation;
+                g_implementation = nullptr;
+            }
+            g_implementationLock.Unlock();
+        }
+        void StartImplementation()
+        {
+            ASSERT(_service != nullptr);
+
             // As there are currently two flavors of the potential Wayland Compositor Implementations, e.g.
             // Westeros and Weston, we do not want to decide here which one we instantiate. We have given both
             // implemntations a "generic" handle that starts the compositor. Here we just instantiate the
             // one that is build together with this so, which might be westeros (if Westeros.cpp is compiled and
             // linked with this so) or weston, if someone creates, in the near future a Westonr.cpp to be
             // compiled with this so, in stead of the Westeros.cpp :-)
-            _server = Implementation::Create(_service->ConfigLine());
+            _server = Implementation::Create(_service);
 
             ASSERT(_server != nullptr);
 
@@ -278,286 +522,80 @@ namespace Plugin {
                 // Firing up the compositor controllerr.
                 _job.Run();
 
-                TRACE(Trace::Information, (_T("Compositor initialized")));
-                _hardwarestate = Exchange::IResourceCenter::OPERATIONAL;
-                Notify();
-                SetEventPlatformReady();
-            }
+                TRACE(Trace::Information, (_T("Compositor initialized\n")));
 
-            return ((_server != nullptr) && (_controller != nullptr)) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE;
-        }
-        void SetEventPlatformReady()
-        {
-            // The platform appears to be ready, set the event
-            PluginHost::ISubSystem* systemInfo = _service->QueryInterfaceByCallsign<PluginHost::ISubSystem>(string());
+                PluginHost::ISubSystem* subSystems = _service->SubSystems();
 
-            ASSERT(systemInfo != nullptr);
+                ASSERT(subSystems != nullptr);
 
-            if ((systemInfo != nullptr) && (systemInfo->IsActive(PluginHost::ISubSystem::PLATFORM) == false)) {
-                systemInfo->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
-            }
-
-            if (systemInfo != nullptr) {
-                systemInfo->Release();
-            }
-        }
-
-
-        // -------------------------------------------------------------------------------------------------------
-        //   IResourceCenter methods
-        // -------------------------------------------------------------------------------------------------------
-        /* virtual */ void Register(Exchange::IResourceCenter::INotification* notification)
-        {
-            // Do not double register a notification sink.
-            _resourceClientsLock.Lock();
-            ASSERT(std::find(_resourceClients.begin(), _resourceClients.end(), notification) == _resourceClients.end());
-
-            notification->AddRef();
-
-            _resourceClients.push_back(notification);
-
-            notification->StateChange(_hardwarestate);
-            _resourceClientsLock.Unlock();
-        }
-        /* virtual */ void Unregister(Exchange::IResourceCenter::INotification* notification)
-        {
-            _resourceClientsLock.Lock();
-            std::list<Exchange::IResourceCenter::INotification*>::iterator index(std::find(_resourceClients.begin(), _resourceClients.end(), notification));
-
-            // Do not un-register something you did not register.
-            ASSERT(index != _resourceClients.end());
-
-            notification->Release();
-
-            _resourceClients.erase(index);
-            _resourceClientsLock.Unlock();
-        }
-        /* virtual */ Exchange::IResourceCenter::hardware_state HardwareState() const
-        {
-            return (_hardwarestate);
-        }
-        /* virtual */ uint8_t Identifier(const uint8_t maxLength, uint8_t buffer[]) const
-        {
-            // TODO: For now use RawDeviceId, this needs to move or change in future.
-            _resourceClientsLock.Lock();
-
-            if (_identifier[0] == 0) {
-                const uint8_t* id(Core::SystemInfo::Instance().RawDeviceId());
-
-                _identifier[0] = ((sizeof(_identifier) - 1) < id[0] ? (sizeof(_identifier) - 1) : id[0]);
-                memcpy(&(_identifier[1]), &id[1], _identifier[0]);
-            }
-
-            _resourceClientsLock.Unlock();
-
-            ::memcpy(buffer, &_identifier[1], (maxLength >= _identifier[0] ? _identifier[0] : maxLength));
-            return _identifier[0];
-        }
-
-        // -------------------------------------------------------------------------------------------------------
-        //   IComposition methods
-        // -------------------------------------------------------------------------------------------------------
-        /* virtual */ void Register(Exchange::IComposition::INotification* notification)
-        {
-            // Do not double register a notification sink.
-            _compositionClientsLock.Lock();
-            ASSERT(std::find(_compositionClients.begin(), _compositionClients.end(), notification) == _compositionClients.end());
-
-            notification->AddRef();
-
-            _compositionClients.push_back(notification);
-
-            std::list<Entry*>::iterator index(_clients.begin());
-
-            while (index != _clients.end()) {
-
-                if ((*index)->IsActive() == true) {
-                    notification->Attached(*index);
+                if (subSystems != nullptr) {
+                    // Set Graphics event. We need to set up a handler for this at a later moment
+                    subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
+                    subSystems->Release();
                 }
-                index++;
             }
-            _compositionClientsLock.Unlock();
-        }
-        /* virtual */ void Unregister(Exchange::IComposition::INotification* notification)
-        {
-            _compositionClientsLock.Lock();
-            std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_compositionClients.begin(), _compositionClients.end(), notification));
-
-            // Do not un-register something you did not register.
-            ASSERT(index != _compositionClients.end());
-
-            if (index != _compositionClients.end()) {
-
-                _compositionClients.erase(index);
-
-                notification->Release();
-            }
-            _compositionClientsLock.Unlock();
         }
 
-        /* virtual */ Exchange::IComposition::IClient* Client(const string& name)
-        {
-            Exchange::IComposition::IClient* result = nullptr;
-
-            _compositionClientsLock.Lock();
-
-            std::list<Entry*>::iterator index(_clients.begin());
-
-            while ((index != _clients.end()) && ((*index)->Name() != name)) {
-                index++;
-            }
-
-            if ((index != _clients.end()) && ((*index)->IsActive() == true)) {
-                result = (*index);
-                result->AddRef();
-            }
-            _compositionClientsLock.Unlock();
-
-            return (result);
-        }
-        /* virtual */ Exchange::IComposition::IClient* Client(const uint8_t id)
-        {
-            uint8_t modifiableId = id;
-            Exchange::IComposition::IClient* result = nullptr;
-
-            _compositionClientsLock.Lock();
-            std::list<Entry*>::iterator index(_clients.begin());
-            while ((index != _clients.end()) && (modifiableId != 0)) {
-                if ((*index)->IsActive() == true) {
-
-                    modifiableId--;
-                }
-                index++;
-            }
-            if (index != _clients.end()) {
-                result = (*index);
-                result->AddRef();
-            }
-            _compositionClientsLock.Unlock();
-
-            return (result);
-        }
-
-        // -------------------------------------------------------------------------------------------------------
-        //   IProcess methods
-        // -------------------------------------------------------------------------------------------------------
-        /* virtual */ bool Dispatch()
-        {
-            printf("DISPATCH [%s:%d] %s.\n", __FILE__, __LINE__, __PRETTY_FUNCTION__);
-            return (true);
-        }
-
+#ifdef USE_WPEFRAMEWORK_NXSERVER
     private:
-        void RecursiveList(std::list<Exchange::IResourceCenter::INotification*>::iterator& index)
+        PluginHost::ISubSystem* SubSystems()
         {
-            Exchange::IResourceCenter::INotification* callee(*index);
-
-            ASSERT(callee != nullptr);
-
-            if (callee != nullptr) {
-                callee->AddRef();
-
-                if (++index != _resourceClients.end()) {
-                    RecursiveList(index);
-                }
-                else {
-                    _resourceClientsLock.Unlock();
-                }
-
-                callee->StateChange(_hardwarestate);
-                callee->Release();
-            }
+            return _service->SubSystems();
         }
-        void Notify()
-        {
-            _resourceClientsLock.Lock();
-            if (_resourceClients.size() > 0) {
-                std::list<Exchange::IResourceCenter::INotification*>::iterator index(_resourceClients.begin());
-                RecursiveList(index);
+
+
+        class NXSink : public WPEFramework::Broadcom::Platform::ICallback {
+        private:
+            NXSink() = delete;
+            NXSink(const NXSink&) = delete;
+            NXSink& operator=(const NXSink&) = delete;
+
+        public:
+            explicit NXSink(CompositorImplementation* parent)
+                : _parent(*parent)
+            {
+                ASSERT(parent != nullptr);
             }
-            else {
-                _resourceClientsLock.Unlock();
-            }
-        }
-        void Add(const uint32_t id)
-        {
-            std::list<Entry*>::iterator index(_clients.begin());
-
-            while ((index != _clients.end()) && (id != (*index)->Id())) {
-                index++;
+            ~NXSink()
+            {
             }
 
-            if (index == _clients.end()) {
-                Entry* entry(Entry::Create(_server, _controller, id));
+        public:
+            // -------------------------------------------------------------------------------------------------------
+            //   Broadcom::Platform::::ICallback methods
+            // -------------------------------------------------------------------------------------------------------
+            /* virtual */ void Attached(const char clientName[])
+            { /* intentionally left empty */
+            }
 
-                _clients.push_back(entry);
-                TRACE(Trace::Information, (_T("Added client id[%d] name[%s]."), entry->Id(), entry->Name().c_str()));
+            /* virtual */ void Detached(const char clientName[])
+            { /* intentionally left empty */
+            }
 
-                if (_compositionClients.size() > 0) {
+            /* virtual */ virtual void StateChange(Broadcom::Platform::server_state state)
+            {
+                if (state == Broadcom::Platform::OPERATIONAL) {
+                    PluginHost::ISubSystem* subSystems = _parent.SubSystems();
 
-                    std::list<Exchange::IComposition::INotification*>::iterator index(_compositionClients.begin());
+                    ASSERT(subSystems != nullptr);
 
-                    while (index != _compositionClients.end()) {
-                        (*index)->Attached(entry);
-                        index++;
+                    if (subSystems != nullptr) {
+                        // Set Graphics event. We need to set up a handler for this at a later moment
+                        subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
+                        subSystems->Release();
                     }
+
+                    _parent.StartImplementation();
                 }
             }
-            else {
-                printf("[%s:%d] %s Client surface id found I guess we should update the the entry\n", __FILE__, __LINE__, __PRETTY_FUNCTION__);
-            }
-        }
-        void Remove(const uint32_t id)
-        {
-            std::list<Entry*>::iterator index(_clients.begin());
 
-            while ((index != _clients.end()) && (id != (*index)->Id())) {
-                index++;
-            }
-
-            if (index != _clients.end()) {
-                Entry* entry(*index);
-
-                _clients.erase(index);
-
-                TRACE(Trace::Information, (_T("Removed client id[%d] name[%s]."), entry->Id(), entry->Name().c_str()));
-
-                if (_compositionClients.size() > 0) {
-                    std::list<Exchange::IComposition::INotification*>::iterator index(_compositionClients.begin());
-
-                    while (index != _compositionClients.end()) {
-                        (*index)->Detached(entry);
-                        index++;
-                    }
-                }
-
-                entry->Release();
-            }
-        }
-        void Process()
-        {
-            printf("[%s:%d] Starting wayland loop.\n", __FILE__, __LINE__);
-            _controller->Process(this);
-            printf("[%s:%d] Exiting wayland loop.\n", __FILE__, __LINE__);
-        }
-        static void CloseDown()
-        {
-            // Make sure we get exclusive access to the Destruction of this Resource Center.
-            _resourceClientsLock.Lock();
-
-            // Seems we are destructed.....If we still have a pointer to the implementation, Kill it..
-            if (_implementation != nullptr) {
-                delete _implementation;
-                _implementation = nullptr;
-            }
-            _resourceClientsLock.Unlock();
-        }
+        private:
+            CompositorImplementation& _parent;
+        };
+#endif
 
     private:
         Config _config;
-        hardware_state _hardwarestate;
-        mutable uint8_t _identifier[16];
-        std::list<Exchange::IResourceCenter::INotification*> _resourceClients;
         std::list<Exchange::IComposition::INotification*> _compositionClients;
         std::list<Entry*> _clients;
         Implementation::IServer* _server;
@@ -566,9 +604,13 @@ namespace Plugin {
         Sink _sink;
         Wayland::Display::Surface* _surface;
         PluginHost::IShell* _service;
+#ifdef USE_WPEFRAMEWORK_NXSERVER
+        NXSink _nxsink;
+        Broadcom::Platform* _nxserver;
+#endif
     };
 
-    SERVICE_REGISTRATION(PlatformImplementation, 1, 0);
+    SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
 
 } // namespace Plugin
 

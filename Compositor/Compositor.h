@@ -2,7 +2,6 @@
 #define __PLUGIN_COMPOSITOR_H
 
 #include "Module.h"
-#include <interfaces/IResourceCenter.h>
 #include <interfaces/IComposition.h>
 
 namespace WPEFramework {
@@ -126,6 +125,7 @@ namespace Plugin {
                 , Clients()
             {
                 Add(_T("clients"), &Clients);
+                Add(_T("resolution"), &Resolution);
             }
 
             virtual ~Data()
@@ -134,6 +134,7 @@ namespace Plugin {
 
         public:
             Core::JSON::ArrayType<Core::JSON::String> Clients;
+            Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
         };
 
     public:
@@ -144,7 +145,6 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(Compositor)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
-        INTERFACE_AGGREGATE(Exchange::IResourceCenter, _resourceCenter)
         INTERFACE_AGGREGATE(Exchange::IComposition, _composition)
         END_INTERFACE_MAP
 
@@ -167,6 +167,8 @@ namespace Plugin {
         void Clients(Core::JSON::ArrayType<Core::JSON::String>& clients) const;
         void Kill(const string& client) const;
         void Opacity(const string& client, const uint32_t value) const;
+        void SetResolution(const Exchange::IComposition::ScreenResolution) const;
+        const Exchange::IComposition::ScreenResolution GetResolution() const;
         void Visible(const string& client, const bool visible) const;
         void Geometry(const string& client, const uint32_t x, const uint32_t y, const uint32_t width, const uint32_t height) const;
         void Top(const string& client) const;
@@ -176,7 +178,6 @@ namespace Plugin {
         mutable Core::CriticalSection _adminLock;
         uint8_t _skipURL;
         Core::Sink<Notification> _notification;
-        Exchange::IResourceCenter* _resourceCenter;
         Exchange::IComposition* _composition;
         PluginHost::IShell* _service;
         uint32_t _pid;

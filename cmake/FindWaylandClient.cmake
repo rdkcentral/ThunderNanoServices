@@ -1,9 +1,11 @@
 # - Try to find Wayland.
 # Once done, this will define
 #
-#  WAYLAND_FOUND - system has Wayland.
-#  WAYLAND_INCLUDE_DIRS - the Wayland include directories
-#  WAYLAND_LIBRARIES - link these to use Wayland.
+#  WAYLANDCLIENT_FOUND - system has Wayland.
+#  WAYLANDCLIENT_INCLUDE_DIRS - the Wayland include directories
+#  WAYLANDCLIENT_LIBRARIES - link these to use Wayland.
+#
+#  WAYLAND::CLIENT, the wayland client library
 #
 # Copyright (C) 2014 Igalia S.L.
 #
@@ -29,7 +31,21 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 find_package(PkgConfig)
-pkg_check_modules(WAYLAND wayland-client>=1.2 wayland-server)
+pkg_check_modules(WAYLANDCLIENT wayland-client>=1.2 )
+
+find_library(WAYLANDCLIENT_LIB NAMES wayland-client
+        HINTS ${WAYLANDCLIENT_LIBDIR} ${WAYLANDCLIENT_LIBRARY_DIRS})
+
+if(WAYLANDCLIENT_FOUND AND NOT TARGET WAYLAND::CLIENT)
+    add_library(WAYLAND::CLIENT UNKNOWN IMPORTED)
+    set_target_properties(WAYLAND::CLIENT PROPERTIES
+            IMPORTED_LOCATION "${WAYLANDCLIENT_LIB}"
+            INTERFACE_LINK_LIBRARIES "${WAYLANDCLIENT_LIBRARIES}"
+            INTERFACE_COMPILE_OPTIONS "${WAYLANDCLIENT_CFLAGS_OTHER}"
+            INTERFACE_INCLUDE_DIRECTORIES "${WAYLANDCLIENT_INCLUDE_DIRS}"
+            )
+endif()
 
 include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(WAYLAND DEFAULT_MSG WAYLAND_FOUND)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(WAYLAND DEFAULT_MSG WAYLANDCLIENT_FOUND)
+mark_as_advanced(WAYLANDCLIENT_INCLUDE_DIRS WAYLANDCLIENT_LIBRARIES)

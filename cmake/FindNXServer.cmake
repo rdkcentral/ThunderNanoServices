@@ -1,12 +1,12 @@
-# - Try to find wayland-egl.
-# Once done, this will define
+# - Try to find BroadCom RefSW.
+# Once done this will define
+#  BCMREFSW_FOUND - System has Nexus
+#  BCMREFSW_INCLUDE_DIRS - The Nexus include directories
 #
-#  WAYLAND_EGL_INCLUDE_DIRS - the wayland-egl include directories
-#  WAYLAND_EGL_LIBRARIES - link these to use wayland-egl.
+#  All variable from platform_app.inc are available except:
+#  - NEXUS_PLATFORM_VERSION_NUMBER.
 #
-#  WAYLAND::EGL, the wayland-egl library
-#
-# Copyright (C) 2015 Igalia S.L.
+# Copyright (C) 2015 Metrological.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -29,22 +29,25 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-find_package(PkgConfig)
-pkg_check_modules(WAYLAND_EGL wayland-egl)
+find_library(LIBNXSERVER_LIBRARY NAMES libnxserver.a)
 
-find_library(WAYLAND_EGL_LIB NAMES wayland-egl
-        HINTS ${WAYLAND_EGL_LIBDIR} ${WAYLAND_EGL_LIBRARY_DIRS})
-
-if(WAYLAND_EGL_FOUND AND NOT TARGET WAYLAND::EGL)
-    add_library(WAYLAND::EGL UNKNOWN IMPORTED)
-    set_target_properties(WAYLAND::EGL PROPERTIES
-            IMPORTED_LOCATION "${WAYLAND_EGL_LIB}"
-            INTERFACE_LINK_LIBRARIES "${WAYLAND_EGL_LIBRARIES}"
-            INTERFACE_COMPILE_OPTIONS "${WAYLAND_EGL_DEFINITIONS}"
-            INTERFACE_INCLUDE_DIRECTORIES "${WAYLAND_EGL_INCLUDE_DIRS}"
-            )
-endif()
+find_path(LIBNXSERVER_INCLUDE_DIR refsw/nxserverlib.h
+        PATHS usr/include/
+        )
 
 include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(WAYLAND_EGL DEFAULT_MSG WAYLAND_EGL_FOUND)
-mark_as_advanced(WAYLAND_EGL_INCLUDE_DIRS WAYLAND_EGL_LIBRARIES)
+
+find_package_handle_standard_args(LIBNEXUS DEFAULT_MSG LIBNXSERVER_INCLUDE_DIR LIBNXSERVER_LIBRARY)
+
+mark_as_advanced(LIBNXSERVER_INCLUDE_DIR LIBNXSERVER_LIBRARY)
+
+if(NOT TARGET NEXUS::NXSERVER)
+    add_library(NEXUS::NXSERVER UNKNOWN IMPORTED)
+    if(EXISTS "${LIBNEXUS_LIBRARY}")
+        set_target_properties(NEXUS::NXSERVER PROPERTIES
+                IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+                IMPORTED_LOCATION "${LIBNXSERVER_LIBRARY}"
+                INTERFACE_INCLUDE_DIRECTORIES "${LIBNXSERVER_INCLUDE_DIR}"
+                    )
+    endif()
+endif()

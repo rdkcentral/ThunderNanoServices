@@ -204,13 +204,15 @@ namespace Implementation {
         Core::JSON::DecUInt32 Height;
     };
 
-    IServer* Create(const string& configLine)
+    IServer* Create(PluginHost::IShell* service)
     {
+        ASSERT(service != nullptr);
+
         Config config;
-        config.FromString(configLine);
+        config.FromString(service->ConfigLine());
 
         return Westeros::Compositor::Create(config.Renderer.Value(), config.Display.Value(), config.Width.Value(), config.Height.Value());
     }
-};
-} // namespace Composition
+} // namespace Implementation
+}
 } // namespace WPEFramework

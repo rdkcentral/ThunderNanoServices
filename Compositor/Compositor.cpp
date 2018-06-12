@@ -1,17 +1,31 @@
 #include "Compositor.h"
 
 namespace WPEFramework {
+
+ENUM_CONVERSION_BEGIN(Exchange::IComposition::ScreenResolution)
+
+    { Exchange::IComposition::ScreenResolution_Unknown,   _TXT("Unknown")   },
+    { Exchange::IComposition::ScreenResolution_480i,      _TXT("480i")      },
+    { Exchange::IComposition::ScreenResolution_480p,      _TXT("480p")      },
+    { Exchange::IComposition::ScreenResolution_720p,      _TXT("720p")      },
+    { Exchange::IComposition::ScreenResolution_720p50Hz,  _TXT("720p50Hz")  },
+    { Exchange::IComposition::ScreenResolution_1080p24Hz, _TXT("1080p24Hz") },
+    { Exchange::IComposition::ScreenResolution_1080i50Hz, _TXT("1080i50Hz") },
+    { Exchange::IComposition::ScreenResolution_1080p50Hz, _TXT("1080p50Hz") },
+    { Exchange::IComposition::ScreenResolution_1080p60Hz, _TXT("1080p60Hz") },
+
+ENUM_CONVERSION_END(Exchange::IComposition::ScreenResolution)
+
 namespace Plugin {
     SERVICE_REGISTRATION(Compositor, 1, 0);
 
-    static Core::ProxyPoolType<Web::Response> responseFactory(4);
-    static Core::ProxyPoolType<Web::JSONBodyType<Compositor::Data> > jsonResponseFactory(4);
+    static Core::ProxyPoolType<Web::Response> responseFactory(2);
+    static Core::ProxyPoolType<Web::JSONBodyType<Compositor::Data> > jsonResponseFactory(2);
 
     Compositor::Compositor()
         : _adminLock()
         , _skipURL()
         , _notification(this)
-        , _resourceCenter(nullptr)
         , _composition(nullptr)
         , _service(nullptr)
         , _pid()
@@ -29,7 +43,6 @@ namespace Plugin {
         string result;
 
         ASSERT(service != nullptr);
-        ASSERT(_resourceCenter == nullptr);
 
         Compositor::Config config;
         config.FromString(service->ConfigLine());
@@ -48,8 +61,8 @@ namespace Plugin {
 
         if (config.OutOfProcess.Value() == true) {
             printf("Compositor start out-of-process\n"); fflush(stdout);
-            _resourceCenter = service->Instantiate<Exchange::IResourceCenter>(
-                2000, _T("PlatformImplementation"), static_cast<uint32_t>(~0), _pid, config.Locator.Value());
+            _composition = service->Instantiate<Exchange::IComposition>(
+                2000, _T("CompositorImplementation"), static_cast<uint32_t>(~0), _pid, config.Locator.Value());
             TRACE(Trace::Information,
                 (_T("Compositor started out of process %s implementation"), config.Locator.Value().c_str()));
         }
@@ -62,8 +75,8 @@ namespace Plugin {
                 resource = Core::Library(path.c_str());
             }
             if (resource.IsLoaded() == true) {
-                _resourceCenter = Core::ServiceAdministrator::Instance().Instantiate<Exchange::IResourceCenter>(
-                    resource, _T("PlatformImplementation"), static_cast<uint32_t>(~0));
+                _composition = Core::ServiceAdministrator::Instance().Instantiate<Exchange::IComposition>(
+                    resource, _T("CompositorImplementation"), static_cast<uint32_t>(~0));
                 TRACE(Trace::Information,
                     (_T("Compositor started in process %s implementation"), config.Locator.Value().c_str()));
             }
@@ -72,28 +85,15 @@ namespace Plugin {
             }
         }
 
-        if (_resourceCenter == nullptr) {
+        if (_composition == nullptr) {
             message = "Instantiating the compositor failed. Could not load: " + config.Locator.Value();
         }
         else {
             _service = service;
 
-            _composition = _resourceCenter->QueryInterface<Exchange::IComposition>();
-
             _notification.Initialize(service, _composition);
 
-            _resourceCenter->Configure(_service);
-
-            // We would actually need to handle setting the Graphics event in the PlatformImplementation. For now, we do it here.
-            PluginHost::ISubSystem* subSystems = _service->SubSystems();
-
-            ASSERT(subSystems != nullptr);
-
-            if (subSystems != nullptr) {
-                // Set Graphics event. We need to set up a handler for this at a later moment
-                subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
-                subSystems->Release();
-            }
+            _composition->Configure(_service);
         }
 
         // On succes return empty, to indicate there is no error text.
@@ -103,7 +103,7 @@ namespace Plugin {
     {
         ASSERT(service == _service);
 
-        // We would actually need to handle setting the Graphics event in the PlatformImplementation. For now, we do it here.
+        // We would actually need to handle setting the Graphics event in the CompositorImplementation. For now, we do it here.
         PluginHost::ISubSystem* subSystems = _service->SubSystems();
 
         ASSERT(subSystems != nullptr);
@@ -113,10 +113,10 @@ namespace Plugin {
             subSystems->Set(PluginHost::ISubSystem::NOT_GRAPHICS, nullptr);
             subSystems->Release();
         }
- 
-        if (_resourceCenter != nullptr) {
-            _resourceCenter->Release();
-            _resourceCenter = nullptr;
+
+        if (_composition != nullptr) {
+            _composition->Release();
+            _composition = nullptr;
         }
 
         _notification.Deinitialize();
@@ -146,65 +146,96 @@ namespace Plugin {
 
         // <GET> ../
         if (request.Verb == Web::Request::HTTP_GET) {
-            Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
+
             // http://<ip>/Service/Compositor/
-            if (index.Next() == false) {
+            // http://<ip>/Service/Compositor/Clients
+            if (index.Next() == false || index.Current() == "Clients") {
+                Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
                 Clients(response->Clients);
+                result->Body(Core::proxy_cast<Web::IBody>(response));
             }
 
-            // http://<ip>/Service/Compositor/Clients
-            else if (index.Current() == "Clients") {
-                Clients(response->Clients);
+            // http://<ip>/Service/Compositor/Resolution
+            else if (index.Current() == "Resolution") {
+                Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
+                response->Resolution = GetResolution();
+                result->Body(Core::proxy_cast<Web::IBody>(response));
             }
 
             result->ContentType = Web::MIMETypes::MIME_JSON;
-            result->Body(Core::proxy_cast<Web::IBody>(response));
         }
         else if (request.Verb == Web::Request::HTTP_POST) {
             Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
 
             if (index.Next() == true) {
-                string clientName(index.Current().Text());
+                if (index.Current() == _T("Resolution")) { /* http://<ip>/Service/Compositor/Resolution/3 --> 720p*/
+                    if (index.Next() == true) {
+                        Exchange::IComposition::ScreenResolution format (Exchange::IComposition::ScreenResolution_Unknown);
+                        uint32_t number(Core::NumberType<uint32_t>(index.Current()).Value());
 
-                if (index.Next() == true) {
-                    if (index.Current().Text() == "Kill") { /* http://<ip>/Service/Compositor/Netflix/Kill */
-                        Kill(clientName);
-                    }
-                    if (index.Current().Text() == "Opacity" && index.Next() == true) { /* http://<ip>/Service/Compositor/Netflix/Opacity/128 */
-                        const uint32_t opacity(std::stoi(index.Current().Text()));
-                        Opacity(clientName, opacity);
-                    }
-                    if (index.Current().Text() == "Visible" && index.Next() == true) { /* http://<ip>/Service/Compositor/Netflix/Visible/Hide */
-                        if (index.Current().Text() == _T("Hide")) {
-                            Visible(clientName, false);
+                        if ((number != 0) && (number < 100)) {
+                             format = static_cast<Exchange::IComposition::ScreenResolution>(number);
                         }
-                        else if (index.Current().Text() == _T("Show")) {
-                            Visible(clientName, true);
-                        }
-                    }
-                    if (index.Current().Text() == "Geometry") { /* http://<ip>/Service/Compositor/Netflix/Geometry/0/0/1280/720 */
-                        uint32_t x(0), y(0), width(0), height(0);
+                        else {
+                            Core::EnumerateType<Exchange::IComposition::ScreenResolution> value (index.Current());
 
-                        if (index.Next() == true) {
-                            x = std::stoi(index.Current().Text());
+                            if (value.IsSet() == true) {
+                                format = value.Value();
+                            }
                         }
-                        if (index.Next() == true) {
-                            y = std::stoi(index.Current().Text());
+                        if (format != Exchange::IComposition::ScreenResolution_Unknown) {
+                            SetResolution(format);
                         }
-                        if (index.Next() == true) {
-                            width = std::stoi(index.Current().Text());
+                        else {
+                            result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                            result->Message = _T("invalid parameter for resolution: ") + index.Current().Text();
                         }
-                        if (index.Next() == true) {
-                            height = std::stoi(index.Current().Text());
-                        }
+                    }
+                }
+                else {
+                    string clientName(index.Current().Text());
 
-                        Geometry(clientName, x, y, width, height);
-                    }
-                    if (index.Current().Text() == "Top") { /* http://<ip>/Service/Compositor/Netflix/Top */
-                        Top(clientName);
-                    }
-                    if (index.Current().Text() == "Input") { /* http://<ip>/Service/Compositor/Netflix/Input */
-                        Input(clientName);
+                    if (index.Next() == true) {
+                        if (index.Current() == _T("Kill")) { /* http://<ip>/Service/Compositor/Netflix/Kill */
+                            Kill(clientName);
+                        }
+                        if (index.Current() == _T("Opacity") &&
+                            index.Next() == true) { /* http://<ip>/Service/Compositor/Netflix/Opacity/128 */
+                            const uint32_t opacity(std::stoi(index.Current().Text()));
+                            Opacity(clientName, opacity);
+                        }
+                        if (index.Current() == _T("Visible") &&
+                            index.Next() == true) { /* http://<ip>/Service/Compositor/Netflix/Visible/Hide */
+                            if (index.Current() == _T("Hide")) {
+                                Visible(clientName, false);
+                            } else if (index.Current() == _T("Show")) {
+                                Visible(clientName, true);
+                            }
+                        }
+                        if (index.Current() == _T("Geometry")) { /* http://<ip>/Service/Compositor/Netflix/Geometry/0/0/1280/720 */
+                            uint32_t x(0), y(0), width(0), height(0);
+
+                            if (index.Next() == true) {
+                                x = Core::NumberType<uint32_t>(index.Current()).Value();
+                            }
+                            if (index.Next() == true) {
+                                y = Core::NumberType<uint32_t>(index.Current()).Value();
+                            }
+                            if (index.Next() == true) {
+                                width  = Core::NumberType<uint32_t>(index.Current()).Value();
+                            }
+                            if (index.Next() == true) {
+                                height = Core::NumberType<uint32_t>(index.Current()).Value();
+                            }
+
+                            Geometry(clientName, x, y, width, height);
+                        }
+                        if (index.Current() == _T("Top")) { /* http://<ip>/Service/Compositor/Netflix/Top */
+                            Top(clientName);
+                        }
+                        if (index.Current() == _T("Input")) { /* http://<ip>/Service/Compositor/Netflix/Input */
+                            Input(clientName);
+                        }
                     }
                 }
             }
@@ -310,6 +341,25 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("Client %s not found."), client.c_str()));
             }
         }
+    }
+
+    void Compositor::SetResolution(const Exchange::IComposition::ScreenResolution format) const
+    {
+        ASSERT(_composition != nullptr);
+
+        if (_composition != nullptr) {
+            _composition->SetResolution(format);
+        }
+    }
+
+    const Exchange::IComposition::ScreenResolution  Compositor::GetResolution() const
+    {
+        ASSERT(_composition != nullptr);
+
+        if (_composition != nullptr) {
+            return (_composition->GetResolution());
+        }
+        return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
     }
 
     void Compositor::Visible(const string& client, const bool visible) const

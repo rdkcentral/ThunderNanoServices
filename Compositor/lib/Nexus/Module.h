@@ -5,8 +5,8 @@
 #define MODULE_NAME Plugin_Compositor_Implementation
 #endif
 
-#include <core/core.h>
-#include <plugins/plugins.h>
+#include <core.h>
+#include <plugins.h>
 
 #undef EXTERNAL
 #define EXTERNAL
