@@ -49,6 +49,18 @@ endif ()
 
 # This is where all the cmake configs are installed.
 set(CMAKE_PREFIX_PATH ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/cmake ${CMAKE_PREFIX_PATH})
+set(NAMESPACE WPEFramework CACHE STRING "cmake namespace definition")
+set(CMAKE_MODULE_PATH "${CMAKE_SYSROOT}/${CMAKE_INSTALL_PREFIX}/include/WPEFramework/cmake" ${CMAKE_MODULE_PATH})
+
+# Git (and its revision)
+find_package(Git QUIET) # if we don't find git or FindGit.cmake is not on the system we ignore it.
+set(VERSION_REVISION "0000000")
+if(GIT_FOUND) # GIT revision
+    include(GetGitRevisionDescription)
+    get_git_short_revision(GIT_SHA1)
+    message(STATUS "GIT revision ${GIT_SHA1}")
+    set(VERSION_REVISION ${GIT_SHA1})
+endif()
 
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     set(CONFIG_DIR "debug" CACHE STRING "Build config diurectory" FORCE)
