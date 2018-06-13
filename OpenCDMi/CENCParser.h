@@ -53,14 +53,27 @@ public:
         inline KeyId(const systemType type, const uint32_t a, const uint16_t b, const uint16_t c, const uint8_t d[])
             : _systems(type)
             , _status(::OCDM::ISession::StatusPending) {
-            _kid[0] = a & 0xFF;
-            _kid[1] = (a >> 8) & 0xFF;
-            _kid[2] = (a >> 16) & 0xFF;
-            _kid[3] = (a >> 24) & 0xFF;
-            _kid[4] = b & 0xFF;
-            _kid[5] = (b >> 8) & 0xFF;
-            _kid[6] = c & 0xFF;
-            _kid[7] = (c >> 8) & 0xFF;
+            // A bit confused on how the mapping of the Microsoft KeyId's should go, looking at the spec: 
+            // https://msdn.microsoft.com/nl-nl/library/windows/desktop/aa379358(v=vs.85).aspx
+            // Assuming the LSB first it would be
+            // _kid[0] = a & 0xFF;
+            // _kid[1] = (a >> 8) & 0xFF;
+            // _kid[2] = (a >> 16) & 0xFF;
+            // _kid[3] = (a >> 24) & 0xFF;
+            // _kid[4] = b & 0xFF;
+            // _kid[5] = (b >> 8) & 0xFF;
+            // _kid[6] = c & 0xFF;
+            // _kid[7] = (c >> 8) & 0xFF;
+
+            // Assuming the MSB first it would be
+            _kid[3] = a & 0xFF;
+            _kid[2] = (a >> 8) & 0xFF;
+            _kid[1] = (a >> 16) & 0xFF;
+            _kid[0] = (a >> 24) & 0xFF;
+            _kid[5] = b & 0xFF;
+            _kid[4] = (b >> 8) & 0xFF;
+            _kid[7] = c & 0xFF;
+            _kid[6] = (c >> 8) & 0xFF;
             ::memcpy(&(_kid[8]), d, 8);
         }
         inline KeyId(const KeyId& copy) 
