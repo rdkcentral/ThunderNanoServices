@@ -5,8 +5,7 @@ set(VERSION_MAJOR 1)
 set(VERSION_MINOR 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_REVISION})
 
-
-include(module) # Setup default stuff needed for the cmake framework thingy.
+message("Setting up ${ARTEFACT}")
 
 add_library(${PLUGIN} SHARED
         Module.cpp
