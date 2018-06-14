@@ -38,6 +38,8 @@ find_library(LIBNXCLIENT_LOCAL_LIBRARY nxclient_local)
 
 find_library(LIBNXCLIENT_LIBRARY nxclient)
 
+find_library(LIBNEXUS_CLIENT_LIBRARY nexus_client)
+
 include(FindPackageHandleStandardArgs)
 
 find_package_handle_standard_args(LIBNEXUS DEFAULT_MSG LIBNEXUS_INCLUDE LIBNEXUS_LIBRARY)
@@ -55,9 +57,22 @@ if(NOT TARGET NEXUS::NEXUS)
     if(EXISTS "${LIBNEXUS_LIBRARY}")
         set_target_properties(NEXUS::NEXUS PROPERTIES
                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                IMPORTED_LOCATION "${LIBNEXUS_LIBRARY}"
                 INTERFACE_INCLUDE_DIRECTORIES "${LIBNEXUS_INCLUDE}"
                     )
+
+        if(NOT EXISTS "${LIBNEXUS_CLIENT_LIBRARY}")
+            message(STATUS "Nexus in Proxy mode")
+            set_target_properties(NEXUS::NEXUS PROPERTIES
+                    IMPORTED_LOCATION "${LIBNEXUS_LIBRARY}"
+                    )
+        else()
+
+            message(STATUS "Nexus in Client mode")
+            set_target_properties(NEXUS::NEXUS PROPERTIES
+                    IMPORTED_LOCATION "${LIBNEXUS_CLIENT_LIBRARY}"
+                    )
+        endif()
+
         if(NOT EXISTS "${LIBNXCLIENT_LIBRARY}")
             set_target_properties(NEXUS::NEXUS PROPERTIES
                  INTERFACE_COMPILE_DEFINITIONS NO_NXCLIENT

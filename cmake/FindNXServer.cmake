@@ -32,22 +32,30 @@
 find_library(LIBNXSERVER_LIBRARY NAMES libnxserver.a)
 
 find_path(LIBNXSERVER_INCLUDE_DIR refsw/nxserverlib.h
-        PATHS usr/include/
-        )
+        PATHS usr/include/)
 
-include(FindPackageHandleStandardArgs)
+find_file(NXSERVER_EXECUTABLE NAMES nxserver
+        PATHS usr/bin/)
 
-find_package_handle_standard_args(LIBNEXUS DEFAULT_MSG LIBNXSERVER_INCLUDE_DIR LIBNXSERVER_LIBRARY)
+if( NOT NXSERVER_EXECUTABLE STREQUAL NXSERVER_EXECUTABLE-NOTFOUND  OR LIBNXSERVER_LIBRARY_FOUND )
+        message(STATUS "Detected a nxserver...")
+        set(NXSERVER_FOUND TRUE)
+endif()
 
-mark_as_advanced(LIBNXSERVER_INCLUDE_DIR LIBNXSERVER_LIBRARY)
+if(LIBNXSERVER_LIBRARY_FOUND)
+    include(FindPackageHandleStandardArgs)
+    find_package_handle_standard_args(LIBNEXUS DEFAULT_MSG LIBNXSERVER_INCLUDE_DIR LIBNXSERVER_LIBRARY)
 
-if(NOT TARGET NEXUS::NXSERVER)
-    add_library(NEXUS::NXSERVER UNKNOWN IMPORTED)
-    if(EXISTS "${LIBNEXUS_LIBRARY}")
-        set_target_properties(NEXUS::NXSERVER PROPERTIES
-                IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                IMPORTED_LOCATION "${LIBNXSERVER_LIBRARY}"
-                INTERFACE_INCLUDE_DIRECTORIES "${LIBNXSERVER_INCLUDE_DIR}"
-                    )
+    mark_as_advanced(LIBNXSERVER_INCLUDE_DIR LIBNXSERVER_LIBRARY)
+
+    if(NOT TARGET NEXUS::NXSERVER)
+        add_library(NEXUS::NXSERVER UNKNOWN IMPORTED)
+        if(EXISTS "${LIBNEXUS_LIBRARY}")
+            set_target_properties(NEXUS::NXSERVER PROPERTIES
+                    IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+                    IMPORTED_LOCATION "${LIBNXSERVER_LIBRARY}"
+                    INTERFACE_INCLUDE_DIRECTORIES "${LIBNXSERVER_INCLUDE_DIR}"
+                        )
+        endif()
     endif()
 endif()

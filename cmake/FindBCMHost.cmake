@@ -28,9 +28,50 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 find_package(PkgConfig)
-pkg_check_modules(BCM_HOST bcm_host)
+pkg_check_modules(PC_BCM_HOST bcm_host)
 
 include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(BCM_HOST DEFAULT_MSG BCM_HOST_LIBRARIES)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(PC_BCM_HOST DEFAULT_MSG PC_BCM_HOST_LIBRARIES)
 
-mark_as_advanced(BCM_HOST_INCLUDE_DIRS BCM_HOST_LIBRARIES)
+if(PC_BCM_HOST_FOUND)
+    set(BCM_HOST_CFLAGS ${PC_BCM_HOST_CFLAGS})
+    set(BCM_HOST_FOUND ${PC_BCM_HOST_FOUND})
+    set(BCM_HOST_DEFINITIONS ${PC_BCM_HOST_CFLAGS_OTHER})
+    set(BCM_HOST_NAMES ${PC_BCM_HOST_LIBRARIES})
+    set(BCM_HOST_INCLUDE_DIRS ${PC_BCM_HOST_INCLUDE_DIRS})
+
+    foreach (_library ${BCM_HOST_NAMES})
+        find_library(BCM_HOST_LIBRARIES_${_library} ${_library}
+                HINTS ${PC_BCM_HOST_LIBDIR} ${PC_BCM_HOST_LIBRARY_DIRS}
+                )
+        set(BCM_HOST_LIBRARIES ${BCM_HOST_LIBRARIES} ${BCM_HOST_LIBRARIES_${_library}})
+    endforeach ()
+
+    find_library(BCM_HOST_LIBRARY NAMES bcm_host
+            HINTS ${PC_BCM_HOST_LIBDIR} ${PC_BCM_HOST_LIBRARY_DIRS}
+            )
+
+    find_library(OPENMAXIL_LIB NAMES openmaxil
+            HINTS ${PC_BCM_HOST_LIBDIR} ${PC_BCM_HOST_LIBRARY_DIRS}
+            )
+
+    if(OPENMAXIL_LIB_FOUND)
+        set(OPENMAXIL_LIBRARY OPENMAXIL_LIB)
+    endif()
+
+    set(BCM_HOST_ADDITIONAL_DEFINITIONS
+            -DOMX_SKIP64BIT
+            -DRPI_NO_X
+            )
+
+    if(BCM_HOST_FOUND AND NOT TARGET BROADCOM::HOST)
+        add_library(BROADCOM::HOST UNKNOWN IMPORTED)
+        set_target_properties(BROADCOM::HOST PROPERTIES
+                IMPORTED_LOCATION "${BCM_HOST_LIBRARY}"
+                INTERFACE_LINK_LIBRARIES "${BCM_HOST_LIBRARIES};${OPENMAXIL_LIBRARY}"
+                INTERFACE_COMPILE_OPTIONS "${BCM_HOST_DEFINITIONS};${BCM_HOST_ADDITIONAL_DEFINITIONS}"
+                INTERFACE_INCLUDE_DIRECTORIES "${BCM_HOST_INCLUDE_DIRS}"
+                )
+    endif()
+    mark_as_advanced(BCM_HOST_INCLUDE_DIRS BCM_HOST_LIBRARIES)
+endif()
