@@ -13,7 +13,14 @@ set(COMPONENT_NAME WPEFrameworkPlugins)
 option(WPEFRAMEWORK_VERBOSE_BUILD "Verbose build output" OFF)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-list(APPEND CMAKE_MODULE_PATH "${WPEFRAMEWORK_PLUGINS_ROOT}/cmake")
+
+# This is where all the cmake configs are installed.
+set(CMAKE_PREFIX_PATH ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/cmake ${CMAKE_PREFIX_PATH})
+set(NAMESPACE WPEFramework CACHE STRING "cmake namespace definition")
+set(CMAKE_MODULE_PATH
+        "${WPEFRAMEWORK_PLUGINS_ROOT}/cmake"
+        "${CMAKE_SYSROOT}/${CMAKE_INSTALL_PREFIX}/include/WPEFramework/cmake"
+        ${CMAKE_MODULE_PATH})
 
 if(CMAKE_CROSSCOMPILING)
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/include/WPEFramework/cmake")
@@ -46,11 +53,6 @@ if (NOT CMAKE_CROSSCOMPILING)
     set(PKG_CONFIG_USE_CMAKE_PREFIX_PATH ON)
     set(CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX})
 endif ()
-
-# This is where all the cmake configs are installed.
-set(CMAKE_PREFIX_PATH ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/cmake ${CMAKE_PREFIX_PATH})
-set(NAMESPACE WPEFramework CACHE STRING "cmake namespace definition")
-set(CMAKE_MODULE_PATH "${CMAKE_SYSROOT}/${CMAKE_INSTALL_PREFIX}/include/WPEFramework/cmake" ${CMAKE_MODULE_PATH})
 
 # Git (and its revision)
 find_package(Git QUIET) # if we don't find git or FindGit.cmake is not on the system we ignore it.
