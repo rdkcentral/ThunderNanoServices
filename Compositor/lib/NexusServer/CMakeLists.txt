@@ -43,9 +43,7 @@ set_target_properties(${TARGET}
             CXX_STANDARD 11
             CXX_STANDARD_REQUIRED YES
             FRAMEWORK FALSE
-            PUBLIC_HEADER "${PUBLIC_HEADERS}" # specify the public headers
-            VERSION ${VERSION}
-            SOVERSION ${VERSION_MAJOR}
+            PUBLIC_HEADER "${PUBLIC_HEADERS}"
             OUTPUT_NAME WPEFramework${TARGET}
             POSITION_INDEPENDENT_CODE ON
         )
