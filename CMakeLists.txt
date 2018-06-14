@@ -85,6 +85,7 @@ if(CLION_ENVIRONMENT)
     add_dependencies(uninstall-component-WPEFrameworkPlugins uninstall-component-WPEFramework)
 endif()
 
+option(WPEFRAMEWORK_PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_COMMANDER "Include Commander plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_COMPOSITOR "Include Compsitor plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_DEVICEINFO "Include DeviceInfo plugin" OFF)
@@ -109,6 +110,10 @@ include_directories(${WPEFRAMEWORK_PLUGINS_INCLUDE_DIRS})
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
+if(WPEFRAMEWORK_PLUGIN_BLUETOOTH)
+    add_subdirectory(Bluetooth)
 endif()
 
 if(WPEFRAMEWORK_PLUGIN_COMMANDER)
