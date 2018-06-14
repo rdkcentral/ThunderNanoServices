@@ -26,8 +26,6 @@ set_target_properties(${PLUGIN}
             CXX_STANDARD 11
             CXX_STANDARD_REQUIRED YES
             FRAMEWORK FALSE
-            VERSION ${VERSION}
-            SOVERSION ${VERSION_MAJOR}
             OUTPUT_NAME ${ARTEFACT})
 
 find_package(BCMHost)
