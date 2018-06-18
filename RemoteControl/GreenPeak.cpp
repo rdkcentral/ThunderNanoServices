@@ -123,7 +123,7 @@ static Bool SendRemappableData = true;
 gpRf4ce_ProfileId_t gpProfileIdList[GP_RF4CE_NWKC_MAX_PAIRING_TABLE_ENTRIES];
 
 static void gpApplication_BindConfirm(gpRf4ce_Result_t result , UInt8 bindingRef, UInt8 profileId)
-{ TR();
+{ 
 
     if(result == gpRf4ce_ResultSuccess) {
         if(bindingRef < GP_RF4CE_NWKC_MAX_PAIRING_TABLE_ENTRIES) {
@@ -231,7 +231,7 @@ void gpZrc_cbMsg(gpZrc_MsgId_t MsgId, UInt8 length, gpZrc_Msg_t* pMsg)
  *                   gpMsoRecipient Callbacks
  ******************************************************************************/
 gpMsoRecipient_Result_t gpMsoRecipient_cbMsg(gpMsoRecipient_MsgId_t msgId, UInt8 index, UInt8 length, gpMsoRecipient_Msg_t* pMsg)
-{ TR();
+{ 
 }
 
 /*****************************************************************************
@@ -275,7 +275,7 @@ void DispatcherResetIndication(Bool setDefault)
 static uint16_t _releasedCode = static_cast<uint16_t>(~0);
 
 static void KeyReleased()
-{ TR();
+{ 
     if (_releasedCode != static_cast<uint16_t>(~0)) {
         WPEFramework::Plugin::GreenPeak::Dispatch(false, _releasedCode, 0);
         _releasedCode = static_cast<uint16_t>(~0);
@@ -320,7 +320,7 @@ void gpRf4ceUserControl_cbUserControlIndication(
  *****************************************************************************/
 
 void gpRf4ceBindAuto_cbRecipientBindConfirm(UInt8 bindingId, gpRf4ce_Result_t status)
-{ TR();
+{ 
     string text;
 
     if (status == gpRf4ce_ResultSuccess) {
@@ -334,12 +334,12 @@ void gpRf4ceBindAuto_cbRecipientBindConfirm(UInt8 bindingId, gpRf4ce_Result_t st
 }
 
 void gpRf4ceBindAuto_cbUnbindIndication(UInt8 bindingId)
-{ TR();
+{ 
     GP_LOG_SYSTEM_PRINTF("Unbind Indication id: %u", 0, (UInt16)bindingId);
 }
 
 void gpRf4ceBindAuto_cbUnbindConfirm(UInt8 bindingId, gpRf4ce_Result_t status)
-{ TR();
+{ 
     GP_LOG_SYSTEM_PRINTF("Unbind Confirm id: %u", 0, (UInt16)bindingId);
 }
 
@@ -347,7 +347,7 @@ void gpRf4ceBindAuto_cbUnbindConfirm(UInt8 bindingId, gpRf4ce_Result_t status)
  *                    gpRf4ceDispatcher Callbacks
  *****************************************************************************/
 static void cbInitializationDone(void)
-{ TR();
+{ 
     gpVersion_ReleaseInfo_t version;
     Int8 DefaultTXPowers[16];
 
@@ -378,7 +378,7 @@ static void cbInitializationDone(void)
 }
 
 void gpRf4ceDispatcher_cbResetConfirm(gpRf4ce_Result_t status)
-{ TR();
+{ 
     gpRf4ce_SetVendorId(GP_RF4CE_NWKC_VENDOR_IDENTIFIER);
     gpRf4ce_SetVendorString(&Application_VendorString);
 
@@ -391,12 +391,12 @@ void gpRf4ceDispatcher_cbResetConfirm(gpRf4ce_Result_t status)
 }
 
 void gpRf4ce_cbStartConfirm(gpRf4ce_Result_t status)
-{ TR();
+{ 
     cbInitializationDone();
 }
 
 void hal_ResetUc(void)
-{ TR();
+{ 
 }
 
 extern GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_DataCallbacks_t
@@ -434,13 +434,13 @@ GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_BindCallbacks_t
       };
 
 void target_DoR4ceReset(void)
-{ TR();
+{ 
     _resetWithColdStart = gpRf4ce_IsColdStartAdvised(TARGET_NODE_CAPABILITIES);
     gpRf4ceDispatcher_ResetRequest(_resetWithColdStart, TARGET_NODE_CAPABILITIES);
 }
 
 void target_ActivatePairing()
-{ TR();
+{ 
     WPEFramework::Plugin::GreenPeak::Report(string("Entering the PairingMode."));
     #if 1
         gpApplication_ZRCBindSetup(false,true);
@@ -459,21 +459,21 @@ void target_ActivatePairing()
 }
 
 static void terminateThread()
-{ TR();
+{ 
     printf("Terminating the GreenPeak dedicated thread.\n");
     pthread_exit(&_threadResult);
     printf("After the terminating GreenPeak dedicated thread.\n");
 }
 
 void Application_Init()
-{ TR();
+{ 
     gpBaseComps_StackInit();
     gpSched_ScheduleEvent(0, target_DoR4ceReset);
 }
 
 // Missing -DMAIN_FUNCTION_NAME=gpMain
 MAIN_FUNCTION_RETURN_TYPE gpMain()
-{ TR();
+{ 
     gpSched_Main_Init();
     for (;;)  {
         // Check if the system can go to sleep
@@ -498,11 +498,11 @@ namespace Plugin {
 
     GreenPeak::Activity::Activity()
         : Core::Thread(Core::Thread::DefaultStackSize(), _T("GreenPeak"))
-    { TR();
+    { 
     }
 
     void GreenPeak::Activity::Dispose()
-    { TR();
+    { 
         gpSched_ScheduleEvent(0, terminateThread);
         Core::Thread::SignalTermination();
 
@@ -517,7 +517,7 @@ namespace Plugin {
     }
 
     /* virtual */ uint32_t GreenPeak::Activity::Worker()
-    { TR();
+    { 
         gpMain();
 
         Block();
@@ -531,8 +531,7 @@ namespace Plugin {
         , _error(static_cast<uint32_t>(~0))
         , _present(WPEFramework::Core::File(_T(GP_DEVICE_NAME), false).Exists())
         , _codeMask(0)
-        , _resourceName("GreenPeakRF4CE")
-    { TR();
+    { 
         if (_present == true) {
             _worker.Run();
             Remotes::RemoteAdministrator::Instance().Announce(*this);
@@ -548,7 +547,7 @@ namespace Plugin {
     }
 
     GreenPeak::~GreenPeak()
-    { TR();
+    { 
         if (_present == true) {
             Remotes::RemoteAdministrator::Instance().Revoke(*this);
             _worker.Dispose();
@@ -566,7 +565,7 @@ namespace Plugin {
     }
 
     /* virtual */ bool GreenPeak::Pairing()
-    { TR();
+    { 
         bool activated = false;
 
         _adminLock.Lock();
@@ -582,7 +581,7 @@ namespace Plugin {
     }
 
     /* virtual */ uint32_t GreenPeak::Callback(Exchange::IKeyHandler* callback)
-    { TR();
+    { 
         _adminLock.Lock();
 
         // This is a 1-1 relation. No way you can set more than
@@ -607,7 +606,7 @@ namespace Plugin {
     }
 
     /* virtual */ string GreenPeak::MetaData() const
-    { TR();
+    { 
         string result;
 
         _adminLock.Lock();
@@ -640,7 +639,7 @@ namespace Plugin {
         const uint16_t revision,
         const uint16_t patch,
         const uint32_t change)
-    { TR();
+    { 
         _info.Major = major;
         _info.Minor = minor;
         _info.Revision = revision;
@@ -656,7 +655,7 @@ namespace Plugin {
         const uint16_t revision,
         const uint16_t patch,
         const uint32_t change)
-    { TR();
+    { 
         _singleton->_Initialized(major, minor, revision, patch, change);
     }
 

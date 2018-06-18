@@ -3,7 +3,7 @@
 
 #include "Module.h"
 #include "interfaces/IKeyHandler.h"
-#define TR() printf("==> %s: %s:%d\n", __FUNCTION__, __FILE__, __LINE__);
+
 namespace WPEFramework {
 namespace Plugin {
 
@@ -30,8 +30,6 @@ namespace Plugin {
 
             Core::JSON::HexUInt32 CodeMask;
         };
-
-    private:
         class Activity : public Core::Thread {
         private:
             Activity(const Activity&);
@@ -89,8 +87,7 @@ namespace Plugin {
     public:
         virtual const TCHAR* Name() const
         {
-            return (_resourceName.c_str());
-            //return (_T("GreenPeakRF4CE"));
+            return (_T("GreenPeakRF4CE"));
         }
         //virtual void CodeMask(uint32_t mask)
         //{
@@ -133,7 +130,6 @@ namespace Plugin {
         uint32_t _error;
         bool _present;
         uint32_t _codeMask;
-      /* static */ const string _resourceName;
     };
 }
 }
