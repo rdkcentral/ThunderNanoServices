@@ -87,12 +87,8 @@ namespace Plugin {
     public:
         virtual const TCHAR* Name() const
         {
-            return (_T("GreenPeakRF4CE"));
+            return (_resourceName.c_str());
         }
-        //virtual void CodeMask(uint32_t mask)
-        //{
-        //    _codeMask = mask;
-        //}
         virtual void Configure(const string& configure)
         {
             Config config; config.FromString(configure);
@@ -130,6 +126,7 @@ namespace Plugin {
         uint32_t _error;
         bool _present;
         uint32_t _codeMask;
+      /* static */ const string _resourceName;
     };
 }
 }
