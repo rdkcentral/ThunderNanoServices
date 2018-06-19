@@ -595,9 +595,6 @@ namespace Plugin {
                     CDMi::IMediaKeySession* sessionInterface = nullptr;
                     CommonEncryptionData keyIds (initData, initDataLength);
 
-                    // See if we, for the given keyIds, already got a session, for he given keySystem.
-                    session = FindSession(keyIds, keySystem);
-
                     // OKe we got a buffer machanism to transfer the raw data, now create
                     // the session.
                     if ((session == nullptr) && (system->CreateMediaKeySession(
