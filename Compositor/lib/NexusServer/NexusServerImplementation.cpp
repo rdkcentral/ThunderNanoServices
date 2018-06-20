@@ -14,8 +14,6 @@
 #include <nxclient.h>
 #include <nxserverlib.h>
 #include <nexus_display_vbi.h>
-#include <nexus_otpmsp.h>
-#include <nexus_read_otp_id.h>
 
 /* print_capabilities */
 #if NEXUS_HAS_VIDEO_DECODER
