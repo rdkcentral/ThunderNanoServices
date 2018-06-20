@@ -31,8 +31,9 @@
 
 find_library(LIBNXSERVER_LIBRARY NAMES libnxserver.a)
 
-find_path(LIBNXSERVER_INCLUDE_DIR refsw/nxserverlib.h
-        PATHS usr/include/)
+find_path(LIBNXSERVER_INCLUDE_DIR nxserverlib.h
+        PATHS usr/include/
+        PATH_SUFFIXES nxclient refsw)
 
 find_file(NXSERVER_EXECUTABLE NAMES nxserver
         PATHS usr/bin/)
