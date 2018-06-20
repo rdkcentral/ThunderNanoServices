@@ -17,7 +17,7 @@ namespace Remotes {
             , _remotes()
         {
         }
- 
+
     public:
         typedef Core::IteratorType<std::list<Exchange::IKeyProducer*>, Exchange::IKeyProducer*> Iterator;
 
@@ -78,6 +78,35 @@ namespace Remotes {
 
             return (result);
         }
+
+
+        bool Unpair(const string& device, uint8_t bindingId)
+        {
+            bool result = true;
+
+            _adminLock.Lock();
+
+            std::list<Exchange::IKeyProducer*>::iterator index(_remotes.begin());
+
+            while (index != _remotes.end()) {
+                if (device.empty() == true) {
+                    result = (*index)->Unpair(bindingId) && result;
+                    index++;
+                }
+                else if (device == (*index)->Name()) {
+                    result = (*index)->Unpair(bindingId);
+                    index = _remotes.end();
+                }
+                else {
+                    index++;
+                }
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+
         string MetaData(const string& device)
         {
             string result;

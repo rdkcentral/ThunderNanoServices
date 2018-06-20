@@ -158,23 +158,23 @@ namespace Plugin {
                     while (index.Next() == true) {
 
                         const TCHAR* producer ((*index)->Name());
-			string loadName(producer);
+            string loadName(producer);
 
                         TRACE_L1(_T("Searching map file for: %s"), producer);
 
-			configList.Reset();
+            configList.Reset();
 
-			while ( (configList.Next() == true) && (configList.Current().Name.Value() != loadName) ) { /* intentionally left empty */ }
+            while ( (configList.Next() == true) && (configList.Current().Name.Value() != loadName) ) { /* intentionally left empty */ }
 
-			if (configList.IsValid() == true) {
-				(*index)->Configure(configList.Current().Settings.Value());
-				// We found an overruling name.
-				loadName = configList.Current().MapFile.Value();
-			}
-			else {
-				(*index)->Configure(EMPTY_STRING);
-				loadName += _T(".json");
-			}
+            if (configList.IsValid() == true) {
+                (*index)->Configure(configList.Current().Settings.Value());
+                // We found an overruling name.
+                loadName = configList.Current().MapFile.Value();
+            }
+            else {
+                (*index)->Configure(EMPTY_STRING);
+                loadName += _T(".json");
+            }
 
                         // See if we need to load a table.
                         string specific (MappingFile (loadName, service->PersistentPath(), service->DataPath()));
@@ -521,6 +521,21 @@ namespace Plugin {
                         else {
                             result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
                             result->Message = string(_T("Failed to activate pairing: ") + deviceName);
+                        }
+                    }
+                    // PUT .../RemoteControl/<DEVICE_NAME>/Unpair : unpair specific DEVICE_NAME & bindId
+                    if (index.Current() == _T("Unpair")) {
+
+                        if (index.Next() == true) {
+                            uint8_t bindingId = atoi(index.Current().Text().c_str());
+                            if (Remotes::RemoteAdministrator::Instance().Unpair(deviceName, bindingId) == true) {
+                                result->ErrorCode = Web::STATUS_OK;
+                                result->Message = string(_T("Unpaired ") + deviceName);
+                            }
+                            else {
+                                result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
+                                result->Message = string(_T("Failed to unpair: ") + deviceName);
+                            }
                         }
                     }
                     // PUT .../RemoteControl/<DEVICE_NAME>/Send : send a code to DEVICE_NAME
