@@ -421,7 +421,8 @@ namespace Plugin {
                     , _mediaKeySession(mediaKeySession)
                     , _sink(this, callback)
                     , _buffer(new DataExchange(mediaKeySession, bufferName, defaultSize))
-                    , _cencData(*sessionData) {
+                    , _cencData(*sessionData)
+                    , _observers() {
 
                     ASSERT (parent != nullptr);
                     ASSERT (sessionData != nullptr);
@@ -485,22 +486,79 @@ namespace Plugin {
                     _mediaKeySession->Close();
                 }
 
+                virtual void Register (::OCDM::ISession::IKeyCallback* callback) override {
+
+                    _adminLock.Lock();
+
+                    ASSERT (std::find(_observers.begin(), _observers.end(), callback) == _observers.end());
+
+                    callback->AddRef();
+
+                    _observers.push_back(callback);
+
+                    // Give them the full list, of KeyIds we got now wit the status..
+                    CommonEncryptionData::Iterator index(_cencData.Keys());
+
+                    while (index.Next() == true) {
+                        const CommonEncryptionData::KeyId& entry (index.Current());
+                        callback->StateChange(entry.Length(), entry.Id(), entry.Status());
+                    }
+
+                    _adminLock.Unlock();
+                }
+
+                virtual void Unregister (::OCDM::ISession::IKeyCallback* callback) override {
+
+                    _adminLock.Lock();
+
+                    std::list<::OCDM::ISession::IKeyCallback*>::iterator  index (std::find(_observers.begin(), _observers.end(), callback));
+
+                    if (index != _observers.end()) {
+                        callback->Release();
+                        _observers.erase(index);
+                    }
+                    _adminLock.Unlock();
+                }
+
                 BEGIN_INTERFACE_MAP(Session)
                     INTERFACE_ENTRY(::OCDM::ISession)
                 END_INTERFACE_MAP
 
             private:
                 inline void UpdateKeyStatus(::OCDM::ISession::KeyStatus status, const uint8_t* buffer, const uint8_t length) {
+
                     // We assume that these UpdateKeyStatusses do not occure in a multithreaded fashion, otherwise we need to lock it.
                     CommonEncryptionData::KeyId keyId;
 		    if (buffer != nullptr) {
                         keyId = CommonEncryptionData::KeyId(CommonEncryptionData::COMMON, buffer, length);
                     }
-                    _cencData.UpdateKeyStatus(status, keyId);
+
+                    _adminLock.Lock();
+
+                    const CommonEncryptionData::KeyId* updated = _cencData.UpdateKeyStatus(status, keyId);
+
+                    if (updated != nullptr) {
+                        std::list<::OCDM::ISession::IKeyCallback*>::const_iterator index (_observers.begin());
+                        const uint8_t length = updated->Length();
+                        const uint8_t* id = updated->Id();
+
+                        TRACE_L1("Reporting a new status for a KeyId. New state: %d", status);
+
+                        while (index != _observers.end()) {
+                            (*index)->StateChange(length, id, status);
+                            index++;
+                        }
+                    }
+                    else {
+                        TRACE(Trace::Information, ("There was no key to update !!!"));
+                    }
+                    
+                    _adminLock.Unlock();
                 }
 
             private:
                 AccessorOCDM& _parent;
+                Core::CriticalSection _adminLock;
                 mutable uint32_t _refCount;
                 std::string _keySystem;
                 std::string _sessionId;
@@ -508,6 +566,7 @@ namespace Plugin {
                 Core::Sink<Sink> _sink;
                 DataExchange* _buffer;
                 CommonEncryptionData _cencData;
+                std::list<::OCDM::ISession::IKeyCallback*> _observers;
             };
  
         public:
