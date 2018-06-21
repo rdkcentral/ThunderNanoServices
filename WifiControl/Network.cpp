@@ -1,8 +1,9 @@
 #include "Network.h"
 #ifdef USE_WIFI_HAL
 #include "WifiHAL.h"
-#endif
+#else
 #include "Controller.h"
+#endif
 
 namespace WPEFramework {
 

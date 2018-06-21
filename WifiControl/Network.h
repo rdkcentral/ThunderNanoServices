@@ -7,7 +7,6 @@ namespace WPEFramework {
 namespace WPASupplicant {
 
 class Controller;
-class WifiHAL;
 
 class Network {
 public:
@@ -59,9 +58,6 @@ public:
 
     private:
         friend class Controller;
-#ifdef USE_WIFI_HAL
-        friend class WifiHAL;
-#endif
         inline void Insert(const Network& element) {
             _list.push_back(element);
         }
@@ -113,11 +109,7 @@ public:
     }
 
     inline Network(
-#ifdef USE_WIFI_HAL
-        Core::ProxyType<WifiHAL> comController,
-#else
         Core::ProxyType<Controller> comController,
-#endif
         const uint32_t id,
         const uint64_t& bssid,
         const uint32_t frequency,
@@ -182,11 +174,7 @@ public:
     string BSSIDString() const;
 
 private:
-#ifdef USE_WIFI_HAL
-        Core::ProxyType<WifiHAL> _comController;
-#else
     Core::ProxyType<Controller> _comController;
-#endif
     uint64_t _bssid;
     uint32_t _frequency;
     int32_t _signal;
@@ -227,12 +215,7 @@ public:
             , _comController() {
             Reset();
         }
-#ifdef USE_WIFI_HAL
-        Iterator(const Core::ProxyType<WifiHAL>& source)
-#else
         Iterator(const Core::ProxyType<Controller>& source)
-
-#endif
             : _list()
             , _comController(source) {
             Reset();
@@ -279,9 +262,7 @@ public:
 
    private:
         friend class Controller;
-#ifdef USE_WIFI_HAL
-        friend class WifiHAL;
-#endif
+
         inline void Insert(const string& ssid, const uint32_t id, const bool enabled, const bool selected) {
             ASSERT (_comController.IsValid() == true);
 
@@ -297,26 +278,16 @@ public:
         std::list<Info> _list;
         std::list<Info>::iterator _index;
         bool _atHead;
-#ifdef USE_WIFI_HAL
-        Core::ProxyType<WifiHAL> _comController;
-#else
         Core::ProxyType<Controller> _comController;
-#endif
     };
 
 
 public:
     Config() : _comController() {
     }
-#ifdef USE_WIFI_HAL
-    Config(const Core::ProxyType<WifiHAL>& controller, const string& ssid) : _comController(controller), _ssid(ssid) {
-        ASSERT(_comController.IsValid() == true);
-    }
-#else
     Config(const Core::ProxyType<Controller>& controller, const string& ssid) : _comController(controller), _ssid(ssid) {
         ASSERT(_comController.IsValid() == true);
     }
-#endif
     Config(const Config& copy) : _comController(copy._comController), _ssid(copy._ssid) {
         ASSERT(_comController.IsValid() == true);
         CopyProperties (copy);
@@ -392,11 +363,7 @@ protected:
     void CopyProperties (const Config& copy);
 
 private:
-#ifdef USE_WIFI_HAL
-    Core::ProxyType<WifiHAL> _comController;
-#else
     Core::ProxyType<Controller> _comController;
-#endif
     string _ssid;
 };
 
