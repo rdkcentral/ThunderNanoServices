@@ -26,10 +26,10 @@ namespace Plugin {
         _service->Register(&_notification);
 
         if (config.OutOfProcess.Value() == true) {
-            _bluetooth = _service->Instantiate<Exchange::IPluginBluetooth>(3000, _T("BluetoothImplementation"), static_cast<uint32>(~0), _pid, _service->Locator());
+            _bluetooth = _service->Instantiate<Exchange::IBluetooth>(3000, _T("BluetoothImplementation"), static_cast<uint32>(~0), _pid, _service->Locator());
         }
         else {
-            _bluetooth = Core::ServiceAdministrator::Instance().Instantiate<Exchange::IPluginBluetooth>(Core::Library(), _T("BluetoothImplementation"), static_cast<uint32>(~0));
+            _bluetooth = Core::ServiceAdministrator::Instance().Instantiate<Exchange::IBluetooth>(Core::Library(), _T("BluetoothImplementation"), static_cast<uint32>(~0));
         }
 
         if (_bluetooth == nullptr) {
