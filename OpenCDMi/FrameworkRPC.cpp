@@ -30,6 +30,11 @@ namespace Plugin {
         OCDMImplementation(const OCDMImplementation&) = delete;
         OCDMImplementation& operator=(const OCDMImplementation&) = delete;
 
+        struct SystemFactory {
+            std::string Name;
+            CDMi::ISystemFactory* Factory;
+        };
+ 
         class ExternalAccess : public RPC::Communicator
         {
         private:
@@ -171,7 +176,7 @@ namespace Plugin {
             Core::ProxyType<ObjectMessageHandler> _handler;
         };
 
-        class  AccessorOCDM : public ::OCDM::IAccessorOCDM {
+        class AccessorOCDM : public ::OCDM::IAccessorOCDM {
         private:
             AccessorOCDM () = delete;
             AccessorOCDM (const AccessorOCDM&) = delete;
@@ -348,7 +353,9 @@ namespace Plugin {
                         _callback->AddRef();
                     }
                     virtual ~Sink() {
-                        _callback->Release();
+                        if (_callback != nullptr) {
+                            Revoke(_callback);
+                        }
                     }
 
                 public:
@@ -357,33 +364,31 @@ namespace Plugin {
                         const uint8_t *f_pbKeyMessage, //__in_bcount(f_cbKeyMessage)
                         uint32_t f_cbKeyMessage, //__in
                         char *f_pszUrl) override {
-                        ASSERT(_callback != nullptr);
                         TRACE(Trace::Information, ("OnKeyMessage(%s)", f_pszUrl));
-                        std::string url(f_pszUrl, strlen(f_pszUrl));
-                        _callback->OnKeyMessage(f_pbKeyMessage, f_cbKeyMessage, url);
-
+			if (_callback != nullptr) {
+                            std::string url(f_pszUrl, strlen(f_pszUrl));
+                            _callback->OnKeyMessage(f_pbKeyMessage, f_cbKeyMessage, url);
+                        }
                     }
                     // Event fired when MediaKeySession has found a usable key.
                     virtual void OnKeyReady() override {
-                        ASSERT(_callback != nullptr);
                         TRACE(Trace::Information, ("OnKeyReady()"));
-                        _callback->OnKeyReady();
+			if (_callback != nullptr) {
+                            _callback->OnKeyReady();
+                        }
                     }
                     // Event fired when MediaKeySession encounters an error.
-                    virtual void OnKeyError(
-                        int16_t f_nError,
-                        ::OCDM::OCDM_RESULT f_crSysError,
-                        const char* errorMessage) override {
-                        ASSERT(_callback != nullptr);
+                    virtual void OnKeyError( int16_t f_nError, ::OCDM::OCDM_RESULT f_crSysError, const char* errorMessage) override {
                         TRACE(Trace::Information, ("OnKeyError(%d,%s)", f_nError, errorMessage));
-                        std::string message(errorMessage, strlen(errorMessage));
-                        _callback->OnKeyError(f_nError, f_crSysError, message);
+			if (_callback != nullptr) {
+                            std::string message(errorMessage, strlen(errorMessage));
+                            _callback->OnKeyError(f_nError, f_crSysError, message);
+                        }
                     }
                     //Event fired on key status update
                     virtual void OnKeyStatusUpdate(const char* keyMessage, const uint8_t buffer[], const uint8_t length) override {
                         ::OCDM::ISession::KeyStatus key;
 
-                        ASSERT(_callback != nullptr);
                         TRACE(Trace::Information, ("OnKeyStatusUpdate(%s)", keyMessage));
 
                         if (::strcmp(keyMessage, "KeyUsable") == 0)
@@ -397,7 +402,18 @@ namespace Plugin {
 
                         _parent.UpdateKeyStatus(key, buffer, length);
 
-                        _callback->OnKeyStatusUpdate(key);
+			if (_callback != nullptr) {
+                            _callback->OnKeyStatusUpdate(key);
+                        }
+                    }
+                    void Revoke (::OCDM::ISession::ICallback* callback) {
+                        if ((_callback != nullptr) && (_callback == callback)) {
+                            _callback->Release();
+                            _callback = nullptr;
+                        }
+                        else {
+                            TRACE_L1("Additional request for Revoking the callback!! %p", callback);
+                        }
                     }
 
                private:
@@ -440,6 +456,7 @@ namespace Plugin {
                     delete _buffer;
 
                     TRACE(Trace::Information, ("Server::Session::~Session(%s,%s) => %p", _keySystem.c_str(), _sessionId.c_str(), this));
+                    TRACE_L1("Destructed the Session Server side: %p", this);
                 }
 
             public:
@@ -518,6 +535,10 @@ namespace Plugin {
                         _observers.erase(index);
                     }
                     _adminLock.Unlock();
+                }
+
+                virtual void Revoke(OCDM::ISession::ICallback* callback) override {
+                    _sink.Revoke (callback);
                 }
 
                 BEGIN_INTERFACE_MAP(Session)
@@ -741,12 +762,9 @@ namespace Plugin {
             }
             void Remove(SessionImplementation* session, const string& keySystem, CDMi::IMediaKeySession* mediaKeySession ) {
 
-                TRACE_L1("Clean Server Side Session: %p", session);
-
                 _adminLock.Lock();
 
                 ASSERT (session != nullptr);
-                ASSERT (mediaKeySession != nullptr);
 
                 if (mediaKeySession != nullptr) {
 
@@ -776,6 +794,7 @@ namespace Plugin {
                 }
 
                 _adminLock.Unlock();
+
             }
  
         private:
@@ -852,6 +871,7 @@ namespace Plugin {
             , _systemToFactory()
             , _systemLibraries()
         {
+            TRACE_L1("Constructing OCDMImplementation Service: %p", this);
         }
         virtual ~OCDMImplementation()
         {
@@ -864,6 +884,8 @@ namespace Plugin {
             }
 
             _systemLibraries.clear();
+
+            TRACE_L1("Destructed OCDMImplementation Service: %p", this);
         }
 
     public:
@@ -884,8 +906,7 @@ namespace Plugin {
 
             // Before we start loading the mapping of the Keys to the factories, load the factories :-)
             Core::Directory entry(locator.c_str(), _T("*.drm"));
-            std::map<const string, CDMi::ISystemFactory*> factories;
-            std::list<string> keySystems;
+            std::map<const string, SystemFactory> factories;
 
             while (entry.Next() == true) {
                 Core::Library library(entry.Current().c_str());
@@ -897,9 +918,11 @@ namespace Plugin {
                         CDMi::ISystemFactory* entry = handle();
 
                         if (handle != nullptr) {
-                            string keySystem(Core::ClassNameOnly(entry->KeySystem()).Text());
-                            keySystems.push_back(keySystem);
-                            factories.insert(std::pair<const string, CDMi::ISystemFactory*>(keySystem, entry));
+                            SystemFactory element;
+                            element.Name = Core::ClassNameOnly(entry->KeySystem()).Text();
+                            element.Factory = entry;
+                            _keySystems.push_back(element.Name);
+                            factories.insert(std::pair<const string, SystemFactory>(element.Name, element));
                             _systemLibraries.push_back(library);
                         }
                     }
@@ -914,11 +937,11 @@ namespace Plugin {
 
                 if ( (system.empty() == false) && (index.Current().Key.Value().empty() == false) ) {
                     // Find a factory for the key system:
-                    std::map<const string, CDMi::ISystemFactory*>::iterator factory (factories.find(system));
+                    std::map<const string, SystemFactory>::iterator factory (factories.find(system));
 
                     if (factory != factories.end()) {
                         // Register this handler
-                        _systemToFactory.insert(std::pair<const std::string, CDMi::ISystemFactory*>(index.Current().Key.Value(), factory->second));
+                        _systemToFactory.insert(std::pair<const std::string, SystemFactory>(index.Current().Key.Value(), factory->second));
                     }
                     else {
                         SYSLOG(PluginHost::Startup, (_T("Required factory [%s], not found for [%s]"), system.c_str(), index.Current().Key.Value().c_str()));
@@ -929,8 +952,6 @@ namespace Plugin {
             if (_systemToFactory.size() == 0) {
                 SYSLOG(PluginHost::Startup, (_T("No DRM factories specified. OCDM can not service any DRM requests.")));
             }
-
-            _keySystems = Core::Service<RPC::StringIterator>::Create<PluginHost::ISubSystem::IDecryption>(keySystems); 
 
             _entryPoint = Core::Service<AccessorOCDM>::Create<::OCDM::IAccessorOCDM>(this, config.SharePath.Value(), config.ShareSize.Value());
             _service = new ExternalAccess(Core::NodeId(config.Connector.Value().c_str()), _entryPoint);
@@ -963,7 +984,7 @@ namespace Plugin {
             return (Core::ERROR_NONE);
         }
         virtual RPC::IStringIterator* Systems() const {
-            return (_keySystems);
+            return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(_keySystems));
         }
         virtual RPC::IStringIterator* Designators(const string& keySystem) const {
             std::list<string> designators;
@@ -995,7 +1016,7 @@ namespace Plugin {
             bool result = (keySystem.empty() == false);
 
             if (result == true) {
-                std::map<const std::string, CDMi::ISystemFactory*>::iterator index (_systemToFactory.find(keySystem));
+                std::map<const std::string, SystemFactory>::iterator index (_systemToFactory.find(keySystem));
 
                 if (index == _systemToFactory.end()) {
                     result = false;
@@ -1016,10 +1037,10 @@ namespace Plugin {
             CDMi::IMediaKeys* result = nullptr;
 
             if (keySystem.empty() == false) {
-                std::map<const std::string, CDMi::ISystemFactory*>::iterator index (_systemToFactory.find(keySystem));
+                std::map<const std::string, SystemFactory>::iterator index (_systemToFactory.find(keySystem));
 
                 if (_systemToFactory.end() != index) {
-                    result = index->second->Instance();
+                    result = index->second.Factory->Instance();
                 }
             }
 	
@@ -1029,18 +1050,18 @@ namespace Plugin {
 
     private:
         void LoadDesignators(const string& keySystem, std::list<string>& designators) const {
-            std::map<const std::string, CDMi::ISystemFactory*>::const_iterator index (_systemToFactory.begin());
+            std::map<const std::string, SystemFactory>::const_iterator index (_systemToFactory.begin());
             while (index != _systemToFactory.end()) {
-                if (keySystem == index->second->KeySystem()) {
+                if (keySystem == index->second.Name) {
                     designators.push_back(index->first);
                 }
                 index++;
             }
         }
         void LoadSessions(const string& keySystem, std::list<string>& designators) const {
-            std::map<const std::string, CDMi::ISystemFactory*>::const_iterator index (_systemToFactory.begin());
+            std::map<const std::string, SystemFactory>::const_iterator index (_systemToFactory.begin());
             while (index != _systemToFactory.end()) {
-                if (keySystem == index->second->KeySystem()) {
+                if (keySystem == index->second.Name) {
                     designators.push_back(index->first);
                 }
                 index++;
@@ -1053,19 +1074,16 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------------
         BEGIN_INTERFACE_MAP(OCDMImplementation)
             INTERFACE_ENTRY(Exchange::IContentDecryption)
-            INTERFACE_AGGREGATE(PluginHost::ISubSystem::IDecryption, _keySystems)
         END_INTERFACE_MAP
 
     private:
         ::OCDM::IAccessorOCDM* _entryPoint;
         ExternalAccess* _service;
         bool _compliant;
-        std::map<const std::string, CDMi::ISystemFactory*> _systemToFactory;
+        std::map<const std::string,SystemFactory> _systemToFactory;
         std::list<Core::Library> _systemLibraries;
-        PluginHost::ISubSystem::IDecryption* _keySystems;
+        std::list<string> _keySystems;
     };
-
-
 
     SERVICE_REGISTRATION(OCDMImplementation, 1, 0);
 

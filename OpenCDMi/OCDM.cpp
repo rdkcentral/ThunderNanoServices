@@ -59,12 +59,14 @@ namespace OCDM {
 
         return (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(PID));
     }
-
 } 
 
 namespace Plugin {
 
     SERVICE_REGISTRATION(OCDM, 1, 0);
+
+    static Core::ProxyPoolType<Web::JSONBodyType<OCDM::Data> >          jsonDataFactory(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<OCDM::Data::System> >  jsonSystemFactory(1);
 
     /* virtual */ const string OCDM::Initialize(PluginHost::IShell* service)
     {
@@ -167,9 +169,74 @@ namespace Plugin {
         TRACE(Trace::Information, (string(_T("Received OCDM request"))));
 
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
 
-        result->ErrorCode = Web::STATUS_OK;
-        result->Message = "OK";
+        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+        result->Message = _T("Unsupported GET request.");
+
+        // By default, we are in front of any element, jump onto the first element, which is if, there is something an empty slot.
+        index.Next();
+
+        if (request.Verb == Web::Request::HTTP_GET) {
+
+            if (index.Next() == false) {
+                Core::ProxyType<Web::JSONBodyType<Data> > data (jsonDataFactory.Element());
+
+                RPC::IStringIterator* systems (_opencdmi->Systems());
+
+                if (systems == nullptr) {
+                    TRACE_L1("Could not load the Systems. %d", __LINE__);
+                }
+                else {
+                    while (systems->Next() == true) {
+                        RPC::IStringIterator* index (_opencdmi->Designators(systems->Current()));
+                        if (index == nullptr) {
+                            TRACE_L1("Could not load the Designators. %d", __LINE__);
+                        }
+                        else {
+                            data->Systems.Add(Data::System(systems->Current(), index));
+                            index->Release();
+                        }
+                    }
+                    systems->Release();
+                }
+                result->ErrorCode = Web::STATUS_OK;
+                result->Message = _T("Available Systems.");
+                result->Body(data);
+            }
+            else {
+                if (index.Current().Text() == _T("Sessions")) {
+
+                    // Core::ProxyType<Web::JSONBodyType<WifiControl::NetworkList> > networks (jsonResponseFactoryNetworkList.Element());
+
+                    // virtual RPC::IStringIterator* Sessions(const string& keySystem);
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->Message = _T("Active Sessions.");
+                    // result->Body(networks);
+
+                } else if (index.Current().Text() == _T("Designators")) {
+                    if (index.Next() == true) {
+
+                        Core::ProxyType<Web::JSONBodyType<OCDM::Data::System> > data(jsonSystemFactory.Element());
+                        RPC::IStringIterator* entries(_opencdmi->Designators(index.Current().Text()));
+
+                        if (entries == nullptr) {
+                            TRACE_L1("Could not load the Designators. %d", __LINE__);
+                        }
+                        else {
+                            data->Name = index.Current().Text();
+                            data->Load(entries);
+                            entries->Release();
+                        }
+
+                        result->Body(data);
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("Available Systems.");
+                    }
+                }
+            }
+        }
+
 
         return result;
     }
