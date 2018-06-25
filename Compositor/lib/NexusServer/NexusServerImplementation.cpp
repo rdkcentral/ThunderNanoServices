@@ -178,7 +178,12 @@ namespace Broadcom {
                     _serverSettings.client.connect = Platform::ClientConnect;
                     _serverSettings.client.disconnect = Platform::ClientDisconnect;
 
+#if NEXUS_SERVER_HAS_EXTENDED_INIT
                     _instance = nxserverlib_init_extended(&_serverSettings, authentication);
+#else
+                    _instance = nxserverlib_init(&_serverSettings);
+#endif
+
                     if (_instance != nullptr) {
                         rc = nxserver_ipc_init(_instance, _lock);
 
