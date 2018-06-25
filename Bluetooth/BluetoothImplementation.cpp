@@ -4,8 +4,10 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    std::map<string, string> BluetoothImplementation::_deviceIdMap;
-    Core::JSON::ArrayType<BTDeviceList::BTDeviceInfo> BluetoothImplementation::_jsonDeviceInfoList;
+    std::map<string, string> BluetoothImplementation::_discoveredDeviceIdMap;
+    std::map<string, string> BluetoothImplementation::_pairedDeviceIdMap;
+    Core::JSON::ArrayType<BTDeviceList::BTDeviceInfo> BluetoothImplementation::_jsonDiscoveredDevices;
+    Core::JSON::ArrayType<BTDeviceList::BTDeviceInfo> BluetoothImplementation::_jsonPairedDevices;
 
     bool BluetoothImplementation::ConfigureBTAdapter()
     {
@@ -15,7 +17,7 @@ namespace Plugin {
             return false;
         }
 
-        if (!PowerOnBTAdapter()) {
+        if (!PowerBTAdapter(true)) {
             TRACE(Trace::Error, ("Failed to switch on bluetooth adaptor"));
             return false;
         }
@@ -23,12 +25,12 @@ namespace Plugin {
         return true;
     }
 
-    bool BluetoothImplementation::PowerOnBTAdapter()
+    bool BluetoothImplementation::PowerBTAdapter(bool poweringUp)
     {
         GError* dbusError = nullptr;
         GVariant* dbusReply = nullptr;
 
-        dbusReply = g_dbus_connection_call_sync(_dbusConnection, BLUEZ_INTERFACE, BLUEZ_OBJECT_HCI, DBUS_PROP_INTERFACE, "Set", g_variant_new("(ssv)", BLUEZ_INTERFACE_ADAPTER, "Powered", g_variant_new("b", true)), nullptr, G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &dbusError);
+        dbusReply = g_dbus_connection_call_sync(_dbusConnection, BLUEZ_INTERFACE, BLUEZ_OBJECT_HCI, DBUS_PROP_INTERFACE, "Set", g_variant_new("(ssv)", BLUEZ_INTERFACE_ADAPTER, "Powered", g_variant_new("b", poweringUp)), nullptr, G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &dbusError);
         if (nullptr == dbusReply) {
             TRACE(Trace::Error, ("Failed powerOnBTAdapter dbus call. Error msg :  %s", dbusError->message));
             return false;
@@ -39,12 +41,6 @@ namespace Plugin {
 
     bool BluetoothImplementation::SubscribeDBusSignals()
     {
-        _propertiesChanged = g_dbus_connection_signal_subscribe(_dbusConnection, nullptr, DBUS_PROP_INTERFACE, "PropertiesChanged", nullptr, BLUEZ_INTERFACE_ADAPTER, G_DBUS_SIGNAL_FLAGS_NONE, AdapterPropertiesChanged, nullptr, nullptr);
-        if (!_propertiesChanged) {
-            TRACE(Trace::Error, ("Failed to subscribe PropertiesChanged signal"));
-            return false;
-        }
-
         _interfacesAdded = g_dbus_connection_signal_subscribe(_dbusConnection, BLUEZ_INTERFACE, DBUS_INTERFACE_OBJECT_MANAGER, "InterfacesAdded", ROOT_OBJECT, nullptr, G_DBUS_SIGNAL_FLAGS_NONE, InterfacesAdded, nullptr, nullptr);
         if (!_interfacesAdded) {
             TRACE(Trace::Error, ("Failed to subscribe InterfacesAdded signal"));
@@ -62,16 +58,10 @@ namespace Plugin {
 
     bool BluetoothImplementation::UnsubscribeDBusSignals()
     {
-        g_dbus_connection_signal_unsubscribe(_dbusConnection, _propertiesChanged);
         g_dbus_connection_signal_unsubscribe(_dbusConnection, _interfacesAdded);
         g_dbus_connection_signal_unsubscribe(_dbusConnection, _interfacesRemoved);
 
         return true;
-    }
-
-    void BluetoothImplementation::AdapterPropertiesChanged(GDBusConnection* connection, const gchar* senderName, const gchar* objectPath, const gchar* interfaceName, const gchar* signalName, GVariant* parameters, gpointer userData)
-    {
-        return;
     }
 
     void BluetoothImplementation::InterfacesAdded(GDBusConnection* connection, const gchar* senderName, const gchar* objectPath, const gchar* interfaceName, const gchar* signalName, GVariant* parameters, gpointer userData)
@@ -86,6 +76,7 @@ namespace Plugin {
         GVariant* devicePropertyValue;
         BTDeviceList::BTDeviceInfo jsonDeviceInfo;
 
+        jsonDeviceInfo.Name = "";
         g_variant_get(parameters, "(oa{sa{sv}})", &deviceId, &iterator1);
         while (g_variant_iter_loop(iterator1, "{sa{sv}}", &bluezDeviceName, &iterator2)) {
             while (g_variant_iter_loop(iterator2, "{sv}", &devicePropertyType, &devicePropertyValue)) {
@@ -100,10 +91,10 @@ namespace Plugin {
                 }
             }
         }
-        if (_deviceIdMap.find(deviceAddress.c_str()) == _deviceIdMap.end()) {
+        if (_discoveredDeviceIdMap.find(deviceAddress.c_str()) == _discoveredDeviceIdMap.end()) {
              TRACE_L1("Added BT Device. Device ID : [%s]", deviceAddress.c_str());
-            _deviceIdMap.insert(std::make_pair(deviceAddress.c_str(), deviceId.c_str()));
-            _jsonDeviceInfoList.Add(jsonDeviceInfo);
+            _discoveredDeviceIdMap.insert(std::make_pair(deviceAddress.c_str(), deviceId.c_str()));
+            _jsonDiscoveredDevices.Add(jsonDeviceInfo);
         }
     }
 
@@ -112,9 +103,9 @@ namespace Plugin {
         string deviceId;
 
         g_variant_get(parameters, "(oas)", &deviceId, nullptr);
-        const auto& iterator = _deviceIdMap.find(deviceId.c_str());
-        if (iterator != _deviceIdMap.end()) {
-            _deviceIdMap.erase(iterator);
+        const auto& iterator = _discoveredDeviceIdMap.find(deviceId.c_str());
+        if (iterator != _discoveredDeviceIdMap.end()) {
+            _discoveredDeviceIdMap.erase(iterator);
             TRACE_L1("Removed BT Device. Device ID : [%s]", deviceId.c_str());
         }
     }
@@ -131,14 +122,17 @@ namespace Plugin {
             return false;
         }
 
-        TRACE(Trace::Information, ("Started BT Scan"));
+        TRACE(Trace::Information, ("Scanning BT Devices..."));
         return true;
     }
 
-    bool BluetoothImplementation::StartScan()
+    bool BluetoothImplementation::Scan()
     {
         if (_isScanning == false) {
             TRACE(Trace::Information, ("Start BT Scan"));
+            // Clearing previously discovered devices.
+            _discoveredDeviceIdMap.clear();
+            _jsonDiscoveredDevices.Clear();
             Run();
             _isScanning = true;
             return true;
@@ -172,18 +166,18 @@ namespace Plugin {
         }
     }
 
-    string BluetoothImplementation::ShowDeviceList()
+    string BluetoothImplementation::DiscoveredDevices()
     {
         std::string deviceInfoList;
 
-        _jsonDeviceInfoList.ToString(deviceInfoList);
+        _jsonDiscoveredDevices.ToString(deviceInfoList);
         return deviceInfoList;
     }
 
     bool BluetoothImplementation::Pair(string deviceId)
     {
-        const auto& iterator = _deviceIdMap.find(deviceId.c_str());
-        if (iterator != _deviceIdMap.end()) {
+        const auto& iterator = _discoveredDeviceIdMap.find(deviceId.c_str());
+        if (iterator != _discoveredDeviceIdMap.end()) {
             TRACE(Trace::Information, ("Pairing BT Device. Device ID : [%s]", deviceId.c_str()));
             if (!PairDevice(iterator->second)) {
                 TRACE(Trace::Error, ("Failed to Pair BT Device. Device ID : [%s]", deviceId.c_str()));
@@ -222,7 +216,7 @@ namespace Plugin {
         return true;
     }
 
-    bool BluetoothImplementation::GetManagedObjects()
+    bool BluetoothImplementation::GetPairedDevices()
     {
         GError* dbusError = nullptr;
         GVariant* dbusReply = nullptr;
@@ -247,6 +241,9 @@ namespace Plugin {
 
         for (int iterator = 0; g_variant_iter_next(iterator1, "{oa{sa{sv}}}", &deviceIdList[iterator],&iterator2); iterator++) {
             TRACE(Trace::Information, ("Paired Device ID -  : [%s]", deviceIdList[iterator].c_str()));
+            // Clearing previous data.
+            deviceName = "";
+            pairedDeviceInfo.Name = "";
             while (g_variant_iter_loop(iterator2, "{sa{sv}}", &bluezDeviceName, &iterator3)) {
                 while (g_variant_iter_loop(iterator3, "{sv}", &devicePropertyType, &devicePropertyValue)) {
                     if (strcmp(devicePropertyType.c_str(), "Address") == 0) {
@@ -263,13 +260,28 @@ namespace Plugin {
                 }
             }
 
-            if (_deviceIdMap.find(deviceAddress.c_str()) == _deviceIdMap.end()) {
+            if (_pairedDeviceIdMap.find(deviceAddress.c_str()) == _pairedDeviceIdMap.end() && strcmp(deviceAddress.c_str(), "")) {
                 TRACE_L1("Added BT Device. Device ID : [%s]", deviceAddress.c_str());
-                _deviceIdMap.insert(std::make_pair(deviceAddress.c_str(), deviceIdList[iterator].c_str()));
-                _jsonDeviceInfoList.Add(pairedDeviceInfo);
+                _pairedDeviceIdMap.insert(std::make_pair(deviceAddress.c_str(), deviceIdList[iterator].c_str()));
+                _jsonPairedDevices.Add(pairedDeviceInfo);
             }
         }
         return true;
+    }
+
+    string BluetoothImplementation::PairedDevices()
+    {
+        std::string deviceInfoList;
+
+        // Clearing previous data
+        _jsonPairedDevices.Clear();
+        _pairedDeviceIdMap.clear();
+        if (GetPairedDevices())
+            _jsonPairedDevices.ToString(deviceInfoList);
+        else
+            TRACE(Trace::Error, ("Failed to get Paired Device List"));
+
+        return deviceInfoList;
     }
 
     bool BluetoothImplementation::Connect(string deviceId)
@@ -277,8 +289,8 @@ namespace Plugin {
         GError* dbusError = nullptr;
         GVariant* dbusReply = nullptr;
 
-        const auto& iterator = _deviceIdMap.find(deviceId.c_str());
-        if (iterator != _deviceIdMap.end()) {
+        const auto& iterator = _pairedDeviceIdMap.find(deviceId.c_str());
+        if (iterator != _pairedDeviceIdMap.end()) {
             TRACE(Trace::Information, ("Connecting BT Device. Device ID : [%s]", deviceId.c_str()));
             dbusReply = g_dbus_connection_call_sync(_dbusConnection, BLUEZ_INTERFACE, iterator->second.c_str(), BLUEZ_INTERFACE_DEVICE, "Connect", nullptr, nullptr, G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &dbusError);
             if (nullptr == dbusReply) {
@@ -300,8 +312,8 @@ namespace Plugin {
         GError* dbusError = nullptr;
         GVariant* dbusReply = nullptr;
 
-        const auto& iterator = _deviceIdMap.find(deviceId.c_str());
-        if (iterator != _deviceIdMap.end()) {
+        const auto& iterator = _pairedDeviceIdMap.find(deviceId.c_str());
+        if (iterator != _pairedDeviceIdMap.end()) {
             TRACE(Trace::Information, ("Disconnecting BT Device. Device ID : [%s]", deviceId.c_str()));
             dbusReply = g_dbus_connection_call_sync(_dbusConnection, BLUEZ_INTERFACE, iterator->second.c_str(), BLUEZ_INTERFACE_DEVICE, "Disconnect", nullptr, nullptr, G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &dbusError);
             if (nullptr == dbusReply) {

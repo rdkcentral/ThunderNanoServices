@@ -115,8 +115,8 @@ namespace Plugin {
         void Deactivated(RPC::IRemoteProcess* process);
 
     private:
-        uint8 _skipURL;
-        uint32 _pid;
+        uint8_t _skipURL;
+        uint32_t _pid;
         PluginHost::IShell* _service;
         Core::Sink<Notification> _notification;
         Exchange::IBluetooth* _bluetooth;
