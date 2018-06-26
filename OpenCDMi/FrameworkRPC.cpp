@@ -596,7 +596,7 @@ namespace Plugin {
                 , _adminLock()
                 , _administrator(name)
                 , _defaultSize(defaultSize)
-                , _sessionMap() {
+                , _sessionList() {
                 ASSERT (parent != nullptr);
             }
             virtual ~AccessorOCDM() {
@@ -616,9 +616,11 @@ namespace Plugin {
 
                 _adminLock.Lock();
 
-                std::map<std::string, SessionImplementation*>::const_iterator index (_sessionMap.find(sessionId));
-                if (index != _sessionMap.end()) {
-                    result = index->second;
+                std::list<SessionImplementation*>::const_iterator index (_sessionList.begin());
+                while ( (index != _sessionList.end()) && ((*index)->SessionId() != sessionId) ) { index++; }
+
+                if (index != _sessionList.end()) {
+                    result = *index;
                     ASSERT (result != nullptr);
                     result->AddRef();
                 }
@@ -631,17 +633,19 @@ namespace Plugin {
             virtual ::OCDM::ISession* Session(const uint8_t data[], const uint8_t keyLength) override {
                 ::OCDM::ISession* result = nullptr;
 
+
                 if (keyLength >= CommonEncryptionData::KeyId::Length()) {
 
                     _adminLock.Lock();
 
-                    std::map<std::string, SessionImplementation*>::const_iterator index (_sessionMap.begin());
+                    std::list<SessionImplementation*>::const_iterator index (_sessionList.begin());
 
-                    while ( (index != _sessionMap.end()) && (index->second->HasKeyId(data) == false) ) { index++; }
+                    while ( (index != _sessionList.end()) && ((*index)->HasKeyId(data) == false) ) { index++; }
 
-                    if (index != _sessionMap.end()) {
+                    if (index != _sessionList.end()) {
 
-                        result = index->second;
+		        printf("Selected session out of list count: %d\n", _sessionList.size());
+                        result = *index;
                         ASSERT (result != nullptr);
                         result->AddRef();
                     }
@@ -700,7 +704,7 @@ namespace Plugin {
 
                                 _adminLock.Lock();
 
-                                _sessionMap.insert (std::pair<std::string, SessionImplementation*>(sessionId, newEntry));
+                                _sessionList.push_front(newEntry);
 
                                 _adminLock.Unlock();
                             }
@@ -746,12 +750,12 @@ namespace Plugin {
             ::OCDM::ISession* FindSession (const CommonEncryptionData& keyIds, const string& keySystem) const {
                 ::OCDM::ISession* result = nullptr;
 
-                std::map<std::string, SessionImplementation*>::const_iterator index(_sessionMap.begin());
+                std::list<SessionImplementation*>::const_iterator index(_sessionList.begin());
 
-                while ( (index != _sessionMap.end()) && (result == nullptr) ) { 
+                while ( (index != _sessionList.end()) && (result == nullptr) ) { 
 
-                    if (index->second->IsSupported(keyIds, keySystem) == true) {
-                        result = index->second;
+                    if ((*index)->IsSupported(keyIds, keySystem) == true) {
+                        result = *index;
                         result->AddRef();
                     }
                     else {
@@ -781,15 +785,15 @@ namespace Plugin {
 
                     _administrator.ReleaseBuffer(session->BufferId());
 
-                    std::map<std::string, SessionImplementation*>::iterator index(_sessionMap.begin());
+                    std::list<SessionImplementation*>::iterator index(_sessionList.begin());
 
-                    while ( (index != _sessionMap.end()) && (session != index->second) ) { index++; }
+                    while ( (index != _sessionList.end()) && (session != (*index)) ) { index++; }
 
-                    ASSERT (index != _sessionMap.end());
+                    ASSERT (index != _sessionList.end());
                 
-                    if (index != _sessionMap.end()) {
+                    if (index != _sessionList.end()) {
 	                // Before we remove it here, release it.
-                        _sessionMap.erase(index);
+                        _sessionList.erase(index);
                     }
                 }
 
@@ -802,7 +806,7 @@ namespace Plugin {
             mutable Core::CriticalSection _adminLock;
             BufferAdministrator _administrator;
             uint32_t _defaultSize;
-            std::map<std::string, SessionImplementation*> _sessionMap;
+            std::list<SessionImplementation*> _sessionList;
         };
 
         class Config : public Core::JSON::Container {
