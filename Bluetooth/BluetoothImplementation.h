@@ -31,6 +31,7 @@ namespace Plugin {
     public:
         BluetoothImplementation()
             : _isScanning(false)
+            , _connected("")
         {
         }
         virtual ~BluetoothImplementation()
@@ -104,12 +105,14 @@ namespace Plugin {
         bool GetPairedDevices();
         string PairedDevices();
         bool Connect(string);
-        bool Disconnect(string);
+        bool Disconnect();
         bool Pair(string);
         bool PairDevice(const string);
         static void InterfacesAdded(GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant*, gpointer);
         static void InterfacesRemoved(GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant*, gpointer);
         bool GetManagedObjects();
+        bool IsScanning() { return _isScanning; };
+        string Connected() { return _connected; };
 
     private:
         GMainLoop* _loop;
@@ -118,6 +121,7 @@ namespace Plugin {
         int _interfacesAdded;
         int _interfacesRemoved;
         bool _isScanning;
+        string _connected;
         static std::map<string, string> _discoveredDeviceIdMap;
         static std::map<string, string> _pairedDeviceIdMap;
         static Core::JSON::ArrayType<BTDeviceList::BTDeviceInfo> _jsonDiscoveredDevices;

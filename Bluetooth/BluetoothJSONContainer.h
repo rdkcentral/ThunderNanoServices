@@ -7,11 +7,30 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class BTDeviceList : public Core::JSON::Container {
+    class BTStatus : public Core::JSON::Container {
     private:
-        BTDeviceList(const BTDeviceList&) = delete;
-        BTDeviceList& operator=(const BTDeviceList&) = delete;
+        BTStatus(const BTStatus&) = delete;
+        BTStatus& operator=(const BTStatus&) = delete;
 
+    public:
+        BTStatus()
+            : Scanning()
+            , Connected()
+        {
+            Add(_T("scanning"), &Scanning);
+            Add(_T("connected"), &Connected);
+        }
+
+        virtual ~BTStatus()
+        {
+        }
+
+    public:
+        Core::JSON::Boolean Scanning;
+        Core::JSON::String Connected;
+    };
+
+    class BTDeviceList : public Core::JSON::Container {
     public:
         class BTDeviceInfo : public Core::JSON::Container {
         private:
@@ -39,27 +58,30 @@ namespace Plugin {
             ~BTDeviceInfo()
             {
             }
+
         public:
             Core::JSON::String Address;
             Core::JSON::String Name;
         };
 
+    private:
+        BTDeviceList(const BTDeviceList&) = delete;
+        BTDeviceList& operator=(const BTDeviceList&) = delete;
+
     public:
         BTDeviceList()
             : Core::JSON::Container()
-            , DeviceInfoList()
-            , DeviceId()
+            , DeviceList()
         {
-            Add(_T("DeviceInfoList"), &DeviceInfoList);
-            Add(_T("DeviceId"), &DeviceId);
+            Add(_T("DeviceList"), &DeviceList);
         }
+
         ~BTDeviceList()
         {
         }
+
     public:
-        Core::JSON::ArrayType<BTDeviceInfo> DeviceInfoList;
-        //BTDeviceInfo DeviceInfoList;
-        Core::JSON::String DeviceId;
+        Core::JSON::ArrayType<BTDeviceInfo> DeviceList;
     };
 
 } //namespace Plugin

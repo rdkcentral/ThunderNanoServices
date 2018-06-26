@@ -113,6 +113,10 @@ namespace Plugin {
 
     private:
         void Deactivated(RPC::IRemoteProcess* process);
+        Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
+        Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
+        Core::ProxyType<Web::Response> PostMethod(Core::TextSegmentIterator& index, const Web::Request& request);
+        Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index);
 
     private:
         uint8_t _skipURL;

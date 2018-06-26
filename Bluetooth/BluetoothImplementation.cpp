@@ -240,6 +240,10 @@ namespace Plugin {
         g_variant_get(dbusReply, "(a{oa{sa{sv}}})", &iterator1);
 
         for (int iterator = 0; g_variant_iter_next(iterator1, "{oa{sa{sv}}}", &deviceIdList[iterator],&iterator2); iterator++) {
+            // Checking whether the object is controller or not.
+            if (!strstr(deviceIdList[iterator].c_str(), DEVICE_ID))
+                continue;
+
             TRACE(Trace::Information, ("Paired Device ID -  : [%s]", deviceIdList[iterator].c_str()));
             // Clearing previous data.
             deviceName = "";
@@ -299,6 +303,7 @@ namespace Plugin {
             }
 
             TRACE(Trace::Information, ("Connected BT Device. Device ID : [%s]", deviceId.c_str()));
+            _connected = deviceId;
             return true;
         }
 
@@ -307,25 +312,26 @@ namespace Plugin {
 
     }
 
-    bool BluetoothImplementation::Disconnect(string deviceId)
+    bool BluetoothImplementation::Disconnect()
     {
         GError* dbusError = nullptr;
         GVariant* dbusReply = nullptr;
 
-        const auto& iterator = _pairedDeviceIdMap.find(deviceId.c_str());
+        const auto& iterator = _pairedDeviceIdMap.find(_connected.c_str());
         if (iterator != _pairedDeviceIdMap.end()) {
-            TRACE(Trace::Information, ("Disconnecting BT Device. Device ID : [%s]", deviceId.c_str()));
+            TRACE(Trace::Information, ("Disconnecting BT Device. Device ID : [%s]", _connected.c_str()));
             dbusReply = g_dbus_connection_call_sync(_dbusConnection, BLUEZ_INTERFACE, iterator->second.c_str(), BLUEZ_INTERFACE_DEVICE, "Disconnect", nullptr, nullptr, G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &dbusError);
             if (nullptr == dbusReply) {
                 TRACE(Trace::Error, ("Failed Disconnect dbus call. Error msg :  %s", dbusError->message));
                 return false;
             }
 
-            TRACE(Trace::Information, ("Disconnected BT Device. Device ID : [%s]", deviceId.c_str()));
+            TRACE(Trace::Information, ("Disconnected BT Device. Device ID : [%s]", _connected.c_str()));
+            _connected = "";
             return true;
         }
 
-        TRACE(Trace::Error, ("Invalid BT Device ID. Device ID : [%s]", deviceId.c_str()));
+        TRACE(Trace::Error, ("Invalid BT Device ID. Device ID : [%s]", _connected.c_str()));
         return false;
     }
 
