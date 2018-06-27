@@ -505,9 +505,9 @@ namespace Plugin {
         Core::Thread::SignalTermination();
 
         // Wait till gpMain has ended......
-        TRACE_L1("Waiting for GreenPeakDriver to stop:");
+        TRACE_L1("Waiting for GreenPeakDriver to stop:", __FUNCTION__);
         Wait(Thread::STOPPED | Thread::BLOCKED);
-        TRACE_L1(" Done!!! \n");
+        TRACE_L1(" Done!!! \n", __FUNCTION__);
     }
 
     /* virtual */ GreenPeak::Activity::~Activity()

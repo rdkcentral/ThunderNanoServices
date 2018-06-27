@@ -48,7 +48,7 @@ namespace Plugin {
         virtual uint32 Configure(PluginHost::IShell* service)
         {
             if (!ConfigureBTAdapter()) {
-                TRACE_L1("Failed configuring Bluetooth Adapter");
+                TRACE_L1("Failed configuring Bluetooth Adapter", __FUNCTION__);
                 return -1;
             }
 
