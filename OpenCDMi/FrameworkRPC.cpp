@@ -281,8 +281,10 @@ namespace Plugin {
                         , _sessionKey(nullptr)
                         , _sessionKeyLength(0) {
                         Core::Thread::Run();
+                        TRACE_L1("Constructing buffer server side: %p - %s", this, name.c_str());
                     }
                     ~DataExchange() {
+                        TRACE_L1("Destructing buffer server side: %p - %s", this, ::OCDM::DataExchange::Name().c_str());
                         // Make sure the thread reaches a HALT.. We are done.
                         Core::Thread::Stop();
 
@@ -446,9 +448,11 @@ namespace Plugin {
 
                     _mediaKeySession->Run(&_sink);
                     TRACE(Trace::Information, ("Server::Session::Session(%s,%s,%s) => %p", _keySystem.c_str(), _sessionId.c_str(), bufferName.c_str(), this));
+                    TRACE_L1("Constructed the Session Server side: %p", this);
                 }
                 virtual ~SessionImplementation() {
 
+                    TRACE_L1("Destructing the Session Server side: %p", this);
                     // this needs to be done in a thread safe way. Leave it up to 
                     // the parent to lock handing out new entries before we clear.
                     _parent.Remove(this, _keySystem, _mediaKeySession);
