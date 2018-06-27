@@ -34,6 +34,8 @@ find_path(LIBNEXUS_INCLUDE nexus_config.h
 
 find_library(LIBNEXUS_LIBRARY nexus)
 
+find_library(LIBB_OS_LIBRARY b_os)
+
 find_library(LIBNXCLIENT_LOCAL_LIBRARY nxclient_local)
 
 find_library(LIBNXCLIENT_LIBRARY nxclient)
@@ -77,6 +79,12 @@ if(NOT TARGET NEXUS::NEXUS)
             set_target_properties(NEXUS::NEXUS PROPERTIES
                  INTERFACE_COMPILE_DEFINITIONS NO_NXCLIENT
                  )
+        endif()
+
+        if(EXISTS "${LIBB_OS_LIBRARY}")
+            set_target_properties(NEXUS::NEXUS PROPERTIES
+                    IMPORTED_LINK_INTERFACE_LIBRARIES "${LIBB_OS_LIBRARY}"
+                    )
         endif()
     endif()
 endif()
