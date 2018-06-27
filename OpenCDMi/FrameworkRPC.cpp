@@ -535,9 +535,10 @@ namespace Plugin {
                     std::list<::OCDM::ISession::IKeyCallback*>::iterator  index (std::find(_observers.begin(), _observers.end(), callback));
 
                     if (index != _observers.end()) {
-                        callback->Release();
+                        (*index)->Release();
                         _observers.erase(index);
                     }
+
                     _adminLock.Unlock();
                 }
 
