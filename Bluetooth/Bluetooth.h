@@ -31,9 +31,11 @@ namespace Plugin {
             }
 
         public:
-            virtual void Activated(RPC::IRemoteProcess*) {
+            virtual void Activated(RPC::IRemoteProcess*)
+            {
             }
-            virtual void Deactivated(RPC::IRemoteProcess* process) {
+            virtual void Deactivated(RPC::IRemoteProcess* process)
+            {
                 _parent.Deactivated(process);
             }
 

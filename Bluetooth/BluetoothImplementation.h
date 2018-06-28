@@ -34,6 +34,7 @@ namespace Plugin {
             , _connected("")
         {
         }
+
         virtual ~BluetoothImplementation()
         {
             if (_loop) {
@@ -128,4 +129,5 @@ namespace Plugin {
         static Core::JSON::ArrayType<BTDeviceList::BTDeviceInfo> _jsonPairedDevices;
     };
 
-} } /* namespace WPEFramework::Plugin */
+} /* namespace WPEFramework::Plugin */
+}

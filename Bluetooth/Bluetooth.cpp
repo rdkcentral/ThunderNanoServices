@@ -26,12 +26,10 @@ namespace Plugin {
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
         _service->Register(&_notification);
 
-        if (config.OutOfProcess.Value() == true) {
+        if (config.OutOfProcess.Value() == true)
             _bluetooth = _service->Instantiate<Exchange::IBluetooth>(3000, _T("BluetoothImplementation"), static_cast<uint32_t>(~0), _pid, _service->Locator());
-        }
-        else {
+        else
             _bluetooth = Core::ServiceAdministrator::Instance().Instantiate<Exchange::IBluetooth>(Core::Library(), _T("BluetoothImplementation"), static_cast<uint32_t>(~0));
-        }
 
         if (_bluetooth == nullptr) {
             message = _T("Bluetooth could not be instantiated.");
@@ -87,9 +85,8 @@ namespace Plugin {
 
         if ((request.Verb == Web::Request::HTTP_PUT) || (request.Verb == Web::Request::HTTP_POST)) {
             if ((index.IsValid() == true) && (index.Next() && index.IsValid())) {
-                if ((index.Remainder() == _T("Pair")) || (index.Remainder() == _T("Connect"))) {
+                if ((index.Remainder() == _T("Pair")) || (index.Remainder() == _T("Connect")))
                    request.Body(jsonResponseFactoryBTDeviceInfo.Element());
-                }
             }
         }
     }
