@@ -47,8 +47,8 @@ namespace Plugin {
 
         class Config : public Core::JSON::Container {
         private:
-            Config(const Config&);
-            Config& operator=(const Config&);
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
 
         public:
             Config()
@@ -64,6 +64,70 @@ namespace Plugin {
         public:
             Core::JSON::Boolean OutOfProcess;
         };
+
+    public:
+        class Data: public Core::JSON::Container {
+        private:
+            Data(const Data&) = delete;
+            Data& operator=(const Data&) = delete;
+
+        public:
+            class System : public Core::JSON::Container {
+            private:
+                System& operator=(const System&) = delete;
+
+            public:
+                System() : Name(), Designators() {
+                    Add(_T("name"), &Name);
+                    Add(_T("designators"), &Designators);
+                }
+                System(const string& name, RPC::IStringIterator* entries) : Name(), Designators() {
+                    Add(_T("name"), &Name);
+                    Add(_T("designators"), &Designators);
+
+                    ASSERT (entries != nullptr);
+
+                    Name = name;
+                    Load(entries);
+
+               }
+                System(const System& copy) : Name(copy.Name), Designators(copy.Designators) {
+                    Add(_T("name"), &Name);
+                    Add(_T("designators"), &Designators);
+                }
+                virtual ~System() {
+                }
+
+            public:
+                Core::JSON::String Name;
+                Core::JSON::ArrayType<Core::JSON::String> Designators;
+
+                inline void Load(RPC::IStringIterator* entries) {
+                    Designators.Clear();
+                    TRACE_L1("Adding Designators: %d", __LINE__);
+                    while (entries->Next() == true) {
+                        Core::JSON::String entry;
+                        entry = entries->Current();
+                        TRACE_L1("Designator: %s", entries->Current().c_str());
+                        Designators.Add(entry);
+                    }
+                }
+            };
+
+        public:
+            Data()
+                : Core::JSON::Container()
+            {
+                Add(_T("systems"), &Systems);
+            }
+            ~Data()
+            {
+            }
+
+        public:
+            Core::JSON::ArrayType<System> Systems;
+        };
+
 
     public:
         OCDM()

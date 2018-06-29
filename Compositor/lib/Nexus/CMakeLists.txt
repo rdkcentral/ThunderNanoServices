@@ -24,7 +24,6 @@ set_target_properties(${TARGET}
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         FRAMEWORK FALSE
-        VERSION ${VERSION}
         OUTPUT_NAME ${compositor_artefact}
         )
 

@@ -11,6 +11,7 @@ option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_HARDWAREREADY "Manual overrule of the time
 option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (Nexus only).")
 option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_GRAPHICS_HEAP_SIZE "Change graphic heap of driver (Nexus only).")
 option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_INSTALL_NEXUS_SERVER "Enable to install the server to staging." OFF)
+option(WPEFRAMEWORK_NEXUS_SERVER_HAS_EXTENDED_INIT "Enable to support unauthenticated nxclients." ON)
 
 message("Setup WPEFramework${TARGET} v${VERSION}...")
 
@@ -37,6 +38,13 @@ target_compile_definitions(${TARGET}
         INTERFACE
             USE_WPEFRAMEWORK_NXSERVER
         )
+
+if (WPEFRAMEWORK_NEXUS_SERVER_HAS_EXTENDED_INIT)
+target_compile_definitions(${TARGET}
+        PRIVATE
+            NEXUS_SERVER_HAS_EXTENDED_INIT
+        )
+endif()
 
 set_target_properties(${TARGET}
         PROPERTIES
