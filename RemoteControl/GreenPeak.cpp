@@ -579,7 +579,7 @@ namespace Plugin {
         return (_error);
     }
 
-    /* virtual */ bool GreenPeak::Pairing()
+    /* virtual */ bool GreenPeak::Pair()
     {
         bool activated = false;
 

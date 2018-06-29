@@ -511,10 +511,10 @@ namespace Plugin {
 
                     bool pressed = false;
 
-                    // PUT .../RemoteControl/<DEVICE_NAME>/PairingMode : activate pairing mode of specific DEVICE_NAME
-                    if (index.Current() == _T("PairingMode")) {
+                    // PUT .../RemoteControl/<DEVICE_NAME>/Pair: activate pairing mode of specific DEVICE_NAME
+                    if (index.Current() == _T("Pair")) {
 
-                        if (Remotes::RemoteAdministrator::Instance().Pairing(deviceName) == true) {
+                        if (Remotes::RemoteAdministrator::Instance().Pair(deviceName) == true) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = string(_T("Pairing mode active: ") + deviceName);
                         }
