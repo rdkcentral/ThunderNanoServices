@@ -1,7 +1,7 @@
 /*****************************************************************************
  *                    Includes Definitions
  *****************************************************************************/
-
+#define _TRACE_LEVEL 3
 #include "GreenPeak.h"
 #include "RemoteAdministrator.h"
 
@@ -32,6 +32,7 @@ extern "C" {
 
 #define GP_COMPONENT_ID_ZRCRECIPIENT 130    // XXX: defined in rf4ce-hal-gp make file
 #define GP_COMPONENT_ID_MSORECIPIENT 152
+#define GP_COMPONENT_ID_RF4CEBINDGDP 49
 
 #include <gpZrc.h>
 #include <gpMsoRecipient.h>
@@ -112,10 +113,19 @@ static void gpApplication_ZRCBindSetup(Bool AllowInteractiveValidation, Bool Pus
         result = gpZrc_Msg(gpZrc_MsgId_RecipientPushButton, NULL);
         TRACE_L1("%s: gpZrc_MsgId_RecipientPushButton result (0x%x)", __FUNCTION__, result);
         if(result != gpZrc_ResultSuccess) {
-            TRACE_L1("FAIL in set of gpZrc_MsgId_RecipientPushButton (0x%x)\n", result);
+            TRACE_L1("FAIL in set of gpZrc_MsgId_RecipientPushButton (0x%x)", result);
             return;
         }
     }
+}
+
+static void gpApplication_ZRCUnbind(UInt8 bindingId)
+{
+    gpZrc_Result_t result = gpZrc_ResultSuccess;
+    gpZrc_Msg_t messageZrc;
+
+    messageZrc.UnbindRequest.bindingId = bindingId;
+    result = gpZrc_Msg(gpZrc_MsgId_UnbindRequest, &messageZrc);
 }
 
 #define NVM_TAG_PROFILEIDLIST       0x00
@@ -155,12 +165,12 @@ void gpZrc_cbMsg(gpZrc_MsgId_t MsgId, UInt8 length, gpZrc_Msg_t* pMsg)
 
     switch(MsgId) {
         case gpZrc_MsgId_cbRecipientBindingIndication: {
-            TRACE_L1("%s: gpZrc_MsgId_cbRecipientBindingIndication MsgId 0x%x\n", __FUNCTION__, MsgId);
+            TRACE_L1("%s: gpZrc_MsgId_cbRecipientBindingIndication MsgId 0x%x", __FUNCTION__, MsgId);
             break;
         }
 
         case gpZrc_MsgId_cbRecipientBindingConfirm: {
-            TRACE_L1("%s: gpZrc_MsgId_cbRecipientBindingConfirm MsgId 0x%x\n", __FUNCTION__, MsgId);
+            TRACE_L1("%s: gpZrc_MsgId_cbRecipientBindingConfirm MsgId 0x%x", __FUNCTION__, MsgId);
             gpRf4ce_ProfileId_t ProfileId = gpRf4ce_ProfileIdZrc;
 
             if(pMsg->cbRecipientBindingConfirm.result == gpRf4ce_ResultSuccess) {
@@ -176,37 +186,34 @@ void gpZrc_cbMsg(gpZrc_MsgId_t MsgId, UInt8 length, gpZrc_Msg_t* pMsg)
         }
 
         case gpZrc_MsgId_cbRecipientPowerStatusNotifyIndication: {
-            TRACE_L1("%s: gpZrc_MsgId_cbRecipientPowerStatusNotifyIndication MsgId 0x%x\n", __FUNCTION__, MsgId);
+            TRACE_L4("%s: gpZrc_MsgId_cbRecipientPowerStatusNotifyIndication MsgId 0x%x", __FUNCTION__, MsgId);
             break;
         }
 
         case gpZrc_MsgId_cbRecipientValidationResultIndication: {
-            TRACE_L1("%s: gpZrc_MsgId_cbRecipientValidationResultIndication MsgId 0x%x\n", __FUNCTION__, MsgId);
+            TRACE_L4("%s: gpZrc_MsgId_cbRecipientValidationResultIndication MsgId 0x%x", __FUNCTION__, MsgId);
             break;
         }
 
         case gpMsoRecipient_MsgId_ValidationComplete:{
-            TRACE_L1("%s: gpMsoRecipient_MsgId_ValidationComplete MsgId 0x%x\n", __FUNCTION__, MsgId);
+            TRACE_L4("%s: gpMsoRecipient_MsgId_ValidationComplete MsgId 0x%x", __FUNCTION__, MsgId);
             break;
         }
 
         case gpZrc_MsgId_cbRecipientActionCodesIndicationNoPayload: {
             for(index=0; index < pMsg->cbActionCodesIndicationNoPayload.numberOfActions; index++) {
-                TRACE_L1("%s: gpZrc_MsgId_cbRecipientActionCodesIndicationNoPayload ActionControl=0x%x ActionCode=0x%x\n", __FUNCTION__,
-                    pMsg->cbActionCodesIndicationNoPayload.ActionRecordList[index].ActionControl,
-                    pMsg->cbActionCodesIndicationNoPayload.ActionRecordList[index].ActionCode);
 
                 UInt8 keyCode = pMsg->cbActionCodesIndicationNoPayload.ActionRecordList[index].ActionCode;
                 switch(pMsg->cbActionCodesIndicationNoPayload.ActionRecordList[index].ActionControl)
                 {
                     case gpRf4ceCmd_ZrcActionTypeAtomic:
                     case gpRf4ceCmd_ZrcActionTypeStart: {
-                        TRACE_L1("%s: Key Pressed keyCode=0x%x\n", __FUNCTION__, keyCode);
+                        TRACE_L1("%s: Key Pressed keyCode=0x%x", __FUNCTION__, keyCode);
                         WPEFramework::Plugin::GreenPeak::Dispatch(true, keyCode, 0);
                         break;
                     }
                     case gpRf4ceCmd_ZrcActionTypeReleased: {
-                        TRACE_L1("%s: Key Released keyCode=0x%x\n", __FUNCTION__, keyCode);
+                        TRACE_L1("%s: Key Released keyCode=0x%x", __FUNCTION__, keyCode);
                         WPEFramework::Plugin::GreenPeak::Dispatch(false, keyCode, 0);
                         break;
                     }
@@ -219,8 +226,20 @@ void gpZrc_cbMsg(gpZrc_MsgId_t MsgId, UInt8 length, gpZrc_Msg_t* pMsg)
 
         }
 
+        case gpZrc_MsgId_cbUnbindConfirm:
+            TRACE_L1("%s: gpZrc_MsgId_cbUnbindConfirm", __FUNCTION__);
+            if (pMsg->cbUnbindConfirm.status == gpRf4ce_ResultNoPairing) {
+                TRACE_L1("Invalid binding id (0x%x)", pMsg->cbUnbindConfirm.bindingId);
+            }
+            // XXX: gpRf4ce_ResultNoAck (0xe9) ???
+            break;
+
+        case gpZrc_MsgId_cbUnbindIndication:
+            TRACE_L1("%s: gpZrc_MsgId_cbUnbindIndication bindingId=%d status=0x%x", __FUNCTION__, pMsg->cbUnbindConfirm.bindingId, pMsg->cbUnbindConfirm.status);
+            break;
+
         default:
-            TRACE_L1("%s: MsgId 0x%x\n", __FUNCTION__, MsgId);
+            TRACE_L1("%s: MsgId 0x%x", __FUNCTION__, MsgId);
             break;
     }
 
@@ -272,6 +291,7 @@ void DispatcherResetIndication(Bool setDefault)
  *                    gpRf4ceUserControl Callbacks
  *****************************************************************************/
 static uint16_t _releasedCode = static_cast<uint16_t>(~0);
+static uint8_t  _binidngId = static_cast<uint8_t>(~0);
 
 static void KeyReleased()
 {
@@ -334,12 +354,12 @@ void gpRf4ceBindAuto_cbRecipientBindConfirm(UInt8 bindingId, gpRf4ce_Result_t st
 
 void gpRf4ceBindAuto_cbUnbindIndication(UInt8 bindingId)
 {
-    GP_LOG_SYSTEM_PRINTF("Unbind Indication id: %u", 0, (UInt16)bindingId);
+    TRACE_L1("Unbind Indication id: %u", 0, (UInt16)bindingId);
 }
 
 void gpRf4ceBindAuto_cbUnbindConfirm(UInt8 bindingId, gpRf4ce_Result_t status)
 {
-    GP_LOG_SYSTEM_PRINTF("Unbind Confirm id: %u", 0, (UInt16)bindingId);
+    TRACE_L1("Unbind Confirm id: %u", 0, (UInt16)bindingId);
 }
 
 /*****************************************************************************
@@ -371,8 +391,6 @@ static void cbInitializationDone(void)
         static_cast<uint16_t>(version.revision),
         static_cast<uint16_t>(version.patch),
         static_cast<uint32_t>(gpVersion_GetChangelist()));
-
-   TRACE_L1("%s: Exiting\n", __FUNCTION__);
 }
 
 void gpRf4ceDispatcher_cbResetConfirm(gpRf4ce_Result_t status)
@@ -456,6 +474,12 @@ void target_ActivatePairing()
     #endif
 }
 
+void target_ActivateUnpairing()
+{
+    WPEFramework::Plugin::GreenPeak::Report(string("Unpairing."));
+    gpApplication_ZRCUnbind(_binidngId);
+}
+
 static void terminateThread()
 {
     printf("Terminating the GreenPeak dedicated thread.\n");
@@ -505,9 +529,9 @@ namespace Plugin {
         Core::Thread::SignalTermination();
 
         // Wait till gpMain has ended......
-        TRACE_L1("Waiting for GreenPeakDriver to stop:", __FUNCTION__);
+        TRACE_L1("%s: Waiting for GreenPeakDriver to stop:", __FUNCTION__);
         Wait(Thread::STOPPED | Thread::BLOCKED);
-        TRACE_L1(" Done!!! \n", __FUNCTION__);
+        TRACE_L1("%s: Done!!! ", __FUNCTION__);
     }
 
     /* virtual */ GreenPeak::Activity::~Activity()
@@ -534,14 +558,6 @@ namespace Plugin {
         if (_present == true) {
             _worker.Run();
             Remotes::RemoteAdministrator::Instance().Announce(*this);
-
-            int count = gpRf4ce_GetNrOfPairingEntries();
-            TRACE_L1("%s: NrOfPairingEntries=%d\n", __FUNCTION__, count);
-
-            int val = gpRf4ceBindValidation_GetAutoCheckValidationPeriod();
-            TRACE_L1("%s: AutoCheckValidationPeriod=%d\n", __FUNCTION__, val);
-
-            TRACE_L1("%s: Exiting\n", __FUNCTION__);
         }
     }
 
@@ -577,6 +593,24 @@ namespace Plugin {
         _adminLock.Unlock();
 
         return (activated);
+    }
+
+
+    /* virtual */ bool GreenPeak::Unpair(uint8_t bindingId)
+    {
+        bool unpaired = false;
+
+        _adminLock.Lock();
+
+        if (_info.Major.IsSet() == true) {
+            _binidngId = bindingId;
+            gpSched_ScheduleEvent(0, target_ActivateUnpairing);
+            unpaired = true;
+        }
+
+        _adminLock.Unlock();
+
+        return (unpaired);
     }
 
     /* virtual */ uint32_t GreenPeak::Callback(Exchange::IKeyHandler* callback)
