@@ -81,7 +81,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(Bluetooth)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IWeb)
-            INTERFACE_AGGREGATE(Exchange::IPluginBluetooth, _bluetooth)
+            INTERFACE_AGGREGATE(Exchange::IBluetooth, _bluetooth)
         END_INTERFACE_MAP
 
     public:
@@ -119,7 +119,7 @@ namespace Plugin {
         uint32 _pid;
         PluginHost::IShell* _service;
         Core::Sink<Notification> _notification;
-        Exchange::IPluginBluetooth* _bluetooth;
+        Exchange::IBluetooth* _bluetooth;
     };
 } //namespace Plugin
 

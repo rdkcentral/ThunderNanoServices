@@ -14,8 +14,6 @@
 #include <nxclient.h>
 #include <nxserverlib.h>
 #include <nexus_display_vbi.h>
-#include <nexus_otpmsp.h>
-#include <nexus_read_otp_id.h>
 
 /* print_capabilities */
 #if NEXUS_HAS_VIDEO_DECODER
@@ -180,7 +178,12 @@ namespace Broadcom {
                     _serverSettings.client.connect = Platform::ClientConnect;
                     _serverSettings.client.disconnect = Platform::ClientDisconnect;
 
+#if NEXUS_SERVER_HAS_EXTENDED_INIT
                     _instance = nxserverlib_init_extended(&_serverSettings, authentication);
+#else
+                    _instance = nxserverlib_init(&_serverSettings);
+#endif
+
                     if (_instance != nullptr) {
                         rc = nxserver_ipc_init(_instance, _lock);
 

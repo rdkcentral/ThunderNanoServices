@@ -22,7 +22,7 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    class BluetoothImplementation : public Exchange::IPluginBluetooth, public Core::Thread
+    class BluetoothImplementation : public Exchange::IBluetooth, public Core::Thread
     {
     private:
         BluetoothImplementation(const BluetoothImplementation&) = delete;
@@ -48,7 +48,7 @@ namespace Plugin {
         virtual uint32 Configure(PluginHost::IShell* service)
         {
             if (!ConfigureBTAdapter()) {
-                TRACE_L1("Failed configuring Bluetooth Adapter");
+                TRACE_L1("Failed configuring Bluetooth Adapter", __FUNCTION__);
                 return -1;
             }
 
@@ -83,7 +83,7 @@ namespace Plugin {
 
     private:
         BEGIN_INTERFACE_MAP(BluetoothImplementation)
-            INTERFACE_ENTRY(Exchange::IPluginBluetooth)
+            INTERFACE_ENTRY(Exchange::IBluetooth)
         END_INTERFACE_MAP
 
     private:

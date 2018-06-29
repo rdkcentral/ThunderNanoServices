@@ -140,6 +140,8 @@ public:
         ::OCDM::ISession::KeyStatus _status;
     };
 
+    typedef Core::IteratorType< const std::list<KeyId>, const KeyId&, std::list<KeyId>::const_iterator > Iterator;
+
 public:
     CommonEncryptionData(const uint8_t data[], const uint16_t length) : _keyIds() {
         Parse(data, length);
@@ -163,6 +165,9 @@ public:
         }
         return (result);
     }
+    inline Iterator Keys() const {
+        return (Iterator(_keyIds));
+    }
     inline bool HasKeyId(const uint8_t keyId[]) const {
         return (std::find(_keyIds.begin(), _keyIds.end(), keyId) != _keyIds.end());
     }
@@ -178,22 +183,30 @@ public:
             index->Flag(key.Systems());
         }
     }
-    inline void UpdateKeyStatus(::OCDM::ISession::KeyStatus status, const KeyId& key) {
+    inline const KeyId* UpdateKeyStatus(::OCDM::ISession::KeyStatus status, const KeyId& key) {
+        KeyId* entry = nullptr;
+
         if (key.IsValid() == true) {
             std::list<KeyId>::iterator index (std::find(_keyIds.begin(), _keyIds.end(), key));
 
             if (index == _keyIds.end()) {
                 _keyIds.emplace_back(key);
-                _keyIds.back().Status(status);
+                entry = &(_keyIds.back());
             }
             else {
-                index->Status(status);
+                entry = &(*index);
             }
         }
         else if (_keyIds.size() > 0) {
             // Just update the first key
-            _keyIds.begin()->Status(status);
+            entry = &(*(_keyIds.begin()));
         }
+
+        if (entry != nullptr) {
+            entry->Status(status);
+        }
+
+        return (entry);
     }
     inline bool IsSupported(const CommonEncryptionData& keys) const {
 
