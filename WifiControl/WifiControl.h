@@ -3,9 +3,10 @@
 
 #include "Module.h"
 #include "Network.h"
-#include "Controller.h"
 #ifdef USE_WIFI_HAL
 #include "WifiHAL.h"
+#else
+#include "Controller.h"
 #endif
 
 namespace WPEFramework {
@@ -516,11 +517,7 @@ namespace Plugin {
         string _configurationStore;
         Sink _sink;
         WifiDriver _wpaSupplicant;
-        #ifdef USE_WIFI_HAL
-        Core::ProxyType<WPASupplicant::WifiHAL> _controller;
-        #else
         Core::ProxyType<WPASupplicant::Controller> _controller;
-        #endif
     };
 
 } // namespace Plugin

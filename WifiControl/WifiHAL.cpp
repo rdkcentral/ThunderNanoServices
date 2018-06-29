@@ -1,5 +1,5 @@
-#include "WifiHAL.h"
-#ifdef USE_WIFI_HAL
+#include "Controller.h"
+
 extern "C" {
 #include <wifi_client_hal.h>
 }
@@ -7,7 +7,7 @@ extern "C" {
 namespace WPEFramework {
 namespace WPASupplicant {
 
-WifiHAL::WifiHAL()
+Controller::Controller()
     :_isOperational(false)
     , _adminLock()
     , _networks()
@@ -16,12 +16,12 @@ WifiHAL::WifiHAL()
     Init();
 }
 
-WifiHAL::~WifiHAL()
+Controller::~Controller()
 {
     Uninit();
 }
 
-void WifiHAL::Init()
+void Controller::Init()
 {
     int rc = RETURN_OK;
     rc = wifi_init();
@@ -31,13 +31,13 @@ void WifiHAL::Init()
     }
 }
 
-void WifiHAL::Uninit()
+void Controller::Uninit()
 {
     wifi_uninit();
     _isOperational = false;
 }
 
-uint32_t WifiHAL::Scan()
+uint32_t Controller::Scan()
 {
     uint32_t result = Core::ERROR_NONE;
     int rc = RETURN_OK;
@@ -101,7 +101,7 @@ uint32_t WifiHAL::Scan()
                 security.erase(security.find_last_not_of(" \n\r")+1);
 
                 Config conf;
-                Core::ProxyType<WifiHAL> channel (Core::ProxyType<WifiHAL>(*this));
+                Core::ProxyType<Controller> channel (Core::ProxyType<Controller>(*this));
                 conf = Config (channel, ssidCurrent);
                 // XXX: WPA, ES
                 conf.PresharedKey(security);
@@ -115,11 +115,11 @@ uint32_t WifiHAL::Scan()
     return result;
 }
 
-int WifiHAL_callback(int ssidIndex, char *AP_SSID, wifiStatusCode_t *error)
+int Controller_callback(int ssidIndex, char *AP_SSID, wifiStatusCode_t *error)
 {
 }
 
-uint32_t WifiHAL::Connect(const string& SSID)
+uint32_t Controller::Connect(const string& SSID)
 {
     uint32_t result = Core::ERROR_NONE;
 
@@ -156,7 +156,7 @@ uint32_t WifiHAL::Connect(const string& SSID)
             mode = WIFI_SECURITY_WEP_128;
         }
 
-        wifi_connectEndpoint_callback_register(WifiHAL_callback);
+        wifi_connectEndpoint_callback_register(Controller_callback);
 
         int rc = wifi_connectEndpoint(1, ssid, mode, nullptr, (char *)config.PresharedKey().c_str(),
                 nullptr, bSaveSSID, nullptr, nullptr, nullptr, nullptr);
@@ -171,13 +171,13 @@ uint32_t WifiHAL::Connect(const string& SSID)
     return result;
 }
 
-uint32_t WifiHAL::Disconnect(const string& SSID)
+uint32_t Controller::Disconnect(const string& SSID)
 {
     wifi_disconnectEndpoint(1, (char *)SSID.c_str());
     return 0;
 }
 
-void WifiHAL::Status()
+void Controller::Status()
 {
     int rc = RETURN_OK;
     ULONG ulCount = 0;
@@ -210,12 +210,12 @@ void WifiHAL::Status()
     }
 }
 
-const string& WifiHAL::Current () const
+const string& Controller::Current () const
 {
     return ssidCurrent;
 }
 
-/* static */ uint64_t WifiHAL::BSSID(const string& element) {
+/* static */ uint64_t Controller::BSSID(const string& element) {
 
     uint64_t bssid = 0;
 
@@ -237,4 +237,3 @@ const string& WifiHAL::Current () const
 
 }
 }
-#endif

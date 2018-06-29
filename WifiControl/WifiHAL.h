@@ -7,7 +7,7 @@
 namespace WPEFramework {
 namespace WPASupplicant {   // XXX: Change ???
 
-class WifiHAL {
+class Controller {
 private:
     struct NetworkInfo {    // XXX: struct -> class
         std::string _ssid;
@@ -39,16 +39,16 @@ private:
     typedef std::map<const string, NetworkInfo>  NetworkInfoContainer;
     typedef std::map<const string, ConfigInfo>  EnabledContainer;
 
-    WifiHAL(const WifiHAL&) = delete;
-    WifiHAL& operator=(const WifiHAL&) = delete;
+    Controller(const Controller&) = delete;
+    Controller& operator=(const Controller&) = delete;
 
 public:
-    static Core::ProxyType<WifiHAL> Create () {
-       return (Core::ProxyType<WifiHAL>::Create());
+    static Core::ProxyType<Controller> Create () {
+       return (Core::ProxyType<Controller>::Create());
     }
 
-    WifiHAL();
-    virtual ~WifiHAL();
+    Controller();
+    virtual ~Controller();
     void Init();
     void Uninit();
     uint32_t Scan();
@@ -57,7 +57,7 @@ public:
 
     inline Network::Iterator Networks() {
         Network::Iterator result;
-        Core::ProxyType<WifiHAL> channel (Core::ProxyType<WifiHAL>(*this));
+        Core::ProxyType<Controller> channel (Core::ProxyType<Controller>(*this));
 
         _adminLock.Lock();
 
@@ -81,7 +81,7 @@ public:
     }
 
     inline Config::Iterator Configs() { TR();
-        Core::ProxyType<WifiHAL> channel (Core::ProxyType<WifiHAL>(*this));
+        Core::ProxyType<Controller> channel (Core::ProxyType<Controller>(*this));
         Config::Iterator result(channel);
 
         _adminLock.Lock();
@@ -107,7 +107,7 @@ public:
 
     Config Create(const string& SSID) { TR();
         Config result;
-        Core::ProxyType<WifiHAL> channel (Core::ProxyType<WifiHAL>(*this));
+        Core::ProxyType<Controller> channel (Core::ProxyType<Controller>(*this));
 
         _adminLock.Lock();
         EnabledContainer::iterator entry (_enabled.find(SSID));
@@ -152,7 +152,7 @@ public:
         EnabledContainer::iterator entry (_enabled.find(SSID));
 
         if (entry != _enabled.end()) {
-            result = Config (Core::ProxyType<WifiHAL>(*this), SSID);
+            result = Config (Core::ProxyType<Controller>(*this), SSID);
             printf("%s: Config Found ssid=%s\n", __FUNCTION__, SSID.c_str());
         }
         else {
