@@ -52,7 +52,7 @@ namespace Remotes {
 
             return (result);
         }
-        bool Pairing(const string& device)
+        bool Pair(const string& device)
         {
             bool result = true;
 
@@ -62,11 +62,11 @@ namespace Remotes {
 
             while (index != _remotes.end()) {
                 if (device.empty() == true) {
-                    result = (*index)->Pairing() && result;
+                    result = (*index)->Pair() && result;
                     index++;
                 }
                 else if (device == (*index)->Name()) {
-                    result = (*index)->Pairing();
+                    result = (*index)->Pair();
                     index = _remotes.end();
                 }
                 else {

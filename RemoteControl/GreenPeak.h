@@ -96,7 +96,7 @@ namespace Plugin {
         }
 
 
-        virtual bool Pairing();
+        virtual bool Pair();
         virtual bool Unpair(uint8_t bindingId);
         virtual uint32_t Callback(Exchange::IKeyHandler* callback);
         virtual uint32_t Error() const;

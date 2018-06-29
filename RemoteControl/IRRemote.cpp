@@ -60,7 +60,7 @@ namespace Plugin {
             _codeMask = config.CodeMask.Value();
         }
 
-        virtual bool Pairing();
+        virtual bool Pair();
         virtual bool Unpair(uint8_t bindingId);
         virtual uint32_t Callback(Exchange::IKeyHandler* callback);
         virtual uint32_t Error() const;
@@ -152,7 +152,7 @@ namespace Plugin {
         _error = Core::ERROR_UNAVAILABLE;
     }
 
-    /* virtual */ bool IRRemote::Pairing() {
+    /* virtual */ bool IRRemote::Pair() {
         return (false);
     }
 
