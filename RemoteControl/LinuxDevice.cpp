@@ -77,10 +77,22 @@ namespace Plugin {
 		}
        		virtual void Configure(const string&)
        		{
-			Pairing();	
+			Pair();	
             	}
-		virtual bool Pairing() {
+		virtual bool Pair()
+		{
+			// Make sure we are not processing anything.
+			Block();
 
+			Refresh();
+
+			// We are done, start observing again.
+			Run();
+			
+			return(true);
+		}
+		virtual bool Unpair(uint8_t bindingId)
+		{
 			// Make sure we are not processing anything.
 			Block();
 
