@@ -4,12 +4,19 @@
 
 #include <interfaces/IComposition.h>
 
+#ifdef INCLUDE_NEXUS_SERVER
 #include <PlatformImplementation.h>
+#else
+#include <nexus_config.h>
+#include <nxclient.h>
+#endif
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace WPEFramework {
 namespace Plugin {
+
+#ifdef INCLUDE_NEXUS_SERVER
     /* -------------------------------------------------------------------------------------------------------------
      * This is a singleton. Declare all C accessors to this object here
      * ------------------------------------------------------------------------------------------------------------- */
@@ -17,7 +24,7 @@ namespace Plugin {
 
     static CompositorImplementation* g_implementation = nullptr;
     static Core::CriticalSection g_implementationLock;
-
+#endif
     /* -------------------------------------------------------------------------------------------------------------
      *
      * ------------------------------------------------------------------------------------------------------------- */
@@ -39,6 +46,7 @@ namespace Plugin {
         CompositorImplementation(const CompositorImplementation&) = delete;
         CompositorImplementation& operator=(const CompositorImplementation&) = delete;
 
+#ifdef INCLUDE_NEXUS_SERVER
     private:
         class Entry : public Exchange::IComposition::IClient {
         private:
@@ -150,17 +158,21 @@ namespace Plugin {
             const string _name;
             nxclient_t _handle;
         };
+#endif
 
     public:
         CompositorImplementation()
-            : _instance(nullptr)
+            : _service()
             , _joinSettings()
+#ifdef INCLUDE_NEXUS_SERVER
+            , _instance(nullptr)
             , _compositionClients()
             , _clients()
-            , _service()
             , _sink(this)
             , _nxserver(nullptr)
+#endif
         {
+#ifdef INCLUDE_NEXUS_SERVER
             // Register an @Exit, in case we are killed, with an incorrect ref count !!
             if (atexit(CloseDown) != 0) {
                 TRACE(Trace::Information, (("Could not register @exit handler. Error: %d."), errno));
@@ -171,20 +183,23 @@ namespace Plugin {
             ASSERT(g_implementation == nullptr);
 
             g_implementation = this;
+#endif
         }
 
         ~CompositorImplementation()
         {
             NxClient_Uninit();
+#ifdef INCLUDE_NEXUS_SERVER
             BSTD_UNUSED(_instance);
 
             if (_nxserver != nullptr) {
                 delete _nxserver;
             }
-
+#endif
             if (_service != nullptr) {
                 _service->Release();
             }
+
         }
 
     public:
@@ -200,14 +215,15 @@ namespace Plugin {
         {
             _service = service;
             _service->AddRef();
-
+            Config nexusConfig;
+#ifdef INCLUDE_NEXUS_SERVER
             ASSERT(_nxserver == nullptr);
 
             if (_nxserver != nullptr) {
                 delete _nxserver;
             }
 
-            Config nexusConfig;
+
             nexusConfig.FromString(_service->ConfigLine());
 
             _nxserver = new Broadcom::Platform(
@@ -220,12 +236,13 @@ namespace Plugin {
             );
 
             ASSERT(_nxserver != nullptr);
-
+#endif
             return  Core::ERROR_NONE;
         }
 
         /* virtual */ void Register(Exchange::IComposition::INotification* notification)
         {
+#ifdef INCLUDE_NEXUS_SERVER
             // Do not double register a notification sink.
             g_implementationLock.Lock();
             ASSERT(std::find(_compositionClients.begin(), _compositionClients.end(), notification) == _compositionClients.end());
@@ -245,10 +262,12 @@ namespace Plugin {
             }
 
             g_implementationLock.Unlock();
+#endif
         }
 
         /* virtual */ void Unregister(Exchange::IComposition::INotification* notification)
         {
+#ifdef INCLUDE_NEXUS_SERVER
             g_implementationLock.Lock();
 
             std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_compositionClients.begin(), _compositionClients.end(), notification));
@@ -264,12 +283,15 @@ namespace Plugin {
             }
 
             g_implementationLock.Unlock();
+#endif
         }
 
         /* virtual */ Exchange::IComposition::IClient* Client(const uint8_t id)
         {
-            uint8_t count = id;
             Exchange::IComposition::IClient* result = nullptr;
+
+#ifdef INCLUDE_NEXUS_SERVER
+            uint8_t count = id;
 
             g_implementationLock.Lock();
 
@@ -287,7 +309,7 @@ namespace Plugin {
             }
 
             g_implementationLock.Unlock();
-
+#endif
             return (result);
         }
 
@@ -295,6 +317,7 @@ namespace Plugin {
         {
             Exchange::IComposition::IClient* result = nullptr;
 
+#ifdef INCLUDE_NEXUS_SERVER
             g_implementationLock.Lock();
 
             std::list<Entry*>::iterator index(_clients.begin());
@@ -309,7 +332,7 @@ namespace Plugin {
             }
 
             g_implementationLock.Unlock();
-
+#endif
             return (result);
         }
 
@@ -366,19 +389,22 @@ namespace Plugin {
                 return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
             }
         }
+
     private:
         void JoinServer(){
-            TRACE(Trace::Information, (_T("Joining external NXServer.")));
+            TRACE(Trace::Information, (_T("Joining NXServer.")));
 
             NEXUS_Error rc = NxClient_Join(&_joinSettings);
-
+#ifdef INCLUDE_NEXUS_SERVER
             if (rc == NEXUS_SUCCESS) {
                 _instance = nxserverlib_get_singleton();
 
                 ASSERT(_instance != nullptr);
             }
+#endif
         }
 
+#ifdef INCLUDE_NEXUS_SERVER
         void Add(const char clientName[])
         {
             const std::string name(clientName);
@@ -455,12 +481,14 @@ namespace Plugin {
                 }
             }
         }
+#endif
 
         PluginHost::ISubSystem* SubSystems()
         {
             return _service->SubSystems();
         }
 
+#ifdef INCLUDE_NEXUS_SERVER
         class Sink : public WPEFramework::Broadcom::Platform::ICallback {
         private:
             Sink() = delete;
@@ -512,7 +540,9 @@ namespace Plugin {
         private:
             CompositorImplementation& _parent;
         };
+#endif
 
+#ifdef INCLUDE_NEXUS_SERVER
         static void CloseDown()
         {
             // Make sure we get exclusive access to the Destruction of this Resource Center.
@@ -525,7 +555,9 @@ namespace Plugin {
             }
             g_implementationLock.Unlock();
         }
+#endif
 
+#ifdef INCLUDE_NEXUS_SERVER
         class Config : public Core::JSON::Container {
         public:
             Config(const Config&);
@@ -557,15 +589,18 @@ namespace Plugin {
             Core::JSON::DecUInt8 BoxMode;
             Core::JSON::DecUInt16 GraphicsHeap;
         };
+#endif
 
     private:
-        nxserver_t _instance;
+        PluginHost::IShell* _service;
         NxClient_JoinSettings _joinSettings;
+#ifdef INCLUDE_NEXUS_SERVER
+        nxserver_t _instance;
         std::list<Exchange::IComposition::INotification*> _compositionClients;
         std::list<Entry*> _clients;
-        PluginHost::IShell* _service;
         Sink _sink;
         Broadcom::Platform* _nxserver;
+#endif
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
