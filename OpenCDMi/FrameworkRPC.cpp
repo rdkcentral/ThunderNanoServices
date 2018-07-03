@@ -649,7 +649,7 @@ namespace Plugin {
 
                     if (index != _sessionList.end()) {
 
-		        printf("Selected session out of list count: %d\n", _sessionList.size());
+		        //printf("Selected session out of list count: %d\n", _sessionList.size());
                         result = *index;
                         ASSERT (result != nullptr);
                         result->AddRef();
