@@ -73,6 +73,7 @@ namespace Plugin {
                 Add(_T("repeatstart"), &RepeatStart);
                 Add(_T("repeatinterval"), &RepeatInterval);
                 Add(_T("devices"), &Devices);
+                Add(_T("virtuals"), &Virtuals);
             }
             ~Config()
             {
@@ -84,6 +85,7 @@ namespace Plugin {
             Core::JSON::DecUInt16 RepeatStart;
             Core::JSON::DecUInt16 RepeatInterval;
             Core::JSON::ArrayType<Device> Devices;
+            Core::JSON::ArrayType<Device> Virtuals;
         };
 
         class Data : public Core::JSON::Container {
@@ -119,6 +121,19 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     public:
+        bool IsVirtualDevice(const string& name) const
+        {
+            return (std::find(_virtualDevices.begin(), _virtualDevices.end(), name) != _virtualDevices.end());
+        }
+        bool IsPhysicalDevice(const string& name) const
+        {
+            Remotes::RemoteAdministrator::Iterator index(Remotes::RemoteAdministrator::Instance().Producers());
+
+            while ((index.Next() == true) && (name != index.Current()->Name())) /* Intentionally empty */;
+
+            return (index.IsValid());
+        }
+
         //	IPlugin methods
         // -------------------------------------------------------------------------------------------------------
 
@@ -170,6 +185,7 @@ namespace Plugin {
 
     private:
         uint32_t _skipURL;
+        std::list<string> _virtualDevices;
         PluginHost::VirtualInput* _inputHandler;
         string _persistentPath;
     };
