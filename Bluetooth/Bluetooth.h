@@ -31,9 +31,11 @@ namespace Plugin {
             }
 
         public:
-            virtual void Activated(RPC::IRemoteProcess*) {
+            virtual void Activated(RPC::IRemoteProcess*)
+            {
             }
-            virtual void Deactivated(RPC::IRemoteProcess* process) {
+            virtual void Deactivated(RPC::IRemoteProcess* process)
+            {
                 _parent.Deactivated(process);
             }
 
@@ -113,10 +115,14 @@ namespace Plugin {
 
     private:
         void Deactivated(RPC::IRemoteProcess* process);
+        Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
+        Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
+        Core::ProxyType<Web::Response> PostMethod(Core::TextSegmentIterator& index, const Web::Request& request);
+        Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index);
 
     private:
-        uint8 _skipURL;
-        uint32 _pid;
+        uint8_t _skipURL;
+        uint32_t _pid;
         PluginHost::IShell* _service;
         Core::Sink<Notification> _notification;
         Exchange::IBluetooth* _bluetooth;
