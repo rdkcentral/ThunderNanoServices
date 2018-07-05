@@ -62,7 +62,7 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
-                , MapFile()
+                , MapFile("keymap.json")
                 , PassOn(false)
                 , RepeatStart(500)
                 , RepeatInterval(100)
@@ -133,7 +133,6 @@ namespace Plugin {
 
             return (index.IsValid());
         }
-        bool IsDefaultMappingTable(const string& name) const;
 
         //	IPlugin methods
         // -------------------------------------------------------------------------------------------------------

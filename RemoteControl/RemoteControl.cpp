@@ -6,7 +6,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    static const string DefaultMappingTable (_T("keymap"));
+    static const string DefaultMappingTable(_T("default"));
     static Core::ProxyPoolType<Web::JSONBodyType<RemoteControl::Data> > jsonResponseFactory(4);
     static Core::ProxyPoolType<Web::JSONBodyType<PluginHost::VirtualInput::KeyMap::KeyMapEntry> > jsonCodeFactory(1);
 
@@ -22,11 +22,11 @@ namespace Plugin {
         // Define them but do not implement them, compile error/link error.
         // -------------------------------------------------------------------
         KeyActivity(const KeyActivity& a_Copy) = delete;
-        KeyActivity& operator= (const KeyActivity& a_RHS) = delete;
+        KeyActivity& operator=(const KeyActivity& a_RHS) = delete;
 
     public:
-        KeyActivity(const string& mapName, const uint32_t code, const bool pressed) :
-                _text (Core::ToString(Trace::Format(_T("Inserted Code: [%s:%08X] state %s."), mapName.c_str(), code, (pressed ? _T("pressed") : _T("released")))))
+        KeyActivity(const string& mapName, const uint32_t code, const bool pressed)
+            : _text(Core::ToString(Trace::Format(_T("Inserted Code: [%s:%08X] state %s."), mapName.c_str(), code, (pressed ? _T("pressed") : _T("released")))))
         {
         }
         ~KeyActivity()
@@ -34,10 +34,12 @@ namespace Plugin {
         }
 
     public:
-        inline const char* Data() const {
+        inline const char* Data() const
+        {
             return (_text.c_str());
         }
-        inline uint16_t Length() const {
+        inline uint16_t Length() const
+        {
             return (static_cast<uint16_t>(_text.length()));
         }
 
@@ -55,12 +57,12 @@ namespace Plugin {
         // Define them but do not implement them, compile error/link error.
         // -------------------------------------------------------------------
         UnknownKey(const UnknownKey& a_Copy) = delete;
-        UnknownKey& operator= (const UnknownKey& a_RHS) = delete;
+        UnknownKey& operator=(const UnknownKey& a_RHS) = delete;
 
     public:
         UnknownKey(const string& mapName, const uint32_t code, const bool pressed, const uint32_t result)
         {
-            const TCHAR* text (pressed ? _T("pressed") : _T("released"));
+            const TCHAR* text(pressed ? _T("pressed") : _T("released"));
 
             if (result == Core::ERROR_UNKNOWN_TABLE) {
                 _text = Core::ToString(Trace::Format(_T("Invalid table: [%s,%08X]"), mapName.c_str(), code));
@@ -77,10 +79,12 @@ namespace Plugin {
         }
 
     public:
-        inline const char* Data() const {
+        inline const char* Data() const
+        {
             return (_text.c_str());
         }
-        inline uint16_t Length() const {
+        inline uint16_t Length() const
+        {
             return (static_cast<uint16_t>(_text.length()));
         }
 
@@ -90,10 +94,11 @@ namespace Plugin {
 
     static Core::ProxyPoolType<Web::TextBody> _remoteInfo(2);
 
-    static string MappingFile (const string& fileName, const string& directory1, const string& directory2) {
+    static string MappingFile(const string& fileName, const string& directory1, const string& directory2)
+    {
 
-        string result (directory1 + fileName);
-        Core::File testObject (directory1 + fileName);
+        string result(directory1 + fileName);
+        Core::File testObject(directory1 + fileName);
 
         if ((testObject.Exists() == false) || (testObject.IsDirectory() == true)) {
             result = directory2 + fileName;
@@ -108,18 +113,18 @@ namespace Plugin {
     }
 
 #ifdef __WIN32__
-#pragma warning( disable : 4355 )
+#pragma warning(disable : 4355)
 #endif
     RemoteControl::RemoteControl()
-            : _skipURL(0)
-            , _inputHandler(PluginHost::InputHandler::KeyHandler())
-            , _persistentPath()
-            , _virtualDevices()
+        : _skipURL(0)
+        , _inputHandler(PluginHost::InputHandler::KeyHandler())
+        , _persistentPath()
+        , _virtualDevices()
     {
         ASSERT(_inputHandler != nullptr);
     }
 #ifdef __WIN32__
-#pragma warning( default : 4355 )
+#pragma warning(default : 4355)
 #endif
 
     /* virtual */ RemoteControl::~RemoteControl()
@@ -131,11 +136,13 @@ namespace Plugin {
         string result;
         RemoteControl::Config config;
         config.FromString(service->ConfigLine());
-        string mappingFile (MappingFile(config.MapFile.Value(), service->PersistentPath(), service->DataPath()));
+        string mappingFile(MappingFile(config.MapFile.Value(), service->PersistentPath(), service->DataPath()));
 
         // First check that we at least can create a default lookup table.
-        if (mappingFile.empty() == false) {
-
+        if ((mappingFile.empty() == true) || (_inputHandler == nullptr)) {
+            result = "Could not configure remote control.";
+        }
+        else {
             TRACE(Trace::Information, (_T("Opening default map file: %s"), mappingFile.c_str()));
             TRACE_L1(_T("Opening default map file: %s"), mappingFile.c_str());
 
@@ -143,94 +150,87 @@ namespace Plugin {
             _persistentPath = service->PersistentPath();
 
             // Seems like we have a default mapping file. Load it..
-            PluginHost::VirtualInput::KeyMap& map (_inputHandler->Table(DefaultMappingTable));
+            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(DefaultMappingTable));
 
             if (map.Load(mappingFile) == Core::ERROR_NONE) {
 
                 map.PassThrough(config.PassOn.Value());
 
-                if (_inputHandler != nullptr) {
-                    Remotes::RemoteAdministrator& admin(Remotes::RemoteAdministrator::Instance());
+                Remotes::RemoteAdministrator& admin(Remotes::RemoteAdministrator::Instance());
 
-                    // Strawl over all remotes (inputs) and see if you need to load mapping tables.
-                    Remotes::RemoteAdministrator::Iterator index (admin.Producers());
-                    Core::JSON::ArrayType<RemoteControl::Config::Device>::Iterator configList (config.Devices.Elements());
+                // Strawl over all remotes (inputs) and see if you need to load mapping tables.
+                Remotes::RemoteAdministrator::Iterator index(admin.Producers());
+                Core::JSON::ArrayType<RemoteControl::Config::Device>::Iterator configList(config.Devices.Elements());
 
-                    while (index.Next() == true) {
+                while (index.Next() == true) {
 
-                        const TCHAR* producer ((*index)->Name());
-            string loadName(producer);
+                    const TCHAR* producer((*index)->Name());
+                    string loadName(producer);
 
-                        TRACE_L1(_T("Searching map file for: %s"), producer);
+                    TRACE_L1(_T("Searching map file for: %s"), producer);
 
-            configList.Reset();
+                    configList.Reset();
 
-            while ( (configList.Next() == true) && (configList.Current().Name.Value() != loadName) ) { /* intentionally left empty */ }
-
-            if (configList.IsValid() == true) {
-                (*index)->Configure(configList.Current().Settings.Value());
-                // We found an overruling name.
-                loadName = configList.Current().MapFile.Value();
-            }
-            else {
-                (*index)->Configure(EMPTY_STRING);
-                loadName += _T(".json");
-            }
-
-                        // See if we need to load a table.
-                        string specific (MappingFile (loadName, service->PersistentPath(), service->DataPath()));
-
-                        if (specific.empty() == false) {
-
-                            TRACE(Trace::Information, (_T("Opening map file: %s"), specific.c_str()));
-                            TRACE_L1(_T("Opening map file: %s"), specific.c_str());
-
-                            // Get our selves a table..
-                            PluginHost::VirtualInput::KeyMap& map (_inputHandler->Table(producer));
-                            map.Load(specific);
-                            if (configList.IsValid() == true) {
-                                map.PassThrough(configList.Current().PassOn.Value());
-                            }
-                        }
+                    while ((configList.Next() == true) && (configList.Current().Name.Value() != loadName)) { /* intentionally left empty */
                     }
 
-                    configList = config.Virtuals.Elements();
+                    if (configList.IsValid() == true) {
+                        (*index)->Configure(configList.Current().Settings.Value());
+                        // We found an overruling name.
+                        loadName = configList.Current().MapFile.Value();
+                    }
+                    else {
+                        (*index)->Configure(EMPTY_STRING);
+                        loadName += _T(".json");
+                    }
 
-                    while (configList.Next() == true) {
-                        // Configure the virtual inputs.
-			string loadName (configList.Current().MapFile.Value());
+                    // See if we need to load a table.
+                    string specific(MappingFile(loadName, service->PersistentPath(), service->DataPath()));
 
-                        if (loadName.empty() == true) {
-                            loadName = configList.Current().Name.Value() + _T(".json");
-                        }
+                    if ((specific.empty() == false) && (specific != mappingFile)) {
 
-                        // See if we need to load a table.
-                        string specific (MappingFile (loadName, service->PersistentPath(), service->DataPath()));
+                        TRACE(Trace::Information, (_T("Opening map file: %s"), specific.c_str()));
+                        TRACE_L1(_T("Opening map file: %s"), specific.c_str());
 
-                        if (specific.empty() == true) {
-                            TRACE(Trace::Information, (_T("VirtualDevice [%s] defined but no map file"), configList.Current().Name.Value().c_str()));
-                        }
-                        else {
-                            TRACE(Trace::Information, (_T("Opening map file: %s"), specific.c_str()));
-                            TRACE_L1(_T("Opening map file: %s"), specific.c_str());
-
-                            // Get our selves a table..
-                            PluginHost::VirtualInput::KeyMap& map (_inputHandler->Table(configList.Current().Name.Value()));
-                            map.Load(specific);
+                        // Get our selves a table..
+                        PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(producer));
+                        map.Load(specific);
+                        if (configList.IsValid() == true) {
                             map.PassThrough(configList.Current().PassOn.Value());
-
-                            _virtualDevices.push_back(configList.Current().Name.Value());
                         }
                     }
-
-                    _skipURL = service->WebPrefix().length();
-                    _inputHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value());
-                    _inputHandler->Default(DefaultMappingTable);
-                    admin.Callback(this);
-
-                } else {
-                    result = "Could not open VirtualInput device.";
                 }
+
+                configList = config.Virtuals.Elements();
+
+                while (configList.Next() == true) {
+                    // Configure the virtual inputs.
+                    string loadName(configList.Current().MapFile.Value());
+
+                    if (loadName.empty() == true) {
+                        loadName = configList.Current().Name.Value() + _T(".json");
+                    }
+
+                    // See if we need to load a table.
+                    string specific(MappingFile(loadName, service->PersistentPath(), service->DataPath()));
+
+                    if ((specific.empty() == false) && (specific != mappingFile)) {
+                        TRACE(Trace::Information, (_T("Opening map file: %s"), specific.c_str()));
+                        TRACE_L1(_T("Opening map file: %s"), specific.c_str());
+
+                        // Get our selves a table..
+                        PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(configList.Current().Name.Value()));
+                        map.Load(specific);
+                        map.PassThrough(configList.Current().PassOn.Value());
+                    }
+
+                    _virtualDevices.push_back(configList.Current().Name.Value());
+                }
+
+                _skipURL = service->WebPrefix().length();
+                _inputHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value());
+                _inputHandler->Default(DefaultMappingTable);
+                admin.Callback(this);
             }
         }
 
@@ -242,12 +242,12 @@ namespace Plugin {
     {
 
         Remotes::RemoteAdministrator& admin(Remotes::RemoteAdministrator::Instance());
-        Remotes::RemoteAdministrator::Iterator index (admin.Producers());
+        Remotes::RemoteAdministrator::Iterator index(admin.Producers());
 
         // Clear all injected device key maps
         while (index.Next() == true) {
 
-            const TCHAR* producer ((*index)->Name());
+            const TCHAR* producer((*index)->Name());
 
             _inputHandler->ClearTable(producer);
         }
@@ -331,8 +331,7 @@ namespace Plugin {
 
         if (request.HasBody() == true) {
 
-            const PluginHost::VirtualInput::KeyMap::KeyMapEntry &data =
-                    *(request.Body<const Web::JSONBodyType <PluginHost::VirtualInput::KeyMap::KeyMapEntry> >());
+            const PluginHost::VirtualInput::KeyMap::KeyMapEntry& data = *(request.Body<const Web::JSONBodyType<PluginHost::VirtualInput::KeyMap::KeyMapEntry> >());
 
             if (data.Code.IsSet() == true) {
                 code = data.Code.Value();
@@ -342,22 +341,21 @@ namespace Plugin {
 
                 if (data.Modifiers.IsSet()) {
 
-                    Core::JSON::ArrayType < Core::JSON::EnumType < PluginHost::VirtualInput::KeyMap::modifier > >
-                            ::ConstIterator flags(data.Modifiers.Elements());
+                    Core::JSON::ArrayType<Core::JSON::EnumType<PluginHost::VirtualInput::KeyMap::modifier> >::ConstIterator flags(data.Modifiers.Elements());
 
                     while (flags.Next() == true) {
                         switch (flags.Current().Value()) {
-                            case PluginHost::VirtualInput::KeyMap::modifier::LEFTSHIFT:
-                            case PluginHost::VirtualInput::KeyMap::modifier::RIGHTSHIFT:
-                            case PluginHost::VirtualInput::KeyMap::modifier::LEFTALT:
-                            case PluginHost::VirtualInput::KeyMap::modifier::RIGHTALT:
-                            case PluginHost::VirtualInput::KeyMap::modifier::LEFTCTRL:
-                            case PluginHost::VirtualInput::KeyMap::modifier::RIGHTCTRL:
-                                modifiers |= flags.Current().Value();
-                                break;
-                            default:
-                                ASSERT(false);
-                                break;
+                        case PluginHost::VirtualInput::KeyMap::modifier::LEFTSHIFT:
+                        case PluginHost::VirtualInput::KeyMap::modifier::RIGHTSHIFT:
+                        case PluginHost::VirtualInput::KeyMap::modifier::LEFTALT:
+                        case PluginHost::VirtualInput::KeyMap::modifier::RIGHTALT:
+                        case PluginHost::VirtualInput::KeyMap::modifier::LEFTCTRL:
+                        case PluginHost::VirtualInput::KeyMap::modifier::RIGHTCTRL:
+                            modifiers |= flags.Current().Value();
+                            break;
+                        default:
+                            ASSERT(false);
+                            break;
                         }
                     }
                 }
@@ -371,7 +369,7 @@ namespace Plugin {
     {
 
         Core::ProxyType<Web::JSONBodyType<PluginHost::VirtualInput::KeyMap::KeyMapEntry> >
-                response(jsonCodeFactory.Element());
+            response(jsonCodeFactory.Element());
 
         response->Code = code;
         response->Key = key;
@@ -381,19 +379,19 @@ namespace Plugin {
 
             if ((modifiers & 0x01) != 0) {
                 switch (flag) {
-                    case PluginHost::VirtualInput::KeyMap::modifier::LEFTSHIFT:
-                    case PluginHost::VirtualInput::KeyMap::modifier::RIGHTSHIFT:
-                    case PluginHost::VirtualInput::KeyMap::modifier::LEFTALT:
-                    case PluginHost::VirtualInput::KeyMap::modifier::RIGHTALT:
-                    case PluginHost::VirtualInput::KeyMap::modifier::LEFTCTRL:
-                    case PluginHost::VirtualInput::KeyMap::modifier::RIGHTCTRL: {
-                        Core::JSON::EnumType <PluginHost::VirtualInput::KeyMap::modifier> &jsonRef = response->Modifiers.Add();
-                        jsonRef = static_cast<PluginHost::VirtualInput::KeyMap::modifier>(flag);
-                        break;
-                    }
-                    default:
-                        ASSERT(false);
-                        break;
+                case PluginHost::VirtualInput::KeyMap::modifier::LEFTSHIFT:
+                case PluginHost::VirtualInput::KeyMap::modifier::RIGHTSHIFT:
+                case PluginHost::VirtualInput::KeyMap::modifier::LEFTALT:
+                case PluginHost::VirtualInput::KeyMap::modifier::RIGHTALT:
+                case PluginHost::VirtualInput::KeyMap::modifier::LEFTCTRL:
+                case PluginHost::VirtualInput::KeyMap::modifier::RIGHTCTRL: {
+                    Core::JSON::EnumType<PluginHost::VirtualInput::KeyMap::modifier>& jsonRef = response->Modifiers.Add();
+                    jsonRef = static_cast<PluginHost::VirtualInput::KeyMap::modifier>(flag);
+                    break;
+                }
+                default:
+                    ASSERT(false);
+                    break;
                 }
             }
 
@@ -416,21 +414,21 @@ namespace Plugin {
             // Perform operations on that specific device
             const string deviceName = index.Current().Text();
 
-            if ( (IsVirtualDevice(deviceName)) || (IsPhysicalDevice(deviceName)) || IsDefaultMappingTable(deviceName) ) {
+            if ((IsVirtualDevice(deviceName)) || (IsPhysicalDevice(deviceName))) {
                 // GET .../RemoteControl/<DEVICE_NAME>?Code=XXX : Get code of DEVICE_NAME
                 if (request.Query.IsSet() == true) {
                     Core::URL::KeyValue options(request.Query.Value());
 
-                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Code"), static_cast<uint32_t>(~0)));
+                    Core::NumberType<uint32_t> code(options.Number<uint32_t>(_T("Code"), static_cast<uint32_t>(~0)));
 
                     result->ErrorCode = Web::STATUS_NOT_FOUND;
                     result->Message = string(_T("Key does not exist in ") + deviceName);
 
                     if (code.Value() != static_cast<uint32_t>(~0)) {
                         // Load default or specific device mapping
-                        PluginHost::VirtualInput::KeyMap &map(_inputHandler->Table(deviceName));
+                        PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
-                        const PluginHost::VirtualInput::KeyMap::ConversionInfo *codeElements = map[code];
+                        const PluginHost::VirtualInput::KeyMap::ConversionInfo* codeElements = map[code];
                         if (codeElements != nullptr) {
 
                             result->ErrorCode = Web::STATUS_OK;
@@ -447,11 +445,11 @@ namespace Plugin {
                 // GET .../RemoteControl/<DEVICE_NAME> : Return metadata of specific DEVICE_NAME
                 else {
 
-                    if ( IsVirtualDevice(deviceName) == true ) {
+                    if (IsVirtualDevice(deviceName) == true) {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = string(_T("Virtual device is loaded"));
                     }
-                    else if ( IsPhysicalDevice(deviceName) == true ) {
+                    else if (IsPhysicalDevice(deviceName) == true) {
                         uint32_t error = Remotes::RemoteAdministrator::Instance().Error(deviceName);
                         if (error == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
@@ -461,13 +459,12 @@ namespace Plugin {
 
                             (*body) = Remotes::RemoteAdministrator::Instance().MetaData(deviceName);
                             result->Body<Web::TextBody>(body);
-                        } else {
+                        }
+                        else {
 
                             result->ErrorCode = Web::STATUS_BAD_GATEWAY;
-                            result->Message = string(_T("Error during loading of device. ErrorCode: ")) +
-                                              Core::NumberType<uint32_t>(error).Text();
+                            result->Message = string(_T("Error during loading of device. ErrorCode: ")) + Core::NumberType<uint32_t>(error).Text();
                         }
-
                     }
                 }
             }
@@ -478,7 +475,7 @@ namespace Plugin {
             Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
 
             // Add virtual devices
-            std::list<string>::const_iterator index (_virtualDevices.begin());
+            std::list<string>::const_iterator index(_virtualDevices.begin());
 
             while (index != _virtualDevices.end()) {
                 Core::JSON::String newElement;
@@ -489,7 +486,7 @@ namespace Plugin {
 
             // Look at specific devices, if we have, append them to response
             Remotes::RemoteAdministrator& admin(Remotes::RemoteAdministrator::Instance());
-            Remotes::RemoteAdministrator::Iterator remoteDevices (admin.Producers());
+            Remotes::RemoteAdministrator::Iterator remoteDevices(admin.Producers());
 
             while (remoteDevices.Next() == true) {
 
@@ -498,7 +495,7 @@ namespace Plugin {
                 response->Devices.Add(newElement);
             }
 
-            result->ErrorCode  = Web::STATUS_OK;
+            result->ErrorCode = Web::STATUS_OK;
             result->Message = string(_T("List of loaded remote devices"));
             result->ContentType = Web::MIMETypes::MIME_JSON;
             result->Body(Core::proxy_cast<Web::IBody>(response));
@@ -519,10 +516,10 @@ namespace Plugin {
         // PUT RemoteControl/<DEVICE_NAME>?Code=XXX
         if (index.IsValid() == true && index.Next() == true) {
             // Perform operations on that specific device
-            const string deviceName (index.Current().Text());
-            const bool physical (IsPhysicalDevice(deviceName));
+            const string deviceName(index.Current().Text());
+            const bool physical(IsPhysicalDevice(deviceName));
 
-            if ( (physical == true) || (IsVirtualDevice(deviceName)) || IsDefaultMappingTable(deviceName)) {
+            if ((physical == true) || (IsVirtualDevice(deviceName))) {
 
                 if (index.Next() == true) {
 
@@ -567,10 +564,10 @@ namespace Plugin {
                             if (code != 0) {
 
                                 uint32_t errCode = KeyEvent(true, code, deviceName);
-                                if (errCode ==  Core::ERROR_NONE) {
+                                if (errCode == Core::ERROR_NONE) {
 
                                     errCode = KeyEvent(false, code, deviceName);
-                                    if (errCode ==  Core::ERROR_NONE) {
+                                    if (errCode == Core::ERROR_NONE) {
 
                                         result->ErrorCode = Web::STATUS_ACCEPTED;
                                         result->Message = string(_T("Soft key is sent to ") + deviceName);
@@ -584,7 +581,7 @@ namespace Plugin {
                         }
                     }
                     // PUT .../RemoteControl/<DEVICE_NAME>/Press|Release : send a code to DEVICE_NAME
-                    else if ( ((pressed = (index.Current() == _T("Press"))) == true) || (index.Current() == _T("Release")) ) {
+                    else if (((pressed = (index.Current() == _T("Press"))) == true) || (index.Current() == _T("Release"))) {
 
                         uint32_t code = 0;
                         uint16_t key = 0;
@@ -594,7 +591,7 @@ namespace Plugin {
                             result->ErrorCode = Web::STATUS_NOT_FOUND;
                             result->Message = string(_T("Key does not exist in ") + deviceName);
 
-                            if ( (code != 0) && (KeyEvent(pressed, code, deviceName) == Core::ERROR_NONE) ) {
+                            if ((code != 0) && (KeyEvent(pressed, code, deviceName) == Core::ERROR_NONE)) {
 
                                 result->ErrorCode = Web::STATUS_ACCEPTED;
                                 result->Message = string(_T("Soft key is sent to ") + deviceName);
@@ -621,7 +618,7 @@ namespace Plugin {
 
                         if (fileName.empty() == false) {
                             // Seems like we have a default mapping file. Load it..
-                            PluginHost::VirtualInput::KeyMap &map(_inputHandler->Table(deviceName));
+                            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
                             if (map.Save(fileName) == Core::ERROR_NONE) {
                                 result->ErrorCode = Web::STATUS_OK;
@@ -644,7 +641,7 @@ namespace Plugin {
                         }
 
                         if (fileName.empty() == false) {
-                            PluginHost::VirtualInput::KeyMap &map(_inputHandler->Table(deviceName));
+                            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
                             if (map.Load(fileName) == Core::ERROR_NONE) {
                                 result->ErrorCode = Web::STATUS_OK;
@@ -664,7 +661,7 @@ namespace Plugin {
                         // Valid code-key pair
                         if (code != 0 && key != 0) {
                             // Load default or specific device mapping
-                            PluginHost::VirtualInput::KeyMap &map(_inputHandler->Table(deviceName));
+                            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
                             if (map.Add(code, key, modifiers) == true) {
                                 result->ErrorCode = Web::STATUS_CREATED;
@@ -692,11 +689,11 @@ namespace Plugin {
         // DELETE .../RemoteControl/<DEVICE_NAME>: delete code from mapping of DEVICE_NAME
         if (index.IsValid() == true && index.Next() == true) {
             // Perform operations on that specific device
-            const string deviceName (index.Current().Text());
+            const string deviceName(index.Current().Text());
 
-            const bool physical (IsPhysicalDevice(deviceName));
+            const bool physical(IsPhysicalDevice(deviceName));
 
-            if ( (physical == true) || (IsVirtualDevice(deviceName))|| IsDefaultMappingTable(deviceName) ) {
+            if ((physical == true) || (IsVirtualDevice(deviceName))) {
 
                 if (index.Next() == false) {
 
@@ -712,13 +709,14 @@ namespace Plugin {
                         if (code != 0) {
 
                             // Load default or specific device mapping
-                            PluginHost::VirtualInput::KeyMap &map(_inputHandler->Table(deviceName));
+                            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
                             map.Delete(code);
 
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = string(_T("Code is deleted"));
-                        } else {
+                        }
+                        else {
                             result->ErrorCode = Web::STATUS_FORBIDDEN;
                             result->Message = string(_T("Key does not exist in ") + deviceName);
                         }
@@ -739,11 +737,11 @@ namespace Plugin {
         // POST .../RemoteControl/<DEVICE_NAME> : Modify a new pair in specific DEVICE_NAME
         if (index.IsValid() == true && index.Next() == true) {
             // Perform operations on that specific device
-            const string deviceName (index.Current().Text());
+            const string deviceName(index.Current().Text());
 
-            const bool physical (IsPhysicalDevice(deviceName));
+            const bool physical(IsPhysicalDevice(deviceName));
 
-            if ( (physical == true) || (IsVirtualDevice(deviceName))|| IsDefaultMappingTable(deviceName)) {
+            if ((physical == true) || (IsVirtualDevice(deviceName))) {
 
                 if (index.Next() == false) {
 
@@ -757,7 +755,7 @@ namespace Plugin {
                         // Valid code-key pair
                         if (code != 0 && key != 0) {
                             // Load default or specific device mapping
-                            PluginHost::VirtualInput::KeyMap &map(_inputHandler->Table(deviceName));
+                            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
                             if (map.Modify(code, key, modifiers) == true) {
                                 result->ErrorCode = Web::STATUS_OK;
@@ -774,10 +772,5 @@ namespace Plugin {
         }
         return (result);
     }
-
-        bool RemoteControl::IsDefaultMappingTable(const string& name) const
-        {
-            return (strcmp (name.c_str(),DefaultMappingTable.c_str()) == 0);
-        }
 }
 }
