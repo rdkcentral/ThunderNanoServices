@@ -481,7 +481,9 @@ namespace Plugin {
             std::list<string>::const_iterator index (_virtualDevices.begin());
 
             while (index != _virtualDevices.end()) {
-                response->Devices.Add() = Core::JSON::String(*index);
+                Core::JSON::String newElement;
+                newElement = *index;
+                response->Devices.Add(newElement);
                 index++;
             }
 
