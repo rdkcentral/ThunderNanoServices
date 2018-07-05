@@ -133,6 +133,7 @@ namespace Plugin {
 
             return (index.IsValid());
         }
+        bool IsDefaultMappingTable(const string& name) const;
 
         //	IPlugin methods
         // -------------------------------------------------------------------------------------------------------

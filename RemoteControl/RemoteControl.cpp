@@ -136,8 +136,8 @@ namespace Plugin {
         // First check that we at least can create a default lookup table.
         if (mappingFile.empty() == false) {
 
-            TRACE(Trace::Information, (_T("Opening map file: %s"), mappingFile.c_str()));
-            TRACE_L1(_T("Opening map file: %s"), mappingFile.c_str());
+            TRACE(Trace::Information, (_T("Opening default map file: %s"), mappingFile.c_str()));
+            TRACE_L1(_T("Opening default map file: %s"), mappingFile.c_str());
 
             // Keep this path for save operation
             _persistentPath = service->PersistentPath();
@@ -414,7 +414,7 @@ namespace Plugin {
             // Perform operations on that specific device
             const string deviceName = index.Current().Text();
 
-            if ( (IsVirtualDevice(deviceName)) || (IsPhysicalDevice(deviceName)) ) {
+            if ( (IsVirtualDevice(deviceName)) || (IsPhysicalDevice(deviceName)) || IsDefaultMappingTable(deviceName) ) {
                 // GET .../RemoteControl/<DEVICE_NAME>?Code=XXX : Get code of DEVICE_NAME
                 if (request.Query.IsSet() == true) {
                     Core::URL::KeyValue options(request.Query.Value());
@@ -518,7 +518,7 @@ namespace Plugin {
             const string deviceName (index.Current().Text());
             const bool physical (IsPhysicalDevice(deviceName));
 
-            if ( (physical == true) || (IsVirtualDevice(deviceName)) ) {
+            if ( (physical == true) || (IsVirtualDevice(deviceName)) || IsDefaultMappingTable(deviceName)) {
 
                 if (index.Next() == true) {
 
@@ -678,7 +678,7 @@ namespace Plugin {
 
             const bool physical (IsPhysicalDevice(deviceName));
 
-            if ( (physical == true) || (IsVirtualDevice(deviceName)) ) {
+            if ( (physical == true) || (IsVirtualDevice(deviceName))|| IsDefaultMappingTable(deviceName) ) {
 
                 if (index.Next() == false) {
 
@@ -725,7 +725,7 @@ namespace Plugin {
 
             const bool physical (IsPhysicalDevice(deviceName));
 
-            if ( (physical == true) || (IsVirtualDevice(deviceName)) ) {
+            if ( (physical == true) || (IsVirtualDevice(deviceName))|| IsDefaultMappingTable(deviceName)) {
 
                 if (index.Next() == false) {
 
@@ -756,5 +756,10 @@ namespace Plugin {
         }
         return (result);
     }
+
+        bool RemoteControl::IsDefaultMappingTable(const string& name) const
+        {
+            return (strcmp (name.c_str(),DefaultMappingTable.c_str()) == 0);
+        }
 }
 }
