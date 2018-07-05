@@ -45,8 +45,6 @@ endif()
 
 if(RF4CE_FOUND)
     message(" - Including RF4CE support")
-    message("RF4CE_INCLUDE_DIRS=${RF4CE_INCLUDE_DIRS}")
-    message("RF4CE_LIBRARIES=${RF4CE_LIBRARIES}")
 
     include_directories (${RF4CE_INCLUDE_DIRS})
 

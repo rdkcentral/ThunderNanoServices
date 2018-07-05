@@ -1498,6 +1498,7 @@ private:
     StatusRequest _statusRequest;
 };
 
+ 
 } }  // namespace WPEFramework::WPASupplicant
 
 #endif // WPASUPPLICANT_CONTROLLER_H

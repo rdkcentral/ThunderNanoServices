@@ -26,7 +26,7 @@ namespace WebKit {
         string WKStringToString(WKStringRef wkStringRef)
         {
             size_t bufferSize = WKStringGetMaximumUTF8CStringSize(wkStringRef);
-            std::unique_ptr<char> buffer(new char[bufferSize]);
+            std::unique_ptr<char[]> buffer(new char[bufferSize]);
             size_t stringLength = WKStringGetUTF8CString(wkStringRef, buffer.get(), bufferSize);
             return Core::ToString(buffer.get(), stringLength - 1);
         }
