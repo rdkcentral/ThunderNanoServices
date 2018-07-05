@@ -114,6 +114,7 @@ namespace Plugin {
             : _skipURL(0)
             , _inputHandler(PluginHost::InputHandler::KeyHandler())
             , _persistentPath()
+            , _virtualDevices()
     {
         ASSERT(_inputHandler != nullptr);
     }
@@ -135,8 +136,8 @@ namespace Plugin {
         // First check that we at least can create a default lookup table.
         if (mappingFile.empty() == false) {
 
-            TRACE(Trace::Information, (_T("Opening map file: %s"), mappingFile.c_str()));
-            TRACE_L1(_T("Opening map file: %s"), mappingFile.c_str());
+            TRACE(Trace::Information, (_T("Opening default map file: %s"), mappingFile.c_str()));
+            TRACE_L1(_T("Opening default map file: %s"), mappingFile.c_str());
 
             // Keep this path for save operation
             _persistentPath = service->PersistentPath();
@@ -193,6 +194,35 @@ namespace Plugin {
                         }
                     }
 
+                    configList = config.Virtuals.Elements();
+
+                    while (configList.Next() == true) {
+                        // Configure the virtual inputs.
+			string loadName (configList.Current().MapFile.Value());
+
+                        if (loadName.empty() == true) {
+                            loadName = configList.Current().Name.Value() + _T(".json");
+                        }
+
+                        // See if we need to load a table.
+                        string specific (MappingFile (loadName, service->PersistentPath(), service->DataPath()));
+
+                        if (specific.empty() == true) {
+                            TRACE(Trace::Information, (_T("VirtualDevice [%s] defined but no map file"), configList.Current().Name.Value().c_str()));
+                        }
+                        else {
+                            TRACE(Trace::Information, (_T("Opening map file: %s"), specific.c_str()));
+                            TRACE_L1(_T("Opening map file: %s"), specific.c_str());
+
+                            // Get our selves a table..
+                            PluginHost::VirtualInput::KeyMap& map (_inputHandler->Table(configList.Current().Name.Value()));
+                            map.Load(specific);
+                            map.PassThrough(configList.Current().PassOn.Value());
+
+                            _virtualDevices.push_back(configList.Current().Name.Value());
+                        }
+                    }
+
                     _skipURL = service->WebPrefix().length();
                     _inputHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value());
                     _inputHandler->Default(DefaultMappingTable);
@@ -225,6 +255,9 @@ namespace Plugin {
         // Clear default key map
         _inputHandler->Default(EMPTY_STRING);
         _inputHandler->ClearTable(DefaultMappingTable);
+
+        // CLear the virtual devices.
+        _virtualDevices.clear();
 
         Remotes::RemoteAdministrator::Instance().RevokeAll();
     }
@@ -290,30 +323,6 @@ namespace Plugin {
             TRACE(UnknownKey, (mapName, code, pressed, result));
         }
         return (result);
-    }
-
-    const string RemoteControl::FindDevice(Core::TextSegmentIterator& index) const
-    {
-        string deviceName;
-
-        if (index.Current() != DefaultMappingTable) {
-
-            Remotes::RemoteAdministrator &admin(Remotes::RemoteAdministrator::Instance());
-            Remotes::RemoteAdministrator::Iterator remoteDevices(admin.Producers());
-
-            while (remoteDevices.Next() == true) {
-                const TCHAR *producer((*remoteDevices)->Name());
-                if (index.Current() == producer) {
-                    deviceName = producer;
-                    break;
-                }
-            }
-        } else {
-
-            deviceName = DefaultMappingTable;
-        }
-
-        return (deviceName);
     }
 
     bool RemoteControl::ParseRequestBody(const Web::Request& request, uint32_t& code, uint16_t& key, uint32_t& modifiers)
@@ -405,19 +414,19 @@ namespace Plugin {
 
         if (index.IsValid() == true && index.Next() == true) {
             // Perform operations on that specific device
-            const string deviceName = FindDevice(index);
+            const string deviceName = index.Current().Text();
 
-            if (deviceName.empty() == false) {
+            if ( (IsVirtualDevice(deviceName)) || (IsPhysicalDevice(deviceName)) || IsDefaultMappingTable(deviceName) ) {
                 // GET .../RemoteControl/<DEVICE_NAME>?Code=XXX : Get code of DEVICE_NAME
                 if (request.Query.IsSet() == true) {
                     Core::URL::KeyValue options(request.Query.Value());
 
-                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Code"), 0));
+                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Code"), static_cast<uint32_t>(~0)));
 
                     result->ErrorCode = Web::STATUS_NOT_FOUND;
                     result->Message = string(_T("Key does not exist in ") + deviceName);
 
-                    if (code.Value() != 0) {
+                    if (code.Value() != static_cast<uint32_t>(~0)) {
                         // Load default or specific device mapping
                         PluginHost::VirtualInput::KeyMap &map(_inputHandler->Table(deviceName));
 
@@ -438,14 +447,15 @@ namespace Plugin {
                 // GET .../RemoteControl/<DEVICE_NAME> : Return metadata of specific DEVICE_NAME
                 else {
 
-                    if (deviceName == DefaultMappingTable) {
+                    if ( IsVirtualDevice(deviceName) == true ) {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
-                        result->Message = string(_T("Default device is loaded"));
-                    } else {
+                        result->Message = string(_T("Virtual device is loaded"));
+                    }
+                    else if ( IsPhysicalDevice(deviceName) == true ) {
                         uint32_t error = Remotes::RemoteAdministrator::Instance().Error(deviceName);
                         if (error == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
-                            result->Message = string(_T("Specific device is loaded"));
+                            result->Message = string(_T("Physical device is loaded"));
 
                             Core::ProxyType<Web::TextBody> body(_remoteInfo.Element());
 
@@ -467,10 +477,15 @@ namespace Plugin {
 
             Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
 
-            // Add default mapping name
-            Core::JSON::String newElement;
-            newElement = DefaultMappingTable;
-            response->Devices.Add(newElement);
+            // Add virtual devices
+            std::list<string>::const_iterator index (_virtualDevices.begin());
+
+            while (index != _virtualDevices.end()) {
+                Core::JSON::String newElement;
+                newElement = *index;
+                response->Devices.Add(newElement);
+                index++;
+            }
 
             // Look at specific devices, if we have, append them to response
             Remotes::RemoteAdministrator& admin(Remotes::RemoteAdministrator::Instance());
@@ -504,8 +519,10 @@ namespace Plugin {
         // PUT RemoteControl/<DEVICE_NAME>?Code=XXX
         if (index.IsValid() == true && index.Next() == true) {
             // Perform operations on that specific device
-            const string deviceName = FindDevice(index);
-            if (deviceName.empty() == false) {
+            const string deviceName (index.Current().Text());
+            const bool physical (IsPhysicalDevice(deviceName));
+
+            if ( (physical == true) || (IsVirtualDevice(deviceName)) || IsDefaultMappingTable(deviceName)) {
 
                 if (index.Next() == true) {
 
@@ -513,8 +530,7 @@ namespace Plugin {
 
                     // PUT .../RemoteControl/<DEVICE_NAME>/Pair: activate pairing mode of specific DEVICE_NAME
                     if (index.Current() == _T("Pair")) {
-
-                        if (Remotes::RemoteAdministrator::Instance().Pair(deviceName) == true) {
+                        if ((physical == true) && (Remotes::RemoteAdministrator::Instance().Pair(deviceName) == true)) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = string(_T("Pairing mode active: ") + deviceName);
                         }
@@ -676,9 +692,11 @@ namespace Plugin {
         // DELETE .../RemoteControl/<DEVICE_NAME>: delete code from mapping of DEVICE_NAME
         if (index.IsValid() == true && index.Next() == true) {
             // Perform operations on that specific device
-            const string deviceName = FindDevice(index);
+            const string deviceName (index.Current().Text());
 
-            if (deviceName.empty() == false) {
+            const bool physical (IsPhysicalDevice(deviceName));
+
+            if ( (physical == true) || (IsVirtualDevice(deviceName))|| IsDefaultMappingTable(deviceName) ) {
 
                 if (index.Next() == false) {
 
@@ -721,9 +739,11 @@ namespace Plugin {
         // POST .../RemoteControl/<DEVICE_NAME> : Modify a new pair in specific DEVICE_NAME
         if (index.IsValid() == true && index.Next() == true) {
             // Perform operations on that specific device
-            const string deviceName = FindDevice(index);
+            const string deviceName (index.Current().Text());
 
-            if (deviceName.empty() == false) {
+            const bool physical (IsPhysicalDevice(deviceName));
+
+            if ( (physical == true) || (IsVirtualDevice(deviceName))|| IsDefaultMappingTable(deviceName)) {
 
                 if (index.Next() == false) {
 
@@ -754,5 +774,10 @@ namespace Plugin {
         }
         return (result);
     }
+
+        bool RemoteControl::IsDefaultMappingTable(const string& name) const
+        {
+            return (strcmp (name.c_str(),DefaultMappingTable.c_str()) == 0);
+        }
 }
 }
