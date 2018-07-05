@@ -332,6 +332,7 @@ static GSourceFuncs _handlerIntervention =
                 , NonCompositedWebGLEnabled(false)
                 , EnvironmentOverride(false)
                 , Automation(false)
+                , WebGLEnabled(true)
             {
                 Add(_T("useragent"), &UserAgent);
                 Add(_T("url"), &URL);
@@ -361,6 +362,7 @@ static GSourceFuncs _handlerIntervention =
                 Add(_T("noncompositedwebgl"), &NonCompositedWebGLEnabled);
                 Add(_T("environmentoverride"), &EnvironmentOverride);
                 Add(_T("automation"), &Automation);
+		Add(_T("webgl"), &WebGLEnabled);
             }
             ~Config()
             {
@@ -395,6 +397,7 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::Boolean NonCompositedWebGLEnabled;
             Core::JSON::Boolean EnvironmentOverride;
             Core::JSON::Boolean Automation;
+	    Core::JSON::Boolean WebGLEnabled;
         };
 
     private:
@@ -980,6 +983,9 @@ static GSourceFuncs _handlerIntervention =
             // Turn on/off non composited WebGL
             WKPreferencesSetNonCompositedWebGLEnabled(preferences, _config.NonCompositedWebGLEnabled.Value());
 
+	    //Turn on/off WebGL
+            WKPreferencesSetWebGLEnabled(preferences, _config.WebGLEnabled.Value());
+ 
             WKPageGroupSetPreferences(pageGroup, preferences);
 
             auto pageConfiguration = WKPageConfigurationCreate();
