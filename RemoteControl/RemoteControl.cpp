@@ -218,6 +218,8 @@ namespace Plugin {
                             PluginHost::VirtualInput::KeyMap& map (_inputHandler->Table(configList.Current().Name.Value()));
                             map.Load(specific);
                             map.PassThrough(configList.Current().PassOn.Value());
+
+                            _virtualDevices.push_back(configList.Current().Name.Value());
                         }
                     }
 
