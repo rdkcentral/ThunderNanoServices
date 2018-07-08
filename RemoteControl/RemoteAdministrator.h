@@ -80,7 +80,7 @@ namespace Remotes {
         }
 
 
-        bool Unpair(const string& device, uint8_t bindingId)
+        bool Unpair(const string& device, string bindingId)
         {
             bool result = true;
 

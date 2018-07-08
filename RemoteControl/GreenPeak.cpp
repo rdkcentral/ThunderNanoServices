@@ -596,14 +596,14 @@ namespace Plugin {
     }
 
 
-    /* virtual */ bool GreenPeak::Unpair(uint8_t bindingId)
+    /* virtual */ bool GreenPeak::Unpair(string bindingId)
     {
         bool unpaired = false;
 
         _adminLock.Lock();
 
         if (_info.Major.IsSet() == true) {
-            _binidngId = bindingId;
+            _binidngId = atoi(bindingId.c_str());
             gpSched_ScheduleEvent(0, target_ActivateUnpairing);
             unpaired = true;
         }

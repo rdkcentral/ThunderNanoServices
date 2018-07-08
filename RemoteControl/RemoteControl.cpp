@@ -540,8 +540,7 @@ namespace Plugin {
                     if (index.Current() == _T("Unpair")) {
 
                         if (index.Next() == true) {
-                            uint8_t bindingId = atoi(index.Current().Text().c_str());
-                            if (Remotes::RemoteAdministrator::Instance().Unpair(deviceName, bindingId) == true) {
+                            if (Remotes::RemoteAdministrator::Instance().Unpair(deviceName, index.Current().Text()) == true) {
                                 result->ErrorCode = Web::STATUS_OK;
                                 result->Message = string(_T("Unpaired ") + deviceName);
                             }

@@ -61,7 +61,7 @@ namespace Plugin {
         }
 
         virtual bool Pair();
-        virtual bool Unpair(uint8_t bindingId);
+        virtual bool Unpair(string bindingId);
         virtual uint32_t Callback(Exchange::IKeyHandler* callback);
         virtual uint32_t Error() const;
         virtual string MetaData() const;
@@ -156,7 +156,7 @@ namespace Plugin {
         return (false);
     }
 
-    /* virtual */ bool IRRemote::Unpair(uint8_t bindingId) {
+    /* virtual */ bool IRRemote::Unpair(string bindingId) {
         return (false);
     }
 
