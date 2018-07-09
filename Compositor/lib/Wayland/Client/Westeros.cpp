@@ -1,4 +1,4 @@
-#include "Client.h"
+#include "Implementation.h"
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -416,7 +416,7 @@ namespace Wayland {
         }
     }
 
-    Display::SurfaceImplementation::SurfaceImplementation(Display& display, const std::string& name, const uint32_t width, const uint32_t height,  const bool upscale)
+    Display::SurfaceImplementation::SurfaceImplementation(Display& display, const std::string& name, const uint32_t width, const uint32_t height)
         : _refcount(1)
         , _level(0)
         , _name(name)
@@ -435,7 +435,7 @@ namespace Wayland {
         , _eglSurfaceWindow(EGL_NO_SURFACE)
         , _keyboard(nullptr)
         , _pointer(nullptr)
-        , _upScale(upscale)
+        , _upScale(false)
     {
         assert(display.IsOperational());
 
@@ -954,13 +954,13 @@ namespace Wayland {
         }
     }
 
-    Display::Surface Display::Create(const std::string& name, const uint32_t width, const uint32_t height, const bool upscale)
+    IDisplay::ISurface* Display::Create(const std::string& name, const uint32_t width, const uint32_t height)
     {
-        Surface result;
+        IDisplay::ISurface result = nullptr;
 
         _adminLock.Lock();
 
-        SurfaceImplementation* surface = new SurfaceImplementation(*this, name, width, height, upscale);
+        SurfaceImplementation* surface = new SurfaceImplementation(*this, name, width, height);
 
         // Wait till we are fully registered.
         _waylandSurfaces.insert(std::pair<struct wl_surface*, SurfaceImplementation*>(surface->_surface, surface));
@@ -1090,14 +1090,8 @@ namespace Wayland {
         _adminLock.Unlock();
     }
 
-    /* static */ Display& Display::Instance()
+    /* static */ Compositor::IDisplay* Display::Instance(const std::string& displayName)
     {
-        return (Display::Instance(std::string()));
-    }
-
-    /* static */ Display& Display::Instance(const std::string& displayName)
-    {
-
         if (_runtimeDir.empty() == true) {
             const char* envName = ::getenv("XDG_RUNTIME_DIR");
             if (envName != nullptr) {
@@ -1110,7 +1104,7 @@ namespace Wayland {
         // or by passing it as an argument to this method (none empty dir)
         assert(_runtimeDir.empty() == false);
 
-        Display* result(nullptr);
+        Compositor::IDisplay* result(nullptr);
 
         _adminLock.Lock();
 
@@ -1232,7 +1226,7 @@ void Display::Process(Display::IProcess* processloop)
         }
     }
 
-    signed int Display::Process(const bool data)
+    int Display::Process(const uint32_t data)
     {
 
         signed int result(0);
@@ -1246,7 +1240,7 @@ void Display::Process(Display::IProcess* processloop)
 
         wl_display_flush(_display);
 
-        if (data == true) {
+        if (data != 0) {
             if (wl_display_read_events(_display) < 0) {
                 result = -2;
             }
@@ -1275,4 +1269,8 @@ void Display::Process(Display::IProcess* processloop)
         ::pthread_kill(_thread, SIGINT);
     }
 }
+
+    /* static */ Compositor::IDisplay* Compositor::IDisplay::Instance(const std::string& displayName) {
+        return (Display::Create(displayName));
+    }
 }
