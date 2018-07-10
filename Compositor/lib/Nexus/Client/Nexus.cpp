@@ -1,206 +1,176 @@
 #include "Implementation.h"
 
-#include <EGL/egl.h>
 #include <EGL/eglext.h>
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
 #include <string.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <sys/mman.h>
-#include <sys/signalfd.h>
-#include <signal.h>
-#include <poll.h>
+
+#define BACKEND_BCM_NEXUS_NXCLIENT 1
+
+#ifdef BACKEND_BCM_NEXUS_NXCLIENT
+#include <refsw/nxclient.h>
+#endif
+
+#include <virtualinput/virtualinput.h>
+
+// pipe to relay the keys to the display...
+int g_pipefd[2];
+
+struct Message {
+    uint32_t code;
+    actiontype type;
+};
+
+static const char * connectorName = "/tmp/keyhandler";
+
+    static void VirtualKeyboardCallback(actiontype type , unsigned int code)
+    {
+        if (type != COMPLETED)
+        {
+            Message message;
+            message.code = code;
+            message.type = type;
+            write(g_pipefd[1], &message, sizeof(message));
+        }
+    }
+
 
 namespace WPEFramework {
 
 namespace Nexus {
 
 #define Trace(fmt, args...) fprintf(stderr, "[pid=%d][Client %s:%d] : " fmt, getpid(), __FILE__, __LINE__, ##args)
-#define RED_SIZE (8)
-#define GREEN_SIZE (8)
-#define BLUE_SIZE (8)
-#define ALPHA_SIZE (8)
-#define DEPTH_SIZE (0)
-
-    static void printEGLConfiguration(EGLDisplay dpy, EGLConfig config)
-    {
-#define X(VAL)    \
-    {             \
-        VAL, #VAL \
-    }
-        struct {
-            EGLint attribute;
-            const char* name;
-        } names[] = {
-            X(EGL_BUFFER_SIZE),
-            X(EGL_RED_SIZE),
-            X(EGL_GREEN_SIZE),
-            X(EGL_BLUE_SIZE),
-            X(EGL_ALPHA_SIZE),
-            X(EGL_CONFIG_CAVEAT),
-            X(EGL_CONFIG_ID),
-            X(EGL_DEPTH_SIZE),
-            X(EGL_LEVEL),
-            X(EGL_MAX_PBUFFER_WIDTH),
-            X(EGL_MAX_PBUFFER_HEIGHT),
-            X(EGL_MAX_PBUFFER_PIXELS),
-            X(EGL_NATIVE_RENDERABLE),
-            X(EGL_NATIVE_VISUAL_ID),
-            X(EGL_NATIVE_VISUAL_TYPE),
-            // X(EGL_PRESERVED_RESOURCES),
-            X(EGL_SAMPLE_BUFFERS),
-            X(EGL_SAMPLES),
-            // X(EGL_STENCIL_BITS),
-            X(EGL_SURFACE_TYPE),
-            X(EGL_TRANSPARENT_TYPE),
-            // X(EGL_TRANSPARENT_RED),
-            // X(EGL_TRANSPARENT_GREEN),
-            // X(EGL_TRANSPARENT_BLUE)
-        };
-#undef X
-
-        for (int j = 0; j < sizeof(names) / sizeof(names[0]); j++) {
-            EGLint value = -1;
-            EGLBoolean res = eglGetConfigAttrib(dpy, config, names[j].attribute, &value);
-            if (res) {
-                Trace("  - %s: %d (0x%x)\n", names[j].name, value, value);
-            }
-        }
-    }
 
     Display::SurfaceImplementation::SurfaceImplementation(Display& display, const std::string& name, const uint32_t width, const uint32_t height)
-        : _refcount(1)
+        : _parent(display)
+        , _refcount(1)
         , _name(name)
         , _x(0)
         , _y(0)
         , _width(width)
         , _height(height)
-        , _eglSurfaceWindow(EGL_NO_SURFACE)
-        , _keyboard(nullptr)
-    {
+        , _nativeWindow(nullptr)
+        , _keyboard(nullptr) {
+
+        uint32_t nexusClientId(0); // For now we only accept 0. See Mail David Montgomery
+        const char* tmp (getenv("CLIENT_IDENTIFIER"));
+
+        if ( (tmp != nullptr) && ((tmp = strchr(tmp, ',')) != nullptr) ) {
+            nexusClientId = atoi(&(tmp[1]));
+        }
+
+        //NXPL_NativeWindowInfoEXT windowInfo;
+        NXPL_NativeWindowInfo windowInfo;
+        windowInfo.x = 0;
+        windowInfo.y = 0;
+        windowInfo.width = _width;
+        windowInfo.height = _height;
+        windowInfo.stretch = false;
+#ifdef BACKEND_BCM_NEXUS_NXCLIENT
+        windowInfo.zOrder = 0;
+#endif
+        windowInfo.clientID = nexusClientId;
+        // _nativeWindow = NXPL_CreateNativeWindowEXT(&windowInfo);
+        _nativeWindow = NXPL_CreateNativeWindow(&windowInfo);
+
+        _parent.Register(this);
+        printf("Constructed the EGL surface (%s, %d).\n", _name.c_str(), nexusClientId);
     }
 
-    void Display::Initialize()
-    {
-        /*
-         * Get default EGL display
-         */
-        _eglDisplay = eglGetDisplay(reinterpret_cast<NativeDisplayType>(_eglDisplay));
+    /* virtual */ Display::SurfaceImplementation::~SurfaceImplementation() {
+        printf("Destructed the EGL surface (%s).\n", _name.c_str());
+        NEXUS_SurfaceClient_Release(reinterpret_cast<NEXUS_SurfaceClient*>(_nativeWindow));
 
-        if (_eglDisplay == EGL_NO_DISPLAY) {
-            Trace("Oops bad Display: %p\n", _eglDisplay);
-        }
-        else {
-            /*
-             * Initialize display
-             */
-            EGLint major, minor;
-            if (eglInitialize(_eglDisplay, &major, &minor) != EGL_TRUE) {
-                Trace("Unable to initialize EGL: %X\n", eglGetError());
-            }
-            else {
-                /*
-                 * Get number of available configurations
-                 */
-                EGLint configCount;
-                Trace("Vendor: %s\n", eglQueryString(_eglDisplay, EGL_VENDOR));
-                Trace("Version: %d.%d\n", major, minor);
-
-                if (eglGetConfigs(_eglDisplay, nullptr, 0, &configCount)) {
-
-                    EGLConfig eglConfigs[configCount];
-
-                    EGLint attributes[] = {
-                        EGL_RED_SIZE, RED_SIZE,
-                        EGL_GREEN_SIZE, GREEN_SIZE,
-                        EGL_BLUE_SIZE, BLUE_SIZE,
-                        EGL_DEPTH_SIZE, DEPTH_SIZE,
-                        EGL_STENCIL_SIZE, 0,
-                        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-                        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-                        EGL_NONE
-                    };
-
-                    Trace("Configs: %d\n", configCount);
-                    /*
-                     * Get a list of configurations that meet or exceed our requirements
-                     */
-                    if (eglChooseConfig(_eglDisplay, attributes, eglConfigs, configCount, &configCount)) {
-
-                        /*
-                         * Choose a suitable configuration
-                         */
-                        unsigned int index = 0;
-
-                        while (index < configCount) {
-                            EGLint redSize, greenSize, blueSize, alphaSize, depthSize;
-
-                            eglGetConfigAttrib(_eglDisplay, eglConfigs[index], EGL_RED_SIZE, &redSize);
-                            eglGetConfigAttrib(_eglDisplay, eglConfigs[index], EGL_GREEN_SIZE, &greenSize);
-                            eglGetConfigAttrib(_eglDisplay, eglConfigs[index], EGL_BLUE_SIZE, &blueSize);
-                            eglGetConfigAttrib(_eglDisplay, eglConfigs[index], EGL_ALPHA_SIZE, &alphaSize);
-                            eglGetConfigAttrib(_eglDisplay, eglConfigs[index], EGL_DEPTH_SIZE, &depthSize);
-
-                            if ((redSize == RED_SIZE) && (greenSize == GREEN_SIZE) && (blueSize == BLUE_SIZE) && (alphaSize == ALPHA_SIZE) && (depthSize >= DEPTH_SIZE)) {
-                                break;
-                            }
-
-                            index++;
-                        }
-                        if (index < configCount) {
-                            _eglConfig = eglConfigs[index];
-
-                            EGLint attributes[] = { EGL_CONTEXT_CLIENT_VERSION, 2 /* ES2 */, EGL_NONE };
-
-                            Trace("Config choosen: %d\n", index);
-                            printEGLConfiguration(_eglDisplay, _eglConfig);
-
-                            /*
-                             * Create an EGL context
-                             */
-                            _eglContext = eglCreateContext(_eglDisplay, _eglConfig, EGL_NO_CONTEXT, attributes);
-
-                            Trace("Context created\n");
-                        }
-                    }
-                }
-                Trace("Extentions: %s\n", eglQueryString(_eglDisplay, EGL_EXTENSIONS));
-            }
-        }
+       _parent.Unregister(this);
     }
 
-    void Display::Deinitialize()
-    {
-        if (_eglContext != EGL_NO_CONTEXT) {
-            eglMakeCurrent(_eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-            eglTerminate(_eglDisplay);
-            eglReleaseThread();
+    Display::Display(const std::string& name) 
+        : _displayName(name)
+        , _nxplHandle(nullptr)
+        , _virtualkeyboard(nullptr)  {
+
+        NEXUS_DisplayHandle displayHandle(nullptr);
+
+#ifdef BACKEND_BCM_NEXUS_NXCLIENT
+        NxClient_JoinSettings joinSettings;
+        NxClient_GetDefaultJoinSettings(&joinSettings);
+
+        strcpy(joinSettings.name, name.c_str());
+
+        NEXUS_Error rc = NxClient_Join(&joinSettings);
+        BDBG_ASSERT(!rc);
+#else
+        NEXUS_Error rc = NEXUS_Platform_Join();
+        BDBG_ASSERT(!rc);
+#endif
+
+        NXPL_RegisterNexusDisplayPlatform(&_nxplHandle, displayHandle);
+
+        if (pipe(g_pipefd) == -1) {
+            g_pipefd[0] = -1;
+            g_pipefd[1] = -1;
         }
+
+        _virtualkeyboard = Construct(name.c_str(), connectorName, VirtualKeyboardCallback);
+        if (_virtualkeyboard == nullptr) {
+            fprintf(stderr, "[LibinputServer] Initialization of virtual keyboard failed!!!\n");
+        }
+
+        printf("Created the Display\n");
+    }
+
+    Display::~Display()
+    {
+        NXPL_UnregisterNexusDisplayPlatform(_nxplHandle);
+#ifdef BACKEND_BCM_NEXUS_NXCLIENT
+        NxClient_Uninit();
+#endif
+        if (_virtualkeyboard != nullptr) {
+           Destruct(_virtualkeyboard);
+        }
+
+        printf("Destructed the Display\n");
     }
 
     /* virtual */ Compositor::IDisplay::ISurface* Display::Create(const std::string& name, const uint32_t width, const uint32_t height)
     {
-        IDisplay::ISurface* result = nullptr;
-
-        return (result);
+        return (new SurfaceImplementation(*this, name, width, height));
     }
 
     /* static */ Compositor::IDisplay* Display::Instance(const std::string& displayName)
     {
-        Compositor::IDisplay* result(nullptr);
+        static Display myDisplay(displayName);
 
-        return (result);
+        return (&myDisplay);
     }
 
+    /* virtual */ int Display::Process (const uint32_t data) {
+        Message message;
+        if ((data != 0) && (g_pipefd[0] != -1) && (read(g_pipefd[0], &message, sizeof(message)) > 0)) {
+
+            std::list<SurfaceImplementation*>::iterator index(_surfaces.begin());
+
+            while (index != _surfaces.end()) {
+                // RELEASED  = 0,
+                // PRESSED   = 1,
+                // REPEAT    = 2,
+
+                (*index)->SendKey (message.code, (message.type == 0 ? IDisplay::IKeyboard::released : IDisplay::IKeyboard::pressed), time(nullptr));
+                index++;
+            }
+        }
+
+        return (0);
+    }
 
     /* virtual */ int Display::FileDescriptor() const
     {
-        return (_fd);
+        return (g_pipefd[0]);
     }
 }
+
     /* static */ Compositor::IDisplay* Compositor::IDisplay::Instance(const std::string& displayName) {
         return (Nexus::Display::Instance(displayName));
     }

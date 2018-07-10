@@ -1,4 +1,4 @@
-set(TARGET cmpositorclient)
+set(TARGET compositorclient)
 
 message("Setup ${TARGET} v${VERSION}...")
 

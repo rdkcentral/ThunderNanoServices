@@ -1,15 +1,18 @@
-set(TARGET cmpositorclient)
+set(TARGET compositorclient)
 
 message("Setup ${TARGET} v${VERSION}...")
 
 find_package(EGL REQUIRED)
 find_package(Core REQUIRED)
+find_package(LibVirtualKeyboard REQUIRED)
+find_package(VirtualInput REQUIRED)
 
 add_library(${TARGET} SHARED Nexus.cpp)
 
 target_link_libraries(${TARGET}
             PUBLIC
             WPEFramework::Core
+            WPEFramework::VirtualInput
             EGL::EGL
             )
 

@@ -29,6 +29,7 @@ namespace Compositor {
             virtual void Key(const uint32_t key, const state action, const uint32_t time) = 0;
             virtual void Modifiers(uint32_t depressedMods, uint32_t latchedMods, uint32_t lockedMods, uint32_t group) = 0;
             virtual void Repeat(int32_t rate, int32_t delay) = 0;
+            virtual void Direct(const uint32_t key, const state action) = 0;
         };
         struct ISurface {
             virtual ~ISurface() {};

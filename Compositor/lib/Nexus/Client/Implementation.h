@@ -4,13 +4,9 @@
 #define EGL_EGLEXT_PROTOTYPES 1
 
 #include <string>
-#include <map>
 #include <cassert>
 #include <list>
-#include <signal.h>
-#include <semaphore.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include <algorithm>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -20,6 +16,16 @@
 #endif
 
 #include "../../Client/Client.h"
+
+#include <refsw/nexus_config.h>
+#include <refsw/nexus_platform.h>
+#include <refsw/nexus_display.h>
+#include <refsw/nexus_core_utils.h>
+#include <refsw/default_nexus.h>
+
+#ifdef BACKEND_BCM_NEXUS_NXCLIENT
+#include <refsw/nxclient.h>
+#endif
 
 namespace WPEFramework {
 namespace Nexus {
@@ -38,9 +44,7 @@ namespace Nexus {
 
         public:
             SurfaceImplementation(Display& compositor, const std::string& name, const uint32_t width, const uint32_t height);
-            virtual ~SurfaceImplementation()
-            {
-            }
+            virtual ~SurfaceImplementation();
 
         public:
             virtual uint32_t AddRef() const override
@@ -57,7 +61,7 @@ namespace Nexus {
             }
             virtual EGLNativeWindowType Native() const override
             {
-                return (static_cast<EGLNativeWindowType>(_eglSurfaceWindow));
+                return (static_cast<EGLNativeWindowType>(_nativeWindow));
             }
             virtual const std::string& Name() const override
             {
@@ -75,6 +79,7 @@ namespace Nexus {
             {
                 assert((_keyboard == nullptr) ^ (keyboard == nullptr));
                 _keyboard = keyboard;
+                fprintf(stderr, "Set Keyboard => %p!\n", _keyboard); fflush(stderr);
             }
             virtual int32_t X() const override
             {
@@ -84,35 +89,34 @@ namespace Nexus {
             {
                 return (_y);
             }
+            inline void SendKey (const uint32_t key, const IKeyboard::state action, const uint32_t time) {
+
+                if (_keyboard != nullptr) {
+                     fprintf(stderr, "Fire %d, %d, %d on [%p].!\n", key, action,time, _keyboard); fflush(stderr);
+                    _keyboard->Direct(key, action);
+                    fprintf(stderr, "Done %d, %d, %d.!\n", key, action,time ); fflush(stderr);
+                }
+            }
 
         private:
-            friend Display;
-
+            Display& _parent;
             mutable uint32_t _refcount;
             std::string _name;
             int32_t _x;
             int32_t _y;
             int32_t _width;
             int32_t _height;
-            EGLSurface _eglSurfaceWindow;
+            EGLSurface _nativeWindow;
             IKeyboard* _keyboard;
         };
 
-        Display(const std::string& displayName)
-            : _displayName(displayName)
-            , _eglDisplay(EGL_NO_DISPLAY)
-            , _eglConfig(0)
-            , _eglContext(EGL_NO_CONTEXT)
-            , _fd(-1) {
-            Initialize();
-        }
+    private:
+        Display(const std::string& displayName);
 
     public:
         static Compositor::IDisplay* Instance(const std::string& displayName);
 
-        virtual ~Display() { 
-            Deinitialize();
-        }
+        virtual ~Display();
 
     public:
         // Lifetime management
@@ -130,36 +134,39 @@ namespace Nexus {
         // Methods
         virtual EGLNativeDisplayType Native() const override 
         {
-            return (static_cast<EGLNativeDisplayType>(_eglDisplay));
+            return (static_cast<EGLNativeDisplayType>(EGL_DEFAULT_DISPLAY));
         }
         virtual const std::string& Name() const override
         {
             return (_displayName);
         }
-        virtual int Process (const uint32_t data) override 
-        {
-            return (0);
-        }
+        virtual int Process (const uint32_t data) override;
         virtual int FileDescriptor() const override;
         virtual ISurface* Create(const std::string& name, const uint32_t width, const uint32_t height) override;
 
     private:
-        void Initialize();
-        void Deinitialize();
+        inline void Register(SurfaceImplementation* surface) {
+            std::list<SurfaceImplementation*>::iterator index(std::find(_surfaces.begin(), _surfaces.end(), surface));
+
+            if (index == _surfaces.end()) {
+                _surfaces.push_back(surface);
+            }
+        }
+        inline void Unregister(SurfaceImplementation* surface) {
+            std::list<SurfaceImplementation*>::iterator index(std::find(_surfaces.begin(), _surfaces.end(), surface));
+
+            if (index != _surfaces.end()) {
+                _surfaces.erase(index);
+            }
+        }
 
     private:
-        friend class Surface;
-        friend class Image;
-
         const std::string _displayName;
-
-        // EGL related info, if initialized and used.
-        EGLDisplay _eglDisplay;
-        EGLConfig _eglConfig;
-        EGLContext _eglContext;
-
-        int _fd;
+        NXPL_PlatformHandle _nxplHandle;
+        void* _virtualkeyboard ;
+        std::list<SurfaceImplementation*> _surfaces;
     };
+
 } // Nexus 
 } // WPEFramework
 
