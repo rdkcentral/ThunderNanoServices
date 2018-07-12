@@ -333,6 +333,7 @@ static GSourceFuncs _handlerIntervention =
                 , EnvironmentOverride(false)
                 , Automation(false)
                 , WebGLEnabled(true)
+                , ThreadedPainting()
             {
                 Add(_T("useragent"), &UserAgent);
                 Add(_T("url"), &URL);
@@ -362,7 +363,8 @@ static GSourceFuncs _handlerIntervention =
                 Add(_T("noncompositedwebgl"), &NonCompositedWebGLEnabled);
                 Add(_T("environmentoverride"), &EnvironmentOverride);
                 Add(_T("automation"), &Automation);
-		Add(_T("webgl"), &WebGLEnabled);
+                Add(_T("webgl"), &WebGLEnabled);
+                Add(_T("threadedpainting"), &ThreadedPainting);
             }
             ~Config()
             {
@@ -397,7 +399,8 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::Boolean NonCompositedWebGLEnabled;
             Core::JSON::Boolean EnvironmentOverride;
             Core::JSON::Boolean Automation;
-	    Core::JSON::Boolean WebGLEnabled;
+            Core::JSON::Boolean WebGLEnabled;
+            Core::JSON::String ThreadedPainting;
         };
 
     private:
@@ -766,6 +769,11 @@ static GSourceFuncs _handlerIntervention =
                 Core::SystemInfo::SetEnvironment(_T("JSC_dumpOptions"), _config.JavaScript.DumpOptions.Value(), !environmentOverride);
             }
 
+            // ThreadedPainting
+            if (_config.ThreadedPainting.Value().empty() == false) {
+                Core::SystemInfo::SetEnvironment(_T("WEBKIT_NICOSIA_PAINTING_THREADS"), _config.ThreadedPainting.Value(), !environmentOverride);
+            }
+
             // Oke, so we are good to go.. Release....
             Core::Thread::Run();
 
@@ -983,7 +991,7 @@ static GSourceFuncs _handlerIntervention =
             // Turn on/off non composited WebGL
             WKPreferencesSetNonCompositedWebGLEnabled(preferences, _config.NonCompositedWebGLEnabled.Value());
 
-	    //Turn on/off WebGL
+            //Turn on/off WebGL
             WKPreferencesSetWebGLEnabled(preferences, _config.WebGLEnabled.Value());
  
             WKPageGroupSetPreferences(pageGroup, preferences);
