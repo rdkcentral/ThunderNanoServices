@@ -57,4 +57,4 @@ configure_file(
 
 install(FILES ${CMAKE_BINARY_DIR}/compositor-client.pc DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
 
-add_subdirectory (test)
+# add_subdirectory (test)

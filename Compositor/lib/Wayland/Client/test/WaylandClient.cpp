@@ -1,4 +1,4 @@
-#include "../Client.h"
+#include "../Implementation.h"
 
 #include <math.h>
 #include <sys/time.h>
@@ -19,16 +19,18 @@ private:
     GLContext& operator=(const GLContext&) = delete;
 
 public:
-    GLContext(const Wayland::Display::Surface& surface)
+    GLContext(const Compositor::IDisplay::ISurface* surface)
         : _surface(surface)
         , _pos(0)
         , _col(1)
     {
+        if (surface != nullptr) _surface->AddRef();
         _startTime = CurrentTime();
         _needRedraw = Initialize();
     }
     virtual ~GLContext()
     {
+        if (surface != nullptr) _surface->Release();
     }
 
 public:
@@ -54,7 +56,7 @@ private:
     GLuint _rotation_uniform;
     GLuint _pos;
     GLuint _col;
-    Wayland::Display::Surface _surface;
+    Compositor::IDisplay:::ISurface _surface;
 };
 
 // ----------------------------------------------------------------------------------------
@@ -157,7 +159,7 @@ void GLContext::Render()
     static const uint32_t speed_div = 5;
     EGLint rect[4];
 
-    glViewport(0, 0, _surface.Width(), _surface.Height());
+    glViewport(0, 0, _surface->Width(), _surface->Height());
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -192,7 +194,7 @@ bool GLContext::Dispatch () {
         [](void* data, struct wl_callback* callback, uint32_t time) {
             GLContext& context = *reinterpret_cast<GLContext*>(data);
 
-            context._surface.Callback(nullptr);
+            // context._surface.Callback(nullptr);
 
             context._needRedraw = true;
         }
@@ -201,13 +203,13 @@ bool GLContext::Dispatch () {
     if (_needRedraw == true) {
         _needRedraw = false;
        Render();
-        _surface.Callback(&frameListener, this);
+        // _surface.Callback(&frameListener, this);
     }
 
     return (true);
 }
 
-static Wayland::Display::Surface* surfaceHandle = nullptr;
+static Compositor::IDisplay::ISurface* surfaceHandle = nullptr;
 
 class Keyboard : public Wayland::Display::IKeyboard {
 private:
@@ -237,24 +239,24 @@ public:
             case KEY_K:
                 // kill
                 Trace("[k] Sending Signal\n");
-                Wayland::Display::Instance().Signal();
+                Wayland::Display::Instance(std::string()).Signal();
                 break;
             case KEY_O:
                 //
                 Trace("[o] set opacity\n");
                 if (surfaceHandle != nullptr) {
                     if (opacityset) {
-                        surfaceHandle->Opacity(50);
+                        // surfaceHandle->Opacity(50);
                     }
                     else {
-                        surfaceHandle->Opacity(100);
+                        // surfaceHandle->Opacity(100);
                     }
                 }
                 break;
             case KEY_F:
                 Trace("[f] Focus client\n");
                 if (surfaceHandle != nullptr) {
-                    surfaceHandle->ZOrder(0);
+                    // surfaceHandle->ZOrder(0);
                 }
                 break;
             default:
@@ -277,20 +279,20 @@ private:
 
 int main(int argc, const char* argv[])
 {
-    Wayland::Display& display(Wayland::Display::Instance());
+    Wayland::Display& display(Wayland::Display::Instance(std::string()));
 
     display.InitializeEGL();
 
-    Wayland::Display::Surface client(display.Create("testClient", 1280, 720));
+    Compositor::IDisplay::ISurface* client(display.Create("testClient", 1280, 720));
 
     GLContext process(client);
     Keyboard myKeyboard;
 
-    client.Keyboard(&myKeyboard);
+    client->Keyboard(&myKeyboard);
 
     if (display.IsOperational() == true) {
 
-        surfaceHandle = &client;
+        // surfaceHandle = &client;
 
         // We also want to be aware of other surfaces.
         display.LoadSurfaces();
@@ -300,10 +302,10 @@ int main(int argc, const char* argv[])
 
         display.Process(&process);
 
-        surfaceHandle = nullptr;
+        // surfaceHandle = nullptr;
     }
 
-    client.Keyboard(nullptr);
+    client->Keyboard(nullptr);
 
     return 0;
 }

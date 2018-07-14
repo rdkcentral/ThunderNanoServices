@@ -19,7 +19,7 @@
 #define nullptr NULL
 #endif
 
-#include "../Client.h"
+#include "../../Client/Client.h"
 
 //
 // Forward declaration of the wayland specific types.
@@ -61,7 +61,7 @@ namespace Wayland {
 
     private:
         Display();
-        Display(const Display&)i = delete;
+        Display(const Display&) = delete;
         Display& operator=(const Display&) = delete;
 
         class CriticalSection {
@@ -99,10 +99,10 @@ namespace Wayland {
             pthread_mutex_t _lock;
         };
 
-        class SurfaceImplementation : public Compositor::ISurface {
+        class SurfaceImplementation : public Compositor::IDisplay::ISurface {
         private:
             SurfaceImplementation() = delete;
-            SurfaceImplementation(const SurfaceImplementation&)i = delete;
+            SurfaceImplementation(const SurfaceImplementation&) = delete;
             SurfaceImplementation& operator=(const SurfaceImplementation&) = delete;
 
         public:
@@ -114,15 +114,17 @@ namespace Wayland {
             }
 
         public:
-            virtual uint32_t void AddRef() const override
+            virtual uint32_t AddRef() const override
             {
                 _refcount++;
+                return (0);
             }
             virtual uint32_t Release() const override
             {
                 if (--_refcount == 0) {
                     delete const_cast<SurfaceImplementation*>(this);
                 }
+                return (0);
             }
             virtual EGLNativeWindowType Native() const override
             {
@@ -140,7 +142,7 @@ namespace Wayland {
             {
                 return (_width);
             }
-            virtual Keyboard(IKeyboard* keyboard) override
+            virtual void Keyboard(IKeyboard* keyboard) override
             {
                 assert((_keyboard == nullptr) ^ (keyboard == nullptr));
                 _keyboard = keyboard;
@@ -150,11 +152,11 @@ namespace Wayland {
                     _keyboard->KeyMap(mapping.c_str(), mapping.length());
                 }
             }
-            virtual uint32_t X() const override
+            virtual int32_t X() const override
             {
                 return (_x);
             }
-            virtual uint32_t Y() const override
+            virtual int32_t Y() const override
             {
                 return (_y);
             }
@@ -567,12 +569,12 @@ namespace Wayland {
         virtual uint32_t AddRef() const 
         {
             // Display can not be destructed, so who cares :-)
-            return (Core::ERROR_NONE);
+            return (0);
         }
         virtual uint32_t Release() const
         {
             // Display can not be destructed, so who cares :-)
-            return (Core::ERROR_NONE);
+            return (0);
         }
 
         // Methods
@@ -580,7 +582,7 @@ namespace Wayland {
         {
             return (static_cast<EGLNativeDisplayType>(_display));
         }
-        virtual const std::string& DisplayName() const override
+        virtual const std::string& Name() const override
         {
             return (_displayName);
         }

@@ -954,9 +954,9 @@ namespace Wayland {
         }
     }
 
-    IDisplay::ISurface* Display::Create(const std::string& name, const uint32_t width, const uint32_t height)
+    Compositor::IDisplay::ISurface* Display::Create(const std::string& name, const uint32_t width, const uint32_t height)
     {
-        IDisplay::ISurface result = nullptr;
+        IDisplay::ISurface* result = nullptr;
 
         _adminLock.Lock();
 
@@ -965,7 +965,7 @@ namespace Wayland {
         // Wait till we are fully registered.
         _waylandSurfaces.insert(std::pair<struct wl_surface*, SurfaceImplementation*>(surface->_surface, surface));
 
-        result = Surface(*surface);
+        result = surface;
 
         _adminLock.Unlock();
 
@@ -1090,7 +1090,7 @@ namespace Wayland {
         _adminLock.Unlock();
     }
 
-    /* static */ Compositor::IDisplay* Display::Instance(const std::string& displayName)
+    /* static */ Display& Display::Instance(const std::string& displayName)
     {
         if (_runtimeDir.empty() == true) {
             const char* envName = ::getenv("XDG_RUNTIME_DIR");
@@ -1104,7 +1104,7 @@ namespace Wayland {
         // or by passing it as an argument to this method (none empty dir)
         assert(_runtimeDir.empty() == false);
 
-        Compositor::IDisplay* result(nullptr);
+        Display* result(nullptr);
 
         _adminLock.Lock();
 
@@ -1271,6 +1271,6 @@ void Display::Process(Display::IProcess* processloop)
 }
 
     /* static */ Compositor::IDisplay* Compositor::IDisplay::Instance(const std::string& displayName) {
-        return (Display::Create(displayName));
+        return (&(Wayland::Display::Instance(displayName)));
     }
 }
