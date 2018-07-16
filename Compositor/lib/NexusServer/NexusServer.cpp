@@ -304,7 +304,7 @@ namespace Broadcom {
                         uint32_t unused = 0;
                         int unused_heap = find_unused_heap(_platformSettings);
                         if (unused_heap != -1) {
-                            TRACE_L1("Setting client heap[%d] to %dMB", index, memory.Client.Value());
+                            TRACE_L1("Setting client heap[%d] to %dMB", unused_heap, memory.Client.Value());
                             _serverSettings.heaps.clientFullHeap = unused_heap;
                             _platformSettings.heap[_serverSettings.heaps.clientFullHeap].size = (memory.Client.Value() * 1024 * 1024);
                             _platformSettings.heap[_serverSettings.heaps.clientFullHeap].memcIndex = _platformSettings.heap[mainIndex].memcIndex;
@@ -412,7 +412,7 @@ namespace Broadcom {
             }
         }
 
-        StateChange(rc == NEXUS_SUCCESS ? INITIALIZING : FAILURE);
+        StateChange(rc == NEXUS_SUCCESS ? OPERATIONAL : FAILURE);
 
         ASSERT(_state != FAILURE);
     }

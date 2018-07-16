@@ -31,23 +31,86 @@ namespace Plugin {
         CompositorImplementation(const CompositorImplementation&) = delete;
         CompositorImplementation& operator=(const CompositorImplementation&) = delete;
 
+        class Config : public Core::JSON::Container {
+        public:
+            Config(const Config&);
+            Config& operator=(const Config&);
+
+        public:
+            Config()
+                    : Core::JSON::Container()
+                    , HardwareDelay(0)
+            {
+                Add(_T("hardwareready"), &HardwareDelay);
+            }
+            ~Config()
+            {
+            }
+
+        public:
+            Core::JSON::DecUInt8 HardwareDelay;
+        };
+
         class Sink : public Broadcom::Platform::IClient, public Broadcom::Platform::IStateChange {
         private:
             Sink() = delete;
             Sink(const Sink&) = delete;
             Sink& operator=(const Sink&) = delete;
 
+            class Postpone : public Core::Thread {
+            private:
+                Postpone() = delete;
+                Postpone(const Postpone&) = delete;
+                Postpone& operator= (const Postpone&) = delete;
+
+            public:
+                Postpone(Sink& parent, const uint16_t delay)
+                    : _parent(parent)
+                    , _trigger(false, true)
+                    , _delay(delay * 1000) {
+                }
+                virtual ~Postpone() {
+                    Block();
+                    _trigger.SetEvent();
+                }
+
+            public:
+                uint32_t Worker() {
+                    if (_trigger.Lock(_delay) == Core::ERROR_TIMEDOUT) {
+                        _parent.PlatformReady();
+                    }
+                    Stop();
+                    return (Core::infinite);
+                }
+
+            private:
+                Sink& _parent;
+                Core::Event _trigger;
+                uint32_t _delay;
+            };
+
         public:
             explicit Sink(CompositorImplementation* parent)
                 : _parent(*parent)
+                , _delay(nullptr)
             {
                 ASSERT(parent != nullptr);
             }
             ~Sink()
             {
+                if (_delay != nullptr) {
+                    delete _delay;
+                }
             }
 
         public:
+            inline void HardwareDelay(const uint16_t time) {
+                ASSERT (_delay == nullptr);
+                if ( (time != 0) && (_delay == nullptr) ) {
+                    _delay = new Postpone(*this, time);
+                }
+            }
+
             // -------------------------------------------------------------------------------------------------------
             //   Broadcom::Platform::ICallback methods
             // -------------------------------------------------------------------------------------------------------
@@ -65,11 +128,23 @@ namespace Plugin {
             /* virtual */ virtual void StateChange(Broadcom::Platform::server_state state)
             {
                 if (state == Broadcom::Platform::OPERATIONAL){
-                    _parent.PlatformReady(); 
+                    if (_delay != nullptr) {
+                        _delay->Run();
+                    } 
+                    else {
+                        _parent.PlatformReady(); 
+                    }
                 }
             }
+
+        private:
+            inline void PlatformReady() {
+                _parent.PlatformReady();
+            }
+
         private:
             CompositorImplementation& _parent;
+            Postpone* _delay;
         };
 
     public:
@@ -105,6 +180,8 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         /* virtual */ uint32_t Configure(PluginHost::IShell* service)
         {
+            string configuration (service->ConfigLine());
+
             _service = service;
             _service->AddRef();
 
@@ -113,8 +190,11 @@ namespace Plugin {
             if (_nxserver != nullptr) {
                 delete _nxserver;
             }
+            Config info; info.FromString(configuration);
 
-            _nxserver = new Broadcom::Platform(&_sink, &_sink, _service->ConfigLine());
+            _sink.HardwareDelay(info.HardwareDelay.Value());
+
+            _nxserver = new Broadcom::Platform(&_sink, &_sink, configuration);
 
             ASSERT(_nxserver != nullptr);
 
