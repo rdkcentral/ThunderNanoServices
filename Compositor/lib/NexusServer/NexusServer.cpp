@@ -135,7 +135,7 @@ namespace Broadcom {
             Add(_T("irmode"), &IRMode);
             Add(_T("authentication"), &Authentication);
             Add(_T("boxmode"), &BoxMode);
-            Add(_T("sagepath"), &BoxMode);
+            Add(_T("sagepath"), &SagePath);
             Add(_T("svp"), &SVPType);
             Add(_T("memory"), &Memory);
         }
