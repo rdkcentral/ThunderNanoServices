@@ -28,7 +28,7 @@ namespace Broadcom {
                 : _client(client)
                 , _settings(*settings)
             {
-                printf("Created client named: %s", _settings.name);
+                TRACE_L1("Created client named: %s", _settings.name);
             }
 
             static Client* Create(nxclient_t client, const NxClient_JoinSettings* settings)
@@ -39,7 +39,7 @@ namespace Broadcom {
             }
             virtual ~Client()
             {
-                printf("Destructing client named: %s", _settings.name);
+                TRACE_L1("Destructing client named: %s", _settings.name);
             }
 
         public:

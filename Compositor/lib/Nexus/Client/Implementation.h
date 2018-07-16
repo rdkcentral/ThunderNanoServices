@@ -79,7 +79,6 @@ namespace Nexus {
             {
                 assert((_keyboard == nullptr) ^ (keyboard == nullptr));
                 _keyboard = keyboard;
-                fprintf(stderr, "Set Keyboard => %p!\n", _keyboard); fflush(stderr);
             }
             virtual int32_t X() const override
             {
@@ -92,9 +91,7 @@ namespace Nexus {
             inline void SendKey (const uint32_t key, const IKeyboard::state action, const uint32_t time) {
 
                 if (_keyboard != nullptr) {
-                     fprintf(stderr, "Fire %d, %d, %d on [%p].!\n", key, action,time, _keyboard); fflush(stderr);
                     _keyboard->Direct(key, action);
-                    fprintf(stderr, "Done %d, %d, %d.!\n", key, action,time ); fflush(stderr);
                 }
             }
 

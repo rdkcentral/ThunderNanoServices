@@ -41,8 +41,6 @@ namespace WPEFramework {
 
 namespace Nexus {
 
-#define Trace(fmt, args...) fprintf(stderr, "[pid=%d][Client %s:%d] : " fmt, getpid(), __FILE__, __LINE__, ##args)
-
     Display::SurfaceImplementation::SurfaceImplementation(Display& display, const std::string& name, const uint32_t width, const uint32_t height)
         : _parent(display)
         , _refcount(1)
@@ -76,11 +74,9 @@ namespace Nexus {
         _nativeWindow = NXPL_CreateNativeWindow(&windowInfo);
 
         _parent.Register(this);
-        printf("Constructed the EGL surface (%s, %d).\n", _name.c_str(), nexusClientId);
     }
 
     /* virtual */ Display::SurfaceImplementation::~SurfaceImplementation() {
-        printf("Destructed the EGL surface (%s).\n", _name.c_str());
         NEXUS_SurfaceClient_Release(reinterpret_cast<NEXUS_SurfaceClient*>(_nativeWindow));
 
        _parent.Unregister(this);
@@ -118,7 +114,7 @@ namespace Nexus {
             fprintf(stderr, "[LibinputServer] Initialization of virtual keyboard failed!!!\n");
         }
 
-        printf("Created the Display\n");
+        printf("Constructed the Display: %d - %s",this, _displayName.c_str());
     }
 
     Display::~Display()
@@ -131,7 +127,7 @@ namespace Nexus {
            Destruct(_virtualkeyboard);
         }
 
-        printf("Destructed the Display\n");
+        printf("Destructed the Display: %d - %s", this, _displayName.c_str());
     }
 
     /* virtual */ Compositor::IDisplay::ISurface* Display::Create(const std::string& name, const uint32_t width, const uint32_t height)
