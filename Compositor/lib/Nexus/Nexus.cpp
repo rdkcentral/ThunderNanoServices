@@ -236,20 +236,6 @@ namespace Plugin {
             );
 
             ASSERT(_nxserver != nullptr);
-#else
-            JoinServer();
-
-            PluginHost::ISubSystem* subSystems = service->SubSystems();
-
-            ASSERT(subSystems != nullptr);
-
-            if (subSystems != nullptr) {
-                // Set Graphics event. We need to set up a handler for this at a later moment
-                subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
-                subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
-                subSystems->Release();
-            }
-
 #endif
             return  Core::ERROR_NONE;
         }
