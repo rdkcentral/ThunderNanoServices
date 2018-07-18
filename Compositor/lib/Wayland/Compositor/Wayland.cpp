@@ -1,13 +1,11 @@
 #include "Module.h"
 #include "Wayland.h"
-#include <Client.h>
+#include "../Client/Implementation.h"
 #include <interfaces/IComposition.h>
 
 #include <virtualinput/VirtualKeyboard.h>
 
-#ifdef USE_WPEFRAMEWORK_NXSERVER
-#include <PlatformImplementation.h>
-#endif
+#include "../NexusServer/NexusServer.h"
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -142,40 +140,6 @@ namespace Plugin {
             Implementation::IServer* _server;
         };
 
-#ifdef USE_WPEFRAMEWORK_NXSERVER
-        class NexusConfig : public Core::JSON::Container {
-        public:
-            NexusConfig(const NexusConfig&);
-            NexusConfig& operator=(const NexusConfig&);
-
-        public:
-            NexusConfig()
-                : Core::JSON::Container()
-                , HardwareDelay(0)
-                , IRMode(NEXUS_IrInputMode_eCirNec)
-                , Authentication(true)
-                , BoxMode(~0)
-                , GraphicsHeap(~0)
-            {
-                Add(_T("hardwareready"), &HardwareDelay);
-                Add(_T("irmode"), &IRMode);
-                Add(_T("authentication"), &Authentication);
-                Add(_T("boxmode"), &BoxMode);
-                Add(_T("graphicsheap"), &GraphicsHeap);
-            }
-            ~NexusConfig()
-            {
-            }
-
-        public:
-            Core::JSON::DecUInt8 HardwareDelay;
-            Core::JSON::DecUInt16 IRMode;
-            Core::JSON::Boolean Authentication;
-            Core::JSON::DecUInt8 BoxMode;
-            Core::JSON::DecUInt16 GraphicsHeap;
-        };
-#endif
-
         class Config : public Core::JSON::Container {
         public:
             Config(const Config&);
@@ -184,8 +148,10 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
+                , Join(false)
                 , Display("wayland-0")
             {
+                Add(_T("join"), &Join);
                 Add(_T("display"), &Display);
             }
             ~Config()
@@ -193,10 +159,11 @@ namespace Plugin {
             }
 
         public:
+            Core::JSON::Boolean Join;
             Core::JSON::String Display;
         };
 
-        class Sink : public Wayland::Display::ICallback {
+        class Sink : public Wayland::Display::ICallback, public Broadcom::Platform::IStateChange {
         private:
             Sink(const Sink&) = delete;
             Sink& operator=(const Sink&) = delete;
@@ -218,6 +185,12 @@ namespace Plugin {
             {
                 _parent.Remove(id);
             }
+            virtual void StateChange(Broadcom::Platform::server_state state)
+            {
+                if (state == Broadcom::Platform::OPERATIONAL) {
+                    _parent.StartImplementation();
+                }
+            }
 
         private:
             CompositorImplementation& _parent;
@@ -234,10 +207,7 @@ namespace Plugin {
             , _sink(*this)
             , _surface(nullptr)
             , _service()
-#ifdef USE_WPEFRAMEWORK_NXSERVER
-            , _nxsink(this)
             , _nxserver(nullptr)
-#endif
         {
             // Register an @Exit, in case we are killed, with an incorrect ref count !!
             if (atexit(CloseDown) != 0) {
@@ -268,11 +238,9 @@ namespace Plugin {
                 delete _controller;
             }
 
-#ifdef USE_WPEFRAMEWORK_NXSERVER
             if (_nxserver != nullptr) {
                 delete _nxserver;
             }
-#endif
 
             if (_service != nullptr) {
                 _service->Release();
@@ -297,7 +265,6 @@ namespace Plugin {
 
             ASSERT(_server == nullptr);
 
-#ifdef USE_WPEFRAMEWORK_NXSERVER
             // If we run on a broadcom platform first start the nxserver, then we start the compositor...
             ASSERT(_nxserver == nullptr);
 
@@ -305,23 +272,16 @@ namespace Plugin {
                 delete _nxserver;
             }
 
-            NexusConfig nexusConfig;
-            nexusConfig.FromString(_service->ConfigLine());
-
-            _nxserver = new Broadcom::Platform(
-                    &_nxsink,
-                    nexusConfig.Authentication.Value(),
-                    nexusConfig.HardwareDelay.Value(),
-                    nexusConfig.GraphicsHeap.Value(),
-                    nexusConfig.BoxMode.Value(),
-                    nexusConfig.IRMode.Value()
-                    );
+            if (_config.Join == false) {
+                _nxserver = new Broadcom::Platform( &_sink, nullptr, _service->ConfigLine());
+            }
+            else {
+                StartImplementation();
+            }
 
             ASSERT(_nxserver != nullptr);
-#else
-            StartImplementation();
-#endif
-            return ((_server != nullptr) && (_controller != nullptr)) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE;
+
+            return (((_nxserver != nullptr) || (_server != nullptr)) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
         }
         /* virtual */ void Register(Exchange::IComposition::INotification* notification)
         {
@@ -498,6 +458,14 @@ namespace Plugin {
         {
             ASSERT(_service != nullptr);
 
+            PluginHost::ISubSystem* subSystems = _service->SubSystems();
+
+            ASSERT (subSystems != nullptr);
+
+            if (subSystems != nullptr) {
+                subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
+            }
+
             // As there are currently two flavors of the potential Wayland Compositor Implementations, e.g.
             // Westeros and Weston, we do not want to decide here which one we instantiate. We have given both
             // implemntations a "generic" handle that starts the compositor. Here we just instantiate the
@@ -524,75 +492,16 @@ namespace Plugin {
 
                 TRACE(Trace::Information, (_T("Compositor initialized\n")));
 
-                PluginHost::ISubSystem* subSystems = _service->SubSystems();
-
-                ASSERT(subSystems != nullptr);
-
                 if (subSystems != nullptr) {
                     // Set Graphics event. We need to set up a handler for this at a later moment
                     subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
-                    subSystems->Release();
-                }
-            }
-        }
-
-#ifdef USE_WPEFRAMEWORK_NXSERVER
-    private:
-        PluginHost::ISubSystem* SubSystems()
-        {
-            return _service->SubSystems();
-        }
-
-
-        class NXSink : public WPEFramework::Broadcom::Platform::ICallback {
-        private:
-            NXSink() = delete;
-            NXSink(const NXSink&) = delete;
-            NXSink& operator=(const NXSink&) = delete;
-
-        public:
-            explicit NXSink(CompositorImplementation* parent)
-                : _parent(*parent)
-            {
-                ASSERT(parent != nullptr);
-            }
-            ~NXSink()
-            {
-            }
-
-        public:
-            // -------------------------------------------------------------------------------------------------------
-            //   Broadcom::Platform::::ICallback methods
-            // -------------------------------------------------------------------------------------------------------
-            /* virtual */ void Attached(const char clientName[])
-            { /* intentionally left empty */
-            }
-
-            /* virtual */ void Detached(const char clientName[])
-            { /* intentionally left empty */
-            }
-
-            /* virtual */ virtual void StateChange(Broadcom::Platform::server_state state)
-            {
-                if (state == Broadcom::Platform::OPERATIONAL) {
-                    PluginHost::ISubSystem* subSystems = _parent.SubSystems();
-
-                    ASSERT(subSystems != nullptr);
-
-                    if (subSystems != nullptr) {
-                        // Set Graphics event. We need to set up a handler for this at a later moment
-                        subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
-                        subSystems->Release();
-                    }
-
-                    _parent.StartImplementation();
                 }
             }
 
-        private:
-            CompositorImplementation& _parent;
-        };
-#endif
+            if (subSystems != nullptr) {
+                subSystems->Release();
+            }
+        }
 
     private:
         Config _config;
@@ -604,10 +513,7 @@ namespace Plugin {
         Sink _sink;
         Wayland::Display::Surface* _surface;
         PluginHost::IShell* _service;
-#ifdef USE_WPEFRAMEWORK_NXSERVER
-        NXSink _nxsink;
         Broadcom::Platform* _nxserver;
-#endif
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);

@@ -19,6 +19,8 @@
 #define nullptr NULL
 #endif
 
+#include "../../Client/Client.h"
+
 //
 // Forward declaration of the wayland specific types.
 // We do not want to make this header file (tsemaphore.hhe C++ abstraction)
@@ -46,25 +48,12 @@ struct wl_shell_surface;
 namespace WPEFramework {
 namespace Wayland {
 
-    class Display {
+    class Display : public Compositor::IDisplay {
     public:
         struct ICallback {
             virtual ~ICallback() {}
             virtual void Attached(const uint32_t id) = 0;
             virtual void Detached(const uint32_t id) = 0;
-        };
-        struct IKeyboard {
-            virtual ~IKeyboard() {}
-
-            enum state {
-                released = 0,
-                pressed
-            };
-
-            virtual void KeyMap(const char information[], const uint16_t size) = 0;
-            virtual void Key(const uint32_t key, const state action, const uint32_t time) = 0;
-            virtual void Modifiers(uint32_t depressedMods, uint32_t latchedMods, uint32_t lockedMods, uint32_t group) = 0;
-            virtual void Repeat(int32_t rate, int32_t delay) = 0;
         };
         struct IPointer {
             virtual ~IPointer() {}
@@ -72,8 +61,8 @@ namespace Wayland {
 
     private:
         Display();
-        Display(const Display&);
-        Display& operator=(const Display&);
+        Display(const Display&) = delete;
+        Display& operator=(const Display&) = delete;
 
         class CriticalSection {
         private:
@@ -110,14 +99,14 @@ namespace Wayland {
             pthread_mutex_t _lock;
         };
 
-        class SurfaceImplementation {
+        class SurfaceImplementation : public Compositor::IDisplay::ISurface {
         private:
-            SurfaceImplementation();
-            SurfaceImplementation(const SurfaceImplementation&);
-            SurfaceImplementation& operator=(const SurfaceImplementation&);
+            SurfaceImplementation() = delete;
+            SurfaceImplementation(const SurfaceImplementation&) = delete;
+            SurfaceImplementation& operator=(const SurfaceImplementation&) = delete;
 
         public:
-            SurfaceImplementation(Display& compositor, const std::string& name, const uint32_t width, const uint32_t height, const bool upscale = false);
+            SurfaceImplementation(Display& compositor, const std::string& name, const uint32_t width, const uint32_t height);
             SurfaceImplementation(Display& compositor, const uint32_t id, const char* name);
             SurfaceImplementation(Display& compositor, const uint32_t id, struct wl_surface* surface);
             virtual ~SurfaceImplementation()
@@ -125,35 +114,55 @@ namespace Wayland {
             }
 
         public:
-            inline void AddRef()
+            virtual uint32_t AddRef() const override
             {
                 _refcount++;
+                return (0);
             }
-            inline void Release()
+            virtual uint32_t Release() const override
             {
                 if (--_refcount == 0) {
-                    delete this;
+                    delete const_cast<SurfaceImplementation*>(this);
                 }
+                return (0);
             }
-            inline EGLNativeWindowType Native() const
+            virtual EGLNativeWindowType Native() const override
             {
                 return (static_cast<EGLNativeWindowType>(_native));
+            }
+            virtual const std::string& Name() const override
+            {
+                return _name;
+            }
+            virtual int32_t Height() const override
+            {
+                return (_height);
+            }
+            virtual int32_t Width() const override
+            {
+                return (_width);
+            }
+            virtual void Keyboard(IKeyboard* keyboard) override
+            {
+                assert((_keyboard == nullptr) ^ (keyboard == nullptr));
+                _keyboard = keyboard;
+
+                if (_keyboard != nullptr && _display != nullptr) {
+                    const std::string& mapping = _display->KeyMapConfiguration();
+                    _keyboard->KeyMap(mapping.c_str(), mapping.length());
+                }
+            }
+            virtual int32_t X() const override
+            {
+                return (_x);
+            }
+            virtual int32_t Y() const override
+            {
+                return (_y);
             }
             inline uint32_t Id() const
             {
                 return (_id);
-            }
-            inline const std::string& Name() const
-            {
-                return _name;
-            }
-            inline int32_t Height() const
-            {
-                return (_height);
-            }
-            inline int32_t Width() const
-            {
-                return (_width);
             }
             inline bool IsVisible() const
             {
@@ -184,17 +193,7 @@ namespace Wayland {
                     _name = name;
                 }
             }
-            void Keyboard(IKeyboard* keyboard)
-            {
-                assert((_keyboard == nullptr) ^ (keyboard == nullptr));
-                _keyboard = keyboard;
-
-                if (_keyboard != nullptr && _display != nullptr) {
-                    const std::string& mapping = _display->KeyMapConfiguration();
-                    _keyboard->KeyMap(mapping.c_str(), mapping.length());
-                }
-            }
-            void Pointer(IPointer* pointer)
+           void Pointer(IPointer* pointer)
             {
                 assert((_pointer == nullptr) ^ (pointer == nullptr));
                 _pointer = pointer;
@@ -234,7 +233,7 @@ namespace Wayland {
         private:
             friend Display;
 
-            uint32_t _refcount;
+            mutable uint32_t _refcount;
             int _level;
             std::string _name;
             uint32_t _id;
@@ -558,7 +557,6 @@ namespace Wayland {
             _runtimeDir = directory;
         }
 
-        static Display& Instance();
         static Display& Instance(const std::string& displayName);
 
         ~Display()
@@ -567,10 +565,31 @@ namespace Wayland {
         }
 
     public:
-        inline EGLNativeDisplayType Native() const
+        // Lifetime management
+        virtual uint32_t AddRef() const 
+        {
+            // Display can not be destructed, so who cares :-)
+            return (0);
+        }
+        virtual uint32_t Release() const
+        {
+            // Display can not be destructed, so who cares :-)
+            return (0);
+        }
+
+        // Methods
+        virtual EGLNativeDisplayType Native() const override 
         {
             return (static_cast<EGLNativeDisplayType>(_display));
         }
+        virtual const std::string& Name() const override
+        {
+            return (_displayName);
+        }
+        virtual int FileDescriptor() const override;
+        virtual int Process(const uint32_t data) override;
+        virtual ISurface* Create(const std::string& name, const uint32_t width, const uint32_t height) override;
+
         inline bool IsOperational() const
         {
             return (_display != nullptr);
@@ -585,10 +604,6 @@ namespace Wayland {
             assert((callback != nullptr) ^ (_clientHandler != nullptr));
             _clientHandler = callback;
             _adminLock.Unlock();
-        }
-        inline const std::string& DisplayName() const
-        {
-            return (_displayName);
         }
         inline const std::string& RuntimeDirectory() const
         {
@@ -617,12 +632,9 @@ namespace Wayland {
             _adminLock.Unlock();
         }
         void LoadSurfaces();
-        Surface Create(const std::string& name, const uint32_t width, const uint32_t height, const bool upscale = false);
         Image Create(const uint32_t texture, const uint32_t width, const uint32_t height);
         void Process(IProcess* processLoop);
-        signed int Process(const bool data);
         void Signal();
-        int FileDescriptor() const;
         inline EGLDisplay GetDisplay() const
         {
             return _eglDisplay;

@@ -683,7 +683,8 @@ static GSourceFuncs _handlerIntervention =
             Core::SystemInfo::SetEnvironment(_T("HOME"), service->PersistentPath());
 
             if (_config.ClientIdentifier.IsSet() == true) {
-                Core::SystemInfo::SetEnvironment(_T("CLIENT_IDENTIFIER"), _config.ClientIdentifier.Value(), !environmentOverride);
+                string value (service->Callsign() + ',' + _config.ClientIdentifier.Value());
+                Core::SystemInfo::SetEnvironment(_T("CLIENT_IDENTIFIER"), value, !environmentOverride);
             }
             else {
                 Core::SystemInfo::SetEnvironment(_T("CLIENT_IDENTIFIER"), service->Callsign(), !environmentOverride);

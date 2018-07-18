@@ -38,7 +38,6 @@ namespace Plugin {
 
     /* virtual */ const string Compositor::Initialize(PluginHost::IShell* service)
     {
-        printf("Compositor::Initialize\n"); fflush(stdout);
         string message(EMPTY_STRING);
         string result;
 
@@ -60,14 +59,12 @@ namespace Plugin {
         }
 
         if (config.OutOfProcess.Value() == true) {
-            printf("Compositor start out-of-process\n"); fflush(stdout);
             _composition = service->Instantiate<Exchange::IComposition>(
                 2000, _T("CompositorImplementation"), static_cast<uint32_t>(~0), _pid, config.Locator.Value());
             TRACE(Trace::Information,
                 (_T("Compositor started out of process %s implementation"), config.Locator.Value().c_str()));
         }
         else {
-            printf("Compositor start in-process\n"); fflush(stdout);
             Core::Library resource(config.Locator.Value().c_str());
             if (!resource.IsLoaded())
             {

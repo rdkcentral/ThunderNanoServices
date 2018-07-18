@@ -12,3 +12,4 @@ if (WPEFRAMEWORK_PLUGIN_COMPOSITOR_NXSERVER)
 endif ()
 
 add_subdirectory (${WPEFRAMEWORK_PLUGIN_COMPOSITOR_IMPLEMENTATION})
+add_subdirectory (Client)

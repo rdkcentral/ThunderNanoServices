@@ -1,7 +1,7 @@
 set(PLUGIN_NAME Compositor)
 
 option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_SYSTEM "Callsign to report information." "Controller")
-option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_IMPLEMENTATION "Defines what implementation(s) are included." "None")
+option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_IMPLEMENTATION "Defines which implementation is used." "None")
 option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_HARDWAREREADY "Manual overrule of the time it takes to initialisize all hardware (s) [0 - UINT16_MAX]." 0)
 option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_SERVICE "Defines where to get resouce handles. [internal, external]." external)
 option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_OUTOFPROCESS "Controls if the plugin should run in its own process. [true, false]." true)
@@ -17,9 +17,6 @@ set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_REVISION})
 
 include(module)
 
-if (${WPEFRAMEWORK_PLUGIN_COMPOSITOR_IMPLEMENTATION} STREQUAL "Wayland")
-  set(WPEFRAMEWORK_PLUGIN_COMPOSITOR_CLIENT_LIBS waylandeglclient)
-endif ()
 
 set(PLUGIN_DEPENDENCIES_INCLUDE_DIRS)
 set(PLUGIN_DEPENDENCIES

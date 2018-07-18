@@ -1,0 +1,12 @@
+set (PUBLIC_HEADERS
+     Client.h 
+    )
+
+install(
+	FILES ${PUBLIC_HEADERS}
+        DESTINATION include/${NAMESPACE}/compositor
+)
+
+if (WPEFRAMEWORK_PLUGIN_COMPOSITOR_IMPLEMENTATION)
+  add_subdirectory (${WPEFRAMEWORK_PLUGIN_COMPOSITOR_IMPLEMENTATION})
+endif ()

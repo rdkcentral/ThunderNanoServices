@@ -17,17 +17,19 @@ message("Setup WPEFramework${TARGET} v${VERSION}...")
 
 find_package(Nexus REQUIRED)
 find_package(NXServer REQUIRED)
+find_package(Core REQUIRED)
 
 add_library(${TARGET} STATIC
-        NexusServerImplementation.cpp
+        NexusServer.cpp
         )
 
 set(PUBLIC_HEADERS
-        PlatformImplementation.h
+        NexusServer.h
         )
 
 target_link_libraries(${TARGET}
         PRIVATE
+            WPEFramework::Core
             NEXUS::NEXUS
             NEXUS::NXSERVER
         PUBLIC

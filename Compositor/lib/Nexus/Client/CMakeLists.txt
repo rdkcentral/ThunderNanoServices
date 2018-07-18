@@ -2,20 +2,17 @@ set(TARGET compositorclient)
 
 message("Setup ${TARGET} v${VERSION}...")
 
-find_package(WaylandClient REQUIRED)
 find_package(EGL REQUIRED)
-find_package(WaylandEGL REQUIRED)
-find_package(Westeros REQUIRED)
 find_package(Core REQUIRED)
+find_package(LibVirtualKeyboard REQUIRED)
+find_package(VirtualInput REQUIRED)
 
-add_library(${TARGET} SHARED Westeros.cpp)
+add_library(${TARGET} SHARED Nexus.cpp)
 
 target_link_libraries(${TARGET}
             PUBLIC
             WPEFramework::Core
-            WESTEROS::CLIENT
-            WAYLAND::CLIENT
-            WAYLAND::EGL
+            WPEFramework::VirtualInput
             EGL::EGL
             )
 
@@ -23,13 +20,13 @@ set_target_properties(${TARGET} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         FRAMEWORK FALSE
+        PUBLIC_HEADER "${PUBLIC_HEADERS}"
         DEFINE_SYMBOL WPEFRAMEWORK_WAYLAND_EGL_CLIENT
         )
 
 target_include_directories( ${TARGET}
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<INSTALL_INTERFACE:include/${NAMESPACE}/wayland>
         $<INSTALL_INTERFACE:include/${NAMESPACE}>
         )
 
@@ -37,9 +34,7 @@ install(
         TARGETS ${TARGET}  EXPORT ${TARGET}Targets  # for downstream dependencies
         ARCHIVE DESTINATION lib COMPONENT libs      # static lib
         LIBRARY DESTINATION lib COMPONENT libs      # shared lib
-        RUNTIME DESTINATION bin COMPONENT libs      # binaries
         FRAMEWORK DESTINATION bin COMPONENT libs    # for mac
-        INCLUDES DESTINATION include/${NAMESPACE}/wayland      # headers
 )
 
 # For cmake based consumers
@@ -56,5 +51,3 @@ configure_file(
         @ONLY)
 
 install(FILES ${CMAKE_BINARY_DIR}/compositor-client.pc DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
-
-# add_subdirectory (test)
