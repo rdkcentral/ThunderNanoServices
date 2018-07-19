@@ -125,7 +125,7 @@ namespace Plugin {
         Activity _worker;
         Info _info;
         uint32_t _error;
-        bool _present;
+        // bool _present;
         uint32_t _codeMask;
       /* static */ const string _resourceName;
     };

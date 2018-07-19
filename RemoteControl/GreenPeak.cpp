@@ -5,9 +5,13 @@
 #include "GreenPeak.h"
 #include "RemoteAdministrator.h"
 
-//#define GP_DEVICE_NAME "/dev/gpK5"
-#define GP_DEVICE_NAME "/dev/gpK7C"
 
+/*
+ * Device node is hardcoded in the GreenPeak sources and is NOT exported by the Qorvo makefiles.
+ * Let us assume that the stack library and kernel-module-load script are nicely in sync.
+ */
+//#define GP_DEVICE_NAME "/dev/gpK5"
+//#define GP_DEVICE_NAME "/dev/gpK7C"
 
 extern "C" {
 
@@ -493,6 +497,7 @@ void Application_Init()
     gpSched_ScheduleEvent(0, target_DoR4ceReset);
 }
 
+/*
 // Missing -DMAIN_FUNCTION_NAME=gpMain
 MAIN_FUNCTION_RETURN_TYPE gpMain()
 {
@@ -504,7 +509,7 @@ MAIN_FUNCTION_RETURN_TYPE gpMain()
     }
     MAIN_FUNCTION_RETURN_VALUE;
 }
-
+*/
 } // extern "C"
 
 
@@ -540,7 +545,13 @@ namespace Plugin {
 
     /* virtual */ uint32_t GreenPeak::Activity::Worker()
     {
-        gpMain();
+        gpSched_Main_Init();
+
+        while (IsRunning())  {
+            // Check if the system can go to sleep
+            gpSched_GoToSleep();
+            gpSched_Main_Body();
+        }
 
         Block();
         return (Core::infinite);
@@ -551,22 +562,22 @@ namespace Plugin {
         , _callback(nullptr)
         , _worker()
         , _error(static_cast<uint32_t>(~0))
-        , _present(WPEFramework::Core::File(_T(GP_DEVICE_NAME), false).Exists())
+        // , _present(WPEFramework::Core::File(_T(GP_DEVICE_NAME), false).Exists())
         , _codeMask(0)
         , _resourceName("GreenPeakRF4CE")
     {
-        if (_present == true) {
+        // if (_present == true) {
             _worker.Run();
             Remotes::RemoteAdministrator::Instance().Announce(*this);
-        }
+        // }
     }
 
     GreenPeak::~GreenPeak()
     {
-        if (_present == true) {
+        // if (_present == true) {
             Remotes::RemoteAdministrator::Instance().Revoke(*this);
             _worker.Dispose();
-        }
+        // }
     }
 
     bool GreenPeak::WaitForReady(const uint32_t time) const
