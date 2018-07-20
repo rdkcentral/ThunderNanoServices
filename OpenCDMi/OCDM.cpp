@@ -86,13 +86,7 @@ namespace Plugin {
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
         _service->Register(&_notification);
 
-        if (config.OutOfProcess.Value() == true) {
-
-            _opencdmi = _service->Instantiate<Exchange::IContentDecryption>(2000, _T("OCDMImplementation"), static_cast<uint32_t>(~0), _pid, _service->Locator());
-        }
-        else {
-            _opencdmi = Core::ServiceAdministrator::Instance().Instantiate<Exchange::IContentDecryption>(Core::Library(), _T("OCDMImplementation"), static_cast<uint32_t>(~0));
-        }
+        _opencdmi = _service->Root<Exchange::IContentDecryption>(_pid, 2000, _T("OCDMImplementation"));
 
         if (_opencdmi == nullptr) {
             message = _T("OCDM could not be instantiated.");
