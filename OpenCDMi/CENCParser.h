@@ -289,6 +289,10 @@ private:
         do {
             // Check if this is a PSSH box...
             uint32_t size = (data[offset] << 24) | (data[offset+1] << 16) | (data[offset+2] << 8) | data[offset+3];
+            if (size == 0) {
+               TRACE_L1("While parsing CENC, found chunk of size 0, are you sure the data is valid? %d\n", __LINE__);
+               break;
+            }
 
             if ((size <= static_cast<uint32_t>(length - offset)) && (memcmp(&(data[offset+4]), PSSHeader, 4) == 0)) {
                 ParsePSSHBox(&(data[offset + 4 + 4]), size - 4 - 4);
