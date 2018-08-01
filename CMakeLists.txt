@@ -104,6 +104,7 @@ option(WPEFRAMEWORK_PLUGIN_COMMANDER "Include Commander plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_COMPOSITOR "Include Compsitor plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_DEVICEINFO "Include DeviceInfo plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_DHCPSERVER "Include DHCPServer plugin" OFF)
+option(WPEFRAMEWORK_PLUGIN_FRONTPANEL "Include FrontPanel plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_LOCATIONSYNC "Include LocationSync plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_MONITOR "Include Monitor plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_NETWORKCONTROL "Include NetworkControlplugin" OFF)
@@ -144,6 +145,10 @@ endif()
 
 if(WPEFRAMEWORK_PLUGIN_DHCPSERVER)
     add_subdirectory(DHCPServer)
+endif()
+
+if(WPEFRAMEWORK_PLUGIN_FRONTPANEL)
+    add_subdirectory(FrontPanel)
 endif()
 
 if(WPEFRAMEWORK_PLUGIN_SICONTROL)
