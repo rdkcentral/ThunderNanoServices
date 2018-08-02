@@ -1,8 +1,8 @@
 # - Try to find DummyDSHAL
 # Once done this will define
-#  OPENCDMI_FOUND - System has libocdmi
-#  OPENCDMI_INCLUDE_DIRS - The libocdmi include directories
-#  OPENCDMI_LIBRARIES - The libraries needed to use libcdmi
+#  DSHAL_LIB - System has libds-hal
+#  DSHAL_INCLUDE_DIR - The libds-hal include directories
+#  DSHAL_LIBRARIES - The libraries needed to use libds-hal
 #
 # Copyright (C) 2016 TATA ELXSI
 # Copyright (C) 2016 Metrological.
