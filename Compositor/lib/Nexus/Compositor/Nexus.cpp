@@ -3,7 +3,14 @@
 #include "Module.h"
 
 #include <interfaces/IComposition.h>
+
+#ifdef  USE_WPEFRAMEWORK_NXSERVER
 #include <NexusServer.h>
+#else
+#include <nexus_config.h>
+#include <nexus_video_types.h>
+#include <nxclient.h>
+#endif
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -51,7 +58,12 @@ namespace Plugin {
             Core::JSON::DecUInt8 HardwareDelay;
         };
 
-        class Sink : public Broadcom::Platform::IClient, public Broadcom::Platform::IStateChange {
+        class Sink
+#ifdef USE_WPEFRAMEWORK_NXSERVER
+            : public Broadcom::Platform::IClient
+            , public Broadcom::Platform::IStateChange
+#endif
+        {
         private:
             Sink() = delete;
             Sink(const Sink&) = delete;
@@ -95,6 +107,14 @@ namespace Plugin {
                 , _delay(nullptr)
             {
                 ASSERT(parent != nullptr);
+#ifndef USE_WPEFRAMEWORK_NXSERVER
+                if (_delay != nullptr) {
+                    _delay->Run();
+                }
+                else {
+                    _parent.PlatformReady();
+                }
+#endif
             }
             ~Sink()
             {
@@ -110,7 +130,7 @@ namespace Plugin {
                     _delay = new Postpone(*this, time);
                 }
             }
-
+#ifdef USE_WPEFRAMEWORK_NXSERVER
             // -------------------------------------------------------------------------------------------------------
             //   Broadcom::Platform::ICallback methods
             // -------------------------------------------------------------------------------------------------------
@@ -136,6 +156,7 @@ namespace Plugin {
                     }
                 }
             }
+#endif
 
         private:
             inline void PlatformReady() {
@@ -154,15 +175,19 @@ namespace Plugin {
             , _observers()
             , _clients()
             , _sink(this)
+#ifdef USE_WPEFRAMEWORK_NXSERVER
             , _nxserver(nullptr)
+#endif
         {
         }
 
         ~CompositorImplementation()
         {
+#ifdef USE_WPEFRAMEWORK_NXSERVER
             if (_nxserver != nullptr) {
                 delete _nxserver;
             }
+#endif
             if (_service != nullptr) {
                 _service->Release();
             }
@@ -184,20 +209,22 @@ namespace Plugin {
 
             _service = service;
             _service->AddRef();
-
+#ifdef USE_WPEFRAMEWORK_NXSERVER
             ASSERT(_nxserver == nullptr);
 
             if (_nxserver != nullptr) {
                 delete _nxserver;
             }
+#endif
             Config info; info.FromString(configuration);
 
             _sink.HardwareDelay(info.HardwareDelay.Value());
 
+#ifdef USE_WPEFRAMEWORK_NXSERVER
             _nxserver = new Broadcom::Platform(&_sink, &_sink, configuration);
 
             ASSERT(_nxserver != nullptr);
-
+#endif
             return  Core::ERROR_NONE;
         }
 
@@ -440,7 +467,9 @@ namespace Plugin {
         std::list<Exchange::IComposition::INotification*> _observers;
         std::list<Exchange::IComposition::IClient*> _clients;
         Sink _sink;
+#ifdef USE_WPEFRAMEWORK_NXSERVER
         Broadcom::Platform* _nxserver;
+#endif
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
