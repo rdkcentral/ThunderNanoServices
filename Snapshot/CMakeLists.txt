@@ -38,11 +38,6 @@ if (NXSERVER_FOUND)
                 NEXUS::NEXUS
                 NEXUS::NXCLIENT)
 
-    #TODO: this should come from platform_app.inc
-    target_compile_definitions(${PLUGIN}
-            PRIVATE
-                "BSTD_CPU_ENDIAN=BSTD_ENDIAN_LITTLE")
-
     target_sources(${PLUGIN}
             PRIVATE
                 Device/NexusCapture.cpp)
