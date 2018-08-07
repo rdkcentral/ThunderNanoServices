@@ -6,18 +6,11 @@ set(DSHAL_SOURCES
     DSHAL.cpp
 )
 
-set(DSHAL_INCLUDE
-    dsVideoPort.h
-    dsError.h
-    dsTypes.h
-    dsHost.h
-)
 set(DSHAL_INPUT
     ${DSHAL_SOURCES}
-    ${DSHAL_INCLUDES}
 )
 set(DSHAL_CONFIG
-    HALConfig
+    rdk_devicesettings_hal.conf
     DummyHALConfig.sh
 )
 
@@ -36,5 +29,5 @@ install(
 
 install(
     FILES ${DSHAL_CONFIG}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/local/etc/WPEFramework/
 )

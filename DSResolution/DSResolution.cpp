@@ -63,11 +63,13 @@ namespace Plugin {
         Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
         // By default, we are in front of any element, jump onto the first element, which is if, there is something an empty slot.
         index.Next();
-        if (request.Verb == Web::Request::HTTP_GET)
+        if (request.Verb == Web::Request::HTTP_GET) {
+            TRACE(Trace::Information, (string(_T("GET"))));
             result = GetMethod(index);
-        else if (request.Verb == Web::Request::HTTP_POST)
+        } else if (request.Verb == Web::Request::HTTP_POST) {
+            TRACE(Trace::Information, (string(_T("POST"))));
             result = PostMethod(index, request);
-
+        }
         return result;
     }
    
@@ -81,19 +83,14 @@ namespace Plugin {
         if (index.IsValid() == true) {
             if (index.Next() && index.IsValid()) {
                 Core::ProxyType<Web::JSONBodyType<DSResolution::Config>> response(jsonBodyDataFactory.Element());
-                if (index.Remainder() == _T("GetDSResolution")) {
-                    TRACE(Trace::Information, (string(_T("GetDSResolution"))));
-                    uint16_t resolution = _controller->GetDSResolution();
-                    response->DSResolution = resolution;
-                    TRACE(Trace::Information, (_T("DSResolution : %d"), resolution));
-                    if(resolution <= dsVIDEO_PIXELRES_MAX) {
-                        result->ContentType = Web::MIMETypes::MIME_JSON;
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Body(response);
-                        result->Message = _T("Get Device Setting Resolution");
-                        TRACE(Trace::Information, (string(_T("Successfully get the Display Resolution"))));
-                    } else
-                        TRACE(Trace::Error, (string(_T("Failed to get the Display Resolution"))));
+                if (index.Remainder() == _T("Resolution")) {
+                    TRACE(Trace::Information, (string(_T("Get Resolution"))));
+                    response->Resolution = _controller->Resolution();
+                    result->ContentType = Web::MIMETypes::MIME_JSON;
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->Body(response);
+                    result->Message = _T("Get Device Setting Resolution");
+                    TRACE(Trace::Information, (string(_T("Successfully get the Display Resolution"))));
                 }
                 else
                     TRACE(Trace::Information, (string(_T("Not a valid GET method"))));
@@ -112,20 +109,25 @@ namespace Plugin {
         if (index.IsValid() == true) {
             if (index.Next() && index.IsValid()) {
                 Core::ProxyType<Web::JSONBodyType<DSResolution::Config>> response(jsonBodyDataFactory.Element());
-                if (index.Remainder() == _T("SetDSResolution") && (request.HasBody())) {
-                    uint16_t DSResolution = request.Body<const Config>()->DSResolution.Value();
-                    bool status;
-                    DSResolution--;
-                    TRACE(Trace::Information, (_T("DSResolution : %d"), DSResolution));
-                    status = _controller->SetDSResolution(DSResolution);
-                    if(status) {
-                        result->ContentType = Web::MIMETypes::MIME_JSON;
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Body(response);
-                        result->Message = _T("Set Device Setting Resolution");
-                        TRACE(Trace::Information, (string(_T("Successfully set the Display Resolution"))));
-                    } else 
-                        TRACE(Trace::Error, (string(_T("Failed to set the Display Resolution"))));
+                if (index.Remainder() == _T("Resolution") && (request.HasBody())) {
+                    DSResolutionHAL::PixelResolution format (DSResolutionHAL::PixelResolution_Unknown);
+                    format = request.Body<const Config>()->Resolution.Value();
+                    if (format != DSResolutionHAL::PixelResolution_Unknown) {
+                        bool status = true;
+                        status = _controller->Resolution(format);
+                        if(status) {
+                            result->ContentType = Web::MIMETypes::MIME_JSON;
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->Body(response);
+                            result->Message = _T("Set Device Setting Resolution");
+                            TRACE(Trace::Information, (string(_T("Successfully set the Display Resolution"))));
+                        }
+                        else {
+                            result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                            result->Message = _T("Unknown Pixel Resolution: ");
+                            TRACE(Trace::Error, (string(_T("Failed to set the Display Resolution"))));
+                        }
+                    }
                 }
             }
         }

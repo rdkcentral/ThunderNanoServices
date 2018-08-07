@@ -42,7 +42,7 @@ extern "C" {
 #include "dsTypes.h"
 #include "dsHost.h"
 
-void initConfig();
+bool initConfig();
 
 /** 
  * @addtogroup DSHAL_VIDEOPORT_API Device Settings HAL Video Port Public API

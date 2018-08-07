@@ -6,22 +6,26 @@
 #include <string.h>
 #include <vector>
 
-uint16_t _pixelResolution = dsVIDEO_PIXELRES_MAX;
+#define WPEFRAMEWORK_CONFIG_LOCATION "/usr/local/etc/WPEFramework"
+#define WPEFRAMEWORK_HAL_CONFIG_FILE "rdk_devicesettings_hal.conf"
 
 struct DummyConfig
 {
     std::string func;
     std::string value; 
 };
+uint16_t _pixelResolution = dsVIDEO_PIXELRES_MAX;
 
 std::vector<DummyConfig> configuraton;
 
-void initConfig()
+bool initConfig()
 {
     DummyConfig dummyConfig;
     std::string config;
     char* token;
-    std::ifstream configFile("/usr/HALConfig");
+    char file [70];
+    sprintf (file, "%s/%s",WPEFRAMEWORK_CONFIG_LOCATION,WPEFRAMEWORK_HAL_CONFIG_FILE);
+    std::ifstream configFile(file);
     if (configFile.is_open()){
         while(!configFile.eof())
         {
@@ -44,105 +48,74 @@ void initConfig()
             configuraton.push_back(dummyConfig);
             delete [] conf;
         }
-    }
+    }else
+        return false;
     configFile.close();
+    return true;
 }
+
 dsError_t  dsHostInit()
 {
-    initConfig();    
-    printf("%s:%s:%d\n",__FILE__,__func__,__LINE__);
-    for( int i=0;i<configuraton.size();i++)
-        if("HOST_INIT" == configuraton[i].func)
-           if("true" == configuraton[i].value)
-               return dsERR_NONE;
-           else
-               return dsERR_GENERAL;
+    if(initConfig()) {
+        for( int i=0;i<configuraton.size();i++)
+            if("HOST_INIT" == configuraton[i].func)
+                if("true" == configuraton[i].value)
+                    return dsERR_NONE;
+                else
+                    return dsERR_GENERAL;
+    }
+    return dsERR_GENERAL;
 }
 
 dsError_t  dsVideoPortInit()
 {
-    printf("%s:%s:%d\n",__FILE__,__func__,__LINE__);
     for( int i=0;i<configuraton.size();i++)
         if("VIDEOPORT_INIT" == configuraton[i].func)
-           if("true" == configuraton[i].value)
-               return dsERR_NONE;
-           else
-               return dsERR_GENERAL;
+            if("true" == configuraton[i].value)
+                return dsERR_NONE;
+            else
+                return dsERR_GENERAL;
 }
 
 dsError_t  dsGetVideoPort(dsVideoPortType_t type, int index, int *handle)
 {
-    printf("%s:%s:%d\n",__FILE__,__func__,__LINE__);
     for( int i=0;i<configuraton.size();i++)
         if("GETVIDEOPORT" == configuraton[i].func)
-           if("true" == configuraton[i].value)
-               return dsERR_NONE;
-           else
-               return dsERR_GENERAL;
+            if("true" == configuraton[i].value)
+                return dsERR_NONE;
+            else
+                return dsERR_GENERAL;
 }
 
 dsError_t  dsIsVideoPortEnabled(int handle, bool *enabled)
 {
-    printf("%s:%s:%d\n",__FILE__,__func__,__LINE__);
     *enabled = true;
-   for( int i=0;i<configuraton.size();i++)
+    for( int i=0;i<configuraton.size();i++)
         if("VIDEOPORT_ENABLED" == configuraton[i].func)
-           if("true" == configuraton[i].value)
-               return dsERR_NONE;
-           else
-               return dsERR_GENERAL; 
+            if("true" == configuraton[i].value)
+                return dsERR_NONE;
+            else
+                return dsERR_GENERAL;
 }
 
 dsError_t dsIsDisplayConnected(int handle, bool *connected)
 {
     *connected = true;
-    printf("%s:%s:%d\n",__FILE__,__func__,__LINE__);
     for( int i=0;i<configuraton.size();i++)
         if("ISDISPLAY_CONNECTED" == configuraton[i].func)
-           if("true" == configuraton[i].value)
-               return dsERR_NONE;
-           else
-               return dsERR_GENERAL;
+            if("true" == configuraton[i].value)
+                return dsERR_NONE;
+            else
+                return dsERR_GENERAL;
 }
 
 dsError_t  dsGetResolution(int handle, dsVideoPortResolution_t *resolution)
 {
     dsError_t dsRet = dsERR_GENERAL;
-    printf("%s:%s:%d\n",__FILE__,__func__,__LINE__);
     for( int i=0;i<configuraton.size();i++) {
         if("GET_RESOLUTION" == configuraton[i].func) {
             if("true" == configuraton[i].value) {
-                printf("PixelResolution is :");
-                switch(_pixelResolution)
-                {
-                    case 0:
-                        resolution->pixelResolution = (dsVideoResolution_t)1;
-                        printf("dsVIDEO_PIXELRES_720x480");
-                        break;
-                    case 1:
-                        resolution->pixelResolution = (dsVideoResolution_t)2;
-                        printf("dsVIDEO_PIXELRES_720x576");
-                        break;
-                    case 2:
-                        resolution->pixelResolution = (dsVideoResolution_t)3;
-                        printf("dsVIDEO_PIXELRES_1280x720");
-                        break;
-                    case 3:
-                        resolution->pixelResolution = (dsVideoResolution_t)4;
-                        printf("dsVIDEO_PIXELRES_1920x1080");
-                        break;
-                    case 4:
-                        resolution->pixelResolution =(dsVideoResolution_t)5;
-                        printf("dsVIDEO_PIXELRES_3840x2160");
-                        break;
-                    case 5:
-                        resolution->pixelResolution = (dsVideoResolution_t)6;
-                        printf("dsVIDEO_PIXELRES_4096x2160");
-                        break;
-                    default:
-                        printf("Deafult");
-                }
-                printf("\n");
+                resolution->pixelResolution = dsVideoResolution_t(_pixelResolution);
                 dsRet = dsERR_NONE;
             }
         }
@@ -153,39 +126,13 @@ dsError_t  dsGetResolution(int handle, dsVideoPortResolution_t *resolution)
 dsError_t  dsSetResolution(int handle, dsVideoPortResolution_t *resolution)
 {
     dsError_t dsRet = dsERR_GENERAL;
-    printf("%s:%s:%d Resolution : [%d]\n",__FILE__,__func__,__LINE__,(uint16_t)resolution->pixelResolution);
     for( int i=0;i<configuraton.size();i++) {
         if("SET_RESOLUTION" == configuraton[i].func) {
             if("true" == configuraton[i].value) {
-                _pixelResolution = (uint16_t)resolution->pixelResolution;
-                printf("PixelResolution is :");
-                switch((uint16_t)resolution->pixelResolution)
-                {
-                    case 0:
-                        printf("dsVIDEO_PIXELRES_720x480");
-                        break;
-                    case 1:
-                        printf("dsVIDEO_PIXELRES_720x576");
-                        break;
-                    case 2:
-                        printf("dsVIDEO_PIXELRES_1280x720");
-                        break;
-                    case 3:
-                        printf("dsVIDEO_PIXELRES_1920x1080");
-                        break;
-                    case 4:
-                        printf("dsVIDEO_PIXELRES_3840x2160");
-                        break;
-                    case 5:
-                        printf("dsVIDEO_PIXELRES_4096x2160");
-                        break;
-                    default:
-                        printf("Deafult");
-                }
-                printf("\n");
+                _pixelResolution = resolution->pixelResolution ;
                 dsRet =   dsERR_NONE;
             }
-         }
-     }
-     return dsRet;
+        }
+    }
+    return dsRet;
 }
