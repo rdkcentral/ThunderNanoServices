@@ -34,7 +34,7 @@ namespace Plugin {
     public:
         DSResolution()
             : _skipURL(0)
-            , _service(nullptr)
+            , _controller()
         {
         }
 
@@ -65,11 +65,10 @@ namespace Plugin {
 
     private:
         uint8_t _skipURL;
-        PluginHost::IShell* _service;
-        Core::ProxyType<DSResolutionHAL> _controller;
-
+        DSResolutionHAL _controller;
     };
 
 } //Plugin
 } //WPEFramework
+
 #endif // __DSRESOLUTION_H

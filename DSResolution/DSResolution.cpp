@@ -10,36 +10,23 @@ namespace Plugin {
     /* virtual */ const string DSResolution::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
-        ASSERT(_controller.IsValid() == false);
 
         string result;
-
+        DSResolution::Config config. config.FromString (service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
-        _service = service;
 
-        _controller = DSResolutionHAL::Create();
-        if ((_controller.IsValid() == true) && (!(_controller->IsOperational()))) {
-            _controller.Release();
+        if (_controller->IsOperational() == false) {
             result = _T("Not Feasible to change the Device Settings"); 
         }
+        else if ((config.Resolution.IsSet() == true) && (!_controller->Resolution(config.Resolution.Value()))) {
+            TRACE(Trace::Information, (string(_T("Failed to set the configured Display Resolution"))));
+        }
         
-        if((service != nullptr) && ( _controller->IsOperational())){
-            TRACE(Trace::Information, (_T("Successfully instantiated DSResolution Plug-In")));
-            result = _T("") ;
-        }
-        else {
-            if(_controller->IsOperational()) {
-                TRACE(Trace::Error, (_T("Failed to initialize DSResolution Plug-In")));          
-                result =  _T("No Service.");
-             }
-        }
         return result;
     }
 
-    /* virtual */ void DSResolution::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void DSResolution::Deinitialize(PluginHost::IShell* /* service */)
     {
-         ASSERT(_service == service);
-        _service = nullptr;
     }
 
     /* virtual */ string DSResolution::Information() const
@@ -109,9 +96,14 @@ namespace Plugin {
         if (index.IsValid() == true) {
             if (index.Next() && index.IsValid()) {
                 Core::ProxyType<Web::JSONBodyType<DSResolution::Config>> response(jsonBodyDataFactory.Element());
-                if (index.Remainder() == _T("Resolution") && (request.HasBody())) {
+                if (index.Current() == _T("Resolution")) {
                     DSResolutionHAL::PixelResolution format (DSResolutionHAL::PixelResolution_Unknown);
-                    format = request.Body<const Config>()->Resolution.Value();
+                    if (request.HasBody() == true) {
+                        format = request.Body<const Config>()->Resolution.Value();
+                    }
+                    else (index.Next() == true) {
+                        format = Core::EnumerateType<DSResolutionHAL::PixelResolution>(index.Current().Data()).Value();
+                    }
                     if (format != DSResolutionHAL::PixelResolution_Unknown) {
                         bool status = true;
                         status = _controller->Resolution(format);
