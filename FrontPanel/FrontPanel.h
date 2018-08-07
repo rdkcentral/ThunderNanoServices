@@ -17,34 +17,40 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
-                , FPDIndicator()
+                , Indicator()
                 , BlinkDuration()
                 , BlinkIterations()
-                , FPDBrightness()
-                , FPDState()
-                , FPDColor()
-                , FPDTimeFormat()
+                , Brightness()
+                , State()
+                , StateStr()
+                , Color()
+                , ColorStr()
+                , TimeFormat()
+                , TimeFormatStr()
                 , Hour()
                 , Minutes()
                 , Text()
-                , FPDTextDisplay()
+                , TextDisplay()
                 , Enable()
                 , ScrollHoldOnDur()
                 , HorzScrollIterations()
                 , VertScrollIterations()
                 , ToPersist()
             {
-                Add(_T("FPDIndicator"), &FPDIndicator);
+                Add(_T("Indicator"), &Indicator);
                 Add(_T("BlinkDuration"), &BlinkDuration);
                 Add(_T("BlinkIterations"), &BlinkIterations);
-                Add(_T("FPDBrightness"), &FPDBrightness);
-                Add(_T("FPDState"), &FPDState);
-                Add(_T("FPDColor"), &FPDColor);
-                Add(_T("FPDTimeFormat"), &FPDTimeFormat);
+                Add(_T("Brightness"), &Brightness);
+                Add(_T("State"), &State);
+                Add(_T("State"), &StateStr);
+                Add(_T("Color"), &Color);
+                Add(_T("Color"), &ColorStr);
+                Add(_T("TimeFormat"), &TimeFormat);
+                Add(_T("TimeFormat"), &TimeFormatStr);
                 Add(_T("Hour"), &Hour);
                 Add(_T("Minutes"), &Minutes);
                 Add(_T("Text"), &Text);
-                Add(_T("FPDTextDisplay"), &FPDTextDisplay);
+                Add(_T("TextDisplay"), &TextDisplay);
                 Add(_T("Enable"), &Enable);
                 Add(_T("ScrollHoldOnDur"), &ScrollHoldOnDur);
                 Add(_T("HorzScrollIterations"), &HorzScrollIterations);
@@ -56,17 +62,20 @@ namespace Plugin {
             }
 
         public:
-            Core::JSON::DecUInt32 FPDIndicator; //
+            Core::JSON::DecUInt32 Indicator;
             Core::JSON::DecUInt32 BlinkDuration;
             Core::JSON::DecUInt32 BlinkIterations;
-            Core::JSON::DecUInt32 FPDBrightness; //
-            Core::JSON::DecUInt32 FPDState; //
-            Core::JSON::DecUInt32 FPDColor; //
-            Core::JSON::DecUInt32 FPDTimeFormat; //
+            Core::JSON::DecUInt32 Brightness;
+            Core::JSON::DecUInt32 State;
+            Core::JSON::String StateStr;
+            Core::JSON::DecUInt32 Color;
+            Core::JSON::String ColorStr;
+            Core::JSON::DecUInt32 TimeFormat;
+            Core::JSON::String TimeFormatStr;
             Core::JSON::DecUInt32 Hour;
             Core::JSON::DecUInt32 Minutes;
             Core::JSON::String Text;
-            Core::JSON::DecUInt32 FPDTextDisplay; //
+            Core::JSON::DecUInt32 TextDisplay;
             Core::JSON::DecUInt32 Enable;
             Core::JSON::DecUInt32 ScrollHoldOnDur;
             Core::JSON::DecUInt32 HorzScrollIterations;
@@ -106,14 +115,14 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
-        Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
+        Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> PostMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index);
 
     private:
         uint8_t _skipURL;
         PluginHost::IShell* _service;
-        Core::ProxyType<WPASupplicant::FrontPanelHAL> _controller;
+        Core::ProxyType<FrontPanelHAL> _controller;
     };
 
 } // Namespace Plugin.

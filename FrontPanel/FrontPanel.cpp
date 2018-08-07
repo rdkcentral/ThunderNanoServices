@@ -16,7 +16,7 @@ namespace Plugin {
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
         _service = service;
 
-        _controller = WPASupplicant::FrontPanelHAL::Create();
+        _controller = FrontPanelHAL::Create();
         if ((_controller.IsValid() == true)  && (_controller->IsOperational() == true)) {
         }
 
@@ -51,14 +51,14 @@ namespace Plugin {
         // By default, we are in front of any element, jump onto the first element, which is if, there is something an empty slot.
         index.Next();
         if (request.Verb == Web::Request::HTTP_GET)
-            result = GetMethod(index);
+            result = GetMethod(index, request);
         else if (request.Verb == Web::Request::HTTP_POST)
             result = PostMethod(index, request);
 
         return result;
     }
 
-    Core::ProxyType<Web::Response> FrontPanel::GetMethod(Core::TextSegmentIterator& index)
+    Core::ProxyType<Web::Response> FrontPanel::GetMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -67,10 +67,72 @@ namespace Plugin {
         if (index.IsValid() == true) {
             if (index.Next() && index.IsValid()) {
                 Core::ProxyType<Web::JSONBodyType<FrontPanel::Config>> response(jsonBodyDataFactory.Element());
-                if (index.Remainder() == _T("GetFPTimeFormat")) {
-                    uint32_t timeFormat;
+                if (index.Current() == _T("State")) {
+                    Core::URL::KeyValue options(request.Query.Value());
+                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Indicator"), 0));
+                    uint32_t indicator = code.Value();
+                    string state;
+                    if (_controller->GetFPState(indicator, state)) {
+                        response->StateStr = state;
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Body(response);
+                        result->Message = _T("Get Front Panel State");
+                    } else {
+                        result->ErrorCode = Web::STATUS_NO_CONTENT;
+                        result->Message = _T("Failed to Get Front Panel State.");
+                    }
+                } else if (index.Current() == _T("Brightness")) {
+                    printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
+                    Core::URL::KeyValue options(request.Query.Value());
+                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Indicator"), 0));
+                    uint32_t indicator = code.Value();
+                    uint32_t brightness;
+                    if (_controller->GetFPBrightness(indicator, brightness)) {
+                        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
+                        response->Brightness = brightness;
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Body(response);
+                        result->Message = _T("Get Front Panel Brightness.");
+                    } else {
+                        result->ErrorCode = Web::STATUS_NO_CONTENT;
+                        result->Message = _T("Failed to Get Front Panel Brightness.");
+                    }
+                } else if (index.Current() == _T("Color")) {
+                    printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
+                    Core::URL::KeyValue options(request.Query.Value());
+                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Indicator"), 0));
+                    uint32_t indicator = code.Value();
+                    string color;
+                    if (_controller->GetFPColor(indicator, color)) {
+                        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
+                        response->ColorStr = color;
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Body(response);
+                        result->Message = _T("Get Front Panel Color.");
+                    } else {
+                        result->ErrorCode = Web::STATUS_NO_CONTENT;
+                        result->Message = _T("Failed to Get Front Panel Color.");
+                    }
+                } else if (index.Current() == _T("TextBrightness")) {
+                    printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
+                    Core::URL::KeyValue options(request.Query.Value());
+                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("TextDisplay"), 0));
+                    uint32_t textDisplay = code.Value();
+                    uint32_t brightness;
+                    if (_controller->GetFPTextBrightness(textDisplay, brightness)) {
+                        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
+                        response->Brightness = brightness;
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Body(response);
+                        result->Message = _T("Get Front Panel Text Brightness.");
+                    } else {
+                        result->ErrorCode = Web::STATUS_NO_CONTENT;
+                        result->Message = _T("Failed to Get Front Panel Text Brightness.");
+                    }
+                } else if (index.Current() == _T("TimeFormat")) {
+                    string timeFormat;
                     if (_controller->GetFPTimeFormat(timeFormat)) {
-                        response->FPDTimeFormat = timeFormat;
+                        response->TimeFormatStr = timeFormat;
                         result->ErrorCode = Web::STATUS_OK;
                         result->Body(response);
                         result->Message = _T("Get Front Panel Time Format.");
@@ -93,175 +155,127 @@ namespace Plugin {
         if (index.IsValid() == true) {
             if (index.Next() && index.IsValid()) {
                 Core::ProxyType<Web::JSONBodyType<FrontPanel::Config>> response(jsonBodyDataFactory.Element());
-                if (index.Remainder() == _T("GetFPState") && (request.HasBody())) {
-                    uint32_t FPDIndicator = request.Body<const Config>()->FPDIndicator.Value();
-                    bool state;
-                    if (_controller->GetFPState(FPDIndicator, state)) {
-                        response->FPDState = state;
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Body(response);
-                        result->Message = _T("Get Front Panel State");
-                    } else {
-                        result->ErrorCode = Web::STATUS_NO_CONTENT;
-                        result->Message = _T("Failed to Get Front Panel State.");
-                    }
-                } else if (index.Remainder() == _T("GetFPBrightness") && (request.HasBody())) {
-                    uint32_t FPDIndicator = request.Body<const Config>()->FPDIndicator.Value();
-                    uint32_t brightness;
-                    if (_controller->GetFPBrightness(FPDIndicator, brightness)) {
-                        response->FPDBrightness = brightness;
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Body(response);
-                        result->Message = _T("Get Front Panel Brightness.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_NO_CONTENT;
-                        result->Message = _T("Failed to Get Front Panel Brightness.");
-                    }
-                } else if (index.Remainder() == _T("GetFPColor") && (request.HasBody())) {
-                    uint32_t FPDIndicator = request.Body<const Config>()->FPDIndicator.Value();
-                    uint32_t color;
-                    if (_controller->GetFPColor(FPDIndicator, color)) {
-                        response->FPDColor = color;
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Body(response);
-                        result->Message = _T("Get Front Panel Color.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_NO_CONTENT;
-                        result->Message = _T("Failed to Get Front Panel Color.");
-                    }
-                } else if (index.Remainder() == _T("GetFPTextBrightness") && (request.HasBody())) {
-                    uint32_t FPDTextDisplay = request.Body<const Config>()->FPDTextDisplay.Value();
-                    uint32_t brightness;
-                    if (_controller->GetFPTextBrightness(FPDTextDisplay, brightness)) {
-                        response->FPDBrightness = brightness;
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Body(response);
-                        result->Message = _T("Get Front Panel Text Brightness.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_NO_CONTENT;
-                        result->Message = _T("Failed to Get Front Panel Text Brightness.");
-                    }
-                } else if (index.Remainder() == _T("SetFPBlink") && (request.HasBody())) {
-                    uint32_t FPDIndicator = request.Body<const Config>()->FPDIndicator.Value();
-                    uint32_t BlinkDuration = request.Body<const Config>()->BlinkDuration.Value();
-                    uint32_t BlinkIterations = request.Body<const Config>()->BlinkIterations.Value();
-                    if (_controller->SetFPBlink(FPDIndicator, BlinkDuration, BlinkIterations)) {
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Set Front Panel Blink.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_NO_CONTENT;
-                        result->Message = _T("Failed to Set Front Panel Blink.");
-                    }
-                } else if (index.Remainder() == _T("SetFPBrightness") && (request.HasBody())) {
-                    uint32_t FPDIndicator = request.Body<const Config>()->FPDIndicator.Value();
-                    uint32_t FPDBrightness = request.Body<const Config>()->FPDBrightness.Value();
-                    if (_controller->SetFPBrightness(FPDIndicator, FPDBrightness)) {
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Set Front Panel Brightness.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_NO_CONTENT;
-                        result->Message = _T("Failed to Set Front Panel Brightness.");
-                    }
-                } else if (index.Remainder() == _T("SetFPState") && (request.HasBody())) {
-                    uint32_t FPDIndicator = request.Body<const Config>()->FPDIndicator.Value();
-                    bool FPDState = request.Body<const Config>()->FPDState.Value();
-                    if (_controller->SetFPState(FPDIndicator, FPDState)) {
+                if (index.Current() == _T("State") && (request.HasBody())) {
+                    uint32_t indicator = request.Body<const Config>()->Indicator.Value();
+                    bool state = request.Body<const Config>()->State.Value();
+                    if (_controller->SetFPState(indicator, state)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel State.");
                     } else {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = _T("Failed to Set Front Panel State.");
                     }
-                } else if (index.Remainder() == _T("SetFPColor") && (request.HasBody())) {
-                    uint32_t FPDIndicator = request.Body<const Config>()->FPDIndicator.Value();
-                    uint32_t FPDColor = request.Body<const Config>()->FPDColor.Value();
-                    if (_controller->SetFPColor(FPDIndicator, FPDColor)) {
+                } else if (index.Current() == _T("Brightness") && (request.HasBody())) {
+                    uint32_t indicator = request.Body<const Config>()->Indicator.Value();
+                    uint32_t brightness = request.Body<const Config>()->Brightness.Value();
+                    if (_controller->SetFPBrightness(indicator, brightness)) {
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("Set Front Panel Brightness.");
+                    } else {
+                        result->ErrorCode = Web::STATUS_NO_CONTENT;
+                        result->Message = _T("Failed to Set Front Panel Brightness.");
+                    }
+                } else if (index.Current() == _T("Color") && (request.HasBody())) {
+                    uint32_t indicator = request.Body<const Config>()->Indicator.Value();
+                    uint32_t color = request.Body<const Config>()->Color.Value();
+                    if (_controller->SetFPColor(indicator, color)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Color.");
                     } else {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = _T("Failed to Set Front Panel Color.");
                     }
-                } else if (index.Remainder() == _T("SetFPTime") && (request.HasBody())) {
-                    uint32_t FPDTimeFormat = request.Body<const Config>()->FPDTimeFormat.Value();
-                    uint32_t Hour = request.Body<const Config>()->Hour.Value();
-                    uint32_t Minutes = request.Body<const Config>()->Minutes.Value();
-                    if (_controller->SetFPTime(FPDTimeFormat, Hour, Minutes)) {
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Set Front Panel Time.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_NO_CONTENT;
-                        result->Message = _T("Failed to Set Front Panel Time.");
-                    }
-                } else if (index.Remainder() == _T("SetFPText") && (request.HasBody())) {
-                    std::string Text = request.Body<const Config>()->Text.Value();
-                    if (_controller->SetFPText(Text)) {
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Set Front Panel Text.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_NO_CONTENT;
-                        result->Message = _T("Failed to Set Front Panel Text.");
-                    }
-                } else if (index.Remainder() == _T("SetFPTextBrightness") && (request.HasBody())) {
-                    uint32_t FPDTextDisplay = request.Body<const Config>()->FPDTextDisplay.Value();
-                    uint32_t FPDBrightness = request.Body<const Config>()->FPDBrightness.Value();
-                    if (_controller->SetFPTextBrightness(FPDTextDisplay, FPDBrightness)) {
+                } else if (index.Current() == _T("TextBrightness") && (request.HasBody())) {
+                    uint32_t textDisplay = request.Body<const Config>()->TextDisplay.Value();
+                    uint32_t brightness = request.Body<const Config>()->Brightness.Value();
+                    if (_controller->SetFPTextBrightness(textDisplay, brightness)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Text Brightness.");
                     } else {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = _T("Failed to Set Front Panel Text Brightness.");
                     }
-                 } else if (index.Remainder() == _T("FPEnableClockDisplay") && (request.HasBody())) {
-                    uint32_t Enable = request.Body<const Config>()->Enable.Value();
-                    if (_controller->FPEnableClockDisplay(Enable)) {
+                } else if (index.Current() == _T("TimeFormat") && (request.HasBody())) {
+                    uint32_t timeFormat = request.Body<const Config>()->TimeFormat.Value();
+                    if (_controller->SetFPTimeFormat(timeFormat)) {
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("Set Front Panel Time Format.");
+                    } else {
+                        result->ErrorCode = Web::STATUS_NO_CONTENT;
+                        result->Message = _T("Failed to Set Front Panel Time Format.");
+                    }
+                } else if (index.Current() == _T("Blink") && (request.HasBody())) {
+                    uint32_t indicator = request.Body<const Config>()->Indicator.Value();
+                    uint32_t blinkDuration = request.Body<const Config>()->BlinkDuration.Value();
+                    uint32_t blinkIterations = request.Body<const Config>()->BlinkIterations.Value();
+                    if (_controller->SetFPBlink(indicator, blinkDuration, blinkIterations)) {
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("Set Front Panel Blink.");
+                    } else {
+                        result->ErrorCode = Web::STATUS_NO_CONTENT;
+                        result->Message = _T("Failed to Set Front Panel Blink.");
+                    }
+                } else if (index.Current() == _T("Time") && (request.HasBody())) {
+                    uint32_t timeFormat = request.Body<const Config>()->TimeFormat.Value();
+                    uint32_t hour = request.Body<const Config>()->Hour.Value();
+                    uint32_t minutes = request.Body<const Config>()->Minutes.Value();
+                    if (_controller->SetFPTime(timeFormat, hour, minutes)) {
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("Set Front Panel Time.");
+                    } else {
+                        result->ErrorCode = Web::STATUS_NO_CONTENT;
+                        result->Message = _T("Failed to Set Front Panel Time.");
+                    }
+                } else if (index.Current() == _T("Text") && (request.HasBody())) {
+                    std::string text = request.Body<const Config>()->Text.Value();
+                    if (_controller->SetFPText(text)) {
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("Set Front Panel Text.");
+                    } else {
+                        result->ErrorCode = Web::STATUS_NO_CONTENT;
+                        result->Message = _T("Failed to Set Front Panel Text.");
+                    }
+                 } else if (index.Current() == _T("ClockDisplay") && (request.HasBody())) {
+                    uint32_t enable = request.Body<const Config>()->Enable.Value();
+                    if (_controller->FPEnableClockDisplay(enable)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Enable Front Panel Clock Display.");
                     } else {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = _T("Failed to Set Front Panel Clock Display.");
                     }
-                } else if (index.Remainder() == _T("SetFPScroll") && (request.HasBody())) {
-                    uint32_t ScrollHoldOnDur = request.Body<const Config>()->ScrollHoldOnDur.Value();
-                    uint32_t HorzScrollIterations = request.Body<const Config>()->HorzScrollIterations.Value();
-                    uint32_t VertScrollIterations = request.Body<const Config>()->VertScrollIterations.Value();
-                    if (_controller->SetFPScroll(ScrollHoldOnDur, HorzScrollIterations, VertScrollIterations)) {
+                } else if (index.Current() == _T("Scroll") && (request.HasBody())) {
+                    uint32_t scrollHoldOnDur = request.Body<const Config>()->ScrollHoldOnDur.Value();
+                    uint32_t horzScrollIterations = request.Body<const Config>()->HorzScrollIterations.Value();
+                    uint32_t vertScrollIterations = request.Body<const Config>()->VertScrollIterations.Value();
+                    if (_controller->SetFPScroll(scrollHoldOnDur, horzScrollIterations, vertScrollIterations)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Scroll.");
                     } else {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = _T("Failed to Set Front Panel Scroll.");
                     }
-                } else if (index.Remainder() == _T("SetFPDBrightness") && (request.HasBody())) {
-                    uint32_t FPDIndicator = request.Body<const Config>()->FPDIndicator.Value();
-                    uint32_t FPDBrightness = request.Body<const Config>()->FPDBrightness.Value();
-                    bool ToPersist = request.Body<const Config>()->ToPersist.Value();
-                    if (_controller->SetFPDBrightness(FPDIndicator, FPDBrightness, ToPersist)) {
+                } else if (index.Current() == _T("FPDBrightness") && (request.HasBody())) {
+                    uint32_t indicator = request.Body<const Config>()->Indicator.Value();
+                    uint32_t brightness = request.Body<const Config>()->Brightness.Value();
+                    bool toPersist = request.Body<const Config>()->ToPersist.Value();
+                    if (_controller->SetFPDBrightness(indicator, brightness, toPersist)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Display Brightness.");
                     } else {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = _T("Failed to Set Front Panel Brightness.");
                     }
-                } else if (index.Remainder() == _T("SetFPDColor") && (request.HasBody())) {
-                    uint32_t FPDIndicator = request.Body<const Config>()->FPDIndicator.Value();
-                    uint32_t FPDColor = request.Body<const Config>()->FPDColor.Value();
-                    bool ToPersist = request.Body<const Config>()->ToPersist.Value();
-                    if (_controller->SetFPDColor(FPDIndicator, FPDColor, ToPersist)) {
+                } else if (index.Current() == _T("FPDColor") && (request.HasBody())) {
+                    uint32_t indicator = request.Body<const Config>()->Indicator.Value();
+                    uint32_t color = request.Body<const Config>()->Color.Value();
+                    bool toPersist = request.Body<const Config>()->ToPersist.Value();
+                    if (_controller->SetFPDColor(indicator, color, toPersist)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Display Color.");
                     } else {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = _T("Failed to Set Front Panel Display Color.");
-                    }
-                } else if (index.Remainder() == _T("SetFPTimeFormat") && (request.HasBody())) {
-                    uint32_t FPDTimeFormat = request.Body<const Config>()->FPDTimeFormat.Value();
-                    if (_controller->SetFPTimeFormat(FPDTimeFormat)) {
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Set Front Panel Time Format.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_NO_CONTENT;
-                        result->Message = _T("Failed to Set Front Panel Time Format.");
                     }
                 }
             }

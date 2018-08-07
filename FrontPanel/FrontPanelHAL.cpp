@@ -1,7 +1,4 @@
 #include "FrontPanelHAL.h"
-extern "C" {
-#include <dsFPD.h>
-}
 
 namespace WPEFramework {
 
@@ -34,12 +31,12 @@ namespace WPEFramework {
         }
     }
 
-    bool FrontPanelHAL::GetFPState(uint32_t eIndicator, bool& state)
+    bool FrontPanelHAL::GetFPState(uint32_t eIndicator, string& state)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
         dsFPDState_t fpdState;
         if (dsGetFPState((dsFPDIndicator_t)eIndicator, &fpdState) == dsERR_NONE) {
-            state = (fpdState == dsFPD_STATE_OFF) ? false : true;
+            state = stateLookup.find(fpdState)->second;
             return true;
         }
         return false;
@@ -53,11 +50,14 @@ namespace WPEFramework {
         return false;
     }
 
-    bool FrontPanelHAL::GetFPColor(uint32_t eIndicator, uint32_t& color)
+    bool FrontPanelHAL::GetFPColor(uint32_t eIndicator, string& color)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        if (dsGetFPColor((dsFPDIndicator_t)eIndicator, (dsFPDColor_t*)&color) == dsERR_NONE)
+        dsFPDColor_t fpdColor;
+        if (dsGetFPColor((dsFPDIndicator_t)eIndicator, &fpdColor) == dsERR_NONE) {
+            color = colorLookup.find(fpdColor)->second;
             return true;
+        }
         return false;
 
     }
@@ -71,12 +71,12 @@ namespace WPEFramework {
         return false;
     }
 
-    bool FrontPanelHAL::GetFPTimeFormat(uint32_t& timeFormat)
+    bool FrontPanelHAL::GetFPTimeFormat(string& timeFormat)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
         dsFPDTimeFormat_t fpdTimeFormat;
         if (dsGetFPTimeFormat(&fpdTimeFormat) == dsERR_NONE) {
-            timeFormat = fpdTimeFormat;
+            timeFormat = timeFormatLookup.find(fpdTimeFormat)->second;
             return true;
         }
         return false;
