@@ -82,13 +82,11 @@ namespace Plugin {
                         result->Message = _T("Failed to Get Front Panel State.");
                     }
                 } else if (index.Current() == _T("Brightness")) {
-                    printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
                     Core::URL::KeyValue options(request.Query.Value());
                     Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Indicator"), 0));
                     uint32_t indicator = code.Value();
                     uint32_t brightness;
                     if (_controller->GetFPBrightness(indicator, brightness)) {
-                        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
                         response->Brightness = brightness;
                         result->ErrorCode = Web::STATUS_OK;
                         result->Body(response);
@@ -98,13 +96,11 @@ namespace Plugin {
                         result->Message = _T("Failed to Get Front Panel Brightness.");
                     }
                 } else if (index.Current() == _T("Color")) {
-                    printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
                     Core::URL::KeyValue options(request.Query.Value());
                     Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Indicator"), 0));
                     uint32_t indicator = code.Value();
                     string color;
                     if (_controller->GetFPColor(indicator, color)) {
-                        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
                         response->ColorStr = color;
                         result->ErrorCode = Web::STATUS_OK;
                         result->Body(response);
@@ -114,13 +110,11 @@ namespace Plugin {
                         result->Message = _T("Failed to Get Front Panel Color.");
                     }
                 } else if (index.Current() == _T("TextBrightness")) {
-                    printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
                     Core::URL::KeyValue options(request.Query.Value());
                     Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("TextDisplay"), 0));
                     uint32_t textDisplay = code.Value();
                     uint32_t brightness;
                     if (_controller->GetFPTextBrightness(textDisplay, brightness)) {
-                        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
                         response->Brightness = brightness;
                         result->ErrorCode = Web::STATUS_OK;
                         result->Body(response);
