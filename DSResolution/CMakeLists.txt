@@ -12,6 +12,7 @@ set(PLUGIN_OPTIONS)
 set(PLUGIN_DEPENDENCIES
     ${DSHAL_LIB}
 )
+set(PLUGIN_INCLUDE_DIRS ${WPEFRAMEWORK_INCLUDE_DIRS})
 
 set(PLUGIN_SOURCES
     Module.cpp
@@ -39,7 +40,9 @@ include(default_targets)  # This is a regular plugin no need to edit the default
 #endif()
 
 target_link_libraries(${MODULE_NAME} ${PLUGIN_LIBS1})
+target_include_directories(${MODULE_NAME} PRIVATE ${PLUGIN_INCLUDE_DIRS})
 
-#add_subdirectory(src)
-
+if(DSRESOLUTION_WITH_DUMMY_DSHAL)
+add_subdirectory(src)
+endif(DSRESOLUTION_WITH_DUMMY_DSHAL)
 write_config(${PLUGIN_NAME})

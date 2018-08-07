@@ -17,15 +17,15 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()   
-                , DSResolution()
+                , Resolution()
             {
-                Add(_T("DSResolution"), &DSResolution);
+                Add(_T("Resolution"), &Resolution);
             }
             ~Config()
             {
             }
         public:
-            Core::JSON::DecUInt32 DSResolution; 
+            Core::JSON::EnumType<DSResolutionHAL::PixelResolution> Resolution;
         };
     private:
         DSResolution(const DSResolution&) = delete;
