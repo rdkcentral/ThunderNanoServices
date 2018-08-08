@@ -15,19 +15,16 @@ private:
     DSResolutionHAL& operator=(const DSResolutionHAL&) = delete;
 
 public:
-        enum PixelResolution {
-            PixelResolution_720x480 = 1,
-            PixelResolution_720x576 = 2,
-            PixelResolution_1280x720 = 3,
-            PixelResolution_1920x1080 = 4,
-            PixelResolution_3840x2160 = 5,
-            PixelResolution_4096x2160 = 6,
-            PixelResolution_Unknown = 7
-        };
+    enum PixelResolution {
+        PixelResolution_720x480 ,
+        PixelResolution_720x576 ,
+        PixelResolution_1280x720 ,
+        PixelResolution_1920x1080 ,
+        PixelResolution_3840x2160 ,
+        PixelResolution_4096x2160 ,
+        PixelResolution_Unknown
+    };
 
-    static Core::ProxyType<DSResolutionHAL> Create () {
-        return (Core::ProxyType<DSResolutionHAL>::Create());
-    }
     DSResolutionHAL();
     virtual ~DSResolutionHAL();
     const PixelResolution Resolution();
@@ -45,7 +42,7 @@ private :
         { PixelResolution_3840x2160, dsVIDEO_PIXELRES_3840x2160 },
         { PixelResolution_4096x2160, dsVIDEO_PIXELRES_4096x2160 },
         { PixelResolution_Unknown, dsVIDEO_PIXELRES_MAX }
-   };
+    };
 
 
 private:

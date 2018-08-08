@@ -12,13 +12,14 @@ namespace Plugin {
         ASSERT(service != nullptr);
 
         string result;
-        DSResolution::Config config. config.FromString (service->ConfigLine());
+        DSResolution::Config config;
+        config.FromString (service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
-        if (_controller->IsOperational() == false) {
+        if (_controller.IsOperational() == false) {
             result = _T("Not Feasible to change the Device Settings"); 
         }
-        else if ((config.Resolution.IsSet() == true) && (!_controller->Resolution(config.Resolution.Value()))) {
+        else if ((config.Resolution.IsSet() == true) && (!_controller.Resolution(config.Resolution.Value()))) {
             TRACE(Trace::Information, (string(_T("Failed to set the configured Display Resolution"))));
         }
         
@@ -72,7 +73,7 @@ namespace Plugin {
                 Core::ProxyType<Web::JSONBodyType<DSResolution::Config>> response(jsonBodyDataFactory.Element());
                 if (index.Remainder() == _T("Resolution")) {
                     TRACE(Trace::Information, (string(_T("Get Resolution"))));
-                    response->Resolution = _controller->Resolution();
+                    response->Resolution = _controller.Resolution();
                     result->ContentType = Web::MIMETypes::MIME_JSON;
                     result->ErrorCode = Web::STATUS_OK;
                     result->Body(response);
@@ -100,13 +101,16 @@ namespace Plugin {
                     DSResolutionHAL::PixelResolution format (DSResolutionHAL::PixelResolution_Unknown);
                     if (request.HasBody() == true) {
                         format = request.Body<const Config>()->Resolution.Value();
+                        TRACE(Trace::Information, (_T("Resolution is : %d"),format));
                     }
-                    else (index.Next() == true) {
+                    else if(index.Next() == true) {
                         format = Core::EnumerateType<DSResolutionHAL::PixelResolution>(index.Current().Data()).Value();
+                        TRACE(Trace::Information, (_T("Resolution is : %d"),format));
                     }
+
                     if (format != DSResolutionHAL::PixelResolution_Unknown) {
                         bool status = true;
-                        status = _controller->Resolution(format);
+                        status = _controller.Resolution(format);
                         if(status) {
                             result->ContentType = Web::MIMETypes::MIME_JSON;
                             result->ErrorCode = Web::STATUS_OK;
