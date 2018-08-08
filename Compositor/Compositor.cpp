@@ -58,30 +58,8 @@ namespace Plugin {
             TRACE(Trace::Information, (_T("XDG_RUNTIME_DIR is set to %s "), runTimeDir));
         }
 
-        if (config.OutOfProcess.Value() == true) {
-            _composition = service->Instantiate<Exchange::IComposition>(
-                2000, _T("CompositorImplementation"), static_cast<uint32_t>(~0), _pid, config.Locator.Value());
-            TRACE(Trace::Information,
-                (_T("Compositor started out of process %s implementation"), config.Locator.Value().c_str()));
-        }
-        else {
-            Core::Library resource(config.Locator.Value().c_str());
-            if (!resource.IsLoaded())
-            {
-                string path = service->DataPath() + config.Locator.Value();
-                resource = Core::Library(path.c_str());
-            }
-            if (resource.IsLoaded() == true) {
-                _composition = Core::ServiceAdministrator::Instance().Instantiate<Exchange::IComposition>(
-                    resource, _T("CompositorImplementation"), static_cast<uint32_t>(~0));
-                TRACE(Trace::Information,
-                    (_T("Compositor started in process %s implementation"), config.Locator.Value().c_str()));
-            }
-            else {
-                message = _T("Could not load the PlatformPlugin library [") + config.Locator.Value() + _T("]");
-            }
-        }
-
+        _composition = service->Root<Exchange::IComposition>(_pid, 2000, _T("CompositorImplementation"));
+        
         if (_composition == nullptr) {
             message = "Instantiating the compositor failed. Could not load: " + config.Locator.Value();
         }
