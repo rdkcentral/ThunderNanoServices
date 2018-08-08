@@ -89,7 +89,6 @@ namespace Plugin {
     public:
         FrontPanel()
             : _skipURL(0)
-            , _service(nullptr)
         {
         }
 
@@ -121,8 +120,7 @@ namespace Plugin {
 
     private:
         uint8_t _skipURL;
-        PluginHost::IShell* _service;
-        Core::ProxyType<FrontPanelHAL> _controller;
+        FrontPanelHAL _controller;
     };
 
 } // Namespace Plugin.

@@ -11,22 +11,15 @@ namespace Plugin {
     /* virtual */ const string FrontPanel::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
-        ASSERT(_controller.IsValid() == false);
 
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
-        _service = service;
 
-        _controller = FrontPanelHAL::Create();
-        if ((_controller.IsValid() == true)  && (_controller->IsOperational() == true)) {
-        }
 
-        return (_service != nullptr ? _T("") : _T("No service."));
+        return (service != nullptr ? _T("") : _T("No service."));
     }
 
     /* virtual */ void FrontPanel::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == service);
-        _service = nullptr;
     }
 
     /* virtual */ string FrontPanel::Information() const
@@ -72,7 +65,7 @@ namespace Plugin {
                     Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Indicator"), 0));
                     uint32_t indicator = code.Value();
                     string state;
-                    if (_controller->GetFPState(indicator, state)) {
+                    if (_controller.GetFPState(indicator, state)) {
                         response->StateStr = state;
                         result->ErrorCode = Web::STATUS_OK;
                         result->Body(response);
@@ -86,7 +79,7 @@ namespace Plugin {
                     Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Indicator"), 0));
                     uint32_t indicator = code.Value();
                     uint32_t brightness;
-                    if (_controller->GetFPBrightness(indicator, brightness)) {
+                    if (_controller.GetFPBrightness(indicator, brightness)) {
                         response->Brightness = brightness;
                         result->ErrorCode = Web::STATUS_OK;
                         result->Body(response);
@@ -100,7 +93,7 @@ namespace Plugin {
                     Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Indicator"), 0));
                     uint32_t indicator = code.Value();
                     string color;
-                    if (_controller->GetFPColor(indicator, color)) {
+                    if (_controller.GetFPColor(indicator, color)) {
                         response->ColorStr = color;
                         result->ErrorCode = Web::STATUS_OK;
                         result->Body(response);
@@ -114,7 +107,7 @@ namespace Plugin {
                     Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("TextDisplay"), 0));
                     uint32_t textDisplay = code.Value();
                     uint32_t brightness;
-                    if (_controller->GetFPTextBrightness(textDisplay, brightness)) {
+                    if (_controller.GetFPTextBrightness(textDisplay, brightness)) {
                         response->Brightness = brightness;
                         result->ErrorCode = Web::STATUS_OK;
                         result->Body(response);
@@ -125,7 +118,7 @@ namespace Plugin {
                     }
                 } else if (index.Current() == _T("TimeFormat")) {
                     string timeFormat;
-                    if (_controller->GetFPTimeFormat(timeFormat)) {
+                    if (_controller.GetFPTimeFormat(timeFormat)) {
                         response->TimeFormatStr = timeFormat;
                         result->ErrorCode = Web::STATUS_OK;
                         result->Body(response);
@@ -152,7 +145,7 @@ namespace Plugin {
                 if (index.Current() == _T("State") && (request.HasBody())) {
                     uint32_t indicator = request.Body<const Config>()->Indicator.Value();
                     bool state = request.Body<const Config>()->State.Value();
-                    if (_controller->SetFPState(indicator, state)) {
+                    if (_controller.SetFPState(indicator, state)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel State.");
                     } else {
@@ -162,7 +155,7 @@ namespace Plugin {
                 } else if (index.Current() == _T("Brightness") && (request.HasBody())) {
                     uint32_t indicator = request.Body<const Config>()->Indicator.Value();
                     uint32_t brightness = request.Body<const Config>()->Brightness.Value();
-                    if (_controller->SetFPBrightness(indicator, brightness)) {
+                    if (_controller.SetFPBrightness(indicator, brightness)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Brightness.");
                     } else {
@@ -172,7 +165,7 @@ namespace Plugin {
                 } else if (index.Current() == _T("Color") && (request.HasBody())) {
                     uint32_t indicator = request.Body<const Config>()->Indicator.Value();
                     uint32_t color = request.Body<const Config>()->Color.Value();
-                    if (_controller->SetFPColor(indicator, color)) {
+                    if (_controller.SetFPColor(indicator, color)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Color.");
                     } else {
@@ -182,7 +175,7 @@ namespace Plugin {
                 } else if (index.Current() == _T("TextBrightness") && (request.HasBody())) {
                     uint32_t textDisplay = request.Body<const Config>()->TextDisplay.Value();
                     uint32_t brightness = request.Body<const Config>()->Brightness.Value();
-                    if (_controller->SetFPTextBrightness(textDisplay, brightness)) {
+                    if (_controller.SetFPTextBrightness(textDisplay, brightness)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Text Brightness.");
                     } else {
@@ -191,7 +184,7 @@ namespace Plugin {
                     }
                 } else if (index.Current() == _T("TimeFormat") && (request.HasBody())) {
                     uint32_t timeFormat = request.Body<const Config>()->TimeFormat.Value();
-                    if (_controller->SetFPTimeFormat(timeFormat)) {
+                    if (_controller.SetFPTimeFormat(timeFormat)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Time Format.");
                     } else {
@@ -202,7 +195,7 @@ namespace Plugin {
                     uint32_t indicator = request.Body<const Config>()->Indicator.Value();
                     uint32_t blinkDuration = request.Body<const Config>()->BlinkDuration.Value();
                     uint32_t blinkIterations = request.Body<const Config>()->BlinkIterations.Value();
-                    if (_controller->SetFPBlink(indicator, blinkDuration, blinkIterations)) {
+                    if (_controller.SetFPBlink(indicator, blinkDuration, blinkIterations)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Blink.");
                     } else {
@@ -213,7 +206,7 @@ namespace Plugin {
                     uint32_t timeFormat = request.Body<const Config>()->TimeFormat.Value();
                     uint32_t hour = request.Body<const Config>()->Hour.Value();
                     uint32_t minutes = request.Body<const Config>()->Minutes.Value();
-                    if (_controller->SetFPTime(timeFormat, hour, minutes)) {
+                    if (_controller.SetFPTime(timeFormat, hour, minutes)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Time.");
                     } else {
@@ -222,7 +215,7 @@ namespace Plugin {
                     }
                 } else if (index.Current() == _T("Text") && (request.HasBody())) {
                     std::string text = request.Body<const Config>()->Text.Value();
-                    if (_controller->SetFPText(text)) {
+                    if (_controller.SetFPText(text)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Text.");
                     } else {
@@ -231,7 +224,7 @@ namespace Plugin {
                     }
                  } else if (index.Current() == _T("ClockDisplay") && (request.HasBody())) {
                     uint32_t enable = request.Body<const Config>()->Enable.Value();
-                    if (_controller->FPEnableClockDisplay(enable)) {
+                    if (_controller.FPEnableClockDisplay(enable)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Enable Front Panel Clock Display.");
                     } else {
@@ -242,7 +235,7 @@ namespace Plugin {
                     uint32_t scrollHoldOnDur = request.Body<const Config>()->ScrollHoldOnDur.Value();
                     uint32_t horzScrollIterations = request.Body<const Config>()->HorzScrollIterations.Value();
                     uint32_t vertScrollIterations = request.Body<const Config>()->VertScrollIterations.Value();
-                    if (_controller->SetFPScroll(scrollHoldOnDur, horzScrollIterations, vertScrollIterations)) {
+                    if (_controller.SetFPScroll(scrollHoldOnDur, horzScrollIterations, vertScrollIterations)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Scroll.");
                     } else {
@@ -253,7 +246,7 @@ namespace Plugin {
                     uint32_t indicator = request.Body<const Config>()->Indicator.Value();
                     uint32_t brightness = request.Body<const Config>()->Brightness.Value();
                     bool toPersist = request.Body<const Config>()->ToPersist.Value();
-                    if (_controller->SetFPDBrightness(indicator, brightness, toPersist)) {
+                    if (_controller.SetFPDBrightness(indicator, brightness, toPersist)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Display Brightness.");
                     } else {
@@ -264,7 +257,7 @@ namespace Plugin {
                     uint32_t indicator = request.Body<const Config>()->Indicator.Value();
                     uint32_t color = request.Body<const Config>()->Color.Value();
                     bool toPersist = request.Body<const Config>()->ToPersist.Value();
-                    if (_controller->SetFPDColor(indicator, color, toPersist)) {
+                    if (_controller.SetFPDColor(indicator, color, toPersist)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Set Front Panel Display Color.");
                     } else {
