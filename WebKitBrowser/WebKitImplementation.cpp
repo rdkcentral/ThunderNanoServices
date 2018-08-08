@@ -334,6 +334,8 @@ static GSourceFuncs _handlerIntervention =
                 , Automation(false)
                 , WebGLEnabled(true)
                 , ThreadedPainting()
+                , Width(1280)
+                , Height(720)
             {
                 Add(_T("useragent"), &UserAgent);
                 Add(_T("url"), &URL);
@@ -365,6 +367,8 @@ static GSourceFuncs _handlerIntervention =
                 Add(_T("automation"), &Automation);
                 Add(_T("webgl"), &WebGLEnabled);
                 Add(_T("threadedpainting"), &ThreadedPainting);
+                Add(_T("width"), &Width);
+                Add(_T("height"), &Height);
             }
             ~Config()
             {
@@ -401,6 +405,8 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::Boolean Automation;
             Core::JSON::Boolean WebGLEnabled;
             Core::JSON::String ThreadedPainting;
+            Core::JSON::DecUInt16 Width;
+            Core::JSON::DecUInt16 Height;
         };
 
     private:
@@ -774,6 +780,11 @@ static GSourceFuncs _handlerIntervention =
             if (_config.ThreadedPainting.Value().empty() == false) {
                 Core::SystemInfo::SetEnvironment(_T("WEBKIT_NICOSIA_PAINTING_THREADS"), _config.ThreadedPainting.Value(), !environmentOverride);
             }
+
+            string width(Core::NumberType<uint16_t>(_config.Width.Value()).Text());
+            string height(Core::NumberType<uint16_t>(_config.Height.Value()).Text());
+            Core::SystemInfo::SetEnvironment(_T("WEBKIT_RESOLUTION_WIDTH"), width, !environmentOverride);
+            Core::SystemInfo::SetEnvironment(_T("WEBKIT_RESOLUTION_HEIGHT"), height, !environmentOverride);
 
             // Oke, so we are good to go.. Release....
             Core::Thread::Run();
