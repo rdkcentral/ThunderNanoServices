@@ -27,7 +27,9 @@ namespace Broadcom {
         { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p24Hz, NEXUS_VideoFormat_e1080p24hz },
         { Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz, NEXUS_VideoFormat_e1080i50hz },
         { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p50Hz, NEXUS_VideoFormat_e1080p50hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p60Hz, NEXUS_VideoFormat_e1080p60hz }
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p60Hz, NEXUS_VideoFormat_e1080p60hz },
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p50Hz, NEXUS_VideoFormat_e4096x2160p50hz },
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz, NEXUS_VideoFormat_e4096x2160p60hz }
     };
 
     /* virtual */ string Platform::Client::Name() const
@@ -149,7 +151,7 @@ namespace Broadcom {
             Add(_T("boxmode"), &BoxMode);
             Add(_T("sagepath"), &SagePath);
             Add(_T("svp"), &SVPType);
-            Add(_T("Resolution"), &Resolution);
+            Add(_T("resolution"), &Resolution);
             Add(_T("memory"), &Memory);
         }
         ~Config()
