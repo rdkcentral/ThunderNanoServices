@@ -10,6 +10,9 @@ set(MODULE_NAME WPEFramework${PLUGIN_NAME})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y")
 set(WPEFRAMEWORK_PLUGIN_TVCONTROL_DVB false CACHE STRING "Set dvb dbs")
 
+option(WPEFRAMEWORK_PLUGIN_TVCONTROL_AUTOSTART "Controls if the plugin should start while starting the framework. [true, false]." true)
+option(WPEFRAMEWORK_PLUGIN_TVCONTROL_OUTOFPROCESS "Controls if the plugin should run in its own process. [true, false]." true)
+
 include(setup_target_properties_library)
 include(show_target_properties)
 

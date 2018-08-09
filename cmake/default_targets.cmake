@@ -97,6 +97,10 @@ macro(write_config)
                 map_append(${plugin_config} autostart ${autostart})
             endif()
 
+            if (NOT ${outofprocess} STREQUAL "")
+                map_append(${plugin_config} outofprocess ${outofprocess})
+            endif()
+
             if (NOT ${configuration} STREQUAL "")
                 map_append(${plugin_config} configuration ${configuration})
             endif()
