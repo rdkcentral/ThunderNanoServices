@@ -167,8 +167,8 @@ namespace Plugin {
         void Clients(Core::JSON::ArrayType<Core::JSON::String>& clients) const;
         void Kill(const string& client) const;
         void Opacity(const string& client, const uint32_t value) const;
-        void SetResolution(const Exchange::IComposition::ScreenResolution) const;
-        const Exchange::IComposition::ScreenResolution GetResolution() const;
+        void Resolution(const Exchange::IComposition::ScreenResolution);
+        Exchange::IComposition::ScreenResolution Resolution() const;
         void Visible(const string& client, const bool visible) const;
         void Geometry(const string& client, const uint32_t x, const uint32_t y, const uint32_t width, const uint32_t height) const;
         void Top(const string& client) const;

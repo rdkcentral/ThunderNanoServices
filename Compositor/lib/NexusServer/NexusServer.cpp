@@ -18,6 +18,17 @@ BDBG_MODULE(NexusServer);
 
 namespace WPEFramework {
 namespace Broadcom {
+    static const std::map<const Exchange::IComposition::ScreenResolution, const NEXUS_VideoFormat > formatLookup = {
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown, NEXUS_VideoFormat_eUnknown },
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_480i, NEXUS_VideoFormat_eNtsc },
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_480p, NEXUS_VideoFormat_e480p },
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_720p, NEXUS_VideoFormat_e720p },
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_720p50Hz, NEXUS_VideoFormat_e720p50hz },
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p24Hz, NEXUS_VideoFormat_e1080p24hz },
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz, NEXUS_VideoFormat_e1080i50hz },
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p50Hz, NEXUS_VideoFormat_e1080p50hz },
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p60Hz, NEXUS_VideoFormat_e1080p60hz }
+    };
 
     /* virtual */ string Platform::Client::Name() const
     {
@@ -131,12 +142,14 @@ namespace Broadcom {
             , BoxMode(~0)
             , SagePath()
             , SVPType(NONE)
+            , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
             , Memory() {
             Add(_T("irmode"), &IRMode);
             Add(_T("authentication"), &Authentication);
             Add(_T("boxmode"), &BoxMode);
             Add(_T("sagepath"), &SagePath);
             Add(_T("svp"), &SVPType);
+            Add(_T("Resolution"), &Resolution);
             Add(_T("memory"), &Memory);
         }
         ~Config()
@@ -149,6 +162,7 @@ namespace Broadcom {
         Core::JSON::DecUInt8 BoxMode;
         Core::JSON::String SagePath;
         Core::JSON::EnumType<svptype> SVPType;
+        Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
         MemoryInfo Memory;
     };
 
@@ -336,6 +350,15 @@ namespace Broadcom {
                 }
             }
 
+            if (config.Resolution.IsSet() == true) {
+                const auto index(formatLookup.find(config.Resolution.Value()));
+
+                if ( (index != formatLookup.cend()) && 
+                     (index->second != NEXUS_VideoFormat_eUnknown) ) {
+                     _serverSettings.display.format = index->second; 
+                }
+            }
+
             if (config.SVPType.IsSet() == true) {
                 _serverSettings.svp = static_cast<nxserverlib_svp_type>(config.SVPType.Value());
             }
@@ -416,7 +439,47 @@ namespace Broadcom {
 
         ASSERT(_state != FAILURE);
     }
+    uint32_t Platform::Resolution(const Exchange::IComposition::ScreenResolution format)
+    {
+        uint32_t result = Core::ERROR_UNKNOWN_KEY_PASSED;
+        NxClient_DisplaySettings displaySettings;
 
+        NxClient_GetDisplaySettings(&displaySettings);
+
+        const auto index(formatLookup.find(format));
+
+        if ( (index != formatLookup.cend()) && 
+             (index->second != NEXUS_VideoFormat_eUnknown) ) {
+
+            result = Core::ERROR_NONE;
+
+            if (index->second != displaySettings.format) {
+
+                displaySettings.format = index->second;
+                if (NxClient_SetDisplaySettings(&displaySettings) != 0) {
+                    result = Core::ERROR_GENERAL;
+                }
+            }
+        }
+        return (result);
+    }
+    Exchange::IComposition::ScreenResolution Platform::Resolution() const
+    {
+        Exchange::IComposition::ScreenResolution result (Exchange::IComposition::ScreenResolution_Unknown);
+        NxClient_DisplaySettings displaySettings;
+
+        NxClient_GetDisplaySettings(&displaySettings);
+        NEXUS_VideoFormat format = displaySettings.format;
+        const auto index = std::find_if(formatLookup.cbegin(), formatLookup.cend(),
+                      [format](const std::pair<const Exchange::IComposition::ScreenResolution, const NEXUS_VideoFormat>& entry)
+                      { return entry.second == format; });
+
+        if (index != formatLookup.cend()) {
+            result = index->first;
+        }
+        return (result);
+    }
+ 
     // -------------------------------------------------------------------------------------------------------
     //   private methods
     // -------------------------------------------------------------------------------------------------------

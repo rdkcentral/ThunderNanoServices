@@ -133,7 +133,7 @@ namespace Plugin {
             // http://<ip>/Service/Compositor/Resolution
             else if (index.Current() == "Resolution") {
                 Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
-                response->Resolution = GetResolution();
+                response->Resolution = Resolution();
                 result->Body(Core::proxy_cast<Web::IBody>(response));
             }
 
@@ -159,7 +159,7 @@ namespace Plugin {
                             }
                         }
                         if (format != Exchange::IComposition::ScreenResolution_Unknown) {
-                            SetResolution(format);
+                            Resolution(format);
                         }
                         else {
                             result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -318,21 +318,21 @@ namespace Plugin {
         }
     }
 
-    void Compositor::SetResolution(const Exchange::IComposition::ScreenResolution format) const
+    void Compositor::Resolution(const Exchange::IComposition::ScreenResolution format)
     {
         ASSERT(_composition != nullptr);
 
         if (_composition != nullptr) {
-            _composition->SetResolution(format);
+            _composition->Resolution(format);
         }
     }
 
-    const Exchange::IComposition::ScreenResolution  Compositor::GetResolution() const
+    Exchange::IComposition::ScreenResolution  Compositor::Resolution() const
     {
         ASSERT(_composition != nullptr);
 
         if (_composition != nullptr) {
-            return (_composition->GetResolution());
+            return (_composition->Resolution());
         }
         return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
     }
