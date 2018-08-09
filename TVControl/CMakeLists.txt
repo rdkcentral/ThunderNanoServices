@@ -137,31 +137,7 @@ install(
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins
     COMPONENT ${MODULE_NAME})
 
-# default configutation
-map()
-#  kv(callsign Tuner)
-    kv(locator lib${MODULE_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
-    kv(classname ${PLUGIN_NAME})
-    kv(autostart true)
-    kv(outofprocess true)
-    key(configuration)
-    map()
-        kv(dvb ${WPEFRAMEWORK_PLUGIN_TVCONTROL_DVB})
-        kv(idletime 30)
-        kv(homets 0)
-        kv(frequencylist ${WPEFRAMEWORK_PLUGINS_TVCONTROL_FREQUENCY_LIST})
-        kv(tuneparameters ${WPEFRAMEWORK_PLUGINS_TVCONTROL_TUNE_PARAM})
-        kv(countrycode ${WPEFRAMEWORK_PLUGINS_TVCONTROL_COUNTRY_CODE})
-        kv(countryregionid ${WPEFRAMEWORK_PLUGINS_TVCONTROL_COUNTRY_REGION_ID})
-    end()
-end()
-ans(PLUGIN_TVCONTROL_CONFIG)
-
-json_write("${CMAKE_CURRENT_LIST_DIR}/${PLUGIN_NAME}.json" ${PLUGIN_TVCONTROL_CONFIG})
-install(
-    FILES ${PLUGIN_NAME}.json
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/../etc/WPEFramework/plugins/
-    COMPONENT ${MODULE_NAME})
+write_config( ${PLUGIN_NAME} )
 
 add_subdirectory(TVPlatform)
 add_subdirectory(test)
