@@ -104,6 +104,8 @@ namespace Broadcom {
         inline server_state State() const {
             return _state;
         }
+        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format);
+        Exchange::IComposition::ScreenResolution Resolution() const;
 
     private:
         void Add(nxclient_t client, const NxClient_JoinSettings* joinSettings);

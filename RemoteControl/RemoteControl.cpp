@@ -117,9 +117,9 @@ namespace Plugin {
 #endif
     RemoteControl::RemoteControl()
         : _skipURL(0)
+        , _virtualDevices()
         , _inputHandler(PluginHost::InputHandler::KeyHandler())
         , _persistentPath()
-        , _virtualDevices()
     {
         ASSERT(_inputHandler != nullptr);
     }

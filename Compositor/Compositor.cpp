@@ -13,6 +13,8 @@ ENUM_CONVERSION_BEGIN(Exchange::IComposition::ScreenResolution)
     { Exchange::IComposition::ScreenResolution_1080i50Hz, _TXT("1080i50Hz") },
     { Exchange::IComposition::ScreenResolution_1080p50Hz, _TXT("1080p50Hz") },
     { Exchange::IComposition::ScreenResolution_1080p60Hz, _TXT("1080p60Hz") },
+    { Exchange::IComposition::ScreenResolution_2160p50Hz, _TXT("2160p50Hz") },
+    { Exchange::IComposition::ScreenResolution_2160p60Hz, _TXT("2160p60Hz") },
 
 ENUM_CONVERSION_END(Exchange::IComposition::ScreenResolution)
 
@@ -58,30 +60,8 @@ namespace Plugin {
             TRACE(Trace::Information, (_T("XDG_RUNTIME_DIR is set to %s "), runTimeDir));
         }
 
-        if (config.OutOfProcess.Value() == true) {
-            _composition = service->Instantiate<Exchange::IComposition>(
-                2000, _T("CompositorImplementation"), static_cast<uint32_t>(~0), _pid, config.Locator.Value());
-            TRACE(Trace::Information,
-                (_T("Compositor started out of process %s implementation"), config.Locator.Value().c_str()));
-        }
-        else {
-            Core::Library resource(config.Locator.Value().c_str());
-            if (!resource.IsLoaded())
-            {
-                string path = service->DataPath() + config.Locator.Value();
-                resource = Core::Library(path.c_str());
-            }
-            if (resource.IsLoaded() == true) {
-                _composition = Core::ServiceAdministrator::Instance().Instantiate<Exchange::IComposition>(
-                    resource, _T("CompositorImplementation"), static_cast<uint32_t>(~0));
-                TRACE(Trace::Information,
-                    (_T("Compositor started in process %s implementation"), config.Locator.Value().c_str()));
-            }
-            else {
-                message = _T("Could not load the PlatformPlugin library [") + config.Locator.Value() + _T("]");
-            }
-        }
-
+        _composition = service->Root<Exchange::IComposition>(_pid, 2000, _T("CompositorImplementation"));
+        
         if (_composition == nullptr) {
             message = "Instantiating the compositor failed. Could not load: " + config.Locator.Value();
         }
@@ -155,7 +135,7 @@ namespace Plugin {
             // http://<ip>/Service/Compositor/Resolution
             else if (index.Current() == "Resolution") {
                 Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
-                response->Resolution = GetResolution();
+                response->Resolution = Resolution();
                 result->Body(Core::proxy_cast<Web::IBody>(response));
             }
 
@@ -181,7 +161,7 @@ namespace Plugin {
                             }
                         }
                         if (format != Exchange::IComposition::ScreenResolution_Unknown) {
-                            SetResolution(format);
+                            Resolution(format);
                         }
                         else {
                             result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -340,21 +320,21 @@ namespace Plugin {
         }
     }
 
-    void Compositor::SetResolution(const Exchange::IComposition::ScreenResolution format) const
+    void Compositor::Resolution(const Exchange::IComposition::ScreenResolution format)
     {
         ASSERT(_composition != nullptr);
 
         if (_composition != nullptr) {
-            _composition->SetResolution(format);
+            _composition->Resolution(format);
         }
     }
 
-    const Exchange::IComposition::ScreenResolution  Compositor::GetResolution() const
+    Exchange::IComposition::ScreenResolution  Compositor::Resolution() const
     {
         ASSERT(_composition != nullptr);
 
         if (_composition != nullptr) {
-            return (_composition->GetResolution());
+            return (_composition->Resolution());
         }
         return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
     }
