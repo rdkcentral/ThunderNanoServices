@@ -84,8 +84,17 @@ void ITuner::Deinitialize(PluginHost::IShell* service)
 void ITuner::StartScan(TVPlatform::ITVPlatform::ITunerHandler& tunerHandler)
 {
     TvmRc rc = TvmError;
-    if (!_tvPlatform->IsScanning())
-        rc = _tvPlatform->Scan(_frequencyList, tunerHandler);
+    if (!_tvPlatform->IsScanning()) {
+        std::vector<uint32_t> nitFrequencyList;
+        _epgDB.GetFrequencyListFromNit(nitFrequencyList);   // XXX: handle duplicate frequency
+        TRACE_L1("%s: Scanning NIT Frequencies (%d)", __FUNCTION__, nitFrequencyList.size());
+
+        if (nitFrequencyList.size()) {
+            rc = _tvPlatform->Scan(nitFrequencyList, tunerHandler);
+        } else {
+            TRACE(Trace::Error, (_T("%s: %s:%d FREQUENCY_LIST is Empty"), __FUNCTION__, __FILE__, __LINE__));
+        }
+    }
 }
 
 void ITuner::StopScan()
@@ -165,9 +174,10 @@ bool ITuner::StoreTSInfoInDB()
     memset(&tsInfoList, 0, sizeof(TSInfoList));
     bool ret = false;
     TRACE(Trace::Information, (_T("TS Information\n")));
-    if ((_tvPlatform->GetTSInfo(tsInfoList) == TvmSuccess) && tsInfoList.size() && _epgDB.InsertTSInfo(tsInfoList))
+    if ((_tvPlatform->GetTSInfo(tsInfoList) == TvmSuccess) && tsInfoList.size() && _epgDB.InsertTSInfo(tsInfoList)) {
         ret = true;
-    TRACE(Trace::Information, (_T("Failed to store TS Information\n")));
+    } else
+        TRACE(Trace::Information, (_T("Failed to store TS Information\n")));
     return ret;
 }
 }

@@ -1,3 +1,4 @@
+//#define _TRACE_LEVEL 5
 #include "Module.h"
 #include "EPGData.h"
 
@@ -57,7 +58,7 @@ bool EPGDataBase::OpenDB()
     if (!sqlite3_open(":memory:", &_dataBase)) {
         TRACE(Trace::Information, (_T("Open Success")));
         return true;
-    } 
+    }
     TRACE(Trace::Error, (_T("Open Failed")));
     return false;
 }
@@ -108,7 +109,7 @@ bool EPGDataBase::ExecuteSQLQuery(char const* sqlQuery)
         sqlite3_free(_errMsg);
         status = false;
     } else
-        TRACE(Trace::Information, (_T("Sql query executed successfully")));
+        TRACE_L4("Sql query executed successfully", NULL);
 
     DBUnlock();
     return status;
@@ -178,11 +179,11 @@ bool EPGDataBase::DBLock()
     f1.l_pid = getpid(); // our PID.
     ret = fcntl(_fd, F_SETLKW, &f1);  // Set the lock, waiting if necessary.
     if (!ret) {
-        TRACE(Trace::Information, (_T("DB LOCKED")));
+        TRACE_L4("DB LOCKED", NULL);
         return true;
     }
 
-    TRACE(Trace::Information, (_T("DB ALREADY LOCKED")));
+    TRACE_L4("DB ALREADY LOCKED", NULL);
     return false;
 }
 
@@ -197,10 +198,10 @@ bool EPGDataBase::DBUnlock()
     f1.l_pid = getpid(); // our PID.
     ret = fcntl(_fd, F_SETLK, &f1); // set the region to unlocked.
     if (!ret) {
-        TRACE(Trace::Information, (_T("DB UNLOCKED")));
+        TRACE_L4("DB UNLOCKED", NULL);
         return true;
     }
-    TRACE(Trace::Information, (_T("DB ALREADY UNLOCKED")));
+    TRACE_L4("DB ALREADY UNLOCKED", NULL);
     return false;
 }
 

@@ -2,7 +2,6 @@
 #include "ParserDVB.h"
 
 using namespace WPEFramework;
-
 #define READ_16(buf1, buf0) ((uint16_t)(buf1 << 8 | buf0))
 #define READ_32(buf3, buf2, buf1, buf0) ((uint32_t)((buf3 << 24) | (buf2 << 16) | (buf1 << 8) | buf0))
 #define      GETBITS(Source, MSBit, LSBit)   ( \
@@ -227,7 +226,7 @@ void ParserDVB::ParseData(uint8_t* siData, uint32_t frequency)
     }
 
     uint8_t tableId = siData[0];
-    TRACE(Trace::Information, (_T("Table type =  %02X"), tableId));
+    TRACE_L4(_T("Table type =  %02X"), tableId);
     uint16_t sectionLength;
     uint16_t tableIdExt;
     uint8_t versionNo;
@@ -301,10 +300,10 @@ void ParserDVB::ParseData(uint8_t* siData, uint32_t frequency)
     }
 
     default:
-        TRACE(Trace::Information, (_T("SI Table type unknown")));
+        TRACE_L4("SI Table type unknown", NULL);
         break;
     }
-}    
+}
 
 void ParserDVB::SendBaseTableRequest()
 {
@@ -617,7 +616,6 @@ void ParserDVB::ParsePMT(uint8_t* buf, uint16_t sectionLength, uint16_t programN
 void ParserDVB::ParseNIT(uint8_t* buf, uint16_t sectionLength, uint16_t networkId, uint8_t versionNo, uint8_t sectionNo)
 {
     uint16_t descriptorsLoopLen = READ_16(GETBITS(buf[0], 3, 0), buf[1]);
-
     if (sectionLength < descriptorsLoopLen) {
         TRACE(Trace::Error, (_T("section too short: networkId == 0x%04x, sectionLength == %i, "
             "descriptorsLoopLen == %i"),
@@ -741,12 +739,14 @@ void ParserDVB::ParseSDT(uint8_t* buf, uint16_t sectionLength, uint16_t transpor
     auto it = _sdtHeaderMap.find(key);
     if (it != _sdtHeaderMap.end()) {
         if (sdtHeader->Version() == it->second->Version()) {
-            if (sdtHeader->SectionNumber() == it->second->SectionNumber())
+            if (sdtHeader->SectionNumber() == it->second->SectionNumber()) {
                 return; // Skip.
+            }
         }
         it->second = sdtHeader;
     } else
         _sdtHeaderMap.insert(std::make_pair(key, sdtHeader));
+
     while (sectionLength >= SDT_LOOP_LEN) {
         uint16_t serviceId = READ_16(buf[0], buf[1]);
         _channel.serviceId = serviceId;
@@ -948,15 +948,15 @@ uint32_t ParserDVB::Worker()
         ConfigureParser();
     }
     while (IsRunning() == true) {
-        TRACE(Trace::Information, (_T("Parser running = %d \n"), IsRunning()));
+        TRACE_L4(_T("Parser running = %d \n"), IsRunning());
         std::pair<uint8_t*, uint16_t>  dataElement;
         dataElement = DataQueue::GetInstance().Pop();
-        TRACE(Trace::Information, (_T("Worker data obtained")));
+        TRACE_L4("Worker data obtained", NULL);
         if (std::get<0>(dataElement)) {
-            TRACE(Trace::Information, (_T("DBS DVB")));
+            //TRACE(Trace::Information, (_T("DBS DVB")));
             uint32_t frequency = 0;
             memcpy(&frequency, std::get<0>(dataElement), sizeof(uint32_t));
-            TRACE(Trace::Information, (_T("Frequency = %u\n"), frequency));
+            TRACE_L4(_T("Frequency = %u\n"), frequency);
             ParseData(std::get<0>(dataElement) + DATA_OFFSET, frequency);
             free(std::get<0>(dataElement));
         }
