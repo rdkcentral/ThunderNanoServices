@@ -35,7 +35,7 @@ namespace Plugin {
     static void didStartProvisionalNavigation(WKPageRef page, WKNavigationRef navigation, WKTypeRef userData, const void* clientInfo);
     static void didFinishDocumentLoad(WKPageRef page, WKNavigationRef navigation, WKTypeRef userData, const void* clientInfo);
     static void onFrameDisplayed(WKViewRef view, const void* clientInfo);
-    //static void didSameDocumentNavigation(const OpaqueWKPage* page, const OpaqueWKNavigation* nav, unsigned int count, const void* clientInfo, const void* info);
+    static void didSameDocumentNavigation(const OpaqueWKPage* page, const OpaqueWKNavigation* nav, unsigned int count, const void* clientInfo, const void* info);
     static void requestClosure(const void* clientInfo);
     static void didRequestAutomationSession(WKContextRef context, WKStringRef sessionID, const void* clientInfo);
     static WKPageRef onAutomationSessionRequestNewPage(WKWebAutomationSessionRef session, const void* clientInfo);
@@ -62,7 +62,7 @@ namespace Plugin {
         nullptr, // didFailNavigation
         nullptr, // didFailProvisionalLoadInSubframe
         didFinishDocumentLoad,
-        nullptr, // didSameDocumentNavigation
+        didSameDocumentNavigation, // didSameDocumentNavigation
         nullptr, // renderingProgressDidChange
         nullptr, // canAuthenticateAgainstProtectionSpace
         nullptr, // didReceiveAuthenticationChallenge
@@ -1153,8 +1153,8 @@ static GSourceFuncs _handlerIntervention =
         WKRelease(urlStringRef);
     }
 
-    /* static void didSameDocumentNavigation(const OpaqueWKPage* page, const OpaqueWKNavigation* nav, WKSameDocumentNavigationType type, const void* clientInfo, const void* info) {
-
+    /* static */ void didSameDocumentNavigation(const OpaqueWKPage* page, const OpaqueWKNavigation* nav, WKSameDocumentNavigationType type, const void* clientInfo, const void* info)
+    {
         if (type == kWKSameDocumentNavigationAnchorNavigation) {
             WebKitImplementation* browser = const_cast<WebKitImplementation*>(static_cast<const WebKitImplementation*>(info));
 
@@ -1163,12 +1163,12 @@ static GSourceFuncs _handlerIntervention =
 
             string url = WebKit::Utils::WKStringToString(urlStringRef);
 
-            printf("didSameDocumentNavigation %s %d \n", url.c_str(), type);
             browser->OnURLChanged(url);
+
             WKRelease(urlRef);
             WKRelease(urlStringRef);
         }
-    } */
+    }
 
     /* static */ void didFinishDocumentLoad(WKPageRef page, WKNavigationRef navigation, WKTypeRef userData, const void* clientInfo)
     {
