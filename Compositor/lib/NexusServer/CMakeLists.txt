@@ -12,28 +12,39 @@ option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (N
 option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_GRAPHICS_HEAP_SIZE "Change graphic heap of driver (Nexus only).")
 option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_INSTALL_NEXUS_SERVER "Enable to install the server to staging." OFF)
 option(WPEFRAMEWORK_NEXUS_SERVER_HAS_EXTENDED_INIT "Enable to support unauthenticated nxclients." ON)
+option(WPEFRAMEWORK_NEXUS_SERVER_EXTERNAL "Enable hooking up to an eternally running NxServer instead of running one." OFF)
 
 message("Setup WPEFramework${TARGET} v${VERSION}...")
 
 find_package(Nexus REQUIRED)
-find_package(NXServer REQUIRED)
 find_package(Core REQUIRED)
 
 add_library(${TARGET} STATIC
         NexusServer.cpp
         )
 
-set(PUBLIC_HEADERS
-        NexusServer.h
-        )
 
-target_link_libraries(${TARGET}
+if (WPEFRAMEWORK_NEXUS_SERVER_EXTERNAL)
+    target_link_libraries(${TARGET}
+        PRIVATE
+            WPEFramework::Core
+        PUBLIC
+            NEXUS::NXCLIENT
+        )
+else()
+    find_package(NXServer REQUIRED)
+    target_link_libraries(${TARGET}
         PRIVATE
             WPEFramework::Core
             NEXUS::NEXUS
             NEXUS::NXSERVER
         PUBLIC
             NEXUS::NXCLIENT_LOCAL
+        )
+endif()
+
+set(PUBLIC_HEADERS
+        NexusServer.h
         )
 
 target_compile_definitions(${TARGET}
@@ -45,6 +56,13 @@ if (WPEFRAMEWORK_NEXUS_SERVER_HAS_EXTENDED_INIT)
 target_compile_definitions(${TARGET}
         PRIVATE
             NEXUS_SERVER_HAS_EXTENDED_INIT
+        )
+endif()
+
+if (WPEFRAMEWORK_NEXUS_SERVER_EXTERNAL)
+target_compile_definitions(${TARGET}
+        PRIVATE
+            NEXUS_SERVER_EXTERNAL
         )
 endif()
 

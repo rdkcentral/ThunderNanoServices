@@ -1,16 +1,8 @@
-#include <stdio.h>
-#include <string.h>
 #include "Module.h"
 
-#include <interfaces/IComposition.h>
-
-#ifdef  USE_WPEFRAMEWORK_NXSERVER
 #include <NexusServer.h>
-#else
-#include <nexus_config.h>
-#include <nexus_video_types.h>
-#include <nxclient.h>
-#endif
+
+#include <interfaces/IComposition.h>
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -46,10 +38,8 @@ namespace Plugin {
         };
 
         class Sink
-#ifdef USE_WPEFRAMEWORK_NXSERVER
             : public Broadcom::Platform::IClient
             , public Broadcom::Platform::IStateChange
-#endif
         {
         private:
             Sink() = delete;
@@ -94,14 +84,6 @@ namespace Plugin {
                 , _delay(nullptr)
             {
                 ASSERT(parent != nullptr);
-#ifndef USE_WPEFRAMEWORK_NXSERVER
-                if (_delay != nullptr) {
-                    _delay->Run();
-                }
-                else {
-                    _parent.PlatformReady();
-                }
-#endif
             }
             ~Sink()
             {
@@ -117,7 +99,6 @@ namespace Plugin {
                     _delay = new Postpone(*this, time);
                 }
             }
-#ifdef USE_WPEFRAMEWORK_NXSERVER
             // -------------------------------------------------------------------------------------------------------
             //   Broadcom::Platform::ICallback methods
             // -------------------------------------------------------------------------------------------------------
@@ -143,7 +124,6 @@ namespace Plugin {
                     }
                 }
             }
-#endif
 
         private:
             inline void PlatformReady() {
@@ -162,24 +142,18 @@ namespace Plugin {
             , _observers()
             , _clients()
             , _sink(this)
-#ifdef USE_WPEFRAMEWORK_NXSERVER
             , _nxserver(nullptr)
-#endif
         {
         }
 
         ~CompositorImplementation()
         {
-           
-#ifdef USE_WPEFRAMEWORK_NXSERVER
             if (_nxserver != nullptr) {
                 delete _nxserver;
             }
-#endif
             if (_service != nullptr) {
                 _service->Release();
             }
-
         }
 
     public:
@@ -197,25 +171,17 @@ namespace Plugin {
 
             _service = service;
             _service->AddRef();
-#ifdef USE_WPEFRAMEWORK_NXSERVER
+
             ASSERT(_nxserver == nullptr);
 
-            if (_nxserver != nullptr) {
-                delete _nxserver;
-            }
-#endif
             Config info; info.FromString(configuration);
 
             _sink.HardwareDelay(info.HardwareDelay.Value());
-            NxClient_GetDefaultJoinSettings(&_joinSettings);
 
-            strcpy(_joinSettings.name, service->Callsign().c_str());
-
-#ifdef USE_WPEFRAMEWORK_NXSERVER
-            _nxserver = new Broadcom::Platform(&_sink, &_sink, configuration);
+            _nxserver = new Broadcom::Platform(service->Callsign(), &_sink, &_sink, configuration);
 
             ASSERT(_nxserver != nullptr);
-#endif
+
             return  Core::ERROR_NONE;
         }
 
@@ -346,6 +312,7 @@ namespace Plugin {
                         TRACE(Trace::Information, (_T("Client already registered %s."), name.c_str()));
                     }
                     else {
+                        client->AddRef();
                         _clients.push_back(client);
 
                         TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
@@ -414,11 +381,10 @@ namespace Plugin {
 
                 // Now the platform is ready we should Join it as well, since we 
                 // will do generic (not client related) stuff as well.
-#ifdef INCLUDE_NEXUS_SERVER
-                if (NxClient_Join(&_joinSettings) != NEXUS_SUCCESS) {
+
+                if ((_nxserver != nullptr) && (_nxserver->Join() != true)) {
                     TRACE(Trace::Information, (_T("Could not Join the started NXServer.")));
                 }
-#endif
             }
         }
 
@@ -428,10 +394,7 @@ namespace Plugin {
         std::list<Exchange::IComposition::INotification*> _observers;
         std::list<Exchange::IComposition::IClient*> _clients;
         Sink _sink;
-        NxClient_JoinSettings _joinSettings;
-#ifdef USE_WPEFRAMEWORK_NXSERVER
         Broadcom::Platform* _nxserver;
-#endif
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
