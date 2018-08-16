@@ -211,7 +211,7 @@ private:
     void ParsePAT(uint8_t*, uint16_t);
     void ParsePMT(uint8_t*, uint16_t, uint16_t);
     void ParseNIT(uint8_t*, uint16_t, uint16_t, uint8_t, uint8_t);
-    void ParseSDT(uint8_t*, uint16_t, uint16_t, uint8_t, uint8_t);
+    void ParseSDT(uint8_t*, uint16_t, uint16_t, uint8_t, uint8_t, uint8_t);
     void ParseEIT(uint8_t*, uint16_t, uint16_t, uint8_t, uint8_t);
     void ParseTDT(uint8_t*, uint16_t);
     void ParseTOT(uint8_t*, uint16_t);

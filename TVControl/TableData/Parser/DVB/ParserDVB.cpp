@@ -231,11 +231,13 @@ void ParserDVB::ParseData(uint8_t* siData, uint32_t frequency)
     uint16_t tableIdExt;
     uint8_t versionNo;
     uint8_t sectionNo;
+    uint8_t lastSectionNo;
 
     sectionLength = READ_16(GETBITS(siData[1], 3, 0), siData[2]);
     tableIdExt = READ_16(siData[3], siData[4]);
     versionNo = GETBITS(siData[5], 5, 1);
     sectionNo = siData[6];
+    lastSectionNo = siData[7];
     siData += TABLE_HEADER_LEN;
     sectionLength -= (LAST_SECTION_NUM_OFFSET - TABLE_ID_EXTENSION_OFFSET + 1) + CRC_LEN; // Remaining header length + CRC length.
 
@@ -263,11 +265,11 @@ void ParserDVB::ParseData(uint8_t* siData, uint32_t frequency)
         ParseBAT(siData, sectionLength, tableIdExt, versionNo, sectionNo);
         break;
     }
-    case SERVICE_DESCRIPTION_OTHER_TABLE_ID:
 #endif
+    case SERVICE_DESCRIPTION_OTHER_TABLE_ID:
     case SERVICE_DESCRIPTION_TABLE_ID: {
-        if (GetSIHandler()->IsTSInfoPresent() && !GetSIHandler()->IsScanning())
-            ParseSDT(siData, sectionLength, tableIdExt, versionNo, sectionNo);
+        if (!GetSIHandler()->IsScanning())
+            ParseSDT(siData, sectionLength, tableIdExt, versionNo, sectionNo, lastSectionNo);
         break;
     }
 
@@ -719,7 +721,7 @@ void ParserDVB::ParseBAT(uint8_t* buf, uint16_t sectionLength, uint16_t bouquetI
 }
 #endif
 
-void ParserDVB::ParseSDT(uint8_t* buf, uint16_t sectionLength, uint16_t transportStreamId, uint8_t versionNo, uint8_t sectionNo)
+void ParserDVB::ParseSDT(uint8_t* buf, uint16_t sectionLength, uint16_t transportStreamId, uint8_t versionNo, uint8_t sectionNo, uint8_t lastSectionNo)
 {
     _channel.transportStreamId = transportStreamId;
     uint16_t originalNetworkId = READ_16(buf[0], buf[1]);
@@ -739,19 +741,27 @@ void ParserDVB::ParseSDT(uint8_t* buf, uint16_t sectionLength, uint16_t transpor
     auto it = _sdtHeaderMap.find(key);
     if (it != _sdtHeaderMap.end()) {
         if (sdtHeader->Version() == it->second->Version()) {
-            if (sdtHeader->SectionNumber() == it->second->SectionNumber()) {
-                return; // Skip.
+            if (lastSectionNo == it->second->SectionNumber()) {
+                return;                 // Skip.
             }
         }
         it->second = sdtHeader;
-    } else
+        TRACE_L2("%s: originalNetworkId=%d transportStreamId=%d versionNo=%d sectionNo=%d lastSectionNo=%d",
+            __FUNCTION__, originalNetworkId, transportStreamId, versionNo, sectionNo, lastSectionNo);
+    } else {
+        if ((lastSectionNo) && (sectionNo != 0))
+            return;
+
         _sdtHeaderMap.insert(std::make_pair(key, sdtHeader));
+        TRACE_L2("%s: originalNetworkId=%d transportStreamId=%d versionNo=%d sectionNo=%d lastSectionNo=%d, _sdtHeaderMap.size=%d",
+                __FUNCTION__, originalNetworkId, transportStreamId, versionNo, sectionNo, lastSectionNo, _sdtHeaderMap.size());
+    }
 
     while (sectionLength >= SDT_LOOP_LEN) {
         uint16_t serviceId = READ_16(buf[0], buf[1]);
         _channel.serviceId = serviceId;
-        TRACE(Trace::Information, (_T("transportStreamId = 0x%0x"), transportStreamId));
-        TRACE(Trace::Information, (_T("service_id = 0x%x"), serviceId));
+
+        TRACE_L3("%s: serviceId=%d (x%x)", __FUNCTION__, serviceId, serviceId);
         uint16_t descriptorsLoopLen = READ_16(GETBITS(buf[3], 3, 0), buf[4]);
 
         if (sectionLength < descriptorsLoopLen) {
@@ -776,17 +786,15 @@ void ParserDVB::ParseSDT(uint8_t* buf, uint16_t sectionLength, uint16_t transpor
         uint32_t frequency;
         uint8_t modulation;
         _epgDB.GetFrequencyAndModulationFromNit(originalNetworkId, transportStreamId, frequency, modulation);
-        if (_epgDB.IsServicePresentInTSInfo(_channel.serviceId)) {
-            if (_serviceIdLCNMap.find(_channel.serviceId) == _serviceIdLCNMap.end()) {
-                uint16_t lcn;
-                if (!_epgDB.IsServicePresentInChannelTable(_channel.serviceId, _channel.transportStreamId, lcn))
-                    lcn = _serviceIdLCNMap.size() + 1;
-                _serviceIdLCNMap[_channel.serviceId] = lcn;
-            }
-            _channel.channelNum = _serviceIdLCNMap[_channel.serviceId];
-            _epgDB.InsertChannelInfo(frequency, modulation, _channel.serviceName.c_str(), _channel.serviceId, _channel.transportStreamId
-            , originalNetworkId, std::to_string(_channel.channelNum), _channel.serviceId, "");
+        if (_serviceIdLCNMap.find(_channel.serviceId) == _serviceIdLCNMap.end()) {
+            uint16_t lcn;
+            if (!_epgDB.IsServicePresentInChannelTable(_channel.serviceId, _channel.transportStreamId, lcn))
+                lcn = _serviceIdLCNMap.size() + 1;
+            _serviceIdLCNMap[_channel.serviceId] = lcn;
         }
+        _channel.channelNum = _serviceIdLCNMap[_channel.serviceId];
+        _epgDB.InsertChannelInfo(frequency, modulation, _channel.serviceName.c_str(), _channel.serviceId, _channel.transportStreamId
+        , originalNetworkId, std::to_string(_channel.channelNum), _channel.serviceId, "");
         sectionLength -= descriptorsLoopLen + SDT_LOOP_LEN;
         buf += descriptorsLoopLen + SDT_LOOP_LEN;
     }
@@ -953,7 +961,6 @@ uint32_t ParserDVB::Worker()
         dataElement = DataQueue::GetInstance().Pop();
         TRACE_L4("Worker data obtained", NULL);
         if (std::get<0>(dataElement)) {
-            //TRACE(Trace::Information, (_T("DBS DVB")));
             uint32_t frequency = 0;
             memcpy(&frequency, std::get<0>(dataElement), sizeof(uint32_t));
             TRACE_L4(_T("Frequency = %u\n"), frequency);

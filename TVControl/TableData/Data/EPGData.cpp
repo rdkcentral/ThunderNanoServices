@@ -1,4 +1,3 @@
-//#define _TRACE_LEVEL 5
 #include "Module.h"
 #include "EPGData.h"
 
@@ -238,7 +237,8 @@ bool EPGDataBase::GetFrequencyFromChannelInfo(const string& lcn, uint32_t& frequ
         DBLock();
         uint32_t freq;
         snprintf(sqlQuery, 1024, "SELECT FREQUENCY FROM CHANNEL WHERE LCN=%s;", lcn.c_str());
-        if (sqlite3_prepare(_dataBase, sqlQuery, -1, &_stmt, 0) == SQLITE_OK) {
+        TRACE_L3("QUERY = %s", sqlQuery);
+         if (sqlite3_prepare(_dataBase, sqlQuery, -1, &_stmt, 0) == SQLITE_OK) {
             rc = sqlite3_step(_stmt);
             if ((rc == SQLITE_ROW) || (rc == SQLITE_DONE))
                 freq = (uint32_t)sqlite3_column_int(_stmt, 0);
@@ -264,7 +264,8 @@ bool EPGDataBase::GetFrequencyAndModulationFromNit(uint16_t originalNetworkId, u
         uint32_t freq;
         uint32_t mod;
         snprintf(sqlQuery, 1024, "SELECT * FROM NIT WHERE ORIGINAL_NETWORK_ID=%d AND TRANSPORT_STREAM_ID=%d;", (int)originalNetworkId, (int)transportStreamId);
-        if (sqlite3_prepare(_dataBase, sqlQuery, -1, &_stmt, 0) == SQLITE_OK) {
+        TRACE_L3("QUERY = %s", sqlQuery);
+         if (sqlite3_prepare(_dataBase, sqlQuery, -1, &_stmt, 0) == SQLITE_OK) {
             rc = sqlite3_step(_stmt);
             if ((rc == SQLITE_ROW) || (rc == SQLITE_DONE)) {
                 freq = (uint32_t)sqlite3_column_int(_stmt, 3);
@@ -292,6 +293,7 @@ bool EPGDataBase::GetServiceIdFromChannelInfo(const string& lcn, uint16_t& servi
         DBLock();
         uint16_t svcId;
         snprintf(sqlQuery, 1024, "SELECT PROGRAM_NUMBER FROM CHANNEL WHERE LCN=%s;", lcn.c_str());
+        TRACE_L3("QUERY = %s", sqlQuery);
         if (sqlite3_prepare(_dataBase, sqlQuery, -1, &_stmt, 0) == SQLITE_OK) {
             rc = sqlite3_step(_stmt);
             if ((rc == SQLITE_ROW) || (rc == SQLITE_DONE))
@@ -315,6 +317,7 @@ bool EPGDataBase::InsertChannelInfo(uint32_t frequency, uint32_t modulation, con
         NAME, LANGUAGE) VALUES (\"%s\", %d, %d, %d, %d, %d, %d, \"%s\", \"%s\");", lcn.c_str(), (int)frequency, (int)modulation
         , (int)serviceId, (int)tsId, (int)networkId, (int)programNo, name, language.size() ? language.c_str() : "und");
 
+    TRACE_L3("QUERY = %s", sqlQuery);
     TRACE(Trace::Information, (_T("QUERY = %s"), sqlQuery));
     return ExecuteSQLQuery(sqlQuery);
 }
@@ -336,6 +339,7 @@ bool EPGDataBase::IsTableEmpty(const std::string& table)
     DBLock();
     snprintf(sqlDelete, 1024, "SELECT Count(*) FROM %s;", table.c_str());
     sqlite3_prepare_v2(_dataBase, sqlDelete, -1, &_stmt, nullptr);
+    TRACE_L3("QUERY = %s", sqlDelete);
     if ((sqlite3_step(_stmt) == SQLITE_ROW) && !sqlite3_column_int(_stmt, 0)) {
         TRACE(Trace::Information, (_T("%s table empty"), table.c_str()));
         sqlite3_finalize(_stmt);
@@ -349,10 +353,19 @@ bool EPGDataBase::IsTableEmpty(const std::string& table)
 
 }
 
-bool EPGDataBase::GetFrequencyListFromNit(std::vector<uint32_t>& frequencyList)
+bool EPGDataBase::GetFrequencyListFromNit(std::vector<uint32_t>& frequencyList, uint16_t originalNetworkId)
 {
+    std::stringstream sqlQuery;
+
+    sqlQuery << "SELECT FREQUENCY FROM NIT";
+    if (originalNetworkId) {
+        sqlQuery << " WHERE ORIGINAL_NETWORK_ID == " << originalNetworkId;
+    }
+    sqlQuery << " ORDER BY TRANSPORT_STREAM_ID";
+
     DBLock();
-    sqlite3_prepare_v2(_dataBase, "SELECT FREQUENCY FROM NIT", -1, &_stmt, nullptr);
+    sqlite3_prepare_v2(_dataBase, sqlQuery.str().c_str(), -1, &_stmt, nullptr);
+    TRACE_L2("QUERY = %s", sqlQuery.str().c_str());
     while (sqlite3_step(_stmt) == SQLITE_ROW)
         frequencyList.push_back((uint32_t)sqlite3_column_int(_stmt, 0));
     sqlite3_finalize(_stmt);
@@ -377,7 +390,10 @@ bool EPGDataBase::ReadFrequency(std::vector<uint32_t>& frequencyList)
     bool ret = false;
     DBLock();
     uint32_t frequency;
-    sqlite3_prepare_v2(_dataBase, "SELECT * FROM FREQUENCY;", -1, &_stmt, nullptr);
+    const char *sqlQuery = "SELECT * FROM FREQUENCY";
+
+    TRACE_L3("QUERY = %s", sqlQuery);
+    sqlite3_prepare_v2(_dataBase, sqlQuery, -1, &_stmt, nullptr);
     frequencyList.clear();
     while (sqlite3_step(_stmt) == SQLITE_ROW) {
         frequency = (uint32_t)sqlite3_column_int(_stmt, 0);
@@ -396,8 +412,11 @@ bool EPGDataBase::ReadChannels(WPEFramework::Core::JSON::ArrayType<WPEFramework:
     bool ret = false;
     DBLock();
     std::string table("CHANNEL");
+
     if (!IsTableEmpty(table)) {
-        sqlite3_prepare_v2(_dataBase, "SELECT * FROM CHANNEL;", -1, &_stmt, nullptr);
+        const char *sqlQuery = "SELECT * FROM CHANNEL";
+        TRACE_L3("QUERY = %s", sqlQuery);
+        sqlite3_prepare_v2(_dataBase, sqlQuery, -1, &_stmt, nullptr);
         while (sqlite3_step(_stmt) == SQLITE_ROW) {
             WPEFramework::Channel channel;
             channel.number = reinterpret_cast<const char*>(sqlite3_column_text(_stmt, 0));
@@ -423,7 +442,8 @@ bool EPGDataBase::ReadChannel(const string& channelNum, WPEFramework::Channel& c
     std::string table("CHANNEL");
     if (!IsTableEmpty(table)) {
         DBLock();
-        snprintf(sqlQuery, 1024, "SELECT * FROM CHANNEL WHERE LCN=%s;", channelNum.c_str());
+        snprintf(sqlQuery, 1024, "SELECT * FROM CHANNEL WHERE LCN=%s", channelNum.c_str());
+        TRACE_L3("QUERY = %s", sqlQuery);
         sqlite3_prepare_v2(_dataBase, sqlQuery, -1, &_stmt, nullptr);
         while (sqlite3_step(_stmt) == SQLITE_ROW) {
             channel.number = reinterpret_cast<const char*>(sqlite3_column_text(_stmt, 0));
@@ -448,8 +468,11 @@ bool EPGDataBase::ReadPrograms(WPEFramework::Core::JSON::ArrayType<WPEFramework:
     time_t currTime;
     time(&currTime);
     TRACE(Trace::Information, (_T("current time = %d"), currTime));
+    const char *sqlQuery = "SELECT * FROM PROGRAM";
+    TRACE_L3("QUERY = %s", sqlQuery);
+
     DBLock();
-    sqlite3_prepare_v2(_dataBase, "SELECT * FROM PROGRAM;", -1, &_stmt, nullptr);
+    sqlite3_prepare_v2(_dataBase, sqlQuery, -1, &_stmt, nullptr);
     while (sqlite3_step(_stmt) == SQLITE_ROW) {
         time_t startTime = (time_t)sqlite3_column_int(_stmt, 2);
         if ((startTime < (currTime + EPG_DURATION)) && ((startTime + sqlite3_column_int(_stmt, 3)) > currTime)) {
@@ -480,8 +503,11 @@ bool EPGDataBase::ReadProgram(uint16_t serviceId, WPEFramework::Program& program
         time_t currTime;
         time(&currTime);
         TRACE(Trace::Information, (_T("current time = %d"), currTime));
+        const char *sqlQuery = "SELECT * FROM PROGRAM WHERE SOURCE_ID = ? ;";
+        TRACE_L3("QUERY = %s", sqlQuery);
+
         DBLock();
-        sqlite3_prepare_v2(_dataBase, "SELECT * FROM PROGRAM WHERE SOURCE_ID = ? ;", -1, &_stmt, nullptr);
+        sqlite3_prepare_v2(_dataBase, sqlQuery, -1, &_stmt, nullptr);
         sqlite3_bind_int(_stmt, 1, (int)serviceId);
         while (sqlite3_step(_stmt) == SQLITE_ROW) {
             time_t startTime = (time_t)sqlite3_column_int(_stmt, 2);
@@ -613,8 +639,11 @@ bool EPGDataBase::ReadTSInfo(TSInfo& tsInfo)
     bool ret = false;
     std::string table("TSINFO");
     if (!IsTableEmpty(table)) {
+        const char *sqlQuery = "SELECT * FROM TSINFO WHERE FREQUENCY = ? AND PROGRAM_NUMBER = ? ;";
+        TRACE_L3("QUERY = %s", sqlQuery);
+
         DBLock();
-        sqlite3_prepare_v2(_dataBase, "SELECT * FROM TSINFO WHERE FREQUENCY = ? AND PROGRAM_NUMBER = ? ;", -1, &_stmt, nullptr);
+        sqlite3_prepare_v2(_dataBase, sqlQuery, -1, &_stmt, nullptr);
         sqlite3_bind_int(_stmt, 1, (int)tsInfo.frequency);
         sqlite3_bind_int(_stmt, 2, (int)tsInfo.programNumber);
 

@@ -49,7 +49,7 @@ public:
     bool GetFrequencyFromChannelInfo(const string&, uint32_t&);
     bool ReadFrequency(std::vector<uint32_t>&);
     bool ReadChannel(const string&, WPEFramework::Channel&);
-    bool GetFrequencyListFromNit(std::vector<uint32_t>&);
+    bool GetFrequencyListFromNit(std::vector<uint32_t>&, uint16_t originalNetworkId = 0);
     bool GetFrequencyAndModulationFromNit(uint16_t, uint16_t, uint32_t&, uint8_t&);
     void ClearSIData();
     int LoadOrSaveDB(bool);
