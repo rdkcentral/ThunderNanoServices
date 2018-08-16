@@ -1,21 +1,46 @@
-set(PLUGIN_LIBS
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${CMAKE_DL_LIBS}
-    ${WPEFRAMEWORK_LIBRARY_WPEFrameworkPlugins}
-    ${PLUGIN_DEPENDENCIES})
+set(PLUGIN_NAME Dictionary)
+
+include(module) # Setup default stuff needed for the cmake framework thingy.
+
+
+set(MODULE_NAME WPEFramework${PLUGIN_NAME})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y")
+
+message("Setting up ${MODULE_NAME}")
+
+set(PLUGIN_DEPENDENCIES_INCLUDE_DIRS)
+
+set(PLUGIN_DEFINITIONS
+    PLUGIN_DHCPSERVER)
 
 set(PLUGIN_INCLUDE_DIRS
     ${WPEFRAMEWORK_INCLUDE_DIRS}
     ${PLUGIN_DEPENDENCIES_INCLUDE_DIRS})
 
+set(PLUGIN_OPTIONS)
+
+set(PLUGIN_DEPENDENCIES)
+
+set(PLUGIN_LIBS
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${CMAKE_DL_LIBS}
+    ${WPEFRAMEWORK_LIBRARY_WPEFrameworkPlugins}
+    ${WPEFRAMEWORK_LIBRARY_WPEFrameworkCore}
+    ${WPEFRAMEWORK_LIBRARY_WPEFrameworkTracing}
+    ${PLUGIN_DEPENDENCIES})
+
 file(GLOB PLUGIN_INCLUDES *.h)
+
+set(PLUGIN_SOURCES
+    Module.cpp
+    Dictionary.cpp
+)
 
 set(PLUGIN_INPUT
     ${PLUGIN_SOURCES}
-    ${PLUGIN_INCLUDES}
-    )
+    ${PLUGIN_INCLUDES})
 
-if (WPEFRAMEWORK_VERBOSE_BUILD)
+#if (WPEFRAMEWORK_VERBOSE_BUILD)
     display_list("Defines                     : " ${PLUGIN_DEFINITIONS} )
     display_list("Compiler options            : " ${PLUGIN_OPTIONS} )
     display_list("Source files                : " ${PLUGIN_SOURCES} )
@@ -24,12 +49,12 @@ if (WPEFRAMEWORK_VERBOSE_BUILD)
     display_list("Link libs                   : " ${PLUGIN_LIBS} )
     display_list("Linker options              : " ${PLUGIN_LINK_OPTIONS} )
     display_list("Dependencies                : " ${PLUGIN_DEPENDENCIES} )
-endif()
-
+#endif()
 
 add_library(${MODULE_NAME} SHARED ${PLUGIN_INPUT})
 target_compile_definitions(${MODULE_NAME} PRIVATE ${PLUGIN_DEFINITIONS})
 target_include_directories(${MODULE_NAME} PRIVATE ${PLUGIN_INCLUDE_DIRS})
+set_target_properties(${MODULE_NAME} PROPERTIES DEFINE_SYMBOL WPEFRAMEWORK_PLATFORM_PLUGIN)
 target_link_libraries(${MODULE_NAME} ${PLUGIN_LIBS})
 list_to_string(PLUGIN_LINK_OPTIONS PLUGIN_LINK_OPTIONS_STRING)
 if (NOT "${PLUGIN_LINK_OPTIONS_STRING}" STREQUAL "")
@@ -37,14 +62,11 @@ if (NOT "${PLUGIN_LINK_OPTIONS_STRING}" STREQUAL "")
 endif()
 set_target_properties(${MODULE_NAME} PROPERTIES OUTPUT_NAME ${MODULE_NAME})
 
-include(setup_target_properties_library)
 setup_target_properties_library(${MODULE_NAME})
 
 if (WPEFRAMEWORK_VERBOSE_BUILD)
-    include(show_target_properties)
     show_target_properties(${MODULE_NAME})
 endif()
-
 
 # uninstall target
 configure_file(
@@ -71,48 +93,22 @@ install(
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins
     COMPONENT ${MODULE_NAME})
 
-macro(write_config)
-    foreach(plugin ${ARGV})
-        message("Writing configuration for ${plugin}")
+# default configuration
+map()
+    kv(callsign ${PLUGIN_NAME})
+    kv(locator lib${MODULE_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
+    kv(classname ${PLUGIN_NAME})
+    kv(autostart false)
+    key(configuration)
+    map()
+        kv(storage DataModel.json)
+        kv(lingertime 10)
+    end()
+end()
+ans(PLUGIN_CONFIG)
 
-        map()
-            kv(locator lib${MODULE_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
-            kv(classname ${PLUGIN_NAME})
-        end()
-        ans(plugin_config) # default configuration
-
-        if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/${plugin}.config")
-            include(${CMAKE_CURRENT_LIST_DIR}/${plugin}.config)
-
-            list(LENGTH preconditions number_preconditions)
-
-            if (number_preconditions GREATER 0)
-                map_append(${plugin_config} precondition ___array___)
-                foreach(entry ${preconditions})
-                    map_append(${plugin_config} precondition ${entry})
-                endforeach()
-            endif()
-
-            if (NOT ${autostart} STREQUAL "")
-                map_append(${plugin_config} autostart ${autostart})
-            endif()
-
-            if (NOT ${outofprocess} STREQUAL "")
-                map_append(${plugin_config} outofprocess ${outofprocess})
-            endif()
-
-            if (NOT ${configuration} STREQUAL "")
-                map_append(${plugin_config} configuration ${configuration})
-            endif()
-        endif()
-
-        json_write("${CMAKE_CURRENT_LIST_DIR}/${plugin}.json" ${plugin_config})
-
-        install(
-                FILES ${plugin}.json DESTINATION
-                ${CMAKE_INSTALL_PREFIX}/../etc/WPEFramework/plugins/
-                COMPONENT ${MODULE_NAME})
-    endforeach()
-endmacro()
-
-
+json_write("${CMAKE_CURRENT_LIST_DIR}/${PLUGIN_NAME}.json" ${PLUGIN_CONFIG})
+install(
+    FILES ${PLUGIN_NAME}.json
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/../etc/WPEFramework/plugins/
+    COMPONENT ${MODULE_NAME})

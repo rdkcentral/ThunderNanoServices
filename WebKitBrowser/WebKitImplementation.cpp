@@ -35,7 +35,7 @@ namespace Plugin {
     static void didStartProvisionalNavigation(WKPageRef page, WKNavigationRef navigation, WKTypeRef userData, const void* clientInfo);
     static void didFinishDocumentLoad(WKPageRef page, WKNavigationRef navigation, WKTypeRef userData, const void* clientInfo);
     static void onFrameDisplayed(WKViewRef view, const void* clientInfo);
-    //static void didSameDocumentNavigation(const OpaqueWKPage* page, const OpaqueWKNavigation* nav, unsigned int count, const void* clientInfo, const void* info);
+    static void didSameDocumentNavigation(const OpaqueWKPage* page, const OpaqueWKNavigation* nav, unsigned int count, const void* clientInfo, const void* info);
     static void requestClosure(const void* clientInfo);
     static void didRequestAutomationSession(WKContextRef context, WKStringRef sessionID, const void* clientInfo);
     static WKPageRef onAutomationSessionRequestNewPage(WKWebAutomationSessionRef session, const void* clientInfo);
@@ -62,7 +62,7 @@ namespace Plugin {
         nullptr, // didFailNavigation
         nullptr, // didFailProvisionalLoadInSubframe
         didFinishDocumentLoad,
-        nullptr, // didSameDocumentNavigation
+        didSameDocumentNavigation, // didSameDocumentNavigation
         nullptr, // renderingProgressDidChange
         nullptr, // canAuthenticateAgainstProtectionSpace
         nullptr, // didReceiveAuthenticationChallenge
@@ -334,6 +334,8 @@ static GSourceFuncs _handlerIntervention =
                 , Automation(false)
                 , WebGLEnabled(true)
                 , ThreadedPainting()
+                , Width(1280)
+                , Height(720)
             {
                 Add(_T("useragent"), &UserAgent);
                 Add(_T("url"), &URL);
@@ -365,6 +367,8 @@ static GSourceFuncs _handlerIntervention =
                 Add(_T("automation"), &Automation);
                 Add(_T("webgl"), &WebGLEnabled);
                 Add(_T("threadedpainting"), &ThreadedPainting);
+                Add(_T("width"), &Width);
+                Add(_T("height"), &Height);
             }
             ~Config()
             {
@@ -401,6 +405,8 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::Boolean Automation;
             Core::JSON::Boolean WebGLEnabled;
             Core::JSON::String ThreadedPainting;
+            Core::JSON::DecUInt16 Width;
+            Core::JSON::DecUInt16 Height;
         };
 
     private:
@@ -775,6 +781,11 @@ static GSourceFuncs _handlerIntervention =
                 Core::SystemInfo::SetEnvironment(_T("WEBKIT_NICOSIA_PAINTING_THREADS"), _config.ThreadedPainting.Value(), !environmentOverride);
             }
 
+            string width(Core::NumberType<uint16_t>(_config.Width.Value()).Text());
+            string height(Core::NumberType<uint16_t>(_config.Height.Value()).Text());
+            Core::SystemInfo::SetEnvironment(_T("WEBKIT_RESOLUTION_WIDTH"), width, !environmentOverride);
+            Core::SystemInfo::SetEnvironment(_T("WEBKIT_RESOLUTION_HEIGHT"), height, !environmentOverride);
+
             // Oke, so we are good to go.. Release....
             Core::Thread::Run();
 
@@ -1142,8 +1153,8 @@ static GSourceFuncs _handlerIntervention =
         WKRelease(urlStringRef);
     }
 
-    /* static void didSameDocumentNavigation(const OpaqueWKPage* page, const OpaqueWKNavigation* nav, WKSameDocumentNavigationType type, const void* clientInfo, const void* info) {
-
+    /* static */ void didSameDocumentNavigation(const OpaqueWKPage* page, const OpaqueWKNavigation* nav, WKSameDocumentNavigationType type, const void* clientInfo, const void* info)
+    {
         if (type == kWKSameDocumentNavigationAnchorNavigation) {
             WebKitImplementation* browser = const_cast<WebKitImplementation*>(static_cast<const WebKitImplementation*>(info));
 
@@ -1152,12 +1163,12 @@ static GSourceFuncs _handlerIntervention =
 
             string url = WebKit::Utils::WKStringToString(urlStringRef);
 
-            printf("didSameDocumentNavigation %s %d \n", url.c_str(), type);
             browser->OnURLChanged(url);
+
             WKRelease(urlRef);
             WKRelease(urlStringRef);
         }
-    } */
+    }
 
     /* static */ void didFinishDocumentLoad(WKPageRef page, WKNavigationRef navigation, WKTypeRef userData, const void* clientInfo)
     {

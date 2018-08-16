@@ -3,7 +3,14 @@
 #include "Module.h"
 
 #include <interfaces/IComposition.h>
+
+#ifdef  USE_WPEFRAMEWORK_NXSERVER
 #include <NexusServer.h>
+#else
+#include <nexus_config.h>
+#include <nexus_video_types.h>
+#include <nxclient.h>
+#endif
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -14,19 +21,6 @@ namespace Plugin {
      *
      * ------------------------------------------------------------------------------------------------------------- */
     class CompositorImplementation : public Exchange::IComposition {
-    private:
-        const std::map<const Exchange::IComposition::ScreenResolution, const NEXUS_VideoFormat > formatLookup = {
-                { Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown, NEXUS_VideoFormat_eUnknown },
-                { Exchange::IComposition::ScreenResolution::ScreenResolution_480i, NEXUS_VideoFormat_eNtsc },
-                { Exchange::IComposition::ScreenResolution::ScreenResolution_480p, NEXUS_VideoFormat_e480p },
-                { Exchange::IComposition::ScreenResolution::ScreenResolution_720p, NEXUS_VideoFormat_e720p },
-                { Exchange::IComposition::ScreenResolution::ScreenResolution_720p50Hz, NEXUS_VideoFormat_e720p50hz },
-                { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p24Hz, NEXUS_VideoFormat_e1080p24hz },
-                { Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz, NEXUS_VideoFormat_e1080i50hz },
-                { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p50Hz, NEXUS_VideoFormat_e1080p50hz },
-                { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p60Hz, NEXUS_VideoFormat_e1080p60hz }
-        };
-
     private:
         CompositorImplementation(const CompositorImplementation&) = delete;
         CompositorImplementation& operator=(const CompositorImplementation&) = delete;
@@ -51,7 +45,12 @@ namespace Plugin {
             Core::JSON::DecUInt8 HardwareDelay;
         };
 
-        class Sink : public Broadcom::Platform::IClient, public Broadcom::Platform::IStateChange {
+        class Sink
+#ifdef USE_WPEFRAMEWORK_NXSERVER
+            : public Broadcom::Platform::IClient
+            , public Broadcom::Platform::IStateChange
+#endif
+        {
         private:
             Sink() = delete;
             Sink(const Sink&) = delete;
@@ -95,6 +94,14 @@ namespace Plugin {
                 , _delay(nullptr)
             {
                 ASSERT(parent != nullptr);
+#ifndef USE_WPEFRAMEWORK_NXSERVER
+                if (_delay != nullptr) {
+                    _delay->Run();
+                }
+                else {
+                    _parent.PlatformReady();
+                }
+#endif
             }
             ~Sink()
             {
@@ -110,7 +117,7 @@ namespace Plugin {
                     _delay = new Postpone(*this, time);
                 }
             }
-
+#ifdef USE_WPEFRAMEWORK_NXSERVER
             // -------------------------------------------------------------------------------------------------------
             //   Broadcom::Platform::ICallback methods
             // -------------------------------------------------------------------------------------------------------
@@ -136,6 +143,7 @@ namespace Plugin {
                     }
                 }
             }
+#endif
 
         private:
             inline void PlatformReady() {
@@ -154,15 +162,20 @@ namespace Plugin {
             , _observers()
             , _clients()
             , _sink(this)
+#ifdef USE_WPEFRAMEWORK_NXSERVER
             , _nxserver(nullptr)
+#endif
         {
         }
 
         ~CompositorImplementation()
         {
+           
+#ifdef USE_WPEFRAMEWORK_NXSERVER
             if (_nxserver != nullptr) {
                 delete _nxserver;
             }
+#endif
             if (_service != nullptr) {
                 _service->Release();
             }
@@ -184,20 +197,25 @@ namespace Plugin {
 
             _service = service;
             _service->AddRef();
-
+#ifdef USE_WPEFRAMEWORK_NXSERVER
             ASSERT(_nxserver == nullptr);
 
             if (_nxserver != nullptr) {
                 delete _nxserver;
             }
+#endif
             Config info; info.FromString(configuration);
 
             _sink.HardwareDelay(info.HardwareDelay.Value());
+            NxClient_GetDefaultJoinSettings(&_joinSettings);
 
+            strcpy(_joinSettings.name, service->Callsign().c_str());
+
+#ifdef USE_WPEFRAMEWORK_NXSERVER
             _nxserver = new Broadcom::Platform(&_sink, &_sink, configuration);
 
             ASSERT(_nxserver != nullptr);
-
+#endif
             return  Core::ERROR_NONE;
         }
 
@@ -289,58 +307,20 @@ namespace Plugin {
             return (result);
         }
 
-        /* virtual */ void SetResolution(const Exchange::IComposition::ScreenResolution format)
+        /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format)
         {
+            ASSERT (_nxserver != nullptr);
 
-            NEXUS_Error rc;
-            NxClient_DisplaySettings displaySettings;
-
-            NxClient_GetDisplaySettings(&displaySettings);
-
-            const auto index(formatLookup.find(format));
-
-            if (index == formatLookup.cend() || index->second == NEXUS_VideoFormat_eUnknown
-                || index->second == displaySettings.format) {
-
-                TRACE(Trace::Information, (_T("Output resolution is already %d"), format));
-                return;
+            if (_nxserver != nullptr) {
+                _nxserver->Resolution(format);
             }
-
-            if (displaySettings.format != index->second) {
-
-                displaySettings.format = index->second;
-                rc = NxClient_SetDisplaySettings(&displaySettings);
-                if (rc) {
-
-                    TRACE(Trace::Information, (_T("Setting resolution is failed: %d"), index->second));
-                    return;
-                }
-            }
-            TRACE(Trace::Information, (_T("New resolution is %d "), index->second));
-            return;
         }
 
-        /* virtual */ const ScreenResolution GetResolution()
+        /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const 
         {
-            NEXUS_Error rc;
-            NxClient_DisplaySettings displaySettings;
-            NEXUS_VideoFormat format;
+            ASSERT (_nxserver != nullptr);
 
-            NxClient_GetDisplaySettings(&displaySettings);
-            format = displaySettings.format;
-
-            const auto index = std::find_if(formatLookup.cbegin(), formatLookup.cend(),
-                      [format](const std::pair<const Exchange::IComposition::ScreenResolution, const NEXUS_VideoFormat>& found)
-                      { return found.second == format; });
-
-            if (index != formatLookup.cend()) {
-                TRACE(Trace::Information, (_T("Resolution is %d "), index->second));
-                return index->first;
-            }
-            else {
-                TRACE(Trace::Information, (_T("Resolution is unknown")));
-                return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
-            }
+            return (_nxserver->Resolution());
         }
 
     private:
@@ -431,6 +411,14 @@ namespace Plugin {
                 subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
                 subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
                 subSystems->Release();
+
+                // Now the platform is ready we should Join it as well, since we 
+                // will do generic (not client related) stuff as well.
+#ifdef INCLUDE_NEXUS_SERVER
+                if (NxClient_Join(&_joinSettings) != NEXUS_SUCCESS) {
+                    TRACE(Trace::Information, (_T("Could not Join the started NXServer.")));
+                }
+#endif
             }
         }
 
@@ -440,7 +428,10 @@ namespace Plugin {
         std::list<Exchange::IComposition::INotification*> _observers;
         std::list<Exchange::IComposition::IClient*> _clients;
         Sink _sink;
+        NxClient_JoinSettings _joinSettings;
+#ifdef USE_WPEFRAMEWORK_NXSERVER
         Broadcom::Platform* _nxserver;
+#endif
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);

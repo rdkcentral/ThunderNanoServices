@@ -2,10 +2,10 @@
 
 #include <interfaces/ICapture.h>
 
-#include <refsw/nexus_config.h>
-#include <refsw/nxclient.h>
-#include <refsw/nexus_surface.h>
-#include <refsw/nexus_surface_client.h>
+#include <nexus_config.h>
+#include <nxclient.h>
+#include <nexus_surface.h>
+#include <nexus_surface_client.h>
 
 namespace WPEFramework {
 namespace Plugin {
