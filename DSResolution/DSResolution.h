@@ -19,7 +19,7 @@ namespace Plugin {
                 : Core::JSON::Container()   
                 , Resolution()
             {
-                Add(_T("Resolution"), &Resolution);
+                Add(_T("resolution"), &Resolution);
             }
             ~Config()
             {
