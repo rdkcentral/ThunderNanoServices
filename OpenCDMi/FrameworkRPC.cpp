@@ -439,8 +439,7 @@ namespace Plugin {
                     , _mediaKeySession(mediaKeySession)
                     , _sink(this, callback)
                     , _buffer(new DataExchange(mediaKeySession, bufferName, defaultSize))
-                    , _cencData(*sessionData)
-                    , _observers() {
+                    , _cencData(*sessionData) {
 
                     ASSERT (parent != nullptr);
                     ASSERT (sessionData != nullptr);
@@ -507,41 +506,6 @@ namespace Plugin {
                     _mediaKeySession->Close();
                 }
 
-                virtual void Register (::OCDM::ISession::IKeyCallback* callback) override {
-
-                    _adminLock.Lock();
-
-                    ASSERT (std::find(_observers.begin(), _observers.end(), callback) == _observers.end());
-
-                    callback->AddRef();
-
-                    _observers.push_back(callback);
-
-                    // Give them the full list, of KeyIds we got now wit the status..
-                    CommonEncryptionData::Iterator index(_cencData.Keys());
-
-                    while (index.Next() == true) {
-                        const CommonEncryptionData::KeyId& entry (index.Current());
-                        callback->StateChange(entry.Length(), entry.Id(), entry.Status());
-                    }
-
-                    _adminLock.Unlock();
-                }
-
-                virtual void Unregister (::OCDM::ISession::IKeyCallback* callback) override {
-
-                    _adminLock.Lock();
-
-                    std::list<::OCDM::ISession::IKeyCallback*>::iterator  index (std::find(_observers.begin(), _observers.end(), callback));
-
-                    if (index != _observers.end()) {
-                        (*index)->Release();
-                        _observers.erase(index);
-                    }
-
-                    _adminLock.Unlock();
-                }
-
                 virtual void Revoke(OCDM::ISession::ICallback* callback) override {
                     _sink.Revoke (callback);
                 }
@@ -549,6 +513,21 @@ namespace Plugin {
                 BEGIN_INTERFACE_MAP(Session)
                     INTERFACE_ENTRY(::OCDM::ISession)
                 END_INTERFACE_MAP
+
+                void ReportKeyIds(::OCDM::IAccessorOCDM::INotification* callback) const {
+
+                    _adminLock.Lock();
+
+                    // Give them the full list, of KeyIds we got now wit the status..
+                    CommonEncryptionData::Iterator index(_cencData.Keys());
+
+                    while (index.Next() == true) {
+                        const CommonEncryptionData::KeyId& entry (index.Current());
+                        callback->KeyChange(_sessionId, entry.Id(), entry.Length(), entry.Status());
+                    }
+
+                    _adminLock.Unlock();
+                }
 
             private:
                 inline void UpdateKeyStatus(::OCDM::ISession::KeyStatus status, const uint8_t* buffer, const uint8_t length) {
@@ -559,32 +538,25 @@ namespace Plugin {
                         keyId = CommonEncryptionData::KeyId(CommonEncryptionData::COMMON, buffer, length);
                     }
 
-                    _adminLock.Lock();
-
                     const CommonEncryptionData::KeyId* updated = _cencData.UpdateKeyStatus(status, keyId);
 
                     if (updated != nullptr) {
-                        std::list<::OCDM::ISession::IKeyCallback*>::const_iterator index (_observers.begin());
                         const uint8_t length = updated->Length();
                         const uint8_t* id = updated->Id();
 
                         TRACE_L1("Reporting a new status for a KeyId. New state: %d", status);
 
-                        while (index != _observers.end()) {
-                            (*index)->StateChange(length, id, status);
-                            index++;
-                        }
+                        _parent.ReportKeyChange(_sessionId, id, length, status);
                     }
                     else {
                         TRACE(Trace::Information, ("There was no key to update !!!"));
                     }
                     
-                    _adminLock.Unlock();
                 }
 
             private:
                 AccessorOCDM& _parent;
-                Core::CriticalSection _adminLock;
+                mutable Core::CriticalSection _adminLock;
                 mutable uint32_t _refCount;
                 std::string _keySystem;
                 std::string _sessionId;
@@ -592,7 +564,6 @@ namespace Plugin {
                 Core::Sink<Sink> _sink;
                 DataExchange* _buffer;
                 CommonEncryptionData _cencData;
-                std::list<::OCDM::ISession::IKeyCallback*> _observers;
             };
  
         public:
@@ -601,7 +572,8 @@ namespace Plugin {
                 , _adminLock()
                 , _administrator(name)
                 , _defaultSize(defaultSize)
-                , _sessionList() {
+                , _sessionList() 
+                , _observers() {
                 ASSERT (parent != nullptr);
             }
             virtual ~AccessorOCDM() {
@@ -710,6 +682,7 @@ namespace Plugin {
                                 _adminLock.Lock();
 
                                 _sessionList.push_front(newEntry);
+                                ReportCreate(sessionId);
 
                                 _adminLock.Unlock();
                             }
@@ -747,11 +720,69 @@ namespace Plugin {
 		return (0);
             }
 
+            virtual void Register (::OCDM::IAccessorOCDM::INotification* callback) override {
+
+                _adminLock.Lock();
+
+                ASSERT (std::find(_observers.begin(), _observers.end(), callback) == _observers.end());
+
+                callback->AddRef();
+
+                _observers.push_back(callback);
+
+                std::list<SessionImplementation*>::const_iterator index (_sessionList.begin());
+                while (index != _sessionList.end()) { 
+                    (*index)->ReportKeyIds(callback);
+                    index++; 
+                }
+
+ 
+                _adminLock.Unlock();
+            }
+
+            virtual void Unregister (::OCDM::IAccessorOCDM::INotification* callback) override {
+
+                _adminLock.Lock();
+
+                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator  index (std::find(_observers.begin(), _observers.end(), callback));
+
+                if (index != _observers.end()) {
+                    (*index)->Release();
+                    _observers.erase(index);
+                }
+
+                _adminLock.Unlock();
+            }
+ 
             BEGIN_INTERFACE_MAP(AccessorOCDM)
                 INTERFACE_ENTRY(::OCDM::IAccessorOCDM)
             END_INTERFACE_MAP
 
         private:
+            void ReportCreate(const string& sessionId) {
+                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator  index (_observers.begin());
+                while (index != _observers.end()) {
+                    (*index)->Create(sessionId);
+                    index++;
+                }
+            }
+            void ReportDestroy(const string& sessionId) {
+                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator  index (_observers.begin());
+                while (index != _observers.end()) {
+                    (*index)->Destroy(sessionId);
+                    index++;
+                }
+            }
+            void ReportKeyChange(const string& sessionId, const uint8_t keyId[], const uint8_t length, const OCDM::ISession::KeyStatus status) {
+                _adminLock.Lock();
+                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator  index (_observers.begin());
+                while (index != _observers.end()) {
+                    (*index)->KeyChange(sessionId, keyId, length, status);
+                    index++;
+                }
+                
+                _adminLock.Unlock();
+            }
             ::OCDM::ISession* FindSession (const CommonEncryptionData& keyIds, const string& keySystem) const {
                 ::OCDM::ISession* result = nullptr;
 
@@ -797,8 +828,10 @@ namespace Plugin {
                     ASSERT (index != _sessionList.end());
                 
                     if (index != _sessionList.end()) {
+                        const string sessionId(session->SessionId());
 	                // Before we remove it here, release it.
                         _sessionList.erase(index);
+                        ReportDestroy(sessionId);
                     }
                 }
 
@@ -812,6 +845,7 @@ namespace Plugin {
             BufferAdministrator _administrator;
             uint32_t _defaultSize;
             std::list<SessionImplementation*> _sessionList;
+            std::list<::OCDM::IAccessorOCDM::INotification*> _observers;
         };
 
         class Config : public Core::JSON::Container {
