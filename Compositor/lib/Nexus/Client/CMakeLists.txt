@@ -7,7 +7,7 @@ find_package(Core REQUIRED)
 find_package(LibVirtualKeyboard REQUIRED)
 find_package(VirtualInput REQUIRED)
 
-add_library(${TARGET} SHARED Nexus.cpp)
+add_library(${TARGET} SHARED Implementation.cpp)
 
 target_link_libraries(${TARGET}
             PUBLIC
