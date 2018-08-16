@@ -103,6 +103,7 @@ option(WPEFRAMEWORK_PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_COMMANDER "Include Commander plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_COMPOSITOR "Include Compsitor plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_DEVICEINFO "Include DeviceInfo plugin" OFF)
+option(WPEFRAMEWORK_PLUGIN_DSRESOLUTION "Include DSResolution plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_DHCPSERVER "Include DHCPServer plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_DICTIONARY "Include Dictionary plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_LOCATIONSYNC "Include LocationSync plugin" OFF)
@@ -141,6 +142,10 @@ endif()
 
 if(WPEFRAMEWORK_PLUGIN_DEVICEINFO)
     add_subdirectory(DeviceInfo)
+endif()
+
+if(WPEFRAMEWORK_PLUGIN_DSRESOLUTION)
+    add_subdirectory(DSResolution)
 endif()
 
 if(WPEFRAMEWORK_PLUGIN_DHCPSERVER)
