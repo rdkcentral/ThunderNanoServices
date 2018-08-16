@@ -58,7 +58,7 @@ public:
     bool SetFPTime(uint32_t, uint32_t, uint32_t);
     bool SetFPText(string);
     bool SetFPTextBrightness(uint32_t, uint32_t);
-    bool FPEnableClockDisplay(uint32_t);
+    bool FPEnableClockDisplay(bool);
     bool SetFPScroll(uint32_t, uint32_t, uint32_t);
     bool SetFPDBrightness(uint32_t, uint32_t, bool);
     bool SetFPDColor(uint32_t, uint32_t, bool);

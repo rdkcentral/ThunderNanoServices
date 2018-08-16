@@ -76,7 +76,7 @@ namespace Plugin {
             Core::JSON::DecUInt32 Minutes;
             Core::JSON::String Text;
             Core::JSON::DecUInt32 TextDisplay;
-            Core::JSON::DecUInt32 Enable;
+            Core::JSON::Boolean Enable;
             Core::JSON::DecUInt32 ScrollHoldOnDur;
             Core::JSON::DecUInt32 HorzScrollIterations;
             Core::JSON::DecUInt32 VertScrollIterations;

@@ -154,7 +154,7 @@ namespace WPEFramework {
         return false;
     }
 
-    bool FrontPanelHAL::FPEnableClockDisplay(uint32_t enable)
+    bool FrontPanelHAL::FPEnableClockDisplay(bool enable)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
         if (dsFPEnableCLockDisplay((int)enable) == dsERR_NONE)
