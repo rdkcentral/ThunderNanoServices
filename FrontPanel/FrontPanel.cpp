@@ -62,7 +62,7 @@ namespace Plugin {
                 Core::ProxyType<Web::JSONBodyType<FrontPanel::Config>> response(jsonBodyDataFactory.Element());
                 if (index.Current() == _T("State")) {
                     Core::URL::KeyValue options(request.Query.Value());
-                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Indicator"), 0));
+                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("indicator"), 0));
                     uint32_t indicator = code.Value();
                     string state;
                     if (_controller.GetFPState(indicator, state)) {
@@ -76,7 +76,7 @@ namespace Plugin {
                     }
                 } else if (index.Current() == _T("Brightness")) {
                     Core::URL::KeyValue options(request.Query.Value());
-                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Indicator"), 0));
+                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("indicator"), 0));
                     uint32_t indicator = code.Value();
                     uint32_t brightness;
                     if (_controller.GetFPBrightness(indicator, brightness)) {
@@ -90,7 +90,7 @@ namespace Plugin {
                     }
                 } else if (index.Current() == _T("Color")) {
                     Core::URL::KeyValue options(request.Query.Value());
-                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("Indicator"), 0));
+                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("indicator"), 0));
                     uint32_t indicator = code.Value();
                     string color;
                     if (_controller.GetFPColor(indicator, color)) {
@@ -104,7 +104,7 @@ namespace Plugin {
                     }
                 } else if (index.Current() == _T("TextBrightness")) {
                     Core::URL::KeyValue options(request.Query.Value());
-                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("TextDisplay"), 0));
+                    Core::NumberType <uint32_t> code(options.Number<uint32_t>(_T("textdisplay"), 0));
                     uint32_t textDisplay = code.Value();
                     uint32_t brightness;
                     if (_controller.GetFPTextBrightness(textDisplay, brightness)) {
@@ -242,7 +242,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = _T("Failed to Set Front Panel Scroll.");
                     }
-                } else if (index.Current() == _T("FPDBrightness") && (request.HasBody())) {
+                } else if (index.Current() == _T("DBrightness") && (request.HasBody())) {
                     uint32_t indicator = request.Body<const Config>()->Indicator.Value();
                     uint32_t brightness = request.Body<const Config>()->Brightness.Value();
                     bool toPersist = request.Body<const Config>()->ToPersist.Value();
@@ -253,7 +253,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = _T("Failed to Set Front Panel Brightness.");
                     }
-                } else if (index.Current() == _T("FPDColor") && (request.HasBody())) {
+                } else if (index.Current() == _T("DColor") && (request.HasBody())) {
                     uint32_t indicator = request.Body<const Config>()->Indicator.Value();
                     uint32_t color = request.Body<const Config>()->Color.Value();
                     bool toPersist = request.Body<const Config>()->ToPersist.Value();

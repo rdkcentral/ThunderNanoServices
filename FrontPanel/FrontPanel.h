@@ -37,25 +37,25 @@ namespace Plugin {
                 , VertScrollIterations()
                 , ToPersist()
             {
-                Add(_T("Indicator"), &Indicator);
-                Add(_T("BlinkDuration"), &BlinkDuration);
-                Add(_T("BlinkIterations"), &BlinkIterations);
-                Add(_T("Brightness"), &Brightness);
-                Add(_T("State"), &State);
-                Add(_T("State"), &StateStr);
-                Add(_T("Color"), &Color);
-                Add(_T("Color"), &ColorStr);
-                Add(_T("TimeFormat"), &TimeFormat);
-                Add(_T("TimeFormat"), &TimeFormatStr);
-                Add(_T("Hour"), &Hour);
-                Add(_T("Minutes"), &Minutes);
-                Add(_T("Text"), &Text);
-                Add(_T("TextDisplay"), &TextDisplay);
-                Add(_T("Enable"), &Enable);
-                Add(_T("ScrollHoldOnDur"), &ScrollHoldOnDur);
-                Add(_T("HorzScrollIterations"), &HorzScrollIterations);
-                Add(_T("VertScrollIterations"), &VertScrollIterations);
-                Add(_T("ToPersist"), &ToPersist);
+                Add(_T("indicator"), &Indicator);
+                Add(_T("blinkduration"), &BlinkDuration);
+                Add(_T("blinkiterations"), &BlinkIterations);
+                Add(_T("brightness"), &Brightness);
+                Add(_T("state"), &State);
+                Add(_T("state"), &StateStr);
+                Add(_T("color"), &Color);
+                Add(_T("color"), &ColorStr);
+                Add(_T("timeformat"), &TimeFormat);
+                Add(_T("timeformat"), &TimeFormatStr);
+                Add(_T("hour"), &Hour);
+                Add(_T("minutes"), &Minutes);
+                Add(_T("text"), &Text);
+                Add(_T("textdisplay"), &TextDisplay);
+                Add(_T("enable"), &Enable);
+                Add(_T("scrollholdondur"), &ScrollHoldOnDur);
+                Add(_T("horzscrolliterations"), &HorzScrollIterations);
+                Add(_T("vertscrolliterations"), &VertScrollIterations);
+                Add(_T("topersist"), &ToPersist);
             }
             ~Config()
             {
