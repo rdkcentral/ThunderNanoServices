@@ -245,15 +245,15 @@ namespace Broadcom {
         , _stateHandler(stateChanges)
         , _joined(false)
     {
-        NEXUS_Error rc;
-
         ASSERT(_implementation == nullptr);
         ASSERT(_instance == nullptr);
 
-        _implementation = this;
-
         // Strange someone already started a NXServer.
         if (_instance == nullptr) {
+
+            _implementation = this;
+
+            NEXUS_Error rc = NEXUS_SUCCESS;
 
             // Register an @Exit, in case we are killed, with an incorrect ref count !!
             if (atexit(CloseDown) != 0) {
@@ -261,9 +261,10 @@ namespace Broadcom {
                 exit(EXIT_FAILURE);
             }
 
+            #ifndef NEXUS_SERVER_EXTERNAL
+
             TRACE_L1("Start Nexus server...%d\n", __LINE__);
 
-            #ifndef NEXUS_SERVER_EXTERNAL
             Config config; config.FromString(configuration);
 
             if ((config.SagePath.IsSet() == true) && (config.SagePath.Value().empty() == false)) {
@@ -448,9 +449,9 @@ namespace Broadcom {
             }
 
             #endif // NEXUS_SERVER_EXTERNAL
-        }
 
-        StateChange(rc == NEXUS_SUCCESS ? OPERATIONAL : FAILURE);
+            StateChange(rc == NEXUS_SUCCESS ? OPERATIONAL : FAILURE);
+        }
 
         ASSERT(_state != FAILURE);
     }
