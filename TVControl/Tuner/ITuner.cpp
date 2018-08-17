@@ -125,7 +125,6 @@ void ITuner::SetCurrentChannel(const string& channelId, TVPlatform::ITVPlatform:
     uint32_t frequency;
     if (!_epgDB.IsParentalLocked(channelId)) {
         if (_epgDB.GetFrequencyFromChannelInfo(channelId, frequency) && _epgDB.GetServiceIdFromChannelInfo(channelId, progNum)) {
-            TRACE(Trace::Information, (_T("SetCurrentChannel to  %s with freq = %u program num = %d"), channelId.c_str(), frequency, progNum));
 #if RECORDED_STREAM
             // FIXME: Added for testing purpose only.
             const char* freq = getenv("TVC_FREQUENCY_LIST");
@@ -141,7 +140,7 @@ void ITuner::SetCurrentChannel(const string& channelId, TVPlatform::ITVPlatform:
 #endif
             // FIXME: Remove later.
 
-            TRACE(Trace::Information, (_T("SetCurrentChannel to %s with freq = %u program num = %d"), channelId.c_str(), frequency, progNum));
+            TRACE_L1("SetCurrentChannel to %s with freq = %u program num = %d", channelId.c_str(), frequency, progNum);
             TSInfo tsInfo;
             memset(&tsInfo, 0, sizeof(tsInfo));
             tsInfo.frequency = frequency;
@@ -158,10 +157,10 @@ void ITuner::SetCurrentChannel(const string& channelId, TVPlatform::ITVPlatform:
                     _currentChannel.clear();
                     _currentChannel.assign(channelId);
                     tunerHandler.CurrentChannelChanged(_currentChannel);
-                    TRACE(Trace::Information, (_T("Current channel is = %s"), channelId.c_str()));
+                    TRACE_L1("Current channel is = %s", channelId.c_str());
                 }
             } else
-                TRACE(Trace::Information, (_T("Failed get TS details for channel ID = %s, freq = %u, program number = %d form DB"), channelId.c_str(), tsInfo.frequency, tsInfo.programNumber));
+                TRACE_L1("Failed get TS details for channel ID = %s, freq = %u, program number = %d form DB", channelId.c_str(), tsInfo.frequency, tsInfo.programNumber);
         } else
             TRACE(Trace::Error, (_T("Failed to get frequency and program number for channel ID = %s"), channelId.c_str()));
     } else

@@ -209,7 +209,7 @@ bool EPGDataBase::InsertFrequencyInfo(std::vector<uint32_t> frequencyList)
     char sqlQuery[1024];
     for (auto& frequency : frequencyList) {
         snprintf(sqlQuery, 1024, "INSERT OR IGNORE INTO FREQUENCY (FREQUENCY) VALUES (%d);", (int)frequency);
-        TRACE(Trace::Information, (_T("QUERY = %s"), sqlQuery));
+        TRACE_L4("QUERY = %s", sqlQuery);
         if (!ExecuteSQLQuery(sqlQuery)) {
             return false;
         }
@@ -223,7 +223,7 @@ bool EPGDataBase::InsertNitInfo(uint16_t networkId, uint16_t tsId, uint16_t orig
 
     snprintf(sqlQuery, 1024, "INSERT OR IGNORE INTO NIT (NETWORK_ID, TRANSPORT_STREAM_ID, ORIGINAL_NETWORK_ID, FREQUENCY, MODULATION) VALUES (%d, %d, %d, %d, %d);", (int)networkId, (int)tsId, (int)originalNetworkId, (int)frequency, (int)modulation);
 
-    TRACE(Trace::Information, (_T("QUERY = %s"), sqlQuery));
+    TRACE_L4("QUERY = %s", sqlQuery);
     return ExecuteSQLQuery(sqlQuery);
 }
 
@@ -318,7 +318,6 @@ bool EPGDataBase::InsertChannelInfo(uint32_t frequency, uint32_t modulation, con
         , (int)serviceId, (int)tsId, (int)networkId, (int)programNo, name, language.size() ? language.c_str() : "und");
 
     TRACE_L3("QUERY = %s", sqlQuery);
-    TRACE(Trace::Information, (_T("QUERY = %s"), sqlQuery));
     return ExecuteSQLQuery(sqlQuery);
 }
 
@@ -341,12 +340,12 @@ bool EPGDataBase::IsTableEmpty(const std::string& table)
     sqlite3_prepare_v2(_dataBase, sqlDelete, -1, &_stmt, nullptr);
     TRACE_L3("QUERY = %s", sqlDelete);
     if ((sqlite3_step(_stmt) == SQLITE_ROW) && !sqlite3_column_int(_stmt, 0)) {
-        TRACE(Trace::Information, (_T("%s table empty"), table.c_str()));
+        TRACE_L4("%s table empty", table.c_str());
         sqlite3_finalize(_stmt);
         DBUnlock();
         return true;
     }
-    TRACE(Trace::Information, (_T("%s table has content"), table.c_str()));
+    TRACE_L4("%s table has content", table.c_str());
     sqlite3_finalize(_stmt);
     DBUnlock();
     return false;
@@ -365,7 +364,7 @@ bool EPGDataBase::GetFrequencyListFromNit(std::vector<uint32_t>& frequencyList, 
 
     DBLock();
     sqlite3_prepare_v2(_dataBase, sqlQuery.str().c_str(), -1, &_stmt, nullptr);
-    TRACE_L2("QUERY = %s", sqlQuery.str().c_str());
+    TRACE_L3("QUERY = %s", sqlQuery.str().c_str());
     while (sqlite3_step(_stmt) == SQLITE_ROW)
         frequencyList.push_back((uint32_t)sqlite3_column_int(_stmt, 0));
     sqlite3_finalize(_stmt);
@@ -626,7 +625,7 @@ bool EPGDataBase::InsertTSInfo(TSInfoList& TSInfoList)
     char sqlQuery[1024];
     for (auto& tsInfo : TSInfoList) {
         snprintf(sqlQuery, 1024, "INSERT OR IGNORE INTO TSINFO (FREQUENCY, PROGRAM_NUMBER, VIDEO_PID, VIDEO_CODEC, VIDEO_PCR_PID, AUDIO_PID, AUDIO_CODEC, AUDIO_PCR_PID, PMT_PID) VALUES (%d, %d, %d, %d, %d, %d, %d, %d, %d);", (int)tsInfo.frequency, tsInfo.programNumber, tsInfo.videoPid, tsInfo.videoCodec, tsInfo.videoPcrPid, tsInfo.audioPid, tsInfo.audioCodec, tsInfo.audioPcrPid, tsInfo.pmtPid);
-        TRACE(Trace::Information, (_T("QUERY = %s"), sqlQuery));
+        TRACE_L3("QUERY = %s", sqlQuery);
         if (!ExecuteSQLQuery(sqlQuery)) {
             return false;
         }

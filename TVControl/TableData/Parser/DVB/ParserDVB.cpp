@@ -256,7 +256,7 @@ void ParserDVB::ParseData(uint8_t* siData, uint32_t frequency)
     case NETWORK_INFORMATION_OTHER_TABLE_ID:
 #endif
     case NETWORK_INFORMATION_TABLE_ID: {
-        ParseNIT(siData, sectionLength, tableIdExt, versionNo, sectionNo);
+        ParseNIT(siData, sectionLength, tableIdExt, versionNo, sectionNo, lastSectionNo);
         // FIXME Temporary addition till simultaneous filter are ready.
         break;
     }
@@ -354,7 +354,7 @@ void ParserDVB::ParseServiceDescriptor(uint8_t* buf)
     serviceNameLen = *buf;
     _channel.serviceName.clear();
     _channel.serviceName = ConvertToUnicode(buf + 1, serviceNameLen);
-    TRACE(Trace::Information, (_T("service_name = %s"), _channel.serviceName.c_str()));
+    TRACE_L4("service_name = %s", _channel.serviceName.c_str());
 }
 
 void ParserDVB::ParseShortEventDescriptor(uint8_t* buf)
@@ -365,7 +365,7 @@ void ParserDVB::ParseShortEventDescriptor(uint8_t* buf)
     eventNameLen = *buf;
     _event.eventName.clear();
     _event.eventName = ConvertToUnicode(buf + 1, eventNameLen);
-    TRACE(Trace::Information, (_T("event_name = %s"), _event.eventName.c_str()));
+    TRACE_L4("event_name = %s", _event.eventName.c_str());
 }
 
 void ParserDVB::ParseComponentDescriptor(uint8_t* buf)
@@ -375,8 +375,8 @@ void ParserDVB::ParseComponentDescriptor(uint8_t* buf)
     buf += DESCR_HEADER_LEN;
     streamContent = GETBITS(buf[0], 3, 0);
     componentType = buf[1];
-    TRACE(Trace::Information, (_T("stream_content = 0x%0x"), streamContent));
-    TRACE(Trace::Information, (_T("component_type = 0x%0x"), componentType));
+    TRACE_L4("stream_content = 0x%0x", streamContent);
+    TRACE_L4("component_type = 0x%0x", componentType);
     switch (streamContent) {
     case VIDEO_STREAM_CONTENT:
         break;
@@ -393,7 +393,7 @@ void ParserDVB::ParseComponentDescriptor(uint8_t* buf)
         if (!isPresent) {
             std::string audio;
             audio = ConvertToUnicode(buf + 3, CHAR_CODE_LEN);
-            TRACE(Trace::Information, (_T("audio = %s"), audio.c_str()));
+            TRACE_L4("audio = %s", audio.c_str());
             _event.audioLanguages.push_back(audio);
         }
         break;
@@ -411,7 +411,7 @@ void ParserDVB::ParseComponentDescriptor(uint8_t* buf)
         if (!isPresent) {
             std::string subtitle;
             subtitle = ConvertToUnicode(buf + 3, CHAR_CODE_LEN);
-            TRACE(Trace::Information, (_T("subtitle = %s"), subtitle.c_str()));
+            TRACE_L4("subtitle = %s", subtitle.c_str());
             _event.subtitleLanguages.push_back(subtitle);
         }
         break;
@@ -439,9 +439,9 @@ void ParserDVB::ParseContentDescriptor(uint8_t* buf)
         size_t strLen = contentNibbleLevel1 > 16 ? strlen("Not available") : strlen(gen[contentNibbleLevel1]);
 
         _event.genre.assign(contentNibbleLevel1 > 16 ? "Not available" : gen[contentNibbleLevel1], strLen + 1);
-        TRACE(Trace::Information, (_T("content_nibble_level_1 = 0x%0x"), contentNibbleLevel1));
-        TRACE(Trace::Information, (_T("content_nibble_level_2 = 0x%0x"), contentNibbleLevel2));
-        TRACE(Trace::Information, (_T("genre = %s"), _event.genre.c_str()));
+        TRACE_L4("content_nibble_level_1 = 0x%0x", contentNibbleLevel1);
+        TRACE_L4("content_nibble_level_2 = 0x%0x", contentNibbleLevel2);
+        TRACE_L4("genre = %s", _event.genre.c_str());
         descriptorLength -= CONTENT_DESCR_LOOP_LEN;
         buf += CONTENT_DESCR_LOOP_LEN;
     }
@@ -469,12 +469,12 @@ void ParserDVB::ParseLocalTimeOffsetDescriptor(uint8_t* buf)
             DvbHHMM dvbNextTimeOffset;
             memcpy(dvbNextTimeOffset, buf + 11, 2);
             time_t nextTimeOffset = DvbhhmmToSeconds(dvbNextTimeOffset);
-            TRACE(Trace::Information, (_T("countryCode = %s"), countryCode));
-            TRACE(Trace::Information, (_T("countryRegionId = %d"), countryRegionId));
-            TRACE(Trace::Information, (_T("localTimeOffsetPolarity = %d"), localTimeOffsetPolarity));
-            TRACE(Trace::Information, (_T("localTimeOffset = %d"), _localTimeOffset));
-            TRACE(Trace::Information, (_T("timeOfChange = %ld"), timeOfChange));
-            TRACE(Trace::Information, (_T("nextTimeOffset = %d"), nextTimeOffset));
+            TRACE_L4("countryCode = %s", countryCode);
+            TRACE_L4("countryRegionId = %d", countryRegionId);
+            TRACE_L4("localTimeOffsetPolarity = %d", localTimeOffsetPolarity);
+            TRACE_L4("localTimeOffset = %d", _localTimeOffset);
+            TRACE_L4("timeOfChange = %ld", timeOfChange);
+            TRACE_L4("nextTimeOffset = %d", nextTimeOffset);
             break;
         }
 
@@ -491,8 +491,8 @@ void ParserDVB::ParseLogicalChannelDescriptor(uint8_t* buf)
     while (descriptorLength > 0) {
         serviceId = READ_16(buf[0], buf[1]);
         lcn = READ_16(GETBITS(buf[2], 1, 0), buf[3]);
-        TRACE(Trace::Information, (_T("serviceId = 0x%02x"), serviceId));
-        TRACE(Trace::Information, (_T("LCN = %d"), lcn));
+        TRACE_L4("serviceId = 0x%02x", serviceId);
+        TRACE_L4("LCN = %d", lcn);
 
         _serviceIdLCNMap[serviceId] = lcn;
 
@@ -615,7 +615,7 @@ void ParserDVB::ParsePMT(uint8_t* buf, uint16_t sectionLength, uint16_t programN
     }
 }
 
-void ParserDVB::ParseNIT(uint8_t* buf, uint16_t sectionLength, uint16_t networkId, uint8_t versionNo, uint8_t sectionNo)
+void ParserDVB::ParseNIT(uint8_t* buf, uint16_t sectionLength, uint16_t networkId, uint8_t versionNo, uint8_t sectionNo, uint8_t lastSectionNo)
 {
     uint16_t descriptorsLoopLen = READ_16(GETBITS(buf[0], 3, 0), buf[1]);
     if (sectionLength < descriptorsLoopLen) {
@@ -631,12 +631,19 @@ void ParserDVB::ParseNIT(uint8_t* buf, uint16_t sectionLength, uint16_t networkI
     auto it = _nitHeaderMap.find(key);
     if (it != _nitHeaderMap.end()) {
         if (nitHeader->Version() == it->second->Version()) {
-            if (nitHeader->SectionNumber() == it->second->SectionNumber())
+            if (lastSectionNo == it->second->SectionNumber())
                 return; // Skip packet.
         }
         it->second = nitHeader;
-    } else
+        TRACE_L1("%s: networkId=%d  versionNo=%d sectionNo=%d lastSectionNo=%d",
+            __FUNCTION__, networkId, versionNo, sectionNo, lastSectionNo);
+    } else {
+        if ((lastSectionNo) && (sectionNo != 0))
+            return;
         _nitHeaderMap.insert(std::make_pair(key, nitHeader));
+        TRACE_L1("%s: networkId=%d  versionNo=%d sectionNo=%d lastSectionNo=%d, _nitHeaderMap.size=%d",
+            __FUNCTION__, networkId, versionNo, sectionNo, lastSectionNo, _nitHeaderMap.size());
+    }
 
     sectionLength -= (descriptorsLoopLen + NIT_LOOP_BASE_OFFSET - LAST_SECTION_NUM_OFFSET);
     buf += (descriptorsLoopLen + NIT_LOOP_BASE_OFFSET - LAST_SECTION_NUM_OFFSET);
@@ -650,9 +657,7 @@ void ParserDVB::ParseNIT(uint8_t* buf, uint16_t sectionLength, uint16_t networkI
             break;
         uint16_t originalNetworkId = READ_16(buf[2], buf[3]);
         _nit.originalNetworkId = originalNetworkId;
-        TRACE(Trace::Information, (_T("networkId = 0x%0x"), networkId));
-        TRACE(Trace::Information, (_T("originalNetworkId = 0x%0x"), originalNetworkId));
-        TRACE(Trace::Information, (_T("transportStreamId = 0x%0x"), transportStreamId));
+        TRACE_L2("%s: originalNetworkId=%d transportStreamId=%d", __FUNCTION__, originalNetworkId, transportStreamId);
         std::pair<uint16_t, uint16_t> key(originalNetworkId, transportStreamId);
 #ifdef ENABLE_BOUQUET_PARSING
         auto iterator = _batInfo.find(key);
@@ -741,19 +746,18 @@ void ParserDVB::ParseSDT(uint8_t* buf, uint16_t sectionLength, uint16_t transpor
     auto it = _sdtHeaderMap.find(key);
     if (it != _sdtHeaderMap.end()) {
         if (sdtHeader->Version() == it->second->Version()) {
-            if (lastSectionNo == it->second->SectionNumber()) {
+            if (lastSectionNo == it->second->SectionNumber())
                 return;                 // Skip.
-            }
         }
         it->second = sdtHeader;
-        TRACE_L2("%s: originalNetworkId=%d transportStreamId=%d versionNo=%d sectionNo=%d lastSectionNo=%d",
+        TRACE_L1("%s: originalNetworkId=%d transportStreamId=%d versionNo=%d sectionNo=%d lastSectionNo=%d",
             __FUNCTION__, originalNetworkId, transportStreamId, versionNo, sectionNo, lastSectionNo);
     } else {
         if ((lastSectionNo) && (sectionNo != 0))
             return;
 
         _sdtHeaderMap.insert(std::make_pair(key, sdtHeader));
-        TRACE_L2("%s: originalNetworkId=%d transportStreamId=%d versionNo=%d sectionNo=%d lastSectionNo=%d, _sdtHeaderMap.size=%d",
+        TRACE_L1("%s: originalNetworkId=%d transportStreamId=%d versionNo=%d sectionNo=%d lastSectionNo=%d, _sdtHeaderMap.size=%d",
                 __FUNCTION__, originalNetworkId, transportStreamId, versionNo, sectionNo, lastSectionNo, _sdtHeaderMap.size());
     }
 
@@ -761,7 +765,7 @@ void ParserDVB::ParseSDT(uint8_t* buf, uint16_t sectionLength, uint16_t transpor
         uint16_t serviceId = READ_16(buf[0], buf[1]);
         _channel.serviceId = serviceId;
 
-        TRACE_L3("%s: serviceId=%d (x%x)", __FUNCTION__, serviceId, serviceId);
+        TRACE_L2("%s: serviceId=%d (x%x)", __FUNCTION__, serviceId, serviceId);
         uint16_t descriptorsLoopLen = READ_16(GETBITS(buf[3], 3, 0), buf[4]);
 
         if (sectionLength < descriptorsLoopLen) {
@@ -774,9 +778,9 @@ void ParserDVB::ParseSDT(uint8_t* buf, uint16_t sectionLength, uint16_t transpor
 
         RunningMode running;
         running = static_cast<RunningMode>((buf[3] >> 5) & 0x7);
-        TRACE(Trace::Information, (_T("running_status = %s")
-            , running == NotRunning ? "not running" : running == StartsSoon ?
-            "starts soon" : running == Pausing ? "pausing" : running == Running ? "running" : "???"));
+        TRACE_L4("running_status = %s",
+            running == NotRunning ? "not running" : running == StartsSoon ?
+            "starts soon" : running == Pausing ? "pausing" : running == Running ? "running" : "???");
 
         std::tuple<uint16_t, uint16_t, uint16_t> key(originalNetworkId, transportStreamId, serviceId);
         _sdtInfo.insert(key);
@@ -804,9 +808,9 @@ void ParserDVB::ParseEIT(uint8_t* buf, uint16_t sectionLength, uint16_t serviceI
 {
     uint16_t transportStreamId = READ_16(buf[0], buf[1]);
     uint16_t originalNetworkId = READ_16(buf[2], buf[3]);
-    TRACE(Trace::Information, (_T("service_id = 0x%0x"), serviceId));
-    TRACE(Trace::Information, (_T("transportStreamId = 0x%0x"), transportStreamId));
-    TRACE(Trace::Information, (_T("originalNetworkId = 0x%0x"), originalNetworkId));
+    TRACE_L4("service_id = 0x%0x", serviceId);
+    TRACE_L4("transportStreamId = 0x%0x", transportStreamId);
+    TRACE_L4("originalNetworkId = 0x%0x", originalNetworkId);
     buf += (EIT_LOOP_BASE_OFFSET - LAST_SECTION_NUM_OFFSET);
     _event.serviceId = serviceId;
 
@@ -828,7 +832,7 @@ void ParserDVB::ParseEIT(uint8_t* buf, uint16_t sectionLength, uint16_t serviceI
 
     while (sectionLength >= EIT_LOOP_LEN) {
         uint16_t eventId = READ_16(buf[0], buf[1]);
-        TRACE(Trace::Information, (_T("event_id  = 0x%0x"), eventId));
+        TRACE_L4("event_id  = 0x%0x", eventId);
         _event.eventId = eventId;
         uint16_t descriptorsLoopLen = READ_16(GETBITS(buf[10], 3, 0), buf[11]);
         if (sectionLength < descriptorsLoopLen) {
@@ -839,17 +843,17 @@ void ParserDVB::ParseEIT(uint8_t* buf, uint16_t sectionLength, uint16_t serviceI
         memcpy(dvbStartTime, buf + 2, 5);
         time_t startTime;
         startTime = DvbdateToUnixtime(dvbStartTime);
-        TRACE(Trace::Information, (_T("start time = %ld(%d:%d:%d)"), startTime, dvbStartTime[2], dvbStartTime[3], dvbStartTime[4]));
+        TRACE_L4("start time = %ld(%d:%d:%d)", startTime, dvbStartTime[2], dvbStartTime[3], dvbStartTime[4]);
         _event.startTime = startTime + _localTimeOffset;
         DvbDuration dvbDuration;
         memcpy(dvbDuration, buf + 7, 3);
         time_t duration;
         duration = DvbdurationToSeconds(dvbDuration);
-        TRACE(Trace::Information, (_T("duration = %ld"), duration));
+        TRACE_L4("duration = %ld", duration);
         _event.duration = duration;
         RunningMode running;
         running = static_cast<RunningMode>((buf[10] >> 5) & 0x7);
-        TRACE(Trace::Information, (_T("running status = %s"), running == NotRunning ? "not running" : running == StartsSoon ? "starts soon" : running == Pausing ? "pausing" : running == Running ? "running" : "???"));
+        TRACE_L4("running status = %s", running == NotRunning ? "not running" : running == StartsSoon ? "starts soon" : running == Pausing ? "pausing" : running == Running ? "running" : "???");
 
         _event.genre.clear();
         ClearLanguages();
