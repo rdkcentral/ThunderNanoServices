@@ -33,6 +33,8 @@ set(PLUGIN_SOURCES
 
 include(default_targets)
 
+target_link_libraries(${MODULE_NAME} WPEFramework::Interfaces)
+
 if(WPEFRAMEWORK_PLUGIN_COMPOSITOR_SERVER)
     add_subdirectory(server)
 endif ()
