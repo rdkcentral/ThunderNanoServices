@@ -182,6 +182,10 @@ namespace Plugin {
 
             ASSERT(_nxserver != nullptr);
 
+            if ((_nxserver != nullptr) && (_nxserver->State() == Broadcom::Platform::OPERATIONAL) && (_nxserver->Join() == false)) {
+                TRACE(Trace::Information, (_T("Could not Join the started NXServer.")));
+            }
+
             return  Core::ERROR_NONE;
         }
 
@@ -286,7 +290,7 @@ namespace Plugin {
         {
             ASSERT (_nxserver != nullptr);
 
-            return (_nxserver->Resolution());
+            return (_nxserver != nullptr ? _nxserver->Resolution() : Exchange::IComposition::ScreenResolution_Unknown);
         }
 
     private:
@@ -381,7 +385,6 @@ namespace Plugin {
 
                 // Now the platform is ready we should Join it as well, since we 
                 // will do generic (not client related) stuff as well.
-
                 if ((_nxserver != nullptr) && (_nxserver->Join() != true)) {
                     TRACE(Trace::Information, (_T("Could not Join the started NXServer.")));
                 }

@@ -14,9 +14,8 @@ target_link_libraries(${TARGET}
         PRIVATE
         WPEFramework::Core
         WPEFramework::Plugins
+        WPEFramework::Interfaces
         )
-
-    #    WPEFramework::Interfaces:
 
 set_target_properties(${TARGET}
         PROPERTIES
