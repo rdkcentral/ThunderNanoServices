@@ -4,7 +4,7 @@
 #define _TRACE_LEVEL 3
 #include "GreenPeak.h"
 #include "RemoteAdministrator.h"
-
+#include <sys/syscall.h>
 
 /*
  * Device node is hardcoded in the GreenPeak sources and is NOT exported by the Qorvo makefiles.
@@ -62,6 +62,7 @@ gpRf4ce_VendorString_t Application_VendorString = { XSTRINGIFY(GP_RF4CE_NWKC_VEN
 static Bool _resetWithColdStart;
 static int _threadResult;
 
+char _userString[20];
 
 const gpNvm_ElementDefine_t gpNvm_elementBaseLUTElements[] = 
 {
@@ -522,8 +523,7 @@ static void cbInitializationDone(void)
 
     {
         //TODO: Make it configurable
-	char userString[20] = "Samsung&UPC";
-        gpRf4ce_SetUserString(userString);
+        gpRf4ce_SetUserString(_userString);
     }
 
     gpApplication_ZRCBindSetup(true,false);
@@ -664,6 +664,37 @@ void gpApplication_IndicateBindFailureToMiddleware(gpRf4ce_Result_t result)
 namespace WPEFramework {
 namespace Plugin {
 
+    static uint32_t LoadModule(const string& moduleName) {
+        uint32_t result(Core::ERROR_OPENING_FAILED);
+        int fd(::open(moduleName.c_str(), O_RDONLY));
+
+        if (fd >= 0) {
+            const char params[] = "";
+            struct stat st;
+            fstat(fd, &st);
+            void* image = malloc(st.st_size);
+            read(fd, image, st.st_size);
+            close(fd);
+            if (::syscall(__NR_init_module, image, st.st_size, params) != 0) {
+                perror("init_module failed");
+                result = Core::ERROR_BAD_REQUEST;
+            }
+            else {
+                result = Core::ERROR_NONE;
+            }
+            ::free(image);
+        }
+    }
+    static uint32_t UnloadModule(const string& moduleName) {
+
+        if (syscall(__NR_delete_module, moduleName.c_str(), O_NONBLOCK) != 0) {
+            return (Core::ERROR_BAD_REQUEST);
+        }
+        return(Core::ERROR_NONE);
+    }
+
+    
+    /* static */ const string GreenPeak::_resourceName("GreenPeak");
     static GreenPeak* _singleton(Core::Service<GreenPeak>::Create<GreenPeak>());
 
     GreenPeak::Activity::Activity()
@@ -673,8 +704,9 @@ namespace Plugin {
 
     void GreenPeak::Activity::Dispose()
     {
+        Stop();
         gpSched_ScheduleEvent(0, terminateThread);
-        Core::Thread::SignalTermination();
+        //Core::Thread::SignalTermination();
 
         // Wait till gpMain has ended......
         TRACE_L1("%s: Waiting for GreenPeakDriver to stop:", __FUNCTION__);
@@ -715,22 +747,20 @@ namespace Plugin {
         , _callback(nullptr)
         , _worker()
         , _error(static_cast<uint32_t>(~0))
-        // , _present(WPEFramework::Core::File(_T(GP_DEVICE_NAME), false).Exists())
         , _codeMask(0)
-        , _resourceName("GreenPeakRF4CE")
+        , _loadedModule()
     {
-        // if (_present == true) {
-            _worker.Run();
-            Remotes::RemoteAdministrator::Instance().Announce(*this);
-        // }
+        Remotes::RemoteAdministrator::Instance().Announce(*this);
     }
 
     GreenPeak::~GreenPeak()
     {
-        // if (_present == true) {
-            Remotes::RemoteAdministrator::Instance().Revoke(*this);
-            _worker.Dispose();
-        // }
+        Remotes::RemoteAdministrator::Instance().Revoke(*this);
+        _worker.Dispose();
+
+        if (_loadedModule.empty() == false) {
+            UnloadModule(_loadedModule.c_str());
+        }
     }
 
     bool GreenPeak::WaitForReady(const uint32_t time) const
@@ -813,6 +843,25 @@ namespace Plugin {
         _adminLock.Unlock();
 
         return (result);
+    }
+
+    /* virtual */ void GreenPeak::Configure(const string& configure)
+    {
+        Config config; config.FromString(configure);
+        _codeMask = config.CodeMask.Value();
+
+        if ( (config.Module.IsSet() == true) && (config.Module.Value().empty() == false) ) {
+            if (LoadModule(config.Module.Value()) == Core::ERROR_NONE) {
+                _loadedModule = Core::File::FileName(config.Module.Value());
+                if (config.NodeId.IsSet() == true) {
+                    string nodeName ("/dev/" + _loadedModule);
+                    ::mknod (nodeName.c_str(), 0755 | S_IFCHR,::makedev(config.NodeId.Value(), 0));
+                }
+            }
+        }
+
+        ::strncpy (_userString, config.RemoteId.Value().c_str(), sizeof(_userString));
+        _worker.Run();
     }
 
     void GreenPeak::_Dispatch(const bool pressed, const uint16_t code, const uint16_t modifiers)

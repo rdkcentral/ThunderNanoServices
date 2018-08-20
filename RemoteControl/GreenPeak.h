@@ -21,14 +21,23 @@ namespace Plugin {
             Config ()
                 : Core::JSON::Container()
                 , CodeMask(static_cast<uint32_t>(~0))
+                , RemoteId(_T("Samsung&UPC"))
+                , Module()
+                , NodeId()
             {
                 Add(_T("codemask"), &CodeMask);
+                Add(_T("remoteid"), &RemoteId);
+                Add(_T("module"), &Module);
+                Add(_T("nodeid"), &NodeId);
             }
             ~Config()
             {
             }
 
             Core::JSON::HexUInt32 CodeMask;
+            Core::JSON::String RemoteId;
+            Core::JSON::String Module;
+            Core::JSON::DecUInt8 NodeId;
         };
         class Activity : public Core::Thread {
         private:
@@ -89,13 +98,7 @@ namespace Plugin {
         {
             return (_resourceName.c_str());
         }
-        virtual void Configure(const string& configure)
-        {
-            Config config; config.FromString(configure);
-            _codeMask = config.CodeMask.Value();
-        }
-
-
+        virtual void Configure(const string& configure);
         virtual bool Pair();
         virtual bool Unpair(string bindingId);
         virtual uint32_t Callback(Exchange::IKeyHandler* callback);
@@ -125,9 +128,9 @@ namespace Plugin {
         Activity _worker;
         Info _info;
         uint32_t _error;
-        // bool _present;
         uint32_t _codeMask;
-      /* static */ const string _resourceName;
+        string _loadedModule;
+        static const string _resourceName;
     };
 }
 }
