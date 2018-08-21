@@ -1,17 +1,7 @@
-/*****************************************************************************
- *                    Includes Definitions
- *****************************************************************************/
-#define _TRACE_LEVEL 3
-#include "GreenPeak.h"
+#include "Module.h"
 #include "RemoteAdministrator.h"
-#include <sys/syscall.h>
 
-/*
- * Device node is hardcoded in the GreenPeak sources and is NOT exported by the Qorvo makefiles.
- * Let us assume that the stack library and kernel-module-load script are nicely in sync.
- */
-//#define GP_DEVICE_NAME "/dev/gpK5"
-//#define GP_DEVICE_NAME "/dev/gpK7C"
+#include <sys/syscall.h>
 
 extern "C" {
 
@@ -26,14 +16,12 @@ extern "C" {
 #include <gpPd.h>
 #include <gpReset.h>
 #include <gpRf4ce.h>
-//#include <gpRf4ceBindAuto.h>
 #include <gpRf4ceBindValidation.h>
 #include <gpRf4ceDispatcher.h>
 #include <gpRf4ceUserControl.h>
 #include <gpSched.h>
 #include <gpVersion.h>
 #include <gpUtils.h>
-
 #include <hal.h>
 
 #define GP_COMPONENT_ID_ZRCRECIPIENT 130    // XXX: defined in rf4ce-hal-gp make file
@@ -44,25 +32,351 @@ extern "C" {
 #include <gpMsoRecipient.h>
 #include <gpNvm.h>
 
-//#include <gpApplication_MW.h>
+}
+
+/*****************************************************************************
+ *  GreenPeak C++ Wrapper class. Hide C artifacts
+ *****************************************************************************/
+
+namespace WPEFramework {
+namespace Plugin {
+
+    static uint32_t LoadModule(const string& moduleName) {
+        uint32_t result(Core::ERROR_OPENING_FAILED);
+        int fd(::open(moduleName.c_str(), O_RDONLY));
+
+        if (fd >= 0) {
+            const char params[] = "";
+            struct stat st;
+            fstat(fd, &st);
+            void* image = malloc(st.st_size);
+            read(fd, image, st.st_size);
+            close(fd);
+            if (::syscall(__NR_init_module, image, st.st_size, params) != 0) {
+                perror("init_module failed");
+                result = Core::ERROR_BAD_REQUEST;
+            }
+            else {
+                result = Core::ERROR_NONE;
+            }
+            ::free(image);
+        }
+    }
+
+    static uint32_t UnloadModule(const string& moduleName) {
+
+        if (syscall(__NR_delete_module, moduleName.c_str(), O_NONBLOCK) != 0) {
+            return (Core::ERROR_BAD_REQUEST);
+        }
+        return(Core::ERROR_NONE);
+    }
+
+    
+    class GreenPeak : public Exchange::IKeyProducer {
+    private:
+        GreenPeak(const GreenPeak&) = delete;
+        GreenPeak& operator=(const GreenPeak&) = delete;
+
+        class Config : public Core::JSON::Container {
+        private:
+            Config (const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+
+        public:
+            Config ()
+                : Core::JSON::Container()
+                , RemoteId(_T("Samsung&UPC"))
+                , Module()
+                , NodeId()
+            {
+                Add(_T("remoteid"), &RemoteId);
+                Add(_T("module"), &Module);
+                Add(_T("nodeid"), &NodeId);
+            }
+            ~Config()
+            {
+            }
+
+            Core::JSON::String RemoteId;
+            Core::JSON::String Module;
+            Core::JSON::DecUInt8 NodeId;
+        };
+        class Activity : public Core::Thread {
+        private:
+            Activity(const Activity&) = delete;
+            Activity& operator=(const Activity&) = delete;
+
+        public:
+            Activity()
+                : Core::Thread(Core::Thread::DefaultStackSize(), _T("GreenPeak")) {
+            }
+            virtual ~Activity() {
+            }
+
+        public:
+            void Dispose() {
+                Stop();
+                gpSched_ScheduleEvent(0, terminateThread);
+
+                // Wait till gpMain has ended......
+                TRACE_L1("%s: Waiting for GreenPeakDriver to stop:", __FUNCTION__);
+                Wait(Thread::STOPPED | Thread::BLOCKED);
+                TRACE_L1("%s: Done!!! ", __FUNCTION__);
+            }
+
+        private:
+            virtual uint32_t GreenPeak::Activity::Worker() override {
+                GP_UTILS_INIT_STACK();
+                HAL_INITIALIZE_GLOBAL_INT();
+
+                // Hardware initialisation
+                HAL_INIT();
+
+                // Radio interrupts that occur will only be handled later on in the main loop
+                // Other interrupt source do not trigger any calls to blocks that are not initialized yet
+                HAL_ENABLE_GLOBAL_INT();
+        
+                gpBaseComps_StackInit();
+                gpSched_ScheduleEvent(0, target_DoR4ceReset);
+                GP_UTILS_DUMP_STACK_POINTER();
+                GP_UTILS_CHECK_STACK_PATTERN();
+                GP_UTILS_CHECK_STACK_POINTER();
+
+                while (IsRunning())  {
+                    // Check if the system can go to sleep
+                    gpSched_GoToSleep();
+                    gpSched_Main_Body();
+                }
+                return (Core::infinite);
+            }
+        };
+
+        class Info : public Core::JSON::Container {
+        private:
+            Info(const Info&) = delete;
+            Info& operator=(const Info&) = delete;
+
+        public:
+            Info()
+                : Core::JSON::Container()
+                , Major(static_cast<uint16_t>(~0))
+                , Minor(static_cast<uint16_t>(~0))
+                , Revision(static_cast<uint16_t>(~0))
+                , Patch(static_cast<uint16_t>(~0))
+                , Change(static_cast<uint16_t>(~0))
+            {
+                Add(_T("major"), &Major);
+                Add(_T("minor"), &Minor);
+                Add(_T("revision"), &Revision);
+                Add(_T("patch"), &Patch);
+                Add(_T("change"), &Change);
+            }
+            ~Info()
+            {
+            }
+
+        public:
+            Core::JSON::DecUInt16 Major;
+            Core::JSON::DecUInt16 Minor;
+            Core::JSON::DecUInt16 Revision;
+            Core::JSON::DecUInt16 Patch;
+            Core::JSON::DecUInt16 Change;
+        };
+
+    public:
+        GreenPeak::GreenPeak()
+            : _readySignal(false, true)
+            , _callback(nullptr)
+            , _worker()
+            , _error(static_cast<uint32_t>(~0))
+            , _loadedModule() {
+            Remotes::RemoteAdministrator::Instance().Announce(*this);
+        }
+        virtual ~GreenPeak() {
+            Remotes::RemoteAdministrator::Instance().Revoke(*this);
+            _worker.Dispose();
+
+            if (_loadedModule.empty() == false) {
+                UnloadModule(_loadedModule.c_str());
+            }
+        }
+
+    public:
+        inline bool GreenPeak::WaitForReady(const uint32_t time) const
+        {
+            return (_readySignal.Lock(time) == 0);
+        }
+        virtual const TCHAR* Name() const override {
+            return (_resourceName.c_str());
+        }
+        virtual uint32_t Error() const override {
+            return (_error);
+        }
+        virtual bool Pair() override {
+            bool activated = false;
+
+            _adminLock.Lock();
+
+            if (_info.Major.IsSet() == true) {
+                gpSched_ScheduleEvent(0, target_ActivatePairing);
+                activated = true;
+            }
+
+            _adminLock.Unlock();
+
+            return (activated);
+        }
+        virtual bool Unpair(string bindingId) override {
+            bool unpaired = false;
+
+            _adminLock.Lock();
+
+            if (_info.Major.IsSet() == true) {
+                _bindingId = atoi(bindingId.c_str());
+                gpSched_ScheduleEvent(0, target_ActivateUnpairing);
+                unpaired = true;
+            }
+
+            _adminLock.Unlock();
+
+            return (unpaired);
+        }
+        virtual uint32_t Callback(Exchange::IKeyHandler* callback) override {
+            _adminLock.Lock();
+
+            // This is a 1-1 relation. No way you can set more than
+            // 1 listener. First clear the previous one (nullptr) before
+            // Setting a new one.
+            ASSERT((callback != nullptr) ^ (_callback != nullptr));
+
+            if (callback == nullptr) {
+                // We are unlinked. Deinitialize the stuff.
+                // Deinitialize();
+                _callback = nullptr;
+            }
+            else {
+                // Initialize();
+                TRACE_L1("%s: callback=%p _callback=%p", __FUNCTION__, callback, _callback);
+                _callback = callback;
+            }
+
+            _adminLock.Unlock();
+
+            return (Core::ERROR_NONE);
+        }
+        virtual string MetaData() const override {
+            string result;
+
+            _adminLock.Lock();
+
+            _info.ToString(result);
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        virtual void Configure(const string& configure) override {
+            Config config; config.FromString(configure);
+
+            if ( (config.Module.IsSet() == true) && (config.Module.Value().empty() == false) ) {
+                if (LoadModule(config.Module.Value()) == Core::ERROR_NONE) {
+                    _loadedModule = Core::File::FileName(config.Module.Value());
+                    if (config.NodeId.IsSet() == true) {
+                        string nodeName ("/dev/" + _loadedModule);
+                        ::mknod (nodeName.c_str(), 0755 | S_IFCHR,::makedev(config.NodeId.Value(), 0));
+                    }
+                }
+            }
+
+            ::strncpy (_userString, config.RemoteId.Value().c_str(), sizeof(_userString));
+            _worker.Run();
+        }
+
+        BEGIN_INTERFACE_MAP(GreenPeak)
+            INTERFACE_ENTRY(Exchange::IKeyProducer)
+        END_INTERFACE_MAP
+
+        // -------------------------------------------------------------------------------
+        // The greenpeak library is C oriented. These methods should not be used by the
+        // consumers of this class but are to link the greenpeak C works to the C++ world.
+        // These methods should only be used by the GreenPeak C methods in the GreenPeak
+        // implementation file.
+        // -------------------------------------------------------------------------------
+        static const char* UserString() const {
+            return (_singleton->_userString);
+        }
+        static void Dispatch(const bool pressed, const uint16_t code, const uint16_t modifiers) {
+            _singleton->_Dispatch(pressed, code, modifiers);
+        }
+        static void Initialized(const uint16_t major, const uint16_t minor, const uint16_t revision, const uint16_t patch, const uint32_t change) {    
+            _singleton->_Initialized(major, minor, revision, patch, change);
+        }
+        static void Report(const string& text) {
+            TRACE_GLOBAL(Trace::Information, (_T("RF4CE Report: %s"), text.c_str()));
+        }
+
+    private:
+        inline void _Dispatch(const bool pressed, const uint16_t code, const uint16_t modifiers) {
+            _adminLock.Lock();
+
+            if (_callback != nullptr) {
+                _callback->KeyEvent(pressed, (code | (modifiers << 16)), _resourceName);
+            } 
+
+            _adminLock.Unlock();
+        }
+        inline void _Initialized(const uint16_t major,
+            const uint16_t minor,
+            const uint16_t revision,
+            const uint16_t patch,
+            const uint32_t change) {
+            _info.Major = major;
+            _info.Minor = minor;
+            _info.Revision = revision;
+            _info.Patch = patch;
+            _info.Change = change;
+
+            _error = 0;
+            _readySignal.Unlock();
+        }
+
+    private:
+        mutable Core::CriticalSection _adminLock;
+        mutable WPEFramework::Core::Event _readySignal;
+        Exchange::IKeyHandler* _callback;
+        Activity _worker;
+        Info _info;
+        uint32_t _error;
+        string _loadedModule;
+        char _userString[20];
+        static const string _resourceName;
+        static GreenPeak* _singleton;
+    };
+
+    /* static */ const string GreenPeak::_resourceName("GreenPeak");
+    /* static */ GreenPeak* Greenpeak::_singleton(Core::Service<GreenPeak>::Create<GreenPeak>());
+
+
+/*****************************************************************************
+ * All intersting C stuff. Lowlevel Greenpeak stuff...
+ *****************************************************************************/
+
+extern "C" {
+
 void gpApplication_IndicateBindSuccessToMiddleware(UInt8 bindingRef, UInt8 profileId);
 void gpApplication_IndicateBindFailureToMiddleware(UInt8 result);
 
 /*****************************************************************************
  *                    Macro Definitions
  *****************************************************************************/
-#define NUM_OF_EL_DEV_TYPE_LIST 3
-#define NUM_OF_EL_PROFILE_ID_LIST 2
-#define APP_CAPABILITIES_LISTS (((((NUM_OF_EL_DEV_TYPE_LIST) << GP_RF4CE_APP_CAPABILITY_NBR_DEVICES_IDX) & GP_RF4CE_APP_CAPABILITY_NBR_DEVICES_BM)) | (BM(GP_RF4CE_APP_CAPABILITY_USER_STRING_IDX)) | ((((NUM_OF_EL_PROFILE_ID_LIST) << GP_RF4CE_APP_CAPABILITY_NBR_PROFILES_IDX) & GP_RF4CE_APP_CAPABILITY_NBR_PROFILES_BM)))
-
 #define TARGET_NODE_CAPABILITIES 0x0F // Normalization - security - power supply - target
-
-gpRf4ce_VendorString_t Application_VendorString = { XSTRINGIFY(GP_RF4CE_NWKC_VENDOR_STRING) };
+#define NVM_TAG_PROFILEIDLIST    0x00
 
 static Bool _resetWithColdStart;
-static int _threadResult;
+static Bool _SendRemappableData = true;
 
-char _userString[20];
+gpRf4ce_ProfileId_t gpProfileIdList[GP_RF4CE_NWKC_MAX_PAIRING_TABLE_ENTRIES];
+gpRf4ce_VendorString_t Application_VendorString = { XSTRINGIFY(GP_RF4CE_NWKC_VENDOR_STRING) };
 
 const gpNvm_ElementDefine_t gpNvm_elementBaseLUTElements[] = 
 {
@@ -198,7 +512,6 @@ const gpNvm_LookUpTableHeader_t gpNvm_elementBaseLUTHeader =
 
 const gpNvm_VersionCrc_t gpNvm_InheritedNvmVersionCrc = 0xaba7;
 
-
 /********************************************************************************
  *                  Polling Renegotiation
  ********************************************************************************/
@@ -270,9 +583,6 @@ static void gpApplication_ZRCUnbind(UInt8 bindingId)
     result = gpZrc_Msg(gpZrc_MsgId_UnbindRequest, &messageZrc);
 }
 
-#define NVM_TAG_PROFILEIDLIST       0x00
-static Bool SendRemappableData = true;
-gpRf4ce_ProfileId_t gpProfileIdList[GP_RF4CE_NWKC_MAX_PAIRING_TABLE_ENTRIES];
 
 static void gpApplication_BindConfirm(gpRf4ce_Result_t result , UInt8 bindingRef, UInt8 profileId)
 {
@@ -287,7 +597,7 @@ static void gpApplication_BindConfirm(gpRf4ce_Result_t result , UInt8 bindingRef
 
         if(profileId == gpRf4ce_ProfileIdZrc2_0) {
             //gpApplication_ConfigureActionMapping(bindingRef);
-            //gpApplication_SetActionMapping(bindingRef, SendRemappableData);
+            //gpApplication_SetActionMapping(bindingRef, _SendRemappableData);
             //gpSched_ScheduleEvent(0, Application_ConfigurePolling);
         }
 
@@ -434,7 +744,7 @@ void DispatcherResetIndication(Bool setDefault)
  *                    gpRf4ceUserControl Callbacks
  *****************************************************************************/
 static uint16_t _releasedCode = static_cast<uint16_t>(~0);
-static uint8_t  _binidngId = static_cast<uint8_t>(~0);
+static uint8_t  _bindingId = static_cast<uint8_t>(~0);
 
 static void KeyReleased()
 {
@@ -521,10 +831,7 @@ static void cbInitializationDone(void)
     gpMacDispatcher_SetTransmitPower(3, 0);
     gpMacDispatcher_SetDefaultTransmitPowers(DefaultTXPowers);
 
-    {
-        //TODO: Make it configurable
-        gpRf4ce_SetUserString(_userString);
-    }
+    gpRf4ce_SetUserString(WPEFramework::Plugin::GreenPeak::UserString());
 
     gpApplication_ZRCBindSetup(true,false);
 
@@ -558,40 +865,6 @@ void hal_ResetUc(void)
 {
 }
 
-extern GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_DataCallbacks_t
-    ROM gpApp_DataCallbacks
-        FLASH_PROGMEM;
-extern GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_BindCallbacks_t
-    ROM gpApp_BindCallbacks
-        FLASH_PROGMEM;
-
-GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_DataCallbacks_t
-    ROM gpApp_DataCallbacks
-        FLASH_PROGMEM
-    = {
-        DispatcherResetIndication,
-        DispatcherDataIndication,
-        nullptr,
-        nullptr,
-        nullptr
-      };
-
-GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_BindCallbacks_t
-    ROM gpApp_BindCallbacks
-        FLASH_PROGMEM
-    = {
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-      };
-
 void target_DoR4ceReset(void)
 {
     _resetWithColdStart = gpRf4ce_IsColdStartAdvised(TARGET_NODE_CAPABILITIES);
@@ -620,14 +893,12 @@ void target_ActivatePairing()
 void target_ActivateUnpairing()
 {
     WPEFramework::Plugin::GreenPeak::Report(string("Unpairing."));
-    gpApplication_ZRCUnbind(_binidngId);
+    gpApplication_ZRCUnbind(_bindingId);
 }
 
 static void terminateThread()
 {
-    printf("Terminating the GreenPeak dedicated thread.\n");
-    pthread_exit(&_threadResult);
-    printf("After the terminating GreenPeak dedicated thread.\n");
+    printf("Terminating the loop.\n");
 }
 
 void Application_Init()
@@ -635,7 +906,6 @@ void Application_Init()
     gpBaseComps_StackInit();
     gpSched_ScheduleEvent(0, target_DoR4ceReset);
 }
-
 
 void gpRf4ce_cbDpiDisableConfirm(gpRf4ce_Result_t result)
 {
@@ -648,266 +918,52 @@ void gpApplication_IndicateBindSuccessToMiddleware(UInt8 bindingRef, UInt8 profi
 {
     GP_LOG_SYSTEM_PRINTF("Bind Success. BindId: 0x%x, ProfileId: 0x%x",0,bindingRef, profileId);
 }
+
 void gpApplication_IndicateBindFailureToMiddleware(gpRf4ce_Result_t result)
 {
     GP_LOG_SYSTEM_PRINTF("Bind Failure. Status 0x%x",0,result);
 }
 
+/*
+extern GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_DataCallbacks_t
+    ROM gpApp_DataCallbacks
+        FLASH_PROGMEM;
+extern GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_BindCallbacks_t
+    ROM gpApp_BindCallbacks
+        FLASH_PROGMEM;
+*/
+
+GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_DataCallbacks_t
+    ROM gpApp_DataCallbacks
+        FLASH_PROGMEM
+    = {
+        DispatcherResetIndication,
+        DispatcherDataIndication,
+        nullptr,
+        nullptr,
+        nullptr
+      };
+
+GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_BindCallbacks_t
+    ROM gpApp_BindCallbacks
+        FLASH_PROGMEM
+    = {
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+      };
+
+
 } // extern "C"
 
-
-
-/*****************************************************************************
-*  GreenPeak C++ Wrapper class. Hide C artifacts
-*****************************************************************************/
-
-namespace WPEFramework {
-namespace Plugin {
-
-    static uint32_t LoadModule(const string& moduleName) {
-        uint32_t result(Core::ERROR_OPENING_FAILED);
-        int fd(::open(moduleName.c_str(), O_RDONLY));
-
-        if (fd >= 0) {
-            const char params[] = "";
-            struct stat st;
-            fstat(fd, &st);
-            void* image = malloc(st.st_size);
-            read(fd, image, st.st_size);
-            close(fd);
-            if (::syscall(__NR_init_module, image, st.st_size, params) != 0) {
-                perror("init_module failed");
-                result = Core::ERROR_BAD_REQUEST;
-            }
-            else {
-                result = Core::ERROR_NONE;
-            }
-            ::free(image);
-        }
-    }
-    static uint32_t UnloadModule(const string& moduleName) {
-
-        if (syscall(__NR_delete_module, moduleName.c_str(), O_NONBLOCK) != 0) {
-            return (Core::ERROR_BAD_REQUEST);
-        }
-        return(Core::ERROR_NONE);
-    }
-
-    
-    /* static */ const string GreenPeak::_resourceName("GreenPeak");
-    static GreenPeak* _singleton(Core::Service<GreenPeak>::Create<GreenPeak>());
-
-    GreenPeak::Activity::Activity()
-        : Core::Thread(Core::Thread::DefaultStackSize(), _T("GreenPeak"))
-    {
-    }
-
-    void GreenPeak::Activity::Dispose()
-    {
-        Stop();
-        gpSched_ScheduleEvent(0, terminateThread);
-        //Core::Thread::SignalTermination();
-
-        // Wait till gpMain has ended......
-        TRACE_L1("%s: Waiting for GreenPeakDriver to stop:", __FUNCTION__);
-        Wait(Thread::STOPPED | Thread::BLOCKED);
-        TRACE_L1("%s: Done!!! ", __FUNCTION__);
-    }
-
-    /* virtual */ GreenPeak::Activity::~Activity()
-    {
-    }
-
-    /* virtual */ uint32_t GreenPeak::Activity::Worker()
-    {
-        GP_UTILS_INIT_STACK();
-        HAL_INITIALIZE_GLOBAL_INT();
-        //Hardware initialisation
-        HAL_INIT();
-        //Radio interrupts that occur will only be handled later on in the main loop
-        //Other interrupt source do not trigger any calls to blocks that are not initialized yet
-        HAL_ENABLE_GLOBAL_INT();
-        
-        gpBaseComps_StackInit();
-        gpSched_ScheduleEvent(0, target_DoR4ceReset);
-        GP_UTILS_DUMP_STACK_POINTER();
-        GP_UTILS_CHECK_STACK_PATTERN();
-        GP_UTILS_CHECK_STACK_POINTER();
-       while (IsRunning())  {
-            // Check if the system can go to sleep
-            gpSched_GoToSleep();
-            gpSched_Main_Body();
-        }
-        Block();
-        return (Core::infinite);
-    }
-
-    GreenPeak::GreenPeak()
-        : _readySignal(false, true)
-        , _callback(nullptr)
-        , _worker()
-        , _error(static_cast<uint32_t>(~0))
-        , _codeMask(0)
-        , _loadedModule()
-    {
-        Remotes::RemoteAdministrator::Instance().Announce(*this);
-    }
-
-    GreenPeak::~GreenPeak()
-    {
-        Remotes::RemoteAdministrator::Instance().Revoke(*this);
-        _worker.Dispose();
-
-        if (_loadedModule.empty() == false) {
-            UnloadModule(_loadedModule.c_str());
-        }
-    }
-
-    bool GreenPeak::WaitForReady(const uint32_t time) const
-    {
-        return (_readySignal.Lock(time) == 0);
-    }
-
-    /* virtual */ uint32_t GreenPeak::Error() const
-    {
-        return (_error);
-    }
-
-    /* virtual */ bool GreenPeak::Pair()
-    {
-        bool activated = false;
-
-        _adminLock.Lock();
-
-        if (_info.Major.IsSet() == true) {
-            gpSched_ScheduleEvent(0, target_ActivatePairing);
-            activated = true;
-        }
-
-        _adminLock.Unlock();
-
-        return (activated);
-    }
-
-
-    /* virtual */ bool GreenPeak::Unpair(string bindingId)
-    {
-        bool unpaired = false;
-
-        _adminLock.Lock();
-
-        if (_info.Major.IsSet() == true) {
-            _binidngId = atoi(bindingId.c_str());
-            gpSched_ScheduleEvent(0, target_ActivateUnpairing);
-            unpaired = true;
-        }
-
-        _adminLock.Unlock();
-
-        return (unpaired);
-    }
-
-    /* virtual */ uint32_t GreenPeak::Callback(Exchange::IKeyHandler* callback)
-    {
-        _adminLock.Lock();
-
-        // This is a 1-1 relation. No way you can set more than
-        // 1 listener. First clear the previous one (nullptr) before
-        // Setting a new one.
-        ASSERT((callback != nullptr) ^ (_callback != nullptr));
-
-        if (callback == nullptr) {
-            // We are unlinked. Deinitialize the stuff.
-            // Deinitialize();
-            _callback = nullptr;
-        }
-        else {
-            // Initialize();
-            TRACE_L1("%s: callback=%p _callback=%p", __FUNCTION__, callback, _callback);
-            _callback = callback;
-        }
-
-        _adminLock.Unlock();
-
-        return (Core::ERROR_NONE);
-    }
-
-    /* virtual */ string GreenPeak::MetaData() const
-    {
-        string result;
-
-        _adminLock.Lock();
-
-        _info.ToString(result);
-
-        _adminLock.Unlock();
-
-        return (result);
-    }
-
-    /* virtual */ void GreenPeak::Configure(const string& configure)
-    {
-        Config config; config.FromString(configure);
-        _codeMask = config.CodeMask.Value();
-
-        if ( (config.Module.IsSet() == true) && (config.Module.Value().empty() == false) ) {
-            if (LoadModule(config.Module.Value()) == Core::ERROR_NONE) {
-                _loadedModule = Core::File::FileName(config.Module.Value());
-                if (config.NodeId.IsSet() == true) {
-                    string nodeName ("/dev/" + _loadedModule);
-                    ::mknod (nodeName.c_str(), 0755 | S_IFCHR,::makedev(config.NodeId.Value(), 0));
-                }
-            }
-        }
-
-        ::strncpy (_userString, config.RemoteId.Value().c_str(), sizeof(_userString));
-        _worker.Run();
-    }
-
-    void GreenPeak::_Dispatch(const bool pressed, const uint16_t code, const uint16_t modifiers)
-    {
-        _adminLock.Lock();
-
-        if (_callback != nullptr) {
-            _callback->KeyEvent(pressed, (code | (modifiers << 16)), _resourceName);
-        }
-
-        _adminLock.Unlock();
-    }
-
-    /* static */ void GreenPeak::Dispatch(const bool pressed, const uint16_t code, const uint16_t modifiers)
-    {
-        _singleton->_Dispatch(pressed, code, modifiers);
-    }
-
-    void GreenPeak::_Initialized(const uint16_t major,
-        const uint16_t minor,
-        const uint16_t revision,
-        const uint16_t patch,
-        const uint32_t change)
-    {
-        _info.Major = major;
-        _info.Minor = minor;
-        _info.Revision = revision;
-        _info.Patch = patch;
-        _info.Change = change;
-
-        _error = 0;
-        _readySignal.Unlock();
-    }
-
-    /* static */ void GreenPeak::Initialized(const uint16_t major,
-        const uint16_t minor,
-        const uint16_t revision,
-        const uint16_t patch,
-        const uint32_t change)
-    {
-        _singleton->_Initialized(major, minor, revision, patch, change);
-    }
-
-    /* static */ void GreenPeak::Report(const string& text)
-    {
-        TRACE_GLOBAL(Trace::Information, (_T("RF4CE Report: %s"), text.c_str()));
-    }
 }
 }
+
+#endif // __REMOTECONTROL_GREENPEAK__
