@@ -5,6 +5,13 @@
 
 extern "C" {
 
+static void terminateThread(void);
+static void target_DoR4ceReset(void);
+static void target_ActivatePairing(void);
+static void target_ActivateUnpairing(void);
+
+static uint8_t  _bindingId = static_cast<uint8_t>(~0);
+
 #define GP_COMPONENT_ID GP_COMPONENT_ID_APP
 #define GP_MODULE_ID GP_MODULE_ID_APP
 
@@ -22,15 +29,10 @@ extern "C" {
 #include <gpSched.h>
 #include <gpVersion.h>
 #include <gpUtils.h>
-#include <hal.h>
-
-#define GP_COMPONENT_ID_ZRCRECIPIENT 130    // XXX: defined in rf4ce-hal-gp make file
-#define GP_COMPONENT_ID_MSORECIPIENT 152
-#define GP_COMPONENT_ID_RF4CEBINDGDP 49
-
 #include <gpZrc.h>
 #include <gpMsoRecipient.h>
 #include <gpNvm.h>
+#include <hal.h>
 
 }
 
@@ -125,7 +127,7 @@ namespace Plugin {
             }
 
         private:
-            virtual uint32_t GreenPeak::Activity::Worker() override {
+            virtual uint32_t Worker() override {
                 GP_UTILS_INIT_STACK();
                 HAL_INITIALIZE_GLOBAL_INT();
 
@@ -184,7 +186,7 @@ namespace Plugin {
         };
 
     public:
-        GreenPeak::GreenPeak()
+        GreenPeak()
             : _readySignal(false, true)
             , _callback(nullptr)
             , _worker()
@@ -202,7 +204,7 @@ namespace Plugin {
         }
 
     public:
-        inline bool GreenPeak::WaitForReady(const uint32_t time) const
+        inline bool WaitForReady(const uint32_t time) const
         {
             return (_readySignal.Lock(time) == 0);
         }
@@ -302,7 +304,7 @@ namespace Plugin {
         // These methods should only be used by the GreenPeak C methods in the GreenPeak
         // implementation file.
         // -------------------------------------------------------------------------------
-        static const char* UserString() const {
+        static char* UserString() {
             return (_singleton->_userString);
         }
         static void Dispatch(const bool pressed, const uint16_t code, const uint16_t modifiers) {
@@ -354,8 +356,9 @@ namespace Plugin {
     };
 
     /* static */ const string GreenPeak::_resourceName("GreenPeak");
-    /* static */ GreenPeak* Greenpeak::_singleton(Core::Service<GreenPeak>::Create<GreenPeak>());
+    /* static */ GreenPeak* GreenPeak::_singleton(Core::Service<GreenPeak>::Create<GreenPeak>());
 
+} } // namespace WPEFramework::Plugin
 
 /*****************************************************************************
  * All intersting C stuff. Lowlevel Greenpeak stuff...
@@ -744,7 +747,6 @@ void DispatcherResetIndication(Bool setDefault)
  *                    gpRf4ceUserControl Callbacks
  *****************************************************************************/
 static uint16_t _releasedCode = static_cast<uint16_t>(~0);
-static uint8_t  _bindingId = static_cast<uint8_t>(~0);
 
 static void KeyReleased()
 {
@@ -865,13 +867,13 @@ void hal_ResetUc(void)
 {
 }
 
-void target_DoR4ceReset(void)
+static void target_DoR4ceReset(void)
 {
     _resetWithColdStart = gpRf4ce_IsColdStartAdvised(TARGET_NODE_CAPABILITIES);
     gpRf4ceDispatcher_ResetRequest(_resetWithColdStart, TARGET_NODE_CAPABILITIES);
 }
 
-void target_ActivatePairing()
+static void target_ActivatePairing()
 {
     WPEFramework::Plugin::GreenPeak::Report(string("Entering the PairingMode."));
     #if 1
@@ -890,7 +892,7 @@ void target_ActivatePairing()
     #endif
 }
 
-void target_ActivateUnpairing()
+static void target_ActivateUnpairing()
 {
     WPEFramework::Plugin::GreenPeak::Report(string("Unpairing."));
     gpApplication_ZRCUnbind(_bindingId);
@@ -963,7 +965,3 @@ GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_BindCallbacks_t
 
 } // extern "C"
 
-}
-}
-
-#endif // __REMOTECONTROL_GREENPEAK__
