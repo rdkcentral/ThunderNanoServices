@@ -926,14 +926,13 @@ void gpApplication_IndicateBindFailureToMiddleware(gpRf4ce_Result_t result)
     GP_LOG_SYSTEM_PRINTF("Bind Failure. Status 0x%x",0,result);
 }
 
-/*
 extern GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_DataCallbacks_t
     ROM gpApp_DataCallbacks
         FLASH_PROGMEM;
+
 extern GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_BindCallbacks_t
     ROM gpApp_BindCallbacks
         FLASH_PROGMEM;
-*/
 
 GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_DataCallbacks_t
     ROM gpApp_DataCallbacks
