@@ -184,6 +184,11 @@ if(WPEFRAMEWORK_PLUGIN_SNAPSHOT)
     add_subdirectory(Snapshot)
 endif()
 
+if(WPEFRAMEWORK_PLUGIN_SYSTEMDCONNECTOR)
+    add_subdirectory(SystemdConnector)
+endif()
+
+
 if(WPEFRAMEWORK_PLUGIN_TIMESYNC)
     add_subdirectory(TimeSync)
 endif()

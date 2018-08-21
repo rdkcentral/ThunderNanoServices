@@ -2,7 +2,6 @@
 #define SYSTEMDCONNECTOR_H
 
 #include "Module.h"
-#include "LocationService.h"
 
 namespace WPEFramework {
 namespace Plugin {

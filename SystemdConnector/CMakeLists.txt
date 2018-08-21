@@ -1,6 +1,11 @@
 set(PLUGIN_NAME SystemdConnector)
+set(MODULE_NAME WPEFramework${PLUGIN_NAME})
+
 
 include(module) # Setup default stuff needed for the cmake framework thingy.
+
+find_package(WPEFramework QUIET)
+find_package(Systemd REQUIRED)
 
 set(PLUGIN_DEFINITIONS)
 
@@ -11,7 +16,7 @@ set(PLUGIN_OPTIONS)
 
 set(PLUGIN_LINK_OPTIONS)
 
-set(PLUGIN_DEPENDENCIES)
+set(PLUGIN_DEPENDENCIES ${SYSTEMD_LIBRARIES})
 
 set(PLUGIN_LIBS
     ${CMAKE_THREAD_LIBS_INIT}
@@ -31,4 +36,4 @@ set(PLUGIN_INPUT
 
 include(default_targets) # This is a regular plugin no need to edit the defaults
 
-write_config( ${PLUGIN_NAME} )
+write_config( ${MODULE_NAME} )

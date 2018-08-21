@@ -7,9 +7,17 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(SystemdConnector, 1, 0);
 
-    static void Startup () {
+    SystemdConnector::SystemdConnector()
+    {
+    }
 
-        TRACE_L1("Notify systemd that the Platform is up and running.\n");
+    /* virtual */ SystemdConnector::~SystemdConnector()
+    {
+    }
+
+    /* virtual */ const string SystemdConnector::Initialize(PluginHost::IShell* /* service */)
+    {
+	   TRACE_L1("Notify systemd that the Platform is up and running.\n");
 
         int rc = sd_notifyf(0,
                 "READY=1\n"
@@ -22,43 +30,13 @@ namespace Plugin {
         else {
             TRACE_L1("Notify Nexus Server Ready to systemd: OK\n");
         }
-    }
-
-    static void Shutdown () {
-
-        TRACE_L1("Notify systemd that the Platform is nolonger available.\n");
-
-        int rc = sd_notifyf(0,
-                "READY=0\n"
-                "STATUS=Platform Server is Down (from WPE Framework Compositor Plugin)\n"
-                "MAINPID=%lu",
-                ::getpid());
-        if (rc) {
-            TRACE_L1("Notify Nexus Server Ready to systemd: FAILED (%d)\n", rc);
-        }
-        else {
-            TRACE_L1("Notify Nexus Server Ready to systemd: OK\n");
-        }
-    }
-
-    SystemdConnector::SystemdConnector()
-    {
-    }
-
-    /* virtual */ SystemdConnector::~SystemdConnector()
-    {
-    }
-
-    /* virtual */ const string SystemdConnector::Initialize(PluginHost::IShell* /* service */)
-    {
-	StartUp();
         // On success return empty, to indicate there is no error text.
         return (string());
     }
 
     /* virtual */ void SystemdConnector::Deinitialize(PluginHost::IShell* /* servicei */)
     {
-        ShutDown();
+        //Strangely enough systemd has no notification for shutting down, so do nothing.
     }
 
     /* virtual */ string SystemdConnector::Information() const
