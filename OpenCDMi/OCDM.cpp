@@ -79,7 +79,7 @@ namespace Plugin {
 
         _pid = 0;
         _service = service;
-        _skipURL = _service->WebPrefix().length();
+        _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
         config.FromString(_service->ConfigLine());
 
         // Register the Process::Notification stuff. The Remote process might die before we get a

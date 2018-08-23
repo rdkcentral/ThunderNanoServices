@@ -13,6 +13,8 @@
 
 #include "CENCParser.h"
 
+#include <ocdm/open_cdm.h>
+
 extern "C" {
 
 typedef ::CDMi::ISystemFactory* (*GetDRMSystemFunction)();
@@ -913,6 +915,9 @@ namespace Plugin {
             , _compliant(false)
             , _systemToFactory()
             , _systemLibraries()
+#ifdef _MSVC_LANG
+            , _proxystubs(::ocdm_proxystubs())
+#endif
         {
             TRACE_L1("Constructing OCDMImplementation Service: %p", this);
         }
@@ -1011,6 +1016,9 @@ namespace Plugin {
                 }
                 else {
                     if (subSystem != nullptr) {
+
+						// Announce the port on which we are listening
+						Core::SystemInfo::SetEnvironment(_T("OPEN_CDM_SERVER"), config.Connector.Value(), true);
 
                         ASSERT (subSystem->IsActive(PluginHost::ISubSystem::DECRYPTION) == false);
                         subSystem->Set(PluginHost::ISubSystem::DECRYPTION, this);
@@ -1126,6 +1134,9 @@ namespace Plugin {
         std::map<const std::string,SystemFactory> _systemToFactory;
         std::list<Core::Library> _systemLibraries;
         std::list<string> _keySystems;
+#ifdef _MSVC_LANG
+        void* _proxystubs;
+#endif
     };
 
     SERVICE_REGISTRATION(OCDMImplementation, 1, 0);

@@ -406,7 +406,7 @@ private:
                     uint8_t byteArray[32];
 
                     // We got a KID, translate it
-                    if (Base64(&(slot[begin + 10]), end , byteArray, sizeof(byteArray)) == KeyId::Length()) {
+                    if (Base64(&(slot[begin + 10]), static_cast<uint8_t>(end), byteArray, sizeof(byteArray)) == KeyId::Length()) {
                         // Pass it the microsoft way :-(
 			uint32_t a = byteArray[0];
 			         a = (a << 8)  | byteArray[1];
