@@ -45,3 +45,17 @@ install(
         PUBLIC_HEADER DESTINATION include/${NAMESPACE} COMPONENT devel   # headers for mac (note the different component -> different package)
         INCLUDES DESTINATION include/${NAMESPACE}     # headers
 )
+
+# For cmake based consumers
+include (CMakePackageConfigHelpers)
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${TARGET}ConfigVersion.cmake VERSION ${VERSION} COMPATIBILITY SameMajorVersion)
+install(EXPORT ${TARGET}Targets FILE ${TARGET}Config.cmake NAMESPACE ${NAMESPACE}:: DESTINATION include/cmake)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}ConfigVersion.cmake DESTINATION include/cmake )
+
+# For non-cmake consumers
+configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/rpiserver.pc.in"
+        "${CMAKE_BINARY_DIR}/rpiserver.pc"
+        @ONLY)
+
+install(FILES ${CMAKE_BINARY_DIR}/rpiserver.pc DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
