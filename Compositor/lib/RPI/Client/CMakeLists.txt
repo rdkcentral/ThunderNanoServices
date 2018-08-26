@@ -1,8 +1,10 @@
-set(TARGET RPICompositor)
+set(TARGET compositorclient)
 
 message("Setting up ${TARGET} for RPI platfrom")
 
 find_package(Core REQUIRED)
+find_package(LibVirtualKeyboard REQUIRED)
+find_package(VirtualInput REQUIRED)
 find_package(Plugins REQUIRED)
 
 add_library(${TARGET}
@@ -10,9 +12,10 @@ add_library(${TARGET}
         )
 
 target_link_libraries(${TARGET}
-        PRIVATE
+        PUBLIC
         WPEFramework::Core
         WPEFramework::Plugins
+        WPEFramework::VirtualInput
         )
 
 set_target_properties(${TARGET}

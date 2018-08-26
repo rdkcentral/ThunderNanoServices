@@ -3,6 +3,7 @@ set(TARGET RPICompositor)
 message("Setting up ${TARGET} for RPI platfrom")
 
 find_package(Core REQUIRED)
+find_package(Plugins REQUIRED)
 
 add_library(${TARGET}
         RPI.cpp
@@ -12,6 +13,7 @@ target_link_libraries(${TARGET}
         PRIVATE
         WPEFramework::Core
         WPEFramework::Plugins
+        WPEFramework::Interfaces        
         )
 
 set_target_properties(${TARGET}
@@ -20,6 +22,11 @@ set_target_properties(${TARGET}
         CXX_STANDARD_REQUIRED YES
         FRAMEWORK FALSE
         OUTPUT_NAME ${compositor_artefact}
+        )
+
+target_link_libraries(${TARGET}
+    PRIVATE
+        rpi::rpiserver
         )
 
 install(TARGETS ${TARGET}
