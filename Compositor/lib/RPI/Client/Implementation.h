@@ -6,6 +6,10 @@
 #include <list>
 #include <algorithm>
 
+#include <bcm_host.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+
 #include "../../Client/Client.h"
 
 namespace WPEFramework {
@@ -79,6 +83,11 @@ private:
         int32_t _height;
         EGLSurface _nativeWindow;
         IKeyboard* _keyboard;
+
+        EGL_DISPMANX_WINDOW_T nativeWindow;
+        DISPMANX_DISPLAY_HANDLE_T dispman_display;
+        DISPMANX_UPDATE_HANDLE_T dispman_update;
+        DISPMANX_ELEMENT_HANDLE_T dispman_element;
     };
 
 private:
