@@ -329,6 +329,9 @@ namespace Plugin {
                                     SetBuffer(0, clearContentSize, clearContent);
                                 }
 
+                                // Store the status we have for the other side.
+                                Status(static_cast<uint32_t>(cr));
+
                                 // Whatever the result, we are done with the buffer..
                                 Consumed();
                             }
