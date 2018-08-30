@@ -218,7 +218,7 @@ namespace Plugin {
                         TRACE(Trace::Information, (_T("Opening map file: %s"), specific.c_str()));
                         TRACE_L1(_T("Opening map file: %s"), specific.c_str());
 
-                        // Get our selves a table..
+                        // Get our selves a table..de
                         PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(configList.Current().Name.Value()));
                         map.Load(specific);
                         map.PassThrough(configList.Current().PassOn.Value());
@@ -226,6 +226,15 @@ namespace Plugin {
 
                     _virtualDevices.push_back(configList.Current().Name.Value());
                 }
+
+				auto postLookup(config.PostLookup.Elements());
+
+				while (postLookup.Next() == true) {
+					string mappingFile(MappingFile(postLookup.Current().MapFile.Value(), service->PersistentPath(), service->DataPath()));
+					if ((mappingFile.empty() == false) && (postLookup.Current().Name.Value().empty() == false)) {
+						_inputHandler->PostLookup(postLookup.Current().Name.Value(), mappingFile);
+					}
+				}
 
                 _skipURL = service->WebPrefix().length();
                 _inputHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value());

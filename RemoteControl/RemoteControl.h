@@ -58,6 +58,30 @@ namespace Plugin {
                 Core::JSON::Boolean PassOn;
                 Core::JSON::String Settings;
             };
+			class Link : public Core::JSON::Container {
+			private:
+				Link& operator=(const Link&) = delete;
+
+			public:
+				Link()
+					: Core::JSON::Container()
+					, Name()
+					, MapFile()
+				{
+					Add(_T("name"), &Name);
+					Add(_T("mapfile"), &MapFile);
+				}
+				Link(const Link&)	{
+					Add(_T("name"), &Name);
+					Add(_T("mapfile"), &MapFile);
+				}
+				~Link()
+				{
+				}
+
+				Core::JSON::String Name;
+				Core::JSON::String MapFile;
+			};
 
         public:
             Config()
@@ -67,6 +91,8 @@ namespace Plugin {
                 , RepeatStart(500)
                 , RepeatInterval(100)
                 , Devices()
+				, Virtuals()
+				, Links()
             {
                 Add(_T("mapfile"), &MapFile);
                 Add(_T("passon"), &PassOn);
@@ -74,7 +100,8 @@ namespace Plugin {
                 Add(_T("repeatinterval"), &RepeatInterval);
                 Add(_T("devices"), &Devices);
                 Add(_T("virtuals"), &Virtuals);
-            }
+				Add(_T("links"), &Links);
+			}
             ~Config()
             {
             }
@@ -85,8 +112,9 @@ namespace Plugin {
             Core::JSON::DecUInt16 RepeatStart;
             Core::JSON::DecUInt16 RepeatInterval;
             Core::JSON::ArrayType<Device> Devices;
-            Core::JSON::ArrayType<Device> Virtuals;
-        };
+			Core::JSON::ArrayType<Device> Virtuals;
+			Core::JSON::ArrayType<Link> Links;
+		};
 
         class Data : public Core::JSON::Container {
 
