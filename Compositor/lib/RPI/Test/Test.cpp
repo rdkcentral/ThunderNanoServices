@@ -50,7 +50,7 @@ public:
         setupEGL();
         createSurface();
         drawFrame();
-        sleep(5);
+        sleep(100);
         destroySurface();
         termEGL();
         return (0);

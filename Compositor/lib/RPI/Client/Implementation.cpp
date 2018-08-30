@@ -1,6 +1,10 @@
 #include "Implementation.h"
 #include <virtualinput/virtualinput.h>
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/un.h>
+
 int g_pipefd[2];
 struct Message {
     uint32_t code;
@@ -20,6 +24,22 @@ static void VirtualKeyboardCallback(actiontype type , unsigned int code) {
 namespace WPEFramework {
 namespace Rpi {
 
+Display::SurfaceImplementation::IpcClient::IpcClient() {
+    struct sockaddr_un addr;
+    sock = socket(AF_UNIX, SOCK_STREAM, 0);
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, "\0hidden", sizeof(addr.sun_path)-1);
+    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0 ) {
+        printf("Display::IpcClient::IpcClient: connect failed\n");
+    }
+}
+
+Display::SurfaceImplementation::IpcClient::~IpcClient() {
+    close(sock);
+}
+
 Display::SurfaceImplementation::SurfaceImplementation(
         Display& display, const std::string& name,
         const uint32_t width, const uint32_t height)
@@ -32,6 +52,8 @@ Display::SurfaceImplementation::SurfaceImplementation(
 , _height(height)
 , _nativeWindow(nullptr)
 , _keyboard(nullptr) {
+
+    _ipcClient = new IpcClient();
 
     VC_RECT_T dst_rect;
     vc_dispmanx_rect_set(&dst_rect, 0, 0, _width, _height);
@@ -62,6 +84,8 @@ Display::SurfaceImplementation::SurfaceImplementation(
 }
 
 Display::SurfaceImplementation::~SurfaceImplementation() {
+
+    delete _ipcClient;
 
     dispman_update = vc_dispmanx_update_start(0);
     vc_dispmanx_element_remove(dispman_update, dispman_element);

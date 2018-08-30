@@ -28,6 +28,18 @@ private:
         SurfaceImplementation& operator=(const SurfaceImplementation&) = delete;
 
     public:
+        class IpcClient {
+        public:
+            IpcClient();
+            virtual ~IpcClient();
+
+        private:
+            int sock;
+    #define IPC_DATABUF_SIZE 256
+            char _sendBuf[IPC_DATABUF_SIZE];
+            char _recvBuf[IPC_DATABUF_SIZE];
+        };
+
         SurfaceImplementation(
                 Display& compositor, const std::string& name,
                 const uint32_t width, const uint32_t height);
@@ -83,6 +95,7 @@ private:
         int32_t _height;
         EGLSurface _nativeWindow;
         IKeyboard* _keyboard;
+        IpcClient* _ipcClient;
 
         EGL_DISPMANX_WINDOW_T nativeWindow;
         DISPMANX_DISPLAY_HANDLE_T dispman_display;

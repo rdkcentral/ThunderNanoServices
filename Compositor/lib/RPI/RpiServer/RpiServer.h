@@ -46,10 +46,43 @@ public:
         virtual void StateChange(server_state state) = 0;
     };
 
+    class IpcServer {
+    public:
+        IpcServer(void (*connectFunc)(void *), void (*disconnectFunc)(void *));
+        virtual ~IpcServer();
+        void RunServer();
+
+    private:
+        static void *ThreadFunc(void *con);
+
+        enum IPC_THREAD_STATE {
+            IPC_SERVER_STARTED = 1,
+            IPC_SERVER_STOPPED,
+            IPC_SERVER_ERROR
+        };
+        IPC_THREAD_STATE _threadState;
+        pthread_t _threadHandle;
+
+#define IPC_MAX_CLIENTS 8
+#define IPC_DATABUF_SIZE 256
+
+        char _sendBuf[IPC_DATABUF_SIZE];
+        char _recvBuf[IPC_DATABUF_SIZE];
+        void (*_connectFunc)(void *);
+        void (*_disconnectFunc)(void *);
+    };
+
 public:
     Platform(const string& callSign, IStateChange* stateChanges,
             IClient* clientChanges, const string& configuration);
     virtual ~Platform();
+
+private:
+    static void ClientConnect(void *con);
+    static void ClientDisconnect(void *con);
+
+    IpcServer* _instance;
+    static Platform* _implementation;
 };
 }
 }
