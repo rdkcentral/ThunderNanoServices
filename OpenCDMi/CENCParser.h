@@ -50,33 +50,20 @@ public:
             }
         }
         // Microsoft playready XML flavor retrieval of KID
-        inline KeyId(const systemType type, const Core::NumberEndian endianness, const uint32_t a, const uint16_t b, const uint16_t c, const uint8_t d[])
+        inline KeyId(const systemType type, const uint32_t a, const uint16_t b, const uint16_t c, const uint8_t d[])
             : _systems(type)
             , _status(::OCDM::ISession::StatusPending) {
             // A bit confused on how the mapping of the Microsoft KeyId's should go, looking at the spec:
             // https://msdn.microsoft.com/nl-nl/library/windows/desktop/aa379358(v=vs.85).aspx
             // Some test cases have a little endian byte ordering for the GUID, other a MSB ordering.
-            if (endianness == Core::NumberEndian::ENDIAN_LITTLE) {
-                _kid[0] = a & 0xFF;
-                _kid[1] = (a >> 8) & 0xFF;
-                _kid[2] = (a >> 16) & 0xFF;
-                _kid[3] = (a >> 24) & 0xFF;
-                _kid[4] = b & 0xFF;
-                _kid[5] = (b >> 8) & 0xFF;
-                _kid[6] = c & 0xFF;
-                _kid[7] = (c >> 8) & 0xFF;
-            } else if (endianness == Core::NumberEndian::ENDIAN_BIG) {
-                _kid[3] = a & 0xFF;
-                _kid[2] = (a >> 8) & 0xFF;
-                _kid[1] = (a >> 16) & 0xFF;
-                _kid[0] = (a >> 24) & 0xFF;
-                _kid[5] = b & 0xFF;
-                _kid[4] = (b >> 8) & 0xFF;
-                _kid[7] = c & 0xFF;
-                _kid[6] = (c >> 8) & 0xFF;
-            } else {
-                ASSERT(false); // Not reachable, middle endianness mercifully hasn't been encountered yet
-            }
+            _kid[0] = a & 0xFF;
+            _kid[1] = (a >> 8) & 0xFF;
+            _kid[2] = (a >> 16) & 0xFF;
+            _kid[3] = (a >> 24) & 0xFF;
+            _kid[4] = b & 0xFF;
+            _kid[5] = (b >> 8) & 0xFF;
+            _kid[6] = c & 0xFF;
+            _kid[7] = (c >> 8) & 0xFF;
 
             ::memcpy(&(_kid[8]), d, 8);
         }
@@ -100,13 +87,40 @@ public:
             return (operator!=(InvalidKey));
         }
         inline bool operator==(const uint8_t rhs[]) const {
-            return (::memcmp(rhs, _kid, sizeof(_kid)) == 0);
+            // Hack, in case of PlayReady, the key offered on the interface might be
+            // ordered incorrectly, cater for this situation, by silenty comparing with this incorrect value.
+            bool equal = false;
+
+            // Regardless of the order, the last 8 bytes should be equal
+            if (memcmp (&_kid[8], &(rhs[8]), 8)  == 0) {
+
+                // Lets first try the non swapped byte order.
+                if (memcmp (_kid, rhs, 8)  == 0) {
+                    // this is a match :-)
+                    equal = true;
+                }
+                else {
+                    // Let do the byte order alignment as suggested in the spec and see if it matches than :-)
+                    // https://msdn.microsoft.com/nl-nl/library/windows/desktop/aa379358(v=vs.85).aspx
+                    uint8_t alignedBuffer[8];
+                    alignedBuffer[0] = rhs[3];
+                    alignedBuffer[1] = rhs[2];
+                    alignedBuffer[2] = rhs[1];
+                    alignedBuffer[3] = rhs[0];
+                    alignedBuffer[4] = rhs[5];
+                    alignedBuffer[5] = rhs[4];
+                    alignedBuffer[6] = rhs[7];
+                    alignedBuffer[7] = rhs[6];
+                    equal = (memcmp (_kid, alignedBuffer, 8)  == 0);
+                }
+            }
+            return (equal);
         }
         inline bool operator!=(const uint8_t rhs[]) const {
             return !(operator==(rhs));
         }
         inline bool operator==(const KeyId& rhs) const {
-            return (::memcmp(_kid, rhs._kid, sizeof(_kid)) == 0);
+            return (operator==(rhs._kid));
         }
         inline bool operator!=(const KeyId& rhs) const {
             return !(operator==(rhs));
@@ -419,8 +433,7 @@ private:
                         uint8_t* d = &byteArray[8];
 
                         // Add them in both endiannesses, since we have encountered both in the wild.
-                        AddKeyId(KeyId(PLAYREADY, Core::NumberEndian::ENDIAN_LITTLE, a, b, c, d));
-                        AddKeyId(KeyId(PLAYREADY, Core::NumberEndian::ENDIAN_BIG, a, b, c, d));
+                        AddKeyId(KeyId(PLAYREADY, a, b, c, d));
                     }
                     size -= (begin + 10 +  end + 12);
                     slot += (begin + 10 +  end + 12);
