@@ -220,17 +220,16 @@ namespace Broadcom {
     Platform::~Platform()
     {
         _state = DEINITIALIZING;
-
-        #ifndef NEXUS_SERVER_EXTERNAL
-        nxserver_ipc_uninit();
-        nxserverlib_uninit(_instance);
-        BKNI_DestroyMutex(_lock);
-        NEXUS_Platform_Uninit();
-        #endif
-
         if (_joined == true) {
             NxClient_Uninit();
         }
+        #ifndef NEXUS_SERVER_EXTERNAL
+        nxserver_ipc_uninit();
+        nxserverlib_uninit(_instance);
+        NEXUS_Platform_Uninit();
+        BKNI_DestroyMutex(_lock);
+        #endif
+        _implementation = nullptr;
     }
 
     Platform::Platform(const string& callsign, IStateChange* stateChanges, IClient* clientChanges, const std::string& configuration)
