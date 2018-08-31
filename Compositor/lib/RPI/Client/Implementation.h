@@ -28,14 +28,24 @@ private:
         SurfaceImplementation& operator=(const SurfaceImplementation&) = delete;
 
     public:
+        typedef struct {
+            char displayName[32];
+            int x;
+            int y;
+            int width;
+            int height;
+        } ClientContext;
+
         class IpcClient {
         public:
-            IpcClient();
+            IpcClient(SurfaceImplementation &surfaceImpl,
+                    void *clientCon, int ccSize);
             virtual ~IpcClient();
 
         private:
+            SurfaceImplementation& _parent;
             int sock;
-    #define IPC_DATABUF_SIZE 256
+    #define IPC_DATABUF_SIZE 48
             char _sendBuf[IPC_DATABUF_SIZE];
             char _recvBuf[IPC_DATABUF_SIZE];
         };

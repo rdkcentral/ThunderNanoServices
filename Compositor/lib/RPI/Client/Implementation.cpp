@@ -24,7 +24,9 @@ static void VirtualKeyboardCallback(actiontype type , unsigned int code) {
 namespace WPEFramework {
 namespace Rpi {
 
-Display::SurfaceImplementation::IpcClient::IpcClient() {
+Display::SurfaceImplementation::IpcClient::IpcClient(
+        SurfaceImplementation &surfaceImpl, void *clientCon, int ccSize)
+: _parent(surfaceImpl){
     struct sockaddr_un addr;
     sock = socket(AF_UNIX, SOCK_STREAM, 0);
 
@@ -34,6 +36,8 @@ Display::SurfaceImplementation::IpcClient::IpcClient() {
     if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0 ) {
         printf("Display::IpcClient::IpcClient: connect failed\n");
     }
+    memcpy((void *)_sendBuf, (void *)clientCon, ccSize);
+    send(sock, _sendBuf, IPC_DATABUF_SIZE, 0);
 }
 
 Display::SurfaceImplementation::IpcClient::~IpcClient() {
@@ -53,8 +57,15 @@ Display::SurfaceImplementation::SurfaceImplementation(
 , _nativeWindow(nullptr)
 , _keyboard(nullptr) {
 
-    _ipcClient = new IpcClient();
+    ClientContext clientCon;
+    strcpy((char *)clientCon.displayName, (char *)_name.c_str());
+    clientCon.x = _x;
+    clientCon.y = _y;
+    clientCon.width = _width;
+    clientCon.height = _height;
+    _ipcClient = new IpcClient(*this, (void *)&clientCon, sizeof(clientCon));
 
+    int layerNum = atoi((char *)_name.c_str());
     VC_RECT_T dst_rect;
     vc_dispmanx_rect_set(&dst_rect, 0, 0, _width, _height);
     VC_RECT_T src_rect;
@@ -65,7 +76,7 @@ Display::SurfaceImplementation::SurfaceImplementation(
     dispman_element = vc_dispmanx_element_add(
             dispman_update,
             dispman_display,
-            2 /*layer*/,
+            layerNum /*layer*/,
             &dst_rect,
             0 /*src*/,
             &src_rect,
