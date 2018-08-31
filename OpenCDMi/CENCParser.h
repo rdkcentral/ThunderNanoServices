@@ -50,33 +50,20 @@ public:
             }
         }
         // Microsoft playready XML flavor retrieval of KID
-        inline KeyId(const systemType type, const Core::NumberEndian endianness, const uint32_t a, const uint16_t b, const uint16_t c, const uint8_t d[])
+        inline KeyId(const systemType type, const uint32_t a, const uint16_t b, const uint16_t c, const uint8_t d[])
             : _systems(type)
             , _status(::OCDM::ISession::StatusPending) {
             // A bit confused on how the mapping of the Microsoft KeyId's should go, looking at the spec:
             // https://msdn.microsoft.com/nl-nl/library/windows/desktop/aa379358(v=vs.85).aspx
             // Some test cases have a little endian byte ordering for the GUID, other a MSB ordering.
-            if (endianness == Core::NumberEndian::ENDIAN_LITTLE) {
-                _kid[0] = a & 0xFF;
-                _kid[1] = (a >> 8) & 0xFF;
-                _kid[2] = (a >> 16) & 0xFF;
-                _kid[3] = (a >> 24) & 0xFF;
-                _kid[4] = b & 0xFF;
-                _kid[5] = (b >> 8) & 0xFF;
-                _kid[6] = c & 0xFF;
-                _kid[7] = (c >> 8) & 0xFF;
-            } else if (endianness == Core::NumberEndian::ENDIAN_BIG) {
-                _kid[3] = a & 0xFF;
-                _kid[2] = (a >> 8) & 0xFF;
-                _kid[1] = (a >> 16) & 0xFF;
-                _kid[0] = (a >> 24) & 0xFF;
-                _kid[5] = b & 0xFF;
-                _kid[4] = (b >> 8) & 0xFF;
-                _kid[7] = c & 0xFF;
-                _kid[6] = (c >> 8) & 0xFF;
-            } else {
-                ASSERT(false); // Not reachable, middle endianness mercifully hasn't been encountered yet
-            }
+            _kid[0] = a & 0xFF;
+            _kid[1] = (a >> 8) & 0xFF;
+            _kid[2] = (a >> 16) & 0xFF;
+            _kid[3] = (a >> 24) & 0xFF;
+            _kid[4] = b & 0xFF;
+            _kid[5] = (b >> 8) & 0xFF;
+            _kid[6] = c & 0xFF;
+            _kid[7] = (c >> 8) & 0xFF;
 
             ::memcpy(&(_kid[8]), d, 8);
         }
@@ -419,8 +406,7 @@ private:
                         uint8_t* d = &byteArray[8];
 
                         // Add them in both endiannesses, since we have encountered both in the wild.
-                        AddKeyId(KeyId(PLAYREADY, Core::NumberEndian::ENDIAN_LITTLE, a, b, c, d));
-                        AddKeyId(KeyId(PLAYREADY, Core::NumberEndian::ENDIAN_BIG, a, b, c, d));
+                        AddKeyId(KeyId(PLAYREADY, a, b, c, d));
                     }
                     size -= (begin + 10 +  end + 12);
                     slot += (begin + 10 +  end + 12);
