@@ -227,7 +227,7 @@ namespace Plugin {
                     _virtualDevices.push_back(configList.Current().Name.Value());
                 }
 
-				auto postLookup(config.PostLookup.Elements());
+				auto postLookup(config.Links.Elements());
 
 				while (postLookup.Next() == true) {
 					string mappingFile(MappingFile(postLookup.Current().MapFile.Value(), service->PersistentPath(), service->DataPath()));
