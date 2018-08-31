@@ -149,6 +149,7 @@ namespace Plugin {
                     gpSched_GoToSleep();
                     gpSched_Main_Body();
                 }
+                hal_DeInit();
                 return (Core::infinite);
             }
         };
