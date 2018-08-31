@@ -10,6 +10,7 @@ option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (N
 option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_GRAPHICS_HEAP_SIZE "Change graphic heap of driver (Nexus only).")
 
 set(WPEFRAMEWORK_PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB "libcompositorplugin.so" CACHE STRING "Specify a library with a compositor implentation." )
+set(WPEFRAMEWORK_PLUGIN_COMPOSITOR_RESOLUTION "720p" CACHE STRING "Specify the startup resolution")
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 0)
