@@ -67,7 +67,7 @@ namespace Plugin {
 
     static uint32_t UnloadModule(const string& moduleName) {
 
-        if (syscall(__NR_delete_module, moduleName.c_str(), O_NONBLOCK) != 0) {
+        if (syscall(__NR_delete_module, moduleName.c_str(), O_NONBLOCK|O_TRUNC) != 0) {
             return (Core::ERROR_BAD_REQUEST);
         }
         return(Core::ERROR_NONE);
@@ -196,11 +196,6 @@ namespace Plugin {
         }
         virtual ~GreenPeak() {
             Remotes::RemoteAdministrator::Instance().Revoke(*this);
-            _worker.Dispose();
-
-            if (_loadedModule.empty() == false) {
-                UnloadModule(_loadedModule.c_str());
-            }
         }
 
     public:
@@ -253,8 +248,12 @@ namespace Plugin {
 
             if (callback == nullptr) {
                 // We are unlinked. Deinitialize the stuff.
-                // Deinitialize();
                 _callback = nullptr;
+                _worker.Dispose();
+
+                if (_loadedModule.empty() == false) {
+                   UnloadModule(_loadedModule.c_str());
+                }
             }
             else {
                 // Initialize();
