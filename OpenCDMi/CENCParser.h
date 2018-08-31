@@ -87,13 +87,40 @@ public:
             return (operator!=(InvalidKey));
         }
         inline bool operator==(const uint8_t rhs[]) const {
-            return (::memcmp(rhs, _kid, sizeof(_kid)) == 0);
+            // Hack, in case of PlayReady, the key offered on the interface might be
+            // ordered incorrectly, cater for this situation, by silenty comparing with this incorrect value.
+            bool equal = false;
+
+            // Regardless of the order, the last 8 bytes should be equal
+            if (memcmp (&_kid[8], &(rhs[8]), 8)  == 0) {
+
+                // Lets first try the non swapped byte order.
+                if (memcmp (_kid, rhs, 8)  == 0) {
+                    // this is a match :-)
+                    equal = true;
+                }
+                else {
+                    // Let do the byte order alignment as suggested in the spec and see if it matches than :-)
+                    // https://msdn.microsoft.com/nl-nl/library/windows/desktop/aa379358(v=vs.85).aspx
+                    uint8_t alignedBuffer[8];
+                    alignedBuffer[0] = rhs[3];
+                    alignedBuffer[1] = rhs[2];
+                    alignedBuffer[2] = rhs[1];
+                    alignedBuffer[3] = rhs[0];
+                    alignedBuffer[4] = rhs[5];
+                    alignedBuffer[5] = rhs[4];
+                    alignedBuffer[6] = rhs[7];
+                    alignedBuffer[7] = rhs[6];
+                    equal = (memcmp (_kid, alignedBuffer, 8)  == 0);
+                }
+            }
+            return (equal);
         }
         inline bool operator!=(const uint8_t rhs[]) const {
             return !(operator==(rhs));
         }
         inline bool operator==(const KeyId& rhs) const {
-            return (::memcmp(_kid, rhs._kid, sizeof(_kid)) == 0);
+            return (operator==(rhs._kid));
         }
         inline bool operator!=(const KeyId& rhs) const {
             return !(operator==(rhs));
