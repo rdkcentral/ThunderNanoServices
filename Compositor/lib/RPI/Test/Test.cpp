@@ -1,5 +1,6 @@
 #include <string>
 #include <chrono>
+#include <iostream>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -45,13 +46,34 @@ class TestContext {
 public:
 
     int run() {
-
-        idisplay = Compositor::IDisplay::Instance(DisplayName());
+        printf("q = quit, n = new Surface, d = delete surface\n");
+        idisplay = Compositor::IDisplay::Instance(DisplayName   ());
         setupEGL();
-        createSurface();
-        drawFrame();
-        sleep(100);
-        destroySurface();
+
+        int character;
+        do {
+            printf("\n>>");
+            character = ::toupper(::getc(stdin));
+
+            switch (character) {
+            case 'N': {
+                std::string name;
+                printf("\nEnter name >>");
+                std::cin.ignore();
+                std::getline(std::cin, name);
+                createSurface(name);
+                drawFrame();
+                break;
+            }
+            case 'D': {
+                destroySurface();
+                break;
+            }
+            }
+        } while (character != 'Q');
+
+        idisplay->Release();
+
         termEGL();
         return (0);
     }
@@ -71,9 +93,15 @@ private:
         eglSwapBuffers(eglDisplay, eglSurfaceWindow);
     }
 
-    void createSurface() {
+    void createSurface(const std::string& name) {
 
-        surface = idisplay->Create(DisplayName(), 1280, 720);
+        if ( surface != nullptr )
+        {
+            surface->Release();
+            surface = nullptr;        
+        }
+
+        surface = idisplay->Create(name, 1280, 720);
         NativeWindowType native = surface->Native();
         eglSurfaceWindow = eglCreateWindowSurface(
                 eglDisplay, eglConfig, native, NULL);
@@ -86,7 +114,12 @@ private:
         eglMakeCurrent(
                 eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
         eglDestroySurface(eglDisplay, eglSurfaceWindow);
-        delete surface;
+
+        if ( surface != nullptr )
+        {
+            surface->Release();
+            surface = nullptr;        
+        }
     }
 
     void setupEGL() {
@@ -127,8 +160,8 @@ private:
 
 private:
 
-    Compositor::IDisplay *idisplay;
-    Compositor::IDisplay::ISurface* surface;
+    Compositor::IDisplay *idisplay = nullptr;
+    Compositor::IDisplay::ISurface* surface = nullptr;
 
     EGLDisplay eglDisplay;
     EGLConfig eglConfig;

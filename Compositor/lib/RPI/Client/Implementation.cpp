@@ -24,79 +24,182 @@ static void VirtualKeyboardCallback(actiontype type , unsigned int code) {
 namespace WPEFramework {
 namespace Rpi {
 
-Display::SurfaceImplementation::IpcClient::IpcClient(
-        SurfaceImplementation &surfaceImpl, void *clientCon, int ccSize)
-: _parent(surfaceImpl){
-    struct sockaddr_un addr;
-    sock = socket(AF_UNIX, SOCK_STREAM, 0);
+class AccessorCompositor : public Exchange::IComposition::INotification {
+public:
+    AccessorCompositor () = delete;
+    AccessorCompositor (const AccessorCompositor&) = delete;
+    AccessorCompositor& operator= (const AccessorCompositor&) = delete;
 
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, "\0hidden", sizeof(addr.sun_path)-1);
-    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0 ) {
-        printf("Display::IpcClient::IpcClient: connect failed\n");
+private:
+    class RPCClient {
+    private:
+        RPCClient() = delete;
+        RPCClient(const RPCClient&) = delete;
+        RPCClient& operator=(const RPCClient&) = delete;
+
+        typedef WPEFramework::RPC::InvokeServerType<4, 1> RPCService;
+
+    public:
+        RPCClient(const Core::NodeId& nodeId, const string& proxyStubPath)
+            : _proxyStubs() 
+            , _client(Core::ProxyType<RPC::CommunicatorClient>::Create(nodeId))
+            , _service(Core::ProxyType<RPCService>::Create(Core::Thread::DefaultStackSize())) {
+
+            _client->CreateFactory<RPC::InvokeMessage>(2);
+            if (_client->Open(RPC::CommunicationTimeOut) == Core::ERROR_NONE) {
+
+                // Time to load the ProxyStubs, that are used for InterProcess communication
+                Core::Directory index(proxyStubPath.c_str(), _T("*.so"));
+
+                while (index.Next() == true) {
+                    Core::Library library(index.Current().c_str());
+
+                    if (library.IsLoaded() == true) {
+                        _proxyStubs.push_back(library);
+                    }             
+                } 
+ 
+                SleepMs(100);
+
+                _client->Register(_service);
+            }
+            else {
+                _client.Release();
+            }
+        }
+        ~RPCClient() {
+            _proxyStubs.clear();
+            if (_client.IsValid() == true) {
+                _client->Unregister(_service);
+                _client->Close(Core::infinite);
+                _client.Release();
+            }
+        }
+
+    public:
+        inline bool IsOperational() const {
+            return (_client.IsValid());
+        }
+
+        template <typename INTERFACE>
+        INTERFACE* Create(const string& objectName, const uint32_t version = static_cast<uint32_t>(~0)) {
+            INTERFACE* result = nullptr;
+
+            if (_client.IsValid() == true) {
+                // Oke we could open the channel, lets get the interface
+                result = _client->Create<INTERFACE>(objectName, version);
+            }
+
+            return (result);
+        }
+
+    private:
+        std::list<Core::Library> _proxyStubs;
+        Core::ProxyType<RPC::CommunicatorClient> _client;
+        Core::ProxyType<RPCService> _service;
+    };
+
+    private:
+
+    AccessorCompositor (const TCHAR domainName[]) 
+        : _refCount(1)
+        , _adminLock() 
+        , _client(Core::NodeId(domainName), _T("/usr/lib/wpeframework/proxystubs")) // todo: how to get the correct path?
+        , _remote(nullptr) {
+
+        if (_client.IsOperational() == true) { 
+
+            _remote = _client.Create<Exchange::IComposition::INotification>(_T("CompositorImplementation"));
+        }
     }
-    memcpy((void *)_sendBuf, (void *)clientCon, ccSize);
-    send(sock, _sendBuf, IPC_DATABUF_SIZE, 0);
-}
 
-Display::SurfaceImplementation::IpcClient::~IpcClient() {
-    close(sock);
-}
+    public:
+
+    virtual void AddRef() const override {
+        Core::InterlockedIncrement(_refCount);
+    }
+
+    virtual uint32_t Release() const override {
+
+        _adminLock.Lock();
+
+        if (Core::InterlockedDecrement(_refCount) == 0) {
+            delete this;
+            return (Core::ERROR_DESTRUCTION_SUCCEEDED);
+        }
+
+        _adminLock.Unlock();
+
+        return (Core::ERROR_NONE);
+    }
+
+    void Attached(Exchange::IComposition::IClient* client) override {
+        if( _remote != nullptr ) {
+            _remote->Attached(client);
+        }
+    }
+
+    void Detached(Exchange::IComposition::IClient* client) override {
+        if( _remote != nullptr ) {
+            _remote->Detached(client);
+        }
+    }
+
+public:
+    static AccessorCompositor* Create () {
+
+			string connector;
+			if ((Core::SystemInfo::GetEnvironment(_T("RPI_COMPOSITOR"), connector) == false) || (connector.empty() == true)) {
+				connector = _T("/tmp/rpicompositor");
+			}
+
+            AccessorCompositor* result = new AccessorCompositor (connector.c_str());
+
+            if (result->_remote == nullptr) {
+                TRACE_L1("Failed to creater AccessorCompositor");
+                delete result;
+            }
+            else {
+                TRACE_L1("Created the AccessorCompositor succesfully");
+            }
+
+        return (result);
+    }
+
+    ~AccessorCompositor() {
+        if (_remote != nullptr) {
+            _remote->Release();
+        }
+        TRACE_L1("Destructed the AccessorCompositor");
+    }
+
+    BEGIN_INTERFACE_MAP(AccessorCompositor)
+        INTERFACE_ENTRY(Exchange::IComposition::INotification)
+    END_INTERFACE_MAP
+
+private:
+    mutable uint32_t _refCount;
+    mutable Core::CriticalSection _adminLock;
+    RPCClient _client;
+    Exchange::IComposition::INotification* _remote;
+};
 
 Display::SurfaceImplementation::SurfaceImplementation(
         Display& display, const std::string& name,
         const uint32_t width, const uint32_t height)
 : _parent(display)
 , _refcount(1)
-, _name(name)
-, _x(0)
-, _y(0)
-, _width(width)
-, _height(height)
 , _nativeWindow(nullptr)
-, _keyboard(nullptr) {
+, _keyboard(nullptr)
+, _client(nullptr) 
+{
 
-    ClientContext clientCon;
-    strcpy((char *)clientCon.displayName, (char *)_name.c_str());
-    clientCon.x = _x;
-    clientCon.y = _y;
-    clientCon.width = _width;
-    clientCon.height = _height;
-    _ipcClient = new IpcClient(*this, (void *)&clientCon, sizeof(clientCon));
-
-    int layerNum = atoi((char *)_name.c_str());
-    VC_RECT_T dst_rect;
-    vc_dispmanx_rect_set(&dst_rect, 0, 0, _width, _height);
-    VC_RECT_T src_rect;
-    vc_dispmanx_rect_set(&src_rect, 0, 0, (_width << 16), (_height << 16));
-
-    dispman_display = vc_dispmanx_display_open(0);
-    dispman_update = vc_dispmanx_update_start(0);
-    dispman_element = vc_dispmanx_element_add(
-            dispman_update,
-            dispman_display,
-            layerNum /*layer*/,
-            &dst_rect,
-            0 /*src*/,
-            &src_rect,
-            DISPMANX_PROTECTION_NONE,
-            0 /*alpha*/,
-            0 /*clamp*/,
-            DISPMANX_NO_ROTATE);
-    vc_dispmanx_update_submit_sync(dispman_update);
-
-    nativeWindow.element = dispman_element;
-    nativeWindow.width = _width;
-    nativeWindow.height = _height;
-    _nativeWindow = static_cast<EGLSurface>(&nativeWindow);
+    _client = Display::SurfaceImplementation::RaspberryPiClient::Create(name, 0, 0, width, height); //todo: where to get x and y?
 
     _parent.Register(this);
 }
 
 Display::SurfaceImplementation::~SurfaceImplementation() {
-
-    delete _ipcClient;
 
     dispman_update = vc_dispmanx_update_start(0);
     vc_dispmanx_element_remove(dispman_update, dispman_element);
@@ -104,11 +207,17 @@ Display::SurfaceImplementation::~SurfaceImplementation() {
     vc_dispmanx_display_close(dispman_display);
 
     _parent.Unregister(this);
+
+    if( _client != nullptr ) { 
+        _client->Release();
+        _client = nullptr;
+    }
 }
 
 Display::Display(const std::string& name)
 : _displayName(name)
-, _virtualkeyboard(nullptr)  {
+, _virtualkeyboard(nullptr)
+, _accessorCompositor(AccessorCompositor::Create())  {
 
     if (pipe(g_pipefd) == -1) {
         g_pipefd[0] = -1;
@@ -126,6 +235,10 @@ Display::~Display() {
 
     if (_virtualkeyboard != nullptr) {
         Destruct(_virtualkeyboard);
+    }
+
+    if ( _accessorCompositor != nullptr ) {
+        _accessorCompositor->Release();
     }
 }
 
@@ -159,6 +272,30 @@ Compositor::IDisplay* Display::Instance(const std::string& displayName) {
     static Display myDisplay(displayName);
     return (&myDisplay);
 }
+
+
+inline void Display::Register(Display::SurfaceImplementation* surface) {
+    std::list<SurfaceImplementation*>::iterator index(
+            std::find(_surfaces.begin(), _surfaces.end(), surface));
+    if (index == _surfaces.end()) {
+        _surfaces.push_back(surface);
+        if ( _accessorCompositor != nullptr && surface->Client() != nullptr) {
+        _accessorCompositor->Attached(surface->Client());
+        }
+    }
+}
+inline void Display::Unregister(Display::SurfaceImplementation* surface) {
+    std::list<SurfaceImplementation*>::iterator index(
+            std::find(_surfaces.begin(), _surfaces.end(), surface));
+    if (index != _surfaces.end()) {
+        if ( _accessorCompositor != nullptr && surface->Client() != nullptr) {
+        _accessorCompositor->Detached(surface->Client());
+        }
+        _surfaces.erase(index);
+    }
+}  
+
+
 }
 
 Compositor::IDisplay* Compositor::IDisplay::Instance(
@@ -166,4 +303,6 @@ Compositor::IDisplay* Compositor::IDisplay::Instance(
     bcm_host_init();
     return (Rpi::Display::Instance(displayName));
 }
+
 }
+

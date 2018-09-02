@@ -23,11 +23,6 @@ set_target_properties(${TARGET}
         OUTPUT_NAME ${compositor_artefact}
         )
 
-target_link_libraries(${TARGET}
-    PRIVATE
-        rpi::rpiserver
-        )
-
 install(TARGETS ${TARGET}
         DESTINATION ${CMAKE_INSTALL_PREFIX}/share/WPEFramework/Compositor
         )

@@ -1,5 +1,5 @@
 set(COMPOSITOR_TEST_ARTIFACT
-    Test
+    RPICompositorTest
     )
 
 include(setup_target_properties_executable)

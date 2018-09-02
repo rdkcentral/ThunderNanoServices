@@ -5,15 +5,20 @@
 #include <cassert>
 #include <list>
 #include <algorithm>
+#include <memory>
 
 #include <bcm_host.h>
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+#include <interfaces/IComposition.h>
+
 #include "../../Client/Client.h"
 
 namespace WPEFramework {
 namespace Rpi {
+
+class AccessorCompositor;
 
 class Display : public Compositor::IDisplay {
 private:
@@ -27,91 +32,170 @@ private:
         SurfaceImplementation(const SurfaceImplementation&) = delete;
         SurfaceImplementation& operator=(const SurfaceImplementation&) = delete;
 
-    public:
-        typedef struct {
-            char displayName[32];
-            int x;
-            int y;
-            int width;
-            int height;
-        } ClientContext;
+        class RaspberryPiClient : public Exchange::IComposition::IClient {
+            public:
+                RaspberryPiClient() = delete;
+                RaspberryPiClient(const RaspberryPiClient&) = delete;
+                RaspberryPiClient& operator=(const RaspberryPiClient&) = delete;
 
-        class IpcClient {
-        public:
-            IpcClient(SurfaceImplementation &surfaceImpl,
-                    void *clientCon, int ccSize);
-            virtual ~IpcClient();
+                static RaspberryPiClient* Create(const std::string& name, const uint32_t x, const uint32_t y, const uint32_t width, const uint32_t height)
+                {
+                    RaspberryPiClient* result = Core::Service<RaspberryPiClient>::Create<RaspberryPiClient>(name, x, y, width, height);
 
-        private:
-            SurfaceImplementation& _parent;
-            int sock;
-    #define IPC_DATABUF_SIZE 48
-            char _sendBuf[IPC_DATABUF_SIZE];
-            char _recvBuf[IPC_DATABUF_SIZE];
+                    return (result);
+                }
+
+            
+                RaspberryPiClient(const std::string& name, const uint32_t x, const uint32_t y, const uint32_t width, const uint32_t height)
+                    : Exchange::IComposition::IClient()
+                    , _name(name)
+                    , _x(x)
+                    , _y(y)
+                    , _width(width)
+                    , _height(height)
+                {
+                    TRACE_L1("Created client named: %s", _name.c_str());
+                }
+
+                virtual ~RaspberryPiClient()
+                {
+                    TRACE_L1("Destructing client named: %s", -name.c_str());
+                }
+
+                virtual string Name() const override
+                {
+                    return _name;
+                }
+                virtual void Kill() override
+                {
+                    //todo: implement
+                    fprintf(stderr, "Kill called!!!\n");
+                }
+                virtual void Opacity(const uint32_t value) override
+                {
+                    // todo implement
+                    fprintf(stderr, "Opacity called!!!\n");
+                }
+                virtual void Geometry(const uint32_t X, const uint32_t Y, const uint32_t width, const uint32_t height) override
+                {
+                    // todo implement
+                    fprintf(stderr, "Geometry called!!!\n");
+                }
+                virtual void Visible(const bool visible) override
+                {
+                    // todo implement
+                    fprintf(stderr, "Visible called!!!\n");
+                }
+                virtual void SetTop() override
+                {
+                    // todo implement
+                    fprintf(stderr, "SetTop called!!!\n");
+                }
+                virtual void SetInput() override
+                {
+                    // todo implement
+                    fprintf(stderr, "SetInput called!!!\n");
+
+                }
+                uint32_t X() const
+                {
+                    return _x;
+                }
+                uint32_t Y() const
+                {
+                    return _y;
+                }
+                uint32_t Width() const
+                {
+                    return _width;
+                }
+                uint32_t Height() const
+                {
+                    return _height;
+                }
+                const string& ClientName() const
+                {
+                    return _name;
+                }
+
+                BEGIN_INTERFACE_MAP(Entry)
+                    INTERFACE_ENTRY(Exchange::IComposition::IClient)
+                END_INTERFACE_MAP
+
+            private:
+            std::string _name;
+            uint32_t _x;
+            uint32_t _y;
+            uint32_t _width;
+            uint32_t _height;   
         };
 
-        SurfaceImplementation(
-                Display& compositor, const std::string& name,
-                const uint32_t width, const uint32_t height);
-        virtual ~SurfaceImplementation();
-        virtual uint32_t AddRef() const override {
-            _refcount++;
-            return (_refcount);
-        }
-        virtual uint32_t Release() const override {
-            if (--_refcount == 0) {
-                delete const_cast<SurfaceImplementation*>(this);
+        public:
+            SurfaceImplementation(
+                    Display& compositor, const std::string& name,
+                    const uint32_t width, const uint32_t height);
+            virtual ~SurfaceImplementation();
+            virtual uint32_t AddRef() const override {
+                _refcount++;
+                return (_refcount);
             }
-            return (0);
-        }
-        virtual EGLNativeWindowType Native() const override {
-            return (static_cast<EGLNativeWindowType>(_nativeWindow));
-        }
-        virtual const std::string& Name() const override {
-            return _name;
-        }
-        virtual int32_t Height() const override {
-            return (_height);
-        }
-        virtual int32_t Width() const override {
-            return (_width);
-        }
-        virtual void Keyboard(
-                Compositor::IDisplay::IKeyboard* keyboard) override {
-            assert((_keyboard == nullptr) ^ (keyboard == nullptr));
-            _keyboard = keyboard;
-        }
-        virtual int32_t X() const override {
-            return (_x);
-        }
-        virtual int32_t Y() const override {
-            return (_y);
-        }
-        inline void SendKey(
-                const uint32_t key,
-                const IKeyboard::state action, const uint32_t time) {
-            if (_keyboard != nullptr) {
-                _keyboard->Direct(key, action);
+            virtual uint32_t Release() const override {
+                if (--_refcount == 0) {
+                    delete const_cast<SurfaceImplementation*>(this);
+                }
+                return (0);
             }
-        }
+            virtual EGLNativeWindowType Native() const override {
+                return (static_cast<EGLNativeWindowType>(_nativeWindow));
+            }
+            virtual const string& Name() const override {
+                return _client->ClientName();
+            }
+            virtual int32_t Height() const override {
+                return _client->Height();
+            }
+            virtual int32_t Width() const override {
+                return (_client->Width());
+            }
+            virtual void Keyboard(
+                    Compositor::IDisplay::IKeyboard* keyboard) override {
+                assert((_keyboard == nullptr) ^ (keyboard == nullptr));
+                _keyboard = keyboard;
+            }
+            virtual int32_t X() const override {
+                return (_client->X());
+            }
+            virtual int32_t Y() const override {
+                return (_client->Y());
+            }
+            inline void SendKey(
+                    const uint32_t key,
+                    const IKeyboard::state action, const uint32_t time) {
+                if (_keyboard != nullptr) {
+                    _keyboard->Direct(key, action);
+                }
+            }
 
-    private:
-        Display& _parent;
-        mutable uint32_t _refcount;
-        std::string _name;
-        int32_t _x;
-        int32_t _y;
-        int32_t _width;
-        int32_t _height;
-        EGLSurface _nativeWindow;
-        IKeyboard* _keyboard;
-        IpcClient* _ipcClient;
+            inline const Exchange::IComposition::IClient* Client() const {
+                return _client;
+            }
 
-        EGL_DISPMANX_WINDOW_T nativeWindow;
-        DISPMANX_DISPLAY_HANDLE_T dispman_display;
-        DISPMANX_UPDATE_HANDLE_T dispman_update;
-        DISPMANX_ELEMENT_HANDLE_T dispman_element;
-    };
+            inline Exchange::IComposition::IClient* Client() {
+                return _client;
+            }
+
+        private:
+            Display& _parent;
+            mutable uint32_t _refcount;
+            EGLSurface _nativeWindow;
+            IKeyboard* _keyboard;
+            RaspberryPiClient* _client;
+
+            EGL_DISPMANX_WINDOW_T nativeWindow;
+            DISPMANX_DISPLAY_HANDLE_T dispman_display;
+            DISPMANX_UPDATE_HANDLE_T dispman_update;
+            DISPMANX_ELEMENT_HANDLE_T dispman_element;
+        };
 
 private:
     Display(const std::string& displayName);
@@ -138,24 +222,13 @@ public:
     static Compositor::IDisplay* Instance(const std::string& displayName);
 
 private:
-    inline void Register(SurfaceImplementation* surface) {
-        std::list<SurfaceImplementation*>::iterator index(
-                std::find(_surfaces.begin(), _surfaces.end(), surface));
-        if (index == _surfaces.end()) {
-            _surfaces.push_back(surface);
-        }
-    }
-    inline void Unregister(SurfaceImplementation* surface) {
-        std::list<SurfaceImplementation*>::iterator index(
-                std::find(_surfaces.begin(), _surfaces.end(), surface));
-        if (index != _surfaces.end()) {
-            _surfaces.erase(index);
-        }
-    }
+    inline void Register(SurfaceImplementation* surface);
+    inline void Unregister(SurfaceImplementation* surface);
 
     const std::string _displayName;
     void* _virtualkeyboard ;
     std::list<SurfaceImplementation*> _surfaces;
+    AccessorCompositor* _accessorCompositor;
 };
 
 } // Rpi
