@@ -29,12 +29,14 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 #
 
-find_path (DSHAL_INCLUDE_DIR NAME dsVideoPort.h PATHS usr/include/)
+find_path (DSHAL_VIDEOPORT_INCLUDE_DIR NAMES dsVideoPort.h PATHS usr/include/)
 
-find_library(DSHAL_LIB NAME  libds-hal.so HINTS /usr/lib /usr/local/lib ${CMAKE_INSTALL_PREFIX}/usr/lib)
+find_path(DSHAL_FPD_INCLUDE_DIR NAMES dsFPD.h PATHS usr/include/)
+
+find_library(DSHAL_LIB NAMES ds-hal HINTS /usr/lib /usr/local/lib ${CMAKE_INSTALL_PREFIX}/usr/lib)
 
 include(FindPackageHandleStandardArgs)
-set (DSHAL_INCLUDE_DIRS ${DSHAL_INCLUDE_DIR} CACHE PATH "Path to header")
+set (DSHAL_INCLUDE_DIRS ${DSHAL_VIDEOPORT_INCLUDE_DIR} ${DSHAL_FPD_INCLUDE_DIR} CACHE PATH "Path to header")
 set (DSHAL_LIBRARIES ${DSHAL_LIB} CACHE PATH "path to ds-hal library")
 
 mark_as_advanced(DSHAL_INCLUDE_DIRS DSHAL_LIBRARIES)
