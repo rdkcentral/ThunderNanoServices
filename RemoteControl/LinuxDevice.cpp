@@ -73,7 +73,7 @@ namespace Plugin {
     public:
         virtual const TCHAR* Name() const
         {
-            return (_T("LinuxDevice"));
+            return (_T("DevInput"));
         }
             virtual void Configure(const string&)
             {

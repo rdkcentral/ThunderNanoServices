@@ -80,7 +80,7 @@ namespace Plugin {
         uint32_t _codeMask;
     };
 
-    /* static */ const string IRRemote::_resourceName(_T("NexusIR"));
+    /* static */ const string IRRemote::_resourceName(_T("IR"));
     static IRRemote* _singleton(Core::Service<IRRemote>::Create<IRRemote>());
 
     IRRemote::IRRemote()

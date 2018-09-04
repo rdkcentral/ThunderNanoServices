@@ -355,7 +355,7 @@ namespace Plugin {
         static GreenPeak* _singleton;
     };
 
-    /* static */ const string GreenPeak::_resourceName("GreenPeak");
+    /* static */ const string GreenPeak::_resourceName("RF4CE");
     /* static */ GreenPeak* GreenPeak::_singleton(Core::Service<GreenPeak>::Create<GreenPeak>());
 
 } } // namespace WPEFramework::Plugin
