@@ -184,12 +184,106 @@ private:
     Exchange::IComposition::INotification* _remote;
 };
 
+Display::SurfaceImplementation::RaspberryPiClient::RaspberryPiClient(const std::string& name, const uint32_t x, const uint32_t y, const uint32_t width, const uint32_t height)
+: Exchange::IComposition::IClient()
+, _name(name)
+, _x(x)
+, _y(y)
+, _width(width)
+, _height(height) {
+
+    TRACE_L1("Created client named: %s", _name.c_str());
+
+    VC_DISPMANX_ALPHA_T alpha = {
+            DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS,
+            255,
+            0
+    };
+
+    _layerNum = atoi((char *)_name.c_str());
+    vc_dispmanx_rect_set(&_dstRect, 0, 0, _width, _height);
+    vc_dispmanx_rect_set(&_srcRect, 0, 0, (_width << 16), (_height << 16));
+
+    _dispmanDisplay = vc_dispmanx_display_open(0);
+    _dispmanUpdate = vc_dispmanx_update_start(0);
+    _dispmanElement = vc_dispmanx_element_add(
+            _dispmanUpdate,
+            _dispmanDisplay,
+            _layerNum /*layer*/,
+            &_dstRect,
+            0 /*src*/,
+            &_srcRect,
+            DISPMANX_PROTECTION_NONE,
+            &alpha /*alpha*/,
+            0 /*clamp*/,
+            DISPMANX_NO_ROTATE);
+    vc_dispmanx_update_submit_sync(_dispmanUpdate);
+
+    _nativeWindow.element = _dispmanElement;
+    _nativeWindow.width = _width;
+    _nativeWindow.height = _height;
+    _nativeSurface = static_cast<EGLSurface>(&_nativeWindow);
+}
+
+Display::SurfaceImplementation::RaspberryPiClient::~RaspberryPiClient() {
+
+    TRACE_L1("Destructing client named: %s", _name.c_str());
+
+    _dispmanUpdate = vc_dispmanx_update_start(0);
+    vc_dispmanx_element_remove(_dispmanUpdate, _dispmanElement);
+    vc_dispmanx_update_submit_sync(_dispmanUpdate);
+    vc_dispmanx_display_close(_dispmanDisplay);
+}
+
+void Display::SurfaceImplementation::RaspberryPiClient::Opacity(
+        const uint32_t value) {
+
+    _opacity = (value > 255) ? 255 : value;
+    _dispmanUpdate = vc_dispmanx_update_start(0);
+    vc_dispmanx_element_change_attributes(_dispmanUpdate,
+            _dispmanElement,
+            ELEMENT_CHANGE_OPACITY,
+            _layerNum,
+            _opacity,
+            &_dstRect,
+            &_srcRect,
+            0,
+            DISPMANX_NO_ROTATE);
+    vc_dispmanx_update_submit_sync(_dispmanUpdate);
+}
+
+void Display::SurfaceImplementation::RaspberryPiClient::Geometry(
+        const uint32_t X, const uint32_t Y,
+        const uint32_t width, const uint32_t height) {
+    _x = X;
+    _y = Y;
+    _width = width;
+    _height = height;
+    vc_dispmanx_rect_set(&_dstRect, _x, _y, _width, _height);
+    vc_dispmanx_rect_set(&_srcRect, 0, 0, (_width << 16), (_height << 16));
+
+    _dispmanUpdate = vc_dispmanx_update_start(0);
+    vc_dispmanx_element_change_attributes(_dispmanUpdate,
+            _dispmanElement,
+            ELEMENT_CHANGE_DEST_RECT,
+            _layerNum,
+            _opacity,
+            &_dstRect,
+            &_srcRect,
+            0,
+            DISPMANX_NO_ROTATE);
+    vc_dispmanx_update_submit_sync(_dispmanUpdate);
+}
+
+void Display::SurfaceImplementation::RaspberryPiClient::Visible(
+        const bool visible) {
+}
+
 Display::SurfaceImplementation::SurfaceImplementation(
         Display& display, const std::string& name,
         const uint32_t width, const uint32_t height)
 : _parent(display)
 , _refcount(1)
-, _nativeWindow(nullptr)
 , _keyboard(nullptr)
 , _client(nullptr) 
 {
@@ -200,11 +294,6 @@ Display::SurfaceImplementation::SurfaceImplementation(
 }
 
 Display::SurfaceImplementation::~SurfaceImplementation() {
-
-    dispman_update = vc_dispmanx_update_start(0);
-    vc_dispmanx_element_remove(dispman_update, dispman_element);
-    vc_dispmanx_update_submit_sync(dispman_update);
-    vc_dispmanx_display_close(dispman_display);
 
     _parent.Unregister(this);
 

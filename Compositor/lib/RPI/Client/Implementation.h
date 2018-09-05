@@ -15,6 +15,9 @@
 
 #include "../../Client/Client.h"
 
+#define ELEMENT_CHANGE_DEST_RECT (1<<2)
+#define ELEMENT_CHANGE_OPACITY (1<<1)
+
 namespace WPEFramework {
 namespace Rpi {
 
@@ -45,22 +48,15 @@ private:
                     return (result);
                 }
 
-            
-                RaspberryPiClient(const std::string& name, const uint32_t x, const uint32_t y, const uint32_t width, const uint32_t height)
-                    : Exchange::IComposition::IClient()
-                    , _name(name)
-                    , _x(x)
-                    , _y(y)
-                    , _width(width)
-                    , _height(height)
-                {
-                    TRACE_L1("Created client named: %s", _name.c_str());
-                }
-
-                virtual ~RaspberryPiClient()
-                {
-                    TRACE_L1("Destructing client named: %s", -name.c_str());
-                }
+                RaspberryPiClient(
+                        const std::string& name, const uint32_t x,
+                        const uint32_t y, const uint32_t width,
+                        const uint32_t height);
+                virtual ~RaspberryPiClient();
+                virtual void Opacity(const uint32_t value) override;
+                virtual void Geometry(const uint32_t X, const uint32_t Y,
+                        const uint32_t width, const uint32_t height) override;
+                virtual void Visible(const bool visible) override;
 
                 virtual string Name() const override
                 {
@@ -71,21 +67,7 @@ private:
                     //todo: implement
                     fprintf(stderr, "Kill called!!!\n");
                 }
-                virtual void Opacity(const uint32_t value) override
-                {
-                    // todo implement
-                    fprintf(stderr, "Opacity called!!!\n");
-                }
-                virtual void Geometry(const uint32_t X, const uint32_t Y, const uint32_t width, const uint32_t height) override
-                {
-                    // todo implement
-                    fprintf(stderr, "Geometry called!!!\n");
-                }
-                virtual void Visible(const bool visible) override
-                {
-                    // todo implement
-                    fprintf(stderr, "Visible called!!!\n");
-                }
+
                 virtual void SetTop() override
                 {
                     // todo implement
@@ -97,6 +79,11 @@ private:
                     fprintf(stderr, "SetInput called!!!\n");
 
                 }
+
+                EGLNativeDisplayType Native() const {
+                    return (static_cast<EGLNativeWindowType>(_nativeSurface));
+                }
+
                 uint32_t X() const
                 {
                     return _x;
@@ -123,11 +110,22 @@ private:
                 END_INTERFACE_MAP
 
             private:
-            std::string _name;
-            uint32_t _x;
-            uint32_t _y;
-            uint32_t _width;
-            uint32_t _height;   
+                std::string _name;
+                uint32_t _x;
+                uint32_t _y;
+                uint32_t _width;
+                uint32_t _height;
+                uint32_t _opacity;
+                int32_t _layerNum;
+
+                EGLSurface _nativeSurface;
+                EGL_DISPMANX_WINDOW_T _nativeWindow;
+                DISPMANX_DISPLAY_HANDLE_T _dispmanDisplay;
+                DISPMANX_UPDATE_HANDLE_T _dispmanUpdate;
+                DISPMANX_ELEMENT_HANDLE_T _dispmanElement;
+
+                VC_RECT_T _dstRect;
+                VC_RECT_T _srcRect;
         };
 
         public:
@@ -146,7 +144,7 @@ private:
                 return (0);
             }
             virtual EGLNativeWindowType Native() const override {
-                return (static_cast<EGLNativeWindowType>(_nativeWindow));
+                return _client->Native();
             }
             virtual const string& Name() const override {
                 return _client->ClientName();
@@ -187,14 +185,8 @@ private:
         private:
             Display& _parent;
             mutable uint32_t _refcount;
-            EGLSurface _nativeWindow;
             IKeyboard* _keyboard;
             RaspberryPiClient* _client;
-
-            EGL_DISPMANX_WINDOW_T nativeWindow;
-            DISPMANX_DISPLAY_HANDLE_T dispman_display;
-            DISPMANX_UPDATE_HANDLE_T dispman_update;
-            DISPMANX_ELEMENT_HANDLE_T dispman_element;
         };
 
 private:
