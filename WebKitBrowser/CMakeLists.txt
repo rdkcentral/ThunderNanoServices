@@ -4,6 +4,7 @@ include(module) # Setup default stuff needed for the cmake framework thingy.
 
 option(WPEFRAMEWORK_PLUGIN_WEBKITBROWSER_STUBBED "Include the wpe browser as a stubbed plugin." OFF)
 option(WPEFRAMEWORK_PLUGIN_WEBKITBROWSER_YOUTUBE "Include YouTube in seperate plugin." OFF)
+option(WPEFRAMEWORK_PLUGIN_WEBKITBROWSER_APPS "Include Apps instance in seperate plugin." OFF)
 option(WPEFRAMEWORK_PLUGIN_WEBKITBROWSER_UX "Include UX in seperate plugin." OFF)
 
 set(WPEFRAMEWORK_PLUGIN_WEBKITBROWSER_AUTOSTART false CACHE STRING "Automatically start WebKitBrowser plugin")
@@ -63,6 +64,11 @@ write_config( ${PLUGIN_NAME} )
 # youtube configuration
 if(WPEFRAMEWORK_PLUGIN_WEBKITBROWSER_YOUTUBE)
     write_config( YouTube )
+endif()
+
+# Applications instance configuration
+if(WPEFRAMEWORK_PLUGIN_WEBKITBROWSER_APPS)
+    write_config( Apps )
 endif()
 
 # youtube configuration
