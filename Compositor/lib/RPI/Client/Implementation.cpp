@@ -1,10 +1,6 @@
 #include "Implementation.h"
 #include <virtualinput/virtualinput.h>
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/un.h>
-
 int g_pipefd[2];
 struct Message {
     uint32_t code;
@@ -41,26 +37,22 @@ private:
 
     public:
         RPCClient(const Core::NodeId& nodeId, const string& proxyStubPath)
-            : _proxyStubs() 
-            , _client(Core::ProxyType<RPC::CommunicatorClient>::Create(nodeId))
-            , _service(Core::ProxyType<RPCService>::Create(Core::Thread::DefaultStackSize())) {
+        : _proxyStubs()
+        , _client(Core::ProxyType<RPC::CommunicatorClient>::Create(nodeId))
+        , _service(Core::ProxyType<RPCService>::Create(Core::Thread::DefaultStackSize())) {
 
             _client->CreateFactory<RPC::InvokeMessage>(2);
             if (_client->Open(RPC::CommunicationTimeOut) == Core::ERROR_NONE) {
-
-                // Time to load the ProxyStubs, that are used for InterProcess communication
+                // Time to load the ProxyStubs, that are used for
+                // InterProcess communication
                 Core::Directory index(proxyStubPath.c_str(), _T("*.so"));
-
                 while (index.Next() == true) {
                     Core::Library library(index.Current().c_str());
-
                     if (library.IsLoaded() == true) {
                         _proxyStubs.push_back(library);
                     }             
                 } 
- 
                 SleepMs(100);
-
                 _client->Register(_service);
             }
             else {
@@ -80,16 +72,14 @@ private:
         inline bool IsOperational() const {
             return (_client.IsValid());
         }
-
         template <typename INTERFACE>
-        INTERFACE* Create(const string& objectName, const uint32_t version = static_cast<uint32_t>(~0)) {
+        INTERFACE* Create(const string& objectName,
+                const uint32_t version = static_cast<uint32_t>(~0)) {
             INTERFACE* result = nullptr;
-
             if (_client.IsValid() == true) {
                 // Oke we could open the channel, lets get the interface
                 result = _client->Create<INTERFACE>(objectName, version);
             }
-
             return (result);
         }
 
@@ -99,37 +89,31 @@ private:
         Core::ProxyType<RPCService> _service;
     };
 
-    private:
-
+private:
     AccessorCompositor (const TCHAR domainName[]) 
-        : _refCount(1)
-        , _adminLock() 
-        , _client(Core::NodeId(domainName), _T("/usr/lib/wpeframework/proxystubs")) // todo: how to get the correct path?
-        , _remote(nullptr) {
+    : _refCount(1)
+    , _adminLock()
+    , _client(Core::NodeId(domainName), _T("/usr/lib/wpeframework/proxystubs"))
+    , _remote(nullptr) {
 
         if (_client.IsOperational() == true) { 
-
-            _remote = _client.Create<Exchange::IComposition::INotification>(_T("CompositorImplementation"));
+            _remote = _client.Create<Exchange::IComposition
+                    ::INotification>(_T("CompositorImplementation"));
         }
     }
 
-    public:
-
+public:
     virtual void AddRef() const override {
         Core::InterlockedIncrement(_refCount);
     }
 
     virtual uint32_t Release() const override {
-
         _adminLock.Lock();
-
         if (Core::InterlockedDecrement(_refCount) == 0) {
             delete this;
             return (Core::ERROR_DESTRUCTION_SUCCEEDED);
         }
-
         _adminLock.Unlock();
-
         return (Core::ERROR_NONE);
     }
 
@@ -148,21 +132,19 @@ private:
 public:
     static AccessorCompositor* Create () {
 
-			string connector;
-			if ((Core::SystemInfo::GetEnvironment(_T("RPI_COMPOSITOR"), connector) == false) || (connector.empty() == true)) {
-				connector = _T("/tmp/rpicompositor");
-			}
-
-            AccessorCompositor* result = new AccessorCompositor (connector.c_str());
-
-            if (result->_remote == nullptr) {
-                TRACE_L1("Failed to creater AccessorCompositor");
-                delete result;
-            }
-            else {
-                TRACE_L1("Created the AccessorCompositor succesfully");
-            }
-
+        string connector;
+        if ((Core::SystemInfo::GetEnvironment(_T("RPI_COMPOSITOR"),
+                connector) == false) || (connector.empty() == true)) {
+            connector = _T("/tmp/rpicompositor");
+        }
+        AccessorCompositor* result = new AccessorCompositor (connector.c_str());
+        if (result->_remote == nullptr) {
+            TRACE_L1("Failed to creater AccessorCompositor");
+            delete result;
+        }
+        else {
+            TRACE_L1("Created the AccessorCompositor succesfully");
+        }
         return (result);
     }
 
@@ -174,7 +156,7 @@ public:
     }
 
     BEGIN_INTERFACE_MAP(AccessorCompositor)
-        INTERFACE_ENTRY(Exchange::IComposition::INotification)
+    INTERFACE_ENTRY(Exchange::IComposition::INotification)
     END_INTERFACE_MAP
 
 private:
@@ -185,7 +167,9 @@ private:
 };
 
 int32_t Display::SurfaceImplementation::RaspberryPiClient::_glayerNum = 0;
-Display::SurfaceImplementation::RaspberryPiClient::RaspberryPiClient(const std::string& name, const uint32_t x, const uint32_t y, const uint32_t width, const uint32_t height)
+Display::SurfaceImplementation::RaspberryPiClient::RaspberryPiClient(
+        const std::string& name, const uint32_t x, const uint32_t y,
+        const uint32_t width, const uint32_t height)
 : Exchange::IComposition::IClient()
 , _name(name)
 , _x(x)
@@ -294,18 +278,16 @@ Display::SurfaceImplementation::SurfaceImplementation(
 : _parent(display)
 , _refcount(1)
 , _keyboard(nullptr)
-, _client(nullptr) 
-{
+, _client(nullptr) {
 
-    _client = Display::SurfaceImplementation::RaspberryPiClient::Create(name, 0, 0, width, height); //todo: where to get x and y?
-
+    _client = Display::SurfaceImplementation::RaspberryPiClient::Create(
+            name, 0, 0, width, height); //todo: where to get x and y?
     _parent.Register(this);
 }
 
 Display::SurfaceImplementation::~SurfaceImplementation() {
 
     _parent.Unregister(this);
-
     if( _client != nullptr ) { 
         _client->Release();
         _client = nullptr;
@@ -321,7 +303,6 @@ Display::Display(const std::string& name)
         g_pipefd[0] = -1;
         g_pipefd[1] = -1;
     }
-
     _virtualkeyboard = Construct(
             name.c_str(), connectorName, VirtualKeyboardCallback);
     if (_virtualkeyboard == nullptr) {
@@ -334,8 +315,7 @@ Display::~Display() {
     if (_virtualkeyboard != nullptr) {
         Destruct(_virtualkeyboard);
     }
-
-    if ( _accessorCompositor != nullptr ) {
+    if (_accessorCompositor != nullptr) {
         _accessorCompositor->Release();
     }
 }
@@ -371,29 +351,27 @@ Compositor::IDisplay* Display::Instance(const std::string& displayName) {
     return (&myDisplay);
 }
 
-
 inline void Display::Register(Display::SurfaceImplementation* surface) {
     std::list<SurfaceImplementation*>::iterator index(
             std::find(_surfaces.begin(), _surfaces.end(), surface));
     if (index == _surfaces.end()) {
         _surfaces.push_back(surface);
         if ( _accessorCompositor != nullptr && surface->Client() != nullptr) {
-        _accessorCompositor->Attached(surface->Client());
+            _accessorCompositor->Attached(surface->Client());
         }
     }
 }
+
 inline void Display::Unregister(Display::SurfaceImplementation* surface) {
     std::list<SurfaceImplementation*>::iterator index(
             std::find(_surfaces.begin(), _surfaces.end(), surface));
     if (index != _surfaces.end()) {
         if ( _accessorCompositor != nullptr && surface->Client() != nullptr) {
-        _accessorCompositor->Detached(surface->Client());
+            _accessorCompositor->Detached(surface->Client());
         }
         _surfaces.erase(index);
     }
 }  
-
-
 }
 
 Compositor::IDisplay* Compositor::IDisplay::Instance(
@@ -401,6 +379,4 @@ Compositor::IDisplay* Compositor::IDisplay::Instance(
     bcm_host_init();
     return (Rpi::Display::Instance(displayName));
 }
-
 }
-
