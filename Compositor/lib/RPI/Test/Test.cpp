@@ -41,46 +41,44 @@ EGLint context_attrib_list[] = {
         EGL_NONE,
 };
 
+#define MAX_SURFACES 5
+
 class TestContext {
 
 public:
-
     int run() {
-        printf("q = quit, n = new Surface, d = delete surface\n");
-        idisplay = Compositor::IDisplay::Instance(DisplayName   ());
         setupEGL();
+        idisplay = Compositor::IDisplay::Instance(DisplayName());
 
-        int character;
-        do {
-            printf("\n>>");
-            character = ::toupper(::getc(stdin));
+        for(int i = 0; i < MAX_SURFACES; i++) {
 
-            switch (character) {
-            case 'N': {
-                std::string name;
-                printf("\nEnter name >>");
-                std::cin.ignore();
-                std::getline(std::cin, name);
-                createSurface(name);
-                drawFrame();
-                break;
-            }
-            case 'D': {
-                destroySurface();
-                break;
-            }
-            }
-        } while (character != 'Q');
+            std::string name = "surface-" + std::to_string(i);
+            isurfaces[i] = idisplay->Create(name, 1280/2, 720/2);
+            eglSurfaceWindows[i] = createEGLSurface(isurfaces[i]->Native());
+        }
+
+        for(int i = 0; i < MAX_SURFACES; i++) {
+
+            drawFrame(eglSurfaceWindows[i]);
+        }
+        sleep(500);
+
+        for(int i = 0; i < MAX_SURFACES; i++) {
+
+            destroyEGLSurface(eglSurfaceWindows[i]);
+            isurfaces[i]->Release();
+        }
 
         idisplay->Release();
-
         termEGL();
         return (0);
     }
 
 private:
+    void drawFrame(EGLSurface eglSurfaceWindow) {
 
-    void drawFrame() {
+        eglMakeCurrent(
+            eglDisplay, eglSurfaceWindow, eglSurfaceWindow, eglContext);
 
         GLclampf red = ((float)rand()/(float)(RAND_MAX)) * 1.0;
         GLclampf green = ((float)rand()/(float)(RAND_MAX)) * 1.0;
@@ -93,33 +91,17 @@ private:
         eglSwapBuffers(eglDisplay, eglSurfaceWindow);
     }
 
-    void createSurface(const std::string& name) {
+    EGLSurface createEGLSurface(NativeWindowType native) {
 
-        if ( surface != nullptr )
-        {
-            surface->Release();
-            surface = nullptr;        
-        }
-
-        surface = idisplay->Create(name, 1280, 720);
-        NativeWindowType native = surface->Native();
+        EGLSurface eglSurfaceWindow;
         eglSurfaceWindow = eglCreateWindowSurface(
                 eglDisplay, eglConfig, native, NULL);
-        eglMakeCurrent(
-                eglDisplay, eglSurfaceWindow, eglSurfaceWindow, eglContext);
+        return eglSurfaceWindow;
     }
 
-    void destroySurface() {
+    void destroyEGLSurface(EGLSurface eglSurfaceWindow) {
 
-        eglMakeCurrent(
-                eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
         eglDestroySurface(eglDisplay, eglSurfaceWindow);
-
-        if ( surface != nullptr )
-        {
-            surface->Release();
-            surface = nullptr;        
-        }
     }
 
     void setupEGL() {
@@ -160,13 +142,13 @@ private:
 
 private:
 
-    Compositor::IDisplay *idisplay = nullptr;
-    Compositor::IDisplay::ISurface* surface = nullptr;
-
     EGLDisplay eglDisplay;
     EGLConfig eglConfig;
     EGLContext eglContext;
-    EGLSurface eglSurfaceWindow;
+    EGLSurface eglSurfaceWindows[MAX_SURFACES];
+
+    Compositor::IDisplay *idisplay;
+    Compositor::IDisplay::ISurface* isurfaces[MAX_SURFACES];
 };
 } // WPEFramework
 

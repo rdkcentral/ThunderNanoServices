@@ -184,6 +184,7 @@ private:
     Exchange::IComposition::INotification* _remote;
 };
 
+int32_t Display::SurfaceImplementation::RaspberryPiClient::_glayerNum = 0;
 Display::SurfaceImplementation::RaspberryPiClient::RaspberryPiClient(const std::string& name, const uint32_t x, const uint32_t y, const uint32_t width, const uint32_t height)
 : Exchange::IComposition::IClient()
 , _name(name)
@@ -200,7 +201,7 @@ Display::SurfaceImplementation::RaspberryPiClient::RaspberryPiClient(const std::
             0
     };
 
-    _layerNum = atoi((char *)_name.c_str());
+    _layerNum = getLayerNum();
     vc_dispmanx_rect_set(&_dstRect, 0, 0, _width, _height);
     vc_dispmanx_rect_set(&_srcRect, 0, 0, (_width << 16), (_height << 16));
 
@@ -272,6 +273,14 @@ void Display::SurfaceImplementation::RaspberryPiClient::Geometry(
             &_srcRect,
             0,
             DISPMANX_NO_ROTATE);
+    vc_dispmanx_update_submit_sync(_dispmanUpdate);
+}
+
+void Display::SurfaceImplementation::RaspberryPiClient::SetTop()
+{
+    _layerNum = getLayerNum();
+    _dispmanUpdate = vc_dispmanx_update_start(0);
+    vc_dispmanx_element_change_layer(_dispmanUpdate, _dispmanElement, _layerNum);
     vc_dispmanx_update_submit_sync(_dispmanUpdate);
 }
 

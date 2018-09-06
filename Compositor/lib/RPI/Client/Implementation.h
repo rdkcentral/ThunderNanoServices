@@ -56,6 +56,7 @@ private:
                 virtual void Opacity(const uint32_t value) override;
                 virtual void Geometry(const uint32_t X, const uint32_t Y,
                         const uint32_t width, const uint32_t height) override;
+                virtual void SetTop() override;
                 virtual void Visible(const bool visible) override;
 
                 virtual string Name() const override
@@ -66,12 +67,6 @@ private:
                 {
                     //todo: implement
                     fprintf(stderr, "Kill called!!!\n");
-                }
-
-                virtual void SetTop() override
-                {
-                    // todo implement
-                    fprintf(stderr, "SetTop called!!!\n");
                 }
                 virtual void SetInput() override
                 {
@@ -110,6 +105,11 @@ private:
                 END_INTERFACE_MAP
 
             private:
+                static int32_t _glayerNum;
+                static int32_t getLayerNum() {
+                    return Display::SurfaceImplementation::RaspberryPiClient::_glayerNum;
+                }
+
                 std::string _name;
                 uint32_t _x;
                 uint32_t _y;
