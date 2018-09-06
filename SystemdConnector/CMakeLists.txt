@@ -36,4 +36,4 @@ set(PLUGIN_INPUT
 
 include(default_targets) # This is a regular plugin no need to edit the defaults
 
-write_config( ${MODULE_NAME} )
+write_config( ${PLUGIN_NAME} )
