@@ -70,12 +70,13 @@ static class PluginHost
             // We have something to report back, do so...
             if (_comClient.IsValid() == true) {
 
-                if ((result = _comClient->Open(2 * RPC::CommunicationTimeOut)) != Core::ERROR_NONE) {
+                if ((result = _comClient->Open(RPC::CommunicationTimeOut)) != Core::ERROR_NONE) {
 
                     TRACE_L1("Could not open the connection, error (%d)", result);
+                } 
+                else if (_comClient->WaitForCompletion(RPC::CommunicationTimeOut) == false) {
+                    TRACE_L1("Could not exchange the initial AnnounceMessage");
                 }
-                
-                _comClient->WaitForCompletion();
             }
 
             _bundle = bundle;

@@ -44,138 +44,36 @@ namespace Plugin {
             ExternalAccess(const ExternalAccess &) = delete;
             ExternalAccess & operator=(const ExternalAccess &) = delete;
 
-            class RequestHandler : public Core::IPCServerType<RPC::InvokeMessage>, public Core::Thread
-            {
-            private:
-                struct Info
-                {
-                    Core::ProxyType<RPC::InvokeMessage> message;
-                    Core::ProxyType<Core::IPCChannel> channel;
-                };
-                typedef Core::QueueType<Info> MessageQueue;
-
-                RequestHandler(const RequestHandler &) = delete;
-                RequestHandler & operator=(const RequestHandler &) = delete;
-
-            public:
-                RequestHandler()
-                    : Core::IPCServerType<RPC::InvokeMessage>(), Core::Thread(), _handleQueue(64),
-                      _handler(RPC::Administrator::Instance())
-                {
-                    Run();
-                }
-
-                ~RequestHandler()
-                {
-                    Thread::Stop();
-                    _handleQueue.Disable();
-                    Thread::Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
-                 }
-
-            public:
-                virtual void Procedure(Core::IPCChannel & channel, Core::ProxyType<RPC::InvokeMessage> & data)
-                {
-                    // Oke, see if we can reference count the IPCChannel
-                    Info newElement;
-                    newElement.channel = Core::ProxyType<Core::IPCChannel>(channel);
-                    newElement.message = data;
-
-                    ASSERT(newElement.channel.IsValid() == true);
-
-                    _handleQueue.Insert(newElement, Core::infinite);
-                }
-
-                virtual uint32_t Worker()
-                {
-                    Info newRequest;
-
-                    while (_handleQueue.Extract(newRequest, Core::infinite) == true)
-                    {
-
-                        _handler.Invoke(newRequest.channel, newRequest.message);
-
-                        Core::ProxyType<Core::IIPC> message(newRequest.message);
-                        newRequest.channel->ReportResponse(message);
-                    }
-
-                    return (Core::infinite);
-                }
-
-            private:
-                MessageQueue _handleQueue;
-                RPC::Administrator & _handler;
-            };
-
-            class ObjectMessageHandler : public Core::IPCServerType<RPC::ObjectMessage>
-            {
-            private:
-                ObjectMessageHandler() = delete;
-                ObjectMessageHandler(const ObjectMessageHandler &) = delete;
-                ObjectMessageHandler & operator=(const ObjectMessageHandler &) = delete;
-
-            public:
-                ObjectMessageHandler(::OCDM::IAccessorOCDM* parentInterface)
-                    : _parentInterface(parentInterface)
-                {
-                }
-                ~ObjectMessageHandler()
-                {
-                }
-
-            public:
-                virtual void Procedure(Core::IPCChannel & channel, Core::ProxyType<RPC::ObjectMessage> & data)
-                {
-                    // Oke, see if we can reference count the IPCChannel
-                    Core::ProxyType<Core::IPCChannel> refChannel(channel);
-
-                    ASSERT(refChannel.IsValid());
- 
-                    if (refChannel.IsValid() == true)
-                    {
-                        const uint32_t interfaceId(data->Parameters().InterfaceId());
-                        const uint32_t versionId(data->Parameters().VersionId());
-
-                        // Currently we only support version 1 of the IRPCLink :-)
-                        if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) &&
-                            (interfaceId == ::OCDM::IAccessorOCDM::ID)) {
-                            // Reference count our parent
-                            _parentInterface->AddRef();
-
-                            // Allright, respond with the interface.
-                            data->Response().Value(_parentInterface);
-                        }
-                        else {
-                            // Allright, respond with the interface.
-                            data->Response().Value(nullptr);
-                         }
-                    }
-
-                    Core::ProxyType<Core::IIPC> returnValue(data);
-                    channel.ReportResponse(returnValue);
-                }
-
-            private:
-                ::OCDM::IAccessorOCDM* _parentInterface;
-            };
-
         public:
             ExternalAccess(const Core::NodeId & source, ::OCDM::IAccessorOCDM* parentInterface)
-                : RPC::Communicator(source, Core::ProxyType<RequestHandler>::Create())
-                , _handler(Core::ProxyType<ObjectMessageHandler>::Create(parentInterface))
+                : RPC::Communicator(source, Core::ProxyType< RPC::InvokeServerType<16, 1> >::Create(), _T(""))
+				, _parentInterface(parentInterface)
             {
-                RPC::Communicator::CreateFactory<RPC::ObjectMessage>(1);
-                RPC::Communicator::Register(_handler);
-            }
-
+				Open(Core::infinite);
+			}
             ~ExternalAccess()
             {
                 Close(Core::infinite);
-                RPC::Communicator::Unregister(_handler);
-                RPC::Communicator::DestroyFactory<RPC::ObjectMessage>();
             }
 
+		private:
+			virtual void* Instance(const string& className, const uint32_t interfaceId, const uint32_t versionId) {
+				void* result = nullptr;
+
+				// Currently we only support version 1 of the IRPCLink :-)
+				if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) &&
+					((interfaceId == ::OCDM::IAccessorOCDM::ID) || (interfaceId == Core::IUnknown::ID))) {
+					// Reference count our parent
+					_parentInterface->AddRef();
+
+					// Allright, respond with the interface.
+					result = _parentInterface;
+				}
+				return (result);
+			}
+
         private:
-            Core::ProxyType<ObjectMessageHandler> _handler;
+			::OCDM::IAccessorOCDM* _parentInterface;
         };
 
         class AccessorOCDM : public ::OCDM::IAccessorOCDM {
@@ -328,6 +226,9 @@ namespace Plugin {
                                     // Adjust the buffer on our sied (this process) on what we will write back
                                     SetBuffer(0, clearContentSize, clearContent);
                                 }
+
+                                // Store the status we have for the other side.
+                                Status(static_cast<uint32_t>(cr));
 
                                 // Store the status we have for the other side.
                                 Status(static_cast<uint32_t>(cr));
@@ -918,9 +819,6 @@ namespace Plugin {
             , _compliant(false)
             , _systemToFactory()
             , _systemLibraries()
-#ifdef _MSVC_LANG
-            , _proxystubs(::ocdm_proxystubs())
-#endif
         {
             TRACE_L1("Constructing OCDMImplementation Service: %p", this);
         }
@@ -1009,9 +907,7 @@ namespace Plugin {
 
             if (_service != nullptr) {
 
-                result = _service->Open(Core::infinite);
-
-                if (result != Core::ERROR_NONE) {
+                if (_service->IsListening() == false) {
                     delete _service;
                     _entryPoint->Release();
                     _service = nullptr;
