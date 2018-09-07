@@ -18,118 +18,13 @@ private:
         ExternalAccess(const ExternalAccess &) = delete;
         ExternalAccess & operator=(const ExternalAccess &) = delete;
 
-        class RequestHandler :
-                public Core::IPCServerType<RPC::InvokeMessage>,
-                public Core::Thread {
-        private:
-            struct Info {
-                Core::ProxyType<RPC::InvokeMessage> message;
-                Core::ProxyType<Core::IPCChannel> channel;
-            };
-            typedef Core::QueueType<Info> MessageQueue;
-            RequestHandler(const RequestHandler &) = delete;
-            RequestHandler & operator=(const RequestHandler &) = delete;
-
-        public:
-            RequestHandler()
-            : Core::IPCServerType<RPC::InvokeMessage>()
-            , Core::Thread()
-            , _handleQueue(64)
-            , _handler(RPC::Administrator::Instance()) {
-                Run();
-            }
-
-            ~RequestHandler() {
-                Thread::Stop();
-                _handleQueue.Disable();
-                Thread::Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
-            }
-
-        public:
-            virtual void Procedure(
-                    Core::IPCChannel & channel,
-                    Core::ProxyType<RPC::InvokeMessage> & data) {
-                // Oke, see if we can reference count the IPCChannel
-                Info newElement;
-                newElement.channel = Core::ProxyType<Core::IPCChannel>(channel);
-                newElement.message = data;
-                ASSERT(newElement.channel.IsValid() == true);
-                _handleQueue.Insert(newElement, Core::infinite);
-            }
-
-            virtual uint32_t Worker() {
-                Info newRequest;
-                while (_handleQueue.Extract(
-                        newRequest, Core::infinite) == true) {
-                    _handler.Invoke(newRequest.channel, newRequest.message);
-                    Core::ProxyType<Core::IIPC> message(newRequest.message);
-                    newRequest.channel->ReportResponse(message);
-                }
-                return (Core::infinite);
-            }
-
-        private:
-            MessageQueue _handleQueue;
-            RPC::Administrator & _handler;
-        };
-
-        class ObjectMessageHandler :
-                public Core::IPCServerType<RPC::ObjectMessage> {
-        private:
-            ObjectMessageHandler() = delete;
-            ObjectMessageHandler(const ObjectMessageHandler &) = delete;
-            ObjectMessageHandler & operator=(const ObjectMessageHandler &) = delete;
-
-        public:
-            ObjectMessageHandler(IComposition::INotification* parentInterface)
-            : _parentInterface(parentInterface) {
-            }
-
-            ~ObjectMessageHandler() {
-            }
-
-        public:
-            virtual void Procedure(
-                    Core::IPCChannel & channel,
-                    Core::ProxyType<RPC::ObjectMessage> &data) {
-                // Oke, see if we can reference count the IPCChannel
-                Core::ProxyType<Core::IPCChannel> refChannel(channel);
-                ASSERT(refChannel.IsValid());
-
-                if (refChannel.IsValid() == true) {
-                    const uint32_t interfaceId(data->Parameters().InterfaceId());
-                    const uint32_t versionId(data->Parameters().VersionId());
-
-                    // Currently we only support version 1 of the IRPCLink :-)
-                    if (((versionId == 1) ||
-                            (versionId == static_cast<uint32_t>(~0))) &&
-                            (interfaceId == IComposition::INotification::ID)) {
-                        // Reference count our parent
-                        _parentInterface->AddRef();
-                        // Allright, respond with the interface.
-                        data->Response().Value(_parentInterface);
-                    }
-                    else {
-                        // Allright, respond with the interface.
-                        data->Response().Value(nullptr);
-                    }
-                }
-                Core::ProxyType<Core::IIPC> returnValue(data);
-                channel.ReportResponse(returnValue);
-            }
-
-        private:
-            IComposition::INotification* _parentInterface;
-        };
-
     public:
         ExternalAccess(
                 const Core::NodeId & source,
-                IComposition::INotification* parentInterface)
-        : RPC::Communicator(source, Core::ProxyType<RequestHandler>::Create())
-        , _handler(Core::ProxyType<ObjectMessageHandler>::Create(parentInterface)) {
-            RPC::Communicator::CreateFactory<RPC::ObjectMessage>(1);
-            RPC::Communicator::Register(_handler);
+                IComposition* parentInterface,
+                const string& proxyStub)
+        : RPC::Communicator(source, Core::ProxyType< RPC::InvokeServerType<8, 1> >::Create(), proxyStub)
+        , _parentInterface (parenInterface) {
         }
 
         ~ExternalAccess() {
@@ -139,7 +34,20 @@ private:
         }
 
     private:
-        Core::ProxyType<ObjectMessageHandler> _handler;
+        void* Instance(const string& className, const uint32_t interfaceId, const uint32_t versionId) override {
+            void* result = nullptr;
+            // Currently we only support version 1 of the IRPCLink :-)
+            if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) &&
+                 (interfaceId == IComposition::INotficiation::ID)) {
+                // Reference count our parent
+                _parentInterface->AddRef();
+                result = _parentInterface;
+            }
+            return (result);
+        }
+        
+    private:
+        IComposition::INotification* _parentInterface;
     };
 
 public:
@@ -193,7 +101,7 @@ public:
 
         _externalAccess.reset(
                 new ExternalAccess(
-                        Core::NodeId(config.Connector.Value().c_str()), this));
+                        Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath()));
         uint32_t result = _externalAccess->Open(Core::infinite);
         if (result == Core::ERROR_NONE) {
             // Announce the port on which we are listening
