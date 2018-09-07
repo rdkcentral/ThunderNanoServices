@@ -21,16 +21,14 @@ private:
     public:
         ExternalAccess(
                 const Core::NodeId & source,
-                IComposition* parentInterface,
+                IComposition::INotification* parentInterface,
                 const string& proxyStub)
         : RPC::Communicator(source, Core::ProxyType< RPC::InvokeServerType<8, 1> >::Create(), proxyStub)
-        , _parentInterface (parenInterface) {
+        , _parentInterface (parentInterface) {
         }
 
         ~ExternalAccess() {
             Close(Core::infinite);
-            RPC::Communicator::Unregister(_handler);
-            RPC::Communicator::DestroyFactory<RPC::ObjectMessage>();
         }
 
     private:
@@ -38,7 +36,7 @@ private:
             void* result = nullptr;
             // Currently we only support version 1 of the IRPCLink :-)
             if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) &&
-                 (interfaceId == IComposition::INotficiation::ID)) {
+                 (interfaceId == IComposition::INotification::ID)) {
                 // Reference count our parent
                 _parentInterface->AddRef();
                 result = _parentInterface;
