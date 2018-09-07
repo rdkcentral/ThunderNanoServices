@@ -1,403 +1,382 @@
-#include "Module.h"
+#include "Implementation.h"
+#include <virtualinput/virtualinput.h>
 
-#include <NexusServer.h>
+int g_pipefd[2];
+struct Message {
+    uint32_t code;
+    actiontype type;
+};
 
-#include <interfaces/IComposition.h>
-
-MODULE_NAME_DECLARATION(BUILD_REFERENCE)
+static const char * connectorName = "/tmp/keyhandler";
+static void VirtualKeyboardCallback(actiontype type , unsigned int code) {
+    if (type != COMPLETED) {
+        Message message;
+        message.code = code;
+        message.type = type;
+        write(g_pipefd[1], &message, sizeof(message));
+    }
+}
 
 namespace WPEFramework {
-namespace Plugin {
+namespace Rpi {
 
-    /* -------------------------------------------------------------------------------------------------------------
-     *
-     * ------------------------------------------------------------------------------------------------------------- */
-    class CompositorImplementation : public Exchange::IComposition {
+class AccessorCompositor : public Exchange::IComposition::INotification {
+public:
+    AccessorCompositor () = delete;
+    AccessorCompositor (const AccessorCompositor&) = delete;
+    AccessorCompositor& operator= (const AccessorCompositor&) = delete;
+
+private:
+    class RPCClient {
     private:
-        CompositorImplementation(const CompositorImplementation&) = delete;
-        CompositorImplementation& operator=(const CompositorImplementation&) = delete;
+        RPCClient() = delete;
+        RPCClient(const RPCClient&) = delete;
+        RPCClient& operator=(const RPCClient&) = delete;
 
-        class Config : public Core::JSON::Container {
-        public:
-            Config(const Config&);
-            Config& operator=(const Config&);
-
-        public:
-            Config()
-                    : Core::JSON::Container()
-                    , HardwareDelay(0)
-            {
-                Add(_T("hardwareready"), &HardwareDelay);
-            }
-            ~Config()
-            {
-            }
-
-        public:
-            Core::JSON::DecUInt8 HardwareDelay;
-        };
-
-        class Sink
-            : public Broadcom::Platform::IClient
-            , public Broadcom::Platform::IStateChange
-        {
-        private:
-            Sink() = delete;
-            Sink(const Sink&) = delete;
-            Sink& operator=(const Sink&) = delete;
-
-            class Postpone : public Core::Thread {
-            private:
-                Postpone() = delete;
-                Postpone(const Postpone&) = delete;
-                Postpone& operator= (const Postpone&) = delete;
-
-            public:
-                Postpone(Sink& parent, const uint16_t delay)
-                    : _parent(parent)
-                    , _trigger(false, true)
-                    , _delay(delay * 1000) {
-                }
-                virtual ~Postpone() {
-                    Block();
-                    _trigger.SetEvent();
-                }
-
-            public:
-                uint32_t Worker() {
-                    if (_trigger.Lock(_delay) == Core::ERROR_TIMEDOUT) {
-                        _parent.PlatformReady();
-                    }
-                    Stop();
-                    return (Core::infinite);
-                }
-
-            private:
-                Sink& _parent;
-                Core::Event _trigger;
-                uint32_t _delay;
-            };
-
-        public:
-            explicit Sink(CompositorImplementation* parent)
-                : _parent(*parent)
-                , _delay(nullptr)
-            {
-                ASSERT(parent != nullptr);
-            }
-            ~Sink()
-            {
-                if (_delay != nullptr) {
-                    delete _delay;
-                }
-            }
-
-        public:
-            inline void HardwareDelay(const uint16_t time) {
-                ASSERT (_delay == nullptr);
-                if ( (time != 0) && (_delay == nullptr) ) {
-                    _delay = new Postpone(*this, time);
-                }
-            }
-            // -------------------------------------------------------------------------------------------------------
-            //   Broadcom::Platform::ICallback methods
-            // -------------------------------------------------------------------------------------------------------
-            /* virtual */ void Attached(Exchange::IComposition::IClient* client)
-            {
-                _parent.Add(client);
-
-            }
-
-            /* virtual */ void Detached(const char clientName[])
-            {
-                _parent.Remove(clientName);
-            }
-
-            /* virtual */ virtual void StateChange(Broadcom::Platform::server_state state)
-            {
-                if (state == Broadcom::Platform::OPERATIONAL){
-                    if (_delay != nullptr) {
-                        _delay->Run();
-                    } 
-                    else {
-                        _parent.PlatformReady(); 
-                    }
-                }
-            }
-
-        private:
-            inline void PlatformReady() {
-                _parent.PlatformReady();
-            }
-
-        private:
-            CompositorImplementation& _parent;
-            Postpone* _delay;
-        };
+        typedef WPEFramework::RPC::InvokeServerType<4, 1> RPCService;
 
     public:
-        CompositorImplementation()
-            : _adminLock()
-            , _service(nullptr)
-            , _observers()
-            , _clients()
-            , _sink(this)
-            , _nxserver(nullptr)
-        {
-        }
+        RPCClient(const Core::NodeId& nodeId, const string& proxyStubPath)
+        : _proxyStubs()
+        , _client(Core::ProxyType<RPC::CommunicatorClient>::Create(nodeId))
+        , _service(Core::ProxyType<RPCService>::Create(Core::Thread::DefaultStackSize())) {
 
-        ~CompositorImplementation()
-        {
-            if (_nxserver != nullptr) {
-                delete _nxserver;
-            }
-            if (_service != nullptr) {
-                _service->Release();
-            }
-        }
-
-    public:
-        BEGIN_INTERFACE_MAP(CompositorImplementation)
-        INTERFACE_ENTRY(Exchange::IComposition)
-        END_INTERFACE_MAP
-
-    public:
-        // -------------------------------------------------------------------------------------------------------
-        //   IComposition methods
-        // -------------------------------------------------------------------------------------------------------
-        /* virtual */ uint32_t Configure(PluginHost::IShell* service)
-        {
-            string configuration (service->ConfigLine());
-
-            _service = service;
-            _service->AddRef();
-
-            ASSERT(_nxserver == nullptr);
-
-            Config info; info.FromString(configuration);
-
-            _sink.HardwareDelay(info.HardwareDelay.Value());
-
-            _nxserver = new Broadcom::Platform(service->Callsign(), &_sink, &_sink, configuration);
-
-            ASSERT(_nxserver != nullptr);
-
-            return  Core::ERROR_NONE;
-        }
-
-        /* virtual */ void Register(Exchange::IComposition::INotification* notification)
-        {
-            // Do not double register a notification sink.
-            _adminLock.Lock();
-
-            ASSERT(std::find(_observers.begin(), _observers.end(), notification) == _observers.end());
-
-            notification->AddRef();
-
-            _observers.push_back(notification);
-
-            std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
-
-            while (index != _clients.end()) {
-
-                notification->Attached(*index);
-                index++;
-            }
-
-            _adminLock.Unlock();
-        }
-
-        /* virtual */ void Unregister(Exchange::IComposition::INotification* notification)
-        {
-            _adminLock.Lock();
-
-            std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
-
-            // Do not un-register something you did not register.
-            ASSERT(index != _observers.end());
-
-            if (index != _observers.end()) {
-
-                _observers.erase(index);
-
-                notification->Release();
-            }
-
-            _adminLock.Unlock();
-        }
-
-        /* virtual */ Exchange::IComposition::IClient* Client(const uint8_t id)
-        {
-            Exchange::IComposition::IClient* result = nullptr;
-
-            uint8_t count = id;
-
-            _adminLock.Lock();
-
-            std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
-
-            while ((count != 0) && (index != _clients.end())) {
-                count--;
-                index++;
-            }
-
-            if (index != _clients.end()) {
-                result = (*index);
-                result->AddRef();
-            }
-
-            _adminLock.Unlock();
-
-            return (result);
-        }
-
-        /* virtual */ Exchange::IComposition::IClient* Client(const string& name)
-        {
-            Exchange::IComposition::IClient* result = nullptr;
-
-            _adminLock.Lock();
-
-            std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
-
-            while ((index != _clients.end()) && ((*index)->Name() != name)) {
-                index++;
-            }
-
-            if (index != _clients.end()) {
-                result = (*index);
-                result->AddRef();
-            }
-
-            _adminLock.Unlock();
-
-            return (result);
-        }
-
-        /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format)
-        {
-            ASSERT (_nxserver != nullptr);
-
-            if (_nxserver != nullptr) {
-                _nxserver->Resolution(format);
-            }
-        }
-
-        /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const 
-        {
-            ASSERT (_nxserver != nullptr);
-
-            return (_nxserver->Resolution());
-        }
-
-    private:
-        void Add(Exchange::IComposition::IClient* client)
-        {
-            ASSERT (client != nullptr);
-
-            if (client != nullptr) {
-
-                const std::string name(client->Name());
-
-                if (name.empty() == true) {
-                    TRACE(Trace::Information, (_T("Registration of a nameless client.")));
-                }
-                else {
-                    std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
-
-                    while ((index != _clients.end()) && (name != (*index)->Name())) {
-                        index++;
-                    }
-
-                    if (index != _clients.end()) {
-                        TRACE(Trace::Information, (_T("Client already registered %s."), name.c_str()));
-                    }
-                    else {
-                        client->AddRef();
-                        _clients.push_back(client);
-
-                        TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
-
-                        if (_observers.size() > 0) {
-
-                            std::list<Exchange::IComposition::INotification*>::iterator index(_observers.begin());
-
-                            while (index != _observers.end()) {
-                                (*index)->Attached(client);
-                                index++;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        void Remove(const char clientName[])
-        {
-            const std::string name(clientName);
-
-            if (name.empty() == true) {
-                TRACE(Trace::Information, (_T("Unregistering a nameless client.")));
+            _client->CreateFactory<RPC::InvokeMessage>(2);
+            if (_client->Open(RPC::CommunicationTimeOut) == Core::ERROR_NONE) {
+                // Time to load the ProxyStubs, that are used for
+                // InterProcess communication
+                Core::Directory index(proxyStubPath.c_str(), _T("*.so"));
+                while (index.Next() == true) {
+                    Core::Library library(index.Current().c_str());
+                    if (library.IsLoaded() == true) {
+                        _proxyStubs.push_back(library);
+                    }             
+                } 
+                SleepMs(100);
+                _client->Register(_service);
             }
             else {
-                std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
-
-                while ((index != _clients.end()) && (name != (*index)->Name())) {
-                    index++;
-                }
-
-                if (index == _clients.end()) {
-                    TRACE(Trace::Information, (_T("Client already unregistered %s."), name.c_str()));
-                }
-                else {
-                    Exchange::IComposition::IClient* entry(*index);
-
-                    _clients.erase(index);
-
-                    TRACE(Trace::Information, (_T("Removed client %s."), name.c_str()));
-
-                    if (_observers.size() > 0) {
-                        std::list<Exchange::IComposition::INotification*>::iterator index(_observers.begin());
-
-                        while (index != _observers.end()) {
-                            (*index)->Detached(entry);
-                            index++;
-                        }
-                    }
-
-                    entry->Release();
-                }
+                _client.Release();
             }
         }
-        void PlatformReady()
-        {
-            PluginHost::ISubSystem* subSystems(_service->SubSystems());
-
-            ASSERT(subSystems != nullptr);
-
-            if (subSystems != nullptr) {
-                // Set Graphics event. We need to set up a handler for this at a later moment
-                subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
-                subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
-                subSystems->Release();
-
-                // Now the platform is ready we should Join it as well, since we 
-                // will do generic (not client related) stuff as well.
-
-                if ((_nxserver != nullptr) && (_nxserver->Join() != true)) {
-                    TRACE(Trace::Information, (_T("Could not Join the started NXServer.")));
-                }
+        ~RPCClient() {
+            _proxyStubs.clear();
+            if (_client.IsValid() == true) {
+                _client->Unregister(_service);
+                _client->Close(Core::infinite);
+                _client.Release();
             }
+        }
+
+    public:
+        inline bool IsOperational() const {
+            return (_client.IsValid());
+        }
+        template <typename INTERFACE>
+        INTERFACE* Create(const string& objectName,
+                const uint32_t version = static_cast<uint32_t>(~0)) {
+            INTERFACE* result = nullptr;
+            if (_client.IsValid() == true) {
+                // Oke we could open the channel, lets get the interface
+                result = _client->Create<INTERFACE>(objectName, version);
+            }
+            return (result);
         }
 
     private:
-        Core::CriticalSection _adminLock;
-        PluginHost::IShell* _service;
-        std::list<Exchange::IComposition::INotification*> _observers;
-        std::list<Exchange::IComposition::IClient*> _clients;
-        Sink _sink;
-        Broadcom::Platform* _nxserver;
+        std::list<Core::Library> _proxyStubs;
+        Core::ProxyType<RPC::CommunicatorClient> _client;
+        Core::ProxyType<RPCService> _service;
     };
 
-    SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
+private:
+    AccessorCompositor (const TCHAR domainName[]) 
+    : _refCount(1)
+    , _adminLock()
+    , _client(Core::NodeId(domainName), _T("/usr/lib/wpeframework/proxystubs"))
+    , _remote(nullptr) {
 
-} // namespace Plugin
-} // namespace WPEFramework
+        if (_client.IsOperational() == true) { 
+            _remote = _client.Create<Exchange::IComposition
+                    ::INotification>(_T("CompositorImplementation"));
+        }
+    }
+
+public:
+    virtual void AddRef() const override {
+        Core::InterlockedIncrement(_refCount);
+    }
+
+    virtual uint32_t Release() const override {
+        _adminLock.Lock();
+        if (Core::InterlockedDecrement(_refCount) == 0) {
+            delete this;
+            return (Core::ERROR_DESTRUCTION_SUCCEEDED);
+        }
+        _adminLock.Unlock();
+        return (Core::ERROR_NONE);
+    }
+
+    void Attached(Exchange::IComposition::IClient* client) override {
+        if( _remote != nullptr ) {
+            _remote->Attached(client);
+        }
+    }
+
+    void Detached(Exchange::IComposition::IClient* client) override {
+        if( _remote != nullptr ) {
+            _remote->Detached(client);
+        }
+    }
+
+public:
+    static AccessorCompositor* Create () {
+
+        string connector;
+        if ((Core::SystemInfo::GetEnvironment(_T("RPI_COMPOSITOR"),
+                connector) == false) || (connector.empty() == true)) {
+            connector = _T("/tmp/rpicompositor");
+        }
+        AccessorCompositor* result = new AccessorCompositor (connector.c_str());
+        if (result->_remote == nullptr) {
+            TRACE_L1("Failed to creater AccessorCompositor");
+            delete result;
+        }
+        else {
+            TRACE_L1("Created the AccessorCompositor succesfully");
+        }
+        return (result);
+    }
+
+    ~AccessorCompositor() {
+        if (_remote != nullptr) {
+            _remote->Release();
+        }
+        TRACE_L1("Destructed the AccessorCompositor");
+    }
+
+    BEGIN_INTERFACE_MAP(AccessorCompositor)
+    INTERFACE_ENTRY(Exchange::IComposition::INotification)
+    END_INTERFACE_MAP
+
+private:
+    mutable uint32_t _refCount;
+    mutable Core::CriticalSection _adminLock;
+    RPCClient _client;
+    Exchange::IComposition::INotification* _remote;
+};
+
+int32_t Display::SurfaceImplementation::RaspberryPiClient::_glayerNum = 0;
+Display::SurfaceImplementation::RaspberryPiClient::RaspberryPiClient(
+        const std::string& name, const uint32_t x, const uint32_t y,
+        const uint32_t width, const uint32_t height)
+: Exchange::IComposition::IClient()
+, _name(name)
+, _x(x)
+, _y(y)
+, _width(width)
+, _height(height) {
+
+    TRACE_L1("Created client named: %s", _name.c_str());
+
+    VC_DISPMANX_ALPHA_T alpha = {
+            DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS,
+            255,
+            0
+    };
+
+    _layerNum = getLayerNum();
+    vc_dispmanx_rect_set(&_dstRect, 0, 0, _width, _height);
+    vc_dispmanx_rect_set(&_srcRect, 0, 0, (_width << 16), (_height << 16));
+
+    _dispmanDisplay = vc_dispmanx_display_open(0);
+    _dispmanUpdate = vc_dispmanx_update_start(0);
+    _dispmanElement = vc_dispmanx_element_add(
+            _dispmanUpdate,
+            _dispmanDisplay,
+            _layerNum /*layer*/,
+            &_dstRect,
+            0 /*src*/,
+            &_srcRect,
+            DISPMANX_PROTECTION_NONE,
+            &alpha /*alpha*/,
+            0 /*clamp*/,
+            DISPMANX_NO_ROTATE);
+    vc_dispmanx_update_submit_sync(_dispmanUpdate);
+
+    _nativeWindow.element = _dispmanElement;
+    _nativeWindow.width = _width;
+    _nativeWindow.height = _height;
+    _nativeSurface = static_cast<EGLSurface>(&_nativeWindow);
+}
+
+Display::SurfaceImplementation::RaspberryPiClient::~RaspberryPiClient() {
+
+    TRACE_L1("Destructing client named: %s", _name.c_str());
+
+    _dispmanUpdate = vc_dispmanx_update_start(0);
+    vc_dispmanx_element_remove(_dispmanUpdate, _dispmanElement);
+    vc_dispmanx_update_submit_sync(_dispmanUpdate);
+    vc_dispmanx_display_close(_dispmanDisplay);
+}
+
+void Display::SurfaceImplementation::RaspberryPiClient::Opacity(
+        const uint32_t value) {
+
+    _opacity = (value > 255) ? 255 : value;
+    _dispmanUpdate = vc_dispmanx_update_start(0);
+    vc_dispmanx_element_change_attributes(_dispmanUpdate,
+            _dispmanElement,
+            ELEMENT_CHANGE_OPACITY,
+            _layerNum,
+            _opacity,
+            &_dstRect,
+            &_srcRect,
+            0,
+            DISPMANX_NO_ROTATE);
+    vc_dispmanx_update_submit_sync(_dispmanUpdate);
+}
+
+void Display::SurfaceImplementation::RaspberryPiClient::Geometry(
+        const uint32_t X, const uint32_t Y,
+        const uint32_t width, const uint32_t height) {
+    _x = X;
+    _y = Y;
+    _width = width;
+    _height = height;
+    vc_dispmanx_rect_set(&_dstRect, _x, _y, _width, _height);
+    vc_dispmanx_rect_set(&_srcRect, 0, 0, (_width << 16), (_height << 16));
+
+    _dispmanUpdate = vc_dispmanx_update_start(0);
+    vc_dispmanx_element_change_attributes(_dispmanUpdate,
+            _dispmanElement,
+            ELEMENT_CHANGE_DEST_RECT,
+            _layerNum,
+            _opacity,
+            &_dstRect,
+            &_srcRect,
+            0,
+            DISPMANX_NO_ROTATE);
+    vc_dispmanx_update_submit_sync(_dispmanUpdate);
+}
+
+void Display::SurfaceImplementation::RaspberryPiClient::SetTop()
+{
+    _layerNum = getLayerNum();
+    _dispmanUpdate = vc_dispmanx_update_start(0);
+    vc_dispmanx_element_change_layer(_dispmanUpdate, _dispmanElement, _layerNum);
+    vc_dispmanx_update_submit_sync(_dispmanUpdate);
+}
+
+void Display::SurfaceImplementation::RaspberryPiClient::Visible(
+        const bool visible) {
+}
+
+Display::SurfaceImplementation::SurfaceImplementation(
+        Display& display, const std::string& name,
+        const uint32_t width, const uint32_t height)
+: _parent(display)
+, _refcount(1)
+, _keyboard(nullptr)
+, _client(nullptr) {
+
+    _client = Display::SurfaceImplementation::RaspberryPiClient::Create(
+            name, 0, 0, width, height); //todo: where to get x and y?
+    _parent.Register(this);
+}
+
+Display::SurfaceImplementation::~SurfaceImplementation() {
+
+    _parent.Unregister(this);
+    if( _client != nullptr ) { 
+        _client->Release();
+        _client = nullptr;
+    }
+}
+
+Display::Display(const std::string& name)
+: _displayName(name)
+, _virtualkeyboard(nullptr)
+, _accessorCompositor(AccessorCompositor::Create())  {
+
+    if (pipe(g_pipefd) == -1) {
+        g_pipefd[0] = -1;
+        g_pipefd[1] = -1;
+    }
+    _virtualkeyboard = Construct(
+            name.c_str(), connectorName, VirtualKeyboardCallback);
+    if (_virtualkeyboard == nullptr) {
+        fprintf(stderr, "Initialization of virtual keyboard failed!!!\n");
+    }
+}
+
+Display::~Display() {
+
+    if (_virtualkeyboard != nullptr) {
+        Destruct(_virtualkeyboard);
+    }
+    if (_accessorCompositor != nullptr) {
+        _accessorCompositor->Release();
+    }
+}
+
+int Display::Process(const uint32_t data) {
+    Message message;
+    if ((data != 0) && (g_pipefd[0] != -1) &&
+            (read(g_pipefd[0], &message, sizeof(message)) > 0)) {
+
+        std::list<SurfaceImplementation*>::iterator index(_surfaces.begin());
+        while (index != _surfaces.end()) {
+            (*index)->SendKey(
+                    message.code, (message.type == 0 ?
+                            IDisplay::IKeyboard::released :
+                            IDisplay::IKeyboard::pressed), time(nullptr));
+            index++;
+        }
+    }
+    return (0);
+}
+
+int Display::FileDescriptor() const {
+    return (g_pipefd[0]);
+}
+
+Compositor::IDisplay::ISurface* Display::Create(
+        const std::string& name, const uint32_t width, const uint32_t height) {
+    return (new SurfaceImplementation(*this, name, width, height));
+}
+
+Compositor::IDisplay* Display::Instance(const std::string& displayName) {
+    static Display myDisplay(displayName);
+    return (&myDisplay);
+}
+
+inline void Display::Register(Display::SurfaceImplementation* surface) {
+    std::list<SurfaceImplementation*>::iterator index(
+            std::find(_surfaces.begin(), _surfaces.end(), surface));
+    if (index == _surfaces.end()) {
+        _surfaces.push_back(surface);
+        if ( _accessorCompositor != nullptr && surface->Client() != nullptr) {
+            _accessorCompositor->Attached(surface->Client());
+        }
+    }
+}
+
+inline void Display::Unregister(Display::SurfaceImplementation* surface) {
+    std::list<SurfaceImplementation*>::iterator index(
+            std::find(_surfaces.begin(), _surfaces.end(), surface));
+    if (index != _surfaces.end()) {
+        if ( _accessorCompositor != nullptr && surface->Client() != nullptr) {
+            _accessorCompositor->Detached(surface->Client());
+        }
+        _surfaces.erase(index);
+    }
+}  
+}
+
+Compositor::IDisplay* Compositor::IDisplay::Instance(
+        const std::string& displayName) {
+    bcm_host_init();
+    return (Rpi::Display::Instance(displayName));
+}
+}

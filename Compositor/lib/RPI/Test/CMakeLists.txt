@@ -1,0 +1,38 @@
+set(COMPOSITOR_TEST_ARTIFACT
+    RPICompositorTest
+    )
+
+include(setup_target_properties_executable)
+include(show_target_properties)
+
+message("Setting up ${COMPOSITOR_TEST_ARTIFACT}")
+
+set(COMPOSITOR_TEST_DEFINITIONS
+    )
+
+set(COMPOSITOR_TEST_INCLUDE_DIRS
+	)
+
+set(COMPOSITOR_TEST_LIBS
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${CMAKE_DL_LIBS}
+    WPEFrameworkCore
+    WPEFrameworkPlugins
+    WPEFrameworkProtocols
+    compositorclient
+    GLESv2
+    EGL
+    )
+
+set(COMPOSITOR_TEST_SOURCES
+    Test.cpp
+    )
+
+add_executable(${COMPOSITOR_TEST_ARTIFACT} ${COMPOSITOR_TEST_SOURCES})
+target_compile_definitions(${COMPOSITOR_TEST_ARTIFACT} PRIVATE ${COMPOSITOR_TEST_DEFINITIONS})
+target_include_directories(${COMPOSITOR_TEST_ARTIFACT} PRIVATE ${COMPOSITOR_TEST_INCLUDE_DIRS})
+target_link_libraries(${COMPOSITOR_TEST_ARTIFACT} ${COMPOSITOR_TEST_LIBS})
+
+set_target_properties(${COMPOSITOR_TEST_ARTIFACT} PROPERTIES OUTPUT_NAME ${COMPOSITOR_TEST_ARTIFACT})
+setup_target_properties_executable(${COMPOSITOR_TEST_ARTIFACT})
+show_target_properties(${COMPOSITOR_TEST_ARTIFACT})
