@@ -11,6 +11,43 @@
 
 namespace WPEFramework {
 
+class Keyboard : public Compositor::IDisplay::IKeyboard {
+private:
+    Keyboard(const Keyboard&) = delete;
+    Keyboard& operator=(const Keyboard&) = delete;
+
+public:
+    Keyboard() {
+    }
+    virtual ~Keyboard() {
+    }
+
+public:
+    virtual uint32_t AddRef() const override {
+    }
+    virtual uint32_t Release() const override {
+    }
+    virtual void KeyMap(const char information[], const uint16_t size) override {
+    }
+    virtual void Key(const uint32_t key,
+            const IKeyboard::state action, const uint32_t time) override {
+    }
+    virtual void Modifiers(uint32_t depressedMods,
+            uint32_t latchedMods, uint32_t lockedMods, uint32_t group) override {
+    }
+    virtual void Repeat(int32_t rate, int32_t delay) override {
+    }
+    virtual void Direct(const uint32_t key, const state action) override {
+        fprintf(stderr, "KEY: %u for %s\n", key, _isurface->Name().c_str());
+    }
+    void SetSurface(Compositor::IDisplay::ISurface* surface){
+        _isurface = surface;
+    }
+
+private:
+    Compositor::IDisplay::ISurface* _isurface;
+};
+
 EGLint const attrib_list[] = {
         EGL_RED_SIZE,
         8,
@@ -50,21 +87,31 @@ public:
         setupEGL();
         idisplay = Compositor::IDisplay::Instance(DisplayName());
 
-        for(int i = 0; i < MAX_SURFACES; i++) {
+        for (int i = 0; i < MAX_SURFACES; i++) {
 
             std::string name = "surface-" + std::to_string(i);
             isurfaces[i] = idisplay->Create(name, 1280/2, 720/2);
             eglSurfaceWindows[i] = createEGLSurface(isurfaces[i]->Native());
+
+            ikeyboard[i] = new Keyboard();
+            isurfaces[i]->Keyboard(ikeyboard[i]);
+            ikeyboard[i]->SetSurface(isurfaces[i]);
         }
 
-        for(int i = 0; i < MAX_SURFACES; i++) {
+        for (int i = 0; i < MAX_SURFACES; i++) {
 
             drawFrame(eglSurfaceWindows[i]);
         }
-        sleep(500);
 
-        for(int i = 0; i < MAX_SURFACES; i++) {
+        while (true) {
 
+            idisplay->Process(1);
+            usleep(100000);
+        }
+
+        for (int i = 0; i < MAX_SURFACES; i++) {
+
+            delete ikeyboard[i];
             destroyEGLSurface(eglSurfaceWindows[i]);
             isurfaces[i]->Release();
         }
@@ -149,6 +196,7 @@ private:
 
     Compositor::IDisplay *idisplay;
     Compositor::IDisplay::ISurface* isurfaces[MAX_SURFACES];
+    Keyboard *ikeyboard[MAX_SURFACES];
 };
 } // WPEFramework
 

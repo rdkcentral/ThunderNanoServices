@@ -166,11 +166,13 @@ private:
     Exchange::IComposition::INotification* _remote;
 };
 
-int32_t Display::SurfaceImplementation::RaspberryPiClient::_glayerNum = 0;
 Display::SurfaceImplementation::RaspberryPiClient::RaspberryPiClient(
+        SurfaceImplementation& surface,
         const std::string& name, const uint32_t x, const uint32_t y,
         const uint32_t width, const uint32_t height)
 : Exchange::IComposition::IClient()
+, _parent(surface)
+, _refcount(1)
 , _name(name)
 , _x(x)
 , _y(y)
@@ -185,7 +187,7 @@ Display::SurfaceImplementation::RaspberryPiClient::RaspberryPiClient(
             0
     };
 
-    _layerNum = getLayerNum();
+    _layerNum = _parent.getLayerNum();
     vc_dispmanx_rect_set(&_dstRect, 0, 0, _width, _height);
     vc_dispmanx_rect_set(&_srcRect, 0, 0, (_width << 16), (_height << 16));
 
@@ -260,12 +262,15 @@ void Display::SurfaceImplementation::RaspberryPiClient::Geometry(
     vc_dispmanx_update_submit_sync(_dispmanUpdate);
 }
 
-void Display::SurfaceImplementation::RaspberryPiClient::SetTop()
-{
-    _layerNum = getLayerNum();
+void Display::SurfaceImplementation::RaspberryPiClient::SetTop() {
+    _layerNum = _parent.getLayerNum();
     _dispmanUpdate = vc_dispmanx_update_start(0);
     vc_dispmanx_element_change_layer(_dispmanUpdate, _dispmanElement, _layerNum);
     vc_dispmanx_update_submit_sync(_dispmanUpdate);
+}
+
+void Display::SurfaceImplementation::RaspberryPiClient::SetInput() {
+    _parent.SetInput();
 }
 
 void Display::SurfaceImplementation::RaspberryPiClient::Visible(
@@ -280,8 +285,8 @@ Display::SurfaceImplementation::SurfaceImplementation(
 , _keyboard(nullptr)
 , _client(nullptr) {
 
-    _client = Display::SurfaceImplementation::RaspberryPiClient::Create(
-            name, 0, 0, width, height); //todo: where to get x and y?
+    _client = new Display::SurfaceImplementation::RaspberryPiClient(
+                *this, name, 0, 0, width, height); //todo: where to get x and y?
     _parent.Register(this);
 }
 
@@ -296,6 +301,7 @@ Display::SurfaceImplementation::~SurfaceImplementation() {
 
 Display::Display(const std::string& name)
 : _displayName(name)
+, _glayerNum(0)
 , _virtualkeyboard(nullptr)
 , _accessorCompositor(AccessorCompositor::Create())  {
 
@@ -327,10 +333,13 @@ int Display::Process(const uint32_t data) {
 
         std::list<SurfaceImplementation*>::iterator index(_surfaces.begin());
         while (index != _surfaces.end()) {
-            (*index)->SendKey(
-                    message.code, (message.type == 0 ?
-                            IDisplay::IKeyboard::released :
-                            IDisplay::IKeyboard::pressed), time(nullptr));
+            if((*index) == _inputSurface) {
+                (*index)->SendKey(
+                        message.code, (message.type == 0 ?
+                                IDisplay::IKeyboard::released :
+                                IDisplay::IKeyboard::pressed), time(nullptr));
+                break;
+            }
             index++;
         }
     }

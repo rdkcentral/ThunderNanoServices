@@ -34,15 +34,8 @@ private:
             RaspberryPiClient(const RaspberryPiClient&) = delete;
             RaspberryPiClient& operator=(const RaspberryPiClient&) = delete;
 
-            static RaspberryPiClient* Create(
-                    const std::string& name, const uint32_t x, const uint32_t y,
-                    const uint32_t width, const uint32_t height) {
-                RaspberryPiClient* result = Core::Service<RaspberryPiClient>::
-                        Create<RaspberryPiClient>(name, x, y, width, height);
-                return (result);
-            }
-
             RaspberryPiClient(
+                    SurfaceImplementation& surface,
                     const std::string& name, const uint32_t x,
                     const uint32_t y, const uint32_t width,
                     const uint32_t height);
@@ -51,18 +44,24 @@ private:
             virtual void Geometry(const uint32_t X, const uint32_t Y,
                     const uint32_t width, const uint32_t height) override;
             virtual void SetTop() override;
+            virtual void SetInput() override;
             virtual void Visible(const bool visible) override;
 
+            virtual void AddRef() const override {
+                _refcount++;
+            }
+            virtual uint32_t Release() const override {
+                if (--_refcount == 0) {
+                    delete const_cast<RaspberryPiClient*>(this);
+                }
+                return (0);
+            }
             virtual string Name() const override {
                 return _name;
             }
             virtual void Kill() override {
                 //todo: implement
                 fprintf(stderr, "Kill called!!!\n");
-            }
-            virtual void SetInput() override {
-                // todo implement
-                fprintf(stderr, "SetInput called!!!\n");
             }
             EGLNativeDisplayType Native() const {
                 return (static_cast<EGLNativeWindowType>(_nativeSurface));
@@ -88,11 +87,8 @@ private:
             END_INTERFACE_MAP
 
         private:
-            static int32_t _glayerNum;
-            static int32_t getLayerNum() {
-                return Display::SurfaceImplementation::RaspberryPiClient::_glayerNum;
-            }
-
+            SurfaceImplementation& _parent;
+            mutable uint32_t _refcount;
             std::string _name;
             uint32_t _x;
             uint32_t _y;
@@ -162,6 +158,12 @@ private:
         inline Exchange::IComposition::IClient* Client() {
             return _client;
         }
+        void SetInput() {
+            _parent.SetInput(this);
+        }
+        int32_t getLayerNum() {
+            return _parent.getLayerNum();
+        }
 
     private:
         Display& _parent;
@@ -197,9 +199,17 @@ public:
 private:
     inline void Register(SurfaceImplementation* surface);
     inline void Unregister(SurfaceImplementation* surface);
+    void SetInput(SurfaceImplementation* surface) {
+        _inputSurface = surface;
+    }
+    int32_t getLayerNum() {
+        return _glayerNum++;
+    }
 
     const std::string _displayName;
-    void* _virtualkeyboard ;
+    int32_t _glayerNum;
+    void* _virtualkeyboard;
+    SurfaceImplementation* _inputSurface;
     std::list<SurfaceImplementation*> _surfaces;
     AccessorCompositor* _accessorCompositor;
 };
