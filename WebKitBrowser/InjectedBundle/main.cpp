@@ -75,7 +75,7 @@ static class PluginHost
                     TRACE_L1("Could not open the connection, error (%d)", result);
                 } 
                 else if (_comClient->WaitForCompletion(RPC::CommunicationTimeOut) == false) {
-                    TRACE_L1("Could not exchange the initial AnnounceMessage");
+		    TRACE_L1("Could not exchange the initial AnnounceMessage: line %d ", __LINE__);
                 }
             }
 
