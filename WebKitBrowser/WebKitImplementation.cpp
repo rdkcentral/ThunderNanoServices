@@ -428,7 +428,6 @@ static GSourceFuncs _handlerIntervention =
             , _state(PluginHost::IStateControl::UNINITIALIZED)
             , _hidden(false)
             , _time(0)
-            , _autoStart(false)
             , _compliant(false)    
             , _automationSession(nullptr)
         {
@@ -682,8 +681,6 @@ static GSourceFuncs _handlerIntervention =
             if ( (environmentOverride == false) || (Core::SystemInfo::GetEnvironment(_T("WPE_WEBKIT_URL"), _URL) == false) ) {
                 _URL = _config.URL.Value();
             }
-
-            _autoStart = service->AutoStart();
 
             Core::SystemInfo::SetEnvironment(_T("QUEUEPLAYER_FLUSH_MODE"), _T("3"), false);
             Core::SystemInfo::SetEnvironment(_T("HOME"), service->PersistentPath());
@@ -1107,7 +1104,6 @@ static GSourceFuncs _handlerIntervention =
         PluginHost::IStateControl::state _state;
         bool _hidden;
         uint64_t _time;
-        bool _autoStart;
         bool _compliant;
         WKWebAutomationSessionRef _automationSession;
     };
