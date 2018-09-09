@@ -6,6 +6,7 @@
 #include <EGL/eglext.h>
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
+#include <png.h>
 
 #include "../../Client/Client.h"
 
@@ -78,32 +79,66 @@ EGLint context_attrib_list[] = {
         EGL_NONE,
 };
 
-#define MAX_SURFACES 5
+const char *vshader = R"(
+       attribute vec4 position;
+       attribute vec2 texcoord;
+       varying vec2 texcoordVarying;
+       void main() {
+           gl_Position = position;
+           texcoordVarying = texcoord;
+       }
+   )";
+
+const char *fshader = R"(
+       precision mediump float;
+       varying vec2 texcoordVarying;
+       uniform sampler2D texture;
+       void main() {
+           gl_FragColor = texture2D(texture, texcoordVarying);
+       }
+   )";
+
+const float vertices[] = {
+        -1.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 0.0f
+};
+const float texcoords[] = {
+        0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f
+};
+
+#define MAX_SURFACES 3
+
+bool mainloopRunning = true;
+void intHandler(int) {
+    mainloopRunning = false;
+}
 
 class TestContext {
 
 public:
     int run() {
+        signal(SIGINT, intHandler);
+
         setupEGL();
         idisplay = Compositor::IDisplay::Instance(DisplayName());
 
         for (int i = 0; i < MAX_SURFACES; i++) {
 
             std::string name = "surface-" + std::to_string(i);
-            isurfaces[i] = idisplay->Create(name, 1280/2, 720/2);
+            isurfaces[i] = idisplay->Create(name, 1280, 720);
             eglSurfaceWindows[i] = createEGLSurface(isurfaces[i]->Native());
-
+#if 0
+            setupGL();
+            drawImage(eglSurfaceWindows[i]);
+            termGL();
+#else
+            drawFrame(eglSurfaceWindows[i]);
+#endif
             ikeyboard[i] = new Keyboard();
             isurfaces[i]->Keyboard(ikeyboard[i]);
             ikeyboard[i]->SetSurface(isurfaces[i]);
         }
 
-        for (int i = 0; i < MAX_SURFACES; i++) {
-
-            drawFrame(eglSurfaceWindows[i]);
-        }
-
-        while (true) {
+        while (mainloopRunning) {
 
             idisplay->Process(1);
             usleep(100000);
@@ -122,6 +157,127 @@ public:
     }
 
 private:
+
+    void setupGL() {
+
+        vertexShader = glCreateShader(GL_VERTEX_SHADER);
+        glShaderSource(vertexShader, 1, &vshader, nullptr);
+        glCompileShader(vertexShader);
+
+        fragShader = glCreateShader(GL_FRAGMENT_SHADER);
+        glShaderSource(fragShader, 1, &fshader, nullptr);
+        glCompileShader(fragShader);
+
+        program = glCreateProgram();
+        glAttachShader(program, vertexShader);
+        glAttachShader(program, fragShader);
+        glLinkProgram(program);
+
+        position = glGetAttribLocation(program, "position");
+        glEnableVertexAttribArray(position);
+        texcoord = glGetAttribLocation(program, "texcoord");
+        glEnableVertexAttribArray(texcoord);
+
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    }
+
+    void termGL() {
+
+        glDeleteTextures(1, &texture);
+
+        glDetachShader(program, vertexShader);
+        glDetachShader(program, fragShader);
+
+        glDeleteProgram(program);
+
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragShader);
+    }
+
+    int loadPng(char *filename) {
+
+        FILE *fp = fopen(filename, "rb");
+        if (fp == nullptr) {
+            printf("fopen failed\n");
+            return (-1);
+        }
+
+        png_structp png = png_create_read_struct(
+            PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+        png_infop info = png_create_info_struct(png);
+
+        png_init_io(png, fp);
+        png_set_sig_bytes(png, 0);
+
+        png_read_png(png, info, (PNG_TRANSFORM_STRIP_16 |
+                                 PNG_TRANSFORM_PACKING | PNG_TRANSFORM_EXPAND), nullptr);
+
+        int bit_depth, color_type;
+        png_get_IHDR(png, info, &imageWidth, &imageHeight,
+                     &bit_depth, &color_type, NULL, NULL, NULL);
+
+        if (color_type == PNG_COLOR_TYPE_RGB) {
+            imageFormat = GL_RGB;
+        }
+        else {
+            imageFormat = GL_RGBA;
+        }
+
+        unsigned int row_bytes = png_get_rowbytes(png, info);
+        imageData = (unsigned char *)malloc(row_bytes * imageHeight);
+
+        png_bytepp rows = png_get_rows(png, info);
+        for (unsigned int i = 0; i < imageHeight; ++i) {
+            memcpy(imageData + (row_bytes * i), rows[i], row_bytes);
+        }
+
+        png_destroy_read_struct(&png, &info, nullptr);
+        fclose(fp);
+        return (0);
+    }
+
+    void deletePng() {
+        free(imageData);
+    }
+
+    void drawImage(EGLSurface eglSurfaceWindow) {
+
+        eglMakeCurrent(
+            eglDisplay, eglSurfaceWindow, eglSurfaceWindow, eglContext);
+
+        if (loadPng((char *)"/root/test.png") != 0) {
+
+            GLclampf red = ((float)rand()/(float)(RAND_MAX)) * 1.0;
+            GLclampf green = ((float)rand()/(float)(RAND_MAX)) * 1.0;
+            GLclampf blue = ((float)rand()/(float)(RAND_MAX)) * 1.0;
+
+            glClearColor(red, green, blue, 1.0);
+            glClear(GL_COLOR_BUFFER_BIT);
+        }
+        else {
+
+            glClearColor(0.0f, 0.0f, 0.0f, 0.1f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            glTexImage2D(GL_TEXTURE_2D, 0, imageFormat,
+                         imageWidth, imageHeight,
+                         0, imageFormat, GL_UNSIGNED_BYTE, imageData);
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+            glUseProgram(program);
+
+            glVertexAttribPointer(texcoord, 2, GL_FLOAT, GL_FALSE, 0, texcoords);
+            glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, 0, vertices);
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+            deletePng();
+        }
+        eglSwapBuffers(eglDisplay, eglSurfaceWindow);
+    }
+
     void drawFrame(EGLSurface eglSurfaceWindow) {
 
         eglMakeCurrent(
@@ -143,6 +299,8 @@ private:
         EGLSurface eglSurfaceWindow;
         eglSurfaceWindow = eglCreateWindowSurface(
                 eglDisplay, eglConfig, native, NULL);
+        eglMakeCurrent(
+            eglDisplay, eglSurfaceWindow, eglSurfaceWindow, eglContext);
         return eglSurfaceWindow;
     }
 
@@ -193,6 +351,18 @@ private:
     EGLConfig eglConfig;
     EGLContext eglContext;
     EGLSurface eglSurfaceWindows[MAX_SURFACES];
+
+    GLuint imageWidth;
+    GLuint imageHeight;
+    unsigned char *imageData;
+    GLenum imageFormat;
+
+    GLuint program;
+    GLuint vertexShader;
+    GLuint fragShader;
+    GLuint position;
+    GLuint texcoord;
+    GLuint texture;
 
     Compositor::IDisplay *idisplay;
     Compositor::IDisplay::ISurface* isurfaces[MAX_SURFACES];

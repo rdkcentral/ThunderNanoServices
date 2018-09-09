@@ -94,7 +94,10 @@ private:
             uint32_t _y;
             uint32_t _width;
             uint32_t _height;
+            uint32_t _screenWidth;
+            uint32_t _screenHeight;
             uint32_t _opacity;
+            bool _visible;
             int32_t _layerNum;
 
             EGLSurface _nativeSurface;

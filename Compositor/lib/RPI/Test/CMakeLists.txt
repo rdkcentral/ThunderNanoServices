@@ -22,6 +22,7 @@ set(COMPOSITOR_TEST_LIBS
     compositorclient
     GLESv2
     EGL
+    png
     )
 
 set(COMPOSITOR_TEST_SOURCES

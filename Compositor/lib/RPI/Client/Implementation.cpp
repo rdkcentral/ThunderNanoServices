@@ -177,19 +177,22 @@ Display::SurfaceImplementation::RaspberryPiClient::RaspberryPiClient(
 , _x(x)
 , _y(y)
 , _width(width)
-, _height(height) {
+, _height(height)
+, _opacity(255)
+, _visible(true) {
 
     TRACE_L1("Created client named: %s", _name.c_str());
 
+    graphics_get_display_size(0, &_screenWidth, &_screenHeight);
     VC_DISPMANX_ALPHA_T alpha = {
             DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS,
             255,
             0
     };
-
     _layerNum = _parent.getLayerNum();
     vc_dispmanx_rect_set(&_dstRect, 0, 0, _width, _height);
-    vc_dispmanx_rect_set(&_srcRect, 0, 0, (_width << 16), (_height << 16));
+    vc_dispmanx_rect_set(&_srcRect,
+            0, 0, (_screenWidth << 16), (_screenHeight << 16));
 
     _dispmanDisplay = vc_dispmanx_display_open(0);
     _dispmanUpdate = vc_dispmanx_update_start(0);
@@ -207,8 +210,8 @@ Display::SurfaceImplementation::RaspberryPiClient::RaspberryPiClient(
     vc_dispmanx_update_submit_sync(_dispmanUpdate);
 
     _nativeWindow.element = _dispmanElement;
-    _nativeWindow.width = _width;
-    _nativeWindow.height = _height;
+    _nativeWindow.width = _screenWidth;
+    _nativeWindow.height = _screenHeight;
     _nativeSurface = static_cast<EGLSurface>(&_nativeWindow);
 }
 
@@ -226,12 +229,14 @@ void Display::SurfaceImplementation::RaspberryPiClient::Opacity(
         const uint32_t value) {
 
     _opacity = (value > 255) ? 255 : value;
+    uint32_t opacity = (_visible == true) ? _opacity : 0;
+
     _dispmanUpdate = vc_dispmanx_update_start(0);
     vc_dispmanx_element_change_attributes(_dispmanUpdate,
             _dispmanElement,
             ELEMENT_CHANGE_OPACITY,
             _layerNum,
-            _opacity,
+            opacity,
             &_dstRect,
             &_srcRect,
             0,
@@ -246,15 +251,18 @@ void Display::SurfaceImplementation::RaspberryPiClient::Geometry(
     _y = Y;
     _width = width;
     _height = height;
+
     vc_dispmanx_rect_set(&_dstRect, _x, _y, _width, _height);
-    vc_dispmanx_rect_set(&_srcRect, 0, 0, (_width << 16), (_height << 16));
+    vc_dispmanx_rect_set(&_srcRect,
+            0, 0, (_screenWidth << 16), (_screenHeight << 16));
+    uint32_t opacity = (_visible == true) ? _opacity : 0;
 
     _dispmanUpdate = vc_dispmanx_update_start(0);
     vc_dispmanx_element_change_attributes(_dispmanUpdate,
             _dispmanElement,
             ELEMENT_CHANGE_DEST_RECT,
             _layerNum,
-            _opacity,
+            opacity,
             &_dstRect,
             &_srcRect,
             0,
@@ -275,6 +283,21 @@ void Display::SurfaceImplementation::RaspberryPiClient::SetInput() {
 
 void Display::SurfaceImplementation::RaspberryPiClient::Visible(
         const bool visible) {
+
+    _visible = visible;
+    uint32_t opacity = (_visible == true) ? _opacity : 0;
+
+    _dispmanUpdate = vc_dispmanx_update_start(0);
+    vc_dispmanx_element_change_attributes(_dispmanUpdate,
+            _dispmanElement,
+            ELEMENT_CHANGE_OPACITY,
+            _layerNum,
+            opacity,
+            &_dstRect,
+            &_srcRect,
+            0,
+            DISPMANX_NO_ROTATE);
+    vc_dispmanx_update_submit_sync(_dispmanUpdate);
 }
 
 Display::SurfaceImplementation::SurfaceImplementation(
