@@ -1042,6 +1042,8 @@ static GSourceFuncs _handlerIntervention =
             _handlerInjectedBundle.base.clientInfo = static_cast<void*>(this);
             WKContextSetInjectedBundleClient(context, &_handlerInjectedBundle.base);
 
+            WKPageSetProxies(_page, nullptr);
+	
             if (_config.Automation.Value()) {
                 _handlerAutomation.base.clientInfo = static_cast<void*>(this);
                 WKContextSetAutomationClient(context, &_handlerAutomation.base);
