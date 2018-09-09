@@ -1059,7 +1059,7 @@ static GSourceFuncs _handlerIntervention =
 
             // Move into the correct state, as requested
             _adminLock.Lock();
-            if ((_state == PluginHost::IStateControl::SUSPENDED) || ((_autoStart == true) && (_state == PluginHost::IStateControl::UNINITIALIZED))) {
+            if ((_state == PluginHost::IStateControl::SUSPENDED) || (_state == PluginHost::IStateControl::UNINITIALIZED)) {
                 _state = PluginHost::IStateControl::UNINITIALIZED;
                 Suspend();
             }
