@@ -40,7 +40,7 @@ private:
         : _client(Core::ProxyType<RPC::CommunicatorClient>::Create(nodeId))
         , _service(Core::ProxyType<RPCService>::Create(Core::Thread::DefaultStackSize())) {
 
-            if (_client->Open(RPC::CommunicationTimeOut, _T("CompositorImplementation"), Exchange::IComposition::INotification, ~0) == Core::ERROR_NONE) {
+            if (_client->Open(RPC::CommunicationTimeOut, _T("CompositorImplementation"), Exchange::IComposition::INotification::ID, ~0) == Core::ERROR_NONE) {
                 _client->CreateFactory<RPC::InvokeMessage>(2);
                 _client->Register(_service);
             }
@@ -62,15 +62,9 @@ private:
             return (_client.IsValid());
         }
         template <typename INTERFACE>
-        INTERFACE* Create(const string& objectName,
-                const uint32_t version = static_cast<uint32_t>(~0)) {
-            INTERFACE* result = nullptr;
-            if (_client.IsValid() == true) {
-                // Oke we could open the channel, lets get the interface
-                result = _client->Create<INTERFACE>(objectName, version);
-            }
-            return (result);
-        }
+		INTERFACE* WaitForCompletion(const uint32_t waitTime) {
+			return (_client->WaitForCompletion<INTERFACE>(waitTime));
+		}
 
     private:
         Core::ProxyType<RPC::CommunicatorClient> _client;
@@ -84,7 +78,7 @@ private:
     , _client(Core::NodeId(domainName))
     , _remote(nullptr) {
         if (_client.IsValid() == true) {
-           _remote = _client.WaitForCompletion<Exchange::IComposition::INotification>();
+           _remote = _client.WaitForCompletion<Exchange::IComposition::INotification>(6000);
         }
     }
 

@@ -77,7 +77,7 @@ private:
     public:
         Config()
         : Core::JSON::Container()
-        , Connector(_T("/tmp/rpicompositor")) {
+        , Connector(_T("/tmp/compositor")) {
             Add(_T("connector"), &Connector);
         }
 
@@ -104,7 +104,7 @@ public:
         if (result == Core::ERROR_NONE) {
             // Announce the port on which we are listening
             Core::SystemInfo::SetEnvironment(
-                    _T("RPI_COMPOSITOR"), config.Connector.Value(), true);
+                    _T("COMPOSITOR"), config.Connector.Value(), true);
             PlatformReady();
         }
         else {
