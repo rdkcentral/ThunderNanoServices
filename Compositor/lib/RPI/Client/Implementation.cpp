@@ -36,23 +36,12 @@ private:
         typedef WPEFramework::RPC::InvokeServerType<4, 1> RPCService;
 
     public:
-        RPCClient(const Core::NodeId& nodeId, const string& proxyStubPath)
-        : _proxyStubs()
-        , _client(Core::ProxyType<RPC::CommunicatorClient>::Create(nodeId))
+        RPCClient(const Core::NodeId& nodeId)
+        : _client(Core::ProxyType<RPC::CommunicatorClient>::Create(nodeId))
         , _service(Core::ProxyType<RPCService>::Create(Core::Thread::DefaultStackSize())) {
 
-            _client->CreateFactory<RPC::InvokeMessage>(2);
-            if (_client->Open(RPC::CommunicationTimeOut) == Core::ERROR_NONE) {
-                // Time to load the ProxyStubs, that are used for
-                // InterProcess communication
-                Core::Directory index(proxyStubPath.c_str(), _T("*.so"));
-                while (index.Next() == true) {
-                    Core::Library library(index.Current().c_str());
-                    if (library.IsLoaded() == true) {
-                        _proxyStubs.push_back(library);
-                    }             
-                } 
-                SleepMs(100);
+            if (_client->Open(RPC::CommunicationTimeOut, _T("CompositorImplementation"), Exchange::IComposition::INotification, ~0) == Core::ERROR_NONE) {
+                _client->CreateFactory<RPC::InvokeMessage>(2);
                 _client->Register(_service);
             }
             else {
@@ -60,16 +49,16 @@ private:
             }
         }
         ~RPCClient() {
-            _proxyStubs.clear();
             if (_client.IsValid() == true) {
                 _client->Unregister(_service);
+                _client->DestroyFactory<RPC::InvokeMessage>();
                 _client->Close(Core::infinite);
                 _client.Release();
             }
         }
 
     public:
-        inline bool IsOperational() const {
+        inline bool IsValid() const {
             return (_client.IsValid());
         }
         template <typename INTERFACE>
@@ -84,7 +73,6 @@ private:
         }
 
     private:
-        std::list<Core::Library> _proxyStubs;
         Core::ProxyType<RPC::CommunicatorClient> _client;
         Core::ProxyType<RPCService> _service;
     };
@@ -93,12 +81,10 @@ private:
     AccessorCompositor (const TCHAR domainName[]) 
     : _refCount(1)
     , _adminLock()
-    , _client(Core::NodeId(domainName), _T("/usr/lib/wpeframework/proxystubs"))
+    , _client(Core::NodeId(domainName))
     , _remote(nullptr) {
-
-        if (_client.IsOperational() == true) { 
-            _remote = _client.Create<Exchange::IComposition
-                    ::INotification>(_T("CompositorImplementation"));
+        if (_client.IsValid() == true) {
+           _remote = _client.WaitForCompletion<Exchange::IComposition::INotification>();
         }
     }
 
@@ -133,9 +119,8 @@ public:
     static AccessorCompositor* Create () {
 
         string connector;
-        if ((Core::SystemInfo::GetEnvironment(_T("RPI_COMPOSITOR"),
-                connector) == false) || (connector.empty() == true)) {
-            connector = _T("/tmp/rpicompositor");
+        if ((Core::SystemInfo::GetEnvironment(_T("COMPOSITOR"), connector) == false) || (connector.empty() == true)) {
+            connector = _T("/tmp/compositor");
         }
         AccessorCompositor* result = new AccessorCompositor (connector.c_str());
         if (result->_remote == nullptr) {
