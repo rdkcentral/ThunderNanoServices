@@ -306,7 +306,7 @@ Display::Display(const std::string& name)
 , _glayerNum(0)
 , _virtualkeyboard(nullptr)
 , _accessorCompositor(AccessorCompositor::Create())  {
-
+ bcm_host_init();
     if (pipe(g_pipefd) == -1) {
         g_pipefd[0] = -1;
         g_pipefd[1] = -1;
@@ -334,16 +334,14 @@ int Display::Process(const uint32_t data) {
             (read(g_pipefd[0], &message, sizeof(message)) > 0)) {
 
         std::list<SurfaceImplementation*>::iterator index(_surfaces.begin());
-        while (index != _surfaces.end()) {
-            if((*index) == _inputSurface) {
-                (*index)->SendKey(
-                        message.code, (message.type == 0 ?
-                                IDisplay::IKeyboard::released :
-                                IDisplay::IKeyboard::pressed), time(nullptr));
-                break;
+          while (index != _surfaces.end()) {
+                // RELEASED  = 0,
+                // PRESSED   = 1,
+                // REPEAT    = 2,
+
+                (*index)->SendKey (message.code, (message.type == 0 ? IDisplay::IKeyboard::released : IDisplay::IKeyboard::pressed), time(nullptr));
+                index++;
             }
-            index++;
-        }
     }
     return (0);
 }
@@ -387,7 +385,7 @@ inline void Display::Unregister(Display::SurfaceImplementation* surface) {
 
 Compositor::IDisplay* Compositor::IDisplay::Instance(
         const std::string& displayName) {
-    bcm_host_init();
+   
     return (Rpi::Display::Instance(displayName));
 }
 }
