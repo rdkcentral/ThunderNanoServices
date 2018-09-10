@@ -2,6 +2,41 @@
 
 namespace WPEFramework {
 
+    ENUM_CONVERSION_BEGIN(FrontPanelHAL::Indicator)
+        { FrontPanelHAL::MESSAGE,    _TXT("MESSAGE") },
+        { FrontPanelHAL::POWER,    _TXT("POWER") },
+        { FrontPanelHAL::RECORD,    _TXT("RECORD") },
+        { FrontPanelHAL::REMOTE,    _TXT("REMOTE") },
+        { FrontPanelHAL::RFBYPASS,    _TXT("RFBYPASS") },
+        { FrontPanelHAL::MAX_INDICATOR,    _TXT("MAX_INDICATOR") },
+    ENUM_CONVERSION_END(FrontPanelHAL::Indicator)
+
+    ENUM_CONVERSION_BEGIN(FrontPanelHAL::TextDisplay)
+        { FrontPanelHAL::TEXT,    _TXT("TEXT") },
+        { FrontPanelHAL::MAX_TEXTDISP,    _TXT("MAX_TEXTDISP") },
+    ENUM_CONVERSION_END(FrontPanelHAL::TextDisplay)
+
+    ENUM_CONVERSION_BEGIN(FrontPanelHAL::State)
+        { FrontPanelHAL::STATE_OFF,    _TXT("STATE_OFF") },
+        { FrontPanelHAL::STATE_ON,    _TXT("STATE_ON") },
+    ENUM_CONVERSION_END(FrontPanelHAL::State)
+
+    ENUM_CONVERSION_BEGIN(FrontPanelHAL::TimeFormat)
+        { FrontPanelHAL::TWELVE_HOUR,    _TXT("TWELVE_HOUR") },
+        { FrontPanelHAL::TWENTY_FOUR_HOUR,    _TXT("TWENTY_FOUR_HOUR") },
+        { FrontPanelHAL::STRING,    _TXT("STRING") },
+    ENUM_CONVERSION_END(FrontPanelHAL::TimeFormat)
+
+    ENUM_CONVERSION_BEGIN(FrontPanelHAL::Color)
+       { FrontPanelHAL::BLUE,    _TXT("BLUE") },
+       { FrontPanelHAL::GREEN,    _TXT("GREEN") },
+       { FrontPanelHAL::RED,    _TXT("RED") },
+       { FrontPanelHAL::YELLOW,    _TXT("YELLOW") },
+       { FrontPanelHAL::ORANGE,    _TXT("ORANGE") },
+       { FrontPanelHAL::WHITE,    _TXT("WHITE") },
+       { FrontPanelHAL::MAX_COLOR,    _TXT("MAX_COLOR") },
+    ENUM_CONVERSION_END(FrontPanelHAL::Color)
+
     FrontPanelHAL::FrontPanelHAL()
         : _isOperational(false)
     {
@@ -31,123 +66,150 @@ namespace WPEFramework {
         }
     }
 
-    bool FrontPanelHAL::GetFPState(uint32_t eIndicator, string& state)
+    bool FrontPanelHAL::GetFPState(Indicator indicator, State& state)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
+        dsFPDIndicator_t fpdIndicator = indicatorLookup.find(indicator)->second;
         dsFPDState_t fpdState;
-        if (dsGetFPState((dsFPDIndicator_t)eIndicator, &fpdState) == dsERR_NONE) {
-            state = stateLookup.find(fpdState)->second;
+        if (dsGetFPState(fpdIndicator, &fpdState) == dsERR_NONE) {
+            const auto index = std::find_if(stateLookup.cbegin(), stateLookup.cend(),
+                [fpdState](const std::pair<const State, const dsFPDState_t>& found)
+                { return found.second == fpdState; });
+
+            if (index != stateLookup.cend())
+                state = index->first;
+
             return true;
         }
         return false;
     }
 
-    bool FrontPanelHAL::GetFPBrightness(uint32_t eIndicator, uint32_t& brightness)
+    bool FrontPanelHAL::GetFPBrightness(Indicator indicator, uint32_t& brightness)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        if (dsGetFPBrightness((dsFPDIndicator_t)eIndicator, (dsFPDBrightness_t*)&brightness) == dsERR_NONE)
+        dsFPDIndicator_t fpdIndicator = indicatorLookup.find(indicator)->second;
+        if (dsGetFPBrightness(fpdIndicator, (dsFPDBrightness_t*)&brightness) == dsERR_NONE)
             return true;
         return false;
     }
 
-    bool FrontPanelHAL::GetFPColor(uint32_t eIndicator, string& color)
+    bool FrontPanelHAL::GetFPColor(Indicator indicator, Color& color)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
+        dsFPDIndicator_t fpdIndicator = indicatorLookup.find(indicator)->second;
         dsFPDColor_t fpdColor;
-        if (dsGetFPColor((dsFPDIndicator_t)eIndicator, &fpdColor) == dsERR_NONE) {
-            color = colorLookup.find(fpdColor)->second;
+        if (dsGetFPColor(fpdIndicator, &fpdColor) == dsERR_NONE) {
+            const auto index = std::find_if(colorLookup.cbegin(), colorLookup.cend(),
+                [fpdColor](const std::pair<const Color, const dsFPDColor_t>& found)
+                { return found.second == fpdColor; });
+
+            if (index != colorLookup.cend())
+                color = index->first;
+
             return true;
         }
         return false;
 
     }
 
-    bool FrontPanelHAL::GetFPTextBrightness(uint32_t eIndicator, uint32_t& brightness)
+    bool FrontPanelHAL::GetFPTextBrightness(TextDisplay indicator, uint32_t& brightness)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        dsFPDTextDisplay_t fpdIndicator = static_cast<dsFPDTextDisplay_t>(eIndicator);
+        dsFPDTextDisplay_t fpdIndicator = textDisplayLookup.find(indicator)->second;
         if (dsGetFPTextBrightness(fpdIndicator, (dsFPDBrightness_t*)&brightness) == dsERR_NONE)
             return true;
         return false;
     }
 
-    bool FrontPanelHAL::GetFPTimeFormat(string& timeFormat)
+    bool FrontPanelHAL::GetFPTimeFormat(TimeFormat& timeFormat)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
         dsFPDTimeFormat_t fpdTimeFormat;
         if (dsGetFPTimeFormat(&fpdTimeFormat) == dsERR_NONE) {
-            timeFormat = timeFormatLookup.find(fpdTimeFormat)->second;
+            const auto index = std::find_if(timeFormatLookup.cbegin(), timeFormatLookup.cend(),
+                [fpdTimeFormat](const std::pair<const TimeFormat, const dsFPDTimeFormat_t>& found)
+                { return found.second == fpdTimeFormat; });
+
+            if (index != timeFormatLookup.cend())
+                timeFormat = index->first;
+
             return true;
         }
         return false;
     }
 
-    bool FrontPanelHAL::SetFPBlink(uint32_t eIndicator, uint32_t uBlinkDuration, uint32_t uBlinkIterations)
+    bool FrontPanelHAL::SetFPBlink(Indicator indicator, uint32_t uBlinkDuration, uint32_t blinkIterations)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        if (dsSetFPBlink((dsFPDIndicator_t)eIndicator, uBlinkDuration, uBlinkIterations) == dsERR_NONE) {
+        dsFPDIndicator_t fpdIndicator = indicatorLookup.find(indicator)->second;
+        if (dsSetFPBlink(fpdIndicator, uBlinkDuration, blinkIterations) == dsERR_NONE) {
             TRACE(Trace::Information, (_T("Set Front Panel Blink.")));
             return true;
         }
         return false;
     }
 
-    bool FrontPanelHAL::SetFPBrightness(uint32_t eIndicator, uint32_t eBrightness)
+    bool FrontPanelHAL::SetFPBrightness(Indicator indicator, uint32_t brightness)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        if (dsSetFPBrightness((dsFPDIndicator_t)eIndicator, (dsFPDBrightness_t)eBrightness)  == dsERR_NONE) {
+        dsFPDIndicator_t fpdIndicator = indicatorLookup.find(indicator)->second;
+        if (dsSetFPBrightness(fpdIndicator, (dsFPDBrightness_t)brightness)  == dsERR_NONE) {
             TRACE(Trace::Information, (_T("Set Front Panel Brightness.")));
             return true;
         }
         return false;
     }
 
-    bool FrontPanelHAL::SetFPState(uint32_t eIndicator, bool state)
+    bool FrontPanelHAL::SetFPState(Indicator indicator, State state)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        dsFPDState_t fpdState = state ? dsFPD_STATE_ON : dsFPD_STATE_OFF;
-        if (dsSetFPState((dsFPDIndicator_t)eIndicator, fpdState)  == dsERR_NONE) {
+        dsFPDIndicator_t fpdIndicator = indicatorLookup.find(indicator)->second;
+        dsFPDState_t fpdState = stateLookup.find(state)->second;
+        if (dsSetFPState(fpdIndicator, fpdState)  == dsERR_NONE) {
             TRACE(Trace::Information, (_T("Set Front Panel State.")));
             return true;
         }
         return false;
     }
 
-    bool FrontPanelHAL::SetFPColor(uint32_t eIndicator, uint32_t eColor)
+    bool FrontPanelHAL::SetFPColor(Indicator indicator, Color color)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        if (dsSetFPColor((dsFPDIndicator_t)eIndicator, (dsFPDColor_t)eColor) == dsERR_NONE) {
+        dsFPDIndicator_t fpdIndicator = indicatorLookup.find(indicator)->second;
+        dsFPDColor_t fpdColor = colorLookup.find(color)->second;
+        if (dsSetFPColor(fpdIndicator, fpdColor) == dsERR_NONE) {
             TRACE(Trace::Information, (_T("Set Front Panel Color.")));
             return true;
         }
         return false;
     }
 
-    bool FrontPanelHAL::SetFPTime(uint32_t eTimeFormat, uint32_t uHour, uint32_t uMinutes)
+    bool FrontPanelHAL::SetFPTime(TimeFormat timeFormat, uint32_t hour, uint32_t minutes)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        if (dsSetFPTime((dsFPDTimeFormat_t)eTimeFormat, uHour, uMinutes) == dsERR_NONE) {
+        dsFPDTimeFormat_t fpdTimeFormat = timeFormatLookup.find(timeFormat)->second;
+        if (dsSetFPTime(fpdTimeFormat, hour, minutes) == dsERR_NONE) {
             TRACE(Trace::Information, (_T("Set Front Panel Time.")));
             return true;
         }
         return false;
     }
 
-    bool FrontPanelHAL::SetFPText(string pText)
+    bool FrontPanelHAL::SetFPText(string text)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        if (dsSetFPText(pText.c_str()) == dsERR_NONE) {
+        if (dsSetFPText(text.c_str()) == dsERR_NONE) {
             TRACE(Trace::Information, (_T("Set Front Panel Text.")));
             return true;
         }
         return false;
     }
 
-    bool FrontPanelHAL::SetFPTextBrightness(uint32_t eIndicator, uint32_t eBrightness)
+    bool FrontPanelHAL::SetFPTextBrightness(TextDisplay indicator, uint32_t brightness)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        dsFPDTextDisplay_t fpdIndicator = static_cast<dsFPDTextDisplay_t>(eIndicator);
-        if (dsSetFPTextBrightness(fpdIndicator, (dsFPDBrightness_t)eBrightness) == dsERR_NONE) {
+        dsFPDTextDisplay_t fpdIndicator = textDisplayLookup.find(indicator)->second;
+        if (dsSetFPTextBrightness(fpdIndicator, (dsFPDBrightness_t)brightness) == dsERR_NONE) {
             TRACE(Trace::Information, (_T("Set Front Panel Text Brightness.")));
             return true;
         }
@@ -162,40 +224,44 @@ namespace WPEFramework {
         return false;
     }
 
-    bool FrontPanelHAL::SetFPScroll(uint32_t uScrollHoldOnDur, uint32_t uHorzScrollIterations, uint32_t uVertScrollIterations)
+    bool FrontPanelHAL::SetFPScroll(uint32_t scrollHoldOnDur, uint32_t horzScrollIterations, uint32_t vertScrollIterations)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        if (dsSetFPScroll(uScrollHoldOnDur, uHorzScrollIterations, uVertScrollIterations) == dsERR_NONE) {
+        if (dsSetFPScroll(scrollHoldOnDur, horzScrollIterations, vertScrollIterations) == dsERR_NONE) {
             TRACE(Trace::Information, (_T("Set Front Panel Scroll.")));
             return true;
         }
         return false;
     }
 
-    bool FrontPanelHAL::SetFPDBrightness(uint32_t eIndicator, uint32_t eBrightness, bool toPersist)
+    bool FrontPanelHAL::SetFPDBrightness(Indicator indicator, uint32_t brightness, bool toPersist)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        if(dsSetFPDBrightness((dsFPDIndicator_t)eIndicator, (dsFPDBrightness_t)eBrightness, toPersist) == dsERR_NONE) {
+        dsFPDIndicator_t fpdIndicator = indicatorLookup.find(indicator)->second;
+        if(dsSetFPDBrightness(fpdIndicator, (dsFPDBrightness_t)brightness, toPersist) == dsERR_NONE) {
             TRACE(Trace::Information, (_T("Set Front Panel Display Brightness.")));
             return true;
         }
         return false;
     }
 
-    bool FrontPanelHAL::SetFPDColor(uint32_t eIndicator, uint32_t eColor, bool toPersist)
+    bool FrontPanelHAL::SetFPDColor(Indicator indicator, Color color, bool toPersist)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        if (dsSetFPDColor((dsFPDIndicator_t)eIndicator, (dsFPDColor_t)eColor, toPersist) == dsERR_NONE) {
+        dsFPDIndicator_t fpdIndicator = indicatorLookup.find(indicator)->second;
+        dsFPDColor_t fpdColor = colorLookup.find(color)->second;
+        if (dsSetFPDColor(fpdIndicator, fpdColor, toPersist) == dsERR_NONE) {
             TRACE(Trace::Information, (_T("Set Front Panel Display Color.")));
             return true;
         }
         return false;
     }
 
-    bool FrontPanelHAL::SetFPTimeFormat(uint32_t eTimeFormat)
+    bool FrontPanelHAL::SetFPTimeFormat(TimeFormat timeFormat)
     {
         TRACE(Trace::Information, (_T("%s"), __func__));
-        if (dsSetFPTimeFormat((dsFPDTimeFormat_t)eTimeFormat) == dsERR_NONE) {
+        dsFPDTimeFormat_t fpdTimeFormat = timeFormatLookup.find(timeFormat)->second;
+        if (dsSetFPTimeFormat(fpdTimeFormat) == dsERR_NONE) {
             TRACE(Trace::Information, (_T("Set Front Panel Time Format.")));
             return true;
         }

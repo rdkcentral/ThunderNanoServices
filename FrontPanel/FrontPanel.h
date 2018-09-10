@@ -22,11 +22,8 @@ namespace Plugin {
                 , BlinkIterations()
                 , Brightness()
                 , State()
-                , StateStr()
                 , Color()
-                , ColorStr()
                 , TimeFormat()
-                , TimeFormatStr()
                 , Hour()
                 , Minutes()
                 , Text()
@@ -42,11 +39,8 @@ namespace Plugin {
                 Add(_T("blinkiterations"), &BlinkIterations);
                 Add(_T("brightness"), &Brightness);
                 Add(_T("state"), &State);
-                Add(_T("state"), &StateStr);
                 Add(_T("color"), &Color);
-                Add(_T("color"), &ColorStr);
                 Add(_T("timeformat"), &TimeFormat);
-                Add(_T("timeformat"), &TimeFormatStr);
                 Add(_T("hour"), &Hour);
                 Add(_T("minutes"), &Minutes);
                 Add(_T("text"), &Text);
@@ -62,20 +56,17 @@ namespace Plugin {
             }
 
         public:
-            Core::JSON::DecUInt32 Indicator;
+            Core::JSON::EnumType<FrontPanelHAL::Indicator> Indicator;
             Core::JSON::DecUInt32 BlinkDuration;
             Core::JSON::DecUInt32 BlinkIterations;
             Core::JSON::DecUInt32 Brightness;
-            Core::JSON::DecUInt32 State;
-            Core::JSON::String StateStr;
-            Core::JSON::DecUInt32 Color;
-            Core::JSON::String ColorStr;
-            Core::JSON::DecUInt32 TimeFormat;
-            Core::JSON::String TimeFormatStr;
+            Core::JSON::EnumType<FrontPanelHAL::State> State;
+            Core::JSON::EnumType<FrontPanelHAL::Color> Color;
+            Core::JSON::EnumType<FrontPanelHAL::TimeFormat> TimeFormat;
             Core::JSON::DecUInt32 Hour;
             Core::JSON::DecUInt32 Minutes;
             Core::JSON::String Text;
-            Core::JSON::DecUInt32 TextDisplay;
+            Core::JSON::EnumType<FrontPanelHAL::TextDisplay> TextDisplay;
             Core::JSON::Boolean Enable;
             Core::JSON::DecUInt32 ScrollHoldOnDur;
             Core::JSON::DecUInt32 HorzScrollIterations;
