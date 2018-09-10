@@ -227,6 +227,39 @@ bool EPGDataBase::InsertNitInfo(uint16_t networkId, uint16_t tsId, uint16_t orig
     return ExecuteSQLQuery(sqlQuery);
 }
 
+bool EPGDataBase::GetTuneInfo(const string& lcn, uint32_t& frequency, uint16_t& programNummber, uint16_t& modulation)
+{
+    char sqlQuery[1024];
+    uint32_t rc = 0;
+    bool ret = false;
+    std::string table("CHANNEL");
+    if (!IsTableEmpty(table)) {
+        DBLock();
+        uint32_t freq;
+        uint16_t prog, mod;
+        snprintf(sqlQuery, 1024, "SELECT FREQUENCY, PROGRAM_NUMBER, MODULATION FROM CHANNEL WHERE LCN=%s;", lcn.c_str());
+        TRACE_L3("QUERY = %s", sqlQuery);
+         if (sqlite3_prepare(_dataBase, sqlQuery, -1, &_stmt, 0) == SQLITE_OK) {
+            rc = sqlite3_step(_stmt);
+            if ((rc == SQLITE_ROW) || (rc == SQLITE_DONE)) {
+                freq = (uint32_t)sqlite3_column_int(_stmt, 0);
+                prog = (uint16_t)sqlite3_column_int(_stmt, 1);
+                mod  = (uint16_t)sqlite3_column_int(_stmt, 2);
+            }
+            sqlite3_reset(_stmt);
+            if (sqlite3_finalize(_stmt) == SQLITE_OK) {
+                frequency = freq;
+                programNummber = prog;
+                modulation = mod;
+                ret = true;
+            }
+        }
+        DBUnlock();
+    }
+    return ret;
+}
+
+#if 0
 bool EPGDataBase::GetFrequencyFromChannelInfo(const string& lcn, uint32_t& frequency)
 {
     char sqlQuery[1024];
@@ -253,6 +286,33 @@ bool EPGDataBase::GetFrequencyFromChannelInfo(const string& lcn, uint32_t& frequ
     return ret;
 }
 
+bool EPGDataBase::GetServiceIdFromChannelInfo(const string& lcn, uint16_t& serviceId)
+{
+    char sqlQuery[1024];
+    uint32_t rc = 0;
+    bool ret = false;
+    std::string table("CHANNEL");
+    if (!IsTableEmpty(table)) {
+        DBLock();
+        uint16_t svcId;
+        snprintf(sqlQuery, 1024, "SELECT PROGRAM_NUMBER FROM CHANNEL WHERE LCN=%s;", lcn.c_str());
+        TRACE_L3("QUERY = %s", sqlQuery);
+        if (sqlite3_prepare(_dataBase, sqlQuery, -1, &_stmt, 0) == SQLITE_OK) {
+            rc = sqlite3_step(_stmt);
+            if ((rc == SQLITE_ROW) || (rc == SQLITE_DONE))
+                svcId = (uint16_t)sqlite3_column_int(_stmt, 0);
+            sqlite3_reset(_stmt);
+            if (sqlite3_finalize(_stmt) == SQLITE_OK) {
+                serviceId = svcId;
+                ret = true;
+            }
+        }
+        DBUnlock();
+    }
+    return ret;
+}
+#endif
+
 bool EPGDataBase::GetFrequencyAndModulationFromNit(uint16_t originalNetworkId, uint16_t transportStreamId, uint32_t& frequency, uint8_t& modulation)
 {
     char sqlQuery[1024];
@@ -275,32 +335,6 @@ bool EPGDataBase::GetFrequencyAndModulationFromNit(uint16_t originalNetworkId, u
             if (sqlite3_finalize(_stmt) == SQLITE_OK) {
                 frequency = freq;
                 modulation = mod;
-                ret = true;
-            }
-        }
-        DBUnlock();
-    }
-    return ret;
-}
-
-bool EPGDataBase::GetServiceIdFromChannelInfo(const string& lcn, uint16_t& serviceId)
-{
-    char sqlQuery[1024];
-    uint32_t rc = 0;
-    bool ret = false;
-    std::string table("CHANNEL");
-    if (!IsTableEmpty(table)) {
-        DBLock();
-        uint16_t svcId;
-        snprintf(sqlQuery, 1024, "SELECT PROGRAM_NUMBER FROM CHANNEL WHERE LCN=%s;", lcn.c_str());
-        TRACE_L3("QUERY = %s", sqlQuery);
-        if (sqlite3_prepare(_dataBase, sqlQuery, -1, &_stmt, 0) == SQLITE_OK) {
-            rc = sqlite3_step(_stmt);
-            if ((rc == SQLITE_ROW) || (rc == SQLITE_DONE))
-                svcId = (uint16_t)sqlite3_column_int(_stmt, 0);
-            sqlite3_reset(_stmt);
-            if (sqlite3_finalize(_stmt) == SQLITE_OK) {
-                serviceId = svcId;
                 ret = true;
             }
         }
@@ -610,6 +644,7 @@ bool EPGDataBase::ReadAudioLanguages(uint64_t eventId, std::vector<std::string>&
     return ret;
 }
 
+#if 0
 bool EPGDataBase::InsertTSInfo(TSInfoList& TSInfoList)
 {
     char const* sql = "DELETE FROM TSINFO";
@@ -665,7 +700,7 @@ bool EPGDataBase::ReadTSInfo(TSInfo& tsInfo)
     }
     return ret;
 }
-
+#endif
 bool EPGDataBase::IsServicePresentInTSInfo(int32_t programNumber)
 {
     bool ret = false;

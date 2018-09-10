@@ -121,10 +121,10 @@ std::string ITuner::GetCurrentChannel()
 
 void ITuner::SetCurrentChannel(const string& channelId, TVPlatform::ITVPlatform::ITunerHandler& tunerHandler)
 {
-    uint16_t progNum;
     uint32_t frequency;
+    uint16_t programNummber, modulation;
     if (!_epgDB.IsParentalLocked(channelId)) {
-        if (_epgDB.GetFrequencyFromChannelInfo(channelId, frequency) && _epgDB.GetServiceIdFromChannelInfo(channelId, progNum)) {
+        if (_epgDB.GetTuneInfo(channelId, frequency, programNummber, modulation)) {
 #if RECORDED_STREAM
             // FIXME: Added for testing purpose only.
             const char* freq = getenv("TVC_FREQUENCY_LIST");
@@ -140,27 +140,13 @@ void ITuner::SetCurrentChannel(const string& channelId, TVPlatform::ITVPlatform:
 #endif
             // FIXME: Remove later.
 
-            TRACE_L1("SetCurrentChannel to %s with freq = %u program num = %d", channelId.c_str(), frequency, progNum);
-            TSInfo tsInfo;
-            memset(&tsInfo, 0, sizeof(tsInfo));
-            tsInfo.frequency = frequency;
-            tsInfo.programNumber = progNum;
-            if (_epgDB.ReadTSInfo(tsInfo)) {
-                TRACE(Trace::Information, (_T("SetCurrentChannel to %s with freq = %u program num = %d \
-                    videoPid = %d, videocodec= %d, videoPCRpid = %d, audioPid = %d, \
-                    audiocodec = %d, audioPCRPid = %d pmtpid =%d"),
-                    channelId.c_str(), tsInfo.frequency,
-                    tsInfo.programNumber, tsInfo.videoPid, tsInfo.videoCodec, tsInfo.videoPcrPid,
-                    tsInfo.audioPid, tsInfo.audioCodec, tsInfo.audioPcrPid, tsInfo.pmtPid));
-                _tvPlatform->Disconnect();
-                if( _tvPlatform->Tune(tsInfo, tunerHandler) == TvmSuccess) {
-                    _currentChannel.clear();
-                    _currentChannel.assign(channelId);
-                    tunerHandler.CurrentChannelChanged(_currentChannel);
-                    TRACE_L1("Current channel is = %s", channelId.c_str());
-                }
-            } else
-                TRACE_L1("Failed get TS details for channel ID = %s, freq = %u, program number = %d form DB", channelId.c_str(), tsInfo.frequency, tsInfo.programNumber);
+            TRACE_L1("SetCurrentChannel to %s with freq = %u programNummber = %d", channelId.c_str(), frequency, programNummber);
+            if( _tvPlatform->Tune(frequency, programNummber, modulation, tunerHandler) == TvmSuccess) {
+                _currentChannel.clear();
+                _currentChannel.assign(channelId);
+                tunerHandler.CurrentChannelChanged(_currentChannel);
+                TRACE_L1("Current channel is = %s", channelId.c_str());
+            }
         } else
             TRACE(Trace::Error, (_T("Failed to get frequency and program number for channel ID = %s"), channelId.c_str()));
     } else
