@@ -3,6 +3,7 @@ set(TARGET compositorclient)
 message("Setup ${TARGET} v${VERSION}...")
 
 find_package(Core REQUIRED)
+find_package(Plugins REQUIRED)
 find_package(LibVirtualKeyboard REQUIRED)
 find_package(VirtualInput REQUIRED)
 
@@ -11,6 +12,7 @@ add_library(${TARGET} SHARED Implementation.cpp)
 target_link_libraries(${TARGET}
             PUBLIC
             WPEFramework::Core
+            WPEFramework::Plugins
             WPEFramework::VirtualInput
             )
 
