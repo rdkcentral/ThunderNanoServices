@@ -24,7 +24,7 @@ public:
     }
 
 public:
-    virtual uint32_t AddRef() const override {
+    virtual void AddRef() const override {
     }
     virtual uint32_t Release() const override {
     }

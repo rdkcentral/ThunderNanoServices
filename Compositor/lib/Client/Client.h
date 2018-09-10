@@ -21,7 +21,7 @@ namespace Compositor {
             };
 
             // Lifetime management
-            virtual uint32_t AddRef() const = 0;
+            virtual void AddRef() const = 0;
             virtual uint32_t Release() const = 0;
 
             // Methods
@@ -35,12 +35,12 @@ namespace Compositor {
             virtual ~ISurface() {};
 
             // Lifetime management
-            virtual uint32_t AddRef() const = 0;
+            virtual void AddRef() const = 0;
             virtual uint32_t Release() const = 0;
 
             // Methods
             virtual EGLNativeWindowType Native() const = 0;
-            virtual const std::string& Name() const = 0;
+            virtual std::string Name() const = 0;
             virtual void Keyboard(IKeyboard* keyboard) = 0;
             virtual int32_t X() const = 0;
             virtual int32_t Y() const = 0;
@@ -53,7 +53,7 @@ namespace Compositor {
         virtual ~IDisplay() {}
 
         // Lifetime management
-        virtual uint32_t AddRef() const = 0;
+        virtual void AddRef() const = 0;
         virtual uint32_t Release() const = 0;
 
         // Methods
