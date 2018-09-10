@@ -148,7 +148,7 @@ std::string ITableData::GetChannels()
 }
 
 std::string ITableData::GetPrograms()
-{ 
+{
     // Get all programs of all channels for 3hr.
     TRACE(Trace::Information, (_T("GetPrograms")));
     Core::JSON::ArrayType<Program> programList;
@@ -163,8 +163,9 @@ std::string ITableData::GetCurrentProgram(const string& channelNum)
     TRACE(Trace::Information, (_T("GetCurrentProgram")));
     Program program;
     std::string strPgm;
-    uint16_t serviceId;
-    _epgDB.GetServiceIdFromChannelInfo(channelNum, serviceId);
+    uint32_t frequency;
+    uint16_t serviceId, modulation;
+    _epgDB.GetTuneInfo(channelNum, frequency, serviceId, modulation);
     if (_epgDB.ReadProgram(serviceId, program))
         program.ToString(strPgm);
     return strPgm;
