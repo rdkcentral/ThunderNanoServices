@@ -88,8 +88,23 @@ private:
         Core::JSON::String Connector;
     };
 
+    struct ClientData
+    {
+        ClientData(Exchange::IComposition::IClient* client, Exchange::IComposition::ScreenResolution resolution)
+        : currentRectangle()
+        , clientInterface(client) {
+            currentRectangle.x = 0;
+            currentRectangle.y = 0;
+            currentRectangle.width = Exchange::IComposition::WidthFromResolution(resolution);
+            currentRectangle.height = Exchange::IComposition::HeightFromResolution(resolution);
+        }
+
+        Exchange::IComposition::Rectangle currentRectangle = Exchange::IComposition::Rectangle();
+        Exchange::IComposition::IClient* clientInterface = nullptr;
+    };
+
 public:
-    uint32_t Configure(PluginHost::IShell* service) {
+    uint32_t Configure(PluginHost::IShell* service) override {
         _service = service;
         _service->AddRef();
 
@@ -116,21 +131,21 @@ public:
         return  result;
     }
 
-    void Register(Exchange::IComposition::INotification* notification) {
+    void Register(Exchange::IComposition::INotification* notification) override {
         _adminLock.Lock();
         ASSERT(std::find(_observers.begin(),
                 _observers.end(), notification) == _observers.end());
         notification->AddRef();
         _observers.push_back(notification);
-        std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
+        auto index(_clients.begin());
         while (index != _clients.end()) {
-            notification->Attached(*index);
+            notification->Attached((*index).clientInterface);
             index++;
         }
         _adminLock.Unlock();
     }
 
-    void Unregister(Exchange::IComposition::INotification* notification) {
+    void Unregister(Exchange::IComposition::INotification* notification) override {
         _adminLock.Lock();
         std::list<Exchange::IComposition::INotification*>::iterator index(
                 std::find(_observers.begin(), _observers.end(), notification));
@@ -142,70 +157,80 @@ public:
         _adminLock.Unlock();
     }
 
-    Exchange::IComposition::IClient* Client(const uint8_t id) {
+    Exchange::IComposition::IClient* Client(const uint8_t id) override {
         Exchange::IComposition::IClient* result = nullptr;
-        uint8_t count = id;
         _adminLock.Lock();
-        std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
-        while ((count != 0) && (index != _clients.end())) {
-            count--;
-            index++;
-        }
+        auto index(_clients.begin());
+        std::advance(index, id);
         if (index != _clients.end()) {
-            result = (*index);
+            result = ((*index).clientInterface);
+            ASSERT(result != nullptr);
             result->AddRef();
         }
         _adminLock.Unlock();
         return (result);
     }
 
-    Exchange::IComposition::IClient* Client(const string& name) {
-        Exchange::IComposition::IClient* result = nullptr;
-        _adminLock.Lock();
-        std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
-        while ((index != _clients.end()) && ((*index)->Name() != name)) {
-            index++;
-        }
-        if (index != _clients.end()) {
-            result = (*index);
-            result->AddRef();
-        }
-        _adminLock.Unlock();
-        return (result);
+    Exchange::IComposition::IClient* Client(const string& name) override {
+        return FindClient(name);
     }
 
-    void Resolution(const Exchange::IComposition::ScreenResolution format) {
+    virtual void Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle) override {
+        Exchange::IComposition::IClient* client = FindClient(callsign);
+        if( client != nullptr ) {
+            client->ChangedGeometry(rectangle);
+            client->Release();
+         }   
+    }
+
+    virtual Exchange::IComposition::Rectangle Geometry(const string& callsign) const override {
+        return FindClientRectangle(callsign);
+    }
+
+    void Resolution(const Exchange::IComposition::ScreenResolution format) override {
         fprintf(stderr, "CompositorImplementation::Resolution %d\n", format);
     }
 
-    Exchange::IComposition::ScreenResolution Resolution() const {
+    Exchange::IComposition::ScreenResolution Resolution() const override {
         return Exchange::IComposition::ScreenResolution::ScreenResolution_720p;
     }
 
 private:
+    using ConstClientDataIterator = std::list<ClientData>::const_iterator;
+
+    ConstClientDataIterator GetClientIterator(const string& name) const {
+        auto iterator =  std::find_if(_clients.begin(), _clients.end(), [&](const ClientData& value)
+            {
+                ASSERT(value.clientInterface != nullptr);
+                return (value.clientInterface->Name() == name);
+            });
+        return iterator;
+    }    
+
     void Add(Exchange::IComposition::IClient* client) {
 
         ASSERT (client != nullptr);
         if (client != nullptr) {
 
-            const std::string name(client->Name());
+            const string name(client->Name());
             if (name.empty() == true) {
+                ASSERT(false);
                 TRACE(Trace::Information,
                         (_T("Registration of a nameless client.")));
             }
             else {
-                std::list<Exchange::IComposition
-                ::IClient*>::iterator index(_clients.begin());
-                while ((index != _clients.end()) && (name != (*index)->Name())) {
-                    index++;
-                }
-                if (index != _clients.end()) {
+                _adminLock.Lock();
+
+                const ClientData* clientdata = FindClientData(name); 
+                if (clientdata != nullptr) {
+                    ASSERT (false);
                     TRACE(Trace::Information,
                             (_T("Client already registered %s."), name.c_str()));
                 }
                 else {
                     client->AddRef();
-                    _clients.push_back(client);
+                    
+                    _clients.push_back(ClientData(client, Resolution()));
                     TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
 
                     if (_observers.size() > 0) {
@@ -217,42 +242,42 @@ private:
                         }
                     }
                 }
+
+                _adminLock.Unlock();
+
             }
         }
     }
 
-    void Remove(const char clientName[]) {
-        const std::string name(clientName);
-        if (name.empty() == true) {
-            TRACE(Trace::Information, (_T("Unregistering a nameless client.")));
+    void Remove(const string& clientName) {
+        _adminLock.Lock();
+
+        auto iterator =  GetClientIterator(clientName);
+        if(iterator != _clients.end()) {
+            Exchange::IComposition::IClient* client = (*iterator).clientInterface;
+            _clients.erase(iterator);
+            TRACE(Trace::Information, (_T("Removed client %s."), clientName.c_str()));
+
+            ASSERT(client != nullptr);
+
+            if (_observers.size() > 0) {
+                std::list<Exchange::IComposition
+                ::INotification*>::iterator index(_observers.begin());
+                while (index != _observers.end()) {
+                    (*index)->Detached(client);
+                    index++;
+                }
+            }
+
+            client->Release();        
         }
         else {
-            std::list<Exchange::IComposition
-            ::IClient*>::iterator index(_clients.begin());
-            while ((index != _clients.end()) && (name != (*index)->Name())) {
-                index++;
-            }
-            if (index == _clients.end()) {
-                TRACE(Trace::Information,
-                        (_T("Client already unregistered %s."), name.c_str()));
-            }
-            else {
-                Exchange::IComposition::IClient* entry(*index);
-                _clients.erase(index);
-                TRACE(Trace::Information, (_T("Removed client %s."), name.c_str()));
-
-                if (_observers.size() > 0) {
-                    std::list<Exchange::IComposition
-                    ::INotification*>::iterator index(_observers.begin());
-                    while (index != _observers.end()) {
-                        (*index)->Detached(entry);
-                        index++;
-                    }
-                }
-                entry->Release();
-            }
+            ASSERT (false);
+            TRACE(Trace::Information, (_T("Client %s could not be removed, not found."), clientName.c_str()));
         }
-    }
+
+        _adminLock.Unlock();
+   }
 
     void PlatformReady() {
         PluginHost::ISubSystem* subSystems(_service->SubSystems());
@@ -269,14 +294,59 @@ private:
     }
 
     void Detached(IClient* client) override {
-        Remove(client->Name().c_str());
+        ASSERT(client != nullptr);
+        Remove(client->Name());
     }
 
-    Core::CriticalSection _adminLock;
+    Exchange::IComposition::Rectangle FindClientRectangle(const string& name) const {
+        Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
+
+        _adminLock.Lock();
+
+        const ClientData* clientdata = FindClientData(name);
+
+        if(clientdata != nullptr) {
+            rectangle = clientdata->currentRectangle;
+        }
+
+        _adminLock.Unlock();
+
+        return rectangle;
+    }
+
+    IClient* FindClient(const string& name) const {
+        IClient* client = nullptr;
+
+        _adminLock.Lock();
+
+        const ClientData* clientdata = FindClientData(name);
+
+        if(clientdata != nullptr) {
+            client = clientdata->clientInterface;
+            ASSERT(client != nullptr);
+            client->AddRef(); 
+        }
+
+        _adminLock.Unlock();
+
+        return client;
+    }
+
+    const ClientData* FindClientData(const string& name) const {
+        const ClientData* clientdata = nullptr;
+        auto iterator =  GetClientIterator(name);
+        if(iterator != _clients.end())
+        {
+            clientdata = &(*iterator);
+        }
+        return clientdata;
+    }
+
+    mutable Core::CriticalSection _adminLock;
     PluginHost::IShell* _service;
     std::unique_ptr<ExternalAccess> _externalAccess;
     std::list<Exchange::IComposition::INotification*> _observers;
-    std::list<Exchange::IComposition::IClient*> _clients;
+    std::list<ClientData> _clients;
 };
 
 SERVICE_REGISTRATION(CompositorImplementation, 1, 0);

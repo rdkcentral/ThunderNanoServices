@@ -94,15 +94,26 @@ private:
         AccessorCompositor () 
         : _client(Connector())
         , _remote(nullptr) {
-            if (_client.IsValid() == true) {
-            _remote = _client.WaitForCompletion<Exchange::IComposition::INotification>(6000);
-            }
+            
         }
-        ~AccessorCompositor() {
+
+        inline void Initialize() {
+          if (_client.IsValid() == true) {
+            _remote = _client.WaitForCompletion<Exchange::IComposition::INotification>(6000);
+          }
+  
+        }
+
+        inline void Deinitialize() {
             if (_remote != nullptr) {
                 _remote->Release();
+                _remote = nullptr;
             }
             TRACE_L1("Destructed the AccessorCompositor");
+
+        }
+
+        ~AccessorCompositor() {
         }
 
     public:
@@ -127,7 +138,7 @@ private:
         Exchange::IComposition::INotification* _remote;
     };
 
-    class SurfaceImplementation : public Compositor::IDisplay::ISurface, public Exchange::IComposition::IClient {
+    class SurfaceImplementation : public Exchange::IComposition::IClient {
     public:
         SurfaceImplementation() = delete;
         SurfaceImplementation(const SurfaceImplementation&) = delete;
@@ -139,11 +150,9 @@ private:
         virtual ~SurfaceImplementation();
 
         virtual void Opacity(const uint32_t value) override;
-        virtual void Geometry(const uint32_t X, const uint32_t Y,
-                const uint32_t width, const uint32_t height) override;
+        virtual void ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) override;
         virtual void SetTop() override;
         virtual void SetInput() override;
-        virtual void Visible(const bool visible) override;
 
         virtual string Name() const override {
             return _name;
@@ -152,23 +161,17 @@ private:
             //todo: implement
             fprintf(stderr, "Kill called!!!\n");
         }
-        virtual EGLNativeWindowType Native() const override {
+        inline EGLNativeWindowType Native() const {
             return (static_cast<EGLNativeWindowType>(_nativeSurface));
         }
-        virtual int32_t X() const override {
-            return (0);
-        }
-        virtual int32_t Y() const override {
-            return (0);
-        }
-        virtual int32_t Width() const override {
+        inline int32_t Width() const {
             return _width;
         }
-        virtual int32_t Height() const override {
+        inline int32_t Height() const {
             return _height;
         }
-        virtual void Keyboard(
-                Compositor::IDisplay::IKeyboard* keyboard) override {
+        inline void Keyboard(
+                Compositor::IDisplay::IKeyboard* keyboard) {
             assert((_keyboard == nullptr) ^ (keyboard == nullptr));
             _keyboard = keyboard;
         }
@@ -180,7 +183,46 @@ private:
             }
         }
 
-        using Core::IUnknown::AddRef; 
+      operator Compositor::IDisplay::ISurface*()
+        {
+            return &_impl;
+        }    
+    
+    private:
+        class Implementation : public Compositor::IDisplay::ISurface {
+            public:
+                Implementation(SurfaceImplementation& parent)
+                : _parent(parent) {
+
+                }
+                        // Lifetime management
+            virtual void AddRef() const override {
+                _parent.AddRef();
+            }
+            virtual uint32_t Release() const override {
+                return _parent.Release();
+            }
+
+            // Methods
+            virtual EGLNativeWindowType Native() const override {
+                return _parent.Native();
+            }
+            virtual std::string Name() const override {
+                return _parent.Name();
+            }
+            virtual void Keyboard(IKeyboard* keyboard) override {
+                _parent.Keyboard(keyboard);
+            }
+            virtual int32_t Width() const override {
+                return _parent.Width();
+            }
+            virtual int32_t Height() const override {
+                return _parent.Height();
+            }
+            private:
+
+                SurfaceImplementation& _parent;
+        };
 
         BEGIN_INTERFACE_MAP(Entry)
             INTERFACE_ENTRY(Exchange::IComposition::IClient)
@@ -188,12 +230,10 @@ private:
 
     private:
         Display& _display;
-        Core::CriticalSection _adminLock;
         std::string _name;
-        uint32_t _width;
-        uint32_t _height;
-        uint32_t _opacity;
-        bool _visible;
+        /* const */ uint32_t _width;
+        /* const */ uint32_t _height;
+        uint32_t _opacity;        
 
         EGLSurface _nativeSurface;
         EGL_DISPMANX_WINDOW_T _nativeWindow;
@@ -205,6 +245,8 @@ private:
         VC_RECT_T _srcRect;
 
         IKeyboard* _keyboard;
+        Implementation _impl;
+
     };
 
 public:
@@ -233,6 +275,7 @@ private:
     inline void Unregister(SurfaceImplementation* surface);
 
     const std::string _displayName;
+    mutable Core::CriticalSection _adminLock;
     void* _virtualkeyboard;
     std::list<SurfaceImplementation*> _surfaces;
     Exchange::IComposition::INotification* _accessorCompositor;
@@ -244,12 +287,12 @@ Display::SurfaceImplementation::SurfaceImplementation(
         const uint32_t width, const uint32_t height)
 : Exchange::IComposition::IClient()
 , _display(*display)
-, _adminLock()
 , _name(name)
 , _width(width)
 , _height(height)
 , _opacity(255) 
-, _visible(true) {
+, _keyboard(nullptr)
+, _impl(*this) {
     TRACE_L1("Created client named: %s", _name.c_str());
 
     graphics_get_display_size(0, &_width, &_height);
@@ -300,41 +343,34 @@ Display::SurfaceImplementation::~SurfaceImplementation() {
 void Display::SurfaceImplementation::Opacity(
         const uint32_t value) {
 
-    ASSERT (value <= 255);
+    ASSERT (value <= Exchange::IComposition::maxOpacity);
 
-    _opacity = (value > 255) ? 255 : value;
+    _opacity = (value > Exchange::IComposition::maxOpacity) ? Exchange::IComposition::maxOpacity : value;
 
-    if (_visible == true) {
-
-        _dispmanUpdate = vc_dispmanx_update_start(0);
-        vc_dispmanx_element_change_attributes(_dispmanUpdate,
-                _dispmanElement,
-                (1 << 1),
-                0,
-                _opacity,
-                &_dstRect,
-                &_srcRect,
-                0,
-                DISPMANX_NO_ROTATE);
-        vc_dispmanx_update_submit_sync(_dispmanUpdate);
-    }
+    _dispmanUpdate = vc_dispmanx_update_start(0);
+    vc_dispmanx_element_change_attributes(_dispmanUpdate,
+            _dispmanElement,
+            (1 << 1),
+            0,
+            _opacity,
+            &_dstRect,
+            &_srcRect,
+            0,
+            DISPMANX_NO_ROTATE);
+    vc_dispmanx_update_submit_sync(_dispmanUpdate);
 }
 
-void Display::SurfaceImplementation::Geometry(
-        const uint32_t x, const uint32_t y,
-        const uint32_t width, const uint32_t height) {
-
-    vc_dispmanx_rect_set(&_dstRect, x, y, width, height);
+void Display::SurfaceImplementation::ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) {
+    vc_dispmanx_rect_set(&_dstRect, rectangle.x, rectangle.y, rectangle.width, rectangle.height);
     vc_dispmanx_rect_set(&_srcRect,
             0, 0, (_width << 16), (_height << 16));
-    uint32_t opacity = (_visible == true) ? _opacity : 0;
 
     _dispmanUpdate = vc_dispmanx_update_start(0);
     vc_dispmanx_element_change_attributes(_dispmanUpdate,
             _dispmanElement,
             (1 << 2),
             0,
-            opacity,
+            _opacity,
             &_dstRect,
             &_srcRect,
             0,
@@ -351,29 +387,13 @@ void Display::SurfaceImplementation::SetTop() {
 void Display::SurfaceImplementation::SetInput() {
 }
 
-void Display::SurfaceImplementation::Visible(
-        const bool visible) {
-
-    _visible = visible;
-    uint32_t opacity = (_visible == true) ? _opacity : 0;
-
-    _dispmanUpdate = vc_dispmanx_update_start(0);
-    vc_dispmanx_element_change_attributes(_dispmanUpdate,
-            _dispmanElement,
-            (1 << 1),
-            0,
-            opacity,
-            &_dstRect,
-            &_srcRect,
-            0,
-            DISPMANX_NO_ROTATE);
-    vc_dispmanx_update_submit_sync(_dispmanUpdate);
-}
-
 Display::Display(const std::string& name)
 : _displayName(name)
+, _adminLock()
 , _virtualkeyboard(nullptr)
 , _accessorCompositor(Core::Service<AccessorCompositor>::Create<AccessorCompositor>())  {
+
+    static_cast<AccessorCompositor*>(_accessorCompositor)->Initialize();
 
     bcm_host_init();
 
@@ -385,6 +405,7 @@ Display::Display(const std::string& name)
             name.c_str(), connectorName, VirtualKeyboardCallback);
     if (_virtualkeyboard == nullptr) {
         fprintf(stderr, "Initialization of virtual keyboard failed!!!\n");
+        fflush(stderr);
     }
 }
 
@@ -393,13 +414,15 @@ Display::~Display() {
     if (_virtualkeyboard != nullptr) {
         Destruct(_virtualkeyboard);
     }
-}
+  static_cast<AccessorCompositor*>(_accessorCompositor)->Deinitialize();
+  }
 
 int Display::Process(const uint32_t data) {
     Message message;
     if ((data != 0) && (g_pipefd[0] != -1) &&
             (read(g_pipefd[0], &message, sizeof(message)) > 0)) {
 
+        _adminLock.Lock();
         std::list<SurfaceImplementation*>::iterator index(_surfaces.begin());
         while (index != _surfaces.end()) {
             // RELEASED  = 0,
@@ -409,6 +432,7 @@ int Display::Process(const uint32_t data) {
             (*index)->SendKey (message.code, (message.type == 0 ? IDisplay::IKeyboard::released : IDisplay::IKeyboard::pressed), time(nullptr));
             index++;
         }
+        _adminLock.Unlock();
     }
     return (0);
 }
@@ -419,22 +443,28 @@ int Display::FileDescriptor() const {
 
 Compositor::IDisplay::ISurface* Display::Create(
         const std::string& name, const uint32_t width, const uint32_t height) {
-    return (Core::Service<SurfaceImplementation>::Create<SurfaceImplementation>(this, name, width, height));
-}
+
+    Compositor::IDisplay::ISurface* retval = *(Core::Service<SurfaceImplementation>::Create<SurfaceImplementation>(this, name, width, height));
+
+   return retval;
+   }
 
 inline void Display::Register(Display::SurfaceImplementation* surface) {
+    _adminLock.Lock();
     std::list<SurfaceImplementation*>::iterator index(
             std::find(_surfaces.begin(), _surfaces.end(), surface));
     if (index == _surfaces.end()) {
         _surfaces.push_back(surface);
         ASSERT (surface != nullptr);
         if ( _accessorCompositor != nullptr) {
-            _accessorCompositor->Attached(surface);
+               _accessorCompositor->Attached(surface);
         }
     }
+    _adminLock.Unlock();
 }
 
 inline void Display::Unregister(Display::SurfaceImplementation* surface) {
+    _adminLock.Lock();
     std::list<SurfaceImplementation*>::iterator index(
             std::find(_surfaces.begin(), _surfaces.end(), surface));
     if (index != _surfaces.end()) {
@@ -444,12 +474,14 @@ inline void Display::Unregister(Display::SurfaceImplementation* surface) {
         }
         _surfaces.erase(index);
     }
+    _adminLock.Unlock();
 }  
 
 
 Compositor::IDisplay* Compositor::IDisplay::Instance(const string& displayName) {
     static Display myDisplay(displayName);
-    return (&myDisplay);
+        Compositor::IDisplay* retval = (&myDisplay);
+         return (&myDisplay);
 }
 
 }

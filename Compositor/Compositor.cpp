@@ -123,6 +123,23 @@ namespace Plugin {
                 result->Body(Core::proxy_cast<Web::IBody>(response));
             }
 
+            // http://<ip>/Service/Compositor/Geometry/[Callsign]
+            else if (index.Current() == "Geometry") {
+                if ( index.Next() == true ) {
+                    Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
+                    Exchange::IComposition::Rectangle rectangle = Geometry(index.Current().Text());
+                    response->X = rectangle.x;
+                    response->Y = rectangle.x;
+                    response->Width = rectangle.width;
+                    response->Height = rectangle.height;
+                    result->Body(Core::proxy_cast<Web::IBody>(response));
+                }
+                else {
+                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                    result->Message = _T("Could not get Geometry, Client not specified");                    
+                }
+            }
+
             result->ContentType = Web::MIMETypes::MIME_JSON;
         }
         else if (request.Verb == Web::Request::HTTP_POST) {
@@ -174,22 +191,22 @@ namespace Plugin {
                             }
                         }
                         if (index.Current() == _T("Geometry")) { /* http://<ip>/Service/Compositor/Netflix/Geometry/0/0/1280/720 */
-                            uint32_t x(0), y(0), width(0), height(0);
+                            Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
 
                             if (index.Next() == true) {
-                                x = Core::NumberType<uint32_t>(index.Current()).Value();
+                                rectangle.x = Core::NumberType<uint32_t>(index.Current()).Value();
                             }
                             if (index.Next() == true) {
-                                y = Core::NumberType<uint32_t>(index.Current()).Value();
+                                rectangle.y = Core::NumberType<uint32_t>(index.Current()).Value();
                             }
                             if (index.Next() == true) {
-                                width  = Core::NumberType<uint32_t>(index.Current()).Value();
+                                rectangle.width  = Core::NumberType<uint32_t>(index.Current()).Value();
                             }
                             if (index.Next() == true) {
-                                height = Core::NumberType<uint32_t>(index.Current()).Value();
+                                rectangle.height = Core::NumberType<uint32_t>(index.Current()).Value();
                             }
 
-                            Geometry(clientName, x, y, width, height);
+                            Geometry(clientName, rectangle);
                         }
                         if (index.Current() == _T("Top")) { /* http://<ip>/Service/Compositor/Netflix/Top */
                             Top(clientName);
@@ -291,19 +308,25 @@ namespace Plugin {
         }
     }
 
-    void Compositor::Geometry(const string& client, const uint32_t x, const uint32_t y, const uint32_t width, const uint32_t height) const
+    void Compositor::Geometry(const string& client, const Exchange::IComposition::Rectangle& rectangle)
     {
         ASSERT(_composition != nullptr);
 
         if (_composition != nullptr) {
-            Exchange::IComposition::IClient* composition = _composition->Client(client);
-            if (composition != nullptr) {
-                composition->Geometry(x, y, width, height);
-            }
-            else {
-                TRACE(Trace::Information, (_T("Client %s not found."), client.c_str()));
-            }
+            _composition->Geometry(client, rectangle); 
         }
+    }
+
+    Exchange::IComposition::Rectangle Compositor::Geometry(const string& client) const
+    {
+        Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
+
+        ASSERT(_composition != nullptr);
+
+        if (_composition != nullptr) {
+            rectangle = _composition->Geometry(client); 
+        }
+        return rectangle;
     }
 
     void Compositor::Resolution(const Exchange::IComposition::ScreenResolution format)
@@ -332,7 +355,7 @@ namespace Plugin {
         if (_composition != nullptr) {
             Exchange::IComposition::IClient* composition = _composition->Client(client);
             if (composition != nullptr) {
-                composition->Visible(visible);
+                composition->Opacity( visible == true ? Exchange::IComposition::maxOpacity : Exchange::IComposition::minOpacity );
             }
             else {
                 TRACE(Trace::Information, (_T("Client %s not found."), client.c_str()));
