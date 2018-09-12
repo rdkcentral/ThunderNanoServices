@@ -40,103 +40,6 @@ private:
     Display(const Display&) = delete;
     Display& operator=(const Display&) = delete;
 
-    class AccessorCompositor : public Exchange::IComposition::INotification {
-    public:
-        AccessorCompositor (const AccessorCompositor&) = delete;
-        AccessorCompositor& operator= (const AccessorCompositor&) = delete;
-
-    private:
-        class RPCClient {
-        private:
-            RPCClient() = delete;
-            RPCClient(const RPCClient&) = delete;
-            RPCClient& operator=(const RPCClient&) = delete;
-
-            typedef WPEFramework::RPC::InvokeServerType<4, 1> RPCService;
-
-        public:
-            RPCClient(const Core::NodeId& nodeId)
-            : _client(Core::ProxyType<RPC::CommunicatorClient>::Create(nodeId))
-            , _service(Core::ProxyType<RPCService>::Create(Core::Thread::DefaultStackSize())) {
-
-                if (_client->Open(RPC::CommunicationTimeOut, _T("CompositorImplementation"), Exchange::IComposition::INotification::ID, ~0) == Core::ERROR_NONE) {
-                    _client->CreateFactory<RPC::InvokeMessage>(2);
-                    _client->Register(_service);
-                }
-                else {
-                    _client.Release();
-                }
-            }
-            ~RPCClient() {
-                if (_client.IsValid() == true) {
-                    _client->Unregister(_service);
-                    _client->DestroyFactory<RPC::InvokeMessage>();
-                    _client->Close(Core::infinite);
-                    _client.Release();
-                }
-            }
-
-        public:
-            inline bool IsValid() const {
-                return (_client.IsValid());
-            }
-            template <typename INTERFACE>
-            INTERFACE* WaitForCompletion(const uint32_t waitTime) {
-                return (_client->WaitForCompletion<INTERFACE>(waitTime));
-            }
-
-        private:
-            Core::ProxyType<RPC::CommunicatorClient> _client;
-            Core::ProxyType<RPCService> _service;
-        };
-
-    public:
-        AccessorCompositor () 
-        : _client(Connector())
-        , _remote(nullptr) {
-            
-        }
-
-        inline void Initialize() {
-          if (_client.IsValid() == true) {
-            _remote = _client.WaitForCompletion<Exchange::IComposition::INotification>(6000);
-          }
-  
-        }
-
-        inline void Deinitialize() {
-            if (_remote != nullptr) {
-                _remote->Release();
-                _remote = nullptr;
-            }
-            TRACE_L1("Destructed the AccessorCompositor");
-
-        }
-
-        ~AccessorCompositor() {
-        }
-
-    public:
-        void Attached(Exchange::IComposition::IClient* client) override {
-            if( _remote != nullptr ) {
-                _remote->Attached(client);
-            }
-        }
-
-        void Detached(Exchange::IComposition::IClient* client) override {
-            if( _remote != nullptr ) {
-                _remote->Detached(client);
-            }
-        }
-
-        BEGIN_INTERFACE_MAP(AccessorCompositor)
-        INTERFACE_ENTRY(Exchange::IComposition::INotification)
-        END_INTERFACE_MAP
-
-    private:
-        RPCClient _client;
-        Exchange::IComposition::INotification* _remote;
-    };
 
     class SurfaceImplementation : public Exchange::IComposition::IClient {
     public:
@@ -292,7 +195,8 @@ Display::SurfaceImplementation::SurfaceImplementation(
 , _height(height)
 , _opacity(255) 
 , _keyboard(nullptr)
-, _impl(*this) {
+, _impl(*this)
+, _client(nodeId, Core::ProxyType<RPC::InvokeServerType<4,1>::Create(Core::Thread::DefaultStackSize()))
     TRACE_L1("Created client named: %s", _name.c_str());
 
     graphics_get_display_size(0, &_width, &_height);

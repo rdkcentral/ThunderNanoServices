@@ -6,12 +6,116 @@ namespace WPEFramework {
 namespace Plugin {
 
 class CompositorImplementation :
-        public Exchange::IComposition,
-        public Exchange::IComposition::INotification {
+        public Exchange::IComposition {
 private:
     CompositorImplementation(const CompositorImplementation&) = delete;
     CompositorImplementation& operator=(const CompositorImplementation&) = delete;
 
+	class ExternalAccess : public RPC::Communicator
+    {
+    private:
+		ExternalAccess() = delete;
+        ExternalAccess(const ExternalAccess &) = delete;
+        ExternalAccess & operator=(const ExternalAccess &) = delete;
+
+		class ProcessObserver : public RPC::IRemoteProcess::INotification {
+		private:
+			ProcessObserver() = delete;
+			ProcessObserver(const ProcessObserver&) = delete;
+			ProcessObserver& operator= (const ProcessObserver&) = delete;
+
+		public:
+			ProcessObserver(ExternalAccess* parent)
+				: _parent(*parent) {
+				ASSERT(parent != nullptr);
+			}
+			virtual ~ProcessObserver() {
+			}
+
+		public:
+			virtual void Activated(RPC::IRemoteProcess* process) override {
+				_parent.Activated(process->Id());
+			}
+			virtual void Deactivated(RPC::IRemoteProcess* process) override {
+				_parent.Deactivated(process->Id());
+			}
+
+			BEGIN_INTERFACE_MAP(ProcessObserver)
+				INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+			END_INTERFACE_MAP
+
+		private:
+			ExternalAccess& _parent;
+		};
+
+
+        using ClientsList = std::list< Exchange::IComposition::IClient* >;
+        using ProcessMap = std::map<const uint32_t, ClientsList >;
+
+    public:
+        ExternalAccess(CompositorImplementation& parent, const Core::NodeId & source, const string& proxyStubPath)
+            : RPC::Communicator(source, Core::ProxyType< RPC::InvokeServerType<16, 1> >::Create(), proxyStubPath)
+            , _parent(parent)
+			, _sink(this)
+        {
+            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR"), Connector());
+			Register(&_sink);
+        }
+        ~ExternalAccess()
+        {
+			Unregister(&_sink);
+		}
+
+        void Drop(Exchange::IComposition::IClient* client) {
+            ProcessMap::iterator index (_clients.begin());
+
+            while (index != _clients.end()) {
+                ClientsList::iterator clientindex ((index->begin());
+                while (clientindex != (index->end))
+                {
+                    if ((*clientindex) == client)
+                    {
+                        index->erase(clientindex);
+                        index = _clients.end();
+                        break;
+                    }
+                    ++clientindex;
+                }
+                (index == _clients.end()) ? : ++index;
+            }
+        }
+
+	private:
+		virtual void Instance(const uint32_t pid, Core::IUnknown* element, const uint32_t interfaceId) override {
+			Exchange::IComposition::IClient* result = element->QueryInterface<Exchange::IComposition::IClient>();
+
+            if (result != nullptr) {
+    			_clients[pid].push_back(result);
+                _parent.Attach(result);
+            }
+		}
+		void Activated(const uint32_t pid) {
+		}
+		void Deactivated(const uint32_t pid) {
+            //Check if we own clients of this pid.
+			printf("Process [%d] disappeared\n", pid);
+            
+
+			std::map<const uint32_t, std::list< Exchange::IRPCLink* > >::iterator index(_clients.find(pid));
+			if (index != _clients.end()) {
+
+				// Ooopsie daisy something left the building, clean its remains...
+				printf("Process [%d] disappeared, killing %d clients\n", pid, index->second.size());
+				_clients.erase(index);
+			}
+		}
+
+	private:
+		ProcessMap _clients;
+		Exchange::IRPCLink* _parentInterface;
+		Core::Sink< ProcessObserver> _sink;
+		Core::ProxyType<Job> _job;
+    };
     class ExternalAccess : public RPC::Communicator {
     private:
         ExternalAccess() = delete;
@@ -44,8 +148,6 @@ private:
             return (result);
         }
         
-    private:
-        IComposition::INotification* _parentInterface;
     };
 
 public:
