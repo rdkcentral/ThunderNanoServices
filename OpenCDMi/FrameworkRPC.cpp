@@ -375,7 +375,7 @@ namespace Plugin {
                 inline bool HasKeyId(const uint8_t keyId[]) {
                     return (_cencData.HasKeyId(keyId));
                 }
-                const std::string& SessionId() const {
+                virtual std::string SessionId() const override {
                     return (_sessionId);
                 }
 
