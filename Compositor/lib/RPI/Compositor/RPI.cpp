@@ -1,3 +1,5 @@
+#include "Module.h"
+
 #include <interfaces/IComposition.h>
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
