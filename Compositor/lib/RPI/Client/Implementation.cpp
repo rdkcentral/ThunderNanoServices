@@ -40,8 +40,48 @@ private:
     Display(const Display&) = delete;
     Display& operator=(const Display&) = delete;
 
+    class EXTERNAL CompositorClient {
+    private:
+        // -------------------------------------------------------------------
+        // This object should not be copied or assigned. Prevent the copy
+        // constructor and assignment constructor from being used. Compiler
+        // generated assignment and copy methods will be blocked by the
+        // following statments.
+        // Define them but do not implement them, compile error/link error.
+        // -------------------------------------------------------------------
+        CompositorClient(const CompositorClient& a_Copy) = delete;
+        CompositorClient& operator=(const CompositorClient& a_RHS) = delete;
 
-    class SurfaceImplementation : public Exchange::IComposition::IClient {
+    public:
+        CompositorClient(const TCHAR formatter[], ...)
+        {
+            va_list ap;
+            va_start(ap, formatter);
+            Trace::Format(_text, formatter, ap);
+            va_end(ap);
+        }
+        CompositorClient(const string& text)
+            : _text(Core::ToString(text))
+        {
+        }
+        ~CompositorClient() = default;
+
+    public:
+        inline const char* Data() const
+        {
+            return (_text.c_str());
+        }
+        inline uint16_t Length() const
+        {
+            return (static_cast<uint16_t>(_text.length()));
+        }
+
+    private:
+        string _text;
+    };
+
+    class SurfaceImplementation : public Exchange::IComposition::IClient
+                                , public Compositor::IDisplay::ISurface  {
     public:
         SurfaceImplementation() = delete;
         SurfaceImplementation(const SurfaceImplementation&) = delete;
@@ -52,17 +92,18 @@ private:
                 const uint32_t width, const uint32_t height);
         virtual ~SurfaceImplementation();
 
-        virtual void Opacity(const uint32_t value) override;
-        virtual void ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) override;
-        virtual void SetTop() override;
-        virtual void SetInput() override;
+        using Exchange::IComposition::IClient::AddRef;
+
+        void Opacity(const uint32_t value) override;
+        void ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) override;
+        void ChangedZOrder(const uint8_t zorder) override;
 
         virtual string Name() const override {
             return _name;
         }
         virtual void Kill() override {
             //todo: implement
-            fprintf(stderr, "Kill called!!!\n");
+            TRACE(CompositorClient, (_T("Kill called for Client %s. Not supported."), Name().c_str()));
         }
         inline EGLNativeWindowType Native() const {
             return (static_cast<EGLNativeWindowType>(_nativeSurface));
@@ -85,47 +126,8 @@ private:
                 _keyboard->Direct(key, action);
             }
         }
-
-      operator Compositor::IDisplay::ISurface*()
-        {
-            return &_impl;
-        }    
     
     private:
-        class Implementation : public Compositor::IDisplay::ISurface {
-            public:
-                Implementation(SurfaceImplementation& parent)
-                : _parent(parent) {
-
-                }
-                        // Lifetime management
-            virtual void AddRef() const override {
-                _parent.AddRef();
-            }
-            virtual uint32_t Release() const override {
-                return _parent.Release();
-            }
-
-            // Methods
-            virtual EGLNativeWindowType Native() const override {
-                return _parent.Native();
-            }
-            virtual std::string Name() const override {
-                return _parent.Name();
-            }
-            virtual void Keyboard(IKeyboard* keyboard) override {
-                _parent.Keyboard(keyboard);
-            }
-            virtual int32_t Width() const override {
-                return _parent.Width();
-            }
-            virtual int32_t Height() const override {
-                return _parent.Height();
-            }
-            private:
-
-                SurfaceImplementation& _parent;
-        };
 
         BEGIN_INTERFACE_MAP(Entry)
             INTERFACE_ENTRY(Exchange::IComposition::IClient)
@@ -133,9 +135,9 @@ private:
 
     private:
         Display& _display;
-        std::string _name;
-        /* const */ uint32_t _width;
-        /* const */ uint32_t _height;
+        const std::string _name;
+        const uint32_t _width;
+        const uint32_t _height;
         uint32_t _opacity;        
 
         EGLSurface _nativeSurface;
@@ -148,7 +150,6 @@ private:
         VC_RECT_T _srcRect;
 
         IKeyboard* _keyboard;
-        Implementation _impl;
 
     };
 
@@ -164,7 +165,7 @@ public:
     virtual EGLNativeDisplayType Native() const override {
         return (static_cast<EGLNativeDisplayType>(EGL_DEFAULT_DISPLAY));
     }
-    virtual const std::string& Name() const override {
+    virtual const std::string& Name() const final {
         return (_displayName);
     }
     virtual int Process (const uint32_t data) override;
@@ -173,15 +174,34 @@ public:
             const std::string& name,
             const uint32_t width, const uint32_t height) override;
 
+    inline uint32_t DisplaySizeWidth() const {
+        return _displaysize.first;
+    }
+
+     inline uint32_t DisplaySizeHeight() const {
+        return _displaysize.second;
+    }
+
 private:
     inline void Register(SurfaceImplementation* surface);
     inline void Unregister(SurfaceImplementation* surface);
+    inline void OfferClientInterface(Exchange::IComposition::IClient* client);
+    inline void RevokeClientInterface(Exchange::IComposition::IClient* client);
+
+    using DisplaySize = std::pair<uint32_t,uint32_t>;
+
+    inline static DisplaySize RetrieveDisplaySize() {
+        DisplaySize displaysize;
+        graphics_get_display_size(0, &displaysize.first, &displaysize.second);
+        return displaysize;
+    }
 
     const std::string _displayName;
     mutable Core::CriticalSection _adminLock;
     void* _virtualkeyboard;
+    const DisplaySize _displaysize;
     std::list<SurfaceImplementation*> _surfaces;
-    Exchange::IComposition::INotification* _accessorCompositor;
+    Core::ProxyType<RPC::CommunicatorClient> _compositerServerRPCConnection;
 };
 
 Display::SurfaceImplementation::SurfaceImplementation(
@@ -194,20 +214,18 @@ Display::SurfaceImplementation::SurfaceImplementation(
 , _width(width)
 , _height(height)
 , _opacity(255) 
-, _keyboard(nullptr)
-, _impl(*this)
-, _client(nodeId, Core::ProxyType<RPC::InvokeServerType<4,1>::Create(Core::Thread::DefaultStackSize()))
-    TRACE_L1("Created client named: %s", _name.c_str());
+, _keyboard(nullptr) {
 
-    graphics_get_display_size(0, &_width, &_height);
+    TRACE(CompositorClient, (_T("Created client named: %s"), _name.c_str()));
+
     VC_DISPMANX_ALPHA_T alpha = {
             DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS,
             255,
             0
     };
-    vc_dispmanx_rect_set(&_dstRect, 0, 0, _width, _height);
+    vc_dispmanx_rect_set(&_dstRect, 0, 0, _display.DisplaySizeWidth(), _display.DisplaySizeHeight()); 
     vc_dispmanx_rect_set(&_srcRect,
-            0, 0, (_width << 16), (_height << 16));
+            0, 0, (_display.DisplaySizeWidth() << 16), (_display.DisplaySizeHeight() << 16)); // ook goed
 
     _dispmanDisplay = vc_dispmanx_display_open(0);
     _dispmanUpdate = vc_dispmanx_update_start(0);
@@ -225,8 +243,8 @@ Display::SurfaceImplementation::SurfaceImplementation(
     vc_dispmanx_update_submit_sync(_dispmanUpdate);
 
     _nativeWindow.element = _dispmanElement;
-    _nativeWindow.width = _width;
-    _nativeWindow.height = _height;
+    _nativeWindow.width = _display.DisplaySizeWidth();
+    _nativeWindow.height = _display.DisplaySizeHeight();
     _nativeSurface = static_cast<EGLSurface>(&_nativeWindow);
 
     _display.Register(this);
@@ -234,7 +252,7 @@ Display::SurfaceImplementation::SurfaceImplementation(
 
 Display::SurfaceImplementation::~SurfaceImplementation() {
 
-    TRACE_L1("Destructing client named: %s", _name.c_str());
+    TRACE(CompositorClient, (_T("Destructing client named: %s"), _name.c_str()));
 
     _dispmanUpdate = vc_dispmanx_update_start(0);
     vc_dispmanx_element_remove(_dispmanUpdate, _dispmanElement);
@@ -267,7 +285,7 @@ void Display::SurfaceImplementation::Opacity(
 void Display::SurfaceImplementation::ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) {
     vc_dispmanx_rect_set(&_dstRect, rectangle.x, rectangle.y, rectangle.width, rectangle.height);
     vc_dispmanx_rect_set(&_srcRect,
-            0, 0, (_width << 16), (_height << 16));
+            0, 0, (_display.DisplaySizeWidth() << 16), (_display.DisplaySizeHeight() << 16));
 
     _dispmanUpdate = vc_dispmanx_update_start(0);
     vc_dispmanx_element_change_attributes(_dispmanUpdate,
@@ -280,26 +298,30 @@ void Display::SurfaceImplementation::ChangedGeometry(const Exchange::ICompositio
             0,
             DISPMANX_NO_ROTATE);
     vc_dispmanx_update_submit_sync(_dispmanUpdate);
+
+}
+void Display::SurfaceImplementation::ChangedZOrder(const uint8_t zorder) {
+   _dispmanUpdate = vc_dispmanx_update_start(0);
+    vc_dispmanx_element_change_layer(_dispmanUpdate, _dispmanElement, zorder);
+    vc_dispmanx_update_submit_sync(_dispmanUpdate);    
 }
 
-void Display::SurfaceImplementation::SetTop() {
-    _dispmanUpdate = vc_dispmanx_update_start(0);
-    vc_dispmanx_element_change_layer(_dispmanUpdate, _dispmanElement, 0);
-    vc_dispmanx_update_submit_sync(_dispmanUpdate);
-}
-
-void Display::SurfaceImplementation::SetInput() {
-}
-
-Display::Display(const std::string& name)
+Display::Display(const string& name)
 : _displayName(name)
 , _adminLock()
 , _virtualkeyboard(nullptr)
-, _accessorCompositor(Core::Service<AccessorCompositor>::Create<AccessorCompositor>())  {
-
-    static_cast<AccessorCompositor*>(_accessorCompositor)->Initialize();
+, _displaysize(RetrieveDisplaySize())
+, _compositerServerRPCConnection(Core::ProxyType< RPC::CommunicatorClient >::Create(Connector(), Core::ProxyType< RPC::InvokeServerType<2,1> >::Create() ) )  {
 
     bcm_host_init();
+
+    uint32_t result = _compositerServerRPCConnection->Open(RPC::CommunicationTimeOut);
+    if ( result != Core::ERROR_NONE ) { 
+        TRACE(CompositorClient, (_T("Could not open connection to Compositor with node %s. Error: %s"), _compositerServerRPCConnection->Source().RemoteId(), Core::NumberType<uint32_t>(result).Text()));
+    }
+    else {
+        _compositerServerRPCConnection.Release();
+    }
 
     if (pipe(g_pipefd) == -1) {
         g_pipefd[0] = -1;
@@ -308,17 +330,32 @@ Display::Display(const std::string& name)
     _virtualkeyboard = Construct(
             name.c_str(), connectorName, VirtualKeyboardCallback);
     if (_virtualkeyboard == nullptr) {
-        fprintf(stderr, "Initialization of virtual keyboard failed!!!\n");
-        fflush(stderr);
+        TRACE(CompositorClient, (_T("Initialization of virtual keyboard failed for Display %s!"), Name()));
     }
 }
 
 Display::~Display() {
 
+    for_each(_surfaces.begin(), _surfaces.end(), [&](SurfaceImplementation* surface) {
+
+                        string name = surface->Name();
+
+                        RevokeClientInterface(surface);
+
+                        if( static_cast<Core::IUnknown*>(surface)->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED ) { //note, need cast to prevent ambigious call
+                            TRACE(CompositorClient, (_T("Compositor Surface [%s] is not properly destructed"), name.c_str()));
+                        }
+                    }
+            );
+
     if (_virtualkeyboard != nullptr) {
         Destruct(_virtualkeyboard);
     }
-  static_cast<AccessorCompositor*>(_accessorCompositor)->Deinitialize();
+
+    if( _compositerServerRPCConnection.IsValid() == true ) {
+        _compositerServerRPCConnection.Release();
+    }
+
   }
 
 int Display::Process(const uint32_t data) {
@@ -348,44 +385,64 @@ int Display::FileDescriptor() const {
 Compositor::IDisplay::ISurface* Display::Create(
         const std::string& name, const uint32_t width, const uint32_t height) {
 
-    Compositor::IDisplay::ISurface* retval = *(Core::Service<SurfaceImplementation>::Create<SurfaceImplementation>(this, name, width, height));
+    SurfaceImplementation* retval = (Core::Service<SurfaceImplementation>::Create<SurfaceImplementation>(this, name, width, height));
+
+    OfferClientInterface(retval);
 
    return retval;
    }
 
 inline void Display::Register(Display::SurfaceImplementation* surface) {
+    ASSERT (surface != nullptr);
+
     _adminLock.Lock();
+
     std::list<SurfaceImplementation*>::iterator index(
             std::find(_surfaces.begin(), _surfaces.end(), surface));
     if (index == _surfaces.end()) {
         _surfaces.push_back(surface);
-        ASSERT (surface != nullptr);
-        if ( _accessorCompositor != nullptr) {
-               _accessorCompositor->Attached(surface);
-        }
     }
+
     _adminLock.Unlock();
 }
 
 inline void Display::Unregister(Display::SurfaceImplementation* surface) {
+        
+    ASSERT (surface != nullptr);
+
     _adminLock.Lock();
+
     std::list<SurfaceImplementation*>::iterator index(
             std::find(_surfaces.begin(), _surfaces.end(), surface));
     if (index != _surfaces.end()) {
-        ASSERT (surface != nullptr);
-        if ( _accessorCompositor != nullptr) {
-            _accessorCompositor->Detached(surface);
-        }
         _surfaces.erase(index);
     }
+
     _adminLock.Unlock();
 }  
 
+void Display::OfferClientInterface(Exchange::IComposition::IClient* client) {
+    ASSERT( client != nullptr );
+    uint32_t result = _compositerServerRPCConnection->Offer(client);
+    if ( result != Core::ERROR_NONE ) { 
+        TRACE(CompositorClient, (_T("Could not offer IClient interface with callsign %s to Compositor. Error: %s"), client->Name(), Core::NumberType<uint32_t>(result).Text()));
+    }
+}
+
+void Display::RevokeClientInterface(Exchange::IComposition::IClient* client) {
+    ASSERT( client != nullptr );
+
+    uint32_t result = _compositerServerRPCConnection->Revoke(client);
+
+    if ( result != Core::ERROR_NONE ) { 
+        TRACE(CompositorClient, (_T("Could not revoke IClient interface with callsign %s to Compositor. Error: %s"), client->Name(), Core::NumberType<uint32_t>(result).Text()));
+    }
+}
 
 Compositor::IDisplay* Compositor::IDisplay::Instance(const string& displayName) {
-    static Display myDisplay(displayName);
-        Compositor::IDisplay* retval = (&myDisplay);
-         return (&myDisplay);
+    static Display& myDisplay = Core::SingletonType<Display>::Instance(displayName);
+    
+    return (&myDisplay);
 }
 
 }

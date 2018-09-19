@@ -33,50 +33,28 @@ static class PluginHost
 
     public:
         PluginHost()
-            : _comClient(Core::ProxyType<RPC::CommunicatorClient>::Create(GetConnectionNode()))
-	    , _handler(Core::ProxyType< RPC::ObjectMessageHandler >::Create())
-            , _invokeServer(Core::ProxyType< RPC::InvokeServerType<16,2> >::Create(Core::Thread::DefaultStackSize()))
+            : _comClient(Core::ProxyType< RPC::CommunicatorClient >::Create(GetConnectionNode(), Core::ProxyType< RPC::InvokeServerType<16,2> >::Create() ) )
         {
-	    ASSERT (_comClient.IsValid() == true);
-	    ASSERT (_handler.IsValid() == true);
-	    ASSERT (_invokeServer.IsValid() == true);
-
-            // Seems like we have enough information, open up the Process communcication Channel.
-            _comClient->CreateFactory<RPC::InvokeMessage>(4);
-            _comClient->CreateFactory<RPC::ObjectMessage>(2);
-
-            // Make sure we understand inbound requests and that we have a factory to create those elements.
-            _comClient->Register(Core::proxy_cast<Core::IIPCServer>(_invokeServer));
-            _comClient->Register(Core::proxy_cast<Core::IIPCServer>(_handler));
         }
         ~PluginHost()
         {
             TRACE_L1("Destructing injected bundle stuff!!! [%d]", __LINE__);
             Deinitialize();
-
-            if (_comClient.IsValid() == true) {
-                _comClient->Unregister(Core::proxy_cast<Core::IIPCServer>(_handler));
-                _comClient->Unregister(Core::proxy_cast<Core::IIPCServer>(_invokeServer));
-            }
         }
 
     public:
         void Initialize (WKBundleRef bundle)
         {
-            uint32_t result;
 
             Trace::TraceType<Trace::Information, &Core::System::MODULE_NAME>::Enable(true);
 
             // We have something to report back, do so...
-            if (_comClient.IsValid() == true) {
-
-                if ((result = _comClient->Open(RPC::CommunicationTimeOut)) != Core::ERROR_NONE) {
-
-                    TRACE_L1("Could not open the connection, error (%d)", result);
-                } 
-                else if (_comClient->WaitForCompletion(RPC::CommunicationTimeOut) == false) {
-		    TRACE_L1("Could not exchange the initial AnnounceMessage: line %d ", __LINE__);
-                }
+             uint32_t result = _comClient->Open(RPC::CommunicationTimeOut);
+            if ( result != Core::ERROR_NONE ) { 
+                TRACE(Trace::Error, (_T("Could not open connection to node %s. Error: %s"), _comClient  ->Source().RemoteId(), Core::NumberType<uint32_t>(result).Text()));
+            }
+            else {
+                _comClient.Release();
             }
 
             _bundle = bundle;
@@ -86,8 +64,8 @@ static class PluginHost
 
         void Deinitialize() 
         {
-            if (_comClient.IsValid() == true) {
-                _comClient->Close(Core::infinite);
+            if( _comClient.IsValid() == true ) {
+                _comClient.Release();
             }
 
 	    Core::Singleton::Dispose();
@@ -103,8 +81,6 @@ static class PluginHost
 
     private:
         Core::ProxyType<RPC::CommunicatorClient> _comClient;
-        Core::ProxyType<RPC::ObjectMessageHandler> _handler;
-        Core::ProxyType<RPC::InvokeServerType<16,2> > _invokeServer;
 
         // White list for CORS.
         std::unique_ptr<WhiteListedOriginDomainsList> _whiteListedOriginDomainPairs;

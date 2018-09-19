@@ -5,8 +5,7 @@ MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 namespace WPEFramework {
 namespace Plugin {
 
-class CompositorImplementation :
-        public Exchange::IComposition {
+class CompositorImplementation  : public Exchange::IComposition {
 private:
     CompositorImplementation(const CompositorImplementation&) = delete;
     CompositorImplementation& operator=(const CompositorImplementation&) = delete;
@@ -18,136 +17,39 @@ private:
         ExternalAccess(const ExternalAccess &) = delete;
         ExternalAccess & operator=(const ExternalAccess &) = delete;
 
-		class ProcessObserver : public RPC::IRemoteProcess::INotification {
-		private:
-			ProcessObserver() = delete;
-			ProcessObserver(const ProcessObserver&) = delete;
-			ProcessObserver& operator= (const ProcessObserver&) = delete;
-
-		public:
-			ProcessObserver(ExternalAccess* parent)
-				: _parent(*parent) {
-				ASSERT(parent != nullptr);
-			}
-			virtual ~ProcessObserver() {
-			}
-
-		public:
-			virtual void Activated(RPC::IRemoteProcess* process) override {
-				_parent.Activated(process->Id());
-			}
-			virtual void Deactivated(RPC::IRemoteProcess* process) override {
-				_parent.Deactivated(process->Id());
-			}
-
-			BEGIN_INTERFACE_MAP(ProcessObserver)
-				INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
-			END_INTERFACE_MAP
-
-		private:
-			ExternalAccess& _parent;
-		};
-
-
-        using ClientsList = std::list< Exchange::IComposition::IClient* >;
-        using ProcessMap = std::map<const uint32_t, ClientsList >;
-
     public:
         ExternalAccess(CompositorImplementation& parent, const Core::NodeId & source, const string& proxyStubPath)
-            : RPC::Communicator(source, Core::ProxyType< RPC::InvokeServerType<16, 1> >::Create(), proxyStubPath)
+            : RPC::Communicator(source, Core::ProxyType< RPC::InvokeServerType<16, 1> >::Create(), proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath)
             , _parent(parent)
-			, _sink(this)
         {
-            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR"), Connector());
-			Register(&_sink);
-        }
-        ~ExternalAccess()
-        {
-			Unregister(&_sink);
-		}
-
-        void Drop(Exchange::IComposition::IClient* client) {
-            ProcessMap::iterator index (_clients.begin());
-
-            while (index != _clients.end()) {
-                ClientsList::iterator clientindex ((index->begin());
-                while (clientindex != (index->end))
-                {
-                    if ((*clientindex) == client)
-                    {
-                        index->erase(clientindex);
-                        index = _clients.end();
-                        break;
-                    }
-                    ++clientindex;
-                }
-                (index == _clients.end()) ? : ++index;
+            uint32_t result = RPC::Communicator::Open(RPC::CommunicationTimeOut);
+            if (result != Core::ERROR_NONE) {
+                TRACE(Trace::Error, (_T("Could not open RPI Compositor RPCLink server. Error: %s"), Core::NumberType<uint32_t>(result).Text()));
+            }
+            else {
+                // We need to pass the communication channel NodeId via an environment variable, for process,
+                // not being started by the rpcprocess...
+                Core::SystemInfo::SetEnvironment(_T("COMPOSITOR"), RPC::Communicator::Connector(), true);
             }
         }
 
+        ~ExternalAccess() override = default;
+
 	private:
-		virtual void Instance(const uint32_t pid, Core::IUnknown* element, const uint32_t interfaceId) override {
+        void Offer(const uint32_t pid,  Core::IUnknown* element, const uint32_t interfaceID) override {
 			Exchange::IComposition::IClient* result = element->QueryInterface<Exchange::IComposition::IClient>();
 
             if (result != nullptr) {
-    			_clients[pid].push_back(result);
-                _parent.Attach(result);
+                _parent.NewClientOffered(result);
             }
 		}
-		void Activated(const uint32_t pid) {
-		}
-		void Deactivated(const uint32_t pid) {
-            //Check if we own clients of this pid.
-			printf("Process [%d] disappeared\n", pid);
-            
 
-			std::map<const uint32_t, std::list< Exchange::IRPCLink* > >::iterator index(_clients.find(pid));
-			if (index != _clients.end()) {
-
-				// Ooopsie daisy something left the building, clean its remains...
-				printf("Process [%d] disappeared, killing %d clients\n", pid, index->second.size());
-				_clients.erase(index);
-			}
-		}
+        void Revoke(const uint32_t pid,  const Core::IUnknown* element, const uint32_t interfaceID) override {
+            _parent.ClientRevoked(element);
+        }
 
 	private:
-		ProcessMap _clients;
-		Exchange::IRPCLink* _parentInterface;
-		Core::Sink< ProcessObserver> _sink;
-		Core::ProxyType<Job> _job;
-    };
-    class ExternalAccess : public RPC::Communicator {
-    private:
-        ExternalAccess() = delete;
-        ExternalAccess(const ExternalAccess &) = delete;
-        ExternalAccess & operator=(const ExternalAccess &) = delete;
-
-    public:
-        ExternalAccess(
-                const Core::NodeId & source,
-                IComposition::INotification* parentInterface,
-                const string& proxyStub)
-        : RPC::Communicator(source, Core::ProxyType< RPC::InvokeServerType<8, 1> >::Create(), proxyStub)
-        , _parentInterface (parentInterface) {
-        }
-
-        ~ExternalAccess() {
-            Close(Core::infinite);
-        }
-
-    private:
-        void* Instance(const string& className, const uint32_t interfaceId, const uint32_t versionId) override {
-            void* result = nullptr;
-            // Currently we only support version 1 of the IRPCLink :-)
-            if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) &&
-                 (interfaceId == IComposition::INotification::ID)) {
-                // Reference count our parent
-                _parentInterface->AddRef();
-                result = _parentInterface;
-            }
-            return (result);
-        }
-        
+        CompositorImplementation& _parent;
     };
 
 public:
@@ -167,7 +69,6 @@ public:
 
     BEGIN_INTERFACE_MAP(CompositorImplementation)
     INTERFACE_ENTRY(Exchange::IComposition)
-    INTERFACE_ENTRY(Exchange::IComposition::INotification)
     END_INTERFACE_MAP
 
 private:
@@ -192,6 +93,7 @@ private:
 
     struct ClientData
     {
+        ClientData() : currentRectangle(), clientInterface(nullptr) {}
         ClientData(Exchange::IComposition::IClient* client, Exchange::IComposition::ScreenResolution resolution)
         : currentRectangle()
         , clientInterface(client) {
@@ -207,6 +109,7 @@ private:
 
 public:
     uint32_t Configure(PluginHost::IShell* service) override {
+        uint32_t result = Core::ERROR_NONE;
         _service = service;
         _service->AddRef();
 
@@ -214,21 +117,13 @@ public:
         Config config;
         config.FromString(service->ConfigLine());
 
-        _externalAccess.reset(
-                new ExternalAccess(
-                        Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath()));
-        uint32_t result = _externalAccess->Open(Core::infinite);
-        if (result == Core::ERROR_NONE) {
-            // Announce the port on which we are listening
-            Core::SystemInfo::SetEnvironment(
-                    _T("COMPOSITOR"), config.Connector.Value(), true);
+        _externalAccess.reset(new ExternalAccess(*this, Core::NodeId(config.Connector.Value().c_str()), service->ProxyStubPath()));
+        if (_externalAccess->IsListening() == false) {
             PlatformReady();
         }
         else {
-            _externalAccess.reset();
-            TRACE(Trace::Error,
-                    (_T("Could not open RPI Compositor RPCLink server. Error: %s"),
-                            Core::NumberType<uint32_t>(result).Text()));
+            TRACE(Trace::Error, (_T("Could not report PlatformReady as there was a problem starting the Compositor RPC %s"), _T("server")));
+            result = Core::ERROR_OPENING_FAILED;
         }
         return  result;
     }
@@ -241,7 +136,7 @@ public:
         _observers.push_back(notification);
         auto index(_clients.begin());
         while (index != _clients.end()) {
-            notification->Attached((*index).clientInterface);
+            notification->Attached(index->second.clientInterface);
             index++;
         }
         _adminLock.Unlock();
@@ -265,7 +160,7 @@ public:
         auto index(_clients.begin());
         std::advance(index, id);
         if (index != _clients.end()) {
-            result = ((*index).clientInterface);
+            result = (index->second.clientInterface);
             ASSERT(result != nullptr);
             result->AddRef();
         }
@@ -277,20 +172,58 @@ public:
         return FindClient(name);
     }
 
-    virtual void Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle) override {
+private:
+    template<typename ClientOperation>
+    uint32_t CallOnClientByCallsign(const string& callsign, ClientOperation&& operation) {
+        uint32_t error = Core::ERROR_NONE;
         Exchange::IComposition::IClient* client = FindClient(callsign);
         if( client != nullptr ) {
-            client->ChangedGeometry(rectangle);
+            std::forward<ClientOperation>(operation)(*client);
             client->Release();
-         }   
+         }           
+         else {
+             error = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
+         }
+         return error;
     }
 
-    virtual Exchange::IComposition::Rectangle Geometry(const string& callsign) const override {
-        return FindClientRectangle(callsign);
+public:
+
+    uint32_t Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle) override {
+        uint32_t result = CallOnClientByCallsign(callsign, [&](Exchange::IComposition::IClient& client) { client.ChangedGeometry(rectangle); } );
+        if( result == Core::ERROR_NONE ) {
+            result = SetClientRectangle(callsign, rectangle);
+        }
+        return result;
+    }
+
+    Exchange::IComposition::Rectangle Geometry(const string& callsign) const override {
+        return FindClientRectangle(callsign);         
+    }
+
+    uint32_t ToTop(const string& callsign) override {
+        // todo correct implementation
+        return CallOnClientByCallsign(callsign, [&](Exchange::IComposition::IClient& client) { client.ChangedZOrder(0); } );
+    }
+
+    uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override {
+        // todo correct implementation
+        return CallOnClientByCallsign(callsignRelativeTo, [&](Exchange::IComposition::IClient& client) { client.ChangedZOrder(0); } );    }
+
+    RPC::IStringIterator* ClientsInZorder() const override {
+        // todo correct implementation
+        using CliensCallsignArray = std::vector<string>; 
+        _adminLock.Lock();
+        CliensCallsignArray clients(_clients.size());
+        for( auto const& client : _clients ) {
+            clients.push_back(client.first); // todo for now RPC call inside lock, later on we need some map anyway
+        } 
+        _adminLock.Unlock();
+        return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(clients));
     }
 
     void Resolution(const Exchange::IComposition::ScreenResolution format) override {
-        fprintf(stderr, "CompositorImplementation::Resolution %d\n", format);
+        TRACE(Trace::Information, (_T("Could not set screenresolution to %s. Not supported for Rapberry Pi compositor"), Core::EnumerateType<Exchange::IComposition::ScreenResolution>(format).Data()));
     }
 
     Exchange::IComposition::ScreenResolution Resolution() const override {
@@ -298,18 +231,14 @@ public:
     }
 
 private:
-    using ConstClientDataIterator = std::list<ClientData>::const_iterator;
+    using ClientDataContainer = std::map<string, ClientData>;
+    using ConstClientDataIterator = ClientDataContainer::const_iterator;
 
-    ConstClientDataIterator GetClientIterator(const string& name) const {
-        auto iterator =  std::find_if(_clients.begin(), _clients.end(), [&](const ClientData& value)
-            {
-                ASSERT(value.clientInterface != nullptr);
-                return (value.clientInterface->Name() == name);
-            });
-        return iterator;
+    ConstClientDataIterator GetClientIterator(const string& callsign) const {
+    return _clients.find(callsign);
     }    
 
-    void Add(Exchange::IComposition::IClient* client) {
+    void NewClientOffered(Exchange::IComposition::IClient* client) {
 
         ASSERT (client != nullptr);
         if (client != nullptr) {
@@ -331,55 +260,53 @@ private:
                 }
                 else {
                     client->AddRef();
-                    
-                    _clients.push_back(ClientData(client, Resolution()));
+                    _clients[name] = ClientData(client, Resolution());
                     TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
 
-                    if (_observers.size() > 0) {
-                        std::list<Exchange::IComposition
-                        ::INotification*>::iterator index(_observers.begin());
-                        while (index != _observers.end()) {
-                            (*index)->Attached(client);
-                            index++;
-                        }
+                    for( auto&& index : _observers) {
+                        index->Attached(client);
                     }
                 }
 
+                client->AddRef(); // for call to RecalculateZOrder
+
                 _adminLock.Unlock();
 
+                RecalculateZOrder(client); //note: do outside lock
             }
         }
     }
 
-    void Remove(const string& clientName) {
+    void ClientRevoked(const IUnknown* client) {
+        // note do not release by looking up the name, client might live in another process and the name call might fail if the connection is gone
+         ASSERT(client != nullptr);
+
         _adminLock.Lock();
-
-        auto iterator =  GetClientIterator(clientName);
-        if(iterator != _clients.end()) {
-            Exchange::IComposition::IClient* client = (*iterator).clientInterface;
-            _clients.erase(iterator);
-            TRACE(Trace::Information, (_T("Removed client %s."), clientName.c_str()));
-
-            ASSERT(client != nullptr);
-
-            if (_observers.size() > 0) {
-                std::list<Exchange::IComposition
-                ::INotification*>::iterator index(_observers.begin());
-                while (index != _observers.end()) {
-                    (*index)->Detached(client);
-                    index++;
-                }
+        auto it = _clients.begin();
+        while( it != _clients.end() ) {
+            if( it->second.clientInterface == client )
+            {
+                TRACE(Trace::Information, (_T("Removed client %s."), it->first.c_str()));
+                for( auto index : _observers) {
+                    index->Detached(it->second.clientInterface); //note as we have the name here, we could more efficiently pass the name to the caller as it is not allowed to get it from the pointer passes, but we are going to restructure the interface anyway
+                }       
+                it->second.clientInterface->Release();
+                _clients.erase(it);
+                break;
             }
-
-            client->Release();        
+            ++it;
         }
-        else {
-            ASSERT (false);
-            TRACE(Trace::Information, (_T("Client %s could not be removed, not found."), clientName.c_str()));
-        }
-
         _adminLock.Unlock();
-   }
+
+        TRACE(Trace::Information, (_T("Client detached completed")));
+    }
+
+    // on new client
+    void RecalculateZOrder(Exchange::IComposition::IClient* client) {
+        ASSERT(client != nullptr);
+        client->ChangedZOrder(0);
+        client->Release();
+    }
 
     void PlatformReady() {
         PluginHost::ISubSystem* subSystems(_service->SubSystems());
@@ -389,15 +316,6 @@ private:
             subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
             subSystems->Release();
         }
-    }
-
-    void Attached(IClient* client) override {
-        Add(client);
-    }
-
-    void Detached(IClient* client) override {
-        ASSERT(client != nullptr);
-        Remove(client->Name());
     }
 
     Exchange::IComposition::Rectangle FindClientRectangle(const string& name) const {
@@ -414,6 +332,21 @@ private:
         _adminLock.Unlock();
 
         return rectangle;
+    }
+
+     uint32_t SetClientRectangle(const string& name, const Exchange::IComposition::Rectangle& rectangle) {
+
+        _adminLock.Lock();
+
+        ClientData* clientdata = FindClientData(name);
+
+        if(clientdata != nullptr) {
+            clientdata->currentRectangle = rectangle;
+        }
+
+        _adminLock.Unlock();
+
+        return (clientdata != nullptr ? Core::ERROR_NONE : Core::ERROR_FIRST_RESOURCE_NOT_FOUND);
     }
 
     IClient* FindClient(const string& name) const {
@@ -439,16 +372,20 @@ private:
         auto iterator =  GetClientIterator(name);
         if(iterator != _clients.end())
         {
-            clientdata = &(*iterator);
+            clientdata = &(iterator->second);
         }
         return clientdata;
+    }
+
+    ClientData* FindClientData(const string& name) {
+        return const_cast<ClientData*>( static_cast<const CompositorImplementation&>( *this ).FindClientData(name));
     }
 
     mutable Core::CriticalSection _adminLock;
     PluginHost::IShell* _service;
     std::unique_ptr<ExternalAccess> _externalAccess;
     std::list<Exchange::IComposition::INotification*> _observers;
-    std::list<ClientData> _clients;
+    ClientDataContainer _clients; 
 };
 
 SERVICE_REGISTRATION(CompositorImplementation, 1, 0);

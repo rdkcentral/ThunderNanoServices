@@ -91,8 +91,7 @@ namespace Plugin {
     /* virtual */ void Compositor::Inbound(Web::Request& /* request */)
     {
     }
-    /* virtual */ Core::ProxyType<Web::Response> Compositor::Process(const Web::Request& request)
-    {
+    /* virtual */ Core::ProxyType<Web::Response> Compositor::Process(const Web::Request& request) {
         ASSERT(_skipURL <= request.Path.length());
 
         Core::ProxyType<Web::Response> result(responseFactory.Element());
@@ -115,7 +114,12 @@ namespace Plugin {
                 Clients(response->Clients);
                 result->Body(Core::proxy_cast<Web::IBody>(response));
             }
-
+            // http://<ip>/Service/Compositor/ZOrder (top to bottom)
+            if (index.Next() == false || index.Current() == "ZOrder") {
+                Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
+                ZOrder(response->Clients) ;
+                result->Body(Core::proxy_cast<Web::IBody>(response));
+            }
             // http://<ip>/Service/Compositor/Resolution
             else if (index.Current() == "Resolution") {
                 Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
@@ -128,6 +132,10 @@ namespace Plugin {
                 if ( index.Next() == true ) {
                     Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
                     Exchange::IComposition::Rectangle rectangle = Geometry(index.Current().Text());
+                    if( rectangle.x == 0 && rectangle.y == 0 && rectangle.width == 0 && rectangle.height == 0 ) {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = _T("Could not retrieve Geometry, could not find Client ") + index.Current().Text();                          
+                    }
                     response->X = rectangle.x;
                     response->Y = rectangle.x;
                     response->Width = rectangle.width;
@@ -136,7 +144,7 @@ namespace Plugin {
                 }
                 else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                    result->Message = _T("Could not get Geometry, Client not specified");                    
+                    result->Message = _T("Could not retrieve Geometry, Client not specified");                    
                 }
             }
 
@@ -174,24 +182,27 @@ namespace Plugin {
                     string clientName(index.Current().Text());
 
                     if (index.Next() == true) {
+                        uint32_t error = Core::ERROR_NONE;
                         if (index.Current() == _T("Kill")) { /* http://<ip>/Service/Compositor/Netflix/Kill */
-                            Kill(clientName);
+                            error = Kill(clientName);
                         }
-                        if (index.Current() == _T("Opacity") &&
+                        else if (index.Current() == _T("Opacity") &&
                             index.Next() == true) { /* http://<ip>/Service/Compositor/Netflix/Opacity/128 */
                             const uint32_t opacity(std::stoi(index.Current().Text()));
-                            Opacity(clientName, opacity);
+                            error = Opacity(clientName, opacity);
                         }
-                        if (index.Current() == _T("Visible") &&
-                            index.Next() == true) { /* http://<ip>/Service/Compositor/Netflix/Visible/Hide */
+                        else if (index.Current() == _T("Visible") &&
+                            index.Next() == true) { /* http://<ip>/Service/Compositor/Netflix/Visible/Hide  or Show */
                             if (index.Current() == _T("Hide")) {
-                                Visible(clientName, false);
+                                error = Visible(clientName, false);
                             } else if (index.Current() == _T("Show")) {
-                                Visible(clientName, true);
-                            }
+                                error = Visible(clientName, true);
+                            }           
                         }
-                        if (index.Current() == _T("Geometry")) { /* http://<ip>/Service/Compositor/Netflix/Geometry/0/0/1280/720 */
+                        else if (index.Current() == _T("Geometry")) { /* http://<ip>/Service/Compositor/Netflix/Geometry/0/0/1280/720 */
                             Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
+
+                            uint32_t rectangleError = Core::ERROR_INCORRECT_URL;
 
                             if (index.Next() == true) {
                                 rectangle.x = Core::NumberType<uint32_t>(index.Current()).Value();
@@ -204,16 +215,60 @@ namespace Plugin {
                             }
                             if (index.Next() == true) {
                                 rectangle.height = Core::NumberType<uint32_t>(index.Current()).Value();
+                                rectangleError = Core::ERROR_NONE;
                             }
 
-                            Geometry(clientName, rectangle);
+                            if ( rectangleError == Core::ERROR_NONE ) {
+                                error = Geometry(clientName, rectangle);
+                            }
+                            else {
+                                result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                                result->Message = string(_T("Could not set rectangle for Client ")) + clientName + _T(". Not all required information provided");
+                            }
+
+                            error = Geometry(clientName, rectangle);
                         }
-                        if (index.Current() == _T("Top")) { /* http://<ip>/Service/Compositor/Netflix/Top */
-                            Top(clientName);
+                        else if (index.Current() == _T("ToTop")) { /* http://<ip>/Service/Compositor/Netflix/ToTop */
+                            error = ToTop(clientName);
                         }
-                        if (index.Current() == _T("Input")) { /* http://<ip>/Service/Compositor/Netflix/Input */
-                            Input(clientName);
+                        else if (index.Current() == _T("PutBelow")) { /* http://<ip>/Service/Compositor/Netflix/PutBelow/Youtube */
+                            if (index.Next() == true) {
+                                error = PutBelow(index.Current().Text(), clientName);
+                                if( error != Core::ERROR_NONE ) {
+                                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                                    result->Message = string(_T("Could not change z-order for Client "));
+                                    if ( error == Core::ERROR_FIRST_RESOURCE_NOT_FOUND ) {
+                                        result->Message += _T(". Client is not registered");
+                                    }
+                                    else if ( error == Core::ERROR_SECOND_RESOURCE_NOT_FOUND ) {
+                                        result->Message += _T(". Client relative to which the operation should be executed is not registered");
+                                    } 
+                                    else {
+                                        result->Message += _T(". Unspecified problem");
+                                    }
+                                }
+                            }
+                            else {
+                                result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                                result->Message = string(_T("Could not change z-order for Client ")) + clientName + _T(". Not specified relative to which Client.");
+                            }
                         }
+
+                        if( error != Core::ERROR_NONE && result->ErrorCode == Web::STATUS_OK ) {
+                            if ( error == Core::ERROR_FIRST_RESOURCE_NOT_FOUND ) {
+                                result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                                result->Message = string(_T("Client ")) + clientName + _T(" is not registered.");                                
+                            }
+                            else {
+                                result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                                result->Message = string(_T("Unspecified error"));                                
+                             }
+                        }
+                    }
+                    else {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = string(_T("Client is not provided"));
+                       
                     }
                 }
             }
@@ -229,108 +284,99 @@ namespace Plugin {
         return result;
     }
 
-    void Compositor::Attached(Exchange::IComposition::IClient* client)
-    {
+    void Compositor::Attached(Exchange::IComposition::IClient* client) {
         ASSERT(client != nullptr);
 
-        string name(client->Name());
+        if ( client != nullptr ) {
+            string name(client->Name());
 
-        _adminLock.Lock();
-        std::map<string, Exchange::IComposition::IClient*>::iterator it = _clients.find(name);
+            _adminLock.Lock();
+            std::map<string, Exchange::IComposition::IClient*>::iterator it = _clients.find(name);
 
-        if (it != _clients.end()) {
-            it->second->Release();
-            _clients.erase(it);
+            if (it != _clients.end()) {
+                TRACE(Trace::Information, (_T("Client %s was already attached, old instance removed"), name.c_str()));
+                it->second->Release();
+                _clients.erase(it);
+            }
+
+            _clients[name] = client;
+            client->AddRef();
+
+            _adminLock.Unlock();
+
+            TRACE(Trace::Information, (_T("Client %s attached"), name.c_str()));
         }
-
-        _clients[name] = client;
-        client->AddRef();
-
-        _adminLock.Unlock();
-
-        TRACE(Trace::Information, (_T("Client %s attached"), name.c_str()));
     }
-    void Compositor::Detached(Exchange::IComposition::IClient* client)
-    {
+
+    void Compositor::Detached(Exchange::IComposition::IClient* client) {
+        // note do not release by looking up the name, client might live in another process and the name call might fail if the connection is gone
         ASSERT(client != nullptr);
 
-        string name(client->Name());
-
-        TRACE_L1("Client detached starting: %s", name.c_str());
+        TRACE(Trace::Information, (_T("Client detached starting")));
         _adminLock.Lock();
-        std::map<string, Exchange::IComposition::IClient*>::iterator it = _clients.find(name);
-
-        if (it != _clients.end()) {
-            it->second->Release();
-            _clients.erase(it);
+        auto it = _clients.begin();
+        while( it != _clients.end() ) {
+            if( it->second == client )
+            {
+                TRACE(Trace::Information, (_T("Client %s detached"), it->first));
+                it->second->Release();
+                _clients.erase(it);
+                break;
+            }
+            ++it;
         }
-        TRACE_L1("Client detached completed: %s", name.c_str());
         _adminLock.Unlock();
 
-        TRACE(Trace::Information, (_T("Client %s detached"), name.c_str()));
+        TRACE(Trace::Information, (_T("Client detached completed")));
     }
-    void Compositor::Clients(Core::JSON::ArrayType<Core::JSON::String>& clients) const
-    {
+
+    template<typename ClientOperation>
+    uint32_t Compositor::CallOnClientByCallsign(const string& callsign, ClientOperation&& operation) const {
+        ASSERT(_composition != nullptr);   
+
+        uint32_t error = Core::ERROR_NONE;
+
+        if (_composition != nullptr) {
+            Exchange::IComposition::IClient* client;
+
+            _adminLock.Lock();
+            auto it = _clients.find(callsign);
+
+            if (it != _clients.end()) {
+                client = it->second;
+                ASSERT(client != nullptr);
+                client->AddRef();
+            }
+            else {
+                error = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
+                TRACE(Trace::Information, (_T("Client %s not found in CallOnClientByCallsign."), callsign.c_str()));
+            }
+            _adminLock.Unlock();
+            std::forward<ClientOperation>(operation)(*client);
+            client->Release();
+        }
+        return error;
+    }
+
+    void Compositor::Clients(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const {
         _adminLock.Lock();
         for (auto const& client : _clients) {
             TRACE(Trace::Information, (_T("Client %s added to the JSON array"), client.first.c_str()));
-            Core::JSON::String& element(clients.Add());
+            Core::JSON::String& element(callsigns.Add());
             element = client.first;
         }
         _adminLock.Unlock();
     }
-    void Compositor::Kill(const string& client) const
-    {
-        ASSERT(_composition != nullptr);
 
-        if (_composition != nullptr) {
-            Exchange::IComposition::IClient* composition = _composition->Client(client);
-            if (composition != nullptr) {
-                composition->Kill();
-            }
-            else {
-                TRACE(Trace::Information, (_T("Client %s not found."), client.c_str()));
-            }
-        }
-    }
-    void Compositor::Opacity(const string& client, const uint32_t value) const
-    {
-        ASSERT(_composition != nullptr);
-
-        if (_composition != nullptr) {
-            Exchange::IComposition::IClient* composition = _composition->Client(client);
-            if (composition != nullptr) {
-                composition->Opacity(value);
-            }
-            else {
-                TRACE(Trace::Information, (_T("Client %s not found."), client.c_str()));
-            }
-        }
+    uint32_t Compositor::Kill(const string& callsign) const {
+        return CallOnClientByCallsign(callsign, [](Exchange::IComposition::IClient& client) { client.Kill(); });
     }
 
-    void Compositor::Geometry(const string& client, const Exchange::IComposition::Rectangle& rectangle)
-    {
-        ASSERT(_composition != nullptr);
-
-        if (_composition != nullptr) {
-            _composition->Geometry(client, rectangle); 
-        }
+    uint32_t Compositor::Opacity(const string& callsign, const uint32_t value) const  {
+        return CallOnClientByCallsign(callsign, [&](Exchange::IComposition::IClient& client) { client.Opacity(value); } );    
     }
 
-    Exchange::IComposition::Rectangle Compositor::Geometry(const string& client) const
-    {
-        Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
-
-        ASSERT(_composition != nullptr);
-
-        if (_composition != nullptr) {
-            rectangle = _composition->Geometry(client); 
-        }
-        return rectangle;
-    }
-
-    void Compositor::Resolution(const Exchange::IComposition::ScreenResolution format)
-    {
+    void Compositor::Resolution(const Exchange::IComposition::ScreenResolution format) {
         ASSERT(_composition != nullptr);
 
         if (_composition != nullptr) {
@@ -338,8 +384,7 @@ namespace Plugin {
         }
     }
 
-    Exchange::IComposition::ScreenResolution  Compositor::Resolution() const
-    {
+   Exchange::IComposition::ScreenResolution  Compositor::Resolution() const {
         ASSERT(_composition != nullptr);
 
         if (_composition != nullptr) {
@@ -348,48 +393,68 @@ namespace Plugin {
         return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
     }
 
-    void Compositor::Visible(const string& client, const bool visible) const
-    {
+    uint32_t Compositor::Visible(const string& callsign, const bool visible) const {
+        return Opacity(callsign, visible == true ? Exchange::IComposition::maxOpacity : Exchange::IComposition::minOpacity );
+    }
+
+    uint32_t Compositor::Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle) {
+        ASSERT(_composition != nullptr);
+
+        uint32_t error = Core::ERROR_NONE;
+
+        if (_composition != nullptr) {
+           error = _composition->Geometry(callsign, rectangle); 
+        }
+
+        return error;
+    }
+
+    Exchange::IComposition::Rectangle Compositor::Geometry(const string& callsign) const {
+        Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
+
         ASSERT(_composition != nullptr);
 
         if (_composition != nullptr) {
-            Exchange::IComposition::IClient* composition = _composition->Client(client);
-            if (composition != nullptr) {
-                composition->Opacity( visible == true ? Exchange::IComposition::maxOpacity : Exchange::IComposition::minOpacity );
-            }
-            else {
-                TRACE(Trace::Information, (_T("Client %s not found."), client.c_str()));
-            }
+            rectangle = _composition->Geometry(callsign); 
         }
+        return rectangle;
     }
-    void Compositor::Top(const string& client) const
-    {
+
+    uint32_t Compositor::ToTop(const string& callsign) {
         ASSERT(_composition != nullptr);
 
-        if (_composition != nullptr) {
-            Exchange::IComposition::IClient* composition = _composition->Client(client);
-            if (composition != nullptr) {
-                composition->SetTop();
-            }
-            else {
-                TRACE(Trace::Information, (_T("Client %s not found."), client.c_str()));
-            }
-        }
-    }
-    void Compositor::Input(const string& client) const
-    {
-        ASSERT(_composition != nullptr);
+        uint32_t error = Core::ERROR_NONE;
 
         if (_composition != nullptr) {
-            Exchange::IComposition::IClient* composition = _composition->Client(client);
-            if (composition != nullptr) {
-                composition->SetInput();
-            }
-            else {
-                TRACE(Trace::Information, (_T("Client %s not found."), client.c_str()));
-            }
+            error = _composition->ToTop(callsign); 
         }
+        return error;    
     }
+
+    uint32_t Compositor::PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) {
+         ASSERT(_composition != nullptr);
+
+        uint32_t error = Core::ERROR_NONE;
+
+        if (_composition != nullptr) {
+            error = _composition->PutBelow(callsignRelativeTo, callsignToReorder); 
+        }
+        return error;             
+    }
+
+    void Compositor::Compositor::ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const {
+        ASSERT(_composition != nullptr);
+        RPC::IStringIterator* iterator = _composition->ClientsInZorder();
+        ASSERT(iterator != nullptr)
+
+        while ( iterator->IsValid() == true ) {
+            Core::JSON::String& element(callsigns.Add());
+            element = iterator->Current();
+            iterator->Next();
+        }
+        iterator->Release();
+    }
+
 
 } // namespace Plugin
 } // namespace WPEFramework
