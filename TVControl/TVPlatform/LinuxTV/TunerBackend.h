@@ -49,7 +49,7 @@ public:
     TvmRc StartScanning(std::vector<uint32_t>, TVPlatform::ITVPlatform::ITunerHandler&);
     TvmRc StopScanning();
     TvmRc SetHomeTS(uint32_t);
-    TvmRc Tune(TSInfo&, TVPlatform::ITVPlatform::ITunerHandler&);
+    TvmRc Tune(uint32_t, uint16_t, uint16_t, TVPlatform::ITVPlatform::ITunerHandler&);
     TvmRc StartFilter(uint16_t, TVPlatform::ITVPlatform::ISectionHandler*);
     TvmRc StopFilter(uint16_t);
     TvmRc StopFilters();

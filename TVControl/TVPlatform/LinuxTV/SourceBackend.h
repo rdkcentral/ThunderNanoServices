@@ -68,7 +68,7 @@ public:
     TvmRc StartScanning(std::vector<uint32_t>, TVPlatform::ITVPlatform::ITunerHandler&);
     TvmRc StopScanning();
     TvmRc SetHomeTS(uint32_t);
-    TvmRc Tune(TSInfo&, TVPlatform::ITVPlatform::ITunerHandler&);
+    TvmRc Tune(uint32_t, uint16_t, uint16_t, TVPlatform::ITVPlatform::ITunerHandler&);
     TvmRc StartFilter(uint16_t, TVPlatform::ITVPlatform::ISectionHandler*);
     TvmRc StopFilter(uint16_t);
     TvmRc StopFilters();
@@ -87,15 +87,16 @@ private:
     void MpegScan(uint32_t);
     void DvbScan();
     bool ProcessPAT(uint32_t, int32_t);
-    bool ProcessPMT(int32_t, TSInfo&);
+    bool ProcessPMT(int32_t, AtscStream&);
     int32_t CreateSectionFilter(uint16_t, uint8_t, bool);
     void SectionFilterThread();
     void ScanningThread(std::vector<uint32_t>, TVPlatform::ITVPlatform::ITunerHandler&);
-    TvmRc SetCurrentChannel(TSInfo&, TVPlatform::ITVPlatform::ITunerHandler&);
-    void SetCurrentChannelThread(TSInfo&, TVPlatform::ITVPlatform::ITunerHandler&);
+    TvmRc SetCurrentChannel(uint32_t, uint16_t, uint16_t, TVPlatform::ITVPlatform::ITunerHandler&);
+    void SetCurrentChannelThread(uint32_t, uint16_t, uint16_t, TVPlatform::ITVPlatform::ITunerHandler&);
     bool PopulateChannelData(uint32_t);
     void ResumeFiltering();
     bool PauseFiltering();
+    bool GetStreamInfo(uint32_t, uint16_t, AtscStream&);
 
 private:
     SourceType _sType;
@@ -117,7 +118,7 @@ private:
     std::mutex _scanCompleteMutex;
     std::condition_variable_any _scanCompleteCondition;
 
-    TSInfoList _channelData;
+    AtscPSI _psiData;
 
     std::vector<struct pollfd> _pollFds;
     std::map<uint16_t, uint32_t> _pollFdsMap;

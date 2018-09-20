@@ -51,12 +51,12 @@ TvmRc TVPlatformImplementation::StopScanning()
         return tuner->StopScanning();
 }
 
-TvmRc TVPlatformImplementation::Tune(TSInfo& tsInfo, ITunerHandler& tunerHandler)
+TvmRc TVPlatformImplementation::Tune(uint32_t frequency, uint16_t programNumber, uint16_t modulation, ITunerHandler& tunerHandler)
 {
     TvmRc ret = TvmError;
     LinuxDVB::TvTunerBackend* tuner = GetTuner(true);
     if (tuner) {
-        if ((ret = tuner->Tune(tsInfo, tunerHandler)) == TvmSuccess)
+        if ((ret = tuner->Tune(frequency, programNumber, modulation, tunerHandler)) == TvmSuccess)
             _isStreaming = true;
     }
     return ret;
