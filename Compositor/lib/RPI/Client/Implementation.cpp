@@ -223,7 +223,7 @@ Display::SurfaceImplementation::SurfaceImplementation(
     TRACE(CompositorClient, (_T("Created client named: %s"), _name.c_str()));
 
     VC_DISPMANX_ALPHA_T alpha = {
-            DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS,
+            static_cast<DISPMANX_FLAGS_ALPHA_T>(DISPMANX_FLAGS_ALPHA_FROM_SOURCE),
             255,
             0
     };
@@ -322,8 +322,6 @@ Display::Display(const string& name)
     uint32_t result = _compositerServerRPCConnection->Open(RPC::CommunicationTimeOut);
     if ( result != Core::ERROR_NONE ) { 
         TRACE(CompositorClient, (_T("Could not open connection to Compositor with node %s. Error: %s"), _compositerServerRPCConnection->Source().RemoteId(), Core::NumberType<uint32_t>(result).Text()));
-    }
-    else {
         _compositerServerRPCConnection.Release();
     }
 
