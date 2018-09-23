@@ -38,6 +38,21 @@ static Core::NodeId Connector () {
     return (Core::NodeId(connector.c_str()));
 }
 
+class BCMHostInit {
+    public:    
+
+    BCMHostInit(const BCMHostInit&) = delete;
+    BCMHostInit& operator=(const BCMHostInit&) = delete;
+
+    BCMHostInit() {
+        bcm_host_init();
+    }
+
+   ~BCMHostInit() {
+        bcm_host_deinit();
+   }
+};
+
 class Display : public Compositor::IDisplay {
 private:
     Display() = delete;
@@ -229,7 +244,7 @@ Display::SurfaceImplementation::SurfaceImplementation(
     };
     vc_dispmanx_rect_set(&_dstRect, 0, 0, _display.DisplaySizeWidth(), _display.DisplaySizeHeight()); 
     vc_dispmanx_rect_set(&_srcRect,
-            0, 0, (_display.DisplaySizeWidth() << 16), (_display.DisplaySizeHeight() << 16)); // ook goed
+            0, 0, (_display.DisplaySizeWidth() << 16), (_display.DisplaySizeHeight() << 16)); 
 
     _dispmanDisplay = vc_dispmanx_display_open(0);
     _dispmanUpdate = vc_dispmanx_update_start(0);
@@ -316,8 +331,6 @@ Display::Display(const string& name)
 , _virtualkeyboard(nullptr)
 , _displaysize(RetrieveDisplaySize())
 , _compositerServerRPCConnection(Core::ProxyType< RPC::CommunicatorClient >::Create(Connector(), Core::ProxyType< RPC::InvokeServerType<2,1> >::Create() ) )  {
-
-    bcm_host_init();
 
     uint32_t result = _compositerServerRPCConnection->Open(RPC::CommunicationTimeOut);
     if ( result != Core::ERROR_NONE ) { 
@@ -442,6 +455,7 @@ void Display::RevokeClientInterface(Exchange::IComposition::IClient* client) {
 }
 
 Compositor::IDisplay* Compositor::IDisplay::Instance(const string& displayName) {
+    static BCMHostInit bcmhostinit; // must be done before Display constructor
     static Display& myDisplay = Core::SingletonType<Display>::Instance(displayName);
     
     return (&myDisplay);
