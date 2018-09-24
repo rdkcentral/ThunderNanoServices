@@ -27,6 +27,25 @@ static void VirtualKeyboardCallback(actiontype type , unsigned int code) {
     }
 }
 
+namespace {
+
+    class BCMHostInit {
+        public:    
+
+        BCMHostInit(const BCMHostInit&) = delete;
+        BCMHostInit& operator=(const BCMHostInit&) = delete;
+
+        BCMHostInit() {
+            bcm_host_init();
+        }
+
+        ~BCMHostInit() {
+            bcm_host_deinit();
+        }
+
+    };
+}
+
 namespace WPEFramework {
 
 static Core::NodeId Connector () {
@@ -37,21 +56,6 @@ static Core::NodeId Connector () {
     }
     return (Core::NodeId(connector.c_str()));
 }
-
-class BCMHostInit {
-    public:    
-
-    BCMHostInit(const BCMHostInit&) = delete;
-    BCMHostInit& operator=(const BCMHostInit&) = delete;
-
-    BCMHostInit() {
-        bcm_host_init();
-    }
-
-   ~BCMHostInit() {
-        bcm_host_deinit();
-   }
-};
 
 class Display : public Compositor::IDisplay {
 private:

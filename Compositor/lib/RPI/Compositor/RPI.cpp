@@ -120,7 +120,8 @@ public:
         config.FromString(service->ConfigLine());
 
         _externalAccess.reset(new ExternalAccess(*this, Core::NodeId(config.Connector.Value().c_str()), service->ProxyStubPath()));
-        if (_externalAccess->IsListening() == false) {
+
+        if (_externalAccess->IsListening() == true) {
             PlatformReady();
         }
         else {
