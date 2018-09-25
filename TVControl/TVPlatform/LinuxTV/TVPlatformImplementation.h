@@ -15,8 +15,8 @@ public:
 
     TvmRc Init() {}
     TvmRc Deinit() {}
-    TvmRc Tune(uint32_t) {}
-    TvmRc Tune(TSInfo&, ITunerHandler&);
+    TvmRc Tune(uint32_t, uint16_t) {}
+    TvmRc Tune(uint32_t, uint16_t, uint16_t, TVPlatform::ITVPlatform::ITunerHandler&);
     TvmRc Scan(std::vector<uint32_t>, ITunerHandler&);
     TvmRc StopScanning();
     TvmRc GetChannelMap(ChannelMap&);

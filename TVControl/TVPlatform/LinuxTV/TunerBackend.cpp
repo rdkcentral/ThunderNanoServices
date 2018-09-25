@@ -497,9 +497,8 @@ std::vector<uint32_t>& TvTunerBackend::GetFrequencyList()
     return _source->GetFrequencyList();
 }
 
-TvmRc TvTunerBackend::Tune(TSInfo& tsInfo, TVPlatform::ITVPlatform::ITunerHandler& tunerHandler)
+TvmRc TvTunerBackend::Tune(uint32_t frequency, uint16_t programNumber, uint16_t modulation, TVPlatform::ITVPlatform::ITunerHandler& tunerHandler)
 {
-    return _source->Tune(tsInfo, tunerHandler);
-
+    return _source->Tune(frequency, programNumber, modulation, tunerHandler);
 }
 } // namespace LinuxDVB

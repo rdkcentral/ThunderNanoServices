@@ -109,8 +109,8 @@ SourceBackend::~SourceBackend()
     TRACE(Trace::Information, (_T("~SourceBackend")));
     _isRunning = false;
     _isScanInProgress = false;
-    if (_channelData.size())
-        _channelData.clear();
+    if (_psiData.size())
+        _psiData.clear();
     gst_object_unref(GST_OBJECT (_gstData.pipeline));
 
     _sectionFilterMutex.lock();
@@ -200,10 +200,9 @@ TvmRc SourceBackend::StopFilters()
     _pollFdsMap.clear();
 }
 
-TvmRc SourceBackend::Tune(TSInfo& tsInfo,  TVPlatform::ITVPlatform::ITunerHandler& tunerHandler)
+TvmRc SourceBackend::Tune(uint32_t frequency, uint16_t programNumber, uint16_t modulation,  TVPlatform::ITVPlatform::ITunerHandler& tunerHandler)
 {
-    TRACE(Trace::Information, (_T("tune freq = %u, vidPid = %" PRIu16 ", audioPid = %" PRIu16 ", pmtPid= %" PRIu16 ""), tsInfo.frequency, tsInfo.videoPid, tsInfo.audioPid, tsInfo.pmtPid));
-    return SetCurrentChannel(tsInfo, tunerHandler);
+    return SetCurrentChannel(frequency, programNumber, modulation, tunerHandler);
 }
 
 TvmRc SourceBackend::StartFilter(uint16_t pid, TVPlatform::ITVPlatform::ISectionHandler* pSectionHandler)
@@ -240,18 +239,21 @@ TvmRc SourceBackend::StartScanning(std::vector<uint32_t> freqList, TVPlatform::I
 TvmRc SourceBackend::GetChannelMap(ChannelMap& chanMap)
 {
     TvmRc rc = TvmSuccess;
-    for (auto& channel : _channelData) {
-        ChannelDetails chan;
-        chan.programNumber = channel.programNumber;
-        chan.frequency = channel.frequency;
-        if (channel.videoPid)
-            chan.type = ChannelDetails::Normal;
-        else if (channel.audioPid)
-            chan.type = ChannelDetails::Radio;
-        else
-            chan.type = ChannelDetails::Data;
-        if (chan.type != ChannelDetails::Data)
-            chanMap.push_back(chan);
+    for (auto &psiInfo : _psiData) {
+        AtscPmt pmt = psiInfo.second;
+        for (auto& pmtInfo : pmt) {
+            ChannelDetails chan;
+            chan.frequency = psiInfo.first;
+            chan.programNumber = pmtInfo.first;
+            if (pmtInfo.second.videoPid)
+                chan.type = ChannelDetails::Normal;
+            else if (pmtInfo.second.audioPid)
+                chan.type = ChannelDetails::Radio;
+            else
+                chan.type = ChannelDetails::Data;
+            if (chan.type != ChannelDetails::Data)
+                chanMap.push_back(chan);
+        }
     }
     return rc;
 }
@@ -289,8 +291,8 @@ void SourceBackend::ScanningThread(std::vector<uint32_t> freqList, TVPlatform::I
     TRACE(Trace::Information, (string(__FUNCTION__)));
     _isScanInProgress = true;
 
-    if (_channelData.size())
-        _channelData.clear();
+    if (_psiData.size())
+        _psiData.clear();
 
     PauseFiltering();
 
@@ -352,7 +354,7 @@ void SourceBackend::ScanningThread(std::vector<uint32_t> freqList, TVPlatform::I
     _isScanInProgress = false;
 }
 
-bool SourceBackend::ProcessPMT(int32_t pmtFd, TSInfo& channel)
+bool SourceBackend::ProcessPMT(int32_t pmtFd, AtscStream& stream)
 {
     int32_t size;
     uint8_t siBuf[4096];
@@ -385,10 +387,10 @@ bool SourceBackend::ProcessPMT(int32_t pmtFd, TSInfo& channel)
     mpeg_pmt_section_streams_for_each(pmt, curStream)
     {
         TRACE(Trace::Information, (_T("stream_type : %x pid : %x"), curStream->stream_type, curStream->pid));
-        if ((!channel.videoPid) && (curStream->stream_type == 0X02))
-            channel.videoPid = curStream->pid;
-        if ((!channel.audioPid) && (curStream->stream_type == 0X81))
-            channel.audioPid = curStream->pid;
+        if ((!stream.videoPid) && (curStream->stream_type == 0X02))
+            stream.videoPid = curStream->pid;
+        if ((!stream.audioPid) && (curStream->stream_type == 0X81))
+            stream.audioPid = curStream->pid;
     }
 }
 
@@ -435,16 +437,16 @@ bool SourceBackend::StopPlayBack()
     return true;
 }
 
-TvmRc SourceBackend::SetCurrentChannel(TSInfo& tsInfo, TVPlatform::ITVPlatform::ITunerHandler& tunerHandler)
+TvmRc SourceBackend::SetCurrentChannel(uint32_t frequency, uint16_t programNumber, uint16_t modulation, TVPlatform::ITVPlatform::ITunerHandler& tunerHandler)
 {
     TRACE(Trace::Information, (_T("Set Channel invoked")));
     TvmRc ret = TvmError;
     _channelChangeCompleteMutex.lock();
     _channelChangeState = TvmError;
     _channelChangeCompleteMutex.unlock();
-    if (_channelNo !=  tsInfo.programNumber) {
-        _channelNo = tsInfo.programNumber;
-        std::thread th(&SourceBackend::SetCurrentChannelThread, this, std::ref(tsInfo), std::ref(tunerHandler));
+    if (_channelNo !=  programNumber) {
+        _channelNo = programNumber;
+        std::thread th(&SourceBackend::SetCurrentChannelThread, this, frequency, programNumber, modulation, std::ref(tunerHandler));
         th.detach();
         _channelChangeCompleteMutex.lock();
         _channelChangeCompleteCondition.wait(_channelChangeCompleteMutex);
@@ -453,7 +455,30 @@ TvmRc SourceBackend::SetCurrentChannel(TSInfo& tsInfo, TVPlatform::ITVPlatform::
     return _channelChangeState;
 }
 
-void SourceBackend::SetCurrentChannelThread(TSInfo& tsInfo, TVPlatform::ITVPlatform::ITunerHandler& tunerHandler)
+bool SourceBackend::GetStreamInfo(uint32_t frequency, uint16_t programNumber, AtscStream& stream)
+{
+    bool bFound = false;
+    auto it = _psiData.find(frequency);
+    if (it != _psiData.end()) {
+        TRACE(Trace::Error, (_T("%s: TS found for %u Hz"), __FUNCTION__, frequency));
+        AtscPmt& pmt = it->second;
+        auto itPMT = pmt.find(programNumber);
+        if (itPMT != pmt.end()) {
+            TRACE(Trace::Error, (_T("%s: Program Number %d found"), __FUNCTION__, programNumber));
+
+            stream.pmtPid = itPMT->second.pmtPid;
+            stream.videoPid = itPMT->second.videoPid;
+            stream.audioPid = itPMT->second.audioPid;
+            bFound = true;
+
+        } else
+            TRACE(Trace::Error, (_T("%s: Program Number %d not found"), __FUNCTION__, programNumber));
+    } else
+        TRACE(Trace::Error, (_T("%s: TS Not found for %u Hz"), __FUNCTION__, frequency));
+    return bFound;
+}
+
+void SourceBackend::SetCurrentChannelThread(uint32_t frequency, uint16_t programNumber, uint16_t modulation, TVPlatform::ITVPlatform::ITunerHandler& tunerHandler)
 {
     TRACE(Trace::Information, (_T("Tune to Channel(program number):: %" PRIu64 ""), _channelNo));
     PauseFiltering();
@@ -466,16 +491,18 @@ void SourceBackend::SetCurrentChannelThread(TSInfo& tsInfo, TVPlatform::ITVPlatf
     if (_playbackInProgress)
         StopPlayBack();
 
-    uint32_t modulation = _tunerData->modulation;
-    if (StartPlayBack(tsInfo.frequency, modulation, tsInfo.pmtPid, tsInfo.videoPid, tsInfo.audioPid)) {
-        _channelChangeState = TvmSuccess;
-        if (_tunerCount == 1) {
-            if (_currentTunedFrequency != tsInfo.frequency) {
-                _currentTunedFrequency = tsInfo.frequency;
-                StopFilters();
-                tunerHandler.StreamingFrequencyChanged(_currentTunedFrequency);
-            } else
-                ResumeFiltering();
+    AtscStream stream;
+    if (GetStreamInfo(frequency, programNumber, stream)) {
+        if (StartPlayBack(frequency, modulation, stream.pmtPid, stream.videoPid, stream.audioPid)) {
+            _channelChangeState = TvmSuccess;
+            if (_tunerCount == 1) {
+                if (_currentTunedFrequency != frequency) {
+                    _currentTunedFrequency = frequency;
+                    StopFilters();
+                    tunerHandler.StreamingFrequencyChanged(_currentTunedFrequency);
+                } else
+                    ResumeFiltering();
+            }
         }
     }
     _channelChangeCompleteMutex.lock();
@@ -582,9 +609,6 @@ void SourceBackend::AtscScan(uint32_t frequency, uint32_t modulation)
 bool SourceBackend::PopulateChannelData(uint32_t frequency)
 {
     MpegScan(frequency);
-    for (auto& channel : _channelData) {
-        TRACE(Trace::Information, (_T("LCN:%d, pmtPid:%d, videoPid:%d, audioPid:%d, frequency : %u"), channel.programNumber, channel.pmtPid, channel.videoPid, channel.audioPid, frequency));
-    }
     return true;
 }
 
@@ -651,19 +675,17 @@ bool SourceBackend::ProcessPAT(uint32_t frequency, int32_t patFd)
     // Try and find the requested program.
     struct mpeg_pat_program* curProgram;
     int32_t pmtFd = -1;
+    AtscPmt pmt;
     mpeg_pat_section_programs_for_each(pat, curProgram)
     {
         TRACE(Trace::Information, (_T("Program Number:- %d PMT Pid:- %u frequency  :- %d"), curProgram->program_number, curProgram->pid, frequency));
-        TSInfo channel;
-        memset(&channel, 0, sizeof(channel));
-        channel.programNumber = curProgram->program_number;
-        channel.pmtPid = curProgram->pid;
-        channel.frequency = frequency;
         if ((pmtFd = CreateSectionFilter(curProgram->pid, TablePmt, 1)) < 0)
             return false;
         pollfd.fd = pmtFd;
         pollfd.events = POLLIN | POLLPRI | POLLERR |POLLHUP | POLLNVAL;
         bool pmtOk = false;
+        AtscStream stream;
+        stream.pmtPid = curProgram->pid;
         while (!pmtOk) {
             int32_t count = poll(&pollfd, 1, 100);
             if (count < 0) {
@@ -675,16 +697,17 @@ bool SourceBackend::ProcessPAT(uint32_t frequency, int32_t patFd)
                 continue;
             }
             if (pollfd.revents & (POLLIN | POLLPRI)) {
-                ProcessPMT(pollfd.fd, channel); // FIXME:PMT updation to be taken care of.
+                ProcessPMT(pollfd.fd, stream); // FIXME:PMT updation to be taken care of.
                 pmtOk = true;
             }
         }
-        _channelData.push_back(channel);
+        pmt[curProgram->program_number] = stream;
         if (pmtFd != -1) {
             dvbdemux_stop(pmtFd);
             close(pmtFd);
         }
     }
+    _psiData[frequency] = pmt;
     // Remember the PAT version.
     return true;
 }
@@ -693,20 +716,22 @@ TvmRc SourceBackend::GetTSInfo(TSInfoList& tsInfoList)
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     TvmRc rc = TvmSuccess;
-    for (auto& channel : _channelData) {
-        TSInfo tsInfo;
-        memset(&tsInfo, 0, sizeof(tsInfo));
-        tsInfo.programNumber = channel.programNumber;
-        tsInfo.frequency = channel.frequency;
-        tsInfo.audioPid = channel.audioPid;
-        tsInfo.videoPid = channel.videoPid;
-        tsInfo.pmtPid = channel.pmtPid;
-        if (tsInfo.audioPid || tsInfo.videoPid) {
-            tsInfoList.push_back(tsInfo);
+    for (auto &psiInfo : _psiData) {
+        AtscPmt pmt = psiInfo.second;
+        for (auto& pmtInfo : pmt) {
+            TSInfo tsInfo{};
+            tsInfo.frequency = psiInfo.first;
+            tsInfo.programNumber = pmtInfo.first;
+            tsInfo.audioPid = pmtInfo.second.audioPid;
+            tsInfo.videoPid = pmtInfo.second.videoPid;
+            tsInfo.pmtPid = pmtInfo.second.pmtPid;
+            if (tsInfo.audioPid || tsInfo.videoPid) {
+                tsInfoList.push_back(tsInfo);
 
-            TRACE(Trace::Information, (_T("LCN:%" PRIu16 ", pmtPid:%" PRIu16 ", videoPid:%" PRIu16 ", audioPid:%" PRIu16 " \
-                frequency : %u"), tsInfo.programNumber,
-                tsInfo.pmtPid, tsInfo.videoPid, tsInfo.audioPid, tsInfo.frequency));
+                TRACE(Trace::Information, (_T("LCN:%" PRIu16 ", pmtPid:%" PRIu16 ", videoPid:%" PRIu16 ", audioPid:%" PRIu16 " \
+                    frequency : %u"), tsInfo.programNumber,
+                    tsInfo.pmtPid, tsInfo.videoPid, tsInfo.audioPid, tsInfo.frequency));
+            }
         }
     }
     return rc;
