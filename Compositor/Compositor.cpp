@@ -115,7 +115,7 @@ namespace Plugin {
                 result->Body(Core::proxy_cast<Web::IBody>(response));
             }
             // http://<ip>/Service/Compositor/ZOrder (top to bottom)
-            if (index.Next() == false || index.Current() == "ZOrder") {
+            else if (index.Current() == "ZOrder") {
                 Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
                 ZOrder(response->Clients) ;
                 result->Body(Core::proxy_cast<Web::IBody>(response));
@@ -228,7 +228,7 @@ namespace Plugin {
 
                             error = Geometry(clientName, rectangle);
                         }
-                        else if (index.Current() == _T("ToTop")) { /* http://<ip>/Service/Compositor/Netflix/ToTop */
+                        else if (index.Current() == _T("Top")) { /* http://<ip>/Service/Compositor/Netflix/ToTop */
                             error = ToTop(clientName);
                         }
                         else if (index.Current() == _T("PutBelow")) { /* http://<ip>/Service/Compositor/Netflix/PutBelow/Youtube */
@@ -434,6 +434,10 @@ namespace Plugin {
     uint32_t Compositor::PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) {
          ASSERT(_composition != nullptr);
 
+         ASSERT(false); // not implemeted for now, we'll do that when it is needed
+
+         return Core::ERROR_UNAVAILABLE;
+
         uint32_t error = Core::ERROR_NONE;
 
         if (_composition != nullptr) {
@@ -442,17 +446,21 @@ namespace Plugin {
         return error;             
     }
 
-    void Compositor::Compositor::ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const {
+    void Compositor::ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const {
         ASSERT(_composition != nullptr);
         RPC::IStringIterator* iterator = _composition->ClientsInZorder();
+
         ASSERT(iterator != nullptr)
 
-        while ( iterator->IsValid() == true ) {
-            Core::JSON::String& element(callsigns.Add());
-            element = iterator->Current();
-            iterator->Next();
-        }
+        if(iterator != nullptr) {
+
+            while ( iterator->IsValid() == true ) {
+                Core::JSON::String& element(callsigns.Add());
+                element = iterator->Current();
+                iterator->Next();
+            }
         iterator->Release();
+    }
     }
 
 

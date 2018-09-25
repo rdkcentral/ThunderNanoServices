@@ -242,7 +242,7 @@ Display::SurfaceImplementation::SurfaceImplementation(
     TRACE(CompositorClient, (_T("Created client named: %s"), _name.c_str()));
 
     VC_DISPMANX_ALPHA_T alpha = {
-            static_cast<DISPMANX_FLAGS_ALPHA_T>(DISPMANX_FLAGS_ALPHA_FROM_SOURCE),
+            DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS,
             255,
             0
     };
@@ -287,8 +287,6 @@ Display::SurfaceImplementation::~SurfaceImplementation() {
 
 void Display::SurfaceImplementation::Opacity(
         const uint32_t value) {
-
-    ASSERT (value <= Exchange::IComposition::maxOpacity);
 
     _opacity = (value > Exchange::IComposition::maxOpacity) ? Exchange::IComposition::maxOpacity : value;
 
@@ -358,8 +356,6 @@ Display::~Display() {
     for_each(_surfaces.begin(), _surfaces.end(), [&](SurfaceImplementation* surface) {
 
                         string name = surface->Name();
-
-                        RevokeClientInterface(surface);
 
                         if( static_cast<Core::IUnknown*>(surface)->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED ) { //note, need cast to prevent ambigious call
                             TRACE(CompositorClient, (_T("Compositor Surface [%s] is not properly destructed"), name.c_str()));
@@ -438,6 +434,9 @@ inline void Display::Unregister(Display::SurfaceImplementation* surface) {
     }
 
     _adminLock.Unlock();
+
+    RevokeClientInterface(surface);
+
 }  
 
 void Display::OfferClientInterface(Exchange::IComposition::IClient* client) {

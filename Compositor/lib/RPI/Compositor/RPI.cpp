@@ -257,18 +257,19 @@ private:
 
                 const ClientData* clientdata = FindClientData(name); 
                 if (clientdata != nullptr) {
-                    ASSERT (false);
+                //    ASSERT (false);
                     TRACE(Trace::Information,
                             (_T("Client already registered %s."), name.c_str()));
+                    // as the old one may be dangling becayse of a crash let's remove that one, this is the most logical thing to do
+                    ClientRevoked(clientdata->clientInterface); 
                 }
-                else {
-                    client->AddRef();
-                    _clients[name] = ClientData(client, Resolution());
-                    TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
 
-                    for( auto&& index : _observers) {
-                        index->Attached(client);
-                    }
+                client->AddRef();
+                _clients[name] = ClientData(client, Resolution());
+                TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
+
+                for( auto&& index : _observers) {
+                    index->Attached(client);
                 }
 
                 client->AddRef(); // for call to RecalculateZOrder
@@ -293,7 +294,11 @@ private:
                 for( auto index : _observers) {
                     index->Detached(it->second.clientInterface); //note as we have the name here, we could more efficiently pass the name to the caller as it is not allowed to get it from the pointer passes, but we are going to restructure the interface anyway
                 }       
-                it->second.clientInterface->Release();
+
+                uint32_t result = it->second.clientInterface->Release();
+
+                TRACE_L1("Releasing Compositor Client result: %s", result == Core::ERROR_DESTRUCTION_SUCCEEDED ? "succeeded" : "failed" );
+
                 _clients.erase(it);
                 break;
             }
