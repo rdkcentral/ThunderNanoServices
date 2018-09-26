@@ -242,44 +242,43 @@ namespace Plugin {
 
             if (index.Next() == true) {
 
-
                 std::map<const string, StaticInfo>::iterator entry(_interfaces.find(index.Current().Text()));
 
-				if (entry != _interfaces.end()) {
+                if (entry != _interfaces.end()) {
+                    
+                    Core::ProxyType<Web::JSONBodyType<NetworkControl::Entry> > data(jsonGetNetworkFactory.Element());
 
-					Core::ProxyType<Web::JSONBodyType<NetworkControl::Entry> > data(jsonGetNetworkFactory.Element());
-					
-					entry->second.Store(*data);
-					data->Interface = entry->first;
+                    entry->second.Store(*data);
+                    data->Interface = entry->first;
 
-					result->Body(data);
-                        
+                    result->Body(data);
+    
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = "OK";
-				}
-				else {
+                }
+                else {
 					result->ErrorCode = Web::STATUS_NOT_FOUND;
 					result->Message = string(_T("Could not find interface: ")) + index.Current().Text();
-				}
+                }
             }
             else {
                 std::map<const string, StaticInfo>::iterator entry(_interfaces.begin());
 
-				Core::ProxyType<Web::JSONBodyType< Core::JSON::ArrayType< NetworkControl::Entry> > > data(jsonGetNetworksFactory.Element());
+                Core::ProxyType<Web::JSONBodyType< Core::JSON::ArrayType< NetworkControl::Entry> > > data(jsonGetNetworksFactory.Element());
 
                 while (entry != _interfaces.end()) {
 
-					Entry& newSlot = data->Add();
+                    Entry& newSlot = data->Add();
 
-					entry->second.Store(newSlot);
-					newSlot.Interface = entry->first;
-					entry++;
+                    entry->second.Store(newSlot);
+                    newSlot.Interface = entry->first;
+                    entry++;
                 }
-				result->Body(data);
-                     
+                result->Body(data);
+     
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";   
-			}
+            }
 
             _adminLock.Unlock();
         }
