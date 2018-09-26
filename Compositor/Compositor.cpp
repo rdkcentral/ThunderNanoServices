@@ -181,94 +181,102 @@ namespace Plugin {
                 else {
                     string clientName(index.Current().Text());
 
-                    if (index.Next() == true) {
-                        uint32_t error = Core::ERROR_NONE;
-                        if (index.Current() == _T("Kill")) { /* http://<ip>/Service/Compositor/Netflix/Kill */
-                            error = Kill(clientName);
-                        }
-                        else if (index.Current() == _T("Opacity") &&
-                            index.Next() == true) { /* http://<ip>/Service/Compositor/Netflix/Opacity/128 */
-                            const uint32_t opacity(std::stoi(index.Current().Text()));
-                            error = Opacity(clientName, opacity);
-                        }
-                        else if (index.Current() == _T("Visible") &&
-                            index.Next() == true) { /* http://<ip>/Service/Compositor/Netflix/Visible/Hide  or Show */
-                            if (index.Current() == _T("Hide")) {
-                                error = Visible(clientName, false);
-                            } else if (index.Current() == _T("Show")) {
-                                error = Visible(clientName, true);
-                            }           
-                        }
-                        else if (index.Current() == _T("Geometry")) { /* http://<ip>/Service/Compositor/Netflix/Geometry/0/0/1280/720 */
-                            Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
-
-                            uint32_t rectangleError = Core::ERROR_INCORRECT_URL;
-
-                            if (index.Next() == true) {
-                                rectangle.x = Core::NumberType<uint32_t>(index.Current()).Value();
-                            }
-                            if (index.Next() == true) {
-                                rectangle.y = Core::NumberType<uint32_t>(index.Current()).Value();
-                            }
-                            if (index.Next() == true) {
-                                rectangle.width  = Core::NumberType<uint32_t>(index.Current()).Value();
-                            }
-                            if (index.Next() == true) {
-                                rectangle.height = Core::NumberType<uint32_t>(index.Current()).Value();
-                                rectangleError = Core::ERROR_NONE;
-                            }
-
-                            if ( rectangleError == Core::ERROR_NONE ) {
-                                error = Geometry(clientName, rectangle);
-                            }
-                            else {
-                                result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                                result->Message = string(_T("Could not set rectangle for Client ")) + clientName + _T(". Not all required information provided");
-                            }
-
-                            error = Geometry(clientName, rectangle);
-                        }
-                        else if (index.Current() == _T("Top")) { /* http://<ip>/Service/Compositor/Netflix/ToTop */
-                            error = ToTop(clientName);
-                        }
-                        else if (index.Current() == _T("PutBelow")) { /* http://<ip>/Service/Compositor/Netflix/PutBelow/Youtube */
-                            if (index.Next() == true) {
-                                error = PutBelow(index.Current().Text(), clientName);
-                                if( error != Core::ERROR_NONE ) {
-                                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                                    result->Message = string(_T("Could not change z-order for Client "));
-                                    if ( error == Core::ERROR_FIRST_RESOURCE_NOT_FOUND ) {
-                                        result->Message += _T(". Client is not registered");
-                                    }
-                                    else if ( error == Core::ERROR_SECOND_RESOURCE_NOT_FOUND ) {
-                                        result->Message += _T(". Client relative to which the operation should be executed is not registered");
-                                    } 
-                                    else {
-                                        result->Message += _T(". Unspecified problem");
-                                    }
-                                }
-                            }
-                            else {
-                                result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                                result->Message = string(_T("Could not change z-order for Client ")) + clientName + _T(". Not specified relative to which Client.");
-                            }
-                        }
-
-                        if( error != Core::ERROR_NONE && result->ErrorCode == Web::STATUS_OK ) {
-                            if ( error == Core::ERROR_FIRST_RESOURCE_NOT_FOUND ) {
-                                result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                                result->Message = string(_T("Client ")) + clientName + _T(" is not registered.");                                
-                            }
-                            else {
-                                result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                                result->Message = string(_T("Unspecified error"));                                
-                             }
-                        }
+                    if( clientName.empty() == true )
+                    {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = string(_T("Client was not provided (empty)"));
                     }
                     else {
-                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = string(_T("Client is not provided"));
-                       
+
+                        if (index.Next() == true) {
+                            uint32_t error = Core::ERROR_NONE;
+                            if (index.Current() == _T("Kill")) { /* http://<ip>/Service/Compositor/Netflix/Kill */
+                                error = Kill(clientName);
+                            }
+                            else if (index.Current() == _T("Opacity") &&
+                                index.Next() == true) { /* http://<ip>/Service/Compositor/Netflix/Opacity/128 */
+                                const uint32_t opacity(std::stoi(index.Current().Text()));
+                                error = Opacity(clientName, opacity);
+                            }
+                            else if (index.Current() == _T("Visible") &&
+                                index.Next() == true) { /* http://<ip>/Service/Compositor/Netflix/Visible/Hide  or Show */
+                                if (index.Current() == _T("Hide")) {
+                                    error = Visible(clientName, false);
+                                } else if (index.Current() == _T("Show")) {
+                                    error = Visible(clientName, true);
+                                }           
+                            }
+                            else if (index.Current() == _T("Geometry")) { /* http://<ip>/Service/Compositor/Netflix/Geometry/0/0/1280/720 */
+                                Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
+
+                                uint32_t rectangleError = Core::ERROR_INCORRECT_URL;
+
+                                if (index.Next() == true) {
+                                    rectangle.x = Core::NumberType<uint32_t>(index.Current()).Value();
+                                }
+                                if (index.Next() == true) {
+                                    rectangle.y = Core::NumberType<uint32_t>(index.Current()).Value();
+                                }
+                                if (index.Next() == true) {
+                                    rectangle.width  = Core::NumberType<uint32_t>(index.Current()).Value();
+                                }
+                                if (index.Next() == true) {
+                                    rectangle.height = Core::NumberType<uint32_t>(index.Current()).Value();
+                                    rectangleError = Core::ERROR_NONE;
+                                }
+
+                                if ( rectangleError == Core::ERROR_NONE ) {
+                                    error = Geometry(clientName, rectangle);
+                                }
+                                else {
+                                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                                    result->Message = string(_T("Could not set rectangle for Client ")) + clientName + _T(". Not all required information provided");
+                                }
+
+                                error = Geometry(clientName, rectangle);
+                            }
+                            else if (index.Current() == _T("Top")) { /* http://<ip>/Service/Compositor/Netflix/Top */
+                                error = ToTop(clientName);
+                            }
+                            else if (index.Current() == _T("PutBelow")) { /* http://<ip>/Service/Compositor/Netflix/PutBelow/Youtube */
+                                if (index.Next() == true) {
+                                    error = PutBelow(index.Current().Text(), clientName);
+                                    if( error != Core::ERROR_NONE ) {
+                                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                                        result->Message = string(_T("Could not change z-order for Client "));
+                                        if ( error == Core::ERROR_FIRST_RESOURCE_NOT_FOUND ) {
+                                            result->Message += _T(". Client is not registered");
+                                        }
+                                        else if ( error == Core::ERROR_SECOND_RESOURCE_NOT_FOUND ) {
+                                            result->Message += _T(". Client relative to which the operation should be executed is not registered");
+                                        } 
+                                        else {
+                                            result->Message += _T(". Unspecified problem");
+                                        }
+                                    }
+                                }
+                                else {
+                                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                                    result->Message = string(_T("Could not change z-order for Client ")) + clientName + _T(". Not specified relative to which Client.");
+                                }
+                            }
+
+                            if( error != Core::ERROR_NONE && result->ErrorCode == Web::STATUS_OK ) {
+                                if ( error == Core::ERROR_FIRST_RESOURCE_NOT_FOUND ) {
+                                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                                    result->Message = string(_T("Client ")) + clientName + _T(" is not registered.");                                
+                                }
+                                else {
+                                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                                    result->Message = string(_T("Unspecified error"));                                
+                                }
+                            }
+                        }
+                        else {
+                            result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                            result->Message = string(_T("Client is not provided"));
+                        
+                        }
                     }
                 }
             }
@@ -453,14 +461,12 @@ namespace Plugin {
         ASSERT(iterator != nullptr)
 
         if(iterator != nullptr) {
-
-            while ( iterator->IsValid() == true ) {
+            while (iterator->Next() == true) {
                 Core::JSON::String& element(callsigns.Add());
                 element = iterator->Current();
-                iterator->Next();
             }
-        iterator->Release();
-    }
+            iterator->Release();
+        }
     }
 
 
