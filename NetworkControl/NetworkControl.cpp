@@ -253,6 +253,9 @@ namespace Plugin {
 					data->Interface = entry->first;
 
 					result->Body(data);
+                        
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->Message = "OK";
 				}
 				else {
 					result->ErrorCode = Web::STATUS_NOT_FOUND;
@@ -273,6 +276,9 @@ namespace Plugin {
 					entry++;
                 }
 				result->Body(data);
+                     
+                result->ErrorCode = Web::STATUS_OK;
+                result->Message = "OK";   
 			}
 
             _adminLock.Unlock();
