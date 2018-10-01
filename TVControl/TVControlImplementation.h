@@ -176,7 +176,7 @@ private:
 
     public:
         ExternalAccess(const Core::NodeId& source, TVControlImplementation* parentInterface)
-            : RPC::Communicator(source, Core::ProxyType<RequestHandler>::Create())
+            : RPC::Communicator(source, Core::ProxyType<RequestHandler>::Create(), _T(""))
             , _handler(Core::ProxyType<ObjectMessageHandler>::Create(parentInterface))
         {
             TRACE(Trace::Information, (string(__FUNCTION__)));

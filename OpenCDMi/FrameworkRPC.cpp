@@ -205,6 +205,8 @@ namespace Plugin {
                             RequestConsume(WPEFramework::Core::infinite);
 
                             if (IsRunning() == true) {
+                                uint8_t keyIdLength = 0;
+				const uint8_t* keyIdData = KeyId(keyIdLength);
                                 int cr = _mediaKeys->Decrypt(
                                     _sessionKey,
                                     _sessionKeyLength,
@@ -215,7 +217,9 @@ namespace Plugin {
                                     Buffer(),
                                     BytesWritten(),
                                     &clearContentSize,
-                                    &clearContent);
+                                    &clearContent,
+                                    keyIdLength,
+                                    keyIdData);
 
                                 if ((cr == 0) && (clearContentSize != 0)) {
                                     if (clearContentSize != BytesWritten()) {

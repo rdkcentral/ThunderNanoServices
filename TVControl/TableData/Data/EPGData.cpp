@@ -99,6 +99,25 @@ bool EPGDataBase::CreateNitTable()
     return ExecuteSQLQuery(sqlQuery);
 }
 
+bool EPGDataBase::TableExists(string table)
+{
+    char sqlDelete[1024];
+    DBLock();
+    snprintf(sqlDelete, 1024, "SELECT Count(*) FROM sqlite_master WHERE type='table' AND name='{%s}';", table.c_str());
+    sqlite3_prepare_v2(_dataBase, sqlDelete, -1, &_stmt, nullptr);
+    TRACE_L3("QUERY = %s", sqlDelete);
+    if ((sqlite3_step(_stmt) == SQLITE_ROW) && !sqlite3_column_int(_stmt, 0)) {
+        TRACE_L4("%s table doesn't exist", table.c_str());
+        sqlite3_finalize(_stmt);
+        DBUnlock();
+        return false;
+    }
+    TRACE_L4("%s table exists", table.c_str());
+    sqlite3_finalize(_stmt);
+    DBUnlock();
+    return true;
+}
+
 bool EPGDataBase::ExecuteSQLQuery(char const* sqlQuery)
 {
     bool status = true;
@@ -644,7 +663,6 @@ bool EPGDataBase::ReadAudioLanguages(uint64_t eventId, std::vector<std::string>&
     return ret;
 }
 
-#if 0
 bool EPGDataBase::InsertTSInfo(TSInfoList& TSInfoList)
 {
     char const* sql = "DELETE FROM TSINFO";
@@ -668,39 +686,6 @@ bool EPGDataBase::InsertTSInfo(TSInfoList& TSInfoList)
     return true;
 }
 
-bool EPGDataBase::ReadTSInfo(TSInfo& tsInfo)
-{
-    bool ret = false;
-    std::string table("TSINFO");
-    if (!IsTableEmpty(table)) {
-        const char *sqlQuery = "SELECT * FROM TSINFO WHERE FREQUENCY = ? AND PROGRAM_NUMBER = ? ;";
-        TRACE_L3("QUERY = %s", sqlQuery);
-
-        DBLock();
-        sqlite3_prepare_v2(_dataBase, sqlQuery, -1, &_stmt, nullptr);
-        sqlite3_bind_int(_stmt, 1, (int)tsInfo.frequency);
-        sqlite3_bind_int(_stmt, 2, (int)tsInfo.programNumber);
-
-        if (sqlite3_step(_stmt) == SQLITE_ROW) {
-            tsInfo.videoPid = (uint16_t)sqlite3_column_int(_stmt, 2);
-            tsInfo.videoCodec = (uint32_t)sqlite3_column_int(_stmt, 3);
-            tsInfo.videoPcrPid = (uint16_t)sqlite3_column_int(_stmt, 4);
-            tsInfo.audioPid = (uint16_t)sqlite3_column_int(_stmt, 5);
-            tsInfo.audioCodec = (uint32_t)sqlite3_column_int(_stmt, 6);
-            tsInfo.audioPcrPid = (uint16_t)sqlite3_column_int(_stmt, 7);
-            tsInfo.pmtPid  = (uint16_t)sqlite3_column_int(_stmt, 8);
-            ret = true;
-            TRACE(Trace::Information, (_T("Data read with freq = %u program num = %d videoPid = %d, \
-                videocodec=%d, videoPCRpid = %d, audioPid = %d , audiocodec=%d, \
-                AudioPCRPid = %d pmtpid =%d"), tsInfo.frequency, tsInfo.programNumber,
-                tsInfo.videoPid, tsInfo.videoCodec, tsInfo.videoPcrPid, tsInfo.audioPid, tsInfo.audioCodec, tsInfo.audioPcrPid, tsInfo.pmtPid));
-        }
-        sqlite3_finalize(_stmt);
-        DBUnlock();
-    }
-    return ret;
-}
-#endif
 bool EPGDataBase::IsServicePresentInTSInfo(int32_t programNumber)
 {
     bool ret = false;

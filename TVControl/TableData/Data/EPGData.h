@@ -60,9 +60,9 @@ public:
     bool IsParentalLocked(const string&);
     bool SetParentalLock(const bool, const string&);
     bool InsertTSInfo(TSInfoList&);
-    //bool ReadTSInfo(TSInfo&);
     bool IsServicePresentInTSInfo(int32_t);
     bool UnlockChannels();
     bool IsServicePresentInChannelTable(uint16_t, uint16_t, uint16_t&);
+    bool TableExists(string);
 };
 #endif

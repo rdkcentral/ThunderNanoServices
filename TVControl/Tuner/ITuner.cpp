@@ -85,15 +85,17 @@ void ITuner::StartScan(TVPlatform::ITVPlatform::ITunerHandler& tunerHandler)
 {
     TvmRc rc = TvmError;
     if (!_tvPlatform->IsScanning()) {
-        std::vector<uint32_t> nitFrequencyList;
-        _epgDB.GetFrequencyListFromNit(nitFrequencyList);   // XXX: handle duplicate frequency
-        TRACE_L1("%s: Scanning NIT Frequencies (%d)", __FUNCTION__, nitFrequencyList.size());
+        if (_epgDB.TableExists("NIT")) {
+            std::vector<uint32_t> nitFrequencyList;
+            _epgDB.GetFrequencyListFromNit(nitFrequencyList);   // XXX: handle duplicate frequency
+            TRACE_L1("%s: Scanning NIT Frequencies (%d)", __FUNCTION__, nitFrequencyList.size());
 
-        if (nitFrequencyList.size()) {
-            rc = _tvPlatform->Scan(nitFrequencyList, tunerHandler);
-        } else {
-            TRACE(Trace::Error, (_T("%s: %s:%d FREQUENCY_LIST is Empty"), __FUNCTION__, __FILE__, __LINE__));
-        }
+            if (nitFrequencyList.size())
+                rc = _tvPlatform->Scan(nitFrequencyList, tunerHandler);
+            else
+                TRACE(Trace::Error, (_T("%s: %s:%d FREQUENCY_LIST is Empty"), __FUNCTION__, __FILE__, __LINE__));
+        } else
+            rc = _tvPlatform->Scan(_frequencyList, tunerHandler);
     }
 }
 
