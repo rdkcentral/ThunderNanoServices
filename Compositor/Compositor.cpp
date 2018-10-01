@@ -235,7 +235,7 @@ namespace Plugin {
 
                                 error = Geometry(clientName, rectangle);
                             }
-                            else if (index.Current() == _T("Top")) { /* http://<ip>/Service/Compositor/Netflix/Top */
+                        else if (index.Current() == _T("Top")) { /* http://<ip>/Service/Compositor/Netflix/Top */
                                 error = ToTop(clientName);
                             }
                             else if (index.Current() == _T("PutBelow")) { /* http://<ip>/Service/Compositor/Netflix/PutBelow/Youtube */
