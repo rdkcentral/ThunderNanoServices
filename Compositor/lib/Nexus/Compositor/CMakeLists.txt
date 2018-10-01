@@ -5,6 +5,7 @@ message("Setting up ${TARGET} for Nexus platfrom")
 find_package(Nexus REQUIRED)
 find_package(Core REQUIRED)
 find_package(Plugins REQUIRED)
+find_package(Interfaces REQUIRED)
 
 add_library(${TARGET}
         Implementation.cpp

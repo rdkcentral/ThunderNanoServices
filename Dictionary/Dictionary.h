@@ -113,7 +113,7 @@ public:
             ASSERT(_lifeTime != nullptr);
             _lifeTime->AddRef();
         }
-        virtual uint32 Release() const {
+        virtual uint32_t Release() const {
             ASSERT(_lifeTime != nullptr);
             return (_lifeTime->Release());
         }
@@ -382,7 +382,7 @@ private:
 
 private:
     mutable Core::CriticalSection _adminLock;
-    uint8 _skipURL;
+    uint8_t _skipURL;
     Config _config;
     DictionaryMap _dictionary;
     ObserverMap _observers;

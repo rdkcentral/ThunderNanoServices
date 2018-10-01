@@ -46,11 +46,11 @@ namespace Plugin {
 
         public:
             ExternalAccess(const Core::NodeId & source, ::OCDM::IAccessorOCDM* parentInterface)
-                : RPC::Communicator(source, Core::ProxyType< RPC::InvokeServerType<16, 1> >::Create(), _T(""))
-				, _parentInterface(parentInterface)
+                : RPC::Communicator(source, Core::ProxyType< RPC::InvokeServerType<4, 1> >::Create(), _T(""))
+		, _parentInterface(parentInterface)
             {
-				Open(Core::infinite);
-			}
+		Open(Core::infinite);
+            }
             ~ExternalAccess()
             {
                 Close(Core::infinite);
@@ -73,7 +73,7 @@ namespace Plugin {
 			}
 
         private:
-			::OCDM::IAccessorOCDM* _parentInterface;
+		::OCDM::IAccessorOCDM* _parentInterface;
         };
 
         class AccessorOCDM : public ::OCDM::IAccessorOCDM {

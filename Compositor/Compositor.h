@@ -126,6 +126,10 @@ namespace Plugin {
             {
                 Add(_T("clients"), &Clients);
                 Add(_T("resolution"), &Resolution);
+                Add(_T("x"), &X);
+                Add(_T("y"), &Y);
+                Add(_T("width"), &Width);
+                Add(_T("height"), &Height);
             }
 
             virtual ~Data()
@@ -135,7 +139,11 @@ namespace Plugin {
         public:
             Core::JSON::ArrayType<Core::JSON::String> Clients;
             Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
-        };
+            Core::JSON::DecUInt32 X;
+            Core::JSON::DecUInt32 Y;       
+            Core::JSON::DecUInt32 Width;
+            Core::JSON::DecUInt32 Height;       
+    };
 
     public:
         Compositor();
@@ -164,15 +172,20 @@ namespace Plugin {
         void Attached(Exchange::IComposition::IClient* client);
         void Detached(Exchange::IComposition::IClient* client);
 
-        void Clients(Core::JSON::ArrayType<Core::JSON::String>& clients) const;
-        void Kill(const string& client) const;
-        void Opacity(const string& client, const uint32_t value) const;
+        template<typename ClientOperation>
+        uint32_t CallOnClientByCallsign(const string& callsign, ClientOperation&& operation) const;
+
+        void Clients(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const;
+        uint32_t Kill(const string& callsign) const;
+        uint32_t Opacity(const string& callsign, const uint32_t value) const;
         void Resolution(const Exchange::IComposition::ScreenResolution);
         Exchange::IComposition::ScreenResolution Resolution() const;
-        void Visible(const string& client, const bool visible) const;
-        void Geometry(const string& client, const uint32_t x, const uint32_t y, const uint32_t width, const uint32_t height) const;
-        void Top(const string& client) const;
-        void Input(const string& client) const;
+        uint32_t Visible(const string& callsign, const bool visible) const;
+        uint32_t Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle);
+        Exchange::IComposition::Rectangle Geometry(const string& callsign) const;
+        uint32_t ToTop(const string& callsign);
+        uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder);
+        void ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const;
 
     private:
         mutable Core::CriticalSection _adminLock;

@@ -21,7 +21,7 @@ namespace Compositor {
             };
 
             // Lifetime management
-            virtual uint32_t AddRef() const = 0;
+            virtual void AddRef() const = 0;
             virtual uint32_t Release() const = 0;
 
             // Methods
@@ -35,15 +35,13 @@ namespace Compositor {
             virtual ~ISurface() {};
 
             // Lifetime management
-            virtual uint32_t AddRef() const = 0;
+            virtual void AddRef() const = 0;
             virtual uint32_t Release() const = 0;
 
             // Methods
             virtual EGLNativeWindowType Native() const = 0;
-            virtual const std::string& Name() const = 0;
+            virtual std::string Name() const = 0;
             virtual void Keyboard(IKeyboard* keyboard) = 0;
-            virtual int32_t X() const = 0;
-            virtual int32_t Y() const = 0;
             virtual int32_t Width() const = 0;
             virtual int32_t Height() const = 0;
         };
@@ -53,13 +51,13 @@ namespace Compositor {
         virtual ~IDisplay() {}
 
         // Lifetime management
-        virtual uint32_t AddRef() const = 0;
+        virtual void AddRef() const = 0;
         virtual uint32_t Release() const = 0;
 
         // Methods
         virtual EGLNativeDisplayType Native() const = 0;
         virtual const std::string& Name() const = 0;
-        virtual ISurface* Create(const std::string& name, const uint32_t width, const uint32_t height) = 0;
+        virtual ISurface* Create(const std::string& name, const uint32_t width, const uint32_t height) = 0; //initial position on screen is fullscreen,x and y therefore implicit and 0
         virtual int Process(const uint32_t data) = 0;
         virtual int FileDescriptor() const = 0;
     };
