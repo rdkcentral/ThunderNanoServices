@@ -321,19 +321,25 @@ namespace Plugin {
         ASSERT(client != nullptr);
 
         TRACE(Trace::Information, (_T("Client detached starting")));
+        Exchange::IComposition::IClient* removedclient = nullptr;
+
         _adminLock.Lock();
         auto it = _clients.begin();
         while( it != _clients.end() ) {
             if( it->second == client )
             {
+                removedclient = it->second;
                 TRACE(Trace::Information, (_T("Client %s detached"), it->first));
-                it->second->Release();
                 _clients.erase(it);
                 break;
             }
             ++it;
         }
         _adminLock.Unlock();
+
+//        if( removedclient != nullptr ) {
+//            removedclient->Release();
+//        }
 
         TRACE(Trace::Information, (_T("Client detached completed")));
     }
