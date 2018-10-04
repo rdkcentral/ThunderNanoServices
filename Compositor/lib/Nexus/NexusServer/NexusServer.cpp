@@ -58,36 +58,22 @@ namespace Broadcom {
         TRACE(Trace::Information, (_T("Alpha client %s to %d."), Name().c_str(), value));
         nxserverlib_set_server_alpha(_client, value);
     }
+    /* virtual */ void Platform::Client::ChangedGeometry(const Exchange::IComposition::Rectangle& /* rectangle */) {
+    }
+    /* virtual */ void Platform::Client::ChangedZOrder(const uint8_t zorder) {
 
-    /* virtual */ void Platform::Client::Geometry(const uint32_t X, const uint32_t Y, const uint32_t width, const uint32_t height)
-    {
         ASSERT(_client != nullptr);
 
-        TRACE(Trace::Information, (_T("Geometry client %s size=%dx%d position=%dx%d"), X,Y,width,height));
+        if (zorder == 0) {   
+            /* the definition of "focus" is variable. this is one impl. */
+            NxClient_ConnectList list;
+            struct nxclient_status status;
 
-        NEXUS_SurfaceComposition geometry;
-    }
+            nxclient_get_status(_client, &status);
+            NxClient_P_Config_GetConnectList(_client, status.handle, &list);
 
-    /* virtual */ void Platform::Client::Visible(const bool visible)
-    {
-        // TODO
-    }
-
-    /* virtual */ void Platform::Client::SetTop()
-    {
-        ASSERT(_client != nullptr);
-
-        /* the definition of "focus" is variable. this is one impl. */
-        NxClient_ConnectList list;
-        struct nxclient_status status;
-
-        nxclient_get_status(_client, &status);
-        NxClient_P_Config_GetConnectList(_client, status.handle, &list);
-
-        /* only refresh first connect */
-    }
-
-    /* virtual */ void Platform::Client::SetInput() {
+            /* only refresh first connect */
+        }
     }
 
     class Config : public Core::JSON::Container {

@@ -45,8 +45,6 @@ namespace Nexus {
         : _parent(display)
         , _refcount(1)
         , _name(name)
-        , _x(0)
-        , _y(0)
         , _width(width)
         , _height(height)
         , _nativeWindow(nullptr)

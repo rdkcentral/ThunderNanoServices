@@ -16,12 +16,6 @@ TVControlImplementation::TVControlImplementation()
     , _externalAccess(nullptr)
     , _nodeId(TUNER_PROCESS_NODE_ID)
 {
-    _externalAccess = new ExternalAccess(Core::NodeId(_nodeId), this);
-    uint32_t result = _externalAccess->Open(RPC::CommunicationTimeOut);
-    if (result != Core::ERROR_NONE) {
-        TRACE(Trace::Information, (_T("Could not open TVControlImplementation server.")));
-        delete _externalAccess;
-    }
 }
 
 TVControlImplementation::~TVControlImplementation()
@@ -44,20 +38,29 @@ uint32_t TVControlImplementation::Configure(PluginHost::IShell* service)
     config.FromString(service->ConfigLine());
     const string locator(service->DataPath() + config.Location.Value());
 
-    Core::Directory entry(locator.c_str(), _T("TVControl.tvplatform"));
-    while (entry.Next() == true) {
-        _tvPlatformSystem = Core::Library(entry.Current().c_str());
-        if (_tvPlatformSystem.IsLoaded() == true) {
-            GetTVPlatformSystemFunction handle = reinterpret_cast<GetTVPlatformSystemFunction>(_tvPlatformSystem.LoadFunction(_T("GetSystemTVPlatform")));
-            if (handle != nullptr) {
-                TVPlatform::ISystemTVPlatform* systemTVPlatform = handle();
-                TVPlatform::ITVPlatform* tvPlatform = systemTVPlatform->GetInstance();
-                _tuner = ITuner::GetInstance(tvPlatform);
-                _tableData = ITableData::GetInstance(*this, tvPlatform);
-                _tuner->Initialize(service);
+    _externalAccess = new ExternalAccess(Core::NodeId(_nodeId), this, service->ProxyStubPath());
+    uint32_t result = _externalAccess->Open(RPC::CommunicationTimeOut);
+    if (result != Core::ERROR_NONE) {
+        TRACE(Trace::Information, (_T("Could not open TVControlImplementation server.")));
+        delete _externalAccess;
+        _externalAccess = nullptr;
+    }
+    else {
+        Core::Directory entry(locator.c_str(), _T("TVControl.tvplatform"));
+        while (entry.Next() == true) {
+            _tvPlatformSystem = Core::Library(entry.Current().c_str());
+            if (_tvPlatformSystem.IsLoaded() == true) {
+                GetTVPlatformSystemFunction handle = reinterpret_cast<GetTVPlatformSystemFunction>(_tvPlatformSystem.LoadFunction(_T("GetSystemTVPlatform")));
+                if (handle != nullptr) {
+                    TVPlatform::ISystemTVPlatform* systemTVPlatform = handle();
+                    TVPlatform::ITVPlatform* tvPlatform = systemTVPlatform->GetInstance();
+                    _tuner = ITuner::GetInstance(tvPlatform);
+                    _tableData = ITableData::GetInstance(*this, tvPlatform);
+                    _tuner->Initialize(service);
+                }
+            } else {
+                TRACE(Trace::Information, (_T("Could not load tvcontrol library")));
             }
-        } else {
-            TRACE(Trace::Information, (_T("Could not load tvcontrol library")));
         }
     }
 }

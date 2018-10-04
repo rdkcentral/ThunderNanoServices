@@ -47,10 +47,9 @@ namespace Nexus {
             virtual ~SurfaceImplementation();
 
         public:
-            virtual uint32_t AddRef() const override
+            virtual void AddRef() const override
             {
                 _refcount++;
-                return (_refcount);
             }
             virtual uint32_t Release() const override
             {
@@ -63,7 +62,7 @@ namespace Nexus {
             {
                 return (static_cast<EGLNativeWindowType>(_nativeWindow));
             }
-            virtual const std::string& Name() const override
+            virtual std::string Name() const override
             {
                 return _name;
             }
@@ -80,14 +79,6 @@ namespace Nexus {
                 assert((_keyboard == nullptr) ^ (keyboard == nullptr));
                 _keyboard = keyboard;
             }
-            virtual int32_t X() const override
-            {
-                return (_x);
-            }
-            virtual int32_t Y() const override
-            {
-                return (_y);
-            }
             inline void SendKey (const uint32_t key, const IKeyboard::state action, const uint32_t time) {
 
                 if (_keyboard != nullptr) {
@@ -99,8 +90,6 @@ namespace Nexus {
             Display& _parent;
             mutable uint32_t _refcount;
             std::string _name;
-            int32_t _x;
-            int32_t _y;
             int32_t _width;
             int32_t _height;
             EGLSurface _nativeWindow;
@@ -117,10 +106,8 @@ namespace Nexus {
 
     public:
         // Lifetime management
-        virtual uint32_t AddRef() const 
+        virtual void AddRef() const 
         {
-            // Display can not be destructed, so who cares :-)
-            return (0);
         }
         virtual uint32_t Release() const
         {

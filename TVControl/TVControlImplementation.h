@@ -48,154 +48,39 @@ private:
         ExternalAccess(const ExternalAccess&) = delete;
         ExternalAccess& operator=(const ExternalAccess&) = delete;
 
-        class RequestHandler : public Core::IPCServerType<RPC::InvokeMessage>, public Core::Thread {
-        private:
-            struct Info {
-                Core::ProxyType<RPC::InvokeMessage> message;
-                Core::ProxyType<Core::IPCChannel> channel;
-            };
-            typedef Core::QueueType<Info> MessageQueue;
-
-            RequestHandler(const RequestHandler&) = delete;
-            RequestHandler& operator=(const RequestHandler&) = delete;
-
-        public:
-            RequestHandler()
-                : Core::IPCServerType<RPC::InvokeMessage>()
-                , Core::Thread()
-                , _handleQueue(64)
-                , _handler(RPC::Administrator::Instance())
-            {
-                TRACE(Trace::Information, (string(__FUNCTION__)));
-                Run();
-            }
-            ~RequestHandler()
-            {
-                TRACE(Trace::Information, (string(__FUNCTION__)));
-                Thread::Stop();
-                _handleQueue.Disable();
-                Thread::Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
-            }
-
-        public:
-            virtual void Procedure(Core::IPCChannel& channel, Core::ProxyType<RPC::InvokeMessage>& data)
-            {
-                TRACE(Trace::Information, (string(__FUNCTION__)));
-                // Oke, see if we can reference count the IPCChannel.
-                Info newElement;
-                newElement.channel = Core::ProxyType<Core::IPCChannel>(channel);
-                newElement.message = data;
-
-                ASSERT(newElement.channel.IsValid());
-
-                TRACE(Trace::Information, (_T("Received an invoke request !!!")));
-                _handleQueue.Insert(newElement, Core::infinite);
-            }
-
-            virtual uint32_t Worker()
-            {
-                TRACE(Trace::Information, (string(__FUNCTION__)));
-                Info newRequest;
-
-                while (_handleQueue.Extract(newRequest, Core::infinite)) {
-
-                    _handler.Invoke(newRequest.channel, newRequest.message);
-
-                    Core::ProxyType<Core::IIPC> message(newRequest.message);
-                    newRequest.channel->ReportResponse(message);
-                }
-
-                return (Core::infinite);
-            }
-
-        private:
-            MessageQueue _handleQueue;
-            RPC::Administrator& _handler;
-        };
-        class ObjectMessageHandler : public Core::IPCServerType<RPC::ObjectMessage> {
-        private:
-            ObjectMessageHandler() = delete;
-            ObjectMessageHandler(const ObjectMessageHandler&) = delete;
-            ObjectMessageHandler& operator=(const ObjectMessageHandler&) = delete;
-
-        public:
-            ObjectMessageHandler(TVControlImplementation* parentInterface)
-                : _parentInterface(parentInterface)
-            {
-                TRACE(Trace::Information, (string(__FUNCTION__)));
-            }
-            ~ObjectMessageHandler()
-            {
-                TRACE(Trace::Information, (string(__FUNCTION__)));
-            }
-
-        public:
-            virtual void Procedure(Core::IPCChannel& channel, Core::ProxyType<RPC::ObjectMessage>& data)
-            {
-                TRACE(Trace::Information, (string(__FUNCTION__)));
-                // Oke, see if we can reference count the IPCChannel.
-                Core::ProxyType<Core::IPCChannel> refChannel(channel);
-
-                ASSERT(refChannel.IsValid());
-
-                if (refChannel.IsValid()) {
-                    const uint32_t interfaceId(data->Parameters().InterfaceId());
-                    const uint32_t versionId(data->Parameters().VersionId());
-
-                    TRACE(Trace::Information, (_T("%s: interfaceId=x%x versionId=%d _parentInterface=%p"), __FUNCTION__, interfaceId, versionId, _parentInterface));
-                    // Currently we only support version 1 of the TVControlImplementation.
-                    if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0)))) {
-                        if (interfaceId == Exchange::IStreaming::ID) {
-                            // Reference count our parent.
-                            Exchange::IStreaming* interface = _parentInterface;
-                            interface->AddRef();
-
-                            // Allright, respond with the interface.
-                            data->Response().Value(interface);
-                        } else if (interfaceId == Exchange::IGuide::ID) {
-                            // Reference count our parent.
-                            Exchange::IGuide* interface = _parentInterface;
-                            interface->AddRef();
-
-                            // Allright, respond with the interface.
-                            data->Response().Value(interface);
-                        }
-                    } else {
-                        // Allright, respond with the interface.
-                        data->Response().Value(nullptr);
-                    }
-                }
-
-                Core::ProxyType<Core::IIPC> returnValue(data);
-                channel.ReportResponse(returnValue);
-            }
-
-        private:
-            TVControlImplementation* _parentInterface;
-        };
-
     public:
-        ExternalAccess(const Core::NodeId& source, TVControlImplementation* parentInterface)
-            : RPC::Communicator(source, Core::ProxyType<RequestHandler>::Create(), _T(""))
-            , _handler(Core::ProxyType<ObjectMessageHandler>::Create(parentInterface))
+        ExternalAccess(const Core::NodeId& source, TVControlImplementation* parentInterface, const string& proxyStubPath)
+            : RPC::Communicator(source, Core::ProxyType< RPC::InvokeServerType<4,1> >::Create(), proxyStubPath)
+            , _interface(parentInterface)
         {
-            TRACE(Trace::Information, (string(__FUNCTION__)));
-
             TRACE(Trace::Information, (_T("%s: parentInterface=%p"), __FUNCTION__, parentInterface));
-            RPC::Communicator::CreateFactory<RPC::ObjectMessage>(1);
-            RPC::Communicator::Register(_handler);
 
             Core::SystemInfo::SetEnvironment(_T("TUNER_CONNECTOR"), RPC::Communicator::Connector());
         }
         ~ExternalAccess()
         {
             TRACE(Trace::Information, (string(__FUNCTION__)));
-            RPC::Communicator::Unregister(_handler);
-            RPC::Communicator::DestroyFactory<RPC::ObjectMessage>();
         }
 
     private:
-        Core::ProxyType<ObjectMessageHandler> _handler;
+        virtual void* Aquire (const string& /* className */, const uint32_t interfaceId, const uint32_t /* version */) {
+
+            void* result = nullptr;
+
+            if (interfaceId == Exchange::IStreaming::ID) {
+                result = static_cast<Exchange::IStreaming*>(_interface);
+                _interface->AddRef();
+            }
+            else if (interfaceId == Exchange::IGuide::ID) {
+                result = static_cast<Exchange::IGuide*>(_interface);
+                _interface->AddRef();
+            }
+
+            return (nullptr);
+        }
+
+    private:
+        TVControlImplementation* _interface;
     };
 
 public:

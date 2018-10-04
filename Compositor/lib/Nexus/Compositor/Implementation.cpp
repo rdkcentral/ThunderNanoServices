@@ -277,8 +277,35 @@ namespace Plugin {
             return (result);
         }
 
-        /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format)
-        {
+        /* virtual */ uint32_t Geometry(const string& callsign, const Rectangle& rectangle) override {
+            return (Core::ERROR_GENERAL);
+        }
+
+        /* virtual */ Exchange::IComposition::Rectangle Geometry(const string& callsign) const override {
+            Exchange::IComposition::Rectangle rectangle;
+
+            rectangle.x = 0;
+            rectangle.y = 0;
+            rectangle.width = 0;
+            rectangle.height = 0;
+
+            return (rectangle); 
+        }
+
+        /* virtual */ uint32_t ToTop(const string& callsign) override {
+            return (Core::ERROR_GENERAL);
+        }
+
+        /* virtual */ uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override {
+            return (Core::ERROR_GENERAL);
+        }
+
+        /* virtual */ RPC::IStringIterator* ClientsInZorder() const override {
+            return (nullptr);
+        }
+
+        /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override {
+
             ASSERT (_nxserver != nullptr);
 
             if (_nxserver != nullptr) {
@@ -286,8 +313,8 @@ namespace Plugin {
             }
         }
 
-        /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const 
-        {
+        /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const override {
+
             ASSERT (_nxserver != nullptr);
 
             return (_nxserver != nullptr ? _nxserver->Resolution() : Exchange::IComposition::ScreenResolution_Unknown);

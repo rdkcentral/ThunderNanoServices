@@ -55,17 +55,20 @@ namespace Broadcom {
             {
                 return (_settings.name);
             }
+
             virtual string Name() const override;
             virtual void Kill() override;
             virtual void Opacity(const uint32_t value) override;
-            virtual void Geometry(const uint32_t X, const uint32_t Y, const uint32_t width, const uint32_t height) override;
-            virtual void Visible(const bool visible) override;
-            virtual void SetTop() override;
-            virtual void SetInput() override;
+
 
             BEGIN_INTERFACE_MAP(Entry)
                 INTERFACE_ENTRY(Exchange::IComposition::IClient)
             END_INTERFACE_MAP
+
+        private:
+            // note: following methods are for callback, do not call on the interface to influence the Client, see Compostion interface to do this
+            virtual void ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) override;
+            virtual void ChangedZOrder(const uint8_t zorder) override;
 
         private:
             nxclient_t _client;

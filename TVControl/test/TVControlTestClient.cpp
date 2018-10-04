@@ -91,7 +91,6 @@ public:
     TVControlTestClient();
     ~TVControlTestClient();
 
-    void loadProxyStubs(const std::string &proxyStubPath);
     void init();
     void loop();
     void help();
@@ -109,7 +108,6 @@ private:
     StreamingNotificationListener* _streamingNotificationListener;
     std::list <Core::Library> proxyStubs;
     Core::ProxyType<RPC::CommunicatorClient> _client;
-    Core::ProxyType<RPCService> _service;
 };
 
 TVControlTestClient::TVControlTestClient()
@@ -118,8 +116,7 @@ TVControlTestClient::TVControlTestClient()
     , _tuner(nullptr)
     , _guideNotificationListener(nullptr)
     , _streamingNotificationListener(nullptr)
-    , _client(Core::ProxyType<RPC::CommunicatorClient>::Create(nodeId))
-    , _service(Core::ProxyType<RPCService>::Create(Core::Thread::DefaultStackSize()))
+    , _client(Core::ProxyType<RPC::CommunicatorClient>::Create(nodeId, Core::ProxyType<RPCService>::Create(Core::Thread::DefaultStackSize())))
 {
 }
 
@@ -138,17 +135,14 @@ TVControlTestClient::~TVControlTestClient()
 void TVControlTestClient::init()
 {
     printf("Opening connection to server\n");
-    _client->CreateFactory<RPC::InvokeMessage>(2);
     if (_client->Open(RPC::CommunicationTimeOut) == Core::ERROR_NONE) {
         SleepMs(100);
-        _client->Register(_service);
 
         // Oke we could open the channel for tunel, lets get the interface.
-        _tuner = _client->Create<Exchange::IStreaming>(_T("Tuner"));
-        SleepMs(100);
+        _tuner = _client->Aquire<Exchange::IStreaming>(6000, _T("Tuner"), ~0);
 
         // Oke we could open the channel for guide, lets get the interface.
-        _guide = _client->Create<Exchange::IGuide>(_T("Guide"));
+        _guide = _client->Aquire<Exchange::IGuide>(6000, _T("Guide"), ~0);
     } else
         _client.Release();
 
@@ -169,20 +163,6 @@ void TVControlTestClient::init()
     } else
         printf("Could not load the IGuide interface pointer = %p\n", _guide);
 
-}
-
-void TVControlTestClient::loadProxyStubs(const std::string &proxyStubPath)
-{
-    printf("Loading proxy stubs\n");
-    // Time to load the ProxyStubs, that are used for InterProcess communication.
-    Core::Directory index(proxyStubPath.c_str(), _T("*.so"));
-
-    while (index.Next()) {
-        Core::Library library(index.Current().c_str());
-
-        if (library.IsLoaded())
-            proxyStubs.push_back(library);
-    }
 }
 
 void TVControlTestClient::loop()
@@ -347,12 +327,7 @@ void TVControlTestClient::help()
 int main(int argc, char ** argv)
 {
     {
-        string proxyStubPath = _T("/usr/lib/wpeframework/proxystubs");
-        if (argc >= 2)
-            proxyStubPath = string(argv[1]);
-
         TVControlTestClient testClient;
-        testClient.loadProxyStubs(proxyStubPath);
         testClient.init();
 
         testClient.loop();
