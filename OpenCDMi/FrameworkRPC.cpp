@@ -57,7 +57,7 @@ namespace Plugin {
             }
 
 		private:
-			virtual void* Instance(const string& className, const uint32_t interfaceId, const uint32_t versionId) {
+			virtual void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) {
 				void* result = nullptr;
 
 				// Currently we only support version 1 of the IRPCLink :-)
