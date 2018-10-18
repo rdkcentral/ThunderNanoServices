@@ -242,7 +242,8 @@ Display::SurfaceImplementation::SurfaceImplementation(
     TRACE(CompositorClient, (_T("Created client named: %s"), _name.c_str()));
 
     VC_DISPMANX_ALPHA_T alpha = {
-            DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS,
+            static_cast<DISPMANX_FLAGS_ALPHA_T>
+            (DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_MIX),
             255,
             0
     };
