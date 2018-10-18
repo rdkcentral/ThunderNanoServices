@@ -203,7 +203,7 @@ if(WPEFRAMEWORK_PLUGIN_TRACECONTROL)
 endif()
 
 if(WPEFRAMEWORK_PLUGIN_TVCONTROL)
-	add_subdirectory(TVControl)
+    add_subdirectory(TVControl)
 endif(WPEFRAMEWORK_PLUGIN_TVCONTROL)
 
 if(WPEFRAMEWORK_PLUGIN_WEBKITBROWSER)
@@ -224,4 +224,8 @@ endif()
 
 if(WPEFRAMEWORK_PLUGIN_WIFICONTROL)
     add_subdirectory(WifiControl)
+endif()
+
+if(WPEFRAMEWORK_PLUGIN_RTSPCLIENT)
+    add_subdirectory(RtspClient)
 endif()

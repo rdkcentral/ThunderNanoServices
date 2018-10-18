@@ -53,7 +53,10 @@ private:
             : RPC::Communicator(source, Core::ProxyType< RPC::InvokeServerType<4,1> >::Create(), proxyStubPath)
             , _interface(parentInterface)
         {
-            TRACE(Trace::Information, (_T("%s: parentInterface=%p"), __FUNCTION__, parentInterface));
+            //TRACE(Trace::Information, (_T("%s: parentInterface=%p"), __FUNCTION__, parentInterface));
+            TRACE_L1("%s: parentInterface=%p", __FUNCTION__, parentInterface);
+            //RPC::Communicator::CreateFactory<RPC::ObjectMessage>(1);
+            //RPC::Communicator::Register(_handler);
 
             Core::SystemInfo::SetEnvironment(_T("TUNER_CONNECTOR"), RPC::Communicator::Connector());
         }
