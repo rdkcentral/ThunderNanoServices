@@ -29,8 +29,8 @@ namespace Broadcom {
         { Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz, NEXUS_VideoFormat_e1080i50hz },
         { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p50Hz, NEXUS_VideoFormat_e1080p50hz },
         { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p60Hz, NEXUS_VideoFormat_e1080p60hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p50Hz, NEXUS_VideoFormat_e4096x2160p50hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz, NEXUS_VideoFormat_e4096x2160p60hz }
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p50Hz, NEXUS_VideoFormat_e3840x2160p50hz },
+        { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz, NEXUS_VideoFormat_e3840x2160p60hz }
     };
 
     /* virtual */ string Platform::Client::Name() const
