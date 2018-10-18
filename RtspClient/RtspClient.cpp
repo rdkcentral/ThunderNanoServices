@@ -95,7 +95,7 @@ namespace Plugin {
 
             if (index.Current().Text() == _T("Test")) {
                 Core::ProxyType<Web::JSONBodyType<Data> > data (jsonDataFactory.Element());
-                data->Str = _implementation->RtspClientGet();
+                data->Str = _implementation->Get("");
                 result->ContentType = Web::MIMETypes::MIME_JSON;
                 result->Body(data);
             } else {
@@ -107,7 +107,7 @@ namespace Plugin {
             if (index.Current().Text() == _T("Test")) {
                 std::string str = request.Body<const Data>()->Str.Value();
 
-                _implementation->RtspClientSet(str);
+                _implementation->Set(str, "");
 
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";
