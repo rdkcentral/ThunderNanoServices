@@ -74,7 +74,7 @@ namespace Plugin {
             ::OCDM::IAccessorOCDM* _parentInterface;
         };
 
-        class AccessorOCDM : public ::OCDM::IAccessorOCDM {
+        class AccessorOCDM : public ::OCDM::IAccessorOCDM, public ::OCDM::IAccessorOCDMExt {
         private:
             AccessorOCDM() = delete;
             AccessorOCDM(const AccessorOCDM&) = delete;
@@ -503,10 +503,12 @@ namespace Plugin {
                 , _adminLock()
                 , _administrator(name)
                 , _defaultSize(defaultSize)
-                , _sessionList()
-                , _observers()
-            {
-                ASSERT(parent != nullptr);
+                , _sessionList() 
+                , _observers() {
+                ASSERT (parent != nullptr);
+
+                // TODO: figure out if we can know/need to know selected key system here
+                _systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem("com.metrological.null"));
             }
             virtual ~AccessorOCDM()
             {
@@ -650,8 +652,11 @@ namespace Plugin {
                 return (0);
             }
 
-            virtual void Register(::OCDM::IAccessorOCDM::INotification* callback) override
-            {
+            virtual time_t GetDrmSystemTime() const override {
+                return _systemExt->GetDrmSystemTime();
+            }
+
+            virtual void Register (::OCDM::IAccessorOCDM::INotification* callback) override {
 
                 _adminLock.Lock();
 
@@ -686,7 +691,8 @@ namespace Plugin {
             }
 
             BEGIN_INTERFACE_MAP(AccessorOCDM)
-            INTERFACE_ENTRY(::OCDM::IAccessorOCDM)
+                INTERFACE_ENTRY(::OCDM::IAccessorOCDM)
+                INTERFACE_RELAY(::OCDM::IAccessorOCDMExt, _systemExt)
             END_INTERFACE_MAP
 
         private:
@@ -777,6 +783,7 @@ namespace Plugin {
 
         private:
             OCDMImplementation& _parent;
+            CDMi::IMediaKeysExt* _systemExt;
             mutable Core::CriticalSection _adminLock;
             BufferAdministrator _administrator;
             uint32_t _defaultSize;
