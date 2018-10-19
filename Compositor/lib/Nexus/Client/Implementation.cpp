@@ -57,8 +57,8 @@ namespace Nexus {
             nexusClientId = atoi(&(tmp[1]));
         }
 
-        //NXPL_NativeWindowInfoEXT windowInfo;
-        NXPL_NativeWindowInfo windowInfo;
+        NXPL_NativeWindowInfoEXT windowInfo;
+        NXPL_GetDefaultNativeWindowInfoEXT(&windowInfo);
         windowInfo.x = 0;
         windowInfo.y = 0;
         windowInfo.width = _width;
@@ -68,8 +68,7 @@ namespace Nexus {
         windowInfo.zOrder = 0;
 #endif
         windowInfo.clientID = nexusClientId;
-        // _nativeWindow = NXPL_CreateNativeWindowEXT(&windowInfo);
-        _nativeWindow = NXPL_CreateNativeWindow(&windowInfo);
+        _nativeWindow = NXPL_CreateNativeWindowEXT(&windowInfo);
 
         _parent.Register(this);
     }
