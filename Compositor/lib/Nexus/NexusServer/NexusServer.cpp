@@ -140,8 +140,6 @@ namespace Broadcom {
             Add(_T("svp"), &SVPType);
             Add(_T("resolution"), &Resolution);
             Add(_T("memory"), &Memory);
-            Add(_T("framebufferwidth"), &FrameBufferWidth);
-            Add(_T("framebufferheight"), &FrameBufferHeight);
         }
         ~Config()
         {
@@ -155,8 +153,6 @@ namespace Broadcom {
         Core::JSON::EnumType<svptype> SVPType;
         Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
         MemoryInfo Memory;
-        Core::JSON::DecUInt16 FrameBufferWidth;
-        Core::JSON::DecUInt16 FrameBufferHeight;
     };
 
 
@@ -358,7 +354,10 @@ namespace Broadcom {
 
                 if ( (index != formatLookup.cend()) && 
                      (index->second != NEXUS_VideoFormat_eUnknown) ) {
-                     _serverSettings.display.format = index->second; 
+                    _serverSettings.display.format = index->second;
+                    _serverSettings.fbsize.width = Exchange::IComposition::WidthFromResolution(config.Resolution.Value());
+                    _serverSettings.fbsize.height = Exchange::IComposition::HeightFromResolution(config.Resolution.Value());
+
                 }
             }
 
@@ -392,11 +391,6 @@ namespace Broadcom {
             cmdline_settings.frontend = true;
             cmdline_settings.loudnessMode = NEXUS_AudioLoudnessEquivalenceMode_eNone;
             _serverSettings.session[0].dolbyMs = nxserverlib_dolby_ms_type_none;
-
-            if (config.FrameBufferWidth.IsSet() && config.FrameBufferHeight.IsSet()) {
-                _serverSettings.fbsize.width = config.FrameBufferWidth.Value();
-                _serverSettings.fbsize.height = config.FrameBufferHeight.Value();
-            }
 
             rc = nxserver_modify_platform_settings(&_serverSettings,
                 &cmdline_settings,
