@@ -268,8 +268,11 @@ namespace Plugin {
                     {
                         _callback->AddRef();
                     }
-                    virtual ~Sink()
-                    {
+                    Sink(SessionImplementation* parent)
+                        : _parent(*parent)
+                        , _callback(nullptr) {
+                    }
+                    virtual ~Sink() {
                         if (_callback != nullptr) {
                             Revoke(_callback);
                         }
@@ -368,8 +371,39 @@ namespace Plugin {
                     TRACE(Trace::Information, ("Server::Session::Session(%s,%s,%s) => %p", _keySystem.c_str(), _sessionId.c_str(), bufferName.c_str(), this));
                     TRACE_L1("Constructed the Session Server side: %p", this);
                 }
-                virtual ~SessionImplementation()
-                {
+
+                // TODO: don't need the sink?
+                SessionImplementation(
+                    AccessorOCDM* parent,
+                    const std::string keySystem,
+                    CDMi::IMediaKeySessionExt* mediaKeySession,
+                    const string bufferName,
+                    const uint32_t defaultSize,
+                    const CommonEncryptionData* sessionData)
+                    : _parent(*parent)
+                    , _refCount(1)
+                    , _keySystem(keySystem)
+                    //, _sessionId(mediaKeySession->GetSessionId())
+                    , _sessionId("") // TODO
+                    //, _mediaKeySession(mediaKeySession)
+                    , _mediaKeySession(nullptr) // TODO
+                    , _mediaKeySessionExt(dynamic_cast<CDMi::IMediaKeySessionExt*>(mediaKeySession))
+                    , _sink(this) // TODO: do we need the sink?
+                    //, _buffer(new DataExchange(mediaKeySession, bufferName, defaultSize))
+                    , _buffer(new DataExchange(nullptr, bufferName, defaultSize)) // TODO
+                    , _cencData(*sessionData) {
+                    ASSERT (parent != nullptr);
+                    ASSERT (sessionData != nullptr);
+                    //ASSERT (_mediaKeySession != nullptr);
+
+                    // This constructor can only be used for extended OCDM sessions.
+                    ASSERT (_mediaKeySessionExt != nullptr);
+
+                    // TODO: what should we do with the sink?
+                    //_mediaKeySession->Run(&_sink);
+                }
+
+                virtual ~SessionImplementation() {
 
                     TRACE_L1("Destructing the Session Server side: %p", this);
                     // this needs to be done in a thread safe way. Leave it up to
@@ -659,6 +693,78 @@ namespace Plugin {
 
             virtual time_t GetDrmSystemTime() const override {
                 return _systemExt->GetDrmSystemTime();
+            }
+
+            virtual OCDM::OCDM_RESULT CreateSessionExt(
+                uint32_t sessionId,
+                const char contentId[],
+                uint32_t contentIdLength,
+                OCDM::IAccessorOCDMExt::LicenseTypeExt licenseType,
+                const uint8_t drmHeader[],
+                uint32_t drmHeaderLength,
+                OCDM::ISessionExt*& session) override
+            {
+
+                // TODO: key system
+                const string keySystem = "com.metrological.null";
+                CDMi::IMediaKeysExt* system = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+
+                if (system == nullptr) {
+                    session = nullptr;
+                }
+                else {
+                    CDMi::IMediaKeySessionExt* sessionInterface = nullptr;
+
+                    // TODO
+                    uint8_t initData[] = { 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 };
+                    uint16_t initDataLength = sizeof(initData);
+                    CommonEncryptionData keyIds (initData, initDataLength);
+
+                    // OKe we got a buffer machanism to transfer the raw data, now create
+                    // the session.
+                    // TODO: real conversion of licensetype
+                    if ((session == nullptr) && (system->CreateMediaKeySessionExt(sessionId, contentId, contentIdLength,
+                                                 (CDMi::LicenseTypeExt)licenseType, drmHeader, drmHeaderLength, &sessionInterface) == 0)) {
+
+                        if (sessionInterface != nullptr) {
+
+                            std::string bufferId;
+
+                            // See if there is a buffer available we can use..
+                            if (_administrator.AquireBuffer(bufferId) == true) {
+
+
+                                SessionImplementation* newEntry = Core::Service<SessionImplementation>::Create<SessionImplementation>(this, keySystem, sessionInterface, bufferId, _defaultSize, &keyIds);
+
+                                session = newEntry;
+
+                                // TODO ?
+                                //sessionId = newEntry->SessionId();
+
+                                _adminLock.Lock();
+
+                                _sessionList.push_front(newEntry);
+
+                                // TODO ?
+                                //ReportCreate(sessionId);
+
+                                _adminLock.Unlock();
+                            }
+                            else {
+                                // TODO ?
+                                //TRACE_L1("Could not allocate a buffer for session: %s", sessionId.c_str());
+
+                                // TODO: We need to drop the session somehow...
+                            }
+                        }
+                    }
+                }
+
+                if (session == nullptr) {
+                    TRACE_L1("Could not create a DRM session! [%d]", __LINE__);
+                }
+
+                return (session != nullptr ? 0 : 1);
             }
 
             virtual void Register (::OCDM::IAccessorOCDM::INotification* callback) override {
