@@ -63,7 +63,7 @@ namespace Nexus {
         windowInfo.y = 0;
         windowInfo.width = _width;
         windowInfo.height = _height;
-        windowInfo.stretch = false;
+        windowInfo.stretch = true;
 #ifdef BACKEND_BCM_NEXUS_NXCLIENT
         windowInfo.zOrder = 0;
 #endif
