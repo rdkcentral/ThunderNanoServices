@@ -386,21 +386,20 @@ namespace Plugin {
                     //, _sessionId(mediaKeySession->GetSessionId())
                     , _sessionId("") // TODO
                     //, _mediaKeySession(mediaKeySession)
-                    , _mediaKeySession(nullptr) // TODO
-                    , _mediaKeySessionExt(dynamic_cast<CDMi::IMediaKeySessionExt*>(mediaKeySession))
+                    , _mediaKeySession(dynamic_cast<CDMi::IMediaKeySession*>(mediaKeySession)) // TODO
+                    , _mediaKeySessionExt(mediaKeySession)
                     , _sink(this) // TODO: do we need the sink?
                     //, _buffer(new DataExchange(mediaKeySession, bufferName, defaultSize))
-                    , _buffer(new DataExchange(nullptr, bufferName, defaultSize)) // TODO
+                    , _buffer(new DataExchange(dynamic_cast<CDMi::IMediaKeySession*>(mediaKeySession), bufferName, defaultSize)) // TODO
                     , _cencData(*sessionData) {
                     ASSERT (parent != nullptr);
                     ASSERT (sessionData != nullptr);
-                    //ASSERT (_mediaKeySession != nullptr);
+                    ASSERT (_mediaKeySession != nullptr);
 
                     // This constructor can only be used for extended OCDM sessions.
                     ASSERT (_mediaKeySessionExt != nullptr);
 
-                    // TODO: what should we do with the sink?
-                    //_mediaKeySession->Run(&_sink);
+                    _mediaKeySession->Run(&_sink);
                 }
 
                 virtual ~SessionImplementation() {
@@ -437,6 +436,10 @@ namespace Plugin {
 
                 virtual std::string BufferId() const override
                 {
+                    return (_buffer->Name());
+                }
+
+                virtual std::string BufferIdExt() const override {
                     return (_buffer->Name());
                 }
 
