@@ -485,6 +485,70 @@ namespace Plugin {
                     return _mediaKeySessionExt->PlaylevelCompressedVideo();
                 }
 
+                virtual uint16_t PlaylevelUncompressedVideo() const override {
+                    return _mediaKeySessionExt->PlaylevelUncompressedVideo();
+                }
+
+                virtual uint16_t PlaylevelAnalogVideo() const override {
+                    return _mediaKeySessionExt->PlaylevelAnalogVideo();
+                }
+
+                virtual uint16_t PlaylevelCompressedAudio() const override {
+                    return _mediaKeySessionExt->PlaylevelCompressedAudio();
+                }
+
+                virtual uint16_t PlaylevelUncompressedAudio() const override {
+                    return _mediaKeySessionExt->PlaylevelUncompressedAudio();
+                }
+
+                virtual std::string GetContentIdExt() const override {
+                    return _mediaKeySessionExt->GetContentIdExt();
+                }
+
+                virtual void SetContentIdExt(const std::string & contentId) override {
+                    _mediaKeySessionExt->SetContentIdExt(contentId);
+                }
+
+                virtual LicenseTypeExt GetLicenseTypeExt() const override {
+                    // TODO: nice conversion
+                    return (OCDM::ISessionExt::LicenseTypeExt)_mediaKeySessionExt->GetLicenseTypeExt();
+                }
+
+                virtual void SetLicenseTypeExt(LicenseTypeExt licenseType) override {
+                    // TODO: nice coversion
+                    _mediaKeySessionExt->SetLicenseTypeExt((CDMi::LicenseTypeExt)licenseType);
+                }
+
+                virtual SessionStateExt GetSessionStateExt() const override {
+                    // TODO: nice conversion
+                    return (OCDM::ISessionExt::SessionStateExt)_mediaKeySessionExt->GetSessionStateExt();
+                }
+
+                virtual void SetSessionStateExt(SessionStateExt sessionState) override {
+                    // TODO: nice conversion
+                    _mediaKeySessionExt->SetSessionStateExt((CDMi::SessionStateExt)sessionState);
+                }
+
+                virtual OCDM::OCDM_RESULT SetDrmHeader(const uint8_t drmHeader[], uint32_t drmHeaderLength) override {
+                    // TODO: conversion
+                    return (OCDM::OCDM_RESULT)_mediaKeySessionExt->SetDrmHeader(drmHeader, drmHeaderLength);
+                }
+
+                virtual OCDM::OCDM_RESULT GetChallengeDataNetflix(uint8_t * challenge, uint32_t & challengeSize, uint32_t isLDL) override {
+                    // TODO: conversion
+                    return (OCDM::OCDM_RESULT)_mediaKeySessionExt->GetChallengeDataNetflix(challenge, challengeSize, isLDL);
+                }
+
+                virtual OCDM::OCDM_RESULT StoreLicenseData(const uint8_t licenseData[], uint32_t licenseDataSize, unsigned char * secureStopId) override {
+                    // TODO: conversion
+                    return (OCDM::OCDM_RESULT)_mediaKeySessionExt->StoreLicenseData(licenseData, licenseDataSize, secureStopId);
+                }
+
+                virtual OCDM::OCDM_RESULT InitDecryptContextByKid() override {
+                    // TODO: conversion
+                    return (OCDM::OCDM_RESULT)_mediaKeySessionExt->InitDecryptContextByKid();
+                }
+
                 BEGIN_INTERFACE_MAP(Session)
                     INTERFACE_ENTRY(::OCDM::ISession)
                     INTERFACE_RELAY(::OCDM::ISession, _mediaKeySessionExt)
@@ -706,7 +770,7 @@ namespace Plugin {
                 uint32_t sessionId,
                 const char contentId[],
                 uint32_t contentIdLength,
-                OCDM::IAccessorOCDMExt::LicenseTypeExt licenseType,
+                OCDM::ISessionExt::LicenseTypeExt licenseType,
                 const uint8_t drmHeader[],
                 uint32_t drmHeaderLength,
                 OCDM::ISessionExt*& session) override
