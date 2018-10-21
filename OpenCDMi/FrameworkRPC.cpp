@@ -838,6 +838,31 @@ namespace Plugin {
                 return (session != nullptr ? 0 : 1);
             }
 
+            std::string GetVersionExt() const override
+            {
+                return _systemExt->GetVersionExt();
+            }
+
+            uint32_t GetLdlSessionLimit() const override
+            {
+                return _systemExt->GetLdlSessionLimit();
+            }
+
+            OCDM::OCDM_RESULT EnableSecureStop(bool enable) override
+            {
+                return _systemExt->EnableSecureStop(enable);
+            }
+
+            OCDM::OCDM_RESULT CommitSecureStop(
+                    const unsigned char sessionID[],
+                    uint32_t sessionIDLength,
+                    const unsigned char serverResponse[],
+                    uint32_t serverResponseLength)
+            {
+                return _systemExt->CommitSecureStop(sessionID, sessionIDLength, serverResponse, serverResponseLength);
+            }
+
+
             virtual void Register (::OCDM::IAccessorOCDM::INotification* callback) override {
 
                 _adminLock.Lock();
