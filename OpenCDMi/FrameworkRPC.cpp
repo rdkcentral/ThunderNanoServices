@@ -618,7 +618,7 @@ namespace Plugin {
                 ASSERT (parent != nullptr);
 
                 // TODO: figure out if we can know/need to know selected key system here
-                _systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem("com.metrological.null"));
+                _systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem("com.microsoft.playready"));
             }
             virtual ~AccessorOCDM()
             {
@@ -777,7 +777,7 @@ namespace Plugin {
             {
 
                 // TODO: key system
-                const string keySystem = "com.metrological.null";
+                const string keySystem = "com.microsoft.playready";
                 CDMi::IMediaKeysExt* system = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
 
                 if (system == nullptr) {
