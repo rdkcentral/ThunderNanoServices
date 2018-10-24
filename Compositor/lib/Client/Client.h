@@ -44,6 +44,7 @@ namespace Compositor {
             virtual void Keyboard(IKeyboard* keyboard) = 0;
             virtual int32_t Width() const = 0;
             virtual int32_t Height() const = 0;
+            virtual void ChangedZOrder(const uint8_t zorder) = 0;
         };
 
         static IDisplay* Instance(const std::string& displayName);
