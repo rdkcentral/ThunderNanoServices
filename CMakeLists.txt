@@ -111,6 +111,7 @@ option(WPEFRAMEWORK_PLUGIN_LOCATIONSYNC "Include LocationSync plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_MONITOR "Include Monitor plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_NETWORKCONTROL "Include NetworkControlplugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_OPENCDMI "Include OpenCDMi plugin" OFF)
+option(WPEFRAMEWORK_PLUGIN_POWER "Include Power plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_SNAPSHOT "Include Snapshot plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_TIMESYNC "Include TimeSync plugin" OFF)
@@ -179,6 +180,10 @@ endif()
 
 if(WPEFRAMEWORK_PLUGIN_OPENCDMI)
     add_subdirectory(OpenCDMi)
+endif()
+
+if(WPEFRAMEWORK_PLUGIN_POWER)
+    add_subdirectory(Power)
 endif()
 
 if(WPEFRAMEWORK_PLUGIN_REMOTECONTROL)
