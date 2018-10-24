@@ -2,6 +2,10 @@
 #include <interfaces/IRtspClient.h>
 #include <interfaces/IMemory.h>
 
+#include "RtspSession.h"
+
+#define TR() printf("%s:%d\n", __FUNCTION__, __LINE__);
+
 namespace WPEFramework {
 namespace Plugin {
 
@@ -39,14 +43,18 @@ namespace Plugin {
             : _observers()
             , str("Nothing set")
         {
+            TRACE_L1("%s: Initializing", __FUNCTION__);
+            string hostaddress = "192.168.2.9";        // XXX: Move it to config file
+            _rtspSession.Initialize(hostaddress, 5554);
         }
 
         virtual ~RtspClientImplementation()
         {
+            _rtspSession.Terminate();
         }
 
         uint32_t Configure(PluginHost::IShell* service)
-        {
+        { TR()
             ASSERT(service != nullptr);
 
             Config config;
@@ -58,27 +66,32 @@ namespace Plugin {
         }
 
         uint32_t Setup(const string& assetId, uint32_t position)
-        {
+        { TR()
             return 0;
         }
 
         uint32_t Play(int16_t scale, uint32_t position)
-        {
+        { TR()
             return 0;
         }
 
         uint32_t Teardown()
-        {
+        { TR()
             return 0;
         }
 
         void Set(const string& name, const string& value)
-        {
+        { TR()
         }
 
-        string Get(const string& value) const
-        {
+        string Get(const string& name) const
+        { TR()
             return (str);
+        }
+
+        string Test() const
+        { TR()
+            return ("Hello!!!");
         }
 
         BEGIN_INTERFACE_MAP(RtspClientImplementation)
@@ -86,6 +99,7 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
+        RtspSession _rtspSession;
         std::list<PluginHost::IStateControl::INotification*> _observers;
         string str;
     };

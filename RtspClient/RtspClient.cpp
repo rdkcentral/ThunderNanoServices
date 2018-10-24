@@ -34,6 +34,7 @@ namespace Plugin {
         }
         else {
             _implementation->Configure(_service);
+            TRACE_L1("RtspClient Plugin initialized %p", _implementation);
        }
 
         return message;
@@ -76,8 +77,8 @@ namespace Plugin {
 
     /* virtual */ void RtspClient::Inbound(WPEFramework::Web::Request& request)
     {
-    if (request.Verb == Web::Request::HTTP_POST)
-        request.Body(jsonBodyDataFactory.Element());
+        if (request.Verb == Web::Request::HTTP_POST)
+            request.Body(jsonBodyDataFactory.Element());
     }
 
     /* virtual */ Core::ProxyType<Web::Response> RtspClient::Process(const WPEFramework::Web::Request& request)
@@ -90,34 +91,29 @@ namespace Plugin {
         Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
 
         if ((request.Verb == Web::Request::HTTP_GET) && ((index.Next()) && (index.Next()))) {
-            result->ErrorCode = Web::STATUS_OK;
-            result->Message = "OK";
+            result->ErrorCode = Web::STATUS_BAD_REQUEST;
+            //result->Message = "Bad Request";
 
             if (index.Current().Text() == _T("Test")) {
+                _implementation->Test();
+                result->ErrorCode = Web::STATUS_OK;
+            } else if (index.Current().Text() == _T("Get")) {
                 Core::ProxyType<Web::JSONBodyType<Data> > data (jsonDataFactory.Element());
                 data->Str = _implementation->Get("");
                 result->ContentType = Web::MIMETypes::MIME_JSON;
                 result->Body(data);
-            } else {
-                result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                result->Message = _T("Unsupported GET Request");
+                result->ErrorCode = Web::STATUS_OK;
             }
         } else if ((request.Verb == Web::Request::HTTP_POST) && ((index.Next()) && (index.Next()))) {
 
-            if (index.Current().Text() == _T("Test")) {
+            if (index.Current().Text() == _T("Set")) {
                 std::string str = request.Body<const Data>()->Str.Value();
 
                 _implementation->Set(str, "");
 
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";
-            } else {
-                result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                result->Message = _T("Unsupported POST Request");
             }
-        } else {
-            result->ErrorCode = Web::STATUS_BAD_REQUEST;
-            result->Message = _T("Unsupported Method.");
         }
         return result;
     }
