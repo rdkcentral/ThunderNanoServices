@@ -107,10 +107,10 @@ namespace Plugin {
         }
         else if ((request.Verb == Web::Request::HTTP_POST) && (request.HasBody())) {
             Core::ProxyType<const Monitor::Data> body (request.Body<const Monitor::Data>());
-            TRACE_L1("Sets Restart Limit");
             string observable = body->Observable.Value();
-            uint32_t restartlimit = body->RestartLimit.Value();
-            _monitor->Update(observable,restartlimit);
+            uint32_t restartLimit = body->RestartLimit.Value();
+            TRACE(Trace::Information,(_T("Sets Restart Limit :%d"),restartLimit));
+            _monitor->Update(observable,restartLimit);
         }
         else {
             result->ErrorCode = Web::STATUS_BAD_REQUEST;
