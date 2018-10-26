@@ -1,8 +1,10 @@
-#include "RtspParser.h"
-
 #include <sstream>
 #include <vector>
 #include <iomanip>
+
+#include <plugins/Logging.h>
+
+#include "RtspParser.h"
 
 #define ANNOUNCEMENT_CHECK_INTERVAL     10
 #define RTSP_THREAD_SLEEP_MS            1000
@@ -11,10 +13,15 @@
 #define RTSP_RESPONSE_WAIT_TIME         3000
 #define RTSP_TERMINATOR                 "\r\n"
 
-unsigned int RtspParser::seq = 0;
+namespace WPEFramework {
+namespace Plugin {
 
-RtspParser::RtspParser()
+unsigned int RtspParser::_sequence = 0;
+
+RtspParser::RtspParser(RtspSessionInfo& info)
+    : _sessionInfo(info)
 {
+    TRACE_L2( "%s:\t%s:%d", __FUNCTION__, __FILE__, __LINE__);
 }
 
 std::string
@@ -27,7 +34,7 @@ RtspParser::buildSetupRequest(const std::string &server, const std::string &asse
     ss << "StbId=943BB162A323&";
     ss << "CADeviceId=943BB162A323";
     ss << " RTSP/1.0\r\n";
-    ss << "CSeq:" << ++seq << "\r\n";
+    ss << "CSeq:" << ++_sequence << "\r\n";
     ss << "User-Agent: Metro\r\n";
     ss << "Transport: MP2T/DVBC/QAM;unicast;\r\n";
     ss << "\r\n";
@@ -44,16 +51,16 @@ RtspParser::buildPlayRequest(float scale, int offset)
     string sessionId;
     string cmd = (scale == 0) ? "PAUSE" : "PLAY";
 
-    if (sessionInfo.bSrmIsRtspProxy)
-        sessionId = sessionInfo.sessionId;
+    if (_sessionInfo.bSrmIsRtspProxy)
+        sessionId = _sessionInfo.sessionId;
     else
-        sessionId = sessionInfo.ctrlSessionId;
+        sessionId = _sessionInfo.ctrlSessionId;
 
     ss << cmd << " * RTSP/1.0\r\n";
-    ss << "CSeq:" << ++seq << "\r\n";
+    ss << "CSeq:" << ++_sequence << "\r\n";
     ss << "Session:" << sessionId << "\r\n";
     if (offset) {
-        int pos = (offset == INT_MAX) ? 0 : MS2SEC(sessionInfo.npt) + offset;
+        int pos = (offset == INT_MAX) ? 0 : MS2SEC(_sessionInfo.npt) + offset;
         ss << "Range: npt=" << pos << "\r\n";
     }
     ss << "Scale: " << scale << "\r\n";
@@ -71,9 +78,9 @@ RtspParser::buildGetParamRequest(bool bSRM)
     string sessId;
 
     if (bSRM) {
-        sessId = sessionInfo.sessionId;
+        sessId = _sessionInfo.sessionId;
     } else {
-        sessId = sessionInfo.ctrlSessionId;
+        sessId = _sessionInfo.ctrlSessionId;
         std::stringstream ssParams;
         ssParams << "Position\r\n" ;
         ssParams << "Scale\r\n";
@@ -83,7 +90,7 @@ RtspParser::buildGetParamRequest(bool bSRM)
 
     std::stringstream ss;
     ss << "GET_PARAMETER * RTSP/1.0\r\n";
-    ss << "CSeq:" << ++seq << "\r\n";
+    ss << "CSeq:" << ++_sequence << "\r\n";
     ss << "Session:" << sessId << "\r\n";
     ss << "Content-Type: text/parameters\r\n";
     ss << "Content-Length: " << strParams.length() << "\r\n";
@@ -106,8 +113,8 @@ RtspParser::buildTeardownRequest(int reason)
     string strReason = "Cleint Intiated";
 
     ss << "TEARDOWN * RTSP/1.0\r\n";
-    ss << "CSeq:" << ++seq << "\r\n";
-    ss << "Session:" << sessionInfo.sessionId << "\r\n";
+    ss << "CSeq:" << ++_sequence << "\r\n";
+    ss << "Session:" << _sessionInfo.sessionId << "\r\n";
     ss << "Reason:" << reason << " " << strReason << "\r\n";
     ss << "\r\n";
 
@@ -119,12 +126,12 @@ RtspParser::buildTeardownRequest(int reason)
 std::string
 RtspParser::buildResponse(int respSeq, bool bSRM)
 {
-    string sessId = (bSRM) ? sessionInfo.sessionId : sessionInfo.ctrlSessionId;
+    string sessId = (bSRM) ? _sessionInfo.sessionId : _sessionInfo.ctrlSessionId;
 
     std::stringstream ss;
     ss << "RTSP/1.0 200 OK\r\n";
     ss << "CSeq:" << respSeq << "\r\n";
-    ss << "Session:" << sessionInfo.sessionId << "\r\n";
+    ss << "Session:" << _sessionInfo.sessionId << "\r\n";
     ss << "\r\n";
     ss << "\r\n";
     return ss.str();
@@ -139,64 +146,66 @@ int RtspParser::processSetupResponse(const std::string &response)
     string sess = setupMap["Session"];
     TRACE_L2( "%s: session id='%s'", __FUNCTION__, sess.c_str());
     if (sess.find(";") == string::npos) {
-        sessionInfo.sessionId = sess;
-        sessionInfo.sessionTimeout = SEC2MS(sessionInfo.defaultSessionTimeout);
-        TRACE_L2( "%s: using default sessionTimeout %d", __FUNCTION__, sessionInfo.defaultSessionTimeout);
+        _sessionInfo.sessionId = sess;
+        _sessionInfo.sessionTimeout = SEC2MS(_sessionInfo.defaultSessionTimeout);
+        TRACE_L2( "%s: using default sessionTimeout %d", __FUNCTION__, _sessionInfo.defaultSessionTimeout);
     } else {                            // contains heartbeat
         parse(sess, params, ";", "=");
         NAMED_ARRAY::iterator it=params.begin();
-        sessionInfo.sessionId = it->first;
+        _sessionInfo.sessionId = it->first;
 
         if (params.size() > 1 )
-            sessionInfo.sessionTimeout = SEC2MS(atoi(params["timeout"].c_str()));
+            _sessionInfo.sessionTimeout = SEC2MS(atoi(params["timeout"].c_str()));
     }
 
     sess = setupMap["ControlSession"];
-    if (sess.find(";") == string::npos) {
-        sessionInfo.ctrlSessionId = sess;
-        sessionInfo.ctrlSessionTimeout = SEC2MS(sessionInfo.defaultCtrlSessionTimeout);
-        TRACE_L2( "%s: using default ctrlSessionTimeout %d", __FUNCTION__, sessionInfo.defaultCtrlSessionTimeout);
-    } else {
-        parse(sess, params, ";", "=");
-        NAMED_ARRAY::iterator it=params.begin();
-        sessionInfo.ctrlSessionId = it->first;
+    if (sess.size()) {
+        if (sess.find(";") == string::npos) {
+            _sessionInfo.ctrlSessionId = sess;
+            _sessionInfo.ctrlSessionTimeout = SEC2MS(_sessionInfo.defaultCtrlSessionTimeout);
+            TRACE_L2( "%s: using default ctrlSessionTimeout %d", __FUNCTION__, _sessionInfo.defaultCtrlSessionTimeout);
+        } else {
+            parse(sess, params, ";", "=");
+            NAMED_ARRAY::iterator it=params.begin();
+            _sessionInfo.ctrlSessionId = it->first;
 
-        if (params.size() > 1 )
-            sessionInfo.ctrlSessionTimeout = SEC2MS(atoi(params["timeout"].c_str()));
+            if (params.size() > 1 )
+                _sessionInfo.ctrlSessionTimeout = SEC2MS(atoi(params["timeout"].c_str()));
+        }
+
+        if (_sessionInfo.sessionId.compare(_sessionInfo.ctrlSessionId) == 0)  // XXX: check IP Addr ???
+            _sessionInfo.bSrmIsRtspProxy = true;
+        else
+            _sessionInfo.bSrmIsRtspProxy = false;
     }
-
-    if (sessionInfo.sessionId.compare(sessionInfo.ctrlSessionId) == 0)  // XXX: check IP Addr ???
-        sessionInfo.bSrmIsRtspProxy = true;
-    else
-        sessionInfo.bSrmIsRtspProxy = false;
 
     string location = setupMap["Location"];
     string chan = setupMap["Tuning"];
     parse(chan, params, ";", "=");
-    sessionInfo.frequency  = atoi(params["frequency"].c_str()) * 100;
-    sessionInfo.modulation = atoi(params["modulation"].c_str());
-    sessionInfo.symbolRate = atoi(params["symbol_rate"].c_str());
+    _sessionInfo.frequency  = atoi(params["frequency"].c_str()) * 100;
+    _sessionInfo.modulation = atoi(params["modulation"].c_str());
+    _sessionInfo.symbolRate = atoi(params["symbol_rate"].c_str());
 
     string tune = setupMap["Channel"];
     parse(tune, params, ";", "=");
-    sessionInfo.programNum = atoi(params["Svcid"].c_str());
+    _sessionInfo.programNum = atoi(params["Svcid"].c_str());
 
-    sessionInfo.bookmark = atof(setupMap["Bookmark"].c_str());
-    sessionInfo.duration = atoi(setupMap["Duration"].c_str());
+    _sessionInfo.bookmark = atof(setupMap["Bookmark"].c_str());
+    _sessionInfo.duration = atoi(setupMap["Duration"].c_str());
 
     TRACE_L2( "%s: f=%d p=%d m=%d s=%d bookmark=%f duration=%d",
-        __FUNCTION__, sessionInfo.frequency, sessionInfo.programNum, sessionInfo.modulation, sessionInfo.symbolRate, sessionInfo.bookmark, sessionInfo.duration);
+        __FUNCTION__, _sessionInfo.frequency, _sessionInfo.programNum, _sessionInfo.modulation, _sessionInfo.symbolRate, _sessionInfo.bookmark, _sessionInfo.duration);
 }
 
 void RtspParser::updateNPT(NAMED_ARRAY &playMap)
 {
     float nptStart = 0, nptEnd = 0;
-    float oldScale = sessionInfo.scale;
-    float oldNPT = sessionInfo.npt;
+    float oldScale = _sessionInfo.scale;
+    float oldNPT = _sessionInfo.npt;
 
     NAMED_ARRAY::iterator it = playMap.find("Scale");
     if (it != playMap.end())
-        sessionInfo.scale = atof(playMap["Scale"].c_str());
+        _sessionInfo.scale = atof(playMap["Scale"].c_str());
 
     it = playMap.find("Range");
     if (it != playMap.end()) {
@@ -213,8 +222,8 @@ void RtspParser::updateNPT(NAMED_ARRAY &playMap)
 
         }
 
-        sessionInfo.npt = SEC2MS(nptStart);
-        TRACE_L2( "%s: NPT=%6.2f scale=%2.2f oldNPT=%6.2f oldScale=%2.2f", __FUNCTION__,  SEC2MS(sessionInfo.npt), sessionInfo.scale, oldNPT, oldScale);
+        _sessionInfo.npt = SEC2MS(nptStart);
+        TRACE_L2( "%s: NPT=%6.2f scale=%2.2f oldNPT=%6.2f oldScale=%2.2f", __FUNCTION__,  SEC2MS(_sessionInfo.npt), _sessionInfo.scale, oldNPT, oldScale);
     }
 }
 
@@ -269,7 +278,7 @@ void RtspParser::parse(const std::string &str,  NAMED_ARRAY &contents, const str
             done = true;
     }
 
-    TRACE_L2( "%s: contents.size=%d", __FUNCTION__, contents.size());
+    TRACE_L4( "%s: contents.size=%d", __FUNCTION__, contents.size());
     for (NAMED_ARRAY::iterator it=contents.begin(); it!=contents.end(); ++it)
         TRACE_L4( "%s: %s => '%s'", __FUNCTION__, it->first.c_str(), it->second.c_str());
 }
@@ -279,6 +288,8 @@ RtspParser::parseResponse(const std::string str,  std::string &rtspBody, RtspPar
 {
     int rtspCode = 0;
     msgType = RTSP_UNKNOWN;
+
+    hexDump("Response: ", str);
     // -------------------------------------------------------------------------
     // RTSP/1.0 200 OK
     // RTSP/1.0 400 Bad Request
@@ -338,3 +349,5 @@ void RtspParser::hexDump(const char* label, const std::string& msg)
     }
     TRACE_L2("%s: %s", label, ss.str().c_str());
 }
+
+}} // WPEFramework::Plugin

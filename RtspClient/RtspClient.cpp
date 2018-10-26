@@ -87,17 +87,13 @@ namespace Plugin {
 
         TRACE(Trace::Information, (string(_T("Received RtspClient request"))));
 
+        uint32_t rc = 0;
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
         Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
+        result->ErrorCode = Web::STATUS_BAD_REQUEST;
 
         if ((request.Verb == Web::Request::HTTP_GET) && ((index.Next()) && (index.Next()))) {
-            result->ErrorCode = Web::STATUS_BAD_REQUEST;
-            //result->Message = "Bad Request";
-
-            if (index.Current().Text() == _T("Test")) {
-                _implementation->Test();
-                result->ErrorCode = Web::STATUS_OK;
-            } else if (index.Current().Text() == _T("Get")) {
+            if (index.Current().Text() == _T("Get")) {
                 Core::ProxyType<Web::JSONBodyType<Data> > data (jsonDataFactory.Element());
                 data->Str = _implementation->Get("");
                 result->ContentType = Web::MIMETypes::MIME_JSON;
@@ -105,14 +101,23 @@ namespace Plugin {
                 result->ErrorCode = Web::STATUS_OK;
             }
         } else if ((request.Verb == Web::Request::HTTP_POST) && ((index.Next()) && (index.Next()))) {
-
-            if (index.Current().Text() == _T("Set")) {
+            if (index.Current().Text() == _T("Setup")) {
+                string assetId;
+                int start = 0;
+                rc = _implementation->Setup(assetId, start);
+                result->ErrorCode = (rc == 0) ? Web::STATUS_OK : Web::STATUS_INTERNAL_SERVER_ERROR;
+            } else if (index.Current().Text() == _T("Teardown")) {
+                rc = _implementation->Teardown();
+                result->ErrorCode = (rc == 0) ? Web::STATUS_OK : Web::STATUS_INTERNAL_SERVER_ERROR;
+            } else if (index.Current().Text() == _T("Play")) {
+                int16_t scale = 1;
+                uint32_t position = 0;
+                rc = _implementation->Play(position, scale);
+                result->ErrorCode = (rc == 0) ? Web::STATUS_OK : Web::STATUS_INTERNAL_SERVER_ERROR;
+            } else if (index.Current().Text() == _T("Set")) {
                 std::string str = request.Body<const Data>()->Str.Value();
-
                 _implementation->Set(str, "");
-
                 result->ErrorCode = Web::STATUS_OK;
-                result->Message = "OK";
             }
         }
         return result;

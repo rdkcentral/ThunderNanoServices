@@ -14,6 +14,8 @@ set(PLUGIN_SOURCES
         RtspParser.cpp
         RtspSocket.cpp
         RtspParser.cpp
+        RtspSession.cpp
+        RtspSessionInfo.cpp
         )
 
 include(default_targets) # This is a regular plugin no need to edit the defaults
