@@ -89,7 +89,7 @@ if(RF4CE_FOUND)
 endif()
 
 install(
-	FILES web-remote.json
+	FILES linux-windows.json
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/WPEFramework/RemoteControl
 	COMPONENT ${MODULE_NAME})
 

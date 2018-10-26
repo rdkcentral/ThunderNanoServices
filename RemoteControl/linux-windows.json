@@ -1,0 +1,12 @@
+[
+    { "in": { "code":  2 }, "out": { "code": 49 }, "key": "1" },
+    { "in": { "code":  3 }, "out": { "code": 50 }, "key": "2" },
+    { "in": { "code":  4 }, "out": { "code": 51 }, "key": "3" },
+    { "in": { "code":  5 }, "out": { "code": 52 }, "key": "4" },
+    { "in": { "code":  6 }, "out": { "code": 53 }, "key": "5" },
+    { "in": { "code":  7 }, "out": { "code": 54 }, "key": "6" },
+    { "in": { "code":  8 }, "out": { "code": 55 }, "key": "7" },
+    { "in": { "code":  9 }, "out": { "code": 56 }, "key": "8" },
+    { "in": { "code": 10 }, "out": { "code": 57 }, "key": "9" },
+    { "in": { "code": 11 }, "out": { "code": 48 }, "key": "0" }
+]

@@ -171,36 +171,58 @@ namespace Plugin {
         // If there is an error, return a string describing the issue why the initialisation failed.
         // The Service object is *NOT* reference counted, lifetime ends if the plugin is deactivated.
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
-        virtual const string Initialize(PluginHost::IShell* service);
+        virtual const string Initialize(PluginHost::IShell* service) override;
 
         // The plugin is unloaded from WPEFramework. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After theis call, the lifetime of the Service object ends.
-        virtual void Deinitialize(PluginHost::IShell* service);
+        virtual void Deinitialize(PluginHost::IShell* service) override;
 
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
-        virtual string Information() const;
+        virtual string Information() const override;
 
         //      IWeb methods
         // -------------------------------------------------------------------------------------------------------
         // Whenever a request is received, it might carry some additional data in the body. This method allows
         // the plugin to attach a deserializable data object (ref counted) to be loaded with any potential found
         // in the body of the request.
-        virtual void Inbound(Web::Request& request);
+        virtual void Inbound(Web::Request& request) override;
 
         // If everything is received correctly, the request is passed on to us, through a thread from the thread pool, to
         // do our thing and to return the result in the response object. Here the actual specific module work,
         // based on a a request is handled.
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         //      IKeyHandler methods
         // -------------------------------------------------------------------------------------------------------
-        // Whnever a key is pressed or release, let this plugin now, it will take the proper arrangements and timings
+        // Whenever a key is pressed or release, let this plugin now, it will take the proper arrangements and timings
         // to announce this key event to the linux system. Repeat event is triggered by the watchdog implementation
         // in this plugin. No need to signal this.
-        virtual uint32_t KeyEvent(const bool pressed, const uint32_t code, const string& table);
+        virtual uint32_t KeyEvent(const bool pressed, const uint32_t code, const string& table) override;
+
+        // Next to handling keys, we also have a number of devices can produce keys. All these key producers have a name.
+        // Using the next interface it is possible to retrieve the KeyProducers implemented by ths plugin. 
+        virtual Exchange::IKeyProducer* Producer(const string& name) override {
+
+            Exchange::IKeyProducer* result = nullptr;
+
+            Remotes::RemoteAdministrator::Iterator index(Remotes::RemoteAdministrator::Instance().Producers());
+
+            while ((index.Next() == true) && (name != index.Current()->Name())) /* Intentionally empty */;
+
+            if (index.IsValid()  == true) {
+
+                result = index.Current();
+
+                ASSERT (result != nullptr);
+
+                result->AddRef();
+            }
+
+            return (result);
+        }
 
     private:
         Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index, const Web::Request& request) const;
