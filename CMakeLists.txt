@@ -106,6 +106,7 @@ option(WPEFRAMEWORK_PLUGIN_DEVICEINFO "Include DeviceInfo plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_DSRESOLUTION "Include DSResolution plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_DHCPSERVER "Include DHCPServer plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_DICTIONARY "Include Dictionary plugin" OFF)
+option(WPEFRAMEWORK_PLUGIN_IOCONNECTOR "Include IOConnector plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_FRONTPANEL "Include FrontPanel plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_LOCATIONSYNC "Include LocationSync plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_MONITOR "Include Monitor plugin" OFF)
@@ -160,6 +161,10 @@ endif()
 
 if(WPEFRAMEWORK_PLUGIN_FRONTPANEL)
     add_subdirectory(FrontPanel)
+endif()
+
+if(WPEFRAMEWORK_PLUGIN_IOCONNECTOR)
+    add_subdirectory(IOConnector)
 endif()
 
 if(WPEFRAMEWORK_PLUGIN_SICONTROL)

@@ -23,25 +23,31 @@ namespace OCDM {
             }
 
         public:
-            virtual void Observe(const bool enable)
+            virtual void Observe(const uint32_t pid)
             {
-                _observable = enable;
+                if (pid == 0) {
+                    _observable = false;
+                }
+                else {
+                    _observable = false;
+                    _main = Core::ProcessInfo(pid);
+                }
             }
             virtual uint64_t Resident() const
             {
-                return (_main.Resident());
+                return (_observable == false ? 0 : _main.Resident());
             }
             virtual uint64_t Allocated() const
             {
-                return (_main.Allocated());
+                return (_observable == false ? 0 : _main.Allocated());
             }
             virtual uint64_t Shared() const
             {
-                return (_main.Shared());
+                return (_observable == false ? 0 : _main.Shared());
             }
             virtual uint8_t Processes() const
             {
-                return (1);
+                return (IsOperational() ? 1 : 0);
             }
             virtual const bool IsOperational() const
             {

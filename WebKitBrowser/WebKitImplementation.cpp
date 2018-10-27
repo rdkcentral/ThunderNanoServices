@@ -1265,7 +1265,7 @@ namespace WebKitBrowser {
         MemoryObserverImpl(const uint32_t id)
             : _main(id == 0 ? Core::ProcessInfo().Id() : id)
             , _children(_main.Id())
-            , _startTime()
+            , _startTime(Core::Time::Now().Ticks() + (TYPICAL_STARTUP_TIME * 1000000))
         { // IsOperation true till calculated time (microseconds)
         }
         ~MemoryObserverImpl()
@@ -1273,9 +1273,10 @@ namespace WebKitBrowser {
         }
 
     public:
-        virtual void Observe(const bool enable)
+        virtual void Observe(const uint32_t pid)
         {
-            if (enable == true) {
+            if (pid != 0) {
+                _main = Core::ProcessInfo(pid);
                 _startTime = Core::Time::Now().Ticks() + (TYPICAL_STARTUP_TIME * 1000000);
             }
             else {
@@ -1285,48 +1286,60 @@ namespace WebKitBrowser {
 
         virtual uint64_t Resident() const
         {
-            if (_children.Count() < 2) {
-                _children = Core::ProcessInfo::Iterator(_main.Id());
-            }
+            uint32_t result(0);
 
-            uint64_t result(_main.Resident());
+            if (_startTime != 0) {
+                if (_children.Count() < 2) {
+                    _children = Core::ProcessInfo::Iterator(_main.Id());
+                }
 
-            _children.Reset();
+                result = _main.Resident();
 
-            while (_children.Next() == true) {
-                result += _children.Current().Resident();
+                _children.Reset();
+
+                while (_children.Next() == true) {
+                    result += _children.Current().Resident();
+                }
             }
 
             return (result);
         }
         virtual uint64_t Allocated() const
         {
-            if (_children.Count() < 2) {
-                _children = Core::ProcessInfo::Iterator(_main.Id());
-            }
+            uint32_t result(0);
 
-            uint64_t result(_main.Allocated());
+            if (_startTime != 0) {
+                if (_children.Count() < 2) {
+                    _children = Core::ProcessInfo::Iterator(_main.Id());
+                }
 
-            _children.Reset();
+                result = _main.Allocated();
 
-            while (_children.Next() == true) {
-                result += _children.Current().Allocated();
+                _children.Reset();
+
+                while (_children.Next() == true) {
+                    result += _children.Current().Allocated();
+                }
             }
 
             return (result);
         }
         virtual uint64_t Shared() const
         {
-            if (_children.Count() < 2) {
-                _children = Core::ProcessInfo::Iterator(_main.Id());
-            }
+            uint32_t result(0);
 
-            uint64_t result(_main.Shared());
+            if (_startTime != 0) {
+                if (_children.Count() < 2) {
+                    _children = Core::ProcessInfo::Iterator(_main.Id());
+                }
 
-            _children.Reset();
+                result = _main.Shared();
 
-            while (_children.Next() == true) {
-                result += _children.Current().Shared();
+                _children.Reset();
+
+                while (_children.Next() == true) {
+                    result += _children.Current().Shared();
+                }
             }
 
             return (result);
@@ -1335,35 +1348,39 @@ namespace WebKitBrowser {
         {
             // Refresh the children list !!!
             _children = Core::ProcessInfo::Iterator(_main.Id());
-            return (1 + _children.Count());
+            return ((_startTime == 0) || (_main.IsActive() == true) ? 1 : 0) + _children.Count();
         }
         virtual const bool IsOperational() const
         {
-            const uint8_t requiredChildren = (sizeof(mandatoryProcesses) / sizeof(mandatoryProcesses[0]));
+            uint32_t requiredProcesses = 0;
 
-            //!< We can monitor a max of 32 processes, every mandatory process represents a bit in the requiredProcesses.
-            // In the end we check if all bits are 0, what means all mandatory processes are still running.
-            uint32_t requiredProcesses = (0xFFFFFFFF >> (32 - requiredChildren));
+            if (_startTime != 0) {
+                const uint8_t requiredChildren = (sizeof(mandatoryProcesses) / sizeof(mandatoryProcesses[0]));
 
-            //!< If there are less children than in the the mandatoryProcesses struct, we are done and return false.
-            if (_children.Count() >= requiredChildren) {
+                //!< We can monitor a max of 32 processes, every mandatory process represents a bit in the requiredProcesses.
+                // In the end we check if all bits are 0, what means all mandatory processes are still running.
+                requiredProcesses = (0xFFFFFFFF >> (32 - requiredChildren));
 
-                _children.Reset();
+                //!< If there are less children than in the the mandatoryProcesses struct, we are done and return false.
+                if (_children.Count() >= requiredChildren) {
 
-                //!< loop over all child processes as long as we are operational.
-                while ((requiredProcesses != 0) && (true == _children.Next())) {
+                    _children.Reset();
 
-                    uint8_t count(0);
-                    string name(_children.Current().Name());
+                    //!< loop over all child processes as long as we are operational.
+                    while ((requiredProcesses != 0) && (true == _children.Next())) {
 
-                    while ((count < requiredChildren) && (name != mandatoryProcesses[count])) {
-                        ++count;
-                    }
+                        uint8_t count(0);
+                        string name(_children.Current().Name());
 
-                    //<! this is a mandatory process and if its still active reset its bit in requiredProcesses.
-                    //   If not we are not completely operational.
-                    if ((count < requiredChildren) && (_children.Current().IsActive() == true)) {
-                        requiredProcesses &= (~(1 << count));
+                        while ((count < requiredChildren) && (name != mandatoryProcesses[count])) {
+                            ++count;
+                        }
+
+                        //<! this is a mandatory process and if its still active reset its bit in requiredProcesses.
+                        //   If not we are not completely operational.
+                        if ((count < requiredChildren) && (_children.Current().IsActive() == true)) {
+                            requiredProcesses &= (~(1 << count));
+                        }
                     }
                 }
             }
