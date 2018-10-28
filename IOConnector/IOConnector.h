@@ -41,7 +41,7 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
-                , Pin(16)
+                , Pin(162)
                 , Callsign(_T("RemoeControl"))
                 , Producer(_T("RF4CE")) {
                 Add(_T("pin"), &Pin);
