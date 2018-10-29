@@ -546,7 +546,7 @@ namespace Plugin {
                                 status |= NOT_OPERATIONAL;
                                 TRACE_L1("Status not operational. %d", __LINE__);
                             }
-                           _operationalSlots = _operationalInterval;
+                            _operationalSlots = _operationalInterval;
                         }
                         if ((_memoryInterval != 0) && (_memorySlots == 0)) {
                             _measurement.Measure(_source);
@@ -555,7 +555,7 @@ namespace Plugin {
                                 status |= EXCEEDED_MEMORY;
                                 TRACE_L1("Status MetaData Exceeded. %d", __LINE__);
                             }
-                           _memorySlots = _memoryInterval;
+                            _memorySlots = _memoryInterval;
                         }
                     }
                     return (status);
