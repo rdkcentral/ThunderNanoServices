@@ -188,18 +188,7 @@ void PowerImplementation::Init()
 
         NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
         
-        if (_gpioPin != 0) {
-            NEXUS_GpioSettings gpioSettings;
-            TRACE(Trace::Information, (_T("Enabling wakeup GPIO: %d-%d"),_gpioType, _gpioPin));
-
-            NEXUS_Gpio_GetDefaultSettings(NEXUS_GpioType_eAonStandard, &gpioSettings);
-            gpioSettings.mode = NEXUS_GpioMode_eInput;
-            gpioSettings.interruptMode = NEXUS_GpioInterrupt_eRisingEdge;
-            gpioSettings.interrupt.callback = gpioInterrupt;
-            gpioSettings.interrupt.context = this;
-            _gpioHandle = NEXUS_Gpio_Open(_gpioType, _gpioPin, &gpioSettings);
-        }
-    }
+   }
 }
 
 void PowerImplementation::Deinit()
@@ -249,6 +238,17 @@ void PowerImplementation::Configure(const string& settings)
         _gpioPin = config.GPIOPin.Value();
         if (config.GPIOType.IsSet() == true) {
             _gpioType = static_cast<NEXUS_GpioType>(config.GPIOType.Value());
+        }
+        if (_gpioPin != 0) {
+            NEXUS_GpioSettings gpioSettings;
+            TRACE(Trace::Information, (_T("Enabling wakeup GPIO: %d-%d"),_gpioType, _gpioPin));
+
+            NEXUS_Gpio_GetDefaultSettings(NEXUS_GpioType_eAonStandard, &gpioSettings);
+            gpioSettings.mode = NEXUS_GpioMode_eInput;
+            gpioSettings.interruptMode = NEXUS_GpioInterrupt_eRisingEdge;
+            gpioSettings.interrupt.callback = gpioInterrupt;
+            gpioSettings.interrupt.context = this;
+            _gpioHandle = NEXUS_Gpio_Open(_gpioType, _gpioPin, &gpioSettings);
         }
     }
 }
