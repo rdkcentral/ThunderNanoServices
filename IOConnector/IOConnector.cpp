@@ -101,7 +101,7 @@ namespace Plugin {
 
         TRACE(IOState, (pin));
 
-        if (pin.Get() == true) {
+        if (pin.Get() == false) {
             Exchange::IKeyHandler* handler (_service->QueryInterfaceByCallsign<Exchange::IKeyHandler>(_callsign));
 
             if (handler != nullptr) {
