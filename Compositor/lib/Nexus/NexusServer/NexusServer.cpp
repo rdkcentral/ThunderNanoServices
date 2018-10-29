@@ -88,6 +88,18 @@ namespace Broadcom {
             ALL = nxserverlib_svp_type_cdb_urr  /* Force CRR for video CDB + default to all secure only buffers */
         };
 
+        enum hdcplevel {
+            HDCP_NONE = NxClient_HdcpLevel_eNone,           /* No HDCP requested by this client. */
+            HDCP_OPTIONAL = NxClient_HdcpLevel_eOptional,   /* Enable HDCP but do not mute video, even on authentication failure. */
+            HDCP_MANDATORY = NxClient_HdcpLevel_eMandatory  /* Enable HDCP and mute video until authentication success. */
+        };
+
+        enum hdcpversion {
+            AUTO = NxClient_HdcpVersion_eAuto,    /* Always authenticate using the highest version supported by HDMI receiver (Content Stream Type 0) */
+            HDCP1X = NxClient_HdcpVersion_eHdcp1x,  /* Always authenticate using HDCP 1.x mode (regardless of HDMI Receiver capabilities) */
+            HDCP22 = NxClient_HdcpVersion_eHdcp22   /* Always authenticate using HDCP 2.2 mode, Content Stream Type 1 */
+        };
+
         class MemoryInfo : public Core::JSON::Container {
         private:
             MemoryInfo(const MemoryInfo&) = delete;
@@ -132,6 +144,10 @@ namespace Broadcom {
             , SagePath()
             , SVPType(NONE)
             , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
+            , HDCPLevel(HDCP_NONE)
+            , HDCPVersion(AUTO)
+            , HDCP1xBinFile()
+            , HDCP2xBinFile()
             , Memory() {
             Add(_T("irmode"), &IRMode);
             Add(_T("authentication"), &Authentication);
@@ -142,6 +158,10 @@ namespace Broadcom {
             Add(_T("memory"), &Memory);
             Add(_T("framebufferwidth"), &FrameBufferWidth);
             Add(_T("framebufferheight"), &FrameBufferHeight);
+            Add(_T("hdcplevel"), &HDCPLevel);
+            Add(_T("hdcpversion"), &HDCPVersion);
+            Add(_T("hdcp1xbinfile"), &HDCP1xBinFile);
+            Add(_T("hdcp2xbinfile"), &HDCP2xBinFile);
         }
         ~Config()
         {
@@ -157,6 +177,10 @@ namespace Broadcom {
         MemoryInfo Memory;
         Core::JSON::DecUInt16 FrameBufferWidth;
         Core::JSON::DecUInt16 FrameBufferHeight;
+        Core::JSON::EnumType<hdcplevel> HDCPLevel;
+        Core::JSON::EnumType<hdcpversion> HDCPVersion;
+        Core::JSON::String HDCP1xBinFile;
+        Core::JSON::String HDCP2xBinFile;
     };
 
 
@@ -398,6 +422,21 @@ namespace Broadcom {
                 _serverSettings.fbsize.height = config.FrameBufferHeight.Value();
             }
 
+            if (config.HDCPLevel.Value() != Config::HDCP_NONE) {
+                _serverSettings.hdcp.alwaysLevel = static_cast<NxClient_HdcpLevel>(config.HDCPLevel.Value());
+                _serverSettings.hdcp.versionSelect = static_cast<NxClient_HdcpVersion>(config.HDCPVersion.Value());
+
+                /* set the hdcp1x bin file path */
+                if ((config.HDCP1xBinFile.IsSet() == true) && (config.HDCP1xBinFile.Value().empty() == false)) {
+                    snprintf(_serverSettings.hdcp.hdcp1xBinFile, sizeof(_serverSettings.hdcp.hdcp1xBinFile), "%s",  config.HDCP1xBinFile.Value().c_str());
+                }
+
+                /* set the hdcp2x bin file path */
+                if ((config.HDCP2xBinFile.IsSet() == true) && (config.HDCP2xBinFile.Value().empty() == false)) {
+                    snprintf(_serverSettings.hdcp.hdcp2xBinFile, sizeof(_serverSettings.hdcp.hdcp2xBinFile), "%s",  config.HDCP2xBinFile.Value().c_str());
+                }
+            }
+
             rc = nxserver_modify_platform_settings(&_serverSettings,
                 &cmdline_settings,
                 &_platformSettings,
@@ -542,5 +581,21 @@ ENUM_CONVERSION_BEGIN(Broadcom::Config::svptype)
 	{ Broadcom::Config::ALL,   _TXT("All")   },
 
 ENUM_CONVERSION_END(Broadcom::Config::svptype);
+
+ENUM_CONVERSION_BEGIN(Broadcom::Config::hdcplevel)
+
+        { Broadcom::Config::HDCP_NONE,      _TXT("Hdcp_None")      },
+        { Broadcom::Config::HDCP_OPTIONAL,  _TXT("Hdcp_Optional")  },
+        { Broadcom::Config::HDCP_MANDATORY, _TXT("Hdcp_Mandatory") },
+
+ENUM_CONVERSION_END(Broadcom::Config::hdcplevel);
+
+ENUM_CONVERSION_BEGIN(Broadcom::Config::hdcpversion)
+
+        { Broadcom::Config::AUTO,   _TXT("Auto")},
+        { Broadcom::Config::HDCP1X, _TXT("Hdcp1x")},
+        { Broadcom::Config::HDCP22, _TXT("Hdcp22")},
+
+ENUM_CONVERSION_END(Broadcom::Config::hdcpversion);
 
 } // WPEFramework
