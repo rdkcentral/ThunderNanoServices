@@ -121,7 +121,7 @@ private:
 		while (index != _subscribers.end()) {
 
 			_pollPins[count].fd = index->first;
-			_pollPins[count].events = POLLIN|POLLPRI;
+			_pollPins[count].events = POLLERR|POLLPRI;
 			_pollPins[count].revents = 0;
 			count++;
 
@@ -152,7 +152,7 @@ private:
 
 				while (--count >= 1) {
 
-					if (_pollPins[count].revents & (POLLPRI|POLLIN)) {
+					if (_pollPins[count].revents & (POLLPRI|POLLERR)) {
 
 						unsigned char buffer[1];
 

@@ -2,6 +2,34 @@
 
 namespace WPEFramework {
 
+ENUM_CONVERSION_BEGIN(GPIO::Pin::trigger_mode)
+
+    { GPIO::Pin::RISING,  _TXT(_T("rising"))  },
+    { GPIO::Pin::FALLING, _TXT(_T("falling")) },
+    { GPIO::Pin::BOTH,    _TXT(_T("both"))    },
+    { GPIO::Pin::HIGH,    _TXT(_T("high"))    },
+    { GPIO::Pin::LOW,     _TXT(_T("low"))     },
+
+ENUM_CONVERSION_END(GPIO::Pin::trigger_mode)
+
+ENUM_CONVERSION_BEGIN(GPIO::Pin::pin_mode)
+
+    { GPIO::Pin::INPUT,    _TXT(_T("in"))    },
+    { GPIO::Pin::OUTPUT,   _TXT(_T("out"))   },
+    { GPIO::Pin::PWM_TONE, _TXT(_T("tone"))  },
+    { GPIO::Pin::PWM,      _TXT(_T("pwm"))   },
+    { GPIO::Pin::CLOCK,    _TXT(_T("clock")) },
+
+ENUM_CONVERSION_END(GPIO::Pin::pin_mode)
+
+ENUM_CONVERSION_BEGIN(GPIO::Pin::pull_mode)
+
+    { GPIO::Pin::OFF,    _TXT(_T("0")) },
+    { GPIO::Pin::DOWN,   _TXT(_T("1")) },
+    { GPIO::Pin::UP,     _TXT(_T("2")) },
+
+ENUM_CONVERSION_END(GPIO::Pin::pull_mode)
+
 namespace GPIO {
 
 // ----------------------------------------------------------------------------------------------------

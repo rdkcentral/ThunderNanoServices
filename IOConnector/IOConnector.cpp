@@ -7,6 +7,39 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(IOConnector, 1, 0);
 
+    class EXTERNAL IOState {
+    private:
+        // -------------------------------------------------------------------
+        // This object should not be copied or assigned. Prevent the copy
+        // constructor and assignment constructor from being used. Compiler
+        // generated assignment and copy methods will be blocked by the
+        // following statments.
+        // Define them but do not implement them, compile error/link error.
+        // -------------------------------------------------------------------
+        IOState(const IOState& a_Copy) = delete;
+        IOState& operator=(const IOState& a_RHS) = delete;
+
+    public:
+        inline IOState(const GPIO::Pin& pin) {
+            Trace::Format(_text, _T("IO Activity on pin: %d, current state: %s"), pin.Id(), (pin.Get() ? _T("true") : _T("false")));
+        }
+        ~IOState() {
+        }
+
+    public:
+        inline const char* Data() const
+        {
+            return (_text.c_str());
+        }
+        inline uint16_t Length() const
+        {
+            return (static_cast<uint16_t>(_text.length()));
+        }
+
+    private:
+        std::string _text;
+    };
+
     IOConnector::IOConnector()
         : _service(nullptr)
         , _sink(*this)
@@ -31,6 +64,7 @@ namespace Plugin {
         _pin = new GPIO::Pin(config.Pin.Value());
 
         if (_pin != nullptr) {
+            _pin->Trigger(GPIO::Pin::FALLING);
             _pin->Register(&_sink);
             _callsign = config.Callsign.Value();
             _producer = config.Producer.Value();
@@ -64,6 +98,8 @@ namespace Plugin {
 
         ASSERT (_pin == &pin);
         ASSERT (_service != nullptr);
+
+        TRACE(IOState, (pin));
 
         if (pin.Get() == true) {
             Exchange::IKeyHandler* handler (_service->QueryInterfaceByCallsign<Exchange::IKeyHandler>(_callsign));
