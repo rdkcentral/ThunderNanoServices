@@ -50,7 +50,8 @@ public:
 
 public:
     PowerImplementation ()
-        : _pmContext(nullptr)
+        : _adminLock()
+        , _pmContext(nullptr)
         , _event(nullptr)
         , _wakeupEvent(nullptr)
         , _mode(NEXUS_PlatformStandbyMode_eOn)
@@ -77,6 +78,8 @@ public:
     END_INTERFACE_MAP
 
     // IPower methods
+    virtual void Register(IPower::INotification* sink) override;
+    virtual void Unregister(IPower::INotification* sink) override;
     virtual PCState GetState() const override;
     virtual PCStatus SetState(const PCState, const uint32_t) override;
     virtual void PowerKey() override;
@@ -91,8 +94,12 @@ private:
     void SetWakeEvent();
     void PrintWakeup();
     static void gpioInterrupt(void *context, int param);
+    void Resumed();
 
 private:
+    Core::CriticalSection _adminLock;
+    std::list<Exchange::IPower::INotification*> _notificationClients;
+
     void* _pmContext;
     bool _coldBoot;
     bool _eventTriggered;
@@ -210,6 +217,39 @@ void PowerImplementation::Deinit()
     }
 
     NxClient_Uninit();
+}
+
+void PowerImplementation::Register(Exchange::IPower::INotification* sink)
+{
+    _adminLock.Lock();
+
+    // Make sure a sink is not registered multiple times.
+    ASSERT(std::find(_notificationClients.begin(), _notificationClients.end(), sink) == _notificationClients.end());
+
+    _notificationClients.push_back(sink);
+    sink->AddRef();
+
+    _adminLock.Unlock();
+
+    TRACE(Trace::Information, (_T("Registered a sink on the power")));
+}
+
+void PowerImplementation::Unregister(Exchange::IPower::INotification* sink)
+{
+    _adminLock.Lock();
+
+    std::list<Exchange::IPower::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));
+
+    // Make sure you do not unregister something you did not register !!!
+    ASSERT(index != _notificationClients.end());
+
+    if (index != _notificationClients.end()) {
+        (*index)->Release();
+        _notificationClients.erase(index);
+        TRACE(Trace::Information, (_T("Unregistered a sink on the power")));
+    }
+
+    _adminLock.Unlock();
 }
 
 void PowerImplementation::StopWorker()
@@ -382,6 +422,10 @@ Exchange::IPower::PCStatus PowerImplementation::SetPowerState()
     if (rc)
         return PCFailure;
 
+    if (_mode == NEXUS_PlatformStandbyMode_eOn) {
+        TRACE(Trace::Information, (_T("Resumed")));
+        Resumed();
+    }
     return PCSuccess;
 }
 
@@ -393,6 +437,20 @@ void PowerImplementation::SetWakeEvent()
             BKNI_SetEvent(_wakeupEvent);
         }
     }
+}
+
+void PowerImplementation::Resumed()
+{
+    _adminLock.Lock();
+
+    std::list<Exchange::IPower::INotification*>::iterator index(_notificationClients.begin());
+
+    while (index != _notificationClients.end()) {
+        (*index)->Resumed();
+        index++;
+    }
+
+    _adminLock.Unlock();
 }
 
 Exchange::IPower::PCStatus PowerImplementation::SetState(const Exchange::IPower::PCState state, const uint32_t timeout)

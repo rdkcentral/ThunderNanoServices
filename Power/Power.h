@@ -14,7 +14,8 @@ private:
 
     class Notification : 
         public PluginHost::IPlugin::INotification,
-        public PluginHost::VirtualInput::Notifier {
+        public PluginHost::VirtualInput::Notifier,
+        public Exchange::IPower::INotification {
 
     private:
         Notification() = delete;
@@ -41,8 +42,15 @@ private:
         {
             _parent.StateChange(plugin);
         }
+
+        virtual void Resumed()
+        {
+            _parent.ControlClients(Exchange::IPower::PCState::On);
+        }
+
         BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
+            INTERFACE_ENTRY(Exchange::IPower::INotification)
         END_INTERFACE_MAP
 
     private:
