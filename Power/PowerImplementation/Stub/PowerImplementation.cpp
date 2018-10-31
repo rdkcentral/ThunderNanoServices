@@ -42,6 +42,12 @@ public:
     virtual void Configure(const string& settings) {
         TRACE(Trace::Information, (_T("PowerImplementation::Configure()")));
     }
+    virtual void PowerImplementation::Register(Exchange::IPower::INotification* sink) override {
+        TRACE(Trace::Information, (_T("PowerImplementation::Register()")));
+    }
+    virtual void PowerImplementation::Unregister(Exchange::IPower::INotification* sink) override {
+        TRACE(Trace::Information, (_T("PowerImplementation::Unregister()")));
+    }
 
 private:
     PCState _currentState;
