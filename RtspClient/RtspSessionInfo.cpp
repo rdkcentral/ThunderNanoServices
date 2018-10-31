@@ -18,6 +18,8 @@ RtspSessionInfo::RtspSessionInfo()
 
 void RtspSessionInfo::reset()
 {
+    sessionId = std::string();
+    ctrlSessionId = std::string();
     npt = 0;
     duration = 0;
     bookmark = 0;

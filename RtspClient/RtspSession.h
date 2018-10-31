@@ -17,7 +17,7 @@ namespace Plugin {
 #define MB(x)   (x*1000)
 
 
-enum MyReturnCode {
+enum RtspReturnCode {
     ERR_OK,
     ERR_UNKNOWN,
     ERR_ACTIVE,
@@ -43,23 +43,23 @@ class RtspSession : public Core::Thread
     public:
         RtspSession();
         ~RtspSession();
-        MyReturnCode Initialize(const string& hostname, int port);
-        MyReturnCode Terminate();
-        MyReturnCode open(const string assetId, int start = 0, const string &reqCpeId = "", const string &remoteIp = "");
-        MyReturnCode close();
-        MyReturnCode play(int offset = 0, int num = 1, int denom = 1);
-        MyReturnCode getProp(const string name, string &value);
+        RtspReturnCode Initialize(const string& hostname, int port);
+        RtspReturnCode Terminate();
+        RtspReturnCode open(const string assetId, int start = 0, const string &reqCpeId = "", const string &remoteIp = "");
+        RtspReturnCode close();
+        RtspReturnCode play(float scale, int offset);
+        RtspReturnCode getProp(const string name, string &value);
 
-        MyReturnCode getParam(bool bSRM);
-        MyReturnCode sendHeartbeat(bool bSRM);
-        MyReturnCode sendHeartbeats();
+        RtspReturnCode getParam(bool bSRM);
+        RtspReturnCode sendHeartbeat(bool bSRM);
+        RtspReturnCode sendHeartbeats();
 
-        MyReturnCode check(bool bSRM, int timeout, string *pStr = NULL);
-        MyReturnCode checkResponse(bool bStream);
-        MyReturnCode checkAnnouncement();
-        MyReturnCode processAnnouncement(const std::string &response, bool bSRM);
-        MyReturnCode sendResponse(int respSeq, bool bSRM);
-        MyReturnCode sendAnnouncement(int code, const string &reason);
+        RtspReturnCode check(bool bSRM, int timeout, string *pStr = NULL);
+        RtspReturnCode checkResponse(bool bStream);
+        RtspReturnCode checkAnnouncement();
+        RtspReturnCode processAnnouncement(const std::string &response, bool bSRM);
+        RtspReturnCode sendResponse(int respSeq, bool bSRM);
+        RtspReturnCode sendAnnouncement(int code, const string &reason);
 
         enum Type {
             RTSP_SETUP = 1,
@@ -104,7 +104,8 @@ class RtspSession : public Core::Thread
         Core::CriticalSection _adminLock;
 
         bool _isSessionActive;
-        int _nextSRMHeartbeatMS, _nextPumpHeartbearMS;
+        int _nextSRMHeartbeatMS;
+        int _nextPumpHeartbearMS;
         int _playDelay;
 
 };

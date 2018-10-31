@@ -112,7 +112,7 @@ namespace Plugin {
             } else if (index.Current().Text() == _T("Play")) {
                 int16_t scale = 1;
                 uint32_t position = 0;
-                rc = _implementation->Play(position, scale);
+                rc = _implementation->Play(scale, position);
                 result->ErrorCode = (rc == 0) ? Web::STATUS_OK : Web::STATUS_INTERNAL_SERVER_ERROR;
             } else if (index.Current().Text() == _T("Set")) {
                 std::string str = request.Body<const Data>()->Str.Value();

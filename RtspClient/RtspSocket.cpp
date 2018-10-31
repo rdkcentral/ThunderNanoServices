@@ -99,7 +99,8 @@ int RtspSocket::Send(const std::string &buffer)
     int rc = 0;
     int n;
 
-    TRACE_L2(  "%s: sockfd=%d buffer.length=%d", __FUNCTION__, sockfd, buffer.length());
+    TRACE_L2( "%s: sockfd=%d buffer.length=%d", __FUNCTION__, sockfd, buffer.length());
+    TRACE_L4( "%s: %s\n", __FUNCTION__, buffer.c_str());
     n = write (sockfd, buffer.c_str(), buffer.length());
     //n = send(sockfd, buffer.c_str(), buffer.length(), 0);
     if (n < 0)
@@ -132,8 +133,9 @@ int RtspSocket::Receive(std::string &buffer, unsigned long timeoutMS)
                 TRACE_L1(  "%s: ERROR reading from socket ret=%d", __FUNCTION__, ret);
                 rc = -1;
             } else {
-                // TRACE_L2("%s\n",buf);
                 buffer = std::string(buf, ret);
+                TRACE_L2( "%s: sockfd=%d buffer.length=%d", __FUNCTION__, sockfd, buffer.length());
+                TRACE_L4( "%s: %s\n", __FUNCTION__, buffer.c_str());
                 rc = 0;
             }
         } else {
@@ -141,7 +143,7 @@ int RtspSocket::Receive(std::string &buffer, unsigned long timeoutMS)
             rc = -1;
         }
     } else {
-        //TRACE_L1(  "%s: select FAILED (%d)\n", __FUNCTION__, ret);
+        //TRACE_L2(  "%s: select FAILED (%d)\n", __FUNCTION__, ret);
         rc = -1;
     }
 

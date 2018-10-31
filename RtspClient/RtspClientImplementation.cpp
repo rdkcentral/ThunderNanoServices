@@ -62,7 +62,7 @@ namespace Plugin {
 
         uint32_t Setup(const string& assetId, uint32_t position)
         {
-            MyReturnCode rc = ERR_OK;
+            RtspReturnCode rc = ERR_OK;
 
             string host = "Heisenberg";        // XXX: Move it to config file
             uint16_t port = 5554;
@@ -76,16 +76,16 @@ namespace Plugin {
 
         uint32_t Play(int16_t scale, uint32_t position)
         {
-            MyReturnCode rc = ERR_OK;
+            RtspReturnCode rc = ERR_OK;
 
-            rc = _rtspSession.play(position, scale, 1);
+            rc = _rtspSession.play(scale, position);
 
             return rc;
         }
 
         uint32_t Teardown()
         {
-            MyReturnCode rc = ERR_OK;
+            RtspReturnCode rc = ERR_OK;
 
             rc = _rtspSession.close();
             _rtspSession.Terminate();

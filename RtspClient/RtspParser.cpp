@@ -102,7 +102,6 @@ RtspParser::buildGetParamRequest(bool bSRM)
 
     hexDump("GETPARAM", ss.str());
 
-    TRACE_L2( "%s: %d. '%s'", __FUNCTION__, bSRM, ss.str().c_str());
     return ss.str();
 }
 
@@ -250,7 +249,7 @@ int RtspParser::processTeardownResponse(const std::string &response)
 
 void RtspParser::parse(const std::string &str,  NAMED_ARRAY &contents, const string &sep1, const string &sep2)
 {
-    //TRACE_L2( "%s: size=%d input='%s'\n", __FUNCTION__, str.size(), str.c_str());
+    TRACE_L4( "%s: size=%d input='%s'", __FUNCTION__, str.size(), str.c_str());
     contents.clear();
 
     bool done = false;
@@ -265,13 +264,15 @@ void RtspParser::parse(const std::string &str,  NAMED_ARRAY &contents, const str
 
         string sub = str.substr(start, pos-start);
         size_t pos2 = sub.find(sep2);
-        if (pos2 != string::npos) {
+        if (pos2 == string::npos) {
+            string left = sub.substr(0, pos2);
+            contents[left] = "";
+        } else {
             string left = sub.substr(0, pos2);
             string right = sub.substr(pos2+sep2.size());
-            //TRACE_L2("%s: \tleft=%s right=%s pos=%u", __FUNCTION__, left.c_str(), right.c_str(), pos2);
+            TRACE_L4("%s:     left=%s right=%s pos=%u", __FUNCTION__, left.c_str(), right.c_str(), pos2);
             contents[left] = right;
         }
-//        cout << sub << endl;
 
         start = pos+sep1.size();
         if (start >= str.size())
@@ -339,15 +340,20 @@ int RtspParser::split(const string& str, const string& delim,  std::vector<strin
     return tokens.size();
 }
 
+#define DUMP_CHAR_PER_LINE 32
 void RtspParser::hexDump(const char* label, const std::string& msg)
 {
-    std::stringstream ss;
-    int32_t max = (msg.length() > 32) ? 32 : msg.length();
-    for (int32_t i = 0; i < max; i++) {
+    std::stringstream ssHex, ss;
+    for (int32_t i = 0; i < msg.length(); i++) {
         int byte = (uint8_t)msg.at(i);
-        ss << std::setfill('0') << std::setw(2) << std::hex <<  byte << " ";
+        ssHex << std::setfill('0') << std::setw(2) << std::hex <<  byte << " ";
+        ss << char((byte < 32) ? '.' : byte);
+
+        TRACE_L2("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
+        ss.str(std::string());
+        ssHex.str(std::string());
     }
-    TRACE_L2("%s: %s", label, ss.str().c_str());
+    TRACE_L2("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
 }
 
 }} // WPEFramework::Plugin
