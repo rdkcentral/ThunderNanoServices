@@ -43,9 +43,9 @@ private:
             _parent.StateChange(plugin);
         }
 
-        virtual void Resumed()
+        virtual void StateChange(Exchange::IPower::PCState state)
         {
-            _parent.ControlClients(Exchange::IPower::PCState::On);
+            _parent.ControlClients(state);
         }
 
         BEGIN_INTERFACE_MAP(Notification)

@@ -446,7 +446,7 @@ void PowerImplementation::Resumed()
     std::list<Exchange::IPower::INotification*>::iterator index(_notificationClients.begin());
 
     while (index != _notificationClients.end()) {
-        (*index)->Resumed();
+        (*index)->StateChange(Exchange::IPower::On);
         index++;
     }
 
