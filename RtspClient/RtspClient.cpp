@@ -102,16 +102,16 @@ namespace Plugin {
             }
         } else if ((request.Verb == Web::Request::HTTP_POST) && ((index.Next()) && (index.Next()))) {
             if (index.Current().Text() == _T("Setup")) {
-                string assetId;
-                int start = 0;
-                rc = _implementation->Setup(assetId, start);
+                string assetId = request.Body<const Data>()->AssetId.Value();
+                uint32_t position = request.Body<const Data>()->Position.Value();
+                rc = _implementation->Setup(assetId, position);
                 result->ErrorCode = (rc == 0) ? Web::STATUS_OK : Web::STATUS_INTERNAL_SERVER_ERROR;
             } else if (index.Current().Text() == _T("Teardown")) {
                 rc = _implementation->Teardown();
                 result->ErrorCode = (rc == 0) ? Web::STATUS_OK : Web::STATUS_INTERNAL_SERVER_ERROR;
             } else if (index.Current().Text() == _T("Play")) {
-                int16_t scale = 1;
-                uint32_t position = 0;
+                int32_t scale = request.Body<const Data>()->Scale.Value();
+                uint32_t position = request.Body<const Data>()->Position.Value();
                 rc = _implementation->Play(scale, position);
                 result->ErrorCode = (rc == 0) ? Web::STATUS_OK : Web::STATUS_INTERNAL_SERVER_ERROR;
             } else if (index.Current().Text() == _T("Set")) {

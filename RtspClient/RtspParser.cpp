@@ -25,7 +25,7 @@ RtspParser::RtspParser(RtspSessionInfo& info)
 }
 
 std::string
-RtspParser::buildSetupRequest(const std::string &server, const std::string &assetId)
+RtspParser::BuildSetupRequest(const std::string &server, const std::string &assetId)
 {
     std::stringstream ss;
 
@@ -39,13 +39,13 @@ RtspParser::buildSetupRequest(const std::string &server, const std::string &asse
     ss << "Transport: MP2T/DVBC/QAM;unicast;\r\n";
     ss << "\r\n";
 
-    hexDump("SETUP", ss.str());
+    HexDump("SETUP", ss.str());
 
     return ss.str();
 }
 
 std::string
-RtspParser::buildPlayRequest(float scale, int offset)
+RtspParser::BuildPlayRequest(float scale, uint32_t position)
 {
     std::stringstream ss;
     string sessionId;
@@ -59,20 +59,17 @@ RtspParser::buildPlayRequest(float scale, int offset)
     ss << cmd << " * RTSP/1.0\r\n";
     ss << "CSeq:" << ++_sequence << "\r\n";
     ss << "Session:" << sessionId << "\r\n";
-    if (offset) {
-        int pos = (offset == INT_MAX) ? 0 : MS2SEC(_sessionInfo.npt) + offset;
-        ss << "Range: npt=" << pos << "\r\n";
-    }
+    ss << "Range: npt=" << position << "\r\n";
     ss << "Scale: " << scale << "\r\n";
     ss << "\r\n";
 
-    hexDump("PLAY", ss.str());
+    HexDump("PLAY", ss.str());
 
     return ss.str();
 }
 
 std::string
-RtspParser::buildGetParamRequest(bool bSRM)
+RtspParser::BuildGetParamRequest(bool bSRM)
 {
     string strParams;
     string sessId;
@@ -100,13 +97,13 @@ RtspParser::buildGetParamRequest(bool bSRM)
     }
     ss << "\r\n";
 
-    hexDump("GETPARAM", ss.str());
+    HexDump("GETPARAM", ss.str());
 
     return ss.str();
 }
 
 std::string
-RtspParser::buildTeardownRequest(int reason)
+RtspParser::BuildTeardownRequest(int reason)
 {
     std::stringstream ss;
     string strReason = "Cleint Intiated";
@@ -117,13 +114,13 @@ RtspParser::buildTeardownRequest(int reason)
     ss << "Reason:" << reason << " " << strReason << "\r\n";
     ss << "\r\n";
 
-    hexDump("TEARDOWN", ss.str());
+    HexDump("TEARDOWN", ss.str());
 
     return ss.str();
 }
 
 std::string
-RtspParser::buildResponse(int respSeq, bool bSRM)
+RtspParser::BuildResponse(int respSeq, bool bSRM)
 {
     string sessId = (bSRM) ? _sessionInfo.sessionId : _sessionInfo.ctrlSessionId;
 
@@ -136,11 +133,11 @@ RtspParser::buildResponse(int respSeq, bool bSRM)
     return ss.str();
 }
 
-int RtspParser::processSetupResponse(const std::string &response)
+int RtspParser::ProcessSetupResponse(const std::string &response)
 {
     NAMED_ARRAY setupMap;               // entire response
     NAMED_ARRAY params;                 // single line
-    parse(response, setupMap, "\r\n", ": ");
+    Parse(response, setupMap, "\r\n", ": ");
 
     string sess = setupMap["Session"];
     TRACE_L2( "%s: session id='%s'", __FUNCTION__, sess.c_str());
@@ -149,7 +146,7 @@ int RtspParser::processSetupResponse(const std::string &response)
         _sessionInfo.sessionTimeout = SEC2MS(_sessionInfo.defaultSessionTimeout);
         TRACE_L2( "%s: using default sessionTimeout %d", __FUNCTION__, _sessionInfo.defaultSessionTimeout);
     } else {                            // contains heartbeat
-        parse(sess, params, ";", "=");
+        Parse(sess, params, ";", "=");
         NAMED_ARRAY::iterator it=params.begin();
         _sessionInfo.sessionId = it->first;
 
@@ -164,7 +161,7 @@ int RtspParser::processSetupResponse(const std::string &response)
             _sessionInfo.ctrlSessionTimeout = SEC2MS(_sessionInfo.defaultCtrlSessionTimeout);
             TRACE_L2( "%s: using default ctrlSessionTimeout %d", __FUNCTION__, _sessionInfo.defaultCtrlSessionTimeout);
         } else {
-            parse(sess, params, ";", "=");
+            Parse(sess, params, ";", "=");
             NAMED_ARRAY::iterator it=params.begin();
             _sessionInfo.ctrlSessionId = it->first;
 
@@ -180,13 +177,13 @@ int RtspParser::processSetupResponse(const std::string &response)
 
     string location = setupMap["Location"];
     string chan = setupMap["Tuning"];
-    parse(chan, params, ";", "=");
+    Parse(chan, params, ";", "=");
     _sessionInfo.frequency  = atoi(params["frequency"].c_str()) * 100;
     _sessionInfo.modulation = atoi(params["modulation"].c_str());
     _sessionInfo.symbolRate = atoi(params["symbol_rate"].c_str());
 
     string tune = setupMap["Channel"];
-    parse(tune, params, ";", "=");
+    Parse(tune, params, ";", "=");
     _sessionInfo.programNum = atoi(params["Svcid"].c_str());
 
     _sessionInfo.bookmark = atof(setupMap["Bookmark"].c_str());
@@ -196,7 +193,7 @@ int RtspParser::processSetupResponse(const std::string &response)
         __FUNCTION__, _sessionInfo.frequency, _sessionInfo.programNum, _sessionInfo.modulation, _sessionInfo.symbolRate, _sessionInfo.bookmark, _sessionInfo.duration);
 }
 
-void RtspParser::updateNPT(NAMED_ARRAY &playMap)
+void RtspParser::UpdateNPT(NAMED_ARRAY &playMap)
 {
     float nptStart = 0, nptEnd = 0;
     float oldScale = _sessionInfo.scale;
@@ -222,32 +219,32 @@ void RtspParser::updateNPT(NAMED_ARRAY &playMap)
         }
 
         _sessionInfo.npt = SEC2MS(nptStart);
-        TRACE_L2( "%s: NPT=%6.2f scale=%2.2f oldNPT=%6.2f oldScale=%2.2f", __FUNCTION__,  SEC2MS(_sessionInfo.npt), _sessionInfo.scale, oldNPT, oldScale);
+        TRACE_L2( "%s: npt=%6.2f scale=%2.2f oldNPT=%6.2f oldScale=%2.2f", __FUNCTION__,  SEC2MS(_sessionInfo.npt), _sessionInfo.scale, oldNPT, oldScale);
     }
 }
 
-int RtspParser::processPlayResponse(const std::string &response)
+int RtspParser::ProcessPlayResponse(const std::string &response)
 {
     NAMED_ARRAY playMap;
-    parse(response, playMap, "\r\n", ": ");
-    updateNPT(playMap);
+    Parse(response, playMap, "\r\n", ": ");
+    UpdateNPT(playMap);
 }
 
-int RtspParser::processGetParamResponse(const std::string &response)
+int RtspParser::ProcessGetParamResponse(const std::string &response)
 {
     NAMED_ARRAY playMap;
-    parse(response, playMap, "\r\n", ": ");
-    updateNPT(playMap);
+    Parse(response, playMap, "\r\n", ": ");
+    UpdateNPT(playMap);
 }
 
-int RtspParser::processTeardownResponse(const std::string &response)
+int RtspParser::ProcessTeardownResponse(const std::string &response)
 {
     NAMED_ARRAY playMap;
-    parse(response, playMap, "\r\n", ": ");
+    Parse(response, playMap, "\r\n", ": ");
     //
 }
 
-void RtspParser::parse(const std::string &str,  NAMED_ARRAY &contents, const string &sep1, const string &sep2)
+void RtspParser::Parse(const std::string &str,  NAMED_ARRAY &contents, const string &sep1, const string &sep2)
 {
     TRACE_L4( "%s: size=%d input='%s'", __FUNCTION__, str.size(), str.c_str());
     contents.clear();
@@ -285,12 +282,12 @@ void RtspParser::parse(const std::string &str,  NAMED_ARRAY &contents, const str
 }
 
 int
-RtspParser::parseResponse(const std::string str,  std::string &rtspBody, RtspParser::MessageType &msgType)
+RtspParser::ParseResponse(const std::string str,  std::string &rtspBody, RtspParser::MessageType &msgType)
 {
     int rtspCode = 0;
     msgType = RTSP_UNKNOWN;
 
-    hexDump("Response: ", str);
+    HexDump("Response: ", str);
     // -------------------------------------------------------------------------
     // RTSP/1.0 200 OK
     // RTSP/1.0 400 Bad Request
@@ -300,7 +297,7 @@ RtspParser::parseResponse(const std::string str,  std::string &rtspBody, RtspPar
     if (pos !=std::string::npos) {
         string header = str.substr(0, pos);
         std::vector<string> tokens;
-        split(header, " ", tokens);
+        Split(header, " ", tokens);
         //TRACE_L2( "%s: header.length=%d tokens.size=%d", __FUNCTION__, header.length(), tokens.size());
         //for (int i = 0; i < tokens.size(); i++)
         //    TRACE_L2( "%s: %d. '%s'", __FUNCTION__, i, tokens.at(i).c_str());
@@ -314,16 +311,16 @@ RtspParser::parseResponse(const std::string str,  std::string &rtspBody, RtspPar
                 msgType = RTSP_RESPONSE;
                 rtspCode = std::stoi(tokens.at(1));
             }
-            // parse rest, only if header is valid
+            // Parse rest, only if header is valid
             rtspBody = str.substr(pos+2);       // +2 CRLR
-            //parse(tokenStr, contents, ":", "\r\n");
+            //Parse(tokenStr, contents, ":", "\r\n");
         }
     }
 
     return msgType;
 }
 
-int RtspParser::split(const string& str, const string& delim,  std::vector<string>& tokens)
+int RtspParser::Split(const string& str, const string& delim,  std::vector<string>& tokens)
 {
     size_t prev = 0, pos = 0;
     do
@@ -340,8 +337,7 @@ int RtspParser::split(const string& str, const string& delim,  std::vector<strin
     return tokens.size();
 }
 
-#define DUMP_CHAR_PER_LINE 32
-void RtspParser::hexDump(const char* label, const std::string& msg)
+void RtspParser::HexDump(const char* label, const std::string& msg, uint16_t charsPerLine)
 {
     std::stringstream ssHex, ss;
     for (int32_t i = 0; i < msg.length(); i++) {
@@ -349,9 +345,11 @@ void RtspParser::hexDump(const char* label, const std::string& msg)
         ssHex << std::setfill('0') << std::setw(2) << std::hex <<  byte << " ";
         ss << char((byte < 32) ? '.' : byte);
 
-        TRACE_L2("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
-        ss.str(std::string());
-        ssHex.str(std::string());
+        if (!((i+1) % charsPerLine)) {
+            TRACE_L2("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
+            ss.str(std::string());
+            ssHex.str(std::string());
+        }
     }
     TRACE_L2("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
 }

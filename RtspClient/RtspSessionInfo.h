@@ -7,6 +7,7 @@ namespace WPEFramework {
 namespace Plugin {
 
 struct ServerInfo {
+    std::string name;
     std::string address;
     uint16_t port;
 };

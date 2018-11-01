@@ -21,26 +21,26 @@ class RtspParser
         };
 
         RtspParser(RtspSessionInfo& sessionInfo);
-        std::string buildSetupRequest(const std::string &server, const std::string &assetId);
-        std::string buildPlayRequest(float scale = 1.0, int pos = 0);
-        std::string buildGetParamRequest(bool bSRM);
-        std::string buildTeardownRequest(int reason);
-        std::string buildResponse(int seq, bool bSRM);
+        std::string BuildSetupRequest(const std::string &server, const std::string &assetId);
+        std::string BuildPlayRequest(float scale = 1.0, uint32_t position = 0);
+        std::string BuildGetParamRequest(bool bSRM);
+        std::string BuildTeardownRequest(int reason);
+        std::string BuildResponse(int seq, bool bSRM);
 
-        int processSetupResponse(const std::string &response);
-        int processPlayResponse(const std::string &response);
-        int processGetParamResponse(const std::string &response);
-        int processTeardownResponse(const std::string &response);
-        int processAnnouncement(const std::string &response, bool bSRM);
+        int ProcessSetupResponse(const std::string &response);
+        int ProcessPlayResponse(const std::string &response);
+        int ProcessGetParamResponse(const std::string &response);
+        int ProcessTeardownResponse(const std::string &response);
+        int ProcessAnnouncement(const std::string &response, bool bSRM);
 
-        void parse(const std::string &str,  NAMED_ARRAY &contents, const string &sep1, const string &sep2);
-        int parseResponse(const std::string str,  std::string &rtspBody, RtspParser::MessageType &msgType);
+        void Parse(const std::string &str,  NAMED_ARRAY &contents, const string &sep1, const string &sep2);
+        int ParseResponse(const std::string str,  std::string &rtspBody, RtspParser::MessageType &msgType);
 
     private:
-        void updateNPT(NAMED_ARRAY &playMap);
+        void UpdateNPT(NAMED_ARRAY &playMap);
 
-        int split(const string& str, const string& delim,  std::vector<string>& tokens);
-        static void hexDump(const char* label, const std::string& msg);
+        int Split(const string& str, const string& delim,  std::vector<string>& tokens);
+        static void HexDump(const char* label, const std::string& msg, uint16_t charsPerLine = 32);
 
     public:
         RtspSessionInfo& _sessionInfo;

@@ -74,7 +74,11 @@ namespace Plugin {
             Data()
                 : Core::JSON::Container()
                 , Str()
+                , AssetId()
             {
+                Add(_T("AssetId"), &AssetId);
+                Add(_T("Scale"), &Scale);
+                Add(_T("Position"), &Position);
                 Add(_T("Str"), &Str);
             }
             ~Data()
@@ -82,6 +86,9 @@ namespace Plugin {
             }
 
         public:
+            Core::JSON::String AssetId;
+            Core::JSON::DecSInt32 Scale;
+            Core::JSON::DecUInt32 Position;
             Core::JSON::String Str;
         };
 

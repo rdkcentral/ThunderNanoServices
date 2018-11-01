@@ -69,16 +69,17 @@ namespace Plugin {
             rc = _rtspSession.Initialize(host, port);
 
             if (rc == ERR_OK) {
-                rc = _rtspSession.open(assetId, position);
+                rc = _rtspSession.Open(assetId, position);
             }
             return rc;
         }
 
-        uint32_t Play(int16_t scale, uint32_t position)
+        uint32_t Play(int32_t scale, uint32_t position)
         {
             RtspReturnCode rc = ERR_OK;
 
-            rc = _rtspSession.play(scale, position);
+            TRACE_L2( "%s: scale=%d position=%d", __FUNCTION__, scale, position);
+            rc = _rtspSession.Play((float_t) scale/1000, position);
 
             return rc;
         }
@@ -87,7 +88,7 @@ namespace Plugin {
         {
             RtspReturnCode rc = ERR_OK;
 
-            rc = _rtspSession.close();
+            rc = _rtspSession.Close();
             _rtspSession.Terminate();
 
             return rc;
