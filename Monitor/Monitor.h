@@ -473,26 +473,27 @@ namespace Plugin {
                 }
 
             public:
-                inline void IncrRestartCount ()
+                inline void IncrRestartCount()
                 {
                     _restartCount++;
                 }
-                inline void ResetRestartCount ()                {
+                inline void ResetRestartCount()
+                {
                     _restartCount = 0;
                 }
-                inline uint32_t GetRestartCount ()
+                inline uint32_t RestartCount() const
                 {
                     return _restartCount;
                 }
-                inline void SetRestartLimit(uint32_t value)
+                inline void RestartLimit(const uint32_t value)
                 {
                     _restartLimit = value;
                 }
-                inline uint32_t GetRestartLimit()
+                inline uint32_t RestartLimit() const
                 {
                     return _restartLimit;
                 }
-                inline bool HasRestartAllowed () const 
+                inline bool HasRestartAllowed() const
                 {
                     return (_operationalEvaluate);
                 }
@@ -606,7 +607,7 @@ namespace Plugin {
 
                 while (index != _monitor.end()) {
                     if (index->first == observable)
-                        index->second.SetRestartLimit(value);
+                        index->second.RestartLimit(value);
                     index++;
                 }
             }
@@ -662,7 +663,6 @@ namespace Plugin {
                     PluginHost::IShell::state currentState(service->State());
 
                     if (currentState == PluginHost::IShell::ACTIVATED) {
-                        //index->second.ResetRestartCount();
                         // Get the MetaData interface
                         Exchange::IMemory* memory = service->QueryInterface<Exchange::IMemory>();
 
@@ -682,9 +682,9 @@ namespace Plugin {
                         const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Activate\", \"reason\": \"Automatic\" }");
                         _service->Notify(message);
  
-                        if (index->second.GetRestartCount() == index->second.GetRestartLimit()) {
-                            TRACE(Trace::Error, (_T("Restarting of %s Failed : Tried %d attempts.\n"), service->Callsign().c_str(),index->second.GetRestartLimit()));
-                            const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Restart\", \"reason\":\"" + (std::to_string(index->second.GetRestartLimit())).c_str() + " Attempts Failed\"}");
+                        if (index->second.RestartCount() == index->second.RestartLimit()) {
+                            TRACE(Trace::Error, (_T("Restarting of %s Failed : Tried %d attempts.\n"), service->Callsign().c_str(),index->second.RestartLimit()));
+                            const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Restart\", \"reason\":\"" + (std::to_string(index->second.RestartLimit())).c_str() + " Attempts Failed\"}");
                             _service->Notify(message);
                             index->second.ResetRestartCount();
                         }
