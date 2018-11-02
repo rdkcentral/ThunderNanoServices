@@ -1,35 +1,37 @@
 [
-    { "in": { "code": 167}, "out": { "code": 433}, "key": "Recordings" },
-    { "in": { "code": 116}, "out": { "code": 320}, "key": "Power" },
-    { "in": { "code": 113}, "out": { "code": 334}, "key": "VolumeMute" },
-                                     
-    { "in": { "code": 168}, "out": { "code": 227}, "key": "MediaRewind" },
-    { "in": { "code": 164}, "out": { "code": 179}, "key": "MediaPlayPause" },
-    { "in": { "code": 159}, "out": { "code": 228}, "key": "MediaFastForward" },
-                                     
-    { "in": { "code": 103}, "out": { "code": 273}, "key": "ArrowUp" },
-    { "in": { "code": 108}, "out": { "code": 274}, "key": "ArrowDown" },
-    { "in": { "code": 105}, "out": { "code": 276}, "key": "ArrowLeft" },
-    { "in": { "code": 106}, "out": { "code": 275}, "key": "ArrowRight" },
-    { "in": { "code":  28}, "out": { "code":  13}, "key": "Enter" },
+    "conversion": [
+        { "in": { "code": 167}, "out": { "code": 433}, "key": "Recordings" },
+        { "in": { "code": 116}, "out": { "code": 320}, "key": "Power" },
+        { "in": { "code": 113}, "out": { "code": 334}, "key": "VolumeMute" },
 
-    { "in": { "code":  14}, "out": { "code":  27}, "key": "Backspace" },
-    { "in": { "code": 358}, "out": { "code": 315}, "key": "Info" },
-    { "in": { "code": 139}, "out": { "code": 319}, "key": "ContextMenu" },
+        { "in": { "code": 168}, "out": { "code": 227}, "key": "MediaRewind" },
+        { "in": { "code": 164}, "out": { "code": 179}, "key": "MediaPlayPause" },
+        { "in": { "code": 159}, "out": { "code": 228}, "key": "MediaFastForward" },
 
-    { "in": { "code": 402}, "out": { "code": 330}, "key": "ChannelUp" },
-    { "in": { "code": 403}, "out": { "code": 331}, "key": "ChannelDown" },
-    { "in": { "code": 115}, "out": { "code": 332}, "key": "VolumeUp" },
-    { "in": { "code": 114}, "out": { "code": 333}, "key": "VolumeDown" },
+        { "in": { "code": 103}, "out": { "code": 273}, "key": "ArrowUp" },
+        { "in": { "code": 108}, "out": { "code": 274}, "key": "ArrowDown" },
+        { "in": { "code": 105}, "out": { "code": 276}, "key": "ArrowLeft" },
+        { "in": { "code": 106}, "out": { "code": 275}, "key": "ArrowRight" },
+        { "in": { "code":  28}, "out": { "code":  13}, "key": "Enter" },
 
-    { "in": { "code":  2 }, "out": { "code": 49 }, "key": "1" },
-    { "in": { "code":  3 }, "out": { "code": 50 }, "key": "2" },
-    { "in": { "code":  4 }, "out": { "code": 51 }, "key": "3" },
-    { "in": { "code":  5 }, "out": { "code": 52 }, "key": "4" },
-    { "in": { "code":  6 }, "out": { "code": 53 }, "key": "5" },
-    { "in": { "code":  7 }, "out": { "code": 54 }, "key": "6" },
-    { "in": { "code":  8 }, "out": { "code": 55 }, "key": "7" },
-    { "in": { "code":  9 }, "out": { "code": 56 }, "key": "8" },
-    { "in": { "code": 10 }, "out": { "code": 57 }, "key": "9" },
-    { "in": { "code": 11 }, "out": { "code": 48 }, "key": "0" }
+        { "in": { "code":  14}, "out": { "code":  27}, "key": "Backspace" },
+        { "in": { "code": 358}, "out": { "code": 315}, "key": "Info" },
+        { "in": { "code": 139}, "out": { "code": 319}, "key": "ContextMenu" },
+
+        { "in": { "code": 402}, "out": { "code": 330}, "key": "ChannelUp" },
+        { "in": { "code": 403}, "out": { "code": 331}, "key": "ChannelDown" },
+        { "in": { "code": 115}, "out": { "code": 332}, "key": "VolumeUp" },
+        { "in": { "code": 114}, "out": { "code": 333}, "key": "VolumeDown" },
+
+        { "in": { "code":  2 }, "out": { "code": 49 }, "key": "1" },
+        { "in": { "code":  3 }, "out": { "code": 50 }, "key": "2" },
+        { "in": { "code":  4 }, "out": { "code": 51 }, "key": "3" },
+        { "in": { "code":  5 }, "out": { "code": 52 }, "key": "4" },
+        { "in": { "code":  6 }, "out": { "code": 53 }, "key": "5" },
+        { "in": { "code":  7 }, "out": { "code": 54 }, "key": "6" },
+        { "in": { "code":  8 }, "out": { "code": 55 }, "key": "7" },
+        { "in": { "code":  9 }, "out": { "code": 56 }, "key": "8" },
+        { "in": { "code": 10 }, "out": { "code": 57 }, "key": "9" },
+        { "in": { "code": 11 }, "out": { "code": 48 }, "key": "0" }
+    ]
 ]
