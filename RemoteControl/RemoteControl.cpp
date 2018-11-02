@@ -139,7 +139,7 @@ namespace Plugin {
         string mappingFile(MappingFile(config.MapFile.Value(), service->PersistentPath(), service->DataPath()));
 
         // First check that we at least can create a default lookup table.
-        if ((mappingFile.empty() == true) || (_inputHandler == nullptr)) {
+        if (_inputHandler == nullptr) {
             result = "Could not configure remote control.";
         }
         else {
@@ -152,95 +152,102 @@ namespace Plugin {
             // Seems like we have a default mapping file. Load it..
             PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(DefaultMappingTable));
 
-            if (map.Load(mappingFile) == Core::ERROR_NONE) {
+            if (mappingFile.empty() == true) {
 
                 map.PassThrough(config.PassOn.Value());
+            } else {
+                if (map.Load(mappingFile) == Core::ERROR_NONE) {
 
-                Remotes::RemoteAdministrator& admin(Remotes::RemoteAdministrator::Instance());
+                    map.PassThrough(config.PassOn.Value());
+                } else {
+                    map.PassThrough(false);
+                }
+            }
 
-                // Strawl over all remotes (inputs) and see if you need to load mapping tables.
-                Remotes::RemoteAdministrator::Iterator index(admin.Producers());
-                Core::JSON::ArrayType<RemoteControl::Config::Device>::Iterator configList(config.Devices.Elements());
+            Remotes::RemoteAdministrator& admin(Remotes::RemoteAdministrator::Instance());
 
-                while (index.Next() == true) {
+            // Strawl over all remotes (inputs) and see if you need to load mapping tables.
+            Remotes::RemoteAdministrator::Iterator index(admin.Producers());
+            Core::JSON::ArrayType<RemoteControl::Config::Device>::Iterator configList(config.Devices.Elements());
 
-                    const TCHAR* producer((*index)->Name());
-                    string loadName(producer);
+            while (index.Next() == true) {
 
-                    TRACE_L1(_T("Searching map file for: %s"), producer);
+                const TCHAR* producer((*index)->Name());
+                string loadName(producer);
 
-                    configList.Reset();
+                TRACE_L1(_T("Searching map file for: %s"), producer);
 
-                    while ((configList.Next() == true) && (configList.Current().Name.Value() != loadName)) { /* intentionally left empty */
-                    }
+                configList.Reset();
 
-                    if (configList.IsValid() == true) {
-                        (*index)->Configure(configList.Current().Settings.Value());
-                        // We found an overruling name.
-                        loadName = configList.Current().MapFile.Value();
-                    }
-                    else {
-                        (*index)->Configure(EMPTY_STRING);
-                        loadName += _T(".json");
-                    }
-
-                    // See if we need to load a table.
-                    string specific(MappingFile(loadName, service->PersistentPath(), service->DataPath()));
-
-                    if ((specific.empty() == false) && (specific != mappingFile)) {
-
-                        TRACE(Trace::Information, (_T("Opening map file: %s"), specific.c_str()));
-                        TRACE_L1(_T("Opening map file: %s"), specific.c_str());
-
-                        // Get our selves a table..
-                        PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(producer));
-                        map.Load(specific);
-                        if (configList.IsValid() == true) {
-                            map.PassThrough(configList.Current().PassOn.Value());
-                        }
-                    }
+                while ((configList.Next() == true) && (configList.Current().Name.Value() != loadName)) { /* intentionally left empty */
                 }
 
-                configList = config.Virtuals.Elements();
+                if (configList.IsValid() == true) {
+                    (*index)->Configure(configList.Current().Settings.Value());
+                    // We found an overruling name.
+                    loadName = configList.Current().MapFile.Value();
+                }
+                else {
+                    (*index)->Configure(EMPTY_STRING);
+                    loadName += _T(".json");
+                }
 
-                while (configList.Next() == true) {
-                    // Configure the virtual inputs.
-                    string loadName(configList.Current().MapFile.Value());
+                // See if we need to load a table.
+                string specific(MappingFile(loadName, service->PersistentPath(), service->DataPath()));
 
-                    if (loadName.empty() == true) {
-                        loadName = configList.Current().Name.Value() + _T(".json");
-                    }
+                if ((specific.empty() == false) && (specific != mappingFile)) {
 
-                    // See if we need to load a table.
-                    string specific(MappingFile(loadName, service->PersistentPath(), service->DataPath()));
+                    TRACE(Trace::Information, (_T("Opening map file: %s"), specific.c_str()));
+                    TRACE_L1(_T("Opening map file: %s"), specific.c_str());
 
-                    if ((specific.empty() == false) && (specific != mappingFile)) {
-                        TRACE(Trace::Information, (_T("Opening map file: %s"), specific.c_str()));
-                        TRACE_L1(_T("Opening map file: %s"), specific.c_str());
-
-                        // Get our selves a table..de
-                        PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(configList.Current().Name.Value()));
-                        map.Load(specific);
+                    // Get our selves a table..
+                    PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(producer));
+                    map.Load(specific);
+                    if (configList.IsValid() == true) {
                         map.PassThrough(configList.Current().PassOn.Value());
                     }
+                }
+            }
 
-                    _virtualDevices.push_back(configList.Current().Name.Value());
+            configList = config.Virtuals.Elements();
+
+            while (configList.Next() == true) {
+                // Configure the virtual inputs.
+                string loadName(configList.Current().MapFile.Value());
+
+                if (loadName.empty() == true) {
+                    loadName = configList.Current().Name.Value() + _T(".json");
                 }
 
-				auto postLookup(config.Links.Elements());
+                // See if we need to load a table.
+                string specific(MappingFile(loadName, service->PersistentPath(), service->DataPath()));
 
-				while (postLookup.Next() == true) {
-					string mappingFile(MappingFile(postLookup.Current().MapFile.Value(), service->PersistentPath(), service->DataPath()));
-					if ((mappingFile.empty() == false) && (postLookup.Current().Name.Value().empty() == false)) {
-						_inputHandler->PostLookup(postLookup.Current().Name.Value(), mappingFile);
-					}
-				}
+                if ((specific.empty() == false) && (specific != mappingFile)) {
+                    TRACE(Trace::Information, (_T("Opening map file: %s"), specific.c_str()));
+                    TRACE_L1(_T("Opening map file: %s"), specific.c_str());
 
-                _skipURL = service->WebPrefix().length();
-                _inputHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value());
-                _inputHandler->Default(DefaultMappingTable);
-                admin.Callback(this);
+                    // Get our selves a table..de
+                    PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(configList.Current().Name.Value()));
+                    map.Load(specific);
+                    map.PassThrough(configList.Current().PassOn.Value());
+                }
+
+                _virtualDevices.push_back(configList.Current().Name.Value());
             }
+
+            auto postLookup(config.Links.Elements());
+
+            while (postLookup.Next() == true) {
+                string mappingFile(MappingFile(postLookup.Current().MapFile.Value(), service->PersistentPath(), service->DataPath()));
+                if ((mappingFile.empty() == false) && (postLookup.Current().Name.Value().empty() == false)) {
+                    _inputHandler->PostLookup(postLookup.Current().Name.Value(), mappingFile);
+                }
+            }
+
+            _skipURL = service->WebPrefix().length();
+            _inputHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value());
+            _inputHandler->Default(DefaultMappingTable);
+            admin.Callback(this);
         }
 
         // On succes return nullptr, to indicate there is no error text.
