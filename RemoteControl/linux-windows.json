@@ -1,4 +1,4 @@
-[
+{
     "conversion": [
         { "in": { "code": 167}, "out": { "code": 433}, "key": "Recordings" },
         { "in": { "code": 116}, "out": { "code": 320}, "key": "Power" },
@@ -34,4 +34,4 @@
         { "in": { "code": 10 }, "out": { "code": 57 }, "key": "9" },
         { "in": { "code": 11 }, "out": { "code": 48 }, "key": "0" }
     ]
-]
+}
