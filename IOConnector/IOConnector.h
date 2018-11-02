@@ -42,7 +42,7 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , Pin(162)
-                , Callsign(_T("RemoeControl"))
+                , Callsign(_T("RemoteControl"))
                 , Producer(_T("RF4CE")) {
                 Add(_T("pin"), &Pin);
                 Add(_T("callsign"), &Callsign);
