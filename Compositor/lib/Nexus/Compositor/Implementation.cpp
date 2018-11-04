@@ -93,13 +93,13 @@ namespace Plugin {
             }
 
         public:
-            inline void HardwareDelay(const uint16_t time) {
+            inline void HardwareDelay(const uint16_t time, Exchange::IComposition::ScreenResolution format) {
                 ASSERT (_delay == nullptr);
                 if ( (time != 0) && (_delay == nullptr) ) {
                     _delay = new Postpone(*this, time);
                 }
+                _displayFormat = format;
             }
-            // -------------------------------------------------------------------------------------------------------
             //   Broadcom::Platform::ICallback methods
             // -------------------------------------------------------------------------------------------------------
             /* virtual */ void Attached(Exchange::IComposition::IClient* client)
@@ -128,11 +128,14 @@ namespace Plugin {
         private:
             inline void PlatformReady() {
                 _parent.PlatformReady();
+                if (_delay != nullptr)
+                    _parent.Resolution(_displayFormat);
             }
 
         private:
             CompositorImplementation& _parent;
             Postpone* _delay;
+            Exchange::IComposition::ScreenResolution _displayFormat;
         };
 
     public:
@@ -176,7 +179,7 @@ namespace Plugin {
 
             Config info; info.FromString(configuration);
 
-            _sink.HardwareDelay(info.HardwareDelay.Value());
+            _sink.HardwareDelay(info.HardwareDelay.Value(), info.Resolution.Value());
 
             _nxserver = new Broadcom::Platform(service->Callsign(), &_sink, &_sink, configuration);
 
