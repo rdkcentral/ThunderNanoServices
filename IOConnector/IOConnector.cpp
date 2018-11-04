@@ -105,7 +105,7 @@ namespace Plugin {
             Exchange::IKeyHandler* handler (_service->QueryInterfaceByCallsign<Exchange::IKeyHandler>(_callsign));
 
             if (handler != nullptr) {
-                Exchange::IKeyProducer* producer (handler->QueryInterface<Exchange::IKeyProducer>());
+                Exchange::IKeyProducer* producer (handler->Producer(_producer));
 
                 if (producer != nullptr) {
                     producer->Pair();
