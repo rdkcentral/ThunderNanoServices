@@ -794,6 +794,14 @@ static GSourceFuncs _handlerIntervention =
             Core::SystemInfo::SetEnvironment(_T("WEBKIT_RESOLUTION_WIDTH"), width, !environmentOverride);
             Core::SystemInfo::SetEnvironment(_T("WEBKIT_RESOLUTION_HEIGHT"), height, !environmentOverride);
 
+            if (width.empty() == false) {
+                Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_WIDTH"), width, !environmentOverride);
+            }
+
+            if (height.empty() == false) {
+                Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_HEIGHT"), height, !environmentOverride);
+            }
+
             // Oke, so we are good to go.. Release....
             Core::Thread::Run();
 
