@@ -26,8 +26,10 @@ namespace Plugin {
             Config()
                     : Core::JSON::Container()
                     , HardwareDelay(0)
+                    , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
             {
                 Add(_T("hardwareready"), &HardwareDelay);
+                Add(_T("resolution"), &Resolution);
             }
             ~Config()
             {
@@ -35,6 +37,7 @@ namespace Plugin {
 
         public:
             Core::JSON::DecUInt8 HardwareDelay;
+            Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
         };
 
         class Sink
