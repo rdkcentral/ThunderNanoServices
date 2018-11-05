@@ -336,6 +336,7 @@ static GSourceFuncs _handlerIntervention =
                 , ThreadedPainting()
                 , Width(1280)
                 , Height(720)
+                , PTSOffset(0)
             {
                 Add(_T("useragent"), &UserAgent);
                 Add(_T("url"), &URL);
@@ -369,6 +370,7 @@ static GSourceFuncs _handlerIntervention =
                 Add(_T("threadedpainting"), &ThreadedPainting);
                 Add(_T("width"), &Width);
                 Add(_T("height"), &Height);
+                Add(_T("ptsoffset"), &PTSOffset);
             }
             ~Config()
             {
@@ -407,6 +409,7 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::String ThreadedPainting;
             Core::JSON::DecUInt16 Width;
             Core::JSON::DecUInt16 Height;
+            Core::JSON::DecSInt16 PTSOffset;
         };
 
     private:
@@ -778,6 +781,12 @@ static GSourceFuncs _handlerIntervention =
             // ThreadedPainting
             if (_config.ThreadedPainting.Value().empty() == false) {
                 Core::SystemInfo::SetEnvironment(_T("WEBKIT_NICOSIA_PAINTING_THREADS"), _config.ThreadedPainting.Value(), !environmentOverride);
+            }
+
+            // PTSOffset
+            if (_config.PTSOffset.IsSet() == true) {
+                string ptsoffset(Core::NumberType<int16_t>(_config.PTSOffset.Value()).Text());
+                Core::SystemInfo::SetEnvironment(_T("PTS_REPORTING_OFFSET_MS"), ptsoffset, !environmentOverride);
             }
 
             string width(Core::NumberType<uint16_t>(_config.Width.Value()).Text());
