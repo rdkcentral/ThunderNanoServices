@@ -3,6 +3,15 @@
 #include <interfaces/IKeyHandler.h>
 
 namespace WPEFramework {
+
+ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::state)
+
+    { Plugin::IOConnector::Config::Pin::LOW,  _TXT("Low")  },
+    { Plugin::IOConnector::Config::Pin::HIGH, _TXT("High") },
+    { Plugin::IOConnector::Config::Pin::BOTH, _TXT("Both") },
+
+ENUM_CONVERSION_END(Plugin::IOConnector::Config::Pin::state)
+
 namespace Plugin {
 
     SERVICE_REGISTRATION(IOConnector, 1, 0);
@@ -43,9 +52,7 @@ namespace Plugin {
     IOConnector::IOConnector()
         : _service(nullptr)
         , _sink(*this)
-        , _pin(nullptr)
-        , _callsign()
-        , _producer()
+        , _pins()
     {
     }
 
@@ -61,17 +68,36 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
 
         _service = service;
-        _pin = new GPIO::Pin(config.Pin.Value());
 
-        if (_pin != nullptr) {
-            _pin->Trigger(GPIO::Pin::FALLING);
-            _pin->Register(&_sink);
-            _callsign = config.Callsign.Value();
-            _producer = config.Producer.Value();
+        auto index (config.Pins.Elements());
+
+        while (index.Next() == true) {
+            
+            GPIO::Pin* pin = new GPIO::Pin(index.Current().Id.Value());
+
+            if (pin != nullptr) {
+                switch(index.Current().State.Value()) {
+                case Config::Pin::LOW:  pin->Trigger(GPIO::Pin::FALLING); break;
+                case Config::Pin::HIGH: pin->Trigger(GPIO::Pin::RISING);  break;
+                case Config::Pin::BOTH: pin->Trigger(GPIO::Pin::BOTH);    break;
+                default: break;
+                }
+			
+                pin->Register(&_sink);
+
+                IHandler* method = nullptr;
+
+                if (index.Current().Handler.IsSet() != false) {
+                    Config::Pin::Handle&  handler (index.Current().Handler);
+                    method = HandlerAdministrator::Instance().Handler(handler.Handler.Value(), _service, handler.Config.Value());
+                }
+
+                _pins.push_back(PinHandler(pin, method));
+            }
         }
         
         // On success return empty, to indicate there is no error text.
-        return (_pin != nullptr ? string() : _T("Could not instantiate the requested Pin"));
+        return (_pins.size() > 0 ? string() : _T("Could not instantiate the requested Pin"));
     }
 
     /* virtual */ void IOConnector::Deinitialize(PluginHost::IShell* service)
@@ -79,10 +105,12 @@ namespace Plugin {
         ASSERT (_service == service);
         ASSERT (_pin != nullptr);
 
-        if (_pin != nullptr) {
-            _pin->Unregister(&_sink);
-            delete _pin;
-            _pin = nullptr;
+        while (_pins.size() > 0) {
+            delete _pins.front().first;
+            if (_pins.front().second != nullptr) {
+                delete _pins.front().second;
+            }
+            _pins.pop_front();
         }
 
         _service = nullptr;
@@ -101,18 +129,21 @@ namespace Plugin {
 
         TRACE(IOState, (pin));
 
-        if (pin.Get() == false) {
-            Exchange::IKeyHandler* handler (_service->QueryInterfaceByCallsign<Exchange::IKeyHandler>(_callsign));
+        // Lets find the pin and trigger if posisble...
+        Pins::iterator index = _pins.begin();
 
-            if (handler != nullptr) {
-                Exchange::IKeyProducer* producer (handler->Producer(_producer));
+        while ((index != _pins.end()) && (index->first != &pin)) { index++; }
 
-                if (producer != nullptr) {
-                    producer->Pair();
-                    producer->Release();
-                }
+        if (index != _pins.end()) {
 
-                handler->Release();
+            if (index->second != nullptr) {
+                index->second->Trigger(pin);
+            }
+            else {
+                _service->Notify(_T("{ \"id\": ") + 
+                                Core::NumberType<uint8_t>(pin.Id()).Text() + 
+                                _T(", \"state\": \"") + 
+                                (pin.Get() ? _T("High\" }") : _T("Low\" }")));
             }
         }
     }

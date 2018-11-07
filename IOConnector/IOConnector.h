@@ -2,6 +2,7 @@
 #define IOCONNECTOR_H
 
 #include "Module.h"
+#include "Handler.h"
 #include "GPIO.h"
 
 namespace WPEFramework {
@@ -33,28 +34,95 @@ namespace Plugin {
             IOConnector& _parent;
         };
 
+        typedef std::pair<GPIO::Pin*, IHandler*> PinHandler;
+        typedef std::list<PinHandler> Pins;
+
+    public:
         class Config : public Core::JSON::Container {
         private:
             Config(const Config&) = delete;
             Config& operator=(const Config&) = delete;
 
         public:
+            class Pin : public Core::JSON::Container {
+            public:
+                class Handle: public Core::JSON::Container {
+                public:
+                    Handle()
+                        : Handler()
+                        , Config() {
+                        Add(_T("handler"), &Handler);
+                        Add(_T("config"), &Config);
+                    }
+                    Handle(const Handle& copy)
+                        : Handler(copy.Handler)
+                        , Config(copy.Config) {
+                        Add(_T("handler"), &Handler);
+                        Add(_T("config"), &Config);
+                    }
+                    virtual ~Handle() {
+                    }
+
+                    Handle& operator= (const Handle& RHS) {
+                        Handler = RHS.Handler;
+                        Config = RHS.Config;
+                        return(*this);
+                    }
+
+                public:
+                    Core::JSON::String Handler;
+                    Core::JSON::String Config;
+                };
+
+                enum state {
+                    LOW,
+                    HIGH,
+                    BOTH
+                };
+
+            public:
+                Pin()
+                    : Id(~0)
+                    , State(LOW)
+                    , Handler() {
+                    Add(_T("id"), &Id);
+                    Add(_T("state"), &State);
+                    Add(_T("handler"), &Handler);
+                }
+                Pin(const Pin& copy)
+                    : Id(copy.Id)
+                    , State(copy.State)
+                    , Handler(copy.Handler) {
+                    Add(_T("id"), &Id);
+                    Add(_T("state"), &State);
+                    Add(_T("handler"), &Handler);
+                }
+		virtual ~Pin() {
+		}
+
+                Pin& operator= (const Pin& RHS) {
+                    Id = RHS.Id;
+                    State = RHS.State;
+                    Handler = RHS.Handler;
+                    return(*this);
+                }
+	
+            public:
+                Core::JSON::DecUInt8 Id;
+                Core::JSON::EnumType<state> State;
+                Handle Handler;
+            };
+
+        public:
             Config()
-                : Core::JSON::Container()
-                , Pin(162)
-                , Callsign(_T("RemoteControl"))
-                , Producer(_T("RF4CE")) {
-                Add(_T("pin"), &Pin);
-                Add(_T("callsign"), &Callsign);
-                Add(_T("producer"), &Producer);
+                : Core::JSON::Container() {
+                Add(_T("pins"), &Pins);
             }
             virtual ~Config() {
             }
 
         public:
-            Core::JSON::DecUInt8 Pin;
-            Core::JSON::String   Callsign;
-            Core::JSON::String   Producer;
+            Core::JSON::ArrayType<Pin> Pins;
         };
 
     public:
@@ -79,9 +147,7 @@ namespace Plugin {
     private:
         PluginHost::IShell* _service;
         Sink _sink;
-        GPIO::Pin* _pin;
-	string _callsign;
-        string _producer;
+        Pins _pins;
     };
 
 } // namespace Plugin

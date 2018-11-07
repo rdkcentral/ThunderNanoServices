@@ -98,7 +98,7 @@ void Dictionary::CreateExternalDictionary(const string& currentSpace, NameSpace&
         CreateInternalDictionary(EMPTY_STRING, dictionary);
     }
 
-    _skipURL = static_cast<uint8>(service->WebPrefix().length());
+    _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
     // On succes return a name as a Callsign to be used in the URL, after the "service"prefix
     return (_T(""));

@@ -21,6 +21,8 @@ set(PLUGIN_SOURCES
     Module.cpp
     IOConnector.cpp
     GPIO.cpp
+    Handler.cpp
+    RemotePairing.cpp
 )
 
 set(PLUGIN_INPUT
