@@ -93,6 +93,11 @@ install(
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/WPEFramework/RemoteControl
 	COMPONENT ${MODULE_NAME})
 
+install(
+	FILES web-remote.json
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/WPEFramework/RemoteControl
+	COMPONENT ${MODULE_NAME})
+
 install(TARGETS ${PLUGIN}
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins
 	COMPONENT ${MODULE_NAME})
