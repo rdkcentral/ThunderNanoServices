@@ -35,12 +35,11 @@ class RtspParser
 
         void Parse(const std::string &str,  NAMED_ARRAY &contents, const string &sep1, const string &sep2);
         int ParseResponse(const std::string str,  std::string &rtspBody, RtspParser::MessageType &msgType);
+        static void HexDump(const char* label, const std::string& msg, uint16_t charsPerLine = 32);
 
     private:
         void UpdateNPT(NAMED_ARRAY &playMap);
-
         int Split(const string& str, const string& delim,  std::vector<string>& tokens);
-        static void HexDump(const char* label, const std::string& msg, uint16_t charsPerLine = 32);
 
     public:
         RtspSessionInfo& _sessionInfo;

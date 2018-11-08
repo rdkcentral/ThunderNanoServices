@@ -12,7 +12,6 @@ set(PLUGIN_SOURCES
         RtspClient.cpp
         RtspClientImplementation.cpp
         RtspParser.cpp
-        RtspSocket.cpp
         RtspParser.cpp
         RtspSession.cpp
         RtspSessionInfo.cpp

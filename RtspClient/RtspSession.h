@@ -1,12 +1,16 @@
 #ifndef RTSPSESSION_H
 #define RTSPSESSION_H
 
-#include <plugins/Logging.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <linux/netlink.h>
+
+#include <core/NodeId.h>
+#include <core/SocketPort.h>
 #include <core/Queue.h>
 #include <core/Thread.h>
 
 #include "RtspParser.h"
-#include "RtspSocket.h"
 
 class RtspParser;
 
@@ -21,6 +25,7 @@ enum RtspReturnCode {
     ERR_OK,
     ERR_UNKNOWN,
     ERR_ACTIVE,
+    ERR_NO_ACTIVE_SESSION,
     ERR_CONNECT_FAILED,
     ERR_SESSION_FAILED,
     ERR_NO_MORE,
@@ -37,9 +42,27 @@ class RtspMessage
 
 typedef Core::QueueType<RtspMessage> MessageQueue;
 
+class RtspSession;
+
 
 class RtspSession : public Core::Thread
 {
+    public:
+        class Socket : public Core::SocketStream
+        {
+            public:
+            Socket(const Core::NodeId &local, const Core::NodeId &remote, RtspSession& rtspSession);
+            virtual ~Socket();
+            uint16_t Send(string message);
+            uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize);
+            uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize);
+            void StateChange();
+
+            private:
+                RtspSession& _rtspSession;
+                string data;
+       };
+
     public:
         RtspSession();
         ~RtspSession();
@@ -53,6 +76,8 @@ class RtspSession : public Core::Thread
         RtspReturnCode GetParam(bool bSRM);
         RtspReturnCode SendHeartbeat(bool bSRM);
         RtspReturnCode SendHeartbeats();
+
+        RtspReturnCode processResponse(const string &response);
 
         RtspReturnCode Check(bool bSRM, int timeout, string *pStr = NULL);
         RtspReturnCode CheckResponse(bool bStream);
@@ -87,8 +112,9 @@ class RtspSession : public Core::Thread
 
     private:
         uint32_t Worker ();
-        inline  RtspSocket& GetSocket(bool bSRM)    {
-            return (bSRM || _sessionInfo.bSrmIsRtspProxy) ? _srmSocket : _controlSocket;
+
+        inline  RtspSession::Socket& GetSocket(bool bSRM)    {
+            return (bSRM || _sessionInfo.bSrmIsRtspProxy) ? *_srmSocket : *_controlSocket;
         }
 
         inline bool IsSrmRtspProxy() {
@@ -96,8 +122,10 @@ class RtspSession : public Core::Thread
         }
 
     private:
-        RtspSocket _srmSocket;          // XXX: Replace RtspSocket with Core::Socket
-        RtspSocket _controlSocket;
+        Core::NodeId remote;
+        Core::NodeId local;
+        RtspSession::Socket *_srmSocket;
+        RtspSession::Socket *_controlSocket;
         RtspParser _parser;
         RtspSessionInfo _sessionInfo;
         MessageQueue _requestQueue;
@@ -108,7 +136,6 @@ class RtspSession : public Core::Thread
         int _nextSRMHeartbeatMS;
         int _nextPumpHeartbearMS;
         int _playDelay;
-
 };
 
 }} // WPEFramework::Plugin

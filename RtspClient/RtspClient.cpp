@@ -85,7 +85,7 @@ namespace Plugin {
     {
         ASSERT(_skipURL <= request.Path.length());
 
-        TRACE(Trace::Information, (string(_T("Received RtspClient request"))));
+        TRACE(Trace::Information, (_T("Received RtspClient request")));
 
         uint32_t rc = 0;
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());

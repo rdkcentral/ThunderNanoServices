@@ -1,11 +1,11 @@
 #include <netdb.h>
 
+#include "Module.h"
 #include "RtspSession.h"
 
 #define ANNOUNCEMENT_CHECK_INTERVAL     10
 #define RTSP_RESPONSE_WAIT_TIME         3000
 #define RTSP_THREAD_SLEEP_MS            1000
-#define TR TRACE_L4( "%s: %s:%d", __FUNCTION__, __FILE__, __LINE__);
 
 namespace WPEFramework {
 namespace Plugin {
@@ -19,49 +19,41 @@ RtspSession::RtspSession()
  , _nextSRMHeartbeatMS(0)
  , _nextPumpHeartbearMS(0)
  , _playDelay(2000)
-{ TR;
+ , _srmSocket(nullptr)
+ , _controlSocket(nullptr)
+{
+    Core::Thread::Run();
 }
 
 RtspSession::~RtspSession()
-{ TR;
+{
 }
 
 RtspReturnCode
 RtspSession::Initialize(const string& hostname, uint16_t port)
-{   TR;
+{
     RtspReturnCode rc = ERR_OK;
 
-    _isSessionActive = false;
-    _nextSRMHeartbeatMS = 0;
-    _nextPumpHeartbearMS = 0;
+    _adminLock.Lock();
+    if (!(_srmSocket && _srmSocket->IsOpen())) {
+        _isSessionActive = false;
+        _nextSRMHeartbeatMS = 0;
+        _nextPumpHeartbearMS = 0;
 
-    if (!_srmSocket.isValid()) {
-        string hostaddress;
-        struct hostent *he = gethostbyname (hostname.c_str());
-        if (he == NULL) {
-            TRACE_L1 ( "%s: Unable to resolve hostname (%s)", __FUNCTION__, hostaddress.c_str());
-        } else {
-            hostaddress = inet_ntoa (*((struct in_addr *) he->h_addr_list[0]));
-            TRACE_L2( "%s: host=%s srmAddr=%s port=%d", __FUNCTION__, hostname.c_str(), hostaddress.c_str(), port);
-        }
-
-        if (_srmSocket.Create() == 0) {
-            if (_srmSocket.Connect(hostaddress, port) == 0) {
-                _sessionInfo.srm.name = hostname;
-                TRACE_L1( "%s: Connected, starting messaging thread", __FUNCTION__);
-                Core::Thread::Run();
-            } else {
-                rc = ERR_SESSION_FAILED;
-                TRACE_L1( "%s: Failed to connect to SRM socket", __FUNCTION__);
-            }
-        } else {
+        // Core::Thread::Run();
+        remote = Core::NodeId(hostname.c_str(), port);
+        _srmSocket = new RtspSession::Socket(local, remote, *this);
+        if (_srmSocket->State() == 0) {
+            TRACE_L1( "%s: SRM Socket failed. State=%x", __FUNCTION__, _srmSocket->State());
             rc = ERR_SESSION_FAILED;
-            TRACE_L1( "%s: Failed to create SRM socket", __FUNCTION__);
+        } else {
+            TRACE_L1( "%s: srmSock->State=%x", __FUNCTION__, _srmSocket->State());
         }
     } else {
         TRACE_L1( "%s: Initialize failed, session is active", __FUNCTION__);
         rc = ERR_ACTIVE;
     }
+    _adminLock.Unlock();
 
     return rc;
 }
@@ -69,22 +61,25 @@ RtspSession::Initialize(const string& hostname, uint16_t port)
 RtspReturnCode
 RtspSession::Terminate()
 {
+    _adminLock.Lock();
     //Core::Thread::Stop();
     //Core::Thread::Wait (Core::Thread::STOPPED, Core::infinite);
     // XXX: After Stop can't restart, try suspend
 
-    TRACE_L4( "%s: closing SRM socket", __FUNCTION__);
-    _srmSocket.Disconnect();
-
+    TRACE_L1( "%s: closing SRM socket", __FUNCTION__);
+    delete _srmSocket;
+    _srmSocket = nullptr;
     if (!IsSrmRtspProxy()) {
         TRACE_L4( "%s: closing control socket", __FUNCTION__);
-        _controlSocket.Disconnect();
+        delete _controlSocket;
+        _controlSocket = nullptr;
     }
+    _adminLock.Unlock();
 }
 
 RtspReturnCode
 RtspSession::Open(const string assetId, uint32_t position, const string &reqCpeId, const string &remoteIp)
-{   TR;
+{
     RtspReturnCode rc = ERR_OK;
     RtspMessage request;
     RtspMessage response;
@@ -102,22 +97,21 @@ RtspSession::Open(const string assetId, uint32_t position, const string &reqCpeI
         _requestQueue.Post(request);
 
         if (_responseQueue.Extract(response, RTSP_RESPONSE_WAIT_TIME)) {
+            _adminLock.Lock();
             _parser.ProcessSetupResponse(response.message);
 
             if (!IsSrmRtspProxy()) {
-                _sessionInfo.pump.address = "192.168.2.9";  // XXX: use pump address from Session setup response
-                _sessionInfo.pump.port = 8060;
-                TRACE_L1( "%s: NOT in rtsp proxy mode, connecting control socket", __FUNCTION__);
-                if (_controlSocket.Create() == 0) {
-                    if (_controlSocket.Connect(_sessionInfo.pump.address, _sessionInfo.pump.port) == -1) {
-                        rc = ERR_CONNECT_FAILED;
-                        TRACE_L1( "%s: Failed to connect to socket", __FUNCTION__);
-                    }
+                TRACE_L1( "%s: NOT in rtsp proxy mode, connecting control socket (%s:%d)",
+                    __FUNCTION__, _sessionInfo.pump.address.c_str(), _sessionInfo.pump.port);
+                _controlSocket = new RtspSession::Socket(Core::NodeId(), Core::NodeId(_sessionInfo.pump.address.c_str(), _sessionInfo.pump.port), *this);
+                if (_controlSocket->State() == 0) {
+                    TRACE_L1( "%s: Control Socket failed. State=%x", __FUNCTION__, _controlSocket->State());
+                    rc = ERR_SESSION_FAILED;
                 } else {
-                    rc = ERR_CONNECT_FAILED;
-                    TRACE_L1( "%s: Failed to create control socket", __FUNCTION__);
+                    TRACE_L1( "%s: _controlSocket->State=%x", __FUNCTION__, _controlSocket->State());
                 }
             }
+            _adminLock.Unlock();
         } else {
             TRACE_L1( "%s: Failed to get Response", __FUNCTION__);
             rc = ERR_TIMED_OUT;
@@ -140,97 +134,77 @@ RtspSession::Open(const string assetId, uint32_t position, const string &reqCpeI
 
 RtspReturnCode
 RtspSession::Close()
-{   TR;
+{
     RtspReturnCode rc = ERR_OK;
     int reason = 0;
     RtspMessage request;
     RtspMessage response;
 
-    request.message = _parser.BuildTeardownRequest(reason);
-    _requestQueue.Post(request);
-    if (_responseQueue.Extract(response, RTSP_RESPONSE_WAIT_TIME)) {
-        _parser.ProcessTeardownResponse(response.message);
+    if (_isSessionActive) {
+        request.message = _parser.BuildTeardownRequest(reason);
+        _requestQueue.Post(request);
+        if (_responseQueue.Extract(response, RTSP_RESPONSE_WAIT_TIME)) {
+            _parser.ProcessTeardownResponse(response.message);
+        } else {
+            TRACE_L1( "%s: Failed to get Response", __FUNCTION__);
+            rc = ERR_TIMED_OUT;
+        }
+
+        _isSessionActive = false;
     } else {
-        TRACE_L1( "%s: Failed to get Response", __FUNCTION__);
-        rc = ERR_TIMED_OUT;
+        rc = ERR_NO_ACTIVE_SESSION;
     }
 
-    _isSessionActive = false;
-    TRACE_L1( "%s: Exiting", __FUNCTION__);
 
     return rc;
 }
 
 RtspReturnCode
 RtspSession::Play(float scale, uint32_t position)
-{   TR;
+{
     RtspReturnCode rc = ERR_OK;
 
-    TRACE_L2( "%s: scale=%f offset=%d", __FUNCTION__, scale, position);
+    if (_isSessionActive) {
+        TRACE_L2( "%s: scale=%f offset=%d", __FUNCTION__, scale, position);
 
-    RtspMessage request;
-    RtspMessage response;
+        RtspMessage request;
+        RtspMessage response;
 
-    request.bStreamRequest = true;
-    request.message = _parser.BuildPlayRequest(scale, position);
-    _requestQueue.Post(request);
-    if (_responseQueue.Extract(response, RTSP_RESPONSE_WAIT_TIME)) {
-        _parser.ProcessPlayResponse(request.message);
+        request.bStreamRequest = true;
+        request.message = _parser.BuildPlayRequest(scale, position);
+        _requestQueue.Post(request);
+        if (_responseQueue.Extract(response, RTSP_RESPONSE_WAIT_TIME)) {
+            _parser.ProcessPlayResponse(request.message);
+        } else {
+            TRACE_L1( "%s: Failed to get Response", __FUNCTION__);
+            rc = ERR_TIMED_OUT;
+        }
     } else {
-        TRACE_L1( "%s: Failed to get Response", __FUNCTION__);
-        rc = ERR_TIMED_OUT;
+        rc = ERR_NO_ACTIVE_SESSION;
     }
-
     return rc;
 }
 
+
 RtspReturnCode
-RtspSession::Check(bool bSRM, int timeout, string *pStr)
-{   TR;
+RtspSession::processResponse(const string &response)
+{
     RtspReturnCode rc = ERR_OK;
-    int sockRc = 0;
-    string response;
-    sockRc = GetSocket(bSRM).Receive(response, timeout);
 
     if (response.length()) {
-        //HexDump("Response: ", response);
         string responseBody;
         RtspParser::MessageType msgType;
         int rtspRc = _parser.ParseResponse(response, responseBody, msgType);
         if (msgType == RtspParser::RTSP_ANNOUNCE) {
             //rc = ProcessAnnouncement(responseBody, bSRM);
         } else if (msgType == RtspParser::RTSP_RESPONSE) {
-            if (pStr) {
-                *pStr = responseBody;    // Heartbeat response
-            } else {
-                RtspMessage rtspResp;
-                rtspResp.message = responseBody;
-                _responseQueue.Post(rtspResp);
-            }
+            RtspMessage rtspResp;
+            rtspResp.message = responseBody;
+            _responseQueue.Post(rtspResp);
         } else {
             TRACE_L1( "%s: UNKNOWN response '%s'", __FUNCTION__, response.c_str());
         }
     }
-    return rc;
-}
-
-RtspReturnCode
-RtspSession::CheckResponse(bool bStream)
-{ TR
-    // Session messages goes to SRM, Stream messages goes to VideoServer
-    bool bSRM = (bStream) ? false : true;
-    return Check(bSRM, RTSP_RESPONSE_WAIT_TIME);
-}
-
-RtspReturnCode
-RtspSession::CheckAnnouncement()
-{
-    RtspReturnCode rc = ERR_OK;
-    if (!IsSrmRtspProxy()) {
-        rc = Check(false, ANNOUNCEMENT_CHECK_INTERVAL); // from VOD pump
-    }
-    rc = Check(true, ANNOUNCEMENT_CHECK_INTERVAL);      // from SRM
-
     return rc;
 }
 
@@ -244,15 +218,15 @@ RtspSession::SendHeartbeat(bool bSRM)
     request.message = _parser.BuildGetParamRequest(bSRM);
     int sockRc;
 
-    //HexDump(request.message);
-    sockRc = GetSocket(bSRM).Send(request.message);
+    _requestQueue.Post(request);
 
-    if (sockRc == 0) {
-        Check(bSRM, RTSP_RESPONSE_WAIT_TIME, &response.message);
+    if (_responseQueue.Extract(response, RTSP_RESPONSE_WAIT_TIME)) {
         _parser.ProcessGetParamResponse(response.message);
     } else {
-       TRACE_L1( "%s: send failed rc=%d", __FUNCTION__, sockRc);
+        TRACE_L1( "%s: Failed to get Response", __FUNCTION__);
+        rc = ERR_TIMED_OUT;
     }
+
     return rc;
 }
 
@@ -281,45 +255,86 @@ RtspSession::SendHeartbeats()
         }
     }
 
-    TRACE_L4( "%s: npt=%.3f_nextSRMHeartbeatMS=%d _nextPumpHeartbearMS=%d sessionTimeoutMS=%d ctrlSessionTimeoutMS=%d",
-            __FUNCTION__, _sessionInfo.npt, _nextSRMHeartbeatMS, _nextPumpHeartbearMS, sessionTimeoutMS, ctrlSessionTimeoutMS);
-
     return rc;
 }
 
 
 uint32_t RtspSession::Worker ()
 {
-    TRACE_L1( "%s: Entering ", __FUNCTION__);
+    TRACE_L2( "%s: Entering ", __FUNCTION__);
     RtspReturnCode rc = ERR_OK;
     int sockRc = 0;
 
     while (IsRunning() == true) {
         if (_isSessionActive) {
             _sessionInfo.npt += RTSP_THREAD_SLEEP_MS * _sessionInfo.scale;
-            TRACE_L4( "%s: npt=%f", __FUNCTION__, _sessionInfo.npt);
+            TRACE_L4("%s: npt=%.3f_nextSRMHeartbeat=%d _nextPumpHeartbear=%d sessionTimeout=%d ctrlSessionTimeout=%d",
+                __FUNCTION__, _sessionInfo.npt, _nextSRMHeartbeatMS, _nextPumpHeartbearMS, _sessionInfo.sessionTimeout, _sessionInfo.ctrlSessionTimeout);
 
-            CheckAnnouncement();
             SendHeartbeats();
-        }
 
-        if (!_requestQueue.IsEmpty()) {
-            TRACE_L2( "%s: Message received ", __FUNCTION__);
+            if (!_requestQueue.IsEmpty()) {
+                TRACE_L2( "%s: Message received ", __FUNCTION__);
 
-            RtspMessage request;
-            _requestQueue.Extract(request, 0);
-            //_requestQueue.Remove(request);
-            bool bSRM = (request.bStreamRequest) ? false : true;
-
-            sockRc = GetSocket(bSRM).Send(request.message);
-            Check(bSRM, RTSP_RESPONSE_WAIT_TIME);
+                RtspMessage request;
+                _requestQueue.Extract(request, 0);
+                bool bSRM = (request.bStreamRequest) ? false : true;
+                sockRc = GetSocket(bSRM).Send(request.message);
+            } else {
+                usleep(RTSP_THREAD_SLEEP_MS * 1000);
+            }
         } else {
-            TRACE_L4( "%s: Waiting for request", __FUNCTION__);
             usleep(RTSP_THREAD_SLEEP_MS * 1000);
         }
     }
-    TRACE_L1( "%s: Exiting IsRunning=%d", __FUNCTION__, IsRunning());
+    TRACE_L2( "%s: Exiting IsRunning=%d", __FUNCTION__, IsRunning());
+}
+
+
+RtspSession::Socket::Socket(const Core::NodeId &local, const Core::NodeId &remote, RtspSession& rtspSession)
+    : Core::SocketStream(false, local, remote, 4096, 4096)
+    , _rtspSession(rtspSession)
+{
+    Open(1000, "");
+};
+
+RtspSession::Socket::~Socket()
+{
+    Close(1000);
+};
+
+uint16_t RtspSession::Socket::Send(string message)
+{
+    data = message;
+    Trigger();
+    return 0;
+}
+
+uint16_t RtspSession::Socket::SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
+{
+    uint16_t len = data.size();
+    TRACE_L4( "%s: Entering maxSendSize=%d bytesToSend=%d\n", __FUNCTION__, maxSendSize, len);
+    memcpy(dataFrame, data.c_str(), len);
+    data = string();
+    return len;
+}
+
+uint16_t RtspSession::Socket::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
+{
+    TRACE_L4( "%s: Entering receivedSize=%d\n", __FUNCTION__, receivedSize);
+    string response((char *)dataFrame, receivedSize);
+    _rtspSession.processResponse(response);
+    return receivedSize;
+}
+
+void RtspSession::Socket::StateChange()
+{
+    if (State() == 0) {
+        TRACE_L1( "%s: Lost connection", __FUNCTION__, State());
+        // XXX: Not doing anything if connection is lost, playback might still work but trickplay wont work.
+    } else {
+        TRACE_L1( "%s: State=%d", __FUNCTION__, State());
+    }
 }
 
 }} // WPEFramework::Plugin
-

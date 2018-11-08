@@ -7,7 +7,6 @@
 #include "RtspParser.h"
 
 #define ANNOUNCEMENT_CHECK_INTERVAL     10
-#define RTSP_THREAD_SLEEP_MS            1000
 #define SEC2MS(s)                       (s*1000)
 #define MS2SEC(ms)                      (ms/1000)
 #define RTSP_RESPONSE_WAIT_TIME         3000
@@ -21,7 +20,7 @@ unsigned int RtspParser::_sequence = 0;
 RtspParser::RtspParser(RtspSessionInfo& info)
     : _sessionInfo(info)
 {
-    TRACE_L2( "%s:\t%s:%d", __FUNCTION__, __FILE__, __LINE__);
+    TRACE_L2( "%s: %s:%d", __FUNCTION__, __FILE__, __LINE__);
 }
 
 std::string
@@ -215,7 +214,6 @@ void RtspParser::UpdateNPT(NAMED_ARRAY &playMap)
             } else {
                 nptStart = atof(range.substr(posEq+1).c_str());
             }
-
         }
 
         _sessionInfo.npt = SEC2MS(nptStart);
@@ -311,7 +309,7 @@ RtspParser::ParseResponse(const std::string str,  std::string &rtspBody, RtspPar
                 msgType = RTSP_RESPONSE;
                 rtspCode = std::stoi(tokens.at(1));
             }
-            // Parse rest, only if header is valid
+            // Parse rest, only if the header is valid
             rtspBody = str.substr(pos+2);       // +2 CRLR
             //Parse(tokenStr, contents, ":", "\r\n");
         }
