@@ -1,7 +1,7 @@
 set(PLUGIN_NAME RtspClient)
 
-set(WPEFRAMEWORK_PLUGIN_SAMPLE_AUTOSTART true CACHE STRING true)
-set(WPEFRAMEWORK_PLUGIN_SAMPLE_OOP false CACHE STRING true)
+set(WPEFRAMEWORK_PLUGIN_RTSPCLIENT_AUTOSTART true CACHE STRING true)
+set(WPEFRAMEWORK_PLUGIN_RTSPCLIENT_OOP true CACHE STRING true)
 
 include(module) # Setup default stuff needed for the cmake framework thingy.
 

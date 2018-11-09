@@ -41,7 +41,9 @@ RtspSession::Initialize(const string& hostname, uint16_t port)
         _nextPumpHeartbearMS = 0;
 
         // Core::Thread::Run();
-        remote = Core::NodeId(hostname.c_str(), port);
+        _sessionInfo.srm.name = hostname;
+        _sessionInfo.srm.port = port;
+        remote = Core::NodeId(_sessionInfo.srm.name.c_str(), _sessionInfo.srm.port);
         _srmSocket = new RtspSession::Socket(local, remote, *this);
         if (_srmSocket->State() == 0) {
             TRACE_L1( "%s: SRM Socket failed. State=%x", __FUNCTION__, _srmSocket->State());
@@ -268,8 +270,8 @@ uint32_t RtspSession::Worker ()
     while (IsRunning() == true) {
         if (_isSessionActive) {
             _sessionInfo.npt += RTSP_THREAD_SLEEP_MS * _sessionInfo.scale;
-            TRACE_L4("%s: npt=%.3f_nextSRMHeartbeat=%d _nextPumpHeartbear=%d sessionTimeout=%d ctrlSessionTimeout=%d",
-                __FUNCTION__, _sessionInfo.npt, _nextSRMHeartbeatMS, _nextPumpHeartbearMS, _sessionInfo.sessionTimeout, _sessionInfo.ctrlSessionTimeout);
+            TRACE(Trace::Information, ("npt=%.3f_nextSRMHeartbeat=%d _nextPumpHeartbear=%d sessionTimeout=%d ctrlSessionTimeout=%d",
+                _sessionInfo.npt, _nextSRMHeartbeatMS, _nextPumpHeartbearMS, _sessionInfo.sessionTimeout, _sessionInfo.ctrlSessionTimeout));
 
             SendHeartbeats();
 
@@ -313,7 +315,7 @@ uint16_t RtspSession::Socket::Send(string message)
 uint16_t RtspSession::Socket::SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
 {
     uint16_t len = data.size();
-    TRACE_L4( "%s: Entering maxSendSize=%d bytesToSend=%d\n", __FUNCTION__, maxSendSize, len);
+    TRACE(Trace::Information, ("%s: maxSendSize=%d bytesToSend=%d", __FUNCTION__, maxSendSize, len));
     memcpy(dataFrame, data.c_str(), len);
     data = string();
     return len;
@@ -321,7 +323,7 @@ uint16_t RtspSession::Socket::SendData(uint8_t* dataFrame, const uint16_t maxSen
 
 uint16_t RtspSession::Socket::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
 {
-    TRACE_L4( "%s: Entering receivedSize=%d\n", __FUNCTION__, receivedSize);
+    TRACE(Trace::Information, ("%s: receivedSize=%d", __FUNCTION__, receivedSize));
     string response((char *)dataFrame, receivedSize);
     _rtspSession.processResponse(response);
     return receivedSize;

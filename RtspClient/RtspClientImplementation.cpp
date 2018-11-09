@@ -20,6 +20,8 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , TestNum(0)
             {
+                Add(_T("hostname"), &Hostname);
+                Add(_T("port"), &Port);
                 Add(_T("testNum"), &TestNum);
                 Add(_T("testStr"), &TestStr);
             }
@@ -28,6 +30,8 @@ namespace Plugin {
             }
 
         public:
+            Core::JSON::String Hostname;
+            Core::JSON::DecUInt16 Port;
             Core::JSON::DecUInt16 TestNum;
             Core::JSON::String TestStr;
         };
@@ -51,11 +55,9 @@ namespace Plugin {
         uint32_t Configure(PluginHost::IShell* service)
         {
             ASSERT(service != nullptr);
-
-            Config config;
-            config.FromString(service->ConfigLine());
-
             uint32_t result = 0;
+
+            config.FromString(service->ConfigLine());
 
             return (result);
         }
@@ -64,9 +66,7 @@ namespace Plugin {
         {
             RtspReturnCode rc = ERR_OK;
 
-            string host = "Heisenberg";        // XXX: Move it to config file
-            uint16_t port = 5554;
-            rc = _rtspSession.Initialize(host, port);
+            rc = _rtspSession.Initialize(config.Hostname.Value().c_str(), config.Port.Value());
 
             if (rc == ERR_OK) {
                 rc = _rtspSession.Open(assetId, position);
@@ -110,6 +110,7 @@ namespace Plugin {
     private:
         RtspSession _rtspSession;
         std::list<PluginHost::IStateControl::INotification*> _observers;
+        Config config;
         string str;
     };
 
