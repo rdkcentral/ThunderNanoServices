@@ -4,13 +4,16 @@
 
 namespace WPEFramework {
 
-ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::state)
+ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
 
-    { Plugin::IOConnector::Config::Pin::LOW,  _TXT("Low")  },
-    { Plugin::IOConnector::Config::Pin::HIGH, _TXT("High") },
-    { Plugin::IOConnector::Config::Pin::BOTH, _TXT("Both") },
+    { Plugin::IOConnector::Config::Pin::LOW,      _TXT("Low")      },
+    { Plugin::IOConnector::Config::Pin::HIGH,     _TXT("High")     },
+    { Plugin::IOConnector::Config::Pin::BOTH,     _TXT("Both")     },
+    { Plugin::IOConnector::Config::Pin::ACTIVE,   _TXT("Active")   },
+    { Plugin::IOConnector::Config::Pin::INACTIVE, _TXT("Inactive") },
+    { Plugin::IOConnector::Config::Pin::OUTPUT,   _TXT("Output")   },
 
-ENUM_CONVERSION_END(Plugin::IOConnector::Config::Pin::state)
+ENUM_CONVERSION_END(Plugin::IOConnector::Config::Pin::mode)
 
 namespace Plugin {
 
@@ -76,10 +79,42 @@ namespace Plugin {
             GPIO::Pin* pin = new GPIO::Pin(index.Current().Id.Value());
 
             if (pin != nullptr) {
-                switch(index.Current().State.Value()) {
-                case Config::Pin::LOW:  pin->Trigger(GPIO::Pin::FALLING); break;
-                case Config::Pin::HIGH: pin->Trigger(GPIO::Pin::RISING);  break;
-                case Config::Pin::BOTH: pin->Trigger(GPIO::Pin::BOTH);    break;
+                switch(index.Current().Mode.Value()) {
+                case Config::Pin::LOW:
+                {
+                    pin->Mode(GPIO::Pin::INPUT);
+                    pin->Trigger(GPIO::Pin::FALLING); 
+                    break;
+                }
+                case Config::Pin::HIGH:
+                {
+                    pin->Mode(GPIO::Pin::INPUT);
+                    pin->Trigger(GPIO::Pin::RISING); 
+                    break;
+                }
+                case Config::Pin::BOTH:
+                {
+                    pin->Mode(GPIO::Pin::INPUT);
+                    pin->Trigger(GPIO::Pin::BOTH); 
+                    break;
+                }
+                case Config::Pin::ACTIVE:
+                {
+                    pin->Mode(GPIO::Pin::OUTPUT);
+                    pin->Set(true); 
+                    break;
+                }
+                case Config::Pin::INACTIVE:
+                {
+                    pin->Mode(GPIO::Pin::OUTPUT);
+                    pin->Set(false); 
+                    break;
+                }
+                case Config::Pin::OUTPUT:
+                {
+                    pin->Mode(GPIO::Pin::OUTPUT);
+                    break;
+                }
                 default: break;
                 }
 			

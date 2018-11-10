@@ -74,27 +74,30 @@ namespace Plugin {
                     Core::JSON::String Config;
                 };
 
-                enum state {
-                    LOW,
-                    HIGH,
-                    BOTH
+                enum mode {
+                    LOW,        /* input  */
+                    HIGH,       /* input  */
+                    BOTH,       /* input  */
+                    ACTIVE,     /* output */
+                    INACTIVE,   /* output */
+                    OUTPUT      /* output */
                 };
 
             public:
                 Pin()
                     : Id(~0)
-                    , State(LOW)
+                    , Mode(LOW)
                     , Handler() {
                     Add(_T("id"), &Id);
-                    Add(_T("state"), &State);
+                    Add(_T("mode"), &Mode);
                     Add(_T("handler"), &Handler);
                 }
                 Pin(const Pin& copy)
                     : Id(copy.Id)
-                    , State(copy.State)
+                    , Mode(copy.Mode)
                     , Handler(copy.Handler) {
                     Add(_T("id"), &Id);
-                    Add(_T("state"), &State);
+                    Add(_T("mode"), &Mode);
                     Add(_T("handler"), &Handler);
                 }
 		virtual ~Pin() {
@@ -102,14 +105,14 @@ namespace Plugin {
 
                 Pin& operator= (const Pin& RHS) {
                     Id = RHS.Id;
-                    State = RHS.State;
+                    Mode = RHS.Mode;
                     Handler = RHS.Handler;
                     return(*this);
                 }
 	
             public:
                 Core::JSON::DecUInt8 Id;
-                Core::JSON::EnumType<state> State;
+                Core::JSON::EnumType<mode> Mode;
                 Handle Handler;
             };
 
