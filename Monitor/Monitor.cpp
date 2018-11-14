@@ -6,6 +6,7 @@ namespace Plugin {
     SERVICE_REGISTRATION(Monitor, 1, 0);
 
     static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<Monitor::Data> > > jsonBodyDataFactory(2);
+    static Core::ProxyPoolType<Web::JSONBodyType<Monitor::Data> > jsonBodyParamFactory(2);
     static Core::ProxyPoolType<Web::JSONBodyType<Monitor::Data::MetaData> > jsonMemoryBodyDataFactory(2);
 
     /* virtual */ const string Monitor::Initialize(PluginHost::IShell* service)
@@ -41,9 +42,10 @@ namespace Plugin {
         return (nullptr);
     }
 
-    /* virtual */ void Monitor::Inbound(Web::Request& /* request */)
+    /* virtual */ void Monitor::Inbound(Web::Request& request)
     {
-        // There are no requests coming in with a body that require a JSON body. So continue without action here.
+        if ((request.Verb == Web::Request::HTTP_PUT) || (request.Verb == Web::Request::HTTP_POST)) 
+            request.Body(jsonBodyParamFactory.Element());
     }
 
     // <GET> ../				Get all Memory Measurments
@@ -102,6 +104,13 @@ namespace Plugin {
             }
 
             result->ContentType = Web::MIME_JSON;
+        }
+        else if ((request.Verb == Web::Request::HTTP_POST) && (request.HasBody())) {
+            Core::ProxyType<const Monitor::Data> body (request.Body<const Monitor::Data>());
+            string observable = body->Observable.Value();
+            uint32_t restartLimit = body->RestartLimit.Value();
+            TRACE(Trace::Information,(_T("Sets Restart Limit :%d"),restartLimit));
+            _monitor->Update(observable,restartLimit);
         }
         else {
             result->ErrorCode = Web::STATUS_BAD_REQUEST;

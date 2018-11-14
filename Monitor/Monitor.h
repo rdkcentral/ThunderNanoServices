@@ -4,6 +4,8 @@
 #include "Module.h"
 #include <interfaces/IMemory.h>
 
+#include<string>
+
 static uint32_t gcd(uint32_t a, uint32_t b)
 {
     return b == 0 ? a : gcd(b, a % b);
@@ -279,6 +281,8 @@ namespace Plugin {
             {
                 Add(_T("name"), &Name);
                 Add(_T("measurment"), &Measurement);
+                Add(_T("observable"), &Observable);
+                Add(_T("restartlimit"), &RestartLimit);
             }
             Data(const string& name, const Monitor::MetaData& info)
                 : Core::JSON::Container()
@@ -293,9 +297,13 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , Name(copy.Name)
                 , Measurement(copy.Measurement)
+                , Observable(copy.Observable)
+                , RestartLimit(copy.RestartLimit)
             {
                 Add(_T("name"), &Name);
                 Add(_T("measurment"), &Measurement);
+                Add(_T("observable"), &Observable);
+                Add(_T("restartlimit"), &RestartLimit);
             }
             ~Data()
             {
@@ -304,6 +312,8 @@ namespace Plugin {
         public:
             Core::JSON::String Name;
             MetaData Measurement;
+            Core::JSON::String Observable;
+            Core::JSON::DecUInt32 RestartLimit;
         };
 
     private:
@@ -328,6 +338,7 @@ namespace Plugin {
                     Add(_T("memory"), &MetaData);
                     Add(_T("memorylimit"), &MetaDataLimit);
                     Add(_T("operational"), &Operational);
+                    Add(_T("restartlimit"), &RestartLimit);
                 }
                 Entry(const Entry& copy)
                     : Core::JSON::Container()
@@ -335,11 +346,13 @@ namespace Plugin {
                     , MetaData(copy.MetaData)
                     , MetaDataLimit(copy.MetaDataLimit)
                     , Operational(copy.Operational)
+                    , RestartLimit(copy.RestartLimit)
                 {
                     Add(_T("callsign"), &Callsign);
                     Add(_T("memory"), &MetaData);
                     Add(_T("memorylimit"), &MetaDataLimit);
                     Add(_T("operational"), &Operational);
+                    Add(_T("restartlimit"), &RestartLimit);
                 }
                 ~Entry()
                 {
@@ -350,6 +363,7 @@ namespace Plugin {
                 Core::JSON::DecUInt32 MetaData;
                 Core::JSON::DecUInt32 MetaDataLimit;
                 Core::JSON::DecSInt32 Operational;
+                Core::JSON::DecSInt32 RestartLimit;
             };
  
         public:
@@ -392,7 +406,7 @@ namespace Plugin {
                 virtual void Dispatch() override
                 {
                     _parent.Probe();
-               }
+                }
 
             private:
                 MonitorObjects& _parent;
@@ -410,13 +424,15 @@ namespace Plugin {
                 };
 
             public:
-                MonitorObject(const bool actOnOperational, const uint32_t operationalInterval, const uint32_t memoryInterval, const uint64_t memoryThreshold, const uint64_t absTime)
+                MonitorObject(const bool actOnOperational, const uint32_t operationalInterval, const uint32_t memoryInterval, const uint64_t memoryThreshold, const uint64_t absTime, const uint32_t restartLimit)
                     : _operationalInterval(operationalInterval)
                     , _memoryInterval(memoryInterval)
                     , _memoryThreshold(memoryThreshold * 1024)
                     , _operationalSlots(operationalInterval)
                     , _memorySlots(memoryInterval)
                     , _nextSlot(absTime)
+                    , _restartCount(0)
+                    , _restartLimit(restartLimit)
                     , _measurement()
                     , _operationalEvaluate(actOnOperational)
                     , _source(nullptr)
@@ -437,6 +453,8 @@ namespace Plugin {
                     , _operationalSlots(copy._operationalSlots)
                     , _memorySlots(copy._memorySlots)
                     , _nextSlot(copy._nextSlot)
+                    , _restartCount(copy._restartCount)
+                    , _restartLimit(copy._restartLimit)
                     , _measurement(copy._measurement)
                     , _operationalEvaluate(copy._operationalEvaluate)
                     , _source(copy._source)
@@ -455,7 +473,27 @@ namespace Plugin {
                 }
 
             public:
-                inline bool HasRestartAllowed () const 
+                inline void IncrRestartCount()
+                {
+                    _restartCount++;
+                }
+                inline void ResetRestartCount()
+                {
+                    _restartCount = 0;
+                }
+                inline uint32_t RestartCount() const
+                {
+                    return _restartCount;
+                }
+                inline void RestartLimit(const uint32_t value)
+                {
+                    _restartLimit = value;
+                }
+                inline uint32_t RestartLimit() const
+                {
+                    return _restartLimit;
+                }
+                inline bool HasRestartAllowed() const
                 {
                     return (_operationalEvaluate);
                 }
@@ -531,6 +569,8 @@ namespace Plugin {
                 uint32_t _operationalSlots;
                 uint32_t _memorySlots;
                 uint64_t _nextSlot;
+                uint32_t _restartCount;
+                uint32_t _restartLimit;
                 MetaData _measurement;
                 bool _operationalEvaluate;
                 Exchange::IMemory* _source;
@@ -561,6 +601,16 @@ namespace Plugin {
             {
                 return (_monitor.size());
             }
+            inline void Update(string observable, uint32_t value)
+            {
+                std::map<string, MonitorObject>::iterator index(_monitor.begin());
+
+                while (index != _monitor.end()) {
+                    if (index->first == observable)
+                        index->second.RestartLimit(value);
+                    index++;
+                }
+            }
             inline void Open(PluginHost::IShell* service, Core::JSON::ArrayType<Config::Entry>::Iterator& index)
             {
                 ASSERT((service != nullptr) && (_service == nullptr));
@@ -579,10 +629,9 @@ namespace Plugin {
                     uint32_t interval = abs(element.Operational.Value());
                     interval = interval * 1000 * 1000; // Move from Seconds to MicroSeconds
                     uint32_t memory(element.MetaData.Value() * 1000 * 1000);        // Move from Seconds to MicroSeconds
-
+                    uint32_t restartLimit(element.RestartLimit.Value());
                     if ( (interval != 0) || (memory !=0) ) {
-
-                        _monitor.insert(std::pair<string, MonitorObject>(callSign, MonitorObject(element.Operational.Value() >= 0, interval, memory, memoryThreshold, baseTime)));
+                        _monitor.insert(std::pair<string, MonitorObject>(callSign, MonitorObject(element.Operational.Value() >= 0, interval, memory, memoryThreshold, baseTime,restartLimit)));
                     }
                 }
 
@@ -614,7 +663,6 @@ namespace Plugin {
                     PluginHost::IShell::state currentState(service->State());
 
                     if (currentState == PluginHost::IShell::ACTIVATED) {
-
                         // Get the MetaData interface
                         Exchange::IMemory* memory = service->QueryInterface<Exchange::IMemory>();
 
@@ -634,6 +682,13 @@ namespace Plugin {
                         const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Activate\", \"reason\": \"Automatic\" }");
                         _service->Notify(message);
  
+                        if (index->second.RestartCount() == index->second.RestartLimit()) {
+                            TRACE(Trace::Error, (_T("Restarting of %s Failed : Tried %d attempts.\n"), service->Callsign().c_str(),index->second.RestartLimit()));
+                            const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Restart\", \"reason\":\"" + (std::to_string(index->second.RestartLimit())).c_str() + " Attempts Failed\"}");
+                            _service->Notify(message);
+                            index->second.ResetRestartCount();
+                        }
+                        index->second.IncrRestartCount();
                         TRACE(Trace::Information, (_T("Restarting %s again because we detected it was shutdown.\n"), service->Callsign().c_str()));
                         PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(service, PluginHost::IShell::ACTIVATED, PluginHost::IShell::AUTOMATIC));
                     }
