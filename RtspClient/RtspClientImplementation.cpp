@@ -7,7 +7,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class RtspClientImplementation : public Exchange::IRtspClient {
+    class RtspClientImplementation : public Exchange::IRtspClient, RtspSession::AnnouncementHandler {
     private:
 
         class Config : public Core::JSON::Container {
@@ -43,7 +43,7 @@ namespace Plugin {
     public:
         RtspClientImplementation()
             : _observers()
-            , str("Nothing set")
+            , _rtspSession(*this)
         {
             TRACE_L1("%s: Initializing", __FUNCTION__);
         }
@@ -62,6 +62,7 @@ namespace Plugin {
             return (result);
         }
 
+        // Exchange::IRtspClient
         uint32_t Setup(const string& assetId, uint32_t position)
         {
             RtspReturnCode rc = ERR_OK;
@@ -78,7 +79,6 @@ namespace Plugin {
         {
             RtspReturnCode rc = ERR_OK;
 
-            TRACE_L2( "%s: scale=%d position=%d", __FUNCTION__, scale, position);
             rc = _rtspSession.Play((float_t) scale/1000, position);
 
             return rc;
@@ -96,11 +96,20 @@ namespace Plugin {
 
         void Set(const string& name, const string& value)
         {
+            _rtspSession.Set(name, value);
         }
 
         string Get(const string& name) const
         {
-            return (str);
+            string value;
+            RtspReturnCode rc = _rtspSession.Get(name, value);
+            return value;
+        }
+
+        // RtspSession::AnnouncementHandler
+        void announce(const RtspAnnounce& announcement)
+        {
+            TRACE_L1("%s: Announcement received. code =", __FUNCTION__, announcement.GetCode());
         }
 
         BEGIN_INTERFACE_MAP(RtspClientImplementation)
@@ -108,10 +117,9 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        RtspSession _rtspSession;
         std::list<PluginHost::IStateControl::INotification*> _observers;
+        RtspSession _rtspSession;
         Config config;
-        string str;
     };
 
     SERVICE_REGISTRATION(RtspClientImplementation, 1, 0);

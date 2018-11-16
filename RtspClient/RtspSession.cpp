@@ -3,34 +3,30 @@
 #include "Module.h"
 #include "RtspSession.h"
 
-#define ANNOUNCEMENT_CHECK_INTERVAL     10
-#define RTSP_RESPONSE_WAIT_TIME         3000
-#define RTSP_THREAD_SLEEP_MS            1000
 
 namespace WPEFramework {
 namespace Plugin {
 
-RtspSession::RtspSession()
- : Core::Thread(KB(64), _T("RtspClient"))
+RtspSession::RtspSession(RtspSession::AnnouncementHandler& handler)
+ : _announcementHandler(handler)
  , _parser(_sessionInfo)
  , _requestQueue(64)
  , _responseQueue(64)
  , _isSessionActive(false)
  , _nextSRMHeartbeatMS(0)
- , _nextPumpHeartbearMS(0)
+ , _nextPumpHeartbeatMS(0)
  , _playDelay(2000)
  , _srmSocket(nullptr)
  , _controlSocket(nullptr)
+ , _heartbeatTimer(Core::Thread::DefaultStackSize(), _T("RtspHeartbeatTimer"))
 {
-    Core::Thread::Run();
 }
 
 RtspSession::~RtspSession()
 {
 }
 
-RtspReturnCode
-RtspSession::Initialize(const string& hostname, uint16_t port)
+RtspReturnCode RtspSession::Initialize(const string& hostname, uint16_t port)
 {
     RtspReturnCode rc = ERR_OK;
 
@@ -38,13 +34,12 @@ RtspSession::Initialize(const string& hostname, uint16_t port)
     if (!(_srmSocket && _srmSocket->IsOpen())) {
         _isSessionActive = false;
         _nextSRMHeartbeatMS = 0;
-        _nextPumpHeartbearMS = 0;
+        _nextPumpHeartbeatMS = 0;
 
-        // Core::Thread::Run();
         _sessionInfo.srm.name = hostname;
         _sessionInfo.srm.port = port;
-        remote = Core::NodeId(_sessionInfo.srm.name.c_str(), _sessionInfo.srm.port);
-        _srmSocket = new RtspSession::Socket(local, remote, *this);
+        _remote = Core::NodeId(_sessionInfo.srm.name.c_str(), _sessionInfo.srm.port);
+        _srmSocket = new RtspSession::Socket(_local, _remote, *this);
         if (_srmSocket->State() == 0) {
             TRACE_L1( "%s: SRM Socket failed. State=%x", __FUNCTION__, _srmSocket->State());
             rc = ERR_SESSION_FAILED;
@@ -60,13 +55,9 @@ RtspSession::Initialize(const string& hostname, uint16_t port)
     return rc;
 }
 
-RtspReturnCode
-RtspSession::Terminate()
+RtspReturnCode RtspSession::Terminate()
 {
     _adminLock.Lock();
-    //Core::Thread::Stop();
-    //Core::Thread::Wait (Core::Thread::STOPPED, Core::infinite);
-    // XXX: After Stop can't restart, try suspend
 
     TRACE_L1( "%s: closing SRM socket", __FUNCTION__);
     delete _srmSocket;
@@ -79,12 +70,31 @@ RtspSession::Terminate()
     _adminLock.Unlock();
 }
 
-RtspReturnCode
-RtspSession::Open(const string assetId, uint32_t position, const string &reqCpeId, const string &remoteIp)
+RtspReturnCode RtspSession::Send(const RtspMessagePtr& request)
+{
+    _requestQueue.Post(request);
+    GetSocket(request->bSRM).Trigger();;
+}
+
+uint64_t RtspSession::Timed(const uint64_t scheduledTime)
+{
+    if (_isSessionActive) {
+        _sessionInfo.npt += NptUpdateInterwal * _sessionInfo.scale;
+        TRACE(Trace::Information, ("npt=%.3f_nextSRMHeartbeat=%d _nextPumpHeartbeat=%d sessionTimeout=%d ctrlSessionTimeout=%d",
+        _sessionInfo.npt, _nextSRMHeartbeatMS, _nextPumpHeartbeatMS, _sessionInfo.sessionTimeout, _sessionInfo.ctrlSessionTimeout));
+
+        SendHeartbeats();
+
+        Core::Time NextTick = Core::Time::Now();
+        NextTick.Add(NptUpdateInterwal);
+        _heartbeatTimer.Schedule(NextTick.Ticks(), HeartbeatTimer(*this));
+    }
+}
+
+RtspReturnCode RtspSession::Open(const string assetId, uint32_t position, const string &reqCpeId, const string &remoteIp)
 {
     RtspReturnCode rc = ERR_OK;
-    RtspMessage request;
-    RtspMessage response;
+    RtspMessagePtr response;
 
     if (!_isSessionActive) {
         _sessionInfo.reset();
@@ -95,12 +105,16 @@ RtspSession::Open(const string assetId, uint32_t position, const string &reqCpeI
         }
 
         _isSessionActive = true;
-        request.message = _parser.BuildSetupRequest(_sessionInfo.srm.name, assetId);
-        _requestQueue.Post(request);
+        RtspMessagePtr request = _parser.BuildSetupRequest(_sessionInfo.srm.name, assetId);
+        Send(request);
 
-        if (_responseQueue.Extract(response, RTSP_RESPONSE_WAIT_TIME)) {
+        if (_responseQueue.Extract(response, ResponseWaitTime)) {
             _adminLock.Lock();
-            _parser.ProcessSetupResponse(response.message);
+            _parser.ProcessSetupResponse(response->message);
+
+            Core::Time NextTick = Core::Time::Now();
+            NextTick.Add(NptUpdateInterwal);
+            _heartbeatTimer.Schedule(NextTick.Ticks(), HeartbeatTimer(*this));
 
             if (!IsSrmRtspProxy()) {
                 TRACE_L1( "%s: NOT in rtsp proxy mode, connecting control socket (%s:%d)",
@@ -121,7 +135,7 @@ RtspSession::Open(const string assetId, uint32_t position, const string &reqCpeI
 
         if (rc == ERR_OK) {
             _nextSRMHeartbeatMS  = _sessionInfo.sessionTimeout;
-            _nextPumpHeartbearMS = _sessionInfo.ctrlSessionTimeout;
+            _nextPumpHeartbeatMS = _sessionInfo.ctrlSessionTimeout;
 
             // implicit play
             Play(1.0, (position == 0) ? _sessionInfo.bookmark : position);
@@ -134,19 +148,17 @@ RtspSession::Open(const string assetId, uint32_t position, const string &reqCpeI
 }
 
 
-RtspReturnCode
-RtspSession::Close()
+RtspReturnCode RtspSession::Close()
 {
     RtspReturnCode rc = ERR_OK;
     int reason = 0;
-    RtspMessage request;
-    RtspMessage response;
+    RtspMessagePtr response;
 
     if (_isSessionActive) {
-        request.message = _parser.BuildTeardownRequest(reason);
-        _requestQueue.Post(request);
-        if (_responseQueue.Extract(response, RTSP_RESPONSE_WAIT_TIME)) {
-            _parser.ProcessTeardownResponse(response.message);
+        RtspMessagePtr request = _parser.BuildTeardownRequest(reason);
+        Send(request);
+        if (_responseQueue.Extract(response, ResponseWaitTime)) {
+            _parser.ProcessTeardownResponse(response->message);
         } else {
             TRACE_L1( "%s: Failed to get Response", __FUNCTION__);
             rc = ERR_TIMED_OUT;
@@ -161,22 +173,19 @@ RtspSession::Close()
     return rc;
 }
 
-RtspReturnCode
-RtspSession::Play(float scale, uint32_t position)
+RtspReturnCode RtspSession::Play(float scale, uint32_t position)
 {
     RtspReturnCode rc = ERR_OK;
 
     if (_isSessionActive) {
         TRACE_L2( "%s: scale=%f offset=%d", __FUNCTION__, scale, position);
 
-        RtspMessage request;
-        RtspMessage response;
+        RtspMessagePtr response;
 
-        request.bStreamRequest = true;
-        request.message = _parser.BuildPlayRequest(scale, position);
-        _requestQueue.Post(request);
-        if (_responseQueue.Extract(response, RTSP_RESPONSE_WAIT_TIME)) {
-            _parser.ProcessPlayResponse(request.message);
+        RtspMessagePtr request = _parser.BuildPlayRequest(scale, position);
+        Send(request);
+        if (_responseQueue.Extract(response, ResponseWaitTime)) {
+            _parser.ProcessPlayResponse(response->message);
         } else {
             TRACE_L1( "%s: Failed to get Response", __FUNCTION__);
             rc = ERR_TIMED_OUT;
@@ -187,43 +196,67 @@ RtspSession::Play(float scale, uint32_t position)
     return rc;
 }
 
-
-RtspReturnCode
-RtspSession::processResponse(const string &response)
+RtspReturnCode RtspSession::Get(const string name, string &value) const
 {
     RtspReturnCode rc = ERR_OK;
 
-    if (response.length()) {
-        string responseBody;
-        RtspParser::MessageType msgType;
-        int rtspRc = _parser.ParseResponse(response, responseBody, msgType);
-        if (msgType == RtspParser::RTSP_ANNOUNCE) {
-            //rc = ProcessAnnouncement(responseBody, bSRM);
-        } else if (msgType == RtspParser::RTSP_RESPONSE) {
-            RtspMessage rtspResp;
-            rtspResp.message = responseBody;
-            _responseQueue.Post(rtspResp);
+    return rc;
+}
+
+RtspReturnCode RtspSession::Set(const string& name, const string& value)
+{
+    RtspReturnCode rc = ERR_OK;
+
+    return rc;
+}
+
+
+RtspReturnCode RtspSession::ProcessResponse(const string &responseStr, bool bSRM)
+{
+    RtspReturnCode rc = ERR_OK;
+
+    if (responseStr.length()) {
+        RtspMessagePtr response = _parser.ParseResponse(responseStr);
+        if (dynamic_cast<RtspAnnounce*>(response.get()) != nullptr) {
+            RtspAnnounce& announcement = *dynamic_cast<RtspAnnounce*>(response.get());
+            // rc = sendResponse(respSeq, bSRM);
+
+            // reset scale & npt
+            if (announcement.GetCode() == RtspAnnounce::EosReached) {
+                _sessionInfo.scale = 1;
+                _sessionInfo.npt = 0;
+            }
+            _announcementHandler.announce(announcement);
+        } else if (dynamic_cast<RtspResponse*>(response.get()) != nullptr) {
+            _responseQueue.Post(response);
         } else {
-            TRACE_L1( "%s: UNKNOWN response '%s'", __FUNCTION__, response.c_str());
+            TRACE_L1( "%s: UNKNOWN response '%s'", __FUNCTION__, responseStr.c_str());
         }
     }
     return rc;
 }
 
-RtspReturnCode
-RtspSession::SendHeartbeat(bool bSRM)
+RtspReturnCode RtspSession::SendResponse(int respSeq, bool bSRM)
 {
     RtspReturnCode rc = ERR_OK;
-    RtspMessage request;
-    RtspMessage response;
+    RtspMessagePtr  request = _parser.BuildResponse(respSeq, bSRM);
 
-    request.message = _parser.BuildGetParamRequest(bSRM);
-    int sockRc;
+    TRACE_L1( "%s: Sending Announcement Response", __FUNCTION__);
+    Send(request);
 
-    _requestQueue.Post(request);
+    return rc;
+}
 
-    if (_responseQueue.Extract(response, RTSP_RESPONSE_WAIT_TIME)) {
-        _parser.ProcessGetParamResponse(response.message);
+RtspReturnCode RtspSession::SendHeartbeat(bool bSRM)
+{
+    RtspReturnCode rc = ERR_OK;
+    RtspMessagePtr response;
+
+    RtspMessagePtr request = _parser.BuildGetParamRequest(bSRM);
+    Send(request);
+
+    if (_responseQueue.Extract(response, ResponseWaitTime)) {
+        _parser.ProcessGetParamResponse(response->message);
     } else {
         TRACE_L1( "%s: Failed to get Response", __FUNCTION__);
         rc = ERR_TIMED_OUT;
@@ -232,8 +265,7 @@ RtspSession::SendHeartbeat(bool bSRM)
     return rc;
 }
 
-RtspReturnCode
-RtspSession::SendHeartbeats()
+RtspReturnCode RtspSession::SendHeartbeats()
 {
     RtspReturnCode rc = ERR_OK;
     int sessionTimeoutMS     = _sessionInfo.sessionTimeout;
@@ -241,7 +273,7 @@ RtspSession::SendHeartbeats()
 
     // SRM Heartbeat
     if ( !_sessionInfo.sessionId.empty() && sessionTimeoutMS > 0) {
-        _nextSRMHeartbeatMS -= RTSP_THREAD_SLEEP_MS;
+        _nextSRMHeartbeatMS -= NptUpdateInterwal;
         if (_nextSRMHeartbeatMS <= 0) {
             rc = SendHeartbeat(true);
             _nextSRMHeartbeatMS = sessionTimeoutMS;
@@ -250,48 +282,15 @@ RtspSession::SendHeartbeats()
 
     // VideoServer/pump Heartbeat
     if ( !_sessionInfo.ctrlSessionId.empty() && ctrlSessionTimeoutMS > 0) {
-        _nextPumpHeartbearMS -= RTSP_THREAD_SLEEP_MS;
-        if (_nextPumpHeartbearMS <= 0) {
+        _nextPumpHeartbeatMS -= NptUpdateInterwal;
+        if (_nextPumpHeartbeatMS <= 0) {
             rc = SendHeartbeat(false);
-            _nextPumpHeartbearMS = ctrlSessionTimeoutMS;
+            _nextPumpHeartbeatMS = ctrlSessionTimeoutMS;
         }
     }
 
     return rc;
 }
-
-
-uint32_t RtspSession::Worker ()
-{
-    TRACE_L2( "%s: Entering ", __FUNCTION__);
-    RtspReturnCode rc = ERR_OK;
-    int sockRc = 0;
-
-    while (IsRunning() == true) {
-        if (_isSessionActive) {
-            _sessionInfo.npt += RTSP_THREAD_SLEEP_MS * _sessionInfo.scale;
-            TRACE(Trace::Information, ("npt=%.3f_nextSRMHeartbeat=%d _nextPumpHeartbear=%d sessionTimeout=%d ctrlSessionTimeout=%d",
-                _sessionInfo.npt, _nextSRMHeartbeatMS, _nextPumpHeartbearMS, _sessionInfo.sessionTimeout, _sessionInfo.ctrlSessionTimeout));
-
-            SendHeartbeats();
-
-            if (!_requestQueue.IsEmpty()) {
-                TRACE_L2( "%s: Message received ", __FUNCTION__);
-
-                RtspMessage request;
-                _requestQueue.Extract(request, 0);
-                bool bSRM = (request.bStreamRequest) ? false : true;
-                sockRc = GetSocket(bSRM).Send(request.message);
-            } else {
-                usleep(RTSP_THREAD_SLEEP_MS * 1000);
-            }
-        } else {
-            usleep(RTSP_THREAD_SLEEP_MS * 1000);
-        }
-    }
-    TRACE_L2( "%s: Exiting IsRunning=%d", __FUNCTION__, IsRunning());
-}
-
 
 RtspSession::Socket::Socket(const Core::NodeId &local, const Core::NodeId &remote, RtspSession& rtspSession)
     : Core::SocketStream(false, local, remote, 4096, 4096)
@@ -305,19 +304,19 @@ RtspSession::Socket::~Socket()
     Close(1000);
 };
 
-uint16_t RtspSession::Socket::Send(string message)
-{
-    data = message;
-    Trigger();
-    return 0;
-}
-
 uint16_t RtspSession::Socket::SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
 {
-    uint16_t len = data.size();
-    TRACE(Trace::Information, ("%s: maxSendSize=%d bytesToSend=%d", __FUNCTION__, maxSendSize, len));
-    memcpy(dataFrame, data.c_str(), len);
-    data = string();
+    TRACE_L4( "%s: _requestQueue.IsEmpty=%d ", __FUNCTION__, _rtspSession._requestQueue.IsEmpty());
+
+    uint16_t len = 0;
+    if (!_rtspSession._requestQueue.IsEmpty()) {
+        RtspMessagePtr request;
+        _rtspSession._requestQueue.Extract(request, 0);
+        len = request->message.size();
+        memcpy(dataFrame, request->message.c_str(), len);
+        TRACE(Trace::Information, ("%s: maxSendSize=%d bytesToSend=%d", __FUNCTION__, maxSendSize, len));
+    }
+
     return len;
 }
 
@@ -325,7 +324,8 @@ uint16_t RtspSession::Socket::ReceiveData(uint8_t* dataFrame, const uint16_t rec
 {
     TRACE(Trace::Information, ("%s: receivedSize=%d", __FUNCTION__, receivedSize));
     string response((char *)dataFrame, receivedSize);
-    _rtspSession.processResponse(response);
+    bool bSRM = (_rtspSession._srmSocket == this);
+    _rtspSession.ProcessResponse(response, bSRM);
     return receivedSize;
 }
 

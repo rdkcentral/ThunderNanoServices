@@ -6,11 +6,8 @@
 
 #include "RtspParser.h"
 
-#define ANNOUNCEMENT_CHECK_INTERVAL     10
 #define SEC2MS(s)                       (s*1000)
 #define MS2SEC(ms)                      (ms/1000)
-#define RTSP_RESPONSE_WAIT_TIME         3000
-#define RTSP_TERMINATOR                 "\r\n"
 
 namespace WPEFramework {
 namespace Plugin {
@@ -23,53 +20,59 @@ RtspParser::RtspParser(RtspSessionInfo& info)
     TRACE_L2( "%s: %s:%d", __FUNCTION__, __FILE__, __LINE__);
 }
 
-std::string
-RtspParser::BuildSetupRequest(const std::string &server, const std::string &assetId)
+RtspMessagePtr RtspParser::BuildSetupRequest(const std::string &server, const std::string &assetId)
 {
+    RtspMessagePtr request = RtspMessagePtr(new RtspRequst);
     std::stringstream ss;
 
     ss << "SETUP rtsp://" << server << "/" << assetId << "?";
     ss << "VODServingAreaId=1099" << "&";
     ss << "StbId=943BB162A323&";
     ss << "CADeviceId=943BB162A323";
-    ss << " RTSP/1.0\r\n";
-    ss << "CSeq:" << ++_sequence << "\r\n";
-    ss << "User-Agent: Metro\r\n";
-    ss << "Transport: MP2T/DVBC/QAM;unicast;\r\n";
-    ss << "\r\n";
+    ss << " RTSP/1.0" <<  RtspLineTerminator;
+    ss << "CSeq:" << ++_sequence << RtspLineTerminator;
+    ss << "User-Agent: Metro" <<  RtspLineTerminator;
+    ss << "Transport: MP2T/DVBC/QAM;unicast;" <<  RtspLineTerminator;
+    ss << RtspLineTerminator;
 
     HexDump("SETUP", ss.str());
 
-    return ss.str();
+    request->message = ss.str();
+
+    return request;
 }
 
-std::string
-RtspParser::BuildPlayRequest(float scale, uint32_t position)
+RtspMessagePtr RtspParser::BuildPlayRequest(float scale, uint32_t position)
 {
+    RtspMessagePtr request = RtspMessagePtr(new RtspRequst);
     std::stringstream ss;
     string sessionId;
     string cmd = (scale == 0) ? "PAUSE" : "PLAY";
 
-    if (_sessionInfo.bSrmIsRtspProxy)
+    if (_sessionInfo.bSrmIsRtspProxy) {
         sessionId = _sessionInfo.sessionId;
-    else
+        request->bSRM = true;
+    } else {
         sessionId = _sessionInfo.ctrlSessionId;
-
-    ss << cmd << " * RTSP/1.0\r\n";
-    ss << "CSeq:" << ++_sequence << "\r\n";
-    ss << "Session:" << sessionId << "\r\n";
-    ss << "Range: npt=" << position << "\r\n";
-    ss << "Scale: " << scale << "\r\n";
-    ss << "\r\n";
+        request->bSRM = false;
+    }
+    ss << cmd << " * RTSP/1.0" <<  RtspLineTerminator;
+    ss << "CSeq:" << ++_sequence << RtspLineTerminator;
+    ss << "Session:" << sessionId << RtspLineTerminator;
+    ss << "Range: npt=" << position << RtspLineTerminator;
+    ss << "Scale: " << scale << RtspLineTerminator;
+    ss << RtspLineTerminator;
 
     HexDump("PLAY", ss.str());
 
-    return ss.str();
+    request->message = ss.str();
+
+    return request;
 }
 
-std::string
-RtspParser::BuildGetParamRequest(bool bSRM)
+RtspMessagePtr RtspParser::BuildGetParamRequest(bool bSRM)
 {
+    RtspMessagePtr request = RtspMessagePtr(new RtspRequst);
     string strParams;
     string sessId;
 
@@ -78,65 +81,74 @@ RtspParser::BuildGetParamRequest(bool bSRM)
     } else {
         sessId = _sessionInfo.ctrlSessionId;
         std::stringstream ssParams;
-        ssParams << "Position\r\n" ;
-        ssParams << "Scale\r\n";
-        ssParams << "stream_state\r\n";
+        ssParams << "Position" <<  RtspLineTerminator ;
+        ssParams << "Scale" <<  RtspLineTerminator;
+        ssParams << "stream_state" <<  RtspLineTerminator;
         strParams = ssParams.str();
     }
 
     std::stringstream ss;
-    ss << "GET_PARAMETER * RTSP/1.0\r\n";
-    ss << "CSeq:" << ++_sequence << "\r\n";
-    ss << "Session:" << sessId << "\r\n";
-    ss << "Content-Type: text/parameters\r\n";
-    ss << "Content-Length: " << strParams.length() << "\r\n";
+    ss << "GET_PARAMETER * RTSP/1.0" <<  RtspLineTerminator;
+    ss << "CSeq:" << ++_sequence << RtspLineTerminator;
+    ss << "Session:" << sessId << RtspLineTerminator;
+    ss << "Content-Type: text/parameters" <<  RtspLineTerminator;
+    ss << "Content-Length: " << strParams.length() << RtspLineTerminator;
     if (strParams.length()) {
-        ss << "\r\n";
+        ss << RtspLineTerminator;
         ss << strParams;
     }
-    ss << "\r\n";
+    ss << RtspLineTerminator;
 
     HexDump("GETPARAM", ss.str());
 
-    return ss.str();
+    request->message = ss.str();
+
+    return request;
 }
 
-std::string
-RtspParser::BuildTeardownRequest(int reason)
+RtspMessagePtr RtspParser::BuildTeardownRequest(int reason)
 {
+    RtspMessagePtr request = RtspMessagePtr(new RtspRequst);
     std::stringstream ss;
     string strReason = "Cleint Intiated";
 
-    ss << "TEARDOWN * RTSP/1.0\r\n";
-    ss << "CSeq:" << ++_sequence << "\r\n";
-    ss << "Session:" << _sessionInfo.sessionId << "\r\n";
-    ss << "Reason:" << reason << " " << strReason << "\r\n";
-    ss << "\r\n";
+    ss << "TEARDOWN * RTSP/1.0" <<  RtspLineTerminator;
+    ss << "CSeq:" << ++_sequence << RtspLineTerminator;
+    ss << "Session:" << _sessionInfo.sessionId << RtspLineTerminator;
+    ss << "Reason:" << reason << " " << strReason << RtspLineTerminator;
+    ss << RtspLineTerminator;
 
     HexDump("TEARDOWN", ss.str());
 
-    return ss.str();
+    request->message = ss.str();
+
+    return request;
 }
 
-std::string
-RtspParser::BuildResponse(int respSeq, bool bSRM)
+RtspMessagePtr RtspParser::BuildResponse(int respSeq, bool bSRM)
 {
+    RtspMessagePtr request = RtspMessagePtr(new RtspRequst);
     string sessId = (bSRM) ? _sessionInfo.sessionId : _sessionInfo.ctrlSessionId;
 
     std::stringstream ss;
-    ss << "RTSP/1.0 200 OK\r\n";
-    ss << "CSeq:" << respSeq << "\r\n";
-    ss << "Session:" << _sessionInfo.sessionId << "\r\n";
-    ss << "\r\n";
-    ss << "\r\n";
-    return ss.str();
+    ss << "RTSP/1.0 200 OK" <<  RtspLineTerminator;
+    ss << "CSeq:" << respSeq << RtspLineTerminator;
+    ss << "Session:" << _sessionInfo.sessionId << RtspLineTerminator;
+    ss << RtspLineTerminator;
+    ss << RtspLineTerminator;
+
+    HexDump("ANNOUNCERESP", ss.str());
+
+    request->message = ss.str();
+
+    return request;
 }
 
 int RtspParser::ProcessSetupResponse(const std::string &response)
 {
     NAMED_ARRAY setupMap;               // entire response
     NAMED_ARRAY params;                 // single line
-    Parse(response, setupMap, "\r\n", ": ");
+    Parse(response, setupMap, RtspLineTerminator, ": ");
 
     string sess = setupMap["Session"];
     TRACE_L2( "%s: session id='%s'", __FUNCTION__, sess.c_str());
@@ -224,21 +236,21 @@ void RtspParser::UpdateNPT(NAMED_ARRAY &playMap)
 int RtspParser::ProcessPlayResponse(const std::string &response)
 {
     NAMED_ARRAY playMap;
-    Parse(response, playMap, "\r\n", ": ");
+    Parse(response, playMap, RtspLineTerminator, ": ");
     UpdateNPT(playMap);
 }
 
 int RtspParser::ProcessGetParamResponse(const std::string &response)
 {
     NAMED_ARRAY playMap;
-    Parse(response, playMap, "\r\n", ": ");
+    Parse(response, playMap, RtspLineTerminator, ": ");
     UpdateNPT(playMap);
 }
 
 int RtspParser::ProcessTeardownResponse(const std::string &response)
 {
     NAMED_ARRAY playMap;
-    Parse(response, playMap, "\r\n", ": ");
+    Parse(response, playMap, RtspLineTerminator, ": ");
     //
 }
 
@@ -279,11 +291,10 @@ void RtspParser::Parse(const std::string &str,  NAMED_ARRAY &contents, const str
         TRACE_L4( "%s: %s => '%s'", __FUNCTION__, it->first.c_str(), it->second.c_str());
 }
 
-int
-RtspParser::ParseResponse(const std::string str,  std::string &rtspBody, RtspParser::MessageType &msgType)
+RtspMessagePtr RtspParser::ParseResponse(const std::string str)
 {
     int rtspCode = 0;
-    msgType = RTSP_UNKNOWN;
+    RtspMessagePtr response;
 
     HexDump("Response: ", str);
     // -------------------------------------------------------------------------
@@ -291,7 +302,7 @@ RtspParser::ParseResponse(const std::string str,  std::string &rtspBody, RtspPar
     // RTSP/1.0 400 Bad Request
     // ANNOUNCE rtsp://x.x.x.x:8060 RTSP/1.0
     // -------------------------------------------------------------------------
-    int pos = str.find(RTSP_TERMINATOR);
+    int pos = str.find(RtspLineTerminator);
     if (pos !=std::string::npos) {
         string header = str.substr(0, pos);
         std::vector<string> tokens;
@@ -300,23 +311,65 @@ RtspParser::ParseResponse(const std::string str,  std::string &rtspBody, RtspPar
         //for (int i = 0; i < tokens.size(); i++)
         //    TRACE_L2( "%s: %d. '%s'", __FUNCTION__, i, tokens.at(i).c_str());
 
+        // Parse rest, only if the header is valid
         if (tokens.size() >= 3) {
             string first = tokens.at(0);
+            string rtspBody = str.substr(pos+2);       // +2 CRLR
 
             if (first.compare("ANNOUNCE") == 0) {
-                msgType = RTSP_ANNOUNCE;
+                response = ParseAnnouncement(rtspBody, 0);
             } else if (first.compare(0, 5, "RTSP/") == 0) {
-                msgType = RTSP_RESPONSE;
                 rtspCode = std::stoi(tokens.at(1));
+                response = RtspMessagePtr(new RtspResponse(rtspCode));
+                response->message = rtspBody;
             }
-            // Parse rest, only if the header is valid
-            rtspBody = str.substr(pos+2);       // +2 CRLR
-            //Parse(tokenStr, contents, ":", "\r\n");
+            //Parse(tokenStr, contents, ":", RtspLineTerminator);
         }
     }
 
-    return msgType;
+    return response;
 }
+
+RtspMessagePtr RtspParser::ParseAnnouncement(const std::string &response, bool bSRM)
+{
+    /*
+        contents.size=3
+        CSeq => '6'
+        Notice => '2104 "Start-of-Stream Reached" event-date=20160623T231007Z'
+        Session => '2709130937-52547519'
+    */
+    int code = 0;
+    string reason;
+    NAMED_ARRAY announceMap;
+    RtspMessage::Type msgType;
+    Parse(response, announceMap, RtspLineTerminator, ": ");
+    if (announceMap.size()) {
+        int respSeq = atoi(announceMap["CSeq"].c_str());
+        TRACE_L2( "%s: respSeq=%d", __FUNCTION__, respSeq);
+
+        string notice = announceMap["Notice"];
+        size_t pos = notice.find(' ');
+        if (pos != string::npos) {
+            size_t pos2;
+
+            string strCode = notice.substr(0, pos);
+            code = atoi(strCode.c_str());
+
+            pos = notice.find('"');
+            if (pos != string::npos) {
+                pos2 = notice.find('"', pos+1);
+                if (pos2 != string::npos) {
+                    reason = notice.substr(pos+1, pos2-pos);
+                }
+            }
+        }
+    } else {
+        TRACE_L1( "%s: ANNOUNCEMENT without body", __FUNCTION__, response.c_str());
+    }
+
+    return RtspMessagePtr(new RtspAnnounce(code, reason));
+}
+
 
 int RtspParser::Split(const string& str, const string& delim,  std::vector<string>& tokens)
 {

@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 
+#include "RtspCommon.h"
 #include "RtspSessionInfo.h"
 
 namespace WPEFramework {
@@ -14,27 +15,22 @@ typedef std::map<std::string, std::string> NAMED_ARRAY;
 class RtspParser
 {
     public:
-        enum MessageType {
-            RTSP_UNKNOWN,
-            RTSP_RESPONSE,
-            RTSP_ANNOUNCE
-        };
-
         RtspParser(RtspSessionInfo& sessionInfo);
-        std::string BuildSetupRequest(const std::string &server, const std::string &assetId);
-        std::string BuildPlayRequest(float scale = 1.0, uint32_t position = 0);
-        std::string BuildGetParamRequest(bool bSRM);
-        std::string BuildTeardownRequest(int reason);
-        std::string BuildResponse(int seq, bool bSRM);
+        RtspMessagePtr BuildSetupRequest(const std::string &server, const std::string &assetId);
+        RtspMessagePtr BuildPlayRequest(float scale = 1.0, uint32_t position = 0);
+        RtspMessagePtr BuildGetParamRequest(bool bSRM);
+        RtspMessagePtr BuildTeardownRequest(int reason);
+        RtspMessagePtr BuildResponse(int seq, bool bSRM);
 
         int ProcessSetupResponse(const std::string &response);
         int ProcessPlayResponse(const std::string &response);
         int ProcessGetParamResponse(const std::string &response);
         int ProcessTeardownResponse(const std::string &response);
-        int ProcessAnnouncement(const std::string &response, bool bSRM);
 
         void Parse(const std::string &str,  NAMED_ARRAY &contents, const string &sep1, const string &sep2);
-        int ParseResponse(const std::string str,  std::string &rtspBody, RtspParser::MessageType &msgType);
+        RtspMessagePtr ParseResponse(const std::string str);
+        RtspMessagePtr ParseAnnouncement(const std::string &response, bool bSRM);
+
         static void HexDump(const char* label, const std::string& msg, uint16_t charsPerLine = 32);
 
     private:
@@ -45,6 +41,7 @@ class RtspParser
         RtspSessionInfo& _sessionInfo;
 
     private:
+        static constexpr const char* const RtspLineTerminator = "\r\n";
         static unsigned int _sequence;
 };
 
