@@ -7,3 +7,4 @@ uninstall.cmake
 install_manifest.txt
 CTestTestfile.cmake
 output/
+.DS_Store
