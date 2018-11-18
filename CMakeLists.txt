@@ -114,6 +114,7 @@ option(WPEFRAMEWORK_PLUGIN_NETWORKCONTROL "Include NetworkControlplugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_OPENCDMI "Include OpenCDMi plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_POWER "Include Power plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
+option(WPEFRAMEWORK_PLUGIN_STREAMER "Include Streamer plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_SNAPSHOT "Include Snapshot plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_TIMESYNC "Include TimeSync plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_TRACECONTROL "Include TraceControl plugin" OFF)
@@ -199,10 +200,13 @@ if(WPEFRAMEWORK_PLUGIN_SNAPSHOT)
     add_subdirectory(Snapshot)
 endif()
 
+if(WPEFRAMEWORK_PLUGIN_STREAMER)
+    add_subdirectory(Streamer)
+endif()
+
 if(WPEFRAMEWORK_PLUGIN_SYSTEMDCONNECTOR)
     add_subdirectory(SystemdConnector)
 endif()
-
 
 if(WPEFRAMEWORK_PLUGIN_TIMESYNC)
     add_subdirectory(TimeSync)
