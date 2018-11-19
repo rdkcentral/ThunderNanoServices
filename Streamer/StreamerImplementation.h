@@ -55,37 +55,11 @@ private:
         Exchange::IPlayer* _parentInterface;
     };
 
-    class Config : public Core::JSON::Container {
-    private:
-        Config(const Config&) = delete;
-        Config& operator=(const Config&) = delete;
-
-    public:
-        Config()
-            : Core::JSON::Container()
-            , Connector(_T("/tmp/player"))
-            , Frontends(1)
-            , Decoders(1)
-        {
-            Add(_T("connector"), &Connector);
-            Add(_T("frontends"), &Frontends);
-            Add(_T("decoders"), &Decoders);
-        }
-        ~Config()
-        {
-        }
-
-    public:
-        Core::JSON::String Connector;
-        Core::JSON::DecUInt8 Frontends;
-        Core::JSON::DecUInt8 Decoders;
-    };
-
 public:
     StreamerImplementation ()
         : _adminLock()
         , _externalAccess(nullptr)
-        , _administrator(nullptr)
+        , _administrator()
     {
     }
 
@@ -102,13 +76,13 @@ public:
         _adminLock.Unlock();
     }
 
-    //IPlayer Interfaces
+    // IPlayer Interfaces
     virtual uint32_t Configure(PluginHost::IShell* service);
     virtual Exchange::IStream* CreateStream(const Exchange::IStream::streamtype streamType);
 
 private:
     mutable Core::CriticalSection _adminLock;
-    Player::Implementation::Administrator* _administrator;
+    Player::Implementation::Administrator _administrator;
     ExternalAccess* _externalAccess;
 };
 

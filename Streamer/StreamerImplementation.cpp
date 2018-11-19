@@ -12,7 +12,22 @@ SERVICE_REGISTRATION(StreamerImplementation, 1, 0);
 
     uint32_t result = Core::ERROR_NONE;
 
-    Config config; 
+    class Config : public Core::JSON::Container {
+    private:
+        Config(const Config&) = delete;
+        Config& operator=(const Config&) = delete;
+
+    public:
+        Config() : Core::JSON::Container() , Connector(_T("/tmp/player")) {
+            Add(_T("connector"), &Connector);
+        }
+        virtual ~Config() {
+        }
+
+    public:
+        Core::JSON::String Connector;
+    } config;
+
     config.FromString(service->ConfigLine());
 
     _externalAccess = new ExternalAccess(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath());
@@ -24,8 +39,7 @@ SERVICE_REGISTRATION(StreamerImplementation, 1, 0);
         result = Core::ERROR_OPENING_FAILED;
     }
     else {
-        Player::Implementation::FrontendType< Player::Implementation::PlayerPlatform >::Initialize(service->ConfigLine());
-        _administrator = new Player::Implementation::Administrator(config.Frontends.Value(), config.Decoders.Value());
+        result = _administrator.Initialize(service->ConfigLine());
         
     }
     return (result);
@@ -35,15 +49,11 @@ SERVICE_REGISTRATION(StreamerImplementation, 1, 0);
 {
     if (_externalAccess != nullptr) {
 
-        Player::Implementation::FrontendType< Player::Implementation::PlayerPlatform >::Deinitialize();
+        _administrator.Deinitialize();
 
         TRACE(Trace::Information, (_T("StreamerImplementation::Destructor() : delete instance")));
         delete _externalAccess;
         _externalAccess = nullptr;
-    }
-    if (_administrator != nullptr) {
-        delete _administrator;
-        _administrator = nullptr;
     }
 }
 
@@ -53,9 +63,7 @@ SERVICE_REGISTRATION(StreamerImplementation, 1, 0);
 
     _adminLock.Lock();
 
-    if (_administrator != nullptr) {
-        result = _administrator->Aquire(streamType);
-    }
+    result = _administrator.Aquire(streamType);
 
     _adminLock.Unlock();
 

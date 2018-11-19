@@ -40,11 +40,14 @@ add_subdirectory(Implementation/${STREAMER_IMPLEMENTATION})
 include_directories(Implementation/${STREAMER_IMPLEMENTATION})
 set(STREAMER_LIBS -Wl,--whole-archive PlayerPlatform -Wl,--no-whole-archive)
 
-set(PLUGIN_LIBS
+message ("FUCKINg CMAKE WHAT HAPPEND TO THE LIBS: ${ADDITIONAL_LIBRARIES}")
+
+set(PLUGIN_DEPENDENCIES
     ${CMAKE_THREAD_LIBS_INIT}
     ${CMAKE_DL_LIBS}
     ${WPEFRAMEWORK_LIBRARY_WPEFrameworkPlugins}
     ${PLUGIN_DEPENDENCIES}
+    ${ADDITIONAL_LIBRARIES}
     ${STREAMER_LIBS})
 
 include(default_targets) # This is a regular plugin no need to edit the defaults

@@ -12,24 +12,22 @@ namespace Implementation {
 
 class Administrator {
 private:
-    Administrator() = delete;
     Administrator(const Administrator&) = delete;
     Administrator& operator= (const Administrator&) = delete;
 
 public:
-    Administrator(const uint8_t frontends, const uint8_t decoders) 
-        : _frontends(frontends)
-        , _decoders(decoders) {
-        uint32_t bufferSize = (sizeof(Exchange::IStream*) * frontends) + decoders;
-        void* buffer = ::malloc(bufferSize);
-
-        ::memset(buffer, 0, bufferSize);
-
-        _streams = reinterpret_cast<Exchange::IStream**>(buffer);
-        _slots   = &(reinterpret_cast<uint8_t*>(buffer)[sizeof(Exchange::IStream*) * frontends]);
+    Administrator() 
+        : _adminLock()
+        , _frontends(0)
+        , _decoders(0)
+        , _streams(nullptr)
+        , _slots(nullptr) {
     }
-    ~Administrator() {
-    }
+    ~Administrator() {}
+
+public:
+    uint32_t Initialize(const string& config);
+    uint32_t Deinitialize();
 
 public:
     // These methods create and destroy the Exchange::IStream administration slots.
@@ -390,11 +388,11 @@ public:
         _adminLock.Unlock();
     }
 
-    static void Initialize(const string& configuration) {
-      __Initialize<IMPLEMENTATION>(configuration);
+    static uint32_t Initialize(const string& configuration) {
+      return(__Initialize<IMPLEMENTATION>(configuration));
     } 
-    static void Deinitialize() {
-      __Deinitialize<IMPLEMENTATION>();
+    static uint32_t Deinitialize() {
+      return(__Deinitialize<IMPLEMENTATION>());
     } 
  
     BEGIN_INTERFACE_MAP(FrontendType<IMPLEMENTATION>)
@@ -409,29 +407,31 @@ private:
     typedef hasDeinitialize<IMPLEMENTATION, void (IMPLEMENTATION::*)()> TraitDeinitialize;
 
     template <typename TYPE>
-    inline static typename Core::TypeTraits::enable_if<FrontendType<TYPE>::TraitInitialize::value, void>::type
+    inline static typename Core::TypeTraits::enable_if<FrontendType<TYPE>::TraitInitialize::value, uint32_t>::type
     __Initialize(const string& config)
     {
-        IMPLEMENTATION::Initialize(config);
+        return(IMPLEMENTATION::Initialize(config));
     }
 
     template <typename TYPE>
-    inline static typename Core::TypeTraits::enable_if<!FrontendType<TYPE>::TraitInitialize::value, void>::type
+    inline static typename Core::TypeTraits::enable_if<!FrontendType<TYPE>::TraitInitialize::value, uint32_t>::type
     __Initialize(const string&)
     {
+        return (Core::ERROR_NONE);
     }
 
     template <typename TYPE>
-    inline static typename Core::TypeTraits::enable_if<FrontendType<TYPE>::TraitDeinitialize::value, void>::type
+    inline static typename Core::TypeTraits::enable_if<FrontendType<TYPE>::TraitDeinitialize::value, uint32_t>::type
     __Deinitialize()
     {
-        IMPLEMENTATION::Deinitialize();
+        return (IMPLEMENTATION::Deinitialize());
     }
 
     template <typename TYPE>
-    inline static typename Core::TypeTraits::enable_if<!FrontendType<TYPE>::TraitDeinitialize::value, void>::type
+    inline static typename Core::TypeTraits::enable_if<!FrontendType<TYPE>::TraitDeinitialize::value, uint32_t>::type
     __Deinitialize()
     {
+        return (Core::ERROR_NONE);
     }
 
     inline void TimeUpdate(uint64_t position) {
