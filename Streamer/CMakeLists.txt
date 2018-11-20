@@ -40,8 +40,6 @@ add_subdirectory(Implementation/${STREAMER_IMPLEMENTATION})
 include_directories(Implementation/${STREAMER_IMPLEMENTATION})
 set(STREAMER_LIBS -Wl,--whole-archive PlayerPlatform -Wl,--no-whole-archive)
 
-message ("FUCKINg CMAKE WHAT HAPPEND TO THE LIBS: ${ADDITIONAL_LIBRARIES}")
-
 set(PLUGIN_DEPENDENCIES
     ${CMAKE_THREAD_LIBS_INIT}
     ${CMAKE_DL_LIBS}
