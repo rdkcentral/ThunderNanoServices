@@ -138,7 +138,6 @@ namespace Plugin {
     /* virtual */ void IOConnector::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT (_service == service);
-        ASSERT (_pin != nullptr);
 
         while (_pins.size() > 0) {
             delete _pins.front().first;
@@ -159,7 +158,6 @@ namespace Plugin {
 
     void IOConnector::Activity (GPIO::Pin& pin) {
 
-        ASSERT (_pin == &pin);
         ASSERT (_service != nullptr);
 
         TRACE(IOState, (pin));

@@ -23,6 +23,7 @@ private:
     public:
 	Monitor()
 	{
+	    Run();
 	}
 	~Monitor()
 	{

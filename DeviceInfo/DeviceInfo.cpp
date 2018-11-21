@@ -151,23 +151,7 @@ namespace WPEFramework
 
         void DeviceInfo::SocketPortInfo(Data::SocketPortInfo& socketPortInfo)
         {
-#ifdef __DEBUG__
-            socketPortInfo.Total = Core::SocketPort::SocketsInState(static_cast<Core::SocketPort::enumState>(0));
-            socketPortInfo.Open = Core::SocketPort::SocketsInState(Core::SocketPort::OPEN);
-            socketPortInfo.Link = Core::SocketPort::SocketsInState(Core::SocketPort::LINK);
-            socketPortInfo.Exception = Core::SocketPort::SocketsInState(Core::SocketPort::EXCEPTION);
-            socketPortInfo.Shutdown = Core::SocketPort::SocketsInState(Core::SocketPort::SHUTDOWN);
-#ifdef SOCKET_TEST_VECTORS
-            socketPortInfo.Runs = Core::SocketPort::MonitorRuns();
-#endif
-#else
-            socketPortInfo.Total = 0;
-            socketPortInfo.Open = 0;
-            socketPortInfo.Link = 0;
-            socketPortInfo.Exception = 0;
-            socketPortInfo.Shutdown = 0;
-            socketPortInfo.Runs = 0;
-#endif
+            socketPortInfo.Runs = Core::ResourceMonitor::Instance().Runs();
         }
 
         string DeviceInfo::GetDeviceId() const
