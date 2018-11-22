@@ -36,8 +36,6 @@ namespace GPIO {
 // Class: PIN
 // ----------------------------------------------------------------------------------------------------
 
-/* static */ Pin::Monitor Pin::_monitor;
-
 Pin::Pin(const uint8_t pin)
     : _pin(pin)
     , _descriptor(-1) {
@@ -49,8 +47,9 @@ Pin::Pin(const uint8_t pin)
         if (_observers.size() > 0) {
             // Please unregister all observers before dumping the pin.
             ASSERT(false);
-            _monitor.Unregister(*this);
         }
+
+        Core::ResourceMonitor::Instance().Unregister(*this);
 
         close (_descriptor);
         _descriptor = -1;
@@ -84,7 +83,7 @@ void Pin::Register(IObserver* callback) {
     _observers.push_back(callback);
 
     if (_observers.size() == 1) {
-        _monitor.Register (*this);
+        Core::ResourceMonitor::Instance().Register (*this);
     }
 
     _adminLock.Unlock();
@@ -105,7 +104,7 @@ void Pin::Unregister(IObserver* callback) {
         _observers.erase(index);
 
         if (_observers.size() == 0) {
-            _monitor.Unregister (*this);
+            Core::ResourceMonitor::Instance().Unregister (*this);
         }
     }
 
@@ -131,7 +130,7 @@ void Pin::Flush() {
     }
 }
 
-int Pin::Descriptor() const {
+/* virtual */ Core::IResource::handle Pin::Descriptor() const {
 
       if ((_pin != 0xFF) && (_descriptor == -1))
       {
@@ -162,6 +161,22 @@ int Pin::Descriptor() const {
       }
 
       return (_descriptor);
+}
+
+/* virtual */ uint16_t Pin::Events() {
+    return (_descriptor != -1 ? (POLLPRI|POLLERR) : 0);
+}
+
+/* virtual */ void Pin::Handle(const uint16_t events) {
+
+    if ((events & (POLLPRI|POLLERR)) != 0) {
+
+        unsigned char buffer[1];
+
+        read(_descriptor, &buffer, sizeof(buffer));
+
+        Notify();
+    }
 }
 
 void Pin::Trigger (const trigger_mode mode) {
