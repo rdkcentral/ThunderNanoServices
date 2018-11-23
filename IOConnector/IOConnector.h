@@ -13,22 +13,26 @@ namespace Plugin {
         IOConnector(const IOConnector&) = delete;
         IOConnector& operator=(const IOConnector&) = delete;
 
-        class Sink : public GPIO::Pin::IObserver {
+        class Sink : public Exchange::IExternal::INotification {
         private:
             Sink() = delete;
             Sink(const Sink&) = delete;
             Sink& operator= (const Sink&) = delete;
 
         public:
-            Sink(IOConnector& parent) : _parent(parent) {
+            Sink(IOConnector* parent) : _parent(*parent) {
             }
             virtual ~Sink() {
             }
 
         public:
-            virtual void Activity (GPIO::Pin&  pin) override {
-                _parent.Activity(pin);
+            virtual void Update() override {
+                _parent.Activity();
             }
+
+            BEGIN_INTERFACE_MAP(Sink)
+                INTERFACE_ENTRY(Exchange::IExternal::INotification)
+            END_INTERFACE_MAP
 
         private:
             IOConnector& _parent;
@@ -145,11 +149,11 @@ namespace Plugin {
         virtual string Information() const override;
 
     private:
-        void Activity (GPIO::Pin& pin);
+        void Activity ();
 
     private:
         PluginHost::IShell* _service;
-        Sink _sink;
+        Core::Sink<Sink> _sink;
         Pins _pins;
     };
 

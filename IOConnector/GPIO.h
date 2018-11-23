@@ -3,15 +3,19 @@
 
 #include "Module.h"
 
+#include <interfaces/IExternal.h>
+
 namespace WPEFramework {
 
 namespace GPIO {
 
-class Pin : public Core::IResource {
+class Pin : public Exchange::ExternalBase<Exchange::IExternal::GPIO>, public Core::IResource {
 private:
     Pin () = delete;
     Pin (const Pin&) = delete;
     Pin& operator= (const Pin&) = delete;
+
+    typedef Exchange::ExternalBase<Exchange::IExternal::GPIO> BaseClass;
 
 public:
     enum pin_mode {
@@ -28,7 +32,6 @@ public:
         UP = 2
     };
 
-
     enum trigger_mode {
         NONE    = 0x00,
         FALLING = 0x01,
@@ -36,12 +39,6 @@ public:
         BOTH    = 0x03,
         HIGH    = 0x04,
         LOW     = 0x08
-    };
-
-    struct IObserver {
-        virtual ~IObserver() {};
-
-        virtual void Activity (Pin&  pin) = 0;
     };
 
 public:
@@ -53,9 +50,6 @@ public:
         return (_pin);
     }
 
-    void Register(IObserver* callback);
-    void Unregister(IObserver* callback);
-
     bool Get () const;
     void Set (const bool value);
 
@@ -63,34 +57,26 @@ public:
     void Mode (const pin_mode mode);
     void Pull (const pull_mode mode);
 
+    bool HasChanged() const;
+    void Align();
+
 private: 
     virtual Core::IResource::handle Descriptor() const override;
     virtual uint16_t Events() override;
     virtual void Handle(const uint16_t events) override;
 
+    virtual void Trigger() override;
+    virtual uint32_t Get(int32_t& value) const override;
+    virtual uint32_t Set(const int32_t value) override;
+    virtual void Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job) override;
+    virtual void Revoke(const Core::ProxyType<Core::IDispatch>& job) override;
+
     void Flush();
 
-    void Notify () {
-
-        Flush();
-
-        _adminLock.Lock();
-
-        std::list<IObserver*>::iterator index (_observers.begin());
-
-        while (index != _observers.end()) {
-            (*index)->Activity (*this);
-	    index++;
-        }
-
-        _adminLock.Unlock();
-    }
-
 private:
-    Core::CriticalSection _adminLock;
     const uint8_t _pin;
+    uint8_t _lastValue;
     mutable int _descriptor;
-    std::list<IObserver*> _observers;
 };
 
 } } // namespace WPEFramework::GPIO

@@ -54,7 +54,7 @@ namespace Plugin {
 
     IOConnector::IOConnector()
         : _service(nullptr)
-        , _sink(*this)
+        , _sink(this)
         , _pins()
     {
     }
@@ -76,7 +76,7 @@ namespace Plugin {
 
         while (index.Next() == true) {
             
-            GPIO::Pin* pin = new GPIO::Pin(index.Current().Id.Value());
+            GPIO::Pin* pin = Core::Service<GPIO::Pin>::Create<GPIO::Pin>(index.Current().Id.Value());
 
             if (pin != nullptr) {
                 switch(index.Current().Mode.Value()) {
@@ -156,28 +156,35 @@ namespace Plugin {
         return (string());
     }
 
-    void IOConnector::Activity (GPIO::Pin& pin) {
+    void IOConnector::Activity () {
 
         ASSERT (_service != nullptr);
 
-        TRACE(IOState, (pin));
 
         // Lets find the pin and trigger if posisble...
         Pins::iterator index = _pins.begin();
 
-        while ((index != _pins.end()) && (index->first != &pin)) { index++; }
+        while (index != _pins.end()) { 
 
-        if (index != _pins.end()) {
+            if (index->first->HasChanged()) {
+                GPIO::Pin& pin (*(index->first));
 
-            if (index->second != nullptr) {
-                index->second->Trigger(pin);
-            }
-            else {
-                _service->Notify(_T("{ \"id\": ") + 
+                pin.Align();
+
+                TRACE(IOState, (pin));
+
+                if (index->second != nullptr) {
+                    index->second->Trigger(pin);
+                }
+                else {
+                    _service->Notify(_T("{ \"id\": ") + 
                                 Core::NumberType<uint8_t>(pin.Id()).Text() + 
                                 _T(", \"state\": \"") + 
                                 (pin.Get() ? _T("High\" }") : _T("Low\" }")));
+                }
             }
+
+            index++; 
         }
     }
 
