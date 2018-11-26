@@ -5,10 +5,14 @@
 #include "Handler.h"
 #include "GPIO.h"
 
+#include <interfaces/IExternal.h>
+
 namespace WPEFramework {
 namespace Plugin {
 
-    class IOConnector : public PluginHost::IPlugin {
+    class IOConnector 
+        : public PluginHost::IPlugin 
+        , public Exchange::IExternal::IFactory {
     private:
         IOConnector(const IOConnector&) = delete;
         IOConnector& operator=(const IOConnector&) = delete;
@@ -139,6 +143,7 @@ namespace Plugin {
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(IOConnector)
             INTERFACE_ENTRY(PluginHost::IPlugin)
+            INTERFACE_ENTRY(Exchange::IExternal::IFactory)
         END_INTERFACE_MAP
 
     public:
@@ -147,6 +152,12 @@ namespace Plugin {
         virtual const string Initialize(PluginHost::IShell* service) override;
         virtual void Deinitialize(PluginHost::IShell* service) override;
         virtual string Information() const override;
+
+        //   IExternal::IFactory methods
+        // -------------------------------------------------------------------------------------------------------
+        virtual void Register(IFactory::INotification* sink) override;
+        virtual void Unregister(IFactory::INotification* sink) override;
+        virtual Exchange::IExternal* Resource(const uint32_t id) override;
 
     private:
         void Activity ();

@@ -46,10 +46,6 @@ public:
     virtual ~Pin();
   
 public:
-    inline uint8_t Id () const {
-        return (_pin);
-    }
-
     bool Get () const;
     void Set (const bool value);
 

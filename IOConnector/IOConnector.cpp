@@ -33,7 +33,7 @@ namespace Plugin {
 
     public:
         inline IOState(const GPIO::Pin& pin) {
-            Trace::Format(_text, _T("IO Activity on pin: %d, current state: %s"), pin.Id(), (pin.Get() ? _T("true") : _T("false")));
+            Trace::Format(_text, _T("IO Activity on pin: %d, current state: %s"), (pin.Identifier() & 0xFFFF), (pin.Get() ? _T("true") : _T("false")));
         }
         ~IOState() {
         }
@@ -135,6 +135,36 @@ namespace Plugin {
         return (_pins.size() > 0 ? string() : _T("Could not instantiate the requested Pin"));
     }
 
+    /* virtual */ void IOConnector::Register(IFactory::INotification* /* sink */) {
+        /* TODO */
+        ASSERT (false);
+    }
+
+    /* virtual */ void IOConnector::Unregister(IFactory::INotification* /* sink */) {
+        /* TODO */
+        ASSERT (false);
+    }
+
+    /* virtual */ Exchange::IExternal* IOConnector::Resource(const uint32_t id) {
+
+        Exchange::IExternal* result = nullptr;
+
+        // Lets find the pin and trigger if posisble...
+        Pins::iterator index = _pins.begin();
+
+        while ((index != _pins.end()) && (result == nullptr)) { 
+            if (index->first->Identifier() == id) {
+                result = index->first;
+                result->AddRef();
+            }
+            else {
+                index++;
+            }
+        }
+
+        return (result);
+    }
+
     /* virtual */ void IOConnector::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT (_service == service);
@@ -178,7 +208,7 @@ namespace Plugin {
                 }
                 else {
                     _service->Notify(_T("{ \"id\": ") + 
-                                Core::NumberType<uint8_t>(pin.Id()).Text() + 
+                                Core::NumberType<uint8_t>(pin.Identifier() & 0xFFFF).Text() + 
                                 _T(", \"state\": \"") + 
                                 (pin.Get() ? _T("High\" }") : _T("Low\" }")));
                 }
