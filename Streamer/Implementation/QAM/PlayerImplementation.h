@@ -31,12 +31,13 @@ public:
   virtual ~PlayerPlatform() { Terminate(); }
 
 public:
-  static void Initialize(const string& configuration) {
-    printf("Initializeing the Tuner platform with: %s\n", configuration.c_str());
+  static uint32_t Initialize(const string& configuration) {
     Broadcast::ITuner::Initialize(configuration);
+    return (Core::ERROR_NONE);
   }
-  static void Deinitialize() {
+  static uint32_t Deinitialize() {
     Broadcast::ITuner::Deinitialize();
+    return (Core::ERROR_NONE);
   }
   inline string Metadata() const { return string(); }
   inline Exchange::IStream::streamtype Type() const {

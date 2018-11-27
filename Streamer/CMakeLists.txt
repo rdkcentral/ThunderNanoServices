@@ -8,15 +8,14 @@ set(PLUGIN_NAME Streamer)
 
 include(module) # Setup default stuff needed for the cmake framework.
 
+find_package(Interfaces REQUIRED)
+
 set(PLUGIN_DEFINITIONS
     )
 
 set(PLUGIN_OPTIONS)
 
 set(PLUGIN_LINK_OPTIONS)
-
-set(PLUGIN_DEPENDENCIES
-    )
 
 set(PLUGIN_INCLUDE_DIRS
     ${WPEFRAMEWORK_INCLUDE_DIRS})
@@ -43,10 +42,10 @@ set(STREAMER_LIBS -Wl,--whole-archive PlayerPlatform -Wl,--no-whole-archive)
 set(PLUGIN_DEPENDENCIES
     ${CMAKE_THREAD_LIBS_INIT}
     ${CMAKE_DL_LIBS}
-    ${WPEFRAMEWORK_LIBRARY_WPEFrameworkPlugins}
-    ${PLUGIN_DEPENDENCIES}
+    ${WPEFRAMEWORKPLUGINS_LIBRARIES}
     ${ADDITIONAL_LIBRARIES}
-    ${STREAMER_LIBS})
+    ${STREAMER_LIBS}
+    WPEFramework::Interfaces)
 
 include(default_targets) # This is a regular plugin no need to edit the defaults
 

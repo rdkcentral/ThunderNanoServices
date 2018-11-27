@@ -82,7 +82,7 @@ private:
 private:
     const uint8_t _pin;
     uint8_t _activeLow;
-    uint8_t _lastValue;
+    bool _lastValue;
     mutable int _descriptor;
 };
 

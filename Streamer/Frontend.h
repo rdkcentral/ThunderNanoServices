@@ -271,7 +271,7 @@ public:
         , _decoder(nullptr)
         , _callback(nullptr)
         , _sink(this)
-        , _player(type, type, &_sink) {
+        , _player(type, index, &_sink) {
     }
     virtual ~FrontendType() {
         if (_decoder != nullptr) {
@@ -400,11 +400,11 @@ public:
     END_INTERFACE_MAP
 
 private:
-    HAS_MEMBER(Initialize, hasInitialize);
-    HAS_MEMBER(Deinitialize, hasDeinitialize);
+    HAS_STATIC_MEMBER(Initialize, hasInitialize);
+    HAS_STATIC_MEMBER(Deinitialize, hasDeinitialize);
 
-    typedef hasInitialize<IMPLEMENTATION, void (IMPLEMENTATION::*)(const string&)> TraitInitialize;
-    typedef hasDeinitialize<IMPLEMENTATION, void (IMPLEMENTATION::*)()> TraitDeinitialize;
+    typedef hasInitialize<IMPLEMENTATION, uint32_t (IMPLEMENTATION::*)(const string&)> TraitInitialize;
+    typedef hasDeinitialize<IMPLEMENTATION, uint32_t (IMPLEMENTATION::*)()> TraitDeinitialize;
 
     template <typename TYPE>
     inline static typename Core::TypeTraits::enable_if<FrontendType<TYPE>::TraitInitialize::value, uint32_t>::type

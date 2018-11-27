@@ -40,7 +40,7 @@ Pin::Pin(const uint8_t pin, const bool activeLow)
     : BaseClass(pin, IExternal::regulator, IExternal::general, IExternal::logic, 0)
     , _pin(pin)
     , _activeLow(activeLow ? 1 : 0)
-    , _lastValue(~0)
+    , _lastValue(false)
     , _descriptor(-1) {
     if (_pin != 0xFF) 
     {
@@ -70,7 +70,7 @@ Pin::Pin(const uint8_t pin, const bool activeLow)
         _descriptor = open(buffer, O_RDWR);
     }
 
-    _lastValue = (Get() ? 1 : 0);
+    _lastValue = Get();
 }
 
 /* virtual */ Pin::~Pin() {
@@ -136,7 +136,7 @@ void Pin::Flush() {
         // If we are only triggered on a falling edge, or a rising edge
         // the change is not detected compared to the previous value, 
         // force HasChanged to be true!!
-        _lastValue = (Get() ? 0 : 1);
+        _lastValue = !Get();
 
         Updated();
     }
@@ -165,17 +165,11 @@ void Pin::Trigger (const trigger_mode mode) {
 bool Pin::HasChanged() const {
     bool result = false;
 
-    if (_descriptor != -1) {
-        uint8_t value;
-        lseek(_descriptor, 0, SEEK_SET);
-        read(_descriptor, &value, 1);
-        result = (value != '0' ? 1 : 0) ^ _lastValue;
-    }
-    return (result);
+    return (Get() != _lastValue);
 }
 
 void Pin::Align() {
-    _lastValue = (Get() ? 1 : 0);
+    _lastValue = Get();
 }
 
 bool Pin::Get() const {
