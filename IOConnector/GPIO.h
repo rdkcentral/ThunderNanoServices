@@ -56,11 +56,13 @@ public:
     bool HasChanged() const;
     void Align();
     
-    inline void Register() {
+    inline void Subscribe(Exchange::IExternal::INotification* sink) {
+        BaseClass:Register(sink);
         Core::ResourceMonitor::Instance().Register(*this);
     }
-    inline void Unregister() {
+    inline void Unsubscribe(Exchange::IExternal::INotification* sink) {
         Core::ResourceMonitor::Instance().Unregister(*this);
+        BaseClass:Unregister(sink);
     }
 
     virtual void Trigger() override;
@@ -72,7 +74,7 @@ private:
     virtual uint16_t Events() override;
     virtual void Handle(const uint16_t events) override;
 
-   virtual void Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job) override;
+    virtual void Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job) override;
     virtual void Revoke(const Core::ProxyType<Core::IDispatch>& job) override;
 
     void Flush();

@@ -88,21 +88,21 @@ namespace Plugin {
                 {
                     pin->Mode(GPIO::Pin::INPUT);
                     pin->Trigger(GPIO::Pin::FALLING); 
-                    pin->Register();
+                    pin->Subscribe(&_sink);
                     break;
                 }
                 case Config::Pin::HIGH:
                 {
                     pin->Mode(GPIO::Pin::INPUT);
                     pin->Trigger(GPIO::Pin::RISING); 
-                    pin->Register();
+                    pin->Subscribe(&_sink);
                     break;
                 }
                 case Config::Pin::BOTH:
                 {
                     pin->Mode(GPIO::Pin::INPUT);
                     pin->Trigger(GPIO::Pin::BOTH); 
-                    pin->Register();
+                    pin->Subscribe(&_sink);
                     break;
                 }
                 case Config::Pin::ACTIVE:
@@ -177,6 +177,7 @@ namespace Plugin {
         while (_pins.size() > 0) {
             delete _pins.front().first;
             if (_pins.front().second != nullptr) {
+                _pins.front().first->Unsubscribe(&_sink);
                 delete _pins.front().second;
             }
             _pins.pop_front();
