@@ -42,7 +42,7 @@ public:
     };
 
 public:
-    Pin(const uint8_t id);
+    Pin(const uint8_t id, const bool activeLow);
     virtual ~Pin();
   
 public:
@@ -55,22 +55,31 @@ public:
 
     bool HasChanged() const;
     void Align();
+    
+    inline void Register() {
+        Core::ResourceMonitor::Instance().Register(*this);
+    }
+    inline void Unregister() {
+        Core::ResourceMonitor::Instance().Unregister(*this);
+    }
 
+    virtual void Trigger() override;
+    virtual uint32_t Get(int32_t& value) const override;
+    virtual uint32_t Set(const int32_t value) override;
+ 
 private: 
     virtual Core::IResource::handle Descriptor() const override;
     virtual uint16_t Events() override;
     virtual void Handle(const uint16_t events) override;
 
-    virtual void Trigger() override;
-    virtual uint32_t Get(int32_t& value) const override;
-    virtual uint32_t Set(const int32_t value) override;
-    virtual void Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job) override;
+   virtual void Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job) override;
     virtual void Revoke(const Core::ProxyType<Core::IDispatch>& job) override;
 
     void Flush();
 
 private:
     const uint8_t _pin;
+    uint8_t _activeLow;
     uint8_t _lastValue;
     mutable int _descriptor;
 };

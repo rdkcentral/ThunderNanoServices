@@ -19,6 +19,8 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(IOConnector, 1, 0);
 
+    static Core::ProxyPoolType<Web::JSONBodyType<IOConnector::Data> > jsonBodyDataFactory(1);
+
     class EXTERNAL IOState {
     private:
         // -------------------------------------------------------------------
@@ -56,6 +58,7 @@ namespace Plugin {
         : _service(nullptr)
         , _sink(this)
         , _pins()
+        , _skipURL(0)
     {
     }
 
@@ -71,12 +74,13 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
 
         _service = service;
+        _skipURL = _service->WebPrefix().length();
 
         auto index (config.Pins.Elements());
 
         while (index.Next() == true) {
             
-            GPIO::Pin* pin = Core::Service<GPIO::Pin>::Create<GPIO::Pin>(index.Current().Id.Value());
+            GPIO::Pin* pin = Core::Service<GPIO::Pin>::Create<GPIO::Pin>(index.Current().Id.Value(), index.Current().ActiveLow.Value());
 
             if (pin != nullptr) {
                 switch(index.Current().Mode.Value()) {
@@ -84,18 +88,21 @@ namespace Plugin {
                 {
                     pin->Mode(GPIO::Pin::INPUT);
                     pin->Trigger(GPIO::Pin::FALLING); 
+                    pin->Register();
                     break;
                 }
                 case Config::Pin::HIGH:
                 {
                     pin->Mode(GPIO::Pin::INPUT);
                     pin->Trigger(GPIO::Pin::RISING); 
+                    pin->Register();
                     break;
                 }
                 case Config::Pin::BOTH:
                 {
                     pin->Mode(GPIO::Pin::INPUT);
                     pin->Trigger(GPIO::Pin::BOTH); 
+                    pin->Register();
                     break;
                 }
                 case Config::Pin::ACTIVE:
@@ -118,8 +125,6 @@ namespace Plugin {
                 default: break;
                 }
 			
-                pin->Register(&_sink);
-
                 IHandler* method = nullptr;
 
                 if (index.Current().Handler.IsSet() != false) {
@@ -186,10 +191,72 @@ namespace Plugin {
         return (string());
     }
 
+    //  IWeb methods
+    // -------------------------------------------------------------------------------------------------------
+    /* virtual */ void IOConnector::Inbound(Web::Request& /* request */) {
+    }
+
+    /* virtual */ Core::ProxyType<Web::Response> IOConnector::Process(const Web::Request& request) {
+        ASSERT(_skipURL <= request.Path.length());
+
+        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::TextSegmentIterator index(
+            Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
+
+        // Always skip the first, this is the slash
+        index.Next();
+
+        if (index.Next() != true) {
+            result->ErrorCode = Web::STATUS_BAD_REQUEST;
+            result->Message = "No Pin instance number found";
+        } 
+        else {
+            uint32_t pinId (Core::NumberType<uint16_t>(index.Current()).Value());
+
+            // Find the pin..
+            Pins::iterator entry = _pins.begin();
+
+            while ((entry != _pins.end()) && ((entry->first->Identifier() & 0xFFFF) != pinId))  {
+                entry++;
+            }
+
+            if (entry != _pins.end()) {
+                GPIO::Pin& pin (*(entry->first));
+                if (request.Verb == Web::Request::HTTP_GET) {
+                    GetMethod(*result, index, pin);
+                }
+                else if ( (request.Verb == Web::Request::HTTP_POST) && (index.Next() == true) ) {
+                    PostMethod(*result, index, pin);
+                }
+            }
+        }
+
+        return (result);
+    }
+
+    void IOConnector::GetMethod(Web::Response& result, Core::TextSegmentIterator& index, GPIO::Pin& pin) {
+        Core::ProxyType<Web::JSONBodyType<IOConnector::Data> > element = jsonBodyDataFactory.Element();
+        if (element.IsValid() == true) {
+            element->Value = pin.Get();
+            element->Id = pin.Identifier();
+            result.Body(element);
+            result.ErrorCode = Web::STATUS_OK;
+            result.Message = "Pin value retrieved";
+            TRACE(IOState, (pin));
+        }
+    }
+
+    void IOConnector::PostMethod(Web::Response& result, Core::TextSegmentIterator& index, GPIO::Pin& pin) {
+        int32_t value (Core::NumberType<int32_t>(index.Current()));
+        pin.Set(value);
+        result.ErrorCode = Web::STATUS_BAD_REQUEST;
+        result.Message = "No Pin instance number found";
+        TRACE(IOState, (pin));
+    }
+
     void IOConnector::Activity () {
 
         ASSERT (_service != nullptr);
-
 
         // Lets find the pin and trigger if posisble...
         Pins::iterator index = _pins.begin();

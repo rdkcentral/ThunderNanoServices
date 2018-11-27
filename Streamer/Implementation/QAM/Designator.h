@@ -1,6 +1,7 @@
 #ifndef __DESIGNATORPARSER_H
 #define __DESIGNATORPARSER_H
 
+#include "Module.h"
 #include <broadcast/broadcast.h>
 
 namespace WPEFramework {

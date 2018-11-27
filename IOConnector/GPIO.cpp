@@ -36,9 +36,10 @@ namespace GPIO {
 // Class: PIN
 // ----------------------------------------------------------------------------------------------------
 
-Pin::Pin(const uint8_t pin)
+Pin::Pin(const uint8_t pin, const bool activeLow)
     : BaseClass(pin, IExternal::regulator, IExternal::general, IExternal::logic, 0)
     , _pin(pin)
+    , _activeLow(activeLow ? 1 : 0)
     , _lastValue(~0)
     , _descriptor(-1) {
     if (_pin != 0xFF) 
@@ -185,13 +186,22 @@ bool Pin::Get() const {
         lseek(_descriptor, 0, SEEK_SET);
         read(_descriptor, &value, 1);
         result = (value != '0');
+        if (_activeLow != 0) {
+           result = !result;
+        }
     }
     return (result);
 }
 
 void Pin::Set(const bool value) {
     if (_descriptor != -1) {
-        uint8_t newValue = (value ? '1' : '0');
+        uint8_t newValue;
+        if (_activeLow != 0) {
+           newValue = (value ? '0' : '1');
+        }
+        else {
+           newValue = (value ? '1' : '0');
+        }
         write (_descriptor, &newValue, 1);
     }
 }

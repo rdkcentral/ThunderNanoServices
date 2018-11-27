@@ -1,6 +1,7 @@
 #ifndef _PLAYER_IMPLEMENTATION_H
 #define _PLAYER_IMPLEMENTATION_H
 
+#include "Module.h"
 #include <interfaces/ITVControl.h>
 #include <plugins/plugins.h>
 #include <tracing/tracing.h>

@@ -12,6 +12,7 @@ namespace Plugin {
 
     class IOConnector 
         : public PluginHost::IPlugin 
+        , public PluginHost::IWeb
         , public Exchange::IExternal::IFactory {
     private:
         IOConnector(const IOConnector&) = delete;
@@ -95,17 +96,21 @@ namespace Plugin {
                 Pin()
                     : Id(~0)
                     , Mode(LOW)
+                    , ActiveLow(false)
                     , Handler() {
                     Add(_T("id"), &Id);
                     Add(_T("mode"), &Mode);
+                    Add(_T("activelow"), &ActiveLow);
                     Add(_T("handler"), &Handler);
                 }
                 Pin(const Pin& copy)
                     : Id(copy.Id)
                     , Mode(copy.Mode)
+                    , ActiveLow(copy.ActiveLow)
                     , Handler(copy.Handler) {
                     Add(_T("id"), &Id);
                     Add(_T("mode"), &Mode);
+                    Add(_T("activelow"), &ActiveLow);
                     Add(_T("handler"), &Handler);
                 }
 		virtual ~Pin() {
@@ -114,13 +119,16 @@ namespace Plugin {
                 Pin& operator= (const Pin& RHS) {
                     Id = RHS.Id;
                     Mode = RHS.Mode;
+                    ActiveLow = RHS.ActiveLow;
                     Handler = RHS.Handler;
+ 
                     return(*this);
                 }
 	
             public:
                 Core::JSON::DecUInt8 Id;
                 Core::JSON::EnumType<mode> Mode;
+                Core::JSON::Boolean ActiveLow;
                 Handle Handler;
             };
 
@@ -136,6 +144,29 @@ namespace Plugin {
             Core::JSON::ArrayType<Pin> Pins;
         };
 
+        class Data : public Core::JSON::Container {
+        private:
+            Data(const Data&) = delete;
+            Data& operator=(const Data&) = delete;
+
+        public:
+            Data()
+                : Core::JSON::Container()
+                , Id()
+                , Value()
+            {
+                Add(_T("id"), &Id);
+                Add(_T("value"), &Value);
+            }
+            ~Data()
+            {
+            }
+
+        public:
+            Core::JSON::DecUInt16 Id;
+            Core::JSON::DecUInt32 Value;
+        };
+
     public:
         IOConnector();
         virtual ~IOConnector();
@@ -143,6 +174,7 @@ namespace Plugin {
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(IOConnector)
             INTERFACE_ENTRY(PluginHost::IPlugin)
+            INTERFACE_ENTRY(PluginHost::IWeb)
             INTERFACE_ENTRY(Exchange::IExternal::IFactory)
         END_INTERFACE_MAP
 
@@ -159,13 +191,21 @@ namespace Plugin {
         virtual void Unregister(IFactory::INotification* sink) override;
         virtual Exchange::IExternal* Resource(const uint32_t id) override;
 
+        //  IWeb methods
+        // -------------------------------------------------------------------------------------------------------
+        virtual void Inbound(Web::Request& request) override;
+        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+
     private:
         void Activity ();
+        void GetMethod(Web::Response& response, Core::TextSegmentIterator& index, GPIO::Pin& pin);
+        void PostMethod(Web::Response& response, Core::TextSegmentIterator& index, GPIO::Pin& pin);
 
     private:
         PluginHost::IShell* _service;
         Core::Sink<Sink> _sink;
         Pins _pins;
+        uint8_t _skipURL;
     };
 
 } // namespace Plugin
