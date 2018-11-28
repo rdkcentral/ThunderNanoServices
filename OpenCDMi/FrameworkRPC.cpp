@@ -758,35 +758,44 @@ namespace Plugin {
             std::list<::OCDM::IAccessorOCDM::INotification*> _observers;
         };
 
+
+
         class Config : public Core::JSON::Container {
         private:
             Config(const Config&);
             Config& operator=(const Config&);
 
         public: 
-            class Link : public Core::JSON::Container {
+            class Systems : public Core::JSON::Container {
             private:
-                Link& operator= (const Link&);
+                Systems& operator= (const Systems&);
 
             public:
-                Link () 
-                    : Key()
-                    , System(){
-                    Add("key", &Key);
-                    Add("system", &System);
+                Systems () 
+                    : Core::JSON::Container()
+                    , Name()
+                    , Designators()
+                    , Configuration() {
+                    Add("name", &Name);
+                    Add("designators", &Designators);
+                    Add("configuration", &Configuration);
                 }
-                Link (const Link& copy) 
-                    : Key(copy.Key)
-                    , System(copy.System){
-                    Add("key", &Key);
-                    Add("system", &System);
+                Systems (const Systems& copy) 
+                    : Core::JSON::Container()
+                    , Name(copy.Name)
+                    , Designators(copy.Designators)
+                    , Configuration(copy.Configuration) {
+                    Add("name", &Name);
+                    Add("designators", &Designators);
+                    Add("configuration", &Configuration);
                 }
-                virtual ~Link() {
-                }
+                
+                virtual ~Systems() = default;
 
             public:
-                Core::JSON::String Key;
-                Core::JSON::String System;
+                Core::JSON::String Name;
+                Core::JSON::ArrayType<Core::JSON::String> Designators;
+                Core::JSON::String Configuration;
             };
 
         public:
@@ -796,13 +805,13 @@ namespace Plugin {
                 , Connector(_T("/tmp/ocdm"))
                 , SharePath(_T("/tmp"))
                 , ShareSize(8 * 1024)
-                , Mapping()
+                , KeySystems()
             {
                 Add(_T("location"), &Location);
                 Add(_T("connector"), &Connector);
                 Add(_T("sharepath"), &SharePath);
                 Add(_T("sharesize"), &ShareSize);
-                Add(_T("mapping"), &Mapping);
+                Add(_T("systems"), &KeySystems);
             }
             ~Config()
             {
@@ -813,7 +822,7 @@ namespace Plugin {
             Core::JSON::String Connector;
             Core::JSON::String SharePath;
             Core::JSON::DecUInt32 ShareSize;
-            Core::JSON::ArrayType<Link> Mapping;
+            Core::JSON::ArrayType<Systems> KeySystems;
         };
 
     public:
@@ -880,24 +889,39 @@ namespace Plugin {
                         }
                     }
                 }
+                else {
+                    SYSLOG(PluginHost::Startup, (_T("Could not load factory [%s], error [%s]"), Core::File::FileNameExtended(entry.Current()).c_str(), library.Error().c_str()));
+                }
             }
 
-            Core::JSON::ArrayType< Config::Link >::ConstIterator index (static_cast<const Config&>(config).Mapping.Elements());
+            Core::JSON::ArrayType< Config::Systems >::ConstIterator index (static_cast<const Config&>(config).KeySystems.Elements());
 
             while (index.Next () == true) {
 
-                const string system (index.Current().System.Value());
+                const string system (index.Current().Name.Value());
 
-                if ( (system.empty() == false) && (index.Current().Key.Value().empty() == false) ) {
+                if ( (system.empty() == false) && (index.Current().Designators.IsSet() == true) ) {
+                    Core::JSON::ArrayType< Core::JSON::String >::ConstIterator designators (static_cast<const Core::JSON::ArrayType< Core::JSON::String >&>( index.Current().Designators).Elements() );                   
+                    
                     // Find a factory for the key system:
                     std::map<const string, SystemFactory>::iterator factory (factories.find(system));
-
-                    if (factory != factories.end()) {
-                        // Register this handler
-                        _systemToFactory.insert(std::pair<const std::string, SystemFactory>(index.Current().Key.Value(), factory->second));
+                    
+                    while ( designators.Next() == true ) {
+                        const string designator( designators.Current().Value() );
+                        if ( designator.empty() == false )  {
+                            if( factory != factories.end() ) {
+                                _systemToFactory.insert(std::pair<const std::string, SystemFactory>(designator, factory->second));
+                            }
+                            else {
+                                SYSLOG(PluginHost::Startup, (_T("Required factory [%s], not found for [%s]"), system.c_str(), designator.c_str()));
+                            }
+                        }
                     }
-                    else {
-                        SYSLOG(PluginHost::Startup, (_T("Required factory [%s], not found for [%s]"), system.c_str(), index.Current().Key.Value().c_str()));
+
+                    //now handle the configiguration
+                    const string configuration( index.Current().Configuration.Value() );
+                    if( configuration.empty() == false ) {
+                         factory->second.Factory->SystemConfig(configuration);
                     }
                 }
             }
