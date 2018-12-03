@@ -114,10 +114,10 @@ namespace Wayland {
             }
 
         public:
-            virtual uint32_t AddRef() const override
+            virtual void AddRef() const override
             {
                 _refcount++;
-                return (0);
+                return;
             }
             virtual uint32_t Release() const override
             {
@@ -130,7 +130,7 @@ namespace Wayland {
             {
                 return (static_cast<EGLNativeWindowType>(_native));
             }
-            virtual const std::string& Name() const override
+            virtual std::string Name() const override
             {
                 return _name;
             }
@@ -151,14 +151,6 @@ namespace Wayland {
                     const std::string& mapping = _display->KeyMapConfiguration();
                     _keyboard->KeyMap(mapping.c_str(), mapping.length());
                 }
-            }
-            virtual int32_t X() const override
-            {
-                return (_x);
-            }
-            virtual int32_t Y() const override
-            {
-                return (_y);
             }
             inline uint32_t Id() const
             {
@@ -566,10 +558,10 @@ namespace Wayland {
 
     public:
         // Lifetime management
-        virtual uint32_t AddRef() const 
+        virtual void AddRef() const
         {
             // Display can not be destructed, so who cares :-)
-            return (0);
+            return;
         }
         virtual uint32_t Release() const
         {
