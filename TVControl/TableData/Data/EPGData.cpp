@@ -605,6 +605,7 @@ bool EPGDataBase::IsParentalLocked(const string& lcn)
             TRACE(Trace::Information, (_T("DataBase not yet created \n")));
             ret = false;
         }
+        free(buf);
     }
     return ret;
 }
