@@ -374,7 +374,7 @@ namespace Wayland {
                 assert(IsValid() == true);
                 return (_implementation->Id());
             }
-            inline const std::string& Name() const
+            inline const std::string Name() const
             {
                 assert(IsValid() == true);
                 return (_implementation->Name());
@@ -720,7 +720,7 @@ namespace Wayland {
             _adminLock.Lock();
 
             if ((_keyboardReceiver != nullptr) && (_keyboardReceiver->_keyboard != nullptr)) {
-                _keyboardReceiver->_keyboard->Key(key, action, time);
+                _keyboardReceiver->_keyboard->Direct(key, action);
             }
 
             _adminLock.Unlock();

@@ -96,7 +96,7 @@ namespace Westeros {
 
         /*virtual*/ void SetInput(const char name[])
         {
-            WstCompositorFocusClientByName(_compositor, name);
+           // WstCompositorFocusClientByName(_compositor, name); TODO: enable it after discussing with Bram
         }
 
     private:
