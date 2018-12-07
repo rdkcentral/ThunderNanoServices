@@ -246,6 +246,8 @@ namespace Plugin {
 
             _skipURL = service->WebPrefix().length();
             _inputHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value());
+            uint16_t repeatLimit = ((config.ReleaseTimeout.Value() - config.RepeatStart.Value()) / config.RepeatInterval.Value()) + 1;
+            _inputHandler->RepeatLimit(repeatLimit);
             _inputHandler->Default(DefaultMappingTable);
             admin.Callback(this);
         }
