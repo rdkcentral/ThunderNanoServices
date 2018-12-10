@@ -15,6 +15,11 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+#ifdef BCM_HOST
+#include <bcm_host.h>
+#endif
+
+
 #if __cplusplus <= 199711L
 #define nullptr NULL
 #endif
@@ -310,7 +315,9 @@ namespace Wayland {
             , _signal()
             , _thread()
         {
-
+#ifdef BCM_HOST
+            bcm_host_init();
+#endif
             Initialize();
         }
 
@@ -550,10 +557,14 @@ namespace Wayland {
         }
 
         static Display& Instance(const std::string& displayName);
+        static bool DeleteInstance(const std::string& displayName);
 
         ~Display()
         {
             Deinitialize();
+#ifdef BCM_HOST
+            bcm_host_deinit();
+#endif
         }
 
     public:

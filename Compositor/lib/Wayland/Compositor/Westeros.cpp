@@ -2,7 +2,7 @@
 #include <westeros-compositor.h>
 #include "Wayland.h"
 
-#include <VirtualKeyboard.h>
+#include <virtualinput/VirtualKeyboard.h>
 
 namespace WPEFramework {
 namespace Westeros {
@@ -96,7 +96,7 @@ namespace Westeros {
 
         /*virtual*/ void SetInput(const char name[])
         {
-           // WstCompositorFocusClientByName(_compositor, name); TODO: enable it after discussing with Bram
+            WstCompositorFocusClientByName(_compositor, name);
         }
 
     private:
