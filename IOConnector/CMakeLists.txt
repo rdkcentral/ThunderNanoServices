@@ -1,21 +1,5 @@
 set(PLUGIN_NAME IOConnector)
-set(MODULE_NAME WPEFramework${PLUGIN_NAME})
-
-
-include(module) # Setup default stuff needed for the cmake framework thingy.
-
-find_package(WPEFramework QUIET)
-
-set(PLUGIN_INCLUDE_DIRS
-    ${WPEFRAMEWORK_INCLUDE_DIRS})
-
-set(PLUGIN_DEPENDENCIES ${SYSTEMD_LIBRARIES})
-
-set(PLUGIN_LIBS
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${CMAKE_DL_LIBS}
-    ${WPEFRAMEWORK_LIBRARY_WPEFrameworkPlugins}
-    ${PLUGIN_DEPENDENCIES})
+set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 set(PLUGIN_SOURCES
     Module.cpp
@@ -25,11 +9,12 @@ set(PLUGIN_SOURCES
     RemotePairing.cpp
 )
 
-set(PLUGIN_INPUT
-    ${PLUGIN_SOURCES}
-    ${PLUGIN_INCLUDES}
-    )
+# Library definition section
+add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES})
+target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES})
 
-include(default_targets) # This is a regular plugin no need to edit the defaults
+# Library installation section
+string(TOLOWER ${NAMESPACE} STORAGENAME)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
 
 write_config( ${PLUGIN_NAME} )

@@ -9,25 +9,6 @@ set(PLUGIN_NAME TimeSync)
 
 include(module) # Setup default stuff needed for the cmake framework.
 
-set(PLUGIN_DEFINITIONS
-    )
-
-set(PLUGIN_INCLUDE_DIRS
-    ${WPEFRAMEWORK_INCLUDE_DIRS})
-
-set(PLUGIN_OPTIONS)
-
-set(PLUGIN_LINK_OPTIONS)
-
-set(PLUGIN_DEPENDENCIES
-    )
-
-set(PLUGIN_LIBS
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${CMAKE_DL_LIBS}
-    ${WPEFRAMEWORK_LIBRARY_WPEFrameworkPlugins}
-    ${PLUGIN_DEPENDENCIES})
-
 file(GLOB PLUGIN_INCLUDES *.h)
 
 set(PLUGIN_SOURCES

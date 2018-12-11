@@ -1,10 +1,8 @@
 set(PLUGIN_NAME SystemdConnector)
 set(MODULE_NAME WPEFramework${PLUGIN_NAME})
 
-
 include(module) # Setup default stuff needed for the cmake framework thingy.
 
-find_package(WPEFramework QUIET)
 find_package(Systemd REQUIRED)
 
 set(PLUGIN_DEFINITIONS)

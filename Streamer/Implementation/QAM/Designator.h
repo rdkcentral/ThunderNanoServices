@@ -19,7 +19,7 @@ private:
 public:
   Designator(const string &designator)
       : _header(), _frequency(0), _symbolRate(0), _modulation(),
-        _spectral(ITuner::SpectralInversion::Auto) {
+        _spectral(SpectralInversion::Auto) {
     uint16_t offset = 0;
     bool found = false;
     while ((found == false) && (offset < designator.length())) {
@@ -54,14 +54,14 @@ public:
             if (key == _T("frequency")) {
               _frequency = Core::NumberType<uint32_t>(index.Current()).Value();
             } else if (key == _T("modulation")) {
-              _modulation = static_cast<ITuner::Modulation>(
+              _modulation = static_cast<Broadcast::Modulation>(
                   Core::NumberType<uint16_t>(index.Current()).Value());
             } else if (key == _T("symbol")) {
               _symbolRate = Core::NumberType<uint32_t>(index.Current()).Value();
             } else if (key == _T("pgmno")) {
               _program = Core::NumberType<uint16_t>(index.Current()).Value();
             } else if (key == _T("spectral")) {
-              _symbolRate = static_cast<ITuner::SpectralInversion>(
+              _symbolRate = static_cast<Broadcast::SpectralInversion>(
                   Core::NumberType<uint32_t>(index.Current()).Value());
             }
           }
@@ -73,18 +73,18 @@ public:
 
 public:
   inline uint32_t Frequency() const { return (_frequency); }
-  inline ITuner::Modulation Modulation() const { return (_modulation); }
+  inline Broadcast::Modulation Modulation() const { return (_modulation); }
   inline uint32_t SymbolRate() const { return (_symbolRate); }
   inline uint16_t ProgramNumber() const { return (_program); }
-  inline ITuner::SpectralInversion Spectral() const { return (_spectral); }
+  inline Broadcast::SpectralInversion Spectral() const { return (_spectral); }
 
 private:
   Core::TextFragment _header;
   uint32_t _frequency;
   uint32_t _symbolRate;
   uint16_t _program;
-  ITuner::Modulation _modulation;
-  ITuner::SpectralInversion _spectral;
+  Broadcast::Modulation _modulation;
+  Broadcast::SpectralInversion _spectral;
 };
 } // namespace Broadcast
 } // namespace WPEFramework

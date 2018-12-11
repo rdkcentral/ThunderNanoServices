@@ -12,14 +12,8 @@ add_library(${PLUGIN} SHARED
         Snapshot.cpp)
 
 find_package(PNG REQUIRED)
-find_package(Core REQUIRED)
-find_package(Tracing REQUIRED)
 
-target_link_libraries(${PLUGIN}
-        PRIVATE
-            WPEFramework::Core
-            WPEFramework::Tracing
-            PNG::PNG)
+target_link_libraries(${PLUGIN} PRIVATE PNG::PNG)
 
 set_target_properties(${PLUGIN}
         PROPERTIES
@@ -28,8 +22,8 @@ set_target_properties(${PLUGIN}
             FRAMEWORK FALSE
             OUTPUT_NAME ${ARTEFACT})
 
-find_package(BCMHost)
-find_package(NXServer)
+find_package(BCMHost QUIET)
+find_package(NXServer QUIET)
 
 if (NXSERVER_FOUND)
     find_package(Nexus REQUIRED)
@@ -58,6 +52,4 @@ install(TARGETS ${PLUGIN}
         DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins
         COMPONENT ${MODULE_NAME})
 
-include(write_configuration)
-
-write_configuration(${PLUGIN})
+write_config(${PLUGIN})

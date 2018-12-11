@@ -1,103 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-# WPEFRAMEWORK_ROOT acts as the root directory for this project, in case it is embedded in a larger, surrounding project.
-# COMPONENT_NAME is used to group multiple install targets (one per module).
-# MODULE_NAME is used as a replacement for PROJECT_NAME, as using project(x) and PROJECT_NAME seems to interfere with
-# Yocto builds.
-# Be careful to correctly set MODULE_NAME, as it is also used in the uninstall.cmake.in files for naming the uninstall manifest.
-# Additionally, install targets are linked to the MODULE_NAME and COMPONENT_NAME.
-
-set(WPEFRAMEWORK_PLUGINS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
-set(COMPONENT_NAME WPEFrameworkPlugins)
-
-option(WPEFRAMEWORK_VERBOSE_BUILD "Verbose build output" OFF)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-
-# This is where all the cmake configs are installed.
-set(CMAKE_PREFIX_PATH ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/cmake ${CMAKE_PREFIX_PATH})
-set(NAMESPACE WPEFramework CACHE STRING "cmake namespace definition")
-set(CMAKE_MODULE_PATH
-        "${WPEFRAMEWORK_PLUGINS_ROOT}/cmake"
-        "${CMAKE_SYSROOT}/${CMAKE_INSTALL_PREFIX}/include/WPEFramework/cmake"
-        ${CMAKE_MODULE_PATH})
-
-if(CMAKE_CROSSCOMPILING)
-    list(APPEND CMAKE_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/include/WPEFramework/cmake")
-    foreach(searchPath ${CMAKE_FIND_ROOT_PATH})
-        if(EXISTS "${searchPath}/usr/include/WPEFramework/cmake/config.cmake")
-            include(${searchPath}/usr/include/WPEFramework/cmake/config.cmake)
-        endif(EXISTS "${searchPath}/usr/include/WPEFramework/cmake/config.cmake")
-    endforeach()
-else(CMAKE_CROSSCOMPILING)
-    if(EXISTS "${CMAKE_INSTALL_PREFIX}/include/WPEFramework/cmake/config.cmake")
-        list(APPEND CMAKE_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/include/WPEFramework/cmake")
-        include(${CMAKE_INSTALL_PREFIX}/include/WPEFramework/cmake/config.cmake)
-    else()
-        if(EXISTS "${WPEFRAMEWORK_ROOT}/Source/cmake/config.cmake")
-            list(APPEND CMAKE_MODULE_PATH "${WPEFRAMEWORK_ROOT}/Source/cmake")
-            include(${WPEFRAMEWORK_ROOT}/Source/cmake/config.cmake)
-        endif()
-    endif()
-endif(CMAKE_CROSSCOMPILING)
-
-include(list_to_string)
-
-list_to_string(CMAKE_MODULE_PATH CMAKE_MODULE_PATH_STRING)
-if (WPEFRAMEWORK_VERBOSE_BUILD)
-    message(STATUS "CMAKE_MODULE_PATH: " ${CMAKE_MODULE_PATH_STRING})
-endif()
-
-# This is to ensure that if CMAKE_INSTALL_PREFIX is set to a non-default location, pkgconfig can find the .pc file
-if (NOT CMAKE_CROSSCOMPILING)
-    set(PKG_CONFIG_USE_CMAKE_PREFIX_PATH ON)
-    set(CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX})
-endif ()
-
-# Git (and its revision)
-find_package(Git QUIET) # if we don't find git or FindGit.cmake is not on the system we ignore it.
-set(VERSION_REVISION "0000000")
-if(GIT_FOUND) # GIT revision
-    include(GetGitRevisionDescription)
-    get_git_short_revision(GIT_SHA1)
-    message(STATUS "GIT revision ${GIT_SHA1}")
-    set(VERSION_REVISION ${GIT_SHA1})
-endif()
-
-if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    set(CONFIG_DIR "debug" CACHE STRING "Build config diurectory" FORCE)
-elseif(${CMAKE_BUILD_TYPE} STREQUAL "Release")
-    set(CONFIG_DIR "release" CACHE STRING "Build config directory" FORCE)
-elseif(${CMAKE_BUILD_TYPE} STREQUAL "MinSizeRel")
-    set(CONFIG_DIR "releaseMinSize" CACHE STRING "Build config directory" FORCE)
-elseif(${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
-    set(CONFIG_DIR "releaseMinSize" CACHE STRING "Build config directory" FORCE)
-else()
-    message(FATAL_ERROR "Invalid build type: " ${CMAKE_BUILD_TYPE})
-endif()
-
-if (WPEFRAMEWORK_VERBOSE_BUILD)
-    message(STATUS "Build config directory: " ${CMAKE_BINARY_DIR})
-endif()
-
-if (NOT "${WPEFRAMEWORK_ROOT}" STREQUAL "")
-    set(OUTPUT_BASE_DIR ${WPEFRAMEWORK_ROOT}/output)
-else()
-    set(OUTPUT_BASE_DIR ${CMAKE_SOURCE_DIR}/output)
-endif()
-if (WPEFRAMEWORK_VERBOSE_BUILD)
-    message(STATUS "Output base directory: " ${OUTPUT_BASE_DIR})
-endif()
-
-find_package(WPEFrameworkPlugins QUIET)
-
-add_custom_target(install-component-WPEFrameworkPlugins)
-add_custom_target(uninstall-component-WPEFrameworkPlugins)
-
-if(CLION_ENVIRONMENT)
-    add_dependencies(install-component-WPEFrameworkPlugins install-component-WPEFramework)
-    add_dependencies(uninstall-component-WPEFrameworkPlugins uninstall-component-WPEFramework)
-endif()
+include(${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/cmake/tools.cmake)
 
 option(WPEFRAMEWORK_PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_COMMANDER "Include Commander plugin" OFF)
@@ -124,9 +27,15 @@ option(WPEFRAMEWORK_PLUGIN_WEBSERVER "Include WebServer plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_TVCONTROL "Include TVControl plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
-option(WPEFRAMEWORK_PLUGIN_NETFLIX "Has Netflix plugin" OFF)
 
-include_directories(${WPEFRAMEWORK_PLUGINS_INCLUDE_DIRS})
+# This contains all kinds of plugins (publicely available, so they all need the plugin support library !!
+find_package(Plugins REQUIRED)
+include_directories(${PLUGINS_INCLUDE_DIR})
+
+# All packages that did not deliver a CMake Find script (and some deprecated scripts that need to be removed) 
+# are located in the cmake directory. Include it in the search.
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})

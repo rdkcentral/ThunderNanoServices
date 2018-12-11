@@ -1,5 +1,5 @@
-set(PLUGIN RemoteControl)
-set(ARTEFACT WPEFramework${PLUGIN})
+set(PLUGIN_NAME RemoteControl)
+set(MODULE_NAME ${NAMESPACE}${PLUGIN})
 
 set(WPEFRAMEWORK_PLUGIN_REMOTECONTROL_RFCE_REMOTE_ID "GPSTB" CACHE STRING "User string, used for greenpeak")
 set(WPEFRAMEWORK_PLUGIN_REMOTECONTROL_RFCE_MODULE "/lib/modules/misc/gpK5.ko" CACHE STRING "path to kernel module")
@@ -11,38 +11,25 @@ set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR})
 
 message("Setting up ${ARTEFACT}")
 
-find_package(Core REQUIRED)
-find_package(Plugins REQUIRED)
-
-add_library(${PLUGIN}
-	Module.cpp
-	RemoteControl.cpp
-	RemoteAdministrator.cpp
-)
-
-target_link_libraries(${PLUGIN}
-	PRIVATE
-	WPEFramework::Core
-	WPEFramework::Plugins
-)
-
-set_target_properties(${PLUGIN} PROPERTIES
-	CXX_STANDARD 11
+add_library(${MODULE_NAME} Module.cpp RemoteControl.cpp RemoteAdministrator.cpp)
+target_link_libraries(${MODULE_NAME} PRIVATE ${PLUGINS_LIBRARIES})
+set_target_properties(${MODULE_NAME} PROPERTIES 
+        CXX_STANDARD 11
 	CXX_STANDARD_REQUIRED YES
 	FRAMEWORK FALSE
-	OUTPUT_NAME ${ARTEFACT}
+	OUTPUT_NAME ${MODULE_NAME}
 )
 
-find_package(NXServer)
-find_package(VirtualInput)
-find_package(RF4CE)
+find_package(NXServer QUIET)
+find_package(VirtualInput QUIET)
+find_package(RF4CE QUIET)
 
 if(VirtualInput_FOUND)
 	message(STATUS "Including VirtualInput support")
-	target_link_libraries(${PLUGIN}
+	target_link_libraries(${MODULE_NAME}
 		PRIVATE
 			WPEFramework::VirtualInput)
-	target_compile_definitions(${PLUGIN}
+	target_compile_definitions(${MODULE_NAME}
 		PRIVATE
 			VIRTUAL_INPUT_ENABLED)
 endif()
@@ -50,26 +37,26 @@ endif()
 if (WPEFRAMEWORK_PLUGIN_REMOTECONTROL_DEVINPUT)
 	message(STATUS "Including dev input support")
 	list(APPEND PLUGIN_DEPENDENCIES )
-	target_link_libraries(${PLUGIN}
+	target_link_libraries(${MODULE_NAME}
 			PRIVATE
 			    udev)
-	target_sources(${PLUGIN}
+	target_sources(${MODULE_NAME}
 			PRIVATE
 			    LinuxDevice.cpp)
 endif()
 
 if (NXSERVER_FOUND)
 	find_package(Nexus REQUIRED)
-	target_link_libraries(${PLUGIN}
+	target_link_libraries(${MODULE_NAME}
 		PRIVATE
 			NEXUS::NEXUS
 			NEXUS::NXCLIENT)
 	if (WPEFRAMEWORK_PLUGIN_REMOTECONTROL_IR)
 		message(STATUS "Including IR support")
-		target_compile_definitions(${PLUGIN}
+		target_compile_definitions(${MODULE_NAME}
 				PRIVATE
 					IR_ENABLED)
-		target_sources(${PLUGIN}
+		target_sources(${MODULE_NAME}
 				PRIVATE
 					IRRemote.cpp)
 	endif()
@@ -80,10 +67,10 @@ if(RF4CE_FOUND)
 		add_definitions(${RF4CE_DEFINITIONS})
 		add_definitions(-DGP_SCHED_EXTERNAL_MAIN)
         include_directories(${RF4CE_INCLUDE_DIRS})
-        target_sources(${PLUGIN}
+        target_sources(${MODULE_NAME}
 			PRIVATE
 			    GreenPeak.cpp)
-	target_link_libraries(${PLUGIN}
+	target_link_libraries(${MODULE_NAME}
 			PRIVATE
 			    ${RF4CE_LIBRARIES})
 endif()
@@ -98,10 +85,8 @@ install(
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/WPEFramework/RemoteControl
 	COMPONENT ${MODULE_NAME})
 
-install(TARGETS ${PLUGIN}
+install(TARGETS ${MODULE_NAME}
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins
 	COMPONENT ${MODULE_NAME})
 
-include(write_configuration)
-
-write_configuration(${PLUGIN})
+write_config(${PLUGIN})
