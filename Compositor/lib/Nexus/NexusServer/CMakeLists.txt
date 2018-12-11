@@ -27,7 +27,7 @@ add_library(${TARGET} STATIC
 if (WPEFRAMEWORK_NEXUS_SERVER_EXTERNAL)
     target_link_libraries(${TARGET}
         PRIVATE
-            WPEFramework::Core
+            ${CORE_LIBRARIES}
         PUBLIC
             NEXUS::NXCLIENT
         )
@@ -35,7 +35,7 @@ else()
     find_package(NXServer REQUIRED)
     target_link_libraries(${TARGET}
         PRIVATE
-            WPEFramework::Core
+            ${CORE_LIBRARIES}
             NEXUS::NEXUS
             NEXUS::NXSERVER
         PUBLIC
@@ -74,12 +74,6 @@ set_target_properties(${TARGET}
             PUBLIC_HEADER "${PUBLIC_HEADERS}"
             OUTPUT_NAME WPEFramework${TARGET}
             POSITION_INDEPENDENT_CODE ON
-        )
-
-target_include_directories( ${TARGET}
-        PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<INSTALL_INTERFACE:include/${NAMESPACE}>
         )
 
 add_library(${NAMESPACE}::${TARGET} ALIAS ${TARGET})

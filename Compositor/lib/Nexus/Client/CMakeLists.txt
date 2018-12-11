@@ -4,15 +4,16 @@ message("Setup ${TARGET} v${VERSION}...")
 
 find_package(EGL REQUIRED)
 find_package(Core REQUIRED)
-find_package(LibVirtualKeyboard REQUIRED)
 find_package(VirtualInput REQUIRED)
+find_package(Interfaces REQUIRED)
 
 add_library(${TARGET} SHARED Implementation.cpp)
 
 target_link_libraries(${TARGET}
             PUBLIC
-            WPEFramework::Core
-            WPEFramework::VirtualInput
+            ${CORE_LIBRARIES}
+            ${VIRTUALINPUT_LIBRARIES}
+            ${INTERFACES_LIBRARIES}
             EGL::EGL
             )
 
@@ -22,12 +23,6 @@ set_target_properties(${TARGET} PROPERTIES
         FRAMEWORK FALSE
         PUBLIC_HEADER "${PUBLIC_HEADERS}"
         DEFINE_SYMBOL WPEFRAMEWORK_WAYLAND_EGL_CLIENT
-        )
-
-target_include_directories( ${TARGET}
-        PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<INSTALL_INTERFACE:include/${NAMESPACE}>
         )
 
 install(

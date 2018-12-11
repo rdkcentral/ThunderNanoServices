@@ -11,11 +11,13 @@ add_library(${TARGET}
         Implementation.cpp
         )
 
+include_directories(${CORE_INCLUDE_DIR})
+
 target_link_libraries(${TARGET}
         PRIVATE
-        WPEFramework::Core
-        WPEFramework::Plugins
-        WPEFramework::Interfaces
+        ${CORE_LIBRARIES}
+        ${PLUGINS_LIBRARIES}
+        ${INTERFACES_LIBRARIES}
         )
 
 set_target_properties(${TARGET}
