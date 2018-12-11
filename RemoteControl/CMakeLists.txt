@@ -1,6 +1,8 @@
 set(PLUGIN_NAME RemoteControl)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN})
 
+option(WPEFRAMEWORK_PLUGIN_REMOTECONTROL_RFCE "Enable RF4CE functionality." ON)
+
 set(WPEFRAMEWORK_PLUGIN_REMOTECONTROL_RFCE_REMOTE_ID "GPSTB" CACHE STRING "User string, used for greenpeak")
 set(WPEFRAMEWORK_PLUGIN_REMOTECONTROL_RFCE_MODULE "/lib/modules/misc/gpK5.ko" CACHE STRING "path to kernel module")
 set(WPEFRAMEWORK_PLUGIN_REMOTECONTROL_RFCE_NODE_ID 249 CACHE STRING "Node ID for the device to be created")
@@ -22,7 +24,10 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 find_package(NXServer QUIET)
 find_package(VirtualInput QUIET)
-find_package(RF4CE QUIET)
+
+if(WPEFRAMEWORK_PLUGIN_REMOTECONTROL_RFCE)
+	find_package(RF4CE QUIET)
+endif()
 
 if(VirtualInput_FOUND)
 	message(STATUS "Including VirtualInput support")
