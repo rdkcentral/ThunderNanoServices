@@ -1,5 +1,5 @@
 set(PLUGIN_NAME RemoteControl)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN})
+set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 set(WPEFRAMEWORK_PLUGIN_REMOTECONTROL_RFCE_REMOTE_ID "GPSTB" CACHE STRING "User string, used for greenpeak")
 set(WPEFRAMEWORK_PLUGIN_REMOTECONTROL_RFCE_MODULE "/lib/modules/misc/gpK5.ko" CACHE STRING "path to kernel module")
@@ -9,7 +9,7 @@ set(VERSION_MAJOR 1)
 set(VERSION_MINOR 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR})
 
-message("Setting up ${ARTEFACT}")
+message("Setting up ${MODULE_NAME}")
 
 add_library(${MODULE_NAME} Module.cpp RemoteControl.cpp RemoteAdministrator.cpp)
 target_link_libraries(${MODULE_NAME} PRIVATE ${PLUGINS_LIBRARIES})
@@ -36,7 +36,6 @@ endif()
 
 if (WPEFRAMEWORK_PLUGIN_REMOTECONTROL_DEVINPUT)
 	message(STATUS "Including dev input support")
-	list(APPEND PLUGIN_DEPENDENCIES )
 	target_link_libraries(${MODULE_NAME}
 			PRIVATE
 			    udev)
@@ -89,4 +88,4 @@ install(TARGETS ${MODULE_NAME}
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/wpeframework/plugins
 	COMPONENT ${MODULE_NAME})
 
-write_config(${PLUGIN})
+write_config(${PLUGIN_NAME})
