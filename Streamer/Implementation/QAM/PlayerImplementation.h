@@ -58,7 +58,7 @@ public:
       Broadcast::Designator parser(configuration);
 
       result = _player->Tune(parser.Frequency(), parser.Modulation(),
-                             parser.SymbolRate(), parser.Spectral());
+                             parser.SymbolRate(), Broadcast::FEC_INNER_UNKNOWN, parser.Spectral());
 
       if (result != Core::ERROR_NONE) {
         TRACE(Trace::Error, (_T("Error in player load :%d"), result));

@@ -18,7 +18,7 @@ set(PLUGIN_OPTIONS)
 set(PLUGIN_LINK_OPTIONS)
 
 set(PLUGIN_INCLUDE_DIRS
-    ${WPEFRAMEWORK_INCLUDE_DIRS})
+    ${PLUGINS_INCLUDE_DIR})
 
 file(GLOB PLUGIN_INCLUDES *.h)
 
@@ -40,12 +40,10 @@ include_directories(Implementation/${STREAMER_IMPLEMENTATION})
 set(STREAMER_LIBS -Wl,--whole-archive PlayerPlatform -Wl,--no-whole-archive)
 
 set(PLUGIN_DEPENDENCIES
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${CMAKE_DL_LIBS}
-    ${WPEFRAMEWORKPLUGINS_LIBRARIES}
+    ${PLUGINS_LIBRARIES}
     ${ADDITIONAL_LIBRARIES}
     ${STREAMER_LIBS}
-    WPEFramework::Interfaces)
+    ${INTERFACES_LIBRARIES})
 
 include(default_targets) # This is a regular plugin no need to edit the defaults
 
