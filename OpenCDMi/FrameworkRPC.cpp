@@ -896,6 +896,7 @@ namespace Plugin {
 
             Core::JSON::ArrayType< Config::Systems >::ConstIterator index (static_cast<const Config&>(config).KeySystems.Elements());
 
+  printf("%s -- %d\n", __FUNCTION__, __LINE__);
             while (index.Next () == true) {
 
                 const string system (index.Current().Name.Value());
@@ -911,6 +912,13 @@ namespace Plugin {
                         if ( designator.empty() == false )  {
                             if( factory != factories.end() ) {
                                 _systemToFactory.insert(std::pair<const std::string, SystemFactory>(designator, factory->second));
+
+                                //now handle the configiguration
+                                const string configuration( index.Current().Configuration.Value() );
+                                if( configuration.empty() == false ) {
+
+                                    factory->second.Factory->SystemConfig(configuration);
+                                }
                             }
                             else {
                                 SYSLOG(PluginHost::Startup, (_T("Required factory [%s], not found for [%s]"), system.c_str(), designator.c_str()));
@@ -918,13 +926,9 @@ namespace Plugin {
                         }
                     }
 
-                    //now handle the configiguration
-                    const string configuration( index.Current().Configuration.Value() );
-                    if( configuration.empty() == false ) {
-                         factory->second.Factory->SystemConfig(configuration);
-                    }
-                }
+               }
             }
+  printf("%s -- %d\n", __FUNCTION__, __LINE__);
 
             if (_systemToFactory.size() == 0) {
                 SYSLOG(PluginHost::Startup, (_T("No DRM factories specified. OCDM can not service any DRM requests.")));

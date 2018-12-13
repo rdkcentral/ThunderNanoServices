@@ -19,5 +19,4 @@ target_include_directories(${MODULE_NAME} PRIVATE ${WPE_WEBKIT_INCLUDE_DIRS} ${W
 target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES})
 
 # Library installation section
-string(TOLOWER ${NAMESPACE} STORAGENAME)
-install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${STORAGENAME}/WebKitBrowser)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/WebKitBrowser)
