@@ -465,8 +465,4 @@ Compositor::IDisplay* Compositor::IDisplay::Instance(const string& displayName) 
     return (&myDisplay);
 }
 
-bool Compositor::IDisplay::DeleteInstance(const string& displayName) {
-    return false;
-}
-
 }

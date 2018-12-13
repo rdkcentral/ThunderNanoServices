@@ -1133,25 +1133,15 @@ namespace Wayland {
         }
         else {
             result = index->second;
-            result->Initialize();
         }
+        result->AddRef();
         _adminLock.Unlock();
 
         assert(result != nullptr);
 
         return (*result);
     }
-    /* static */ bool Display::DeleteInstance(const std::string& displayName)
-    {
-        _adminLock.Lock();
 
-        DisplayMap::iterator index(_displays.find(displayName));
-        if (index != _displays.end()) {
-            index->second->Deinitialize();
-        }
-        _adminLock.Unlock();
-        return true;
-    }
     static void signalHandler(int signum)
     {
     }
@@ -1302,9 +1292,5 @@ void Display::Process(Display::IProcess* processloop)
 
     /* static */ Compositor::IDisplay* Compositor::IDisplay::Instance(const std::string& displayName) {
         return (&(Wayland::Display::Instance(displayName)));
-    }
-
-    /* static */ bool Compositor::IDisplay::DeleteInstance(const std::string& displayName) {
-        return Wayland::Display::DeleteInstance(displayName);
     }
 }

@@ -25,6 +25,7 @@
 #endif
 
 #include "../../Client/Client.h"
+#include "Module.h"
 
 //
 // Forward declaration of the wayland specific types.
@@ -314,11 +315,11 @@ namespace Wayland {
             , _clientHandler(nullptr)
             , _signal()
             , _thread()
+            , _refCount(0)
         {
 #ifdef BCM_HOST
             bcm_host_init();
 #endif
-            Initialize();
         }
 
     public:
@@ -557,11 +558,10 @@ namespace Wayland {
         }
 
         static Display& Instance(const std::string& displayName);
-        static bool DeleteInstance(const std::string& displayName);
 
         ~Display()
         {
-            Deinitialize();
+            ASSERT(_refCount == 0);
 #ifdef BCM_HOST
             bcm_host_deinit();
 #endif
@@ -571,13 +571,20 @@ namespace Wayland {
         // Lifetime management
         virtual void AddRef() const
         {
-            // Display can not be destructed, so who cares :-)
+            if (Core::InterlockedIncrement(_refCount) == 1) {
+                const_cast<Display*>(this)->Initialize();
+            }
             return;
         }
         virtual uint32_t Release() const
         {
-            // Display can not be destructed, so who cares :-)
-            return (0);
+            if (Core::InterlockedDecrement(_refCount) == 0) {
+                const_cast<Display*>(this)->Deinitialize();
+
+                //Indicate Wayland connection is closed properly
+                return (Core::ERROR_CONNECTION_CLOSED);
+            }
+            return (Core::ERROR_NONE);
         }
 
         // Methods
@@ -811,6 +818,8 @@ namespace Wayland {
         static std::string _runtimeDir;
         static DisplayMap _displays;
         static WaylandSurfaceMap _waylandSurfaces;
+
+        mutable uint32_t _refCount;
     };
 } // Wayland
 } // WPEFramework

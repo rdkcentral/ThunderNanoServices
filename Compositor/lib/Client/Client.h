@@ -47,7 +47,6 @@ namespace Compositor {
         };
 
         static IDisplay* Instance(const std::string& displayName);
-        static bool DeleteInstance(const std::string& displayName);
 
         virtual ~IDisplay() {}
 
