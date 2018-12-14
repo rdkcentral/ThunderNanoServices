@@ -2,7 +2,7 @@
 #include <westeros-compositor.h>
 #include "Wayland.h"
 
-#include <VirtualKeyboard.h>
+#include <virtualinput/VirtualKeyboard.h>
 
 namespace WPEFramework {
 namespace Westeros {

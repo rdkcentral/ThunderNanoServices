@@ -8,15 +8,28 @@ find_package(WaylandEGL REQUIRED)
 find_package(Westeros REQUIRED)
 find_package(Core REQUIRED)
 
+find_package(BCMHost QUIET)
+if(BCM_HOST_FOUND)
+    set(BCM_HOST_LIBS BROADCOM::HOST)
+    list(APPEND PLUGIN_DEFINITIONS "-DBCM_HOST=ON")
+endif(BCM_HOST_FOUND)
+
+
 add_library(${TARGET} SHARED Westeros.cpp)
+
+include_directories(${CORE_INCLUDE_DIR})
+
+#target_compile_definitions(${TARGET} PRIVATE ${PLUGIN_DEFINITIONS})
+add_compiler_flags(${TARGET} "${PLUGINS_DEFINITIONS}")
 
 target_link_libraries(${TARGET}
             PUBLIC
-            WPEFramework::Core
+            ${CORE_LIBRARIES}
             WESTEROS::CLIENT
             WAYLAND::CLIENT
             WAYLAND::EGL
             EGL::EGL
+            ${BCM_HOST_LIBS}
             )
 
 set_target_properties(${TARGET} PROPERTIES
@@ -24,13 +37,6 @@ set_target_properties(${TARGET} PROPERTIES
         CXX_STANDARD_REQUIRED YES
         FRAMEWORK FALSE
         DEFINE_SYMBOL WPEFRAMEWORK_WAYLAND_EGL_CLIENT
-        )
-
-target_include_directories( ${TARGET}
-        PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<INSTALL_INTERFACE:include/${NAMESPACE}/wayland>
-        $<INSTALL_INTERFACE:include/${NAMESPACE}>
         )
 
 install(

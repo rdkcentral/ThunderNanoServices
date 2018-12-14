@@ -14,6 +14,7 @@ find_package(EGL REQUIRED)
 #find_package(nexusserver)
 
 if (WPEFRAMEWORK_PLUGIN_COMPOSITOR_NXSERVER)
+    add_definitions(-DENABLE_NXSERVER=1)
     find_package(Nexus REQUIRED)
     find_package(NXServer REQUIRED)
     target_link_libraries(${target_name} PRIVATE nexus::nexusserver)
@@ -21,8 +22,8 @@ endif ()
 
 target_link_libraries(${target_name}
         PRIVATE
-        WPEFramework::Core
-        WPEFramework::Plugins
+        ${CORE_LIBRARIES}
+        ${PLUGINS_LIBRARIES}
         WAYLAND::SERVER
         WAYLAND::EGL
         EGL::EGL
@@ -42,7 +43,7 @@ endif(WESTEROS_FOUND)
 
 if(WPEFRAMEWORK_PLUGIN_COMPOSITOR_VIRTUALINPUT)
     find_package(VirtualInput REQUIRED)
-    target_link_libraries(${target_name} PRIVATE WPEFramework::VirtualInput)
+    target_link_libraries(${target_name} PRIVATE ${VIRTUALINPUT_LIBRARIES})
 endif(WPEFRAMEWORK_PLUGIN_COMPOSITOR_VIRTUALINPUT)
 
 install(

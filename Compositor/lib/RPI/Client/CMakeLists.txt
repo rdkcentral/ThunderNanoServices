@@ -11,9 +11,8 @@ add_library(${TARGET} SHARED Implementation.cpp)
 
 target_link_libraries(${TARGET}
             PUBLIC
-            WPEFramework::Core
-            WPEFramework::Plugins
-            WPEFramework::VirtualInput
+            ${CORE_LIBRARIES}
+            ${VIRTUALINPUT_LIBRARIES}
             )
 
 set_target_properties(${TARGET} PROPERTIES
@@ -21,12 +20,6 @@ set_target_properties(${TARGET} PROPERTIES
         CXX_STANDARD_REQUIRED YES
         FRAMEWORK FALSE
         PUBLIC_HEADER "${PUBLIC_HEADERS}"
-        )
-
-target_include_directories( ${TARGET}
-        PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<INSTALL_INTERFACE:include/${NAMESPACE}>
         )
 
 install(

@@ -5,7 +5,9 @@
 
 #include <virtualinput/VirtualKeyboard.h>
 
+#ifdef ENABLE_NXSERVER
 #include "../NexusServer/NexusServer.h"
+#endif
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -136,6 +138,10 @@ namespace Plugin {
             END_INTERFACE_MAP
 
         private:
+            virtual void ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) override { }
+            virtual void ChangedZOrder(const uint8_t zorder) override { }
+
+        private:
             Wayland::Display::Surface _surface;
             Implementation::IServer* _server;
         };
@@ -163,7 +169,11 @@ namespace Plugin {
             Core::JSON::String Display;
         };
 
-        class Sink : public Wayland::Display::ICallback, public Broadcom::Platform::IStateChange {
+        class Sink : public Wayland::Display::ICallback
+#ifdef ENABLE_NXSERVER
+                   , public Broadcom::Platform::IStateChange
+#endif
+        {
         private:
             Sink(const Sink&) = delete;
             Sink& operator=(const Sink&) = delete;
@@ -185,12 +195,14 @@ namespace Plugin {
             {
                 _parent.Remove(id);
             }
+#ifdef ENABLE_NXSERVER
             virtual void StateChange(Broadcom::Platform::server_state state)
             {
                 if (state == Broadcom::Platform::OPERATIONAL) {
                     _parent.StartImplementation();
                 }
             }
+#endif
 
         private:
             CompositorImplementation& _parent;
@@ -207,7 +219,9 @@ namespace Plugin {
             , _sink(*this)
             , _surface(nullptr)
             , _service()
+#ifdef ENABLE_NXSERVER
             , _nxserver(nullptr)
+#endif
         {
             // Register an @Exit, in case we are killed, with an incorrect ref count !!
             if (atexit(CloseDown) != 0) {
@@ -238,10 +252,11 @@ namespace Plugin {
                 delete _controller;
             }
 
+#ifdef ENABLE_NXSERVER
             if (_nxserver != nullptr) {
                 delete _nxserver;
             }
-
+#endif
             if (_service != nullptr) {
                 _service->Release();
             }
@@ -265,6 +280,8 @@ namespace Plugin {
 
             ASSERT(_server == nullptr);
 
+
+#ifdef ENABLE_NXSERVER
             // If we run on a broadcom platform first start the nxserver, then we start the compositor...
             ASSERT(_nxserver == nullptr);
 
@@ -282,6 +299,10 @@ namespace Plugin {
             ASSERT(_nxserver != nullptr);
 
             return (((_nxserver != nullptr) || (_server != nullptr)) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
+#else
+            StartImplementation();
+            return ((_server != nullptr) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
+#endif
         }
         /* virtual */ void Register(Exchange::IComposition::INotification* notification)
         {
@@ -362,14 +383,39 @@ namespace Plugin {
 
             return (result);
         }
-        /* virtual */ void SetResolution(const Exchange::IComposition::ScreenResolution format)
-        {
-            /*TODO: TO BE IMPLEMENTED*/
+
+        /* virtual */ uint32_t Geometry(const string& callsign, const Rectangle& rectangle) override {
+            return (Core::ERROR_GENERAL);
         }
-        /* virtual */ const ScreenResolution GetResolution()
-        {
-            /*TODO: TO BE IMPLEMENTED*/
-            return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
+
+        /* virtual */ Exchange::IComposition::Rectangle Geometry(const string& callsign) const override {
+            Exchange::IComposition::Rectangle rectangle;
+
+            rectangle.x = 0;
+            rectangle.y = 0;
+            rectangle.width = 0;
+            rectangle.height = 0;
+
+            return (rectangle);
+        }
+
+        /* virtual */ uint32_t ToTop(const string& callsign) override {
+            return (Core::ERROR_GENERAL);
+        }
+
+        /* virtual */ uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override {
+            return (Core::ERROR_GENERAL);
+        }
+
+        /* virtual */ RPC::IStringIterator* ClientsInZorder() const override {
+            return (nullptr);
+        }
+
+        /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override {
+        }
+
+        /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const override {
+            return ((Exchange::IComposition::ScreenResolution)0);
         }
 
         // -------------------------------------------------------------------------------------------------------
@@ -513,7 +559,9 @@ namespace Plugin {
         Sink _sink;
         Wayland::Display::Surface* _surface;
         PluginHost::IShell* _service;
+#ifdef ENABLE_NXSERVER
         Broadcom::Platform* _nxserver;
+#endif
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);

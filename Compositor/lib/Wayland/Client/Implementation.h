@@ -15,11 +15,17 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+#ifdef BCM_HOST
+#include <bcm_host.h>
+#endif
+
+
 #if __cplusplus <= 199711L
 #define nullptr NULL
 #endif
 
 #include "../../Client/Client.h"
+#include "Module.h"
 
 //
 // Forward declaration of the wayland specific types.
@@ -114,10 +120,10 @@ namespace Wayland {
             }
 
         public:
-            virtual uint32_t AddRef() const override
+            virtual void AddRef() const override
             {
                 _refcount++;
-                return (0);
+                return;
             }
             virtual uint32_t Release() const override
             {
@@ -130,7 +136,7 @@ namespace Wayland {
             {
                 return (static_cast<EGLNativeWindowType>(_native));
             }
-            virtual const std::string& Name() const override
+            virtual std::string Name() const override
             {
                 return _name;
             }
@@ -151,14 +157,6 @@ namespace Wayland {
                     const std::string& mapping = _display->KeyMapConfiguration();
                     _keyboard->KeyMap(mapping.c_str(), mapping.length());
                 }
-            }
-            virtual int32_t X() const override
-            {
-                return (_x);
-            }
-            virtual int32_t Y() const override
-            {
-                return (_y);
             }
             inline uint32_t Id() const
             {
@@ -317,9 +315,11 @@ namespace Wayland {
             , _clientHandler(nullptr)
             , _signal()
             , _thread()
+            , _refCount(0)
         {
-
-            Initialize();
+#ifdef BCM_HOST
+            bcm_host_init();
+#endif
         }
 
     public:
@@ -382,7 +382,7 @@ namespace Wayland {
                 assert(IsValid() == true);
                 return (_implementation->Id());
             }
-            inline const std::string& Name() const
+            inline const std::string Name() const
             {
                 assert(IsValid() == true);
                 return (_implementation->Name());
@@ -561,20 +561,30 @@ namespace Wayland {
 
         ~Display()
         {
-            Deinitialize();
+            ASSERT(_refCount == 0);
+#ifdef BCM_HOST
+            bcm_host_deinit();
+#endif
         }
 
     public:
         // Lifetime management
-        virtual uint32_t AddRef() const 
+        virtual void AddRef() const
         {
-            // Display can not be destructed, so who cares :-)
-            return (0);
+            if (Core::InterlockedIncrement(_refCount) == 1) {
+                const_cast<Display*>(this)->Initialize();
+            }
+            return;
         }
         virtual uint32_t Release() const
         {
-            // Display can not be destructed, so who cares :-)
-            return (0);
+            if (Core::InterlockedDecrement(_refCount) == 0) {
+                const_cast<Display*>(this)->Deinitialize();
+
+                //Indicate Wayland connection is closed properly
+                return (Core::ERROR_CONNECTION_CLOSED);
+            }
+            return (Core::ERROR_NONE);
         }
 
         // Methods
@@ -728,7 +738,7 @@ namespace Wayland {
             _adminLock.Lock();
 
             if ((_keyboardReceiver != nullptr) && (_keyboardReceiver->_keyboard != nullptr)) {
-                _keyboardReceiver->_keyboard->Key(key, action, time);
+                _keyboardReceiver->_keyboard->Direct(key, action);
             }
 
             _adminLock.Unlock();
@@ -808,6 +818,8 @@ namespace Wayland {
         static std::string _runtimeDir;
         static DisplayMap _displays;
         static WaylandSurfaceMap _waylandSurfaces;
+
+        mutable uint32_t _refCount;
     };
 } // Wayland
 } // WPEFramework

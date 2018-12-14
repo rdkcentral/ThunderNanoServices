@@ -237,7 +237,7 @@ static const struct wl_seat_listener seatListener = {
 static const struct wl_simple_shell_listener simpleShellListener = {
     // surface_id
     [](void* data, struct wl_simple_shell* shell, struct wl_surface* surface, uint32_t surfaceId) {
-        Trace("wl_simple_shell_listener.surface_created shell=%p wl_surface=%p surfaceId=%d\n", shell, surface, surfaceId);
+        Trace("wl_simple_shell_listener.surface_id shell=%p wl_surface=%p surfaceId=%d\n", shell, surface, surfaceId);
         Wayland::Display& context = *(static_cast<Wayland::Display*>(data));
 
         // Have no idea if this is true, just lets see...
@@ -453,7 +453,6 @@ namespace Wayland {
             wl_region_add(region, 0, 0, width, height);
 
             // Found in WPEwayland implementation:
-            // wl_surface_set_opaque_region(_surface, region);
             wl_surface_set_opaque_region(_surface, nullptr);
 
             wl_region_destroy(region);
@@ -631,8 +630,6 @@ namespace Wayland {
 
     void Display::SurfaceImplementation::Unlink()
     {
-        Trace("Deinitialize Wayland Surface\n");
-
         if (_display != nullptr) {
 
             if (_frameCallback != nullptr) {
@@ -750,6 +747,9 @@ namespace Wayland {
 
     void Display::Initialize()
     {
+        if (_display != nullptr)
+            return;
+
         if (_runtimeDir.empty() == true) {
             const char* envName = ::getenv("XDG_RUNTIME_DIR");
             if (envName != nullptr) {
@@ -758,6 +758,7 @@ namespace Wayland {
         }
 
         Trace("Initialize Wayland Display on %s\n", _runtimeDir.c_str());
+        Trace("Initialize Wayland Display Name %s\n", _displayName.c_str());
 
         _display = wl_display_connect(_displayName.empty() ? nullptr : _displayName.c_str());
 
@@ -769,6 +770,7 @@ namespace Wayland {
             assert(_registry != nullptr);
 
             if (_registry != nullptr) {
+
                 wl_registry_add_listener(_registry, &globalRegistryListener, this);
                 wl_display_roundtrip(_display);
 
@@ -908,36 +910,51 @@ namespace Wayland {
         _waylandSurfaces.clear();
         _surfaces.clear();
 
-        _adminLock.Unlock();
 
         if (_eglContext != EGL_NO_CONTEXT) {
             eglMakeCurrent(_eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
             eglTerminate(_eglDisplay);
             eglReleaseThread();
         }
-
-        if (_output != nullptr)
+        if (_output != nullptr) {
             wl_output_destroy(_output);
+            _output = nullptr;
+        }
 
-        if (_simpleShell != nullptr)
+        if (_simpleShell != nullptr) {
             wl_simple_shell_destroy(_simpleShell);
+            _simpleShell = nullptr;
+        }
 
-        if (_shell != nullptr)
+        if (_shell != nullptr) {
             wl_shell_destroy(_shell);
+            _shell = nullptr;
+        }
 
-        if (_seat != nullptr)
+        if (_seat != nullptr) {
             wl_seat_destroy(_seat);
+            _seat = nullptr;
+        }
 
-        if (_compositor != nullptr)
+        if (_keyboard) {
+            wl_keyboard_destroy(_keyboard);
+            _keyboard = nullptr;
+        }
+
+        if (_compositor != nullptr) {
             wl_compositor_destroy(_compositor);
+            _compositor = nullptr;
+        }
 
-        if (_registry != nullptr)
+        if (_registry != nullptr) {
             wl_registry_destroy(_registry);
-
+            _registry = nullptr;
+        }
         if (_display != nullptr) {
             wl_display_disconnect(_display);
             _display = nullptr;
         }
+        _adminLock.Unlock();
 
         Trigger();
 
@@ -1024,7 +1041,6 @@ namespace Wayland {
 
             // Somewhere, someone, created a surface, register it.
             _surfaces.insert(std::pair<uint32_t, Display::SurfaceImplementation*>(id, entry));
-            // _waylandSurfaces.insert(std::pair<wl_surface*, Display::SurfaceImplementation*>(index->second, entry));
         }
 
         if (_clientHandler != nullptr) {
@@ -1061,32 +1077,33 @@ namespace Wayland {
     {
         _adminLock.Lock();
 
-        SurfaceMap::iterator index = _surfaces.find(id);
+        if (_collect != true) {
+            SurfaceMap::iterator index = _surfaces.find(id);
 
-        if (index != _surfaces.end()) {
-            // See if it is in the surfaces map, we need to take it out here as well..
-            WaylandSurfaceMap::iterator entry(_waylandSurfaces.find(index->second->_surface));
+            if (index != _surfaces.end()) {
+                // See if it is in the surfaces map, we need to take it out here as well..
+                WaylandSurfaceMap::iterator entry(_waylandSurfaces.find(index->second->_surface));
 
-            // assert(entry != _waylandSurfaces.end());
+                // assert(entry != _waylandSurfaces.end());
 
-            if (entry != _waylandSurfaces.end()) {
-                entry->second->Release();
-                _waylandSurfaces.erase(entry);
+                if (entry != _waylandSurfaces.end()) {
+                    entry->second->Release();
+                    _waylandSurfaces.erase(entry);
+                }
+
+                if (_keyboardReceiver == index->second) {
+                    _keyboardReceiver = nullptr;
+                }
+
+                index->second->Unlink();
+                index->second->Release();
+                _surfaces.erase(index);
             }
 
-            if (_keyboardReceiver == index->second) {
-                _keyboardReceiver = nullptr;
+            if (_clientHandler != nullptr) {
+                _clientHandler->Detached(id);
             }
-
-            index->second->Unlink();
-            index->second->Release();
-            _surfaces.erase(index);
         }
-
-        if (_clientHandler != nullptr) {
-            _clientHandler->Detached(id);
-        }
-
         _adminLock.Unlock();
     }
 
@@ -1117,6 +1134,7 @@ namespace Wayland {
         else {
             result = index->second;
         }
+        result->AddRef();
         _adminLock.Unlock();
 
         assert(result != nullptr);
@@ -1128,7 +1146,7 @@ namespace Wayland {
     {
     }
 
-    /*
+/*
 void Display::Process(Display::IProcess* processloop)
 {
     struct pollfd fd[2];
@@ -1220,9 +1238,10 @@ void Display::Process(Display::IProcess* processloop)
         _thread = ::pthread_self();
 
         Trace("Setup dispatch loop using thread %p signal: %d \n", _thread, _signal);
-
-        while ((wl_display_dispatch(_display) != -1) && (processloop->Dispatch() == true)) {
-            /* intentionally left empty */
+        if (_display != nullptr) {
+            while ((wl_display_dispatch(_display) != -1) && (processloop->Dispatch() == true)) {
+                /* intentionally left empty */
+            }
         }
     }
 
@@ -1230,31 +1249,32 @@ void Display::Process(Display::IProcess* processloop)
     {
 
         signed int result(0);
+        if (_display) {
 
-        while (wl_display_prepare_read(_display) != 0) {
-            if (wl_display_dispatch_pending(_display) < 0) {
-                result = -1;
-                break;
-            }
-        }
-
-        wl_display_flush(_display);
-
-        if (data != 0) {
-            if (wl_display_read_events(_display) < 0) {
-                result = -2;
-            }
-            else {
+            while (wl_display_prepare_read(_display) != 0) {
                 if (wl_display_dispatch_pending(_display) < 0) {
-                    result = 1;
+                    result = -1;
+                    break;
                 }
             }
-        }
-        else {
-            wl_display_cancel_read(_display);
-            result = -3;
-        }
 
+            wl_display_flush(_display);
+
+            if (data != 0) {
+                if (wl_display_read_events(_display) < 0) {
+                    result = -2;
+                }
+                else {
+                    if (wl_display_dispatch_pending(_display) < 0) {
+                        result = 1;
+                     }
+                }
+            }
+            else {
+                wl_display_cancel_read(_display);
+                result = -3;
+            }
+        }
         return result;
     }
 

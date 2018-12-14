@@ -167,4 +167,5 @@ namespace Nexus {
     /* static */ Compositor::IDisplay* Compositor::IDisplay::Instance(const std::string& displayName) {
         return (Nexus::Display::Instance(displayName));
     }
+
 }
