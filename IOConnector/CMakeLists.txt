@@ -6,8 +6,11 @@ set(PLUGIN_SOURCES
     IOConnector.cpp
     GPIO.cpp
     Handler.cpp
-    RemotePairing.cpp
 )
+
+if(WPEFRAMEWORK_PLUGIN_IOCONNECTOR_PAIRING_PIN)
+    list(APPEND PLUGIN_SOURCES RemotePairing.cpp)
+endif(WPEFRAMEWORK_PLUGIN_IOCONNECTOR_PAIRING_PIN)
 
 # Library definition section
 add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES})

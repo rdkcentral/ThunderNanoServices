@@ -60,13 +60,13 @@ namespace Plugin {
                     Handle()
                         : Handler()
                         , Config() {
-                        Add(_T("handler"), &Handler);
+                        Add(_T("name"), &Handler);
                         Add(_T("config"), &Config);
                     }
                     Handle(const Handle& copy)
                         : Handler(copy.Handler)
                         , Config(copy.Config) {
-                        Add(_T("handler"), &Handler);
+                        Add(_T("name"), &Handler);
                         Add(_T("config"), &Config);
                     }
                     virtual ~Handle() {
