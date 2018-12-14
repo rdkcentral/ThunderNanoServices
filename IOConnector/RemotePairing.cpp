@@ -46,19 +46,17 @@ namespace Plugin {
 
             ASSERT (_service != nullptr);
 
-            if (pin.Get() == false) {
-                Exchange::IKeyHandler* handler (_service->QueryInterfaceByCallsign<Exchange::IKeyHandler>(_callsign));
+            Exchange::IKeyHandler* handler (_service->QueryInterfaceByCallsign<Exchange::IKeyHandler>(_callsign));
 
-                if (handler != nullptr) {
-                    Exchange::IKeyProducer* producer (handler->Producer(_producer));
+            if (handler != nullptr) {
+                Exchange::IKeyProducer* producer (handler->Producer(_producer));
 
-                    if (producer != nullptr) {
-                        producer->Pair();
-                        producer->Release();
-                    }
-
-                    handler->Release();
+                if (producer != nullptr) {
+                    producer->Pair();
+                    producer->Release();
                 }
+
+                handler->Release();
             }
         }
 

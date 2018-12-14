@@ -43,19 +43,18 @@ namespace Plugin {
 
             ASSERT (_service != nullptr);
 
-            if (pin.Get() == false) {
-                Exchange::IPower* handler (_service->QueryInterfaceByCallsign<Exchange::IPower>(_callsign));
+            Exchange::IPower* handler (_service->QueryInterfaceByCallsign<Exchange::IPower>(_callsign));
 
-                    handler->SetState();
-                    handler->Release();
-                }
+             if (handler != nullptr) {
+
+                handler->SetState();
+                handler->Release();
             }
         }
 
     private:
         PluginHost::IShell* _service;
         string _callsign;
-        string _producer;
     };
 
     static HandlerAdministrator::Entry<PowerDown> handler;
