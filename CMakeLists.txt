@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-include(${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/cmake/tools.cmake)
+include($ENV{STAGING_DIR}${CMAKE_INSTALL_PREFIX}/include/cmake/tools.cmake)
 
 option(WPEFRAMEWORK_PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_COMMANDER "Include Commander plugin" OFF)
