@@ -1,5 +1,4 @@
-#ifndef __TRACECONTROL_H
-#define __TRACECONTROL_H
+#pragma once
 
 #include "Module.h"
 
@@ -994,5 +993,3 @@ namespace WPEFramework {
 		};
 	}
 }
-
-#endif // __TRACECONTROL_H

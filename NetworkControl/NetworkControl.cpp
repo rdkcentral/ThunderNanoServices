@@ -95,7 +95,7 @@ namespace Plugin {
 	Core::File dnsFile(_dnsFile, true);
         if (dnsFile.Exists() == false) {
             if (dnsFile.Create() == false) {
-                SYSLOG(PluginHost::Startup, (_T("Could not create DNS configuration file [%s]"), _dnsFile.c_str()));
+                SYSLOG(Logging::Startup, (_T("Could not create DNS configuration file [%s]"), _dnsFile.c_str()));
             }
             else {
                 dnsFile.Close();
@@ -123,7 +123,7 @@ namespace Plugin {
                 } while ( (retries-- != 0) && (adapter.IsValid() == false) );
  	
 		if (adapter.IsValid() == false) {
-                    SYSLOG(PluginHost::Startup, (_T("Interface [%s], not available"), interfaceName.c_str()));
+                    SYSLOG(Logging::Startup, (_T("Interface [%s], not available"), interfaceName.c_str()));
                 }
                 else {
 
@@ -139,15 +139,15 @@ namespace Plugin {
 
                     mode how (index.Current().Mode);
                     if (how == MANUAL) {
-                        SYSLOG(PluginHost::Startup, (_T("Interface [%s] activated, no IP associated"), interfaceName.c_str()));
+                        SYSLOG(Logging::Startup, (_T("Interface [%s] activated, no IP associated"), interfaceName.c_str()));
 		    }
 		    else {
 			if (how == DYNAMIC) {
-                            SYSLOG(PluginHost::Startup, (_T("Interface [%s] activated, DHCP request issued"), interfaceName.c_str()));
+                            SYSLOG(Logging::Startup, (_T("Interface [%s] activated, DHCP request issued"), interfaceName.c_str()));
                             Reload(interfaceName, true);
 			}
 			else {
-                            SYSLOG(PluginHost::Startup, (_T("Interface [%s] activated, static IP assigned"), interfaceName.c_str()));
+                            SYSLOG(Logging::Startup, (_T("Interface [%s] activated, static IP assigned"), interfaceName.c_str()));
                             Reload(interfaceName, false);
 			}
                     }
@@ -640,7 +640,7 @@ namespace Plugin {
             Core::DataElementFile file(_dnsFile, Core::DataElementFile::SHAREABLE|Core::DataElementFile::READABLE|Core::DataElementFile::WRITABLE);
 
             if (file.IsValid() == false) {
-                SYSLOG(PluginHost::Startup, (_T("DNS functionality could NOT be updated [%s]"), _dnsFile.c_str()));
+                SYSLOG(Logging::Startup, (_T("DNS functionality could NOT be updated [%s]"), _dnsFile.c_str()));
             }
             else {
                 string data ((_T("#++SECTION: ")) + _service->Callsign() + '\n');
@@ -699,7 +699,7 @@ namespace Plugin {
                 ::memcpy(&(file[offset]), data.c_str(), data.length());
                 file.Sync();
 
-                SYSLOG(PluginHost::Startup, (_T("DNS functionality updated [%s]"), _dnsFile.c_str()));
+                SYSLOG(Logging::Startup, (_T("DNS functionality updated [%s]"), _dnsFile.c_str()));
             }
         }
 

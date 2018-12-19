@@ -890,13 +890,12 @@ namespace Plugin {
                     }
                 }
                 else {
-                    SYSLOG(PluginHost::Startup, (_T("Could not load factory [%s], error [%s]"), Core::File::FileNameExtended(entry.Current()).c_str(), library.Error().c_str()));
+                    SYSLOG(Logging::Startup, (_T("Could not load factory [%s], error [%s]"), Core::File::FileNameExtended(entry.Current()).c_str(), library.Error().c_str()));
                 }
             }
 
             Core::JSON::ArrayType< Config::Systems >::ConstIterator index (static_cast<const Config&>(config).KeySystems.Elements());
 
-  printf("%s -- %d\n", __FUNCTION__, __LINE__);
             while (index.Next () == true) {
 
                 const string system (index.Current().Name.Value());
@@ -921,17 +920,16 @@ namespace Plugin {
                                 }
                             }
                             else {
-                                SYSLOG(PluginHost::Startup, (_T("Required factory [%s], not found for [%s]"), system.c_str(), designator.c_str()));
+                                SYSLOG(Logging::Startup, (_T("Required factory [%s], not found for [%s]"), system.c_str(), designator.c_str()));
                             }
                         }
                     }
 
                }
             }
-  printf("%s -- %d\n", __FUNCTION__, __LINE__);
 
             if (_systemToFactory.size() == 0) {
-                SYSLOG(PluginHost::Startup, (_T("No DRM factories specified. OCDM can not service any DRM requests.")));
+                SYSLOG(Logging::Startup, (_T("No DRM factories specified. OCDM can not service any DRM requests.")));
             }
 
             _entryPoint = Core::Service<AccessorOCDM>::Create<::OCDM::IAccessorOCDM>(this, config.SharePath.Value(), config.ShareSize.Value());
@@ -955,7 +953,7 @@ namespace Plugin {
                         subSystem->Set(PluginHost::ISubSystem::DECRYPTION, this);
                     }
                     if (_systemToFactory.size() == 0) {
-                        SYSLOG(PluginHost::Startup, (string(_T("OCDM server has NO key systems registered!!!"))));
+                        SYSLOG(Logging::Startup, (string(_T("OCDM server has NO key systems registered!!!"))));
                     }
                 }
 

@@ -68,8 +68,7 @@ namespace Plugin {
         nullptr, // didReceiveAuthenticationChallenge
         // webProcessDidCrash
         [](WKPageRef page, const void*) {
-         fprintf(stderr, "ERROR: WebProcess crashed: exiting ...\n");
-         fflush(stderr);
+         SYSLOG(Trace::Fatal, ("CRASH: WebProcess crashed, exiting..."));
          exit(1);
         },
         nullptr, // copyWebCryptoMasterKey

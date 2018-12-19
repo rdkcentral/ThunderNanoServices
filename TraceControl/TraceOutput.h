@@ -1,5 +1,4 @@
-#ifndef __TRACEOUTPUT_H
-#define __TRACEOUTPUT_H
+#pragma once
 
 #include "Module.h"
 
@@ -45,5 +44,3 @@ namespace Plugin {
     };
 }
 }
-
-#endif // __TRACEOUTPUT_H

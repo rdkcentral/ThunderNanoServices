@@ -219,10 +219,10 @@ namespace Remotes {
 
                 if (result != Core::ERROR_NONE) {
                     if (callback == nullptr) {
-                        SYSLOG(PluginHost::Startup, (_T("Failed to initialize %s, error [%d]"), (*index)->Name(), result));
+                        SYSLOG(Logging::Startup, (_T("Failed to initialize %s, error [%d]"), (*index)->Name(), result));
                     }
                     else {
-                        SYSLOG(PluginHost::Shutdown, (_T("Failed to deinitialize %s, error [%d]"), (*index)->Name(), result));
+                        SYSLOG(Logging::Shutdown, (_T("Failed to deinitialize %s, error [%d]"), (*index)->Name(), result));
                     }
                 }
 
