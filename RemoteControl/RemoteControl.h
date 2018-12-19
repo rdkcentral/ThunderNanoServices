@@ -90,6 +90,7 @@ namespace Plugin {
                 , PassOn(false)
                 , RepeatStart(500)
                 , RepeatInterval(100)
+                , ReleaseTimeout(1000)
                 , Devices()
 				, Virtuals()
 				, Links()
@@ -98,6 +99,7 @@ namespace Plugin {
                 Add(_T("passon"), &PassOn);
                 Add(_T("repeatstart"), &RepeatStart);
                 Add(_T("repeatinterval"), &RepeatInterval);
+                Add(_T("releasetimeout"), &ReleaseTimeout);
                 Add(_T("devices"), &Devices);
                 Add(_T("virtuals"), &Virtuals);
 				Add(_T("links"), &Links);
@@ -111,6 +113,7 @@ namespace Plugin {
             Core::JSON::Boolean PassOn;
             Core::JSON::DecUInt16 RepeatStart;
             Core::JSON::DecUInt16 RepeatInterval;
+            Core::JSON::DecUInt16 ReleaseTimeout;
             Core::JSON::ArrayType<Device> Devices;
 			Core::JSON::ArrayType<Device> Virtuals;
 			Core::JSON::ArrayType<Link> Links;
