@@ -912,17 +912,18 @@ namespace Plugin {
                             if( factory != factories.end() ) {
                                 _systemToFactory.insert(std::pair<const std::string, SystemFactory>(designator, factory->second));
 
-                                //now handle the configiguration
-                                const string configuration( index.Current().Configuration.Value() );
-                                if( configuration.empty() == false ) {
-
-                                    factory->second.Factory->SystemConfig(configuration);
-                                }
                             }
                             else {
                                 SYSLOG(Logging::Startup, (_T("Required factory [%s], not found for [%s]"), system.c_str(), designator.c_str()));
                             }
                         }
+                    }
+
+                    //now handle the configiguration
+                    const string configuration( index.Current().Configuration.Value() );
+                    if( configuration.empty() == false && factory != factories.end() ) {
+
+                        factory->second.Factory->SystemConfig(configuration);
                     }
 
                }
