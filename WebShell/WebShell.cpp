@@ -141,7 +141,7 @@ namespace Plugin {
                     Run();
                 }
                 else {
-                    Signal(SIGUSR1);
+                    Signal(SIGUSR2);
                 }
 
                 _adminLock.Unlock();
@@ -161,7 +161,7 @@ namespace Plugin {
 
                 index->Release();
 
-                Signal(SIGUSR1);
+                Signal(SIGUSR2);
             }
 
             _adminLock.Unlock();
@@ -214,7 +214,7 @@ namespace Plugin {
                     result += index->Backup(&data[result], (length - result));
 
                     // Make sure we will read the input again..
-                    Signal(SIGUSR1);
+                    Signal(SIGUSR2);
                 }
             }
             return (result);
@@ -229,7 +229,7 @@ namespace Plugin {
             /* Create a sigset of all the signals that we're interested in */
             err = sigemptyset(&sigset);
             ASSERT(err == 0);
-            err = sigaddset(&sigset, SIGUSR1);
+            err = sigaddset(&sigset, SIGUSR2);
             ASSERT(err == 0);
 
             /* We must block the signals in order for signalfd to receive them */
