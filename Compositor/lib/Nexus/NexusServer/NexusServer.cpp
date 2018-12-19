@@ -208,8 +208,8 @@ namespace Broadcom {
         }
     }
 
-    /* static */ int Platform::ClientConnect(nxclient_t client, const NxClient_JoinSettings* pJoinSettings,
-        NEXUS_ClientSettings* pClientSettings)
+    template <typename ...T> /* static */ int Platform::ClientConnect(nxclient_t client, const NxClient_JoinSettings* pJoinSettings,
+        NEXUS_ClientSettings* pClientSettings, T... Targs)
     {
         BSTD_UNUSED(pClientSettings);
 

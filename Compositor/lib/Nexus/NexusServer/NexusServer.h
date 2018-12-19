@@ -121,7 +121,7 @@ namespace Broadcom {
         void Remove(const char clientName[]);
         void StateChange(server_state state);
         static void CloseDown();
-        static int ClientConnect(nxclient_t client, const NxClient_JoinSettings* pJoinSettings, NEXUS_ClientSettings* pClientSettings);
+        template <typename ...T> static int ClientConnect(nxclient_t client, const NxClient_JoinSettings* pJoinSettings, NEXUS_ClientSettings* pClientSettings, T... Targs);
         static void ClientDisconnect(nxclient_t client, const NxClient_JoinSettings* pJoinSettings);
 
     private:
