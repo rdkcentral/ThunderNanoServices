@@ -1,19 +1,22 @@
 set(PLUGIN_NAME OCDM)
+set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-set(WPEFRAMEWORK_PLUGIN_OPENCDMI_AUTOSTART true CACHE STRING true)
-set(WPEFRAMEWORK_PLUGIN_OPENCDMI_OOP false CACHE STRING true)
-
-include(module) # Setup default stuff needed for the cmake framework thingy.
-
-set(PLUGIN_OPTIONS)
-set(PLUGIN_LINK_OPTIONS -locdm)
+message("Setting up ${PLUGIN_NAME}")
 
 set(PLUGIN_SOURCES 
-        Module.cpp
         OCDM.cpp
         CENCParser.cpp
-        FrameworkRPC.cpp)
+        FrameworkRPC.cpp
+        Module.cpp)
 
-include(default_targets) # This is a regular plugin no need to edit the defaults
+find_package(ocdm REQUIRED)
+
+# Library definition section
+add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES})
+target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES} ${OCDM_LIBRARIES})
+
+# Library installation section
+string(TOLOWER ${NAMESPACE} STORAGENAME)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
 
 write_config(${PLUGIN_NAME})
