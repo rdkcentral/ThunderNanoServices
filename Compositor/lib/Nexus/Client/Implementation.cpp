@@ -84,6 +84,8 @@ namespace Nexus {
         , _nxplHandle(nullptr)
         , _virtualkeyboard(nullptr)  {
 
+        setenv("V3D_DRM_DISABLE", "1", 0);
+
         NEXUS_DisplayHandle displayHandle(nullptr);
 
 #ifdef BACKEND_BCM_NEXUS_NXCLIENT
