@@ -25,6 +25,8 @@ set_target_properties(${TARGET} PROPERTIES
         DEFINE_SYMBOL WPEFRAMEWORK_WAYLAND_EGL_CLIENT
         )
 
+add_definitions(${EGL_DEFINITIONS})
+
 install(
         TARGETS ${TARGET}  EXPORT ${TARGET}Targets  # for downstream dependencies
         ARCHIVE DESTINATION lib COMPONENT libs      # static lib
