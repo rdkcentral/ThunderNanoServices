@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-foreach(searchPath ${CMAKE_FIND_ROOT_PATH})
-    if(EXISTS "${searchPath}/${CMAKE_INSTALL_PREFIX}/include/cmake/tools.cmake")
-        include(${searchPath}/${CMAKE_INSTALL_PREFIX}/include/cmake/tools.cmake)
-    endif()
-endforeach()
+include(${CMAKE_SYSROOT}/usr/include/cmake/WPEFramework.cmake)
 
 option(WPEFRAMEWORK_PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(WPEFRAMEWORK_PLUGIN_COMMANDER "Include Commander plugin" OFF)
