@@ -760,7 +760,7 @@ namespace Wayland {
         Trace("Initialize Wayland Display on %s\n", _runtimeDir.c_str());
         Trace("Initialize Wayland Display Name %s\n", _displayName.c_str());
 
-        _display = wl_display_connect(_displayName.empty() ? nullptr : _displayName.c_str());
+        _display = wl_display_connect(nullptr);
 
         assert(_display != nullptr);
 
@@ -1001,7 +1001,6 @@ namespace Wayland {
         WaylandSurfaceMap::iterator index = _waylandSurfaces.find(surface);
 
         if (index != _waylandSurfaces.end()) {
-
             wl_simple_shell_set_name(_simpleShell, id, index->second->Name().c_str());
             // Do not forget to update the actual surface, it is now alive..
             index->second->_id = id;
