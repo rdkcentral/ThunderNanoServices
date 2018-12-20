@@ -142,6 +142,8 @@ namespace Broadcom {
             , Authentication(true)
             , BoxMode(~0)
             , SagePath()
+            , PAKPath()
+            , DRMPath()
             , SVPType(NONE)
             , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
             , HDCPLevel(HDCP_NONE)
@@ -153,6 +155,8 @@ namespace Broadcom {
             Add(_T("authentication"), &Authentication);
             Add(_T("boxmode"), &BoxMode);
             Add(_T("sagepath"), &SagePath);
+            Add(_T("pakpath"), &PAKPath);
+            Add(_T("drmpath"), &DRMPath);
             Add(_T("svp"), &SVPType);
             Add(_T("resolution"), &Resolution);
             Add(_T("memory"), &Memory);
@@ -172,6 +176,8 @@ namespace Broadcom {
         Core::JSON::Boolean Authentication;
         Core::JSON::DecUInt8 BoxMode;
         Core::JSON::String SagePath;
+        Core::JSON::String PAKPath;
+        Core::JSON::String DRMPath;
         Core::JSON::EnumType<svptype> SVPType;
         Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
         MemoryInfo Memory;
@@ -282,6 +288,14 @@ namespace Broadcom {
 
             if ((config.SagePath.IsSet() == true) && (config.SagePath.Value().empty() == false)) {
                 ::setenv("SAGEBIN_PATH", config.SagePath.Value().c_str(), 1);
+            }
+
+            if ((config.PAKPath.IsSet() == true) && (config.PAKPath.Value().empty() == false)) {
+                ::setenv("PAKBIN_PATH", config.PAKPath.Value().c_str(), 1);
+            }
+
+            if ((config.DRMPath.IsSet() == true) && (config.DRMPath.Value().empty() == false)) {
+                ::setenv("DRMBIN_PATH", config.DRMPath.Value().c_str(), 1);
             }
 
             if (config.BoxMode.IsSet()) {
