@@ -1,6 +1,7 @@
 set(PLUGIN_NAME WebKitBrowser)
+set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-include(module) # Setup default stuff needed for the cmake framework thingy.
+message("Setting up ${PLUGIN_NAME}")
 
 option(WPEFRAMEWORK_PLUGIN_WEBKITBROWSER_STUBBED "Include the wpe browser as a stubbed plugin." OFF)
 option(WPEFRAMEWORK_PLUGIN_WEBKITBROWSER_YOUTUBE "Include YouTube in seperate plugin." OFF)

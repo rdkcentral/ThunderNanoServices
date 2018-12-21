@@ -1,23 +1,23 @@
 set(PLUGIN_NAME FrontPanel)
+set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+
+message("Setting up ${PLUGIN_NAME}")
 
 find_package(DSHAL REQUIRED)
 
-set(WPEFRAMEWORK_PLUGIN_FRONTPANEL_AUTOSTART false CACHE STRING "Automatically start FrontPanel plugin")
+set(PLUGIN_FRONTPANEL_AUTOSTART false CACHE STRING "Automatically start FrontPanel plugin")
 
-include(module) # Setup default stuff needed for the cmake framework thingy.
-
-set(PLUGIN_OPTIONS)
-
-set(PLUGIN_DEPENDENCIES
-    ${DSHAL_LIBRARIES}
-)    
-
-set(PLUGIN_SOURCES 
-    Module.cpp
+set(PLUGIN_SOURCES
     FrontPanel.cpp
     FrontPanelHAL.cpp
-)
+    Module.cpp)
 
-include(default_targets) # This is a regular plugin no need to edit the defaults
+# Library definition section
+add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES})
+target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES} ${DSHAL_LIB})
+
+# Library installation section
+string(TOLOWER ${NAMESPACE} STORAGENAME)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
 
 write_config(${PLUGIN_NAME})
