@@ -13,7 +13,7 @@ find_package(EGL REQUIRED)
 
 #find_package(nexusserver)
 
-if (WPEFRAMEWORK_PLUGIN_COMPOSITOR_NXSERVER)
+if (PLUGIN_COMPOSITOR_NXSERVER)
     add_definitions(-DENABLE_NXSERVER=1)
     find_package(Nexus REQUIRED)
     find_package(NXServer REQUIRED)
@@ -41,10 +41,10 @@ if(WESTEROS_FOUND)
     target_link_libraries(${target_name} PRIVATE WESTEROS::SERVER)
 endif(WESTEROS_FOUND)
 
-if(WPEFRAMEWORK_PLUGIN_COMPOSITOR_VIRTUALINPUT)
+if(PLUGIN_COMPOSITOR_VIRTUALINPUT)
     find_package(VirtualInput REQUIRED)
     target_link_libraries(${target_name} PRIVATE ${VIRTUALINPUT_LIBRARIES})
-endif(WPEFRAMEWORK_PLUGIN_COMPOSITOR_VIRTUALINPUT)
+endif(PLUGIN_COMPOSITOR_VIRTUALINPUT)
 
 install(
     TARGETS ${target_name}

@@ -28,7 +28,7 @@ set_target_properties(${TARGET}
         OUTPUT_NAME ${compositor_artefact}
         )
 
-if(WPEFRAMEWORK_PLUGIN_COMPOSITOR_NXSERVER)
+if(PLUGIN_COMPOSITOR_NXSERVER)
     target_compile_definitions(${TARGET}
         PRIVATE
             INCLUDE_NEXUS_SERVER

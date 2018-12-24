@@ -8,10 +8,10 @@
 set(PLUGIN_NAME TVControl)
 set(MODULE_NAME WPEFramework${PLUGIN_NAME})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y")
-set(WPEFRAMEWORK_PLUGIN_TVCONTROL_DVB false CACHE STRING "Set dvb dbs")
+set(PLUGIN_TVCONTROL_DVB false CACHE STRING "Set dvb dbs")
 
-option(WPEFRAMEWORK_PLUGIN_TVCONTROL_AUTOSTART "Controls if the plugin should start while starting the framework. [true, false]." true)
-option(WPEFRAMEWORK_PLUGIN_TVCONTROL_OUTOFPROCESS "Controls if the plugin should run in its own process. [true, false]." true)
+option(PLUGIN_TVCONTROL_AUTOSTART "Controls if the plugin should start while starting the framework. [true, false]." true)
+option(PLUGIN_TVCONTROL_OUTOFPROCESS "Controls if the plugin should run in its own process. [true, false]." true)
 
 include(setup_target_properties_library)
 include(show_target_properties)
@@ -67,10 +67,10 @@ set(PLUGIN_TVCONTROL_SOURCES
 
 list(APPEND PLUGIN_TVCONTROL_INCLUDE_DIRS . TVControl Tuner TableData TableData/Data TableData/Parser)
 
-if (WPEFRAMEWORK_PLUGIN_TVCONTROL_DVB)
+if (PLUGIN_TVCONTROL_DVB)
     list(APPEND PLUGIN_TVCONTROL_SOURCES TableData/Parser/DVB/ParserDVB.cpp)
     list(APPEND PLUGIN_TVCONTROL_INCLUDE_DIRS TableData/Parser/DVB)
-    if(WPEFRAMEWORK_PLUGIN_TVCONTROL_ENABLE_BOUQUET_PARSING)
+    if(PLUGIN_TVCONTROL_ENABLE_BOUQUET_PARSING)
         add_definitions(-DENABLE_BOUQUET_PARSING=1)
     endif()
 else ()

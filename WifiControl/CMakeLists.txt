@@ -8,7 +8,7 @@ set(PLUGIN_SOURCES
     Network.cpp      
     Module.cpp)
 
-if (WPEFRAMEWORK_PLUGIN_USE_RDK_HAL_WIFI)
+if (PLUGIN_USE_RDK_HAL_WIFI)
     target_compile_definitions(${MODULE_NAME} USE_WIFI_HAL)
     list(APPEND PLUGIN_SOURCES WifiHAL.cpp)
 else ()

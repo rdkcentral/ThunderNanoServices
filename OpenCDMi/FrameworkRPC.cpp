@@ -202,7 +202,7 @@ namespace Plugin {
                             uint32_t clearContentSize = 0;
                             uint8_t* clearContent = nullptr;
 
-                            RequestConsume(WPEFramework::Core::infinite);
+                            RequestConsume(Core::infinite);
 
                             if (IsRunning() == true) {
                                 uint8_t keyIdLength = 0;
@@ -1071,4 +1071,4 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(OCDMImplementation, 1, 0);
 
-} } /* namespace iWPEFramework::Plugin */
+} } /* namespace WPEFramework::Plugin */

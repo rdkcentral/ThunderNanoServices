@@ -7,12 +7,12 @@
 set(TARGET nexusserver)
 set(NAMESPACE nexus)
 
-option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_HARDWAREREADY "Manual overrule of the time it takes to initialisize all hardware (s) [0 - UINT16_MAX]." 0)
-option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (Nexus only).")
-option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_GRAPHICS_HEAP_SIZE "Change graphic heap of driver (Nexus only).")
-option(WPEFRAMEWORK_PLUGIN_COMPOSITOR_INSTALL_NEXUS_SERVER "Enable to install the server to staging." OFF)
-option(WPEFRAMEWORK_NEXUS_SERVER_HAS_EXTENDED_INIT "Enable to support unauthenticated nxclients." ON)
-option(WPEFRAMEWORK_NEXUS_SERVER_EXTERNAL "Enable hooking up to an eternally running NxServer instead of running one." OFF)
+option(PLUGIN_COMPOSITOR_HARDWAREREADY "Manual overrule of the time it takes to initialisize all hardware (s) [0 - UINT16_MAX]." 0)
+option(PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (Nexus only).")
+option(PLUGIN_COMPOSITOR_GRAPHICS_HEAP_SIZE "Change graphic heap of driver (Nexus only).")
+option(PLUGIN_COMPOSITOR_INSTALL_NEXUS_SERVER "Enable to install the server to staging." OFF)
+option(NEXUS_SERVER_HAS_EXTENDED_INIT "Enable to support unauthenticated nxclients." ON)
+option(NEXUS_SERVER_EXTERNAL "Enable hooking up to an eternally running NxServer instead of running one." OFF)
 
 message("Setup WPEFramework${TARGET} v${VERSION}...")
 
@@ -24,13 +24,17 @@ add_library(${TARGET} STATIC
         )
 
 
-if (WPEFRAMEWORK_NEXUS_SERVER_EXTERNAL)
+if (NEXUS_SERVER_EXTERNAL)
     target_link_libraries(${TARGET}
         PRIVATE
             ${CORE_LIBRARIES}
         PUBLIC
             NEXUS::NXCLIENT
-        )
+    )
+    target_compile_definitions(${TARGET} 
+        PRIVATE 
+            NEXUS_SERVER_EXTERNAL
+    )
 else()
     find_package(NXServer REQUIRED)
     target_link_libraries(${TARGET}
@@ -43,27 +47,13 @@ else()
         )
 endif()
 
-set(PUBLIC_HEADERS
-        NexusServer.h
-        )
+set(PUBLIC_HEADERS NexusServer.h)
 
-target_compile_definitions(${TARGET}
-        INTERFACE
-            USE_WPEFRAMEWORK_NXSERVER
-        )
-
-if (WPEFRAMEWORK_NEXUS_SERVER_HAS_EXTENDED_INIT)
-target_compile_definitions(${TARGET}
+if (NEXUS_SERVER_HAS_EXTENDED_INIT)
+    target_compile_definitions(${TARGET}
         PRIVATE
             NEXUS_SERVER_HAS_EXTENDED_INIT
-        )
-endif()
-
-if (WPEFRAMEWORK_NEXUS_SERVER_EXTERNAL)
-target_compile_definitions(${TARGET}
-        PRIVATE
-            NEXUS_SERVER_EXTERNAL
-        )
+    )
 endif()
 
 set_target_properties(${TARGET}
@@ -78,7 +68,7 @@ set_target_properties(${TARGET}
 
 add_library(${NAMESPACE}::${TARGET} ALIAS ${TARGET})
 
-if (WPEFRAMEWORK_PLUGIN_COMPOSITOR_INSTALL_NEXUS_SERVER)
+if (PLUGIN_COMPOSITOR_INSTALL_NEXUS_SERVER)
 install(
         TARGETS ${TARGET}  EXPORT ${TARGET}Targets  # for downstream dependencies
         ARCHIVE DESTINATION lib COMPONENT libs      # static lib

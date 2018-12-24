@@ -1,7 +1,7 @@
 set(PLUGIN_NAME LocationSync)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-set(WPEFRAMEWORK_PLUGIN_LOCATIONSYNC_URI location.webplatformforembedded.org CACHE STRING "URI to request the location information")
+set(PLUGIN_LOCATIONSYNC_URI location.webplatformforembedded.org CACHE STRING "URI to request the location information")
 
 set(PLUGIN_SOURCES
     Module.cpp

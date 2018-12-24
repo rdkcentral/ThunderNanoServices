@@ -344,7 +344,7 @@ namespace Plugin {
 
     private:
         mutable Core::CriticalSection _adminLock;
-        mutable WPEFramework::Core::Event _readySignal;
+        mutable Core::Event _readySignal;
         Exchange::IKeyHandler* _callback;
         Activity _worker;
         Info _info;
@@ -365,6 +365,8 @@ namespace Plugin {
  *****************************************************************************/
 
 extern "C" {
+
+using namespace WPEFramework;
 
 void gpApplication_IndicateBindSuccessToMiddleware(UInt8 bindingRef, UInt8 profileId);
 void gpApplication_IndicateBindFailureToMiddleware(UInt8 result);
@@ -664,13 +666,13 @@ void gpZrc_cbMsg(gpZrc_MsgId_t MsgId, UInt8 length, gpZrc_Msg_t* pMsg)
                     
                     case gpRf4ceCmd_ZrcActionTypeStart: {
                         TRACE_L1("%s: Key Pressed keyCode=0x%x", __FUNCTION__, keyCode);
-                        WPEFramework::Plugin::GreenPeak::Dispatch(true, keyCode, 0);
+                        Plugin::GreenPeak::Dispatch(true, keyCode, 0);
                         break;
                     }
                     case gpRf4ceCmd_ZrcActionTypeAtomic:
                     case gpRf4ceCmd_ZrcActionTypeReleased: {
                         TRACE_L1("%s: Key Released keyCode=0x%x", __FUNCTION__, keyCode);
-                        WPEFramework::Plugin::GreenPeak::Dispatch(false, keyCode, 0);
+                        Plugin::GreenPeak::Dispatch(false, keyCode, 0);
                         break;
                     }
                     default: {
@@ -722,12 +724,12 @@ static Bool DispatcherDataIndication(UInt8 pairingRef, gpRf4ce_ProfileId_t profi
         code = gpPd_ReadByte(pdHandle, nsduOffset + 4) | (gpPd_ReadByte(pdHandle, nsduOffset + 3) << 8);
 
         if (code == 0) {
-            WPEFramework::Plugin::GreenPeak::Dispatch(false, lastCode, 0);
+            Plugin::GreenPeak::Dispatch(false, lastCode, 0);
             lastCode = 0;
         }
         else {
             lastCode = code | 0x8000;
-            WPEFramework::Plugin::GreenPeak::Dispatch(true, lastCode, 0);
+            Plugin::GreenPeak::Dispatch(true, lastCode, 0);
         }
 
         gpPd_FreePd(pdHandle);
@@ -751,7 +753,7 @@ static uint16_t _releasedCode = static_cast<uint16_t>(~0);
 static void KeyReleased()
 {
     if (_releasedCode != static_cast<uint16_t>(~0)) {
-        WPEFramework::Plugin::GreenPeak::Dispatch(false, _releasedCode, 0);
+        Plugin::GreenPeak::Dispatch(false, _releasedCode, 0);
         _releasedCode = static_cast<uint16_t>(~0);
     }
 }
@@ -778,11 +780,11 @@ void gpRf4ceUserControl_cbUserControlIndication(
     }
     else if ((_releasedCode == static_cast<uint16_t>(~0)) || (_releasedCode != commandCode)) {
         if (_releasedCode != static_cast<uint16_t>(~0)) {
-            WPEFramework::Plugin::GreenPeak::Dispatch(false, _releasedCode, 0);
+            Plugin::GreenPeak::Dispatch(false, _releasedCode, 0);
             _releasedCode = static_cast<uint16_t>(~0);
         }
 
-        WPEFramework::Plugin::GreenPeak::Dispatch((keyStatus == gpRf4ceUserControl_KeyStatusPressed), commandCode, 0);
+        Plugin::GreenPeak::Dispatch((keyStatus == gpRf4ceUserControl_KeyStatusPressed), commandCode, 0);
     }
     else {
         _releasedCode = static_cast<uint16_t>(~0);
@@ -798,13 +800,13 @@ void gpRf4ceBindAuto_cbRecipientBindConfirm(UInt8 bindingId, gpRf4ce_Result_t st
     string text;
 
     if (status == gpRf4ce_ResultSuccess) {
-        text = WPEFramework::Trace::Format(_T("Pairing successfull. ID: [%d]"), static_cast<uint16_t>(bindingId));
+        text = Trace::Format(_T("Pairing successfull. ID: [%d]"), static_cast<uint16_t>(bindingId));
     }
     else {
-        text = WPEFramework::Trace::Format(_T("Pairing Failed. Error: [%X]"), static_cast<uint16_t>(status));
+        text = Trace::Format(_T("Pairing Failed. Error: [%X]"), static_cast<uint16_t>(status));
     }
 
-    WPEFramework::Plugin::GreenPeak::Report(text);
+    Plugin::GreenPeak::Report(text);
 }
 
 void gpRf4ceBindAuto_cbUnbindIndication(UInt8 bindingId)
@@ -833,11 +835,11 @@ static void cbInitializationDone(void)
     gpMacDispatcher_SetTransmitPower(3, 0);
     gpMacDispatcher_SetDefaultTransmitPowers(DefaultTXPowers);
 
-    gpRf4ce_SetUserString(WPEFramework::Plugin::GreenPeak::UserString());
+    gpRf4ce_SetUserString(Plugin::GreenPeak::UserString());
 
     gpApplication_ZRCBindSetup(true,false);
 
-    WPEFramework::Plugin::GreenPeak::Initialized(
+    Plugin::GreenPeak::Initialized(
         static_cast<uint16_t>(version.major),
         static_cast<uint16_t>(version.minor),
         static_cast<uint16_t>(version.revision),
@@ -875,7 +877,7 @@ static void target_DoR4ceReset(void)
 
 static void target_ActivatePairing()
 {
-    WPEFramework::Plugin::GreenPeak::Report(string("Entering the PairingMode."));
+    Plugin::GreenPeak::Report(string("Entering the PairingMode."));
     #if 1
         gpApplication_ZRCBindSetup(false,true);
     #else
@@ -894,7 +896,7 @@ static void target_ActivatePairing()
 
 static void target_ActivateUnpairing()
 {
-    WPEFramework::Plugin::GreenPeak::Report(string("Unpairing."));
+    Plugin::GreenPeak::Report(string("Unpairing."));
     gpApplication_ZRCUnbind(_bindingId);
 }
 

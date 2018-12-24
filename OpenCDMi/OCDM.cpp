@@ -158,11 +158,11 @@ namespace Plugin {
         return (nullptr);
     }
 
-    /* virtual */ void OCDM::Inbound(WPEFramework::Web::Request& request)
+    /* virtual */ void OCDM::Inbound(Web::Request& request)
     {
     }
 
-    /* virtual */ Core::ProxyType<Web::Response> OCDM::Process(const WPEFramework::Web::Request& request)
+    /* virtual */ Core::ProxyType<Web::Response> OCDM::Process(const Web::Request& request)
     {
         ASSERT(_skipURL <= request.Path.length());
 

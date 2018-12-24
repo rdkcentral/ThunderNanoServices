@@ -1,5 +1,5 @@
 
-if (WPEFRAMEWORK_PLUGIN_COMPOSITOR_NXSERVER)
+if (PLUGIN_COMPOSITOR_NXSERVER)
 add_subdirectory (NexusServer)
 endif ()
 

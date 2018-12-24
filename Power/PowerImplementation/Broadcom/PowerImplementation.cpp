@@ -1,4 +1,4 @@
-#include "Module.h"
+#include "../../Module.h"
 #include <interfaces/IPower.h>
 
 #include <nexus_config.h>

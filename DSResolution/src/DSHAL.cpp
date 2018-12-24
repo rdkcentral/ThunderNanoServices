@@ -6,8 +6,8 @@
 #include <string.h>
 #include <vector>
 
-#define WPEFRAMEWORK_CONFIG_LOCATION "/usr/local/etc/WPEFramework"
-#define WPEFRAMEWORK_HAL_CONFIG_FILE "rdk_devicesettings_hal.conf"
+#define CONFIG_LOCATION "/usr/local/etc/WPEFramework"
+#define HAL_CONFIG_FILE "rdk_devicesettings_hal.conf"
 
 struct DummyConfig
 {
@@ -24,7 +24,7 @@ bool initConfig()
     std::string config;
     char* token;
     char file [70];
-    sprintf (file, "%s/%s",WPEFRAMEWORK_CONFIG_LOCATION,WPEFRAMEWORK_HAL_CONFIG_FILE);
+    sprintf (file, "%s/%s",CONFIG_LOCATION,HAL_CONFIG_FILE);
     std::ifstream configFile(file);
     if (configFile.is_open()){
         while(!configFile.eof())

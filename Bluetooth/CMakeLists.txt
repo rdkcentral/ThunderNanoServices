@@ -11,8 +11,8 @@ set(PLUGIN_SOURCES
     BluetoothImplementation.cpp
     Module.cpp)
 
-set(WPEFRAMEWORK_PLUGIN_BLUETOOTH_AUTOSTART true CACHE STRING true)
-set(WPEFRAMEWORK_PLUGIN_BLUETOOTH_OOP false CACHE STRING true)
+set(PLUGIN_BLUETOOTH_AUTOSTART true CACHE STRING true)
+set(PLUGIN_BLUETOOTH_OOP false CACHE STRING true)
 
 # Library definition section
 include_directories(${GLIB_INCLUDE_DIRS} ${DBUS_INCLUDE_DIRS})
