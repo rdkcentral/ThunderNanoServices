@@ -19,7 +19,7 @@ set(STREAMER_LIBS -Wl,--whole-archive PlayerPlatform -Wl,--no-whole-archive)
 
 # Library definition section
 add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES})
-target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES} ${STREAMER_LIBS} ${INTERFACES_LIBRARIES})
+target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES} ${INTERFACES_LIBRARIES} ${ADDITIONAL_LIBRARIES})
 
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGENAME)
