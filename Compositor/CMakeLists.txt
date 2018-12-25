@@ -1,4 +1,5 @@
 set(PLUGIN_NAME Compositor)
+set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 option(PLUGIN_COMPOSITOR_SYSTEM "Callsign to report information." "Controller")
 option(PLUGIN_COMPOSITOR_IMPLEMENTATION "Defines which implementation is used." "None")
@@ -16,25 +17,23 @@ set(VERSION_MAJOR 1)
 set(VERSION_MINOR 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_REVISION})
 
-include(module)
-
 find_package(Interfaces REQUIRED)
 
-set(PLUGIN_DEPENDENCIES_INCLUDE_DIRS)
-set(PLUGIN_DEPENDENCIES
-        ${PLUGIN_COMPOSITOR_CLIENT_LIBS}
-        )
-set(PLUGIN_DEFINITIONS)
-set(PLUGIN_OPTIONS)
-set(PLUGIN_LINK_OPTIONS)
 set(PLUGIN_SOURCES
     Module.cpp
-    Compositor.cpp
-    )
+    Compositor.cpp)
 
-include(default_targets)
+file(GLOB PLUGIN_INCLUDES *.h)
 
-target_link_libraries(${MODULE_NAME} ${INTERFACES_LIBRARIES})
+add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES} ${PLUGIN_INCLUDES})
+target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES} ${INTERFACES_LIBRARIES} ${PLUGIN_COMPOSITOR_CLIENT_LIBS})
+set_target_properties(${MODULE_NAME} PROPERTIES OUTPUT_NAME ${MODULE_NAME})
+
+string(TOLOWER ${NAMESPACE} STORAGENAME)
+install(
+    TARGETS ${MODULE_NAME}
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins
+    COMPONENT ${MODULE_NAME})
 
 if(PLUGIN_COMPOSITOR_SERVER)
     add_subdirectory(server)

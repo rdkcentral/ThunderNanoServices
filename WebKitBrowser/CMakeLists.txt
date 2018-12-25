@@ -3,7 +3,6 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 message("Setting up ${PLUGIN_NAME}")
 
-option(PLUGIN_WEBKITBROWSER_STUBBED "Include the wpe browser as a stubbed plugin." OFF)
 option(PLUGIN_WEBKITBROWSER_YOUTUBE "Include YouTube in seperate plugin." OFF)
 option(PLUGIN_WEBKITBROWSER_APPS "Include Apps instance in seperate plugin." OFF)
 option(PLUGIN_WEBKITBROWSER_UX "Include UX in seperate plugin." OFF)
@@ -34,18 +33,12 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(GLIB REQUIRED)
 find_package(WPEWebKit REQUIRED)
 
-set(PLUGIN_DEFINITIONS)
-
-if(PLUGIN_WEBKITBROWSER_STUBBED)
-    list(APPEND PLUGIN_DEFINITIONS __STUBBED__)
-endif()
-
-set(PLUGIN_DEPENDENCIES_INCLUDE_DIRS
+set(PLUGIN_INCLUDE_DIRS
     ${WPE_WEBKIT_INCLUDE_DIRS}
     ${WPE_WEBKIT_INCLUDE_DIRS}/WPE
     ${GLIB_INCLUDE_DIRS})
 
-set(PLUGIN_DEPENDENCIES
+set(PLUGIN_LIBRARIES
     ${GLIB_LIBRARIES}
     ${WPE_WEBKIT_LIBRARIES})
 
@@ -57,12 +50,21 @@ set(PLUGIN_SOURCES
     InjectedBundle/Utils.cpp
 )
 
-include(default_targets) # This is a regular plugin no need to edit the defaults
+file(GLOB PLUGIN_INCLUDES *.h)
 
-if(NOT PLUGIN_WEBKITBROWSER_STUBBED)
-    # also build injected bundle
-    add_subdirectory(InjectedBundle)
-endif()
+add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES} ${PLUGIN_INCLUDES})
+target_include_directories(${MODULE_NAME} PRIVATE ${PLUGIN_INCLUDE_DIRS})
+target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES} ${PLUGIN_LIBRARIES})
+set_target_properties(${MODULE_NAME} PROPERTIES OUTPUT_NAME ${MODULE_NAME})
+
+string(TOLOWER ${NAMESPACE} STORAGENAME)
+install(
+    TARGETS ${MODULE_NAME}
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins
+    COMPONENT ${MODULE_NAME})
+
+# also build injected bundle
+add_subdirectory(InjectedBundle)
 
 write_config( ${PLUGIN_NAME} )
 
