@@ -92,14 +92,10 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
-                , OutOfProcess(true)
                 , System(_T("Controller"))
-                , Locator("libplatformplugin.so")
                 , WorkDir()
             {
-                Add(_T("outofprocess"), &OutOfProcess);
                 Add(_T("system"), &System);
-                Add(_T("locator"), &Locator);
                 Add(_T("workdir"), &WorkDir);
             }
             ~Config()
@@ -107,9 +103,7 @@ namespace Plugin {
             }
 
         public:
-            Core::JSON::Boolean OutOfProcess;
             Core::JSON::String System;
-            Core::JSON::String Locator;
             Core::JSON::String WorkDir;
         };
 

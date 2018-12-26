@@ -47,7 +47,7 @@ namespace Plugin {
         _composition = service->Root<Exchange::IComposition>(_pid, 2000, _T("CompositorImplementation"));
         
         if (_composition == nullptr) {
-            message = "Instantiating the compositor failed. Could not load: " + config.Locator.Value();
+            message = "Instantiating the compositor failed. Could not load: CompositorImplementation";
         }
         else {
             _service = service;

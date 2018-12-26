@@ -1,5 +1,6 @@
 set(PLUGIN_NAME Compositor)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+set(PLATFORM_COMPOSITOR "compositorplugin")
 
 option(PLUGIN_COMPOSITOR_SYSTEM "Callsign to report information." "Controller")
 option(PLUGIN_COMPOSITOR_IMPLEMENTATION "Defines which implementation is used." "None")
@@ -10,7 +11,7 @@ option(PLUGIN_COMPOSITOR_AUTOTRACE "Contols if the plugin should automatically s
 option(PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (Nexus only).")
 option(PLUGIN_COMPOSITOR_GRAPHICS_HEAP_SIZE "Change graphic heap of driver (Nexus only).")
 
-set(PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB "libcompositorplugin.so" CACHE STRING "Specify a library with a compositor implentation." )
+set(PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB "lib${PLATFORM_COMPOSITOR}.so" CACHE STRING "Specify a library with a compositor implentation." )
 set(PLUGIN_COMPOSITOR_RESOLUTION "720p" CACHE STRING "Specify the startup resolution")
 
 set(VERSION_MAJOR 1)

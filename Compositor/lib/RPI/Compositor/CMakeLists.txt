@@ -1,4 +1,4 @@
-set(TARGET RPICompositor)
+set(TARGET ${PLATFORM_COMPOSITOR})
 
 message("Setting up ${TARGET} for RPI platfrom")
 
@@ -22,9 +22,8 @@ set_target_properties(${TARGET}
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         FRAMEWORK FALSE
-        OUTPUT_NAME ${compositor_artefact}
         )
 
 install(TARGETS ${TARGET}
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/WPEFramework/Compositor
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor
         )
