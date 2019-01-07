@@ -12,7 +12,7 @@ target_link_libraries(${TARGET}
             PUBLIC
             ${CORE_LIBRARIES}
             ${VIRTUALINPUT_LIBRARIES}
-            )
+            ${PLUGINS_LIBRARIES})
 
 set_target_properties(${TARGET} PROPERTIES
         CXX_STANDARD 11
