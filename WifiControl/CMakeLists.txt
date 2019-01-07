@@ -4,7 +4,7 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 message("Setting up ${PLUGIN_NAME}")
 
 set(PLUGIN_SOURCES
-    Controller.cpp  
+    WifiControl.cpp  
     Network.cpp      
     Module.cpp)
 
