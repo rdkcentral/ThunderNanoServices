@@ -4,7 +4,7 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 message("Setting up ${PLUGIN_NAME}")
 
 find_package(GLIB REQUIRED)
-find_package(DBUS REQUIRED)
+find_package(Bluez REQUIRED)
 
 set(PLUGIN_SOURCES
     Bluetooth.cpp
@@ -15,9 +15,9 @@ set(PLUGIN_BLUETOOTH_AUTOSTART true CACHE STRING true)
 set(PLUGIN_BLUETOOTH_OOP false CACHE STRING true)
 
 # Library definition section
-include_directories(${GLIB_INCLUDE_DIRS} ${DBUS_INCLUDE_DIRS})
+include_directories(${GLIB_INCLUDE_DIRS} ${BLUEZ_INCLUDE_DIRS})
 add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES})
-target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES} ${GLIB_GIO_LIBRARIES} ${GLIB_LIBRARIES} ${DBUS_LIBRARIES})
+target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES} ${GLIB_GIO_LIBRARIES} ${GLIB_LIBRARIES} ${BLUEZ_LIBRARIES})
 
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGENAME)

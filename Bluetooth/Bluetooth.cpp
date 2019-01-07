@@ -7,8 +7,7 @@ namespace Plugin {
     SERVICE_REGISTRATION(Bluetooth, 1, 0);
 
     static Core::ProxyPoolType<Web::JSONBodyType<BTStatus> > jsonResponseFactoryBTStatus(1);
-    static Core::ProxyPoolType<Web::JSONBodyType<BTDeviceList> > jsonResponseFactoryBTDeviceList(1);
-    static Core::ProxyPoolType<Web::JSONBodyType<BTDeviceList::BTDeviceInfo> > jsonResponseFactoryBTDeviceInfo(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<BTDeviceInfo> > jsonResponseFactoryBTDeviceInfo(1);
 
     /* virtual */ const string Bluetooth::Initialize(PluginHost::IShell* service)
     {
@@ -85,7 +84,7 @@ namespace Plugin {
 
         if ((request.Verb == Web::Request::HTTP_PUT) || (request.Verb == Web::Request::HTTP_POST)) {
             if ((index.IsValid() == true) && (index.Next() && index.IsValid())) {
-                if ((index.Remainder() == _T("Pair")) || (index.Remainder() == _T("Connect")))
+                if ((index.Remainder() == _T("Pair")) || (index.Remainder() == _T("Connect")) || (index.Remainder() == _T("Disconnect")))
                    request.Body(jsonResponseFactoryBTDeviceInfo.Element());
             }
         }
@@ -133,7 +132,7 @@ namespace Plugin {
                 if (index.Remainder() == _T("DiscoveredDevices")) {
 
                     TRACE(Trace::Information, (string(__FUNCTION__)));
-                    Core::ProxyType<Web::JSONBodyType<BTDeviceList> > response(jsonResponseFactoryBTDeviceList.Element());
+                    Core::ProxyType<Web::JSONBodyType<BTStatus> > response(jsonResponseFactoryBTStatus.Element());
 
                     std::string discoveredDevices = _bluetooth->DiscoveredDevices();
                     if (discoveredDevices.size() > 0) {
@@ -149,7 +148,7 @@ namespace Plugin {
                 } else if (index.Remainder() == _T("PairedDevices")) {
 
                     TRACE(Trace::Information, (string(__FUNCTION__)));
-                    Core::ProxyType<Web::JSONBodyType<BTDeviceList> > response(jsonResponseFactoryBTDeviceList.Element());
+                    Core::ProxyType<Web::JSONBodyType<BTStatus> > response(jsonResponseFactoryBTStatus.Element());
 
                     std::string pairedDevices = _bluetooth->PairedDevices();
                     if (pairedDevices.size() > 0) {
@@ -171,7 +170,10 @@ namespace Plugin {
             result->Message = _T("Current status.");
 
             response->Scanning = _bluetooth->IsScanning();
-            response->Connected = _bluetooth->Connected();
+            std::string connectedDevices = _bluetooth->ConnectedDevices();
+            if (connectedDevices.size() > 0)
+                response->DeviceList.FromString(connectedDevices);
+
             result->Body(response);
         }
 
@@ -205,7 +207,7 @@ namespace Plugin {
                         result->Message = _T("Unable to stop Scan.");
                     }
                 } else if ((index.Remainder() == _T("Pair")) && (request.HasBody())) {
-                    Core::ProxyType<const BTDeviceList::BTDeviceInfo> deviceInfo (request.Body<const BTDeviceList::BTDeviceInfo>());
+                    Core::ProxyType<const BTDeviceInfo> deviceInfo (request.Body<const BTDeviceInfo>());
                     if (_bluetooth->Pair(deviceInfo->Address)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Paired device.");
@@ -214,13 +216,22 @@ namespace Plugin {
                         result->Message = _T("Unable to Pair device.");
                     }
                 } else if ((index.Remainder() == _T("Connect")) && (request.HasBody())) {
-                    Core::ProxyType<const BTDeviceList::BTDeviceInfo> deviceInfo (request.Body<const BTDeviceList::BTDeviceInfo>());
+                    Core::ProxyType<const BTDeviceInfo> deviceInfo (request.Body<const BTDeviceInfo>());
                     if (_bluetooth->Connect(deviceInfo->Address)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Connected device.");
                     } else {
                         result->ErrorCode = Web::STATUS_BAD_REQUEST;
                         result->Message = _T("Unable to Connect device.");
+                    }
+                } else if ((index.Remainder() == _T("Disconnect")) && (request.HasBody())) {
+                    Core::ProxyType<const BTDeviceInfo> deviceInfo (request.Body<const BTDeviceInfo>());
+                    if (_bluetooth->Disconnect(deviceInfo->Address)) {
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("Disconnected device.");
+                    } else {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = _T("Unable to Disconnect device.");
                     }
                 }
             }
@@ -233,7 +244,7 @@ namespace Plugin {
     {
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
-        result->Message = _T("Unsupported POST requestservice.");
+        result->Message = _T("Unsupported POST request.");
 
         return result;
     }
@@ -243,20 +254,6 @@ namespace Plugin {
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported DELETE request.");
-
-        if (index.IsValid() == true) {
-            if (index.Next()) {
-                if (index.Remainder() == _T("Connect")) {
-                    if (_bluetooth->Disconnect()) {
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Disconnected device.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = _T("Unable to Disconnect device.");
-                    }
-                }
-            }
-        }
 
         return result;
     }
