@@ -116,8 +116,9 @@ ENUM_CONVERSION_END(Core::SerialPort::Parity);
 				const Core::SerialPort::BaudRate baudrate,
 				const Core::SerialPort::Parity parityE,
 				const Core::SerialPort::DataBits dataBits,
-				const Core::SerialPort::StopBits stopBits)
-				: Core::StreamType<Core::SerialPort>(deviceName, baudrate, parityE, dataBits, stopBits, bufferSize, bufferSize)
+				const Core::SerialPort::StopBits stopBits,
+				const Core::SerialPort::FlowControl flowControl)
+				: Core::StreamType<Core::SerialPort>(deviceName, baudrate, parityE, dataBits, stopBits, flowControl, bufferSize, bufferSize)
 				, _parent(parent)
 			{
 			}
@@ -172,9 +173,10 @@ ENUM_CONVERSION_END(Core::SerialPort::Parity);
 				const Core::SerialPort::BaudRate baudrate,
 				const Core::SerialPort::Parity parityE,
 				const Core::SerialPort::DataBits dataBits,
-				const Core::SerialPort::StopBits stopBits)
+				const Core::SerialPort::StopBits stopBits,
+				const Core::SerialPort::FlowControl flowControl)
 				: WebProxy::Connector(channel, &_streamType)
-				, _streamType(*this, bufferSize, deviceName, baudrate, parityE, dataBits, stopBits)
+				, _streamType(*this, bufferSize, deviceName, baudrate, parityE, dataBits, stopBits, flowControl)
 			{
 			}
 			#ifdef __WIN32__ 
@@ -322,6 +324,7 @@ ENUM_CONVERSION_END(Core::SerialPort::Parity);
 				Core::SerialPort::Parity parity(Core::SerialPort::NONE);
 				Core::SerialPort::DataBits dataBits(Core::SerialPort::DataBits::BITS_8);
 				Core::SerialPort::StopBits stopBits(Core::SerialPort::StopBits::BITS_1);
+				Core::SerialPort::FlowControl flowControl(Core::SerialPort::FlowControl::OFF);
 				const string& options(channel.Query());
 				bool datagram(false);
 				bool text(false);
@@ -383,7 +386,7 @@ ENUM_CONVERSION_END(Core::SerialPort::Parity);
 					}
 				}
 				else if ((device.Length() > 0) && (host.Length() == 0)) {
-					result = new ConnectorWrapper<DeviceChannel>(channel, 1024, device.Text(), baudRate, parity, dataBits, stopBits);
+					result = new ConnectorWrapper<DeviceChannel>(channel, 1024, device.Text(), baudRate, parity, dataBits, stopBits, flowControl);
 				}
 
 				if ((result != nullptr) && (text == true)) {
