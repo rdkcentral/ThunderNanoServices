@@ -9,12 +9,11 @@ set(PLUGIN_REMOTECONTROL_RFCE_NODE_ID 249 CACHE STRING "Node ID for the device t
 
 message("Setting up ${MODULE_NAME}")
 
-find_package(NXServer QUIET)
+find_package(Nexus QUIET)
 
 add_library(${MODULE_NAME} Module.cpp RemoteControl.cpp RemoteAdministrator.cpp)
 
-if (NXSERVER_FOUND)
-    find_package(Nexus REQUIRED)
+if (NXCLIENT_FOUND AND NEXUS_FOUND)
     if (PLUGIN_REMOTECONTROL_IR)
         message(STATUS "Including IR support")
         target_compile_definitions(${MODULE_NAME} PRIVATE IR_ENABLED)

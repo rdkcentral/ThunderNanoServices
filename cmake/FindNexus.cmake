@@ -32,7 +32,7 @@
 find_path(LIBNEXUS_INCLUDE nexus_config.h
         PATH_SUFFIXES refsw)
 
-find_path(LIBNXCLIENT_INCLUDE nxserverlib.h
+find_path(LIBNXCLIENT_INCLUDE nxclient.h
         PATH_SUFFIXES nxclient refsw)
 
 set(LIBNEXUS_INCLUDE_DIRS
@@ -52,15 +52,18 @@ find_library(LIBNEXUS_CLIENT_LIBRARY nexus_client)
 
 include(FindPackageHandleStandardArgs)
 
-find_package_handle_standard_args(LIBNEXUS DEFAULT_MSG LIBNEXUS_INCLUDE_DIRS LIBNEXUS_LIBRARY)
-
-mark_as_advanced(LIBNEXUS_INCLUDE_DIRS LIBNEXUS_LIBRARY)
 
 if(EXISTS "${LIBNXCLIENT_LIBRARY}")
   find_package_handle_standard_args(LIBNXCLIENT DEFAULT_MSG LIBNEXUS_INCLUDE_DIRS LIBNXCLIENT_LIBRARY)
   mark_as_advanced(LIBNXCLIENT_LIBRARY)
+  set (NXCLIENT_FOUND TRUE)
 endif()
 
+if(EXISTS "${LIBNEXUS_LIBRARY}")
+  find_package_handle_standard_args(LIBNEXUS DEFAULT_MSG LIBNEXUS_INCLUDE_DIRS LIBNEXUS_LIBRARY)
+  mark_as_advanced(LIBNEXUS_INCLUDE_DIRS LIBNEXUS_LIBRARY)
+  set (NEXUS_FOUND TRUE)
+endif()
 
 if(NOT TARGET NEXUS::NEXUS)
     add_library(NEXUS::NEXUS UNKNOWN IMPORTED)

@@ -5,7 +5,7 @@ message("Setting up ${PLUGIN_NAME}")
 
 find_package(PNG REQUIRED)
 find_package(BCMHost QUIET)
-find_package(NXServer QUIET)
+find_package(Nexus QUIET)
 
 add_library(${MODULE_NAME} SHARED
         Module.cpp
@@ -20,8 +20,7 @@ set_target_properties(${MODULE_NAME}
             FRAMEWORK FALSE
             OUTPUT_NAME ${MODULE_NAME})
 
-if (NXSERVER_FOUND)
-    find_package(Nexus REQUIRED)
+if (NXCLIENT_FOUND AND NEXUS_FOUND)
     target_link_libraries(${MODULE_NAME} PRIVATE NEXUS::NEXUS NEXUS::NXCLIENT) 
     target_sources(${MODULE_NAME} PRIVATE Device/NexusCapture.cpp)
 elseif (BCM_HOST_FOUND)
