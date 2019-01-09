@@ -15,4 +15,4 @@ target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES})
 string(TOLOWER ${NAMESPACE} STORAGENAME)
 install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
 
-write_config(${PLUGIN_NAME} Tracing)
+write_config(${PLUGIN_NAME})
