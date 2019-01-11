@@ -161,7 +161,8 @@ private:
         const std::string _name;
         const uint32_t _width;
         const uint32_t _height;
-        uint32_t _opacity;        
+        uint32_t _opacity;
+        uint32_t _layer;
 
         EGLSurface _nativeSurface;
         EGL_DISPMANX_WINDOW_T _nativeWindow;
@@ -236,7 +237,8 @@ Display::SurfaceImplementation::SurfaceImplementation(
 , _name(name)
 , _width(width)
 , _height(height)
-, _opacity(255) 
+, _opacity(255)
+, _layer(0)
 , _keyboard(nullptr) {
 
     TRACE(CompositorClient, (_T("Created client named: %s"), _name.c_str()));
@@ -256,7 +258,7 @@ Display::SurfaceImplementation::SurfaceImplementation(
     _dispmanElement = vc_dispmanx_element_add(
             _dispmanUpdate,
             _dispmanDisplay,
-            0,
+            _layer,
             &_dstRect,
             0 /*src*/,
             &_srcRect,
@@ -295,7 +297,7 @@ void Display::SurfaceImplementation::Opacity(
     vc_dispmanx_element_change_attributes(_dispmanUpdate,
             _dispmanElement,
             (1 << 1),
-            0,
+            _layer,
             _opacity,
             &_dstRect,
             &_srcRect,
@@ -313,7 +315,7 @@ void Display::SurfaceImplementation::ChangedGeometry(const Exchange::ICompositio
     vc_dispmanx_element_change_attributes(_dispmanUpdate,
             _dispmanElement,
             (1 << 2),
-            0,
+            _layer,
             _opacity,
             &_dstRect,
             &_srcRect,
@@ -323,9 +325,10 @@ void Display::SurfaceImplementation::ChangedGeometry(const Exchange::ICompositio
 
 }
 void Display::SurfaceImplementation::ChangedZOrder(const uint8_t zorder) {
+   _layer = zorder;
    _dispmanUpdate = vc_dispmanx_update_start(0);
-    vc_dispmanx_element_change_layer(_dispmanUpdate, _dispmanElement, zorder);
-    vc_dispmanx_update_submit_sync(_dispmanUpdate);    
+   vc_dispmanx_element_change_layer(_dispmanUpdate, _dispmanElement, zorder);
+   vc_dispmanx_update_submit_sync(_dispmanUpdate);
 }
 
 Display::Display(const string& name)
