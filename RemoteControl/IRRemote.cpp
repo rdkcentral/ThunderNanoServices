@@ -3,10 +3,10 @@
 
 #include <linux/uinput.h>
 #include <interfaces/IKeyHandler.h>
-#include <refsw/nexus_config.h>
-#include <refsw/nexus_platform.h>
-#include <refsw/nxclient.h>
-#include <refsw/nexus_input_client.h>
+#include <nexus_config.h>
+#include <nexus_platform.h>
+#include <nxclient.h>
+#include <nexus_input_client.h>
 
 extern int getIRHandle();
 
