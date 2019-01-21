@@ -1,0 +1,9 @@
+#ifndef __MODULE_PLUGIN_BLUETOOTH_DRIVERS_H
+#define __MODULE_PLUGIN_BLUETOOTH_DRIVERS_H
+
+#include <core/core.h>
+
+#undef EXTERNAL
+#define EXTERNAL
+
+#endif // __MODULE_PLUGIN_BLUETOOTH_DRIVERS_H
