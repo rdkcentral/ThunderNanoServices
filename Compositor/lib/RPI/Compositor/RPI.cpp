@@ -206,7 +206,7 @@ public:
 
     uint32_t ToTop(const string& callsign) override {
         // todo correct implementation
-        return CallOnClientByCallsign(callsign, [&](Exchange::IComposition::IClient& client) { client.ChangedZOrder(0); } );
+        return CallOnClientByCallsign(callsign, [&](Exchange::IComposition::IClient& client) { client.ChangedZOrder(_clients.size()); } );
     }
 
     uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override {
@@ -312,7 +312,7 @@ private:
     // on new client
     void RecalculateZOrder(Exchange::IComposition::IClient* client) {
         ASSERT(client != nullptr);
-        client->ChangedZOrder(0);
+        client->ChangedZOrder(_clients.size());
         client->Release();
     }
 

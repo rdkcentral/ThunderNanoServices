@@ -446,11 +446,12 @@ namespace Plugin {
     }
 
     uint32_t Compositor::PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) {
-         ASSERT(_composition != nullptr);
+        ASSERT(_composition != nullptr);
 
-         ASSERT(false); // not implemeted for now, we'll do that when it is needed
+        ASSERT(false); // not implemeted for now, we'll do that when it is neede
+                       // now  the logic supports only putting the callsignToReorder to the bottom
 
-         return Core::ERROR_UNAVAILABLE;
+        //return Core::ERROR_UNAVAILABLE;
 
         uint32_t error = Core::ERROR_NONE;
 
