@@ -90,7 +90,7 @@ namespace Plugin {
                 , PassOn(false)
                 , RepeatStart(500)
                 , RepeatInterval(100)
-                , ReleaseTimeout(1000)
+                , ReleaseTimeout(30000)
                 , Devices()
 				, Virtuals()
 				, Links()
