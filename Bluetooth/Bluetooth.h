@@ -337,11 +337,13 @@ namespace Bluetooth {
         HCISocket(const HCISocket&) = delete;
         HCISocket& operator=(const HCISocket&) = delete;
 
+        static constexpr uint8_t  LE_PUBLIC_ADDRESS      = 0x00;
+        static constexpr uint8_t  LE_RANDOM_ADDRESS      = 0x01;
+
         static constexpr int      SCAN_TIMEOUT           = 1000;
         static constexpr uint8_t  SCAN_TYPE              = 0x01;
-        static constexpr uint8_t  OWN_TYPE               = 0x00;
         static constexpr uint8_t  SCAN_FILTER_POLICY     = 0x00;
-        static constexpr uint8_t  SCAN_FILTER_DUPLICATES = 0x01;
+        static constexpr uint8_t  SCAN_FILTER_DUPLICATES = 0x00;
         static constexpr uint8_t  EIR_NAME_SHORT         = 0x08;
         static constexpr uint8_t  EIR_NAME_COMPLETE      = 0x09;
 
@@ -404,8 +406,11 @@ namespace Bluetooth {
         bool IsScanning() const {
             return ((_state & SCANNING) != 0);
         }
-        void StartScan(const uint16_t interval, const uint16_t window) {
-
+        void StartScan(const bool limited, const bool passive) {
+            const uint16_t interval = (limited ? 0x12 : 0x10);
+            const uint16_t window   = (limited ? 0x12 : 0x10);
+            const uint8_t  scanType = (passive ? 0x01 : 0x00);
+            
             Lock();
 
             if ((_state & SCANNING) == 0) {
@@ -415,7 +420,7 @@ namespace Bluetooth {
 
                 Set (Filter(HCI_EVENT_PKT, EVT_LE_META_EVENT));
 
-                if (hci_le_set_scan_parameters(descriptor, SCAN_TYPE, htobs(interval), htobs(window), OWN_TYPE, SCAN_FILTER_POLICY, SCAN_TIMEOUT) >= 0) {
+                if (hci_le_set_scan_parameters(descriptor, scanType, htobs(interval), htobs(window), LE_PUBLIC_ADDRESS, SCAN_FILTER_POLICY, SCAN_TIMEOUT) >= 0) {
                     if (hci_le_set_scan_enable(descriptor, 1, SCAN_FILTER_DUPLICATES, SCAN_TIMEOUT) >= 0) {
                         _state |= SCANNING;
                     }

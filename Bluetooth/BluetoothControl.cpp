@@ -233,13 +233,14 @@ namespace Plugin {
                 TRACE(Trace::Information, (string(__FUNCTION__)));
 
                 if (index.Current() == _T("Scan")) {
-                    if (Scan(true) == Core::ERROR_NONE) {
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Scan started.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = _T("Unable to start Scan.");
-                    }
+                    Core::URL::KeyValue options(request.Query.Value());
+
+                    bool limited = options.Boolean(_T("Limited"), false);
+                    bool passive = options.Boolean(_T("Passive"), false);
+
+                    _hciSocket.StartScan(limited, passive);
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->Message = _T("Scan started.");
                 } else if (index.Current() == _T("Pair")) {
                     string destination;
                     if (index.Next() == true) {
@@ -290,13 +291,9 @@ namespace Plugin {
                 TRACE(Trace::Information, (string(__FUNCTION__)));
 
                 if (index.Current() == _T("Scan")) {
-                    if (Scan(false) == Core::ERROR_NONE) {
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Scan stopped.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = _T("Unable to start Scan.");
-                    }
+                    _hciSocket.StopScan();
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->Message = _T("Scan stopped.");
                 } else if (index.Current() == _T("Pair")) {
                     string address;
                     if (index.Next() == true) {
@@ -373,7 +370,7 @@ namespace Plugin {
             // Clearing previously discovered devices.
             RemoveDevices ([] (DeviceImpl* device) -> bool { if ((device->IsPaired() == false) && (device->IsConnected() == false)) device->Clear(); return(false); });
 
-            _hciSocket.StartScan(0x10, 0x10);
+            _hciSocket.StartScan(false, false);
 
         } 
         else if ((_hciSocket.IsScanning() == true) && (enable == false)) {

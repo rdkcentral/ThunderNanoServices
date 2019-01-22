@@ -26,7 +26,7 @@ public:
     public:
         Config()
             : Core::JSON::Container()
-            , Port(_T("/dev/ttyS0"))
+            , Port(_T("/dev/ttyAMA0"))
             , Firmware(_T("/etc/firmware/"))
             , BaudRate(921600)
             , MACAddress()
