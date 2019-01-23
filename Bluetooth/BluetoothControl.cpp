@@ -235,10 +235,19 @@ namespace Plugin {
                 if (index.Current() == _T("Scan")) {
                     Core::URL::KeyValue options(request.Query.Value());
 
+                    bool lowEnergy = options.Boolean(_T("LowEnergy"), true);
                     bool limited = options.Boolean(_T("Limited"), false);
                     bool passive = options.Boolean(_T("Passive"), false);
+                    uint16_t duration = options.Number<uint16_t>(_T("ScanTime"), 10);
+                    uint8_t flags = 0;
+                    uint32_t type = 0x338B9E;
 
-                    _hciSocket.StartScan(limited, passive);
+                    if (lowEnergy == true) {
+                        _hciSocket.Scan(duration, limited, passive);
+                    }
+                    else {
+                        _hciSocket.Scan(duration, type, flags);
+                    }
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("Scan started.");
                 } else if (index.Current() == _T("Pair")) {
@@ -291,7 +300,7 @@ namespace Plugin {
                 TRACE(Trace::Information, (string(__FUNCTION__)));
 
                 if (index.Current() == _T("Scan")) {
-                    _hciSocket.StopScan();
+                    _hciSocket.Abort();
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("Scan stopped.");
                 } else if (index.Current() == _T("Pair")) {
@@ -370,14 +379,25 @@ namespace Plugin {
             // Clearing previously discovered devices.
             RemoveDevices ([] (DeviceImpl* device) -> bool { if ((device->IsPaired() == false) && (device->IsConnected() == false)) device->Clear(); return(false); });
 
-            _hciSocket.StartScan(false, false);
+            bool lowEnergy = true;
+            bool limited = false;
+            bool passive = false;
+            uint16_t duration = 10;
+            uint8_t flags = 0;
+            uint32_t type = 0x338B9E;
 
+            if (lowEnergy == true) {
+                _hciSocket.Scan(duration, limited, passive);
+            }
+            else {
+                _hciSocket.Scan(duration, type, flags);
+            }
         } 
         else if ((_hciSocket.IsScanning() == true) && (enable == false)) {
 
             TRACE(Trace::Information, ("Stop Bluetooth Scan"));
 
-            _hciSocket.StopScan();
+            _hciSocket.Abort();
         }
 
         return (_hciSocket.IsScanning() == enable);

@@ -21,21 +21,74 @@ namespace Plugin {
             HCISocket(const HCISocket&) = delete;
             HCISocket& operator= (const HCISocket&) = delete;
 
+        private:
+            // The bluetooth library has some unexpected behaviour. For example, the scan of NON-BLE devices
+            // is a blocking call for the duration of the passed in time. Which is, I think, very intrusive 
+            // fo any responsive design. If a RESTFull call would start a scan, the call would last the duration
+            // of the scan, which is typicall >= 10Secods which is unacceptable, so it needs to be decoupled.
+            // This decoupling is done on this internal Worker thread.
+            class Job : public Core::IDispatch {
+            private:
+                Job() = delete;
+                Job(const Job&) = delete;
+                Job& operator= (const Job&) = delete;
+
+            public:
+                Job(Bluetooth::HCISocket* parent) : _parent(*parent) {
+                }    
+                virtual ~Job() {
+                }
+            
+                void Load (const uint16_t scanTime, const uint32_t type, const uint8_t flags) {
+                    if (_type == static_cast<uint32_t>(~0)) {
+                        _scanTime = scanTime;
+                        _type = type;
+                        _flags = flags;
+                        PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
+                    }
+                }
+
+            private:
+                virtual void Dispatch() {
+                    _parent.Scan(_scanTime, _type, _flags);
+                    _type = 0;
+                }
+
+            private:
+                Bluetooth::HCISocket& _parent;
+                uint16_t _scanTime;
+                uint32_t _type;
+                uint8_t _flags;
+            };
+
         public:
             HCISocket(BluetoothControl& parent) 
                 : Bluetooth::HCISocket()
-                , _parent(parent) {
+                , _parent(parent)
+                , _activity(Core::ProxyType<Job>::Create(this)) {
             }
             virtual ~HCISocket() {
+                PluginHost::WorkerPool::Instance().Revoke(_activity);
             }
 
         public:
             virtual void DiscoveredDevice (const Bluetooth::Address& address, const string& shortName, const string& longName) {
                 _parent.DiscoveredDevice (address, shortName, longName);
             }
+            void Scan(const uint16_t scanTime, const uint32_t type, const uint8_t flags) {
+                Lock();
+                _activity->Load(scanTime, type, flags);
+                Unlock();
+            }
+            void Scan(const uint16_t scanTime, const bool limited, const bool passive) {
+                Lock();
+                Bluetooth::HCISocket::Scan(scanTime, limited, passive);
+                Unlock();
+            }
             
         private:
             BluetoothControl& _parent;
+            Core::ProxyType<Job> _activity;
         };
 
         class HIDSocket : public Bluetooth::L2Socket {

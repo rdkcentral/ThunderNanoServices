@@ -249,7 +249,9 @@ namespace Bluetooth {
         bool operator!= (const Address& rhs) const {
             return(!operator==(rhs));
         }
- 
+        void OUI(char oui[9]) const {
+            ba2oui(Data(), oui);
+        }
         string ToString() const {
             static constexpr TCHAR _hexArray[] = "0123456789ABCDEF";
             string result;
@@ -406,11 +408,54 @@ namespace Bluetooth {
         bool IsScanning() const {
             return ((_state & SCANNING) != 0);
         }
-        void StartScan(const bool limited, const bool passive) {
-            const uint16_t interval = (limited ? 0x12 : 0x10);
-            const uint16_t window   = (limited ? 0x12 : 0x10);
-            const uint8_t  scanType = (passive ? 0x01 : 0x00);
-            
+        void Scan(const uint16_t scanTime, const uint32_t type, const uint8_t flags) {
+
+            ASSERT (scanTime <= 326);
+
+            Lock();
+
+            if ((_state & SCANNING) == 0) {
+                int descriptor = Handle();
+
+                _state |= SCANNING;
+
+                Unlock();
+
+                ASSERT (descriptor >= 0);
+
+                void* buf = (ALLOCA(sizeof(struct hci_inquiry_req) + (sizeof(inquiry_info) * 255)));
+                struct hci_inquiry_req* ir = reinterpret_cast<struct hci_inquiry_req*> (buf);
+
+                ir->dev_id  = hci_get_route(nullptr);
+                ir->num_rsp = 255;
+                ir->length  = (((scanTime * 100) + 50)/128);
+                ir->flags   = flags;
+                ir->lap[0]  = (type >> 16) & 0xFF; // 0x33;
+                ir->lap[1]  = (type >> 8)  & 0xFF; // 0x8b;
+                ir->lap[2]  = type & 0xFF;         // 0x9e;
+
+                if (ioctl(descriptor, HCIINQUIRY, reinterpret_cast<unsigned long>(buf)) >= 0) {
+
+                    int entries = ir->num_rsp;
+                    inquiry_info* info = reinterpret_cast<inquiry_info*>(&(reinterpret_cast<uint8_t*>(buf)[sizeof(hci_inquiry_req)]));
+
+                    for (uint8_t index = 0; index < entries; index++) {
+                        bdaddr_t* address = &(info[index].bdaddr);
+                        char name[250];
+                        memset(name, 0, sizeof(name));
+                        if (hci_read_remote_name(descriptor, address, sizeof(name), name, 0) < 0) {
+                        }
+                    }
+                }
+
+                Lock();
+
+                _state &= (~SCANNING);
+            }
+
+            Unlock();
+        }
+        void Scan (const uint16_t scanTime, const bool limited, const bool passive) {
             Lock();
 
             if ((_state & SCANNING) == 0) {
@@ -418,6 +463,10 @@ namespace Bluetooth {
 
                 ASSERT (descriptor >= 0);
 
+                const uint16_t interval = (limited ? 0x12 : 0x10);
+                const uint16_t window   = (limited ? 0x12 : 0x10);
+                const uint8_t  scanType = (passive ? 0x01 : 0x00);
+            
                 Set (Filter(HCI_EVENT_PKT, EVT_LE_META_EVENT));
 
                 if (hci_le_set_scan_parameters(descriptor, scanType, htobs(interval), htobs(window), LE_PUBLIC_ADDRESS, SCAN_FILTER_POLICY, SCAN_TIMEOUT) >= 0) {
@@ -428,8 +477,8 @@ namespace Bluetooth {
             }
 
             Unlock();
-        }
-        void StopScan() {
+       }
+        void Abort() {
 
             Lock();
 
@@ -503,8 +552,6 @@ namespace Bluetooth {
             METADATA_DESCRIPTORS,
             OPERATIONAL
         };
-
-
 
         class CommandFrame {
         private: 
