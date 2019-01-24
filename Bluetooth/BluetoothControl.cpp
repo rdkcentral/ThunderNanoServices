@@ -184,38 +184,39 @@ namespace Plugin {
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported GET request.");
 
-        if (index.IsValid() == false) {
+        if (index.Next() == false) {
+            
             Core::ProxyType<Web::JSONBodyType<Status> > response(jsonResponseFactoryStatus.Element());
 
             result->ErrorCode = Web::STATUS_OK;
             result->Message = _T("Current status.");
 
             response->Scanning = IsScanning();
-            std::list<DeviceImpl*>::const_iterator index = _devices.begin();
+            std::list<DeviceImpl*>::const_iterator loop = _devices.begin();
 
-            while (index != _devices.end()) { 
-                response->Devices.Add().Set(*index);
-                index++; 
+            printf("Gathering info...\n");
+
+            while (loop != _devices.end()) { 
+                response->Devices.Add().Set(*loop);
+                loop++; 
             }
 
             result->Body(response);
         }
         else {
-            if (index.Next() && index.IsValid()) {
-                TRACE(Trace::Information, (string(__FUNCTION__)));
-                DeviceImpl* device = Find(index.Current().Text());
+            TRACE(Trace::Information, (string(__FUNCTION__)));
+            DeviceImpl* device = Find(index.Current().Text());
  
-                if (device != nullptr) {
-                    Core::ProxyType<Web::JSONBodyType<DeviceImpl::JSON> > response(jsonResponseFactoryDevice.Element());
-                    response->Set(device);
+            if (device != nullptr) {
+                Core::ProxyType<Web::JSONBodyType<DeviceImpl::JSON> > response(jsonResponseFactoryDevice.Element());
+                response->Set(device);
 
-                    result->ErrorCode = Web::STATUS_OK;
-                    result->Message = _T("device info.");
-                    result->Body(response);
-                } else {
-                    result->ErrorCode = Web::STATUS_NO_CONTENT;
-                    result->Message = _T("Unable to display Paired devices.");
-                }
+                result->ErrorCode = Web::STATUS_OK;
+                result->Message = _T("device info.");
+                result->Body(response);
+            } else {
+                result->ErrorCode = Web::STATUS_NO_CONTENT;
+                result->Message = _T("Unable to display device. Device not found");
             }
         } 
 
@@ -415,7 +416,7 @@ namespace Plugin {
         return (Core::Service<DeviceImpl::IteratorImpl>::Create<IBluetooth::IDevice::IIterator>(_devices));
     }
 
-    void BluetoothControl::DiscoveredDevice(const Bluetooth::Address& address, const string& shortName, const string& longName) {
+    void BluetoothControl::DiscoveredDevice(const Bluetooth::Address& address, const string& name) {
 
         _adminLock.Lock();
 
@@ -424,10 +425,10 @@ namespace Plugin {
         while ( (index != _devices.end()) && (*(*index) != address) ) { index++; }
 
         if (index != _devices.end()) {
-            (*index)->Update(shortName,longName);
+            (*index)->Update(name);
         }
         else {
-            _devices.push_back(Core::Service<DeviceImpl>::Create<DeviceImpl>(address, shortName, longName));
+            _devices.push_back(Core::Service<DeviceImpl>::Create<DeviceImpl>(address, name));
         }
 
         _adminLock.Unlock();

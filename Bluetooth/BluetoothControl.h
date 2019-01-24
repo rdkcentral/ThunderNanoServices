@@ -34,7 +34,7 @@ namespace Plugin {
                 Job& operator= (const Job&) = delete;
 
             public:
-                Job(Bluetooth::HCISocket* parent) : _parent(*parent) {
+                Job(Bluetooth::HCISocket* parent) : _parent(*parent), _type (~0) {
                 }    
                 virtual ~Job() {
                 }
@@ -50,8 +50,10 @@ namespace Plugin {
 
             private:
                 virtual void Dispatch() {
+                    printf("Trying to run a regular scan. %d - 0x%X -%d\n", _scanTime, _type, _flags);
                     _parent.Scan(_scanTime, _type, _flags);
-                    _type = 0;
+                    printf("Scan completed\n");
+                    _type = ~0;
                 }
 
             private:
@@ -72,8 +74,10 @@ namespace Plugin {
             }
 
         public:
-            virtual void DiscoveredDevice (const Bluetooth::Address& address, const string& shortName, const string& longName) {
-                _parent.DiscoveredDevice (address, shortName, longName);
+            virtual void DiscoveredDevice (const Bluetooth::Address& address, const string& name) override {
+		TRACE(Trace::Information, (_T("Discoverd Device: %s: %s"), address.ToString().c_str(), name.c_str()));
+
+                _parent.DiscoveredDevice (address, name);
             }
             void Scan(const uint16_t scanTime, const uint32_t type, const uint8_t flags) {
                 Lock();
@@ -82,6 +86,7 @@ namespace Plugin {
             }
             void Scan(const uint16_t scanTime, const bool limited, const bool passive) {
                 Lock();
+                printf("Trying to run a LE scan. %d - %d -%d\n", scanTime, limited ? 1 : 0, passive ? 1 : 0);
                 Bluetooth::HCISocket::Scan(scanTime, limited, passive);
                 Unlock();
             }
@@ -401,19 +406,16 @@ namespace Plugin {
             DeviceImpl() 
                 : _address()
                 , _name()
-                , _longName()
                 , _state(0) {
             }
-            DeviceImpl(const Bluetooth::Address& address, const string& shortName, const string& longName) 
+            DeviceImpl(const Bluetooth::Address& address, const string& name) 
                 : _address(address)
-                , _name(shortName)
-                , _longName(longName)
+                , _name(name)
                 , _state(DISCOVERED) {
             }
             DeviceImpl(const DeviceImpl& copy) 
                 : _address(copy._address)
                 , _name(copy._name) 
-                , _longName(copy._longName)
                 , _state(copy._state) {
             }
             ~DeviceImpl() {
@@ -446,9 +448,8 @@ namespace Plugin {
             inline bool operator!= (const Bluetooth::Address& rhs) const {
                 return (_address != rhs);
             }
-            inline void Update (const string& shortName, const string& longName) {
-                _name = shortName;
-                _longName = longName;
+            inline void Update (const string& name) {
+                _name = name;
                 _state |= DISCOVERED;
             }
 
@@ -459,7 +460,6 @@ namespace Plugin {
         private:
             Bluetooth::Address _address;
             string _name;
-            string _longName;
             uint8_t _state;
             Bluetooth::L2Socket* _channel;
         };
@@ -549,7 +549,7 @@ namespace Plugin {
         Core::ProxyType<Web::Response> PostMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         void RemoveDevices(std::function<bool(DeviceImpl*)> filter);
-        void DiscoveredDevice(const Bluetooth::Address& address, const string& shortName, const string& longName);
+        void DiscoveredDevice(const Bluetooth::Address& address, const string& name);
         DeviceImpl* Find(const string&);
 
     private:

@@ -257,12 +257,12 @@ namespace Bluetooth {
             string result;
 
             if (IsValid() == true) {
-                for (uint8_t index = 1; index < _length; index++) {
+                for (uint8_t index = 0; index < _length; index++) {
                     if (result.empty() == false) {
                         result += ':';
                     }
-                    result += _hexArray[(_address.b[index] >> 4) & 0x0F];
-                    result += _hexArray[_address.b[index] & 0x0F];
+                    result += _hexArray[(_address.b[(_length - 1) - index] >> 4) & 0x0F];
+                    result += _hexArray[_address.b[(_length - 1) - index] & 0x0F];
                 }
             }
 
@@ -345,17 +345,18 @@ namespace Bluetooth {
         static constexpr int      SCAN_TIMEOUT           = 1000;
         static constexpr uint8_t  SCAN_TYPE              = 0x01;
         static constexpr uint8_t  SCAN_FILTER_POLICY     = 0x00;
-        static constexpr uint8_t  SCAN_FILTER_DUPLICATES = 0x00;
+        static constexpr uint8_t  SCAN_FILTER_DUPLICATES = 0x01;
         static constexpr uint8_t  EIR_NAME_SHORT         = 0x08;
         static constexpr uint8_t  EIR_NAME_COMPLETE      = 0x09;
 
     public:
         class Filter {
-        private: 
-            Filter() = delete;
-
         public: 
+            Filter() {
+                hci_filter_clear(&_filter);
+            }
             Filter(const uint32_t type, const uint32_t events) {
+
                 hci_filter_clear(&_filter);
                 hci_filter_set_ptype(type, &_filter);
                 hci_filter_set_event(events, &_filter);
@@ -372,6 +373,9 @@ namespace Bluetooth {
             Filter& operator=(const Filter& rhs) {
                 ::memcpy(&_filter, &(rhs._filter), sizeof(_filter));
                 return (*this);
+            }
+            uint16_t Length() const {
+                return (sizeof(_filter));
             }
 
         private:
@@ -390,14 +394,17 @@ namespace Bluetooth {
         };
 
     public:
-        enum state : uint8_t {
-            SCANNING = 0x0001
+        enum state : uint16_t {
+            SCANNING   = 0x0001,
+            LOW_ENERGY = 0x0002,
+            REGULAR    = 0x0004
         };
 
     public:
         HCISocket()
             : Core::SynchronousSocket(SocketPort::RAW, Core::NodeId(HCI_DEV_NONE, HCI_CHANNEL_CONTROL), Core::NodeId(), 256, 256)
-            , _state(0) {
+            , _state(0)
+            , _oldFilter() {
 
         }
         virtual ~HCISocket() {
@@ -417,40 +424,73 @@ namespace Bluetooth {
             if ((_state & SCANNING) == 0) {
                 int descriptor = Handle();
 
-                _state |= SCANNING;
+                _state |= (SCANNING|REGULAR);
 
                 Unlock();
 
                 ASSERT (descriptor >= 0);
 
-                void* buf = (ALLOCA(sizeof(struct hci_inquiry_req) + (sizeof(inquiry_info) * 255)));
+                void* buf = ALLOCA(sizeof(struct hci_inquiry_req) + (sizeof(inquiry_info) * 128));
                 struct hci_inquiry_req* ir = reinterpret_cast<struct hci_inquiry_req*> (buf);
+                std::list<Address> reported;
 
                 ir->dev_id  = hci_get_route(nullptr);
-                ir->num_rsp = 255;
-                ir->length  = (((scanTime * 100) + 50)/128);
-                ir->flags   = flags;
+                ir->num_rsp = 128;
+                ir->length  = (((scanTime * 100) + 50) / 128);
+                ir->flags   = flags|IREQ_CACHE_FLUSH;
                 ir->lap[0]  = (type >> 16) & 0xFF; // 0x33;
                 ir->lap[1]  = (type >> 8)  & 0xFF; // 0x8b;
                 ir->lap[2]  = type & 0xFF;         // 0x9e;
+                // Core::Time endTime = Core::Time::Now().Add(scanTime * 1000);
 
+                printf("Start Time: %s\n", Core::Time::Now().ToRFC1123().c_str());
+                // while ((ir->length != 0) && (ioctl(descriptor, HCIINQUIRY, reinterpret_cast<unsigned long>(buf)) >= 0)) {
                 if (ioctl(descriptor, HCIINQUIRY, reinterpret_cast<unsigned long>(buf)) >= 0) {
 
-                    int entries = ir->num_rsp;
-                    inquiry_info* info = reinterpret_cast<inquiry_info*>(&(reinterpret_cast<uint8_t*>(buf)[sizeof(hci_inquiry_req)]));
+                    for (uint8_t index = 0; index < (ir->num_rsp); index++) {
+                        inquiry_info* info = reinterpret_cast<inquiry_info*>(&(reinterpret_cast<uint8_t*>(buf)[sizeof(hci_inquiry_req)]));
 
-                    for (uint8_t index = 0; index < entries; index++) {
                         bdaddr_t* address = &(info[index].bdaddr);
-                        char name[250];
-                        memset(name, 0, sizeof(name));
-                        if (hci_read_remote_name(descriptor, address, sizeof(name), name, 0) < 0) {
+                        Address newSource (*address);
+
+                        std::list<Address>::const_iterator finder(std::find(reported.begin(), reported.end(), newSource));
+
+                        if (finder == reported.end()) {
+                            char name[250];
+                            name[0] = '\0';
+                            uint8_t pos = 0;
+
+                            if (hci_read_remote_name_with_clock_offset(descriptor,
+                                        address,
+                                        info[index].pscan_rep_mode,
+                                        info[index].clock_offset | 0x8000,
+                                        sizeof(name), name, 100000) >= 0) {
+
+                                while ((pos < sizeof(name)) && (name[pos] != '\0')) {
+                                    if (::isprint(name[pos]) == 0) name[pos] = '.';
+                                    pos++;
+                                }
+                            }
+                            if (pos == 0) {
+                                printf("Entry[%s] has no name. Do not report it.\n", Address(*address).ToString().c_str());
+                            }
+                            else {
+                                reported.push_back(newSource);
+                                DiscoveredDevice(newSource, string(name, pos));
+                            }
                         }
                     }
+
+                    // Reset go for the next round !!
+                    // ir->length  = (endTime <= Core::Time::Now() ? 0 : 1);
+                    // ir->num_rsp = 128;
+                    // ir->flags  &= ~IREQ_CACHE_FLUSH;
                 }
+                printf("End Time: %s\n", Core::Time::Now().ToRFC1123().c_str());
 
                 Lock();
 
-                _state &= (~SCANNING);
+                _state &= (~(SCANNING|REGULAR));
             }
 
             Unlock();
@@ -465,19 +505,20 @@ namespace Bluetooth {
 
                 const uint16_t interval = (limited ? 0x12 : 0x10);
                 const uint16_t window   = (limited ? 0x12 : 0x10);
-                const uint8_t  scanType = (passive ? 0x01 : 0x00);
-            
+                const uint8_t  scanType = (passive ? 0x00 : 0x01);
+
+                Get (_oldFilter);
                 Set (Filter(HCI_EVENT_PKT, EVT_LE_META_EVENT));
 
                 if (hci_le_set_scan_parameters(descriptor, scanType, htobs(interval), htobs(window), LE_PUBLIC_ADDRESS, SCAN_FILTER_POLICY, SCAN_TIMEOUT) >= 0) {
                     if (hci_le_set_scan_enable(descriptor, 1, SCAN_FILTER_DUPLICATES, SCAN_TIMEOUT) >= 0) {
-                        _state |= SCANNING;
+                        _state |= (SCANNING|LOW_ENERGY);
                     }
                 }
             }
 
             Unlock();
-       }
+        }
         void Abort() {
 
             Lock();
@@ -488,21 +529,21 @@ namespace Bluetooth {
                 ASSERT (descriptor >= 0);
  
                 if (hci_le_set_scan_enable(descriptor, 0, SCAN_FILTER_DUPLICATES, SCAN_TIMEOUT) >= 0) {
-                    _state ^= SCANNING;
+                    _state &= ~(SCANNING|LOW_ENERGY);
                 }
+                Set(_oldFilter);
             }
 
             Unlock();
         }
         void Get (Filter& filter) const {
-            socklen_t filterLen = sizeof(struct hci_filter);
-            ::getsockopt(Handle(), SOL_HCI, HCI_FILTER, const_cast<struct hci_filter*>(&(filter.Data())), &filterLen);
+            socklen_t filterLen = filter.Length();
+            ::getsockopt(Handle(), SOL_HCI, HCI_FILTER, &(filter.Data()), &filterLen);
         }
         void Set (const Filter& filter) {
-            ::setsockopt(Handle(), SOL_HCI, HCI_FILTER, &(filter.Data()), sizeof(struct hci_filter));
+            ::setsockopt(Handle(), SOL_HCI, HCI_FILTER, &(filter.Data()), filter.Length());
         }
-
-        virtual void DiscoveredDevice (const Address&, const string& shortAddress, const string& longName) = 0;
+        virtual void DiscoveredDevice (const Address&, const string& name) = 0;
 
     private:        
         virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t availableData) override
@@ -516,19 +557,26 @@ namespace Bluetooth {
                 uint16_t offset = 0;
                 uint16_t length = advertisingInfo->length;
                 const uint8_t* buffer = advertisingInfo->data;
+                const char* name = nullptr;
+                uint8_t pos = 0;
 
                 while (((offset + buffer[offset]) <= advertisingInfo->length) && (buffer[offset] != 0)) {
 
-                    if (buffer[offset+1] != EIR_NAME_SHORT) {
-                        shortName = string(reinterpret_cast<const char*>(&(buffer[offset])), buffer[offset]);
-                    }
-                    else if (buffer[offset+1] != EIR_NAME_COMPLETE) {
-                        longName = string(reinterpret_cast<const char*>(&(buffer[offset])), buffer[offset]);
+                    if ( ((buffer[offset+1] == EIR_NAME_SHORT) && (name == nullptr)) ||
+                          (buffer[offset+1] == EIR_NAME_COMPLETE) ) {
+                        name = reinterpret_cast<const char*>(&(buffer[offset+2]));
+                        pos  = buffer[offset] - 1;
                     }
                     offset += (buffer[offset] + 1);
                 }
 
-                DiscoveredDevice (Address(advertisingInfo->bdaddr), shortName, longName);
+                if ( (name == nullptr) || (pos == 0) ) {
+                    TRACE_L1("Entry[%s] has no name. Do not report it.", Address(advertisingInfo->bdaddr).ToString());
+                }
+                else {
+                    DiscoveredDevice (Address(advertisingInfo->bdaddr), string (name, pos));
+                }
+ 
             }
 
             return (availableData);
@@ -536,6 +584,7 @@ namespace Bluetooth {
 
     private:
         uint8_t _state;
+        Filter _oldFilter;
     };
 
     class L2Socket : public Core::SocketPort {
