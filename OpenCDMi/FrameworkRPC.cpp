@@ -226,7 +226,7 @@ namespace Plugin {
 //                                    keyIdLength,
 //                                    keyIdData);
                                 unsigned long long byteOffset = ByteOffset();
-				                int cr = _mediaKeysExt->DecryptNetflix(IVKey(), IVKeyLength(), byteOffset, Buffer(), BytesWritten());
+				                int cr = _mediaKeysExt->DecryptNetflix(IVKey(), IVKeyLength(), byteOffset, Buffer(), BytesWritten(), InitWithLast15());
 
                                 if ((cr == 0) && (clearContentSize != 0)) {
                                     if (clearContentSize != BytesWritten()) {
