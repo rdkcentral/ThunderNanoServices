@@ -33,27 +33,50 @@ namespace Plugin {
                 Job(const Job&) = delete;
                 Job& operator= (const Job&) = delete;
 
+                enum scanMode {
+                    LOW_ENERGY = 0x01,
+                    REGULAR    = 0x02,
+                    PASSIVE    = 0x04,
+                    LIMITED    = 0x08
+                };
+
             public:
-                Job(Bluetooth::HCISocket* parent) : _parent(*parent), _type (~0) {
+                Job(Bluetooth::HCISocket* parent) : _parent(*parent), _mode(0) {
                 }    
                 virtual ~Job() {
                 }
-            
+
+            public:
                 void Load (const uint16_t scanTime, const uint32_t type, const uint8_t flags) {
-                    if (_type == static_cast<uint32_t>(~0)) {
+                    if (_mode == 0) {
+                        _mode = REGULAR;
                         _scanTime = scanTime;
                         _type = type;
                         _flags = flags;
                         PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
                     }
                 }
+                void Load (const uint16_t scanTime, const bool limited, const bool passive) {
+                    if (_mode == 0) {
+                        _mode = LOW_ENERGY | (passive ? PASSIVE : 0) | (limited ? LIMITED : 0);
+                        _scanTime = scanTime;
+                        PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
+                    }
+                }
 
             private:
                 virtual void Dispatch() {
-                    printf("Trying to run a regular scan. %d - 0x%X -%d\n", _scanTime, _type, _flags);
-                    _parent.Scan(_scanTime, _type, _flags);
-                    printf("Scan completed\n");
-                    _type = ~0;
+
+                    if ((_mode & REGULAR) != 0) {
+                        TRACE(Trace::Information, (_T("Start regular scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
+                        _parent.Scan(_scanTime, _type, _flags);
+                    }
+                    else {
+                        TRACE(Trace::Information, (_T("Start Low Energy scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
+                        _parent.Scan(_scanTime, ((_mode & LIMITED) != 0), ((_mode & PASSIVE) != 0));
+                    }
+                    TRACE(Trace::Information, (_T("Scan completed: %s"), Core::Time::Now().ToRFC1123().c_str()));
+                    _mode = 0;
                 }
 
             private:
@@ -61,6 +84,7 @@ namespace Plugin {
                 uint16_t _scanTime;
                 uint32_t _type;
                 uint8_t _flags;
+                uint8_t _mode;
             };
 
         public:
@@ -74,10 +98,10 @@ namespace Plugin {
             }
 
         public:
-            virtual void DiscoveredDevice (const Bluetooth::Address& address, const string& name) override {
+            virtual void DiscoveredDevice (const bool lowEnergy, const Bluetooth::Address& address, const string& name) override {
 		TRACE(Trace::Information, (_T("Discoverd Device: %s: %s"), address.ToString().c_str(), name.c_str()));
 
-                _parent.DiscoveredDevice (address, name);
+                _parent.DiscoveredDevice (lowEnergy, address, name);
             }
             void Scan(const uint16_t scanTime, const uint32_t type, const uint8_t flags) {
                 Lock();
@@ -86,8 +110,7 @@ namespace Plugin {
             }
             void Scan(const uint16_t scanTime, const bool limited, const bool passive) {
                 Lock();
-                printf("Trying to run a LE scan. %d - %d -%d\n", scanTime, limited ? 1 : 0, passive ? 1 : 0);
-                Bluetooth::HCISocket::Scan(scanTime, limited, passive);
+                _activity->Load(scanTime, limited, passive);
                 Unlock();
             }
             
@@ -206,8 +229,17 @@ namespace Plugin {
                 , _inputHandler(nullptr) {
                 const uint16_t message[] = { 0x0001, 0xFFFF, PRIMARY_SERVICE_UUID, HID_UUID }; 
                 CreateFrame(ATT_OP_FIND_BY_TYPE_REQ, (sizeof(message)/sizeof(uint16_t)), message);
+                printf ("Connecting from: [%s] to: [%s]\n", LocalNode().HostName().c_str(), RemoteNode().HostName().c_str());
             }
             virtual ~HIDSocket() {
+            }
+
+        protected:
+            virtual bool Initialize() override {
+                printf("Setting the security.\n");
+                Security(BT_SECURITY_MEDIUM, 0);
+                printf("Done.\n");
+                return (Bluetooth::L2Socket::Initialize());
             }
             
         private:
@@ -309,19 +341,24 @@ namespace Plugin {
                     : Core::JSON::Container()
                     , Address()
                     , Name()
+                    , LowEnergy(false)
                 {
                     Add(_T("address"), &Address);
                     Add(_T("name"), &Name);
+                    Add(_T("le"), &LowEnergy);
                 }
                 JSON(const JSON& copy)
                     : Core::JSON::Container()
                     , Address()
                     , Name()
+                    , LowEnergy(false)
                 {
                     Add(_T("address"), &Address);
                     Add(_T("name"), &Name);
+                    Add(_T("le"), &LowEnergy);
                     Address = copy.Address;
                     Name = copy.Name;
+                    LowEnergy= copy.LowEnergy;
                 }
                 virtual ~JSON() {
                 }
@@ -331,15 +368,18 @@ namespace Plugin {
                     if (source != nullptr) {
                         Address = source->Address();
                         Name = source->Name();
+                        LowEnergy = source->LowEnergy();
                     }
                     else {
                         Address.Clear();
                         Name.Clear();
+                        LowEnergy.Clear();
                     }
                     return (*this);
                 }
                 Core::JSON::String Address;
                 Core::JSON::String Name;
+                Core::JSON::Boolean LowEnergy;
             };
 
             class IteratorImpl : public IBluetooth::IDevice::IIterator {
@@ -406,17 +446,23 @@ namespace Plugin {
             DeviceImpl() 
                 : _address()
                 , _name()
-                , _state(0) {
+                , _state(0)
+                , _lowEnergy(false)
+                , _channel(nullptr) {
             }
-            DeviceImpl(const Bluetooth::Address& address, const string& name) 
+            DeviceImpl(const bool lowEnergy, const Bluetooth::Address& address, const string& name) 
                 : _address(address)
                 , _name(name)
-                , _state(DISCOVERED) {
+                , _state(DISCOVERED)
+                , _lowEnergy(lowEnergy)
+                , _channel(nullptr) {
             }
             DeviceImpl(const DeviceImpl& copy) 
                 : _address(copy._address)
                 , _name(copy._name) 
-                , _state(copy._state) {
+                , _state(copy._state)
+                , _lowEnergy(copy._lowEnergy)
+                , _channel(nullptr) {
             }
             ~DeviceImpl() {
             }
@@ -438,6 +484,9 @@ namespace Plugin {
             }
             virtual bool IsConnected() const override {
                 return ((_state & CONNECTED) != 0);
+            }
+            inline bool LowEnergy() const {
+                return (_lowEnergy);
             }
             inline void Clear() { 
                 _state &= (~DISCOVERED);
@@ -461,6 +510,7 @@ namespace Plugin {
             Bluetooth::Address _address;
             string _name;
             uint8_t _state;
+            bool _lowEnergy;
             Bluetooth::L2Socket* _channel;
         };
 
@@ -549,7 +599,7 @@ namespace Plugin {
         Core::ProxyType<Web::Response> PostMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         void RemoveDevices(std::function<bool(DeviceImpl*)> filter);
-        void DiscoveredDevice(const Bluetooth::Address& address, const string& name);
+        void DiscoveredDevice(const bool lowEnergy, const Bluetooth::Address& address, const string& name);
         DeviceImpl* Find(const string&);
 
     private:

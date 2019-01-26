@@ -17,9 +17,13 @@ namespace Plugin {
         if (_channel == nullptr) {
             Bluetooth::Address from(source.c_str());
             _channel = new HIDSocket(_HIDPath, from, _address);
+            uint32_t error = ~0;
 
-            if ( (_channel != nullptr) && (_channel->Open(1000) == Core::ERROR_NONE) ) {
-                _channel->Security(BT_SECURITY_MEDIUM, 0);
+            if ( (_channel != nullptr) && ( (error = _channel->Open(1000)) == Core::ERROR_NONE) ) {
+                printf("Opening from: %s succeeded\n", source.c_str());
+            }
+            else {
+                printf("Open Failed. Error: %d\n", error);
             }
         }
         return (Core::ERROR_NONE);
@@ -194,8 +198,6 @@ namespace Plugin {
             response->Scanning = IsScanning();
             std::list<DeviceImpl*>::const_iterator loop = _devices.begin();
 
-            printf("Gathering info...\n");
-
             while (loop != _devices.end()) { 
                 response->Devices.Add().Set(*loop);
                 loop++; 
@@ -262,7 +264,7 @@ namespace Plugin {
                     DeviceImpl* device = Find(destination);
                     if (device == nullptr) {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
-                        result->Message = _T("Paired device.");
+                        result->Message = _T("Device not found.");
                     }
                     else if (device->Pair(_btAddress.ToString())) {
                         result->ErrorCode = Web::STATUS_OK;
@@ -322,7 +324,7 @@ namespace Plugin {
                         result->Message = _T("Unpaired device.");
                     } else {
                         result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = _T("Unable to Pair device.");
+                        result->Message = _T("Unable to Unpair device.");
                     }
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -416,7 +418,7 @@ namespace Plugin {
         return (Core::Service<DeviceImpl::IteratorImpl>::Create<IBluetooth::IDevice::IIterator>(_devices));
     }
 
-    void BluetoothControl::DiscoveredDevice(const Bluetooth::Address& address, const string& name) {
+    void BluetoothControl::DiscoveredDevice(const bool lowEnergy, const Bluetooth::Address& address, const string& name) {
 
         _adminLock.Lock();
 
@@ -428,7 +430,7 @@ namespace Plugin {
             (*index)->Update(name);
         }
         else {
-            _devices.push_back(Core::Service<DeviceImpl>::Create<DeviceImpl>(address, name));
+            _devices.push_back(Core::Service<DeviceImpl>::Create<DeviceImpl>(lowEnergy, address, name));
         }
 
         _adminLock.Unlock();

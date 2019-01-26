@@ -395,16 +395,17 @@ namespace Bluetooth {
 
     public:
         enum state : uint16_t {
+            IDLE       = 0x0000,
             SCANNING   = 0x0001,
             LOW_ENERGY = 0x0002,
-            REGULAR    = 0x0004
+            REGULAR    = 0x0004,
+            ABORT      = 0x0008
         };
 
     public:
         HCISocket()
             : Core::SynchronousSocket(SocketPort::RAW, Core::NodeId(HCI_DEV_NONE, HCI_CHANNEL_CONTROL), Core::NodeId(), 256, 256)
-            , _state(0)
-            , _oldFilter() {
+            , _state(IDLE) {
 
         }
         virtual ~HCISocket() {
@@ -424,7 +425,7 @@ namespace Bluetooth {
             if ((_state & SCANNING) == 0) {
                 int descriptor = Handle();
 
-                _state |= (SCANNING|REGULAR);
+                _state.SetState(static_cast<state>(_state.GetState() | (SCANNING|REGULAR)));
 
                 Unlock();
 
@@ -443,7 +444,6 @@ namespace Bluetooth {
                 ir->lap[2]  = type & 0xFF;         // 0x9e;
                 // Core::Time endTime = Core::Time::Now().Add(scanTime * 1000);
 
-                printf("Start Time: %s\n", Core::Time::Now().ToRFC1123().c_str());
                 // while ((ir->length != 0) && (ioctl(descriptor, HCIINQUIRY, reinterpret_cast<unsigned long>(buf)) >= 0)) {
                 if (ioctl(descriptor, HCIINQUIRY, reinterpret_cast<unsigned long>(buf)) >= 0) {
 
@@ -476,7 +476,7 @@ namespace Bluetooth {
                             }
                             else {
                                 reported.push_back(newSource);
-                                DiscoveredDevice(newSource, string(name, pos));
+                                DiscoveredDevice(false, newSource, string(name, pos));
                             }
                         }
                     }
@@ -486,11 +486,10 @@ namespace Bluetooth {
                     // ir->num_rsp = 128;
                     // ir->flags  &= ~IREQ_CACHE_FLUSH;
                 }
-                printf("End Time: %s\n", Core::Time::Now().ToRFC1123().c_str());
 
                 Lock();
 
-                _state &= (~(SCANNING|REGULAR));
+                _state.SetState(static_cast<state>(_state.GetState() & (~(ABORT|SCANNING|REGULAR))));
             }
 
             Unlock();
@@ -499,6 +498,7 @@ namespace Bluetooth {
             Lock();
 
             if ((_state & SCANNING) == 0) {
+                Filter oldFilter;
                 int descriptor = Handle();
 
                 ASSERT (descriptor >= 0);
@@ -507,14 +507,27 @@ namespace Bluetooth {
                 const uint16_t window   = (limited ? 0x12 : 0x10);
                 const uint8_t  scanType = (passive ? 0x00 : 0x01);
 
-                Get (_oldFilter);
+                Get (oldFilter);
                 Set (Filter(HCI_EVENT_PKT, EVT_LE_META_EVENT));
 
                 if (hci_le_set_scan_parameters(descriptor, scanType, htobs(interval), htobs(window), LE_PUBLIC_ADDRESS, SCAN_FILTER_POLICY, SCAN_TIMEOUT) >= 0) {
                     if (hci_le_set_scan_enable(descriptor, 1, SCAN_FILTER_DUPLICATES, SCAN_TIMEOUT) >= 0) {
-                        _state |= (SCANNING|LOW_ENERGY);
+                        _state.SetState(static_cast<state>(_state.GetState() | (SCANNING|LOW_ENERGY)));
+
+                        // Now lets wait for the scanning period..
+                        Unlock();
+
+                        _state.WaitState(ABORT, scanTime*1000);
+                        
+                        Lock();
+                        
+                        hci_le_set_scan_enable(descriptor, 0, SCAN_FILTER_DUPLICATES, SCAN_TIMEOUT);
+
+                        _state.SetState(static_cast<state>(_state.GetState() & (~(ABORT|SCANNING|LOW_ENERGY))));
                     }
                 }
+
+                Set(oldFilter);
             }
 
             Unlock();
@@ -524,14 +537,8 @@ namespace Bluetooth {
             Lock();
 
             if ((_state & SCANNING) != 0) {
-                int descriptor = Handle();
-
-                ASSERT (descriptor >= 0);
- 
-                if (hci_le_set_scan_enable(descriptor, 0, SCAN_FILTER_DUPLICATES, SCAN_TIMEOUT) >= 0) {
-                    _state &= ~(SCANNING|LOW_ENERGY);
-                }
-                Set(_oldFilter);
+                // TODO: Find if we can actually abort a IOCTL:HCIINQUIRY !!
+                _state.SetState (static_cast<state>(_state.GetState() | ABORT));
             }
 
             Unlock();
@@ -543,7 +550,7 @@ namespace Bluetooth {
         void Set (const Filter& filter) {
             ::setsockopt(Handle(), SOL_HCI, HCI_FILTER, &(filter.Data()), filter.Length());
         }
-        virtual void DiscoveredDevice (const Address&, const string& name) = 0;
+        virtual void DiscoveredDevice (const bool lowEnergy, const Address&, const string& name) = 0;
 
     private:        
         virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t availableData) override
@@ -574,7 +581,7 @@ namespace Bluetooth {
                     TRACE_L1("Entry[%s] has no name. Do not report it.", Address(advertisingInfo->bdaddr).ToString());
                 }
                 else {
-                    DiscoveredDevice (Address(advertisingInfo->bdaddr), string (name, pos));
+                    DiscoveredDevice (true, Address(advertisingInfo->bdaddr), string (name, pos));
                 }
  
             }
@@ -583,8 +590,7 @@ namespace Bluetooth {
         }
 
     private:
-        uint8_t _state;
-        Filter _oldFilter;
+        Core::StateTrigger<state> _state;
     };
 
     class L2Socket : public Core::SocketPort {
@@ -783,15 +789,21 @@ namespace Bluetooth {
         virtual void StateChange () override
 	{
 	    if (IsOpen() == true) {
+                printf ("l2Socket reports statchange to OPEN!!!\n");
                 socklen_t len = sizeof(_connectionInfo);
                 ::getsockopt(Handle(), SOL_L2CAP, L2CAP_CONNINFO, &_connectionInfo, &len);
  
                 // Send out a potential prepared frame fro Detection...
                 Trigger();
             }
+            else {
+
+                printf ("l2Socket reports statchange to CLOSED!!!\n");
+            }
         }
         virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t availableData) override
         {
+           printf ("Executing in state: %d\n", _state);
             if (_state == OPERATIONAL) {
                 Received (dataFrame, availableData);
             }
