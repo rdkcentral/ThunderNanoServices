@@ -8,3 +8,4 @@ install_manifest.txt
 CTestTestfile.cmake
 output/
 .DS_Store
+.vscode
