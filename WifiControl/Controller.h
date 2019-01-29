@@ -945,6 +945,8 @@ public:
         EnabledContainer::iterator entry (_enabled.find(SSID));
 
         if (entry != _enabled.end()) {
+             //Config call internally calls Lock so unlocking here to avoid dead lock
+	     _adminLock.Unlock();
             // This is an existing config. Easy Piecie.
             result = Config (Core::ProxyType<Controller>(*this), SSID);
         }
@@ -971,10 +973,10 @@ public:
             _adminLock.Lock();
 
             _enabled[SSID] = ConfigInfo(id, false);
+	    //Config internally calls Lock so unlocking here to avoid dead lock
+	    _adminLock.Unlock();
             result = Config(Core::ProxyType<Controller>(*this), SSID);
         }
-
-        _adminLock.Unlock();
   
         return (result);
     }
