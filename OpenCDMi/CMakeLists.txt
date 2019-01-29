@@ -11,6 +11,10 @@ set(PLUGIN_SOURCES
 
 find_package(ocdm REQUIRED)
 
+# avoid -as-needed flag being set, this will break linking to libocdm.so
+string(REPLACE "-Wl,--as-needed" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-as-needed")
+
 # Library definition section
 add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES})
 target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES} ${OCDM_LIBRARIES})
