@@ -9,7 +9,7 @@ find_package(GLESv2 REQUIRED)
 target_link_libraries(${TARGET}
         PRIVATE
         WPEFramework::WaylandEGLClient
-        EGL::GLESV2
+        GLESV2::GLESV2
         )
 
 set_target_properties(${TARGET} PROPERTIES

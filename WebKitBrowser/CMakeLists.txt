@@ -1,8 +1,6 @@
 set(PLUGIN_NAME WebKitBrowser)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-message("Setting up ${PLUGIN_NAME}")
-
 option(PLUGIN_WEBKITBROWSER_YOUTUBE "Include YouTube in seperate plugin." OFF)
 option(PLUGIN_WEBKITBROWSER_APPS "Include Apps instance in seperate plugin." OFF)
 option(PLUGIN_WEBKITBROWSER_UX "Include UX in seperate plugin." OFF)
@@ -30,19 +28,11 @@ set(PLUGIN_APPS_USERAGENT ${PLUGIN_WEBKITBROWSER_USERAGENT} CACHE STRING "User a
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(GLIB REQUIRED)
 find_package(WPEWebKit REQUIRED)
 
-set(PLUGIN_INCLUDE_DIRS
-    ${WPE_WEBKIT_INCLUDE_DIRS}
-    ${WPE_WEBKIT_INCLUDE_DIRS}/WPE
-    ${GLIB_INCLUDE_DIRS})
-
-set(PLUGIN_LIBRARIES
-    ${GLIB_LIBRARIES}
-    ${WPE_WEBKIT_LIBRARIES})
-
-set(PLUGIN_SOURCES 
+add_library(${MODULE_NAME} SHARED  
     Module.cpp
     WebKitBrowser.cpp
     WebKitImplementation.cpp
@@ -50,18 +40,25 @@ set(PLUGIN_SOURCES
     InjectedBundle/Utils.cpp
 )
 
-file(GLOB PLUGIN_INCLUDES *.h)
+set_target_properties(${MODULE_NAME} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
 
-add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES} ${PLUGIN_INCLUDES})
-target_include_directories(${MODULE_NAME} PRIVATE ${PLUGIN_INCLUDE_DIRS})
-target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES} ${PLUGIN_LIBRARIES})
-set_target_properties(${MODULE_NAME} PROPERTIES OUTPUT_NAME ${MODULE_NAME})
+target_link_libraries(${MODULE_NAME}
+    PRIVATE 
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${GLIB_LIBRARIES}
+        ${WPE_WEBKIT_LIBRARIES})
 
-string(TOLOWER ${NAMESPACE} STORAGENAME)
+target_include_directories(${MODULE_NAME} 
+    PRIVATE 
+        ${WPE_WEBKIT_INCLUDE_DIRS}
+        ${WPE_WEBKIT_INCLUDE_DIRS}/WPE
+        ${GLIB_INCLUDE_DIRS})
+
 install(
     TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins
-    COMPONENT ${MODULE_NAME})
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
 
 # also build injected bundle
 add_subdirectory(InjectedBundle)

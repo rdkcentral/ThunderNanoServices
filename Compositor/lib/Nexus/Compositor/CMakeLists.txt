@@ -2,10 +2,12 @@ set(TARGET ${PLATFORM_COMPOSITOR})
 
 message("Setting up ${TARGET} for Nexus platfrom")
 
-find_package(Nexus REQUIRED)
-find_package(Core REQUIRED)
-find_package(Plugins REQUIRED)
-find_package(Interfaces REQUIRED)
+find_package(NXCLIENT REQUIRED)
+find_package(NXCLIENT REQUIRED)
+find_package(NXCLIENT_LOCAL REQUIRED)
+find_package(${NAMESPACE}Core REQUIRED)
+find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Interfaces REQUIRED)
 
 add_library(${TARGET}
         Implementation.cpp
@@ -14,18 +16,14 @@ add_library(${TARGET}
 include_directories(${CORE_INCLUDE_DIR})
 
 target_link_libraries(${TARGET}
-        PRIVATE
-        ${CORE_LIBRARIES}
-        ${PLUGINS_LIBRARIES}
-        ${INTERFACES_LIBRARIES}
-        )
+    PRIVATE
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces)
 
-set_target_properties(${TARGET}
-        PROPERTIES
+set_target_properties(${TARGET} PROPERTIES
         CXX_STANDARD 11
-        CXX_STANDARD_REQUIRED YES
-        FRAMEWORK FALSE
-        )
+        CXX_STANDARD_REQUIRED YES)
 
 if(PLUGIN_COMPOSITOR_NXSERVER)
     target_compile_definitions(${TARGET}
@@ -35,13 +33,13 @@ if(PLUGIN_COMPOSITOR_NXSERVER)
 
     target_link_libraries(${TARGET}
         PRIVATE
-            nexus::nexusserver
-            NEXUS::NXCLIENT_LOCAL
+            ${NAMESPACE}nexusserver::${NAMESPACE}nexusserver
+            NXCLIENT_LOCAL::NXCLIENT_LOCAL
             )
 else()
-target_link_libraries(${TARGET}
+    target_link_libraries(${TARGET}
         PRIVATE
-            NEXUS::NXCLIENT
+            NXCLIENT::NXCLIENT
         )
 endif()
 

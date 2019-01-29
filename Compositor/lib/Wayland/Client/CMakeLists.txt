@@ -6,7 +6,7 @@ find_package(WaylandClient REQUIRED)
 find_package(EGL REQUIRED)
 find_package(WaylandEGL REQUIRED)
 find_package(Westeros REQUIRED)
-find_package(Core REQUIRED)
+find_package(${NAMESPACE}Core REQUIRED)
 
 find_package(BCMHost QUIET)
 if(BCM_HOST_FOUND)

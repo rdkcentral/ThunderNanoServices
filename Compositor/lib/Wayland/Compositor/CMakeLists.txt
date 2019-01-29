@@ -7,21 +7,23 @@ add_library(${TARGET} Wayland.cpp)
 
 find_package(WaylandServer REQUIRED)
 find_package(WaylandEGL REQUIRED)
-find_package(Core REQUIRED)
-find_package(Plugins REQUIRED)
+find_package(${NAMESPACE}Core REQUIRED)
+find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(EGL REQUIRED)
 
 if (PLUGIN_COMPOSITOR_NXSERVER)
     add_definitions(-DENABLE_NXSERVER=1)
-    find_package(Nexus REQUIRED)
-    find_package(NXServer REQUIRED)
-    target_link_libraries(${TARGET} PRIVATE nexus::nexusserver)
+    find_package(NEXUS REQUIRED)
+    find_package(NXSERVER REQUIRED)
+    target_link_libraries(${TARGET} 
+        PRIVATE 
+           ${NAMESPACE}nexusserver::${NAMESPACE}nexusserver)
 endif ()
 
 target_link_libraries(${TARGET}
         PRIVATE
-        ${CORE_LIBRARIES}
-        ${PLUGINS_LIBRARIES}
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         WAYLAND::SERVER
         WAYLAND::EGL
         EGL::EGL
@@ -40,7 +42,7 @@ if(WESTEROS_FOUND)
 endif(WESTEROS_FOUND)
 
 if(PLUGIN_COMPOSITOR_VIRTUALINPUT)
-    find_package(VirtualInput REQUIRED)
+    find_package(${NAMESPACE}VirtualInput REQUIRED)
     target_link_libraries(${TARGET} PRIVATE ${VIRTUALINPUT_LIBRARIES})
 endif(PLUGIN_COMPOSITOR_VIRTUALINPUT)
 

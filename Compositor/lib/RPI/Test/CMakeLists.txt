@@ -1,23 +1,22 @@
-set(COMPOSITOR_TEST_ARTIFACT RPICompositorTest)
+set(TEST RPICompositorTest)
 
-message("Setting up ${COMPOSITOR_TEST_ARTIFACT}")
+message("Setting up ${TEST}")
 
-find_package(Core REQUIRED)
-find_package(Plugins REQUIRED)
-find_package(VirtualInput REQUIRED)
+find_package(${NAMESPACE}Core REQUIRED)
+find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}VirtualInput REQUIRED)
 
-set(COMPOSITOR_TEST_LIBS
-    ${CORE_LIBRARIES}
-    ${PLUGINS_LIBRARIES}
-    compositorclient
-    GLESv2
-    EGL
-    png
-    )
+find_package(GLESv2 REQUIRED)
+find_package(EGL REQUIRED)
+find_package(PNG REQUIRED)
 
-set(COMPOSITOR_TEST_SOURCES Test.cpp)
+add_executable(${TEST} Test.cpp)
 
-add_executable(${COMPOSITOR_TEST_ARTIFACT} ${COMPOSITOR_TEST_SOURCES})
-target_link_libraries(${COMPOSITOR_TEST_ARTIFACT} ${COMPOSITOR_TEST_LIBS})
-
-set_target_properties(${COMPOSITOR_TEST_ARTIFACT} PROPERTIES OUTPUT_NAME ${COMPOSITOR_TEST_ARTIFACT})
+target_link_libraries(${TEST} 
+    PRIVATE
+        compositorclient
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        GLESV2::GLESV2
+        EGL::EGL
+        PNG::PNG)
