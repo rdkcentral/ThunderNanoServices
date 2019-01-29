@@ -775,10 +775,6 @@ namespace Plugin {
             }
 
             virtual OCDM::OCDM_RESULT CreateSessionExt(
-                uint32_t sessionId,
-                const char contentId[],
-                uint32_t contentIdLength,
-                OCDM::ISessionExt::LicenseTypeExt licenseType,
                 const uint8_t drmHeader[],
                 uint32_t drmHeaderLength,
                 OCDM::ISessionExt*& session) override
@@ -802,8 +798,7 @@ namespace Plugin {
                     // OKe we got a buffer machanism to transfer the raw data, now create
                     // the session.
                     // TODO: real conversion of licensetype
-                    if ((session == nullptr) && (system->CreateMediaKeySessionExt(sessionId, contentId, contentIdLength,
-                                                 (CDMi::LicenseTypeExt)licenseType, drmHeader, drmHeaderLength, &sessionInterface) == 0)) {
+                    if ((session == nullptr) && (system->CreateMediaKeySessionExt(drmHeader, drmHeaderLength, &sessionInterface) == 0)) {
 
                         if (sessionInterface != nullptr) {
 
