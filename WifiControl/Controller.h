@@ -929,10 +929,13 @@ public:
 
         if (entry != _enabled.end()) {
             // This is an existing config. Easy Piecie.
+            //Config call internally calls Lock so unlocking here to avoid dead lock
+            _adminLock.Unlock();
             result = Config (Core::ProxyType<Controller>(*this), SSID);
         }
-
-        _adminLock.Unlock();
+        else{
+            _adminLock.Unlock();
+        }
   
         return (result);
     }
@@ -991,8 +994,10 @@ public:
         if ( (entry != _enabled.end()) && (entry->second.Id() != 0) ) {
 
             // This is an existing config. Easy Piecie.
+	    //Config internally calls Lock so unlocking here to avoid dead lock
+            _adminLock.Unlock();
             result = Config (Core::ProxyType<Controller>(*this), SSID);
-
+            _adminLock.Lock();
             // We have bo entry for this SSID, lets create one.
             CustomRequest exchange (string(_TXT("REMOVE_NETWORK ")) + Core::NumberType<uint32_t>(entry->second.Id()).Text());
 
