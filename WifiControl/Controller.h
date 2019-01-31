@@ -1142,7 +1142,7 @@ public:
 
         if ( (index != _enabled.end()) && (index->second.IsEnabled() == true) ) {
 
-            CustomRequest exchange (string(_TXT("DISCONNECT ")) + Core::NumberType<uint32_t>(index->second.Id()).Text());
+            CustomRequest exchange (string(_TXT("DISCONNECT")));
 
             Submit(&exchange);
 
