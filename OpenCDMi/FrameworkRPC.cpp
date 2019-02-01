@@ -212,8 +212,6 @@ namespace Plugin {
                                 uint8_t keyIdLength = 0;
                                 const uint8_t* keyIdData = KeyId(keyIdLength);
 
-                                // TODO: combine normal case and netflix case, or at least select right one
-                                unsigned long long byteOffset = ByteOffset();
                                 int cr = _mediaKeys->Decrypt(
                                     _sessionKey,
                                     _sessionKeyLength,
@@ -227,10 +225,7 @@ namespace Plugin {
                                     &clearContent,
                                     keyIdLength,
                                     keyIdData,
-                                    byteOffset,
                                     InitWithLast15());
-				                //int cr = _mediaKeysExt->DecryptNetflix(IVKey(), IVKeyLength(), byteOffset, Buffer(), BytesWritten(), InitWithLast15());
-
                                 if ((cr == 0) && (clearContentSize != 0)) {
                                     if (clearContentSize != BytesWritten()) {
                                         TRACE_L1("Returned clear sample size (%d) differs from encrypted buffer size (%d)", clearContentSize, BytesWritten());
@@ -559,7 +554,7 @@ namespace Plugin {
 
                 BEGIN_INTERFACE_MAP(Session)
                     INTERFACE_ENTRY(::OCDM::ISession)
-                    INTERFACE_RELAY(::OCDM::ISession, _mediaKeySessionExt)
+                    INTERFACE_RELAY(::OCDM::ISessionExt, _mediaKeySessionExt)
                 END_INTERFACE_MAP
 
                 void ReportKeyIds(::OCDM::IAccessorOCDM::INotification* callback) const
