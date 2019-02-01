@@ -199,7 +199,7 @@ namespace Plugin {
 
         if (_NxInputClient) {
             // always get the key, else the queue fills up and weird things happen
-            rc = NEXUS_InputClient_GetCodes((NEXUS_InputClientHandle) _NxInputClient, &inputRouterCode, 1, &num);
+            rc = NEXUS_InputClient_GetCodes((NEXUS_InputClientHandle) _NxInputClient, &inputRouterCode, 2, &num);
             int rawCode = inputRouterCode.data.irInput.code & _codeMask;
             int repeat = inputRouterCode.data.irInput.repeat;
             TRACE_L1("%s: RawCode 0x%X Codemask:0x%X Code:0x%X", __FUNCTION__, inputRouterCode.data.irInput.code, _codeMask, rawCode);
