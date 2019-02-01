@@ -15,11 +15,11 @@ namespace Plugin {
         BluetoothControl(const BluetoothControl&) = delete;
         BluetoothControl& operator=(const BluetoothControl&) = delete;
 
-        class HCISocket : public Bluetooth::HCISocket {
+        class Scanner : public Bluetooth::HCISocket::IScanning {
         private:
-            HCISocket() = delete;
-            HCISocket(const HCISocket&) = delete;
-            HCISocket& operator= (const HCISocket&) = delete;
+            Scanner() = delete;
+            Scanner(const Scanner&) = delete;
+            Scanner& operator= (const Scanner&) = delete;
 
         private:
             // The bluetooth library has some unexpected behaviour. For example, the scan of NON-BLE devices
@@ -41,7 +41,7 @@ namespace Plugin {
                 };
 
             public:
-                Job(Bluetooth::HCISocket* parent) : _parent(*parent), _mode(0) {
+                Job(Scanner* parent) : _parent(*parent), _mode(0) {
                 }    
                 virtual ~Job() {
                 }
@@ -69,18 +69,18 @@ namespace Plugin {
 
                     if ((_mode & REGULAR) != 0) {
                         TRACE(Trace::Information, (_T("Start regular scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
-                        _parent.Scan(_scanTime, _type, _flags);
+                        Bluetooth::HCISocket::Control().Scan(&_parent, _scanTime, _type, _flags);
                     }
                     else {
                         TRACE(Trace::Information, (_T("Start Low Energy scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
-                        _parent.Scan(_scanTime, ((_mode & LIMITED) != 0), ((_mode & PASSIVE) != 0));
+                        Bluetooth::HCISocket::Control().Scan(&_parent, _scanTime, ((_mode & LIMITED) != 0), ((_mode & PASSIVE) != 0));
                     }
                     TRACE(Trace::Information, (_T("Scan completed: %s"), Core::Time::Now().ToRFC1123().c_str()));
                     _mode = 0;
                 }
 
             private:
-                Bluetooth::HCISocket& _parent;
+                Scanner& _parent;
                 uint16_t _scanTime;
                 uint32_t _type;
                 uint8_t _flags;
@@ -88,12 +88,11 @@ namespace Plugin {
             };
 
         public:
-            HCISocket(BluetoothControl& parent) 
-                : Bluetooth::HCISocket()
-                , _parent(parent)
+            Scanner(BluetoothControl& parent) 
+                : _parent(parent)
                 , _activity(Core::ProxyType<Job>::Create(this)) {
             }
-            virtual ~HCISocket() {
+            virtual ~Scanner() {
                 PluginHost::WorkerPool::Instance().Revoke(_activity);
             }
 
@@ -104,14 +103,10 @@ namespace Plugin {
                 _parent.DiscoveredDevice (lowEnergy, address, name);
             }
             void Scan(const uint16_t scanTime, const uint32_t type, const uint8_t flags) {
-                Lock();
                 _activity->Load(scanTime, type, flags);
-                Unlock();
             }
             void Scan(const uint16_t scanTime, const bool limited, const bool passive) {
-                Lock();
                 _activity->Load(scanTime, limited, passive);
-                Unlock();
             }
             
         private:
@@ -122,7 +117,7 @@ namespace Plugin {
         class HIDSocket : public Bluetooth::L2Socket {
         private:
             HIDSocket() = delete;
-            HIDSocket(const HCISocket&) = delete;
+            HIDSocket(const HIDSocket&) = delete;
             HIDSocket& operator= (const HIDSocket&) = delete;
 
             static constexpr uint8_t ATT_OP_FIND_BY_TYPE_REQ  = 0x06;
@@ -539,8 +534,9 @@ namespace Plugin {
             : _skipURL(0)
             , _adminLock()
             , _service(nullptr)
+            , _channel(nullptr)
             , _driver(nullptr)
-            , _hciSocket(*this)
+            , _scanner(*this)
             , _btAddress()
             , _interface()
         {
@@ -607,7 +603,8 @@ namespace Plugin {
         Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         Bluetooth::Driver* _driver;
-        HCISocket _hciSocket;
+        Bluetooth::HCISocket* _channel;
+        Scanner _scanner;
         Bluetooth::Address _btAddress;
         Bluetooth::Driver::Interface _interface;
         std::list<DeviceImpl*> _devices;

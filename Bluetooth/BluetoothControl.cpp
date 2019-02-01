@@ -62,50 +62,18 @@ namespace Plugin {
             if (_interface.IsValid() == false) {
                 result = _T("Could not bring up the interface.");
             }
+            else if (_interface.Up() == false) {
+                result = "Failed to bring up the Bluetooth interface";
+            }
             else {
-                HCISocket channel (*this);
+                _channel = &(Bluetooth::HCISocket::Control());
 
-                if (channel.Open(Core::infinite) != Core::ERROR_NONE) {
+                if (_channel->Open(Core::infinite) != Core::ERROR_NONE) {
                     result = _T("Could not open a management Bleutooth connection.");
                 }
-                else {
-                    Bluetooth::ManagementFrame mgmtFrame(ADAPTER_INDEX);
-                    struct mgmt_mode modeFlags;
-                    modeFlags.val = htobs(ENABLE_MODE);
-
-                    if (channel.Send(mgmtFrame.Set(MGMT_OP_SET_POWERED, modeFlags), 1000) != Core::ERROR_NONE) {
-                        result = "Failed to power on bluetooth adaptor";
-                    }
-                    // Enable Bondable on adaptor.
-                    else if (channel.Send(mgmtFrame.Set(MGMT_OP_SET_BONDABLE, modeFlags), 1000) != Core::ERROR_NONE) {
-                        result = "Failed to enable Bondable";
-                    }
-                    // Enable Simple Secure Simple Pairing.
-                    else if (channel.Send(mgmtFrame.Set(MGMT_OP_SET_SSP, modeFlags), 1000) != Core::ERROR_NONE) {
-                        result = "Failed to enable Simple Secure Simple Pairing";
-                    }
-                    // Enable Low Energy
-                    else if (channel.Send(mgmtFrame.Set(MGMT_OP_SET_LE, modeFlags), 1000) != Core::ERROR_NONE) {
-                        result = "Failed to enable Low Energy";
-                    }    
-                    // Enable Secure Connections
-                    else if (channel.Send(mgmtFrame.Set(MGMT_OP_SET_SECURE_CONN, modeFlags), 1000) != Core::ERROR_NONE) {
-                        result = "Failed to enable Secure Connections";
-                    }
-                    else if (_interface.Up() == false) {
-                        result = "Failed to bring up the Bluetooth interface";
-                    }
-                    else if (_btAddress.Default() == false) {
-                        result = "Could not get the Bluetooth address";
-                    }
-                    else {
-                        _hciSocket.LocalNode(_btAddress.NodeId());
-
-                        if (_hciSocket.Open(100) != Core::ERROR_NONE) {
-                            result = "Could not open the HCI control channel";
-                        }
-                    }
-                }                
+                else if (_btAddress.Default() == false) {
+                    result = "Could not get the Bluetooth address";
+                }
             }
         }
 
@@ -246,10 +214,10 @@ namespace Plugin {
                     uint32_t type = 0x338B9E;
 
                     if (lowEnergy == true) {
-                        _hciSocket.Scan(duration, limited, passive);
+                        _scanner.Scan(duration, limited, passive);
                     }
                     else {
-                        _hciSocket.Scan(duration, type, flags);
+                        _scanner.Scan(duration, type, flags);
                     }
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("Scan started.");
@@ -303,7 +271,7 @@ namespace Plugin {
                 TRACE(Trace::Information, (string(__FUNCTION__)));
 
                 if (index.Current() == _T("Scan")) {
-                    _hciSocket.Abort();
+                    _channel->Abort();
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("Scan stopped.");
                 } else if (index.Current() == _T("Pair")) {
@@ -341,7 +309,7 @@ namespace Plugin {
     //  IBluetooth methods
     // -------------------------------------------------------------------------------------------------------
     /* virtual */ bool BluetoothControl::IsScanning() const {
-        return (_hciSocket.IsScanning());
+        return (_channel->IsScanning());
     }
     /* virtual */ uint32_t BluetoothControl::Register(IBluetooth::INotification* notification) {
         _adminLock.Lock();
@@ -375,7 +343,7 @@ namespace Plugin {
         _adminLock.Unlock();
     }
     /* virtual */ bool BluetoothControl::Scan(const bool enable) {
-        if ((_hciSocket.IsScanning() == false) && (enable == true)) {
+        if ((_channel->IsScanning() == false) && (enable == true)) {
 
             TRACE(Trace::Information, ("Start Bluetooth Scan"));
 
@@ -390,20 +358,20 @@ namespace Plugin {
             uint32_t type = 0x338B9E;
 
             if (lowEnergy == true) {
-                _hciSocket.Scan(duration, limited, passive);
+                _scanner.Scan(duration, limited, passive);
             }
             else {
-                _hciSocket.Scan(duration, type, flags);
+                _scanner.Scan(duration, type, flags);
             }
         } 
-        else if ((_hciSocket.IsScanning() == true) && (enable == false)) {
+        else if ((_channel->IsScanning() == true) && (enable == false)) {
 
             TRACE(Trace::Information, ("Stop Bluetooth Scan"));
 
-            _hciSocket.Abort();
+            _channel->Abort();
         }
 
-        return (_hciSocket.IsScanning() == enable);
+        return (_channel->IsScanning() == enable);
     }
 
     /* virtual */ Exchange::IBluetooth::IDevice* BluetoothControl::Device (const string& address) {
