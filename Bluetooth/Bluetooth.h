@@ -243,7 +243,7 @@ namespace Core {
                 CHANNEL::Trigger();
             }
 
-            while ( (CHANNEL::IsOpen() == true) && (request.IsCompleted() == false) && (endTime > now) ) {
+            while ( (CHANNEL::IsOpen() == true) && (request.IsComplete() == false) && (endTime > now) ) {
                 uint32_t remainingTime = (endTime.Ticks() - now.Ticks()) / Core::Time::TicksPerMillisecond;
 
                 _waitCount++;
@@ -259,7 +259,7 @@ namespace Core {
                 now = Core::Time::Now();
             }
 
-            return (request.IsCompleted() ? Core::ERROR_NONE : Core::ERROR_ASYNC_ABORTED);
+            return (request.IsComplete() ? Core::ERROR_NONE : Core::ERROR_ASYNC_ABORTED);
         }
 
         // Methods to extract and insert data into the socket buffers
@@ -454,6 +454,60 @@ namespace Bluetooth {
             virtual void DiscoveredDevice (const bool lowEnergy, const Address&, const string& name) = 0;
         };
 
+        template<typename OUTBOUND>
+        class ManagementType : public Core::IOutbound{
+        private: 
+            ManagementType() = delete;
+            ManagementType(const ManagementType<OUTBOUND>&) = delete;
+            ManagementType<OUTBOUND>& operator= (const ManagementType<OUTBOUND>&) = delete;
+
+        public:
+            ManagementType(const uint16_t adapterIndex) 
+                : _offset(sizeof(_buffer)) {
+                _buffer[2] = ((adapterIndex >> 8) & 0xFF);
+                _buffer[3] = (adapterIndex & 0xFF);
+                _buffer[4] = static_cast<uint8_t>((sizeof(OUTBOUND) >> 8) & 0xFF);
+                _buffer[5] = static_cast<uint8_t>(sizeof(OUTBOUND) & 0xFF);
+            }
+            virtual ~ManagementType() {
+            }
+
+        public:
+            void Clear () {
+                _offset = 0;
+                ::memset(&(_buffer[6]), 0, sizeof(_buffer) - 6);
+            }
+            OUTBOUND* operator->() {
+                return (reinterpret_cast<OUTBOUND*>(&(_buffer[6])));
+            }
+            uint32_t Send (HCISocket& socket, const uint32_t waitTime, const uint16_t opCode) {
+                _offset = 0;
+                _buffer[0] = ((opCode >> 8) & 0xFF);
+                _buffer[1] = (opCode & 0xFF);
+
+                uint32_t result = socket.Exchange(*this, waitTime);
+            }
+
+        private:
+            virtual uint16_t Id() const {
+                return ((_buffer[0] << 8) | _buffer[1]);
+            }
+            virtual uint16_t Serialize(uint8_t stream[], const uint16_t length) const {
+                uint16_t result = std::min(static_cast<uint16_t>(sizeof(_buffer) - _offset), length);
+                if (result > 0) {
+
+                    ::memcpy (stream, &(_buffer[_offset]), result);
+                    for (uint8_t index = 0; index < result; index++) { printf("%02X:", stream[index]); } printf("\n");
+                    _offset += result;
+                }
+                return (result);
+            }
+
+        private:
+            mutable uint16_t _offset;
+            uint8_t _buffer[6 + sizeof(OUTBOUND)];
+        };
+
         template<const uint16_t OPCODE, typename OUTBOUND>
         class CommandType : public Core::IOutbound{
         private: 
@@ -504,7 +558,7 @@ namespace Bluetooth {
                     // Seems we need to push "our" message, register it for whatever godsake reason...
                     _parent->SetOpcode(OPCODE);
                     
-                    ::memcpy (&(stream[result]), &(_buffer[_offset]), result);
+                    ::memcpy (stream, &(_buffer[_offset]), result);
                     _offset += result;
                 }
                 return (result);
@@ -600,6 +654,9 @@ namespace Bluetooth {
             ABORT      = 0x0008
         };
 
+        // ------------------------------------------------------------------------
+        // Create definitions for the HCI commands
+        // ------------------------------------------------------------------------
         typedef ExchangeType<cmd_opcode_pack(OGF_LINK_CTL,OCF_CREATE_CONN), create_conn_cp, evt_conn_complete, EVT_CONN_COMPLETE>
                 Connect;
 
@@ -612,11 +669,24 @@ namespace Bluetooth {
         typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_REMOTE_NAME_REQ), remote_name_req_cp, evt_remote_name_req_complete, EVT_REMOTE_NAME_REQ_COMPLETE>
                 RemoteName;
  
+        // ------------------------------------------------------------------------
+        // Create definitions for the Management commands
+        // ------------------------------------------------------------------------
+        typedef ManagementType<mgmt_mode> ManagementMode;
+
     public:
         HCISocket(const Core::NodeId& sourceNode)
             : Core::SynchronousChannelType<Core::SocketPort>(SocketPort::RAW, sourceNode, Core::NodeId(), 256, 256)
             , _state(IDLE) {
 
+            hci_filter_clear(&_filter);
+            hci_filter_set_ptype(HCI_EVENT_PKT,  &_filter);
+            hci_filter_set_event(EVT_CMD_STATUS, &_filter);
+            hci_filter_set_event(EVT_CMD_COMPLETE, &_filter);
+            hci_filter_set_event(EVT_LE_META_EVENT, &_filter);
+
+            // Interesting why this needs to be set.... I hope not!!
+            // hci_filter_set_event(r->event, &_filter);
         }
         virtual ~HCISocket() {
             Close(Core::infinite);
@@ -761,20 +831,6 @@ namespace Bluetooth {
         void SetOpcode(const uint16_t opcode) {
             hci_filter_set_opcode(opcode, &_filter);
             setsockopt(Handle(), SOL_HCI, HCI_FILTER, &_filter, sizeof(_filter));
-        }
-        virtual bool Initialize() override {
-            bool success = Core::SynchronousChannelType<Core::SocketPort>::Initialize();
-
-            hci_filter_clear(&_filter);
-            hci_filter_set_ptype(HCI_EVENT_PKT,  &_filter);
-            hci_filter_set_event(EVT_CMD_STATUS, &_filter);
-            hci_filter_set_event(EVT_CMD_COMPLETE, &_filter);
-            hci_filter_set_event(EVT_LE_META_EVENT, &_filter);
-
-            // Interesting why this needs to be set.... I hope not!!
-            // hci_filter_set_event(r->event, &_filter);
-
-            return (success && (setsockopt(Handle(), SOL_HCI, HCI_FILTER, &_filter, sizeof(_filter)) >= 0));
         }
         virtual uint16_t Deserialize (const uint8_t* dataFrame, const uint16_t availableData) override
         {

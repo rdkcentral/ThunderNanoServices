@@ -65,15 +65,39 @@ namespace Plugin {
             else if (_interface.Up() == false) {
                 result = "Failed to bring up the Bluetooth interface";
             }
+            else if (_btAddress.Default() == false) {
+                result = "Could not get the default Bluetooth address";
+            }
             else {
+                Bluetooth::HCISocket::ManagementMode command(ADAPTER_INDEX);
+                command->val = htobs(ENABLE_MODE);
+
                 _channel = &(Bluetooth::HCISocket::Control());
 
-                if (_channel->Open(Core::infinite) != Core::ERROR_NONE) {
-                    result = _T("Could not open a management Bleutooth connection.");
+                uint32_t error = _channel->Open(Core::infinite);
+
+                if (error != Core::ERROR_NONE) {
+                    result = _T("Could not open a management Bleutooth connection. [") + Core::NumberType<uint32_t>(error).Text() + _T("]");
                 }
-                else if (_btAddress.Default() == false) {
-                    result = "Could not get the Bluetooth address";
+                else if (command.Send(*_channel, 500, MGMT_OP_SET_POWERED) != Core::ERROR_NONE) {
+                    result = "Failed to power on bluetooth adaptor";
                 }
+                // Enable Bondable on adaptor.
+                else if (command.Send(*_channel, 500, MGMT_OP_SET_BONDABLE) != Core::ERROR_NONE) {
+                    result = "Failed to enable Bondable";
+                }
+                // Enable Simple Secure Simple Pairing.
+                else if (command.Send(*_channel, 500, MGMT_OP_SET_SSP) != Core::ERROR_NONE) {
+                    result = "Failed to enable Simple Secure Simple Pairing";
+                }
+                // Enable Low Energy
+                else if (command.Send(*_channel, 500, MGMT_OP_SET_LE) != Core::ERROR_NONE) {
+                    result = "Failed to enable Low Energy";
+               }    
+               // Enable Secure Connections
+               else if (command.Send(*_channel, 500, MGMT_OP_SET_SECURE_CONN) != Core::ERROR_NONE) {
+                   result = "Failed to enable Secure Connections";
+               }
             }
         }
 
