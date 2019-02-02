@@ -205,13 +205,16 @@ namespace Core {
         int Handle() const {
             return (static_cast<const Core::IResource&>(*this).Descriptor());
         }
-        void Lock () {
+        void Lock() {
             _adminLock.Lock();
         }
-        void Unlock () {
+        void Unlock() {
             _adminLock.Unlock();
         }
-
+        virtual void StateChange () override
+	{
+            Reevaluate();
+        }
         virtual uint16_t Deserialize (const uint8_t* dataFrame, const uint16_t availableData) = 0;
 
     private:        
@@ -240,7 +243,12 @@ namespace Core {
             uint32_t result = Core::ERROR_NONE;
 
             if (_queue.size() == 1) {
+
+                _adminLock.Unlock();
+
                 CHANNEL::Trigger();
+
+                _adminLock.Lock();
             }
 
             while ( (CHANNEL::IsOpen() == true) && (request.IsComplete() == false) && (endTime > now) ) {
@@ -325,11 +333,9 @@ namespace Core {
                 result += Deserialize(&(dataFrame[result]), availableData - result);
             }
 
+            _adminLock.Unlock();
+
             return (result);
-        }
-        virtual void StateChange () override
-	{
-            Reevaluate();
         }
 
     private:
@@ -391,12 +397,12 @@ namespace Bluetooth {
         uint8_t Length () const {
             return (_length);
         }
-        Core::NodeId NodeId() const {
+        Core::NodeId NodeId(const uint16_t channelType) const {
             Core::NodeId result;
             int deviceId = hci_get_route(const_cast<bdaddr_t*>(Data()));
 
             if (deviceId >= 0) {
-                result = Core::NodeId(static_cast<uint16_t>(deviceId), 0);
+                result = Core::NodeId(static_cast<uint16_t>(deviceId), channelType);
             }
 
             return (result);
@@ -437,7 +443,6 @@ namespace Bluetooth {
 
     class HCISocket : public Core::SynchronousChannelType<Core::SocketPort> {
     private:
-        HCISocket(const HCISocket&) = delete;
         HCISocket& operator=(const HCISocket&) = delete;
 
         static constexpr int      SCAN_TIMEOUT           = 1000;
@@ -464,10 +469,10 @@ namespace Bluetooth {
         public:
             ManagementType(const uint16_t adapterIndex) 
                 : _offset(sizeof(_buffer)) {
-                _buffer[2] = ((adapterIndex >> 8) & 0xFF);
-                _buffer[3] = (adapterIndex & 0xFF);
-                _buffer[4] = static_cast<uint8_t>((sizeof(OUTBOUND) >> 8) & 0xFF);
-                _buffer[5] = static_cast<uint8_t>(sizeof(OUTBOUND) & 0xFF);
+                _buffer[2] = (adapterIndex & 0xFF);
+                _buffer[3] = ((adapterIndex >> 8) & 0xFF);
+                _buffer[4] = static_cast<uint8_t>(sizeof(OUTBOUND) & 0xFF);
+                _buffer[5] = static_cast<uint8_t>((sizeof(OUTBOUND) >> 8) & 0xFF);
             }
             virtual ~ManagementType() {
             }
@@ -482,8 +487,8 @@ namespace Bluetooth {
             }
             uint32_t Send (HCISocket& socket, const uint32_t waitTime, const uint16_t opCode) {
                 _offset = 0;
-                _buffer[0] = ((opCode >> 8) & 0xFF);
-                _buffer[1] = (opCode & 0xFF);
+                _buffer[0] = (opCode & 0xFF);
+                _buffer[1] = ((opCode >> 8) & 0xFF);
 
                 uint32_t result = socket.Exchange(*this, waitTime);
             }
@@ -497,7 +502,7 @@ namespace Bluetooth {
                 if (result > 0) {
 
                     ::memcpy (stream, &(_buffer[_offset]), result);
-                    for (uint8_t index = 0; index < result; index++) { printf("%02X:", stream[index]); } printf("\n");
+                    // for (uint8_t index = 0; index < result; index++) { printf("%02X:", stream[index]); } printf("\n");
                     _offset += result;
                 }
                 return (result);
@@ -532,8 +537,8 @@ namespace Bluetooth {
             void Clear () {
                 _offset = 0;
                 _buffer[0] = HCI_COMMAND_PKT;
-                _buffer[1] = ((OPCODE >> 8) & 0xFF);
-                _buffer[2] = (OPCODE & 0xFF);
+                _buffer[1] = (OPCODE & 0xFF);
+                _buffer[2] = ((OPCODE >> 8) & 0xFF);
                 _buffer[3] = static_cast<uint8_t>(sizeof(OUTBOUND));
                 ::memset(&(_buffer[4]), 0, sizeof(_buffer) - 4);
             }
@@ -645,18 +650,25 @@ namespace Bluetooth {
             uint16_t _error;
         };
 
+        
+        static constexpr uint32_t MAX_ACTION_TIMEOUT = 1000; /* 2 Seconds for commands to complete ? */
+        static constexpr uint16_t ACTION_MASK = 0x3FFF;
+
     public:
         enum state : uint16_t {
-            IDLE       = 0x0000,
-            SCANNING   = 0x0001,
-            LOW_ENERGY = 0x0002,
-            REGULAR    = 0x0004,
-            ABORT      = 0x0008
+            IDLE          = 0x0000,
+            SCANNING      = 0x0001,
+            CONNECTING    = 0x0002,
+            DISCONNECTING = 0x0004,
+            METADATA      = 0x0008,
+            ABORT         = 0x4000,
+            LOW_ENERGY    = 0x8000
         };
 
         // ------------------------------------------------------------------------
         // Create definitions for the HCI commands
         // ------------------------------------------------------------------------
+        struct Command {
         typedef ExchangeType<cmd_opcode_pack(OGF_LINK_CTL,OCF_CREATE_CONN), create_conn_cp, evt_conn_complete, EVT_CONN_COMPLETE>
                 Connect;
 
@@ -668,6 +680,7 @@ namespace Bluetooth {
 
         typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_REMOTE_NAME_REQ), remote_name_req_cp, evt_remote_name_req_complete, EVT_REMOTE_NAME_REQ_COMPLETE>
                 RemoteName;
+        };
  
         // ------------------------------------------------------------------------
         // Create definitions for the Management commands
@@ -675,26 +688,17 @@ namespace Bluetooth {
         typedef ManagementType<mgmt_mode> ManagementMode;
 
     public:
+        HCISocket()
+            : Core::SynchronousChannelType<Core::SocketPort>(SocketPort::RAW, Core::NodeId(), Core::NodeId(), 256, 256)
+            , _state(IDLE) {
+        }
         HCISocket(const Core::NodeId& sourceNode)
             : Core::SynchronousChannelType<Core::SocketPort>(SocketPort::RAW, sourceNode, Core::NodeId(), 256, 256)
             , _state(IDLE) {
 
-            hci_filter_clear(&_filter);
-            hci_filter_set_ptype(HCI_EVENT_PKT,  &_filter);
-            hci_filter_set_event(EVT_CMD_STATUS, &_filter);
-            hci_filter_set_event(EVT_CMD_COMPLETE, &_filter);
-            hci_filter_set_event(EVT_LE_META_EVENT, &_filter);
-
-            // Interesting why this needs to be set.... I hope not!!
-            // hci_filter_set_event(r->event, &_filter);
-        }
+       }
         virtual ~HCISocket() {
             Close(Core::infinite);
-        }
-
-        static HCISocket& Control () {
-            static HCISocket& _instance = Core::SingletonType< HCISocket >::Instance(Core::NodeId(HCI_DEV_NONE, HCI_CHANNEL_CONTROL));
-            return (_instance);
         }
 
     public:
@@ -707,10 +711,10 @@ namespace Bluetooth {
 
             Lock();
 
-            if ((_state & SCANNING) == 0) {
+            if ((_state & ACTION_MASK) == 0) {
                 int descriptor = Handle();
 
-                _state.SetState(static_cast<state>(_state.GetState() | (SCANNING|REGULAR)));
+                _state.SetState(static_cast<state>(_state.GetState() | SCANNING));
 
                 Unlock();
 
@@ -774,7 +778,7 @@ namespace Bluetooth {
 
                 Lock();
 
-                _state.SetState(static_cast<state>(_state.GetState() & (~(ABORT|SCANNING|REGULAR))));
+                _state.SetState(static_cast<state>(_state.GetState() & (~(ABORT|SCANNING))));
             }
 
             Unlock();
@@ -782,7 +786,7 @@ namespace Bluetooth {
         void Scan (IScanning* callback, const uint16_t scanTime, const bool limited, const bool passive) {
             Lock();
 
-            if ((_state & SCANNING) == 0) {
+            if ((_state & ACTION_MASK) == 0) {
                 int descriptor = Handle();
 
                 ASSERT (descriptor >= 0);
@@ -800,13 +804,17 @@ namespace Bluetooth {
                         // Now lets wait for the scanning period..
                         Unlock();
 
+                        printf ("Entering scan wait...\n");
                         _state.WaitState(ABORT, scanTime*1000);
+                        printf ("Leaving scan wait...\n");
                         
                         Lock();
 
                         _callback = nullptr;
                         
+                        printf ("Disable scan...\n");
                         hci_le_set_scan_enable(descriptor, 0, SCAN_FILTER_DUPLICATES, SCAN_TIMEOUT);
+                        printf ("Disabled scan...\n");
 
                         _state.SetState(static_cast<state>(_state.GetState() & (~(ABORT|SCANNING|LOW_ENERGY))));
                     }
@@ -819,9 +827,80 @@ namespace Bluetooth {
 
             Lock();
 
-            if ((_state & SCANNING) != 0) {
+            if ((_state & ACTION_MASK) != 0) {
                 // TODO: Find if we can actually abort a IOCTL:HCIINQUIRY !!
                 _state.SetState (static_cast<state>(_state.GetState() | ABORT));
+            }
+
+            Unlock();
+        }
+        void Connect (Core::IOutbound::ICallback* callback, const bool lowEnergy, const Address& remote) {
+
+            Lock();
+
+            if ((_state & ACTION_MASK) == 0) {
+                if (lowEnergy == false) {
+
+                    _cmds.connect.Clear();
+                    _cmds.connect->bdaddr         = *remote.Data();
+                    _cmds.connect->pkt_type       = htobs(HCI_DM1 | HCI_DM3 | HCI_DM5 | HCI_DH1 | HCI_DH3 | HCI_DH5);
+                    _cmds.connect->pscan_rep_mode = 0x02;
+                    _cmds.connect->clock_offset   = 0x0000;
+                    _cmds.connect->role_switch    = 0x01;
+                    _cmds.connect.Send(*this, MAX_ACTION_TIMEOUT, callback);
+
+                    _state.SetState(static_cast<state>(_state.GetState() | CONNECTING));
+                }
+                else {
+
+                    _cmds.connectLE.Clear();
+                    _cmds.connectLE->interval = htobs(0x0004);
+                    _cmds.connectLE->window = htobs(0x0004);
+                    _cmds.connectLE->initiator_filter = 0;
+                    _cmds.connectLE->peer_bdaddr_type = LE_PUBLIC_ADDRESS;
+                    _cmds.connectLE->peer_bdaddr = *remote.Data();
+                    _cmds.connectLE->own_bdaddr_type = LE_PUBLIC_ADDRESS;
+                    _cmds.connectLE->min_interval = htobs(0x000F);
+                    _cmds.connectLE->max_interval = htobs(0x000F);
+                    _cmds.connectLE->latency = htobs(0x0000);
+                    _cmds.connectLE->supervision_timeout = htobs(0x0C80);
+                    _cmds.connectLE->min_ce_length = htobs(0x0001);
+                    _cmds.connectLE->max_ce_length = htobs(0x0001);
+                    _cmds.connectLE.Send(*this, MAX_ACTION_TIMEOUT, callback);
+
+                    _state.SetState(static_cast<state>(_state.GetState() | (CONNECTING|LOW_ENERGY)));
+                }
+            }
+
+            Unlock();
+        }
+        void Disconnect (Core::IOutbound::ICallback* callback, const uint16_t handle, const uint8_t reason) {
+
+            Lock();
+
+            if ((_state & ACTION_MASK) == 0) {
+
+                _cmds.disconnect->handle = htobs(handle);
+                _cmds.disconnect->reason = reason;
+                _cmds.disconnect.Send(*this, MAX_ACTION_TIMEOUT, callback);
+                _state.SetState(static_cast<state>(_state.GetState() | DISCONNECTING));
+            }
+
+            Unlock();
+        }
+        void RemoteName(Core::IOutbound::ICallback* callback, const Address& remote) {
+
+            Lock();
+
+            if ((_state & ACTION_MASK) == 0) {
+
+                _cmds.name.Clear();
+                _cmds.name->bdaddr         = *remote.Data();
+                _cmds.name->pscan_mode     = 0x00;
+                _cmds.name->pscan_rep_mode = 0x02;
+                _cmds.name->clock_offset   = 0x0000;
+                _cmds.name.Send(*this, MAX_ACTION_TIMEOUT, callback);
+                _state.SetState(static_cast<state>(_state.GetState() | METADATA));
             }
 
             Unlock();
@@ -836,6 +915,8 @@ namespace Bluetooth {
         {
             const hci_event_hdr* hdr = reinterpret_cast<const hci_event_hdr*>(&(dataFrame[1]));
             const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&(dataFrame[1 + HCI_EVENT_HDR_SIZE]));
+
+            printf("Received Event...\n");
   
             switch (hdr->evt) {
             case EVT_LE_META_EVENT:
@@ -878,166 +959,35 @@ namespace Bluetooth {
 
             return (availableData);
         }
+        virtual void StateChange() override {
+            Core::SynchronousChannelType<Core::SocketPort>::StateChange();
+            if (IsOpen() == true) {
+                hci_filter_clear(&_filter);
+                hci_filter_set_ptype(HCI_EVENT_PKT,  &_filter);
+                hci_filter_set_event(EVT_CMD_STATUS, &_filter);
+                hci_filter_set_event(EVT_CMD_COMPLETE, &_filter);
+                hci_filter_set_event(EVT_LE_META_EVENT, &_filter);
+
+                // Interesting why this needs to be set.... I hope not!!
+                // hci_filter_set_opcode(0, &_filter);
+
+                setsockopt(Handle(), SOL_HCI, HCI_FILTER, &_filter, sizeof(_filter));
+            }
+        }
 
     private:
         Core::StateTrigger<state> _state;
         IScanning* _callback;
         struct hci_filter _filter;
-    };
-
-    class BluetoothSocket {
-    private:
-        BluetoothSocket() = delete;
-        BluetoothSocket(const BluetoothSocket&) = delete;
-        BluetoothSocket& operator= (const BluetoothSocket&) = delete;
-
-        static constexpr uint32_t MAX_CONNECT_TIME = 5000;
-
-        class Callback : public Core::IOutbound::ICallback{
-        private:
-            Callback() = delete;
-            Callback(const Callback&) = delete;
-            Callback& operator= (const Callback&) = delete;
-
-        public:
-            Callback(BluetoothSocket& parent) 
-                : _parent(parent) {
-            }
-            virtual ~Callback() {
-            }
-
-        public:
-            virtual void Updated (const Core::IOutbound& data, const uint32_t errorCode) override {
-                _parent.Update(data, errorCode);
-            }
-
-        private:
-            BluetoothSocket& _parent;
-        };
-
-    public:
-        BluetoothSocket(const bool lowEnergy, const Address& remote) 
-            : _flags(lowEnergy ? 0x80 : 0x00)
-            , _handle(~0)
-            , _error(0)
-            , _remote(remote)
-            , _sink(*this)
-            , _cmds() {
-        }
-        virtual ~BluetoothSocket() {
-        }
-
-    public:
-        bool IsOpen() const {
-            return ((_handle != ~0) && (_error == Core::ERROR_NONE));
-        }
-        uint32_t Open(const uint32_t time) {
-            Connect();
-        }
-        uint32_t Close(const uint32_t time) {
-            Disconnect();
-        }
-
-    protected:
-        // Methods to extract and insert data into the socket buffers
-        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) = 0;
-        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) = 0;
-
-        // Signal a state change, Opened, Closed or Accepted
-        virtual void StateChange() = 0;
-
-    private:
-        void RemoteName() {
-
-            _flags = 4; // Sending the request name message.
-
-            _cmds.name.Clear();
-            _cmds.name->bdaddr         = *_remote.Data();
-            _cmds.name->pscan_mode     = 0x00;
-            _cmds.name->pscan_rep_mode = 0x02;
-            _cmds.name->clock_offset   = 0x0000;
-            _cmds.name.Send(HCISocket::Control(), MAX_CONNECT_TIME, &_sink);
-        }
-        void Connect () {
-            if ( (_handle == ~0) && ((_flags & 0x0F) == 0) )  {
-                if ((_flags & 0x80) == 0) {
-                    _flags = 1; // Sending the regular connect message.
-
-                    _cmds.connect.Clear();
-                    _cmds.connect->bdaddr         = *_remote.Data();
-                    _cmds.connect->pkt_type       = htobs(HCI_DM1 | HCI_DM3 | HCI_DM5 | HCI_DH1 | HCI_DH3 | HCI_DH5);
-                    _cmds.connect->pscan_rep_mode = 0x02;
-                    _cmds.connect->clock_offset   = 0x0000;
-                    _cmds.connect->role_switch    = 0x01;
-                    _cmds.connect.Send(HCISocket::Control(), MAX_CONNECT_TIME, &_sink);
-                }
-                else {
-                    _flags = 2; // Sending the LE connect message.
-
-                    _cmds.connectLE.Clear();
-                    _cmds.connectLE->interval = htobs(0x0004);
-                    _cmds.connectLE->window = htobs(0x0004);
-                    _cmds.connectLE->initiator_filter = 0;
-                    _cmds.connectLE->peer_bdaddr_type = LE_PUBLIC_ADDRESS;
-                    _cmds.connectLE->peer_bdaddr = *_remote.Data();
-                    _cmds.connectLE->own_bdaddr_type = LE_PUBLIC_ADDRESS;
-                    _cmds.connectLE->min_interval = htobs(0x000F);
-                    _cmds.connectLE->max_interval = htobs(0x000F);
-                    _cmds.connectLE->latency = htobs(0x0000);
-                    _cmds.connectLE->supervision_timeout = htobs(0x0C80);
-                    _cmds.connectLE->min_ce_length = htobs(0x0001);
-                    _cmds.connectLE->max_ce_length = htobs(0x0001);
-                    _cmds.connectLE.Send(HCISocket::Control(), MAX_CONNECT_TIME, &_sink);
-                }
-            }
-        }
-        void Disconnect () {
-            if ( (_handle != ~0) && ((_flags & 0x0F) == 0) )  {
-
-                _flags = 3; // Sending the regular connect message.
-
-                _cmds.disconnect->handle = htobs(_handle);
-                _cmds.disconnect->reason = 0;
-                _cmds.disconnect.Send(HCISocket::Control(), MAX_CONNECT_TIME, &_sink);
-            }
-        }
-        void Update(const Core::IOutbound& /* data */, const uint32_t /* errorCode */) {
-
-            if ((_flags & 0x0F) == 1) {
-                _handle = _cmds.connect.Response().handle;
-                _error = _cmds.connect.Error();
-                _flags &= 0xF0;
-            }
-            else if ((_flags & 0x0F) == 2) {
-                _handle = _cmds.connectLE.Response().handle;
-                _error = _cmds.connectLE.Error();
-                _flags &= 0xF0;
-            }
-            else if ((_flags & 0x0F) == 3) {
-                _handle = ~0;
-                _error = 0;
-                _flags &= 0xF0;
-            }
-
-            StateChange();
-        }
-
-    private:
-        uint8_t _flags;
-        uint16_t _handle;
-        uint16_t _error;
-        Address _remote;
-        Callback _sink;
         union Commands {
            Commands() {}
            ~Commands() {}
 
-           HCISocket::Connect    connect;
-           HCISocket::ConnectLE  connectLE;
-           HCISocket::Disconnect disconnect;
-           HCISocket::RemoteName name;
+           Command::Connect    connect;
+           Command::ConnectLE  connectLE;
+           Command::Disconnect disconnect;
+           Command::RemoteName name;
         } _cmds;
-        
     };
 
     class L2Socket : public Core::SocketPort {

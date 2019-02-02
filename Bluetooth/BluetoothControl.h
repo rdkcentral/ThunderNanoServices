@@ -15,7 +15,7 @@ namespace Plugin {
         BluetoothControl(const BluetoothControl&) = delete;
         BluetoothControl& operator=(const BluetoothControl&) = delete;
 
-        class Scanner : public Bluetooth::HCISocket::IScanning {
+        class Scanner : public Bluetooth::HCISocket::IScanning, public Bluetooth::HCISocket {
         private:
             Scanner() = delete;
             Scanner(const Scanner&) = delete;
@@ -69,11 +69,11 @@ namespace Plugin {
 
                     if ((_mode & REGULAR) != 0) {
                         TRACE(Trace::Information, (_T("Start regular scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
-                        Bluetooth::HCISocket::Control().Scan(&_parent, _scanTime, _type, _flags);
+                        _parent.Run(_scanTime, _type, _flags);
                     }
                     else {
                         TRACE(Trace::Information, (_T("Start Low Energy scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
-                        Bluetooth::HCISocket::Control().Scan(&_parent, _scanTime, ((_mode & LIMITED) != 0), ((_mode & PASSIVE) != 0));
+                        _parent.Run(_scanTime, ((_mode & LIMITED) != 0), ((_mode & PASSIVE) != 0));
                     }
                     TRACE(Trace::Information, (_T("Scan completed: %s"), Core::Time::Now().ToRFC1123().c_str()));
                     _mode = 0;
@@ -89,7 +89,8 @@ namespace Plugin {
 
         public:
             Scanner(BluetoothControl& parent) 
-                : _parent(parent)
+                : Bluetooth::HCISocket()
+                , _parent(parent)
                 , _activity(Core::ProxyType<Job>::Create(this)) {
             }
             virtual ~Scanner() {
@@ -108,7 +109,28 @@ namespace Plugin {
             void Scan(const uint16_t scanTime, const bool limited, const bool passive) {
                 _activity->Load(scanTime, limited, passive);
             }
-            
+            uint32_t Open (const Bluetooth::Address& address) {
+                uint32_t result = Core::ERROR_NONE;
+ 
+                if (IsOpen() == false) {
+                    Bluetooth::HCISocket::LocalNode(address.NodeId(HCI_CHANNEL_RAW));
+                    result = Bluetooth::HCISocket::Open(Core::infinite);
+                }
+
+                return (result);
+            }
+            uint32_t Close() {
+                return (Bluetooth::HCISocket::Close(Core::infinite));
+            }
+
+        private:
+            void Run (const uint16_t scanTime, const uint32_t type, const uint8_t flags) {
+	        Bluetooth::HCISocket::Scan(this, scanTime, type, flags);
+	    }
+	    void Run(const uint16_t scanTime, const bool limited, const bool passive) {
+	        Bluetooth::HCISocket::Scan(this, scanTime, limited, passive);
+	    }
+	 
         private:
             BluetoothControl& _parent;
             Core::ProxyType<Job> _activity;
@@ -534,11 +556,13 @@ namespace Plugin {
             : _skipURL(0)
             , _adminLock()
             , _service(nullptr)
-            , _channel(nullptr)
             , _driver(nullptr)
-            , _scanner(*this)
+            , _administrator(Core::NodeId (HCI_DEV_NONE, HCI_CHANNEL_CONTROL))
+            , _application(*this)
             , _btAddress()
             , _interface()
+            , _devices()
+            , _observers()
         {
         }
         virtual ~BluetoothControl()
@@ -603,8 +627,8 @@ namespace Plugin {
         Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         Bluetooth::Driver* _driver;
-        Bluetooth::HCISocket* _channel;
-        Scanner _scanner;
+        Bluetooth::HCISocket _administrator;
+        Scanner _application;
         Bluetooth::Address _btAddress;
         Bluetooth::Driver::Interface _interface;
         std::list<DeviceImpl*> _devices;
