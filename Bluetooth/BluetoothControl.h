@@ -341,11 +341,41 @@ namespace Plugin {
     public:
         class EXTERNAL DeviceImpl : public IBluetooth::IDevice {
         private: 
+            DeviceImpl() = delete;
+            DeviceImpl(const DeviceImpl&) = delete;
             DeviceImpl& operator=(const DeviceImpl&) = delete;
 
-            enum state : uint8_t {
-                DISCOVERED = 0x01,
-                CONNECTED  = 0x02
+            static constexpr uint32_t MAX_ACTION_TIMEOUT = 2000; /* 2S to setup a connection ? */
+            static constexpr uint16_t ACTION_MASK = 0x0FFF;
+
+            enum state : uint16_t {
+                DECOUPLED     = 0x0001,
+                METADATA      = 0x0002,
+                CONNECTING    = 0x0004,
+                DISCONNECTING = 0x0008,
+                PAIRED        = 0x4000,
+                LOWENERGY     = 0x8000
+            };
+
+            class Sink : public Core::IOutbound::ICallback {
+            private:
+                Sink() = delete;
+                Sink(const Sink&) = delete;
+                Sink& operator= (const Sink&) = delete;
+
+            public:
+                Sink (DeviceImpl& parent) : _parent(parent) {
+                }
+                virtual ~Sink() {
+                }
+
+            public:
+                virtual void Updated (const Core::IOutbound& data, const uint32_t error_code) override {
+                    _parent.Updated(data, error_code);
+                }
+
+            private:
+                DeviceImpl& _parent;
             };
 
         public:
@@ -460,33 +490,85 @@ namespace Plugin {
             };
 
         public:
-            DeviceImpl() 
-                : _address()
-                , _name()
-                , _state(0)
-                , _lowEnergy(false)
-                , _channel(nullptr) {
-            }
-            DeviceImpl(const bool lowEnergy, const Bluetooth::Address& address, const string& name) 
-                : _address(address)
+            DeviceImpl(Bluetooth::HCISocket* application, const bool lowEnergy, const Bluetooth::Address& address, const string& name) 
+                : _application(application)
+                , _address(address)
                 , _name(name)
-                , _state(DISCOVERED)
-                , _lowEnergy(lowEnergy)
-                , _channel(nullptr) {
-            }
-            DeviceImpl(const DeviceImpl& copy) 
-                : _address(copy._address)
-                , _name(copy._name) 
-                , _state(copy._state)
-                , _lowEnergy(copy._lowEnergy)
-                , _channel(nullptr) {
+                , _fullName()
+                , _state( static_cast<state>((_application != nullptr ? METADATA : DECOUPLED) | (lowEnergy ? LOWENERGY : 0)) )
+                , _handle(~0)
+                , _channel(nullptr)
+                , _sink (*this) {
+                RemoteName();
             }
             ~DeviceImpl() {
             }
 
         public:
-            virtual uint32_t Pair(const string& source) override;
+            virtual uint32_t Pair(const string&) override;
             virtual uint32_t Unpair() override;
+
+            virtual uint32_t Connect () {
+                uint32_t result = Core::ERROR_INPROGRESS;
+
+                _state.Lock();
+
+                if ((_state & ACTION_MASK) == 0) {
+
+                    result = Core::ERROR_NONE;
+
+                    _state.SetState(static_cast<state>(_state.GetState() | CONNECTING));
+
+                    if ((_state & LOWENERGY) == 0) {
+
+                        connect.Clear();
+                        connect->bdaddr         = *_address.Data();
+                        connect->pkt_type       = htobs(HCI_DM1 | HCI_DM3 | HCI_DM5 | HCI_DH1 | HCI_DH3 | HCI_DH5);
+                        connect->pscan_rep_mode = 0x02;
+                        connect->clock_offset   = 0x0000;
+                        connect->role_switch    = 0x01;
+                        connect.Send(*_application, MAX_ACTION_TIMEOUT, &_sink);
+                    }
+                    else {
+
+                        connectLE.Clear();
+                        connectLE->interval = htobs(0x0004);
+                        connectLE->window = htobs(0x0004);
+                        connectLE->initiator_filter = 0;
+                        connectLE->peer_bdaddr_type = LE_PUBLIC_ADDRESS;
+                        connectLE->peer_bdaddr = *_address.Data();
+                        connectLE->own_bdaddr_type = LE_PUBLIC_ADDRESS;
+                        connectLE->min_interval = htobs(0x000F);
+                        connectLE->max_interval = htobs(0x000F);
+                        connectLE->latency = htobs(0x0000);
+                        connectLE->supervision_timeout = htobs(0x0C80);
+                        connectLE->min_ce_length = htobs(0x0001);
+                        connectLE->max_ce_length = htobs(0x0001);
+                        connectLE.Send(*_application, MAX_ACTION_TIMEOUT, &_sink);
+                    }
+                }
+
+                _state.Unlock();
+            }
+            virtual void Disconnect (const uint8_t reason) {
+
+                uint32_t result = Core::ERROR_INPROGRESS;
+
+                _state.Lock();
+
+                if ((_state & ACTION_MASK) == 0) {
+
+                    result = Core::ERROR_NONE;
+
+                    _state.SetState(static_cast<state>(_state.GetState() | DISCONNECTING));
+
+                    disconnect->handle = htobs(_handle);
+                    disconnect->reason = reason;
+                    disconnect.Send(*_application, MAX_ACTION_TIMEOUT, &_sink);
+                }
+
+                _state.Unlock();
+            }
             virtual string Address() const override {
                 return (_address.ToString());
             }
@@ -494,19 +576,32 @@ namespace Plugin {
                 return (_name);
             }
             virtual bool IsDiscovered () const override {
-                return ((_state & DISCOVERED) != 0);
+                return ((_state & (METADATA|DECOUPLED)) == 0);
             }
             virtual bool IsPaired() const override {
-                return (_channel != nullptr);
+                return ((_state & PAIRED) != 0);
             }
             virtual bool IsConnected() const override {
-                return ((_state & CONNECTED) != 0);
+                return (_handle != static_cast<uint16_t>(~0));
             }
             inline bool LowEnergy() const {
-                return (_lowEnergy);
+                return ((_state & LOWENERGY) != 0);
             }
             inline void Clear() { 
-                _state &= (~DISCOVERED);
+                _state.Lock();
+                if ( (IsConnected() == false) && (IsPaired() == false) && ((_state & ACTION_MASK) == 0) ) {
+                    _state.SetState(static_cast<state>(_state.GetState() | DECOUPLED));
+                    _fullName.clear();
+                }
+                _state.Unlock();
+            }
+            inline void Discovered() { 
+                _state.Lock();
+                if ( ((_state & ACTION_MASK) == DECOUPLED) && (_application != nullptr) ) {
+                    _state.SetState(static_cast<state>(_state.GetState() | METADATA));
+                    RemoteName();
+                }
+                _state.Unlock();
             }
             inline bool operator== (const Bluetooth::Address& rhs) const {
                 return (_address == rhs);
@@ -514,21 +609,75 @@ namespace Plugin {
             inline bool operator!= (const Bluetooth::Address& rhs) const {
                 return (_address != rhs);
             }
-            inline void Update (const string& name) {
-                _name = name;
-                _state |= DISCOVERED;
-            }
 
             BEGIN_INTERFACE_MAP(DeviceImpl)
                 INTERFACE_ENTRY(IBluetooth::IDevice)
             END_INTERFACE_MAP
 
         private:
+            void RemoteName() {
+
+                if ((_state & ACTION_MASK) == METADATA) {
+
+                    name.Clear();
+                    name->bdaddr         = *_address.Data();
+                    name->pscan_mode     = 0x00;
+                    name->pscan_rep_mode = 0x02;
+                    name->clock_offset   = 0x0000;
+                    name.Send(*_application, MAX_ACTION_TIMEOUT, &_sink);
+                }
+            }
+            void Updated (const Core::IOutbound& data, const uint32_t error_code) {
+                if (data.Id() == Bluetooth::HCISocket::Command::RemoteName::ID) {
+                    // Metadata is flowing in, handle it..
+                    // _cmds.name.Response().bdaddr;
+                    const char* longName = reinterpret_cast<const char*>(name.Response().name);
+                    uint8_t index = 0; 
+                    while (index < HCI_MAX_NAME_LENGTH) { printf("%c", ::isprint(longName[index]) ? longName[index] : '.');  index++; }
+                    index = 0;
+                    while ((index < HCI_MAX_NAME_LENGTH) && (::isprint(longName[index]) != 0)) { index++; }
+                     
+                    _fullName = std::string(longName, index);
+                    printf ("Loaded Long Device Name: %s\n", _fullName.c_str());
+                    _state.SetState(static_cast<state>(_state.GetState() & (~METADATA)));
+                }
+                else if (data.Id() == Bluetooth::HCISocket::Command::Connect::ID) {
+                    // looks like we are connected..
+                    _handle = connect.Response().handle;
+                    printf ("Connected using handle: %d\n", _handle);
+                    _state.SetState(static_cast<state>(_state.GetState() & (~CONNECTING)));
+                }
+                else if (data.Id() == Bluetooth::HCISocket::Command::ConnectLE::ID) {
+                    _handle = connect.Response().handle;
+                    printf ("Connected using handle: %d\n", _handle);
+                    _state.SetState(static_cast<state>(_state.GetState() & (~CONNECTING)));
+                }
+                else if (data.Id() == Bluetooth::HCISocket::Command::Disconnect::ID) {
+                    if (error_code == Core::ERROR_NONE) {
+                        printf ("Disconnected\n");
+                        _handle = ~0;
+                    }
+                    else {
+                        printf ("Disconnected Failed!\n");
+                    }
+                    _state.SetState(static_cast<state>(_state.GetState() & (~DISCONNECTING)));
+                }
+            }
+
+        private:
+            Bluetooth::HCISocket* _application;
             Bluetooth::Address _address;
             string _name;
-            uint8_t _state;
-            bool _lowEnergy;
+            string _fullName;
+            Core::StateTrigger<state> _state;
+            uint16_t _handle;
             Bluetooth::L2Socket* _channel;
+            Sink _sink;
+
+               Bluetooth::HCISocket::Command::Connect    connect;
+               Bluetooth::HCISocket::Command::ConnectLE  connectLE;
+               Bluetooth::HCISocket::Command::Disconnect disconnect;
+               Bluetooth::HCISocket::Command::RemoteName name;
         };
 
         class EXTERNAL Status : public Core::JSON::Container {

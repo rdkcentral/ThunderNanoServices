@@ -416,10 +416,10 @@ namespace Plugin {
         while ( (index != _devices.end()) && (*(*index) != address) ) { index++; }
 
         if (index != _devices.end()) {
-            (*index)->Update(name);
+            (*index)->Discovered();
         }
         else {
-            _devices.push_back(Core::Service<DeviceImpl>::Create<DeviceImpl>(lowEnergy, address, name));
+            _devices.push_back(Core::Service<DeviceImpl>::Create<DeviceImpl>(&_application, lowEnergy, address, name));
         }
 
         _adminLock.Unlock();
