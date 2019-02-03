@@ -143,11 +143,11 @@ namespace Core {
 
             _adminLock.Lock();
 
+            Cleanup();
+
             _queue.emplace_back(message, nullptr);
 
             uint32_t result = Completed(_queue.back(), waitTime);
-
-            Revoke (message);
 
             _adminLock.Unlock();
 
@@ -156,13 +156,15 @@ namespace Core {
 
         uint32_t Exchange(const IOutbound& message, IInbound& response, const uint32_t waitTime) {
 
+            bool trigger = false;
+
             _adminLock.Lock();
+
+            Cleanup();
 
             _queue.emplace_back(message, response);
 
             uint32_t result = Completed(_queue.back(), waitTime);
-
-            Revoke (message);
 
             _adminLock.Unlock();
 
@@ -172,6 +174,8 @@ namespace Core {
         void Send(const uint32_t waitTime, IOutbound::ICallback* callback, const IOutbound& message, IInbound* response = nullptr) {
 
             _adminLock.Lock();
+
+            Cleanup();
 
             _queue.emplace_back(message, response, callback, waitTime);
             bool trigger = (_queue.size() == 1);
@@ -187,6 +191,8 @@ namespace Core {
             bool trigger = false;
 
             _adminLock.Lock();
+
+            Cleanup();
 
             typename std::list<Frame>::iterator index = std::find(_queue.begin(), _queue.end(), message);
             if (index != _queue.end()) {
@@ -205,15 +211,11 @@ namespace Core {
         int Handle() const {
             return (static_cast<const Core::IResource&>(*this).Descriptor());
         }
-        void Lock() {
-            _adminLock.Lock();
-        }
-        void Unlock() {
-            _adminLock.Unlock();
-        }
         virtual void StateChange () override
 	{
+            _adminLock.Lock();
             Reevaluate();
+            _adminLock.Unlock();
         }
         virtual uint16_t Deserialize (const uint8_t* dataFrame, const uint16_t availableData) = 0;
 
@@ -229,8 +231,8 @@ namespace Core {
         }
         void Reevaluate() {
             _reevaluate.SetEvent();
- 
-            while (_waitCount != 0) {
+
+            while (_waitCount.load() != 0) {
                 SleepMs(0);
             }
  
@@ -240,9 +242,9 @@ namespace Core {
 
             Core::Time now = Core::Time::Now();
             Core::Time endTime = Core::Time(now).Add(allowedTime);
-            uint32_t result = Core::ERROR_NONE;
+            uint32_t result = Core::ERROR_ASYNC_ABORTED;
 
-            if (_queue.size() == 1) {
+            if (&(_queue.front()) == &request) {
 
                 _adminLock.Unlock();
 
@@ -267,7 +269,15 @@ namespace Core {
                 now = Core::Time::Now();
             }
 
-            return (request.IsComplete() ? Core::ERROR_NONE : Core::ERROR_ASYNC_ABORTED);
+            typename std::list<Frame>::iterator index = std::find(_queue.begin(), _queue.end(), request.Outbound());
+            if (index != _queue.end()) {
+                if (request.IsComplete() == true) {
+                    result = Core::ERROR_NONE;
+                }
+                _queue.erase (index);
+            }
+
+            return (result);
         }
 
         // Methods to extract and insert data into the socket buffers
@@ -322,18 +332,20 @@ namespace Core {
                     if (frame.Callback() != nullptr) {
                         frame.Callback()->Updated(frame.Outbound(), Core::ERROR_NONE);
                     }
-                    CHANNEL::Trigger();
-                    Reevaluate();
+                    if (_queue.size() > 0) {
+                        CHANNEL::Trigger();
+                    }
                 } 
                 else if (frame.IsComplete()) {
                     Reevaluate();
                 }
             }
+
+            _adminLock.Unlock();
+
             if (result < availableData) { 
                 result += Deserialize(&(dataFrame[result]), availableData - result);
             }
-
-            _adminLock.Unlock();
 
             return (result);
         }
@@ -342,7 +354,7 @@ namespace Core {
         Core::CriticalSection _adminLock;
         std::list<Frame> _queue;
         Core::Event _reevaluate;
-        std::atomic<uint32_t> _waitCount;
+        volatile std::atomic<uint32_t> _waitCount;
     };
 
 } // namespace Core
@@ -709,14 +721,14 @@ namespace Bluetooth {
 
             ASSERT (scanTime <= 326);
 
-            Lock();
+            _state.Lock();
 
             if ((_state & ACTION_MASK) == 0) {
                 int descriptor = Handle();
 
                 _state.SetState(static_cast<state>(_state.GetState() | SCANNING));
 
-                Unlock();
+                _state.Unlock();
 
                 ASSERT (descriptor >= 0);
 
@@ -776,15 +788,15 @@ namespace Bluetooth {
                     // ir->flags  &= ~IREQ_CACHE_FLUSH;
                 }
 
-                Lock();
+                _state.Lock();
 
                 _state.SetState(static_cast<state>(_state.GetState() & (~(ABORT|SCANNING))));
             }
 
-            Unlock();
+            _state.Unlock();
         }
         void Scan (IScanning* callback, const uint16_t scanTime, const bool limited, const bool passive) {
-            Lock();
+            _state.Lock();
 
             if ((_state & ACTION_MASK) == 0) {
                 int descriptor = Handle();
@@ -795,48 +807,48 @@ namespace Bluetooth {
                 const uint16_t window   = (limited ? 0x12 : 0x10);
                 const uint8_t  scanType = (passive ? 0x00 : 0x01);
 
+            printf ("%s - %d...\n", __FUNCTION__, __LINE__);
                 if (hci_le_set_scan_parameters(descriptor, scanType, htobs(interval), htobs(window), LE_PUBLIC_ADDRESS, SCAN_FILTER_POLICY, SCAN_TIMEOUT) >= 0) {
                     _callback = callback;
 
+            printf ("%s - %d...\n", __FUNCTION__, __LINE__);
                     if (hci_le_set_scan_enable(descriptor, 1, SCAN_FILTER_DUPLICATES, SCAN_TIMEOUT) >= 0) {
+            printf ("%s - %d...\n", __FUNCTION__, __LINE__);
                         _state.SetState(static_cast<state>(_state.GetState() | (SCANNING|LOW_ENERGY)));
 
                         // Now lets wait for the scanning period..
-                        Unlock();
+                        _state.Unlock();
 
-                        printf ("Entering scan wait...\n");
                         _state.WaitState(ABORT, scanTime*1000);
-                        printf ("Leaving scan wait...\n");
                         
-                        Lock();
+                        _state.Lock();
 
                         _callback = nullptr;
                         
-                        printf ("Disable scan...\n");
                         hci_le_set_scan_enable(descriptor, 0, SCAN_FILTER_DUPLICATES, SCAN_TIMEOUT);
-                        printf ("Disabled scan...\n");
 
                         _state.SetState(static_cast<state>(_state.GetState() & (~(ABORT|SCANNING|LOW_ENERGY))));
                     }
                 }
+            printf ("%s - %d...\n", __FUNCTION__, __LINE__);
             }
 
-            Unlock();
+            _state.Unlock();
         }
         void Abort() {
 
-            Lock();
+            _state.Lock();
 
             if ((_state & ACTION_MASK) != 0) {
                 // TODO: Find if we can actually abort a IOCTL:HCIINQUIRY !!
                 _state.SetState (static_cast<state>(_state.GetState() | ABORT));
             }
 
-            Unlock();
+            _state.Unlock();
         }
         void Connect (Core::IOutbound::ICallback* callback, const bool lowEnergy, const Address& remote) {
 
-            Lock();
+            _state.Lock();
 
             if ((_state & ACTION_MASK) == 0) {
                 if (lowEnergy == false) {
@@ -872,11 +884,11 @@ namespace Bluetooth {
                 }
             }
 
-            Unlock();
+            _state.Unlock();
         }
         void Disconnect (Core::IOutbound::ICallback* callback, const uint16_t handle, const uint8_t reason) {
 
-            Lock();
+            _state.Lock();
 
             if ((_state & ACTION_MASK) == 0) {
 
@@ -886,11 +898,11 @@ namespace Bluetooth {
                 _state.SetState(static_cast<state>(_state.GetState() | DISCONNECTING));
             }
 
-            Unlock();
+            _state.Unlock();
         }
         void RemoteName(Core::IOutbound::ICallback* callback, const Address& remote) {
 
-            Lock();
+            _state.Lock();
 
             if ((_state & ACTION_MASK) == 0) {
 
@@ -903,7 +915,7 @@ namespace Bluetooth {
                 _state.SetState(static_cast<state>(_state.GetState() | METADATA));
             }
 
-            Unlock();
+            _state.Unlock();
         }
 
     private:
@@ -916,8 +928,6 @@ namespace Bluetooth {
             const hci_event_hdr* hdr = reinterpret_cast<const hci_event_hdr*>(&(dataFrame[1]));
             const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&(dataFrame[1 + HCI_EVENT_HDR_SIZE]));
 
-            printf("Received Event...\n");
-  
             switch (hdr->evt) {
             case EVT_LE_META_EVENT:
                  const evt_le_meta_event* eventMetaData = reinterpret_cast<const evt_le_meta_event*>(ptr);
@@ -946,6 +956,7 @@ namespace Bluetooth {
                          TRACE_L1("Entry[%s] has no name. Do not report it.", Address(advertisingInfo->bdaddr).ToString());
                      }
                      else {
+            printf ("%s - %d, Adding [%s]...\n", __FUNCTION__, __LINE__, string(name, pos).c_str());
                          _state.Lock();
                          if (_callback != nullptr) {
                              _callback->DiscoveredDevice (true, Address(advertisingInfo->bdaddr), string (name, pos));
