@@ -13,28 +13,11 @@ namespace Plugin {
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::Status> > jsonResponseFactoryStatus(1);
     /* static */ string BluetoothControl::_HIDPath;
 
-    /* virtual */ uint32_t BluetoothControl::DeviceImpl::Pair(const string& source) {
-        if (_channel == nullptr) {
-            Bluetooth::Address from(source.c_str());
-            _channel = new HIDSocket(_HIDPath, from, _address);
-            uint32_t error = ~0;
-
-            if ( (_channel != nullptr) && ( (error = _channel->Open(1000)) == Core::ERROR_NONE) ) {
-                printf("Opening from: %s succeeded\n", source.c_str());
-            }
-            else {
-                printf("Open Failed. Error: %d\n", error);
-            }
-        }
+    /* virtual */ uint32_t BluetoothControl::DeviceImpl::Pair() {
         return (Core::ERROR_NONE);
     }
 
     /* virtual */ uint32_t BluetoothControl::DeviceImpl::Unpair() {
-        if (_channel != nullptr) {
-            _channel->Close(Core::infinite);
-            delete _channel;
-            _channel = nullptr;
-        }
         return (Core::ERROR_NONE);
     }
 
@@ -242,7 +225,8 @@ namespace Plugin {
                     }
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("Scan started.");
-                } else if (index.Current() == _T("Pair")) {
+                } else if ( (index.Current() == _T("Pair")) || (index.Current() == _T("Connect")) ) {
+                    bool pair = (index.Current() == _T("Pair"));
                     string destination;
                     if (index.Next() == true) {
                         destination = index.Current().Text();
@@ -255,16 +239,26 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Device not found.");
                     }
-                    else if (device->Pair(_btAddress.ToString())) {
+                    else if (pair == true) {
+                        if (device->Pair() == Core::ERROR_NONE) {
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->Message = _T("Paired device.");
+                        } else {
+                            result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                            result->Message = _T("Unable to Pair device.");
+                        }
+                    }
+                    else if (device->Connect() == Core::ERROR_NONE) {
                         result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Paired device.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = _T("Unable to Pair device.");
+                        result->Message = _T("Connected device.");
+                    }
+                    else {
+                        result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                        result->Message = _T("Unable to connect to device.");
                     }
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                    result->Message = _T("Unable to Disconnect device.");
+                    result->Message = _T("Unable to process PUT request.");
                 }
             }
         }
@@ -278,6 +272,35 @@ namespace Plugin {
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported POST request.");
 
+        if (index.IsValid() == true) {
+            if (index.Next()) {
+                TRACE(Trace::Information, (string(__FUNCTION__)));
+
+                if (index.Current() == _T("Remote")) {
+                    string address;
+                    if (index.Next() == true) {
+                        address = index.Current().Text();
+                    }
+                    else if (request.HasBody() == true) {
+                        address = request.Body<const DeviceImpl::JSON>()->Address;
+                    }
+                    DeviceImpl* device = Find(address);
+                    if (device == nullptr) {
+                        result->ErrorCode = Web::STATUS_NOT_FOUND;
+                        result->Message = _T("Unknown device.");
+                    }
+                    else {
+                        _gattRemotes.emplace_back(device->Locator(), _HIDPath);
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("Unpaired device.");
+                    }
+                }
+            }
+        }
+
+
+        return result;
+ 
         return result;
     }
 
@@ -295,7 +318,8 @@ namespace Plugin {
                     _application.Abort();
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("Scan stopped.");
-                } else if (index.Current() == _T("Pair")) {
+                } else if ( (index.Current() == _T("Pair")) || (index.Current() == _T("Connect")) ) {
+                    bool pair = (index.Current() == _T("Pair"));
                     string address;
                     if (index.Next() == true) {
                         address = index.Current().Text();
@@ -306,14 +330,35 @@ namespace Plugin {
                     DeviceImpl* device = Find(address);
                     if (device == nullptr) {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
-                        result->Message = _T("Unpaired device.");
+                        result->Message = _T("Unknown device.");
                     }
-                    else if (device->Unpair()) {
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Unpaired device.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = _T("Unable to Unpair device.");
+                    else if (pair == true) {
+                        if (device->Unpair() == Core::ERROR_NONE) {
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->Message = _T("Unpaired device.");
+                        } 
+                        else {
+                            result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                            result->Message = _T("Unable to Unpair device.");
+                        }
+                    }
+                    else {
+                        uint16_t reason = 0;
+                        if (index.Next() == true) {
+                            reason = Core::NumberType<uint16_t>(index.Current()).Value();
+                        }
+                        else if (request.HasBody() == true) {
+                            reason = request.Body<const DeviceImpl::JSON>()->Reason;
+                        }
+ 
+                        if (device->Disconnect(reason) == Core::ERROR_NONE) {
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->Message = _T("Disconnected device.");
+                        } 
+                        else {
+                            result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                            result->Message = _T("Unable to Disconnect device.");
+                        }
                     }
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -418,8 +463,11 @@ namespace Plugin {
         if (index != _devices.end()) {
             (*index)->Discovered();
         }
+        else if (lowEnergy == true) {
+            _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(&_application, address, name));
+        }
         else {
-            _devices.push_back(Core::Service<DeviceImpl>::Create<DeviceImpl>(&_application, lowEnergy, address, name));
+            _devices.push_back(Core::Service<DeviceRegular>::Create<DeviceImpl>(&_application, address, name));
         }
 
         _adminLock.Unlock();

@@ -23,14 +23,21 @@ namespace Core {
 
         virtual uint16_t Id() const = 0;
         virtual uint16_t Serialize(uint8_t stream[], const uint16_t length) const = 0;
+        virtual void Reload() const = 0;
     };
 
     struct IInbound {
 
         virtual ~IInbound() {};
 
+        enum state : uint8_t {
+            INPROGRESS,
+            RESEND,
+            COMPLETED
+        };
+
         virtual uint16_t Deserialize(const uint8_t stream[], const uint16_t length) = 0;
-        virtual bool IsCompleted() const = 0;
+        virtual state IsCompleted() const = 0;
     };
 
     template <typename CHANNEL>
@@ -59,6 +66,7 @@ namespace Core {
                 , _state(IDLE)
                 , _expired(0)
                 , _callback(nullptr) {
+                _message.Reload();
             }
             Frame(const IOutbound& message, IInbound* response, IOutbound::ICallback* callback, const uint32_t waitTime) 
                 : _message(message)
@@ -66,6 +74,7 @@ namespace Core {
                 , _state(IDLE)
                 , _expired(Core::Time::Now().Add(waitTime).Ticks())
                 , _callback(callback) {
+                _message.Reload();
             }
             ~Frame() {
             }
@@ -93,8 +102,13 @@ namespace Core {
 
                 if (_response != nullptr) {
                     result = _response->Deserialize(dataFrame, availableData);
-                    if (_response->IsCompleted() == true) {
+                    IInbound::state newState = _response->IsCompleted();
+                    if (newState == IInbound::COMPLETED) {
                         _state = COMPLETE;
+                    }
+                    else if (newState == IInbound::RESEND) {
+                        _message.Reload();
+                        _state = IDLE;
                     }
                 }
                 return (result);
@@ -339,6 +353,9 @@ namespace Core {
                 else if (frame.IsComplete()) {
                     Reevaluate();
                 }
+                else if (frame.IsSend() == false) {
+                    CHANNEL::Trigger();
+                }
             }
 
             _adminLock.Unlock();
@@ -386,6 +403,9 @@ namespace Bluetooth {
         ~Address() {
         }
 
+        static constexpr uint8_t LE_PUBLIC_ADDRESS = 0x00;
+        static constexpr uint8_t LE_RANDOM_ADDRESS = 0x01;
+
     public:
         Address& operator= (const Address& rhs) {
             _length = rhs._length;
@@ -403,6 +423,10 @@ namespace Bluetooth {
             }
             return (IsValid());
         }
+        Address AnyInterface() const {
+            static bdaddr_t g_anyAddress;
+            return (Address (g_anyAddress));
+        }
         const bdaddr_t* Data () const {
             return (IsValid() ? &_address : nullptr);
         }
@@ -419,8 +443,8 @@ namespace Bluetooth {
 
             return (result);
         }
-        Core::NodeId NodeId(const uint16_t cid, const uint8_t addressType) const {
-            return (Core::NodeId (_address, cid, addressType)); 
+        Core::NodeId NodeId(const uint8_t addressType, const uint16_t cid, const uint16_t psm) const {
+            return (Core::NodeId (_address, addressType, cid, psm)); 
         }
         bool operator== (const Address& rhs) const {
             return ((_length == rhs._length) && (memcmp(rhs._address.b, _address.b, _length) == 0));
@@ -472,7 +496,7 @@ namespace Bluetooth {
         };
 
         template<typename OUTBOUND>
-        class ManagementType : public Core::IOutbound{
+        class ManagementType : public Core::IOutbound {
         private: 
             ManagementType() = delete;
             ManagementType(const ManagementType<OUTBOUND>&) = delete;
@@ -491,7 +515,6 @@ namespace Bluetooth {
 
         public:
             void Clear () {
-                _offset = 0;
                 ::memset(&(_buffer[6]), 0, sizeof(_buffer) - 6);
             }
             OUTBOUND* operator->() {
@@ -506,10 +529,13 @@ namespace Bluetooth {
             }
 
         private:
-            virtual uint16_t Id() const {
+            virtual uint16_t Id() const override {
                 return ((_buffer[0] << 8) | _buffer[1]);
             }
-            virtual uint16_t Serialize(uint8_t stream[], const uint16_t length) const {
+            virtual void Reload() const override {
+                _offset = 0;
+            }
+            virtual uint16_t Serialize(uint8_t stream[], const uint16_t length) const override {
                 uint16_t result = std::min(static_cast<uint16_t>(sizeof(_buffer) - _offset), length);
                 if (result > 0) {
 
@@ -537,6 +563,10 @@ namespace Bluetooth {
         public:
             CommandType() 
                 : _offset(sizeof(_buffer)) {
+                _buffer[0] = HCI_COMMAND_PKT;
+                _buffer[1] = (OPCODE & 0xFF);
+                _buffer[2] = ((OPCODE >> 8) & 0xFF);
+                _buffer[3] = static_cast<uint8_t>(sizeof(OUTBOUND));
             }
             virtual ~CommandType() {
             }
@@ -546,32 +576,19 @@ namespace Bluetooth {
                 return (reinterpret_cast<OUTBOUND*>(&(_buffer[4])));
             }
             void Clear () {
-                _offset = 0;
-                _buffer[0] = HCI_COMMAND_PKT;
-                _buffer[1] = (OPCODE & 0xFF);
-                _buffer[2] = ((OPCODE >> 8) & 0xFF);
-                _buffer[3] = static_cast<uint8_t>(sizeof(OUTBOUND));
-                ::memset(&(_buffer[4]), 0, sizeof(_buffer) - 4);
-            }
-            void Send (HCISocket& socket, const uint32_t waitTime, IOutbound::ICallback* callback) {
-                socket.Send(waitTime, *this, callback, nullptr);
-            }
-            uint32_t Exchange(HCISocket& socket, const uint32_t waitTime) {
-                return (socket.Exchange(waitTime, *this));
+               ::memset(&(_buffer[4]), 0, sizeof(_buffer) - 4);
             }
 
         private:
-            virtual uint16_t Id() const {
+            virtual uint16_t Id() const override {
                 return (ID);
             }
-            virtual uint16_t Serialize(uint8_t stream[], const uint16_t length) const {
+            virtual void Reload() const override {
+                _offset = 0;
+            }
+            virtual uint16_t Serialize(uint8_t stream[], const uint16_t length) const override {
                 uint16_t result = std::min(static_cast<uint16_t>(sizeof(_buffer) - _offset), length);
                 if (result > 0) {
-                    
-                    // Seems we need to push "our" message, register it for whatever godsake reason...
-                    // It looks like it works without ...
-                    //_parent->SetOpcode(OPCODE);
-                    // printf ("Opcode: %04X\n", OPCODE);
                     
                     ::memcpy (stream, &(_buffer[_offset]), result);
                     _offset += result;
@@ -605,18 +622,10 @@ namespace Bluetooth {
             const INBOUND& Response() const {
                 return(_response);
             }
-            void Send (HCISocket& socket, const uint32_t waitTime, Core::IOutbound::ICallback* callback) {
-                ::memset (&_response, 0, sizeof(INBOUND));
-                socket.Send(waitTime, *this, callback, this);
-            }
-            uint32_t Exchange(HCISocket& socket, const uint32_t waitTime) {
-                ::memset (&_response, 0, sizeof(INBOUND));
-                return(socket.Exchange(waitTime, static_cast<const Core::IOutbound&>(*this), static_cast<Core::IInbound&>(*this)));
-            }
 
         private:
-            virtual bool IsCompleted() const override {
-                return (_error != ~0);
+            virtual Core::IInbound::state IsCompleted() const override {
+                return (_error != static_cast<uint16_t>(~0) ? Core::IInbound::COMPLETED : Core::IInbound::INPROGRESS);
             }
             virtual uint16_t Deserialize(const uint8_t stream[], const uint16_t length) override {
                 uint16_t result = 0;
@@ -674,7 +683,6 @@ namespace Bluetooth {
             uint16_t _error;
         };
 
-        
         static constexpr uint32_t MAX_ACTION_TIMEOUT = 2000; /* 2 Seconds for commands to complete ? */
         static constexpr uint16_t ACTION_MASK = 0x3FFF;
 
@@ -706,6 +714,9 @@ namespace Bluetooth {
 
         typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_SET_SCAN_ENABLE), le_set_scan_enable_cp, uint8_t, EVT_CMD_STATUS>
                 ScanEnableLE;
+
+        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_READ_REMOTE_USED_FEATURES), le_read_remote_used_features_cp, evt_le_read_remote_used_features_complete, EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE>
+                RemoteFeaturesLE;
         };
  
         // ------------------------------------------------------------------------
@@ -771,28 +782,8 @@ namespace Bluetooth {
                         std::list<Address>::const_iterator finder(std::find(reported.begin(), reported.end(), newSource));
 
                         if (finder == reported.end()) {
-                            char name[250];
-                            name[0] = '\0';
-                            uint8_t pos = 0;
-
-                            if (hci_read_remote_name_with_clock_offset(descriptor,
-                                        address,
-                                        info[index].pscan_rep_mode,
-                                        info[index].clock_offset | 0x8000,
-                                        sizeof(name), name, 100000) >= 0) {
-
-                                while ((pos < sizeof(name)) && (name[pos] != '\0')) {
-                                    if (::isprint(name[pos]) == 0) name[pos] = '.';
-                                    pos++;
-                                }
-                            }
-                            if (pos == 0) {
-                                printf("Entry[%s] has no name. Do not report it.\n", Address(*address).ToString().c_str());
-                            }
-                            else {
-                                reported.push_back(newSource);
-                                callback->DiscoveredDevice(false, newSource, string(name, pos));
-                            }
+                            reported.push_back(newSource);
+                            callback->DiscoveredDevice(false, newSource, _T("[Unknown]"));
                         }
                     }
 
@@ -822,7 +813,7 @@ namespace Bluetooth {
                 parameters->own_bdaddr_type = LE_PUBLIC_ADDRESS;
                 parameters->filter = SCAN_FILTER_POLICY;
 
-                if ( (parameters.Exchange(*this, MAX_ACTION_TIMEOUT) == Core::ERROR_NONE) && (parameters.Response() == 0) ) {
+                if ( (Exchange(MAX_ACTION_TIMEOUT, parameters, parameters) == Core::ERROR_NONE) && (parameters.Response() == 0) ) {
 
                     Command::ScanEnableLE scanner;
                     _callback = callback;
@@ -831,7 +822,7 @@ namespace Bluetooth {
                     scanner->enable = 1;
                     scanner->filter_dup = SCAN_FILTER_DUPLICATES;
 
-                    if ( (scanner.Exchange(*this, MAX_ACTION_TIMEOUT) == Core::ERROR_NONE) && (scanner.Response() == 0) ) {
+                    if ( (Exchange(MAX_ACTION_TIMEOUT, scanner, scanner) == Core::ERROR_NONE) && (scanner.Response() == 0) ) {
 
                         _state.SetState(static_cast<state>(_state.GetState() | SCANNING));
 
@@ -844,9 +835,8 @@ namespace Bluetooth {
 
                         _callback = nullptr;
                         
-                        scanner.Clear();
                         scanner->enable = 0;
-                        scanner.Exchange(*this, MAX_ACTION_TIMEOUT);
+                        Exchange(MAX_ACTION_TIMEOUT, scanner, scanner);
 
                         _state.SetState(static_cast<state>(_state.GetState() & (~(ABORT|SCANNING))));
                     }
@@ -878,6 +868,18 @@ namespace Bluetooth {
             const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&(dataFrame[1 + HCI_EVENT_HDR_SIZE]));
 
             switch (hdr->evt) {
+            case EVT_CMD_STATUS: 
+            {
+                const evt_cmd_status* cs = reinterpret_cast<const evt_cmd_status*>(ptr);
+                printf("EVT_CMD_STATUS:   %X-%03X : %d.%d\n", (cs->opcode >> 10) & 0xF, (cs->opcode & 0x3FF), cs->ncmd, cs->status);
+                break;
+            }
+            case EVT_CMD_COMPLETE:
+            {
+                const evt_cmd_complete* cc = reinterpret_cast<const evt_cmd_complete*>(ptr);;
+                printf("EVT_CMD_COMPLETE: %X-%03X : %d\n", (cc->opcode >> 10) & 0xF, (cc->opcode & 0x3FF), cc->ncmd);
+                break;
+            }
             case EVT_LE_META_EVENT:
             {
                  const evt_le_meta_event* eventMetaData = reinterpret_cast<const evt_le_meta_event*>(ptr);
@@ -945,177 +947,95 @@ namespace Bluetooth {
         Core::StateTrigger<state> _state;
         IScanning* _callback;
         struct hci_filter _filter;
-        union Commands {
-           Commands() {}
-           ~Commands() {}
-
-           Command::Connect    connect;
-           Command::ConnectLE  connectLE;
-           Command::Disconnect disconnect;
-           Command::RemoteName name;
-        } _cmds;
     };
 
-    class L2Socket : public Core::SocketPort {
+    class GATTSocket : public Core::SynchronousChannelType<Core::SocketPort> {
     private:
-        L2Socket(const L2Socket&) = delete;
-        L2Socket& operator=(const L2Socket&) = delete;
+        GATTSocket(const GATTSocket&) = delete;
+        GATTSocket& operator=(const GATTSocket&) = delete;
 
-        enum state {
-            DETECTING,
-            METADATA_ID,
-            METADATA_NAME_HANDLE,
-            METADATA_NAME,
-            METADATA_DESCRIPTORS_HANDLE,
-            METADATA_DESCRIPTORS,
-            OPERATIONAL
-        };
+    protected:
+        static constexpr uint8_t LE_ATT_CID                = 4;
 
-        class CommandFrame {
+        static constexpr uint8_t ATT_OP_ERROR              = 0x01;
+        static constexpr uint8_t ATT_OP_MTU_REQ            = 0x02;
+        static constexpr uint8_t ATT_OP_MTU_RESP           = 0x03;
+        static constexpr uint8_t ATT_OP_FIND_INFO_REQ      = 0x04;
+        static constexpr uint8_t ATT_OP_FIND_INFO_RESP     = 0x05;
+        static constexpr uint8_t ATT_OP_FIND_BY_TYPE_REQ   = 0x06;
+        static constexpr uint8_t ATT_OP_FIND_BY_TYPE_RESP  = 0x07;
+        static constexpr uint8_t ATT_OP_READ_BY_TYPE_REQ   = 0x08;
+        static constexpr uint8_t ATT_OP_READ_BY_TYPE_RESP  = 0x09;
+        static constexpr uint8_t ATT_OP_READ_REQ           = 0x0A;
+        static constexpr uint8_t ATT_OP_READ_RSP           = 0x0B;
+        static constexpr uint8_t ATT_OP_READ_BLOB_REQ      = 0x0C;
+        static constexpr uint8_t ATT_OP_READ_BLOB_RESP     = 0x0D;
+        static constexpr uint8_t ATT_OP_READ_MULTI_REQ     = 0x0E;
+        static constexpr uint8_t ATT_OP_READ_MULTI_RESP    = 0x0F;
+        static constexpr uint8_t ATT_OP_READ_BY_GROUP_REQ  = 0x10;
+        static constexpr uint8_t ATT_OP_READ_BY_GROUP_RESP = 0x11;
+        static constexpr uint8_t ATT_OP_WRITE_REQ          = 0x12;
+        static constexpr uint8_t ATT_OP_WRITE_RESP         = 0x13;
+
+        static constexpr uint8_t ATT_OP_HANDLE_NOTIFY      = 0x1B;
+
+        class Exchange : public Core::IOutbound, public Core::IInbound {
         private: 
-            CommandFrame(const CommandFrame&) = delete;
-            CommandFrame& operator= (const CommandFrame&) = delete;
+            Exchange(const Exchange&) = delete;
+            Exchange& operator= (const Exchange&) = delete;
 
         public:
-            CommandFrame()
-                : _offset(0)
-                , _maxSize(64)
-                , _buffer(reinterpret_cast<uint8_t*>(::malloc(_maxSize)))
-                , _size(0) {
+            Exchange() 
+                : _id(0)
+                , _offset(~0)
+                , _error(~0) {
             }
-            ~CommandFrame() {
-                ::free (_buffer);
+            virtual ~Exchange() {
             }
-           
-        public:
-            uint16_t Serialize(uint8_t stream[], const uint16_t length) const {
-                uint16_t copyLength = std::min(static_cast<uint16_t>(_size - _offset), length);
-                if (copyLength > 0) {
-                    ::memcpy (stream, &(_buffer[_offset]), copyLength);
-                    _offset += copyLength;
-                }
-                return (copyLength);
-            }
-            void Clear() {
-                _offset = 0;
-                _size = 0;
-            }
-            template<typename VALUE>
-            inline CommandFrame& Add(const VALUE& value) {
 
-                if ((sizeof(VALUE) + _size) > _maxSize) {
-                    _maxSize = _maxSize + (8 * sizeof(VALUE));
-                    uint8_t* newBuffer = reinterpret_cast<uint8_t*>(::malloc(_maxSize));
-                    ::memcpy(newBuffer, _buffer, _size);
-                    ::free(_buffer);
-                }
-                ::memcpy (&(_buffer[_size]), &value, sizeof(VALUE));
-                _size += sizeof(VALUE);
-
-                return (*this);
-            }
         private:
+            virtual uint16_t Id() const override {
+                return (_id);
+            }
+            virtual void Reload() const override {
+                _offset = 0;
+            }
+            virtual uint16_t Serialize(uint8_t stream[], const uint16_t length) const override {
+                uint16_t result = std::min(static_cast<uint16_t>(sizeof(_buffer) - _offset), length);
+                if (result > 0) {
+                    
+                    // Seems we need to push "our" message, register it for whatever godsake reason...
+                    // It looks like it works without ...
+                    //_parent->SetOpcode(OPCODE);
+                    // printf ("Opcode: %04X\n", OPCODE);
+                    
+                    ::memcpy (stream, &(_buffer[_offset]), result);
+                    _offset += result;
+                }
+                return (result);
+            }
+            virtual Core::IInbound::state IsCompleted() const override {
+                return (_error != static_cast<uint16_t>(~0) ? Core::IInbound::COMPLETED : Core::IInbound::INPROGRESS);
+            }
+            virtual uint16_t Deserialize(const uint8_t stream[], const uint16_t length) override {
+                uint16_t result = 0;
+            }
+ 
+        private:
+            uint16_t _id;
             mutable uint16_t _offset;
-            uint16_t _maxSize;
-            uint8_t* _buffer;
-            uint16_t _size;
+            uint16_t _error;
+            uint8_t _buffer[128];
         };
 
     public:
-        static constexpr uint8_t LE_PUBLIC_ADDRESS        = 0x00;
-        static constexpr uint8_t LE_RANDOM_ADDRESS        = 0x01;
-        static constexpr uint8_t LE_ATT_CID               = 4;
-
-        static constexpr uint8_t ATT_OP_ERROR             = 0x01;
-        static constexpr uint8_t ATT_OP_FIND_INFO_REQ     = 0x04;
-        static constexpr uint8_t ATT_OP_FIND_INFO_RESP    = 0x05;
-        static constexpr uint8_t ATT_OP_READ_BY_TYPE_REQ  = 0x08;
-        static constexpr uint8_t ATT_OP_READ_BY_TYPE_RESP = 0x09;
-        static constexpr uint8_t ATT_OP_READ_REQ          = 0x0A;
-        static constexpr uint8_t ATT_OP_READ_BLOB_REQ     = 0x0C;
-        static constexpr uint8_t ATT_OP_READ_BLOB_RESP    = 0x0D;
-        static constexpr uint8_t ATT_OP_WRITE_REQ         = 0x12;
-        static constexpr uint8_t ATT_OP_HANDLE_NOTIFY     = 0x1B;
-        static constexpr uint8_t ATT_OP_WRITE_RESP        = 0x13;
-
-        static constexpr uint16_t DEVICE_NAME_UUID        = 0x2a00;
-        static constexpr uint16_t REPORT_MAP_UUID         = 0x2a4b;
- 
-        class Metadata {
-        private:
-            Metadata (const Metadata&) = delete;
-            Metadata& operator= (const Metadata&) = delete;
-
-        public:
-            Metadata ()
-                : _vendorId(0)
-                , _productId(0)
-                , _version(0)
-                , _name()
-                , _blob() {
-            }
-            ~Metadata() {
-            }
-
-        public:
-            inline uint16_t VendorId () const {
-                    return (_vendorId);
-            }
-            inline uint16_t ProductId() const {
-                    return (_productId);
-            }
-            inline uint16_t Version() const {
-                    return (_version);
-            }
-            inline const string& Name() const {
-                    return (_name);
-            }
-            inline const uint8_t* Blob() const {
-                    return (_blob);
-            }
-            inline uint16_t Length() const {
-                    return (sizeof(_blob));
-            }
-            inline uint16_t Country() const {
-                    return (0);
-            }
-
-        private:
-            friend class L2Socket;
-
-            uint16_t _vendorId;
-            uint16_t _productId;
-            uint16_t _version;
-            string _name;
-            uint8_t _blob[8 * 22];
-        }; 
-
-    public:
-        L2Socket(const Core::NodeId& localNode, const Core::NodeId& remoteNode, const uint16_t min, const uint16_t max, const uint16_t bufferSize)
-            : SocketPort(SocketPort::SEQUENCED, localNode, remoteNode, bufferSize, bufferSize)
-            , _state(DETECTING)
-            , _metadata()
-            , _min(min)
-            , _max(max)
-            , _handle(0)
-            , _offset(0)
-            , _frame() {
- 
+        GATTSocket(const Core::NodeId& localNode, const Core::NodeId& remoteNode, const uint16_t bufferSize)
+            : Core::SynchronousChannelType<Core::SocketPort>(SocketPort::SEQUENCED, localNode, remoteNode, bufferSize, bufferSize) {
         }
-        virtual ~L2Socket() {
-            Close(Core::infinite);
+        virtual ~GATTSocket() {
         }
 
     public:
-        inline bool IsDetecting() const {
-            return (_state == DETECTING);
-        }
-        inline bool IsOperational() const {
-            return (_state == OPERATIONAL);
-        }
-        inline const Metadata& Info() const {
-            return (_metadata);
-        }
         bool Security (const uint8_t level, const uint8_t keySize) {
             bool result = true;
             struct bt_security btSecurity;
@@ -1129,131 +1049,19 @@ namespace Bluetooth {
             return (result);
         }
 
-        virtual void Received(const uint8_t dataFrame[], const uint16_t availableData) = 0;
-
-    protected:
-        void CreateFrame(const uint8_t type, const uint8_t length, const uint16_t entries[]) {
-            _frame.Clear();
-            _frame.Add<uint8_t>(type);
-            for (uint8_t index = 0; index < length; index++) {
-                _frame.Add<uint16_t>(htobs(entries[index]));
-            }
-        }
-
     private:        
-        int Handle() const {
-            return (static_cast<const Core::IResource&>(*this).Descriptor());
-        }
-        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override {
-            uint16_t length = _frame.Serialize(dataFrame, maxSendSize);
-            _frame.Clear();
-            return (length);
+        virtual uint16_t Deserialize (const uint8_t* dataFrame, const uint16_t availableData) {
+            ASSERT(false);
         }
         virtual void StateChange () override
 	{
 	    if (IsOpen() == true) {
-                printf ("l2Socket reports statchange to OPEN!!!\n");
                 socklen_t len = sizeof(_connectionInfo);
                 ::getsockopt(Handle(), SOL_L2CAP, L2CAP_CONNINFO, &_connectionInfo, &len);
- 
-                // Send out a potential prepared frame fro Detection...
-                Trigger();
             }
-            else {
-
-                printf ("l2Socket reports statchange to CLOSED!!!\n");
-            }
-        }
-        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t availableData) override
-        {
-           printf ("Executing in state: %d\n", _state);
-            if (_state == OPERATIONAL) {
-                Received (dataFrame, availableData);
-            }
-            else {
-                switch (_state) {
-                case DETECTING:
-                {
-                    break;
-                }
-                case METADATA_ID:
-                {
-                    if (dataFrame[0] == ATT_OP_READ_BY_TYPE_RESP) {
-                        _metadata._vendorId  = (dataFrame[5] << 8) | dataFrame[6];
-                        _metadata._productId = (dataFrame[7] << 8) | dataFrame[8];
-                        _metadata._version   = (dataFrame[9] << 8) | dataFrame[10];
-                        _state = METADATA_NAME_HANDLE;
-                        const uint16_t message[] = { _min, _max, DEVICE_NAME_UUID };
-                        CreateFrame(ATT_OP_READ_BY_TYPE_REQ, (sizeof(message)/sizeof(uint16_t)), message);
-                    }
-                    break;
-                }
-                case METADATA_NAME_HANDLE:
-                {    
-                    if (dataFrame[0] == ATT_OP_READ_BY_TYPE_RESP) {
-                        _state = METADATA_NAME;
-                        _handle = (dataFrame[5] << 8) | dataFrame[6];
-                        const uint16_t message[] = { _handle, 0 };
-                        CreateFrame(ATT_OP_READ_BLOB_REQ, (sizeof(message)/sizeof(uint16_t)), message);
-                    }
-                    break;
-                }
-                case METADATA_NAME:
-                {
-                    if (dataFrame[0] == ATT_OP_READ_BLOB_RESP) {
-                        uint16_t length = 1;
-                        while ((length < availableData) && (dataFrame[length] != '\0')) length++;
-                        _metadata._name = string(reinterpret_cast<const char*>(dataFrame[1]), length - 1);
-                        _state = METADATA_DESCRIPTORS_HANDLE;
-                        const uint16_t message[] = { _min, _max, REPORT_MAP_UUID };
-                        CreateFrame(ATT_OP_READ_BY_TYPE_REQ, (sizeof(message)/sizeof(uint16_t)), message);
-                    }
-                    break;
-                }
-                case METADATA_DESCRIPTORS_HANDLE:
-                {
-                    if (dataFrame[0] == ATT_OP_READ_BY_TYPE_RESP) {
-                        _offset = 0;
-                        _handle = ((dataFrame[5] << 8) | dataFrame[6]);
-                        _state = METADATA_DESCRIPTORS;
-                        const uint16_t message[] = { _handle, _offset };
-                        CreateFrame(ATT_OP_READ_BLOB_REQ, (sizeof(message)/sizeof(uint16_t)), message);
-                    }
-                    break;
-                }
-                case METADATA_DESCRIPTORS:
-                {
-                    if (dataFrame[0] == ATT_OP_READ_BLOB_RESP) {
-                        ::memcpy (&(_metadata._blob[_offset]), &(dataFrame[1]), availableData-1);
-                        _offset += (availableData - 1);
-
-                        if (_offset < sizeof(_metadata._blob)) {
-                            const uint16_t message[] = { _handle, _offset };
-                            CreateFrame(ATT_OP_READ_BLOB_REQ, (sizeof(message)/sizeof(uint16_t)), message);
-                        }
-                        else {
-                            Received (nullptr, 0);
-                            _state = OPERATIONAL;
-                        }
-                    }
-                    break;
-                }
-                default:
-                    ASSERT (false);
-                }
-            }
-
-            return(availableData);
         }
 
     private:
-        state _state;
-        Metadata _metadata;
-        uint16_t _min;
-        uint16_t _max;
-        uint16_t _handle;
-        uint16_t _offset;
-        CommandFrame _frame;
         struct l2cap_conninfo _connectionInfo;
     };
 
