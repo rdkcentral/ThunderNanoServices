@@ -211,7 +211,7 @@ public:
 
     uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override {
         // todo correct implementation
-        return CallOnClientByCallsign(callsignRelativeTo, [&](Exchange::IComposition::IClient& client) { client.ChangedZOrder(0); } );    }
+        return CallOnClientByCallsign(callsignRelativeTo, [&](Exchange::IComposition::IClient& client) { client.ChangedZOrder(~0); } );    }
 
     RPC::IStringIterator* ClientsInZorder() const override {
         // todo correct implementation

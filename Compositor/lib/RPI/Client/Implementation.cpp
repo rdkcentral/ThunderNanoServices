@@ -325,9 +325,16 @@ void Display::SurfaceImplementation::ChangedGeometry(const Exchange::ICompositio
 
 }
 void Display::SurfaceImplementation::ChangedZOrder(const uint8_t zorder) {
-   _layer = zorder;
    _dispmanUpdate = vc_dispmanx_update_start(0);
-   vc_dispmanx_element_change_layer(_dispmanUpdate, _dispmanElement, zorder);
+   int8_t layer = 0;
+
+   if (zorder == static_cast<uint8_t>(~0)) {
+       layer = -1;
+   } else {
+       layer = zorder;
+       _layer = layer;
+   }
+   vc_dispmanx_element_change_layer(_dispmanUpdate, _dispmanElement, layer);
    vc_dispmanx_update_submit_sync(_dispmanUpdate);
 }
 
