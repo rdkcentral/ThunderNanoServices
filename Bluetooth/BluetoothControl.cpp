@@ -13,28 +13,11 @@ namespace Plugin {
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::Status> > jsonResponseFactoryStatus(1);
     /* static */ string BluetoothControl::_HIDPath;
 
-    /* virtual */ uint32_t BluetoothControl::DeviceImpl::Pair(const string& source) {
-        if (_channel == nullptr) {
-            Bluetooth::Address from(source.c_str());
-            _channel = new HIDSocket(_HIDPath, from, _address);
-            uint32_t error = ~0;
-
-            if ( (_channel != nullptr) && ( (error = _channel->Open(1000)) == Core::ERROR_NONE) ) {
-                printf("Opening from: %s succeeded\n", source.c_str());
-            }
-            else {
-                printf("Open Failed. Error: %d\n", error);
-            }
-        }
+    /* virtual */ uint32_t BluetoothControl::DeviceImpl::Pair() {
         return (Core::ERROR_NONE);
     }
 
     /* virtual */ uint32_t BluetoothControl::DeviceImpl::Unpair() {
-        if (_channel != nullptr) {
-            _channel->Close(Core::infinite);
-            delete _channel;
-            _channel = nullptr;
-        }
         return (Core::ERROR_NONE);
     }
 
@@ -57,55 +40,44 @@ namespace Plugin {
             result = _T("Could not load the Bluetooth Driver.");
         }
         else {
+            Bluetooth::HCISocket::ManagementMode command(ADAPTER_INDEX);
+            command->val = htobs(ENABLE_MODE);
+
             _interface = Bluetooth::Driver::Interface(config.Interface.Value());
          
             if (_interface.IsValid() == false) {
                 result = _T("Could not bring up the interface.");
             }
-            else {
-                HCISocket channel (*this);
-
-                if (channel.Open(Core::infinite) != Core::ERROR_NONE) {
-                    result = _T("Could not open a management Bleutooth connection.");
-                }
-                else {
-                    Bluetooth::ManagementFrame mgmtFrame(ADAPTER_INDEX);
-                    struct mgmt_mode modeFlags;
-                    modeFlags.val = htobs(ENABLE_MODE);
-
-                    if (channel.Send(mgmtFrame.Set(MGMT_OP_SET_POWERED, modeFlags), 1000) != Core::ERROR_NONE) {
-                        result = "Failed to power on bluetooth adaptor";
-                    }
-                    // Enable Bondable on adaptor.
-                    else if (channel.Send(mgmtFrame.Set(MGMT_OP_SET_BONDABLE, modeFlags), 1000) != Core::ERROR_NONE) {
-                        result = "Failed to enable Bondable";
-                    }
-                    // Enable Simple Secure Simple Pairing.
-                    else if (channel.Send(mgmtFrame.Set(MGMT_OP_SET_SSP, modeFlags), 1000) != Core::ERROR_NONE) {
-                        result = "Failed to enable Simple Secure Simple Pairing";
-                    }
-                    // Enable Low Energy
-                    else if (channel.Send(mgmtFrame.Set(MGMT_OP_SET_LE, modeFlags), 1000) != Core::ERROR_NONE) {
-                        result = "Failed to enable Low Energy";
-                    }    
-                    // Enable Secure Connections
-                    else if (channel.Send(mgmtFrame.Set(MGMT_OP_SET_SECURE_CONN, modeFlags), 1000) != Core::ERROR_NONE) {
-                        result = "Failed to enable Secure Connections";
-                    }
-                    else if (_interface.Up() == false) {
-                        result = "Failed to bring up the Bluetooth interface";
-                    }
-                    else if (_btAddress.Default() == false) {
-                        result = "Could not get the Bluetooth address";
-                    }
-                    else {
-                        _hciSocket.LocalNode(_btAddress.NodeId());
-
-                        if (_hciSocket.Open(100) != Core::ERROR_NONE) {
-                            result = "Could not open the HCI control channel";
-                        }
-                    }
-                }                
+            else if (_interface.Up() == false) {
+                result = "Failed to bring up the Bluetooth interface";
+            }
+            else if (_btAddress.Default() == false) {
+                result = "Could not get the default Bluetooth address";
+            }
+            else if (_administrator.Open(Core::infinite) != Core::ERROR_NONE) {
+                result = "Could not open the Bluetooth Administrator channel";
+            }
+            else if (command.Send(_administrator, 500, MGMT_OP_SET_POWERED) != Core::ERROR_NONE) {
+                result = "Failed to power on bluetooth adaptor";
+            }
+            // Enable Bondable on adaptor.
+            else if (command.Send(_administrator, 500, MGMT_OP_SET_BONDABLE) != Core::ERROR_NONE) {
+                result = "Failed to enable Bondable";
+            }
+            // Enable Simple Secure Simple Pairing.
+            else if (command.Send(_administrator, 500, MGMT_OP_SET_SSP) != Core::ERROR_NONE) {
+                result = "Failed to enable Simple Secure Simple Pairing";
+            }
+            // Enable Low Energy
+            else if (command.Send(_administrator, 500, MGMT_OP_SET_LE) != Core::ERROR_NONE) {
+                result = "Failed to enable Low Energy";
+            }    
+            // Enable Secure Connections
+            else if (command.Send(_administrator, 500, MGMT_OP_SET_SECURE_CONN) != Core::ERROR_NONE) {
+                result = "Failed to enable Secure Connections";
+            }
+            else if (_application.Open(_btAddress) != Core::ERROR_NONE) {
+                result = "Could not open the Bluetooth Application channel";
             }
         }
 
@@ -246,14 +218,15 @@ namespace Plugin {
                     uint32_t type = 0x338B9E;
 
                     if (lowEnergy == true) {
-                        _hciSocket.Scan(duration, limited, passive);
+                        _application.Scan(duration, limited, passive);
                     }
                     else {
-                        _hciSocket.Scan(duration, type, flags);
+                        _application.Scan(duration, type, flags);
                     }
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("Scan started.");
-                } else if (index.Current() == _T("Pair")) {
+                } else if ( (index.Current() == _T("Pair")) || (index.Current() == _T("Connect")) ) {
+                    bool pair = (index.Current() == _T("Pair"));
                     string destination;
                     if (index.Next() == true) {
                         destination = index.Current().Text();
@@ -266,16 +239,26 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Device not found.");
                     }
-                    else if (device->Pair(_btAddress.ToString())) {
+                    else if (pair == true) {
+                        if (device->Pair() == Core::ERROR_NONE) {
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->Message = _T("Paired device.");
+                        } else {
+                            result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                            result->Message = _T("Unable to Pair device.");
+                        }
+                    }
+                    else if (device->Connect() == Core::ERROR_NONE) {
                         result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Paired device.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = _T("Unable to Pair device.");
+                        result->Message = _T("Connected device.");
+                    }
+                    else {
+                        result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                        result->Message = _T("Unable to connect to device.");
                     }
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                    result->Message = _T("Unable to Disconnect device.");
+                    result->Message = _T("Unable to process PUT request.");
                 }
             }
         }
@@ -289,6 +272,35 @@ namespace Plugin {
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported POST request.");
 
+        if (index.IsValid() == true) {
+            if (index.Next()) {
+                TRACE(Trace::Information, (string(__FUNCTION__)));
+
+                if (index.Current() == _T("Remote")) {
+                    string address;
+                    if (index.Next() == true) {
+                        address = index.Current().Text();
+                    }
+                    else if (request.HasBody() == true) {
+                        address = request.Body<const DeviceImpl::JSON>()->Address;
+                    }
+                    DeviceImpl* device = Find(address);
+                    if (device == nullptr) {
+                        result->ErrorCode = Web::STATUS_NOT_FOUND;
+                        result->Message = _T("Unknown device.");
+                    }
+                    else {
+                        _gattRemotes.emplace_back(device->Locator(), _HIDPath);
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("Unpaired device.");
+                    }
+                }
+            }
+        }
+
+
+        return result;
+ 
         return result;
     }
 
@@ -303,10 +315,11 @@ namespace Plugin {
                 TRACE(Trace::Information, (string(__FUNCTION__)));
 
                 if (index.Current() == _T("Scan")) {
-                    _hciSocket.Abort();
+                    _application.Abort();
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("Scan stopped.");
-                } else if (index.Current() == _T("Pair")) {
+                } else if ( (index.Current() == _T("Pair")) || (index.Current() == _T("Connect")) ) {
+                    bool pair = (index.Current() == _T("Pair"));
                     string address;
                     if (index.Next() == true) {
                         address = index.Current().Text();
@@ -317,14 +330,35 @@ namespace Plugin {
                     DeviceImpl* device = Find(address);
                     if (device == nullptr) {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
-                        result->Message = _T("Unpaired device.");
+                        result->Message = _T("Unknown device.");
                     }
-                    else if (device->Unpair()) {
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Unpaired device.");
-                    } else {
-                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = _T("Unable to Unpair device.");
+                    else if (pair == true) {
+                        if (device->Unpair() == Core::ERROR_NONE) {
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->Message = _T("Unpaired device.");
+                        } 
+                        else {
+                            result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                            result->Message = _T("Unable to Unpair device.");
+                        }
+                    }
+                    else {
+                        uint16_t reason = 0;
+                        if (index.Next() == true) {
+                            reason = Core::NumberType<uint16_t>(index.Current()).Value();
+                        }
+                        else if (request.HasBody() == true) {
+                            reason = request.Body<const DeviceImpl::JSON>()->Reason;
+                        }
+ 
+                        if (device->Disconnect(reason) == Core::ERROR_NONE) {
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->Message = _T("Disconnected device.");
+                        } 
+                        else {
+                            result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                            result->Message = _T("Unable to Disconnect device.");
+                        }
                     }
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -341,7 +375,7 @@ namespace Plugin {
     //  IBluetooth methods
     // -------------------------------------------------------------------------------------------------------
     /* virtual */ bool BluetoothControl::IsScanning() const {
-        return (_hciSocket.IsScanning());
+        return (_application.IsScanning());
     }
     /* virtual */ uint32_t BluetoothControl::Register(IBluetooth::INotification* notification) {
         _adminLock.Lock();
@@ -375,7 +409,7 @@ namespace Plugin {
         _adminLock.Unlock();
     }
     /* virtual */ bool BluetoothControl::Scan(const bool enable) {
-        if ((_hciSocket.IsScanning() == false) && (enable == true)) {
+        if ((_application.IsScanning() == false) && (enable == true)) {
 
             TRACE(Trace::Information, ("Start Bluetooth Scan"));
 
@@ -390,20 +424,20 @@ namespace Plugin {
             uint32_t type = 0x338B9E;
 
             if (lowEnergy == true) {
-                _hciSocket.Scan(duration, limited, passive);
+                _application.Scan(duration, limited, passive);
             }
             else {
-                _hciSocket.Scan(duration, type, flags);
+                _application.Scan(duration, type, flags);
             }
         } 
-        else if ((_hciSocket.IsScanning() == true) && (enable == false)) {
+        else if ((_application.IsScanning() == true) && (enable == false)) {
 
             TRACE(Trace::Information, ("Stop Bluetooth Scan"));
 
-            _hciSocket.Abort();
+            _application.Abort();
         }
 
-        return (_hciSocket.IsScanning() == enable);
+        return (_application.IsScanning() == enable);
     }
 
     /* virtual */ Exchange::IBluetooth::IDevice* BluetoothControl::Device (const string& address) {
@@ -427,10 +461,13 @@ namespace Plugin {
         while ( (index != _devices.end()) && (*(*index) != address) ) { index++; }
 
         if (index != _devices.end()) {
-            (*index)->Update(name);
+            (*index)->Discovered();
+        }
+        else if (lowEnergy == true) {
+            _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(&_application, address, name));
         }
         else {
-            _devices.push_back(Core::Service<DeviceImpl>::Create<DeviceImpl>(lowEnergy, address, name));
+            _devices.push_back(Core::Service<DeviceRegular>::Create<DeviceImpl>(&_application, address, name));
         }
 
         _adminLock.Unlock();

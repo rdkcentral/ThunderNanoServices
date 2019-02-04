@@ -834,6 +834,9 @@ namespace Plugin {
             , _systemLibraries()
         {
             TRACE_L1("Constructing OCDMImplementation Service: %p", this);
+
+            // Make sure we link the OCDM, also in case no-ass-needed is added to the compiler flags..
+            opencdm_announce_proxy_stubs();
         }
         virtual ~OCDMImplementation()
         {
