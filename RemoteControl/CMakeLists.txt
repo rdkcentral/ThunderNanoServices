@@ -69,7 +69,7 @@ if (PLUGIN_REMOTECONTROL_DEVINPUT)
 endif()
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 install(
 	FILES linux-windows.json

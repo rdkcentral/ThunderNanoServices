@@ -58,7 +58,7 @@ target_include_directories(${MODULE_NAME}
 
 install(
     TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 # also build injected bundle
 add_subdirectory(InjectedBundle)

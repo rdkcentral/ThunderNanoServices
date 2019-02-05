@@ -37,7 +37,7 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces)
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 if(PLUGIN_COMPOSITOR_SERVER)
     add_subdirectory(server)

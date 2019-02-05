@@ -22,7 +22,7 @@ target_link_libraries(${MODULE_NAME}
         ${DSHAL_LIB})
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 if(DSRESOLUTION_WITH_DUMMY_DSHAL)
 add_subdirectory(src)
