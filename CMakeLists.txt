@@ -152,3 +152,7 @@ endif()
 if(PLUGIN_RTSPCLIENT)
     add_subdirectory(RtspClient)
 endif()
+
+if(PLUGIN_DsgccClient)
+    add_subdirectory(DsgccClient)
+endif()
