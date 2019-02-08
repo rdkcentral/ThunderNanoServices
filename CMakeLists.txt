@@ -23,6 +23,7 @@ option(PLUGIN_POWER "Include Power plugin" OFF)
 option(PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
 option(PLUGIN_STREAMER "Include Streamer plugin" OFF)
 option(PLUGIN_SNAPSHOT "Include Snapshot plugin" OFF)
+option(PLUGIN_SYSTEMCOMMANDS "Include SystemCommands plugin" OFF)
 option(PLUGIN_TIMESYNC "Include TimeSync plugin" OFF)
 option(PLUGIN_TRACECONTROL "Include TraceControl plugin" OFF)
 option(PLUGIN_WEBKITBROWSER "Include WebKitBrowser plugin" OFF)
@@ -113,6 +114,10 @@ endif()
 
 if(PLUGIN_STREAMER)
     add_subdirectory(Streamer)
+endif()
+
+if(PLUGIN_SYSTEMCOMMANDS)
+    add_subdirectory(SystemCommands)
 endif()
 
 if(PLUGIN_SYSTEMDCONNECTOR)
