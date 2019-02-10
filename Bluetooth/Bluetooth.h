@@ -211,6 +211,10 @@ namespace Core {
             typename std::list<Frame>::iterator index = std::find(_queue.begin(), _queue.end(), message);
             if (index != _queue.end()) {
                 trigger = (_queue.size() > 1) && (index == _queue.begin());
+
+                if (index->Callback() != nullptr) {
+                    index->Callback()->Updated(index->Outbound(), Core::ERROR_ASYNC_ABORTED);
+                }
                 _queue.erase (index);
             }
 
@@ -954,9 +958,189 @@ namespace Bluetooth {
         GATTSocket(const GATTSocket&) = delete;
         GATTSocket& operator=(const GATTSocket&) = delete;
 
-    protected:
-        static constexpr uint8_t LE_ATT_CID                = 4;
+    public:
+        struct ICallback {
+            virtual ~ICallback() {}
 
+            virtual void RawData(const uint16_t min, const uint16_t max, const uint16_t length, const uint8_t data[]) = 0;
+        };
+
+        class UUID {
+        public:
+            // const uint8_t BASE[] = { 00000000-0000-1000-8000-00805F9B34FB };
+
+        public:
+            UUID(const uint16_t uuid) {
+                _uuid[0] = 2;
+                _uuid[1] = (uuid & 0xFF);
+                _uuid[2] = (uuid >> 8) & 0xFF;
+            }
+            UUID(const uint8_t uuid[16]) {
+                _uuid[0] = 16;
+                ::memcpy(&(_uuid[1]), uuid, 16);
+            }
+            UUID(const UUID& copy) {
+                ::memcpy(_uuid, copy._uuid, copy._uuid[0] + 1);
+            }
+            ~UUID() {
+            }
+
+            UUID& operator= (const UUID& rhs) {
+                ::memcpy(_uuid, rhs._uuid, rhs._uuid[0] + 1);
+                return (*this);
+            }
+
+        public:
+            uint16_t Short() const {
+                ASSERT (_uuid[0] == 2);
+                return ((_uuid[2] << 8) | _uuid[1]);
+            }
+            bool operator== (const UUID& rhs) const {
+                return (::memcmp(_uuid, rhs._uuid, _uuid[0] + 1) == 0);
+            }
+            bool operator!= (const UUID& rhs) const {
+                return !(operator==(rhs));
+            }
+            uint8_t Length() const {
+                return (_uuid[0]);
+            }
+            const uint8_t& Data() const {
+                return (_uuid[1]);
+            }
+            
+        private:
+            uint8_t _uuid[17];
+        };
+
+        class Attribute {
+        public:
+            enum type {
+                NIL              = 0x00,
+                INTEGER_UNSIGNED = 0x08,
+                INTEGER_SIGNED   = 0x10,
+                UUID             = 0x18,
+                TEXT             = 0x20,
+                BOOLEAN          = 0x28,
+                SEQUENCE         = 0x30,
+                ALTERNATIVE      = 0x38,
+                URL              = 0x40
+            };
+
+            Attribute () 
+                : _type(~0)
+                , _offset(0)
+                , _length(~0)
+                , _bufferSize(64)
+                , _buffer(reinterpret_cast<uint8_t*>(::malloc (_bufferSize))) {
+            }
+            ~Attribute() {
+                if (_buffer != nullptr) { 
+                    ::free(_buffer);
+                }
+            }
+
+        public:
+            void Clear() {
+                _type = ~0;
+                _offset = 0;
+                _length = ~0;
+            }
+            bool IsLoaded() const {
+                return (_offset == static_cast<uint32_t>(~0));
+            }
+            uint16_t Deserialize(const uint8_t stream[], const uint16_t size) {
+
+                uint16_t result = 0;
+
+                if (size > 0) {
+                    if (_offset == 0) {
+                        _type = stream[0];
+                        if ((_type & 0x7) <= 4) {
+                            if (_type  == 0) {
+                                result = 1;
+
+                                // It's a nil, nothing more required
+                                _offset = static_cast<uint32_t>(~0);
+                                _type   = stream[0];
+                            }
+                            else {
+                                uint8_t length = (1 << (_type & 0x07));
+                                uint8_t copyLength = std::min(length, static_cast<uint8_t>(size - 1));
+                                ::memcpy (_buffer, &stream[1], copyLength);
+                                result = 1 + copyLength;
+                                _offset = (copyLength == length ? ~0 : copyLength);
+                            }
+                        }
+                        else {
+                            uint8_t length = (1 << ((_type & 0x07) - 5) );
+                            uint8_t copyLength = std::min(length, static_cast<uint8_t>(size - 1));
+                            ::memcpy (_buffer, &stream[1], copyLength);
+                            result = 1 + copyLength;
+                            _offset = copyLength;
+                        }
+                    }
+
+                    if ((result < size) && (IsLoaded() == false)) {
+                        // See if we need to set the length
+                        if ( ((_type & 0x7) > 4) && (_length == static_cast<uint32_t>(~0)) ) {
+                            uint8_t length = (1 << ((_type & 0x07) - 5));
+                            uint8_t copyLength = std::min(static_cast<uint8_t>(length - _offset), static_cast<uint8_t>(size - result));
+                            if (copyLength > 0) {
+                                ::memcpy (&(_buffer[_offset]), &stream[result], copyLength);
+                                result += copyLength;
+                                _offset += copyLength;
+                            }
+
+                            if (_offset == length) {
+                                _length = 0;
+                                for (uint8_t index = 0; index < length; index++) {
+                                    _length = (length << 8) | _buffer[index];
+                                }
+                                _offset = (_length == 0 ? ~0 : 0);
+                            }
+                        }
+
+                        if (result < size) {
+                            // Normal payload loading...
+                            uint32_t copyLength = std::min(Length() - _offset, static_cast<uint32_t>(size - result));
+                            // TODO: This one might potentially get very big. Check if the buffer still fits..
+                            ::memcpy (&(_buffer[_offset]), &stream[result], copyLength);
+                            result += copyLength;
+                            _offset = (_offset + copyLength == Length() ? ~0 : _offset + copyLength);
+                        }
+                    }
+                }
+                return(result);            
+            }
+            type Type() const {
+                return (static_cast<type>(_type & 0xF8));
+            }
+            uint32_t Length() const {
+                return ((_type & 0x3) <= 4 ? (_type == 0 ? 0 : 1 << (_type & 0x03)) : _length);
+            }
+            template <typename TYPE>
+            void Load(TYPE& value) const {
+                value = 0;
+                for (uint8_t index = 0; index < sizeof(TYPE); index++) {
+                    value = (value << 8) | _buffer[index];
+                }
+            }
+            void Load(bool& value) const {
+                value = (_buffer[0] != 0);
+            }
+            void Load(string& value) const {
+                value = string(reinterpret_cast<const char*>(_buffer), _length);
+            }
+
+        private:
+            uint8_t _type;
+            uint32_t _offset;
+            uint32_t _length;
+            uint32_t _bufferSize;
+            uint8_t* _buffer;
+        };
+
+    private:
         static constexpr uint8_t ATT_OP_ERROR              = 0x01;
         static constexpr uint8_t ATT_OP_MTU_REQ            = 0x02;
         static constexpr uint8_t ATT_OP_MTU_RESP           = 0x03;
@@ -967,7 +1151,7 @@ namespace Bluetooth {
         static constexpr uint8_t ATT_OP_READ_BY_TYPE_REQ   = 0x08;
         static constexpr uint8_t ATT_OP_READ_BY_TYPE_RESP  = 0x09;
         static constexpr uint8_t ATT_OP_READ_REQ           = 0x0A;
-        static constexpr uint8_t ATT_OP_READ_RSP           = 0x0B;
+        static constexpr uint8_t ATT_OP_READ_RESP          = 0x0B;
         static constexpr uint8_t ATT_OP_READ_BLOB_REQ      = 0x0C;
         static constexpr uint8_t ATT_OP_READ_BLOB_RESP     = 0x0D;
         static constexpr uint8_t ATT_OP_READ_MULTI_REQ     = 0x0E;
@@ -977,60 +1161,379 @@ namespace Bluetooth {
         static constexpr uint8_t ATT_OP_WRITE_REQ          = 0x12;
         static constexpr uint8_t ATT_OP_WRITE_RESP         = 0x13;
 
-        static constexpr uint8_t ATT_OP_HANDLE_NOTIFY      = 0x1B;
+        class Command : public Core::IOutbound::ICallback, public Core::IOutbound, public Core::IInbound {
+        private:
+            Command (const Command&) = delete;
+            Command& operator= (const Command&) = delete;
 
-        class Exchange : public Core::IOutbound, public Core::IInbound {
-        private: 
-            Exchange(const Exchange&) = delete;
-            Exchange& operator= (const Exchange&) = delete;
+            class Exchange {
+            private: 
+                Exchange(const Exchange&) = delete;
+                Exchange& operator= (const Exchange&) = delete;
+
+            public:
+                Exchange() 
+                    : _offset(~0)
+                    , _size(0) {
+                }
+                ~Exchange() {
+                }
+
+            public:
+                bool IsSend() const {
+                    return (_offset != 0);
+                }
+                void Reload () const {
+                    _offset = 0;
+                }
+                uint8_t GetMTU (const uint16_t mySize) {
+                    _buffer[0] = ATT_OP_MTU_REQ;
+                    _buffer[1] = (mySize & 0xFF);
+                    _buffer[2] = (mySize >> 8) & 0xFF;
+                    _size = 3;
+                    return(ATT_OP_MTU_RESP);
+                }
+                uint8_t ReadByGroupType (const uint16_t start, const uint16_t end, const UUID& id) {
+                    _buffer[0] = ATT_OP_READ_BY_GROUP_REQ;
+                    _buffer[1] = (start & 0xFF);
+                    _buffer[2] = (start >> 8) & 0xFF;
+                    _buffer[3] = (end & 0xFF);
+                    _buffer[4] = (end >> 8) & 0xFF;
+                    ::memcpy(&(_buffer[5]), &id.Data(), id.Length()); 
+                    _size = id.Length() + 5;
+                    return(ATT_OP_READ_BY_GROUP_RESP);
+                }
+                uint8_t FindByType (const uint16_t start, const uint16_t end, const UUID& id, const uint8_t length, const uint8_t data[]) {
+                    _buffer[0] = ATT_OP_FIND_BY_TYPE_REQ;
+                    _buffer[1] = (start & 0xFF);
+                    _buffer[2] = (start >> 8) & 0xFF;
+                    _buffer[3] = (end & 0xFF);
+                    _buffer[4] = (end >> 8) & 0xFF;
+                    _buffer[5] = (id.Short() & 0xFF);
+                    _buffer[6] = (id.Short() >> 8) & 0xFF;
+                    ::memcpy(&(_buffer[7]), data, length); 
+                    _size = 7 + length;
+                    return(ATT_OP_FIND_BY_TYPE_RESP);
+                }
+                uint8_t Write (const UUID& id, const uint8_t length, const uint8_t data[]) {
+                    _buffer[0] = ATT_OP_WRITE_REQ;
+                    _buffer[1] = (id.Short() & 0xFF);
+                    _buffer[2] = (id.Short() >> 8) & 0xFF;
+                    ::memcpy(&(_buffer[3]), data, length); 
+                    _size = 3 + length;
+                    return(ATT_OP_WRITE_RESP);
+                }
+                uint8_t ReadByType (const uint16_t start, const uint16_t end, const UUID& id) {
+                    _buffer[0] = ATT_OP_READ_BY_TYPE_REQ;
+                    _buffer[1] = (start & 0xFF);
+                    _buffer[2] = (start >> 8) & 0xFF;
+                    _buffer[3] = (end & 0xFF);
+                    _buffer[4] = (end >> 8) & 0xFF;
+                    ::memcpy(&(_buffer[5]), &id.Data(), id.Length()); 
+                    _size = id.Length() + 5;
+                    return(ATT_OP_READ_BY_TYPE_RESP);
+                }
+                uint8_t FindInformation (const uint16_t start, const uint16_t end) {
+                    _buffer[0] = ATT_OP_FIND_INFO_REQ;
+                    _buffer[1] = (start & 0xFF);
+                    _buffer[2] = (start >> 8) & 0xFF;
+                    _buffer[3] = (end & 0xFF);
+                    _buffer[4] = (end >> 8) & 0xFF;
+                    _size = 5;
+                    return(ATT_OP_FIND_INFO_RESP);
+                }
+                uint8_t Read(const uint16_t handle) {
+                    _buffer[0] = ATT_OP_READ_REQ;
+                    _buffer[1] = (handle & 0xFF);
+                    _buffer[2] = (handle >> 8) & 0xFF;
+                    _size = 3;
+                    return(ATT_OP_READ_RESP);
+                }
+                uint8_t ReadBlob(const uint16_t handle, const uint16_t offset) {
+                    _buffer[0] = ATT_OP_READ_BLOB_REQ;
+                    _buffer[1] = (handle & 0xFF);
+                    _buffer[2] = (handle >> 8) & 0xFF;
+                    _buffer[3] = (offset & 0xFF);
+                    _buffer[4] = (offset >> 8) & 0xFF;
+                    _size = 5;
+                    return (ATT_OP_READ_BLOB_RESP);
+                }
+                uint16_t Serialize(uint8_t stream[], const uint16_t length) const {
+                    uint16_t result = std::min(static_cast<uint16_t>(_size - _offset), length);
+                    if (result > 0) {
+                        ::memcpy (stream, &(_buffer[_offset]), result);
+                        _offset += result;
+
+                        printf("L2CAP send [%d]: ", result);
+                        for (uint8_t index = 0; index < (result-1); index++) { printf("%02X:", stream[index]); } printf("%02X\n", stream[result-1]);
+                    }
+
+                    return (result);
+                }
+ 
+            private:
+                mutable uint16_t _offset;
+                uint8_t _size;
+                uint8_t _buffer[64];
+            };
 
         public:
-            Exchange() 
-                : _id(0)
-                , _offset(~0)
-                , _error(~0) {
+            Command(GATTSocket& parent, const uint16_t bufferSize) 
+                : _parent(parent)
+                , _frame()
+                , _callback(reinterpret_cast<GATTSocket::ICallback*>(~0))
+                , _id(~0)
+                , _min(0x0000)
+                , _max(0xFFFF)
+                , _handles()
+                , _offset(0)
+                , _loaded(0)
+                , _maxSize(1024)
+                , _bufferSize(bufferSize)
+                , _storage(reinterpret_cast<uint8_t*>(::malloc(_maxSize))) {
             }
-            virtual ~Exchange() {
+            virtual ~Command() {
+
+                ASSERT(_callback == nullptr);
+
+                if (_storage != nullptr) {
+                    ::free(_storage);
+                }
+            }
+
+        public:
+            void GetMTU() {
+                _id = _frame.GetMTU(_bufferSize);
+            }
+            void ReadByType (const uint16_t min, const uint16_t max, const UUID& uuid, GATTSocket::ICallback* completed) {
+                ASSERT (_callback == nullptr);
+                _callback = completed;
+                _loaded = 0;
+                _id = _frame.ReadByType(min, max, uuid);
+            }
+            void WriteByType (const uint16_t min, const uint16_t max, const UUID& uuid, const uint8_t length, const uint8_t data[], GATTSocket::ICallback* completed) {
+                ASSERT (_callback == nullptr);
+                _callback = completed;
+                _loaded = std::min(static_cast<uint16_t>(length), _maxSize);
+                ::memcpy(_storage, data, _loaded);
+                _id = _frame.ReadByType(min, max, uuid);
+            }
+            void FindByType (const uint16_t min, const uint16_t max, const UUID& uuid, const uint8_t length, const uint8_t data[], GATTSocket::ICallback* completed) {
+                ASSERT (_callback == nullptr);
+                ASSERT (uuid.HasShort() == true);
+                _callback = completed;
+                _id = _frame.FindByType(min, max, uuid, length, data);
             }
 
         private:
+            virtual void Updated (const Core::IOutbound& data, const uint32_t error_code) {
+                ASSERT (&data == this);
+
+                GATTSocket::ICallback* callback = _callback;
+                _callback = nullptr;
+
+                if (callback == reinterpret_cast<GATTSocket::ICallback*>(~0)) {
+                    _parent.Operational();
+                }
+                else if (callback != nullptr) {
+                    callback->RawData(_min, _max, _loaded, _storage);
+                }
+            }
             virtual uint16_t Id() const override {
                 return (_id);
             }
             virtual void Reload() const override {
-                _offset = 0;
+                _frame.Reload();
             }
             virtual uint16_t Serialize(uint8_t stream[], const uint16_t length) const override {
-                uint16_t result = std::min(static_cast<uint16_t>(sizeof(_buffer) - _offset), length);
-                if (result > 0) {
-                    
-                    // Seems we need to push "our" message, register it for whatever godsake reason...
-                    // It looks like it works without ...
-                    //_parent->SetOpcode(OPCODE);
-                    // printf ("Opcode: %04X\n", OPCODE);
-                    
-                    ::memcpy (stream, &(_buffer[_offset]), result);
-                    _offset += result;
-                }
-                return (result);
+                return(_frame.Serialize(stream, length));
             }
             virtual Core::IInbound::state IsCompleted() const override {
-                return (_error != static_cast<uint16_t>(~0) ? Core::IInbound::COMPLETED : Core::IInbound::INPROGRESS);
+                return (_id == static_cast<uint16_t>(~0) ? Core::IInbound::COMPLETED : (_frame.IsSend() ? Core::IInbound::INPROGRESS : Core::IInbound::RESEND));
             }
             virtual uint16_t Deserialize(const uint8_t stream[], const uint16_t length) override {
                 uint16_t result = 0;
+
+                // See if we need to retrigger..
+                if ( (stream[0] != _id) && (stream[0] != ATT_OP_ERROR) ) {
+                    printf("Unexpected L2CapSocket message. Expected: %d, got %d\n", _id, stream[0]);
+                }
+                else {
+                    result = length;
+
+                    printf("L2CapSocket Receive [%d], Type: %02X\n", length, stream[0]);
+
+                    // This is what we are expecting, so process it...
+                    switch (stream[0]) {
+                    case ATT_OP_ERROR:
+                    {
+                        printf("Houston we got an error... %d, %d\n", _id, length);
+                        break;
+                    }
+                    case ATT_OP_MTU_RESP: 
+                    {
+                        _bufferSize = (stream[2] << 8) | stream[1];
+                        _id = ~0;
+                        break;
+                    }
+                    case ATT_OP_READ_BY_GROUP_RESP:
+                    {
+                        break;
+                    }
+                    case ATT_OP_FIND_BY_TYPE_RESP:
+                    {
+                        _loaded = 0;
+                        _min = ~0;
+                        _max = 0;
+                        /* PDU must contain at least:
+                         * - Attribute Opcode (1 octet)
+                         * - Length (1 octet)
+                         * - Attribute Data List (at least one entry):
+                         *   - Attribute Handle (2 octets)
+                         *   - Attribute Value (at least 1 octet) */
+                        /* Minimum Attribute Data List size */
+                        if (stream[1] >= 3) {
+                            uint8_t entries = (length - 1) / 4;
+                            for (uint8_t index = 0; index < entries; index++) {
+                                uint16_t offset = 2 + (index * stream[1]);
+                                uint16_t foundHandle = (stream[offset+0] << 8) | stream[offset+1];
+                                uint16_t groupHandle = (stream[offset+2] << 8) | stream[offset+3];
+                                if (foundHandle > _max) _max = foundHandle;
+                                if (foundHandle < _min) _min = foundHandle;
+                                printf("Entry: %04X - %04X\n", foundHandle,  groupHandle);
+                                _handles.push_back(foundHandle);
+                            }
+                        }
+                        if (_handles.size() > 0) {
+                            _offset = 0;
+                            _id = _frame.ReadBlob(_handles.front(), _offset);
+                        }
+                        else {
+                            _id = ~0;
+                        }
+
+                        break;
+                    }
+                    case ATT_OP_READ_BY_TYPE_RESP:
+                    {
+                        _loaded = 0;
+                        _min = ~0;
+                        _max = 0;
+                        /* PDU must contain at least:
+                         * - Attribute Opcode (1 octet)
+                         * - Length (1 octet)
+                         * - Attribute Data List (at least one entry):
+                         *   - Attribute Handle (2 octets)
+                         *   - Attribute Value (at least 1 octet) */
+                        /* Minimum Attribute Data List size */
+                        if (stream[1] >= 3) {
+                            printf("found length = %d\n", stream[1]);
+                            uint8_t entries = ((length - 2) / stream[1]);
+                            for (uint8_t index = 0; index < entries; index++) {
+                                uint16_t offset = 2 + (index * stream[1]);
+                                uint16_t handle = (stream[offset] << 8) | stream[offset+1];
+                                if (handle > _max) _max = handle;
+                                if (handle < _min) _min = handle;
+                                printf("Entry: %04X - %02X:%02X:%02X:%02X\n", handle, stream[offset+2], stream[offset+3], stream[offset+4], stream[offset+5]);
+
+                                _handles.push_back(handle);
+                            }
+                        }
+                        if (_handles.size() > 0) {
+                            if(_loaded != 0) {
+                                _offset = 0;
+                                _id = _frame.ReadBlob(_handles.front(), _offset);
+                            }
+                            else {
+                                _id = _frame.Write(_handles.front(), static_cast<uint8_t>(_loaded), _storage);
+                            }
+                        }
+                        else {
+                            _id = ~0;
+                        }
+
+                        break;
+                    }
+                    case ATT_OP_WRITE_RESP: 
+                    {
+                        printf ("We have written: %d\n", _loaded);
+                        _handles.pop_front();
+                        if (_handles.empty() == false) {
+                            _id = _frame.Write(_handles.front(), static_cast<uint8_t>(_loaded), _storage);
+                        }
+                        else {
+                            _id = ~0;
+                        }
+                        break;
+                    }
+                    case ATT_OP_FIND_INFO_RESP:
+                    {
+                        break;
+                    }
+                    case ATT_OP_READ_RESP:
+                    {
+                        break;
+                    }
+                    case ATT_OP_READ_BLOB_RESP:
+                    {
+                        if (result == 1) {
+                            printf ("We have a BLOB retrieval of: %d\n", _offset);
+                            _handles.pop_front();
+                            _storage[_loaded + 0] = 0x80 | (_offset >> 8);
+                            _storage[_loaded + 1] = (_offset & 0xFF);
+                            _loaded += 2 + _offset;
+                            if (_handles.empty() == false) {
+                                _offset = 0;
+                                _id = _frame.ReadBlob(_handles.front(), _offset);
+                            }
+                            else {
+                                _id = ~0;
+                            }
+                        }
+                        else {
+                            if ((_offset + _loaded + result + 2) > _maxSize) {
+                                _maxSize *= 2;
+                                uint8_t* newStorage = reinterpret_cast<uint8_t*> (::malloc (_maxSize));
+                                ::memcpy (newStorage, _storage, (_loaded + _offset));
+                                ::free (_storage);
+                                _storage = newStorage;
+                            }
+                            ::memcpy(&(_storage[_offset + _loaded + 2]), &(stream[1]), result - 1);
+                            _offset += (result - 1);
+                            _id = _frame.ReadBlob(_handles.front(), _offset);
+                        }
+                        break;
+                    }
+                    default:
+                        break;
+                    }
+                }
+                return (result);
             }
  
         private:
+            GATTSocket& _parent;
+            Exchange _frame;
+            GATTSocket::ICallback* _callback;
             uint16_t _id;
-            mutable uint16_t _offset;
-            uint16_t _error;
-            uint8_t _buffer[128];
+            uint16_t _min;
+            uint16_t _max;
+            std::list<uint16_t> _handles;
+            uint16_t _offset;
+            uint16_t _loaded;
+            uint16_t _maxSize;
+            uint16_t _bufferSize;
+            uint8_t* _storage;
         };
 
     public:
+        static constexpr uint8_t LE_ATT_CID                = 4;
+        static constexpr uint8_t ATT_OP_HANDLE_NOTIFY      = 0x1B;
+
+    public:
         GATTSocket(const Core::NodeId& localNode, const Core::NodeId& remoteNode, const uint16_t bufferSize)
-            : Core::SynchronousChannelType<Core::SocketPort>(SocketPort::SEQUENCED, localNode, remoteNode, bufferSize, bufferSize) {
+            : Core::SynchronousChannelType<Core::SocketPort>(SocketPort::SEQUENCED, localNode, remoteNode, bufferSize, bufferSize)
+            , _command(*this, bufferSize) {
         }
         virtual ~GATTSocket() {
         }
@@ -1048,21 +1551,48 @@ namespace Bluetooth {
             }
             return (result);
         }
+        void ReadByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, ICallback* completed) {
+            _command.ReadByType(min, max, uuid, completed);
+            Send(waitTime, _command, &_command, &_command);
+        }
+        void FindByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, const UUID& type, ICallback* completed) {
+            FindByType(waitTime, min, max, uuid, type.Length(), &(type.Data()), completed);
+        }
+        void FindByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, const uint8_t length, const uint8_t data[], ICallback* completed) {
+            _command.FindByType(min, max, uuid, length, data, completed);
+            Send(waitTime, _command, &_command, &_command);
+        }
+        void WriteByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, const UUID& type, ICallback* completed) {
+            WriteByType(waitTime, min, max, uuid, type.Length(), &(type.Data()), completed);
+        }
+        void WriteByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, const uint8_t length, const uint8_t data[], ICallback* completed) {
+            _command.WriteByType(min, max, uuid, length, data, completed);
+            Send(waitTime, _command, &_command, &_command);
+        }
+        void Abort() {
+            Revoke(_command);
+        }
+
+        virtual void Operational() = 0;
+        virtual uint16_t Deserialize (const uint8_t* dataFrame, const uint16_t availableData) = 0;
 
     private:        
-        virtual uint16_t Deserialize (const uint8_t* dataFrame, const uint16_t availableData) {
-            ASSERT(false);
-        }
         virtual void StateChange () override
 	{
+            Core::SynchronousChannelType<Core::SocketPort>::StateChange();
+
 	    if (IsOpen() == true) {
                 socklen_t len = sizeof(_connectionInfo);
                 ::getsockopt(Handle(), SOL_L2CAP, L2CAP_CONNINFO, &_connectionInfo, &len);
+                _command.GetMTU();
+                // Within 1S we should get a response on the MTU.
+                Send(1000, _command, &_command, &_command);
             }
         }
 
     private:
         struct l2cap_conninfo _connectionInfo;
+        Command _command;
     };
 
 } // namespace Bluetooth

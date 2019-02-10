@@ -142,9 +142,31 @@ namespace Plugin {
             GATTRemote(const GATTRemote&) = delete;
             GATTRemote& operator= (const GATTRemote&) = delete;
 
+            class Sink : public Bluetooth::GATTSocket::ICallback {
+            private:
+                Sink() = delete;
+                Sink(const Sink&) = delete;
+                Sink& operator= (const Sink&) = delete;
+
+            public:
+                Sink(GATTRemote& parent) : _parent(parent) {
+                }
+                virtual ~Sink (){
+                }
+
+            public:
+                virtual void RawData(const uint16_t min, const uint16_t max, const uint16_t length, const uint8_t data[]) {
+                    _parent.RawData(min, max, length, data);
+                }
+
+            private:
+                GATTRemote& _parent;
+            }; 
+
             // UUID
             static constexpr uint16_t REPORT_UUID             = 0x2a4d;
             static constexpr uint16_t PRIMARY_SERVICE_UUID    = 0x2800;
+            static constexpr uint16_t CHARACTERISTICS_UUID    = 0x2803;
             static constexpr uint16_t HID_UUID                = 0x1812;
             static constexpr uint16_t PNP_UUID                = 0x2a50;
             static constexpr uint16_t DEVICE_NAME_UUID        = 0x2a00;
@@ -152,59 +174,10 @@ namespace Plugin {
 
             enum state {
                 METADATA_ID,
-                METADATA_NAME_HANDLE,
                 METADATA_NAME,
-                METADATA_DESCRIPTORS_HANDLE,
                 METADATA_DESCRIPTORS,
+                METADATA_ENABLE,
                 OPERATIONAL
-            };
-
-            class CommandFrame {
-            private:
-                CommandFrame(const CommandFrame&) = delete;
-                CommandFrame& operator= (const CommandFrame&) = delete;
-
-                static constexpr uint16_t MAX_BUFFER = 128;
-
-            public:
-                CommandFrame()
-                    : _offset(0)
-                    , _buffer()
-                    , _size(0) {
-                }
-                ~CommandFrame() {
-                }
-
-            public:
-                uint16_t Serialize(uint8_t stream[], const uint16_t length) const {
-                    uint16_t copyLength = std::min(static_cast<uint16_t>(_size - _offset), length);
-                    if (copyLength > 0) {
-                        ::memcpy (stream, &(_buffer[_offset]), copyLength);
-                        _offset += copyLength;
-                    }
-                    return (copyLength);
-                }
-                void Clear() {
-                    _offset = 0;
-                    _size = 0;
-                }
-                template<typename VALUE>
-                inline CommandFrame& Add(const VALUE& value) {
-    
-                    if ((sizeof(VALUE) + _size) > MAX_BUFFER) {
-                        ASSERT(false);
-                        TRACE_L1("Oops paramater does not fit anymore..");
-                    }
-                    ::memcpy (&(_buffer[_size]), &value, sizeof(VALUE));
-                    _size += sizeof(VALUE);
-
-                    return (*this);
-                }
-
-            private:
-                mutable uint16_t _offset;
-                uint8_t _buffer[MAX_BUFFER];
-                uint16_t _size;
             };
 
             class Metadata {
@@ -342,15 +315,13 @@ namespace Plugin {
                 : Bluetooth::GATTSocket(
                       Bluetooth::Address().AnyInterface().NodeId(BDADDR_LE_PUBLIC, Bluetooth::GATTSocket::LE_ATT_CID, 0),
                       remoteNode.NodeId(BDADDR_LE_PUBLIC, Bluetooth::GATTSocket::LE_ATT_CID, 0),
-                      256)
+                      64)
                 , _inputHandler(nullptr)
                 , _device()
                 , _hidPath(hidPath)
                 , _state(METADATA_ID)
                 , _metadata()
-                , _handle(0)
-                , _offset(0)
-                , _frame() {
+                , _sink(*this) {
 
                 uint32_t result = GATTSocket::Open(1000);
             }
@@ -360,27 +331,16 @@ namespace Plugin {
                 }
             }
 
-        protected:
-            void CreateFrame(const uint8_t type, const uint8_t length, const uint16_t entries[]) {
-                _frame.Clear();
-                _frame.Add<uint8_t>(type);
-                for (uint8_t index = 0; index < length; index++) {
-                    _frame.Add<uint16_t>(htobs(entries[index]));
-                }
+        private:
+            virtual uint16_t Deserialize (const uint8_t* dataFrame, const uint16_t availableData) override {
             }
-            virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override {
-                uint16_t length = _frame.Serialize(dataFrame, maxSendSize);
-                _frame.Clear();
-                return (length);
-            }
-            virtual void StateChange () override
-            {
-                if (IsOpen() == true) {
-                    Security(BT_SECURITY_MEDIUM, 0);
-                    const uint16_t message[] = { 0x0001, 0xFFFF, PRIMARY_SERVICE_UUID, HID_UUID }; 
-                    CreateFrame(ATT_OP_FIND_BY_TYPE_REQ, (sizeof(message)/sizeof(uint16_t)), message);
-                    Trigger();
-                }
+            virtual void Operational() override {
+                _state = METADATA_ID;
+                printf("Set the security type.\n");
+                Security(BT_SECURITY_MEDIUM, 0);
+               
+                printf("Find Primary Service.\n");
+                FindByType(10000, 0x0000, 0xFFFF, GATTSocket::UUID(PRIMARY_SERVICE_UUID), HID_UUID, &_sink);
             }
             virtual void Received(const uint8_t dataFrame[], const uint16_t availableData) {
                 printf ("Executing in state: %d - length: %d, First Value: %02X\n", _state, availableData, dataFrame[0]);
@@ -392,93 +352,48 @@ namespace Plugin {
                         }
                     }
                 }
-                else switch (_state) {
+            }
+            void RawData(const uint16_t min, const uint16_t max, const uint16_t length, const uint8_t data[]) {
+                switch (_state) {
                 case METADATA_ID:
                 {
                     printf("Checking for METADATA_ID\n");
-                    if (dataFrame[0] == ATT_OP_FIND_BY_TYPE_RESP) {
-                        _metadata._vendorId  = (dataFrame[5] << 8) | dataFrame[6];
-                        _metadata._productId = (dataFrame[7] << 8) | dataFrame[8];
-                        _metadata._version   = (dataFrame[9] << 8) | dataFrame[10];
-                        _state = METADATA_NAME_HANDLE;
-                        const uint16_t message[] = { 0x0000, 0xFFFF, DEVICE_NAME_UUID };
-                        CreateFrame(ATT_OP_READ_BY_TYPE_REQ, (sizeof(message)/sizeof(uint16_t)), message);
-                        Trigger();
-                        printf("FIRED: %d\n", __LINE__);
-                    }
-                    break;
-                }
-                case METADATA_NAME_HANDLE:
-                {
-                    printf("Checking for METADATA_NAME_HANDLE\n");
-                    if (dataFrame[0] == ATT_OP_READ_BY_TYPE_RESP) {
-                        _state = METADATA_NAME;
-                        _handle = (dataFrame[5] << 8) | dataFrame[6];
-                        const uint16_t message[] = { _handle, 0 };
-                        CreateFrame(ATT_OP_READ_BLOB_REQ, (sizeof(message)/sizeof(uint16_t)), message);
-                        Trigger();
-                        printf("FIRED: %d\n", __LINE__);
-                    }
+                    _state = METADATA_NAME;
+                    _metadata._vendorId  = (data[0] << 8) | data[1];
+                    _metadata._productId = (data[2] << 8) | data[3];
+                    _metadata._version   = (data[4] << 8) | data[5];
+                    ReadByType(10000, 0x0000, 0xFFFF, GATTSocket::UUID(DEVICE_NAME_UUID), &_sink);
                     break;
                 }
                 case METADATA_NAME:
                 {
                     printf("Checking for METADATA_NAME\n");
-                    if (dataFrame[0] == ATT_OP_READ_BLOB_RESP) {
-                        uint16_t length = 1;
-                        while ((length < availableData) && (dataFrame[length] != '\0')) length++;
-                        _metadata._name = string(reinterpret_cast<const char*>(dataFrame[1]), length - 1);
-                        _state = METADATA_DESCRIPTORS_HANDLE;
-                       const uint16_t message[] = { 0x0000, 0xFFFF, REPORT_MAP_UUID };
-                        CreateFrame(ATT_OP_READ_BY_TYPE_REQ, (sizeof(message)/sizeof(uint16_t)), message);
-                        Trigger();
-                        printf("FIRED: %d\n", __LINE__);
-                    }
-                    break;
-                }
-                case METADATA_DESCRIPTORS_HANDLE:
-                {
-                    printf("Checking for METADATA_DESCRIPTORS_HANDLE\n");
-                    if (dataFrame[0] == ATT_OP_READ_BY_TYPE_RESP) {
-                        _offset = 0;
-                        _handle = ((dataFrame[5] << 8) | dataFrame[6]);
-                        _state = METADATA_DESCRIPTORS;
-                        const uint16_t message[] = { _handle, _offset };
-                        CreateFrame(ATT_OP_READ_BLOB_REQ, (sizeof(message)/sizeof(uint16_t)), message);
-                        Trigger();
-                        printf("FIRED: %d\n", __LINE__);
-                    }
+                    _state = METADATA_DESCRIPTORS;
+                    _metadata._name = string(reinterpret_cast<const char*>(&data[2]), length - 2);
+                    ReadByType(10000, 0x0000, 0xFFFF, GATTSocket::UUID(REPORT_MAP_UUID), &_sink);
                     break;
                 }
                 case METADATA_DESCRIPTORS:
                 {
                     printf("Checking for METADATA_DESCRIPTORS\n");
-                    if (dataFrame[0] == ATT_OP_READ_BLOB_RESP) {
-                        ::memcpy (&(_metadata._blob[_offset]), &(dataFrame[1]), availableData-1);
-                        _offset += (availableData - 1);
-
-                        if (_offset < sizeof(_metadata._blob)) {
-                            const uint16_t message[] = { _handle, _offset };
-                            CreateFrame(ATT_OP_READ_BLOB_REQ, (sizeof(message)/sizeof(uint16_t)), message);
-                            Trigger();
-                        printf("FIRED: %d\n", __LINE__);
-                        }
-                        else {
-                            if (_hidPath.empty() == false) {
-                                _device.Open(_hidPath, LocalId(), RemoteId(), _metadata);
-                                if (_device.IsOpen() == true) {
-                                    EnableInputNotification();
-                                }
-                            }
-                            else {
-                                _inputHandler = PluginHost::InputHandler::KeyHandler();
-                                if (_inputHandler != nullptr) {
-                                    EnableInputNotification();
-                                }
-                            }
- 
+                    _state = METADATA_ENABLE;
+                    uint16_t copyLength = std::min(static_cast<uint16_t>(((data[0] & 0x7F) << 8) | data[1]), static_cast<uint16_t>(sizeof(_metadata._blob)));
+                    ::memcpy(_metadata._blob, &(data[2]), copyLength);
+                    WriteByType(10000, 0x0000, 0xFFFF, GATTSocket::UUID(REPORT_UUID), GATTSocket::UUID(htobs(1)), &_sink);
+                    break;
+                }
+                case METADATA_ENABLE:
+                {
+                    if (_hidPath.empty() == false) {
+                        _device.Open(_hidPath, LocalId(), RemoteId(), _metadata);
+                        if (_device.IsOpen() == true) {
                             _state = OPERATIONAL;
-                            printf("FIRED: %d\n", __LINE__);
+                        }
+                    }
+                    else {
+                        _inputHandler = PluginHost::InputHandler::KeyHandler();
+                        if (_inputHandler != nullptr) {
+                            _state = OPERATIONAL;
                         }
                     }
                     break;
@@ -489,21 +404,12 @@ namespace Plugin {
             }
 
         private:
-            void EnableInputNotification()
-            {
-                const uint16_t message[] = { 0x0001, 0xFFFF, REPORT_UUID }; 
-                CreateFrame(ATT_OP_READ_BY_TYPE_REQ, (sizeof(message)/sizeof(uint16_t)), message);
-            }
- 
-        private:
             PluginHost::VirtualInput* _inputHandler;
             InputDevice _device; 
             const string _hidPath;
             state _state;
             Metadata _metadata;
-            uint16_t _handle;
-            uint16_t _offset;
-            CommandFrame _frame;
+            Sink _sink;
         };
 
         class Config : public Core::JSON::Container {
