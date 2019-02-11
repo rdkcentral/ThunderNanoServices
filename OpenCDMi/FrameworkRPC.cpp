@@ -860,11 +860,9 @@ namespace Plugin {
                 return _systemExt->CommitSecureStop(sessionID, sessionIDLength, serverResponse, serverResponseLength);
             }
 
-            OCDM::OCDM_RESULT CreateSystemNetflix(
-                            const std::string& readDir,
-                            const std::string& storeLocation) override
+            OCDM::OCDM_RESULT CreateSystemNetflix() override
             {
-                return _systemExt->CreateSystemNetflix(readDir, storeLocation);
+                return _systemExt->CreateSystemNetflix();
             }
 
             OCDM::OCDM_RESULT InitSystemNetflix() override
