@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.3)
 
-include(${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/cmake/WPEFramework.cmake)
+find_package(WPEFramework)
+
 # All packages that did not deliver a CMake Find script (and some deprecated scripts that need to be removed) 
 # are located in the cmake directory. Include it in the search.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
