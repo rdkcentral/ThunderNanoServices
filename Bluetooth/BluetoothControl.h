@@ -142,7 +142,7 @@ namespace Plugin {
             GATTRemote(const GATTRemote&) = delete;
             GATTRemote& operator= (const GATTRemote&) = delete;
 
-            class Sink : public Bluetooth::GATTSocket::ICallback {
+            class Sink : public Command::ICallback {
             private:
                 Sink() = delete;
                 Sink(const Sink&) = delete;
@@ -155,8 +155,8 @@ namespace Plugin {
                 }
 
             public:
-                virtual void RawData(const uint16_t min, const uint16_t max, const uint16_t length, const uint8_t data[]) {
-                    _parent.RawData(min, max, length, data);
+                virtual void Completed (const uint32_t error) override {
+                    _parent.Completed(error);
                 }
 
             private:
@@ -336,11 +336,8 @@ namespace Plugin {
             }
             virtual void Operational() override {
                 _state = METADATA_ID;
-                printf("Set the security type.\n");
                 Security(BT_SECURITY_MEDIUM, 0);
-               
-                printf("Find Primary Service.\n");
-                FindByType(10000, 0x0000, 0xFFFF, GATTSocket::UUID(PRIMARY_SERVICE_UUID), HID_UUID, &_sink);
+                FindByType(10000, 0x0001, 0xFFFF, GATTSocket::UUID(PRIMARY_SERVICE_UUID), HID_UUID, &_sink);
             }
             virtual void Received(const uint8_t dataFrame[], const uint16_t availableData) {
                 printf ("Executing in state: %d - length: %d, First Value: %02X\n", _state, availableData, dataFrame[0]);
@@ -353,7 +350,10 @@ namespace Plugin {
                     }
                 }
             }
-            void RawData(const uint16_t min, const uint16_t max, const uint16_t length, const uint8_t data[]) {
+            void Completed(const uint32_t error) {
+                if (error == Core::ERROR_NONE) {
+                    const uint8_t* data (Result().Data());
+                    const uint16_t length (Result().Length());
                 switch (_state) {
                 case METADATA_ID:
                 {
@@ -400,6 +400,7 @@ namespace Plugin {
                 }
                 default:
                     ASSERT (false);
+                }
                 }
             }
 

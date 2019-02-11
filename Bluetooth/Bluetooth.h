@@ -959,12 +959,6 @@ namespace Bluetooth {
         GATTSocket& operator=(const GATTSocket&) = delete;
 
     public:
-        struct ICallback {
-            virtual ~ICallback() {}
-
-            virtual void RawData(const uint16_t min, const uint16_t max, const uint16_t length, const uint8_t data[]) = 0;
-        };
-
         class UUID {
         public:
             // const uint8_t BASE[] = { 00000000-0000-1000-8000-00805F9B34FB };
@@ -1140,31 +1134,30 @@ namespace Bluetooth {
             uint8_t* _buffer;
         };
 
-    private:
-        static constexpr uint8_t ATT_OP_ERROR              = 0x01;
-        static constexpr uint8_t ATT_OP_MTU_REQ            = 0x02;
-        static constexpr uint8_t ATT_OP_MTU_RESP           = 0x03;
-        static constexpr uint8_t ATT_OP_FIND_INFO_REQ      = 0x04;
-        static constexpr uint8_t ATT_OP_FIND_INFO_RESP     = 0x05;
-        static constexpr uint8_t ATT_OP_FIND_BY_TYPE_REQ   = 0x06;
-        static constexpr uint8_t ATT_OP_FIND_BY_TYPE_RESP  = 0x07;
-        static constexpr uint8_t ATT_OP_READ_BY_TYPE_REQ   = 0x08;
-        static constexpr uint8_t ATT_OP_READ_BY_TYPE_RESP  = 0x09;
-        static constexpr uint8_t ATT_OP_READ_REQ           = 0x0A;
-        static constexpr uint8_t ATT_OP_READ_RESP          = 0x0B;
-        static constexpr uint8_t ATT_OP_READ_BLOB_REQ      = 0x0C;
-        static constexpr uint8_t ATT_OP_READ_BLOB_RESP     = 0x0D;
-        static constexpr uint8_t ATT_OP_READ_MULTI_REQ     = 0x0E;
-        static constexpr uint8_t ATT_OP_READ_MULTI_RESP    = 0x0F;
-        static constexpr uint8_t ATT_OP_READ_BY_GROUP_REQ  = 0x10;
-        static constexpr uint8_t ATT_OP_READ_BY_GROUP_RESP = 0x11;
-        static constexpr uint8_t ATT_OP_WRITE_REQ          = 0x12;
-        static constexpr uint8_t ATT_OP_WRITE_RESP         = 0x13;
-
         class Command : public Core::IOutbound::ICallback, public Core::IOutbound, public Core::IInbound {
         private:
             Command (const Command&) = delete;
             Command& operator= (const Command&) = delete;
+
+            static constexpr uint8_t ATT_OP_ERROR              = 0x01;
+            static constexpr uint8_t ATT_OP_MTU_REQ            = 0x02;
+            static constexpr uint8_t ATT_OP_MTU_RESP           = 0x03;
+            static constexpr uint8_t ATT_OP_FIND_INFO_REQ      = 0x04;
+            static constexpr uint8_t ATT_OP_FIND_INFO_RESP     = 0x05;
+            static constexpr uint8_t ATT_OP_FIND_BY_TYPE_REQ   = 0x06;
+            static constexpr uint8_t ATT_OP_FIND_BY_TYPE_RESP  = 0x07;
+            static constexpr uint8_t ATT_OP_READ_BY_TYPE_REQ   = 0x08;
+            static constexpr uint8_t ATT_OP_READ_BY_TYPE_RESP  = 0x09;
+            static constexpr uint8_t ATT_OP_READ_REQ           = 0x0A;
+            static constexpr uint8_t ATT_OP_READ_RESP          = 0x0B;
+            static constexpr uint8_t ATT_OP_READ_BLOB_REQ      = 0x0C;
+            static constexpr uint8_t ATT_OP_READ_BLOB_RESP     = 0x0D;
+            static constexpr uint8_t ATT_OP_READ_MULTI_REQ     = 0x0E;
+            static constexpr uint8_t ATT_OP_READ_MULTI_RESP    = 0x0F;
+            static constexpr uint8_t ATT_OP_READ_BY_GROUP_REQ  = 0x10;
+            static constexpr uint8_t ATT_OP_READ_BY_GROUP_RESP = 0x11;
+            static constexpr uint8_t ATT_OP_WRITE_REQ          = 0x12;
+            static constexpr uint8_t ATT_OP_WRITE_RESP         = 0x13;
 
             class Exchange {
             private: 
@@ -1270,6 +1263,12 @@ namespace Bluetooth {
 
                     return (result);
                 }
+                uint16_t Handle() const {
+                    return (((_buffer[0] == ATT_OP_READ_BLOB_REQ) || (_buffer[0] == ATT_OP_READ_REQ)) ? ((_buffer[2] << 8) | _buffer[1]) : 0);
+                }
+                uint16_t Offset() const {
+                    return ((_buffer[0] == ATT_OP_READ_BLOB_REQ) ? ((_buffer[4] << 8) | _buffer[3]) : 0);
+                }
  
             private:
                 mutable uint16_t _offset;
@@ -1278,66 +1277,177 @@ namespace Bluetooth {
             };
 
         public:
-            Command(GATTSocket& parent, const uint16_t bufferSize) 
-                : _parent(parent)
-                , _frame()
-                , _callback(reinterpret_cast<GATTSocket::ICallback*>(~0))
+            struct ICallback {
+                virtual ~ICallback() {}
+
+                virtual void Completed(const uint32_t result) = 0;
+            };
+
+            class Response {
+            private:
+                Response(const Response&) = delete;
+                Response& operator= (const Response&) = delete;
+
+                static constexpr uint16_t BLOCKSIZE = 255;
+                typedef std::pair<uint16_t, uint16_t> Entry;
+
+            public:
+                Response() 
+                    : _maxSize(BLOCKSIZE)
+                    , _loaded(0)
+                    , _result()
+                    , _iterator()
+                    , _storage(reinterpret_cast<uint8_t*>(::malloc(_maxSize))) 
+                    , _preHead(true)
+                    , _min(0x0001)
+                    , _max(0xFFFF) {
+                }
+                ~Response() {
+                    if (_storage != nullptr) {
+                        ::free(_storage);
+                    }
+                }
+                
+            public:
+                void Clear() {
+                    Reset();
+                    _result.clear();
+                    _loaded = 0;
+                    _min = 0xFFFF;
+                    _max = 0x0001;
+                }
+                void Reset() {
+                    _preHead = true;
+                }
+                bool IsValid() const {
+                    return ((_preHead == false) && (_iterator != _result.end()));
+                }
+                bool Next() {
+                    if (_preHead == true) {
+                        _preHead = false;
+                        _iterator =_result.begin();
+                    }
+                    else {
+                        _iterator++;
+                    }
+                    return (_iterator != _result.end());
+                }
+                uint16_t Handle () const {
+                    return (_iterator->first);
+                }
+                uint16_t MTU () const {
+                    return ((_storage[0] << 8) | _storage[1]);
+                }
+                uint16_t Group() const {
+                    return (_iterator->second);
+                }
+                uint16_t Count() const {
+                    return (_result.size());
+                }
+                bool Empty () const {
+                    return (_result.empty());
+                }
+                uint16_t Length() const {
+                    std::list<Entry>::iterator next (_iterator);
+                    return (++next == _result.end() ? (_loaded - _iterator->second) : (next->second- _iterator->second));
+                }
+                const uint8_t* Data() const {
+                    return (&(_storage[_iterator->second]));
+                }
+
+            private:
+                friend class Command;
+                void SetMTU (const uint16_t MTU) {
+                    _storage[0] =  (MTU >> 8) & 0xFF;
+                    _storage[1] =  MTU & 0xFF;
+                }
+                void Add(const uint16_t handle, const uint16_t group) {
+                    if (_min > handle) _min = handle;
+                    if (_max < handle) _max = handle;
+                    _result.emplace_back(Entry(handle, group));
+                }
+                void Add(const uint16_t handle, const uint8_t length, const uint8_t buffer[]) {
+                    if (_min > handle) _min = handle;
+                    if (_max < handle) _max = handle;
+
+                    _result.emplace_back(Entry(handle, _loaded));
+                    Extend (length, buffer);
+                }
+                void Extend(const uint8_t length, const uint8_t buffer[]) {
+                    if ((_loaded + length) > _maxSize) {
+                        _maxSize = ((((_loaded + length) / BLOCKSIZE) + 1) * BLOCKSIZE);
+                        _storage = reinterpret_cast<uint8_t*>(::realloc(_storage, _maxSize));
+                    }
+ 
+                    ::memcpy(&(_storage[_loaded]), buffer, length);
+                    _loaded += length;
+                }
+                uint16_t Offset() const {
+                    return (_result.size() != 0 ? _loaded : _loaded - _result.back().second);
+                }
+
+            private:
+                uint16_t _maxSize;
+                uint16_t _loaded;
+                std::list<Entry> _result;
+                std::list<Entry>::iterator _iterator;
+                uint8_t* _storage;
+                bool _preHead;
+                uint16_t _min;
+                uint16_t _max;
+            };
+
+        public:
+            Command(ICallback* completed, const uint16_t bufferSize) 
+                : _frame()
+                , _callback(completed)
                 , _id(~0)
-                , _min(0x0000)
-                , _max(0xFFFF)
-                , _handles()
-                , _offset(0)
-                , _loaded(0)
-                , _maxSize(1024)
+                , _error(~0)
                 , _bufferSize(bufferSize)
-                , _storage(reinterpret_cast<uint8_t*>(::malloc(_maxSize))) {
+                , _response() {
             }
             virtual ~Command() {
-
-                ASSERT(_callback == nullptr);
-
-                if (_storage != nullptr) {
-                    ::free(_storage);
-                }
             }
 
         public:
+            void SetMTU(const uint16_t bufferSize) {
+                _bufferSize = bufferSize;
+            }
             void GetMTU() {
+                _error = ~0;
                 _id = _frame.GetMTU(_bufferSize);
             }
-            void ReadByType (const uint16_t min, const uint16_t max, const UUID& uuid, GATTSocket::ICallback* completed) {
-                ASSERT (_callback == nullptr);
-                _callback = completed;
-                _loaded = 0;
+            void ReadByGroupType (const uint16_t min, const uint16_t max, const UUID& uuid) {
+                _response.Clear();
+                _error = ~0;
+                _id = _frame.ReadByGroupType(min, max, uuid);
+            }
+            void ReadByType (const uint16_t min, const uint16_t max, const UUID& uuid) {
+                _response.Clear();
+                _error = ~0;
                 _id = _frame.ReadByType(min, max, uuid);
             }
-            void WriteByType (const uint16_t min, const uint16_t max, const UUID& uuid, const uint8_t length, const uint8_t data[], GATTSocket::ICallback* completed) {
-                ASSERT (_callback == nullptr);
-                _callback = completed;
-                _loaded = std::min(static_cast<uint16_t>(length), _maxSize);
-                ::memcpy(_storage, data, _loaded);
+            void WriteByType (const uint16_t min, const uint16_t max, const UUID& uuid, const uint8_t length, const uint8_t data[]) {
+                _response.Clear();
+                _response.Extend(length, data);
+                _error = ~0;
                 _id = _frame.ReadByType(min, max, uuid);
             }
-            void FindByType (const uint16_t min, const uint16_t max, const UUID& uuid, const uint8_t length, const uint8_t data[], GATTSocket::ICallback* completed) {
-                ASSERT (_callback == nullptr);
+            void FindByType (const uint16_t min, const uint16_t max, const UUID& uuid, const uint8_t length, const uint8_t data[]) {
                 ASSERT (uuid.HasShort() == true);
-                _callback = completed;
+                _response.Clear();
+                _error = ~0;
                 _id = _frame.FindByType(min, max, uuid, length, data);
+            }
+            Response& Result() {
+                return (_response);
             }
 
         private:
             virtual void Updated (const Core::IOutbound& data, const uint32_t error_code) {
                 ASSERT (&data == this);
 
-                GATTSocket::ICallback* callback = _callback;
-                _callback = nullptr;
-
-                if (callback == reinterpret_cast<GATTSocket::ICallback*>(~0)) {
-                    _parent.Operational();
-                }
-                else if (callback != nullptr) {
-                    callback->RawData(_min, _max, _loaded, _storage);
-                }
+                _callback->Completed(error_code);
             }
             virtual uint16_t Id() const override {
                 return (_id);
@@ -1349,14 +1459,14 @@ namespace Bluetooth {
                 return(_frame.Serialize(stream, length));
             }
             virtual Core::IInbound::state IsCompleted() const override {
-                return (_id == static_cast<uint16_t>(~0) ? Core::IInbound::COMPLETED : (_frame.IsSend() ? Core::IInbound::INPROGRESS : Core::IInbound::RESEND));
+                return (_error != static_cast<uint16_t>(~0) ? Core::IInbound::COMPLETED : (_frame.IsSend() ? Core::IInbound::INPROGRESS : Core::IInbound::RESEND));
             }
             virtual uint16_t Deserialize(const uint8_t stream[], const uint16_t length) override {
                 uint16_t result = 0;
 
                 // See if we need to retrigger..
-                if ( (stream[0] != _id) && (stream[0] != ATT_OP_ERROR) ) {
-                    printf("Unexpected L2CapSocket message. Expected: %d, got %d\n", _id, stream[0]);
+                if ( (stream[0] != _id) && ((stream[0] != ATT_OP_ERROR) && (stream[1] == _id)) ) {
+                    printf("Unexpected L2CapSocket message. Expected: %d, got %d [%d]\n", _id, stream[0], stream[1]);
                 }
                 else {
                     result = length;
@@ -1367,24 +1477,24 @@ namespace Bluetooth {
                     switch (stream[0]) {
                     case ATT_OP_ERROR:
                     {
-                        printf("Houston we got an error... %d, %d\n", _id, length);
+                        printf("Houston we got an error... %d \n", stream[4]);
+                        _error = stream[4];
                         break;
                     }
                     case ATT_OP_MTU_RESP: 
                     {
-                        _bufferSize = (stream[2] << 8) | stream[1];
-                        _id = ~0;
+                        _response.SetMTU ((stream[2] << 8) | stream[1]);
+                        _error = Core::ERROR_NONE;
                         break;
                     }
                     case ATT_OP_READ_BY_GROUP_RESP:
                     {
+                        printf("L2CapSocket Read By Group Type\n");
+                        _error = Core::ERROR_NONE;
                         break;
                     }
                     case ATT_OP_FIND_BY_TYPE_RESP:
                     {
-                        _loaded = 0;
-                        _min = ~0;
-                        _max = 0;
                         /* PDU must contain at least:
                          * - Attribute Opcode (1 octet)
                          * - Length (1 octet)
@@ -1396,29 +1506,16 @@ namespace Bluetooth {
                             uint8_t entries = (length - 1) / 4;
                             for (uint8_t index = 0; index < entries; index++) {
                                 uint16_t offset = 2 + (index * stream[1]);
-                                uint16_t foundHandle = (stream[offset+0] << 8) | stream[offset+1];
-                                uint16_t groupHandle = (stream[offset+2] << 8) | stream[offset+3];
-                                if (foundHandle > _max) _max = foundHandle;
-                                if (foundHandle < _min) _min = foundHandle;
-                                printf("Entry: %04X - %04X\n", foundHandle,  groupHandle);
-                                _handles.push_back(foundHandle);
+                                uint16_t foundHandle = (stream[offset+1] << 8) | stream[offset+0];
+                                uint16_t groupHandle = (stream[offset+3] << 8) | stream[offset+2];
+                                _response.Add(foundHandle, groupHandle);
                             }
                         }
-                        if (_handles.size() > 0) {
-                            _offset = 0;
-                            _id = _frame.ReadBlob(_handles.front(), _offset);
-                        }
-                        else {
-                            _id = ~0;
-                        }
-
+                        _error = Core::ERROR_NONE;
                         break;
                     }
                     case ATT_OP_READ_BY_TYPE_RESP:
                     {
-                        _loaded = 0;
-                        _min = ~0;
-                        _max = 0;
                         /* PDU must contain at least:
                          * - Attribute Opcode (1 octet)
                          * - Length (1 octet)
@@ -1427,80 +1524,46 @@ namespace Bluetooth {
                          *   - Attribute Value (at least 1 octet) */
                         /* Minimum Attribute Data List size */
                         if (stream[1] >= 3) {
-                            printf("found length = %d\n", stream[1]);
                             uint8_t entries = ((length - 2) / stream[1]);
                             for (uint8_t index = 0; index < entries; index++) {
                                 uint16_t offset = 2 + (index * stream[1]);
                                 uint16_t handle = (stream[offset] << 8) | stream[offset+1];
-                                if (handle > _max) _max = handle;
-                                if (handle < _min) _min = handle;
-                                printf("Entry: %04X - %02X:%02X:%02X:%02X\n", handle, stream[offset+2], stream[offset+3], stream[offset+4], stream[offset+5]);
 
-                                _handles.push_back(handle);
+                                _response.Add(handle, stream[1] - 2, &(stream[offset + 2]));
                             }
                         }
-                        if (_handles.size() > 0) {
-                            if(_loaded != 0) {
-                                _offset = 0;
-                                _id = _frame.ReadBlob(_handles.front(), _offset);
-                            }
-                            else {
-                                _id = _frame.Write(_handles.front(), static_cast<uint8_t>(_loaded), _storage);
-                            }
-                        }
-                        else {
-                            _id = ~0;
-                        }
-
+                        _error = Core::ERROR_NONE;
                         break;
                     }
                     case ATT_OP_WRITE_RESP: 
                     {
-                        printf ("We have written: %d\n", _loaded);
-                        _handles.pop_front();
-                        if (_handles.empty() == false) {
-                            _id = _frame.Write(_handles.front(), static_cast<uint8_t>(_loaded), _storage);
-                        }
-                        else {
-                            _id = ~0;
-                        }
+                        printf ("We have written: %d\n", length);
+                        _error = Core::ERROR_NONE;
                         break;
                     }
                     case ATT_OP_FIND_INFO_RESP:
                     {
+                        _error = Core::ERROR_NONE;
                         break;
                     }
                     case ATT_OP_READ_RESP:
                     {
+                        _error = Core::ERROR_NONE;
                         break;
                     }
                     case ATT_OP_READ_BLOB_RESP:
                     {
-                        if (result == 1) {
-                            printf ("We have a BLOB retrieval of: %d\n", _offset);
-                            _handles.pop_front();
-                            _storage[_loaded + 0] = 0x80 | (_offset >> 8);
-                            _storage[_loaded + 1] = (_offset & 0xFF);
-                            _loaded += 2 + _offset;
-                            if (_handles.empty() == false) {
-                                _offset = 0;
-                                _id = _frame.ReadBlob(_handles.front(), _offset);
-                            }
-                            else {
-                                _id = ~0;
-                            }
+                        if (_response.Offset() == 0) {
+                            _response.Add(_frame.Handle(), length - 1, &(stream[1]));
                         }
                         else {
-                            if ((_offset + _loaded + result + 2) > _maxSize) {
-                                _maxSize *= 2;
-                                uint8_t* newStorage = reinterpret_cast<uint8_t*> (::malloc (_maxSize));
-                                ::memcpy (newStorage, _storage, (_loaded + _offset));
-                                ::free (_storage);
-                                _storage = newStorage;
-                            }
-                            ::memcpy(&(_storage[_offset + _loaded + 2]), &(stream[1]), result - 1);
-                            _offset += (result - 1);
-                            _id = _frame.ReadBlob(_handles.front(), _offset);
+                            _response.Extend (length - 1, &(stream[1]));
+                        }
+                        if (length < _bufferSize) {
+                            _id = _frame.ReadBlob(_frame.Handle(), _response.Offset());
+                        }
+                        else {
+                            _error = Core::ERROR_NONE;
                         }
                         break;
                     }
@@ -1512,24 +1575,61 @@ namespace Bluetooth {
             }
  
         private:
-            GATTSocket& _parent;
             Exchange _frame;
-            GATTSocket::ICallback* _callback;
+            ICallback* _callback;
             uint16_t _id;
-            uint16_t _min;
-            uint16_t _max;
-            std::list<uint16_t> _handles;
-            uint16_t _offset;
-            uint16_t _loaded;
-            uint16_t _maxSize;
+            uint16_t _error;
             uint16_t _bufferSize;
-            uint8_t* _storage;
+            Response _response;
         };
 
-    public:
         static constexpr uint8_t LE_ATT_CID                = 4;
         static constexpr uint8_t ATT_OP_HANDLE_NOTIFY      = 0x1B;
 
+    private:
+        class LocalCommand : public Command, public Command::ICallback {
+        private:
+            LocalCommand () = delete;
+            LocalCommand (const LocalCommand&) = delete;
+            LocalCommand& operator= (const LocalCommand&) = delete;
+
+        public:
+            LocalCommand(GATTSocket& parent, const uint16_t bufferSize) 
+                : Command(this, bufferSize)
+                , _parent(parent)
+                , _callback(reinterpret_cast<Command::ICallback*>(~0)) {
+            }
+            virtual ~LocalCommand() {
+            }
+
+            void SetCallback(Command::ICallback* callback) {
+                ASSERT ((callback == nullptr) ^ (_callback == nullptr));
+                _callback = callback;
+            }
+
+        private:
+            virtual void Completed(const uint32_t result) override {
+                if (_callback == reinterpret_cast<Command::ICallback*>(~0)) {
+                    if (result != Core::ERROR_NONE) {
+                        TRACE_L1("Could not receive the MTU size correctly. Can not reach Operationl.");
+                    }
+                    else {
+                        _callback = nullptr;
+                        _parent.Operational();
+                    }
+                }
+                else if (_callback != nullptr) {
+                    Command::ICallback* callback = _callback;
+                    _callback = nullptr;
+                    callback->Completed(result);
+                }
+            }
+
+        private:
+            GATTSocket& _parent;
+            Command::ICallback* _callback;
+        };
+ 
     public:
         GATTSocket(const Core::NodeId& localNode, const Core::NodeId& remoteNode, const uint16_t bufferSize)
             : Core::SynchronousChannelType<Core::SocketPort>(SocketPort::SEQUENCED, localNode, remoteNode, bufferSize, bufferSize)
@@ -1551,26 +1651,37 @@ namespace Bluetooth {
             }
             return (result);
         }
-        void ReadByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, ICallback* completed) {
-            _command.ReadByType(min, max, uuid, completed);
+        void ReadByGroupType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, Command::ICallback* completed) {
+            _command.ReadByGroupType(min, max, uuid);
+            _command.SetCallback(completed);
             Send(waitTime, _command, &_command, &_command);
         }
-        void FindByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, const UUID& type, ICallback* completed) {
+        void ReadByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, Command::ICallback* completed) {
+            _command.ReadByType(min, max, uuid);
+            _command.SetCallback(completed);
+            Send(waitTime, _command, &_command, &_command);
+        }
+        void FindByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, const UUID& type, Command::ICallback* completed) {
             FindByType(waitTime, min, max, uuid, type.Length(), &(type.Data()), completed);
         }
-        void FindByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, const uint8_t length, const uint8_t data[], ICallback* completed) {
-            _command.FindByType(min, max, uuid, length, data, completed);
+        void FindByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, const uint8_t length, const uint8_t data[], Command::ICallback* completed) {
+            _command.FindByType(min, max, uuid, length, data);
+            _command.SetCallback(completed);
             Send(waitTime, _command, &_command, &_command);
         }
-        void WriteByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, const UUID& type, ICallback* completed) {
+        void WriteByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, const UUID& type, Command::ICallback* completed) {
             WriteByType(waitTime, min, max, uuid, type.Length(), &(type.Data()), completed);
         }
-        void WriteByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, const uint8_t length, const uint8_t data[], ICallback* completed) {
-            _command.WriteByType(min, max, uuid, length, data, completed);
+        void WriteByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, const uint8_t length, const uint8_t data[], Command::ICallback* completed) {
+            _command.WriteByType(min, max, uuid, length, data);
+            _command.SetCallback(completed);
             Send(waitTime, _command, &_command, &_command);
         }
         void Abort() {
             Revoke(_command);
+        }
+        Command::Response& Result() {
+            return (_command.Result());
         }
 
         virtual void Operational() = 0;
@@ -1592,7 +1703,7 @@ namespace Bluetooth {
 
     private:
         struct l2cap_conninfo _connectionInfo;
-        Command _command;
+        LocalCommand _command;
     };
 
 } // namespace Bluetooth
