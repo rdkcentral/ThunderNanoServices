@@ -2,27 +2,23 @@ set(TARGET ${PLATFORM_COMPOSITOR})
 
 message("Setting up ${TARGET} for RPI platfrom")
 
-find_package(Core REQUIRED)
-find_package(Plugins REQUIRED)
-find_package(Interfaces REQUIRED)
+find_package(${NAMESPACE}Core REQUIRED)
+find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Interfaces REQUIRED)
 
 add_library(${TARGET}
-        RPI.cpp
-        )
+        RPI.cpp)
 
 target_link_libraries(${TARGET}
-        PRIVATE
-        ${CORE_LIBRARIES}
-        ${PLUGINS_LIBRARIES}
-        ${INTERFACES_LIBRARIES}
-        )
+    PRIVATE
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces)
 
-set_target_properties(${TARGET}
-        PROPERTIES
+set_target_properties(${TARGET} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
-        FRAMEWORK FALSE
-        )
+        FRAMEWORK FALSE)
 
 install(TARGETS ${TARGET}
         DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor

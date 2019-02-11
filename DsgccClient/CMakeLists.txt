@@ -1,27 +1,33 @@
 set(PLUGIN_NAME DsgccClient)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-find_package(Interfaces REQUIRED)
+find_package(${NAMESPACE}Interfaces REQUIRED)
+find_package(${NAMESPACE}Plugins REQUIRED)
 
-file(GLOB PLUGIN_INCLUDES *.h)
-
-set(PLUGIN_SOURCES
+add_library(${MODULE_NAME} SHARED
         Module.cpp
         DsgccClient.cpp
-        DsgccClientImplementation.cpp
-        )
+        DsgccClientImplementation.cpp)
 
-add_definitions(-DDSG_RPC_INCLUDED=1 -DBCM_DSGCC_CLIENTS_USE_SHARED_MEMORY_IPC=1 -DTARGETOS_Linux)
-list(APPEND PLUGINS_LIBRARIES dsgclient)
+target_compile_definitions(${MODULE_NAME}
+        PRIVATE
+           DSG_RPC_INCLUDED=1 
+           BCM_DSGCC_CLIENTS_USE_SHARED_MEMORY_IPC=1 
+           TARGETOS_Linux)
 
-message ("PLUGINS_LIBRARIES=${PLUGINS_LIBRARIES}")
+set_target_properties(${MODULE_NAME} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
 
-# Library definition section
-add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES})
-target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES} ${INTERFACES_LIBRARIES} ${ADDITIONAL_LIBRARIES})
+target_link_libraries(${MODULE_NAME} 
+    PRIVATE
+        ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        # TODO: write a proper find module for dsgclient to supply all link and compile options. 
+        #       check: FindNXSERVER.cmake, FindEGL.cmake
+        dsgclient)
 
-# Library installation section
-string(TOLOWER ${NAMESPACE} STORAGENAME)
-install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
+install(TARGETS ${MODULE_NAME} 
+    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})

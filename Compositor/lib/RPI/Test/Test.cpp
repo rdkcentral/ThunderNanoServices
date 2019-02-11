@@ -27,6 +27,7 @@ public:
     virtual void AddRef() const override {
     }
     virtual uint32_t Release() const override {
+        return 0;
     }
     virtual void KeyMap(const char information[], const uint16_t size) override {
     }
