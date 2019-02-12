@@ -26,9 +26,13 @@ target_link_libraries(${TARGET}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         WAYLAND::SERVER
         WAYLAND::EGL
-        EGL::EGL
+        ${EGL_LIBRARIES}
         WPEFramework::WaylandEGLClient
         )
+
+target_include_directories(${TARGET}
+    PRIVATE
+        ${EGL_INCLUDE_DIRS})
 
 set_target_properties(${TARGET}
         PROPERTIES

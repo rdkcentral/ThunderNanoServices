@@ -10,12 +10,16 @@ find_package(${NAMESPACE}Interfaces REQUIRED)
 add_library(${TARGET} SHARED Implementation.cpp)
 
 target_link_libraries(${TARGET}
-    PUBLIC
+    PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}VirtualInput::${NAMESPACE}VirtualInput
         ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces
-        EGL::EGL
+        ${EGL_LIBRARIES}
         )
+
+target_include_directories(${TARGET}
+    PRIVATE
+        ${EGL_INCLUDE_DIRS})
 
 set_target_properties(${TARGET} PROPERTIES
         CXX_STANDARD 11

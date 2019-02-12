@@ -23,14 +23,18 @@ include_directories(${CORE_INCLUDE_DIR})
 add_compiler_flags(${TARGET} "${PLUGINS_DEFINITIONS}")
 
 target_link_libraries(${TARGET}
-            PUBLIC
+        PUBLIC
             ${CORE_LIBRARIES}
             WESTEROS::CLIENT
             WAYLAND::CLIENT
             WAYLAND::EGL
-            EGL::EGL
+            ${EGL_LIBRARIES}
             ${BCM_HOST_LIBS}
             )
+
+target_include_directories(${TARGET}
+    PRIVATE
+        ${EGL_INCLUDE_DIRS})
 
 set_target_properties(${TARGET} PROPERTIES
         CXX_STANDARD 11

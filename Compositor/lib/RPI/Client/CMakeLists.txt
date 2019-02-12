@@ -9,10 +9,11 @@ find_package(${NAMESPACE}VirtualInput REQUIRED)
 add_library(${TARGET} SHARED Implementation.cpp)
 
 target_link_libraries(${TARGET}
-    PUBLIC
+    PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}VirtualInput::${NAMESPACE}VirtualInput
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${EGL_LIBRARIES}
 )
 
 set_target_properties(${TARGET} PROPERTIES
@@ -21,6 +22,10 @@ set_target_properties(${TARGET} PROPERTIES
         VERSION ${VERSION}
         SOVERSION ${VERSION_MAJOR}
 )
+
+target_include_directories(${TARGET}
+    PRIVATE
+        ${EGL_INCLUDE_DIRS})
 
 install(
         TARGETS ${TARGET}  EXPORT ${TARGET}Targets  # for downstream dependencies
