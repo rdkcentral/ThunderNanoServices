@@ -13,7 +13,7 @@ option(PLUGIN_COMPOSITOR_INSTALL_NEXUS_SERVER "Enable to install the server to s
 option(NEXUS_SERVER_HAS_EXTENDED_INIT "Enable to support unauthenticated nxclients." ON)
 option(NEXUS_SERVER_EXTERNAL "Enable hooking up to an eternally running NxServer instead of running one." OFF)
 
-message("Setup WPEFramework${TARGET} v${VERSION}...")
+message("Setup ${TARGET} v${VERSION}...")
 
 find_package(NEXUS REQUIRED)
 find_package(NXSERVER REQUIRED)
@@ -63,7 +63,7 @@ set_target_properties(${TARGET}
             POSITION_INDEPENDENT_CODE ON
 )
 
-add_library(${NAMESPACE}::${TARGET} ALIAS ${TARGET})
+add_library(${TARGET}::${TARGET} ALIAS ${TARGET})
 
 if (PLUGIN_COMPOSITOR_INSTALL_NEXUS_SERVER)
 install(
