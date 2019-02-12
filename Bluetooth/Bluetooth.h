@@ -1348,11 +1348,15 @@ namespace Bluetooth {
                     return (_result.empty());
                 }
                 uint16_t Length() const {
-                    std::list<Entry>::iterator next (_iterator);
-                    return (++next == _result.end() ? (_loaded - _iterator->second) : (next->second- _iterator->second));
+                    uint16_t result = _loaded;
+                    if (IsValid() == true) {
+                        std::list<Entry>::iterator next (_iterator);
+                        result = (++next == _result.end() ? (_loaded - _iterator->second) : (next->second - _iterator->second));
+                    }
+                    return (result);
                 }
                 const uint8_t* Data() const {
-                    return (&(_storage[_iterator->second]));
+                    return (IsValid() == true ? &(_storage[_iterator->second]) : (((_result.size() <= 1) && (_loaded > 0)) ? _storage : nullptr));
                 }
 
             private:
@@ -1427,6 +1431,11 @@ namespace Bluetooth {
                 _error = ~0;
                 _id = _frame.ReadByType(min, max, uuid);
             }
+            void ReadBlob (const uint16_t handle) {
+                _response.Clear();
+                _error = ~0;
+                _id = _frame.ReadBlob(handle, 0);
+            }
             void WriteByType (const uint16_t min, const uint16_t max, const UUID& uuid, const uint8_t length, const uint8_t data[]) {
                 _response.Clear();
                 _response.Extend(length, data);
@@ -1483,7 +1492,8 @@ namespace Bluetooth {
                     }
                     case ATT_OP_MTU_RESP: 
                     {
-                        _response.SetMTU ((stream[2] << 8) | stream[1]);
+                        _bufferSize = ((stream[2] << 8) | stream[1]);
+                        _response.SetMTU (_bufferSize);
                         _error = Core::ERROR_NONE;
                         break;
                     }
@@ -1527,7 +1537,7 @@ namespace Bluetooth {
                             uint8_t entries = ((length - 2) / stream[1]);
                             for (uint8_t index = 0; index < entries; index++) {
                                 uint16_t offset = 2 + (index * stream[1]);
-                                uint16_t handle = (stream[offset] << 8) | stream[offset+1];
+                                uint16_t handle = (stream[offset+1] << 8) | stream[offset+0];
 
                                 _response.Add(handle, stream[1] - 2, &(stream[offset + 2]));
                             }
@@ -1559,10 +1569,13 @@ namespace Bluetooth {
                         else {
                             _response.Extend (length - 1, &(stream[1]));
                         }
-                        if (length < _bufferSize) {
+                        printf ("Received a blob of length %d, BufferSize %d\n", length, _bufferSize);
+                        if (length == _bufferSize) {
                             _id = _frame.ReadBlob(_frame.Handle(), _response.Offset());
+                            printf ("Now we need to see a send....\n");
                         }
                         else {
+                            ASSERT (length < _bufferSize);
                             _error = Core::ERROR_NONE;
                         }
                         break;
@@ -1658,6 +1671,11 @@ namespace Bluetooth {
         }
         void ReadByType (const uint32_t waitTime, const uint16_t min, const uint16_t max, const UUID& uuid, Command::ICallback* completed) {
             _command.ReadByType(min, max, uuid);
+            _command.SetCallback(completed);
+            Send(waitTime, _command, &_command, &_command);
+        }
+        void ReadBlob (const uint32_t waitTime, const uint16_t& handle, Command::ICallback* completed) {
+            _command.ReadBlob(handle);
             _command.SetCallback(completed);
             Send(waitTime, _command, &_command, &_command);
         }

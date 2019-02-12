@@ -173,11 +173,15 @@ namespace Plugin {
             static constexpr uint16_t REPORT_MAP_UUID         = 0x2a4b;
 
             enum state {
+                METADATA_TYPE,
                 METADATA_ID,
+                METADATA_NAME_HANDLE,
                 METADATA_NAME,
+                METADATA_DESCRIPTORS_HANDLE,
                 METADATA_DESCRIPTORS,
                 METADATA_ENABLE,
-                OPERATIONAL
+                OPERATIONAL,
+                ERROR
             };
 
             class Metadata {
@@ -319,7 +323,7 @@ namespace Plugin {
                 , _inputHandler(nullptr)
                 , _device()
                 , _hidPath(hidPath)
-                , _state(METADATA_ID)
+                , _state(METADATA_TYPE)
                 , _metadata()
                 , _sink(*this) {
 
@@ -335,12 +339,11 @@ namespace Plugin {
             virtual uint16_t Deserialize (const uint8_t* dataFrame, const uint16_t availableData) override {
             }
             virtual void Operational() override {
-                _state = METADATA_ID;
+                _state = METADATA_TYPE;
                 Security(BT_SECURITY_MEDIUM, 0);
-                FindByType(10000, 0x0001, 0xFFFF, GATTSocket::UUID(PRIMARY_SERVICE_UUID), HID_UUID, &_sink);
+                FindByType(1000, 0x0001, 0xFFFF, GATTSocket::UUID(PRIMARY_SERVICE_UUID), HID_UUID, &_sink);
             }
             virtual void Received(const uint8_t dataFrame[], const uint16_t availableData) {
-                printf ("Executing in state: %d - length: %d, First Value: %02X\n", _state, availableData, dataFrame[0]);
                 if (_state == OPERATIONAL) {
                     if (dataFrame[0] == ATT_OP_HANDLE_NOTIFY) {
                         // We got a key press.. where to ?
@@ -352,55 +355,91 @@ namespace Plugin {
             }
             void Completed(const uint32_t error) {
                 if (error == Core::ERROR_NONE) {
-                    const uint8_t* data (Result().Data());
+                    const uint8_t* data (Result().Data()); // FAILS!!!!
                     const uint16_t length (Result().Length());
-                switch (_state) {
-                case METADATA_ID:
-                {
-                    printf("Checking for METADATA_ID\n");
-                    _state = METADATA_NAME;
-                    _metadata._vendorId  = (data[0] << 8) | data[1];
-                    _metadata._productId = (data[2] << 8) | data[3];
-                    _metadata._version   = (data[4] << 8) | data[5];
-                    ReadByType(10000, 0x0000, 0xFFFF, GATTSocket::UUID(DEVICE_NAME_UUID), &_sink);
-                    break;
-                }
-                case METADATA_NAME:
-                {
-                    printf("Checking for METADATA_NAME\n");
-                    _state = METADATA_DESCRIPTORS;
-                    _metadata._name = string(reinterpret_cast<const char*>(&data[2]), length - 2);
-                    ReadByType(10000, 0x0000, 0xFFFF, GATTSocket::UUID(REPORT_MAP_UUID), &_sink);
-                    break;
-                }
-                case METADATA_DESCRIPTORS:
-                {
-                    printf("Checking for METADATA_DESCRIPTORS\n");
-                    _state = METADATA_ENABLE;
-                    uint16_t copyLength = std::min(static_cast<uint16_t>(((data[0] & 0x7F) << 8) | data[1]), static_cast<uint16_t>(sizeof(_metadata._blob)));
-                    ::memcpy(_metadata._blob, &(data[2]), copyLength);
-                    WriteByType(10000, 0x0000, 0xFFFF, GATTSocket::UUID(REPORT_UUID), GATTSocket::UUID(htobs(1)), &_sink);
-                    break;
-                }
-                case METADATA_ENABLE:
-                {
-                    if (_hidPath.empty() == false) {
-                        _device.Open(_hidPath, LocalId(), RemoteId(), _metadata);
-                        if (_device.IsOpen() == true) {
-                            _state = OPERATIONAL;
+                fprintf(stderr, "%s -- %d\n", __FUNCTION__, __LINE__); fflush (stderr);
+                    switch (_state) {
+                    case METADATA_TYPE:
+                    {
+                        if (Result().Empty() == false) {
+                            ReadByType(1000, 0x0001, 0xFFFF, GATTSocket::UUID(PNP_UUID), &_sink);
+                            _state = METADATA_ID;
                         }
-                    }
-                    else {
-                        _inputHandler = PluginHost::InputHandler::KeyHandler();
-                        if (_inputHandler != nullptr) {
-                            _state = OPERATIONAL;
+                        else {
+                            _state = ERROR;
                         }
+                        break;
                     }
-                    break;
-                }
-                default:
-                    ASSERT (false);
-                }
+                    case METADATA_ID:
+                    {
+                        printf("Checking for METADATA_ID, length: %d\n", length);
+                        _state = METADATA_NAME_HANDLE;
+                        _metadata._vendorId  = (data[0] << 8) | data[1];
+                        _metadata._productId = (data[2] << 8) | data[3];
+                        _metadata._version   = (data[4] << 8) | data[5];
+                        ReadByType(10000, 0x0001, 0xFFFF, GATTSocket::UUID(DEVICE_NAME_UUID), &_sink);
+                        break;
+                    }
+                    case METADATA_NAME_HANDLE:
+                    {
+                        Command::Response& response (Result());
+                        if (response.Next() == true) {
+                            _state = METADATA_NAME;
+                            ReadBlob(1000, response.Handle(), &_sink);
+                        }
+                        else {
+                            _state = ERROR;
+                        }
+                        break;
+                    }
+                    case METADATA_NAME:
+                    {
+                        printf("Checking for METADATA_NAME\n");
+                        _state = METADATA_DESCRIPTORS_HANDLE;
+                        _metadata._name = string(reinterpret_cast<const char*>(data), length);
+                        ReadByType(10000, 0x0001, 0xFFFF, GATTSocket::UUID(REPORT_MAP_UUID), &_sink);
+                        break;
+                    }
+                    case METADATA_DESCRIPTORS_HANDLE:
+                    {
+                        Command::Response& response (Result());
+                        if (response.Next() == true) {
+                            _state = METADATA_DESCRIPTORS;
+                            ReadBlob(1000, response.Handle(), &_sink);
+                        }
+                        else {
+                            _state = ERROR;
+                        }
+                        break;
+                    }
+                    case METADATA_DESCRIPTORS:
+                    {
+                        printf("Checking for METADATA_DESCRIPTORS\n");
+                        _state = METADATA_ENABLE;
+                        uint16_t copyLength = std::min(length, static_cast<uint16_t>(sizeof(_metadata._blob)));
+                        ::memcpy(_metadata._blob, data, copyLength);
+                        WriteByType(10000, 0x0001, 0xFFFF, GATTSocket::UUID(REPORT_UUID), GATTSocket::UUID(htobs(1)), &_sink);
+                        break;
+                    }
+                    case METADATA_ENABLE:
+                    {
+                        if (_hidPath.empty() == false) {
+                            _device.Open(_hidPath, LocalId(), RemoteId(), _metadata);
+                            if (_device.IsOpen() == true) {
+                                _state = OPERATIONAL;
+                            }
+                        }
+                        else {
+                            _inputHandler = PluginHost::InputHandler::KeyHandler();
+                            if (_inputHandler != nullptr) {
+                                _state = OPERATIONAL;
+                            }
+                        }
+                        break;
+                    }
+                    default:
+                        ASSERT (false);
+                    }
                 }
             }
 
