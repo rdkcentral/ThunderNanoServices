@@ -33,6 +33,9 @@ target_link_libraries(${TARGET}
             )
 
 target_include_directories(${TARGET}
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../Client>
+        $<INSTALL_INTERFACE:include/${NAMESPACE}>
     PRIVATE
         ${EGL_INCLUDE_DIRS})
 

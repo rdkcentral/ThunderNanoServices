@@ -24,6 +24,9 @@ set_target_properties(${TARGET} PROPERTIES
 )
 
 target_include_directories(${TARGET}
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../Client>
+        $<INSTALL_INTERFACE:include/${NAMESPACE}>
     PRIVATE
         ${EGL_INCLUDE_DIRS})
 
