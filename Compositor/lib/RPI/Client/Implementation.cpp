@@ -9,7 +9,7 @@ MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 #include <EGL/eglext.h>
 
 #include <interfaces/IComposition.h>
-#include "../../Client/Client.h"
+#include <compositor/Client.h>
 
 int g_pipefd[2];
 struct Message {

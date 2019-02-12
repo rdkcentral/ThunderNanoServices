@@ -24,7 +24,7 @@
 #define nullptr NULL
 #endif
 
-#include "../../Client/Client.h"
+#include <compositor/Client.h>
 #include "Module.h"
 
 //
