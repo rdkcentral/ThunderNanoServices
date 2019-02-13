@@ -170,8 +170,6 @@ namespace Core {
 
         uint32_t Exchange(const uint32_t waitTime, const IOutbound& message, IInbound& response) {
 
-            bool trigger = false;
-
             _adminLock.Lock();
 
             Cleanup();
@@ -274,7 +272,7 @@ namespace Core {
 
                 _adminLock.Unlock();
 
-                result == _reevaluate.Lock(remainingTime);
+                result = _reevaluate.Lock(remainingTime);
 
                 _waitCount--;
 
@@ -525,7 +523,7 @@ namespace Bluetooth {
                 _buffer[0] = (opCode & 0xFF);
                 _buffer[1] = ((opCode >> 8) & 0xFF);
 
-                uint32_t result = socket.Exchange(waitTime, *this);
+                return socket.Exchange(waitTime, *this);
             }
 
         private:
@@ -892,7 +890,6 @@ namespace Bluetooth {
                      string longName;
                      const le_advertising_info* advertisingInfo = reinterpret_cast<const le_advertising_info*>(&(eventMetaData->data[1]));
                      uint16_t offset = 0;
-                     uint16_t length = advertisingInfo->length;
                      const uint8_t* buffer = advertisingInfo->data;
                      const char* name = nullptr;
                      uint8_t pos = 0;
@@ -1018,7 +1015,7 @@ namespace Bluetooth {
                 return (_error != static_cast<uint16_t>(~0) ? Core::IInbound::COMPLETED : Core::IInbound::INPROGRESS);
             }
             virtual uint16_t Deserialize(const uint8_t stream[], const uint16_t length) override {
-                uint16_t result = 0;
+                return 0;
             }
  
         private:
@@ -1052,6 +1049,7 @@ namespace Bluetooth {
     private:        
         virtual uint16_t Deserialize (const uint8_t* dataFrame, const uint16_t availableData) {
             ASSERT(false);
+            return 0;
         }
         virtual void StateChange () override
 	{
