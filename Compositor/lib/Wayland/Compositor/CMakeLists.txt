@@ -9,45 +9,61 @@ find_package(WaylandServer REQUIRED)
 find_package(WaylandEGL REQUIRED)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Interfaces REQUIRED)
 find_package(EGL REQUIRED)
 
 if (PLUGIN_COMPOSITOR_NXSERVER)
-    add_definitions(-DENABLE_NXSERVER=1)
     find_package(NEXUS REQUIRED)
     find_package(NXSERVER REQUIRED)
     target_link_libraries(${TARGET} 
         PRIVATE 
            ${NAMESPACE}nexusserver::${NAMESPACE}nexusserver)
+    target_compile_definitions(${TARGET}
+        PRIVATE
+            ENABLE_NXSERVER=1)
 endif ()
 
 target_link_libraries(${TARGET}
-        PRIVATE
+    PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        WAYLAND::SERVER
-        WAYLAND::EGL
+        ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces
+        WaylandServer::WaylandServer
+        WaylandEGL::WaylandEGL
         ${EGL_LIBRARIES}
-        WPEFramework::WaylandEGLClient
-        )
+)
 
 target_include_directories(${TARGET}
     PRIVATE
-        ${EGL_INCLUDE_DIRS})
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../Client>
+        ${EGL_INCLUDE_DIRS}
+)
 
-set_target_properties(${TARGET}
-        PROPERTIES
-            DEFINE_SYMBOL WPEFRAMEWORK_PLATFORM_PLUGIN
-        )
+set_target_properties(${TARGET} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
+        FRAMEWORK FALSE
+        DEFINE_SYMBOL WPEFRAMEWORK_PLATFORM_PLUGIN
+)
 
-find_package(Westeros)
-if(WESTEROS_FOUND)
-    target_sources(${TARGET} PRIVATE Westeros.cpp)
-    target_link_libraries(${TARGET} PRIVATE WESTEROS::SERVER)
-endif(WESTEROS_FOUND)
+find_package(WesterosServer)
+if(WESTEROS_SERVER_FOUND)
+    target_sources(${TARGET} 
+        PRIVATE 
+            Westeros.cpp
+    )
+    target_link_libraries(${TARGET} 
+        PRIVATE
+            WesterosServer::WesterosServer
+    )
+endif(WESTEROS_SERVER_FOUND)
 
 if(PLUGIN_COMPOSITOR_VIRTUALINPUT)
     find_package(${NAMESPACE}VirtualInput REQUIRED)
-    target_link_libraries(${TARGET} PRIVATE ${VIRTUALINPUT_LIBRARIES})
+    target_link_libraries(${TARGET} 
+        PRIVATE 
+           ${NAMESPACE}VirtualInput::${NAMESPACE}VirtualInput
+    )
 endif(PLUGIN_COMPOSITOR_VIRTUALINPUT)
 
 install(

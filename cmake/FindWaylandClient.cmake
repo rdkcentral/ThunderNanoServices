@@ -5,7 +5,7 @@
 #  WAYLANDCLIENT_INCLUDE_DIRS - the Wayland include directories
 #  WAYLANDCLIENT_LIBRARIES - link these to use Wayland.
 #
-#  WAYLAND::CLIENT, the wayland client library
+#  WaylandClient::WaylandClient, the wayland client library
 #
 # Copyright (C) 2014 Igalia S.L.
 #
@@ -36,9 +36,9 @@ pkg_check_modules(WAYLANDCLIENT wayland-client>=1.2 )
 find_library(WAYLANDCLIENT_LIB NAMES wayland-client
         HINTS ${WAYLANDCLIENT_LIBDIR} ${WAYLANDCLIENT_LIBRARY_DIRS})
 
-if(WAYLANDCLIENT_FOUND AND NOT TARGET WAYLAND::CLIENT)
-    add_library(WAYLAND::CLIENT UNKNOWN IMPORTED)
-    set_target_properties(WAYLAND::CLIENT PROPERTIES
+if(WAYLANDCLIENT_FOUND AND NOT TARGET WaylandClient::WaylandClient)
+    add_library(WaylandClient::WaylandClient UNKNOWN IMPORTED)
+    set_target_properties(WaylandClient::WaylandClient PROPERTIES
             IMPORTED_LOCATION "${WAYLANDCLIENT_LIB}"
             INTERFACE_LINK_LIBRARIES "${WAYLANDCLIENT_LIBRARIES}"
             INTERFACE_COMPILE_OPTIONS "${WAYLANDCLIENT_CFLAGS_OTHER}"
