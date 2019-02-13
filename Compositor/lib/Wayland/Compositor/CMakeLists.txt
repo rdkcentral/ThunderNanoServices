@@ -30,6 +30,7 @@ target_link_libraries(${TARGET}
         ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces
         WaylandServer::WaylandServer
         WaylandEGL::WaylandEGL
+        compositorclient
         ${EGL_LIBRARIES}
 )
 
