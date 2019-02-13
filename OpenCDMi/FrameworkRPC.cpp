@@ -380,6 +380,7 @@ namespace Plugin {
                     AccessorOCDM* parent,
                     const std::string keySystem,
                     CDMi::IMediaKeySessionExt* mediaKeySession,
+                    ::OCDM::ISession::ICallback* callback, 
                     const string bufferName,
                     const uint32_t defaultSize,
                     const CommonEncryptionData* sessionData)
@@ -391,7 +392,7 @@ namespace Plugin {
                     //, _mediaKeySession(mediaKeySession)
                     , _mediaKeySession(dynamic_cast<CDMi::IMediaKeySession*>(mediaKeySession)) // TODO
                     , _mediaKeySessionExt(mediaKeySession)
-                    , _sink(this) // TODO: do we need the sink?
+                    , _sink(this, callback)
                     //, _buffer(new DataExchange(mediaKeySession, bufferName, defaultSize))
                     , _buffer(new DataExchange(dynamic_cast<CDMi::IMediaKeySession*>(mediaKeySession), bufferName, defaultSize)) // TODO
                     , _cencData(*sessionData) {
@@ -772,6 +773,8 @@ namespace Plugin {
             virtual OCDM::OCDM_RESULT CreateSessionExt(
                 const uint8_t drmHeader[],
                 uint32_t drmHeaderLength,
+                ::OCDM::ISession::ICallback* callback,
+                std::string& sessionId,                
                 OCDM::ISessionExt*& session) override
             {
 
@@ -803,19 +806,19 @@ namespace Plugin {
                             if (_administrator.AquireBuffer(bufferId) == true) {
 
 
-                                SessionImplementation* newEntry = Core::Service<SessionImplementation>::Create<SessionImplementation>(this, keySystem, sessionInterface, bufferId, _defaultSize, &keyIds);
+                                SessionImplementation* newEntry = Core::Service<SessionImplementation>::Create<SessionImplementation>(this, keySystem, sessionInterface, callback, bufferId, _defaultSize, &keyIds);
 
                                 session = newEntry;
 
                                 // TODO ?
-                                //sessionId = newEntry->SessionId();
+                                sessionId = newEntry->SessionId();
 
                                 _adminLock.Lock();
 
                                 _sessionList.push_front(newEntry);
 
                                 // TODO ?
-                                //ReportCreate(sessionId);
+                                ReportCreate(sessionId);
 
                                 _adminLock.Unlock();
                             }
