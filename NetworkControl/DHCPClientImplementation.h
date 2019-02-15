@@ -397,6 +397,9 @@ public:
 
                 			TRACE_L1("Sending a Discover for %s", _interfaceName.c_str());
 
+                                        /* transaction id is supposed to be random */
+                                        if (_modus == CLASSIFICATION_DISCOVER) Crypto::Random(_xid);
+
 					SocketDatagram::Trigger();
 				}
 				else {
@@ -494,8 +497,6 @@ private:
 
 	frame.hops = 0;
 
-	/* transaction id is supposed to be random */
-	if (_modus == CLASSIFICATION_DISCOVER) Crypto::Random(_xid);
 	frame.xid=htonl(_xid);
 
 	/*discover_packet.secs=htons(65535);*/
