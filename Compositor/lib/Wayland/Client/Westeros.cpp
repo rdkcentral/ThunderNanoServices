@@ -51,9 +51,8 @@ static const struct wl_shell_surface_listener g_ShellSurfaceListener = {
 struct wl_shm_listener shmListener = {
     // shmFormat
     [](void* data, struct wl_shm* wl_shm, uint32_t format) {
-        Wayland::Display& context = *(static_cast<Wayland::Display*>(data));
 
-        Trace("shm format: %X\n", format, __FILE__);
+        Trace("shm format: %X\n", format);
     }
 };
 
@@ -180,7 +179,6 @@ static const struct wl_pointer_listener pointerListener = {
     },
     // pointerMotion
     [](void* data, struct wl_pointer* pointer, uint32_t time, wl_fixed_t sx, wl_fixed_t sy) {
-        Wayland::Display& context = *(static_cast<Wayland::Display*>(data));
         int x, y;
 
         x = wl_fixed_to_int(sx);
@@ -224,7 +222,6 @@ static const struct wl_seat_listener seatListener = {
     },
     // seatName
     [](void* data, struct wl_seat* seat, const char* name) {
-        Wayland::Display& context = *(static_cast<Wayland::Display*>(data));
 
         Trace("wl_seat_listener.seatName[%p,%s]\n", seat, name);
         // Have no idea if this is true, just lets see...
@@ -258,14 +255,9 @@ static const struct wl_simple_shell_listener simpleShellListener = {
     // surface_created
     [](void* data, struct wl_simple_shell* shell, uint32_t surfaceId, const char* name) {
         Trace("wl_simple_shell_listener.surface_created shell=%p name=%s surfaceId=%d\n", shell, name, surfaceId);
-        Wayland::Display& context = *(static_cast<Wayland::Display*>(data));
 
         // Have no idea if this is true, just lets see...
         assert(shell == context._simpleShell);
-
-        // context.Constructed(surfaceId, name);
-        // wl_simple_shell_get_status(context._simpleShell, surfaceId);
-        // wl_simple_shell_set_zorder(shell, surfaceId, 0);
 
         Trace("wl_simple_shell_listener.surface_created surfaceId=%d\n", surfaceId);
 
@@ -292,9 +284,6 @@ static const struct wl_simple_shell_listener simpleShellListener = {
         assert(shell == context._simpleShell);
 
         context.Dimensions(surfaceId, visible, x, y, width, height, opacity, zorder);
-        /*
-               void Dimensions(   id, visible, x, y, width, height, opacity, zorder);
-  */
 
         context.Constructed(surfaceId, name);
         Trace("wl_simple_shell_listener.surface_status surfaceId=%d\n", surfaceId);
@@ -302,7 +291,6 @@ static const struct wl_simple_shell_listener simpleShellListener = {
     // get_surfaces_done
     [](void* data, struct wl_simple_shell* shell) {
         Trace("wl_simple_shell_listener.get_surfaces_done shell=%p\n", shell);
-        Wayland::Display& context = *(static_cast<Wayland::Display*>(data));
 
         // Have no idea if this is true, just lets see...
         assert(shell == context._simpleShell);
@@ -394,20 +382,15 @@ namespace Wayland {
             X(EGL_NATIVE_RENDERABLE),
             X(EGL_NATIVE_VISUAL_ID),
             X(EGL_NATIVE_VISUAL_TYPE),
-            // X(EGL_PRESERVED_RESOURCES),
             X(EGL_SAMPLE_BUFFERS),
             X(EGL_SAMPLES),
-            // X(EGL_STENCIL_BITS),
             X(EGL_SURFACE_TYPE),
             X(EGL_TRANSPARENT_TYPE),
-            // X(EGL_TRANSPARENT_RED),
-            // X(EGL_TRANSPARENT_GREEN),
-            // X(EGL_TRANSPARENT_BLUE)
         };
 #undef X
 
         Trace("Config details:\n");
-        for (int j = 0; j < sizeof(names) / sizeof(names[0]); j++) {
+        for (unsigned int j = 0; j < sizeof(names) / sizeof(names[0]); j++) {
             EGLint value = -1;
             EGLBoolean res = eglGetConfigAttrib(dpy, config, names[j].attribute, &value);
             if (res) {
@@ -417,7 +400,8 @@ namespace Wayland {
     }
 
     Display::SurfaceImplementation::SurfaceImplementation(Display& display, const std::string& name, const uint32_t width, const uint32_t height)
-        : _refcount(1)
+        : _surface(nullptr)
+        , _refcount(1)
         , _level(0)
         , _name(name)
         , _id(0)
@@ -429,7 +413,6 @@ namespace Wayland {
         , _opacity(0)
         , _ZOrder(0)
         , _display(&display)
-        , _surface(nullptr)
         , _native(nullptr)
         , _frameCallback(nullptr)
         , _eglSurfaceWindow(EGL_NO_SURFACE)
@@ -438,8 +421,6 @@ namespace Wayland {
         , _upScale(false)
     {
         assert(display.IsOperational());
-
-        EGLint result(EGL_FALSE);
 
         _level = 0;
 
@@ -477,7 +458,8 @@ namespace Wayland {
     }
 
     Display::SurfaceImplementation::SurfaceImplementation(Display& display, const uint32_t id, struct wl_surface* surface)
-        : _refcount(1)
+        : _surface(surface)
+        , _refcount(1)
         , _level(2)
         , _name()
         , _id(id)
@@ -487,7 +469,6 @@ namespace Wayland {
         , _opacity(0)
         , _ZOrder(0)
         , _display(&display)
-        , _surface(surface)
         , _native(nullptr)
         , _frameCallback(nullptr)
         , _eglSurfaceWindow(EGL_NO_SURFACE)
@@ -498,7 +479,8 @@ namespace Wayland {
     }
 
     Display::SurfaceImplementation::SurfaceImplementation(Display& display, const uint32_t id, const char* name)
-        : _refcount(1)
+        : _surface(nullptr)
+        , _refcount(1)
         , _level(2)
         , _name(name)
         , _id(id)
@@ -508,7 +490,6 @@ namespace Wayland {
         , _opacity(0)
         , _ZOrder(0)
         , _display(&display)
-        , _surface(nullptr)
         , _native(nullptr)
         , _frameCallback(nullptr)
         , _eglSurfaceWindow(EGL_NO_SURFACE)
@@ -743,6 +724,7 @@ namespace Wayland {
 
             context.Redraw();
         }
+        return nullptr;
     }
 
     void Display::Initialize()
@@ -837,7 +819,7 @@ namespace Wayland {
                         /*
                          * Choose a suitable configuration
                          */
-                        unsigned int index = 0;
+                        int index = 0;
 
                         while (index < configCount) {
                             EGLint redSize, greenSize, blueSize, alphaSize, depthSize;
@@ -1145,85 +1127,6 @@ namespace Wayland {
     {
     }
 
-/*
-void Display::Process(Display::IProcess* processloop)
-{
-    struct pollfd fd[2];
-    struct sigaction sigint;
-
-    int err;
-    sigset_t sigset;
-
-    _tid = pthread_self();
-
-
-    // Create a sigset of all the signals that we're interested in
-    err = sigemptyset(&sigset);
-    assert (err == 0);
-    err = sigaddset(&sigset, SIGUSR1);
-    assert (err == 0);
-
-    // We must block the signals in order for signalfd to receive them
-    err = pthread_sigmask(SIG_BLOCK, &sigset, nullptr);
-    assert(err == 0);
-
-    // Create the signalfd
-    fd[0].fd = signalfd(-1, &sigset, 0);
-
-    assert(fd[0].fd != -1);
-
-    fd[0].events = POLLIN;
-    fd[0].revents = 0;
-
-    fd[1].events = POLLIN;
-    fd[1].revents = 0;
-    fd[1].fd = wl_display_get_fd(_display);
-
-
-    Trace("Setup dispatch loop using thread %p.\n", _tid);
-
-    while (_display != nullptr ) {
-        while (wl_display_prepare_read(_display) != 0) {
-            wl_display_dispatch_pending(_display);
-        }
-
-        wl_display_flush(_display);
-
-        int ret = poll(fd, 2, -1);
-
-        if ( ret <= 0) {
-            wl_display_cancel_read(_display);
-        }
-        else {
-            // Trace("wheeeeeeeeeeeee pid=%d fd0=%d fd1=%d\n", getpid(), fd[0].revents, fd[1].revents);
-            if (fd[1].revents & POLLIN) {
-                // Clear the signal port..
-                fd[1].revents = 0;
-
-                wl_display_read_events(_display);
-            }
-            if (fd[0].revents & POLLIN) {
-                // We have a valid signal, read the info from the fd
-                struct signalfd_siginfo info;
-
-                uint32_t bytes = read(fd[0].fd, &info, sizeof(info));
-
-                assert(bytes == sizeof(info));
-
-                // Clear the signal port..
-                fd[0].revents = 0;
-                //  wl_display_flush(_display);
-            }
-        }
-
-        processloop->Dispatch();
-
-        wl_display_dispatch_pending(_display);
-    }
-
-    // wl_event_queue_destroy(queue);
-}
-*/
     void Display::Process(Display::IProcess* processloop)
     {
 
@@ -1236,7 +1139,7 @@ void Display::Process(Display::IProcess* processloop)
 
         _thread = ::pthread_self();
 
-        Trace("Setup dispatch loop using thread %p signal: %d \n", _thread, _signal);
+        Trace("Setup dispatch loop using thread %p signal: %d \n", &_thread, _signal);
         if (_display != nullptr) {
             while ((wl_display_dispatch(_display) != -1) && (processloop->Dispatch() == true)) {
                 /* intentionally left empty */
@@ -1248,6 +1151,7 @@ void Display::Process(Display::IProcess* processloop)
     {
 
         signed int result(0);
+        _adminLock.Lock();
         if (_display) {
 
             while (wl_display_prepare_read(_display) != 0) {
@@ -1274,6 +1178,7 @@ void Display::Process(Display::IProcess* processloop)
                 result = -3;
             }
         }
+        _adminLock.Unlock();
         return result;
     }
 
@@ -1284,7 +1189,7 @@ void Display::Process(Display::IProcess* processloop)
 
     void Display::Signal()
     {
-        printf("Received Signal, killing thread %p.\n", _thread);
+        printf("Received Signal, killing thread %p.\n", &_thread);
         ::pthread_kill(_thread, SIGINT);
     }
 }

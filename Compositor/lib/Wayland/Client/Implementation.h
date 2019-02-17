@@ -370,6 +370,7 @@ namespace Wayland {
                 if (_implementation != nullptr) {
                     _implementation->AddRef();
                 }
+                return (*this);
             }
 
         public:
@@ -517,6 +518,7 @@ namespace Wayland {
                 if (_implementation != nullptr) {
                     _implementation->AddRef();
                 }
+                return (*this);
             }
 
         public:
