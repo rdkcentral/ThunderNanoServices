@@ -19,7 +19,8 @@ namespace Plugin {
             : Core::Thread(Core::Thread::DefaultStackSize(), _T("LinuxInputSystem"))
             , _devices()
             , _monitor(nullptr)
-            , _update(-1) {
+            , _update(-1)
+            , _callback(nullptr) {
             _pipe[0] = -1;
             _pipe[1] = -1;
             if (::pipe(_pipe) < 0) {
@@ -255,8 +256,8 @@ namespace Plugin {
     private:
         std::vector<int> _devices;
         int _pipe[2];
-                udev_monitor* _monitor;
-                int _update;
+        udev_monitor* _monitor;
+        int _update;
         Exchange::IKeyHandler* _callback;
     };
 
