@@ -222,12 +222,7 @@ static const struct wl_seat_listener seatListener = {
     },
     // seatName
     [](void* data, struct wl_seat* seat, const char* name) {
-
         Trace("wl_seat_listener.seatName[%p,%s]\n", seat, name);
-        // Have no idea if this is true, just lets see...
-        assert(seat == context._seat);
-
-        Trace("wl_seat_listener.name [%p,%s]\n", seat, name);
     }
 };
 
@@ -255,12 +250,6 @@ static const struct wl_simple_shell_listener simpleShellListener = {
     // surface_created
     [](void* data, struct wl_simple_shell* shell, uint32_t surfaceId, const char* name) {
         Trace("wl_simple_shell_listener.surface_created shell=%p name=%s surfaceId=%d\n", shell, name, surfaceId);
-
-        // Have no idea if this is true, just lets see...
-        assert(shell == context._simpleShell);
-
-        Trace("wl_simple_shell_listener.surface_created surfaceId=%d\n", surfaceId);
-
     },
     // surface_destroyed
     [](void* data, struct wl_simple_shell* shell, uint32_t surfaceId, const char* name) {
@@ -290,11 +279,6 @@ static const struct wl_simple_shell_listener simpleShellListener = {
     },
     // get_surfaces_done
     [](void* data, struct wl_simple_shell* shell) {
-        Trace("wl_simple_shell_listener.get_surfaces_done shell=%p\n", shell);
-
-        // Have no idea if this is true, just lets see...
-        assert(shell == context._simpleShell);
-
         Trace("wl_simple_shell_listener.get_surfaces_done shell=%p\n", shell);
     }
 };
