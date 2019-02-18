@@ -1167,6 +1167,9 @@ namespace Bluetooth {
             bool operator!= (const UUID& rhs) const {
                 return !(operator==(rhs));
             }
+            bool HasShort() const {
+                return (_uuid[0] == 2);
+            }
             uint8_t Length() const {
                 return (_uuid[0]);
             }
