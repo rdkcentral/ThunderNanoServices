@@ -766,7 +766,7 @@ namespace Plugin {
                 return (0);
             }
 
-            virtual time_t GetDrmSystemTime() const override {
+            virtual time_t GetDrmSystemTime(const std::string & keySystem) const override {
                 return _systemExt->GetDrmSystemTime();
             }
 
@@ -839,28 +839,37 @@ namespace Plugin {
                 return (session != nullptr ? 0 : 1);
             }
 
-            std::string GetVersionExt() const override
+            std::string GetVersionExt(const std::string & keySystem) const override
             {
                 return _systemExt->GetVersionExt();
             }
 
-            uint32_t GetLdlSessionLimit() const override
+            uint32_t GetLdlSessionLimit(const std::string & keySystem) const override
             {
                 return _systemExt->GetLdlSessionLimit();
             }
 
-            OCDM::OCDM_RESULT EnableSecureStop(bool enable) override
+            OCDM::OCDM_RESULT EnableSecureStop(const std::string & keySystem, bool enable) override
             {
-                return _systemExt->EnableSecureStop(enable);
+                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+                if (systemExt) {
+                    return systemExt->EnableSecureStop(enable);
+                }
+                return -1;
             }
 
             OCDM::OCDM_RESULT CommitSecureStop(
+                    const std::string & keySystem,
                     const unsigned char sessionID[],
                     uint32_t sessionIDLength,
                     const unsigned char serverResponse[],
                     uint32_t serverResponseLength)
             {
-                return _systemExt->CommitSecureStop(sessionID, sessionIDLength, serverResponse, serverResponseLength);
+                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+                if (systemExt) {
+                    return systemExt->CommitSecureStop(sessionID, sessionIDLength, serverResponse, serverResponseLength);
+                }
+                return -1;
             }
 
             OCDM::OCDM_RESULT CreateSystemNetflix() override
