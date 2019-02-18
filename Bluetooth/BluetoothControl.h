@@ -332,8 +332,8 @@ namespace Plugin {
         public:
             GATTRemote(const Bluetooth::Address& remoteNode, const string& hidPath)
                 : Bluetooth::GATTSocket(
-                      Bluetooth::Address().AnyInterface().NodeId(BDADDR_LE_PUBLIC, Bluetooth::GATTSocket::LE_ATT_CID, 0),
-                      remoteNode.NodeId(BDADDR_LE_PUBLIC, Bluetooth::GATTSocket::LE_ATT_CID, 0),
+                      Bluetooth::Address().AnyInterface().NodeId(Bluetooth::Address::LE_PUBLIC_ADDRESS, Bluetooth::GATTSocket::LE_ATT_CID, 0),
+                      remoteNode.NodeId(Bluetooth::Address::LE_PUBLIC_ADDRESS, Bluetooth::GATTSocket::LE_ATT_CID, 0),
                       64)
                 , _inputHandler(nullptr)
                 , _device()
@@ -644,23 +644,89 @@ namespace Plugin {
                 std::list<IBluetooth::IDevice*> _list;
                 std::list<IBluetooth::IDevice*>::iterator _iterator;
             };
+            class FeatureIterator {
+            public:
+                FeatureIterator ()
+                    : _index(-1) {
+                    ::memset(_features, 0, sizeof(_features));
+                }
+                FeatureIterator (const uint8_t length, const uint8_t data[])
+                    : _index(-1) {
+                    uint8_t copyLength = std::min(length, static_cast<uint8_t>(sizeof(_features)));
+                    ::memcpy(_features, data, copyLength);
+                    if (copyLength < sizeof(_features)) {
+                        ::memset(&_features[copyLength], 0, (sizeof(_features) - copyLength));
+                    }
+                }
+                FeatureIterator (const FeatureIterator& copy)
+                    : _index(copy._index) {
+                    ::memcpy(_features, copy._features, sizeof(_features));
+                }
+                ~FeatureIterator() {
+                }
+
+            public:
+                FeatureIterator& operator= (const FeatureIterator& rhs) {
+                    _index = rhs._index;
+                    ::memcpy(_features, rhs._features, sizeof(_features));
+
+                    return (*this);
+                }
+
+                void Reset () {
+                    _index = -1;
+                }
+                bool IsValid() const {
+                    return ((_index >= 0) && (_index < static_cast<int16_t>(sizeof(_features) * 8)));
+                }
+                bool Next () {
+                    _index++;
+
+                    while ( (_index < static_cast<int16_t>(sizeof(_features) * 8)) && ((_features[_index >> 3] & (1 << (_index & 0x7))) == 0) ) {
+                        _index++;
+                    }
+                    return (_index < static_cast<int16_t>(sizeof(_features) * 8));
+                }
+                uint8_t Feature() const {
+                    return (_index);
+                }
+                const TCHAR* Text() const {
+                    uint16_t index = (((index & 0xF8) << 5) | (1 << (_index & 0x7)));
+                    return (FeatureToText(index));
+                }    
+                bool HasFeatures(const uint8_t byte, uint8_t bit) const {
+                    return (byte < sizeof(_features) ? (_features[byte] & bit) != 0 : false);
+                }
+
+            private:
+                const TCHAR* FeatureToText(const uint16_t index) const;
+
+            private:
+                int16_t _index;
+                uint8_t _features[8];
+            };
 
         public:
-            DeviceImpl(Bluetooth::HCISocket* application, const bool lowEnergy, const Bluetooth::Address& address, const string& name) 
-                : _application(application)
+            DeviceImpl(Bluetooth::HCISocket* administrator, Bluetooth::HCISocket* application, const bool lowEnergy, const Bluetooth::Address& address, const string& name) 
+                : _administrator(administrator)
+                , _application(application)
                 , _address(address)
                 , _name(name)
-                , _state(static_cast<state>((_application == nullptr ? DECOUPLED : 0) | (lowEnergy ? LOWENERGY : 0)) ) {
+                , _state(static_cast<state>(lowEnergy ? LOWENERGY : 0)) {
+                ASSERT (_administrator != nullptr);
+                ASSERT (_application != nullptr);
             }
             ~DeviceImpl() {
             }
 
         public:
             virtual uint32_t Pair() override {
-                return (_application->Pair(_address, BDADDR_BREDR, Bluetooth::HCISocket::capabilities::NO_INPUT_NO_OUTPUT));
+                uint8_t type ((_state & LOWENERGY) != 0 ? Bluetooth::Address::LE_PUBLIC_ADDRESS : Bluetooth::Address::BREDR_ADDRESS);
+
+                return (_administrator->Pair(_address, type, Bluetooth::HCISocket::capabilities::NO_INPUT_NO_OUTPUT));
             }
             virtual uint32_t Unpair() override {
-                return (_application->Unpair(_address));
+                return (_administrator->Unpair(_address));
             }
             virtual string Address() const override {
                 return (_address.ToString());
@@ -708,10 +774,17 @@ namespace Plugin {
             uint32_t WaitState (const uint32_t state, const uint32_t waitTime) {
                 return(_state.WaitState(state, waitTime));
             }
+            FeatureIterator Features() const {
+                return (FeatureIterator(static_cast<uint8_t>(sizeof(_features)), _features));
+            }
           
             virtual void Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame) = 0;
 
         protected:
+            void SetFeatures(const uint8_t length, const uint8_t feature[]) {
+                uint8_t copyLength = std::min(length, static_cast<uint8_t>(sizeof(_features)));
+                ::memcpy(_features, feature, copyLength);
+            }
             template <typename MESSAGE>
             uint32_t Send (const uint32_t waitTime, Core::IOutbound::ICallback* callback, const state value, MESSAGE& message) {
 
@@ -769,10 +842,12 @@ namespace Plugin {
             }
 
         private:
+            Bluetooth::HCISocket* _administrator;
             Bluetooth::HCISocket* _application;
             Bluetooth::Address _address;
             string _name;
             Core::StateTrigger<state> _state;
+            uint8_t _features[8];
         };
 
         class EXTERNAL DeviceRegular : public DeviceImpl, Core::IOutbound::ICallback {
@@ -782,8 +857,8 @@ namespace Plugin {
             DeviceRegular& operator= (const DeviceRegular&) = delete;
 
         public:
-            DeviceRegular(Bluetooth::HCISocket* application, const Bluetooth::Address& address, const string& name) 
-                : DeviceImpl(application, false, address, name)
+            DeviceRegular(Bluetooth::HCISocket* administrator, Bluetooth::HCISocket* application, const Bluetooth::Address& address, const string& name) 
+                : DeviceImpl(administrator, application, false, address, name)
                 , _handle (~0) {
 
                 if (SetState (METADATA) == Core::ERROR_NONE) {
@@ -882,8 +957,8 @@ namespace Plugin {
             DeviceLowEnergy& operator= (const DeviceLowEnergy&) = delete;
 
         public:
-            DeviceLowEnergy(Bluetooth::HCISocket* application, const Bluetooth::Address& address, const string& name) 
-                : DeviceImpl(application, true, address, name)
+            DeviceLowEnergy(Bluetooth::HCISocket* administrator, Bluetooth::HCISocket* application, const Bluetooth::Address& address, const string& name) 
+                : DeviceImpl(administrator, application, true, address, name)
                 , _handle(~0) {
                 Connect();
             }
@@ -938,7 +1013,7 @@ namespace Plugin {
                 if ( (subEvent == EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE) && (length >= sizeof(evt_read_remote_features_complete)) ) {
                     const evt_read_remote_features_complete* info = reinterpret_cast<const evt_read_remote_features_complete*>(dataFrame);
                     if (_handle == info->handle) {
-                        ::memcpy(_features, info->features, sizeof(_features));
+                        SetFeatures(sizeof(info->features), info->features);
                     }
                 }
                 else if (subEvent == EVT_LE_ADVERTISING_REPORT) {
@@ -971,7 +1046,6 @@ namespace Plugin {
             Bluetooth::HCISocket::Command::ConnectLE  _connect;
             Bluetooth::HCISocket::Command::Disconnect _disconnect;
             uint16_t _handle;
-            uint8_t _features[8];
         };
  
         class EXTERNAL Status : public Core::JSON::Container {

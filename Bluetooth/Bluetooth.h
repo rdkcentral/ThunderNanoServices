@@ -411,8 +411,9 @@ namespace Bluetooth {
         ~Address() {
         }
 
-        static constexpr uint8_t LE_PUBLIC_ADDRESS = 0x00;
-        static constexpr uint8_t LE_RANDOM_ADDRESS = 0x01;
+        static constexpr uint8_t BREDR_ADDRESS = 0x00;
+        static constexpr uint8_t LE_PUBLIC_ADDRESS = 0x01;
+        static constexpr uint8_t LE_RANDOM_ADDRESS = 0x02;
 
     public:
         Address& operator= (const Address& rhs) {
