@@ -31,11 +31,11 @@ namespace Plugin {
 
 #ifndef __WIN32__
         if (_syslogging == true) {
-            syslog (LOG_NOTICE, "[%s]:[%s:%d]:[%s] %s: %s\n",time.c_str(), Core::FileNameOnly(fileName), lineNumber, Core::ClassNameOnly(className).Data(), information->Category(), information->Data());
+            syslog (LOG_NOTICE, "[%s]:[%s:%d] %s: %s\n",time.c_str(), Core::FileNameOnly(fileName), lineNumber, information->Category(), information->Data());
         } else
 #endif
         {
-            printf ("[%s]:[%s:%d]:[%s] %s: %s\n",time.c_str(), Core::FileNameOnly(fileName), lineNumber, Core::ClassNameOnly(className).Data(), information->Category(), information->Data());
+            printf ("[%s]:[%s:%d] %s: %s\n",time.c_str(), Core::FileNameOnly(fileName), lineNumber, information->Category(), information->Data());
         }
     }
 
