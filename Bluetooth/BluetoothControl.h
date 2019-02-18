@@ -342,7 +342,7 @@ namespace Plugin {
                 , _metadata()
                 , _sink(*this) {
 
-                uint32_t result = GATTSocket::Open(1000);
+                GATTSocket::Open(1000);
             }
             virtual ~GATTRemote() {
                 if (GATTSocket::IsOpen() == true) {
@@ -351,7 +351,8 @@ namespace Plugin {
             }
 
         private:
-            virtual uint16_t Deserialize (const uint8_t* dataFrame, const uint16_t availableData) override {
+            virtual uint16_t Deserialize (const uint8_t* /* dataFrame */, const uint16_t availableData) override {
+                return (availableData);
             }
             virtual void Operational() override {
                 _state = METADATA_TYPE;
@@ -941,9 +942,9 @@ namespace Plugin {
                     }
                 }
                 else if (subEvent == EVT_LE_ADVERTISING_REPORT) {
-                     const le_advertising_info* advertisingInfo = reinterpret_cast<const le_advertising_info*>(dataFrame);
-                     uint16_t len = advertisingInfo->length;
-                     const uint8_t* buffer = advertisingInfo->data;
+                     // const le_advertising_info* advertisingInfo = reinterpret_cast<const le_advertising_info*>(dataFrame);
+                     // uint16_t len = advertisingInfo->length;
+                     // const uint8_t* buffer = advertisingInfo->data;
                      printf("++EVT_LE_ADVERTISING_REPORT: What to do?\n");
                 }
             }

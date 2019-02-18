@@ -1,5 +1,11 @@
 #include "Module.h"
 
+// Don't think self-including header files was a concept BLUEZ got, so
+// we solve it for them. First include Bleutooth, otherwise hci include
+// will fail.
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/hci.h>
+
 namespace WPEFramework {
 
 namespace Bluetooth {

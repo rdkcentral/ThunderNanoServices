@@ -391,6 +391,8 @@ namespace Plugin {
         }
 
         _adminLock.Unlock();
+
+        return (Core::ERROR_NONE);
     }
     /* virtual */ uint32_t BluetoothControl::Unregister(IBluetooth::INotification* notification) {
         _adminLock.Lock();
@@ -406,6 +408,8 @@ namespace Plugin {
         }
 
         _adminLock.Unlock();
+
+        return (Core::ERROR_NONE);
     }
     /* virtual */ bool BluetoothControl::Scan(const bool enable) {
         if ((_application.IsScanning() == false) && (enable == true)) {

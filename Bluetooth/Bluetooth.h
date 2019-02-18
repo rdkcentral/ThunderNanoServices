@@ -172,8 +172,6 @@ namespace Core {
 
         uint32_t Exchange(const uint32_t waitTime, const IOutbound& message, IInbound& response) {
 
-            bool trigger = false;
-
             message.Reload();
 
             _adminLock.Lock();
