@@ -62,6 +62,8 @@ static Core::ProxyPoolType<Web::JSONBodyType<Power::Data> > jsonResponseFactory(
     keyHandler->Unregister(KEY_POWER, &_sink);
 
     _power->Unregister(&_sink);
+ 
+    _power->Release();
 
     _power = nullptr;
     _service = nullptr;
