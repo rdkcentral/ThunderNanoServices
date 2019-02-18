@@ -321,7 +321,7 @@ namespace Plugin {
         ASSERT(client != nullptr);
 
         TRACE(Trace::Information, (_T("Client detached starting")));
-        Exchange::IComposition::IClient* removedclient = nullptr;
+        Exchange::IComposition::IClient* removedclient;
 
         _adminLock.Lock();
         auto it = _clients.begin();

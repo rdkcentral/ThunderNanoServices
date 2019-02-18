@@ -115,7 +115,7 @@ namespace Nexus {
             fprintf(stderr, "[LibinputServer] Initialization of virtual keyboard failed!!!\n");
         }
 
-        printf("Constructed the Display: %d - %s",this, _displayName.c_str());
+        printf("Constructed the Display: %p - %s",this, _displayName.c_str());
     }
 
     Display::~Display()
@@ -128,7 +128,7 @@ namespace Nexus {
            Destruct(_virtualkeyboard);
         }
 
-        printf("Destructed the Display: %d - %s", this, _displayName.c_str());
+        printf("Destructed the Display: %p - %s", this, _displayName.c_str());
     }
 
     /* virtual */ Compositor::IDisplay::ISurface* Display::Create(const std::string& name, const uint32_t width, const uint32_t height)
