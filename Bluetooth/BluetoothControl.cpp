@@ -380,7 +380,7 @@ namespace Plugin {
         _adminLock.Lock();
 
         // Make sure a sink is not registered multiple times.
-        ASSERT(std::find(_observers.begin(), _observers.end(), sink) == _observers.end());
+        ASSERT(std::find(_observers.begin(), _observers.end(), notification) == _observers.end());
 
         _observers.push_back(notification);
         notification->AddRef();

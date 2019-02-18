@@ -1,18 +1,24 @@
 set(PLUGIN_NAME WebProxy)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-message("Setting up ${PLUGIN_NAME}")
+find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Core REQUIRED)
 
-set(PLUGIN_SOURCES
+add_library(${MODULE_NAME} SHARED 
     WebProxy.cpp
     Module.cpp)
 
-# Library definition section
-add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES})
-target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES})
+set_target_properties(${MODULE_NAME} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
 
-# Library installation section
-string(TOLOWER ${NAMESPACE} STORAGENAME)
-install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
+target_link_libraries(${MODULE_NAME} 
+    PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        )
+
+install(TARGETS ${MODULE_NAME} 
+    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})

@@ -28,7 +28,7 @@ public:
         TRACE(Trace::Information, (_T("PowerImplementation::GetState() => %d"), _currentState));
         return (_currentState);
     }
-    virtual PCStatus SetState(const PCState state, const uint32 waitTime) override {
+    virtual PCStatus SetState(const PCState state, const uint32_t waitTime) override {
         
         TRACE(Trace::Information, (_T("PowerImplementation::SetState(%d, %d) => PCSuccess"), state, waitTime));
 
@@ -42,10 +42,10 @@ public:
     virtual void Configure(const string& settings) {
         TRACE(Trace::Information, (_T("PowerImplementation::Configure()")));
     }
-    virtual void PowerImplementation::Register(Exchange::IPower::INotification* sink) override {
+    virtual void Register(Exchange::IPower::INotification* sink) override {
         TRACE(Trace::Information, (_T("PowerImplementation::Register()")));
     }
-    virtual void PowerImplementation::Unregister(Exchange::IPower::INotification* sink) override {
+    virtual void Unregister(Exchange::IPower::INotification* sink) override {
         TRACE(Trace::Information, (_T("PowerImplementation::Unregister()")));
     }
 

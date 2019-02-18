@@ -284,7 +284,7 @@ namespace Core {
 
                 _adminLock.Unlock();
 
-                result == _reevaluate.Lock(remainingTime);
+                result = _reevaluate.Lock(remainingTime);
 
                 _waitCount--;
 
@@ -1076,7 +1076,6 @@ namespace Bluetooth {
                      string longName;
                      const le_advertising_info* advertisingInfo = reinterpret_cast<const le_advertising_info*>(&(eventMetaData->data[1]));
                      uint16_t offset = 0;
-                     uint16_t length = advertisingInfo->length;
                      const uint8_t* buffer = advertisingInfo->data;
                      const char* name = nullptr;
                      uint8_t pos = 0;
@@ -1882,7 +1881,7 @@ namespace Bluetooth {
 
     private:        
         virtual void StateChange () override
-	{
+       	{
             Core::SynchronousChannelType<Core::SocketPort>::StateChange();
 
 	    if (IsOpen() == true) {

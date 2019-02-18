@@ -1,7 +1,9 @@
 set(PLUGIN_NAME IOConnector)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-set(PLUGIN_SOURCES
+find_package(${NAMESPACE}Plugins REQUIRED)
+
+add_library(${MODULE_NAME} SHARED 
     Module.cpp
     IOConnector.cpp
     GPIO.cpp
@@ -9,15 +11,18 @@ set(PLUGIN_SOURCES
 )
 
 if(PLUGIN_IOCONNECTOR_PAIRING_PIN)
-    list(APPEND PLUGIN_SOURCES RemotePairing.cpp)
+    target_sources(${MODULE_NAME} PRIVATE RemotePairing.cpp)
 endif(PLUGIN_IOCONNECTOR_PAIRING_PIN)
 
-# Library definition section
-add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES})
-target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES})
+set_target_properties(${MODULE_NAME} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
 
-# Library installation section
-string(TOLOWER ${NAMESPACE} STORAGENAME)
-install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
+target_link_libraries(${MODULE_NAME} 
+    PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
-write_config( ${PLUGIN_NAME} )
+install(TARGETS ${MODULE_NAME} 
+    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+
+write_config(${PLUGIN_NAME})

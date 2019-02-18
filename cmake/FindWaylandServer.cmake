@@ -4,7 +4,7 @@
 #  WAYLANDSERVER_INCLUDE_DIRS - The Nexus include directories
 #  WAYLANDSERVER_LIBRARIES    - The libraries needed to use Nexus
 #
-#  WAYLAND::SERVER, the wayland server library
+#  WaylandServer::WaylandServer, the wayland server library
 #
 # Copyright (C) 2015 Metrological.
 #
@@ -35,9 +35,9 @@ pkg_check_modules(WAYLANDSERVER wayland-server)
 find_library(WAYLANDSERVER_LIB NAMES wayland-client
         HINTS ${WAYLANDSERVER_LIBDIR} ${WAYLANDSERVER_LIBRARY_DIRS})
 
-if(WAYLANDSERVER_FOUND AND NOT TARGET WAYLAND::SERVER)
-    add_library(WAYLAND::SERVER UNKNOWN IMPORTED)
-    set_target_properties(WAYLAND::SERVER PROPERTIES
+if(WAYLANDSERVER_FOUND AND NOT TARGET WaylandServer::WaylandServer)
+    add_library(WaylandServer::WaylandServer UNKNOWN IMPORTED)
+    set_target_properties(WaylandServer::WaylandServer PROPERTIES
             IMPORTED_LOCATION "${WAYLANDSERVER_LIB}"
             INTERFACE_LINK_LIBRARIES "${WAYLANDSERVER_LIBRARIES}"
             INTERFACE_COMPILE_OPTIONS "${WAYLANDSERVER_CFLAGS_OTHER}"

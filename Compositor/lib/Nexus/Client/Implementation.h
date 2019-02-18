@@ -15,7 +15,7 @@
 #define nullptr NULL
 #endif
 
-#include "../../Client/Client.h"
+#include <compositor/Client.h>
 
 #include <refsw/nexus_config.h>
 #include <refsw/nexus_platform.h>

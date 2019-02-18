@@ -2,24 +2,33 @@ set(TARGET compositorclient)
 
 message("Setup ${TARGET} v${VERSION}...")
 
-find_package(Core REQUIRED)
-find_package(Plugins REQUIRED)
-find_package(VirtualInput REQUIRED)
+find_package(${NAMESPACE}Core REQUIRED)
+find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}VirtualInput REQUIRED)
 
 add_library(${TARGET} SHARED Implementation.cpp)
 
 target_link_libraries(${TARGET}
-            PUBLIC
-            ${CORE_LIBRARIES}
-            ${VIRTUALINPUT_LIBRARIES}
-            ${PLUGINS_LIBRARIES})
+    PRIVATE
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}VirtualInput::${NAMESPACE}VirtualInput
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${EGL_LIBRARIES}
+)
 
 set_target_properties(${TARGET} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
-        FRAMEWORK FALSE
-        PUBLIC_HEADER "${PUBLIC_HEADERS}"
-        )
+        VERSION ${VERSION}
+        SOVERSION ${VERSION_MAJOR}
+)
+
+target_include_directories(${TARGET}
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../Client>
+        $<INSTALL_INTERFACE:include/${NAMESPACE}>
+    PRIVATE
+        ${EGL_INCLUDE_DIRS})
 
 install(
         TARGETS ${TARGET}  EXPORT ${TARGET}Targets  # for downstream dependencies
@@ -28,16 +37,8 @@ install(
         FRAMEWORK DESTINATION bin COMPONENT libs    # for mac
 )
 
-# For cmake based consumers
-include (CMakePackageConfigHelpers)
-write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${TARGET}ConfigVersion.cmake VERSION ${VERSION} COMPATIBILITY SameMajorVersion)
-install(EXPORT ${TARGET}Targets FILE ${TARGET}Config.cmake NAMESPACE ${NAMESPACE}:: DESTINATION include/cmake)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}ConfigVersion.cmake DESTINATION include/cmake )
+InstallPackageConfig(
+        TARGETS ${TARGET}
+        DESCRIPTION "A compositor implementation wrapper for RPI and key handling.")
 
-# For non-cmake consumers
-configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/compositor-client.pc.in"
-        "${CMAKE_BINARY_DIR}/compositor-client.pc"
-        @ONLY)
-
-install(FILES ${CMAKE_BINARY_DIR}/compositor-client.pc DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
+InstallCMakeConfig(TARGETS ${TARGET})

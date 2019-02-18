@@ -11,30 +11,35 @@ option(PLUGIN_COMPOSITOR_AUTOTRACE "Contols if the plugin should automatically s
 option(PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (Nexus only).")
 option(PLUGIN_COMPOSITOR_GRAPHICS_HEAP_SIZE "Change graphic heap of driver (Nexus only).")
 
+option(PLUGIN_COMPOSITOR_TEST "Build a compositor test client" OFF)
+
 set(PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB "lib${PLATFORM_COMPOSITOR}.so" CACHE STRING "Specify a library with a compositor implentation." )
 set(PLUGIN_COMPOSITOR_RESOLUTION "720p" CACHE STRING "Specify the startup resolution")
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 0)
+set(VERSION_REVISION 0)
+
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_REVISION})
 
-find_package(Interfaces REQUIRED)
+find_package(${NAMESPACE}Interfaces REQUIRED)
+find_package(${NAMESPACE}Plugins REQUIRED)
 
-set(PLUGIN_SOURCES
+add_library(${MODULE_NAME} SHARED 
     Module.cpp
     Compositor.cpp)
 
-file(GLOB PLUGIN_INCLUDES *.h)
+set_target_properties(${MODULE_NAME} PROPERTIES
+    CXX_STANDARD 11
+    CXX_STANDARD_REQUIRED YES)
 
-add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES} ${PLUGIN_INCLUDES})
-target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES} ${INTERFACES_LIBRARIES} ${PLUGIN_COMPOSITOR_CLIENT_LIBS})
-set_target_properties(${MODULE_NAME} PROPERTIES OUTPUT_NAME ${MODULE_NAME})
+target_link_libraries(${MODULE_NAME} 
+    PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces)
 
-string(TOLOWER ${NAMESPACE} STORAGENAME)
-install(
-    TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins
-    COMPONENT ${MODULE_NAME})
+install(TARGETS ${MODULE_NAME}
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 if(PLUGIN_COMPOSITOR_SERVER)
     add_subdirectory(server)

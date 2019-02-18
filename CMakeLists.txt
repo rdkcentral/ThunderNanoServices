@@ -1,6 +1,10 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.3)
 
-include(${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/cmake/WPEFramework.cmake)
+find_package(WPEFramework)
+
+# All packages that did not deliver a CMake Find script (and some deprecated scripts that need to be removed) 
+# are located in the cmake directory. Include it in the search.
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(PLUGIN_COMMANDER "Include Commander plugin" OFF)
@@ -28,14 +32,12 @@ option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_TVCONTROL "Include TVControl plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 
-# This contains all kinds of plugins (publicely available, so they all need the plugin support library !!
-find_package(Plugins REQUIRED)
-include_directories(${PLUGINS_INCLUDE_DIR})
+# Library installation section
+string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
 
-# All packages that did not deliver a CMake Find script (and some deprecated scripts that need to be removed) 
-# are located in the cmake directory. Include it in the search.
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+# for writing pc and config files
+include(CmakeHelperFunctions)
+
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
@@ -151,4 +153,8 @@ endif()
 
 if(PLUGIN_RTSPCLIENT)
     add_subdirectory(RtspClient)
+endif()
+
+if(PLUGIN_DsgccClient)
+    add_subdirectory(DsgccClient)
 endif()

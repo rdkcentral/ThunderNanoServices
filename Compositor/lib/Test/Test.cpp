@@ -1,6 +1,9 @@
-#include <string>
 #include <chrono>
 #include <iostream>
+#include <signal.h>
+#include <string.h>
+#include <string>
+#include <unistd.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -8,7 +11,7 @@
 #include <GLES2/gl2ext.h>
 #include <png.h>
 
-#include "../../Client/Client.h"
+#include <compositor/Client.h>
 
 namespace WPEFramework {
 
@@ -27,6 +30,7 @@ public:
     virtual void AddRef() const override {
     }
     virtual uint32_t Release() const override {
+        return 0;
     }
     virtual void KeyMap(const char information[], const uint16_t size) override {
     }
@@ -331,7 +335,7 @@ private:
         const char* callsign (std::getenv("CLIENT_IDENTIFIER"));
 
         if (callsign == nullptr) {
-            name = "WebKitBrowser" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+            name = "CompositorTest" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
         }
         else {
             const char* delimiter = nullptr;

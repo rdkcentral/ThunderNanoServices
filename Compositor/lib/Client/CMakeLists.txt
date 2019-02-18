@@ -1,8 +1,4 @@
-set (PUBLIC_HEADERS
-     Client.h 
-    )
-
 install(
-	FILES ${PUBLIC_HEADERS}
+	FILES compositor/Client.h 
         DESTINATION include/${NAMESPACE}/compositor
 )

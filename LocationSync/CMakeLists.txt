@@ -3,18 +3,23 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 set(PLUGIN_LOCATIONSYNC_URI location.webplatformforembedded.org CACHE STRING "URI to request the location information")
 
-set(PLUGIN_SOURCES
+find_package(${NAMESPACE}Plugins REQUIRED)
+
+add_library(${MODULE_NAME} SHARED 
     Module.cpp
     LocationSync.cpp
     LocationService.cpp
 )
 
-# Library definition section
-add_library(${MODULE_NAME} SHARED ${PLUGIN_SOURCES})
-target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES})
+set_target_properties(${MODULE_NAME} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
 
-# Library installation section
-string(TOLOWER ${NAMESPACE} STORAGENAME)
-install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
+target_link_libraries(${MODULE_NAME} 
+    PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
-write_config( ${PLUGIN_NAME} )
+install(TARGETS ${MODULE_NAME} 
+    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+
+write_config(${PLUGIN_NAME})
