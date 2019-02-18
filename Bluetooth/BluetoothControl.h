@@ -99,8 +99,6 @@ namespace Plugin {
 
         public:
             virtual void DiscoveredDevice (const bool lowEnergy, const Bluetooth::Address& address, const string& name) override {
-		TRACE(Trace::Information, (_T("Discoverd Device: %s: %s"), address.ToString().c_str(), name.c_str()));
-
                 _parent.DiscoveredDevice (lowEnergy, address, name);
             }
             void Scan(const uint16_t scanTime, const uint32_t type, const uint8_t flags) {
@@ -124,6 +122,23 @@ namespace Plugin {
             }
 
         private:
+            virtual uint16_t Deserialize (const uint8_t* stream, const uint16_t length) override {
+                uint16_t result = Bluetooth::HCISocket::Deserialize(stream, length);
+
+                if ((result == 0) && (length >= (HCI_EVENT_HDR_SIZE + 1))) {
+                    const hci_event_hdr* hdr = reinterpret_cast<const hci_event_hdr*>(&(stream[1]));
+                    const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&(stream[1 + HCI_EVENT_HDR_SIZE]));
+                    uint16_t len = (length - (1 + HCI_EVENT_HDR_SIZE));
+
+                    if (hdr->evt == EVT_LE_META_EVENT) {
+                        const evt_le_meta_event* eventMetaData = reinterpret_cast<const evt_le_meta_event*>(ptr);
+
+                        _parent.Notification(eventMetaData->subevent, len - EVT_LE_META_EVENT_SIZE, &(ptr[EVT_LE_META_EVENT_SIZE]));
+                    }
+                }
+  
+                return (result);
+            }
             void Run (const uint16_t scanTime, const uint32_t type, const uint8_t flags) {
 	        Bluetooth::HCISocket::Scan(this, scanTime, type, flags);
 	    }
@@ -492,6 +507,7 @@ namespace Plugin {
                 METADATA      = 0x0002,
                 CONNECTING    = 0x0004,
                 DISCONNECTING = 0x0008,
+                CONNECTED     = 0x2000,
                 PAIRED        = 0x4000,
                 LOWENERGY     = 0x8000
             };
@@ -639,9 +655,12 @@ namespace Plugin {
             }
 
         public:
-            virtual uint32_t Pair() override;
-            virtual uint32_t Unpair() override;
-
+            virtual uint32_t Pair() override {
+                return (_application->Pair(_address, BDADDR_BREDR, Bluetooth::HCISocket::capabilities::NO_INPUT_NO_OUTPUT));
+            }
+            virtual uint32_t Unpair() override {
+                return (_application->Unpair(_address));
+            }
             virtual string Address() const override {
                 return (_address.ToString());
             }
@@ -685,7 +704,12 @@ namespace Plugin {
             const Bluetooth::Address& Locator() const {
                 return (_address);
             }
-            
+            uint32_t WaitState (const uint32_t state, const uint32_t waitTime) {
+                return(_state.WaitState(state, waitTime));
+            }
+          
+            virtual void Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame) = 0;
+
         protected:
             template <typename MESSAGE>
             uint32_t Send (const uint32_t waitTime, Core::IOutbound::ICallback* callback, const state value, MESSAGE& message) {
@@ -809,6 +833,8 @@ namespace Plugin {
             }
 
         private:
+            virtual void Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame) {
+            }
             virtual void Updated (const Core::IOutbound& data, const uint32_t error_code) override {
                 if (data.Id() == Bluetooth::HCISocket::Command::RemoteName::ID) {
                     // Metadata is flowing in, handle it..
@@ -857,15 +883,19 @@ namespace Plugin {
         public:
             DeviceLowEnergy(Bluetooth::HCISocket* application, const Bluetooth::Address& address, const string& name) 
                 : DeviceImpl(application, true, address, name)
-                , _handle (~0) {
+                , _handle(~0) {
+                Connect();
             }
             virtual ~DeviceLowEnergy() {
+                Disconnect(0);
             }
 
         public:
             virtual bool IsConnected() const override {
                 return (_handle != static_cast<uint16_t>(~0));
             }
+
+        private:
             virtual uint32_t Connect () override {
 
                 uint32_t result = Core::ERROR_INPROGRESS;
@@ -896,31 +926,38 @@ namespace Plugin {
 
                 if (SetState(DISCONNECTING) == Core::ERROR_NONE) {
 
-                    _disconnect->handle = htobs(_handle);
+                    // _disconnect->handle = htobs(_handle);
                     _disconnect->reason = reason & 0xFF;
                     result = Send(MAX_ACTION_TIMEOUT, this, DISCONNECTING, _disconnect);
                 }
 
                 return (result);
             }
-
-        private:
+            virtual void Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame) {
+                if ( (subEvent == EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE) && (length >= sizeof(evt_read_remote_features_complete)) ) {
+                    const evt_read_remote_features_complete* info = reinterpret_cast<const evt_read_remote_features_complete*>(dataFrame);
+                    if (_handle == info->handle) {
+                        ::memcpy(_features, info->features, sizeof(_features));
+                    }
+                }
+                else if (subEvent == EVT_LE_ADVERTISING_REPORT) {
+                     const le_advertising_info* advertisingInfo = reinterpret_cast<const le_advertising_info*>(dataFrame);
+                     uint16_t len = advertisingInfo->length;
+                     const uint8_t* buffer = advertisingInfo->data;
+                     printf("++EVT_LE_ADVERTISING_REPORT: What to do?\n");
+                }
+            }
             virtual void Updated (const Core::IOutbound& data, const uint32_t error_code) override {
                 if (data.Id() == Bluetooth::HCISocket::Command::ConnectLE::ID) {
-                    _handle = _connect.Response().handle;
-                    printf ("Connected using handle: %X\n", _handle);
-                    _features.Clear();
-                    _features->handle = _handle;
-                    Send(MAX_ACTION_TIMEOUT, this, CONNECTING, _features);
-                }
-                if (data.Id() == Bluetooth::HCISocket::Command::RemoteFeaturesLE::ID) {
-                    printf ("Features received !!!\n");
+                    if ((error_code == Core::ERROR_NONE) && (_connect.Response().status == 0)) {
+                        _handle = _connect.Response().handle;
+                        printf ("Connected using handle: %d\n", _handle);
+                    }
                     ClearState(CONNECTING);
                 }
                 else if (data.Id() == Bluetooth::HCISocket::Command::Disconnect::ID) {
                     if (error_code == Core::ERROR_NONE) {
                         printf ("Disconnected\n");
-                        _handle = ~0;
                     }
                     else {
                         printf ("Disconnected Failed!\n");
@@ -930,10 +967,10 @@ namespace Plugin {
             }
 
         private:
-            uint16_t _handle;
             Bluetooth::HCISocket::Command::ConnectLE  _connect;
             Bluetooth::HCISocket::Command::Disconnect _disconnect;
-            Bluetooth::HCISocket::Command::RemoteFeaturesLE _features;
+            uint16_t _handle;
+            uint8_t _features[8];
         };
  
         class EXTERNAL Status : public Core::JSON::Container {
@@ -1026,6 +1063,7 @@ namespace Plugin {
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         void RemoveDevices(std::function<bool(DeviceImpl*)> filter);
         void DiscoveredDevice(const bool lowEnergy, const Bluetooth::Address& address, const string& name);
+        void Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame);
         DeviceImpl* Find(const string&);
 
     private:

@@ -155,6 +155,8 @@ namespace Core {
 
         uint32_t Exchange(const uint32_t waitTime, const IOutbound& message) {
 
+            message.Reload();
+
             _adminLock.Lock();
 
             Cleanup();
@@ -172,6 +174,8 @@ namespace Core {
 
             bool trigger = false;
 
+            message.Reload();
+
             _adminLock.Lock();
 
             Cleanup();
@@ -186,6 +190,8 @@ namespace Core {
         }
 
         void Send(const uint32_t waitTime, const IOutbound& message, IOutbound::ICallback* callback, IInbound* response) {
+
+            message.Reload();
 
             _adminLock.Lock();
 
@@ -493,22 +499,33 @@ namespace Bluetooth {
         static constexpr uint8_t  EIR_NAME_COMPLETE      = 0x09;
 
     public:
+        enum capabilities {
+            DISPLAY_ONLY       = 0x00,
+            DISPLAY_YES_NO     = 0x01,
+            KEYBOARD_ONLY      = 0x02,
+            NO_INPUT_NO_OUTPUT = 0x03,
+            KEYBOARD_DISPLAY   = 0x04,
+            INVALID            = 0xFF
+        };
+
         struct IScanning {
             virtual ~IScanning () {}
 
             virtual void DiscoveredDevice (const bool lowEnergy, const Address&, const string& name) = 0;
         };
 
-        template<typename OUTBOUND>
+        template<const uint16_t OPCODE, typename OUTBOUND>
         class ManagementType : public Core::IOutbound {
         private: 
             ManagementType() = delete;
-            ManagementType(const ManagementType<OUTBOUND>&) = delete;
-            ManagementType<OUTBOUND>& operator= (const ManagementType<OUTBOUND>&) = delete;
+            ManagementType(const ManagementType<OPCODE,OUTBOUND>&) = delete;
+            ManagementType<OPCODE,OUTBOUND>& operator= (const ManagementType<OPCODE,OUTBOUND>&) = delete;
 
         public:
             ManagementType(const uint16_t adapterIndex) 
                 : _offset(sizeof(_buffer)) {
+                _buffer[0] = (OPCODE & 0xFF);
+                _buffer[1] = (OPCODE >> 8) & 0xFF;
                 _buffer[2] = (adapterIndex & 0xFF);
                 _buffer[3] = ((adapterIndex >> 8) & 0xFF);
                 _buffer[4] = static_cast<uint8_t>(sizeof(OUTBOUND) & 0xFF);
@@ -524,12 +541,10 @@ namespace Bluetooth {
             OUTBOUND* operator->() {
                 return (reinterpret_cast<OUTBOUND*>(&(_buffer[6])));
             }
-            uint32_t Send (HCISocket& socket, const uint32_t waitTime, const uint16_t opCode) {
-                _offset = 0;
+            Core::IOutbound& OpCode (const uint16_t opCode) {
                 _buffer[0] = (opCode & 0xFF);
                 _buffer[1] = ((opCode >> 8) & 0xFF);
-
-                uint32_t result = socket.Exchange(waitTime, *this);
+                return (*this);
             }
 
         private:
@@ -595,6 +610,7 @@ namespace Bluetooth {
                 if (result > 0) {
                     
                     ::memcpy (stream, &(_buffer[_offset]), result);
+                    for (uint8_t index = 0; index < result; index++) { printf("%02X:", stream[index]); } printf("\n");
                     _offset += result;
                 }
                 return (result);
@@ -638,9 +654,7 @@ namespace Bluetooth {
                     const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&(stream[1 + HCI_EVENT_HDR_SIZE]));
                     uint16_t len = (length - (1 + HCI_EVENT_HDR_SIZE));
   
-                    switch (hdr->evt) {
-                    case EVT_CMD_STATUS: 
-                    {
+                    if (hdr->evt == EVT_CMD_STATUS) {
                          const evt_cmd_status* cs = reinterpret_cast<const evt_cmd_status*>(ptr);
                          if (cs->opcode == CommandType<OPCODE, OUTBOUND>::ID) {
                              
@@ -650,14 +664,14 @@ namespace Bluetooth {
                              else if (cs->status != 0) {
                                  _error = cs->status;
                              }
+                             result = length;
+                             printf(">>EVT_CMD_STATUS: %X-%03X expected: %d\n", (cs->opcode >> 10) & 0xF, (cs->opcode & 0x3FF), cs->status);
                          }
                          else {
-                             printf("Received Command STATUS: %04X len %d, but not what we expected.\n", cs->opcode, len);
+                             printf(">>EVT_CMD_STATUS: %X-%03X unexpected: %d\n", (cs->opcode >> 10) & 0xF, (cs->opcode & 0x3FF), cs->status);
                          }
-                         break;
                     }
-                    case EVT_CMD_COMPLETE:
-                    {
+                    else if (hdr->evt == EVT_CMD_COMPLETE) {
                          const evt_cmd_complete* cc = reinterpret_cast<const evt_cmd_complete*>(ptr);;
                          if (cc->opcode == CommandType<OPCODE, OUTBOUND>::ID) {
                              if (len <= EVT_CMD_COMPLETE_SIZE) {
@@ -668,15 +682,28 @@ namespace Bluetooth {
                                  ::memcpy(reinterpret_cast<uint8_t*>(&_response), &(ptr[EVT_CMD_COMPLETE_SIZE]), toCopy);
                                  _error = Core::ERROR_NONE;
                              }
+                             result = length;
+                             printf(">>EVT_CMD_COMPLETED: %X-%03X expected: %d\n", (cc->opcode >> 10) & 0xF, (cc->opcode & 0x3FF), _error);
                          }
                          else {
-                             printf("Received Command COMPLETED: %04X len %d, but not what we expected.\n", cc->opcode, len);
+                             printf(">>EVT_CMD_COMPLETED: %X-%03X unexpected: %d\n", (cc->opcode >> 10) & 0xF, (cc->opcode & 0x3FF), _error);
                          }
-                         break;
                     }
-                    default:
-                         printf("Received EVENT: %X no clue what to do with it.\n", hdr->evt);
-                         break;
+                    else if ((((CommandType<OPCODE, OUTBOUND>::ID >> 10) & 0x3F) == OGF_LE_CTL) && (hdr->evt == EVT_LE_META_EVENT)) {
+                        const evt_le_meta_event* eventMetaData = reinterpret_cast<const evt_le_meta_event*>(ptr);
+
+                        if (eventMetaData->subevent == RESPONSECODE) {
+
+                             printf(">>EVT_COMPLETE: expected\n");
+                             uint16_t toCopy = std::min(static_cast<uint16_t>(sizeof(INBOUND)), static_cast<uint16_t>(len - EVT_LE_META_EVENT_SIZE));
+                             ::memcpy(reinterpret_cast<uint8_t*>(&_response), &(ptr[EVT_LE_META_EVENT_SIZE]), toCopy);
+ 
+                             _error = Core::ERROR_NONE;
+                             result = length;
+                        }
+                        else {
+                             printf(">>EVT_COMPLETE: unexpected [%d]\n", eventMetaData->subevent);
+                        }
                     }
                 }
                 return (result);
@@ -694,6 +721,8 @@ namespace Bluetooth {
         enum state : uint16_t {
             IDLE          = 0x0000,
             SCANNING      = 0x0001,
+            PAIRING       = 0x0002,
+            ADVERTISING   = 0x4000,
             ABORT         = 0x8000
         };
 
@@ -704,29 +733,57 @@ namespace Bluetooth {
         typedef ExchangeType<cmd_opcode_pack(OGF_LINK_CTL,OCF_CREATE_CONN), create_conn_cp, evt_conn_complete, EVT_CONN_COMPLETE>
                 Connect;
 
-        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_CREATE_CONN), le_create_connection_cp, evt_le_connection_complete, EVT_LE_CONN_COMPLETE>  
-                ConnectLE;
+        typedef ExchangeType<cmd_opcode_pack(OGF_LINK_CTL,OCF_AUTH_REQUESTED), auth_requested_cp, evt_auth_complete, EVT_AUTH_COMPLETE>
+                Authenticate;
 
         typedef ExchangeType<cmd_opcode_pack(OGF_LINK_CTL,OCF_DISCONNECT), disconnect_cp, evt_disconn_complete, EVT_DISCONN_COMPLETE>
                 Disconnect;
 
+        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_CREATE_CONN), le_create_connection_cp, evt_le_connection_complete, EVT_LE_CONN_COMPLETE>  
+                ConnectLE;
+
+        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_START_ENCRYPTION), le_start_encryption_cp, uint8_t, EVT_LE_CONN_COMPLETE>  
+                EncryptLE;
+
         typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_REMOTE_NAME_REQ), remote_name_req_cp, evt_remote_name_req_complete, EVT_REMOTE_NAME_REQ_COMPLETE>
                 RemoteName;
 
-        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_SET_SCAN_PARAMETERS), le_set_scan_parameters_cp, uint8_t, EVT_CMD_STATUS>
+        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_SET_SCAN_PARAMETERS), le_set_scan_parameters_cp, uint8_t, EVT_CMD_COMPLETE>
                 ScanParametersLE;
 
-        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_SET_SCAN_ENABLE), le_set_scan_enable_cp, uint8_t, EVT_CMD_STATUS>
+        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_SET_SCAN_ENABLE), le_set_scan_enable_cp, uint8_t, EVT_CMD_COMPLETE>
                 ScanEnableLE;
+
+        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_CLEAR_WHITE_LIST), Core::Void, Core::Void, EVT_CMD_STATUS>
+                ClearWhiteList;
+
+        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_READ_WHITE_LIST_SIZE), Core::Void, le_read_white_list_size_rp, EVT_CMD_STATUS>
+                ReadWhiteListSize;
+
+        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_ADD_DEVICE_TO_WHITE_LIST), le_add_device_to_white_list_cp, Core::Void, EVT_CMD_STATUS>
+                AddDeviceToWhiteList;
+
+        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_REMOVE_DEVICE_FROM_WHITE_LIST), le_remove_device_from_white_list_cp, uint8_t, EVT_CMD_STATUS>
+                RemoveDeviceFromWhiteList;
 
         typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_READ_REMOTE_USED_FEATURES), le_read_remote_used_features_cp, evt_le_read_remote_used_features_complete, EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE>
                 RemoteFeaturesLE;
+
+        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_SET_ADVERTISING_PARAMETERS), le_set_advertising_parameters_cp, uint8_t, EVT_CMD_COMPLETE>
+                AdvertisingParametersLE;
+
+        typedef ExchangeType<cmd_opcode_pack(OGF_LE_CTL,OCF_LE_SET_ADVERTISE_ENABLE), le_set_advertise_enable_cp, uint8_t, EVT_CMD_COMPLETE>
+                AdvertisingEnableLE;
         };
  
         // ------------------------------------------------------------------------
         // Create definitions for the Management commands
         // ------------------------------------------------------------------------
-        typedef ManagementType<mgmt_mode> ManagementMode;
+        struct Management { 
+            typedef ManagementType<~0, mgmt_mode> OperationalMode;
+            typedef ManagementType<MGMT_OP_PAIR_DEVICE, mgmt_cp_pair_device> Pair;
+            typedef ManagementType<MGMT_OP_UNPAIR_DEVICE, mgmt_cp_unpair_device> Unpair;
+        };
 
     public:
         HCISocket()
@@ -737,7 +794,7 @@ namespace Bluetooth {
             : Core::SynchronousChannelType<Core::SocketPort>(SocketPort::RAW, sourceNode, Core::NodeId(), 256, 256)
             , _state(IDLE) {
 
-       }
+        }
         virtual ~HCISocket() {
             Close(Core::infinite);
         }
@@ -745,6 +802,51 @@ namespace Bluetooth {
     public:
         bool IsScanning() const {
             return ((_state & SCANNING) != 0);
+        }
+        bool IsAdvertising() const {
+            return ((_state & ADVERTISING) != 0);
+        }
+        uint32_t Advertising(const bool enable, const uint8_t mode = 0) {
+            uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+            if (enable == true) {
+                if (IsAdvertising() == false) {
+                    result = Core::ERROR_BAD_REQUEST;
+                    Command::AdvertisingParametersLE parameters;
+
+                    parameters.Clear();
+                    parameters->min_interval = htobs(0x0800);
+                    parameters->max_interval = htobs(0x0800);
+                    parameters->advtype = mode;
+                    parameters->chan_map = 7;
+
+                    if ( (Exchange(MAX_ACTION_TIMEOUT, parameters, parameters) == Core::ERROR_NONE) && (parameters.Response() == 0) ) {
+
+                        Command::AdvertisingEnableLE advertising;
+
+                        advertising.Clear();
+                        advertising->enable = 1;
+
+                        if ( (Exchange(MAX_ACTION_TIMEOUT, advertising, advertising) == Core::ERROR_NONE) && (advertising.Response() == 0) ) {
+                            _state.SetState(static_cast<state>(_state.GetState() | ADVERTISING));
+                            result = Core::ERROR_NONE;
+                        }
+                    }
+                }
+            }
+            else if (IsAdvertising() == true) {
+                result = Core::ERROR_BAD_REQUEST;
+                Command::AdvertisingEnableLE advertising;
+
+                advertising.Clear();
+                advertising->enable = 0;
+
+                if ( (Exchange(MAX_ACTION_TIMEOUT, advertising, advertising) == Core::ERROR_NONE) && (advertising.Response() == 0) ) {
+                    _state.SetState(static_cast<state>(_state.GetState() & (~ADVERTISING)));
+                    result = Core::ERROR_NONE;
+                }
+            }
+            return (result);
         }
         void Scan(IScanning* callback, const uint16_t scanTime, const uint32_t type, const uint8_t flags) {
 
@@ -849,6 +951,67 @@ namespace Bluetooth {
 
             _state.Unlock();
         }
+        uint32_t Pair (const Address& remote, const uint8_t type = BDADDR_BREDR, const capabilities cap = NO_INPUT_NO_OUTPUT) {
+
+            uint32_t result = Core::ERROR_INPROGRESS;
+
+            _state.Lock();
+
+            if ((_state & ACTION_MASK) == 0) {
+
+                _state.SetState(static_cast<state>(_state.GetState() | PAIRING));
+
+                _state.Unlock();
+
+
+                Management::Pair command (0);
+
+                command.Clear();
+                command->addr.bdaddr = *remote.Data(); 
+                command->addr.type = type; 
+                command->io_cap = cap; 
+
+                result = Core::ERROR_NONE;
+
+                result = Exchange(MAX_ACTION_TIMEOUT, command);
+
+                _state.Lock();
+
+                _state.SetState(static_cast<state>(_state.GetState() & (~(ABORT|PAIRING))));
+            }
+
+            _state.Unlock();
+
+            return(result);
+        }
+        uint32_t Unpair (const Address& remote, const uint8_t type = BDADDR_BREDR) {
+
+            uint32_t result = Core::ERROR_INPROGRESS;
+
+            _state.Lock();
+
+            if ((_state & ACTION_MASK) == 0) {
+
+                _state.SetState(static_cast<state>(_state.GetState() | PAIRING));
+
+                _state.Unlock();
+
+
+                Management::Unpair command (0);
+                command.Clear();
+                command->addr.bdaddr = *remote.Data(); 
+                command->addr.type = type; 
+                command->disconnect = 1;
+
+                result = Exchange(MAX_ACTION_TIMEOUT, command);
+
+                _state.SetState(static_cast<state>(_state.GetState() & (~(ABORT|PAIRING))));
+            }
+
+            _state.Unlock();
+
+            return(result);
+        }
         void Abort() {
 
             _state.Lock();
@@ -861,10 +1024,21 @@ namespace Bluetooth {
             _state.Unlock();
         }
 
-    private:
-        void SetOpcode(const uint16_t opcode) {
-            hci_filter_set_opcode(opcode, &_filter);
-            setsockopt(Handle(), SOL_HCI, HCI_FILTER, &_filter, sizeof(_filter));
+    protected:
+        virtual void StateChange() override {
+            Core::SynchronousChannelType<Core::SocketPort>::StateChange();
+            if (IsOpen() == true) {
+                hci_filter_clear(&_filter);
+                hci_filter_set_ptype(HCI_EVENT_PKT,  &_filter);
+                hci_filter_set_event(EVT_CMD_STATUS, &_filter);
+                hci_filter_set_event(EVT_CMD_COMPLETE, &_filter);
+                hci_filter_set_event(EVT_LE_META_EVENT, &_filter);
+
+                // Interesting why this needs to be set.... I hope not!!
+                // hci_filter_set_opcode(0, &_filter);
+
+                setsockopt(Handle(), SOL_HCI, HCI_FILTER, &_filter, sizeof(_filter));
+            }
         }
         virtual uint16_t Deserialize (const uint8_t* dataFrame, const uint16_t availableData) override
         {
@@ -875,23 +1049,29 @@ namespace Bluetooth {
             case EVT_CMD_STATUS: 
             {
                 const evt_cmd_status* cs = reinterpret_cast<const evt_cmd_status*>(ptr);
-                printf("EVT_CMD_STATUS:   %X-%03X : %d.%d\n", (cs->opcode >> 10) & 0xF, (cs->opcode & 0x3FF), cs->ncmd, cs->status);
+                printf("==EVT_CMD_STATUS: %X-%03X status: %d\n", (cs->opcode >> 10) & 0xF, (cs->opcode & 0x3FF), cs->status);
                 break;
             }
             case EVT_CMD_COMPLETE:
             {
                 const evt_cmd_complete* cc = reinterpret_cast<const evt_cmd_complete*>(ptr);;
-                printf("EVT_CMD_COMPLETE: %X-%03X : %d\n", (cc->opcode >> 10) & 0xF, (cc->opcode & 0x3FF), cc->ncmd);
+                printf("==EVT_CMD_COMPLETE: %X-%03X\n", (cc->opcode >> 10) & 0xF, (cc->opcode & 0x3FF));
                 break;
             }
             case EVT_LE_META_EVENT:
             {
                  const evt_le_meta_event* eventMetaData = reinterpret_cast<const evt_le_meta_event*>(ptr);
 
-                 if (eventMetaData->subevent != 0x02) {
-                     printf("Received SUB EVENT: %X\n", eventMetaData->subevent);
+                 if (eventMetaData->subevent == EVT_LE_CONN_COMPLETE) {
+                     printf("==EVT_LE_CONN_COMPLETE: unexpected\n");
                  }
-                 else {
+                 else if (eventMetaData->subevent == EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE) {
+                     printf("==EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE: unexpected\n");
+                 }
+                 else if (eventMetaData->subevent == EVT_DISCONNECT_PHYSICAL_LINK_COMPLETE) {
+                     printf("==EVT_DISCONNECT_PHYSICAL_LINK_COMPLETE: unexpected\n");
+                 }
+                 else if (eventMetaData->subevent == EVT_LE_ADVERTISING_REPORT){
                      string shortName;
                      string longName;
                      const le_advertising_info* advertisingInfo = reinterpret_cast<const le_advertising_info*>(&(eventMetaData->data[1]));
@@ -922,29 +1102,24 @@ namespace Bluetooth {
                          _state.Unlock();
                      }
                  }
+                 else {
+                     printf("==EVT_LE_META_EVENT: unexpected subevent: %d\n", eventMetaData->subevent);
+                 }
                  break;
             }
+            case 0: break;
             default:
-                 printf("Received an EVENT: %X, on the application socket. No clue what to do with it..\n", hdr->evt);
+                 printf("==UNKNOWN: event %X\n", hdr->evt);
                  break;
             }
 
             return (availableData);
         }
-        virtual void StateChange() override {
-            Core::SynchronousChannelType<Core::SocketPort>::StateChange();
-            if (IsOpen() == true) {
-                hci_filter_clear(&_filter);
-                hci_filter_set_ptype(HCI_EVENT_PKT,  &_filter);
-                hci_filter_set_event(EVT_CMD_STATUS, &_filter);
-                hci_filter_set_event(EVT_CMD_COMPLETE, &_filter);
-                hci_filter_set_event(EVT_LE_META_EVENT, &_filter);
 
-                // Interesting why this needs to be set.... I hope not!!
-                // hci_filter_set_opcode(0, &_filter);
-
-                setsockopt(Handle(), SOL_HCI, HCI_FILTER, &_filter, sizeof(_filter));
-            }
+    private:
+        void SetOpcode(const uint16_t opcode) {
+            hci_filter_set_opcode(opcode, &_filter);
+            setsockopt(Handle(), SOL_HCI, HCI_FILTER, &_filter, sizeof(_filter));
         }
 
     private:

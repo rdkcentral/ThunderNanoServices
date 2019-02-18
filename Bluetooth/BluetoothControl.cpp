@@ -13,14 +13,6 @@ namespace Plugin {
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::Status> > jsonResponseFactoryStatus(1);
     /* static */ string BluetoothControl::_HIDPath;
 
-    /* virtual */ uint32_t BluetoothControl::DeviceImpl::Pair() {
-        return (Core::ERROR_NONE);
-    }
-
-    /* virtual */ uint32_t BluetoothControl::DeviceImpl::Unpair() {
-        return (Core::ERROR_NONE);
-    }
-
     /* virtual */ const string BluetoothControl::Initialize(PluginHost::IShell* service)
     {
         string result;
@@ -40,7 +32,7 @@ namespace Plugin {
             result = _T("Could not load the Bluetooth Driver.");
         }
         else {
-            Bluetooth::HCISocket::ManagementMode command(ADAPTER_INDEX);
+            Bluetooth::HCISocket::Management::OperationalMode command(ADAPTER_INDEX);
             command->val = htobs(ENABLE_MODE);
 
             _interface = Bluetooth::Driver::Interface(config.Interface.Value());
@@ -57,27 +49,34 @@ namespace Plugin {
             else if (_administrator.Open(Core::infinite) != Core::ERROR_NONE) {
                 result = "Could not open the Bluetooth Administrator channel";
             }
-            else if (command.Send(_administrator, 500, MGMT_OP_SET_POWERED) != Core::ERROR_NONE) {
+            else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_POWERED)) != Core::ERROR_NONE) {
                 result = "Failed to power on bluetooth adaptor";
             }
             // Enable Bondable on adaptor.
-            else if (command.Send(_administrator, 500, MGMT_OP_SET_BONDABLE) != Core::ERROR_NONE) {
+            else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_BONDABLE)) != Core::ERROR_NONE) {
                 result = "Failed to enable Bondable";
             }
             // Enable Simple Secure Simple Pairing.
-            else if (command.Send(_administrator, 500, MGMT_OP_SET_SSP) != Core::ERROR_NONE) {
+            else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_SSP)) != Core::ERROR_NONE) {
                 result = "Failed to enable Simple Secure Simple Pairing";
             }
             // Enable Low Energy
-            else if (command.Send(_administrator, 500, MGMT_OP_SET_LE) != Core::ERROR_NONE) {
+            else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_LE)) != Core::ERROR_NONE) {
                 result = "Failed to enable Low Energy";
             }    
             // Enable Secure Connections
-            else if (command.Send(_administrator, 500, MGMT_OP_SET_SECURE_CONN) != Core::ERROR_NONE) {
+            else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_SECURE_CONN)) != Core::ERROR_NONE) {
                 result = "Failed to enable Secure Connections";
+            }
+            // Enable Advertising
+            else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_ADVERTISING)) != Core::ERROR_NONE) {
+                result = "Failed to enable Advertising";
             }
             else if (_application.Open(_btAddress) != Core::ERROR_NONE) {
                 result = "Could not open the Bluetooth Application channel";
+            }
+            else if (_application.Advertising(true, 0) != Core::ERROR_NONE) {
+                result = "Could not listen to advertisements on the Application channel";
             }
         }
 
@@ -464,9 +463,11 @@ namespace Plugin {
             (*index)->Discovered();
         }
         else if (lowEnergy == true) {
+            TRACE(Trace::Information, ("Added LowEnergy Bluetooth device: %s, name: %s", address.ToString().c_str(), name.c_str()));
             _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(&_application, address, name));
         }
         else {
+            TRACE(Trace::Information, ("Added Regular Bluetooth device: %s, name: %s", address.ToString().c_str(), name.c_str()));
             _devices.push_back(Core::Service<DeviceRegular>::Create<DeviceImpl>(&_application, address, name));
         }
 
@@ -495,6 +496,15 @@ namespace Plugin {
         while ( (index != _devices.end()) && ((*index)->operator==(search) == false) ) { index++; }
 
         return (index != _devices.end() ? (*index) : nullptr);
+    }
+    void BluetoothControl::Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame) {
+        _adminLock.Lock();
+        std::list<DeviceImpl*>::iterator index = _devices.begin();
+        while (index != _devices.end()) {
+            (*index)->Notification(subEvent, length, dataFrame);
+            index++;
+        }
+        _adminLock.Unlock();
     }
 }
 }
