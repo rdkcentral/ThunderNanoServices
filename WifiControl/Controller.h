@@ -1190,12 +1190,16 @@ private:
 
             slices -= (slices > 5 ? 5 : slices);
 
+            CustomRequest exchange (string(_TXT("PING")));
             Submit(&exchange);
 
+            if ((exchange.Wait(500) == true) && (exchange.Response() == _T("PONG"))) {
+                Revoke (&exchange);
+                break;
+            }
 
-	} while ( (slices != 0) && ((exchange.Wait(500) == false) || (exchange.Response() != _T("PONG"))) );
-
-        Revoke (&exchange);
+            Revoke (&exchange);
+        } while (slices != 0);
 
         return (exchange.Response() == _T("PONG"));
     }
@@ -1478,7 +1482,10 @@ private:
 
          _adminLock.Lock();
 
-        _requests.push_back(data);
+        std::list<Request*>::iterator index (std::find(_requests.begin(), _requests.end(), data));
+        if (index == _requests.end()) {
+            _requests.push_back(data);
+        }
 
         if (_requests.size() == 1) {
             _adminLock.Unlock();
