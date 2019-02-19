@@ -22,4 +22,9 @@ target_include_directories(CompositorTest
       ${EGL_INCLUDE_DIRS}
       ${GLESV2_INCLUDE_DIRS})
 
+target_compile_definitions(CompositorTest
+    PRIVATE
+        ${EGL_DEFINITIONS}
+        ${GLESV2_DEFINITIONS})
+
 install(TARGETS CompositorTest DESTINATION bin)

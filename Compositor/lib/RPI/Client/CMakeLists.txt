@@ -30,6 +30,10 @@ target_include_directories(${TARGET}
     PRIVATE
         ${EGL_INCLUDE_DIRS})
 
+target_compile_definitions(${TARGET}
+    PRIVATE
+        ${EGL_DEFINITIONS})
+
 install(
         TARGETS ${TARGET}  EXPORT ${TARGET}Targets  # for downstream dependencies
         ARCHIVE DESTINATION lib COMPONENT libs      # static lib

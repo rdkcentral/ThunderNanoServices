@@ -37,6 +37,10 @@ target_include_directories(${TARGET}
         ${EGL_INCLUDE_DIRS}
 )
 
+target_compile_definitions(${TARGET}
+    PRIVATE
+        ${EGL_DEFINITIONS})
+
 set_target_properties(${TARGET} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
