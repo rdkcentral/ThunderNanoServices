@@ -620,9 +620,6 @@ namespace Plugin {
                 , _sessionList() 
                 , _observers() {
                 ASSERT (parent != nullptr);
-
-                // TODO: figure out if we can know/need to know selected key system here
-                _systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem("com.microsoft.playready"));
             }
             virtual ~AccessorOCDM()
             {
@@ -767,7 +764,11 @@ namespace Plugin {
             }
 
             virtual time_t GetDrmSystemTime(const std::string & keySystem) const override {
-                return _systemExt->GetDrmSystemTime();
+                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+                if (systemExt) {
+                    return systemExt->GetDrmSystemTime();
+                }
+                return -1;
             }
 
             virtual OCDM::OCDM_RESULT CreateSessionExt(
@@ -841,12 +842,20 @@ namespace Plugin {
 
             std::string GetVersionExt(const std::string & keySystem) const override
             {
-                return _systemExt->GetVersionExt();
+                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+                if (systemExt) {
+                    return systemExt->GetVersionExt();
+                }
+                return "";
             }
 
             uint32_t GetLdlSessionLimit(const std::string & keySystem) const override
             {
-                return _systemExt->GetLdlSessionLimit();
+                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+                if (systemExt) {
+                    return systemExt->GetLdlSessionLimit();
+                }
+                return 0;
             }
 
             OCDM::OCDM_RESULT EnableSecureStop(const std::string & keySystem, bool enable) override
@@ -872,15 +881,54 @@ namespace Plugin {
                 return -1;
             }
 
-            OCDM::OCDM_RESULT CreateSystemNetflix() override
+            OCDM::OCDM_RESULT CreateSystemNetflix(const std::string & keySystem) override
             {
-                return _systemExt->CreateSystemNetflix();
+                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+                if (systemExt) {
+                    return systemExt->CreateSystemNetflix();
+                }
+                return -1;
             }
 
-            OCDM::OCDM_RESULT InitSystemNetflix() override
+            OCDM::OCDM_RESULT InitSystemNetflix(const std::string & keySystem) override
             {
-                return _systemExt->InitSystemNetflix();
+                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+                if (systemExt) {
+                    return systemExt->InitSystemNetflix();
+                }
+                return -1;
             }
+
+            OCDM::OCDM_RESULT TeardownSystemNetflix(const std::string & keySystem) override
+            {
+                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+                if (systemExt) {
+                    return systemExt->TeardownSystemNetflix();
+                }
+                return -1;
+            }
+
+            OCDM::OCDM_RESULT DeleteSecureStore(const std::string & keySystem) override
+            {
+                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+                if (systemExt) {
+                    return systemExt->DeleteSecureStore();
+                }
+                return -1;
+            }
+
+            OCDM::OCDM_RESULT GetSecureStoreHash(
+                    const std::string & keySystem,
+                    uint8_t secureStoreHash[],
+                    uint32_t secureStoreHashLength) override
+            {
+                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+                if (systemExt) {
+                    return systemExt->GetSecureStoreHash(secureStoreHash, secureStoreHashLength);
+                }
+                return -1;
+            }
+
 
             virtual void Register (::OCDM::IAccessorOCDM::INotification* callback) override {
 
@@ -918,7 +966,7 @@ namespace Plugin {
 
             BEGIN_INTERFACE_MAP(AccessorOCDM)
                 INTERFACE_ENTRY(::OCDM::IAccessorOCDM)
-                INTERFACE_RELAY(::OCDM::IAccessorOCDMExt, _systemExt)
+                INTERFACE_ENTRY(::OCDM::IAccessorOCDMExt)
             END_INTERFACE_MAP
 
         private:
@@ -1009,7 +1057,6 @@ namespace Plugin {
 
         private:
             OCDMImplementation& _parent;
-            CDMi::IMediaKeysExt* _systemExt;
             mutable Core::CriticalSection _adminLock;
             BufferAdministrator _administrator;
             uint32_t _defaultSize;
