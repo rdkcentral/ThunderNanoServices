@@ -36,7 +36,6 @@ namespace Plugin {
             _implementation->Configure(_service);
        }
 
-        AsyncStatus("UP");
         return message;
     }
 
@@ -125,7 +124,6 @@ namespace Plugin {
 
     void DsgccClient::Deactivated(RPC::IRemoteProcess* process)
     {
-        AsyncStatus("DOWN");
         if (process->Id() == _pid) {
 
             ASSERT(_service != nullptr);

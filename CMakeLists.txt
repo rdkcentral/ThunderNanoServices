@@ -160,6 +160,6 @@ if(PLUGIN_RTSPCLIENT)
     add_subdirectory(RtspClient)
 endif()
 
-if(PLUGIN_DsgccClient)
+if(PLUGIN_DSGCCCLIENT)
     add_subdirectory(DsgccClient)
 endif()
