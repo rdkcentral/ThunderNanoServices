@@ -6,7 +6,7 @@ option(STREAMER_IMPLEMENTATION "Define the actual implementation to be used for 
 find_package(${NAMESPACE}Interfaces REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 
-add_library(${MODULE_NAME} SHARED 
+add_library(${MODULE_NAME} SHARED
     Module.cpp
     Frontend.cpp
     Streamer.cpp
@@ -15,13 +15,17 @@ add_library(${MODULE_NAME} SHARED
 
 add_subdirectory(Implementation/${STREAMER_IMPLEMENTATION})
 
+set_target_properties(${MODULE_NAME} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
+
 target_link_libraries(${MODULE_NAME}
-    PRIVATE 
+    PRIVATE
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces
         PlayerPlatform)
 
-install(TARGETS ${MODULE_NAME} 
+install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})
