@@ -15,7 +15,7 @@ endif(PLUGIN_STREAMER_TS_SCANNING)
 target_link_libraries(PlayerPlatform 
     PRIVATE 
         ${NAMESPACE}Broadcast::${NAMESPACE}Broadcast
-        NXCLIENT::NXCLIENT})
+        NXCLIENT::NXCLIENT)
 
 install(TARGETS PlayerPlatform 
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/)
