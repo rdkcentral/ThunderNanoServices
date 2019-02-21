@@ -51,7 +51,7 @@ namespace Plugin {
     void DsgccClientImplementation::Activity::HexDump(const char* label, const std::string& msg, uint16_t charsPerLine)
     {
         std::stringstream ssHex, ss;
-        for (int32_t i = 0; i < msg.length(); i++) {
+        for (uint16_t i = 0; i < msg.length(); i++) {
             int byte = (uint8_t)msg.at(i);
             ssHex << std::setfill('0') << std::setw(2) << std::hex <<  byte << " ";
             ss << char((byte < ' ') ? '.' : byte);
@@ -76,7 +76,6 @@ namespace Plugin {
 
         struct dsgClientRegInfo *regInfo = &regInfoData;
         int n;
-        socklen_t       len;
         int retVal;
         char            mesg[MAXLINE];
         int sharedMemoryId;
