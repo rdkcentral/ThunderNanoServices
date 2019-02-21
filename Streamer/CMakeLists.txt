@@ -14,6 +14,11 @@ add_library(${MODULE_NAME} SHARED
 )
 
 add_subdirectory(Implementation/${STREAMER_IMPLEMENTATION})
+include_directories(Implementation/${STREAMER_IMPLEMENTATION})
+
+target_include_directories(${MODULE_NAME}
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR})
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
