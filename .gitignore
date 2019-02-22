@@ -11,3 +11,4 @@ output/
 .vscode
 /.vs
 /artifacts
+*/*.so

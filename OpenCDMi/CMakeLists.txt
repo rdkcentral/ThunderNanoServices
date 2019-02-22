@@ -4,6 +4,9 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 find_package(ocdm REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 
+set(PLUGIN_OCDM_PLAYREADY_READ_DIR "/root/Netflix/dpi/playready" CACHE STRING "Playready read-dir")
+set(PLUGIN_OCDM_PLAYREADY_STORE_LOCATION "/root/Netflix/dpi/playready/storage/drmstore" CACHE STRING "Playready store-location")
+
 add_library(${MODULE_NAME} SHARED 
         OCDM.cpp
         CENCParser.cpp
