@@ -26,6 +26,7 @@ if(NEXUS_SERVER_EXTERNAL)
     find_package(NXCLIENT REQUIRED)
     target_link_libraries(${TARGET}
         PRIVATE
+            ${NAMESPACE}nexusserver::${NAMESPACE}nexusserver
             NXCLIENT::NXCLIENT
         )
 else()
