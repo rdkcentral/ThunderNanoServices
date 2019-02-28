@@ -4,8 +4,6 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(PLUGIN_BLUETOOTH_AUTOSTART true CACHE STRING true)
 set(PLUGIN_BLUETOOTH_OOP false CACHE STRING true)
 
-
-
 find_package(Bluez REQUIRED)
 find_package(BCM_HOST QUIET)
 find_package(NEXUS QUIET)
@@ -30,12 +28,10 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${BLUEZ_LIBRARIES})
 
-if (NEXUS_FOUND)
-    target_sources(${MODULE_NAME} PRIVATE drivers/Basic.cpp)
-elseif (BCM_HOST_FOUND)
+if (BCM_HOST_FOUND)
     target_sources(${MODULE_NAME} PRIVATE drivers/BCM43XX.cpp)
 else ()
-    message(FATAL_ERROR "There is no Bluetooth driver backend for Bluetooth plugin")
+    target_sources(${MODULE_NAME} PRIVATE drivers/Basic.cpp)
 endif ()
 
 install(TARGETS ${MODULE_NAME} 
