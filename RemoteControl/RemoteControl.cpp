@@ -70,9 +70,6 @@ namespace Plugin {
             else if (result == Core::ERROR_UNKNOWN_KEY) {
                 _text = Core::ToString(Trace::Format(_T("Unknown: [%s:%08X] state %s, blocked."), mapName.c_str(), code, text));
             }
-            else if (result == Core::ERROR_UNKNOWN_KEY_PASSED) {
-                _text = Core::ToString(Trace::Format(_T("Unknown: [%s:%08X] state %s, passed."), mapName.c_str(), code, text));
-            }
         }
         ~UnknownKey()
         {
