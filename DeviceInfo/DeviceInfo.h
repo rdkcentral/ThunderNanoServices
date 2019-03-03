@@ -187,7 +187,7 @@ namespace Plugin {
         DeviceInfo(const DeviceInfo&) = delete;
         DeviceInfo& operator=(const DeviceInfo&) = delete;
 
-		uint32_t adresses(const string& parameters, Core::JSON::ArrayType<Data::AddressInfo>& response) {
+		uint32_t addresses(const string& parameters, Core::JSON::ArrayType<Data::AddressInfo>& response) {
 			AddressInfo(response);
 			return (Core::ERROR_NONE);
 		}
@@ -208,7 +208,7 @@ namespace Plugin {
             , _systemId()
             , _deviceId()
         {
-			Register<string, Core::JSON::ArrayType<Data::AddressInfo> >(_T("adresses"), &DeviceInfo::adresses, this);
+			Register<string, Core::JSON::ArrayType<Data::AddressInfo> >(_T("addresses"), &DeviceInfo::addresses, this);
 			Register<string, Data::SysInfo>(_T("system"), &DeviceInfo::system, this);
 			Register<string, Data::SocketPortInfo>(_T("sockets"), &DeviceInfo::sockets, this);
         }
