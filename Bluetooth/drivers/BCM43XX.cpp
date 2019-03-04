@@ -232,7 +232,7 @@ private:
                 }
      
                 if (result == Core::ERROR_NONE) {
-                    int loaded;
+                    int loaded = 0;
                     uint8_t tx_buf[255];
 
                     /* Wait 50ms to let the firmware placed in download mode */
