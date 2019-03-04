@@ -857,12 +857,13 @@ namespace Plugin {
 
             OCDM::OCDM_RESULT GetSecureStopIds(
                     const std::string & keySystem,
-                    unsigned char * Ids[],
+                    unsigned char Ids[],
+                    uint8_t idSize,
                     uint32_t & count)
             {
                 CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
                 if (systemExt) {
-                    return (OCDM::OCDM_RESULT)systemExt->GetSecureStopIds(Ids, count);
+                    return (OCDM::OCDM_RESULT)systemExt->GetSecureStopIds(Ids, idSize, count);
                 }
                 return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
             }
