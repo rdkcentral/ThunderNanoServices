@@ -103,10 +103,10 @@ int main(int argc, char** argv)
 			// 2. [mandatory] Event name to subscribe to on server side (See JSONRPCExamplePlugin::SendTime - 44)
 			// 3. [mandatory] Code to handle this event, it is allowed to use a lambda here, or a object method (see plugin)
 			if (remoteObject.Subscribe<Core::JSON::String>(1000, _T("clock"), &Handlers::clock) == Core::ERROR_NONE) {
-				printf ("Installed a notification handler and registered for the notifications\n")
+				printf("Installed a notification handler and registered for the notifications\n");
 			}
 			else {
-				printf("Failed to install a notification handler\n")
+				printf("Failed to install a notification handler\n");
 			}
             break;
         }
@@ -115,12 +115,8 @@ int main(int argc, char** argv)
 			// The parameters:
 			// 1. [mandatory] Time to wait for the round trip to complete to the server to register.
 			// 2. [mandatory] Event name which was used during the registration
-			if (remoteObject.Unsubscribe(1000, _T("clock")) == Core::ERROR_NONE) {
-				printf("Installed a notification handler and registered for the notifications\n")
-			}
-			else {
-				printf("Failed to install a notification handler\n")
-			}
+			remoteObject.Unsubscribe(1000, _T("clock"));
+			printf("Unregistered and renmoved a notification handler\n");
 			break;
 		}
 		case 'H' :

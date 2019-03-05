@@ -4,7 +4,7 @@
     <ClCompile Include="Module.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TestPlugin.cpp">
+    <ClCompile Include="JSONRPCExamplePlugin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -12,7 +12,7 @@
     <ClInclude Include="Module.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TestPlugin.h">
+    <ClInclude Include="JSONRPCExamplePlugin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

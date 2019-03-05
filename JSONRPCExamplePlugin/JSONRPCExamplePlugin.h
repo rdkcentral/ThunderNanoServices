@@ -33,7 +33,7 @@ namespace WPEFramework {
 				PeriodicSync& operator=(const PeriodicSync&) = delete;
 
 			public:
-				PeriodicSync(TestPlugin* parent)
+				PeriodicSync(JSONRPCExamplePlugin* parent)
 					: _parent(*parent) {
 				}
 				~PeriodicSync() {
@@ -57,7 +57,7 @@ namespace WPEFramework {
 
 			private:
 				uint32_t _nextSlot;
-				TestPlugin& _parent;
+				JSONRPCExamplePlugin& _parent;
 			};
 
 			// Define a handler for incoming JSONRPC messages. This method does not take any
