@@ -57,12 +57,12 @@ public:
     void Align();
     
     inline void Subscribe(Exchange::IExternal::INotification* sink) {
-        BaseClass:Register(sink);
+        BaseClass::Register(sink);
         Core::ResourceMonitor::Instance().Register(*this);
     }
     inline void Unsubscribe(Exchange::IExternal::INotification* sink) {
         Core::ResourceMonitor::Instance().Unregister(*this);
-        BaseClass:Unregister(sink);
+        BaseClass::Unregister(sink);
     }
 
     virtual void Trigger() override;

@@ -27,7 +27,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Power::Data> > jsonResponseFactory(
 
         ASSERT (keyHandler != nullptr);
 
-        keyHandler->Register(KEY_POWER, &_sink);
+        keyHandler->Register(&_sink, KEY_POWER);
 
         // Receive all plugin information on state changes.
         _service->Register(&_sink);
@@ -59,7 +59,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Power::Data> > jsonResponseFactory(
     PluginHost::VirtualInput* keyHandler (PluginHost::InputHandler::KeyHandler());
 
     ASSERT (keyHandler != nullptr);
-    keyHandler->Unregister(KEY_POWER, &_sink);
+    keyHandler->Unregister(&_sink, KEY_POWER);
 
     _power->Unregister(&_sink);
  
