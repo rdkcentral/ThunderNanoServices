@@ -16,6 +16,8 @@ namespace WPEFramework {
 
 		/* virtual */ JSONRPCExamplePlugin::~JSONRPCExamplePlugin()
 		{
+			// PluginHost::JSONRPC method to unregister a JSONRPC method invocation for the method "time".
+			Unregister(_T("time"));
 		}
 
 		/* virtual */ const string JSONRPCExamplePlugin::Initialize(PluginHost::IShell* /* service */)
