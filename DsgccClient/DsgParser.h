@@ -130,7 +130,6 @@ class DsgParser {
 public:
     DsgParser(int vctId)
         : _vctId(vctId) {
-
         TRACE_L1("VctId=%d", _vctId);
     }
 
@@ -147,6 +146,9 @@ public:
     bool parse_mms(unsigned char *buf, int len, struct mms_table *mms);
     bool parse_ntt(unsigned char *buf, int len, struct ntt_table *ntt);
     bool parse_svct(unsigned char *buf, int len, struct vcm **vcmlist, int vctidfilter, int &vct_lookup_index);
+    struct vc_record* reverse_vc_list(struct vc_record *vc_rec);
+    int read_vc(unsigned char *buf, struct vc_record *vc_rec, unsigned char desc_inc);
+
     string output_txt(struct cds_table *cds, struct mms_table *mms, struct ntt_table *ntt, struct vcm *vcm_list);
     void HexDump(const char* label, const std::string& msg, uint16_t charsPerLine = 32);
 

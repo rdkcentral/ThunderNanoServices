@@ -55,59 +55,6 @@ static const char* scte_modfmt_table[] = {
   "RESERVED"
 };
 
-// vc list formed backwards, so reverse order
-static struct vc_record *reverse_vc_list(struct vc_record *vc_rec) {
-    struct vc_record *vc_new=NULL;
-
-    while (vc_rec) {
-        struct vc_record *vc_tmp = vc_rec;
-        vc_rec = vc_rec->next; // pop top from old
-        vc_tmp->next = vc_new;// push it on to new
-        vc_new=vc_tmp;
-    }
-    return vc_new;
-}
-
-// fills vc_rec from buf, returns number of bytes processed
-int read_vc(unsigned char *buf, struct vc_record *vc_rec, unsigned char desc_inc) {
-    int i,n;
-    vc_rec->vc = ((buf[0] & 0xf) << 8) | buf[1];
-    vc_rec->application = buf[2] & 0x80;
-    vc_rec->path_select = buf[2] & 0x20;
-    vc_rec->transport_type = buf[2] & 0x10;
-    vc_rec->channel_type = buf[2] & 0xf;
-    vc_rec->id = (buf[3] << 8) | buf[4];
-
-    TRACE_L3("vc %4d, %s_ID: 0x%04x, %s", vc_rec->vc, vc_rec->application ? "app" : "src", vc_rec->id, vc_rec->channel_type ? "hidden/reserved" : "normal");
-    n=5;
-    if (vc_rec->transport_type == 0) {
-        vc_rec->cds_ref = buf[n++];
-        vc_rec->prognum = (buf[n] << 8) | buf[n+1];
-        n+=2;
-        vc_rec->mms_ref = buf[n++];
-        TRACE_L3("CDS_ref=%d, program=%d, MMS_ref=%d", vc_rec->cds_ref, vc_rec->prognum, vc_rec->mms_ref);
-    } else {
-        vc_rec->cds_ref = buf[n++];
-        vc_rec->scrambled = buf[n] & 0x80;
-        vc_rec->video_std = buf[n++] & 0xf;
-        n+=2; // 2 bytes of zero
-        TRACE_L3("CDS_ref=%d, scrambled=%c, vid_std=%d", vc_rec->cds_ref, vc_rec->scrambled ? 'Y' : 'N', vc_rec->video_std);
-    }
-
-    if (desc_inc) {
-        vc_rec->desc_cnt = buf[n++];
-        for (i=0; i<vc_rec->desc_cnt; i++) {
-            vc_rec->descTag[i] = buf[n++];
-            vc_rec->descLength = buf[n++];
-            vc_rec->chusId[i] = (buf[n] << 24)| (buf[n+1] << 16)| (buf[n+2] << 8) | buf[n+3]; //add logic dynamically retrieve the descriptor values
-            TRACE_L3("descriptor %d: descTag=0x%02x, descLength=%d, chusId=0x%04x", i, vc_rec->descTag[i], vc_rec->descLength, vc_rec->chusId[i]);
-            n += vc_rec->descLength;
-        }
-    }
-
-    return n;
-}
-
 void DsgParser::parse(unsigned char *pBuf, ssize_t len)
 {
     int section_len = ((pBuf[1] & 0xf) << 8) | pBuf[2];
@@ -517,7 +464,6 @@ bool DsgParser::parse_svct(unsigned char *buf, int len, struct vcm **vcmlist, in
 
 string DsgParser::output_txt(struct cds_table *cds, struct mms_table *mms, struct ntt_table *ntt, struct vcm *vcm_list)
 {
-#if 1
     string strChannelMap;
     Core::JSON::ArrayType<Channel> channelMap;
 
@@ -568,101 +514,80 @@ string DsgParser::output_txt(struct cds_table *cds, struct mms_table *mms, struc
     channelMap.ToString(strChannelMap);
     TRACE_L1("strChannelMap.size=%d", strChannelMap.size());
     return strChannelMap;
-#else
-    stringstream ssChannels;
-    struct vcm *vcm = vcm_list;
-    for (vcm = vcm_list; vcm != NULL; vcm=vcm->next) {
-        struct vc_record *vc_rec;
-        vcm->vc_list = reverse_vc_list(vcm->vc_list);
-
-        int callNumber = 1;
-        for (vc_rec = vcm->vc_list; vc_rec != NULL; vc_rec=vc_rec->next) {
-            //Required this change to make sure channels.json file formatted correctly with comma separated
-            //for all the lines except last line
-            if (callNumber != 1)
-                ssChannels << ",";
-
-            stringstream vc;
-            vc << vc_rec->vc;
-
-            stringstream id;
-            id << vc_rec->id;
-
-            stringstream srcId;
-            srcId << std::hex << vc_rec->id;
-
-            stringstream pn;
-            pn << vc_rec->prognum;
-
-            int cdsValue;
-            if (cds->written[vc_rec->cds_ref])
-                cdsValue = cds->cd[vc_rec->cds_ref]/1000000;
-
-            stringstream cf;
-            cf << cdsValue;
-
-            const char* mm;
-            if (mms->written[vc_rec->mms_ref])
-                mm = mms->mm[vc_rec->mms_ref].modulation_fmt;
-
-            string modulationMode = std::string(mm);
-            if(modulationMode.compare("QAM_64") == 0)
-                 modulationMode = "8";
-            else if(modulationMode.compare("QAM_256") == 0)
-                modulationMode = "16";
-
-            stringstream chusId;
-            for (int i=0; i<vc_rec->desc_cnt; i++)
-                  chusId << std::hex << vc_rec->chusId[i];
-
-            // Search NTT for Source ID match and Retrieve Source Name
-            std::string sourceName = "Test Channel";
-            struct sns_record *sn_rec = ntt->sns_list;
-            while (sn_rec && sn_rec->id != vc_rec->id && !vc_rec->application)
-              sn_rec=sn_rec->next;
-            if (sn_rec)
-                sourceName = string(sn_rec->segment);
-
-            stringstream cn;
-            cn << callNumber;
-
-            ssChannels << "{\"channelNumber\":\""<<vc.str()<<"\",";
-            ssChannels << "\"callNumber\":\""<<cn.str()<<"\",";
-            ssChannels << "\"freq\":\""<<cf.str()<<"\",";
-            ssChannels << "\"programNumber\":\""<<pn.str()<<"\",";
-            //Verifier expects chuId value as 4 digit hex (since NewCHUSID starts from value 1000 onwards - 3 digit hex, Appending 0 if chuId length is 3)
-            if(strlen(chusId.str().c_str()) == 3)
-                ssChannels << "\"chuId\":\""<<"0"<<chusId.str()<<"\",";
-            else
-                ssChannels << "\"chuId\":\""<<chusId.str()<<"\",";
-            ssChannels << "\"sourceId\":\""<<srcId.str()<<"\",";
-            ssChannels << "\"description\":\""<<sourceName<<", Channel "<<vc.str()<<", freq "<<cf.str()<<", Program "<<pn.str()<<"\"}";
-
-            callNumber++;
-        } // for
-    }
-    return ssChannels.str();
-#endif
 }
 
-    void DsgParser::HexDump(const char* label, const std::string& msg, uint16_t charsPerLine)
-    {
-        std::stringstream ssHex, ss;
-        for (uint16_t i = 0; i < msg.length(); i++) {
-            int byte = (uint8_t)msg.at(i);
-            ssHex << std::setfill('0') << std::setw(2) << std::hex <<  byte << " ";
-            ss << char((byte < ' ' || byte > 127) ? '.' : byte);
+// vc list formed backwards, so reverse order
+struct vc_record* DsgParser::reverse_vc_list(struct vc_record *vc_rec) {
+    struct vc_record *vc_new=NULL;
 
-            if (!((i+1) % charsPerLine)) {
-                TRACE(Trace::Information, ("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str()));
-                TRACE_L4("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
-                ss.str(std::string());
-                ssHex.str(std::string());
-            }
-        }
-        TRACE(Trace::Information, ("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str()));
-        TRACE_L4("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
+    while (vc_rec) {
+        struct vc_record *vc_tmp = vc_rec;
+        vc_rec = vc_rec->next; // pop top from old
+        vc_tmp->next = vc_new;// push it on to new
+        vc_new=vc_tmp;
     }
+    return vc_new;
+}
+
+// fills vc_rec from buf, returns number of bytes processed
+int DsgParser::read_vc(unsigned char *buf, struct vc_record *vc_rec, unsigned char desc_inc) {
+    int i,n;
+    vc_rec->vc = ((buf[0] & 0xf) << 8) | buf[1];
+    vc_rec->application = buf[2] & 0x80;
+    vc_rec->path_select = buf[2] & 0x20;
+    vc_rec->transport_type = buf[2] & 0x10;
+    vc_rec->channel_type = buf[2] & 0xf;
+    vc_rec->id = (buf[3] << 8) | buf[4];
+
+    TRACE_L3("vc %4d, %s_ID: 0x%04x, %s", vc_rec->vc, vc_rec->application ? "app" : "src", vc_rec->id, vc_rec->channel_type ? "hidden/reserved" : "normal");
+    n=5;
+    if (vc_rec->transport_type == 0) {
+        vc_rec->cds_ref = buf[n++];
+        vc_rec->prognum = (buf[n] << 8) | buf[n+1];
+        n+=2;
+        vc_rec->mms_ref = buf[n++];
+        TRACE_L3("CDS_ref=%d, program=%d, MMS_ref=%d", vc_rec->cds_ref, vc_rec->prognum, vc_rec->mms_ref);
+    } else {
+        vc_rec->cds_ref = buf[n++];
+        vc_rec->scrambled = buf[n] & 0x80;
+        vc_rec->video_std = buf[n++] & 0xf;
+        n+=2; // 2 bytes of zero
+        TRACE_L3("CDS_ref=%d, scrambled=%c, vid_std=%d", vc_rec->cds_ref, vc_rec->scrambled ? 'Y' : 'N', vc_rec->video_std);
+    }
+
+    if (desc_inc) {
+        vc_rec->desc_cnt = buf[n++];
+        for (i=0; i<vc_rec->desc_cnt; i++) {
+            vc_rec->descTag[i] = buf[n++];
+            vc_rec->descLength = buf[n++];
+            vc_rec->chusId[i] = (buf[n] << 24)| (buf[n+1] << 16)| (buf[n+2] << 8) | buf[n+3]; //add logic dynamically retrieve the descriptor values
+            TRACE_L3("descriptor %d: descTag=0x%02x, descLength=%d, chusId=0x%04x", i, vc_rec->descTag[i], vc_rec->descLength, vc_rec->chusId[i]);
+            n += vc_rec->descLength;
+        }
+    }
+
+    return n;
+}
+
+
+void DsgParser::HexDump(const char* label, const std::string& msg, uint16_t charsPerLine)
+{
+    std::stringstream ssHex, ss;
+    for (uint16_t i = 0; i < msg.length(); i++) {
+        int byte = (uint8_t)msg.at(i);
+        ssHex << std::setfill('0') << std::setw(2) << std::hex <<  byte << " ";
+        ss << char((byte < ' ' || byte > 127) ? '.' : byte);
+
+        if (!((i+1) % charsPerLine)) {
+            TRACE(Trace::Information, ("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str()));
+            TRACE_L4("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
+            ss.str(std::string());
+            ssHex.str(std::string());
+        }
+    }
+    TRACE(Trace::Information, ("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str()));
+    TRACE_L4("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
+}
 
 
 } // namespace Plugin
