@@ -1,5 +1,4 @@
 #include <sstream>
-#include <iomanip>
 #include "DsgccClientImplementation.h"
 
 #include <refsw/dsgcc_client_api.h>
@@ -15,24 +14,25 @@ void dsgcc_ClientNotification(struct dsgccClientNotification *clientNotification
 extern char* TunnelStatusTypeName( unsigned int value );
 }
 
+bool parse_svct(unsigned char *buf, int len, struct vcm **vcmlist, int vctidfilter, int &vct_lookup_index);
 
 namespace WPEFramework {
 namespace Plugin {
 
     DsgccClientImplementation::DsgccClientImplementation()
         : _observers()
-        , _worker(config)
+        , _worker(_config)
         , _dsgCallback()
     {
     }
 
     uint32_t DsgccClientImplementation::Configure(PluginHost::IShell* service)
     {
+        uint32_t result = 0;
         ASSERT(service != nullptr);
 
-        config.FromString(service->ConfigLine());
+        _config.FromString(service->ConfigLine());
 
-        uint32_t result = 0;
         _worker.Run();
         //_dsgCallback.Run();
 
@@ -45,28 +45,17 @@ namespace Plugin {
     }
     string DsgccClientImplementation::DsgccClientGet() const
     {
-        return (str);
-    }
-
-    void DsgccClientImplementation::Activity::HexDump(const char* label, const std::string& msg, uint16_t charsPerLine)
-    {
-        std::stringstream ssHex, ss;
-        for (uint16_t i = 0; i < msg.length(); i++) {
-            int byte = (uint8_t)msg.at(i);
-            ssHex << std::setfill('0') << std::setw(2) << std::hex <<  byte << " ";
-            ss << char((byte < ' ') ? '.' : byte);
-
-            if (!((i+1) % charsPerLine)) {
-                TRACE(Trace::Information, ("%s: %s %s\n", label, ssHex.str().c_str(), ss.str().c_str()));
-                ss.str(std::string());
-                ssHex.str(std::string());
-            }
-        }
-        TRACE(Trace::Information, ("%s: %s %s\n", label, ssHex.str().c_str(), ss.str().c_str()));
+        TRACE_L1("Entering %s", __FUNCTION__);
+        return (_worker.getChannels());
     }
 
     uint32_t DsgccClientImplementation::Activity::Worker() {
+        TRACE_L1("Entering %s state=%d", __PRETTY_FUNCTION__, Core::Thread::State());
         Setup(_config.DsgPort, _config.DsgType, _config.DsgId);
+
+        Stop();                         // XXX:
+
+        TRACE_L1("Exiting %s state=%d", __PRETTY_FUNCTION__, Core::Thread::State());
         return (Core::infinite);
     }
 
@@ -75,33 +64,29 @@ namespace Plugin {
         static struct dsgClientRegInfo regInfoData;
 
         struct dsgClientRegInfo *regInfo = &regInfoData;
-        int n;
         int retVal;
-        char            mesg[MAXLINE];
+        char msg[MAXLINE];
+        int len;
         int sharedMemoryId;
 
         CLIENT *handle = NULL;
 
         bzero((char *) regInfo, sizeof(struct dsgClientRegInfo));
-        _isRunning = true;
-
         regInfo->clientPort = port;
+        regInfo->idType = dsgType;
+        regInfo->clientId = dsgId;
 
         sharedMemoryId = BcmSharedMemoryCreate(regInfo->clientPort, 1);
-        TRACE_L1("sharedMemoryId=%x", sharedMemoryId);
-
         handle = clnt_create("127.0.0.1", DSGREGISTRAR, DSGREGISTRARVERS, "udp");
         if (handle == 0) {
-          TRACE_L1("Could not contact DSG Registrar");
-          return;
+            TRACE_L1("Could not contact DSG Registrar");
+            return;
         }
 
         regInfo->handle = (int)handle;
-        regInfo->idType = dsgType;
-        regInfo->clientId = dsgId;
-        regInfo->idType |= 0x00010000;    // strip IP/UDP headers
 
         TRACE_L1("registerdsgclient port=%d type=%d id=%d", regInfo->clientPort, regInfo->idType, regInfo->clientId);
+        regInfo->idType |= 0x00010000;    // strip IP/UDP headers
         retVal = registerdsgclient(regInfo);
 
         if( retVal == DSGCC_SUCCESS ) {
@@ -115,83 +100,41 @@ namespace Plugin {
             TRACE_L1("tunnel status %s", TunnelStatusTypeName(retVal));
         }
 
+        DsgParser _parser(_config.VctId);
         while ( _isRunning ) {
-            n = BcmSharedMemoryRead(sharedMemoryId, mesg, 0);
-            if (n > 0) {
-                HexDump("DSG:", string(mesg,n));
-                process((unsigned char *)mesg, n);
+            len = BcmSharedMemoryRead(sharedMemoryId, msg, 0);
+            if (len > 0) {
+                if (len >= _config.DsgHeaderSize) {
+                    char *pBuf = &msg[_config.DsgHeaderSize];
+                    len -= _config.DsgHeaderSize;
+
+                    _parser.parse((unsigned char *) pBuf, len);
+                    if (_parser.isDone())
+                        _isRunning = false;
+                }
             }
 
-            if (n <= 0) {
+            if (len <= 0) {
                 if (CLIENTPORTKEEPALIVE) {
                     if (errno == EWOULDBLOCK) { // XXX:
                     retVal = dsgcc_KeepAliveClient(&regInfoData);
                         if(retVal & DSGCC_CLIENT_REGISTERED) {
-                        retVal >>= 16;
+                            retVal >>= 16;
                             TRACE_L1("tunnel status %s", TunnelStatusTypeName(retVal));
+                        }
                     }
-                  }
                 }
             }
-        }
+        } // while
 
+        TRACE_L1("Unregistering DsgCC client.");
         retVal = dsgcc_UnregisterClient(regInfo);
         BcmSharedMemoryDelete(sharedMemoryId);
+
+        _channels = _parser.getChannels();
+        TRACE_L1("_parser.getChannels().length=%d", _channels.length());
     }
 
-    void DsgccClientImplementation::Activity::process(unsigned char *pBuf, ssize_t len)
-    {
-        int section_len;
-        section_len = ((pBuf[1] & 0xf) << 8) | pBuf[2];
-
-        switch (pBuf[0]) {
-        case 0xc2:
-            printf("Network Information Table \n");
-            if (section_len < 8) {
-              printf("short NIT, got %d bytes (expected >7)\n", section_len);
-            } else if (1 == (pBuf[6] & 0xf)) {
-               printf(" Network Information Table  : CDS\n"); //1 CDS  Carrier Definition Subtable
-               //cdsDone = parse_cds(pBuf, section_len, &cds);
-            } else if (2 == (pBuf[6] & 0xf)) {
-               printf(" Network Information Table  : MMS\n"); //2 MMS  Modulation Mode Subtable
-               //mmsDone = parse_mms(pBuf, section_len, &mms);
-            } else {
-               printf("NIT tbl_subtype=%s\n", (pBuf[6] & 0xf) ? "RSVD" : "INVLD");  //3-15 Reserved, 0 invalid
-            }
-            break;
-        case 0xc3:
-            printf(" Network text Table\n");
-            //if(!nttDone)
-            //  nttDone = parse_ntt(pBuf, section_len, &ntt);
-            break;
-        case 0xc4:
-            printf(" Short-form Virtual Channel Table\n");
-            //if(!svctDone)
-            //  svctDone = parse_svct(pBuf, section_len, &vcm_list, vctid, vct_lookup_index);
-            break;
-        case 0xc5:
-            printf(" System Time Table \n");
-            if (section_len >= 10) {
-                char buff[60];
-            time_t stt = ((pBuf[5]<<24) | (pBuf[6]<<16) | (pBuf[7]<<8) | pBuf[8]) + 315964800;
-            printf("Current Time : %s\n", ctime(&stt));
-            struct tm * timeinfo;
-            timeinfo =  localtime (&stt);
-            strftime(buff, 60, "%Y-%m-%d %H:%M:%S", timeinfo);
-            printf("System Time Table thinks it is %s\n", buff);
-
-            char setdate[60];
-            sprintf(setdate,"date -s '%s'", buff);
-            system( setdate);
-            printf("System Date Set Successfully\n");
-            }
-            break;
-        default:
-            printf("Unknown section 0x%x len=%d\n", pBuf[0], len);
-            break;
-        }
-
-    }
     uint32_t DsgccClientImplementation::ClientCallbackService::Worker() {
         TRACE_L1("Starting ClientCallbackService::%s", __FUNCTION__);
         dsgClientCallbackSvcRun();

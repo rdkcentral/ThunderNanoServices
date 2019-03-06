@@ -148,8 +148,8 @@ namespace Plugin {
         Exchange::IDsgccClient* _implementation;
         Core::Sink<Notification> _notification;
     };
-} //namespace Plugin
 
-} //namespace Solution
+} //namespace Plugin
+} //namespace WPEFramework
 
 #endif // __DSGCCCLIENT_H

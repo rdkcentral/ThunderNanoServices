@@ -133,5 +133,6 @@ namespace Plugin {
                 PluginHost::IShell::FAILURE));
         }
     }
+
 }
 } //namespace WPEFramework::Plugin
