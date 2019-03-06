@@ -14,7 +14,7 @@ private:
 
     class Notification : 
         public PluginHost::IPlugin::INotification,
-        public PluginHost::VirtualInput::Notifier,
+        public PluginHost::VirtualInput::INotifier,
         public Exchange::IPower::INotification {
 
     private:
@@ -33,9 +33,11 @@ private:
         }
 
     public:
-        virtual void Dispatch(uint32_t& keyCode)
+        virtual void Dispatch(const PluginHost::VirtualInput::actiontype action, const uint32_t keyCode) override
         {
-            _parent.KeyEvent(keyCode);
+            if (action == PluginHost::VirtualInput::RELEASED) {
+                _parent.KeyEvent(keyCode);
+            }
         }
 
         virtual void StateChange(PluginHost::IShell* plugin)
@@ -159,8 +161,9 @@ public:
         : _adminLock()
         , _skipURL(0)
         , _pid(0)
-        , _power(nullptr)
         , _service(nullptr)
+        , _clients()
+        , _power(nullptr)
         , _sink(this)
     {
     }
