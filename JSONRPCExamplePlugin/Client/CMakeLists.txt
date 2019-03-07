@@ -1,25 +1,24 @@
-find_package(WPEFrameworkJSONRPC REQUIRED)
 
-add_executable(CompositorTest Test.cpp)
+find_package(jsonrpc REQUIRED)
 
-set_target_properties(CompositorTest PROPERTIES
+add_executable(jsonRPCExampleClient client.cpp)
+
+set_target_properties(jsonRPCExampleClient PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         )     
 
-target_link_libraries(JSONRPCTest
+target_link_libraries(jsonRPCExampleClient
     PRIVATE
-        WPE
+    jsonrpc::jsonrpc
         )
 
-target_include_directories(CompositorTest
+target_include_directories(jsonRPCExampleClient
     PRIVATE
-      ${EGL_INCLUDE_DIRS}
-      ${GLESV2_INCLUDE_DIRS})
+)
 
-target_compile_definitions(CompositorTest
+target_compile_definitions(jsonRPCExampleClient
     PRIVATE
-        ${EGL_DEFINITIONS}
-        ${GLESV2_DEFINITIONS})
+)
 
-install(TARGETS CompositorTest DESTINATION bin)
+install(TARGETS jsonRPCExampleClient DESTINATION bin)
