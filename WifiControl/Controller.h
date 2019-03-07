@@ -1177,8 +1177,7 @@ private:
 
         uint32_t slices (waitTime * 10);
 
-        CustomRequest exchange (string(_TXT("PING")));
-
+        bool status = false;
         do {
             if (BaseClass::IsOpen() == false) {
                 BaseClass::Close(100);
@@ -1194,14 +1193,13 @@ private:
             Submit(&exchange);
 
             if ((exchange.Wait(500) == true) && (exchange.Response() == _T("PONG"))) {
-                Revoke (&exchange);
-                break;
+                status = true;
             }
 
             Revoke (&exchange);
-        } while (slices != 0);
+        } while ((slices != 0) && (status == false));
 
-        return (exchange.Response() == _T("PONG"));
+        return status;
     }
 
     inline bool Exists(const string& SSID) const {
@@ -1375,7 +1373,6 @@ private:
                 // These elements are not returned upon request, Save them ourselves.
                 index->second.Secret(value);
             }
-
 
             Revoke (&exchange);
         }
