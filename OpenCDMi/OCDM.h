@@ -105,11 +105,10 @@ namespace Plugin {
                 inline void Load(RPC::IStringIterator* entries) {
                     Designators.Clear();
                     TRACE_L1("Adding Designators: %d", __LINE__);
-                    while (entries->Next() == true) {
-                        Core::JSON::String entry;
-                        entry = entries->Current();
-                        TRACE_L1("Designator: %s", entries->Current().c_str());
-                        Designators.Add(entry);
+                    string entry;
+                    while (entries->Next(entry) == true) {
+                        TRACE_L1("Designator: %s", entry.c_str());
+                        Designators.Add(Core::JSON::String(entry));
                     }
                 }
             };

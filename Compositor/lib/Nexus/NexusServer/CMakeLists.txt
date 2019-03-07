@@ -15,16 +15,13 @@ option(NEXUS_SERVER_EXTERNAL "Enable hooking up to an eternally running NxServer
 
 message("Setup ${TARGET} v${VERSION}...")
 
-find_package(NEXUS REQUIRED)
-find_package(NXSERVER REQUIRED)
-find_package(NXCLIENT_LOCAL REQUIRED)
-
 find_package(${NAMESPACE}Core REQUIRED)
 
 add_library(${TARGET} STATIC
         NexusServer.cpp)
 
 if (NEXUS_SERVER_EXTERNAL)
+    find_package(NXCLIENT REQUIRED)
     target_link_libraries(${TARGET}
         PRIVATE
             ${NAMESPACE}Core::${NAMESPACE}Core
@@ -35,6 +32,8 @@ if (NEXUS_SERVER_EXTERNAL)
             NEXUS_SERVER_EXTERNAL)
 else()
     find_package(NXSERVER REQUIRED)
+    find_package(NEXUS REQUIRED)
+    find_package(NXCLIENT_LOCAL REQUIRED)
     target_link_libraries(${TARGET}
         PRIVATE
             ${NAMESPACE}Core::${NAMESPACE}Core

@@ -6,6 +6,7 @@ find_package(EGL REQUIRED)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}VirtualInput REQUIRED)
 find_package(${NAMESPACE}Interfaces REQUIRED)
+find_package(NXCLIENT REQUIRED)
 
 add_library(${TARGET} SHARED Implementation.cpp)
 
@@ -14,6 +15,7 @@ target_link_libraries(${TARGET}
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}VirtualInput::${NAMESPACE}VirtualInput
         ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces
+        NXCLIENT::NXCLIENT
         ${EGL_LIBRARIES}
         )
 

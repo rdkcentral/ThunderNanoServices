@@ -321,14 +321,14 @@ namespace Plugin {
         ASSERT(client != nullptr);
 
         TRACE(Trace::Information, (_T("Client detached starting")));
-        Exchange::IComposition::IClient* removedclient;
+//        Exchange::IComposition::IClient* removedclient;
 
         _adminLock.Lock();
         auto it = _clients.begin();
         while( it != _clients.end() ) {
             if( it->second == client )
             {
-                removedclient = it->second;
+//                removedclient = it->second;
                 TRACE(Trace::Information, (_T("Client %s detached"), it->first));
                 _clients.erase(it);
                 break;
@@ -351,7 +351,7 @@ namespace Plugin {
         uint32_t error = Core::ERROR_NONE;
 
         if (_composition != nullptr) {
-            Exchange::IComposition::IClient* client;
+            Exchange::IComposition::IClient* client = nullptr;
 
             _adminLock.Lock();
             auto it = _clients.find(callsign);
@@ -366,8 +366,10 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("Client %s not found in CallOnClientByCallsign."), callsign.c_str()));
             }
             _adminLock.Unlock();
-            std::forward<ClientOperation>(operation)(*client);
-            client->Release();
+            if (client != nullptr) {
+                std::forward<ClientOperation>(operation)(*client);
+                client->Release();
+            }
         }
         return error;
     }
@@ -468,9 +470,10 @@ namespace Plugin {
         ASSERT(iterator != nullptr)
 
         if(iterator != nullptr) {
-            while (iterator->Next() == true) {
+            string currentElement;
+            while (iterator->Next(currentElement) == true) {
                 Core::JSON::String& element(callsigns.Add());
-                element = iterator->Current();
+                element = currentElement;
             }
             iterator->Release();
         }

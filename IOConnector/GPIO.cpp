@@ -30,6 +30,9 @@ ENUM_CONVERSION_BEGIN(GPIO::Pin::pull_mode)
 
 ENUM_CONVERSION_END(GPIO::Pin::pull_mode)
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+
 namespace GPIO {
 
 // ----------------------------------------------------------------------------------------------------
@@ -62,7 +65,7 @@ Pin::Pin(const uint8_t pin, const bool activeLow)
               pin /= 10;
             } while ((pin > 0) && (index < static_cast<int>(sizeof(id) - 1)));
 
-            write(fd, &(id[sizeof(id) - index]), index);
+            (void) write(fd, &(id[sizeof(id) - index]), index);
             close(fd);
           }
 	}
@@ -93,7 +96,7 @@ Pin::Pin(const uint8_t pin, const bool activeLow)
             pin /= 10;
           } while ((pin > 0) && (index < static_cast<int>(sizeof(buffer) - 1)));
 
-          write(fd, &(buffer[sizeof(buffer) - index]), index);
+          (void) write(fd, &(buffer[sizeof(buffer) - index]), index);
           close(fd);
         }
       }
@@ -110,7 +113,7 @@ void Pin::Flush() {
         while (count-- != 0) {
 
             char buffer;
-            read(_descriptor, &buffer, 1);
+            (void) read(_descriptor, &buffer, 1);
         }
 
         lseek(_descriptor, 0, SEEK_SET);
@@ -163,8 +166,6 @@ void Pin::Trigger (const trigger_mode mode) {
 }
 
 bool Pin::HasChanged() const {
-    bool result = false;
-
     return (Get() != _lastValue);
 }
 
@@ -214,7 +215,7 @@ void Pin::Mode(const pin_mode mode) {
 
 	        if (fd > 0) {
 
-                    write(fd, textMode.Data(), strlen(textMode.Data()));
+                    (void) write(fd, textMode.Data(), strlen(textMode.Data()));
 	            close(fd);
                 }
             }
@@ -237,7 +238,7 @@ void Pin::Pull (const pull_mode mode) {
 
 	        if (fd > 0) {
 
-                    write(fd, textMode.Data(), strlen(textMode.Data()));
+                    (void) write(fd, textMode.Data(), strlen(textMode.Data()));
 	            close(fd);
                 }
             }
@@ -270,3 +271,5 @@ void Pin::Pull (const pull_mode mode) {
 }
 
 } } // namespace WPEFramework::Linux
+
+#pragma GCC diagnostic pop

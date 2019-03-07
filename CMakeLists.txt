@@ -32,6 +32,7 @@ option(PLUGIN_WEBSERVER "Include WebServer plugin" OFF)
 option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_TVCONTROL "Include TVControl plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
+option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
@@ -162,4 +163,8 @@ endif()
 
 if(PLUGIN_DSGCCCLIENT)
     add_subdirectory(DsgccClient)
+endif()
+
+if(PLUGIN_TESTCONTROLLER)
+    add_subdirectory(TestController)
 endif()

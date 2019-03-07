@@ -28,16 +28,7 @@ namespace Plugin {
         _service = service;
         _skipURL = _service->WebPrefix().length();
 
-        bool outOfProcess (config.OutOfProcess.Value() == true);
-
         config.FromString(_service->ConfigLine());
-
-	if (EnvironmentOverride(config.EnvironmentOverride.Value())) {
-            string value;
-            if (Core::SystemInfo::GetEnvironment(_T("WPE_WEBKIT_OUT_OF_PROCESS"), value) == true) {
-                outOfProcess = ((value.length() == 1) && (value[0] == '1')) || (((value.length() == 1) || (value.length() == 4)) && (toupper(value[0]) == 'T'));
-            }
-        }
 
         // Register the Process::Notification stuff. The Remote process might die before we get a
         // change to "register" the sink for these events !!! So do it ahead of instantiation.

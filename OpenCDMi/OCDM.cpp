@@ -188,8 +188,9 @@ namespace Plugin {
                     TRACE_L1("Could not load the Systems. %d", __LINE__);
                 }
                 else {
-                    while (systems->Next() == true) {
-                        RPC::IStringIterator* index (_opencdmi->Designators(systems->Current()));
+                    string element;
+                    while (systems->Next(element) == true) {
+                        RPC::IStringIterator* index (_opencdmi->Designators(element));
                         if (index == nullptr) {
                             TRACE_L1("Could not load the Designators. %d", __LINE__);
                         }
