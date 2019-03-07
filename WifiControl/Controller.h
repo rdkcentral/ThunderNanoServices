@@ -1177,8 +1177,7 @@ private:
 
         uint32_t slices (waitTime * 10);
 
-        CustomRequest exchange (string(_TXT("PING")));
-
+        bool status = false;
         do {
             if (BaseClass::IsOpen() == false) {
                 BaseClass::Close(100);
@@ -1190,14 +1189,17 @@ private:
 
             slices -= (slices > 5 ? 5 : slices);
 
+            CustomRequest exchange (string(_TXT("PING")));
             Submit(&exchange);
 
+            if ((exchange.Wait(500) == true) && (exchange.Response() == _T("PONG"))) {
+                status = true;
+            }
 
-	} while ( (slices != 0) && ((exchange.Wait(500) == false) || (exchange.Response() != _T("PONG"))) );
+            Revoke (&exchange);
+        } while ((slices != 0) && (status == false));
 
-        Revoke (&exchange);
-
-        return (exchange.Response() == _T("PONG"));
+        return status;
     }
 
     inline bool Exists(const string& SSID) const {
@@ -1372,7 +1374,6 @@ private:
                 index->second.Secret(value);
             }
 
-
             Revoke (&exchange);
         }
         else {
@@ -1476,7 +1477,9 @@ private:
 
     void Submit(Request* data) const {
 
-         _adminLock.Lock();
+        _adminLock.Lock();
+
+        ASSERT(std::find(_requests.begin(), _requests.end(), data) == _requests.end());
 
         _requests.push_back(data);
 

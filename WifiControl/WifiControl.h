@@ -95,6 +95,7 @@ namespace Plugin {
             }
             inline void Terminate() {
                 _process.Kill(false);
+                _process.WaitProcessCompleted(1000);
             }
 
         private:
