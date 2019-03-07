@@ -1477,12 +1477,11 @@ private:
 
     void Submit(Request* data) const {
 
-         _adminLock.Lock();
+        _adminLock.Lock();
 
-        std::list<Request*>::iterator index (std::find(_requests.begin(), _requests.end(), data));
-        if (index == _requests.end()) {
-            _requests.push_back(data);
-        }
+        ASSERT(std::find(_requests.begin(), _requests.end(), data) == _requests.end());
+
+        _requests.push_back(data);
 
         if (_requests.size() == 1) {
             _adminLock.Unlock();
