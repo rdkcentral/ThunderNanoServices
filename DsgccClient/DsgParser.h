@@ -5,6 +5,7 @@
 
 namespace WPEFramework {
 namespace Plugin {
+//namespace Dsg {
 
 struct revdesc {
   unsigned char valid;
@@ -115,21 +116,25 @@ public:
     }
 
 public:
-    Core::JSON::String ChannelNumber;
-    Core::JSON::String CallNumber;
-    Core::JSON::String Freq;
-    Core::JSON::String ProgramNumber;
-    Core::JSON::String Modulation;
+    Core::JSON::DecUInt16 ChannelNumber;
+    Core::JSON::DecUInt16 CallNumber;
+    Core::JSON::DecUInt16 Freq;
+    Core::JSON::DecUInt16 ProgramNumber;
+    Core::JSON::DecUInt16 Modulation;
     Core::JSON::String ChuId;
-    Core::JSON::String SourceId;
+    Core::JSON::DecUInt32 SourceId;
     Core::JSON::String Description;
 };
 
 
 class DsgParser {
 public:
-    DsgParser(int vctId)
-        : _vctId(vctId) {
+    DsgParser(int vctId) {
+        SetVctId(vctId);
+    }
+
+    void SetVctId(int vctId) {
+        _vctId = vctId;
         TRACE_L1("VctId=%d", _vctId);
     }
 
@@ -172,6 +177,7 @@ private:
     bool allDone  = false;
 };
 
+//} // Dsg
 } // namespace Plugin
 } // namespace WPEFramework
 

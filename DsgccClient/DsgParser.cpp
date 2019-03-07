@@ -19,6 +19,7 @@ using namespace std;
 
 namespace WPEFramework {
 namespace Plugin {
+//namespace Dsg {
 
 static const char* scte_modfmt_table[] = {
   "UNKNOWN",
@@ -108,6 +109,7 @@ void DsgParser::parse(unsigned char *pBuf, ssize_t len)
 
         TRACE_L2("cdsDone=%d mmsDone=%d nitDone=%d nttDone=%d svctDone=%d", cdsDone, mmsDone, nitDone, nttDone, svctDone);
         if (allDone) {
+            // XXX: Notify
             TRACE_L1("All Done, Generating channel map");
             channels = output_txt(&cds, &mms, &ntt, vcm_list);
 
@@ -129,7 +131,7 @@ void DsgParser::parse(unsigned char *pBuf, ssize_t len)
             }
         }
     } else {
-        TRACE_L1("bad section length (expect %d, got %d)", len-3, section_len);
+        TRACE_L2("bad section length (expect %d, got %d)", len-3, section_len);
     }
 }
 
@@ -475,24 +477,22 @@ string DsgParser::output_txt(struct cds_table *cds, struct mms_table *mms, struc
         int callNumber = 1;
         for (vc_rec = vcm->vc_list; vc_rec != NULL; vc_rec=vc_rec->next) {
             Channel channel;
-            channel.ChannelNumber = to_string(vc_rec->vc); // to_string()
-            channel.CallNumber = to_string(callNumber);
+            channel.ChannelNumber = (uint16_t) vc_rec->vc;
+            channel.CallNumber = (uint16_t) callNumber;
 
             int cdsValue = 0;
             if (cds->written[vc_rec->cds_ref])
                 cdsValue = cds->cd[vc_rec->cds_ref]/1000000;
-            channel.Freq = to_string(cdsValue);
+            channel.Freq = (uint16_t) cdsValue;
 
-            channel.ProgramNumber = to_string(vc_rec->prognum);
+            channel.ProgramNumber = (uint16_t) vc_rec->prognum;
 
             stringstream chusId;
-            for (int i=0; i<vc_rec->desc_cnt; i++)
-                  chusId << std::hex << vc_rec->chusId[i];
+            //for (int i=0; i<vc_rec->desc_cnt; i++)
+            //      chusId << std::hex << vc_rec->chusId[i];
             channel.ChuId = chusId.str();
 
-            stringstream srcId;
-            srcId << std::hex << vc_rec->id;
-            channel.SourceId = srcId.str();
+            channel.SourceId = (uint32_t) vc_rec->id;
 
             // Search NTT for Source ID match and Retrieve Source Name
             std::string sourceName = "Test Channel";
@@ -503,6 +503,9 @@ string DsgParser::output_txt(struct cds_table *cds, struct mms_table *mms, struc
                 sourceName = string(sn_rec->segment);
 
             channel.Description = sourceName;
+
+            //  0: vcn 0000;  source_id 0x0002;  name ;  descriptors 0; freq 111000000Hz;  mod 16;  pn 128;
+            //TRACE_L1("%d: vcn %d;  source_id %04x;  name %s;  freq %d;  mod %d; pn %d;", callNumber, vc_rec->vc, vc_rec->id, sourceName.c_str(), cdsValue, 16, vc_rec->prognum);
 
             channelMap.Add(channel);
 
@@ -589,6 +592,6 @@ void DsgParser::HexDump(const char* label, const std::string& msg, uint16_t char
     TRACE_L4("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
 }
 
-
+//} // DSG
 } // namespace Plugin
 } // namespace WPEFramework

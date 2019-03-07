@@ -49,7 +49,7 @@ namespace Plugin {
             Activity(DsgccClientImplementation::Config &config)
                 : Core::Thread(Core::Thread::DefaultStackSize(), _T("DsgccClient"))
                 , _config(config)
-                , _isRunning(true) {
+                , _vctId(0) {
             }
             virtual ~Activity() {
             }
@@ -58,7 +58,16 @@ namespace Plugin {
                 return _channels;
             }
 
-        public:
+            void End() {
+                _isRunning = false;
+                TRACE_L1("Waiting for Thread to Stop. state=%d", Core::Thread::State());
+                Core::Thread::Wait (Core::Thread::STOPPED, Core::infinite);
+                TRACE_L1("Thread to Stopped. state=%d", Core::Thread::State());
+            }
+
+            void SetVctId(int vctId) {
+                _vctId = vctId;
+            }
             void Dispose() {
                 TRACE_L1("%s: Done!!! ", __FUNCTION__);
             }
@@ -67,6 +76,7 @@ namespace Plugin {
             DsgccClientImplementation::Config &_config;
             bool _isRunning;
             string _channels;
+            int _vctId;
 
             virtual uint32_t Worker() override;
             void Setup(unsigned int port, unsigned int dsgType, unsigned int dsgId);
@@ -107,7 +117,7 @@ namespace Plugin {
 
         uint32_t Configure(PluginHost::IShell* service);
         void DsgccClientSet(const string& str);
-        string GetChannels() const;
+        string DsgccClientGet() const;
 
         BEGIN_INTERFACE_MAP(DsgccClientImplementation)
         INTERFACE_ENTRY(Exchange::IDsgccClient)

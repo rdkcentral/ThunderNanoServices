@@ -93,9 +93,10 @@ namespace Plugin {
             result->ErrorCode = Web::STATUS_OK;
             result->Message = "OK";
 
-            if (index.Current().Text() == _T("Test")) {
+            if (index.Current().Text() == _T("GetChannels")) {
                 Core::ProxyType<Web::JSONBodyType<Data> > data (jsonDataFactory.Element());
-                data->Str = _implementation->DsgccClientGet();
+                string strChannels = _implementation->GetChannels();
+                data->Channels.FromString(strChannels, data->Channels);
                 result->ContentType = Web::MIMETypes::MIME_JSON;
                 result->Body(data);
             } else {

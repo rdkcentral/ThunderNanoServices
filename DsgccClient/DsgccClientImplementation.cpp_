@@ -32,18 +32,22 @@ namespace Plugin {
         ASSERT(service != nullptr);
 
         _config.FromString(service->ConfigLine());
-
+        _worker.SetVctId(_config.VctId);
         _worker.Run();
         //_dsgCallback.Run();
 
         return (result);
     }
 
+
     void DsgccClientImplementation::DsgccClientSet(const string& str)
     {
+        _worker.End();
+        _worker.SetVctId(atoi(str.c_str()));
+        _worker.Run();
         this->str = str;
     }
-    string DsgccClientImplementation::GetChannels() const
+    string DsgccClientImplementation::DsgccClientGet() const
     {
         TRACE_L1("Entering %s", __FUNCTION__);
         return (_worker.getChannels());
@@ -53,7 +57,7 @@ namespace Plugin {
         TRACE_L1("Entering %s state=%d", __PRETTY_FUNCTION__, Core::Thread::State());
         Setup(_config.DsgPort, _config.DsgType, _config.DsgId);
 
-        Stop();                         // XXX:
+        Stop();                      // XXX:
 
         TRACE_L1("Exiting %s state=%d", __PRETTY_FUNCTION__, Core::Thread::State());
         return (Core::infinite);
@@ -100,11 +104,13 @@ namespace Plugin {
             TRACE_L1("tunnel status %s", TunnelStatusTypeName(retVal));
         }
 
-        DsgParser _parser(_config.VctId);
+        DsgParser _parser(_vctId);
+        _isRunning = true;
         while ( _isRunning ) {
             len = BcmSharedMemoryRead(sharedMemoryId, msg, 0);
             if (len > 0) {
                 if (len >= _config.DsgHeaderSize) {
+                    _parser.HexDump("DSG", string(msg, len));
                     char *pBuf = &msg[_config.DsgHeaderSize];
                     len -= _config.DsgHeaderSize;
 
