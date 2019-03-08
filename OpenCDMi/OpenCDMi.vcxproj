@@ -14,7 +14,7 @@
     <ProjectGuid>{F3E438C4-C127-4F85-B22C-FC44F9E65B2F}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>OpenCDMi</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

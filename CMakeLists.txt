@@ -33,6 +33,7 @@ option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_TVCONTROL "Include TVControl plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
+option(PLUGIN_JSONRPCEXAMPLEPLUGIN "Include JSONRPCExamplePlugin plugin" ON)
 
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
@@ -167,4 +168,8 @@ endif()
 
 if(PLUGIN_TESTCONTROLLER)
     add_subdirectory(TestController)
+endif()
+
+if(PLUGIN_JSONRPCEXAMPLEPLUGIN)
+    add_subdirectory(JSONRPCExamplePlugin)
 endif()
