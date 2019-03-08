@@ -319,7 +319,7 @@ namespace WPEFramework {
 					uint16_t _information;
 					uint16_t _length;
 					state _state;
-					uint8_t _traceBuffer[1030];
+					uint8_t _traceBuffer[TRACE_CYCLIC_BUFFER_SIZE];
 					static LocalIterator _localIterator;
 				};
 
