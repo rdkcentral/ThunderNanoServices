@@ -492,6 +492,16 @@ string DsgParser::output_txt(struct cds_table *cds, struct mms_table *mms, struc
             //      chusId << std::hex << vc_rec->chusId[i];
             channel.ChuId = chusId.str();
 
+            const char* mm = "";
+            if (mms->written[vc_rec->mms_ref])
+                mm = mms->mm[vc_rec->mms_ref].modulation_fmt;
+
+            string modulationMode = std::string(mm);
+            if(modulationMode.compare("QAM_64") == 0)
+                 channel.Modulation = 8;
+            else if(modulationMode.compare("QAM_256") == 0)
+                channel.Modulation = 16;
+
             channel.SourceId = (uint32_t) vc_rec->id;
 
             // Search NTT for Source ID match and Retrieve Source Name
