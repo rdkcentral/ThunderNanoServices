@@ -24,6 +24,7 @@ option(PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
 option(PLUGIN_STREAMER "Include Streamer plugin" OFF)
 option(PLUGIN_SNAPSHOT "Include Snapshot plugin" OFF)
 option(PLUGIN_SYSTEMCOMMANDS "Include SystemCommands plugin" OFF)
+option(PLUGIN_TESTUTILITY "Include TestUtility plugin" OFF)
 option(PLUGIN_TIMESYNC "Include TimeSync plugin" OFF)
 option(PLUGIN_TRACECONTROL "Include TraceControl plugin" OFF)
 option(PLUGIN_WEBKITBROWSER "Include WebKitBrowser plugin" OFF)
@@ -124,6 +125,10 @@ endif()
 
 if(PLUGIN_SYSTEMDCONNECTOR)
     add_subdirectory(SystemdConnector)
+endif()
+
+if(PLUGIN_TESTUTILITY)
+    add_subdirectory(TestUtility)
 endif()
 
 if(PLUGIN_TIMESYNC)
