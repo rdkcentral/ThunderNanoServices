@@ -15,9 +15,9 @@ public:
 
     Crash()
         : TestCommandBase(
-            TestCommandBase::DescriptionBuilder(_T("Cause segmenation fault resulting in crash")),
-            TestCommandBase::SignatureBuilder(Parameter())
-                .InputParameter(Parameter("crashDelay", Parameter::JSType::NUMBER, "delay in ms before actual crash")))
+              TestCommandBase::DescriptionBuilder(_T("Cause segmenation fault resulting in crash")),
+              TestCommandBase::SignatureBuilder(Parameter())
+                  .InputParameter(Parameter("crashDelay", Parameter::JSType::NUMBER, "delay in ms before actual crash")))
         , _crashCore(CrashCore::Instance())
         , _name(_T("Crash"))
     {
@@ -56,8 +56,7 @@ public:
         uint8_t crashDelay = CrashCore::DefaultCrashDelay;
         string responseString = _T("");
 
-        if (input.FromString(params))
-        {
+        if (input.FromString(params)) {
             crashDelay = input.CrashDelay;
         }
 

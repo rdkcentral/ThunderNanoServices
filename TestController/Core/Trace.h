@@ -3,7 +3,7 @@
 namespace WPEFramework {
 namespace TestCore {
 
-class TestStart {
+    class TestStart {
     public:
         TestStart() = delete;
         TestStart(const TestStart& a_Copy) = delete;
@@ -30,7 +30,7 @@ class TestStart {
         std::string _text;
     };
 
-class TestEnd {
+    class TestEnd {
     private:
         TestEnd() = delete;
         TestEnd(const TestEnd& a_Copy) = delete;
@@ -56,9 +56,9 @@ class TestEnd {
 
     private:
         std::string _text;
-};
+    };
 
-class TestStep {
+    class TestStep {
     private:
         TestStep() = delete;
         TestStep(const TestStep& a_Copy) = delete;
@@ -84,7 +84,7 @@ class TestStep {
 
     private:
         std::string _text;
-};
+    };
 
 } // namespace TestCore
 } // namespace WPEFramework

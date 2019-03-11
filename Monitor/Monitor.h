@@ -19,7 +19,8 @@ namespace Plugin {
         struct RestartSettings : public Core::JSON::Container {
             RestartSettings& operator=(const RestartSettings& other) = delete;
 
-            RestartSettings() : Core::JSON::Container()
+            RestartSettings()
+                : Core::JSON::Container()
             {
                 Add(_T("limit"), &Limit);
                 Add(_T("windowseconds"), &WindowSeconds);
@@ -459,7 +460,7 @@ namespace Plugin {
 
             public:
                 MonitorObject(const bool actOnOperational, const uint32_t operationalInterval, const uint32_t memoryInterval, const uint64_t memoryThreshold, const uint64_t absTime,
-                              const RestartSettings& operationalRestartSettings, const RestartSettings& memoryRestartSettings)
+                    const RestartSettings& operationalRestartSettings, const RestartSettings& memoryRestartSettings)
                     : _operationalInterval(operationalInterval)
                     , _memoryInterval(memoryInterval)
                     , _memoryThreshold(memoryThreshold * 1024)
@@ -554,17 +555,13 @@ namespace Plugin {
                 {
                     ASSERT(why == PluginHost::IShell::MEMORY_EXCEEDED || why == PluginHost::IShell::FAILURE);
                     ASSERT(HasRestartAllowed());
-                    return why == PluginHost::IShell::MEMORY_EXCEEDED ?
-                           _memoryRestartSettings.Limit :
-                           _operationalRestartSettings.Limit;
+                    return why == PluginHost::IShell::MEMORY_EXCEEDED ? _memoryRestartSettings.Limit : _operationalRestartSettings.Limit;
                 }
                 inline uint32_t RestartWindow(PluginHost::IShell::reason why)
                 {
                     ASSERT(why == PluginHost::IShell::MEMORY_EXCEEDED || why == PluginHost::IShell::FAILURE);
                     ASSERT(HasRestartAllowed());
-                    return why == PluginHost::IShell::MEMORY_EXCEEDED ?
-                           _memoryRestartSettings.WindowSeconds :
-                           _operationalRestartSettings.WindowSeconds;
+                    return why == PluginHost::IShell::MEMORY_EXCEEDED ? _memoryRestartSettings.WindowSeconds : _operationalRestartSettings.WindowSeconds;
                 }
                 inline void UpdateRestartLimits(const RestartSettings& operational, const RestartSettings& memory)
                 {
@@ -684,7 +681,7 @@ namespace Plugin {
                 return (_monitor.size());
             }
             inline void Update(string observable, const MonitorObject::RestartSettings& operational,
-                               const MonitorObject::RestartSettings& memory)
+                const MonitorObject::RestartSettings& memory)
             {
                 std::map<string, MonitorObject>::iterator index(_monitor.begin());
 
@@ -711,19 +708,16 @@ namespace Plugin {
                     uint64_t memoryThreshold(element.MetaDataLimit.Value());
                     uint32_t interval = abs(element.Operational.Value());
                     interval = interval * 1000 * 1000; // Move from Seconds to MicroSecond
-                    uint32_t memory(element.MetaData.Value() * 1000 * 1000);        // Move from Seconds to MicroSeconds
+                    uint32_t memory(element.MetaData.Value() * 1000 * 1000); // Move from Seconds to MicroSeconds
                     MonitorObject::RestartSettings operationalRestartSettings;
                     operationalRestartSettings.Limit = element.OperationalRestartSettings.Limit.Value();
                     operationalRestartSettings.WindowSeconds = element.OperationalRestartSettings.WindowSeconds.Value();
                     MonitorObject::RestartSettings memoryRestartSettings;
                     memoryRestartSettings.Limit = element.MemoryRestartSettings.Limit.Value();
                     memoryRestartSettings.WindowSeconds = element.MemoryRestartSettings.WindowSeconds.Value();
-                    if ( (interval != 0) || (memory != 0) ) {
+                    if ((interval != 0) || (memory != 0)) {
                         _monitor.insert(
-                            std::pair<string, MonitorObject>(callSign, MonitorObject(element.Operational.Value() >= 0,
-                                                                                     interval, memory, memoryThreshold,
-                                                                                     baseTime, operationalRestartSettings,
-                                                                                     memoryRestartSettings)));
+                            std::pair<string, MonitorObject>(callSign, MonitorObject(element.Operational.Value() >= 0, interval, memory, memoryThreshold, baseTime, operationalRestartSettings, memoryRestartSettings)));
                     }
                 }
 
@@ -768,12 +762,10 @@ namespace Plugin {
 
                         const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Activate\", \"reason\": \"Automatic\" }");
                         _service->Notify(message);
-                      
+
                         if (index->second.RegisterRestart(service->Reason()) == false) {
-                            TRACE(Trace::Error, (_T("Giving up restarting of %s: Failed more than %d times within %d seconds.\n"), service->Callsign().c_str(),
-                                                 index->second.RestartLimit(service->Reason()), index->second.RestartWindow(service->Reason())));
-                            const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Restart\", \"reason\":\"" +
-                                                 (std::to_string(index->second.RestartLimit(service->Reason()))).c_str() + " Attempts Failed within the restart window\"}");
+                            TRACE(Trace::Error, (_T("Giving up restarting of %s: Failed more than %d times within %d seconds.\n"), service->Callsign().c_str(), index->second.RestartLimit(service->Reason()), index->second.RestartWindow(service->Reason())));
+                            const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Restart\", \"reason\":\"" + (std::to_string(index->second.RestartLimit(service->Reason()))).c_str() + " Attempts Failed within the restart window\"}");
                             _service->Notify(message);
                         } else {
                             TRACE(Trace::Information, (_T("Restarting %s again because we detected it misbehaved.\n"), service->Callsign().c_str()));

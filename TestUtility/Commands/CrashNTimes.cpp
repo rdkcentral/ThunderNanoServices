@@ -58,17 +58,13 @@ public:
         string responseString = _T("");
         uint8_t crashCount = 0;
 
-        if (input.FromString(params))
-        {
+        if (input.FromString(params)) {
             crashCount = input.CrashCount;
         }
 
-        if (crashCount > 0)
-        {
+        if (crashCount > 0) {
             responseString = _crashCore.CrashNTimes(crashCount);
-        }
-        else
-        {
+        } else {
             responseString = _T("crashCount must be greater than 0");
         }
 

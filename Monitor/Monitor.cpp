@@ -111,12 +111,9 @@ namespace Plugin {
             MonitorObjects::MonitorObject::RestartSettings memoryRestartSettings;
             memoryRestartSettings.Limit = body->MemoryRestartSettings.Limit.Value();
             memoryRestartSettings.WindowSeconds = body->MemoryRestartSettings.WindowSeconds.Value();
-            TRACE(Trace::Information,(_T("Sets Restart Limits: MEMORY:[LIMIT:%d, WINDOW:%d], OPERATIONAL:[LIMIT:%d, WINDOW:%d]"),
-                                      memoryRestartSettings.Limit, memoryRestartSettings.WindowSeconds,
-                                      operationalRestartSettings.Limit, operationalRestartSettings.WindowSeconds));
+            TRACE(Trace::Information, (_T("Sets Restart Limits: MEMORY:[LIMIT:%d, WINDOW:%d], OPERATIONAL:[LIMIT:%d, WINDOW:%d]"), memoryRestartSettings.Limit, memoryRestartSettings.WindowSeconds, operationalRestartSettings.Limit, operationalRestartSettings.WindowSeconds));
             _monitor->Update(observable, operationalRestartSettings, memoryRestartSettings);
-        }
-        else {
+        } else {
             result->ErrorCode = Web::STATUS_BAD_REQUEST;
             result->Message = _T(" could not handle your request.");
         }

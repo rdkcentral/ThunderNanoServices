@@ -2,20 +2,21 @@
 
 #include "../Module.h"
 
-#include <interfaces/ITestController.h>
 #include "../Core/TestAdministrator.h"
 #include "../Core/TestCategoryBase.h"
+#include <interfaces/ITestController.h>
 
 namespace WPEFramework {
 namespace TestCore {
 
-class TestCategory2 : TestCore::TestCategoryBase {
+    class TestCategory2 : TestCore::TestCategoryBase {
     protected:
         TestCategory2()
             : TestCategoryBase()
         {
             TestCore::TestAdministrator::Instance().Announce(this);
         }
+
     public:
         TestCategory2(const TestCategory2&) = delete;
         TestCategory2& operator=(const TestCategory2&) = delete;
@@ -33,22 +34,20 @@ class TestCategory2 : TestCore::TestCategoryBase {
             return _name;
         };
 
-        void Setup() override
-        {
+        void Setup() override{
             /*ToDo: Implement Setup for selected category */
         };
 
-        void TearDown() override
-        {
+        void TearDown() override{
             /*ToDo: Implement TearDown for selected category */
         };
 
         BEGIN_INTERFACE_MAP(TestCategory2)
-            INTERFACE_ENTRY(Exchange::ITestController::ICategory)
+        INTERFACE_ENTRY(Exchange::ITestController::ICategory)
         END_INTERFACE_MAP
 
     private:
         const string _name = _T("TestCategory2");
-};
+    };
 } // namespace TestCore
 } // namespace WPEFramework

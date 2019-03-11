@@ -3,7 +3,7 @@
 namespace WPEFramework {
 namespace TestCore {
 
-class TestLifeCycle {
+    class TestLifeCycle {
     public:
         TestLifeCycle() = delete;
         TestLifeCycle(const TestLifeCycle& a_Copy) = delete;
@@ -57,7 +57,7 @@ class TestLifeCycle {
 
     private:
         std::string _text;
-};
+    };
 
 } // namespace TestCore
 } // namespace WPEFramework

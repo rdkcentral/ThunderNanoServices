@@ -65,9 +65,9 @@ namespace Plugin {
 
         // Define a handler for incoming JSONRPC messages. This method does not take any
         // parameters, it just returns the current time of this server, if it is called.
-        uint32_t time(const string& /* parameters */, string& response)
+        uint32_t time(const Core::JSON::String& /* parameters */, Core::JSON::String& response)
         {
-            response = '\"' + Core::Time::Now().ToRFC1123() + '\"';
+            response = Core::Time::Now().ToRFC1123();
             return (Core::ERROR_NONE);
         }
 

@@ -71,18 +71,12 @@ public:
         string response = EMPTY_STRING;
 
         uint8_t pendingCrashCount = PendingCrashCount();
-        if (pendingCrashCount != 0)
-        {
+        if (pendingCrashCount != 0) {
             response = _T("Pending crash already in progress");
-        }
-        else
-        {
-            if (!SetPendingCrashCount(crashCount))
-            {
+        } else {
+            if (!SetPendingCrashCount(crashCount)) {
                 response = _T("Failed to set new pending crash count");
-            }
-            else
-            {
+            } else {
                 ExecPendingCrash();
             }
         }
@@ -94,21 +88,15 @@ public:
     {
         string response = _T("");
         uint8_t pendingCrashCount = PendingCrashCount();
-        if (pendingCrashCount > 0)
-        {
+        if (pendingCrashCount > 0) {
             pendingCrashCount--;
-            if (SetPendingCrashCount(pendingCrashCount))
-            {
+            if (SetPendingCrashCount(pendingCrashCount)) {
                 response = Crash(DefaultCrashDelay);
-            }
-            else
-            {
+            } else {
                 response = _T("Failed to set new pending crash count");
                 TRACE(TestCore::TestOutput, ("%s", response.c_str()));
             }
-        }
-        else
-        {
+        } else {
             response = _T("No pending crash");
             TRACE(TestCore::TestOutput, ("%s", response.c_str()));
         }
@@ -122,8 +110,7 @@ public:
         ErrorRes responseJSON;
         string responseString = _T("");
 
-        if (!message.empty())
-        {
+        if (!message.empty()) {
             responseJSON.ErrorMsg = message;
             responseJSON.ToString(responseString);
         }
@@ -139,17 +126,13 @@ private:
 
         _lock.Lock();
         pendingCrashFile.open(PendingCrashFilepath, std::fstream::binary);
-        if (pendingCrashFile.is_open())
-        {
+        if (pendingCrashFile.is_open()) {
             uint8_t readVal = 0;
 
             pendingCrashFile >> readVal;
-            if (pendingCrashFile.good())
-            {
+            if (pendingCrashFile.good()) {
                 pendingCrashCount = readVal;
-            }
-            else
-            {
+            } else {
                 TRACE(TestCore::TestOutput, (_T("Failed to read value from pendingCrashFile")));
             }
         }
@@ -165,16 +148,12 @@ private:
 
         _lock.Lock();
         pendingCrashFile.open(PendingCrashFilepath, std::fstream::binary | std::fstream::trunc);
-        if (pendingCrashFile.is_open())
-        {
+        if (pendingCrashFile.is_open()) {
             pendingCrashFile << newCrashCount;
 
-            if (pendingCrashFile.good())
-            {
+            if (pendingCrashFile.good()) {
                 status = true;
-            }
-            else
-            {
+            } else {
                 TRACE(TestCore::TestOutput, (_T("Failed to write value to pendingCrashFile ")));
             }
             pendingCrashFile.close();

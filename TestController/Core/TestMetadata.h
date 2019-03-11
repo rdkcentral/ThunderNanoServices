@@ -5,7 +5,7 @@
 namespace WPEFramework {
 namespace TestCore {
 
-class TestDescription : public Core::JSON::Container {
+    class TestDescription : public Core::JSON::Container {
     public:
         TestDescription(const TestDescription&) = delete;
         TestDescription& operator=(const TestDescription&) = delete;
@@ -23,45 +23,45 @@ class TestDescription : public Core::JSON::Container {
         Core::JSON::String Description;
     };
 
-class TestResult : public Core::JSON::Container {
+    class TestResult : public Core::JSON::Container {
     public:
         class TestStep : public Core::JSON::Container {
-            public:
-                TestStep()
-                    : Core::JSON::Container()
-                    , Description()
-                    , Status()
-                {
-                    Add(_T("testStep"), &Description);
-                    Add(_T("status"), &Status);
-                }
+        public:
+            TestStep()
+                : Core::JSON::Container()
+                , Description()
+                , Status()
+            {
+                Add(_T("testStep"), &Description);
+                Add(_T("status"), &Status);
+            }
 
-                TestStep(const TestStep& copy)
-                    : Core::JSON::Container()
-                    , Description()
-                    , Status()
-                {
-                    this->Description = copy.Description;
-                    this->Status = copy.Status;
+            TestStep(const TestStep& copy)
+                : Core::JSON::Container()
+                , Description()
+                , Status()
+            {
+                this->Description = copy.Description;
+                this->Status = copy.Status;
 
-                    Add(_T("testStep"), &Description);
-                    Add(_T("status"), &Status);
-                }
+                Add(_T("testStep"), &Description);
+                Add(_T("status"), &Status);
+            }
 
-                TestStep& operator=(const TestStep& rhs)
-                {
-                    this->Description = rhs.Description;
-                    this->Status = rhs.Status;
+            TestStep& operator=(const TestStep& rhs)
+            {
+                this->Description = rhs.Description;
+                this->Status = rhs.Status;
 
-                    return *this;
-                }
+                return *this;
+            }
 
-                ~TestStep() = default;
+            ~TestStep() = default;
 
-            public:
-                Core::JSON::String Description;
-                Core::JSON::String Status;
-            };
+        public:
+            Core::JSON::String Description;
+            Core::JSON::String Status;
+        };
 
     public:
         TestResult()
@@ -101,6 +101,6 @@ class TestResult : public Core::JSON::Container {
         Core::JSON::ArrayType<TestStep> Steps;
         Core::JSON::String OverallStatus;
         Core::JSON::String Name;
-};
+    };
 } // namespace TestCore
 } // namespace WPEFramework
