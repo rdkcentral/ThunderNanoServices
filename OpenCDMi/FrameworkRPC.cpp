@@ -483,26 +483,6 @@ namespace Plugin {
                     return _mediaKeySessionExt->GetSessionIdExt();
                 }
 
-                virtual uint16_t PlaylevelCompressedVideo() const override {
-                    return _mediaKeySessionExt->PlaylevelCompressedVideo();
-                }
-
-                virtual uint16_t PlaylevelUncompressedVideo() const override {
-                    return _mediaKeySessionExt->PlaylevelUncompressedVideo();
-                }
-
-                virtual uint16_t PlaylevelAnalogVideo() const override {
-                    return _mediaKeySessionExt->PlaylevelAnalogVideo();
-                }
-
-                virtual uint16_t PlaylevelCompressedAudio() const override {
-                    return _mediaKeySessionExt->PlaylevelCompressedAudio();
-                }
-
-                virtual uint16_t PlaylevelUncompressedAudio() const override {
-                    return _mediaKeySessionExt->PlaylevelUncompressedAudio();
-                }
-
                 virtual OCDM::OCDM_RESULT SetDrmHeader(const uint8_t drmHeader[], uint32_t drmHeaderLength) override {
                     return (OCDM::OCDM_RESULT)_mediaKeySessionExt->SetDrmHeader(drmHeader, drmHeaderLength);
                 }
