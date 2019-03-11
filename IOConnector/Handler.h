@@ -1,14 +1,14 @@
 #ifndef __HANDLER_H
 #define __HANDLER_H
 
-#include "Module.h"
 #include "GPIO.h"
+#include "Module.h"
 
 namespace WPEFramework {
 
 namespace Plugin {
 
-    struct IHandler{
+    struct IHandler {
         virtual ~IHandler() {}
         virtual void Trigger(GPIO::Pin& pin) = 0;
     };
@@ -21,37 +21,45 @@ namespace Plugin {
         };
 
         HandlerAdministrator(const HandlerAdministrator&) = delete;
-        HandlerAdministrator& operator= (const HandlerAdministrator&) = delete;
+        HandlerAdministrator& operator=(const HandlerAdministrator&) = delete;
 
-        HandlerAdministrator() : _factories() {
+        HandlerAdministrator()
+            : _factories()
+        {
         }
 
     public:
-        template<typename HANDLER>
+        template <typename HANDLER>
         class Entry : public HandlerAdministrator::IFactory {
         private:
             Entry(const Entry<HANDLER>&);
             Entry<HANDLER>& operator&(const Entry<HANDLER>&);
 
         public:
-            Entry() {
-                HandlerAdministrator::Instance().Announce (Core::ClassNameOnly(typeid(HANDLER).name()).Text(), this);
+            Entry()
+            {
+                HandlerAdministrator::Instance().Announce(Core::ClassNameOnly(typeid(HANDLER).name()).Text(), this);
             }
-            virtual ~Entry() {
+            virtual ~Entry()
+            {
             }
-            virtual IHandler* Factory(PluginHost::IShell* service, const string& configuration) override {
+            virtual IHandler* Factory(PluginHost::IShell* service, const string& configuration) override
+            {
                 return (new HANDLER(service, configuration));
             }
         };
- 
-        static HandlerAdministrator& Instance() {
-            return(_administrator);
+
+        static HandlerAdministrator& Instance()
+        {
+            return (_administrator);
         }
-        ~HandlerAdministrator() {
+        ~HandlerAdministrator()
+        {
         }
 
     public:
-       IHandler* Handler(const string& name, PluginHost::IShell* service, const string& configuration) {
+        IHandler* Handler(const string& name, PluginHost::IShell* service, const string& configuration)
+        {
             IHandler* result = nullptr;
             std::map<const string, IFactory*>::iterator index = _factories.find(name);
             if (index != _factories.end()) {
@@ -61,7 +69,8 @@ namespace Plugin {
         }
 
     private:
-        void Announce(const string& info, IFactory* factory) {
+        void Announce(const string& info, IFactory* factory)
+        {
             _factories.insert(std::pair<const string, IFactory*>(info, factory));
         }
 
@@ -70,7 +79,7 @@ namespace Plugin {
 
         static HandlerAdministrator _administrator;
     };
-
-} } // Namespace WPEFramework::Plugin
+}
+} // Namespace WPEFramework::Plugin
 
 #endif // __HANDLER_H

@@ -3,18 +3,17 @@
 #include <interfaces/ICapture.h>
 
 #include <nexus_config.h>
-#include <nxclient.h>
 #include <nexus_surface.h>
 #include <nexus_surface_client.h>
+#include <nxclient.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class Initializer
-    {
+    class Initializer {
     private:
         Initializer(const Initializer&) = delete;
-        Initializer& operator= (const Initializer&) = delete;
+        Initializer& operator=(const Initializer&) = delete;
 
     public:
         Initializer()
@@ -31,8 +30,8 @@ namespace Plugin {
 
     class NexusCapture : public Exchange::ICapture {
     private:
-        NexusCapture(const NexusCapture &) = delete;
-        NexusCapture &operator=(const NexusCapture &) = delete;
+        NexusCapture(const NexusCapture&) = delete;
+        NexusCapture& operator=(const NexusCapture&) = delete;
 
     public:
         NexusCapture()
@@ -43,10 +42,10 @@ namespace Plugin {
         }
 
         BEGIN_INTERFACE_MAP(NexusCapture)
-            INTERFACE_ENTRY(Exchange::ICapture)
+        INTERFACE_ENTRY(Exchange::ICapture)
         END_INTERFACE_MAP
 
-        virtual const TCHAR *Name() const
+        virtual const TCHAR* Name() const
         {
             return (_T("NexusCapture"));
         }
@@ -74,7 +73,7 @@ namespace Plugin {
                 NEXUS_Surface_GetMemory(surface, &mem); /* only needed for flush */
                 NEXUS_Surface_Flush(surface);
 
-                storer.R8_G8_B8_A8(static_cast<const unsigned char *>(mem.buffer), width, height);
+                storer.R8_G8_B8_A8(static_cast<const unsigned char*>(mem.buffer), width, height);
             }
 
             // Release all surface related allocations
@@ -85,9 +84,10 @@ namespace Plugin {
     };
 }
 
-    /* static */ Exchange::ICapture* Exchange::ICapture::Instance() {
-	    static Plugin::Initializer initializeDisplay;
+/* static */ Exchange::ICapture* Exchange::ICapture::Instance()
+{
+    static Plugin::Initializer initializeDisplay;
 
-            return (Core::Service<Plugin::NexusCapture>::Create<Exchange::ICapture>());
-    }
+    return (Core::Service<Plugin::NexusCapture>::Create<Exchange::ICapture>());
+}
 }

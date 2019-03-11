@@ -1,12 +1,12 @@
 #include "Module.h"
 #include "RemoteAdministrator.h"
 
-#include <linux/uinput.h>
 #include <interfaces/IKeyHandler.h>
+#include <linux/uinput.h>
 #include <nexus_config.h>
+#include <nexus_input_client.h>
 #include <nexus_platform.h>
 #include <nxclient.h>
-#include <nexus_input_client.h>
 
 extern int getIRHandle();
 
@@ -20,11 +20,11 @@ namespace Plugin {
 
         class Config : public Core::JSON::Container {
         private:
-            Config (const Config&) = delete;
+            Config(const Config&) = delete;
             Config& operator=(const Config&) = delete;
 
         public:
-            Config ()
+            Config()
                 : Core::JSON::Container()
                 , CodeMask(static_cast<uint32_t>(~0))
             {
@@ -37,13 +37,12 @@ namespace Plugin {
             Core::JSON::HexUInt32 CodeMask;
         };
 
-
     public:
         IRRemote();
         virtual ~IRRemote();
 
         BEGIN_INTERFACE_MAP(IRRemote)
-            INTERFACE_ENTRY(Exchange::IKeyProducer)
+        INTERFACE_ENTRY(Exchange::IKeyProducer)
         END_INTERFACE_MAP
 
         void Initialize();
@@ -56,7 +55,8 @@ namespace Plugin {
 
         virtual void Configure(const string& configure)
         {
-            Config config; config.FromString(configure);
+            Config config;
+            config.FromString(configure);
             _codeMask = config.CodeMask.Value();
         }
 
@@ -74,7 +74,7 @@ namespace Plugin {
         uint64_t _lastKeyTicks;
         uint32_t _error;
         Exchange::IKeyHandler* _callback;
-            static const string _resourceName;
+        static const string _resourceName;
         NEXUS_InputClientHandle _NxInputClient;
         NxClient_AllocResults _allocResults;
         uint32_t _codeMask;
@@ -95,7 +95,8 @@ namespace Plugin {
         Remotes::RemoteAdministrator::Instance().Announce(*this);
     }
 
-    /* virtual */ IRRemote::~IRRemote() {
+    /* virtual */ IRRemote::~IRRemote()
+    {
 
         Remotes::RemoteAdministrator::Instance().Revoke(*this);
     }
@@ -121,7 +122,7 @@ namespace Plugin {
         if (_NxInputClient) {
             TRACE_L1("%s: Acquired NEXUS Input Client", __FUNCTION__);
             NEXUS_InputClient_GetSettings(_NxInputClient, &settings);
-            settings.filterMask = 1<<NEXUS_InputRouterDevice_eIrInput;
+            settings.filterMask = 1 << NEXUS_InputRouterDevice_eIrInput;
 
             settings.codeAvailable.callback = IRRemote::NexusCallback;
             settings.codeAvailable.param = _allocResults.inputClient[0].id;
@@ -152,15 +153,18 @@ namespace Plugin {
         _error = Core::ERROR_UNAVAILABLE;
     }
 
-    /* virtual */ bool IRRemote::Pair() {
+    /* virtual */ bool IRRemote::Pair()
+    {
         return (false);
     }
 
-    /* virtual */ bool IRRemote::Unpair(string bindingId) {
+    /* virtual */ bool IRRemote::Unpair(string bindingId)
+    {
         return (false);
     }
 
-    /* virtual */ uint32_t IRRemote::Callback(Exchange::IKeyHandler* callback) {
+    /* virtual */ uint32_t IRRemote::Callback(Exchange::IKeyHandler* callback)
+    {
 
         ASSERT((callback == nullptr) ^ (_callback == nullptr));
 
@@ -168,8 +172,7 @@ namespace Plugin {
             // We are unlinked. Deinitialize the stuff.
             Deinitialize();
             _callback = nullptr;
-        }
-        else {
+        } else {
 
             Initialize();
             TRACE_L1("%s: callback=%p _callback=%p", __FUNCTION__, callback, _callback);
@@ -179,11 +182,13 @@ namespace Plugin {
         return (Core::ERROR_NONE);
     }
 
-    /* virtual */ uint32_t IRRemote::Error() const {
+    /* virtual */ uint32_t IRRemote::Error() const
+    {
         return (_error);
     }
 
-    /* virtual */ string IRRemote::MetaData() const {
+    /* virtual */ string IRRemote::MetaData() const
+    {
         return _T("BCM Nexus");
     }
 
@@ -192,14 +197,15 @@ namespace Plugin {
         _singleton->SendEvent();
     }
 
-    void IRRemote::SendEvent() {
+    void IRRemote::SendEvent()
+    {
         NEXUS_InputRouterCode inputRouterCode;
         unsigned num = 0;
         int rc;
 
         if (_NxInputClient) {
             // always get the key, else the queue fills up and weird things happen
-            rc = NEXUS_InputClient_GetCodes((NEXUS_InputClientHandle) _NxInputClient, &inputRouterCode, 2, &num);
+            rc = NEXUS_InputClient_GetCodes((NEXUS_InputClientHandle)_NxInputClient, &inputRouterCode, 2, &num);
             int rawCode = inputRouterCode.data.irInput.code & _codeMask;
             int repeat = inputRouterCode.data.irInput.repeat;
             TRACE_L1("%s: RawCode 0x%X Codemask:0x%X Code:0x%X", __FUNCTION__, inputRouterCode.data.irInput.code, _codeMask, rawCode);

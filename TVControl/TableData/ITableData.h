@@ -16,9 +16,9 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class ITableData 
-    : public TVPlatform::ITVPlatform::ISectionHandler
-    , public ISIHandler {
+    class ITableData
+        : public TVPlatform::ITVPlatform::ISectionHandler,
+          public ISIHandler {
 
     public:
         class Config : public Core::JSON::Container {

@@ -1,8 +1,8 @@
 #ifndef __FRONTPANEL_H
 #define __FRONTPANEL_H
 
-#include "Module.h"
 #include "FrontPanelHAL.h"
+#include "Module.h"
 
 namespace WPEFramework {
 namespace Plugin {
@@ -73,6 +73,7 @@ namespace Plugin {
             Core::JSON::DecUInt32 VertScrollIterations;
             Core::JSON::Boolean ToPersist;
         };
+
     private:
         FrontPanel(const FrontPanel&) = delete;
         FrontPanel& operator=(const FrontPanel&) = delete;
@@ -88,8 +89,8 @@ namespace Plugin {
         }
 
         BEGIN_INTERFACE_MAP(FrontPanel)
-            INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IPlugin)
+        INTERFACE_ENTRY(PluginHost::IWeb)
         END_INTERFACE_MAP
 
     public:

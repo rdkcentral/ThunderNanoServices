@@ -2,8 +2,8 @@
 #define __PLUGINWEBSERVER_H
 
 #include "Module.h"
-#include <interfaces/IWebServer.h>
 #include <interfaces/IMemory.h>
+#include <interfaces/IWebServer.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -26,11 +26,11 @@ namespace Plugin {
             }
             virtual ~Notification()
             {
-		TRACE_L1("WebServer::Notification destructed. Line: %d", __LINE__);
+                TRACE_L1("WebServer::Notification destructed. Line: %d", __LINE__);
             }
 
         public:
-            virtual void Activated(RPC::IRemoteProcess* /* process */) 
+            virtual void Activated(RPC::IRemoteProcess* /* process */)
             {
             }
             virtual void Deactivated(RPC::IRemoteProcess* process)
@@ -39,7 +39,7 @@ namespace Plugin {
             }
 
             BEGIN_INTERFACE_MAP(Notification)
-                INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -67,9 +67,9 @@ namespace Plugin {
         };
 
     public:
-		#ifdef __WIN32__ 
-		#pragma warning( disable : 4355 )
-		#endif
+#ifdef __WIN32__
+#pragma warning(disable : 4355)
+#endif
         WebServer()
             : _service(nullptr)
             , _server(nullptr)
@@ -77,18 +77,18 @@ namespace Plugin {
             , _notification(this)
         {
         }
-		#ifdef __WIN32__ 
-		#pragma warning( default : 4355 )
-		#endif
-		virtual ~WebServer()
+#ifdef __WIN32__
+#pragma warning(default : 4355)
+#endif
+        virtual ~WebServer()
         {
         }
 
         BEGIN_INTERFACE_MAP(WebServer)
-            INTERFACE_ENTRY(IPlugin)
-            INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
-            INTERFACE_AGGREGATE(Exchange::IWebServer, _server)
-            INTERFACE_AGGREGATE(PluginHost::IStateControl, _server)
+        INTERFACE_ENTRY(IPlugin)
+        INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
+        INTERFACE_AGGREGATE(Exchange::IWebServer, _server)
+        INTERFACE_AGGREGATE(PluginHost::IStateControl, _server)
         END_INTERFACE_MAP
 
     public:
@@ -112,7 +112,7 @@ namespace Plugin {
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
         virtual string Information() const;
 
-	private:
+    private:
         void Deactivated(RPC::IRemoteProcess* process);
 
     private:

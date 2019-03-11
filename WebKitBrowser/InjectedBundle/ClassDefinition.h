@@ -15,7 +15,7 @@ namespace JavaScript {
     private:
         ClassDefinition() = delete;
         ClassDefinition(const ClassDefinition& copy) = delete;
-        ClassDefinition& operator= (const ClassDefinition& copy) = delete;
+        ClassDefinition& operator=(const ClassDefinition& copy) = delete;
 
         typedef std::map<string, ClassDefinition> ClassMap;
         typedef std::vector<const JavaScriptFunction*> FunctionVector;
@@ -38,7 +38,7 @@ namespace JavaScript {
 
         void Add(const JavaScriptFunction* javaScriptFunction);
         void Remove(const JavaScriptFunction* javaScriptFunction);
-        
+
         FunctionIterator GetFunctions()
         {
             return (FunctionIterator(_customFunctions));
@@ -59,7 +59,7 @@ namespace JavaScript {
         std::string _className;
         std::string _extName;
 
-        // Instance declared in main.cpp, as this needs to be initialized before 
+        // Instance declared in main.cpp, as this needs to be initialized before
         // a static in this cpp unit is called!!!
         //static ClassMap _classes;
     };

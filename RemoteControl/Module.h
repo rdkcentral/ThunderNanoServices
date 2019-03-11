@@ -5,9 +5,9 @@
 #define MODULE_NAME Plugin_RemoteControl
 #endif
 
+#include <interfaces/IKeyHandler.h>
 #include <plugins/plugins.h>
 #include <tracing/tracing.h>
-#include <interfaces/IKeyHandler.h>
 
 #undef EXTERNAL
 #define EXTERNAL

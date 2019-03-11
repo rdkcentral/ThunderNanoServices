@@ -1,17 +1,16 @@
-#include <stdio.h>
-#include <signal.h>
-#include <unistd.h>
 #include <iostream>
+#include <signal.h>
+#include <stdio.h>
+#include <unistd.h>
 
-#include <interfaces/IResourceCenter.h>
 #include <interfaces/IComposition.h>
+#include <interfaces/IResourceCenter.h>
 
 using namespace WPEFramework;
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-class MyCompositionListener : public Exchange::IComposition::INotification
-{
+class MyCompositionListener : public Exchange::IComposition::INotification {
 public:
     virtual void Attached(Exchange::IComposition::IClient* client)
     {
@@ -44,7 +43,7 @@ int main(int argc, char* argv[])
 
     string libPath(argv[1]);
     Core::Library resource(libPath.c_str());
-    Exchange::IResourceCenter * resourceCenter = nullptr;
+    Exchange::IResourceCenter* resourceCenter = nullptr;
 
     if (resource.IsLoaded() == true) {
         TRACE_L1("Compositor started in process %s implementation", libPath.c_str());
@@ -69,7 +68,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    MyCompositionListener * listener = Core::Service<MyCompositionListener>::Create<MyCompositionListener>();
+    MyCompositionListener* listener = Core::Service<MyCompositionListener>::Create<MyCompositionListener>();
     composition->Register(listener);
 
     // TODO: this sets default values, should we also allow for string/path passed along on command line?
@@ -77,7 +76,8 @@ int main(int argc, char* argv[])
     TRACE_L1("Configured resource center [%d]", confResult);
 
     TRACE_L1("platformserver: dropping into while-true [%d]", __LINE__);
-    while(true);
+    while (true)
+        ;
 
     Core::Singleton::Dispose();
 

@@ -1,8 +1,8 @@
 #ifndef LOCATIONSYNC_LOCATIONSYNC_H
 #define LOCATIONSYNC_LOCATIONSYNC_H
 
-#include "Module.h"
 #include "LocationService.h"
+#include "Module.h"
 
 namespace WPEFramework {
 namespace Plugin {
@@ -66,7 +66,7 @@ namespace Plugin {
 #endif
             ~Notification()
             {
-				_locator->Release();
+                _locator->Release();
             }
 
         public:
@@ -76,7 +76,7 @@ namespace Plugin {
                 _interval = interval;
                 _retries = retries;
 
-		Probe();
+                Probe();
             }
             inline void Deinitialize()
             {
@@ -90,17 +90,20 @@ namespace Plugin {
                 return (Probe());
             }
 
-            inline PluginHost::ISubSystem::ILocation* Location () {
+            inline PluginHost::ISubSystem::ILocation* Location()
+            {
                 return (_locator);
             }
-            inline PluginHost::ISubSystem::IInternet* Network() {
+            inline PluginHost::ISubSystem::IInternet* Network()
+            {
                 return (_locator);
             }
 
         private:
-            inline uint32_t Probe() {
+            inline uint32_t Probe()
+            {
 
-                ASSERT (_locator != nullptr);
+                ASSERT(_locator != nullptr);
 
                 return (_locator != nullptr ? _locator->Probe(_source, _retries, _interval) : Core::ERROR_UNAVAILABLE);
             }

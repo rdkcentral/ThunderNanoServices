@@ -1,8 +1,8 @@
 #ifndef __JAVASCRIPTFUNCTIONTYPE_H
 #define __JAVASCRIPTFUNCTIONTYPE_H
 
-#include "JavaScriptFunction.h"
 #include "ClassDefinition.h"
+#include "JavaScriptFunction.h"
 
 namespace WPEFramework {
 

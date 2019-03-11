@@ -32,7 +32,7 @@ namespace Compositor {
             virtual void Direct(const uint32_t key, const state action) = 0;
         };
         struct ISurface {
-            virtual ~ISurface() {};
+            virtual ~ISurface(){};
 
             // Lifetime management
             virtual void AddRef() const = 0;
@@ -61,7 +61,7 @@ namespace Compositor {
         virtual int Process(const uint32_t data) = 0;
         virtual int FileDescriptor() const = 0;
     };
-} // Compositor 
+} // Compositor
 } // WPEFramework
 
 #endif // COMPOSITOR_CPP_ABSTRACTION_H

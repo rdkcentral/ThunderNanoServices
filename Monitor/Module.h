@@ -10,5 +10,4 @@
 #undef EXTERNAL
 #define EXTERNAL
 
-
 #endif // __MODULE_PLUGIN_MONITOR_H

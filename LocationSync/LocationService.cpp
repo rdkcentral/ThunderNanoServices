@@ -6,17 +6,16 @@ namespace Plugin {
     struct IGeography {
         virtual ~IGeography() {}
 
-        virtual string Country   () const = 0;
-        virtual string City      () const = 0;
-        virtual string Region    () const = 0;
-        virtual string TimeZone  () const = 0;
-        virtual string Latitude  () const = 0;
-        virtual string Longitude () const = 0;
-        virtual string IP        () const = 0;
-        virtual void   Updated   () = 0;
-
+        virtual string Country() const = 0;
+        virtual string City() const = 0;
+        virtual string Region() const = 0;
+        virtual string TimeZone() const = 0;
+        virtual string Latitude() const = 0;
+        virtual string Longitude() const = 0;
+        virtual string IP() const = 0;
+        virtual void Updated() = 0;
     };
- 
+
     class Geography : public IGeography, public Core::JSON::Container {
 
     private:
@@ -76,31 +75,40 @@ namespace Plugin {
         }
 
     public:
-        virtual string Country () const {
+        virtual string Country() const
+        {
             return (_country.Value());
         }
-        virtual string City () const {
+        virtual string City() const
+        {
             return (_city.Value());
         }
-        virtual string Region () const {
+        virtual string Region() const
+        {
             return (_region.Value());
         }
-        virtual string TimeZone () const {
+        virtual string TimeZone() const
+        {
             return (_timeZone.Value());
         }
-        virtual string Latitude () const {
-            return(_latitude.Value());
+        virtual string Latitude() const
+        {
+            return (_latitude.Value());
         }
-        virtual string Longitude () const {
-            return(_longitude.Value());
+        virtual string Longitude() const
+        {
+            return (_longitude.Value());
         }
-        virtual string IP () const {
+        virtual string IP() const
+        {
             return (_IP.Value());
         }
-        virtual void Updated () {
+        virtual void Updated()
+        {
         }
 
-        inline void Location (const string& latitude, const string& longitude) {
+        inline void Location(const string& latitude, const string& longitude)
+        {
             _latitude = latitude;
             _longitude = longitude;
         }
@@ -138,28 +146,36 @@ namespace Plugin {
         }
 
     public:
-        virtual string Country () const {
+        virtual string Country() const
+        {
             return (_geo.Country());
         }
-        virtual string City () const {
+        virtual string City() const
+        {
             return (_geo.City());
         }
-        virtual string Region () const {
+        virtual string Region() const
+        {
             return (_geo.Region());
         }
-        virtual string TimeZone () const {
-                return (_geo.TimeZone());
+        virtual string TimeZone() const
+        {
+            return (_geo.TimeZone());
         }
-        virtual string Latitude () const {
-                return (_geo.Latitude());
+        virtual string Latitude() const
+        {
+            return (_geo.Latitude());
         }
-        virtual string Longitude () const {
-                return (_geo.Longitude());
+        virtual string Longitude() const
+        {
+            return (_geo.Longitude());
         }
-        virtual string IP () const {
-                return (_IP.Value());
+        virtual string IP() const
+        {
+            return (_IP.Value());
         }
-        virtual void Updated () {
+        virtual void Updated()
+        {
             string info = _geo.Latitude();
 
             size_t location = info.find(',', 1);
@@ -202,29 +218,29 @@ namespace Plugin {
     struct DomainConstructor {
         const TCHAR* domainName;
         const uint32_t length;
-        Core::ProxyType< IGeography > (*factory)();
+        Core::ProxyType<IGeography> (*factory)();
     };
 
     DomainConstructor g_domainFactory[] = {
-        { _TXT("jsonip.metrological.com"), []() -> Core::ProxyType< IGeography > { return (Core::ProxyType< Web::JSONBodyType<Response> >::Create());  } },
-        { _TXT("ip-api.com"),              []() -> Core::ProxyType< IGeography > { return (Core::ProxyType< Web::JSONBodyType<Geography> >::Create()); } }
+        { _TXT("jsonip.metrological.com"), []() -> Core::ProxyType<IGeography> { return (Core::ProxyType<Web::JSONBodyType<Response>>::Create()); } },
+        { _TXT("ip-api.com"), []() -> Core::ProxyType<IGeography> { return (Core::ProxyType<Web::JSONBodyType<Geography>>::Create()); } }
     };
- 
-    static DomainConstructor* FindDomain(const Core::URL& domain) {
-    
+
+    static DomainConstructor* FindDomain(const Core::URL& domain)
+    {
+
         uint32_t index = 0;
 
-        while ( (index < (sizeof(g_domainFactory)/ sizeof(DomainConstructor))) &&
-                (domain.IsDomain(g_domainFactory[index].domainName, g_domainFactory[index].length) == false) ) {
+        while ((index < (sizeof(g_domainFactory) / sizeof(DomainConstructor))) && (domain.IsDomain(g_domainFactory[index].domainName, g_domainFactory[index].length) == false)) {
             index++;
         }
 
-        return (index < (sizeof(g_domainFactory)/sizeof (DomainConstructor)) ? &(g_domainFactory[index]) : nullptr);
+        return (index < (sizeof(g_domainFactory) / sizeof(DomainConstructor)) ? &(g_domainFactory[index]) : nullptr);
     }
 
-    #ifdef __WIN32__ 
-    #pragma warning( disable : 4355 )
-    #endif
+#ifdef __WIN32__
+#pragma warning(disable : 4355)
+#endif
     LocationService::LocationService(Core::IDispatchType<void>* callback)
         : BaseClass(1, g_Factory, false, Core::NodeId(), Core::NodeId(), 256, 1024)
         , _adminLock()
@@ -243,9 +259,9 @@ namespace Plugin {
         , _activity(Core::ProxyType<Job>::Create(this))
     {
     }
-    #ifdef __WIN32__ 
-    #pragma warning( default : 4355 )
-    #endif
+#ifdef __WIN32__
+#pragma warning(default : 4355)
+#endif
 
     /* virtual */ LocationService::~LocationService()
     {
@@ -264,7 +280,7 @@ namespace Plugin {
         if ((_state == IDLE) || (_state == FAILED) || (_state == LOADED)) {
 
             ASSERT(_response.IsValid() == false);
-			ASSERT(_infoCarrier.IsValid() == false);
+            ASSERT(_infoCarrier.IsValid() == false);
 
             result = Core::ERROR_GENERAL;
 
@@ -275,35 +291,35 @@ namespace Plugin {
 
                 result = Core::ERROR_INCORRECT_URL;
 
-                DomainConstructor* constructor = FindDomain (info);
+                DomainConstructor* constructor = FindDomain(info);
 
                 if (constructor != nullptr) {
 
-                    const string hostName (info.Host().Value().Text());
+                    const string hostName(info.Host().Value().Text());
 
                     _state = ACTIVE;
 
                     // it runs till zero, so subtract by definition 1 :-)
-                    _retries        = (retries - 1);
-                    _tryInterval    = retryTimeSpan * 1000; // Move from seconds to mS.
-                    _request->Host  = hostName;
-                    _request->Verb  = Web::Request::HTTP_GET;
-					_request->Path = _T("/");
-					if (info.Path().IsSet() == true) {
-						_request->Path += info.Path().Value().Text();
-					}
-                    _remoteId       = hostName;
+                    _retries = (retries - 1);
+                    _tryInterval = retryTimeSpan * 1000; // Move from seconds to mS.
+                    _request->Host = hostName;
+                    _request->Verb = Web::Request::HTTP_GET;
+                    _request->Path = _T("/");
+                    if (info.Path().IsSet() == true) {
+                        _request->Path += info.Path().Value().Text();
+                    }
+                    _remoteId = hostName;
 
                     if (info.Port().IsSet() == true) {
-                        _remoteId += ':' +  Core::NumberType<uint16_t>(info.Port().Value()).Text();
+                        _remoteId += ':' + Core::NumberType<uint16_t>(info.Port().Value()).Text();
                     }
 
                     if (info.Query().IsSet() == true) {
-                        _request->Query =  info.Query().Value().Text();
+                        _request->Query = info.Query().Value().Text();
                     }
 
-					_infoCarrier = constructor->factory();
-					_response = Core::proxy_cast<Web::IBody>(_infoCarrier);
+                    _infoCarrier = constructor->factory();
+                    _response = Core::proxy_cast<Web::IBody>(_infoCarrier);
 
                     PluginHost::WorkerPool::Instance().Submit(_activity);
 
@@ -341,7 +357,7 @@ namespace Plugin {
     {
         if (element->ErrorCode == Web::STATUS_OK) {
 
-            ASSERT (_response.IsValid () == true);
+            ASSERT(_response.IsValid() == true);
 
             element->Body<Web::IBody>(_response);
         }
@@ -370,8 +386,7 @@ namespace Plugin {
                 ASSERT(localId.IsValid() == true);
 
                 _publicIPAddress = localId.HostAddress();
-            }
-            else {
+            } else {
                 _publicIPAddress = _infoCarrier->IP();
             }
             _state = LOADED;
@@ -386,22 +401,20 @@ namespace Plugin {
                     Core::NodeId::ClearIPV6Enabled();
                 }
 
-				TRACE_L1("Network connectivity established on %s. ip: %s, tz: %s, country: %s",
-					node.Type() == Core::NodeId::TYPE_IPV4 ? _T("IPv4") : _T("IP6"),
-					_publicIPAddress.c_str(),
-					_timeZone.c_str(),
-					_country.c_str());
+                TRACE_L1("Network connectivity established on %s. ip: %s, tz: %s, country: %s",
+                    node.Type() == Core::NodeId::TYPE_IPV4 ? _T("IPv4") : _T("IP6"),
+                    _publicIPAddress.c_str(),
+                    _timeZone.c_str(),
+                    _country.c_str());
 
-                TRACE(Trace::Information, (_T("LocationSync: Network connectivity established. Type: %s, on %s"),
-                    (node.Type() == Core::NodeId::TYPE_IPV6 ? _T("IPv6") : _T("IPv4")), node.HostAddress().c_str()));
+                TRACE(Trace::Information, (_T("LocationSync: Network connectivity established. Type: %s, on %s"), (node.Type() == Core::NodeId::TYPE_IPV6 ? _T("IPv6") : _T("IPv4")), node.HostAddress().c_str()));
                 _callback->Dispatch();
             }
 
-			_infoCarrier.Release();
+            _infoCarrier.Release();
 
             _adminLock.Unlock();
-        }
-        else {
+        } else {
             TRACE_L1("Got a response but had an empty body. %d", __LINE__);
         }
 
@@ -424,8 +437,7 @@ namespace Plugin {
 
             // Send out a trigger to send the request
             Submit(_request);
-        }
-        else if (Link().HasError() == true) {
+        } else if (Link().HasError() == true) {
             Close(0);
             PluginHost::WorkerPool::Instance().Submit(_activity);
         }
@@ -441,8 +453,7 @@ namespace Plugin {
         if ((IsClosed() == false) || (Close(100) != Core::ERROR_NONE)) {
 
             result = 500; // ms...Check again..
-        }
-        else {
+        } else {
 
             _adminLock.Lock();
 
@@ -463,8 +474,7 @@ namespace Plugin {
                         _state = FAILED;
                     else
                         result = _tryInterval;
-                }
-                else {
+                } else {
                     Link().LocalNode(remote.AnyInterface());
                     Link().RemoteNode(remote);
 
@@ -478,8 +488,7 @@ namespace Plugin {
 
                         // We need to get a response in the given time..
                         result = _tryInterval;
-                    }
-                    else {
+                    } else {
                         TRACE_L1("Failed on network %s. Reschedule for the next attempt: %d", (remote.Type() == Core::NodeId::TYPE_IPV6 ? _T("IPv6") : _T("IPv4")), _retries);
 
                         // Seems we could not open this connection, move on to the next attempt.
@@ -506,10 +515,10 @@ namespace Plugin {
         }
     }
 
+    /* static */ uint32_t LocationService::IsSupported(const string& remoteNode)
+    {
 
-    /* static */ uint32_t LocationService::IsSupported(const string& remoteNode) {
-    
-        uint32_t result (Core::ERROR_GENERAL);
+        uint32_t result(Core::ERROR_GENERAL);
         Core::URL domain(remoteNode);
 
         if (domain.IsValid() == true) {
@@ -518,12 +527,10 @@ namespace Plugin {
 
             if (FindDomain(domain) != nullptr) {
                 result = Core::ERROR_NONE;
-            }
-            else {
+            } else {
                 TRACE_L1("URL is not valid. %s", remoteNode.c_str());
             }
-        }
-        else {
+        } else {
             TRACE_L1("Domain is not valid. %s", remoteNode.c_str());
         }
 

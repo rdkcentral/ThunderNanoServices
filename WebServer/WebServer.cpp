@@ -38,14 +38,13 @@ namespace Plugin {
 
             PluginHost::IStateControl* stateControl(_server->QueryInterface<PluginHost::IStateControl>());
 
-            // Potentially the WebServer implementation could crashes before it reaches this point, than there is 
+            // Potentially the WebServer implementation could crashes before it reaches this point, than there is
             // no StateControl. Cope with this situation.
             if (stateControl == nullptr) {
 
                 _server->Release();
                 _server = nullptr;
-            }
-            else {
+            } else {
                 stateControl->Configure(_service);
                 stateControl->Release();
 
@@ -68,21 +67,21 @@ namespace Plugin {
 
     /* virtual */ void WebServer::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service ==_service);
+        ASSERT(_service == _service);
         ASSERT(_server != nullptr);
         ASSERT(_memory != nullptr);
 
-	_service->Unregister(&_notification);
+        _service->Unregister(&_notification);
         _memory->Release();
 
         // Stop processing of the browser:
         if (_server->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 
-            ASSERT (_pid != 0);
+            ASSERT(_pid != 0);
 
             TRACE_L1("OutOfProcess Plugin is not properly destructed. PID: %d", _pid);
 
-            RPC::IRemoteProcess* process (_service->RemoteProcess(_pid));
+            RPC::IRemoteProcess* process(_service->RemoteProcess(_pid));
 
             // The process can disappear in the meantime...
             if (process != nullptr) {
@@ -96,11 +95,11 @@ namespace Plugin {
         PluginHost::ISubSystem* subSystem = service->SubSystems();
 
         if (subSystem != nullptr) {
-            ASSERT (subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true);
+            ASSERT(subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true);
             subSystem->Set(PluginHost::ISubSystem::NOT_WEBSOURCE, nullptr);
             subSystem->Release();
         }
-            
+
         _memory = nullptr;
         _server = nullptr;
         _service = nullptr;
@@ -117,10 +116,10 @@ namespace Plugin {
         // This can potentially be called on a socket thread, so the deactivation (wich in turn kills this object) must be done
         // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
         if (_pid == process->Id()) {
-	
-	    ASSERT(_service != nullptr);
 
-	    PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+            ASSERT(_service != nullptr);
+
+            PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
 }

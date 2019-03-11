@@ -3,8 +3,8 @@
 
 #include "Module.h"
 #include <interfaces/IBrowser.h>
-#include <interfaces/IMemory.h>
 #include <interfaces/IComposition.h>
+#include <interfaces/IMemory.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -34,31 +34,38 @@ namespace Plugin {
             }
 
         public:
-            virtual void LoadFinished(const string& URL) override {
+            virtual void LoadFinished(const string& URL) override
+            {
                 _parent.LoadFinished(URL);
             }
-            virtual void URLChanged(const string& URL) override {
+            virtual void URLChanged(const string& URL) override
+            {
                 _parent.URLChanged(URL);
             }
-            virtual void Hidden(const bool hidden) override {
+            virtual void Hidden(const bool hidden) override
+            {
                 _parent.Hidden(hidden);
             }
-            virtual void Closure() override {
+            virtual void Closure() override
+            {
                 _parent.Closure();
             }
-            virtual void StateChange(const PluginHost::IStateControl::state state) override {
+            virtual void StateChange(const PluginHost::IStateControl::state state) override
+            {
                 _parent.StateChange(state);
             }
-            virtual void Activated(RPC::IRemoteProcess* /*process*/) override {
+            virtual void Activated(RPC::IRemoteProcess* /*process*/) override
+            {
             }
-            virtual void Deactivated(RPC::IRemoteProcess* process) override {
+            virtual void Deactivated(RPC::IRemoteProcess* process) override
+            {
                 _parent.Deactivated(process);
             }
 
             BEGIN_INTERFACE_MAP(Notification)
-                INTERFACE_ENTRY(Exchange::IBrowser::INotification)
-                INTERFACE_ENTRY(PluginHost::IStateControl::INotification)
-                INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(Exchange::IBrowser::INotification)
+            INTERFACE_ENTRY(PluginHost::IStateControl::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -77,7 +84,7 @@ namespace Plugin {
                 , EnvironmentOverride(false)
             {
                 Add(_T("outofprocess"), &OutOfProcess);
-		Add(_T("environmentoverride"), &EnvironmentOverride);
+                Add(_T("environmentoverride"), &EnvironmentOverride);
             }
             ~Config()
             {
@@ -133,7 +140,8 @@ namespace Plugin {
             TRACE_L1("Destructor WebKitBrowser.%d", __LINE__);
         }
 
-	inline static bool EnvironmentOverride(const bool configFlag) {
+        inline static bool EnvironmentOverride(const bool configFlag)
+        {
             bool result = configFlag;
 
             if (result == false) {
@@ -187,7 +195,7 @@ namespace Plugin {
         void Hidden(const bool hidden);
         void Closure();
         void StateChange(const PluginHost::IStateControl::state state);
- 
+
     private:
         uint8_t _skipURL;
         uint32_t _pid;

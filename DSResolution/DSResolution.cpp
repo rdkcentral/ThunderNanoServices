@@ -13,16 +13,15 @@ namespace Plugin {
 
         string result;
         DSResolution::Config config;
-        config.FromString (service->ConfigLine());
+        config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
         if (_controller.IsOperational() == false) {
-            result = _T("Not Feasible to change the Device Settings"); 
-        }
-        else if ((config.Resolution.IsSet() == true) && (!_controller.Resolution(config.Resolution.Value()))) {
+            result = _T("Not Feasible to change the Device Settings");
+        } else if ((config.Resolution.IsSet() == true) && (!_controller.Resolution(config.Resolution.Value()))) {
             TRACE(Trace::Information, (string(_T("Failed to set the configured Display Resolution"))));
         }
-        
+
         return result;
     }
 
@@ -35,11 +34,11 @@ namespace Plugin {
         //No additional info to report
         return (string());
     }
-   
+
     /* virtual */ void DSResolution::Inbound(Web::Request& request)
     {
-         if (request.Verb == Web::Request::HTTP_POST)
-             request.Body(jsonBodyDataFactory.Element());
+        if (request.Verb == Web::Request::HTTP_POST)
+            request.Body(jsonBodyDataFactory.Element());
     }
 
     /* virtual */ Core::ProxyType<Web::Response> DSResolution::Process(const Web::Request& request)
@@ -60,7 +59,7 @@ namespace Plugin {
         }
         return result;
     }
-   
+
     Core::ProxyType<Web::Response> DSResolution::GetMethod(Core::TextSegmentIterator& index)
     {
         TRACE(Trace::Information, (string(_T("GetMethod"))));
@@ -79,8 +78,7 @@ namespace Plugin {
                     result->Body(response);
                     result->Message = _T("Get Device Setting Resolution");
                     TRACE(Trace::Information, (string(_T("Successfully get the Display Resolution"))));
-                }
-                else
+                } else
                     TRACE(Trace::Information, (string(_T("Not a valid GET method"))));
             }
         }
@@ -98,27 +96,25 @@ namespace Plugin {
             if (index.Next() && index.IsValid()) {
                 Core::ProxyType<Web::JSONBodyType<DSResolution::Config>> response(jsonBodyDataFactory.Element());
                 if (index.Current() == _T("Resolution")) {
-                    DSResolutionHAL::PixelResolution format (DSResolutionHAL::PixelResolution_Unknown);
+                    DSResolutionHAL::PixelResolution format(DSResolutionHAL::PixelResolution_Unknown);
                     if (request.HasBody() == true) {
                         format = request.Body<const Config>()->Resolution.Value();
-                        TRACE(Trace::Information, (_T("Resolution is : %d"),format));
-                    }
-                    else if(index.Next() == true) {
+                        TRACE(Trace::Information, (_T("Resolution is : %d"), format));
+                    } else if (index.Next() == true) {
                         format = Core::EnumerateType<DSResolutionHAL::PixelResolution>(index.Current().Data()).Value();
-                        TRACE(Trace::Information, (_T("Resolution is : %d"),format));
+                        TRACE(Trace::Information, (_T("Resolution is : %d"), format));
                     }
 
                     if (format != DSResolutionHAL::PixelResolution_Unknown) {
                         bool status = true;
                         status = _controller.Resolution(format);
-                        if(status) {
+                        if (status) {
                             result->ContentType = Web::MIMETypes::MIME_JSON;
                             result->ErrorCode = Web::STATUS_OK;
                             result->Body(response);
                             result->Message = _T("Set Device Setting Resolution");
                             TRACE(Trace::Information, (string(_T("Successfully set the Display Resolution"))));
-                        }
-                        else {
+                        } else {
                             result->ErrorCode = Web::STATUS_BAD_REQUEST;
                             result->Message = _T("Unknown Pixel Resolution: ");
                             TRACE(Trace::Error, (string(_T("Failed to set the Display Resolution"))));
@@ -128,6 +124,6 @@ namespace Plugin {
             }
         }
         return result;
-    }       
+    }
 } //Plugin
 } //WPEFramework

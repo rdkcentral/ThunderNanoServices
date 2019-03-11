@@ -3,12 +3,12 @@
 
 #define EGL_EGLEXT_PROTOTYPES 1
 
-#include <string>
-#include <map>
 #include <cassert>
 #include <list>
-#include <signal.h>
+#include <map>
 #include <semaphore.h>
+#include <signal.h>
+#include <string>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -19,13 +19,12 @@
 #include <bcm_host.h>
 #endif
 
-
 #if __cplusplus <= 199711L
 #define nullptr NULL
 #endif
 
-#include <compositor/Client.h>
 #include "Module.h"
+#include <compositor/Client.h>
 
 //
 // Forward declaration of the wayland specific types.
@@ -191,7 +190,7 @@ namespace Wayland {
                     _name = name;
                 }
             }
-           void Pointer(IPointer* pointer)
+            void Pointer(IPointer* pointer)
             {
                 assert((_pointer == nullptr) ^ (pointer == nullptr));
                 _pointer = pointer;
@@ -218,8 +217,9 @@ namespace Wayland {
             void SetTop();
 
         private:
-            inline const bool UpScale() const {
-               return _upScale;
+            inline const bool UpScale() const
+            {
+                return _upScale;
             }
             void Redraw();
 
@@ -590,7 +590,7 @@ namespace Wayland {
         }
 
         // Methods
-        virtual EGLNativeDisplayType Native() const override 
+        virtual EGLNativeDisplayType Native() const override
         {
             return (static_cast<EGLNativeDisplayType>(_display));
         }
@@ -637,8 +637,7 @@ namespace Wayland {
 
             if (index != _surfaces.end()) {
                 surface = Surface(*(index->second));
-            }
-            else {
+            } else {
                 surface.Release();
             }
             _adminLock.Unlock();
@@ -693,8 +692,7 @@ namespace Wayland {
                         _keyboardReceiver = nullptr;
                         printf("%s:%d disable keyboard input\n", __FILE__, __LINE__);
                     }
-                }
-                else {
+                } else {
                     _keyboardReceiver = index->second;
                     printf("%s:%d PID=%d enabled keyboard input _keyboardReceiver=%p\n", __FILE__, __LINE__, getpid(), _keyboardReceiver);
                 }
@@ -711,8 +709,7 @@ namespace Wayland {
                     if (_pointerReceiver == index->second) {
                         _pointerReceiver = nullptr;
                     }
-                }
-                else {
+                } else {
                     _pointerReceiver = index->second;
                 }
             }

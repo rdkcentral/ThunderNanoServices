@@ -1,5 +1,5 @@
-#include "Module.h"
 #include "EPGData.h"
+#include "Module.h"
 
 using namespace WPEFramework;
 
@@ -34,13 +34,13 @@ EPGDataBase::~EPGDataBase()
 
 int EPGDataBase::LoadOrSaveDB(bool isSave)
 {
-    sqlite3 *diskFile;
+    sqlite3* diskFile;
     int rc = sqlite3_open(DB_FILE, &diskFile);
     if (rc == SQLITE_OK) {
-        sqlite3 *source = (isSave ? _dataBase : diskFile);
-        sqlite3 *destination = (isSave ? diskFile : _dataBase);
+        sqlite3* source = (isSave ? _dataBase : diskFile);
+        sqlite3* destination = (isSave ? diskFile : _dataBase);
 
-        sqlite3_backup *backup = sqlite3_backup_init(destination, "main", source, "main");
+        sqlite3_backup* backup = sqlite3_backup_init(destination, "main", source, "main");
         if (backup) {
             (void)sqlite3_backup_step(backup, -1);
             (void)sqlite3_backup_finish(backup);
@@ -77,8 +77,8 @@ bool EPGDataBase::CreateFrequencyTable()
         TRACE(Trace::Error, (_T("Error = %s"), _errMsg));
         sqlite3_free(_errMsg);
     }
-    char const* sqlFrequency = "CREATE TABLE FREQUENCY("  \
-        "FREQUENCY INT PRIMARY KEY NOT NULL);";
+    char const* sqlFrequency = "CREATE TABLE FREQUENCY("
+                               "FREQUENCY INT PRIMARY KEY NOT NULL);";
     if (sqlite3_exec(_dataBase, sqlFrequency, Callback, 0, &_errMsg) != SQLITE_OK) {
         TRACE(Trace::Error, (_T("Error = %s"), _errMsg));
         sqlite3_free(_errMsg);
@@ -89,13 +89,13 @@ bool EPGDataBase::CreateFrequencyTable()
 
 bool EPGDataBase::CreateNitTable()
 {
-    char const* sqlQuery = "CREATE TABLE IF NOT EXISTS NIT("  \
-        "NETWORK_ID              INT       NOT NULL," \
-        "TRANSPORT_STREAM_ID INT INT       NOT NULL," \
-        "ORIGINAL_NETWORK_ID     INT       DEFAULT NULL," \
-        "FREQUENCY               INT       DEFAULT NULL," \
-        "MODULATION              INT       DEFAULT NULL," \
-        "UNIQUE(TRANSPORT_STREAM_ID, ORIGINAL_NETWORK_ID));";
+    char const* sqlQuery = "CREATE TABLE IF NOT EXISTS NIT("
+                           "NETWORK_ID              INT       NOT NULL,"
+                           "TRANSPORT_STREAM_ID INT INT       NOT NULL,"
+                           "ORIGINAL_NETWORK_ID     INT       DEFAULT NULL,"
+                           "FREQUENCY               INT       DEFAULT NULL,"
+                           "MODULATION              INT       DEFAULT NULL,"
+                           "UNIQUE(TRANSPORT_STREAM_ID, ORIGINAL_NETWORK_ID));";
     return ExecuteSQLQuery(sqlQuery);
 }
 
@@ -135,56 +135,55 @@ bool EPGDataBase::ExecuteSQLQuery(char const* sqlQuery)
 
 bool EPGDataBase::CreateChannelTable()
 {
-    char const* sqlQuery = "CREATE TABLE IF NOT EXISTS CHANNEL("  \
-        "LCN            TEXT        NOT NULL," \
-        "FREQUENCY      INT         NOT NULL," \
-        "MODULATION     INT         NOT NULL," \
-        "SERVICE_ID     INT         NOT NULL," \
-        "TS_ID          INT         NOT NULL," \
-        "NETWORK_ID     INT         NOT NULL," \
-        "PROGRAM_NUMBER INT         NOT NULL," \
-        "NAME           TEXT        NOT NULL," \
-        "LANGUAGE       VARCHAR(20) DEFAULT 'und'," \
-        "PARENTAL_LOCK  INT         DEFAULT 0, " \
-        "UNIQUE(SERVICE_ID, TS_ID));";
+    char const* sqlQuery = "CREATE TABLE IF NOT EXISTS CHANNEL("
+                           "LCN            TEXT        NOT NULL,"
+                           "FREQUENCY      INT         NOT NULL,"
+                           "MODULATION     INT         NOT NULL,"
+                           "SERVICE_ID     INT         NOT NULL,"
+                           "TS_ID          INT         NOT NULL,"
+                           "NETWORK_ID     INT         NOT NULL,"
+                           "PROGRAM_NUMBER INT         NOT NULL,"
+                           "NAME           TEXT        NOT NULL,"
+                           "LANGUAGE       VARCHAR(20) DEFAULT 'und',"
+                           "PARENTAL_LOCK  INT         DEFAULT 0, "
+                           "UNIQUE(SERVICE_ID, TS_ID));";
 
     return ExecuteSQLQuery(sqlQuery);
 }
 
 bool EPGDataBase::CreateProgramTable()
 {
-    char const* sqlQuery = "CREATE TABLE IF NOT EXISTS PROGRAM("  \
-        "SOURCE_ID       INT      NOT NULL," \
-        "EVENT_ID        INT      NOT NULL," \
-        "START_TIME      INT      NOT NULL," \
-        "DURATION        INT      NOT NULL," \
-        "EVENT_NAME      TEXT     NOT NULL," \
-        "SUBTITLE_LANG   TEXT     NULL DEFAULT 'und'," \
-        "RATING          VARCHAR(10) DEFAULT 'Not Available'," \
-        "GENRE           TEXT     NULL DEFAULT 'Not Available'," \
-        "AUDIO_LANG      TEXT     NULL DEFAULT 'und'," \
-        "UNIQUE(SOURCE_ID, EVENT_ID, START_TIME));";
+    char const* sqlQuery = "CREATE TABLE IF NOT EXISTS PROGRAM("
+                           "SOURCE_ID       INT      NOT NULL,"
+                           "EVENT_ID        INT      NOT NULL,"
+                           "START_TIME      INT      NOT NULL,"
+                           "DURATION        INT      NOT NULL,"
+                           "EVENT_NAME      TEXT     NOT NULL,"
+                           "SUBTITLE_LANG   TEXT     NULL DEFAULT 'und',"
+                           "RATING          VARCHAR(10) DEFAULT 'Not Available',"
+                           "GENRE           TEXT     NULL DEFAULT 'Not Available',"
+                           "AUDIO_LANG      TEXT     NULL DEFAULT 'und',"
+                           "UNIQUE(SOURCE_ID, EVENT_ID, START_TIME));";
 
     return ExecuteSQLQuery(sqlQuery);
 }
 
 bool EPGDataBase::CreateTSTable()
 {
-    char const* sqlQuery = "CREATE TABLE IF NOT EXISTS TSINFO("  \
-        "FREQUENCY                 INT       DEFAULT NULL," \
-        "PROGRAM_NUMBER            INT       DEFAULT NULL," \
-        "VIDEO_PID                 INT       DEFAULT NULL," \
-        "VIDEO_CODEC               INT       DEFAULT NULL," \
-        "VIDEO_PCR_PID             INT       DEFAULT NULL," \
-        "AUDIO_PID                 INT       DEFAULT NULL," \
-        "AUDIO_CODEC               INT       DEFAULT NULL," \
-        "AUDIO_PCR_PID             INT       DEFAULT NULL," \
-        "PMT_PID                   INT       DEFAULT NULL," \
-        "UNIQUE(FREQUENCY, PROGRAM_NUMBER, VIDEO_PID, VIDEO_CODEC, VIDEO_PCR_PID, AUDIO_PID, AUDIO_CODEC, AUDIO_PCR_PID, PMT_PID));";
+    char const* sqlQuery = "CREATE TABLE IF NOT EXISTS TSINFO("
+                           "FREQUENCY                 INT       DEFAULT NULL,"
+                           "PROGRAM_NUMBER            INT       DEFAULT NULL,"
+                           "VIDEO_PID                 INT       DEFAULT NULL,"
+                           "VIDEO_CODEC               INT       DEFAULT NULL,"
+                           "VIDEO_PCR_PID             INT       DEFAULT NULL,"
+                           "AUDIO_PID                 INT       DEFAULT NULL,"
+                           "AUDIO_CODEC               INT       DEFAULT NULL,"
+                           "AUDIO_PCR_PID             INT       DEFAULT NULL,"
+                           "PMT_PID                   INT       DEFAULT NULL,"
+                           "UNIQUE(FREQUENCY, PROGRAM_NUMBER, VIDEO_PID, VIDEO_CODEC, VIDEO_PCR_PID, AUDIO_PID, AUDIO_CODEC, AUDIO_PCR_PID, PMT_PID));";
 
     return ExecuteSQLQuery(sqlQuery);
 }
-
 
 bool EPGDataBase::DBLock()
 {
@@ -195,7 +194,7 @@ bool EPGDataBase::DBLock()
     f1.l_start = 0; // Offset from l_whence.
     f1.l_len = 0; // length, 0 = to EOF.
     f1.l_pid = getpid(); // our PID.
-    ret = fcntl(_fd, F_SETLKW, &f1);  // Set the lock, waiting if necessary.
+    ret = fcntl(_fd, F_SETLKW, &f1); // Set the lock, waiting if necessary.
     if (!ret) {
         TRACE_L4("DB LOCKED", NULL);
         return true;
@@ -258,12 +257,12 @@ bool EPGDataBase::GetTuneInfo(const string& lcn, uint32_t& frequency, uint16_t& 
         uint16_t prog, mod;
         snprintf(sqlQuery, 1024, "SELECT FREQUENCY, PROGRAM_NUMBER, MODULATION FROM CHANNEL WHERE LCN=%s;", lcn.c_str());
         TRACE_L3("QUERY = %s", sqlQuery);
-         if (sqlite3_prepare(_dataBase, sqlQuery, -1, &_stmt, 0) == SQLITE_OK) {
+        if (sqlite3_prepare(_dataBase, sqlQuery, -1, &_stmt, 0) == SQLITE_OK) {
             rc = sqlite3_step(_stmt);
             if ((rc == SQLITE_ROW) || (rc == SQLITE_DONE)) {
                 freq = (uint32_t)sqlite3_column_int(_stmt, 0);
                 prog = (uint16_t)sqlite3_column_int(_stmt, 1);
-                mod  = (uint16_t)sqlite3_column_int(_stmt, 2);
+                mod = (uint16_t)sqlite3_column_int(_stmt, 2);
             }
             sqlite3_reset(_stmt);
             if (sqlite3_finalize(_stmt) == SQLITE_OK) {
@@ -344,7 +343,7 @@ bool EPGDataBase::GetFrequencyAndModulationFromNit(uint16_t originalNetworkId, u
         uint32_t mod;
         snprintf(sqlQuery, 1024, "SELECT * FROM NIT WHERE ORIGINAL_NETWORK_ID=%d AND TRANSPORT_STREAM_ID=%d;", (int)originalNetworkId, (int)transportStreamId);
         TRACE_L3("QUERY = %s", sqlQuery);
-         if (sqlite3_prepare(_dataBase, sqlQuery, -1, &_stmt, 0) == SQLITE_OK) {
+        if (sqlite3_prepare(_dataBase, sqlQuery, -1, &_stmt, 0) == SQLITE_OK) {
             rc = sqlite3_step(_stmt);
             if ((rc == SQLITE_ROW) || (rc == SQLITE_DONE)) {
                 freq = (uint32_t)sqlite3_column_int(_stmt, 3);
@@ -367,8 +366,8 @@ bool EPGDataBase::InsertChannelInfo(uint32_t frequency, uint32_t modulation, con
     char sqlQuery[1024];
 
     snprintf(sqlQuery, 1024, "INSERT OR IGNORE INTO CHANNEL (LCN, FREQUENCY, MODULATION, SERVICE_ID, TS_ID, NETWORK_ID, PROGRAM_NUMBER, \
-        NAME, LANGUAGE) VALUES (\"%s\", %d, %d, %d, %d, %d, %d, \"%s\", \"%s\");", lcn.c_str(), (int)frequency, (int)modulation
-        , (int)serviceId, (int)tsId, (int)networkId, (int)programNo, name, language.size() ? language.c_str() : "und");
+        NAME, LANGUAGE) VALUES (\"%s\", %d, %d, %d, %d, %d, %d, \"%s\", \"%s\");",
+        lcn.c_str(), (int)frequency, (int)modulation, (int)serviceId, (int)tsId, (int)networkId, (int)programNo, name, language.size() ? language.c_str() : "und");
 
     TRACE_L3("QUERY = %s", sqlQuery);
     return ExecuteSQLQuery(sqlQuery);
@@ -378,10 +377,8 @@ bool EPGDataBase::InsertProgramInfo(uint16_t sourceId, uint16_t eventId, time_t 
 {
     char sqlQuery[1024];
     snprintf(sqlQuery, 1024, "INSERT OR REPLACE INTO PROGRAM (SOURCE_ID, EVENT_ID, START_TIME, \
-        DURATION, EVENT_NAME, SUBTITLE_LANG, RATING, GENRE, AUDIO_LANG) VALUES (%d, %d, %d, %d, \"%s\", \"%s\", \"%s\", \"%s\", \"%s\");"
-        , (int)sourceId, (int)eventId, (int)startTime, (int)duration, eventName, subtitleLanguage.size() ? subtitleLanguage.c_str() : "und"
-        , rating.size() ? rating.c_str() : "Not Available", genre.size() ? genre.c_str() : "Not Available"
-        , audioLanguage.size() ? audioLanguage.c_str() : "und");
+        DURATION, EVENT_NAME, SUBTITLE_LANG, RATING, GENRE, AUDIO_LANG) VALUES (%d, %d, %d, %d, \"%s\", \"%s\", \"%s\", \"%s\", \"%s\");",
+        (int)sourceId, (int)eventId, (int)startTime, (int)duration, eventName, subtitleLanguage.size() ? subtitleLanguage.c_str() : "und", rating.size() ? rating.c_str() : "Not Available", genre.size() ? genre.c_str() : "Not Available", audioLanguage.size() ? audioLanguage.c_str() : "und");
     return ExecuteSQLQuery(sqlQuery);
 }
 
@@ -402,7 +399,6 @@ bool EPGDataBase::IsTableEmpty(const std::string& table)
     sqlite3_finalize(_stmt);
     DBUnlock();
     return false;
-
 }
 
 bool EPGDataBase::GetFrequencyListFromNit(std::vector<uint32_t>& frequencyList, uint16_t originalNetworkId)
@@ -442,7 +438,7 @@ bool EPGDataBase::ReadFrequency(std::vector<uint32_t>& frequencyList)
     bool ret = false;
     DBLock();
     uint32_t frequency;
-    const char *sqlQuery = "SELECT * FROM FREQUENCY";
+    const char* sqlQuery = "SELECT * FROM FREQUENCY";
 
     TRACE_L3("QUERY = %s", sqlQuery);
     sqlite3_prepare_v2(_dataBase, sqlQuery, -1, &_stmt, nullptr);
@@ -466,7 +462,7 @@ bool EPGDataBase::ReadChannels(WPEFramework::Core::JSON::ArrayType<WPEFramework:
     std::string table("CHANNEL");
 
     if (!IsTableEmpty(table)) {
-        const char *sqlQuery = "SELECT * FROM CHANNEL";
+        const char* sqlQuery = "SELECT * FROM CHANNEL";
         TRACE_L3("QUERY = %s", sqlQuery);
         sqlite3_prepare_v2(_dataBase, sqlQuery, -1, &_stmt, nullptr);
         while (sqlite3_step(_stmt) == SQLITE_ROW) {
@@ -520,7 +516,7 @@ bool EPGDataBase::ReadPrograms(WPEFramework::Core::JSON::ArrayType<WPEFramework:
     time_t currTime;
     time(&currTime);
     TRACE(Trace::Information, (_T("current time = %d"), currTime));
-    const char *sqlQuery = "SELECT * FROM PROGRAM";
+    const char* sqlQuery = "SELECT * FROM PROGRAM";
     TRACE_L3("QUERY = %s", sqlQuery);
 
     DBLock();
@@ -555,7 +551,7 @@ bool EPGDataBase::ReadProgram(uint16_t serviceId, WPEFramework::Program& program
         time_t currTime;
         time(&currTime);
         TRACE(Trace::Information, (_T("current time = %d"), currTime));
-        const char *sqlQuery = "SELECT * FROM PROGRAM WHERE SOURCE_ID = ? ;";
+        const char* sqlQuery = "SELECT * FROM PROGRAM WHERE SOURCE_ID = ? ;";
         TRACE_L3("QUERY = %s", sqlQuery);
 
         DBLock();
@@ -590,7 +586,7 @@ bool EPGDataBase::IsParentalLocked(const string& lcn)
     std::string table("CHANNEL");
     char sqlQuery[1024];
     if (!IsTableEmpty(table)) {
-        struct stat* buf = (struct stat *)malloc(sizeof(struct stat));
+        struct stat* buf = (struct stat*)malloc(sizeof(struct stat));
         if (!stat("/root/DVB.db", buf)) {
             snprintf(sqlQuery, 1024, "SELECT PARENTAL_LOCK FROM CHANNEL WHERE LCN=%s;", lcn.c_str());
             DBLock();
@@ -704,7 +700,6 @@ bool EPGDataBase::IsServicePresentInTSInfo(int32_t programNumber)
         DBUnlock();
     }
     return ret;
-
 }
 
 bool EPGDataBase::UnlockChannels()

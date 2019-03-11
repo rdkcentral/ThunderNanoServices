@@ -23,19 +23,17 @@ struct Message {
     actiontype type;
 };
 
-static const char * connectorName = "/tmp/keyhandler";
+static const char* connectorName = "/tmp/keyhandler";
 
-    static void VirtualKeyboardCallback(actiontype type , unsigned int code)
-    {
-        if (type != COMPLETED)
-        {
-            Message message;
-            message.code = code;
-            message.type = type;
-            write(g_pipefd[1], &message, sizeof(message));
-        }
+static void VirtualKeyboardCallback(actiontype type, unsigned int code)
+{
+    if (type != COMPLETED) {
+        Message message;
+        message.code = code;
+        message.type = type;
+        write(g_pipefd[1], &message, sizeof(message));
     }
-
+}
 
 namespace WPEFramework {
 
@@ -48,12 +46,13 @@ namespace Nexus {
         , _width(width)
         , _height(height)
         , _nativeWindow(nullptr)
-        , _keyboard(nullptr) {
+        , _keyboard(nullptr)
+    {
 
         uint32_t nexusClientId(0); // For now we only accept 0. See Mail David Montgomery
-        const char* tmp (getenv("CLIENT_IDENTIFIER"));
+        const char* tmp(getenv("CLIENT_IDENTIFIER"));
 
-        if ( (tmp != nullptr) && ((tmp = strchr(tmp, ',')) != nullptr) ) {
+        if ((tmp != nullptr) && ((tmp = strchr(tmp, ',')) != nullptr)) {
             nexusClientId = atoi(&(tmp[1]));
         }
 
@@ -73,16 +72,18 @@ namespace Nexus {
         _parent.Register(this);
     }
 
-    /* virtual */ Display::SurfaceImplementation::~SurfaceImplementation() {
+    /* virtual */ Display::SurfaceImplementation::~SurfaceImplementation()
+    {
         NEXUS_SurfaceClient_Release(reinterpret_cast<NEXUS_SurfaceClient*>(_nativeWindow));
 
-       _parent.Unregister(this);
+        _parent.Unregister(this);
     }
 
-    Display::Display(const std::string& name) 
+    Display::Display(const std::string& name)
         : _displayName(name)
         , _nxplHandle(nullptr)
-        , _virtualkeyboard(nullptr)  {
+        , _virtualkeyboard(nullptr)
+    {
 
         NEXUS_DisplayHandle displayHandle(nullptr);
 
@@ -115,7 +116,7 @@ namespace Nexus {
             fprintf(stderr, "[LibinputServer] Initialization of virtual keyboard failed!!!\n");
         }
 
-        printf("Constructed the Display: %p - %s",this, _displayName.c_str());
+        printf("Constructed the Display: %p - %s", this, _displayName.c_str());
     }
 
     Display::~Display()
@@ -125,7 +126,7 @@ namespace Nexus {
         NxClient_Uninit();
 #endif
         if (_virtualkeyboard != nullptr) {
-           Destruct(_virtualkeyboard);
+            Destruct(_virtualkeyboard);
         }
 
         printf("Destructed the Display: %p - %s", this, _displayName.c_str());
@@ -143,7 +144,8 @@ namespace Nexus {
         return (&myDisplay);
     }
 
-    /* virtual */ int Display::Process (const uint32_t data) {
+    /* virtual */ int Display::Process(const uint32_t data)
+    {
         Message message;
         if ((data != 0) && (g_pipefd[0] != -1) && (read(g_pipefd[0], &message, sizeof(message)) > 0)) {
 
@@ -154,7 +156,7 @@ namespace Nexus {
                 // PRESSED   = 1,
                 // REPEAT    = 2,
 
-                (*index)->SendKey (message.code, (message.type == 0 ? IDisplay::IKeyboard::released : IDisplay::IKeyboard::pressed), time(nullptr));
+                (*index)->SendKey(message.code, (message.type == 0 ? IDisplay::IKeyboard::released : IDisplay::IKeyboard::pressed), time(nullptr));
                 index++;
             }
         }
@@ -168,8 +170,8 @@ namespace Nexus {
     }
 }
 
-    /* static */ Compositor::IDisplay* Compositor::IDisplay::Instance(const std::string& displayName) {
-        return (Nexus::Display::Instance(displayName));
-    }
-
+/* static */ Compositor::IDisplay* Compositor::IDisplay::Instance(const std::string& displayName)
+{
+    return (Nexus::Display::Instance(displayName));
+}
 }

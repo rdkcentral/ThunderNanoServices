@@ -1,8 +1,8 @@
 #include "RemoteAdministrator.h"
 
+#include <interfaces/IKeyHandler.h>
 #include <libudev.h>
 #include <linux/uinput.h>
-#include <interfaces/IKeyHandler.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -20,7 +20,8 @@ namespace Plugin {
             , _devices()
             , _monitor(nullptr)
             , _update(-1)
-            , _callback(nullptr) {
+            , _callback(nullptr)
+        {
             _pipe[0] = -1;
             _pipe[1] = -1;
             if (::pipe(_pipe) < 0) {
@@ -33,8 +34,7 @@ namespace Plugin {
                 }
                 _pipe[0] = -1;
                 _pipe[1] = -1;
-            }
-            else {
+            } else {
                 struct udev* udev = udev_new();
 
                 // Set up a monitor to monitor event devices
@@ -48,7 +48,8 @@ namespace Plugin {
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
             }
         }
-        virtual ~LinuxDevice() {
+        virtual ~LinuxDevice()
+        {
 
             Block();
 
@@ -68,7 +69,6 @@ namespace Plugin {
             if (_monitor != nullptr) {
                 udev_monitor_unref(_monitor);
             }
-
         }
 
     public:
@@ -76,10 +76,10 @@ namespace Plugin {
         {
             return (_T("DevInput"));
         }
-            virtual void Configure(const string&)
-            {
+        virtual void Configure(const string&)
+        {
             Pair();
-                }
+        }
         virtual bool Pair()
         {
             // Make sure we are not processing anything.
@@ -90,7 +90,7 @@ namespace Plugin {
             // We are done, start observing again.
             Run();
 
-            return(true);
+            return (true);
         }
         virtual bool Unpair(string bindingId)
         {
@@ -102,16 +102,16 @@ namespace Plugin {
             // We are done, start observing again.
             Run();
 
-            return(true);
+            return (true);
         }
-        virtual uint32_t Callback(Exchange::IKeyHandler* callback) {
+        virtual uint32_t Callback(Exchange::IKeyHandler* callback)
+        {
             ASSERT((callback == nullptr) ^ (_callback == nullptr));
 
             if (callback == nullptr) {
                 // We are unlinked. Deinitialize the stuff.
                 _callback = nullptr;
-            }
-            else {
+            } else {
 
                 TRACE_L1("%s: callback=%p _callback=%p", __FUNCTION__, callback, _callback);
                 _callback = callback;
@@ -119,28 +119,31 @@ namespace Plugin {
 
             return (Core::ERROR_NONE);
         }
-        virtual uint32_t Error() const {
+        virtual uint32_t Error() const
+        {
             return (Core::ERROR_NONE);
         }
-        virtual string MetaData() const {
+        virtual string MetaData() const
+        {
             return (Name());
         }
 
         BEGIN_INTERFACE_MAP(LinuxDevice)
-            INTERFACE_ENTRY(Exchange::IKeyProducer)
+        INTERFACE_ENTRY(Exchange::IKeyProducer)
         END_INTERFACE_MAP
 
     private:
-        void Refresh() {
+        void Refresh()
+        {
             // Remove all current open devices.
             Clear();
 
             // find devices in /dev/input/
-            Core::Directory dir (Locator);
+            Core::Directory dir(Locator);
             while (dir.Next() == true) {
 
-                Core::File entry (dir.Current(), false);
-                if ( (entry.IsDirectory() == false) && (entry.FileName().substr(0,5) == _T("event")) ) {
+                Core::File entry(dir.Current(), false);
+                if ((entry.IsDirectory() == false) && (entry.FileName().substr(0, 5) == _T("event"))) {
 
                     TRACE(Trace::Information, (_T("Opening input device: %s"), entry.Name().c_str()));
 
@@ -150,9 +153,10 @@ namespace Plugin {
                 }
             }
         }
-        void Clear() {
+        void Clear()
+        {
             for (std::vector<int>::const_iterator it = _devices.begin(), end = _devices.end();
-                it != end; ++it) {
+                 it != end; ++it) {
                 close(*it);
             }
             _devices.clear();
@@ -161,9 +165,10 @@ namespace Plugin {
         {
             Core::Thread::Block();
             write(_pipe[1], " ", 1);
-            Wait (Core::Thread::INITIALIZED|Core::Thread::BLOCKED|Core::Thread::STOPPED, Core::infinite);
+            Wait(Core::Thread::INITIALIZED | Core::Thread::BLOCKED | Core::Thread::STOPPED, Core::infinite);
         }
-        virtual uint32_t Worker () {
+        virtual uint32_t Worker()
+        {
 
             while (IsRunning() == true) {
                 fd_set readset;
@@ -191,7 +196,7 @@ namespace Plugin {
                         udev_device* dev = udev_monitor_receive_device(_monitor);
                         if (dev) {
                             const char* nodeId = udev_device_get_devnode(dev);
-                            bool reload = ((nodeId != nullptr) && (strncmp(Locator, nodeId, sizeof(Locator)-1) == 0));
+                            bool reload = ((nodeId != nullptr) && (strncmp(Locator, nodeId, sizeof(Locator) - 1) == 0));
                             udev_device_unref(dev);
 
                             TRACE_L1("Changes from udev perspective. Reload (%s)", reload ? _T("true") : _T("false"));
@@ -201,8 +206,7 @@ namespace Plugin {
                         }
                     }
 
-
-                        // find the devices to read from
+                    // find the devices to read from
                     std::vector<int>::iterator index = _devices.begin();
 
                     while (index != _devices.end()) {
@@ -212,22 +216,19 @@ namespace Plugin {
                                 // fd closed?
                                 close(*index);
                                 index = _devices.erase(index);
-                            }
-                            else {
+                            } else {
                                 ++index;
                             }
-                        }
-                        else {
+                        } else {
                             ++index;
                         }
                     }
-
-
                 }
             }
             return (Core::infinite);
         }
-        bool HandleInput(const int fd) {
+        bool HandleInput(const int fd)
+        {
             input_event entry[16];
             int index = 0;
             int result = ::read(fd, entry, sizeof(entry));
@@ -235,14 +236,14 @@ namespace Plugin {
             if (result > 0) {
                 while (result >= sizeof(input_event)) {
 
-                    ASSERT (index < (sizeof(entry) / sizeof(input_event)));
+                    ASSERT(index < (sizeof(entry) / sizeof(input_event)));
 
                     // If it is a KEY and it is *NOT* a repeat, send it..
                     // Repeat gets constructed by the framework anyway.
-                    if ( (entry[index].type == EV_KEY) && (entry[index].value != 2) ) {
+                    if ((entry[index].type == EV_KEY) && (entry[index].value != 2)) {
 
                         const uint16_t code = entry[index].code;
-                        const bool pressed  = entry[index].value != 0;
+                        const bool pressed = entry[index].value != 0;
                         TRACE(Trace::Information, (_T("Sending pressed: %s, code: 0x%04X"), (pressed ? _T("true") : _T("false")), code));
                         _callback->KeyEvent(pressed, code, Name());
                     }
@@ -253,6 +254,7 @@ namespace Plugin {
 
             return (result >= 0);
         }
+
     private:
         std::vector<int> _devices;
         int _pipe[2];
@@ -262,6 +264,5 @@ namespace Plugin {
     };
 
     static LinuxDevice* _singleton(Core::Service<LinuxDevice>::Create<LinuxDevice>());
-
 }
 }

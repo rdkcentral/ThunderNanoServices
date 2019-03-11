@@ -12,17 +12,18 @@ namespace WebKit {
 
     class WhiteListedOriginDomainsList {
     private:
-        WhiteListedOriginDomainsList (const WhiteListedOriginDomainsList&) = delete;
-        WhiteListedOriginDomainsList& operator=  (const WhiteListedOriginDomainsList&) = delete;
+        WhiteListedOriginDomainsList(const WhiteListedOriginDomainsList&) = delete;
+        WhiteListedOriginDomainsList& operator=(const WhiteListedOriginDomainsList&) = delete;
 
     public:
-        typedef std::pair<bool,string> Domain;
+        typedef std::pair<bool, string> Domain;
         typedef std::vector<Domain> Domains;
         typedef std::map<string, Domains> WhiteMap;
 
     public:
         static std::unique_ptr<WhiteListedOriginDomainsList> RequestFromWPEFramework(WKBundleRef bundle);
-        ~WhiteListedOriginDomainsList() {
+        ~WhiteListedOriginDomainsList()
+        {
         }
 
     public:
@@ -35,7 +36,8 @@ namespace WebKit {
         }
 
     private:
-        WhiteListedOriginDomainsList() {
+        WhiteListedOriginDomainsList()
+        {
         }
 
         WhiteMap _whiteMap;

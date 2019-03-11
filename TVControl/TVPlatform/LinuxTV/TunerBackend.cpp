@@ -24,8 +24,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "Module.h"
 #include "TunerBackend.h"
+#include "Module.h"
 
 using namespace WPEFramework;
 
@@ -100,8 +100,8 @@ void TvTunerBackend::SetModulation(std::string& modulation)
                 _channel = AtscVsb; // FIXME: check and remove.
 
                 // Set the modulation.
-                struct dtv_property p[] = { {.cmd = DTV_MODULATION } };
-                struct dtv_properties cmdseq = {.num = 1, .props = p };
+                struct dtv_property p[] = { { .cmd = DTV_MODULATION } };
+                struct dtv_properties cmdseq = { .num = 1, .props = p };
                 struct dtv_property* propPtr;
                 propPtr = p;
                 propPtr->u.data = VSB_8;
@@ -297,8 +297,8 @@ void TvTunerBackend::GetSources()
 int32_t TvTunerBackend::GetSupportedSourcesTypeList(SrcTypesVector* outSourceTypesList)
 {
     if (!(_srcTypeListPtr && _supportedSysCount)) {
-        struct dtv_property p = {.cmd = DTV_ENUM_DELSYS };
-        struct dtv_properties cmdName = {.num = 1, .props = &p };
+        struct dtv_property p = { .cmd = DTV_ENUM_DELSYS };
+        struct dtv_properties cmdName = { .num = 1, .props = &p };
         struct dvbfe_handle* feHandle = OpenFE(_tunerData->tunerId);
         if (feHandle) {
             if (ioctl(feHandle->fd, FE_GET_PROPERTY, &cmdName) == -1) {
@@ -415,7 +415,6 @@ int32_t TvTunerBackend::GetSupportedSourcesTypeList(SrcTypesVector* outSourceTyp
             TRACE(Trace::Error, (_T("Failed to open frontend")));
             return -1;
         }
-
     }
 
     // Update the number of supported Sources.

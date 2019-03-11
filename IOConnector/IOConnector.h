@@ -1,19 +1,19 @@
 #ifndef IOCONNECTOR_H
 #define IOCONNECTOR_H
 
-#include "Module.h"
-#include "Handler.h"
 #include "GPIO.h"
+#include "Handler.h"
+#include "Module.h"
 
 #include <interfaces/IExternal.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class IOConnector 
-        : public PluginHost::IPlugin 
-        , public PluginHost::IWeb
-        , public Exchange::IExternal::IFactory {
+    class IOConnector
+        : public PluginHost::IPlugin,
+          public PluginHost::IWeb,
+          public Exchange::IExternal::IFactory {
     private:
         IOConnector(const IOConnector&) = delete;
         IOConnector& operator=(const IOConnector&) = delete;
@@ -22,21 +22,25 @@ namespace Plugin {
         private:
             Sink() = delete;
             Sink(const Sink&) = delete;
-            Sink& operator= (const Sink&) = delete;
+            Sink& operator=(const Sink&) = delete;
 
         public:
-            Sink(IOConnector* parent) : _parent(*parent) {
+            Sink(IOConnector* parent)
+                : _parent(*parent)
+            {
             }
-            virtual ~Sink() {
+            virtual ~Sink()
+            {
             }
 
         public:
-            virtual void Update() override {
+            virtual void Update() override
+            {
                 _parent.Activity();
             }
 
             BEGIN_INTERFACE_MAP(Sink)
-                INTERFACE_ENTRY(Exchange::IExternal::INotification)
+            INTERFACE_ENTRY(Exchange::IExternal::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -55,27 +59,31 @@ namespace Plugin {
         public:
             class Pin : public Core::JSON::Container {
             public:
-                class Handle: public Core::JSON::Container {
+                class Handle : public Core::JSON::Container {
                 public:
                     Handle()
                         : Handler()
-                        , Config() {
+                        , Config()
+                    {
                         Add(_T("name"), &Handler);
                         Add(_T("config"), &Config);
                     }
                     Handle(const Handle& copy)
                         : Handler(copy.Handler)
-                        , Config(copy.Config) {
+                        , Config(copy.Config)
+                    {
                         Add(_T("name"), &Handler);
                         Add(_T("config"), &Config);
                     }
-                    virtual ~Handle() {
+                    virtual ~Handle()
+                    {
                     }
 
-                    Handle& operator= (const Handle& RHS) {
+                    Handle& operator=(const Handle& RHS)
+                    {
                         Handler = RHS.Handler;
                         Config = RHS.Config;
-                        return(*this);
+                        return (*this);
                     }
 
                 public:
@@ -84,12 +92,12 @@ namespace Plugin {
                 };
 
                 enum mode {
-                    LOW,        /* input  */
-                    HIGH,       /* input  */
-                    BOTH,       /* input  */
-                    ACTIVE,     /* output */
-                    INACTIVE,   /* output */
-                    OUTPUT      /* output */
+                    LOW, /* input  */
+                    HIGH, /* input  */
+                    BOTH, /* input  */
+                    ACTIVE, /* output */
+                    INACTIVE, /* output */
+                    OUTPUT /* output */
                 };
 
             public:
@@ -97,7 +105,8 @@ namespace Plugin {
                     : Id(~0)
                     , Mode(LOW)
                     , ActiveLow(false)
-                    , Handler() {
+                    , Handler()
+                {
                     Add(_T("id"), &Id);
                     Add(_T("mode"), &Mode);
                     Add(_T("activelow"), &ActiveLow);
@@ -107,24 +116,27 @@ namespace Plugin {
                     : Id(copy.Id)
                     , Mode(copy.Mode)
                     , ActiveLow(copy.ActiveLow)
-                    , Handler(copy.Handler) {
+                    , Handler(copy.Handler)
+                {
                     Add(_T("id"), &Id);
                     Add(_T("mode"), &Mode);
                     Add(_T("activelow"), &ActiveLow);
                     Add(_T("handler"), &Handler);
                 }
-		virtual ~Pin() {
-		}
+                virtual ~Pin()
+                {
+                }
 
-                Pin& operator= (const Pin& RHS) {
+                Pin& operator=(const Pin& RHS)
+                {
                     Id = RHS.Id;
                     Mode = RHS.Mode;
                     ActiveLow = RHS.ActiveLow;
                     Handler = RHS.Handler;
- 
-                    return(*this);
+
+                    return (*this);
                 }
-	
+
             public:
                 Core::JSON::DecUInt8 Id;
                 Core::JSON::EnumType<mode> Mode;
@@ -134,10 +146,12 @@ namespace Plugin {
 
         public:
             Config()
-                : Core::JSON::Container() {
+                : Core::JSON::Container()
+            {
                 Add(_T("pins"), &Pins);
             }
-            virtual ~Config() {
+            virtual ~Config()
+            {
             }
 
         public:
@@ -173,9 +187,9 @@ namespace Plugin {
 
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(IOConnector)
-            INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(PluginHost::IWeb)
-            INTERFACE_ENTRY(Exchange::IExternal::IFactory)
+        INTERFACE_ENTRY(PluginHost::IPlugin)
+        INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(Exchange::IExternal::IFactory)
         END_INTERFACE_MAP
 
     public:
@@ -197,7 +211,7 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
-        void Activity ();
+        void Activity();
         void GetMethod(Web::Response& response, Core::TextSegmentIterator& index, GPIO::Pin& pin);
         void PostMethod(Web::Response& response, Core::TextSegmentIterator& index, GPIO::Pin& pin);
 

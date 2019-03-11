@@ -12,24 +12,28 @@ private:
     HTML5Notification& operator=(const HTML5Notification& a_RHS) = delete;
 
 public:
-    HTML5Notification (const TCHAR formatter[], ...)
+    HTML5Notification(const TCHAR formatter[], ...)
     {
         va_list ap;
         va_start(ap, formatter);
         Trace::Format(_text, formatter, ap);
         va_end(ap);
     }
-    explicit HTML5Notification(const string& text) : _text(Core::ToString(text)) 
+    explicit HTML5Notification(const string& text)
+        : _text(Core::ToString(text))
     {
     }
     ~HTML5Notification()
     {
     }
+
 public:
-    inline const char* Data() const {
+    inline const char* Data() const
+    {
         return (_text.c_str());
     }
-    inline uint16_t Length() const {
+    inline uint16_t Length() const
+    {
         return (static_cast<uint16_t>(_text.length()));
     }
 

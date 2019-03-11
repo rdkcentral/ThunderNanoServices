@@ -1,5 +1,5 @@
-#include "Module.h"
 #include "TVPlatformImplementation.h"
+#include "Module.h"
 
 using namespace WPEFramework;
 
@@ -278,7 +278,8 @@ static SystemTVPlatformType<TVPlatformImplementation> g_instance;
 
 } // namespace TVPlatform
 
-TVPlatform::ISystemTVPlatform* GetSystemTVPlatform() {
+TVPlatform::ISystemTVPlatform* GetSystemTVPlatform()
+{
 
     return &TVPlatform::g_instance;
 }

@@ -5,21 +5,23 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(DHCPServer, 1, 0);
 
-    static Core::ProxyPoolType<Web::JSONBodyType<DHCPServer::Data> >         jsonDataFactory(1);
-    static Core::ProxyPoolType<Web::JSONBodyType<DHCPServer::Data::Server> > jsonServerDataFactory(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<DHCPServer::Data>> jsonDataFactory(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<DHCPServer::Data::Server>> jsonServerDataFactory(1);
 
-    #ifdef __WIN32__
-    #pragma warning( disable : 4355 )
-    #endif
+#ifdef __WIN32__
+#pragma warning(disable : 4355)
+#endif
     DHCPServer::DHCPServer()
         : _skipURL(0)
-        , _servers() {
+        , _servers()
+    {
     }
-    #ifdef __WIN32__
-    #pragma warning( default : 4355 )
-    #endif
+#ifdef __WIN32__
+#pragma warning(default : 4355)
+#endif
 
-    /* virtual */ DHCPServer::~DHCPServer() {
+    /* virtual */ DHCPServer::~DHCPServer()
+    {
     }
 
     /* virtual */ const string DHCPServer::Initialize(PluginHost::IShell* service)
@@ -30,20 +32,20 @@ namespace Plugin {
 
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
-	Core::NodeId dns (config.DNS.Value().c_str());
-        Core::JSON::ArrayType<Config::Server>::Iterator index (config.Servers.Elements());
+        Core::NodeId dns(config.DNS.Value().c_str());
+        Core::JSON::ArrayType<Config::Server>::Iterator index(config.Servers.Elements());
 
         while (index.Next() == true) {
             if (index.Current().Interface.IsSet() == true) {
-                _servers.emplace(std::piecewise_construct, 
-                    std::make_tuple(index.Current().Interface.Value()), 
+                _servers.emplace(std::piecewise_construct,
+                    std::make_tuple(index.Current().Interface.Value()),
                     std::make_tuple(
                         config.Name.Value(),
                         index.Current().Interface.Value(),
                         index.Current().PoolStart.Value(),
                         index.Current().PoolSize.Value(),
-			index.Current().Router.Value(),
-			dns));
+                        index.Current().Router.Value(),
+                        dns));
             }
         }
 
@@ -53,7 +55,7 @@ namespace Plugin {
 
     /* virtual */ void DHCPServer::Deinitialize(PluginHost::IShell* service)
     {
-	std::map<const string, DHCPServerImplementation>::iterator index( _servers.begin());
+        std::map<const string, DHCPServerImplementation>::iterator index(_servers.begin());
 
         while (index != _servers.end()) {
             index->second.Close();
@@ -74,7 +76,8 @@ namespace Plugin {
     }
 
     /* virtual */ Core::ProxyType<Web::Response>
-    DHCPServer::Process(const Web::Request& request) {
+    DHCPServer::Process(const Web::Request& request)
+    {
 
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
         Core::TextSegmentIterator index(
@@ -90,26 +93,24 @@ namespace Plugin {
 
         if (request.Verb == Web::Request::HTTP_GET) {
 
-
             if (index.Next() == true) {
-	        std::map<const string, DHCPServerImplementation>::iterator server (_servers.find(index.Current().Text()));
+                std::map<const string, DHCPServerImplementation>::iterator server(_servers.find(index.Current().Text()));
 
                 if (server != _servers.end()) {
-                    Core::ProxyType<Data::Server> info (jsonDataFactory.Element());
+                    Core::ProxyType<Data::Server> info(jsonDataFactory.Element());
 
-                    info->Set (server->second);
+                    info->Set(server->second);
                     result->Body(info);
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = "OK";
                 }
-            }
-            else {
-                Core::ProxyType<Data> info (jsonDataFactory.Element());
-	        std::map<const string, DHCPServerImplementation>::iterator servers (_servers.begin());
+            } else {
+                Core::ProxyType<Data> info(jsonDataFactory.Element());
+                std::map<const string, DHCPServerImplementation>::iterator servers(_servers.begin());
 
                 while (servers != _servers.end()) {
 
-                    info->Servers.Add().Set(servers->second);                    
+                    info->Servers.Add().Set(servers->second);
                     servers++;
                 }
 
@@ -117,32 +118,28 @@ namespace Plugin {
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";
             }
-        }
-        else if (request.Verb == Web::Request::HTTP_PUT) {
+        } else if (request.Verb == Web::Request::HTTP_PUT) {
 
             if (index.Next() == true) {
-	        std::map<const string, DHCPServerImplementation>::iterator server (_servers.find(index.Current().Text()));
+                std::map<const string, DHCPServerImplementation>::iterator server(_servers.find(index.Current().Text()));
 
-                if ( (server != _servers.end()) && (index.Next() == true) )  {
+                if ((server != _servers.end()) && (index.Next() == true)) {
 
                     if (index.Current() == _T("Activate")) {
 
                         if (server->second.Open() == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = "OK";
-                        }
-                        else {
+                        } else {
                             result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
                             result->Message = "Could not activate the server";
                         }
-                    }
-                    else if (index.Current() == _T("Deactivate")) {
+                    } else if (index.Current() == _T("Deactivate")) {
 
                         if (server->second.Close() == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = "OK";
-                        }
-                        else {
+                        } else {
                             result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
                             result->Message = "Could not activate the server";
                         }

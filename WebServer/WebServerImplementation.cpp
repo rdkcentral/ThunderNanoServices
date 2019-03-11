@@ -1,6 +1,6 @@
 #include "Module.h"
-#include <interfaces/IWebServer.h>
 #include <interfaces/IMemory.h>
+#include <interfaces/IWebServer.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -216,8 +216,7 @@ namespace Plugin {
                     if (_outstandingMessages.size() == 1) {
                         if (IsOpen() == false) {
                             Open(0);
-                        }
-                        else {
+                        } else {
                             Submit(request);
                         }
                     }
@@ -335,8 +334,7 @@ namespace Plugin {
                     // If path starts with mapped string, we should relay.
                     if (((originalPath.length() == checkSize) || ((originalPath.length() > checkSize) && (originalPath[checkSize] == '/'))) && (originalPath.compare(0, checkSize, proxyPath) == 0)) {
                         found = true;
-                    }
-                    else {
+                    } else {
                         index++;
                     }
                 }
@@ -525,10 +523,9 @@ namespace Plugin {
                 Core::JSON::ArrayType<Config::Proxy>::ConstIterator index(configuration.Proxies.Elements());
 
                 if (configuration.Path.Value()[0] == '/') {
-                    _prefixPath = Core::Directory::Normalize(configuration.Path);
-                }
-                else {
-                    _prefixPath = prefixPath + Core::Directory::Normalize(configuration.Path);
+                    _prefixPath = Core::Directory::Normalize(configuration.Path.Value());
+                } else {
+                    _prefixPath = prefixPath + Core::Directory::Normalize(configuration.Path.Value());
                 }
 
                 _proxyMap.Create(index);
@@ -540,15 +537,13 @@ namespace Plugin {
                         accessor = selectedNode;
                         listenNode = accessor;
                     }
-                }
-                else if (listenNode.IsAnyInterface() == true) {
+                } else if (listenNode.IsAnyInterface() == true) {
                     Core::NodeId selectedNode = Plugin::Config::IPV4UnicastNode(configuration.Interface.Value());
 
                     if (selectedNode.IsValid() == true) {
                         accessor = selectedNode;
                     }
-                }
-                else {
+                } else {
                     accessor = listenNode;
                 }
 
@@ -630,8 +625,7 @@ namespace Plugin {
                         // Give it all the time (0) if it i not yet suspended to close. If it is
                         // suspended, force the close down if not closed in 100ms.
                         index.Client()->Close(0);
-                    }
-                    else {
+                    } else {
                         index.Client()->ResetActivity();
                     }
                 }
@@ -678,7 +672,7 @@ namespace Plugin {
                 PluginHost::ISubSystem* subSystem = service->SubSystems();
 
                 if (subSystem != nullptr) {
-                    ASSERT (subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == false);
+                    ASSERT(subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == false);
                     subSystem->Set(PluginHost::ISubSystem::WEBSOURCE, nullptr);
                     subSystem->Release();
                 }
@@ -769,8 +763,7 @@ namespace Plugin {
                 *fileBody = fileToService + _T("index.html");
                 response->ContentType = Web::MIME_HTML;
                 response->Body<Web::FileBody>(fileBody);
-            }
-            else {
+            } else {
                 *fileBody = fileToService;
                 response->ContentType = result;
                 response->Body<Web::FileBody>(fileBody);
@@ -824,8 +817,7 @@ namespace WebServer {
         {
             if (pid == 0) {
                 _observable = false;
-            }
-            else {
+            } else {
                 _main = Core::ProcessInfo().Id();
                 _observable = true;
             }

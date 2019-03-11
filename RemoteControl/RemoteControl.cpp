@@ -1,14 +1,14 @@
 #include <fcntl.h>
 
-#include "RemoteControl.h"
 #include "RemoteAdministrator.h"
+#include "RemoteControl.h"
 
 namespace WPEFramework {
 namespace Plugin {
 
     static const string DefaultMappingTable(_T("default"));
-    static Core::ProxyPoolType<Web::JSONBodyType<RemoteControl::Data> > jsonResponseFactory(4);
-    static Core::ProxyPoolType<Web::JSONBodyType<PluginHost::VirtualInput::KeyMap::KeyMapEntry> > jsonCodeFactory(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<RemoteControl::Data>> jsonResponseFactory(4);
+    static Core::ProxyPoolType<Web::JSONBodyType<PluginHost::VirtualInput::KeyMap::KeyMapEntry>> jsonCodeFactory(1);
 
     SERVICE_REGISTRATION(RemoteControl, 1, 0);
 
@@ -66,8 +66,7 @@ namespace Plugin {
 
             if (result == Core::ERROR_UNKNOWN_TABLE) {
                 _text = Core::ToString(Trace::Format(_T("Invalid table: [%s,%08X]"), mapName.c_str(), code));
-            }
-            else if (result == Core::ERROR_UNKNOWN_KEY) {
+            } else if (result == Core::ERROR_UNKNOWN_KEY) {
                 _text = Core::ToString(Trace::Format(_T("Unknown: [%s:%08X] state %s, blocked."), mapName.c_str(), code, text));
             }
         }
@@ -138,8 +137,7 @@ namespace Plugin {
         // First check that we at least can create a default lookup table.
         if (_inputHandler == nullptr) {
             result = "Could not configure remote control.";
-        }
-        else {
+        } else {
             TRACE(Trace::Information, (_T("Opening default map file: %s"), mappingFile.c_str()));
             TRACE_L1(_T("Opening default map file: %s"), mappingFile.c_str());
 
@@ -183,8 +181,7 @@ namespace Plugin {
                     (*index)->Configure(configList.Current().Settings.Value());
                     // We found an overruling name.
                     loadName = configList.Current().MapFile.Value();
-                }
-                else {
+                } else {
                     (*index)->Configure(EMPTY_STRING);
                     loadName += _T(".json");
                 }
@@ -305,19 +302,15 @@ namespace Plugin {
         if (request.Verb == Web::Request::HTTP_GET) {
 
             result = GetMethod(index, request);
-        }
-        else if (request.Verb == Web::Request::HTTP_PUT) {
+        } else if (request.Verb == Web::Request::HTTP_PUT) {
             result = PutMethod(index, request);
-        }
-        else if (request.Verb == Web::Request::HTTP_POST) {
+        } else if (request.Verb == Web::Request::HTTP_POST) {
 
             result = PostMethod(index, request);
-        }
-        else if (request.Verb == Web::Request::HTTP_DELETE) {
+        } else if (request.Verb == Web::Request::HTTP_DELETE) {
 
             result = DeleteMethod(index, request);
-        }
-        else {
+        } else {
             result = PluginHost::Factories::Instance().Response();
             result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
             result->Message = string(_T("Unknown request path specified."));
@@ -333,8 +326,7 @@ namespace Plugin {
 
         if (result == Core::ERROR_NONE) {
             TRACE(KeyActivity, (mapName, code, pressed));
-        }
-        else {
+        } else {
             TRACE(UnknownKey, (mapName, code, pressed, result));
         }
         return (result);
@@ -346,7 +338,7 @@ namespace Plugin {
 
         if (request.HasBody() == true) {
 
-            const PluginHost::VirtualInput::KeyMap::KeyMapEntry& data = *(request.Body<const Web::JSONBodyType<PluginHost::VirtualInput::KeyMap::KeyMapEntry> >());
+            const PluginHost::VirtualInput::KeyMap::KeyMapEntry& data = *(request.Body<const Web::JSONBodyType<PluginHost::VirtualInput::KeyMap::KeyMapEntry>>());
 
             if (data.Code.IsSet() == true) {
                 code = data.Code.Value();
@@ -356,7 +348,7 @@ namespace Plugin {
 
                 if (data.Modifiers.IsSet()) {
 
-                    Core::JSON::ArrayType<Core::JSON::EnumType<PluginHost::VirtualInput::KeyMap::modifier> >::ConstIterator flags(data.Modifiers.Elements());
+                    Core::JSON::ArrayType<Core::JSON::EnumType<PluginHost::VirtualInput::KeyMap::modifier>>::ConstIterator flags(data.Modifiers.Elements());
 
                     while (flags.Next() == true) {
                         switch (flags.Current().Value()) {
@@ -383,7 +375,7 @@ namespace Plugin {
     Core::ProxyType<Web::IBody> RemoteControl::CreateResponseBody(const uint32_t code, const uint32_t key, uint16_t modifiers) const
     {
 
-        Core::ProxyType<Web::JSONBodyType<PluginHost::VirtualInput::KeyMap::KeyMapEntry> >
+        Core::ProxyType<Web::JSONBodyType<PluginHost::VirtualInput::KeyMap::KeyMapEntry>>
             response(jsonCodeFactory.Element());
 
         response->Code = code;
@@ -451,8 +443,7 @@ namespace Plugin {
                             result->ContentType = Web::MIMETypes::MIME_JSON;
                             result->Body(CreateResponseBody(code, codeElements->Code, codeElements->Modifiers));
                         }
-                    }
-                    else {
+                    } else {
                         result->ErrorCode = Web::STATUS_BAD_REQUEST;
                         result->Message = string(_T("No key code in request"));
                     }
@@ -463,8 +454,7 @@ namespace Plugin {
                     if (IsVirtualDevice(deviceName) == true) {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = string(_T("Virtual device is loaded"));
-                    }
-                    else if (IsPhysicalDevice(deviceName) == true) {
+                    } else if (IsPhysicalDevice(deviceName) == true) {
                         uint32_t error = Remotes::RemoteAdministrator::Instance().Error(deviceName);
                         if (error == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
@@ -474,8 +464,7 @@ namespace Plugin {
 
                             (*body) = Remotes::RemoteAdministrator::Instance().MetaData(deviceName);
                             result->Body<Web::TextBody>(body);
-                        }
-                        else {
+                        } else {
 
                             result->ErrorCode = Web::STATUS_BAD_GATEWAY;
                             result->Message = string(_T("Error during loading of device. ErrorCode: ")) + Core::NumberType<uint32_t>(error).Text();
@@ -487,7 +476,7 @@ namespace Plugin {
         // GET .../RemoteControl : Return name-list of all registered devices
         else {
 
-            Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
+            Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
 
             // Add virtual devices
             std::list<string>::const_iterator index(_virtualDevices.begin());
@@ -545,8 +534,7 @@ namespace Plugin {
                         if ((physical == true) && (Remotes::RemoteAdministrator::Instance().Pair(deviceName) == true)) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = string(_T("Pairing mode active: ") + deviceName);
-                        }
-                        else {
+                        } else {
                             result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
                             result->Message = string(_T("Failed to activate pairing: ") + deviceName);
                         }
@@ -558,8 +546,7 @@ namespace Plugin {
                             if (Remotes::RemoteAdministrator::Instance().Unpair(deviceName, index.Current().Text()) == true) {
                                 result->ErrorCode = Web::STATUS_OK;
                                 result->Message = string(_T("Unpaired ") + deviceName);
-                            }
-                            else {
+                            } else {
                                 result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
                                 result->Message = string(_T("Failed to unpair: ") + deviceName);
                             }
@@ -588,8 +575,7 @@ namespace Plugin {
                                     }
                                 }
                             }
-                        }
-                        else {
+                        } else {
                             result->ErrorCode = Web::STATUS_BAD_REQUEST;
                             result->Message = string(_T("No key code in request"));
                         }
@@ -610,8 +596,7 @@ namespace Plugin {
                                 result->ErrorCode = Web::STATUS_ACCEPTED;
                                 result->Message = string(_T("Soft key is sent to ") + deviceName);
                             }
-                        }
-                        else {
+                        } else {
                             result->ErrorCode = Web::STATUS_BAD_REQUEST;
                             result->Message = string(_T("No key code in request"));
                         }
@@ -663,8 +648,7 @@ namespace Plugin {
                             }
                         }
                     }
-                }
-                else {
+                } else {
                     uint32_t code = 0;
                     uint16_t key = 0;
                     uint32_t modifiers = 0;
@@ -680,8 +664,7 @@ namespace Plugin {
                             if (map.Add(code, key, modifiers) == true) {
                                 result->ErrorCode = Web::STATUS_CREATED;
                                 result->Message = string(_T("Code is added"));
-                            }
-                            else {
+                            } else {
                                 result->ErrorCode = Web::STATUS_FORBIDDEN;
                                 result->Message = string(_T("Code already exists"));
                             }
@@ -729,8 +712,7 @@ namespace Plugin {
 
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = string(_T("Code is deleted"));
-                        }
-                        else {
+                        } else {
                             result->ErrorCode = Web::STATUS_FORBIDDEN;
                             result->Message = string(_T("Key does not exist in ") + deviceName);
                         }
@@ -774,8 +756,7 @@ namespace Plugin {
                             if (map.Modify(code, key, modifiers) == true) {
                                 result->ErrorCode = Web::STATUS_OK;
                                 result->Message = string(_T("Code is modified"));
-                            }
-                            else {
+                            } else {
                                 result->ErrorCode = Web::STATUS_FORBIDDEN;
                                 result->Message = string(_T("Code does not exist"));
                             }

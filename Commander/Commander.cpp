@@ -16,10 +16,10 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(Commander, 1, 0);
 
-    static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<Core::JSON::String> > > jsonBodyDataFactory(1);
-    static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<Commander::Data> > > jsonBodyArrayDataFactory(2);
-    static Core::ProxyPoolType<Web::JSONBodyType<Commander::Data> > jsonBodySingleDataFactory(2);
-    static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<Commander::Command> > > jsonBodyArrayCommandFactory(2);
+    static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<Core::JSON::String>>> jsonBodyDataFactory(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<Commander::Data>>> jsonBodyArrayDataFactory(2);
+    static Core::ProxyPoolType<Web::JSONBodyType<Commander::Data>> jsonBodySingleDataFactory(2);
+    static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<Commander::Command>>> jsonBodyArrayCommandFactory(2);
 
     Commander::Commander()
         : _skipURL(0)
@@ -53,12 +53,12 @@ namespace Plugin {
         while (index.Next() == true) {
 
             // Create all sequencers defined in the config
-            _sequencers.insert(std::pair<const string, Core::ProxyType<Sequencer > >(
-                                   index.Current(), 
-                                   Core::ProxyType<Sequencer>::Create(
-                                       index.Current(), 
-                                       &_commandAdministrator, 
-                                       _service)));
+            _sequencers.insert(std::pair<const string, Core::ProxyType<Sequencer>>(
+                index.Current().Value(),
+                Core::ProxyType<Sequencer>::Create(
+                    index.Current().Value(),
+                    &_commandAdministrator,
+                    _service)));
         }
 
         // On succes return "".
@@ -70,11 +70,11 @@ namespace Plugin {
         ASSERT(_service == service);
 
         // Stop all running sequencers..
-        std::map<const string, Core::ProxyType<Sequencer> >::iterator index(_sequencers.begin());
+        std::map<const string, Core::ProxyType<Sequencer>>::iterator index(_sequencers.begin());
 
         while (index != _sequencers.end()) {
 
-            Core::ProxyType<Core::IDispatchType<void> > job (Core::proxy_cast<Core::IDispatchType<void> >(index->second));
+            Core::ProxyType<Core::IDispatchType<void>> job(Core::proxy_cast<Core::IDispatchType<void>>(index->second));
 
             index->second->Abort();
             PluginHost::WorkerPool::Instance().Revoke(job);
@@ -125,8 +125,7 @@ namespace Plugin {
 
                 response->ErrorCode = Web::STATUS_BAD_REQUEST;
                 response->Message = _T("Missing Sequencer name or not existing sequencer");
-            }
-            else if (index.Current() == _T("Sequencer")) {
+            } else if (index.Current() == _T("Sequencer")) {
 
                 if (index.Next() == true) {
                     // Seems like we are looking for a specific sequencer..
@@ -134,9 +133,8 @@ namespace Plugin {
 
                         response->ErrorCode = Web::STATUS_BAD_REQUEST;
                         response->Message = _T("Not existing sequencer");
-                    }
-                    else {
-                        Core::ProxyType<Web::JSONBodyType<Commander::Data> > data(jsonBodySingleDataFactory.Element());
+                    } else {
+                        Core::ProxyType<Web::JSONBodyType<Commander::Data>> data(jsonBodySingleDataFactory.Element());
 
                         (*data) = MetaData(*_sequencers[index.Current().Text()]);
 
@@ -144,10 +142,9 @@ namespace Plugin {
                         response->Message = "OK";
                         response->Body(Core::proxy_cast<Web::IBody>(data));
                     }
-                }
-                else {
-                    Core::ProxyType<Web::JSONBodyType<Core::JSON::ArrayType<Commander::Data> > > data(jsonBodyArrayDataFactory.Element());
-                    std::map<const string, Core::ProxyType<Sequencer> >::iterator index(_sequencers.begin());
+                } else {
+                    Core::ProxyType<Web::JSONBodyType<Core::JSON::ArrayType<Commander::Data>>> data(jsonBodyArrayDataFactory.Element());
+                    std::map<const string, Core::ProxyType<Sequencer>>::iterator index(_sequencers.begin());
 
                     while (index != _sequencers.end()) {
 
@@ -160,13 +157,12 @@ namespace Plugin {
                     response->Message = "OK";
                     response->Body(Core::proxy_cast<Web::IBody>(data));
                 }
-            }
-            else if (index.Current() == _T("Commands")) {
+            } else if (index.Current() == _T("Commands")) {
 
                 // Make sure the "elemenyt is ste flag" is active.
                 Core::JSON::String newValue;
 
-                Core::ProxyType<Web::JSONBodyType<Core::JSON::ArrayType<Core::JSON::String> > > data(jsonBodyDataFactory.Element());
+                Core::ProxyType<Web::JSONBodyType<Core::JSON::ArrayType<Core::JSON::String>>> data(jsonBodyDataFactory.Element());
 
                 auto index(_commandAdministrator.Commands());
 
@@ -180,50 +176,43 @@ namespace Plugin {
                 response->Message = "OK";
                 response->Body(Core::proxy_cast<Web::IBody>(data));
             }
-        }
-        else if (request.Verb == Web::Request::HTTP_DELETE) {
+        } else if (request.Verb == Web::Request::HTTP_DELETE) {
             if ((true != index.Next()) || (_sequencers.find(index.Current().Text()) == _sequencers.end())) {
 
                 response->ErrorCode = Web::STATUS_BAD_REQUEST;
                 response->Message = _T("Missing Sequencer name or not existing sequencer");
-            }
-            else {
+            } else {
                 // Current name, is the name of the sequencer
                 Core::ProxyType<Sequencer> sequencer(_sequencers[index.Current().Text()]);
-                Core::ProxyType<Core::IDispatchType<void> > job (Core::proxy_cast<Core::IDispatchType<void> >(sequencer));
+                Core::ProxyType<Core::IDispatchType<void>> job(Core::proxy_cast<Core::IDispatchType<void>>(sequencer));
 
                 if (sequencer->Abort() != Core::ERROR_NONE) {
                     response->ErrorCode = Web::STATUS_NO_CONTENT;
                     response->Message = _T("Sequencer was not in a running state");
-                }
-                else if (PluginHost::WorkerPool::Instance().Revoke(job, 2000) == Core::ERROR_NONE) {
+                } else if (PluginHost::WorkerPool::Instance().Revoke(job, 2000) == Core::ERROR_NONE) {
                     response->ErrorCode = Web::STATUS_OK;
                     response->Message = _T("Sequencer available for next sequence");
-                }
-                else {
+                } else {
                     response->ErrorCode = Web::STATUS_REQUEST_TIME_OUT;
                     response->Message = _T("Sequencer did not stop in time (2S)");
                 }
             }
-        }
-        else if (request.Verb == Web::Request::HTTP_PUT) {
+        } else if (request.Verb == Web::Request::HTTP_PUT) {
 
             if ((true != index.Next()) || (request.HasBody() == false) || (_sequencers.find(index.Current().Text()) == _sequencers.end())) {
 
                 response->ErrorCode = Web::STATUS_BAD_REQUEST;
                 response->Message = _T("Missing Sequencer name, body or invalid sequencer name");
-            }
-            else {
+            } else {
                 // Current name, is the name of the sequencer
                 Core::ProxyType<Sequencer> sequencer(_sequencers[index.Current().Text()]);
-                Core::ProxyType<Core::IDispatchType<void> > job (Core::proxy_cast<Core::IDispatchType<void> >(sequencer));
+                Core::ProxyType<Core::IDispatchType<void>> job(Core::proxy_cast<Core::IDispatchType<void>>(sequencer));
 
                 if (sequencer->IsActive() == true) {
                     response->ErrorCode = Web::STATUS_TEMPORARY_REDIRECT;
                     response->Message = _T("Sequencer already running");
-                }
-                else {
-                    sequencer->Load(*(request.Body<Web::JSONBodyType<Core::JSON::ArrayType<Commander::Command> > >()));
+                } else {
+                    sequencer->Load(*(request.Body<Web::JSONBodyType<Core::JSON::ArrayType<Commander::Command>>>()));
                     sequencer->Execute();
 
                     PluginHost::WorkerPool::Instance().Submit(job);
