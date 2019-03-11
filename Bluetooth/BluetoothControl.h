@@ -6,6 +6,7 @@
 
 #include <interfaces/IBluetooth.h>
 #include <linux/uhid.h>
+#include <functional>
 
 namespace WPEFramework {
 namespace Plugin {

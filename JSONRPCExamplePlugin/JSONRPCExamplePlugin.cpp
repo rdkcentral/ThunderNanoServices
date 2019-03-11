@@ -1,7 +1,7 @@
 #include "JSONRPCExamplePlugin.h"
 
 namespace WPEFramework {
-
+  
 namespace Plugin {
 
     SERVICE_REGISTRATION(JSONRPCExamplePlugin, 1, 0);

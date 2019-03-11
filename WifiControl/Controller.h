@@ -1295,29 +1295,30 @@ namespace WPASupplicant {
 
             EnabledContainer::const_iterator index(_enabled.find(SSID));
 
-            bool result = ((index != _enabled.end()) && (index->second.IsEnabled() == true));
-
-            _adminLock.Unlock();
-
-            return (result);
+            bool status = false;
+            do {
+                if (BaseClass::IsOpen() == false) {
+                  BaseClass::Close(100);
+              
+                return (result);
         }
         inline bool IsSelected(const string& SSID) const
         {
 
             _adminLock.Lock();
 
-            EnabledContainer::const_iterator index(_enabled.find(SSID));
+            CustomRequest exchange (string(_TXT("PING")));
+            Submit(&exchange);
 
-            bool result = ((index != _enabled.end()) && (index->second.IsSelected() == true));
+            if ((exchange.Wait(500) == true) && (exchange.Response() == _T("PONG"))) {
+                status = true;
+            }
 
-            _adminLock.Unlock();
+            Revoke (&exchange);
+        } while ((slices != 0) && (status == false));
 
-            return (result);
-        }
-        inline bool Hidden(const string& SSID) const
-        {
-
-            bool result = false;
+        return status;
+    }
 
             _adminLock.Lock();
 
@@ -1470,9 +1471,11 @@ namespace WPASupplicant {
                 value = exchange.Response();
             }
 
-            Revoke(&exchange);
 
-            return (result);
+          Revoke (&exchange);
+        }
+        else {
+            _adminLock.Unlock();
         }
 
         inline uint32_t GetKey(const string& SSID, const string& key, string& value) const
@@ -1553,7 +1556,9 @@ namespace WPASupplicant {
         void Submit(Request* data) const
         {
 
-            _adminLock.Lock();
+        _adminLock.Lock();
+
+        ASSERT(std::find(_requests.begin(), _requests.end(), data) == _requests.end());
 
             _requests.push_back(data);
 

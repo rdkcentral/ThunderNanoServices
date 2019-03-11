@@ -1,11 +1,12 @@
-set(PLUGIN_NAME SystemdConnector)
-set(MODULE_NAME WPEFramework${PLUGIN_NAME})
+set(PLUGIN_NAME JSONRPCExamplePlugin)
+set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
-find_package(Systemd REQUIRED)
+
+add_subdirectory (Client)
 
 add_library(${MODULE_NAME} SHARED 
-    SystemdConnector.cpp
+    JSONRPCExamplePlugin.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
@@ -14,8 +15,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${SYSTEMD_LIBRARIES})
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
 install(TARGETS ${MODULE_NAME} 
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)

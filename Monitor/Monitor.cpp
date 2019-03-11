@@ -105,10 +105,18 @@ namespace Plugin {
         } else if ((request.Verb == Web::Request::HTTP_POST) && (request.HasBody())) {
             Core::ProxyType<const Monitor::Data> body(request.Body<const Monitor::Data>());
             string observable = body->Observable.Value();
-            uint32_t restartLimit = body->RestartLimit.Value();
-            TRACE(Trace::Information, (_T("Sets Restart Limit :%d"), restartLimit));
-            _monitor->Update(observable, restartLimit);
-        } else {
+            MonitorObjects::MonitorObject::RestartSettings operationalRestartSettings;
+            operationalRestartSettings.Limit = body->OperationalRestartSettings.Limit.Value();
+            operationalRestartSettings.WindowSeconds = body->OperationalRestartSettings.WindowSeconds.Value();
+            MonitorObjects::MonitorObject::RestartSettings memoryRestartSettings;
+            memoryRestartSettings.Limit = body->MemoryRestartSettings.Limit.Value();
+            memoryRestartSettings.WindowSeconds = body->MemoryRestartSettings.WindowSeconds.Value();
+            TRACE(Trace::Information,(_T("Sets Restart Limits: MEMORY:[LIMIT:%d, WINDOW:%d], OPERATIONAL:[LIMIT:%d, WINDOW:%d]"),
+                                      memoryRestartSettings.Limit, memoryRestartSettings.WindowSeconds,
+                                      operationalRestartSettings.Limit, operationalRestartSettings.WindowSeconds));
+            _monitor->Update(observable, operationalRestartSettings, memoryRestartSettings);
+        }
+        else {
             result->ErrorCode = Web::STATUS_BAD_REQUEST;
             result->Message = _T(" could not handle your request.");
         }
