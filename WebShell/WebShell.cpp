@@ -11,87 +11,103 @@ namespace Plugin {
     private:
         class Session {
         private:
-            Session& operator= (const Session&);
+            Session& operator=(const Session&);
 
         public:
             Session()
                 : _channel()
-                , _process() 
+                , _process()
                 , _buffer()
-                , _leftSize(0) {
+                , _leftSize(0)
+            {
             }
-            Session(PluginHost::Channel& channel, Core::ProxyType< Core::Process> process)
+            Session(PluginHost::Channel& channel, Core::ProxyType<Core::Process> process)
                 : _channel(&channel)
                 , _process(process)
                 , _buffer()
-                , _leftSize(0) {
+                , _leftSize(0)
+            {
             }
             Session(const Session& copy)
                 : _channel(copy._channel)
                 , _process(copy._process)
                 , _buffer()
-                , _leftSize(0) {
+                , _leftSize(0)
+            {
             }
-            ~Session () {
+            ~Session()
+            {
             }
 
         public:
-            inline void Release() {
+            inline void Release()
+            {
                 _channel = nullptr;
                 _process.Release();
             }
-            inline PluginHost::Channel& Channel() {
+            inline PluginHost::Channel& Channel()
+            {
 
-                ASSERT (_channel != nullptr);
+                ASSERT(_channel != nullptr);
                 return (*_channel);
             }
-            inline const PluginHost::Channel& Channel() const {
+            inline const PluginHost::Channel& Channel() const
+            {
 
-                ASSERT (_channel != nullptr);
+                ASSERT(_channel != nullptr);
                 return (*_channel);
             }
-            inline Core::ProxyType< Core::Process> Process() {
+            inline Core::ProxyType<Core::Process> Process()
+            {
 
                 return (_process);
             }
-            inline const Core::ProxyType<Core::Process> Process() const {
+            inline const Core::ProxyType<Core::Process> Process() const
+            {
 
                 return (_process);
             }
-            inline bool operator== (const PluginHost::Channel& rhs) const {
-                return ( (_channel != nullptr) && (rhs.Id() == _channel->Id()) );
+            inline bool operator==(const PluginHost::Channel& rhs) const
+            {
+                return ((_channel != nullptr) && (rhs.Id() == _channel->Id()));
             }
-            inline bool operator!= (const PluginHost::Channel& rhs) const {
-                return (!operator== (rhs));
+            inline bool operator!=(const PluginHost::Channel& rhs) const
+            {
+                return (!operator==(rhs));
             }
-            inline bool operator== (const Core::ProxyType<Core::Process>& rhs) const {
-                return ( rhs == _process );
+            inline bool operator==(const Core::ProxyType<Core::Process>& rhs) const
+            {
+                return (rhs == _process);
             }
-            inline bool operator!= (const Core::ProxyType< Core::Process>& rhs) const {
-                return (!operator== (rhs));
+            inline bool operator!=(const Core::ProxyType<Core::Process>& rhs) const
+            {
+                return (!operator==(rhs));
             }
-            uint16_t Backup(const uint8_t data[], const uint16_t size) {
+            uint16_t Backup(const uint8_t data[], const uint16_t size)
+            {
                 uint16_t copySize = (size <= (sizeof(_buffer) - _leftSize) ? size : (sizeof(_buffer) - _leftSize));
 
-                ::memcpy (&(_buffer[_leftSize]), data, copySize);
+                ::memcpy(&(_buffer[_leftSize]), data, copySize);
                 _leftSize += copySize;
                 return (copySize);
             }
-            void Write() {
-                uint32_t writtenBytes = ::write (_process->Input(), _buffer, _leftSize);
+            void Write()
+            {
+                uint32_t writtenBytes = ::write(_process->Input(), _buffer, _leftSize);
                 if (writtenBytes < _leftSize) {
                     ::memcpy(_buffer, &(_buffer[writtenBytes]), (_leftSize - writtenBytes));
                 }
                 _leftSize -= writtenBytes;
             }
-            bool WriteRequired() const {
+            bool WriteRequired() const
+            {
                 return (_leftSize != 0);
             }
 
         private:
             PluginHost::Channel* _channel;
-            Core::ProxyType< Core::Process> _process;
-            uint8_t  _buffer[1024];
+            Core::ProxyType<Core::Process> _process;
+            uint8_t _buffer[1024];
             uint32_t _leftSize;
         };
 
@@ -114,13 +130,14 @@ namespace Plugin {
         }
         ~SessionMonitor()
         {
-            Stop ();
-            
+            Stop();
+
             Wait(Thread::STOPPED, Core::infinite);
         }
 
     public:
-        inline uint32_t Size() const {
+        inline uint32_t Size() const
+        {
             return (_sessions.size());
         }
         bool Open(PluginHost::Channel& channel, Core::Process::Options& options)
@@ -131,7 +148,7 @@ namespace Plugin {
 
             if ((process.IsValid() == true) && (process->Launch(options, &pid) == Core::ERROR_NONE)) {
 
-                ASSERT (process->HasConnector() == true);
+                ASSERT(process->HasConnector() == true);
 
                 _adminLock.Lock();
 
@@ -139,8 +156,7 @@ namespace Plugin {
 
                 if (_sessions.size() == 1) {
                     Run();
-                }
-                else {
+                } else {
                     Signal(SIGUSR2);
                 }
 
@@ -155,7 +171,7 @@ namespace Plugin {
 
             Sessions::iterator index(std::find(_sessions.begin(), _sessions.end(), channel));
 
-            ASSERT (index != _sessions.end());
+            ASSERT(index != _sessions.end());
 
             if (index != _sessions.end()) {
 
@@ -167,43 +183,45 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        uint32_t Read (const uint32_t channelId, uint8_t data[], const uint16_t length) const
+        uint32_t Read(const uint32_t channelId, uint8_t data[], const uint16_t length) const
         {
             uint32_t result = 0;
-            Sessions::const_iterator index (_sessions.begin());
+            Sessions::const_iterator index(_sessions.begin());
 
-            while ((index != _sessions.end()) && (index->Channel().Id() != channelId)) index++;
+            while ((index != _sessions.end()) && (index->Channel().Id() != channelId))
+                index++;
 
             if (index != _sessions.end()) {
 
                 // Seems we found a process that could feed this stream.
-		int load = ::read(index->Process()->Output(), data, length);
+                int load = ::read(index->Process()->Output(), data, length);
 
-		if (load > 0) {
-		    result = load;
-		}
+                if (load > 0) {
+                    result = load;
+                }
 
-		// Is there still some space left to load the the error stream ?
-		if (result < length) {
-                	load = ::read(index->Process()->Error(), &(data[result]), (length - result));
+                // Is there still some space left to load the the error stream ?
+                if (result < length) {
+                    load = ::read(index->Process()->Error(), &(data[result]), (length - result));
 
-			if (load > 0) {
-				result += load;
-			}
-		}
-		if (result < length) {
-		    data[result] = '\0'; 
-		}
+                    if (load > 0) {
+                        result += load;
+                    }
+                }
+                if (result < length) {
+                    data[result] = '\0';
+                }
             }
 
             return (result);
         }
-        uint32_t Write (const uint32_t channelId, const uint8_t data[], const uint16_t length)
+        uint32_t Write(const uint32_t channelId, const uint8_t data[], const uint16_t length)
         {
             uint32_t result = 0;
-            Sessions::iterator index (_sessions.begin());
+            Sessions::iterator index(_sessions.begin());
 
-            while ((index != _sessions.end()) && (index->Channel().Id() != channelId)) index++;
+            while ((index != _sessions.end()) && (index->Channel().Id() != channelId))
+                index++;
 
             if (index != _sessions.end()) {
                 // Seems we found a process that should receive the data..
@@ -271,7 +289,7 @@ namespace Plugin {
 
             // Fill in all entries required/updated..
             while (index != _sessions.end()) {
-                Core::ProxyType< Core::Process> port (index->Process());
+                Core::ProxyType<Core::Process> port(index->Process());
 
                 if (port.IsValid() == false) {
                     index = _sessions.erase(index);
@@ -280,8 +298,7 @@ namespace Plugin {
                         Block();
                         delay = Core::infinite;
                     }
-                }
-                else {
+                } else {
                     _slots[filledFileDescriptors].fd = port->Input();
                     _slots[filledFileDescriptors].events = (index->WriteRequired() ? POLLOUT : 0);
                     _slots[filledFileDescriptors].revents = 0;
@@ -307,8 +324,7 @@ namespace Plugin {
 
                 if (result == -1) {
                     TRACE_L1("poll failed with error <%d>", errno);
-                }
-                else if (_slots[0].revents & POLLIN) {
+                } else if (_slots[0].revents & POLLIN) {
                     /* We have a valid signal, read the info from the fd */
                     struct signalfd_siginfo info;
 
@@ -319,8 +335,7 @@ namespace Plugin {
                     // Clear the signal port..
                     _slots[0].revents = 0;
                 }
-            }
-            else {
+            } else {
                 Block();
                 delay = Core::infinite;
             }
@@ -331,7 +346,7 @@ namespace Plugin {
             index = _sessions.begin();
 
             while ((index != _sessions.end()) && (fd_index < filledFileDescriptors)) {
-                Core::ProxyType< Core::Process > port (index->Process());
+                Core::ProxyType<Core::Process> port(index->Process());
 
                 if (port.IsValid() == false) {
                     index = _sessions.erase(index);
@@ -340,8 +355,7 @@ namespace Plugin {
                         Block();
                         delay = Core::infinite;
                     }
-                }
-                else {
+                } else {
                     int fd = port->Input();
 
                     // Find the current file descriptor in our array..
@@ -353,10 +367,10 @@ namespace Plugin {
                         if ((_slots[fd_index].revents & POLLOUT) != 0) {
                             Input(*index);
                         }
-                        if ((_slots[fd_index+1].revents & POLLIN) != 0) {
+                        if ((_slots[fd_index + 1].revents & POLLIN) != 0) {
                             Output(*index);
                         }
-                        if ((_slots[fd_index+2].revents & POLLIN) != 0) {
+                        if ((_slots[fd_index + 2].revents & POLLIN) != 0) {
                             Error(*index);
                         }
                     }
@@ -371,18 +385,18 @@ namespace Plugin {
             return (delay);
         }
 
-        void Input (Session& session)
+        void Input(Session& session)
         {
             // See if there was somthing left..
             session.Write();
         }
-        void Output (Session& session)
+        void Output(Session& session)
         {
-           session.Channel().RequestOutbound(); 
+            session.Channel().RequestOutbound();
         }
-        void Error (Session& session)
+        void Error(Session& session)
         {
-           session.Channel().RequestOutbound(); 
+            session.Channel().RequestOutbound();
         }
 
     private:
@@ -395,7 +409,7 @@ namespace Plugin {
 
     /* virtual */ const string WebShell::Initialize(PluginHost::IShell* service)
     {
-        ASSERT (_sessionMonitor == nullptr);
+        ASSERT(_sessionMonitor == nullptr);
 
         _config.FromString(service->ConfigLine());
 
@@ -403,7 +417,7 @@ namespace Plugin {
 
         _sessionMonitor = new SessionMonitor();
 
-        ASSERT (_sessionMonitor != nullptr);
+        ASSERT(_sessionMonitor != nullptr);
 
         // On succes return nullptr, to indicate there is no error text.
         return (_T(""));
@@ -411,7 +425,7 @@ namespace Plugin {
 
     /* virtual */ void WebShell::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT (_sessionMonitor != nullptr);
+        ASSERT(_sessionMonitor != nullptr);
 
         service->DisableWebServer();
 
@@ -434,11 +448,10 @@ namespace Plugin {
 
             added = _sessionMonitor->Open(channel, options);
 
-	    TRACE(Connectivity, (_T("Attaching sesssion ID: %d. Open status %s"), channel.Id(), (added ? _T("true") : _T("false"))));
+            TRACE(Connectivity, (_T("Attaching sesssion ID: %d. Open status %s"), channel.Id(), (added ? _T("true") : _T("false"))));
+        } else {
+            TRACE(Connectivity, (_T("Attaching of session not allowed. Connect ID: %d rejected"), channel.Id()));
         }
-	else {
-	    TRACE(Connectivity, (_T("Attaching of session not allowed. Connect ID: %d rejected"), channel.Id()));
-	}
 
         return (added);
     }
@@ -447,7 +460,7 @@ namespace Plugin {
     {
         // See if we can forward this info..
         _sessionMonitor->Close(channel);
-	TRACE(Connectivity, (_T("Removing sesssion ID: %d"), channel.Id()));
+        TRACE(Connectivity, (_T("Removing sesssion ID: %d"), channel.Id()));
     }
 
     /* virtual */ string WebShell::Information() const
@@ -464,9 +477,9 @@ namespace Plugin {
     {
         uint32_t result = length;
 
-	TRACE(Interactivity, (_T("IN: \"%s\""), string(reinterpret_cast<const char*>(&data[0]), length).c_str()));
+        TRACE(Interactivity, (_T("IN: \"%s\""), string(reinterpret_cast<const char*>(&data[0]), length).c_str()));
 
-        result = _sessionMonitor->Write (ID, data, length);
+        result = _sessionMonitor->Write(ID, data, length);
 
         return (result);
     }
@@ -475,11 +488,11 @@ namespace Plugin {
     // raw data to the initiator of the websocket.
     /* virtual */ uint32_t WebShell::Outbound(const uint32_t ID, uint8_t data[], const uint16_t length) const
     {
-        uint32_t result = _sessionMonitor->Read (ID, data, length);
+        uint32_t result = _sessionMonitor->Read(ID, data, length);
 
-	if (result > 0) {
-		TRACE(Interactivity, (_T("OUT: \"%s\""), string(reinterpret_cast<char*>(&data[0]), result).c_str()));
-	}
+        if (result > 0) {
+            TRACE(Interactivity, (_T("OUT: \"%s\""), string(reinterpret_cast<char*>(&data[0]), result).c_str()));
+        }
 
         return (result);
     }

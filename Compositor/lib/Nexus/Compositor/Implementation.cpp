@@ -24,9 +24,9 @@ namespace Plugin {
 
         public:
             Config()
-                    : Core::JSON::Container()
-                    , HardwareDelay(0)
-                    , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
+                : Core::JSON::Container()
+                , HardwareDelay(0)
+                , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
             {
                 Add(_T("hardwareready"), &HardwareDelay);
                 Add(_T("resolution"), &Resolution);
@@ -41,9 +41,8 @@ namespace Plugin {
         };
 
         class Sink
-            : public Broadcom::Platform::IClient
-            , public Broadcom::Platform::IStateChange
-        {
+            : public Broadcom::Platform::IClient,
+              public Broadcom::Platform::IStateChange {
         private:
             Sink() = delete;
             Sink(const Sink&) = delete;
@@ -53,21 +52,24 @@ namespace Plugin {
             private:
                 Postpone() = delete;
                 Postpone(const Postpone&) = delete;
-                Postpone& operator= (const Postpone&) = delete;
+                Postpone& operator=(const Postpone&) = delete;
 
             public:
                 Postpone(Sink& parent, const uint16_t delay)
                     : _parent(parent)
                     , _trigger(false, true)
-                    , _delay(delay * 1000) {
+                    , _delay(delay * 1000)
+                {
                 }
-                virtual ~Postpone() {
+                virtual ~Postpone()
+                {
                     Block();
                     _trigger.SetEvent();
                 }
 
             public:
-                uint32_t Worker() {
+                uint32_t Worker()
+                {
                     if (_trigger.Lock(_delay) == Core::ERROR_TIMEDOUT) {
                         _parent.PlatformReady();
                     }
@@ -96,9 +98,10 @@ namespace Plugin {
             }
 
         public:
-            inline void HardwareDelay(const uint16_t time, Exchange::IComposition::ScreenResolution format) {
-                ASSERT (_delay == nullptr);
-                if ( (time != 0) && (_delay == nullptr) ) {
+            inline void HardwareDelay(const uint16_t time, Exchange::IComposition::ScreenResolution format)
+            {
+                ASSERT(_delay == nullptr);
+                if ((time != 0) && (_delay == nullptr)) {
                     _delay = new Postpone(*this, time);
                 }
                 _displayFormat = format;
@@ -108,7 +111,6 @@ namespace Plugin {
             /* virtual */ void Attached(Exchange::IComposition::IClient* client)
             {
                 _parent.Add(client);
-
             }
 
             /* virtual */ void Detached(const char clientName[])
@@ -118,18 +120,18 @@ namespace Plugin {
 
             /* virtual */ virtual void StateChange(Broadcom::Platform::server_state state)
             {
-                if (state == Broadcom::Platform::OPERATIONAL){
+                if (state == Broadcom::Platform::OPERATIONAL) {
                     if (_delay != nullptr) {
                         _delay->Run();
-                    } 
-                    else {
-                        _parent.PlatformReady(); 
+                    } else {
+                        _parent.PlatformReady();
                     }
                 }
             }
 
         private:
-            inline void PlatformReady() {
+            inline void PlatformReady()
+            {
                 _parent.PlatformReady();
                 if (_delay != nullptr)
                     _parent.Resolution(_displayFormat);
@@ -173,14 +175,15 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         /* virtual */ uint32_t Configure(PluginHost::IShell* service)
         {
-            string configuration (service->ConfigLine());
+            string configuration(service->ConfigLine());
 
             _service = service;
             _service->AddRef();
 
             ASSERT(_nxserver == nullptr);
 
-            Config info; info.FromString(configuration);
+            Config info;
+            info.FromString(configuration);
 
             _sink.HardwareDelay(info.HardwareDelay.Value(), info.Resolution.Value());
 
@@ -192,7 +195,7 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("Could not Join the started NXServer.")));
             }
 
-            return  Core::ERROR_NONE;
+            return Core::ERROR_NONE;
         }
 
         /* virtual */ void Register(Exchange::IComposition::INotification* notification)
@@ -283,11 +286,13 @@ namespace Plugin {
             return (result);
         }
 
-        /* virtual */ uint32_t Geometry(const string& callsign, const Rectangle& rectangle) override {
+        /* virtual */ uint32_t Geometry(const string& callsign, const Rectangle& rectangle) override
+        {
             return (Core::ERROR_GENERAL);
         }
 
-        /* virtual */ Exchange::IComposition::Rectangle Geometry(const string& callsign) const override {
+        /* virtual */ Exchange::IComposition::Rectangle Geometry(const string& callsign) const override
+        {
             Exchange::IComposition::Rectangle rectangle;
 
             rectangle.x = 0;
@@ -295,33 +300,38 @@ namespace Plugin {
             rectangle.width = 0;
             rectangle.height = 0;
 
-            return (rectangle); 
+            return (rectangle);
         }
 
-        /* virtual */ uint32_t ToTop(const string& callsign) override {
+        /* virtual */ uint32_t ToTop(const string& callsign) override
+        {
             return (Core::ERROR_GENERAL);
         }
 
-        /* virtual */ uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override {
+        /* virtual */ uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override
+        {
             return (Core::ERROR_GENERAL);
         }
 
-        /* virtual */ RPC::IStringIterator* ClientsInZorder() const override {
+        /* virtual */ RPC::IStringIterator* ClientsInZorder() const override
+        {
             return (nullptr);
         }
 
-        /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override {
+        /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override
+        {
 
-            ASSERT (_nxserver != nullptr);
+            ASSERT(_nxserver != nullptr);
 
             if (_nxserver != nullptr) {
                 _nxserver->Resolution(format);
             }
         }
 
-        /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const override {
+        /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const override
+        {
 
-            ASSERT (_nxserver != nullptr);
+            ASSERT(_nxserver != nullptr);
 
             return (_nxserver != nullptr ? _nxserver->Resolution() : Exchange::IComposition::ScreenResolution_Unknown);
         }
@@ -329,7 +339,7 @@ namespace Plugin {
     private:
         void Add(Exchange::IComposition::IClient* client)
         {
-            ASSERT (client != nullptr);
+            ASSERT(client != nullptr);
 
             if (client != nullptr) {
 
@@ -337,8 +347,7 @@ namespace Plugin {
 
                 if (name.empty() == true) {
                     TRACE(Trace::Information, (_T("Registration of a nameless client.")));
-                }
-                else {
+                } else {
                     std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
 
                     while ((index != _clients.end()) && (name != (*index)->Name())) {
@@ -347,8 +356,7 @@ namespace Plugin {
 
                     if (index != _clients.end()) {
                         TRACE(Trace::Information, (_T("Client already registered %s."), name.c_str()));
-                    }
-                    else {
+                    } else {
                         client->AddRef();
                         _clients.push_back(client);
 
@@ -373,8 +381,7 @@ namespace Plugin {
 
             if (name.empty() == true) {
                 TRACE(Trace::Information, (_T("Unregistering a nameless client.")));
-            }
-            else {
+            } else {
                 std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
 
                 while ((index != _clients.end()) && (name != (*index)->Name())) {
@@ -383,8 +390,7 @@ namespace Plugin {
 
                 if (index == _clients.end()) {
                     TRACE(Trace::Information, (_T("Client already unregistered %s."), name.c_str()));
-                }
-                else {
+                } else {
                     Exchange::IComposition::IClient* entry(*index);
 
                     _clients.erase(index);
@@ -416,7 +422,7 @@ namespace Plugin {
                 subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
                 subSystems->Release();
 
-                // Now the platform is ready we should Join it as well, since we 
+                // Now the platform is ready we should Join it as well, since we
                 // will do generic (not client related) stuff as well.
                 if ((_nxserver != nullptr) && (_nxserver->Join() != true)) {
                     TRACE(Trace::Information, (_T("Could not Join the started NXServer.")));

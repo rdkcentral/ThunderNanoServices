@@ -18,16 +18,20 @@ namespace Plugin {
         private:
             Sink() = delete;
             Sink(const Sink&) = delete;
-            Sink& operator= (const Sink&) = delete;
+            Sink& operator=(const Sink&) = delete;
 
         public:
-            Sink(WifiControl& parent) : _parent(parent) {
+            Sink(WifiControl& parent)
+                : _parent(parent)
+            {
             }
-            virtual ~Sink() {
+            virtual ~Sink()
+            {
             }
 
         private:
-            virtual void Dispatch (const WPASupplicant::Controller::events& event) override {
+            virtual void Dispatch(const WPASupplicant::Controller::events& event) override
+            {
                 _parent.WifiEvent(event);
             }
 
@@ -37,20 +41,23 @@ namespace Plugin {
 
         class WifiDriver {
         private:
-            WifiDriver (const WifiDriver&) = delete;
-            WifiDriver& operator= (const WifiDriver&) = delete;
+            WifiDriver(const WifiDriver&) = delete;
+            WifiDriver& operator=(const WifiDriver&) = delete;
 
-       public:
-            WifiDriver ()
+        public:
+            WifiDriver()
                 : _interfaceName()
                 , _connector()
-                , _process(true) {
+                , _process(true)
+            {
             }
-            ~WifiDriver () {
+            ~WifiDriver()
+            {
             }
 
         public:
-            uint32_t Lauch (const string& connector, const string& interfaceName, const uint16_t waitTime) {
+            uint32_t Lauch(const string& connector, const string& interfaceName, const uint16_t waitTime)
+            {
                 _interfaceName = interfaceName;
                 _connector = connector;
 
@@ -67,25 +74,25 @@ namespace Plugin {
                 /* global ctrl_interface group */
                 options.Set(_T("-G0"));
 
-                #ifdef __DEBUG__
+#ifdef __DEBUG__
                 options.Set(_T("-dd"));
                 options.Set(_T("-f/tmp/wpasupplicant.log"));
-                #endif
+#endif
 
                 TRACE_L1("Launching %s.", options.Command().c_str());
                 uint32_t result = _process.Launch(options, &_pid);
 
-        if (result == Core::ERROR_NONE) {
+                if (result == Core::ERROR_NONE) {
                     string remoteName(Core::Directory::Normalize(_connector) + _interfaceName);
                     uint32_t slices = (waitTime * 10);
 
                     // Wait till we see the socket being available.
-                while ((slices != 0) && (_process.IsActive() == true) && (Core::File(remoteName).Exists() == false)) {
-                slices--;
+                    while ((slices != 0) && (_process.IsActive() == true) && (Core::File(remoteName).Exists() == false)) {
+                        slices--;
                         ::SleepMs(100);
                     }
 
-                if ((slices == 0) || (_process.IsActive() == false)) {
+                    if ((slices == 0) || (_process.IsActive() == false)) {
                         _process.Kill(false);
                         result = Core::ERROR_TIMEDOUT;
                     }
@@ -93,7 +100,8 @@ namespace Plugin {
 
                 return (result);
             }
-            inline void Terminate() {
+            inline void Terminate()
+            {
                 _process.Kill(false);
                 _process.WaitProcessCompleted(1000);
             }
@@ -115,7 +123,7 @@ namespace Plugin {
             Config()
                 : Connector(_T("/var/run/wpa_supplicant"))
                 , Interface(_T("wlan0"))
-        , Application(_T("/usr/sbin/wpa_supplicant"))
+                , Application(_T("/usr/sbin/wpa_supplicant"))
             {
                 Add(_T("connector"), &Connector);
                 Add(_T("interface"), &Interface);
@@ -157,25 +165,27 @@ namespace Plugin {
         public:
             class Network : public Core::JSON::Container {
             private:
-                Network& operator= (const Network&) = delete;
+                Network& operator=(const Network&) = delete;
 
             public:
                 class Pairing : public Core::JSON::Container {
                 private:
-                    Pairing& operator= (const Pairing&) = delete;
+                    Pairing& operator=(const Pairing&) = delete;
 
                 public:
                     Pairing()
                         : Core::JSON::Container()
                         , Method()
-                        , Keys() {
+                        , Keys()
+                    {
                         Add(_T("method"), &Method);
                         Add(_T("keys"), &Keys);
                     }
                     Pairing(const enum WPASupplicant::Network::pair method, const uint8_t keys)
                         : Core::JSON::Container()
                         , Method()
-                        , Keys() {
+                        , Keys()
+                    {
                         Core::JSON::String textKey;
 
                         Add(_T("method"), &Method);
@@ -197,11 +207,13 @@ namespace Plugin {
                     Pairing(const Pairing& copy)
                         : Core::JSON::Container()
                         , Method(copy.Method)
-                        , Keys(copy.Keys) {
+                        , Keys(copy.Keys)
+                    {
                         Add(_T("method"), &Method);
                         Add(_T("keys"), &Keys);
                     }
-                    ~Pairing() {
+                    ~Pairing()
+                    {
                     }
 
                 public:
@@ -209,7 +221,7 @@ namespace Plugin {
                     Core::JSON::ArrayType<Core::JSON::String> Keys;
                 };
 
-                Network ()
+                Network()
                     : Core::JSON::Container()
                     , BSSID()
                     , Frequency()
@@ -223,7 +235,7 @@ namespace Plugin {
                     Add(_T("pairs"), &Pairs);
                     Add(_T("ssid"), &SSID);
                 }
-                Network (const WPASupplicant::Network& info)
+                Network(const WPASupplicant::Network& info)
                     : Core::JSON::Container()
                     , BSSID()
                     , Frequency()
@@ -246,7 +258,7 @@ namespace Plugin {
                     uint16_t pairs = info.Pair();
                     while (pairs != 0) {
                         if ((bit & pairs) != 0) {
-                            WPASupplicant::Network::pair method (static_cast<WPASupplicant::Network::pair>(bit));
+                            WPASupplicant::Network::pair method(static_cast<WPASupplicant::Network::pair>(bit));
 
                             Pairs.Add(Pairing(method, info.Key(method)));
                             pairs &= ~bit;
@@ -269,7 +281,7 @@ namespace Plugin {
                     Add(_T("ssid"), &SSID);
                 }
 
-/*
+                /*
                 Network& operator=(const Network& RHS)
                 {
                     BSSID = RHS.BSSID;
@@ -311,7 +323,8 @@ namespace Plugin {
             }
 
         public:
-            void Set (WPASupplicant::Network::Iterator& list) {
+            void Set(WPASupplicant::Network::Iterator& list)
+            {
                 list.Reset();
                 while (list.Next() == true) {
                     Networks.Add(Network(list.Current()));
@@ -333,7 +346,7 @@ namespace Plugin {
                 };
 
             public:
-                Config ()
+                Config()
                     : Core::JSON::Container()
                     , SSID()
                     , Identity()
@@ -353,7 +366,7 @@ namespace Plugin {
                     Add(_T("accesspoint"), &AccessPoint);
                     Add(_T("hidden"), &Hidden);
                 }
-                Config (const WPASupplicant::Config& element)
+                Config(const WPASupplicant::Config& element)
                     : Core::JSON::Container()
                     , SSID()
                     , Identity()
@@ -374,7 +387,7 @@ namespace Plugin {
                     Add(_T("hidden"), &Hidden);
 
                     Set(element);
-               }
+                }
                 Config(const Config& copy)
                     : Core::JSON::Container()
                     , SSID(copy.SSID)
@@ -413,22 +426,20 @@ namespace Plugin {
                 }
 
             public:
-                void Set (const WPASupplicant::Config& element) {
+                void Set(const WPASupplicant::Config& element)
+                {
                     SSID = element.SSID();
 
                     if (element.IsUnsecure() == true) {
                         KeyType = UNSECURE;
-                    }
-                    else if (element.IsWPA() == true) {
+                    } else if (element.IsWPA() == true) {
                         KeyType = WPA;
                         if (element.Hash().empty() == false) {
                             Hash = element.Hash();
-                        }
-                        else {
+                        } else {
                             PSK = element.PresharedKey();
                         }
-                    }
-                    else if (element.IsEnterprise() == true) {
+                    } else if (element.IsEnterprise() == true) {
                         KeyType = ENTERPRISE;
                         Identity = element.Identity();
                         Password = element.Password();
@@ -466,7 +477,8 @@ namespace Plugin {
             }
 
         public:
-            void Set (WPASupplicant::Config::Iterator& list) {
+            void Set(WPASupplicant::Config::Iterator& list)
+            {
                 while (list.Next() == true) {
                     Configs.Add(Config(list.Current()));
                 }
@@ -474,7 +486,6 @@ namespace Plugin {
 
             Core::JSON::ArrayType<Config> Configs;
         };
-
 
     private:
         WifiControl(const WifiControl&) = delete;
@@ -488,8 +499,8 @@ namespace Plugin {
         }
 
         BEGIN_INTERFACE_MAP(WifiControl)
-            INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IPlugin)
+        INTERFACE_ENTRY(PluginHost::IWeb)
         END_INTERFACE_MAP
 
     public:
@@ -510,7 +521,7 @@ namespace Plugin {
         Core::ProxyType<Web::Response> PostMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index);
 
-        void WifiEvent (const WPASupplicant::Controller::events& event);
+        void WifiEvent(const WPASupplicant::Controller::events& event);
 
     private:
         uint8_t _skipURL;

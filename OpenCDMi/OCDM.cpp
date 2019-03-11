@@ -27,8 +27,7 @@ namespace OCDM {
             {
                 if (pid == 0) {
                     _observable = false;
-                }
-                else {
+                } else {
                     _observable = false;
                     _main = Core::ProcessInfo(pid);
                 }
@@ -55,7 +54,7 @@ namespace OCDM {
             }
 
             BEGIN_INTERFACE_MAP(MemoryObserverImpl)
-                INTERFACE_ENTRY(Exchange::IMemory)
+            INTERFACE_ENTRY(Exchange::IMemory)
             END_INTERFACE_MAP
 
         private:
@@ -65,14 +64,14 @@ namespace OCDM {
 
         return (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(PID));
     }
-} 
+}
 
 namespace Plugin {
 
     SERVICE_REGISTRATION(OCDM, 1, 0);
 
-    static Core::ProxyPoolType<Web::JSONBodyType<OCDM::Data> >          jsonDataFactory(1);
-    static Core::ProxyPoolType<Web::JSONBodyType<OCDM::Data::System> >  jsonSystemFactory(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<OCDM::Data>> jsonDataFactory(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<OCDM::Data::System>> jsonSystemFactory(1);
 
     /* virtual */ const string OCDM::Initialize(PluginHost::IShell* service)
     {
@@ -98,8 +97,7 @@ namespace Plugin {
             message = _T("OCDM could not be instantiated.");
             _service->Unregister(&_notification);
             _service = nullptr;
-        }
-        else {
+        } else {
             _opencdmi->Configure(_service);
 
             _memory = WPEFramework::OCDM::MemoryObserver(_pid);
@@ -141,7 +139,7 @@ namespace Plugin {
         ASSERT(subSystem != nullptr);
 
         if (subSystem != nullptr) {
-            ASSERT (subSystem->IsActive(PluginHost::ISubSystem::DECRYPTION) == true);
+            ASSERT(subSystem->IsActive(PluginHost::ISubSystem::DECRYPTION) == true);
             subSystem->Set(PluginHost::ISubSystem::NOT_DECRYPTION, nullptr);
             subSystem->Release();
         }
@@ -180,21 +178,19 @@ namespace Plugin {
         if (request.Verb == Web::Request::HTTP_GET) {
 
             if (index.Next() == false) {
-                Core::ProxyType<Web::JSONBodyType<Data> > data (jsonDataFactory.Element());
+                Core::ProxyType<Web::JSONBodyType<Data>> data(jsonDataFactory.Element());
 
-                RPC::IStringIterator* systems (_opencdmi->Systems());
+                RPC::IStringIterator* systems(_opencdmi->Systems());
 
                 if (systems == nullptr) {
                     TRACE_L1("Could not load the Systems. %d", __LINE__);
-                }
-                else {
+                } else {
                     string element;
                     while (systems->Next(element) == true) {
-                        RPC::IStringIterator* index (_opencdmi->Designators(element));
+                        RPC::IStringIterator* index(_opencdmi->Designators(element));
                         if (index == nullptr) {
                             TRACE_L1("Could not load the Designators. %d", __LINE__);
-                        }
-                        else {
+                        } else {
                             data->Systems.Add(Data::System(systems->Current(), index));
                             index->Release();
                         }
@@ -204,8 +200,7 @@ namespace Plugin {
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = _T("Available Systems.");
                 result->Body(data);
-            }
-            else {
+            } else {
                 if (index.Current().Text() == _T("Sessions")) {
 
                     // Core::ProxyType<Web::JSONBodyType<WifiControl::NetworkList> > networks (jsonResponseFactoryNetworkList.Element());
@@ -218,13 +213,12 @@ namespace Plugin {
                 } else if (index.Current().Text() == _T("Designators")) {
                     if (index.Next() == true) {
 
-                        Core::ProxyType<Web::JSONBodyType<OCDM::Data::System> > data(jsonSystemFactory.Element());
+                        Core::ProxyType<Web::JSONBodyType<OCDM::Data::System>> data(jsonSystemFactory.Element());
                         RPC::IStringIterator* entries(_opencdmi->Designators(index.Current().Text()));
 
                         if (entries == nullptr) {
                             TRACE_L1("Could not load the Designators. %d", __LINE__);
-                        }
-                        else {
+                        } else {
                             data->Name = index.Current().Text();
                             data->Load(entries);
                             entries->Release();
@@ -237,7 +231,6 @@ namespace Plugin {
                 }
             }
         }
-
 
         return result;
     }

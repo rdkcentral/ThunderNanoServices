@@ -54,13 +54,11 @@ namespace Plugin {
                     _client = nullptr;
                 }
 
-                if (_service != nullptr)
-                {
+                if (_service != nullptr) {
                     _service->Release();
                     _service = nullptr;
                 }
             }
-
 
             //   IComposition INotification methods
             // -------------------------------------------------------------------------------------------------------
@@ -134,10 +132,10 @@ namespace Plugin {
             Core::JSON::ArrayType<Core::JSON::String> Clients;
             Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
             Core::JSON::DecUInt32 X;
-            Core::JSON::DecUInt32 Y;       
+            Core::JSON::DecUInt32 Y;
             Core::JSON::DecUInt32 Width;
-            Core::JSON::DecUInt32 Height;       
-    };
+            Core::JSON::DecUInt32 Height;
+        };
 
     public:
         Compositor();
@@ -166,7 +164,7 @@ namespace Plugin {
         void Attached(Exchange::IComposition::IClient* client);
         void Detached(Exchange::IComposition::IClient* client);
 
-        template<typename ClientOperation>
+        template <typename ClientOperation>
         uint32_t CallOnClientByCallsign(const string& callsign, ClientOperation&& operation) const;
 
         void Clients(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const;

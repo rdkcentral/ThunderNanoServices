@@ -3,7 +3,6 @@
 
 #include "Module.h"
 #include <interfaces/IMemory.h>
-
 #include <limits>
 #include <string>
 
@@ -68,7 +67,7 @@ namespace Plugin {
                 _shared.Set(memInterface->Shared());
                 _process.Set(memInterface->Processes());
             }
-            void Operational (const bool operational) 
+            void Operational(const bool operational)
             {
                 _operational = operational;
             }
@@ -395,7 +394,7 @@ namespace Plugin {
                 RestartSettings OperationalRestartSettings;
                 RestartSettings MemoryRestartSettings;
             };
- 
+
         public:
             Config()
                 : Core::JSON::Container()
@@ -416,7 +415,7 @@ namespace Plugin {
             MonitorObjects& operator=(const MonitorObjects&) = delete;
 
         public:
-           class Job : public Core::IDispatchType<void> {
+            class Job : public Core::IDispatchType<void> {
             private:
                 Job() = delete;
                 Job(const Job& copy) = delete;
@@ -426,7 +425,7 @@ namespace Plugin {
                 Job(MonitorObjects* parent)
                     : _parent(*parent)
                 {
-                    ASSERT (parent != nullptr);
+                    ASSERT(parent != nullptr);
                 }
                 virtual ~Job()
                 {
@@ -448,7 +447,7 @@ namespace Plugin {
                 MonitorObject& operator=(const MonitorObject&) = delete;
 
                 enum evaluation {
-                    SUCCESFULL      = 0x00,
+                    SUCCESFULL = 0x00,
                     NOT_OPERATIONAL = 0x01,
                     EXCEEDED_MEMORY = 0x02
                 };
@@ -477,12 +476,11 @@ namespace Plugin {
                     , _operationalEvaluate(actOnOperational)
                     , _source(nullptr)
                 {
-                    ASSERT ((_operationalInterval != 0) || (_memoryInterval != 0));
+                    ASSERT((_operationalInterval != 0) || (_memoryInterval != 0));
 
-                    if ((_operationalInterval != 0) && (_memoryInterval != 0) ) {
+                    if ((_operationalInterval != 0) && (_memoryInterval != 0)) {
                         _interval = gcd(_operationalInterval, _memoryInterval);
-                    }
-                    else {
+                    } else {
                         _interval = (_operationalInterval == 0 ? _memoryInterval : _operationalInterval);
                     }
                 }
@@ -623,7 +621,7 @@ namespace Plugin {
                         if ((_operationalInterval != 0) && (_operationalSlots == 0)) {
                             bool operational = _source->IsOperational();
                             _measurement.Operational(operational);
-                            if ((operational == false) && (_operationalEvaluate == true) ) {
+                            if ((operational == false) && (_operationalEvaluate == true)) {
                                 status |= NOT_OPERATIONAL;
                                 TRACE_L1("Status not operational. %d", __LINE__);
                             }
@@ -632,7 +630,7 @@ namespace Plugin {
                         if ((_memoryInterval != 0) && (_memorySlots == 0)) {
                             _measurement.Measure(_source);
 
-                            if ( (_memoryThreshold != 0) && (_measurement.Resident().Last() > _memoryThreshold) ) {
+                            if ((_memoryThreshold != 0) && (_measurement.Resident().Last() > _memoryThreshold)) {
                                 status |= EXCEEDED_MEMORY;
                                 TRACE_L1("Status MetaData Exceeded. %d", __LINE__);
                             }
@@ -662,22 +660,22 @@ namespace Plugin {
             };
 
         public:
-			#ifdef __WIN32__ 
-			#pragma warning( disable : 4355 )
-			#endif
-			MonitorObjects()
+#ifdef __WIN32__
+#pragma warning(disable : 4355)
+#endif
+            MonitorObjects()
                 : _adminLock()
                 , _monitor()
                 , _job(Core::ProxyType<Job>::Create(this))
                 , _service(nullptr)
             {
             }
-			#ifdef __WIN32__ 
-			#pragma warning( default : 4355 )
-			#endif
+#ifdef __WIN32__
+#pragma warning(default : 4355)
+#endif
             virtual ~MonitorObjects()
             {
-                ASSERT (_monitor.size() == 0);
+                ASSERT(_monitor.size() == 0);
             }
 
         public:
@@ -712,7 +710,7 @@ namespace Plugin {
                     string callSign(element.Callsign.Value());
                     uint64_t memoryThreshold(element.MetaDataLimit.Value());
                     uint32_t interval = abs(element.Operational.Value());
-                    interval = interval * 1000 * 1000; // Move from Seconds to MicroSeconds
+                    interval = interval * 1000 * 1000; // Move from Seconds to MicroSecond
                     uint32_t memory(element.MetaData.Value() * 1000 * 1000);        // Move from Seconds to MicroSeconds
                     MonitorObject::RestartSettings operationalRestartSettings;
                     operationalRestartSettings.Limit = element.OperationalRestartSettings.Limit.Value();
@@ -764,18 +762,13 @@ namespace Plugin {
                             index->second.Set(memory);
                             memory->Release();
                         }
-                    }
-                    else if (currentState == PluginHost::IShell::DEACTIVATION) {
+                    } else if (currentState == PluginHost::IShell::DEACTIVATION) {
                         index->second.Set(nullptr);
-                    }
-                    else if ( (currentState == PluginHost::IShell::DEACTIVATED) &&
-                              (index->second.HasRestartAllowed() == true) && 
-                              ( (service->Reason() == PluginHost::IShell::MEMORY_EXCEEDED) ||
-                                (service->Reason() == PluginHost::IShell::FAILURE) ) ) {
+                    } else if ((currentState == PluginHost::IShell::DEACTIVATED) && (index->second.HasRestartAllowed() == true) && ((service->Reason() == PluginHost::IShell::MEMORY_EXCEEDED) || (service->Reason() == PluginHost::IShell::FAILURE))) {
 
                         const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Activate\", \"reason\": \"Automatic\" }");
                         _service->Notify(message);
- 
+                      
                         if (index->second.RegisterRestart(service->Reason()) == false) {
                             TRACE(Trace::Error, (_T("Giving up restarting of %s: Failed more than %d times within %d seconds.\n"), service->Callsign().c_str(),
                                                  index->second.RestartLimit(service->Reason()), index->second.RestartWindow(service->Reason())));
@@ -843,7 +836,7 @@ namespace Plugin {
             }
 
             BEGIN_INTERFACE_MAP(MonitorObjects)
-                INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
+            INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -861,13 +854,13 @@ namespace Plugin {
                     MonitorObject& info(index->second);
 
                     if (info.TimeSlot() <= scheduledTime) {
-                        uint32_t value (info.Evaluate());
+                        uint32_t value(info.Evaluate());
 
-                        if ( (value & (MonitorObject::NOT_OPERATIONAL|MonitorObject::EXCEEDED_MEMORY)) != 0 ) {
+                        if ((value & (MonitorObject::NOT_OPERATIONAL | MonitorObject::EXCEEDED_MEMORY)) != 0) {
                             PluginHost::IShell* plugin(_service->QueryInterfaceByCallsign<PluginHost::IShell>(index->first));
 
                             if (plugin != nullptr) {
-                                Core::EnumerateType<PluginHost::IShell::reason> why (((value & MonitorObject::EXCEEDED_MEMORY) != 0) ? PluginHost::IShell::MEMORY_EXCEEDED : PluginHost::IShell::FAILURE);
+                                Core::EnumerateType<PluginHost::IShell::reason> why(((value & MonitorObject::EXCEEDED_MEMORY) != 0) ? PluginHost::IShell::MEMORY_EXCEEDED : PluginHost::IShell::FAILURE);
 
                                 const string message("{\"callsign\": \"" + plugin->Callsign() + "\", \"action\": \"Deactivate\", \"reason\": \"" + why.Data() + "\" }");
                                 SYSLOG(Trace::Fatal, (_T("FORCED Shutdown: %s by reason: %s."), plugin->Callsign().c_str(), why.Data()));
@@ -892,8 +885,7 @@ namespace Plugin {
                 if (nextSlot != static_cast<uint64_t>(~0)) {
                     if (nextSlot < Core::Time::Now().Ticks()) {
                         PluginHost::WorkerPool::Instance().Submit(_job);
-                    }
-                    else {
+                    } else {
                         nextSlot += 1000 /* Add 1 ms */;
                         PluginHost::WorkerPool::Instance().Schedule(nextSlot, _job);
                     }
@@ -903,11 +895,11 @@ namespace Plugin {
         private:
             Core::CriticalSection _adminLock;
             std::map<string, MonitorObject> _monitor;
-            Core::ProxyType< Core::IDispatchType<void> > _job;
+            Core::ProxyType<Core::IDispatchType<void>> _job;
             PluginHost::IShell* _service;
         };
 
-   public:
+    public:
         Monitor()
             : _skipURL(0)
             , _monitor(Core::Service<MonitorObjects>::Create<MonitorObjects>())
@@ -915,7 +907,7 @@ namespace Plugin {
         }
         virtual ~Monitor()
         {
-			_monitor->Release();
+            _monitor->Release();
         }
 
         BEGIN_INTERFACE_MAP(Monitor)

@@ -3,7 +3,8 @@
 #include "Module.h"
 
 namespace WPEFramework {
-	namespace Plugin {
+
+namespace Plugin {
 
 		class TraceControl : public PluginHost::IPlugin, public PluginHost::IWeb {
 

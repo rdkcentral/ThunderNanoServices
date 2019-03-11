@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
- 
+
 /**
  * @file
  *
@@ -51,8 +51,6 @@
  *
  */
 
-
-
 /**
 * @defgroup devicesettings
 * @{
@@ -60,8 +58,7 @@
 * @{
 **/
 
-
-#ifndef _DS_ERROR_H_ 
+#ifndef _DS_ERROR_H_
 #define _DS_ERROR_H_
 
 #ifdef __cplusplus
@@ -82,12 +79,12 @@ extern "C" {
  * 
  */
 typedef enum {
-    dsERR_NONE = 0,                   /**< No error (success).               */
-    dsERR_GENERAL = 0x1000,           /**< General failure to take action.   */
-    dsERR_INVALID_PARAM,              /**< Invalid input parameter.          */
-    dsERR_INVALID_STATE,              /**< Failure due to invalid state.     */
-    dsERR_OPERATION_NOT_SUPPORTED,    /**< Operation not supported.          */
-    dsERR_UNKNOWN                    /**< Unknown error.                    */
+    dsERR_NONE = 0, /**< No error (success).               */
+    dsERR_GENERAL = 0x1000, /**< General failure to take action.   */
+    dsERR_INVALID_PARAM, /**< Invalid input parameter.          */
+    dsERR_INVALID_STATE, /**< Failure due to invalid state.     */
+    dsERR_OPERATION_NOT_SUPPORTED, /**< Operation not supported.          */
+    dsERR_UNKNOWN /**< Unknown error.                    */
 } dsError_t;
 
 /* End of DSHAL_ERROR doxygen group */
@@ -99,7 +96,6 @@ typedef enum {
 }
 #endif
 #endif /* _DS_ERROR_H_ */
-
 
 /** @} */
 /** @} */

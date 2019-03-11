@@ -1,132 +1,139 @@
 #ifndef PLUGIN_NETWORKCONTROL_H
 #define PLUGIN_NETWORKCONTROL_H
 
-#include "Module.h"
 #include "DHCPClientImplementation.h"
+#include "Module.h"
 
 #include <interfaces/IIPNetwork.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class NetworkControl : 
-        public Exchange::IIPNetwork, 
-        public PluginHost::IPlugin, 
-        public PluginHost::IWeb {
+    class NetworkControl : public Exchange::IIPNetwork,
+                           public PluginHost::IPlugin,
+                           public PluginHost::IWeb {
     public:
-	enum mode {
-		MANUAL,
-		STATIC,
-		DYNAMIC
-	};
+        enum mode {
+            MANUAL,
+            STATIC,
+            DYNAMIC
+        };
 
-	class Entry : public Core::JSON::Container {
-	private:
-		Entry & operator=(const Entry&) = delete;
+        class Entry : public Core::JSON::Container {
+        private:
+            Entry& operator=(const Entry&) = delete;
 
-	public:
-		Entry()
-			: Core::JSON::Container()
-			, Interface()
-			, Mode(MANUAL)
-			, Address()
-			, Mask(32)
-			, Gateway()
-			, _broadcast() {
-			Add(_T("interface"), &Interface);
-			Add(_T("mode"), &Mode);
-			Add(_T("address"), &Address);
-			Add(_T("mask"), &Mask);
-			Add(_T("gateway"), &Gateway);
-			Add(_T("broadcast"), &_broadcast);
-		}
-		Entry(const Entry& copy)
-			: Core::JSON::Container()
-			, Interface(copy.Interface)
-			, Mode(copy.Mode)
-			, Address(copy.Address)
-			, Mask(copy.Mask)
-			, Gateway(copy.Gateway)
-			, _broadcast(copy._broadcast) {
-			Add(_T("interface"), &Interface);
-			Add(_T("mode"), &Mode);
-			Add(_T("address"), &Address);
-			Add(_T("mask"), &Mask);
-			Add(_T("gateway"), &Gateway);
-			Add(_T("broadcast"), &_broadcast);
-		}
-		virtual ~Entry() {
-		}
+        public:
+            Entry()
+                : Core::JSON::Container()
+                , Interface()
+                , Mode(MANUAL)
+                , Address()
+                , Mask(32)
+                , Gateway()
+                , _broadcast()
+            {
+                Add(_T("interface"), &Interface);
+                Add(_T("mode"), &Mode);
+                Add(_T("address"), &Address);
+                Add(_T("mask"), &Mask);
+                Add(_T("gateway"), &Gateway);
+                Add(_T("broadcast"), &_broadcast);
+            }
+            Entry(const Entry& copy)
+                : Core::JSON::Container()
+                , Interface(copy.Interface)
+                , Mode(copy.Mode)
+                , Address(copy.Address)
+                , Mask(copy.Mask)
+                , Gateway(copy.Gateway)
+                , _broadcast(copy._broadcast)
+            {
+                Add(_T("interface"), &Interface);
+                Add(_T("mode"), &Mode);
+                Add(_T("address"), &Address);
+                Add(_T("mask"), &Mask);
+                Add(_T("gateway"), &Gateway);
+                Add(_T("broadcast"), &_broadcast);
+            }
+            virtual ~Entry()
+            {
+            }
 
-	public:
-		Core::JSON::String Interface;
-		Core::JSON::EnumType<mode> Mode;
-		Core::JSON::String Address;
-		Core::JSON::DecUInt8 Mask;
-		Core::JSON::String Gateway;
+        public:
+            Core::JSON::String Interface;
+            Core::JSON::EnumType<mode> Mode;
+            Core::JSON::String Address;
+            Core::JSON::DecUInt8 Mask;
+            Core::JSON::String Gateway;
 
-	public:
-		void Broadcast(const Core::NodeId& address) {
-			_broadcast = address.HostAddress();
-		}
-		Core::NodeId Broadcast() const {
-			Core::NodeId result;
+        public:
+            void Broadcast(const Core::NodeId& address)
+            {
+                _broadcast = address.HostAddress();
+            }
+            Core::NodeId Broadcast() const
+            {
+                Core::NodeId result;
 
-			if (_broadcast.IsSet() == false) {
-							
-				Core::IPNode address (Core::NodeId(Address.Value().c_str()), Mask.Value());
+                if (_broadcast.IsSet() == false) {
 
-				result = address.Broadcast();
-						
-			}
-			else {
-				result = Core::NodeId(_broadcast.Value().c_str());
-			}
+                    Core::IPNode address(Core::NodeId(Address.Value().c_str()), Mask.Value());
 
-			return (result);
-		}
+                    result = address.Broadcast();
 
-	private:
-		Core::JSON::String _broadcast;
-	};
+                } else {
+                    result = Core::NodeId(_broadcast.Value().c_str());
+                }
+
+                return (result);
+            }
+
+        private:
+            Core::JSON::String _broadcast;
+        };
 
     private:
-        class AdapterObserver : 
-            public Core::IDispatch,
-            public WPEFramework::Core::AdapterObserver::INotification {
+        class AdapterObserver : public Core::IDispatch,
+                                public WPEFramework::Core::AdapterObserver::INotification {
         private:
             AdapterObserver() = delete;
             AdapterObserver(const AdapterObserver&) = delete;
-            AdapterObserver& operator= (const AdapterObserver&) = delete;
+            AdapterObserver& operator=(const AdapterObserver&) = delete;
 
         public:
             AdapterObserver(NetworkControl* parent)
                 : _parent(*parent)
                 , _adminLock()
-	        , _observer(this)
-                , _reporting() {
-                ASSERT (parent != nullptr);
+                , _observer(this)
+                , _reporting()
+            {
+                ASSERT(parent != nullptr);
             }
-            virtual ~AdapterObserver() {
+            virtual ~AdapterObserver()
+            {
             }
 
         public:
-            void Open() {
+            void Open()
+            {
                 _observer.Open();
             }
-            void Close() {
-	        Core::ProxyType<Core::IDispatch> job(*this);
+            void Close()
+            {
+                Core::ProxyType<Core::IDispatch> job(*this);
                 _observer.Close();
-                
+
                 _adminLock.Lock();
 
-	        PluginHost::WorkerPool::Instance().Revoke(job);
+                PluginHost::WorkerPool::Instance().Revoke(job);
 
-		_reporting.clear();
+                _reporting.clear();
 
                 _adminLock.Unlock();
             }
-            virtual void Event(const string& interface) override {
+            virtual void Event(const string& interface) override
+            {
 
                 _adminLock.Lock();
 
@@ -136,21 +143,22 @@ namespace Plugin {
 
                     // If this is the first entry, we need to submit a job for processing
                     if (_reporting.size() == 1) {
-			// These events tend to "dender" a lot. Give it some time
-			Core::Time entry(Core::Time::Now().Add(100));
-			Core::ProxyType<Core::IDispatch> job(*this);
+                        // These events tend to "dender" a lot. Give it some time
+                        Core::Time entry(Core::Time::Now().Add(100));
+                        Core::ProxyType<Core::IDispatch> job(*this);
 
-		        PluginHost::WorkerPool::Instance().Schedule(entry, job);
+                        PluginHost::WorkerPool::Instance().Schedule(entry, job);
                     }
                 }
 
                 _adminLock.Unlock();
             }
-	    virtual void Dispatch() override {
-		// Yippie a yee, we have an interface notification:
+            virtual void Dispatch() override
+            {
+                // Yippie a yee, we have an interface notification:
                 _adminLock.Lock();
                 while (_reporting.size() != 0) {
-                    const string interfaceName (_reporting.front());
+                    const string interfaceName(_reporting.front());
                     _reporting.pop_front();
                     _adminLock.Unlock();
 
@@ -161,10 +169,10 @@ namespace Plugin {
                 _adminLock.Unlock();
             }
 
-	private:
+        private:
             NetworkControl& _parent;
             Core::CriticalSection _adminLock;
-	    Core::AdapterObserver _observer;
+            Core::AdapterObserver _observer;
             std::list<string> _reporting;
         };
 
@@ -176,80 +184,93 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
-		, DNSFile("/etc/resolv.conf")
-                , Interfaces ()
-		, DNS()
-		, TimeOut(5)
-                , Open(true) {
+                , DNSFile("/etc/resolv.conf")
+                , Interfaces()
+                , DNS()
+                , TimeOut(5)
+                , Open(true)
+            {
                 Add(_T("dnsfile"), &DNSFile);
                 Add(_T("interfaces"), &Interfaces);
-		Add(_T("timeout"), &TimeOut);
-		Add(_T("open"), &Open);
-		Add(_T("dns"), &DNS);
-	    }
-            ~Config() {
+                Add(_T("timeout"), &TimeOut);
+                Add(_T("open"), &Open);
+                Add(_T("dns"), &DNS);
+            }
+            ~Config()
+            {
             }
 
         public:
             Core::JSON::String DNSFile;
-            Core::JSON::ArrayType< Entry > Interfaces;
-            Core::JSON::ArrayType< Core::JSON::String > DNS;
-	    Core::JSON::DecUInt8 TimeOut;
+            Core::JSON::ArrayType<Entry> Interfaces;
+            Core::JSON::ArrayType<Core::JSON::String> DNS;
+            Core::JSON::DecUInt8 TimeOut;
             Core::JSON::Boolean Open;
-	};
+        };
 
-        class StaticInfo { 
+        class StaticInfo {
         private:
-            StaticInfo& operator= (const StaticInfo&) = delete;
+            StaticInfo& operator=(const StaticInfo&) = delete;
 
         public:
-            StaticInfo () 
+            StaticInfo()
                 : _mode(MANUAL)
                 , _address()
                 , _gateway()
-                , _broadcast() {
+                , _broadcast()
+            {
             }
-            StaticInfo(const Entry& info) 
+            StaticInfo(const Entry& info)
                 : _mode(info.Mode.Value())
                 , _address(Core::IPNode(Core::NodeId(info.Address.Value().c_str()), info.Mask.Value()))
                 , _gateway(Core::NodeId(info.Gateway.Value().c_str()))
-                , _broadcast(info.Broadcast()) {
+                , _broadcast(info.Broadcast())
+            {
             }
-            StaticInfo(const StaticInfo& copy) 
+            StaticInfo(const StaticInfo& copy)
                 : _mode(copy._mode)
                 , _address(copy._address)
                 , _gateway(copy._gateway)
-                , _broadcast(copy._broadcast) {
+                , _broadcast(copy._broadcast)
+            {
             }
-            ~StaticInfo() {
+            ~StaticInfo()
+            {
             }
 
         public:
-            inline mode Mode() const {
+            inline mode Mode() const
+            {
                 return (_mode);
             }
-            inline const Core::IPNode& Address() const {
+            inline const Core::IPNode& Address() const
+            {
                 return (_address);
             }
-            inline const Core::NodeId& Gateway() const {
+            inline const Core::NodeId& Gateway() const
+            {
                 return (_gateway);
             }
-            inline const Core::NodeId& Broadcast() const {
+            inline const Core::NodeId& Broadcast() const
+            {
                 return (_broadcast);
             }
-            inline const DHCPClientImplementation::Offer& Offer() const {
+            inline const DHCPClientImplementation::Offer& Offer() const
+            {
                 return (_offer);
             }
-            inline void Offer(const DHCPClientImplementation::Offer& offer) {
+            inline void Offer(const DHCPClientImplementation::Offer& offer)
+            {
                 _offer = offer;
             }
-	    inline void Store(Entry& info) {
-		info.Mode = _mode;
-		info.Address = _address.HostAddress();
-		info.Mask = _address.Mask();
-		info.Gateway = _gateway.HostAddress();
-		info.Broadcast(_broadcast);
- 	    }
+            inline void Store(Entry& info)
+            {
+                info.Mode = _mode;
+                info.Address = _address.HostAddress();
+                info.Mask = _address.Mask();
+                info.Gateway = _gateway.HostAddress();
+                info.Broadcast(_broadcast);
+            }
 
         private:
             mode _mode;
@@ -259,89 +280,98 @@ namespace Plugin {
             DHCPClientImplementation::Offer _offer;
         };
 
-		class DHCPEngine : public Core::IDispatch, public DHCPClientImplementation::ICallback {
-		private:
-			DHCPEngine() = delete;
-			DHCPEngine(const DHCPEngine&) = delete;
-			DHCPEngine& operator=(const DHCPEngine&) = delete;
+        class DHCPEngine : public Core::IDispatch, public DHCPClientImplementation::ICallback {
+        private:
+            DHCPEngine() = delete;
+            DHCPEngine(const DHCPEngine&) = delete;
+            DHCPEngine& operator=(const DHCPEngine&) = delete;
 
-		public:
-			DHCPEngine(NetworkControl* parent, const string& interfaceName)
-				: _parent(*parent)
-				, _retries(0)
-				, _client(interfaceName, this) {
-			}
-			~DHCPEngine() {
-			}
+        public:
+            DHCPEngine(NetworkControl* parent, const string& interfaceName)
+                : _parent(*parent)
+                , _retries(0)
+                , _client(interfaceName, this)
+            {
+            }
+            ~DHCPEngine()
+            {
+            }
 
-		public:
-			inline DHCPClientImplementation::classifications Classification() const {
-				return (_client.Classification());
-			}
-			inline uint32_t Discover() {
-				return (Discover(Core::NodeId()));
-			}
-			inline uint32_t Discover(const Core::NodeId& preferred) {
+        public:
+            inline DHCPClientImplementation::classifications Classification() const
+            {
+                return (_client.Classification());
+            }
+            inline uint32_t Discover()
+            {
+                return (Discover(Core::NodeId()));
+            }
+            inline uint32_t Discover(const Core::NodeId& preferred)
+            {
 
-				uint32_t result = _client.Discover(preferred);
-				Core::Time entry(Core::Time::Now().Add(_parent.ResponseTime() * 1000));
-				Core::ProxyType<Core::IDispatch> job(*this);
+                uint32_t result = _client.Discover(preferred);
+                Core::Time entry(Core::Time::Now().Add(_parent.ResponseTime() * 1000));
+                Core::ProxyType<Core::IDispatch> job(*this);
 
-				if (result == Core::ERROR_NONE) {
+                if (result == Core::ERROR_NONE) {
 
-					_retries = _parent.ResponseTime() + 1;
+                    _retries = _parent.ResponseTime() + 1;
 
-					// Submit a job, as watchdog.
-					PluginHost::WorkerPool::Instance().Schedule(entry, job);
-				}
+                    // Submit a job, as watchdog.
+                    PluginHost::WorkerPool::Instance().Schedule(entry, job);
+                }
 
-				return (result);
-			}
-			inline void Acknowledge(const Core::NodeId& selected) {
-				_client.Request(selected);
-				// Don't know if there is still a timer pending, but lets kill it..
-				CleanUp();
-			}
+                return (result);
+            }
+            inline void Acknowledge(const Core::NodeId& selected)
+            {
+                _client.Request(selected);
+                // Don't know if there is still a timer pending, but lets kill it..
+                CleanUp();
+            }
 
-			inline void CleanUp() {
-				PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(*this));
-			}
-			inline void Completed() {
-				_client.Completed();
+            inline void CleanUp()
+            {
+                PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(*this));
+            }
+            inline void Completed()
+            {
+                _client.Completed();
+            }
+            inline DHCPClientImplementation::Iterator Offers() const
+            {
+                return (_client.Offers());
+            }
+            virtual void Dispatch(const string& name) override
+            {
+                _parent.Update(name);
+            }
+            virtual void Dispatch() override
+            {
 
-			}
-			inline DHCPClientImplementation::Iterator Offers() const {
-				return (_client.Offers());
-			}
-			virtual void Dispatch(const string& name) override {
-				_parent.Update(name);
-			}
-			virtual void Dispatch() override {
+                if (_retries > 0) {
 
-				if (_retries > 0) {
+                    Core::Time entry(Core::Time::Now().Add(1000));
+                    Core::ProxyType<Core::IDispatch> job(*this);
 
-					Core::Time entry(Core::Time::Now().Add(1000));
-					Core::ProxyType<Core::IDispatch> job(*this);
+                    _retries--;
 
-					_retries--;
+                    _client.Resend();
 
-					_client.Resend();
+                    // Submit a job, as watchdog.
+                    PluginHost::WorkerPool::Instance().Schedule(entry, job);
+                } else {
 
-					// Submit a job, as watchdog.
-					PluginHost::WorkerPool::Instance().Schedule(entry, job);
-				}
-				else {
+                    _parent.Expired(_client.Interface());
+                }
+            }
 
-					_parent.Expired(_client.Interface());
-				}
-			}
+        private:
+            NetworkControl& _parent;
+            uint8_t _retries;
+            DHCPClientImplementation _client;
+        };
 
-		private:
-			NetworkControl& _parent;
-			uint8_t _retries;
-			DHCPClientImplementation _client;
-		};
- 
     private:
         NetworkControl(const NetworkControl&) = delete;
         NetworkControl& operator=(const NetworkControl&) = delete;
@@ -352,9 +382,9 @@ namespace Plugin {
 
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(NetworkControl)
-            INTERFACE_ENTRY(PluginHost::IPlugin)
-	    INTERFACE_ENTRY(PluginHost::IWeb)
-            INTERFACE_ENTRY(Exchange::IIPNetwork) 
+        INTERFACE_ENTRY(PluginHost::IPlugin)
+        INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(Exchange::IIPNetwork)
         END_INTERFACE_MAP
 
     public:
@@ -376,33 +406,35 @@ namespace Plugin {
         virtual uint32_t RemoveAddress(const string& interfaceName, const string& IPAddress, const string& gateway, const string& broadcast) override;
         virtual uint32_t AddDNS(IIPNetwork::IDNSServers* dnsEntries) override;
         virtual uint32_t RemoveDNS(IIPNetwork::IDNSServers* dnsEntries) override;
- 
+
     private:
-        uint32_t Reload (const string& interfaceName, const bool dynamic);
+        uint32_t Reload(const string& interfaceName, const bool dynamic);
         uint32_t SetIP(Core::AdapterIterator& adapter, const Core::IPNode& ipAddress, const Core::NodeId& gateway, const Core::NodeId& broadcast);
-	void Update(const string& interfaceName);
-	void Expired(const string& interfaceName);
-        void RefreshDNS ();
-        void Activity (const string& interface);
-        uint16_t DeleteSection (Core::DataElementFile& file, const string& startMarker, const string& endMarker);
-	uint8_t ResponseTime() const {
-		return(_responseTime);
-	}
-	uint8_t Retries() const {
-		return(_retries);
-	}
+        void Update(const string& interfaceName);
+        void Expired(const string& interfaceName);
+        void RefreshDNS();
+        void Activity(const string& interface);
+        uint16_t DeleteSection(Core::DataElementFile& file, const string& startMarker, const string& endMarker);
+        uint8_t ResponseTime() const
+        {
+            return (_responseTime);
+        }
+        uint8_t Retries() const
+        {
+            return (_retries);
+        }
 
     private:
         Core::CriticalSection _adminLock;
         uint16_t _skipURL;
-	PluginHost::IShell* _service;
-	uint8_t _responseTime;
-	uint8_t _retries;
+        PluginHost::IShell* _service;
+        uint8_t _responseTime;
+        uint8_t _retries;
         string _dnsFile;
-        std::list< std::pair<uint16_t, Core::NodeId> > _dns;
+        std::list<std::pair<uint16_t, Core::NodeId>> _dns;
         std::map<const string, StaticInfo> _interfaces;
-	std::map<const string, Core::ProxyType<DHCPEngine> > _dhcpInterfaces;
-	Core::ProxyType<AdapterObserver> _observer;
+        std::map<const string, Core::ProxyType<DHCPEngine>> _dhcpInterfaces;
+        Core::ProxyType<AdapterObserver> _observer;
     };
 
 } // namespace Plugin

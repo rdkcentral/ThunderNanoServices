@@ -152,8 +152,7 @@ struct SrcTypesVector {
     uint64_t length;
 };
 
-class AtscStream
-{
+class AtscStream {
 public:
     AtscStream()
         : pmtPid(0)
@@ -166,7 +165,7 @@ public:
     uint16_t videoPid;
 };
 
-typedef std::map<uint16_t, AtscStream> AtscPmt;  // indexed by program Number
+typedef std::map<uint16_t, AtscStream> AtscPmt; // indexed by program Number
 
-typedef std::map<uint32_t, AtscPmt> AtscPSI;  // indexed by frequency
+typedef std::map<uint32_t, AtscPmt> AtscPSI; // indexed by frequency
 #endif

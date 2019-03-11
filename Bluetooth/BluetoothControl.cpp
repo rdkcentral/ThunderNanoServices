@@ -2,89 +2,89 @@
 
 namespace WPEFramework {
 
-#define ADAPTER_INDEX                   0X00
-#define ENABLE_MODE                     0x01
+#define ADAPTER_INDEX 0X00
+#define ENABLE_MODE 0x01
 
 namespace Bluetooth {
 
-/* LMP features mapping */
-struct ConversionTable {
-    uint16_t     id;
-    const TCHAR* text;
-};
+    /* LMP features mapping */
+    struct ConversionTable {
+        uint16_t id;
+        const TCHAR* text;
+    };
 
-static ConversionTable lmp_features_map[] = {
-    /* Byte 0 */
-    { LMP_3SLOT       | 0x0000, _T("3-slot packets")    },      /* Bit 0 */
-    { LMP_5SLOT       | 0x0000, _T("5-slot packets")    },      /* Bit 1 */
-    { LMP_ENCRYPT     | 0x0000, _T("encryption")        },      /* Bit 2 */
-    { LMP_SOFFSET     | 0x0000, _T("slot offset")       },      /* Bit 3 */
-    { LMP_TACCURACY   | 0x0000, _T("timing accuracy")   },      /* Bit 4 */
-    { LMP_RSWITCH     | 0x0000, _T("role switch")       },      /* Bit 5 */
-    { LMP_HOLD        | 0x0000, _T("hold mode")         },      /* Bit 6 */
-    { LMP_SNIFF       | 0x0000, _T("sniff mode")        },      /* Bit 7 */
-                      
-    /* Byte 1 */
-    { LMP_PARK        | 0x0100, _T("park state")        },      /* Bit 0 */
-    { LMP_RSSI        | 0x0100, _T("RSSI")              },      /* Bit 1 */
-    { LMP_QUALITY     | 0x0100, _T("channel quality")   },      /* Bit 2 */
-    { LMP_SCO         | 0x0100, _T("SCO link")          },      /* Bit 3 */
-    { LMP_HV2         | 0x0100, _T("HV2 packets")       },      /* Bit 4 */
-    { LMP_HV3         | 0x0100, _T("HV3 packets")       },      /* Bit 5 */
-    { LMP_ULAW        | 0x0100, _T("u-law log")         },      /* Bit 6 */
-    { LMP_ALAW        | 0x0100, _T("A-law log")         },      /* Bit 7 */
-                      
-    /* Byte 2 */
-    { LMP_CVSD        | 0x0200, _T("CVSD")              },      /* Bit 0 */
-    { LMP_PSCHEME     | 0x0200, _T("paging scheme")     },      /* Bit 1 */
-    { LMP_PCONTROL    | 0x0200, _T("power control")     },      /* Bit 2 */
-    { LMP_TRSP_SCO    | 0x0200, _T("transparent SCO")   },      /* Bit 3 */
-    { LMP_BCAST_ENC   | 0x0200, _T("broadcast encrypt") },      /* Bit 7 */
-                      
-    /* Byte 3 */
-    { LMP_EDR_ACL_2M  | 0x0300, _T("EDR ACL 2 Mbps")    },      /* Bit 1 */
-    { LMP_EDR_ACL_3M  | 0x0300, _T("EDR ACL 3 Mbps")    },      /* Bit 2 */
-    { LMP_ENH_ISCAN   | 0x0300, _T("enhanced iscan")    },      /* Bit 3 */
-    { LMP_ILACE_ISCAN | 0x0300, _T("interlaced iscan")  },      /* Bit 4 */
-    { LMP_ILACE_PSCAN | 0x0300, _T("interlaced pscan")  },      /* Bit 5 */
-    { LMP_RSSI_INQ    | 0x0300, _T("inquiry with RSSI") },      /* Bit 6 */
-    { LMP_ESCO        | 0x0300, _T("extended SCO")      },      /* Bit 7 */
+    static ConversionTable lmp_features_map[] = {
+        /* Byte 0 */
+        { LMP_3SLOT | 0x0000, _T("3-slot packets") }, /* Bit 0 */
+        { LMP_5SLOT | 0x0000, _T("5-slot packets") }, /* Bit 1 */
+        { LMP_ENCRYPT | 0x0000, _T("encryption") }, /* Bit 2 */
+        { LMP_SOFFSET | 0x0000, _T("slot offset") }, /* Bit 3 */
+        { LMP_TACCURACY | 0x0000, _T("timing accuracy") }, /* Bit 4 */
+        { LMP_RSWITCH | 0x0000, _T("role switch") }, /* Bit 5 */
+        { LMP_HOLD | 0x0000, _T("hold mode") }, /* Bit 6 */
+        { LMP_SNIFF | 0x0000, _T("sniff mode") }, /* Bit 7 */
 
-    /* Byte 4 */
-    { LMP_EV4         | 0x0400, _T("EV4 packets")       },      /* Bit 0 */
-    { LMP_EV5         | 0x0400, _T("EV5 packets")       },      /* Bit 1 */
-    { LMP_AFH_CAP_SLV | 0x0400, _T("AFH cap. slave")    },      /* Bit 3 */
-    { LMP_AFH_CLS_SLV | 0x0400, _T("AFH class. slave")  },      /* Bit 4 */
-    { LMP_NO_BREDR    | 0x0400, _T("BR/EDR not supp.")  },      /* Bit 5 */
-    { LMP_LE          | 0x0400, _T("LE support")        },      /* Bit 6 */
-    { LMP_EDR_3SLOT   | 0x0400, _T("3-slot EDR ACL")    },      /* Bit 7 */
-                     
-    /* Byte 5 */
-    { LMP_EDR_5SLOT   | 0x0500, _T("5-slot EDR ACL")    },      /* Bit 0 */
-    { LMP_SNIFF_SUBR  | 0x0500, _T("sniff subrating")   },      /* Bit 1 */
-    { LMP_PAUSE_ENC   | 0x0500, _T("pause encryption")  },      /* Bit 2 */
-    { LMP_AFH_CAP_MST | 0x0500, _T("AFH cap. master")   },      /* Bit 3 */
-    { LMP_AFH_CLS_MST | 0x0500, _T("AFH class. master") },      /* Bit 4 */
-    { LMP_EDR_ESCO_2M | 0x0500, _T("EDR eSCO 2 Mbps")   },      /* Bit 5 */
-    { LMP_EDR_ESCO_3M | 0x0500, _T("EDR eSCO 3 Mbps")   },      /* Bit 6 */
-    { LMP_EDR_3S_ESCO | 0x0500, _T("3-slot EDR eSCO")   },      /* Bit 7 */
-                     
-    /* Byte 6 */
-    { LMP_EXT_INQ     | 0x0600, _T("extended inquiry")  },      /* Bit 0 */
-    { LMP_LE_BREDR    | 0x0600, _T("LE and BR/EDR")     },      /* Bit 1 */
-    { LMP_SIMPLE_PAIR | 0x0600, _T("simple pairing")    },      /* Bit 3 */
-    { LMP_ENCAPS_PDU  | 0x0600, _T("encapsulated PDU")  },      /* Bit 4 */
-    { LMP_ERR_DAT_REP | 0x0600, _T("err. data report")  },      /* Bit 5 */
-    { LMP_NFLUSH_PKTS | 0x0600, _T("non-flush flag")    },      /* Bit 6 */
-                     
-    /* Byte 7 */
-    { LMP_LSTO        | 0x0700, _T("LSTO")              },      /* Bit 1 */
-    { LMP_INQ_TX_PWR  | 0x0700, _T("inquiry TX power")  },      /* Bit 2 */
-    { LMP_EPC         | 0x0700, _T("EPC")               },      /* Bit 2 */
-    { LMP_EXT_FEAT    | 0x0700, _T("extended features") },      /* Bit 7 */
+        /* Byte 1 */
+        { LMP_PARK | 0x0100, _T("park state") }, /* Bit 0 */
+        { LMP_RSSI | 0x0100, _T("RSSI") }, /* Bit 1 */
+        { LMP_QUALITY | 0x0100, _T("channel quality") }, /* Bit 2 */
+        { LMP_SCO | 0x0100, _T("SCO link") }, /* Bit 3 */
+        { LMP_HV2 | 0x0100, _T("HV2 packets") }, /* Bit 4 */
+        { LMP_HV3 | 0x0100, _T("HV3 packets") }, /* Bit 5 */
+        { LMP_ULAW | 0x0100, _T("u-law log") }, /* Bit 6 */
+        { LMP_ALAW | 0x0100, _T("A-law log") }, /* Bit 7 */
 
-    { 0x0000, nullptr }
-};
+        /* Byte 2 */
+        { LMP_CVSD | 0x0200, _T("CVSD") }, /* Bit 0 */
+        { LMP_PSCHEME | 0x0200, _T("paging scheme") }, /* Bit 1 */
+        { LMP_PCONTROL | 0x0200, _T("power control") }, /* Bit 2 */
+        { LMP_TRSP_SCO | 0x0200, _T("transparent SCO") }, /* Bit 3 */
+        { LMP_BCAST_ENC | 0x0200, _T("broadcast encrypt") }, /* Bit 7 */
+
+        /* Byte 3 */
+        { LMP_EDR_ACL_2M | 0x0300, _T("EDR ACL 2 Mbps") }, /* Bit 1 */
+        { LMP_EDR_ACL_3M | 0x0300, _T("EDR ACL 3 Mbps") }, /* Bit 2 */
+        { LMP_ENH_ISCAN | 0x0300, _T("enhanced iscan") }, /* Bit 3 */
+        { LMP_ILACE_ISCAN | 0x0300, _T("interlaced iscan") }, /* Bit 4 */
+        { LMP_ILACE_PSCAN | 0x0300, _T("interlaced pscan") }, /* Bit 5 */
+        { LMP_RSSI_INQ | 0x0300, _T("inquiry with RSSI") }, /* Bit 6 */
+        { LMP_ESCO | 0x0300, _T("extended SCO") }, /* Bit 7 */
+
+        /* Byte 4 */
+        { LMP_EV4 | 0x0400, _T("EV4 packets") }, /* Bit 0 */
+        { LMP_EV5 | 0x0400, _T("EV5 packets") }, /* Bit 1 */
+        { LMP_AFH_CAP_SLV | 0x0400, _T("AFH cap. slave") }, /* Bit 3 */
+        { LMP_AFH_CLS_SLV | 0x0400, _T("AFH class. slave") }, /* Bit 4 */
+        { LMP_NO_BREDR | 0x0400, _T("BR/EDR not supp.") }, /* Bit 5 */
+        { LMP_LE | 0x0400, _T("LE support") }, /* Bit 6 */
+        { LMP_EDR_3SLOT | 0x0400, _T("3-slot EDR ACL") }, /* Bit 7 */
+
+        /* Byte 5 */
+        { LMP_EDR_5SLOT | 0x0500, _T("5-slot EDR ACL") }, /* Bit 0 */
+        { LMP_SNIFF_SUBR | 0x0500, _T("sniff subrating") }, /* Bit 1 */
+        { LMP_PAUSE_ENC | 0x0500, _T("pause encryption") }, /* Bit 2 */
+        { LMP_AFH_CAP_MST | 0x0500, _T("AFH cap. master") }, /* Bit 3 */
+        { LMP_AFH_CLS_MST | 0x0500, _T("AFH class. master") }, /* Bit 4 */
+        { LMP_EDR_ESCO_2M | 0x0500, _T("EDR eSCO 2 Mbps") }, /* Bit 5 */
+        { LMP_EDR_ESCO_3M | 0x0500, _T("EDR eSCO 3 Mbps") }, /* Bit 6 */
+        { LMP_EDR_3S_ESCO | 0x0500, _T("3-slot EDR eSCO") }, /* Bit 7 */
+
+        /* Byte 6 */
+        { LMP_EXT_INQ | 0x0600, _T("extended inquiry") }, /* Bit 0 */
+        { LMP_LE_BREDR | 0x0600, _T("LE and BR/EDR") }, /* Bit 1 */
+        { LMP_SIMPLE_PAIR | 0x0600, _T("simple pairing") }, /* Bit 3 */
+        { LMP_ENCAPS_PDU | 0x0600, _T("encapsulated PDU") }, /* Bit 4 */
+        { LMP_ERR_DAT_REP | 0x0600, _T("err. data report") }, /* Bit 5 */
+        { LMP_NFLUSH_PKTS | 0x0600, _T("non-flush flag") }, /* Bit 6 */
+
+        /* Byte 7 */
+        { LMP_LSTO | 0x0700, _T("LSTO") }, /* Bit 1 */
+        { LMP_INQ_TX_PWR | 0x0700, _T("inquiry TX power") }, /* Bit 2 */
+        { LMP_EPC | 0x0700, _T("EPC") }, /* Bit 2 */
+        { LMP_EXT_FEAT | 0x0700, _T("extended features") }, /* Bit 7 */
+
+        { 0x0000, nullptr }
+    };
 
 } // Namespace Bluetooth
 
@@ -92,14 +92,17 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(BluetoothControl, 1, 0);
 
-    static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::DeviceImpl::JSON> > jsonResponseFactoryDevice(1);
-    static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::Status> > jsonResponseFactoryStatus(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::DeviceImpl::JSON>> jsonResponseFactoryDevice(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::Status>> jsonResponseFactoryStatus(1);
     /* static */ string BluetoothControl::_HIDPath;
 
-    const TCHAR* BluetoothControl::DeviceImpl::FeatureIterator::FeatureToText(const uint16_t index) const {
+    const TCHAR* BluetoothControl::DeviceImpl::FeatureIterator::FeatureToText(const uint16_t index) const
+    {
         Bluetooth::ConversionTable* pos = Bluetooth::lmp_features_map;
 
-        while ( (pos->text != nullptr) && (pos->id != index) ) { pos++; }
+        while ((pos->text != nullptr) && (pos->id != index)) {
+            pos++;
+        }
 
         return (pos->text != nullptr ? pos->text : _T("reserved"));
     }
@@ -121,26 +124,21 @@ namespace Plugin {
         // First see if we can bring up the Driver....
         if (_driver == nullptr) {
             result = _T("Could not load the Bluetooth Driver.");
-        }
-        else {
+        } else {
             Bluetooth::HCISocket::Management::OperationalMode command(ADAPTER_INDEX);
             command->val = htobs(ENABLE_MODE);
 
             _interface = Bluetooth::Driver::Interface(config.Interface.Value());
-         
+
             if (_interface.IsValid() == false) {
                 result = _T("Could not bring up the interface.");
-            }
-            else if (_interface.Up() == false) {
+            } else if (_interface.Up() == false) {
                 result = "Failed to bring up the Bluetooth interface";
-            }
-            else if (_btAddress.Default() == false) {
+            } else if (_btAddress.Default() == false) {
                 result = "Could not get the default Bluetooth address";
-            }
-            else if (_administrator.Open(Core::infinite) != Core::ERROR_NONE) {
+            } else if (_administrator.Open(Core::infinite) != Core::ERROR_NONE) {
                 result = "Could not open the Bluetooth Administrator channel";
-            }
-            else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_POWERED)) != Core::ERROR_NONE) {
+            } else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_POWERED)) != Core::ERROR_NONE) {
                 result = "Failed to power on bluetooth adaptor";
             }
             // Enable Bondable on adaptor.
@@ -154,7 +152,7 @@ namespace Plugin {
             // Enable Low Energy
             else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_LE)) != Core::ERROR_NONE) {
                 result = "Failed to enable Low Energy";
-            }    
+            }
             // Enable Secure Connections
             else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_SECURE_CONN)) != Core::ERROR_NONE) {
                 result = "Failed to enable Secure Connections";
@@ -162,16 +160,14 @@ namespace Plugin {
             // Enable Advertising
             else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_ADVERTISING)) != Core::ERROR_NONE) {
                 result = "Failed to enable Advertising";
-            }
-            else if (_application.Open(_btAddress) != Core::ERROR_NONE) {
+            } else if (_application.Open(_btAddress) != Core::ERROR_NONE) {
                 result = "Could not open the Bluetooth Application channel";
-            }
-            else if (_application.Advertising(true, 0) != Core::ERROR_NONE) {
+            } else if (_application.Advertising(true, 0) != Core::ERROR_NONE) {
                 result = "Could not listen to advertisements on the Application channel";
             }
         }
 
-        if ( (_driver != nullptr) && (result.empty() == false) ) {
+        if ((_driver != nullptr) && (result.empty() == false)) {
             _interface.Down();
             delete _driver;
             _driver = nullptr;
@@ -210,7 +206,7 @@ namespace Plugin {
         if ((request.Verb == Web::Request::HTTP_PUT) || (request.Verb == Web::Request::HTTP_POST)) {
             if ((index.IsValid() == true) && (index.Next() && index.IsValid())) {
                 if ((index.Remainder() == _T("Pair")) || (index.Remainder() == _T("Connect")) || (index.Remainder() == _T("Disconnect")))
-                   request.Body(jsonResponseFactoryDevice.Element());
+                    request.Body(jsonResponseFactoryDevice.Element());
             }
         }
     }
@@ -251,8 +247,8 @@ namespace Plugin {
         result->Message = _T("Unsupported GET request.");
 
         if (index.Next() == false) {
-            
-            Core::ProxyType<Web::JSONBodyType<Status> > response(jsonResponseFactoryStatus.Element());
+
+            Core::ProxyType<Web::JSONBodyType<Status>> response(jsonResponseFactoryStatus.Element());
 
             result->ErrorCode = Web::STATUS_OK;
             result->Message = _T("Current status.");
@@ -260,19 +256,18 @@ namespace Plugin {
             response->Scanning = IsScanning();
             std::list<DeviceImpl*>::const_iterator loop = _devices.begin();
 
-            while (loop != _devices.end()) { 
+            while (loop != _devices.end()) {
                 response->Devices.Add().Set(*loop);
-                loop++; 
+                loop++;
             }
 
             result->Body(response);
-        }
-        else {
+        } else {
             TRACE(Trace::Information, (string(__FUNCTION__)));
             DeviceImpl* device = Find(index.Current().Text());
- 
+
             if (device != nullptr) {
-                Core::ProxyType<Web::JSONBodyType<DeviceImpl::JSON> > response(jsonResponseFactoryDevice.Element());
+                Core::ProxyType<Web::JSONBodyType<DeviceImpl::JSON>> response(jsonResponseFactoryDevice.Element());
                 response->Set(device);
 
                 result->ErrorCode = Web::STATUS_OK;
@@ -282,7 +277,7 @@ namespace Plugin {
                 result->ErrorCode = Web::STATUS_NO_CONTENT;
                 result->Message = _T("Unable to display device. Device not found");
             }
-        } 
+        }
 
         return result;
     }
@@ -309,27 +304,24 @@ namespace Plugin {
 
                     if (lowEnergy == true) {
                         _application.Scan(duration, limited, passive);
-                    }
-                    else {
+                    } else {
                         _application.Scan(duration, type, flags);
                     }
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("Scan started.");
-                } else if ( (index.Current() == _T("Pair")) || (index.Current() == _T("Connect")) ) {
+                } else if ((index.Current() == _T("Pair")) || (index.Current() == _T("Connect"))) {
                     bool pair = (index.Current() == _T("Pair"));
                     string destination;
                     if (index.Next() == true) {
                         destination = index.Current().Text();
-                    }
-                    else if (request.HasBody() == true) {
-                        destination = request.Body<const DeviceImpl::JSON>()->Address;
+                    } else if (request.HasBody() == true) {
+                        destination = request.Body<const DeviceImpl::JSON>()->Address.Value();
                     }
                     DeviceImpl* device = Find(destination);
                     if (device == nullptr) {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Device not found.");
-                    }
-                    else if (pair == true) {
+                    } else if (pair == true) {
                         if (device->Pair() == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Paired device.");
@@ -337,12 +329,10 @@ namespace Plugin {
                             result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
                             result->Message = _T("Unable to Pair device.");
                         }
-                    }
-                    else if (device->Connect() == Core::ERROR_NONE) {
+                    } else if (device->Connect() == Core::ERROR_NONE) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Connected device.");
-                    }
-                    else {
+                    } else {
                         result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
                         result->Message = _T("Unable to connect to device.");
                     }
@@ -370,16 +360,14 @@ namespace Plugin {
                     string address;
                     if (index.Next() == true) {
                         address = index.Current().Text();
-                    }
-                    else if (request.HasBody() == true) {
-                        address = request.Body<const DeviceImpl::JSON>()->Address;
+                    } else if (request.HasBody() == true) {
+                        address = request.Body<const DeviceImpl::JSON>()->Address.Value();
                     }
                     DeviceImpl* device = Find(address);
                     if (device == nullptr) {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Unknown device.");
-                    }
-                    else {
+                    } else {
                         _gattRemotes.emplace_back(device->Locator(), _HIDPath);
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Unpaired device.");
@@ -388,9 +376,8 @@ namespace Plugin {
             }
         }
 
-
         return result;
- 
+
         return result;
     }
 
@@ -408,44 +395,38 @@ namespace Plugin {
                     _application.Abort();
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("Scan stopped.");
-                } else if ( (index.Current() == _T("Pair")) || (index.Current() == _T("Connect")) ) {
+                } else if ((index.Current() == _T("Pair")) || (index.Current() == _T("Connect"))) {
                     bool pair = (index.Current() == _T("Pair"));
                     string address;
                     if (index.Next() == true) {
                         address = index.Current().Text();
-                    }
-                    else if (request.HasBody() == true) {
-                        address = request.Body<const DeviceImpl::JSON>()->Address;
+                    } else if (request.HasBody() == true) {
+                        address = request.Body<const DeviceImpl::JSON>()->Address.Value();
                     }
                     DeviceImpl* device = Find(address);
                     if (device == nullptr) {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Unknown device.");
-                    }
-                    else if (pair == true) {
+                    } else if (pair == true) {
                         if (device->Unpair() == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Unpaired device.");
-                        } 
-                        else {
+                        } else {
                             result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
                             result->Message = _T("Unable to Unpair device.");
                         }
-                    }
-                    else {
+                    } else {
                         uint16_t reason = 0;
                         if (index.Next() == true) {
                             reason = Core::NumberType<uint16_t>(index.Current()).Value();
-                        }
-                        else if (request.HasBody() == true) {
+                        } else if (request.HasBody() == true) {
                             reason = request.Body<const DeviceImpl::JSON>()->Reason;
                         }
- 
+
                         if (device->Disconnect(reason) == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Disconnected device.");
-                        } 
-                        else {
+                        } else {
                             result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
                             result->Message = _T("Unable to Disconnect device.");
                         }
@@ -457,17 +438,17 @@ namespace Plugin {
             }
         }
 
-
         return result;
     }
 
-
     //  IBluetooth methods
     // -------------------------------------------------------------------------------------------------------
-    /* virtual */ bool BluetoothControl::IsScanning() const {
+    /* virtual */ bool BluetoothControl::IsScanning() const
+    {
         return (_application.IsScanning());
     }
-    /* virtual */ uint32_t BluetoothControl::Register(IBluetooth::INotification* notification) {
+    /* virtual */ uint32_t BluetoothControl::Register(IBluetooth::INotification* notification)
+    {
         _adminLock.Lock();
 
         // Make sure a sink is not registered multiple times.
@@ -477,7 +458,7 @@ namespace Plugin {
         notification->AddRef();
 
         // Allright iterate over all devices, so thay get announced by the observer..
-        for ( std::list<DeviceImpl*>::iterator index = _devices.begin(), end = _devices.end(); index != end; ++index ) {
+        for (std::list<DeviceImpl*>::iterator index = _devices.begin(), end = _devices.end(); index != end; ++index) {
             notification->Update(*index);
         }
 
@@ -485,7 +466,8 @@ namespace Plugin {
 
         return (Core::ERROR_NONE);
     }
-    /* virtual */ uint32_t BluetoothControl::Unregister(IBluetooth::INotification* notification) {
+    /* virtual */ uint32_t BluetoothControl::Unregister(IBluetooth::INotification* notification)
+    {
         _adminLock.Lock();
 
         std::list<IBluetooth::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
@@ -502,13 +484,14 @@ namespace Plugin {
 
         return (Core::ERROR_NONE);
     }
-    /* virtual */ bool BluetoothControl::Scan(const bool enable) {
+    /* virtual */ bool BluetoothControl::Scan(const bool enable)
+    {
         if ((_application.IsScanning() == false) && (enable == true)) {
 
             TRACE(Trace::Information, ("Start Bluetooth Scan"));
 
             // Clearing previously discovered devices.
-            RemoveDevices ([] (DeviceImpl* device) -> bool { if ((device->IsPaired() == false) && (device->IsConnected() == false)) device->Clear(); return(false); });
+            RemoveDevices([](DeviceImpl* device) -> bool { if ((device->IsPaired() == false) && (device->IsConnected() == false)) device->Clear(); return(false); });
 
             bool lowEnergy = true;
             bool limited = false;
@@ -519,12 +502,10 @@ namespace Plugin {
 
             if (lowEnergy == true) {
                 _application.Scan(duration, limited, passive);
-            }
-            else {
+            } else {
                 _application.Scan(duration, type, flags);
             }
-        } 
-        else if ((_application.IsScanning() == true) && (enable == false)) {
+        } else if ((_application.IsScanning() == true) && (enable == false)) {
 
             TRACE(Trace::Information, ("Stop Bluetooth Scan"));
 
@@ -534,7 +515,8 @@ namespace Plugin {
         return (_application.IsScanning() == enable);
     }
 
-    /* virtual */ Exchange::IBluetooth::IDevice* BluetoothControl::Device (const string& address) {
+    /* virtual */ Exchange::IBluetooth::IDevice* BluetoothControl::Device(const string& address)
+    {
         IBluetooth::IDevice* result = Find(address);
         if (result != nullptr) {
             result->AddRef();
@@ -542,26 +524,28 @@ namespace Plugin {
         return (result);
     }
 
-    /* virtual */ Exchange::IBluetooth::IDevice::IIterator* BluetoothControl::Devices () {
+    /* virtual */ Exchange::IBluetooth::IDevice::IIterator* BluetoothControl::Devices()
+    {
         return (Core::Service<DeviceImpl::IteratorImpl>::Create<IBluetooth::IDevice::IIterator>(_devices));
     }
 
-    void BluetoothControl::DiscoveredDevice(const bool lowEnergy, const Bluetooth::Address& address, const string& name) {
+    void BluetoothControl::DiscoveredDevice(const bool lowEnergy, const Bluetooth::Address& address, const string& name)
+    {
 
         _adminLock.Lock();
 
         std::list<DeviceImpl*>::iterator index = _devices.begin();
 
-        while ( (index != _devices.end()) && (*(*index) != address) ) { index++; }
+        while ((index != _devices.end()) && (*(*index) != address)) {
+            index++;
+        }
 
         if (index != _devices.end()) {
             (*index)->Discovered();
-        }
-        else if (lowEnergy == true) {
+        } else if (lowEnergy == true) {
             TRACE(Trace::Information, ("Added LowEnergy Bluetooth device: %s, name: %s", address.ToString().c_str(), name.c_str()));
             _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(&_administrator, &_application, address, name));
-        }
-        else {
+        } else {
             TRACE(Trace::Information, ("Added Regular Bluetooth device: %s, name: %s", address.ToString().c_str(), name.c_str()));
             _devices.push_back(Core::Service<DeviceRegular>::Create<DeviceImpl>(&_administrator, &_application, address, name));
         }
@@ -569,14 +553,14 @@ namespace Plugin {
         _adminLock.Unlock();
     }
 
-    void BluetoothControl::RemoveDevices(std::function<bool(DeviceImpl*)> filter) {
+    void BluetoothControl::RemoveDevices(std::function<bool(DeviceImpl*)> filter)
+    {
 
         _adminLock.Lock();
 
-        for ( std::list<DeviceImpl*>::iterator index = _devices.begin(), end = _devices.end(); index != end; ++index ) {
+        for (std::list<DeviceImpl*>::iterator index = _devices.begin(), end = _devices.end(); index != end; ++index) {
             // call the function passed into findMatchingAddresses and see if it matches
-            if ( filter ( *index ) == true )
-            {
+            if (filter(*index) == true) {
                 (*index)->Release();
                 index = _devices.erase(index);
             }
@@ -584,15 +568,19 @@ namespace Plugin {
 
         _adminLock.Unlock();
     }
-    BluetoothControl::DeviceImpl* BluetoothControl::Find(const string& address) {
+    BluetoothControl::DeviceImpl* BluetoothControl::Find(const string& address)
+    {
         Bluetooth::Address search(address.c_str());
         std::list<DeviceImpl*>::const_iterator index = _devices.begin();
 
-        while ( (index != _devices.end()) && ((*index)->operator==(search) == false) ) { index++; }
+        while ((index != _devices.end()) && ((*index)->operator==(search) == false)) {
+            index++;
+        }
 
         return (index != _devices.end() ? (*index) : nullptr);
     }
-    void BluetoothControl::Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame) {
+    void BluetoothControl::Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame)
+    {
         _adminLock.Lock();
         std::list<DeviceImpl*>::iterator index = _devices.begin();
         while (index != _devices.end()) {

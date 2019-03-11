@@ -6,14 +6,13 @@
 namespace WPEFramework {
 namespace Plugin {
 
-struct ServerInfo {
-    std::string name;
-    std::string address;
-    uint16_t port;
-};
+    struct ServerInfo {
+        std::string name;
+        std::string address;
+        uint16_t port;
+    };
 
-class RtspSessionInfo
-{
+    class RtspSessionInfo {
     public:
         RtspSessionInfo();
         void reset();
@@ -32,8 +31,8 @@ class RtspSessionInfo
         float bookmark;
         float npt;
         float scale;
-};
-
-}} // WPEFramework::Plugin
+    };
+}
+} // WPEFramework::Plugin
 
 #endif

@@ -8,15 +8,15 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(Snapshot, 1, 0);
 
-    class StoreImpl: public Exchange::ICapture::IStore {
+    class StoreImpl : public Exchange::ICapture::IStore {
     private:
         StoreImpl() = delete;
         StoreImpl(const StoreImpl&) = delete;
         StoreImpl& operator=(const StoreImpl&) = delete;
 
     public:
-        StoreImpl (Core::BinairySemaphore& inProgress, const string& path)
-                : _file(FileBodyExtended::Instance(inProgress, path))
+        StoreImpl(Core::BinairySemaphore& inProgress, const string& path)
+            : _file(FileBodyExtended::Instance(inProgress, path))
         {
         }
 
@@ -24,7 +24,7 @@ namespace Plugin {
         {
         }
 
-        virtual bool R8_G8_B8_A8(const unsigned char *buffer, const unsigned int width, const unsigned int height)
+        virtual bool R8_G8_B8_A8(const unsigned char* buffer, const unsigned int width, const unsigned int height)
         {
 
             png_structp pngPointer = nullptr;
@@ -54,14 +54,14 @@ namespace Plugin {
             // Set image attributes.
             int depth = 8;
             png_set_IHDR(pngPointer,
-                         infoPointer,
-                         width,
-                         height,
-                         depth,
-                         PNG_COLOR_TYPE_RGB,
-                         PNG_INTERLACE_NONE,
-                         PNG_COMPRESSION_TYPE_DEFAULT,
-                         PNG_FILTER_TYPE_DEFAULT);
+                infoPointer,
+                width,
+                height,
+                depth,
+                PNG_COLOR_TYPE_RGB,
+                PNG_INTERLACE_NONE,
+                PNG_COMPRESSION_TYPE_DEFAULT,
+                PNG_FILTER_TYPE_DEFAULT);
 
             // Initialize rows of PNG.
             png_byte** rowLines = static_cast<png_byte**>(png_malloc(pngPointer, height * sizeof(png_byte*)));
@@ -69,12 +69,12 @@ namespace Plugin {
             for (unsigned int i = 0; i < height; ++i) {
 
                 png_byte* rowLine = static_cast<png_byte*>(png_malloc(pngPointer, sizeof(png_byte) * width * pixelSize));
-                const uint8_t *rowSource = buffer + (sizeof(png_byte) * i * width * pixelSize);
+                const uint8_t* rowSource = buffer + (sizeof(png_byte) * i * width * pixelSize);
                 rowLines[i] = rowLine;
-                for (unsigned int j = 0; j < width*pixelSize; j+=pixelSize) {
-                    *rowLine++ = rowSource[j+2]; // Red
-                    *rowLine++ = rowSource[j+1]; // Green
-                    *rowLine++ = rowSource[j+0]; // Blue
+                for (unsigned int j = 0; j < width * pixelSize; j += pixelSize) {
+                    *rowLine++ = rowSource[j + 2]; // Red
+                    *rowLine++ = rowSource[j + 1]; // Green
+                    *rowLine++ = rowSource[j + 0]; // Blue
                     // ignore alpha
                 }
             }
@@ -121,13 +121,12 @@ namespace Plugin {
             FileBodyExtended& operator=(const FileBodyExtended&) = delete;
 
         protected:
-            FileBodyExtended(Core::BinairySemaphore *semLock, const string& path)
-                    : Web::FileBody(path, false)
-                    , _semLock(*semLock)
+            FileBodyExtended(Core::BinairySemaphore* semLock, const string& path)
+                : Web::FileBody(path, false)
+                , _semLock(*semLock)
             {
                 // Already exist, due to unexpected termination!
-                if (true == Core::File::Exists())
-                {
+                if (true == Core::File::Exists()) {
                     // Close and remove file
                     Core::File::Destroy();
                 }
@@ -149,8 +148,7 @@ namespace Plugin {
             {
                 Core::ProxyType<FileBodyExtended> result;
 
-                if (semLock.Lock(0) == Core::ERROR_NONE)
-                {
+                if (semLock.Lock(0) == Core::ERROR_NONE) {
                     // We got the lock, forward it to the filebody
                     result = Core::ProxyType<FileBodyExtended>::Create(&semLock, fileName);
                 }
@@ -161,6 +159,7 @@ namespace Plugin {
         private:
             Core::BinairySemaphore& _semLock;
         };
+
     private:
         Core::ProxyType<FileBodyExtended> _file;
     };
@@ -175,9 +174,8 @@ namespace Plugin {
 
         Core::Directory directory(service->PersistentPath().c_str());
         if (directory.CreatePath()) {
-           _fileName = service->PersistentPath() + string("Capture.png");
-        }
-        else {
+            _fileName = service->PersistentPath() + string("Capture.png");
+        } else {
             _fileName = string("/tmp/Capture.png");
         }
 
@@ -189,8 +187,7 @@ namespace Plugin {
 
         if (_device != nullptr) {
             TRACE_L1(_T("Capture device: %s"), _device->Name());
-        }
-        else {
+        } else {
             result = string("No capture device is registered");
         }
 
@@ -242,8 +239,7 @@ namespace Plugin {
 
                 response->Message = _T("Plugin is up and running");
                 response->ErrorCode = Web::STATUS_OK;
-            }
-            else if ( (index.Current() == "Capture") ) {
+            } else if ((index.Current() == "Capture")) {
 
                 StoreImpl file(_inProgress, _fileName);
 
@@ -270,6 +266,5 @@ namespace Plugin {
 
         return (response);
     }
-
 }
 }

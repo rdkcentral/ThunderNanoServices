@@ -5,22 +5,22 @@
 #include <WPE/WebKit.h>
 #include <WPE/WebKit/WKCookieManagerSoup.h>
 #include <WPE/WebKit/WKGeolocationManager.h> // TODO: add ref to this header in WebKit.h?
-#include <WPE/WebKit/WKGeolocationPosition.h>
 #include <WPE/WebKit/WKGeolocationPermissionRequest.h>
-#include <WPE/WebKit/WKNotificationPermissionRequest.h>
-#include <WPE/WebKit/WKNotificationProvider.h>
+#include <WPE/WebKit/WKGeolocationPosition.h>
 #include <WPE/WebKit/WKNotification.h>
 #include <WPE/WebKit/WKNotificationManager.h>
-#include <WPE/WebKit/WKUserMediaPermissionRequest.h>
+#include <WPE/WebKit/WKNotificationPermissionRequest.h>
+#include <WPE/WebKit/WKNotificationProvider.h>
 #include <WPE/WebKit/WKSoupSession.h>
+#include <WPE/WebKit/WKUserMediaPermissionRequest.h>
 
 #include <glib.h>
 
-#include "WebKitBrowser.h"
-#include "InjectedBundle/WhiteListedOriginDomainsList.h"
-#include "InjectedBundle/Utils.h"
-#include "InjectedBundle/NotifyWPEFramework.h"
 #include "HTML5Notification.h"
+#include "InjectedBundle/NotifyWPEFramework.h"
+#include "InjectedBundle/Utils.h"
+#include "InjectedBundle/WhiteListedOriginDomainsList.h"
+#include "WebKitBrowser.h"
 
 #include <iostream>
 
@@ -68,8 +68,8 @@ namespace Plugin {
         nullptr, // didReceiveAuthenticationChallenge
         // webProcessDidCrash
         [](WKPageRef page, const void*) {
-         SYSLOG(Trace::Fatal, ("CRASH: WebProcess crashed, exiting..."));
-         exit(1);
+            SYSLOG(Trace::Fatal, ("CRASH: WebProcess crashed, exiting..."));
+            exit(1);
         },
         nullptr, // copyWebCryptoMasterKey
         nullptr, // didBeginNavigationGesture
@@ -433,7 +433,7 @@ static GSourceFuncs _handlerIntervention =
             , _state(PluginHost::IStateControl::UNINITIALIZED)
             , _hidden(false)
             , _time(0)
-            , _compliant(false)    
+            , _compliant(false)
             , _automationSession(nullptr)
         {
 
@@ -472,7 +472,6 @@ static GSourceFuncs _handlerIntervention =
                 g_main_context_invoke(
                     _context,
                     [](gpointer customdata) -> gboolean {
-
                         WebKitImplementation* object = static_cast<WebKitImplementation*>(customdata);
                         auto shellURL = WKURLCreateWithUTF8CString(object->_URL.c_str());
                         WKPageLoadURL(object->_page, shellURL);
@@ -505,8 +504,7 @@ static GSourceFuncs _handlerIntervention =
                 // Just move the state to what we would like it to be :-)
                 _state = (command == PluginHost::IStateControl::SUSPEND ? PluginHost::IStateControl::SUSPENDED : PluginHost::IStateControl::RESUMED);
                 result = Core::ERROR_NONE;
-            }
-            else {
+            } else {
                 switch (command) {
                 case PluginHost::IStateControl::SUSPEND:
                     if (_state == PluginHost::IStateControl::RESUMED) {
@@ -564,8 +562,7 @@ static GSourceFuncs _handlerIntervention =
         {
             if (hidden == true) {
                 Hide();
-            }
-            else {
+            } else {
                 Show();
             }
         }
@@ -681,9 +678,9 @@ static GSourceFuncs _handlerIntervention =
             _dataPath = service->DataPath();
             _config.FromString(service->ConfigLine());
 
-            bool environmentOverride (WebKitBrowser::EnvironmentOverride(_config.EnvironmentOverride.Value()));
+            bool environmentOverride(WebKitBrowser::EnvironmentOverride(_config.EnvironmentOverride.Value()));
 
-            if ( (environmentOverride == false) || (Core::SystemInfo::GetEnvironment(_T("WPE_WEBKIT_URL"), _URL) == false) ) {
+            if ((environmentOverride == false) || (Core::SystemInfo::GetEnvironment(_T("WPE_WEBKIT_URL"), _URL) == false)) {
                 _URL = _config.URL.Value();
             }
 
@@ -691,10 +688,9 @@ static GSourceFuncs _handlerIntervention =
             Core::SystemInfo::SetEnvironment(_T("HOME"), service->PersistentPath());
 
             if (_config.ClientIdentifier.IsSet() == true) {
-                string value (service->Callsign() + ',' + _config.ClientIdentifier.Value());
+                string value(service->Callsign() + ',' + _config.ClientIdentifier.Value());
                 Core::SystemInfo::SetEnvironment(_T("CLIENT_IDENTIFIER"), value, !environmentOverride);
-            }
-            else {
+            } else {
                 Core::SystemInfo::SetEnvironment(_T("CLIENT_IDENTIFIER"), service->Callsign(), !environmentOverride);
             }
 
@@ -719,7 +715,7 @@ static GSourceFuncs _handlerIntervention =
             else
                 Core::SystemInfo::SetEnvironment(_T("WPE_SHELL_MEDIA_DISK_CACHE_PATH"), service->PersistentPath(), !environmentOverride);
 
-		// Disk Cache
+            // Disk Cache
             if (_config.DiskCache.Value().empty() == false)
                 Core::SystemInfo::SetEnvironment(_T("WPE_DISK_CACHE_SIZE"), _config.DiskCache.Value(), !environmentOverride);
 
@@ -735,8 +731,8 @@ static GSourceFuncs _handlerIntervention =
                 Core::SystemInfo::SetEnvironment(_T("CAIRO_GL_COMPOSITOR"), _config.Compositor.Value(), !environmentOverride);
 
             // WebInspector
-            if (_config.Inspector.Value().empty() == false){
-                if(_config.Automation.Value())
+            if (_config.Inspector.Value().empty() == false) {
+                if (_config.Automation.Value())
                     Core::SystemInfo::SetEnvironment(_T("WEBKIT_INSPECTOR_SERVER"), _config.Inspector.Value(), !environmentOverride);
                 else
                     Core::SystemInfo::SetEnvironment(_T("WEBKIT_LEGACY_INSPECTOR_SERVER"), _config.Inspector.Value(), !environmentOverride);
@@ -831,7 +827,7 @@ static GSourceFuncs _handlerIntervention =
 
         string GetWhiteListJsonString() const
         {
-            return _config.Whitelist;
+            return _config.Whitelist.Value();
         }
 
         void OnRequestAutomationSession(WKContextRef context, WKStringRef sessionID)
@@ -895,8 +891,7 @@ static GSourceFuncs _handlerIntervention =
         {
             if (_context == nullptr) {
                 _state = PluginHost::IStateControl::SUSPENDED;
-            }
-            else {
+            } else {
                 _time = Core::Time::Now().Ticks();
                 g_main_context_invoke(
                     _context,
@@ -917,8 +912,7 @@ static GSourceFuncs _handlerIntervention =
         {
             if (_context == nullptr) {
                 _state = PluginHost::IStateControl::RESUMED;
-            }
-            else {
+            } else {
                 _time = Core::Time::Now().Ticks();
 
                 g_main_context_invoke(
@@ -1023,7 +1017,7 @@ static GSourceFuncs _handlerIntervention =
 
             //Turn on/off WebGL
             WKPreferencesSetWebGLEnabled(preferences, _config.WebGLEnabled.Value());
- 
+
             WKPageGroupSetPreferences(pageGroup, preferences);
 
             auto pageConfiguration = WKPageConfigurationCreate();
@@ -1062,7 +1056,7 @@ static GSourceFuncs _handlerIntervention =
             WKContextSetInjectedBundleClient(context, &_handlerInjectedBundle.base);
 
             WKPageSetProxies(_page, nullptr);
-	
+
             WKPageSetCustomBackingScaleFactor(_page, _config.ScaleFactor.Value());
 
             if (_config.Automation.Value()) {
@@ -1082,8 +1076,7 @@ static GSourceFuncs _handlerIntervention =
             if ((_state == PluginHost::IStateControl::SUSPENDED) || (_state == PluginHost::IStateControl::UNINITIALIZED)) {
                 _state = PluginHost::IStateControl::UNINITIALIZED;
                 Suspend();
-            }
-            else {
+            } else {
                 _state = PluginHost::IStateControl::UNINITIALIZED;
                 OnStateChange(PluginHost::IStateControl::RESUMED);
             }
@@ -1148,12 +1141,10 @@ static GSourceFuncs _handlerIntervention =
 
             std::vector<string> messageStrings = Utils::ConvertWKArrayToStringVector(messageLines);
             browser->OnJavaScript(messageStrings);
-        }
-        else if (name == WhiteListedOriginDomainsList::GetMessageName()) {
+        } else if (name == WhiteListedOriginDomainsList::GetMessageName()) {
             std::string utf8Json = Core::ToString(browser->GetWhiteListJsonString().c_str());
             *returnData = WKStringCreateWithUTF8CString(utf8Json.c_str());
-        }
-        else {
+        } else {
             // Unexpected message name.
             std::cerr << "WebBridge received synchronous message (" << name << "), but didn't process it." << std::endl;
         }
@@ -1212,7 +1203,7 @@ static GSourceFuncs _handlerIntervention =
         // WebKitImplementation* browser = const_cast<WebKitImplementation*>(static_cast<const WebKitImplementation*>(clientInfo));
         // TODO: @Igalia, make sure the clientInfo is actually holding the correct clientINfo, currently it is nullptr. For
         // now we use the Singleton, this is fine as long as there is only 1 instance (in process) or it is always fine if we
-        // are running out-of-process.. 
+        // are running out-of-process..
         WebKitImplementation* realBrowser = static_cast<WebKitImplementation*>(implementation);
         realBrowser->NotifyClosure();
     }
@@ -1299,8 +1290,7 @@ namespace WebKitBrowser {
             if (pid != 0) {
                 _main = Core::ProcessInfo(pid);
                 _startTime = Core::Time::Now().Ticks() + (TYPICAL_STARTUP_TIME * 1000000);
-            }
-            else {
+            } else {
                 _startTime = 0;
             }
         }

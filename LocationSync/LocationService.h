@@ -12,7 +12,7 @@ namespace Plugin {
     class EXTERNAL LocationService
         : public PluginHost::ISubSystem::ILocation,
           public PluginHost::ISubSystem::IInternet,
-          public Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, Core::ProxyPoolType<Web::Response> &> {
+          public Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, Core::ProxyPoolType<Web::Response>&> {
 
     private:
         enum state {
@@ -73,7 +73,7 @@ namespace Plugin {
         uint32_t Probe(const string& remoteNode, const uint32_t retries, const uint32_t retryTimeSpan);
         void Stop();
 
-      /*
+        /*
        * ------------------------------------------------------------------------------------------------------------
        * ISubSystem::INetwork methods
        * ------------------------------------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ namespace Plugin {
         {
             return (_publicIPAddress.empty() == true ? PluginHost::ISubSystem::IInternet::UNKNOWN : (Core::NodeId::IsIPV6Enabled() ? PluginHost::ISubSystem::IInternet::IPV6 : PluginHost::ISubSystem::IInternet::IPV4));
         }
-      /*
+        /*
        * ------------------------------------------------------------------------------------------------------------
        * ISubSystem::ILocation methods
        * ------------------------------------------------------------------------------------------------------------
@@ -119,7 +119,6 @@ namespace Plugin {
 
         void Dispatch();
 
-
     private:
         Core::CriticalSection _adminLock;
         state _state;
@@ -133,11 +132,11 @@ namespace Plugin {
         string _country;
         string _region;
         string _city;
-		Core::ProxyType<IGeography> _infoCarrier;
+        Core::ProxyType<IGeography> _infoCarrier;
 
         Core::ProxyType<Web::Request> _request;
-        Core::ProxyType<Web::IBody > _response;
-        Core::ProxyType<Core::IDispatch > _activity;
+        Core::ProxyType<Web::IBody> _response;
+        Core::ProxyType<Core::IDispatch> _activity;
     };
 }
 } // namespace WPEFramework:Plugin

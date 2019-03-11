@@ -2,8 +2,8 @@
 
 #include "Utils.h"
 
-using std::vector;
 using std::unique_ptr;
+using std::vector;
 
 // For now we report errors to stderr.
 // TODO: does the injected bundle need a more formal way of dealing with errors?
@@ -50,17 +50,18 @@ namespace WebKit {
             Core::JSON::Boolean SubDomain;
         };
 
-        Core::JSON::ArrayType<JSONEntry> entries; entries.FromString(jsonString);
+        Core::JSON::ArrayType<JSONEntry> entries;
+        entries.FromString(jsonString);
         Core::JSON::ArrayType<JSONEntry>::Iterator originIndex(entries.Elements());
 
         while (originIndex.Next() == true) {
 
             if ((originIndex.Current().Origin.IsSet() == true) && (originIndex.Current().Domain.IsSet() == true)) {
 
-                WhiteListedOriginDomainsList::Domains& domains (info[originIndex.Current().Origin.Value()]);
+                WhiteListedOriginDomainsList::Domains& domains(info[originIndex.Current().Origin.Value()]);
 
                 Core::JSON::ArrayType<Core::JSON::String>::Iterator domainIndex(originIndex.Current().Domain.Elements());
-                bool subDomain (originIndex.Current().SubDomain.Value());
+                bool subDomain(originIndex.Current().SubDomain.Value());
 
                 while (domainIndex.Next()) {
                     domains.emplace_back(subDomain, domainIndex.Current().Value());
@@ -85,7 +86,7 @@ namespace WebKit {
 
         string jsonString = WebKit::Utils::WKStringToString(returnedString);
 
-        unique_ptr<WhiteListedOriginDomainsList> whiteList (new WhiteListedOriginDomainsList());
+        unique_ptr<WhiteListedOriginDomainsList> whiteList(new WhiteListedOriginDomainsList());
         ParseWhiteList(jsonString, whiteList->_whiteMap);
 
         WKRelease(returnData);
@@ -98,7 +99,7 @@ namespace WebKit {
     // Adds stored entries to WebKit.
     void WhiteListedOriginDomainsList::AddWhiteListToWebKit(WKBundleRef bundle)
     {
-        WhiteMap::const_iterator index (_whiteMap.begin());
+        WhiteMap::const_iterator index(_whiteMap.begin());
 
         while (index != _whiteMap.end()) {
 
@@ -125,6 +126,5 @@ namespace WebKit {
             index++;
         }
     }
-
 }
 }

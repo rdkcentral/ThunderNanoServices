@@ -211,7 +211,7 @@ namespace Plugin {
         uint16_t _skipURL;
         uint32_t _periodicity;
         Exchange::ITimeSync* _client;
-        Core::ProxyType<Core::IDispatchType<void> > _activity;
+        Core::ProxyType<Core::IDispatchType<void>> _activity;
         Core::Sink<Notification> _sink;
     };
 

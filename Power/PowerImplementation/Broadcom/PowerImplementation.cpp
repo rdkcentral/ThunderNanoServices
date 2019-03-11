@@ -8,9 +8,8 @@
 
 namespace WPEFramework {
 
-class PowerImplementation :
-    public Exchange::IPower,
-    virtual public WPEFramework::Core::Thread {
+class PowerImplementation : public Exchange::IPower,
+                            virtual public WPEFramework::Core::Thread {
 
 private:
     PowerImplementation(const PowerImplementation&) = delete;
@@ -19,7 +18,7 @@ private:
 public:
     class Config : public Core::JSON::Container {
     private:
-        Config (const Config&) = delete;
+        Config(const Config&) = delete;
         Config& operator=(const Config&) = delete;
 
     public:
@@ -32,7 +31,7 @@ public:
         };
 
     public:
-        Config ()
+        Config()
             : Core::JSON::Container()
             , GPIOPin(0)
             , GPIOType(AON_STANDARD)
@@ -49,7 +48,7 @@ public:
     };
 
 public:
-    PowerImplementation ()
+    PowerImplementation()
         : _adminLock()
         , _pmContext(nullptr)
         , _event(nullptr)
@@ -74,7 +73,7 @@ public:
 
     uint32_t Worker();
     BEGIN_INTERFACE_MAP(PowerImplementation)
-        INTERFACE_ENTRY(Exchange::IPower)
+    INTERFACE_ENTRY(Exchange::IPower)
     END_INTERFACE_MAP
 
     // IPower methods
@@ -93,7 +92,7 @@ private:
     PCStatus SetStandbyState();
     void SetWakeEvent();
     void PrintWakeup();
-    static void gpioInterrupt(void *context, int param);
+    static void gpioInterrupt(void* context, int param);
     void Resumed();
 
 private:
@@ -112,25 +111,24 @@ private:
     NEXUS_GpioHandle _gpioHandle;
     NEXUS_GpioType _gpioType;
     uint32_t _gpioPin;
-    
+
     Core::CriticalSection _lock;
 };
 
-// The essence of making the IPower interface available. This instantiates 
+// The essence of making the IPower interface available. This instantiates
 // an object that can be created from the outside of the library by looking
 // for the PowerImplementation class name, that realizes the IPower interface.
 SERVICE_REGISTRATION(PowerImplementation, 1, 0);
 
 ENUM_CONVERSION_BEGIN(PowerImplementation::Config::gpiotype)
 
-    { PowerImplementation::Config::STANDARD,  _TXT("Standard")  },
+    { PowerImplementation::Config::STANDARD, _TXT("Standard") },
     { PowerImplementation::Config::SPECIAL, _TXT("Special") },
     { PowerImplementation::Config::UNUSED, _TXT("Unused") },
-    { PowerImplementation::Config::AON_STANDARD,   _TXT("AONStandard")   },
-    { PowerImplementation::Config::AON_SPECIAL,   _TXT("AONSpecial")   },
+    { PowerImplementation::Config::AON_STANDARD, _TXT("AONStandard") },
+    { PowerImplementation::Config::AON_SPECIAL, _TXT("AONSpecial") },
 
-ENUM_CONVERSION_END(PowerImplementation::Config::gpiotype);
-
+    ENUM_CONVERSION_END(PowerImplementation::Config::gpiotype);
 }
 
 /* =============================================================================================
@@ -194,8 +192,7 @@ void PowerImplementation::Init()
         _pmContext = brcm_pm_init();
 
         NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
-        
-   }
+    }
 }
 
 void PowerImplementation::Deinit()
@@ -206,7 +203,7 @@ void PowerImplementation::Deinit()
         brcm_pm_close(_pmContext);
     }
     if (_wakeupEvent) {
-       BKNI_DestroyEvent(_wakeupEvent);
+        BKNI_DestroyEvent(_wakeupEvent);
     }
     if (_event) {
         BKNI_DestroyEvent(_event);
@@ -271,7 +268,7 @@ void PowerImplementation::Configure(const string& settings)
 {
     TRACE(Trace::Information, (_T("Configure()")));
 
-    Config config; 
+    Config config;
     config.FromString(settings);
 
     if (config.GPIOPin.IsSet() == true) {
@@ -281,7 +278,7 @@ void PowerImplementation::Configure(const string& settings)
         }
         if (_gpioPin != 0) {
             NEXUS_GpioSettings gpioSettings;
-            TRACE(Trace::Information, (_T("Enabling wakeup GPIO: %d-%d"),_gpioType, _gpioPin));
+            TRACE(Trace::Information, (_T("Enabling wakeup GPIO: %d-%d"), _gpioType, _gpioPin));
 
             NEXUS_Gpio_GetDefaultSettings(NEXUS_GpioType_eAonStandard, &gpioSettings);
             gpioSettings.mode = NEXUS_GpioMode_eInput;
@@ -305,25 +302,18 @@ void PowerImplementation::PrintWakeup()
         return;
     }
 
-    TRACE(Trace::Information, (_T(
-        "Wake up Status:\n"
-        "IR      : %d\n"
-        "UHF     : %d\n"
-        "XPT     : %d\n"
-        "CEC     : %d\n"
-        "GPIO    : %d\n"
-        "KPD     : %d\n"
-        "Timeout : %d\n"),
-        standbyStatus.status.wakeupStatus.ir,
-        standbyStatus.status.wakeupStatus.uhf,
-        standbyStatus.status.wakeupStatus.transport,
-        standbyStatus.status.wakeupStatus.cec,
-        standbyStatus.status.wakeupStatus.gpio,
-        standbyStatus.status.wakeupStatus.keypad,
-        standbyStatus.status.wakeupStatus.timeout));
+    TRACE(Trace::Information, (_T("Wake up Status:\n"
+                                  "IR      : %d\n"
+                                  "UHF     : %d\n"
+                                  "XPT     : %d\n"
+                                  "CEC     : %d\n"
+                                  "GPIO    : %d\n"
+                                  "KPD     : %d\n"
+                                  "Timeout : %d\n"),
+                                  standbyStatus.status.wakeupStatus.ir, standbyStatus.status.wakeupStatus.uhf, standbyStatus.status.wakeupStatus.transport, standbyStatus.status.wakeupStatus.cec, standbyStatus.status.wakeupStatus.gpio, standbyStatus.status.wakeupStatus.keypad, standbyStatus.status.wakeupStatus.timeout));
 }
 
-void PowerImplementation::gpioInterrupt(void *context, int param)
+void PowerImplementation::gpioInterrupt(void* context, int param)
 {
     PowerImplementation* power = static_cast<PowerImplementation*>(context);
 
@@ -332,8 +322,7 @@ void PowerImplementation::gpioInterrupt(void *context, int param)
     BKNI_SetEvent(power->_event);
     power->_eventTriggered = false;
 
-    if (power->_gpioHandle)
-    {
+    if (power->_gpioHandle) {
         NEXUS_Gpio_ClearInterrupt(power->_gpioHandle);
     }
 }
@@ -383,7 +372,7 @@ Exchange::IPower::PCStatus PowerImplementation::SetStandbyState()
                 timeout = _timeout * 1000;
             else
                 timeout = BKNI_INFINITE;
- 
+
             rc = BKNI_WaitForEvent(_wakeupEvent, timeout);
         } else if (_mode == NEXUS_PlatformStandbyMode_ePassive) {
             brcm_pm_suspend(_pmContext, BRCM_PM_STANDBY);
@@ -397,8 +386,7 @@ Exchange::IPower::PCStatus PowerImplementation::SetStandbyState()
 
         PrintWakeup();
         NxClient_GetStandbyStatus(&standbyStatus);
-        if ((rc == NEXUS_TIMEOUT) || standbyStatus.status.wakeupStatus.timeout ||
-            standbyStatus.status.wakeupStatus.ir || _eventTriggered) {
+        if ((rc == NEXUS_TIMEOUT) || standbyStatus.status.wakeupStatus.timeout || standbyStatus.status.wakeupStatus.ir || _eventTriggered) {
             _mode = NEXUS_PlatformStandbyMode_eOn;
             BKNI_SetEvent(_event);
             _eventTriggered = false;
@@ -455,7 +443,7 @@ void PowerImplementation::Resumed()
 
 Exchange::IPower::PCStatus PowerImplementation::SetState(const Exchange::IPower::PCState state, const uint32_t timeout)
 {
-    TRACE(Trace::Information, (_T("SetState state is [%d], Timeout is : [%d]"), state,timeout));
+    TRACE(Trace::Information, (_T("SetState state is [%d], Timeout is : [%d]"), state, timeout));
     PCStatus status = PCSuccess;
     _timeout = timeout;
 
@@ -486,7 +474,7 @@ Exchange::IPower::PCStatus PowerImplementation::SetState(const Exchange::IPower:
 
     if (status == PCSuccess) {
         _lock.Lock();
-        _isSetState= true;
+        _isSetState = true;
         _lock.Unlock();
     } else {
         TRACE(Trace::Error, (_T("SetPowerState given state is not supported!!!")));

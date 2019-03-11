@@ -6,11 +6,11 @@ namespace Plugin {
     SERVICE_REGISTRATION(LocationSync, 1, 0);
 
     static Core::ProxyPoolType<Web::Response> responseFactory(4);
-    static Core::ProxyPoolType<Web::JSONBodyType<LocationSync::Data> > jsonResponseFactory(4);
+    static Core::ProxyPoolType<Web::JSONBodyType<LocationSync::Data>> jsonResponseFactory(4);
 
-    #ifdef __WIN32__
-    #pragma warning( disable : 4355 )
-    #endif
+#ifdef __WIN32__
+#pragma warning(disable : 4355)
+#endif
     LocationSync::LocationSync()
         : _skipURL(0)
         , _source()
@@ -18,9 +18,9 @@ namespace Plugin {
         , _service(nullptr)
     {
     }
-    #ifdef __WIN32__
-    #pragma warning( default : 4355 )
-    #endif
+#ifdef __WIN32__
+#pragma warning(default : 4355)
+#endif
 
     /* virtual */ LocationSync::~LocationSync()
     {
@@ -39,8 +39,7 @@ namespace Plugin {
             _service = service;
 
             _sink.Initialize(service, config.Source.Value(), config.Interval.Value(), config.Retries.Value());
-        }
-        else {
+        } else {
             result = _T("URL for retrieving location is incorrect !!!");
         }
 
@@ -50,7 +49,7 @@ namespace Plugin {
 
     /* virtual */ void LocationSync::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT (_service == service);
+        ASSERT(_service == service);
 
         _sink.Deinitialize();
     }
@@ -79,9 +78,9 @@ namespace Plugin {
         result->Message = "OK";
 
         if (request.Verb == Web::Request::HTTP_GET) {
-            Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
+            Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
 
-            PluginHost::ISubSystem*  subSystem = _service->SubSystems();
+            PluginHost::ISubSystem* subSystem = _service->SubSystems();
 
             ASSERT(subSystem == nullptr);
 
@@ -96,8 +95,7 @@ namespace Plugin {
 
             result->ContentType = Web::MIMETypes::MIME_JSON;
             result->Body(Core::proxy_cast<Web::IBody>(response));
-        }
-        else if (request.Verb == Web::Request::HTTP_POST) {
+        } else if (request.Verb == Web::Request::HTTP_POST) {
 
             if (index.Next()) {
                 if ((index.Current() == "Sync") && (_source.empty() == false)) {
@@ -109,8 +107,7 @@ namespace Plugin {
                     }
                 }
             }
-        }
-        else {
+        } else {
             result->ErrorCode = Web::STATUS_BAD_REQUEST;
             result->Message = _T("Unsupported request for the [LocationSync] service.");
         }
@@ -130,7 +127,7 @@ namespace Plugin {
             subSystem->Set(PluginHost::ISubSystem::LOCATION, _sink.Location());
             subSystem->Release();
 
-            if ( (_sink.Location() != nullptr) && (_sink.Location()->TimeZone().empty() == false) ) {
+            if ((_sink.Location() != nullptr) && (_sink.Location()->TimeZone().empty() == false)) {
                 Core::SystemInfo::SetEnvironment(_T("TZ"), _sink.Location()->TimeZone());
             }
         }

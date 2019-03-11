@@ -42,7 +42,7 @@ private:
     std::thread _tunerThread;
     bool _isRunning;
     bool _isDvb;
-    std::vector<std::unique_ptr<LinuxDVB::TvTunerBackend> > _tunerList;
+    std::vector<std::unique_ptr<LinuxDVB::TvTunerBackend>> _tunerList;
     LinuxDVB::TvTunerBackend* _acquiredTuner;
     bool _isStreaming;
 };

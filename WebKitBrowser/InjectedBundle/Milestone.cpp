@@ -23,7 +23,7 @@ namespace JavaScript {
         {
             const int acceptedArgCount = 3;
             const size_t bufferSize = 1500; // Is limited by UDP package size.
-            
+
             if (argumentCount != acceptedArgCount) {
                 std::cerr << "Milestone only accepts 3 string arguments" << std::endl;
                 return JSValueMakeNull(context);
@@ -41,24 +41,24 @@ namespace JavaScript {
 
                 JSStringRef jsString = JSValueToStringCopy(context, argument, nullptr);
                 char stringBuffer[bufferSize];
-                
+
                 // TODO: for now assumption is ASCII, should we also deal with Unicode?
                 JSStringGetUTF8CString(jsString, stringBuffer, bufferSize);
                 JSStringRelease(jsString);
-                
+
                 argStrings[index] = stringBuffer;
             }
-            
+
             std::stringstream ssMessage;
             ssMessage << "TEST TRACE:";
             for (const string& argString : argStrings) {
-               ssMessage << " \"" << argString << "\"";
+                ssMessage << " \"" << argString << "\"";
             }
-            
+
             std::cerr << ssMessage.str() << std::endl;
-                      
-            TRACE_GLOBAL(Trace::Information, (ssMessage.str()));           
-            
+
+            TRACE_GLOBAL(Trace::Information, (ssMessage.str()));
+
             return JSValueMakeNull(context);
         }
 
@@ -66,4 +66,3 @@ namespace JavaScript {
     }
 }
 }
-

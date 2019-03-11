@@ -5,8 +5,8 @@
 
 #include <WPE/WebKit.h>
 
-#include <memory>
 #include <cassert>
+#include <memory>
 
 namespace WPEFramework {
 namespace JavaScript {

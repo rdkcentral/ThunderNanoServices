@@ -217,7 +217,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = _T("Failed to Set Front Panel Text.");
                     }
-                 } else if (index.Current() == _T("ClockDisplay") && (request.HasBody())) {
+                } else if (index.Current() == _T("ClockDisplay") && (request.HasBody())) {
                     bool enable = request.Body<const Config>()->Enable.Value();
                     if (_controller.FPEnableClockDisplay(enable)) {
                         result->ErrorCode = Web::STATUS_OK;

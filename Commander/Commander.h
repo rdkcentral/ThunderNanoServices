@@ -234,7 +234,7 @@ namespace Plugin {
                 , _service(service)
                 , _sequenceList(5)
             {
-                ASSERT (service != nullptr);
+                ASSERT(service != nullptr);
 
                 if (_service != nullptr) {
                     _service->AddRef();
@@ -315,9 +315,9 @@ namespace Plugin {
 
                     while (index.Next() == true) {
 
-                        const string& label(index.Current().Label);
-                        const string& className(index.Current().Item);
-                        const string& parameters(index.Current().Parameters);
+                        const string& label(index.Current().Label.Value());
+                        const string& className(index.Current().Item.Value());
+                        const string& parameters(index.Current().Parameters.Value());
 
                         Core::ProxyType<Exchange::ICommand> newCommand(_commandFactory->Create(label, className, parameters));
 
@@ -388,8 +388,7 @@ namespace Plugin {
 
                     if (result.empty() == true) {
                         _currentIndex++;
-                    }
-                    else {
+                    } else {
                         uint32_t index = _currentIndex + 1;
 
                         // See if we have a forward label, as mentioned from the execute
@@ -400,8 +399,7 @@ namespace Plugin {
                         if (index < _sequenceList.Count()) {
                             // Seems like we found a next step, set it..
                             _currentIndex = index;
-                        }
-                        else {
+                        } else {
                             // There are no steps before our current step, so no label found, just progress...
                             _currentIndex++;
 
@@ -467,7 +465,7 @@ namespace Plugin {
         template <typename COMMAND>
         void Register()
         {
-            const string name (Core::ClassNameOnly(typeid(COMMAND).name()).Data());
+            const string name(Core::ClassNameOnly(typeid(COMMAND).name()).Data());
             _commandAdministrator.Register(name, new Exchange::Command::FactoryType<COMMAND>());
         }
         template <typename COMMAND>
@@ -495,10 +493,9 @@ namespace Plugin {
         uint8_t _skipURL;
         PluginHost::IShell* _service;
         Administrator _commandAdministrator;
-        std::map<const string, Core::ProxyType<Sequencer> > _sequencers;
+        std::map<const string, Core::ProxyType<Sequencer>> _sequencers;
     };
-
 }
-} 
+}
 
 #endif // __COMMANDER_H

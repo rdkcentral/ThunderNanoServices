@@ -14,9 +14,9 @@ namespace Plugin {
         ~SystemCommands() override = default;
 
         BEGIN_INTERFACE_MAP(SystemCommands)
-            INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(PluginHost::IWeb)
-            INTERFACE_ENTRY(Exchange::ISystemCommands)
+        INTERFACE_ENTRY(PluginHost::IPlugin)
+        INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(Exchange::ISystemCommands)
         END_INTERFACE_MAP
 
         //   IPlugin methods

@@ -5,8 +5,8 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(RtspClient, 1, 0);
 
-    static Core::ProxyPoolType<Web::JSONBodyType<RtspClient::Data> > jsonDataFactory(1);
-    static Core::ProxyPoolType<Web::JSONBodyType<RtspClient::Data> > jsonBodyDataFactory(2);
+    static Core::ProxyPoolType<Web::JSONBodyType<RtspClient::Data>> jsonDataFactory(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<RtspClient::Data>> jsonBodyDataFactory(2);
 
     /* virtual */ const string RtspClient::Initialize(PluginHost::IShell* service)
     {
@@ -31,11 +31,10 @@ namespace Plugin {
             message = _T("RtspClient could not be instantiated.");
             _service->Unregister(&_notification);
             _service = nullptr;
-        }
-        else {
+        } else {
             _implementation->Configure(_service);
             TRACE_L1("RtspClient Plugin initialized %p", _implementation);
-       }
+        }
 
         return message;
     }
@@ -94,7 +93,7 @@ namespace Plugin {
 
         if ((request.Verb == Web::Request::HTTP_GET) && ((index.Next()) && (index.Next()))) {
             if (index.Current().Text() == _T("Get")) {
-                Core::ProxyType<Web::JSONBodyType<Data> > data (jsonDataFactory.Element());
+                Core::ProxyType<Web::JSONBodyType<Data>> data(jsonDataFactory.Element());
                 data->Str = _implementation->Get("");
                 result->ContentType = Web::MIMETypes::MIME_JSON;
                 result->Body(data);

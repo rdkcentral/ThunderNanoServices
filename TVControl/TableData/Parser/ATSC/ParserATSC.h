@@ -108,7 +108,7 @@ private:
     EPGDataBase& _epgDB;
     std::vector<uint16_t> _eitPidVector;
     unsigned _eitPidIndex;
-    std::map<uint16_t, std::unordered_set<uint8_t> > _programMap;
+    std::map<uint16_t, std::unordered_set<uint8_t>> _programMap;
     std::unordered_set<uint16_t> _channelSet;
     bool _isVCTParsed;
     bool _isTimeParsed;

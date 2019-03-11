@@ -38,8 +38,8 @@
 #include <thread>
 #include <tracing/tracing.h>
 
-#include <gst/gst.h>
 #include <glib.h>
+#include <gst/gst.h>
 
 #define BUFFER_SIZE 4096
 #define DATA_OFFSET 6

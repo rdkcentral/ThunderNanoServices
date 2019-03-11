@@ -1,44 +1,40 @@
 #ifndef RTSPSESSION_H
 #define RTSPSESSION_H
 
+#include <linux/netlink.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <linux/netlink.h>
 
 #include <core/NodeId.h>
-#include <core/SocketPort.h>
 #include <core/Queue.h>
+#include <core/SocketPort.h>
 #include <core/Timer.h>
 
 #include "RtspCommon.h"
 #include "RtspParser.h"
 
-
 namespace WPEFramework {
 namespace Plugin {
 
-typedef Core::QueueType<RtspMessagePtr> RequestQueue;
-typedef Core::QueueType<RtspMessagePtr> ResponseQueue;
+    typedef Core::QueueType<RtspMessagePtr> RequestQueue;
+    typedef Core::QueueType<RtspMessagePtr> ResponseQueue;
 
-
-class RtspSession
-{
+    class RtspSession {
     public:
-        class Socket : public Core::SocketStream
-        {
-            public:
-            Socket(const Core::NodeId &local, const Core::NodeId &remote, RtspSession& rtspSession);
+        class Socket : public Core::SocketStream {
+        public:
+            Socket(const Core::NodeId& local, const Core::NodeId& remote, RtspSession& rtspSession);
             virtual ~Socket();
             uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize);
             uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize);
             void StateChange();
 
-            private:
-                RtspSession& _rtspSession;
-       };
+        private:
+            RtspSession& _rtspSession;
+        };
 
         class AnnouncementHandler {
-            public:
+        public:
             virtual void announce(const RtspAnnounce& announcement) = 0;
         };
 
@@ -78,29 +74,31 @@ class RtspSession
         ~RtspSession();
         RtspReturnCode Initialize(const string& hostname, uint16_t port);
         RtspReturnCode Terminate();
-        RtspReturnCode Open(const string assetId, uint32_t position = 0, const string &reqCpeId = "", const string &remoteIp = "");
+        RtspReturnCode Open(const string assetId, uint32_t position = 0, const string& reqCpeId = "", const string& remoteIp = "");
         RtspReturnCode Close();
         RtspReturnCode Play(float scale, uint32_t position = 0);
-        RtspReturnCode Get(const string name, string &value) const;
+        RtspReturnCode Get(const string name, string& value) const;
         RtspReturnCode Set(const string& name, const string& value);
 
         RtspReturnCode Send(const RtspMessagePtr& request);
         RtspReturnCode SendHeartbeat(bool bSRM);
         RtspReturnCode SendHeartbeats();
 
-        RtspReturnCode ProcessResponse(const string &response, bool bSRM);
-        RtspReturnCode ProcessAnnouncement(const std::string &response, bool bSRM);
+        RtspReturnCode ProcessResponse(const string& response, bool bSRM);
+        RtspReturnCode ProcessAnnouncement(const std::string& response, bool bSRM);
         RtspReturnCode SendResponse(int respSeq, bool bSRM);
-        RtspReturnCode SendAnnouncement(int code, const string &reason);
+        RtspReturnCode SendAnnouncement(int code, const string& reason);
 
         uint64_t Timed(const uint64_t scheduledTime);
 
     private:
-        inline  RtspSession::Socket& GetSocket(bool bSRM)    {
+        inline RtspSession::Socket& GetSocket(bool bSRM)
+        {
             return (bSRM || _sessionInfo.bSrmIsRtspProxy) ? *_srmSocket : *_controlSocket;
         }
 
-        inline bool IsSrmRtspProxy() {
+        inline bool IsSrmRtspProxy()
+        {
             return _sessionInfo.bSrmIsRtspProxy;
         }
 
@@ -110,8 +108,8 @@ class RtspSession
 
         Core::NodeId _remote;
         Core::NodeId _local;
-        RtspSession::Socket *_srmSocket;
-        RtspSession::Socket *_controlSocket;
+        RtspSession::Socket* _srmSocket;
+        RtspSession::Socket* _controlSocket;
         RtspSession::AnnouncementHandler& _announcementHandler;
         RtspParser _parser;
         RtspSessionInfo _sessionInfo;
@@ -124,8 +122,8 @@ class RtspSession
         int _nextSRMHeartbeatMS;
         int _nextPumpHeartbeatMS;
         int _playDelay;
-};
-
-}} // WPEFramework::Plugin
+    };
+}
+} // WPEFramework::Plugin
 
 #endif

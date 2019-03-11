@@ -5,9 +5,9 @@
 #define MODULE_NAME Plugin_WebKitBrowser
 #endif
 
+#include <com/com.h>
 #include <core/core.h>
 #include <tracing/tracing.h>
-#include <com/com.h>
 
 #undef EXTERNAL
 #define EXTERNAL

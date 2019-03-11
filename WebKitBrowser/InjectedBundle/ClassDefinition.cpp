@@ -1,38 +1,38 @@
-#include <memory.h>
 #include "ClassDefinition.h"
+#include <memory.h>
 
 namespace WPEFramework {
 namespace JavaScript {
 
-
     // Constructor: uses identifier to build class and extension name.
-    ClassDefinition::ClassDefinition(const string& identifier) 
+    ClassDefinition::ClassDefinition(const string& identifier)
         : _customFunctions()
         , _className(Core::ToString(identifier))
-        , _extName (_className) {
+        , _extName(_className)
+    {
         // Make upper case.
         transform(_className.begin(), _className.end(), _className.begin(), ::toupper);
 
         // Make lower case.
         transform(_extName.begin(), _extName.end(), _extName.begin(), ::tolower);
     }
-    /* static */ ClassDefinition::ClassMap& ClassDefinition::getClassMap() {
+    /* static */ ClassDefinition::ClassMap& ClassDefinition::getClassMap()
+    {
         static ClassDefinition::ClassMap singleton;
         return singleton;
     }
 
-
-    /* static */ ClassDefinition& ClassDefinition::Instance(const string& className) {
+    /* static */ ClassDefinition& ClassDefinition::Instance(const string& className)
+    {
         ClassDefinition::ClassMap& _classes = getClassMap();
         ClassDefinition* result = nullptr;
-        ClassMap::iterator index (_classes.find(className));
+        ClassMap::iterator index(_classes.find(className));
 
         if (index != _classes.end()) {
             result = &(index->second);
-        }
-        else {
+        } else {
             TRACE_L1("Before Classdefinition ingest: %s", className.c_str());
-            std::pair<ClassMap::iterator, bool> entry (_classes.emplace(
+            std::pair<ClassMap::iterator, bool> entry(_classes.emplace(
                 std::piecewise_construct,
                 std::forward_as_tuple(className),
                 std::forward_as_tuple(className)));
@@ -41,7 +41,7 @@ namespace JavaScript {
             result = &(entry.first->second);
         }
 
-        return (*result); 
+        return (*result);
     }
 
     // Adds JS function to class.
@@ -56,7 +56,7 @@ namespace JavaScript {
     void ClassDefinition::Remove(const JavaScriptFunction* javaScriptFunction)
     {
         // Try to find function in class.
-        FunctionVector::iterator index (find(_customFunctions.begin(), _customFunctions.end(), javaScriptFunction));
+        FunctionVector::iterator index(find(_customFunctions.begin(), _customFunctions.end(), javaScriptFunction));
 
         ASSERT(index != _customFunctions.end());
 

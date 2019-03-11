@@ -58,30 +58,31 @@ namespace Plugin {
                 Core::JSON::Boolean PassOn;
                 Core::JSON::String Settings;
             };
-			class Link : public Core::JSON::Container {
-			private:
-				Link& operator=(const Link&) = delete;
+            class Link : public Core::JSON::Container {
+            private:
+                Link& operator=(const Link&) = delete;
 
-			public:
-				Link()
-					: Core::JSON::Container()
-					, Name()
-					, MapFile()
-				{
-					Add(_T("name"), &Name);
-					Add(_T("mapfile"), &MapFile);
-				}
-				Link(const Link&)	{
-					Add(_T("name"), &Name);
-					Add(_T("mapfile"), &MapFile);
-				}
-				~Link()
-				{
-				}
+            public:
+                Link()
+                    : Core::JSON::Container()
+                    , Name()
+                    , MapFile()
+                {
+                    Add(_T("name"), &Name);
+                    Add(_T("mapfile"), &MapFile);
+                }
+                Link(const Link&)
+                {
+                    Add(_T("name"), &Name);
+                    Add(_T("mapfile"), &MapFile);
+                }
+                ~Link()
+                {
+                }
 
-				Core::JSON::String Name;
-				Core::JSON::String MapFile;
-			};
+                Core::JSON::String Name;
+                Core::JSON::String MapFile;
+            };
 
         public:
             Config()
@@ -92,8 +93,8 @@ namespace Plugin {
                 , RepeatInterval(100)
                 , ReleaseTimeout(30000)
                 , Devices()
-				, Virtuals()
-				, Links()
+                , Virtuals()
+                , Links()
             {
                 Add(_T("mapfile"), &MapFile);
                 Add(_T("passon"), &PassOn);
@@ -102,8 +103,8 @@ namespace Plugin {
                 Add(_T("releasetimeout"), &ReleaseTimeout);
                 Add(_T("devices"), &Devices);
                 Add(_T("virtuals"), &Virtuals);
-				Add(_T("links"), &Links);
-			}
+                Add(_T("links"), &Links);
+            }
             ~Config()
             {
             }
@@ -115,9 +116,9 @@ namespace Plugin {
             Core::JSON::DecUInt16 RepeatInterval;
             Core::JSON::DecUInt16 ReleaseTimeout;
             Core::JSON::ArrayType<Device> Devices;
-			Core::JSON::ArrayType<Device> Virtuals;
-			Core::JSON::ArrayType<Link> Links;
-		};
+            Core::JSON::ArrayType<Device> Virtuals;
+            Core::JSON::ArrayType<Link> Links;
+        };
 
         class Data : public Core::JSON::Container {
 
@@ -160,7 +161,8 @@ namespace Plugin {
         {
             Remotes::RemoteAdministrator::Iterator index(Remotes::RemoteAdministrator::Instance().Producers());
 
-            while ((index.Next() == true) && (name != index.Current()->Name())) /* Intentionally empty */;
+            while ((index.Next() == true) && (name != index.Current()->Name())) /* Intentionally empty */
+                ;
 
             return (index.IsValid());
         }
@@ -206,20 +208,22 @@ namespace Plugin {
         virtual uint32_t KeyEvent(const bool pressed, const uint32_t code, const string& table) override;
 
         // Next to handling keys, we also have a number of devices can produce keys. All these key producers have a name.
-        // Using the next interface it is possible to retrieve the KeyProducers implemented by ths plugin. 
-        virtual Exchange::IKeyProducer* Producer(const string& name) override {
+        // Using the next interface it is possible to retrieve the KeyProducers implemented by ths plugin.
+        virtual Exchange::IKeyProducer* Producer(const string& name) override
+        {
 
             Exchange::IKeyProducer* result = nullptr;
 
             Remotes::RemoteAdministrator::Iterator index(Remotes::RemoteAdministrator::Instance().Producers());
 
-            while ((index.Next() == true) && (name != index.Current()->Name())) /* Intentionally empty */;
+            while ((index.Next() == true) && (name != index.Current()->Name())) /* Intentionally empty */
+                ;
 
-            if (index.IsValid()  == true) {
+            if (index.IsValid() == true) {
 
                 result = index.Current();
 
-                ASSERT (result != nullptr);
+                ASSERT(result != nullptr);
 
                 result->AddRef();
             }

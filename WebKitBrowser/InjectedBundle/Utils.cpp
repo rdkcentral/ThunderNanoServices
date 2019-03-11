@@ -1,7 +1,7 @@
 #include "Utils.h"
 
-using std::vector;
 using std::unique_ptr;
+using std::vector;
 
 namespace WPEFramework {
 namespace WebKit {

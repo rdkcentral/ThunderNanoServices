@@ -42,15 +42,12 @@
  * @ingroup DSSETTINGS_HAL
  */
 
-
-
 /**
 * @defgroup devicesettings
 * @{
 * @defgroup hal
 * @{
 **/
-
 
 #ifndef _DS_HOST_H_
 #define _DS_HOST_H_
@@ -62,7 +59,6 @@ extern "C" {
 #include "dsError.h"
 #include "dsTypes.h"
 
-
 /** @addtogroup DSHAL_HOST_API Device Settings HAL Host Public API
  *  @ingroup devicesettingshalapi
  *
@@ -71,8 +67,6 @@ extern "C" {
  *
  *  @{
  */
-
-
 
 /**
  * @brief Initialize the Host sub-system.
@@ -112,7 +106,7 @@ dsError_t dsSetHostPowerMode(int newPower);
  * @return Device Settings error code
  * @retval    ::dsError_t
  */
-dsError_t dsGetHostPowerMode(int *currPower);
+dsError_t dsGetHostPowerMode(int* currPower);
 
 /**
  * @brief Terminate the Host sub-system.
@@ -133,7 +127,7 @@ dsError_t dsHostTerm();
  * @retval dsERR_NONE If sucessfully dsGetPreferredSleepMode api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t dsGetPreferredSleepMode(dsSleepMode_t *pMode);
+dsError_t dsGetPreferredSleepMode(dsSleepMode_t* pMode);
 
 /**
  * @brief This function sets the preferred sleep mode which needs to be persisted.
@@ -153,7 +147,7 @@ dsError_t dsSetPreferredSleepMode(dsSleepMode_t mode);
  * @retval dsERR_NONE If sucessfully dsGetCPUTemperature api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t dsGetCPUTemperature(float *cpuTemperature);
+dsError_t dsGetCPUTemperature(float* cpuTemperature);
 
 /**
  * @brief Get DS HAL API Version.
@@ -167,7 +161,7 @@ dsError_t dsGetCPUTemperature(float *cpuTemperature);
  * @retval dsERR_NONE Successfully got the version number from dsHAL.
  * @retval dsERR_GENERAL Failed to get the version number.
  */
-dsError_t dsGetVersion(uint32_t *versionNumber);
+dsError_t dsGetVersion(uint32_t* versionNumber);
 
 /**
  * @brief Allows the application to set the runtime version of the dsHAL
@@ -186,7 +180,6 @@ dsError_t dsSetVersion(uint32_t versionNumber);
 }
 #endif
 #endif /* _DS_HOST_H_ */
-
 
 /** @} */
 /** @} */

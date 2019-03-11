@@ -31,6 +31,7 @@ private:
     bool OpenDB();
     bool CloseDB();
     bool ExecuteSQLQuery(char const*);
+
 public:
     static EPGDataBase& GetInstance();
     bool IsTableEmpty(const std::string&);
@@ -41,7 +42,7 @@ public:
     bool CreateTSTable();
     bool InsertFrequencyInfo(std::vector<uint32_t>);
     bool InsertChannelInfo(uint32_t, uint32_t, const char*, uint16_t, uint16_t,
-         uint16_t, const std::string&, uint16_t, const std::string&);
+        uint16_t, const std::string&, uint16_t, const std::string&);
     bool InsertProgramInfo(uint16_t, uint16_t, time_t, time_t, const char*,
         const std::string&, const std::string&, const std::string&, const std::string&);
     bool InsertNitInfo(uint16_t, uint16_t, uint16_t, uint32_t, uint8_t);

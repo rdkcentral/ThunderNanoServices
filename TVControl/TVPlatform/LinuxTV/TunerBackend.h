@@ -28,8 +28,8 @@
 #ifndef TUNER_BACKEND_H_
 #define TUNER_BACKEND_H_
 
-#include "TVCommon.h"
 #include "SourceBackend.h"
+#include "TVCommon.h"
 
 #include <math.h>
 #include <sstream>

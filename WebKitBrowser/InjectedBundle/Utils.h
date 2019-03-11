@@ -5,8 +5,8 @@
 
 #include <WPE/WebKit.h>
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 namespace WPEFramework {
 namespace WebKit {

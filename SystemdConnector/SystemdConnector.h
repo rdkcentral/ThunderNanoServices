@@ -17,7 +17,7 @@ namespace Plugin {
 
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(SystemdConnector)
-            INTERFACE_ENTRY(PluginHost::IPlugin)
+        INTERFACE_ENTRY(PluginHost::IPlugin)
         END_INTERFACE_MAP
 
     public:

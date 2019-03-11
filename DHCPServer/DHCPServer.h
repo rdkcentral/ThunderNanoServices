@@ -1,8 +1,8 @@
 #ifndef PLUGIN_DHCPSERVER_H
 #define PLUGIN_DHCPSERVER_H
 
-#include "Module.h"
 #include "DHCPServerImplementation.h"
+#include "Module.h"
 
 namespace WPEFramework {
 namespace Plugin {
@@ -17,19 +17,20 @@ namespace Plugin {
         public:
             class Server : public Core::JSON::Container {
             private:
-                Server& operator= (const Server&) = delete;
+                Server& operator=(const Server&) = delete;
 
             public:
                 class Lease : public Core::JSON::Container {
                 private:
-                    Lease& operator= (const Lease&) = delete;
+                    Lease& operator=(const Lease&) = delete;
 
                 public:
-                    Lease ()
+                    Lease()
                         : Core::JSON::Container()
                         , Name()
                         , IPAddress()
-                        , Expires() {
+                        , Expires()
+                    {
                         Add(_T("name"), &Name);
                         Add(_T("ip"), &IPAddress);
                         Add(_T("expires"), &Expires);
@@ -38,21 +39,24 @@ namespace Plugin {
                         : Core::JSON::Container()
                         , Name(copy.Name)
                         , IPAddress(copy.IPAddress)
-                        , Expires(copy.Expires) {
+                        , Expires(copy.Expires)
+                    {
                         Add(_T("name"), &Name);
                         Add(_T("ip"), &IPAddress);
                         Add(_T("expires"), &Expires);
                     }
-                    virtual ~Lease() {
+                    virtual ~Lease()
+                    {
                     }
 
-		public:
-                    void Set(const DHCPServerImplementation::Lease& lease) {
+                public:
+                    void Set(const DHCPServerImplementation::Lease& lease)
+                    {
                         Name = lease.Id().Text();
                         IPAddress = lease.Address().HostAddress();
                         Expires = lease.Expiration();
                     }
- 
+
                 public:
                     Core::JSON::String Name;
                     Core::JSON::String IPAddress;
@@ -60,14 +64,15 @@ namespace Plugin {
                 };
 
             public:
-                Server ()
+                Server()
                     : Core::JSON::Container()
-                    , Interface ()
+                    , Interface()
                     , Begin()
                     , End()
-	            , Router()
+                    , Router()
                     , Active(false)
-                    , Leases() {
+                    , Leases()
+                {
                     Add(_T("interface"), &Interface);
                     Add(_T("begin"), &Begin);
                     Add(_T("end"), &End);
@@ -80,9 +85,10 @@ namespace Plugin {
                     , Interface(copy.Interface)
                     , Begin(copy.Begin)
                     , End(copy.End)
-		    , Router(copy.Router)
+                    , Router(copy.Router)
                     , Active(copy.Active)
-                    , Leases() {
+                    , Leases()
+                {
                     Add(_T("interface"), &Interface);
                     Add(_T("begin"), &Begin);
                     Add(_T("end"), &End);
@@ -90,18 +96,20 @@ namespace Plugin {
                     Add(_T("active"), &Active);
                     Add(_T("leases"), &Leases);
                 }
-                virtual ~Server() {
+                virtual ~Server()
+                {
                 }
 
             public:
-                void Set (const DHCPServerImplementation& server) {
+                void Set(const DHCPServerImplementation& server)
+                {
                     Interface = server.Interface();
                     Begin = server.BeginPool().HostAddress();
                     End = server.EndPool().HostAddress();
-		    Router = server.Router().HostAddress();
+                    Router = server.Router().HostAddress();
                     Active = server.IsActive();
 
-                    DHCPServerImplementation::Iterator index (server.Leases());
+                    DHCPServerImplementation::Iterator index(server.Leases());
 
                     while (index.Next() == true) {
                         Leases.Add().Set(index.Current());
@@ -114,18 +122,20 @@ namespace Plugin {
                 Core::JSON::String End;
                 Core::JSON::String Router;
                 Core::JSON::Boolean Active;
-                Core::JSON::ArrayType< Lease > Leases;
+                Core::JSON::ArrayType<Lease> Leases;
             };
 
         public:
-            Data() {
+            Data()
+            {
                 Add(_T("servers"), &Servers);
             }
-            virtual ~Data() {
+            virtual ~Data()
+            {
             }
 
         public:
-           Core::JSON::ArrayType< Server > Servers;
+            Core::JSON::ArrayType<Server> Servers;
         };
 
     private:
@@ -140,33 +150,36 @@ namespace Plugin {
                 Server& operator=(const Server&) = delete;
 
             public:
-                Server () 
+                Server()
                     : Core::JSON::Container()
                     , Interface()
                     , PoolStart(0)
                     , PoolSize(0)
                     , Router(0)
-                    , Active(false) {
+                    , Active(false)
+                {
                     Add(_T("interface"), &Interface);
                     Add(_T("poolstart"), &PoolStart);
                     Add(_T("poolsize"), &PoolSize);
                     Add(_T("router"), &Router);
                     Add(_T("active"), &Active);
                 }
-                Server(const Server& copy) 
+                Server(const Server& copy)
                     : Core::JSON::Container()
                     , Interface(copy.Interface)
                     , PoolStart(copy.PoolStart)
                     , PoolSize(copy.PoolSize)
                     , Router(copy.Router)
-                    , Active(copy.Active) {
+                    , Active(copy.Active)
+                {
                     Add(_T("interface"), &Interface);
                     Add(_T("poolstart"), &PoolStart);
                     Add(_T("poolsize"), &PoolSize);
                     Add(_T("router"), &Router);
                     Add(_T("active"), &Active);
                 }
-                virtual ~Server() {
+                virtual ~Server()
+                {
                 }
 
             public:
@@ -181,19 +194,21 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , Name()
-		, DNS()
-                , Servers() {
+                , DNS()
+                , Servers()
+            {
                 Add(_T("name"), &Name);
                 Add(_T("dns"), &DNS);
                 Add(_T("servers"), &Servers);
             }
-            ~Config() {
+            ~Config()
+            {
             }
 
         public:
             Core::JSON::String Name;
             Core::JSON::String DNS;
-            Core::JSON::ArrayType< Server > Servers;
+            Core::JSON::ArrayType<Server> Servers;
         };
 
     private:
@@ -206,8 +221,8 @@ namespace Plugin {
 
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(DHCPServer)
-            INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IPlugin)
+        INTERFACE_ENTRY(PluginHost::IWeb)
         END_INTERFACE_MAP
 
     public:
@@ -224,7 +239,7 @@ namespace Plugin {
 
     private:
         uint16_t _skipURL;
-	std::map<const string, DHCPServerImplementation> _servers;
+        std::map<const string, DHCPServerImplementation> _servers;
     };
 
 } // namespace Plugin
