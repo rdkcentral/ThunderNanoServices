@@ -507,12 +507,12 @@ namespace Plugin {
                     return (OCDM::OCDM_RESULT)_mediaKeySessionExt->SetDrmHeader(drmHeader, drmHeaderLength);
                 }
 
-                virtual OCDM::OCDM_RESULT GetChallengeDataNetflix(uint8_t * challenge, uint32_t & challengeSize, uint32_t isLDL) override {
-                    return (OCDM::OCDM_RESULT)_mediaKeySessionExt->GetChallengeDataNetflix(challenge, challengeSize, isLDL);
+                virtual OCDM::OCDM_RESULT GetChallengeDataExt(uint8_t * challenge, uint32_t & challengeSize, uint32_t isLDL) override {
+                    return (OCDM::OCDM_RESULT)_mediaKeySessionExt->GetChallengeDataExt(challenge, challengeSize, isLDL);
                 }
 
-                virtual OCDM::OCDM_RESULT CancelChallengeDataNetflix() override {
-                    return (OCDM::OCDM_RESULT)_mediaKeySessionExt->CancelChallengeDataNetflix();
+                virtual OCDM::OCDM_RESULT CancelChallengeDataExt() override {
+                    return (OCDM::OCDM_RESULT)_mediaKeySessionExt->CancelChallengeDataExt();
                 }
 
                 virtual OCDM::OCDM_RESULT StoreLicenseData(const uint8_t licenseData[], uint32_t licenseDataSize, unsigned char * secureStopId) override {
@@ -896,29 +896,29 @@ namespace Plugin {
                 return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
             }
 
-            OCDM::OCDM_RESULT CreateSystemNetflix(const std::string & keySystem) override
+            OCDM::OCDM_RESULT CreateSystemExt(const std::string & keySystem) override
             {
                 CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
                 if (systemExt) {
-                    return (OCDM::OCDM_RESULT)systemExt->CreateSystemNetflix();
+                    return (OCDM::OCDM_RESULT)systemExt->CreateSystemExt();
                 }
                 return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
             }
 
-            OCDM::OCDM_RESULT InitSystemNetflix(const std::string & keySystem) override
+            OCDM::OCDM_RESULT InitSystemExt(const std::string & keySystem) override
             {
                 CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
                 if (systemExt) {
-                    return (OCDM::OCDM_RESULT)systemExt->InitSystemNetflix();
+                    return (OCDM::OCDM_RESULT)systemExt->InitSystemExt();
                 }
                 return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
             }
 
-            OCDM::OCDM_RESULT TeardownSystemNetflix(const std::string & keySystem) override
+            OCDM::OCDM_RESULT TeardownSystemExt(const std::string & keySystem) override
             {
                 CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
                 if (systemExt) {
-                    return (OCDM::OCDM_RESULT)systemExt->TeardownSystemNetflix();
+                    return (OCDM::OCDM_RESULT)systemExt->TeardownSystemExt();
                 }
                 return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
             }
