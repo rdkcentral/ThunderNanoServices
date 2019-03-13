@@ -1,4 +1,4 @@
-find_package(${NAMESPACE}JSONRPC REQUIRED)
+find_package(jsonrpc REQUIRED)
 
 add_executable(JSONRPCClient JSONRPCClient.cpp)
 
@@ -8,9 +8,13 @@ set_target_properties(JSONRPCClient PROPERTIES
         )     
 
 target_link_libraries(JSONRPCClient 
-    PRIVATE
-        ${NAMESPACE}JSONRPC::${NAMESPACE}JSONRPC
-        )
+        PRIVATE
+        jsonrpc::jsonrpc
+    )
 
+target_include_directories(JSONRPCClient 
+    PRIVATE
+         "${PROJECT_SOURCE_DIR}/tests"
+)
 
 install(TARGETS JSONRPCClient DESTINATION bin)
