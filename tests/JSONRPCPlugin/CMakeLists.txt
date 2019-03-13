@@ -1,7 +1,7 @@
 set(PLUGIN_NAME JSONRPCPlugin)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-# find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Plugins REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
     JSONRPCPlugin.cpp
