@@ -1,13 +1,4 @@
 #include "Wayland.h"
-#include "../Client/Implementation.h"
-#include "Module.h"
-#include <interfaces/IComposition.h>
-
-#include <virtualinput/VirtualKeyboard.h>
-
-#ifdef ENABLE_NXSERVER
-#include "../NexusServer/NexusServer.h"
-#endif
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
