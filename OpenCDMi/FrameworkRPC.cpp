@@ -303,7 +303,7 @@ namespace Plugin {
                         }
                     }
                     // Event fired when MediaKeySession encounters an error.
-                    virtual void OnKeyError(int16_t f_nError, ::OCDM::OCDM_RESULT f_crSysError, const char* errorMessage) override
+                    virtual void OnKeyError(int16_t f_nError, CDMi::CDMi_RESULT f_crSysError, const char* errorMessage) override
                     {
                         TRACE(Trace::Information, ("OnKeyError(%d,%s)", f_nError, errorMessage));
                         if (_callback != nullptr) {
@@ -663,7 +663,7 @@ namespace Plugin {
 
                     // OKe we got a buffer machanism to transfer the raw data, now create
                     // the session.
-                    if ((session == nullptr) && (system->CreateMediaKeySession(licenseType, initDataType.c_str(), initData, initDataLength, CDMData, CDMDataLength, &sessionInterface) == 0)) {
+                    if ((session == nullptr) && (system->CreateMediaKeySession(keySystem, licenseType, initDataType.c_str(), initData, initDataLength, CDMData, CDMDataLength, &sessionInterface) == 0)) {
 
                         if (sessionInterface != nullptr) {
 
