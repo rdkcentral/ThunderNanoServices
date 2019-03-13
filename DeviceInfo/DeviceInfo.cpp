@@ -1,5 +1,10 @@
 #include "DeviceInfo.h"
 
+#ifdef PROVIDE_NEXUS_OTP_ID
+#include <nexus_otpmsp.h>
+#include <nexus_read_otp_id.h>
+#endif
+
 namespace WPEFramework {
 namespace Plugin {
 
@@ -20,6 +25,11 @@ namespace Plugin {
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
         _subSystem = service->SubSystems();
         _service = service;
+#ifdef PROVIDE_NEXUS_OTP_ID
+        ASSERT(_idProvider == nullptr);
+        _idProvider = Core::Service<IdentityProvider>::Create<IdentityProvider>();
+        _subSystem->Set(PluginHost::ISubSystem::IDENTIFIER, _idProvider);
+#endif
         _deviceId = GetDeviceId();
         _systemId = Core::SystemInfo::Instance().Id(Core::SystemInfo::Instance().RawDeviceId(), ~0);
 
@@ -33,6 +43,11 @@ namespace Plugin {
     /* virtual */ void DeviceInfo::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
+
+        if (_idProvider != nullptr) {
+            delete _idProvider;
+            _idProvider = nullptr;
+        }
 
         if (_subSystem != nullptr) {
             _subSystem->Release();
@@ -168,5 +183,27 @@ namespace Plugin {
         return (result);
     }
 
+#ifdef PROVIDE_NEXUS_OTP_ID
+    DeviceInfo::IdentityProvider::IdentityProvider()
+        : _identifier(nullptr)
+    {
+        ASSERT(_identifier == nullptr);
+
+        if (_identifier == nullptr) {
+            NEXUS_OtpIdOutput id;
+
+            if (NEXUS_SUCCESS == NEXUS_Security_ReadOtpId(NEXUS_OtpIdType_eA, &id)) {
+                _identifier = new uint8_t[id.size + 2];
+
+                ASSERT(_identifier != nullptr);
+
+                ::memcpy(&(_identifier[1]), id.otpId, id.size);
+
+                _identifier[0] = id.size;
+                _identifier[id.size + 1] = '\0';
+            }
+        }
+    }
+#endif
 } // namespace Plugin
 } // namespace WPEFramework
