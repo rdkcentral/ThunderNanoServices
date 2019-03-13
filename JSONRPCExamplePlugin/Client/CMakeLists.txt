@@ -13,12 +13,4 @@ target_link_libraries(jsonRPCExampleClient
     jsonrpc::jsonrpc
         )
 
-target_include_directories(jsonRPCExampleClient
-    PRIVATE
-)
-
-target_compile_definitions(jsonRPCExampleClient
-    PRIVATE
-)
-
 install(TARGETS jsonRPCExampleClient DESTINATION bin)
