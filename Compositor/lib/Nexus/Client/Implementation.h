@@ -17,11 +17,11 @@
 
 #include <compositor/Client.h>
 
-#include <refsw/default_nexus.h>
 #include <refsw/nexus_config.h>
 #include <refsw/nexus_core_utils.h>
 #include <refsw/nexus_display.h>
 #include <refsw/nexus_platform.h>
+#include <refsw/default_nexus.h>
 
 #ifdef BACKEND_BCM_NEXUS_NXCLIENT
 #include <refsw/nxclient.h>
