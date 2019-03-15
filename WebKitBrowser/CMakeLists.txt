@@ -66,7 +66,8 @@ endif()
 
 install(
     TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins
+    COMPONENT ${MODULE_NAME})
 
 # also build injected bundle
 add_subdirectory(InjectedBundle)

@@ -198,5 +198,11 @@ if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${WPEFRAMEWORK_PLUGINS_OPKG_DESCRIPTION}")
     set(CPACK_PACKAGE_FILE_NAME "${WPEFRAMEWORK_PLUGINS_OPKG_FILE_NAME}")
 
+    # list of components from which packages will be generated
+    set(CPACK_COMPONENTS_ALL
+        ${NAMESPACE}WebKitBrowser
+        WPEInjectedBundle
+    )
+
     include(CPack)
 endif()

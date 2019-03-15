@@ -30,4 +30,5 @@ target_include_directories(${MODULE_NAME}
         ${GLIB_INCLUDE_DIRS})
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/WebKitBrowser)
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/WebKitBrowser
+    COMPONENT ${MODULE_NAME})
