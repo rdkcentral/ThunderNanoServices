@@ -1,8 +1,5 @@
-#include "Module.h"
 #include "Wayland.h"
 #include <westeros-compositor.h>
-
-#include <virtualinput/VirtualKeyboard.h>
 
 namespace WPEFramework {
 namespace Westeros {

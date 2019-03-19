@@ -510,7 +510,7 @@ namespace Broadcom {
 
         if (_joined == true) {
 
-            result = Core::ERROR_UNKNOWN_KEY_PASSED;
+            result = Core::ERROR_UNKNOWN_KEY;
 
             NxClient_DisplaySettings displaySettings;
 
