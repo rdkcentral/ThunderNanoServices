@@ -12,10 +12,6 @@ namespace Data {
     };
 
     class EXTERNAL Geometry : public Core::JSON::Container {
-    private:
-        Geometry(const Geometry&) = delete;
-        Geometry& operator=(const Geometry&) = delete;
-
     public:
         Geometry()
             : Core::JSON::Container()
@@ -46,9 +42,29 @@ namespace Data {
             Width = width;
             Height = height;
         }
+		Geometry(const Geometry& copy) 
+			: Core::JSON::Container() 
+            , X(copy.X)
+            , Y(copy.Y)
+            , Width(copy.Width)
+            , Height(copy.Height)
+        {
+            Add(_T("x"), &X);
+            Add(_T("y"), &Y);
+            Add(_T("width"), &Width);
+            Add(_T("height"), &Height);
+        }
         ~Geometry()
         {
         }
+
+		Geometry& operator=(const Geometry& rhs) {
+            X = rhs.X;
+            Y = rhs.Y;
+            Width = rhs.Width;
+            Height = rhs.Height;
+            return (*this);
+		}
 
     public:
         Core::JSON::DecUInt32 X;

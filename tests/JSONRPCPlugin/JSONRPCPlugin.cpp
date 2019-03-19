@@ -9,9 +9,9 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
     { Data::Response::IDLE, _TXT("Idle") },
     { Data::Response::FAILURE, _TXT("Failure") },
 
-    ENUM_CONVERSION_END(Data::Response::state)
+ENUM_CONVERSION_END(Data::Response::state)
 
-        namespace Plugin
+namespace Plugin
 {
 
     SERVICE_REGISTRATION(JSONRPCPlugin, 1, 0);
@@ -27,6 +27,10 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         // PluginHost::JSONRPC method to register a JSONRPC method invocation for the method "time".
         Property<Data::Geometry>(_T("geometry"), &JSONRPCPlugin::get_geometry, &JSONRPCPlugin::set_geometry, this);
         Property<Core::JSON::String>(_T("data"), &JSONRPCPlugin::get_data, &JSONRPCPlugin::set_data, this);
+
+		// Opaque method examples 
+        Register<JsonObject, JsonObject>("swap", &JSONRPCPlugin::swap, this);
+        Property<JsonObject>(_T("window"), &JSONRPCPlugin::get_opaque_geometry, &JSONRPCPlugin::set_opaque_geometry, this);
     }
 
     /* virtual */ JSONRPCPlugin::~JSONRPCPlugin()

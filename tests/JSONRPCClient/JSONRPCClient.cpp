@@ -8,6 +8,15 @@ using namespace WPEFramework;
 
 namespace WPEFramework {
 
+ENUM_CONVERSION_BEGIN(::JsonValue::type)
+
+    { JsonValue::type::EMPTY,   _TXT("empty")   },
+    { JsonValue::type::BOOLEAN, _TXT("boolean") },
+    { JsonValue::type::NUMBER, _TXT("number") },
+    { JsonValue::type::STRING, _TXT("string") },
+
+ENUM_CONVERSION_END(::JsonValue::type)
+
 ENUM_CONVERSION_BEGIN(Data::Response::state)
 
     { Data::Response::ACTIVE, _TXT("Activate") },
@@ -59,6 +68,9 @@ void ShowMenu()
            "\tW : Read Window Property.\n"
            "\t4 : Set property @ value { 0, 2, 1280, 720 }.\n"
            "\t5 : Set property @ value { 200, 300, 720, 100 }.\n"
+           "\tO : Set properties using an opaque variant JSON parameter\n"
+           "\tV : Get properties using an opaque variant JSON parameter\n"
+           "\tE : Invoke and exchange an opaque variant JSON parameter\n"
            "\tH : Help\n"
            "\tQ : Quit\n");
 }
@@ -75,6 +87,17 @@ static void clock(const Core::JSON::String& parameters)
 {
     printf("Received a new time: %s\n", parameters.Value().c_str());
 }
+}
+
+static void PrintObject(const JsonObject::Iterator& iterator)
+{
+    JsonObject::Iterator index = iterator;
+    while (index.Next() == true) {
+        printf("Element [%s]: <%s> = \"%s\"\n",
+            index.Label(),
+            Core::EnumerateType<JsonValue::type>(index.Current().Content()).Data(),
+            index.Current().Value().c_str());
+    }
 }
 
 int main(int argc, char** argv)
@@ -208,6 +231,68 @@ int main(int argc, char** argv)
                 printf("Unregistered and renmoved a notification handler\n");
                 break;
             }
+            case 'O': {
+				// Set properties, using a n Opaque value:
+                remoteObject.SetProperty("window", {{{ "x", 123 }, { "y", 456 }, { "width", 789 }, { "height", 1112 }}});
+                printf("Send out an opaque struct to set the window properties\n");
+                break;
+            }
+            case 'V': {
+                // Get properties, using an Opaque value:
+                JsonObject result;
+                remoteObject.GetProperty("window", result);
+                JsonValue value(result.Get("x"));
+                if (value.Content() == JsonValue::type::EMPTY) {
+                    printf("<x> value not available\n");
+                } else if (value.Content() != JsonValue::type::NUMBER) {
+                    printf("<x> is expected to be a number but it is: %s\n", Core::EnumerateType<JsonValue::type>(value.Content()).Data());
+                } else {
+                    printf("<x>: %d\n", static_cast<uint32_t>(value.Number()));
+                }
+                value = result.Get("y");
+                if (value.Content() == JsonValue::type::EMPTY) {
+                    printf("<y> value not available\n");
+                } else if (value.Content() != JsonValue::type::NUMBER) {
+                    printf("<y> is expected to be a number but it is: %s\n", Core::EnumerateType<JsonValue::type>(value.Content()).Data());
+                } else {
+                    printf("<y>: %d\n", static_cast<uint32_t>(value.Number()));
+                }
+                value = result.Get("width");
+                if (value.Content() == JsonValue::type::EMPTY) {
+                    printf("<width> value not available\n");
+                } else if (value.Content() != JsonValue::type::NUMBER) {
+                    printf("<width> is expected to be a number but it is: %s\n", Core::EnumerateType<JsonValue::type>(value.Content()).Data());
+                } else {
+                    printf("<width>: %d\n", static_cast<uint32_t>(value.Number()));
+                }
+                value = result.Get("height");
+                if (value.Content() == JsonValue::type::EMPTY) {
+                    printf("<height> value not available\n");
+                } else if (value.Content() != JsonValue::type::NUMBER) {
+                    printf("<height> is expected to be a number but it is: %s\n", Core::EnumerateType<JsonValue::type>(value.Content()).Data());
+                } else {
+                    printf("<height>: %d\n", static_cast<uint32_t>(value.Number()));
+                }
+                break;
+            }
+            case 'E': {
+				// Set this one up, the old fasion way
+                JsonObject parameters;
+                JsonObject response;
+                parameters["x"] = 67;
+                parameters["y"] = 99;
+                parameters["width"] = false;  // Deliberate error, see what happens..
+                parameters["height"] = -1299; // Interesting a negative hide... No one is warning us :-)
+                PrintObject(parameters.Variants());
+                if (remoteObject.Invoke("swap", parameters, response) == Core::ERROR_NONE) {
+                    PrintObject(response.Variants());
+				} else {
+                    printf("Something went wrong during the invoke\n");                
+				}
+
+                break;
+			}
+            case '?':
             case 'H':
                 ShowMenu();
             }

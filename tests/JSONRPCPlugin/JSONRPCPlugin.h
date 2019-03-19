@@ -90,18 +90,15 @@ namespace Plugin {
         }
         uint32_t set_geometry(const Data::Geometry& window)
         {
-            _window.X = window.X;
-            _window.Y = window.Y;
+            _window.X = window.X.IsSet() ? window.X.Value() : _window.X;
+            _window.Y = window.Y.IsSet() ? window.Y.Value() : _window.Y;
             _window.Width = window.Width;
             _window.Height = window.Height;
             return (Core::ERROR_NONE);
         }
         uint32_t get_geometry(Data::Geometry& window) const
         {
-            window.X = _window.X;
-            window.Y = _window.Y;
-            window.Width = _window.Width;
-            window.Height = _window.Height;
+            window = Data::Geometry(_window.X, _window.Y, _window.Width, _window.Height);
             return (Core::ERROR_NONE);
         }
         uint32_t get_data(Core::JSON::String& data) const
@@ -112,6 +109,63 @@ namespace Plugin {
         uint32_t set_data(const Core::JSON::String& data)
         {
             _data = data.Value();
+            return (Core::ERROR_NONE);
+        }
+		uint32_t swap(const JsonObject& parameters, JsonObject& response) {
+            response = JsonObject({ { "x", 111 }, { "y", 222 }, { "width", _window.Width }, { "height", _window.Height } });
+            
+			// Now lets see what we got we can set..
+            Core::JSON::Variant value = parameters.Get("x");
+            if (value.Content() == Core::JSON::Variant::type::NUMBER) 
+            {
+                _window.X = static_cast<uint32_t>(value.Number());
+            } else if (value.Content() == Core::JSON::Variant::type::EMPTY) {
+                TRACE(Trace::Information, ("The <x> is not available"));
+            } else {
+                TRACE(Trace::Information, ("The <x> is not defined as a number"));           
+			}
+            value = parameters.Get("y");
+            if (value.Content() == Core::JSON::Variant::type::NUMBER) {
+                _window.X = static_cast<uint32_t>(value.Number());
+            }
+            value = parameters.Get("width");
+            if (value.Content() == Core::JSON::Variant::type::NUMBER) {
+                _window.X = static_cast<uint32_t>(value.Number());
+            }
+            value = parameters.Get("height");
+            if (value.Content() == Core::JSON::Variant::type::NUMBER) {
+                _window.X = static_cast<uint32_t>(value.Number());
+            }
+            return (Core::ERROR_NONE);
+        }
+        uint32_t set_opaque_geometry(const JsonObject& window)
+        {
+            // Now lets see what we got we can set..
+            Core::JSON::Variant value = window.Get("x");
+            if (value.Content() == Core::JSON::Variant::type::NUMBER) {
+                _window.X = static_cast<uint32_t>(value.Number());
+            } else if (value.Content() == Core::JSON::Variant::type::EMPTY) {
+                TRACE(Trace::Information, ("The <x> is not available"));
+            } else {
+                TRACE(Trace::Information, ("The <x> is not defined as a number"));
+            }
+            value = window.Get("y");
+            if (value.Content() == Core::JSON::Variant::type::NUMBER) {
+                _window.Y = static_cast<uint32_t>(value.Number());
+            }
+            value = window.Get("width");
+            if (value.Content() == Core::JSON::Variant::type::NUMBER) {
+                _window.Width = static_cast<uint32_t>(value.Number());
+            }
+            value = window.Get("height");
+            if (value.Content() == Core::JSON::Variant::type::NUMBER) {
+                _window.Height = static_cast<uint32_t>(value.Number());
+            }
+            return (Core::ERROR_NONE);
+        }
+        uint32_t get_opaque_geometry(JsonObject& window) const
+        {
+            window = JsonObject({ { "x", _window.X }, { "y", _window.Y }, { "width", _window.Width }, { "height", _window.Height } });
             return (Core::ERROR_NONE);
         }
 
