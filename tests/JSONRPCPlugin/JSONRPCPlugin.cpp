@@ -21,7 +21,9 @@ namespace Plugin
         , _job(Core::ProxyType<PeriodicSync>::Create(this))
     {
         // PluginHost::JSONRPC method to register a JSONRPC method invocation for the method "time".
-        Register<Core::Void, Core::JSON::String>(_T("time"), &JSONRPCPlugin::time, this);
+        Register<void, Core::JSON::String>(_T("time"), &JSONRPCPlugin::time, this);
+        Register<void, void>(_T("clueless"), &JSONRPCPlugin::clueless, this);
+        Register<Core::JSON::String, void>(_T("input"), &JSONRPCPlugin::input, this);
         Register<Data::Parameters, Data::Response>(_T("extended"), &JSONRPCPlugin::extended, this);
 
         // PluginHost::JSONRPC method to register a JSONRPC method invocation for the method "time".

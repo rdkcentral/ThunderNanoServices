@@ -72,6 +72,17 @@ namespace Plugin {
             return (Core::ERROR_NONE);
         }
 
+        uint32_t clueless()
+        {
+            TRACE(Trace::Information, (_T("A parameter less method that returns nothing was triggered")));
+            return (Core::ERROR_NONE);
+        }
+
+        uint32_t input(const Core::JSON::String& info)
+        {
+            TRACE(Trace::Information, (_T("Received the text: %s"), info.Value().c_str()));
+            return (Core::ERROR_NONE);
+        }
         // If the parameters are more complex (aggregated JSON objects) us JSON container
         // classes.
         uint32_t extended(const Data::Parameters& params, Data::Response& response)
