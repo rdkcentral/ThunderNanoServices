@@ -29,7 +29,7 @@ namespace Plugin {
             }
 
             return result;
-         }
+        }
 
     private:
         SystemCommandsImplementation(const SystemCommandsImplementation&) = delete;

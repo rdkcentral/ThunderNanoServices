@@ -75,22 +75,21 @@
 #define SUBTITLING_DESCR_LOOP_LEN 8
 #define LOGICAL_CHANNEL_DESCR_LOOP_LEN 4
 
-#define ISO8859_5    0x01
-#define ISO8859_6    0x02
-#define ISO8859_7    0x03
-#define ISO8859_8    0x04
-#define ISO8859_9    0x05
-#define ISO8859_10   0x06
-#define ISO8859_11   0x07
-#define ISO8859_12   0x08
-#define ISO8859_13   0x09
-#define ISO8859_14   0x0A
-#define ISO8859_15   0x0B
-#define ISO8859      0x10
-#define ISO10646_1   0x11
+#define ISO8859_5 0x01
+#define ISO8859_6 0x02
+#define ISO8859_7 0x03
+#define ISO8859_8 0x04
+#define ISO8859_9 0x05
+#define ISO8859_10 0x06
+#define ISO8859_11 0x07
+#define ISO8859_12 0x08
+#define ISO8859_13 0x09
+#define ISO8859_14 0x0A
+#define ISO8859_15 0x0B
+#define ISO8859 0x10
+#define ISO10646_1 0x11
 
-uint16_t aunUnicode6937[256] =
-{
+uint16_t aunUnicode6937[256] = {
     /*0x00*/ 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
     /*0x08*/ 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
     /*0x10*/ 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,

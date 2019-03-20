@@ -1,8 +1,8 @@
 #ifndef __DSRESOLUTION_H
 #define __DSRESOLUTION_H
 
-#include "Module.h"
 #include "DSResolutionHAL.h"
+#include "Module.h"
 
 namespace WPEFramework {
 namespace Plugin {
@@ -16,7 +16,7 @@ namespace Plugin {
 
         public:
             Config()
-                : Core::JSON::Container()   
+                : Core::JSON::Container()
                 , Resolution()
             {
                 Add(_T("resolution"), &Resolution);
@@ -24,9 +24,11 @@ namespace Plugin {
             ~Config()
             {
             }
+
         public:
             Core::JSON::EnumType<DSResolutionHAL::PixelResolution> Resolution;
         };
+
     private:
         DSResolution(const DSResolution&) = delete;
         DSResolution& operator=(const DSResolution&) = delete;
@@ -53,7 +55,7 @@ namespace Plugin {
         virtual const string Initialize(PluginHost::IShell* service);
         virtual void Deinitialize(PluginHost::IShell* service);
         virtual string Information() const;
-       
+
         //   IWeb methods
         // -------------------------------------------------------------------------------------------------------
         virtual void Inbound(Web::Request& request) override;

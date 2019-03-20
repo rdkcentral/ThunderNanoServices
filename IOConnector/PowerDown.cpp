@@ -8,22 +8,24 @@ namespace Plugin {
 
     class PowerDown : public IHandler {
     private:
-        PowerDown ();
-        PowerDown (const PowerDown&);
-        PowerDown& operator= (const PowerDown&);
+        PowerDown();
+        PowerDown(const PowerDown&);
+        PowerDown& operator=(const PowerDown&);
 
-        class Config: public Core::JSON::Container {
+        class Config : public Core::JSON::Container {
         private:
             Config(const Config& copy) = delete;
-            Config& operator= (const Config& RHS) = delete;
+            Config& operator=(const Config& RHS) = delete;
 
         public:
             Config()
                 : Callsign()
-                , State() {
+                , State()
+            {
                 Add(_T("callsign"), &Callsign);
             }
-            virtual ~Config() {
+            virtual ~Config()
+            {
             }
 
         public:
@@ -31,21 +33,26 @@ namespace Plugin {
         };
 
     public:
-        PowerDown (PluginHost::IShell* service, const string& configuration) : _service(service) {
-            Config config; config.FromString(configuration);
+        PowerDown(PluginHost::IShell* service, const string& configuration)
+            : _service(service)
+        {
+            Config config;
+            config.FromString(configuration);
             _callsign = config.Callsign.Value();
         }
-        virtual ~PowerDown() {
+        virtual ~PowerDown()
+        {
         }
 
     public:
-        virtual void Trigger(GPIO::Pin& pin) override {
+        virtual void Trigger(GPIO::Pin& pin) override
+        {
 
-            ASSERT (_service != nullptr);
+            ASSERT(_service != nullptr);
 
-            Exchange::IPower* handler (_service->QueryInterfaceByCallsign<Exchange::IPower>(_callsign));
+            Exchange::IPower* handler(_service->QueryInterfaceByCallsign<Exchange::IPower>(_callsign));
 
-             if (handler != nullptr) {
+            if (handler != nullptr) {
 
                 handler->SetState();
                 handler->Release();

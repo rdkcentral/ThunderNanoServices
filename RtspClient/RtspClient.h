@@ -30,14 +30,16 @@ namespace Plugin {
             }
 
         public:
-            virtual void Activated(RPC::IRemoteProcess*) {
+            virtual void Activated(RPC::IRemoteProcess*)
+            {
             }
-            virtual void Deactivated(RPC::IRemoteProcess* process) {
+            virtual void Deactivated(RPC::IRemoteProcess* process)
+            {
                 _parent.Deactivated(process);
             }
 
             BEGIN_INTERFACE_MAP(Notification)
-                INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -91,7 +93,6 @@ namespace Plugin {
             Core::JSON::DecUInt32 Position;
             Core::JSON::String Str;
         };
-
 
     public:
         RtspClient()

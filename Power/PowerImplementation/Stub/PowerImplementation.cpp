@@ -9,7 +9,7 @@ private:
     PowerImplementation& operator=(const PowerImplementation&) = delete;
 
 public:
-    PowerImplementation ()
+    PowerImplementation()
     {
         TRACE(Trace::Information, (_T("PowerImplementation::Construct()")));
     }
@@ -20,32 +20,38 @@ public:
     }
 
     BEGIN_INTERFACE_MAP(PowerImplementation)
-        INTERFACE_ENTRY(Exchange::IPower)
+    INTERFACE_ENTRY(Exchange::IPower)
     END_INTERFACE_MAP
 
     // IPower methods
-    virtual PCState GetState() const override {
+    virtual PCState GetState() const override
+    {
         TRACE(Trace::Information, (_T("PowerImplementation::GetState() => %d"), _currentState));
         return (_currentState);
     }
-    virtual PCStatus SetState(const PCState state, const uint32_t waitTime) override {
-        
+    virtual PCStatus SetState(const PCState state, const uint32_t waitTime) override
+    {
+
         TRACE(Trace::Information, (_T("PowerImplementation::SetState(%d, %d) => PCSuccess"), state, waitTime));
 
         _currentState = state;
 
         return (PCSuccess);
     }
-    virtual void PowerKey() override {
+    virtual void PowerKey() override
+    {
         TRACE(Trace::Information, (_T("PowerImplementation::PowerKey()")));
     }
-    virtual void Configure(const string& settings) {
+    virtual void Configure(const string& settings)
+    {
         TRACE(Trace::Information, (_T("PowerImplementation::Configure()")));
     }
-    virtual void Register(Exchange::IPower::INotification* sink) override {
+    virtual void Register(Exchange::IPower::INotification* sink) override
+    {
         TRACE(Trace::Information, (_T("PowerImplementation::Register()")));
     }
-    virtual void Unregister(Exchange::IPower::INotification* sink) override {
+    virtual void Unregister(Exchange::IPower::INotification* sink) override
+    {
         TRACE(Trace::Information, (_T("PowerImplementation::Unregister()")));
     }
 
@@ -53,9 +59,8 @@ private:
     PCState _currentState;
 };
 
-// The essence of making the IPower interface available. This instantiates 
+// The essence of making the IPower interface available. This instantiates
 // an object that can be created from the outside of the library by looking
 // for the PowerImplementation class name, that realizes the IPower interface.
 SERVICE_REGISTRATION(PowerImplementation, 1, 0);
-
 }

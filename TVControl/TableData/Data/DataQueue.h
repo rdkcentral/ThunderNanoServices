@@ -4,7 +4,7 @@
 #include "Queue.h"
 #define PACKET_TYPE_MASK 0x03
 
-class DataQueue : public Queue<std::pair<uint8_t*, uint16_t> > {
+class DataQueue : public Queue<std::pair<uint8_t*, uint16_t>> {
 private:
     DataQueue() = default;
     ~DataQueue() = default;

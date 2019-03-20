@@ -14,82 +14,90 @@ namespace Plugin {
         WebShell& operator=(const WebShell&) = delete;
 
     public:
-    class Connectivity {
-    private:
-        // -------------------------------------------------------------------
-        // This object should not be copied or assigned. Prevent the copy
-        // constructor and assignment constructor from being used. Compiler
-        // generated assignment and copy methods will be blocked by the
-        // following statments.
-        // Define them but do not implement them, compile error/link error.
-        // -------------------------------------------------------------------
-        Connectivity (const Connectivity& a_Copy) = delete;
-        Connectivity& operator=(const Connectivity& a_RHS) = delete;
+        class Connectivity {
+        private:
+            // -------------------------------------------------------------------
+            // This object should not be copied or assigned. Prevent the copy
+            // constructor and assignment constructor from being used. Compiler
+            // generated assignment and copy methods will be blocked by the
+            // following statments.
+            // Define them but do not implement them, compile error/link error.
+            // -------------------------------------------------------------------
+            Connectivity(const Connectivity& a_Copy) = delete;
+            Connectivity& operator=(const Connectivity& a_RHS) = delete;
 
-    public:
-         Connectivity(const TCHAR formatter[], ...)
-         {
-             va_list ap;
-             va_start(ap, formatter);
-             Trace::Format(_text, formatter, ap);
-             va_end(ap);
-        }
-        Connectivity(const string& text) :  _text(Core::ToString(text)) {
-        }
-        ~Connectivity()
-        {
-        }
+        public:
+            Connectivity(const TCHAR formatter[], ...)
+            {
+                va_list ap;
+                va_start(ap, formatter);
+                Trace::Format(_text, formatter, ap);
+                va_end(ap);
+            }
+            Connectivity(const string& text)
+                : _text(Core::ToString(text))
+            {
+            }
+            ~Connectivity()
+            {
+            }
 
-    public:
-        inline const char* Data() const {
-            return (_text.c_str());
-        }
-        inline uint16_t Length() const {
-            return (static_cast<uint16_t>(_text.length()));
-        }
+        public:
+            inline const char* Data() const
+            {
+                return (_text.c_str());
+            }
+            inline uint16_t Length() const
+            {
+                return (static_cast<uint16_t>(_text.length()));
+            }
 
-    private:
-        std::string _text;
-    };
+        private:
+            std::string _text;
+        };
 
-    // Trace class for internal information of WPEFramework
-    class Interactivity {
-    private:
-        // -------------------------------------------------------------------
-        // This object should not be copied or assigned. Prevent the copy
-        // constructor and assignment constructor from being used. Compiler
-        // generated assignment and copy methods will be blocked by the
-        // following statments.
-        // Define them but do not implement them, compile error/link error.
-        // -------------------------------------------------------------------
-        Interactivity (const Interactivity& a_Copy) = delete;
-        Interactivity& operator=(const Interactivity& a_RHS) = delete;
+        // Trace class for internal information of WPEFramework
+        class Interactivity {
+        private:
+            // -------------------------------------------------------------------
+            // This object should not be copied or assigned. Prevent the copy
+            // constructor and assignment constructor from being used. Compiler
+            // generated assignment and copy methods will be blocked by the
+            // following statments.
+            // Define them but do not implement them, compile error/link error.
+            // -------------------------------------------------------------------
+            Interactivity(const Interactivity& a_Copy) = delete;
+            Interactivity& operator=(const Interactivity& a_RHS) = delete;
 
-    public:
-         Interactivity(const TCHAR formatter[], ...)
-         {
-             va_list ap;
-             va_start(ap, formatter);
-             Trace::Format(_text, formatter, ap);
-             va_end(ap);
-        }
-        Interactivity(const string& text) :  _text(Core::ToString(text)) {
-        }
-        ~Interactivity()
-        {
-        }
+        public:
+            Interactivity(const TCHAR formatter[], ...)
+            {
+                va_list ap;
+                va_start(ap, formatter);
+                Trace::Format(_text, formatter, ap);
+                va_end(ap);
+            }
+            Interactivity(const string& text)
+                : _text(Core::ToString(text))
+            {
+            }
+            ~Interactivity()
+            {
+            }
 
-    public:
-        inline const char* Data() const {
-            return (_text.c_str());
-        }
-        inline uint16_t Length() const {
-            return (static_cast<uint16_t>(_text.length()));
-        }
+        public:
+            inline const char* Data() const
+            {
+                return (_text.c_str());
+            }
+            inline uint16_t Length() const
+            {
+                return (static_cast<uint16_t>(_text.length()));
+            }
 
-    private:
-        std::string _text;
-    };
+        private:
+            std::string _text;
+        };
 
         class Config : public Core::JSON::Container {
         private:
@@ -165,9 +173,9 @@ namespace Plugin {
         virtual uint32_t Outbound(const uint32_t ID, uint8_t data[], const uint16_t length) const;
 
     private:
-        void Input  (Core::ProxyType< Core::Process>& process);
-        void Output (Core::ProxyType< Core::Process>& process);
-        void Error  (Core::ProxyType< Core::Process>& process);
+        void Input(Core::ProxyType<Core::Process>& process);
+        void Output(Core::ProxyType<Core::Process>& process);
+        void Error(Core::ProxyType<Core::Process>& process);
 
     private:
         string _prefix;

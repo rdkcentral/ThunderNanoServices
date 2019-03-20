@@ -1,8 +1,8 @@
 #include "NexusServer.h"
 
 #include <nexus_config.h>
-#include <nexus_types.h>
 #include <nexus_platform.h>
+#include <nexus_types.h>
 #include <nxclient.h>
 #ifndef NEXUS_SERVER_EXTERNAL
 #include <nxserverlib.h>
@@ -19,7 +19,7 @@ BDBG_MODULE(NexusServer);
 namespace WPEFramework {
 
 namespace Broadcom {
-    static const std::map<const Exchange::IComposition::ScreenResolution, const NEXUS_VideoFormat > formatLookup = {
+    static const std::map<const Exchange::IComposition::ScreenResolution, const NEXUS_VideoFormat> formatLookup = {
         { Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown, NEXUS_VideoFormat_eUnknown },
         { Exchange::IComposition::ScreenResolution::ScreenResolution_480i, NEXUS_VideoFormat_eNtsc },
         { Exchange::IComposition::ScreenResolution::ScreenResolution_480p, NEXUS_VideoFormat_e480p },
@@ -58,13 +58,15 @@ namespace Broadcom {
         TRACE(Trace::Information, (_T("Alpha client %s to %d."), Name().c_str(), value));
         nxserverlib_set_server_alpha(_client, value);
     }
-    /* virtual */ void Platform::Client::ChangedGeometry(const Exchange::IComposition::Rectangle& /* rectangle */) {
+    /* virtual */ void Platform::Client::ChangedGeometry(const Exchange::IComposition::Rectangle& /* rectangle */)
+    {
     }
-    /* virtual */ void Platform::Client::ChangedZOrder(const uint8_t zorder) {
+    /* virtual */ void Platform::Client::ChangedZOrder(const uint8_t zorder)
+    {
 
         ASSERT(_client != nullptr);
 
-        if (zorder == 0) {   
+        if (zorder == 0) {
             /* the definition of "focus" is variable. this is one impl. */
             NxClient_ConnectList list;
             struct nxclient_status status;
@@ -84,36 +86,37 @@ namespace Broadcom {
     public:
         enum svptype {
             NONE = nxserverlib_svp_type_none,
-            VIDEO = nxserverlib_svp_type_cdb,   /* Force CRR for video CDB */
-            ALL = nxserverlib_svp_type_cdb_urr  /* Force CRR for video CDB + default to all secure only buffers */
+            VIDEO = nxserverlib_svp_type_cdb, /* Force CRR for video CDB */
+            ALL = nxserverlib_svp_type_cdb_urr /* Force CRR for video CDB + default to all secure only buffers */
         };
 
         enum hdcplevel {
-            HDCP_NONE = NxClient_HdcpLevel_eNone,           /* No HDCP requested by this client. */
-            HDCP_OPTIONAL = NxClient_HdcpLevel_eOptional,   /* Enable HDCP but do not mute video, even on authentication failure. */
-            HDCP_MANDATORY = NxClient_HdcpLevel_eMandatory  /* Enable HDCP and mute video until authentication success. */
+            HDCP_NONE = NxClient_HdcpLevel_eNone, /* No HDCP requested by this client. */
+            HDCP_OPTIONAL = NxClient_HdcpLevel_eOptional, /* Enable HDCP but do not mute video, even on authentication failure. */
+            HDCP_MANDATORY = NxClient_HdcpLevel_eMandatory /* Enable HDCP and mute video until authentication success. */
         };
 
         enum hdcpversion {
-            AUTO = NxClient_HdcpVersion_eAuto,    /* Always authenticate using the highest version supported by HDMI receiver (Content Stream Type 0) */
-            HDCP1X = NxClient_HdcpVersion_eHdcp1x,  /* Always authenticate using HDCP 1.x mode (regardless of HDMI Receiver capabilities) */
-            HDCP22 = NxClient_HdcpVersion_eHdcp22   /* Always authenticate using HDCP 2.2 mode, Content Stream Type 1 */
+            AUTO = NxClient_HdcpVersion_eAuto, /* Always authenticate using the highest version supported by HDMI receiver (Content Stream Type 0) */
+            HDCP1X = NxClient_HdcpVersion_eHdcp1x, /* Always authenticate using HDCP 1.x mode (regardless of HDMI Receiver capabilities) */
+            HDCP22 = NxClient_HdcpVersion_eHdcp22 /* Always authenticate using HDCP 2.2 mode, Content Stream Type 1 */
         };
 
         class MemoryInfo : public Core::JSON::Container {
         private:
             MemoryInfo(const MemoryInfo&) = delete;
-            MemoryInfo& operator= (const MemoryInfo&) = delete;
+            MemoryInfo& operator=(const MemoryInfo&) = delete;
 
         public:
-            MemoryInfo ()
+            MemoryInfo()
                 : GFX()
                 , GFX2()
                 , Restricted()
                 , Main()
                 , Export()
                 , Client()
-                , SecureGFX() {
+                , SecureGFX()
+            {
                 Add(_T("gfx"), &GFX);
                 Add(_T("gfx2"), &GFX2);
                 Add(_T("restricted"), &Restricted);
@@ -122,7 +125,8 @@ namespace Broadcom {
                 Add(_T("client"), &Client);
                 Add(_T("secureGFX"), &SecureGFX);
             }
-            ~MemoryInfo() {
+            ~MemoryInfo()
+            {
             }
 
         public:
@@ -150,7 +154,8 @@ namespace Broadcom {
             , HDCPVersion(AUTO)
             , HDCP1xBinFile()
             , HDCP2xBinFile()
-            , Memory() {
+            , Memory()
+        {
             Add(_T("irmode"), &IRMode);
             Add(_T("authentication"), &Authentication);
             Add(_T("boxmode"), &BoxMode);
@@ -189,21 +194,21 @@ namespace Broadcom {
         Core::JSON::String HDCP2xBinFile;
     };
 
-
     /* -------------------------------------------------------------------------------------------------------------
      * This is a singleton. Declare all C accessors to this object here
      * ------------------------------------------------------------------------------------------------------------- */
     /* static */ Platform* Platform::_implementation = nullptr;
 
-    #ifndef NEXUS_SERVER_EXTERNAL
+#ifndef NEXUS_SERVER_EXTERNAL
     static int find_unused_heap(const NEXUS_PlatformSettings& platformSettings)
     {
-        for (int i=NEXUS_MAX_HEAPS-1;i<NEXUS_MAX_HEAPS;i--) {
-            if (!platformSettings.heap[i].size && !platformSettings.heap[i].heapType) return i;
+        for (int i = NEXUS_MAX_HEAPS - 1; i < NEXUS_MAX_HEAPS; i--) {
+            if (!platformSettings.heap[i].size && !platformSettings.heap[i].heapType)
+                return i;
         }
         return -1;
     }
-    #endif
+#endif
 
     /* static */ void Platform::CloseDown()
     {
@@ -214,7 +219,8 @@ namespace Broadcom {
         }
     }
 
-    template <typename ...T> /* static */ int Platform::ClientConnect(nxclient_t client, const NxClient_JoinSettings* pJoinSettings,
+    template <typename... T>
+    /* static */ int Platform::ClientConnect(nxclient_t client, const NxClient_JoinSettings* pJoinSettings,
         NEXUS_ClientSettings* pClientSettings, T... Targs)
     {
         BSTD_UNUSED(pClientSettings);
@@ -243,12 +249,12 @@ namespace Broadcom {
         if (_joined == true) {
             NxClient_Uninit();
         }
-        #ifndef NEXUS_SERVER_EXTERNAL
+#ifndef NEXUS_SERVER_EXTERNAL
         nxserver_ipc_uninit();
         nxserverlib_uninit(_instance);
         NEXUS_Platform_Uninit();
         BKNI_DestroyMutex(_lock);
-        #endif
+#endif
         _implementation = nullptr;
     }
 
@@ -280,11 +286,12 @@ namespace Broadcom {
                 exit(EXIT_FAILURE);
             }
 
-            #ifndef NEXUS_SERVER_EXTERNAL
+#ifndef NEXUS_SERVER_EXTERNAL
 
             TRACE_L1("Start Nexus server...%d\n", __LINE__);
 
-            Config config; config.FromString(configuration);
+            Config config;
+            config.FromString(configuration);
 
             if ((config.SagePath.IsSet() == true) && (config.SagePath.Value().empty() == false)) {
                 ::setenv("SAGEBIN_PATH", config.SagePath.Value().c_str(), 1);
@@ -315,7 +322,7 @@ namespace Broadcom {
             NEXUS_GetPlatformCapabilities(&(_platformCapabilities));
 
             if (config.Memory.IsSet()) {
-                const Config::MemoryInfo& memory (config.Memory);
+                const Config::MemoryInfo& memory(config.Memory);
 
                 if (memory.GFX.IsSet()) {
                     int index = nxserver_heap_by_type(&_platformSettings, NEXUS_HEAP_TYPE_GRAPHICS);
@@ -382,7 +389,7 @@ namespace Broadcom {
                         _platformSettings.heap[cap.secureGraphics[0].heapIndex].size = (memory.SecureGFX.Value() * 1024 * 1024);
                         _platformSettings.heap[cap.secureGraphics[0].heapIndex].memcIndex = cap.secureGraphics[0].memcIndex;
                         _platformSettings.heap[cap.secureGraphics[0].heapIndex].heapType = NEXUS_HEAP_TYPE_SECURE_GRAPHICS;
-                        _platformSettings.heap[cap.secureGraphics[0].heapIndex].memoryType = NEXUS_MEMORY_TYPE_ONDEMAND_MAPPED|NEXUS_MEMORY_TYPE_MANAGED|NEXUS_MEMORY_TYPE_SECURE;
+                        _platformSettings.heap[cap.secureGraphics[0].heapIndex].memoryType = NEXUS_MEMORY_TYPE_ONDEMAND_MAPPED | NEXUS_MEMORY_TYPE_MANAGED | NEXUS_MEMORY_TYPE_SECURE;
                         /* TODO: allow securegfx to GFD1. for now, apply "-sd off" */
                         _serverSettings.session[0].output.sd = false;
                         _serverSettings.session[0].output.hd = true;
@@ -394,9 +401,8 @@ namespace Broadcom {
             if (config.Resolution.IsSet() == true) {
                 const auto index(formatLookup.find(config.Resolution.Value()));
 
-                if ( (index != formatLookup.cend()) && 
-                     (index->second != NEXUS_VideoFormat_eUnknown) ) {
-                     _serverSettings.display.format = index->second; 
+                if ((index != formatLookup.cend()) && (index->second != NEXUS_VideoFormat_eUnknown)) {
+                    _serverSettings.display.format = index->second;
                 }
             }
 
@@ -442,12 +448,12 @@ namespace Broadcom {
 
                 /* set the hdcp1x bin file path */
                 if ((config.HDCP1xBinFile.IsSet() == true) && (config.HDCP1xBinFile.Value().empty() == false)) {
-                    snprintf(_serverSettings.hdcp.hdcp1xBinFile, sizeof(_serverSettings.hdcp.hdcp1xBinFile), "%s",  config.HDCP1xBinFile.Value().c_str());
+                    snprintf(_serverSettings.hdcp.hdcp1xBinFile, sizeof(_serverSettings.hdcp.hdcp1xBinFile), "%s", config.HDCP1xBinFile.Value().c_str());
                 }
 
                 /* set the hdcp2x bin file path */
                 if ((config.HDCP2xBinFile.IsSet() == true) && (config.HDCP2xBinFile.Value().empty() == false)) {
-                    snprintf(_serverSettings.hdcp.hdcp2xBinFile, sizeof(_serverSettings.hdcp.hdcp2xBinFile), "%s",  config.HDCP2xBinFile.Value().c_str());
+                    snprintf(_serverSettings.hdcp.hdcp2xBinFile, sizeof(_serverSettings.hdcp.hdcp2xBinFile), "%s", config.HDCP2xBinFile.Value().c_str());
                 }
             }
 
@@ -478,24 +484,20 @@ namespace Broadcom {
 
                         if (rc == NEXUS_SUCCESS) {
                             TRACE_L1("Created NexusServer[%p].\n", &_instance);
-                        }
-                        else {
+                        } else {
                             TRACE_L1("nxserver_ipc_init failed [%d]\n", rc);
                         }
-                    }
-                    else {
+                    } else {
                         TRACE_L1("nxserverlib_init_extended failed [%d]\n", rc);
                     }
-                }
-                else {
+                } else {
                     TRACE_L1("NEXUS_Platform_MemConfigInit failed [%d]\n", rc);
                 }
-            }
-            else {
+            } else {
                 TRACE_L1("nxserver_modify_platform_settings failed [%d]\n", rc);
             }
 
-            #endif // NEXUS_SERVER_EXTERNAL
+#endif // NEXUS_SERVER_EXTERNAL
 
             StateChange(rc == NEXUS_SUCCESS ? OPERATIONAL : FAILURE);
         }
@@ -508,7 +510,7 @@ namespace Broadcom {
 
         if (_joined == true) {
 
-            result = Core::ERROR_UNKNOWN_KEY_PASSED;
+            result = Core::ERROR_UNKNOWN_KEY;
 
             NxClient_DisplaySettings displaySettings;
 
@@ -516,8 +518,7 @@ namespace Broadcom {
 
             const auto index(formatLookup.find(format));
 
-            if ( (index != formatLookup.cend()) && 
-                 (index->second != NEXUS_VideoFormat_eUnknown) ) {
+            if ((index != formatLookup.cend()) && (index->second != NEXUS_VideoFormat_eUnknown)) {
 
                 result = Core::ERROR_NONE;
 
@@ -534,7 +535,7 @@ namespace Broadcom {
     }
     Exchange::IComposition::ScreenResolution Platform::Resolution() const
     {
-        Exchange::IComposition::ScreenResolution result (Exchange::IComposition::ScreenResolution_Unknown);
+        Exchange::IComposition::ScreenResolution result(Exchange::IComposition::ScreenResolution_Unknown);
 
         if (_joined == true) {
             NxClient_DisplaySettings displaySettings;
@@ -542,8 +543,7 @@ namespace Broadcom {
             NxClient_GetDisplaySettings(&displaySettings);
             NEXUS_VideoFormat format = displaySettings.format;
             const auto index = std::find_if(formatLookup.cbegin(), formatLookup.cend(),
-                      [format](const std::pair<const Exchange::IComposition::ScreenResolution, const NEXUS_VideoFormat>& entry)
-                      { return entry.second == format; });
+                [format](const std::pair<const Exchange::IComposition::ScreenResolution, const NEXUS_VideoFormat>& entry) { return entry.second == format; });
 
             if (index != formatLookup.cend()) {
                 result = index->first;
@@ -551,7 +551,7 @@ namespace Broadcom {
         }
         return (result);
     }
- 
+
     // -------------------------------------------------------------------------------------------------------
     //   private methods
     // -------------------------------------------------------------------------------------------------------
@@ -590,26 +590,26 @@ namespace Broadcom {
 
 ENUM_CONVERSION_BEGIN(Broadcom::Config::svptype)
 
-	{ Broadcom::Config::NONE,  _TXT("None")  },
-	{ Broadcom::Config::VIDEO, _TXT("Video") },
-	{ Broadcom::Config::ALL,   _TXT("All")   },
+    { Broadcom::Config::NONE, _TXT("None") },
+    { Broadcom::Config::VIDEO, _TXT("Video") },
+    { Broadcom::Config::ALL, _TXT("All") },
 
-ENUM_CONVERSION_END(Broadcom::Config::svptype);
+    ENUM_CONVERSION_END(Broadcom::Config::svptype);
 
 ENUM_CONVERSION_BEGIN(Broadcom::Config::hdcplevel)
 
-        { Broadcom::Config::HDCP_NONE,      _TXT("Hdcp_None")      },
-        { Broadcom::Config::HDCP_OPTIONAL,  _TXT("Hdcp_Optional")  },
-        { Broadcom::Config::HDCP_MANDATORY, _TXT("Hdcp_Mandatory") },
+    { Broadcom::Config::HDCP_NONE, _TXT("Hdcp_None") },
+    { Broadcom::Config::HDCP_OPTIONAL, _TXT("Hdcp_Optional") },
+    { Broadcom::Config::HDCP_MANDATORY, _TXT("Hdcp_Mandatory") },
 
-ENUM_CONVERSION_END(Broadcom::Config::hdcplevel);
+    ENUM_CONVERSION_END(Broadcom::Config::hdcplevel);
 
 ENUM_CONVERSION_BEGIN(Broadcom::Config::hdcpversion)
 
-        { Broadcom::Config::AUTO,   _TXT("Auto")},
-        { Broadcom::Config::HDCP1X, _TXT("Hdcp1x")},
-        { Broadcom::Config::HDCP22, _TXT("Hdcp22")},
+    { Broadcom::Config::AUTO, _TXT("Auto") },
+    { Broadcom::Config::HDCP1X, _TXT("Hdcp1x") },
+    { Broadcom::Config::HDCP22, _TXT("Hdcp22") },
 
-ENUM_CONVERSION_END(Broadcom::Config::hdcpversion);
+    ENUM_CONVERSION_END(Broadcom::Config::hdcpversion);
 
 } // WPEFramework

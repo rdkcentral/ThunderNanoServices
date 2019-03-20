@@ -5,9 +5,9 @@
 #define MODULE_NAME Plugin_Streamer
 #endif
 
+#include <interfaces/ITVControl.h>
 #include <plugins/plugins.h>
 #include <tracing/tracing.h>
-#include <interfaces/ITVControl.h>
 
 #undef EXTERNAL
 #define EXTERNAL

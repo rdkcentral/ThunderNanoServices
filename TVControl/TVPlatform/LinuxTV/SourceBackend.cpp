@@ -40,18 +40,18 @@ static void OnPadAdded(GstElement* element, GstPad* pad, GstElementData* data)
 {
     const gchar* newPadType = gst_structure_get_name(gst_caps_get_structure(gst_pad_query_caps(pad, nullptr), 0));
     GstPad* sinkPad = nullptr;
-    if (g_str_has_prefix (newPadType, "audio/x-raw"))
+    if (g_str_has_prefix(newPadType, "audio/x-raw"))
         sinkPad = gst_element_get_static_pad(data->audioQueue, "sink");
-    else if (g_str_has_prefix (newPadType, "video/x-raw"))
+    else if (g_str_has_prefix(newPadType, "video/x-raw"))
         sinkPad = gst_element_get_static_pad(data->videoQueue, "sink");
 
     if (!gst_pad_is_linked(sinkPad)) {
         g_print("Dynamic pad created, linking audioQueue/videoQueue\n");
         GstPadLinkReturn ret = gst_pad_link(pad, sinkPad);
-        if (GST_PAD_LINK_FAILED (ret))
-            g_print ("Link failed.\n");
+        if (GST_PAD_LINK_FAILED(ret))
+            g_print("Link failed.\n");
         else
-            g_print ("Link succeeded.\n");
+            g_print("Link succeeded.\n");
     }
     gst_object_unref(sinkPad);
 }
@@ -80,8 +80,8 @@ SourceBackend::SourceBackend(SourceType type, TunerData* tunerData)
     _gstData.pipeline = gst_pipeline_new("pipeline");
     _gstData.source = gst_element_factory_make("dvbsrc", "source");
     _gstData.decoder = gst_element_factory_make("decodebin", "decoder");
-    _gstData.audioQueue = gst_element_factory_make("queue","audioqueue");
-    _gstData.videoQueue = gst_element_factory_make("queue","videoqueue");
+    _gstData.audioQueue = gst_element_factory_make("queue", "audioqueue");
+    _gstData.videoQueue = gst_element_factory_make("queue", "videoqueue");
     _gstData.videoConvert = gst_element_factory_make("videoconvert", "videoconv");
     _gstData.audioConvert = gst_element_factory_make("audioconvert", "audioconv");
     _gstData.videoSink = gst_element_factory_make("autovideosink", "videosink");
@@ -92,8 +92,7 @@ SourceBackend::SourceBackend(SourceType type, TunerData* tunerData)
         TRACE(Trace::Error, (_T("One gstreamer element could not be created.")));
         return;
     }
-    gst_bin_add_many(GST_BIN(_gstData.pipeline), _gstData.source, _gstData.decoder, _gstData.audioQueue, _gstData.audioConvert, _gstData.audioSink
-        , _gstData.videoQueue, _gstData.videoConvert, _gstData.videoSink, nullptr);
+    gst_bin_add_many(GST_BIN(_gstData.pipeline), _gstData.source, _gstData.decoder, _gstData.audioQueue, _gstData.audioConvert, _gstData.audioSink, _gstData.videoQueue, _gstData.videoConvert, _gstData.videoSink, nullptr);
 
     if (!gst_element_link(_gstData.source, _gstData.decoder) || !gst_element_link_many(_gstData.audioQueue, _gstData.audioConvert, _gstData.audioSink, nullptr)
         || !gst_element_link_many(_gstData.videoQueue, _gstData.videoConvert, _gstData.videoSink, nullptr)) {
@@ -111,7 +110,7 @@ SourceBackend::~SourceBackend()
     _isScanInProgress = false;
     if (_psiData.size())
         _psiData.clear();
-    gst_object_unref(GST_OBJECT (_gstData.pipeline));
+    gst_object_unref(GST_OBJECT(_gstData.pipeline));
 
     _sectionFilterMutex.lock();
     _sectionFilterCondition.notify_all();
@@ -200,7 +199,7 @@ TvmRc SourceBackend::StopFilters()
     _pollFdsMap.clear();
 }
 
-TvmRc SourceBackend::Tune(uint32_t frequency, uint16_t programNumber, uint16_t modulation,  TVPlatform::ITVPlatform::ITunerHandler& tunerHandler)
+TvmRc SourceBackend::Tune(uint32_t frequency, uint16_t programNumber, uint16_t modulation, TVPlatform::ITVPlatform::ITunerHandler& tunerHandler)
 {
     return SetCurrentChannel(frequency, programNumber, modulation, tunerHandler);
 }
@@ -213,7 +212,7 @@ TvmRc SourceBackend::StartFilter(uint16_t pid, TVPlatform::ITVPlatform::ISection
     }
 
     struct pollfd pollFd;
-    pollFd.events = POLLIN | POLLERR |POLLPRI;
+    pollFd.events = POLLIN | POLLERR | POLLPRI;
     pollFd.fd = CreateSectionFilter(pid, 0, 0);
     TRACE(Trace::Information, (_T("Pushed into poll Fds : pid = 0x%02x"), pid));
     _pollFds.push_back(pollFd);
@@ -239,7 +238,7 @@ TvmRc SourceBackend::StartScanning(std::vector<uint32_t> freqList, TVPlatform::I
 TvmRc SourceBackend::GetChannelMap(ChannelMap& chanMap)
 {
     TvmRc rc = TvmSuccess;
-    for (auto &psiInfo : _psiData) {
+    for (auto& psiInfo : _psiData) {
         AtscPmt pmt = psiInfo.second;
         for (auto& pmtInfo : pmt) {
             ChannelDetails chan;
@@ -408,7 +407,7 @@ bool SourceBackend::StartPlayBack(uint32_t frequency, uint32_t modulation, uint1
         return false;
     }
     char pidSet[20];
-    if ((!pmtPid)&& (!videoPid) && (!audioPid)) {
+    if ((!pmtPid) && (!videoPid) && (!audioPid)) {
         TRACE(Trace::Error, (_T("Invalid pid cannot do playback")));
         return false;
     }
@@ -444,7 +443,7 @@ TvmRc SourceBackend::SetCurrentChannel(uint32_t frequency, uint16_t programNumbe
     _channelChangeCompleteMutex.lock();
     _channelChangeState = TvmError;
     _channelChangeCompleteMutex.unlock();
-    if (_channelNo !=  programNumber) {
+    if (_channelNo != programNumber) {
         _channelNo = programNumber;
         std::thread th(&SourceBackend::SetCurrentChannelThread, this, frequency, programNumber, modulation, std::ref(tunerHandler));
         th.detach();
@@ -579,7 +578,7 @@ void SourceBackend::MpegScan(uint32_t frequency)
             TRACE(Trace::Error, (_T("Poll error")));
             break;
         }
-        if (pollFd.revents & (POLLIN | POLLPRI))  {
+        if (pollFd.revents & (POLLIN | POLLPRI)) {
             TRACE(Trace::Information, (_T("Got PAT data parse it")));
             if (ProcessPAT(frequency, pollFd.fd)) {
                 flag = false;
@@ -682,7 +681,7 @@ bool SourceBackend::ProcessPAT(uint32_t frequency, int32_t patFd)
         if ((pmtFd = CreateSectionFilter(curProgram->pid, TablePmt, 1)) < 0)
             return false;
         pollfd.fd = pmtFd;
-        pollfd.events = POLLIN | POLLPRI | POLLERR |POLLHUP | POLLNVAL;
+        pollfd.events = POLLIN | POLLPRI | POLLERR | POLLHUP | POLLNVAL;
         bool pmtOk = false;
         AtscStream stream;
         stream.pmtPid = curProgram->pid;
@@ -716,7 +715,7 @@ TvmRc SourceBackend::GetTSInfo(TSInfoList& tsInfoList)
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     TvmRc rc = TvmSuccess;
-    for (auto &psiInfo : _psiData) {
+    for (auto& psiInfo : _psiData) {
         AtscPmt pmt = psiInfo.second;
         for (auto& pmtInfo : pmt) {
             TSInfo tsInfo{};
@@ -729,8 +728,8 @@ TvmRc SourceBackend::GetTSInfo(TSInfoList& tsInfoList)
                 tsInfoList.push_back(tsInfo);
 
                 TRACE(Trace::Information, (_T("LCN:%" PRIu16 ", pmtPid:%" PRIu16 ", videoPid:%" PRIu16 ", audioPid:%" PRIu16 " \
-                    frequency : %u"), tsInfo.programNumber,
-                    tsInfo.pmtPid, tsInfo.videoPid, tsInfo.audioPid, tsInfo.frequency));
+                    frequency : %u"),
+                                              tsInfo.programNumber, tsInfo.pmtPid, tsInfo.videoPid, tsInfo.audioPid, tsInfo.frequency));
             }
         }
     }

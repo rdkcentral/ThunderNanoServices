@@ -32,14 +32,16 @@ namespace Plugin {
             }
 
         public:
-            virtual void Activated(RPC::IRemoteProcess*) {
+            virtual void Activated(RPC::IRemoteProcess*)
+            {
             }
-            virtual void Deactivated(RPC::IRemoteProcess* process) {
+            virtual void Deactivated(RPC::IRemoteProcess* process)
+            {
                 _parent.Deactivated(process);
             }
 
             BEGIN_INTERFACE_MAP(Notification)
-                INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -88,7 +90,6 @@ namespace Plugin {
             Core::JSON::String Str;
             Core::JSON::ArrayType<Channel> Channels;
         };
-
 
     public:
         DsgccClient()
@@ -139,7 +140,8 @@ namespace Plugin {
     private:
         void Deactivated(RPC::IRemoteProcess* process);
 
-        void AsyncStatus(const string& status) {
+        void AsyncStatus(const string& status)
+        {
             TRACE_L1("Sending async status. %s", status);
             string message(string("{ \"Status\": \" + status + \" }"));
             _service->Notify(message);

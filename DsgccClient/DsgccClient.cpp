@@ -5,8 +5,8 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(DsgccClient, 1, 0);
 
-    static Core::ProxyPoolType<Web::JSONBodyType<DsgccClient::Data> > jsonDataFactory(1);
-    static Core::ProxyPoolType<Web::JSONBodyType<DsgccClient::Data> > jsonBodyDataFactory(2);
+    static Core::ProxyPoolType<Web::JSONBodyType<DsgccClient::Data>> jsonDataFactory(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<DsgccClient::Data>> jsonBodyDataFactory(2);
 
     /* virtual */ const string DsgccClient::Initialize(PluginHost::IShell* service)
     {
@@ -31,10 +31,9 @@ namespace Plugin {
             message = _T("DsgccClient could not be instantiated.");
             _service->Unregister(&_notification);
             _service = nullptr;
-        }
-        else {
+        } else {
             _implementation->Configure(_service);
-       }
+        }
 
         return message;
     }
@@ -76,8 +75,8 @@ namespace Plugin {
 
     /* virtual */ void DsgccClient::Inbound(WPEFramework::Web::Request& request)
     {
-    if (request.Verb == Web::Request::HTTP_POST)
-        request.Body(jsonBodyDataFactory.Element());
+        if (request.Verb == Web::Request::HTTP_POST)
+            request.Body(jsonBodyDataFactory.Element());
     }
 
     /* virtual */ Core::ProxyType<Web::Response> DsgccClient::Process(const WPEFramework::Web::Request& request)
@@ -97,6 +96,7 @@ namespace Plugin {
                 Core::ProxyType<Web::JSONBodyType<Data> > data (jsonDataFactory.Element());
                 string strChannels = _implementation->GetChannels();
                 data->Channels.FromString(strChannels, data->Channels);
+
                 result->ContentType = Web::MIMETypes::MIME_JSON;
                 result->Body(data);
             } else {

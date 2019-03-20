@@ -2,8 +2,8 @@
 #define __OPENCDMI_H
 
 #include "Module.h"
-#include <interfaces/IMemory.h>
 #include <interfaces/IContentDecryption.h>
+#include <interfaces/IMemory.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -31,14 +31,16 @@ namespace Plugin {
             }
 
         public:
-            virtual void Activated(RPC::IRemoteProcess*) {
+            virtual void Activated(RPC::IRemoteProcess*)
+            {
             }
-            virtual void Deactivated(RPC::IRemoteProcess* process) {
+            virtual void Deactivated(RPC::IRemoteProcess* process)
+            {
                 _parent.Deactivated(process);
             }
 
             BEGIN_INTERFACE_MAP(Notification)
-                INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -66,7 +68,7 @@ namespace Plugin {
         };
 
     public:
-        class Data: public Core::JSON::Container {
+        class Data : public Core::JSON::Container {
         private:
             Data(const Data&) = delete;
             Data& operator=(const Data&) = delete;
@@ -77,39 +79,48 @@ namespace Plugin {
                 System& operator=(const System&) = delete;
 
             public:
-                System() : Name(), Designators() {
+                System()
+                    : Name()
+                    , Designators()
+                {
                     Add(_T("name"), &Name);
                     Add(_T("designators"), &Designators);
                 }
-                System(const string& name, RPC::IStringIterator* entries) : Name(), Designators() {
+                System(const string& name, RPC::IStringIterator* entries)
+                    : Name()
+                    , Designators()
+                {
                     Add(_T("name"), &Name);
                     Add(_T("designators"), &Designators);
 
-                    ASSERT (entries != nullptr);
+                    ASSERT(entries != nullptr);
 
                     Name = name;
                     Load(entries);
-
-               }
-                System(const System& copy) : Name(copy.Name), Designators(copy.Designators) {
+                }
+                System(const System& copy)
+                    : Name(copy.Name)
+                    , Designators(copy.Designators)
+                {
                     Add(_T("name"), &Name);
                     Add(_T("designators"), &Designators);
                 }
-                virtual ~System() {
+                virtual ~System()
+                {
                 }
 
             public:
                 Core::JSON::String Name;
                 Core::JSON::ArrayType<Core::JSON::String> Designators;
 
-                inline void Load(RPC::IStringIterator* entries) {
+                inline void Load(RPC::IStringIterator* entries)
+                {
                     Designators.Clear();
                     TRACE_L1("Adding Designators: %d", __LINE__);
-                    while (entries->Next() == true) {
-                        Core::JSON::String entry;
-                        entry = entries->Current();
-                        TRACE_L1("Designator: %s", entries->Current().c_str());
-                        Designators.Add(entry);
+                    string entry;
+                    while (entries->Next(entry) == true) {
+                        TRACE_L1("Designator: %s", entry.c_str());
+                        Designators.Add(Core::JSON::String(entry));
                     }
                 }
             };
@@ -127,7 +138,6 @@ namespace Plugin {
         public:
             Core::JSON::ArrayType<System> Systems;
         };
-
 
     public:
         OCDM()

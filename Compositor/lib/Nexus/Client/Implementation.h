@@ -3,10 +3,10 @@
 
 #define EGL_EGLEXT_PROTOTYPES 1
 
-#include <string>
+#include <algorithm>
 #include <cassert>
 #include <list>
-#include <algorithm>
+#include <string>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -18,9 +18,9 @@
 #include <compositor/Client.h>
 
 #include <refsw/nexus_config.h>
-#include <refsw/nexus_platform.h>
-#include <refsw/nexus_display.h>
 #include <refsw/nexus_core_utils.h>
+#include <refsw/nexus_display.h>
+#include <refsw/nexus_platform.h>
 #include <refsw/default_nexus.h>
 
 #ifdef BACKEND_BCM_NEXUS_NXCLIENT
@@ -79,7 +79,8 @@ namespace Nexus {
                 assert((_keyboard == nullptr) ^ (keyboard == nullptr));
                 _keyboard = keyboard;
             }
-            inline void SendKey (const uint32_t key, const IKeyboard::state action, const uint32_t time) {
+            inline void SendKey(const uint32_t key, const IKeyboard::state action, const uint32_t time)
+            {
 
                 if (_keyboard != nullptr) {
                     _keyboard->Direct(key, action);
@@ -106,7 +107,7 @@ namespace Nexus {
 
     public:
         // Lifetime management
-        virtual void AddRef() const 
+        virtual void AddRef() const
         {
         }
         virtual uint32_t Release() const
@@ -116,7 +117,7 @@ namespace Nexus {
         }
 
         // Methods
-        virtual EGLNativeDisplayType Native() const override 
+        virtual EGLNativeDisplayType Native() const override
         {
             return (static_cast<EGLNativeDisplayType>(EGL_DEFAULT_DISPLAY));
         }
@@ -124,19 +125,21 @@ namespace Nexus {
         {
             return (_displayName);
         }
-        virtual int Process (const uint32_t data) override;
+        virtual int Process(const uint32_t data) override;
         virtual int FileDescriptor() const override;
         virtual ISurface* Create(const std::string& name, const uint32_t width, const uint32_t height) override;
 
     private:
-        inline void Register(SurfaceImplementation* surface) {
+        inline void Register(SurfaceImplementation* surface)
+        {
             std::list<SurfaceImplementation*>::iterator index(std::find(_surfaces.begin(), _surfaces.end(), surface));
 
             if (index == _surfaces.end()) {
                 _surfaces.push_back(surface);
             }
         }
-        inline void Unregister(SurfaceImplementation* surface) {
+        inline void Unregister(SurfaceImplementation* surface)
+        {
             std::list<SurfaceImplementation*>::iterator index(std::find(_surfaces.begin(), _surfaces.end(), surface));
 
             if (index != _surfaces.end()) {
@@ -147,11 +150,11 @@ namespace Nexus {
     private:
         const std::string _displayName;
         NXPL_PlatformHandle _nxplHandle;
-        void* _virtualkeyboard ;
+        void* _virtualkeyboard;
         std::list<SurfaceImplementation*> _surfaces;
     };
 
-} // Nexus 
+} // Nexus
 } // WPEFramework
 
 #endif // NEXUS_CPP_ABSTRACTION_H

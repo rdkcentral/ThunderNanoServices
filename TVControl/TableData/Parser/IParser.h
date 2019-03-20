@@ -42,6 +42,7 @@ public:
     ~FrequencyHandler();
     uint32_t Worker();
     void SetFrequencyList(std::vector<uint32_t>& list) { _frequencyList = list; }
+
 private:
     uint32_t _currentFreqIndex;
     std::vector<uint32_t> _frequencyList;

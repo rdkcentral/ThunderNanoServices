@@ -60,9 +60,8 @@ namespace Broadcom {
             virtual void Kill() override;
             virtual void Opacity(const uint32_t value) override;
 
-
             BEGIN_INTERFACE_MAP(Entry)
-                INTERFACE_ENTRY(Exchange::IComposition::IClient)
+            INTERFACE_ENTRY(Exchange::IComposition::IClient)
             END_INTERFACE_MAP
 
         private:
@@ -104,11 +103,13 @@ namespace Broadcom {
         virtual ~Platform();
 
     public:
-        inline server_state State() const {
+        inline server_state State() const
+        {
             return _state;
         }
-        inline bool Join() {
-            if ( (_joined == false) && (NxClient_Join(&_joinSettings) == NEXUS_SUCCESS) ) {
+        inline bool Join()
+        {
+            if ((_joined == false) && (NxClient_Join(&_joinSettings) == NEXUS_SUCCESS)) {
                 _joined = true;
             }
             return (_joined);
@@ -121,7 +122,8 @@ namespace Broadcom {
         void Remove(const char clientName[]);
         void StateChange(server_state state);
         static void CloseDown();
-        template <typename ...T> static int ClientConnect(nxclient_t client, const NxClient_JoinSettings* pJoinSettings, NEXUS_ClientSettings* pClientSettings, T... Targs);
+        template <typename... T>
+        static int ClientConnect(nxclient_t client, const NxClient_JoinSettings* pJoinSettings, NEXUS_ClientSettings* pClientSettings, T... Targs);
         static void ClientDisconnect(nxclient_t client, const NxClient_JoinSettings* pJoinSettings);
 
     private:

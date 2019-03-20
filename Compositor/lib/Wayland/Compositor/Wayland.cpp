@@ -1,13 +1,4 @@
-#include "Module.h"
 #include "Wayland.h"
-#include "../Client/Implementation.h"
-#include <interfaces/IComposition.h>
-
-#include <virtualinput/VirtualKeyboard.h>
-
-#ifdef ENABLE_NXSERVER
-#include "../NexusServer/NexusServer.h"
-#endif
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -138,8 +129,8 @@ namespace Plugin {
             END_INTERFACE_MAP
 
         private:
-            virtual void ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) override { }
-            virtual void ChangedZOrder(const uint8_t zorder) override { }
+            virtual void ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) override {}
+            virtual void ChangedZOrder(const uint8_t zorder) override {}
 
         private:
             Wayland::Display::Surface _surface;
@@ -171,7 +162,8 @@ namespace Plugin {
 
         class Sink : public Wayland::Display::ICallback
 #ifdef ENABLE_NXSERVER
-                   , public Broadcom::Platform::IStateChange
+            ,
+                     public Broadcom::Platform::IStateChange
 #endif
         {
         private:
@@ -235,7 +227,8 @@ namespace Plugin {
             g_implementation = this;
         }
 
-        ~CompositorImplementation() {
+        ~CompositorImplementation()
+        {
             TRACE(Trace::Information, (_T("Stopping Wayland\n")));
 
             if (_surface != nullptr) {
@@ -280,7 +273,6 @@ namespace Plugin {
 
             ASSERT(_server == nullptr);
 
-
 #ifdef ENABLE_NXSERVER
             // If we run on a broadcom platform first start the nxserver, then we start the compositor...
             ASSERT(_nxserver == nullptr);
@@ -290,9 +282,8 @@ namespace Plugin {
             }
 
             if (_config.Join == false) {
-                _nxserver = new Broadcom::Platform( &_sink, nullptr, _service->ConfigLine());
-            }
-            else {
+                _nxserver = new Broadcom::Platform(&_sink, nullptr, _service->ConfigLine());
+            } else {
                 StartImplementation();
             }
 
@@ -384,11 +375,13 @@ namespace Plugin {
             return (result);
         }
 
-        /* virtual */ uint32_t Geometry(const string& callsign, const Rectangle& rectangle) override {
+        /* virtual */ uint32_t Geometry(const string& callsign, const Rectangle& rectangle) override
+        {
             return (Core::ERROR_GENERAL);
         }
 
-        /* virtual */ Exchange::IComposition::Rectangle Geometry(const string& callsign) const override {
+        /* virtual */ Exchange::IComposition::Rectangle Geometry(const string& callsign) const override
+        {
             Exchange::IComposition::Rectangle rectangle;
 
             rectangle.x = 0;
@@ -399,22 +392,27 @@ namespace Plugin {
             return (rectangle);
         }
 
-        /* virtual */ uint32_t ToTop(const string& callsign) override {
+        /* virtual */ uint32_t ToTop(const string& callsign) override
+        {
             return (Core::ERROR_GENERAL);
         }
 
-        /* virtual */ uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override {
+        /* virtual */ uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override
+        {
             return (Core::ERROR_GENERAL);
         }
 
-        /* virtual */ RPC::IStringIterator* ClientsInZorder() const override {
+        /* virtual */ RPC::IStringIterator* ClientsInZorder() const override
+        {
             return (nullptr);
         }
 
-        /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override {
+        /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override
+        {
         }
 
-        /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const override {
+        /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const override
+        {
             return ((Exchange::IComposition::ScreenResolution)0);
         }
 
@@ -450,8 +448,7 @@ namespace Plugin {
                         index++;
                     }
                 }
-            }
-            else {
+            } else {
                 TRACE(Trace::Information, (_T("[%s:%d] %s Client surface id found I guess we should update the the entry\n"), __FILE__, __LINE__, __PRETTY_FUNCTION__));
             }
         }
@@ -506,7 +503,7 @@ namespace Plugin {
 
             PluginHost::ISubSystem* subSystems = _service->SubSystems();
 
-            ASSERT (subSystems != nullptr);
+            ASSERT(subSystems != nullptr);
 
             if (subSystems != nullptr) {
                 subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);

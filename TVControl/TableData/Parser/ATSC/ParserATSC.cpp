@@ -58,7 +58,7 @@ ParserATSC::~ParserATSC()
     _vctHeaderMap.clear();
     TRACE(Trace::Information, (_T("Queue cleared")));
 
-   _clientInitialised = false;
+    _clientInitialised = false;
     TRACE(Trace::Information, (_T("Destructor Completed")));
 }
 
@@ -67,7 +67,7 @@ void ParserATSC::ReleaseFilters()
     if (_setFilters) {
         GetSIHandler()->StopFilter(ATSC_BASE_PID, 0);
         for (auto pid : _eitPidVector) {
-            GetSIHandler()->StopFilter(pid, 0/*Placeholder*/);
+            GetSIHandler()->StopFilter(pid, 0 /*Placeholder*/);
         }
     }
     _setFilters = false;
@@ -164,15 +164,14 @@ void ParserATSC::ParseData(struct section_ext* sectionExt, uint32_t frequency)
     case stag_atsc_system_time: {
         if (!_isTimeParsed)
             ParseSTT(psip);
-        }
-        break;
+    } break;
     case stag_atsc_rating_region:
         break;
     default:
         TRACE(Trace::Information, (_T("SI Table type unknown")));
         break;
     }
-}    
+}
 
 bool ParserATSC::ParseEIT(struct atsc_section_psip* psip)
 {
@@ -220,7 +219,7 @@ void ParserATSC::PushEitStopRequest()
 {
     if (_eitPidVector.size()) {
         TRACE(Trace::Information, (_T("PushEitStopRequest with pid =%d"), (_eitPidIndex)));
-        GetSIHandler()->StopFilter(_eitPidVector[_eitPidIndex], 0/*Placeholder*/);
+        GetSIHandler()->StopFilter(_eitPidVector[_eitPidIndex], 0 /*Placeholder*/);
     }
 }
 
@@ -230,7 +229,7 @@ void ParserATSC::PushEitStartRequest()
         TRACE(Trace::Information, (_T("PushEitStartRequest with pid =%d"), _eitPidIndex));
         if (_setFilters) {
             _eitPidIndex %= _eitPidVector.size();
-            GetSIHandler()->StartFilter(_eitPidVector[_eitPidIndex], 0/*Placeholder*/);
+            GetSIHandler()->StartFilter(_eitPidVector[_eitPidIndex], 0 /*Placeholder*/);
         }
     }
 }
@@ -322,25 +321,26 @@ bool ParserATSC::ParseMGT(struct atsc_section_psip* psip)
     struct atsc_mgt_table* t;
     uint32_t i, j;
     struct mgtTableName mgtTabNameArray[] = {
-        {0x0000, "terrestrial VCT with current_next_indictor=1"},
-        {0x0001, "terrestrial VCT with current_next_indictor=0"},
-        {0x0002, "cable VCT with current_next_indictor=1"},
-        {0x0003, "cable VCT with current_next_indictor=0"},
-        {0x0004, "channel ETT"},
-        {0x0005, "DCCSCT"},
-        {0x00FF, "reserved for future  use"},
-        {0x017F, "EIT"},
-        {0x01FF, "reserved for future  use"},
-        {0x027F, "event ETT"},
-        {0x02FF, "reserved for future  use"},
-        {0x03FF, "RRT with rating region"},
-        {0x0FFF, "user private"},
-        {0x13FF, "reserved for future  use"},
-        {0x14FF, "DCCT with dcc_id"},
-        {0xFFFF, "reserved for future  use"}
+        { 0x0000, "terrestrial VCT with current_next_indictor=1" },
+        { 0x0001, "terrestrial VCT with current_next_indictor=0" },
+        { 0x0002, "cable VCT with current_next_indictor=1" },
+        { 0x0003, "cable VCT with current_next_indictor=0" },
+        { 0x0004, "channel ETT" },
+        { 0x0005, "DCCSCT" },
+        { 0x00FF, "reserved for future  use" },
+        { 0x017F, "EIT" },
+        { 0x01FF, "reserved for future  use" },
+        { 0x027F, "event ETT" },
+        { 0x02FF, "reserved for future  use" },
+        { 0x03FF, "RRT with rating region" },
+        { 0x0FFF, "user private" },
+        { 0x13FF, "reserved for future  use" },
+        { 0x14FF, "DCCT with dcc_id" },
+        { 0xFFFF, "reserved for future  use" }
     };
 
-    atsc_mgt_section_tables_for_each(mgt, t, i) {
+    atsc_mgt_section_tables_for_each(mgt, t, i)
+    {
         struct mgtTableName table;
         memset(&table, 0, sizeof(struct mgtTableName));
 
@@ -354,16 +354,14 @@ bool ParserATSC::ParseMGT(struct atsc_section_psip* psip)
                 j = t->table_type - mgtTabNameArray[j - 1]._range - 1;
                 // Table type is EIT push new request.
                 if (t->table_type >= 0x0100 && t->table_type <= 0x017F) {
-                    TRACE(Trace::Information, (_T("EIT::  %2d: type = 0x%04X, PID = 0x%04X "), i,
-                        t->table_type, t->table_type_PID));
+                    TRACE(Trace::Information, (_T("EIT::  %2d: type = 0x%04X, PID = 0x%04X "), i, t->table_type, t->table_type_PID));
                     if (std::find(_eitPidVector.begin(), _eitPidVector.end(), t->table_type_PID) == _eitPidVector.end())
                         _eitPidVector.push_back(t->table_type_PID);
                 }
             }
             break;
         }
-        TRACE(Trace::Information, (_T("%2d: type = 0x%04X, PID = 0x%04X, %s "), i,
-            t->table_type, t->table_type_PID, table._string));
+        TRACE(Trace::Information, (_T("%2d: type = 0x%04X, PID = 0x%04X, %s "), i, t->table_type, t->table_type_PID, table._string));
         if (-1 != j)
             TRACE(Trace::Information, (_T(" %d"), j));
     }
@@ -379,7 +377,7 @@ bool ParserATSC::ParseCVCT(struct atsc_section_psip* psip, uint32_t frequency)
     uint16_t transportStreamId = psip->ext_head.table_id_ext;
     uint8_t sectionNo = psip->ext_head.section_number;
 
-    struct atsc_cvct_section *cvct;
+    struct atsc_cvct_section* cvct;
     if ((cvct = atsc_cvct_section_codec(psip)) == NULL) {
         fprintf(stderr, "SCT XXXX CVCT section decode error\n");
         return false;
@@ -399,19 +397,19 @@ bool ParserATSC::ParseCVCT(struct atsc_section_psip* psip, uint32_t frequency)
     } else
         _vctHeaderMap.insert(std::make_pair(transportStreamId, cvctHeader));
 
-    struct atsc_cvct_channel *channel;
-    struct descriptor *desc;
+    struct atsc_cvct_channel* channel;
+    struct descriptor* desc;
     uint32_t idx;
     struct PmtPidInfo* pmtInfo;
     pmtInfo = reinterpret_cast<struct PmtPidInfo*>(malloc(sizeof(struct PmtPidInfo)));
-    TRACE(Trace::Information, (_T("\tSCT tranport_stream_id:0x%04x"),
-        atsc_cvct_section_transport_stream_id(cvct)));
-    atsc_cvct_section_channels_for_each(cvct, channel, idx) {
+    TRACE(Trace::Information, (_T("\tSCT tranport_stream_id:0x%04x"), atsc_cvct_section_transport_stream_id(cvct)));
+    atsc_cvct_section_channels_for_each(cvct, channel, idx)
+    {
         char* name;
         uint16_t k;
         name = (char*)malloc(sizeof(char) * MAX_TITLE_SIZE);
         for (k = 0; k < MAX_TITLE_SIZE; k++)
-            name[k] = GetBits((const uint8_t *)channel->short_name, k * 16, 16);
+            name[k] = GetBits((const uint8_t*)channel->short_name, k * 16, 16);
         name[MAX_TITLE_SIZE] = '\0';
         std::string logicalChannelNumber;
         if ((channel->major_channel_number && ONEPART_CHANNEL_NUMBER_MASK) == ONEPART_CHANNEL_NUMBER_MASK)
@@ -430,21 +428,7 @@ bool ParserATSC::ParseCVCT(struct atsc_section_psip* psip, uint32_t frequency)
         _channelSet.insert(srcId);
         TRACE(Trace::Information, (_T("Service Name : %s"), name))
 
-        TRACE(Trace::Information, (_T("\tSCT major_channel_number:%04x minor_channel_number:%04x modulation_mode:%02x carrier_frequency:%i channel_TSID:%04x program_number:%04x ETM_location:%i access_controlled:%i hidden:%i path_select:%i out_of_band:%i hide_guide:%i service_type:%02x source_id:%04x"),
-            channel->major_channel_number,
-            channel->minor_channel_number,
-            channel->modulation_mode,
-            channel->carrier_frequency,
-            channel->channel_TSID,
-            channel->program_number,
-            channel->ETM_location,
-            channel->access_controlled,
-            channel->hidden,
-            channel->path_select,
-            channel->out_of_band,
-            channel->hide_guide,
-            channel->service_type,
-            channel->source_id));
+        TRACE(Trace::Information, (_T("\tSCT major_channel_number:%04x minor_channel_number:%04x modulation_mode:%02x carrier_frequency:%i channel_TSID:%04x program_number:%04x ETM_location:%i access_controlled:%i hidden:%i path_select:%i out_of_band:%i hide_guide:%i service_type:%02x source_id:%04x"), channel->major_channel_number, channel->minor_channel_number, channel->modulation_mode, channel->carrier_frequency, channel->channel_TSID, channel->program_number, channel->ETM_location, channel->access_controlled, channel->hidden, channel->path_select, channel->out_of_band, channel->hide_guide, channel->service_type, channel->source_id));
         std::string language;
         atsc_cvct_channel_descriptors_for_each(channel, desc)
         {
@@ -471,7 +455,7 @@ bool ParserATSC::ParseCVCT(struct atsc_section_psip* psip, uint32_t frequency)
         if (name)
             free(name);
     }
-    _isVCTParsed = true;  //FIXME  Todo recheck same flag could be used
+    _isVCTParsed = true; //FIXME  Todo recheck same flag could be used
     return true;
 }
 
@@ -494,7 +478,8 @@ bool ParserATSC::ParseTVCT(struct atsc_section_psip* psip, uint32_t frequency)
 
     if (MAX_NUM_CHANNELS < tvct->num_channels_in_section) {
         TRACE(Trace::Error, (_T("no support for more than %d "
-            "virtual channels in a pyhsical channel"), MAX_NUM_CHANNELS));
+                                "virtual channels in a pyhsical channel"),
+                                MAX_NUM_CHANNELS));
         return false;
     }
 
@@ -521,7 +506,7 @@ bool ParserATSC::ParseTVCT(struct atsc_section_psip* psip, uint32_t frequency)
         char* name;
         name = (char*)malloc(sizeof(char) * MAX_TITLE_SIZE);
         for (k = 0; k < MAX_TITLE_SIZE; k++)
-            name[k] = GetBits((const uint8_t *)ch->short_name, k * 16, 16);
+            name[k] = GetBits((const uint8_t*)ch->short_name, k * 16, 16);
         name[MAX_TITLE_SIZE] = '\0';
         uint16_t majorNum = (uint16_t)ch->major_channel_number;
         uint16_t minorNum = (uint16_t)ch->minor_channel_number;
@@ -560,8 +545,7 @@ bool ParserATSC::ParseTVCT(struct atsc_section_psip* psip, uint32_t frequency)
             }
         }
         if (_epgDB.IsServicePresentInTSInfo(ch->program_number)) {
-            _epgDB.InsertChannelInfo(frequency, ch->modulation_mode, name, ch->source_id, ch->channel_TSID, 0
-                , logicalChannelNumber, ch->program_number, language);
+            _epgDB.InsertChannelInfo(frequency, ch->modulation_mode, name, ch->source_id, ch->channel_TSID, 0, logicalChannelNumber, ch->program_number, language);
         }
         if (name)
             free(name);
@@ -617,31 +601,31 @@ void ParserATSC::ParseAtscExtendedChannelNameDescriptor(char** serviceName, cons
     }
 }
 
-struct ATSCServiceLocationDescriptor ParserATSC::ReadATSCServiceLocationDescriptor(const uint8_t *b)
+struct ATSCServiceLocationDescriptor ParserATSC::ReadATSCServiceLocationDescriptor(const uint8_t* b)
 {
     struct ATSCServiceLocationDescriptor v;
-    v._descriptorTag = GetBits(b,  0, 8);
-    v._descriptorLength = GetBits(b,  8, 8);
+    v._descriptorTag = GetBits(b, 0, 8);
+    v._descriptorLength = GetBits(b, 8, 8);
     v._reserved = GetBits(b, 16, 3);
     v._pcrPid = GetBits(b, 19, 13);
     v._numberElements = GetBits(b, 32, 8);
     return v;
 }
 
-struct ATSCServiceLocationElement ParserATSC::ReadATSCServiceLocationElement(const uint8_t *b)
+struct ATSCServiceLocationElement ParserATSC::ReadATSCServiceLocationElement(const uint8_t* b)
 {
     struct ATSCServiceLocationElement v;
-    v._streamType = GetBits(b,  0, 8);
-    v._reserved = GetBits(b,  8, 3);
+    v._streamType = GetBits(b, 0, 8);
+    v._reserved = GetBits(b, 8, 3);
     v._elementaryPid = GetBits(b, 11, 13);
     v._ISO639LanguageCode = GetBits(b, 24, 24);
     return v;
 }
 
-void ParserATSC::ParseAtscServiceLocationDescriptor(struct PmtPidInfo* s, const unsigned char *buf)
+void ParserATSC::ParseAtscServiceLocationDescriptor(struct PmtPidInfo* s, const unsigned char* buf)
 {
     struct ATSCServiceLocationDescriptor d = ReadATSCServiceLocationDescriptor(buf);
-    unsigned char* b = (unsigned char *)buf + 5;
+    unsigned char* b = (unsigned char*)buf + 5;
     s->_pcrPid = d._pcrPid;
     s->_audioNum = 0;
     for (uint16_t count = 0; count < d._numberElements; count++) {
@@ -655,12 +639,12 @@ void ParserATSC::ParseAtscServiceLocationDescriptor(struct PmtPidInfo* s, const 
             if (s->_audioNum < AUDIO_CHAN_MAX) {
                 s->_audioPid[s->_audioNum] = e._elementaryPid;
                 s->_audioLang[s->_audioNum][0] = (e._ISO639LanguageCode >> 16) & 0xff;
-                s->_audioLang[s->_audioNum][1] = (e._ISO639LanguageCode >> 8)  & 0xff;
-                s->_audioLang[s->_audioNum][2] =  e._ISO639LanguageCode        & 0xff;
+                s->_audioLang[s->_audioNum][1] = (e._ISO639LanguageCode >> 8) & 0xff;
+                s->_audioLang[s->_audioNum][2] = e._ISO639LanguageCode & 0xff;
                 s->_audioLang[s->_audioNum][3] = '\0';
                 s->_audioNum++;
             }
-            TRACE(Trace::Information, (_T("\tAUDIO\t: PID 0x%04x lang: %s"), e._elementaryPid, s->_audioLang[s->_audioNum-1]));
+            TRACE(Trace::Information, (_T("\tAUDIO\t: PID 0x%04x lang: %s"), e._elementaryPid, s->_audioLang[s->_audioNum - 1]));
             break;
         default:
             TRACE(Trace::Information, (_T("unhandled stream_type: %x"), e._streamType));
@@ -670,7 +654,7 @@ void ParserATSC::ParseAtscServiceLocationDescriptor(struct PmtPidInfo* s, const 
     }
 }
 
-bool ParserATSC::ParseEvents(struct atsc_eit_section *eit, uint8_t sourceId)
+bool ParserATSC::ParseEvents(struct atsc_eit_section* eit, uint8_t sourceId)
 {
     uint32_t i, j, k;
     struct atsc_eit_event* e;
@@ -680,7 +664,8 @@ bool ParserATSC::ParseEvents(struct atsc_eit_section *eit, uint8_t sourceId)
         TRACE(Trace::Error, (_T("nullptr pointer detected")));
         return false;
     }
-    atsc_eit_section_events_for_each(eit, e, i) {
+    atsc_eit_section_events_for_each(eit, e, i)
+    {
         struct tm start;
         struct tm end;
         startTime = atsctime_to_unixtime(e->start_time);
@@ -688,9 +673,7 @@ bool ParserATSC::ParseEvents(struct atsc_eit_section *eit, uint8_t sourceId)
         localtime_r(&startTime, &start);
         localtime_r(&endTime, &end);
 
-        TRACE(Trace::Information, (_T("|%02d:%02d--%02d:%02d| "),
-            start.tm_hour, start.tm_min,
-            end.tm_hour, end.tm_min));
+        TRACE(Trace::Information, (_T("|%02d:%02d--%02d:%02d| "), start.tm_hour, start.tm_min, end.tm_hour, end.tm_min));
         uint8_t titleLength = (e->title_length) + 1;
         struct atsc_text* titleText = atsc_eit_event_name_title_text(e);
         if (!titleText)
@@ -703,7 +686,8 @@ bool ParserATSC::ParseEvents(struct atsc_eit_section *eit, uint8_t sourceId)
         struct descriptor* desc;
         char* captionLanguage = nullptr;
         struct atsc_eit_event_part2* part = atsc_eit_event_part2(e);
-        atsc_eit_event_part2_descriptors_for_each(part, desc) {
+        atsc_eit_event_part2_descriptors_for_each(part, desc)
+        {
             if (desc->tag == DTagAtscContentAdvisory)
                 rating = ParseAtscContentAdvisoryDescriptor(desc);
             else if (desc->tag == DTagAtscCaptionService)
@@ -722,7 +706,8 @@ char* ParserATSC::ParseAtscCaptionServiceDescriptor(struct descriptor* desc)
     struct atsc_caption_service_descriptor* captionDesc = atsc_caption_service_descriptor_codec(desc);
     struct atsc_caption_service_entry* caption;
     uint32_t i = 0;
-    atsc_caption_service_descriptor_entries_for_each(captionDesc, caption, i) {
+    atsc_caption_service_descriptor_entries_for_each(captionDesc, caption, i)
+    {
         TRACE(Trace::Information, (_T("Caption lang: %c%c%c "), caption->language_code[0], caption->language_code[1], caption->language_code[2]));
         char* language = reinterpret_cast<char*>(malloc(4));
         language[0] = caption->language_code[0];
@@ -734,7 +719,7 @@ char* ParserATSC::ParseAtscCaptionServiceDescriptor(struct descriptor* desc)
     return nullptr;
 }
 
-std::string ParserATSC::GetUnicode(uint8_t *sourceAddr, size_t sourceLength)
+std::string ParserATSC::GetUnicode(uint8_t* sourceAddr, size_t sourceLength)
 {
     std::string name;
     size_t length;
@@ -758,10 +743,12 @@ std::string ParserATSC::ATSCTextDecode(struct atsc_text* aText, uint8_t length)
 
     int strIndex;
     struct atsc_text_string* curString;
-    atsc_text_strings_for_each(aText, curString, strIndex) {
+    atsc_text_strings_for_each(aText, curString, strIndex)
+    {
         int segIndex;
         struct atsc_text_string_segment* curSegment;
-        atsc_text_string_segments_for_each(curString, curSegment, segIndex) {
+        atsc_text_string_segments_for_each(curString, curSegment, segIndex)
+        {
             if (curSegment->compression_type < 0x3E) {
                 uint8_t* decoded = nullptr;
                 size_t decodedLen = 0;
@@ -784,7 +771,8 @@ std::string ParserATSC::ParseAtscContentAdvisoryDescriptor(struct descriptor* de
     struct atsc_content_advisory_descriptor* content = atsc_content_advisory_descriptor_codec(desc);
     uint32_t i = 0;
     struct atsc_content_advisory_entry* entry;
-    atsc_content_advisory_descriptor_entries_for_each(content, entry, i) {
+    atsc_content_advisory_descriptor_entries_for_each(content, entry, i)
+    {
         struct atsc_content_advisory_entry_part2* entry2 = atsc_content_advisory_entry_part2(entry);
         struct atsc_text* descriptionEntry = atsc_content_advisory_entry_part2_description(entry2);
         rating = ATSCTextDecode(descriptionEntry, entry2->rating_description_length);
@@ -801,7 +789,7 @@ uint32_t ParserATSC::Worker()
     }
     while (IsRunning() == true) {
         TRACE(Trace::Information, (_T("Parser running = %d \n"), IsRunning()));
-        std::pair<uint8_t*, uint16_t>  dataElement;
+        std::pair<uint8_t*, uint16_t> dataElement;
         dataElement = DataQueue::GetInstance().Pop();
         // FIXME:Finalising data frame format.
         TRACE(Trace::Information, (_T("Worker data obtained")));

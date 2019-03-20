@@ -6,7 +6,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class DeviceInfo : public PluginHost::IPlugin, public PluginHost::IWeb {
+    class DeviceInfo : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     public:
         class Data : public Core::JSON::Container {
         public:
@@ -187,6 +187,22 @@ namespace Plugin {
         DeviceInfo(const DeviceInfo&) = delete;
         DeviceInfo& operator=(const DeviceInfo&) = delete;
 
+        uint32_t addresses(const Core::JSON::String& parameters, Core::JSON::ArrayType<Data::AddressInfo>& response)
+        {
+            AddressInfo(response);
+            return (Core::ERROR_NONE);
+        }
+        uint32_t system(const Core::JSON::String& parameters, Data::SysInfo& response)
+        {
+            SysInfo(response);
+            return (Core::ERROR_NONE);
+        }
+        uint32_t sockets(const Core::JSON::String& parameters, Data::SocketPortInfo& response)
+        {
+            SocketPortInfo(response);
+            return (Core::ERROR_NONE);
+        }
+
     public:
         DeviceInfo()
             : _skipURL(0)
@@ -195,6 +211,9 @@ namespace Plugin {
             , _systemId()
             , _deviceId()
         {
+            Register<Core::JSON::String, Core::JSON::ArrayType<Data::AddressInfo>>(_T("addresses"), &DeviceInfo::addresses, this);
+            Register<Core::JSON::String, Data::SysInfo>(_T("system"), &DeviceInfo::system, this);
+            Register<Core::JSON::String, Data::SocketPortInfo>(_T("sockets"), &DeviceInfo::sockets, this);
         }
 
         virtual ~DeviceInfo()
@@ -204,6 +223,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(DeviceInfo)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:

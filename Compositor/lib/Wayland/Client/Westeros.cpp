@@ -6,21 +6,21 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
-#include <wayland-client.h>
-#include <wayland-client-core.h>
-#include <wayland-egl.h>
 #include <simpleshell-client-protocol.h>
+#include <wayland-client-core.h>
+#include <wayland-client.h>
+#include <wayland-egl.h>
 
-#include <string.h>
+#include <poll.h>
 #include <pthread.h>
-#include <unistd.h>
+#include <signal.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/signalfd.h>
-#include <signal.h>
-#include <poll.h>
+#include <unistd.h>
 
 // logical xor
-#define XOR(a,b) ((!a&&b)||(a&&!b))
+#define XOR(a, b) ((!a && b) || (a && !b))
 
 using namespace WPEFramework;
 
@@ -51,7 +51,6 @@ static const struct wl_shell_surface_listener g_ShellSurfaceListener = {
 struct wl_shm_listener shmListener = {
     // shmFormat
     [](void* data, struct wl_shm* wl_shm, uint32_t format) {
-
         Trace("shm format: %X\n", format);
     }
 };
@@ -94,13 +93,11 @@ static const struct wl_keyboard_listener keyboardListener = {
     [](void* data, struct wl_keyboard* keyboard, uint32_t format, int32_t fd, uint32_t size) {
         if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
             close(fd);
-        }
-        else {
+        } else {
             void* mapping = ::mmap(nullptr, size, PROT_READ, MAP_SHARED, fd, 0);
             if (mapping == MAP_FAILED) {
                 close(fd);
-            }
-            else {
+            } else {
 
                 Wayland::Display& context = *(static_cast<Wayland::Display*>(data));
                 context.KeyMapConfiguration(static_cast<const char*>(mapping), size);
@@ -172,7 +169,6 @@ static const struct wl_pointer_listener pointerListener = {
     },
     // pointerLeave
     [](void* data, struct wl_pointer* pointer, uint32_t serial, struct wl_surface* surface) {
-
         Wayland::Display& context = *(static_cast<Wayland::Display*>(data));
         Trace("wl_pointer_listener.pointerLeave [%p]\n", surface);
         context.FocusPointer(surface, false);
@@ -239,12 +235,12 @@ static const struct wl_simple_shell_listener simpleShellListener = {
         Wayland::Display::Surface waylandSurface;
         context.Get(surfaceId, waylandSurface);
 
-        if ((waylandSurface.IsValid() == true) && (waylandSurface.UpScale() == true)){
+        if ((waylandSurface.IsValid() == true) && (waylandSurface.UpScale() == true)) {
             Trace("wl_simple_shell_listener.surface_id upscaling %s to (%dx%d)\n",
-                  waylandSurface.Name().c_str(), context.Physical().Width, context.Physical().Height);
+                waylandSurface.Name().c_str(), context.Physical().Width, context.Physical().Height);
 
             wl_simple_shell_set_geometry(shell, surfaceId, context.Physical().X, context.Physical().Y,
-                                         context.Physical().Width, context.Physical().Height);
+                context.Physical().Width, context.Physical().Height);
         }
     },
     // surface_created
@@ -265,7 +261,6 @@ static const struct wl_simple_shell_listener simpleShellListener = {
     // surface_status
     [](void* data, struct wl_simple_shell* shell, uint32_t surfaceId, const char* name, uint32_t visible,
         int32_t x, int32_t y, int32_t width, int32_t height, wl_fixed_t opacity, wl_fixed_t zorder) {
-
         Trace("surface_status surfaceId=%d name=%s width=%d  height=%d x=%d, y=%d visible=%d opacity=%d zorder=%d\n", surfaceId, name, width, height, x, y, visible, opacity, zorder);
         Wayland::Display& context = *(static_cast<Wayland::Display*>(data));
 
@@ -295,8 +290,7 @@ static const struct wl_registry_listener globalRegistryListener = {
             // I expect that a compositor is tied to a display, so expect the name here to be the one of the display.
             // Lets check :-)
             context._compositor = static_cast<struct wl_compositor*>(wl_registry_bind(registry, name, &wl_compositor_interface, 1));
-        }
-        else if (::strcmp(interface, "wl_simple_shell") == 0) {
+        } else if (::strcmp(interface, "wl_simple_shell") == 0) {
             // A shell, is probably associated with a client, so I guess we now need to find a client..
             struct wl_simple_shell* result = static_cast<struct wl_simple_shell*>(wl_registry_bind(registry, name, &wl_simple_shell_interface, 1));
             wl_simple_shell_add_listener(result, &simpleShellListener, data);
@@ -310,18 +304,15 @@ static const struct wl_registry_listener globalRegistryListener = {
                 // As we are subscribed, get all surfaces we have..
                 wl_simple_shell_get_surfaces(result);
             }
-        }
-        else if (::strcmp(interface, "wl_seat") == 0) {
+        } else if (::strcmp(interface, "wl_seat") == 0) {
             // A shell, is probably associated with a client, so I guess we now need to find a client..
             struct wl_seat* result = static_cast<struct wl_seat*>(wl_registry_bind(registry, name, &wl_seat_interface, 4));
             wl_seat_add_listener(result, &seatListener, data);
             context._seat = result;
-        }
-        else if (::strcmp(interface, "wl_shell") == 0) {
+        } else if (::strcmp(interface, "wl_shell") == 0) {
             // A shell, is probably associated with a client, so I guess we now need to find a client..
             context._shell = static_cast<struct wl_shell*>(wl_registry_bind(registry, name, &wl_shell_interface, 1));
-        }
-        else if (::strcmp(interface, "wl_output") == 0) {
+        } else if (::strcmp(interface, "wl_output") == 0) {
             struct wl_output* result = static_cast<struct wl_output*>(wl_registry_bind(registry, name, &wl_output_interface, 2));
             wl_output_add_listener(result, &outputListener, data);
             context._output = result;
@@ -458,7 +449,7 @@ namespace Wayland {
         , _eglSurfaceWindow(EGL_NO_SURFACE)
         , _keyboard(nullptr)
         , _pointer(nullptr)
-    , _upScale(false)
+        , _upScale(false)
     {
     }
 
@@ -494,8 +485,7 @@ namespace Wayland {
             wl_callback_add_listener(_frameCallback, listener, data);
 
             eglSwapBuffers(_display->_eglDisplay, _eglSurfaceWindow);
-        }
-        else {
+        } else {
             wl_callback_destroy(_frameCallback);
             _frameCallback = nullptr;
         }
@@ -517,35 +507,35 @@ namespace Wayland {
     void Display::SurfaceImplementation::Visibility(const bool visible)
     {
         wl_simple_shell_set_visible(_display->_simpleShell, _id, (visible ? 1 : 0));
-        wl_display_flush( _display->_display );
+        wl_display_flush(_display->_display);
         Redraw();
     }
 
     void Display::SurfaceImplementation::Opacity(const uint32_t opacity)
     {
         wl_simple_shell_set_opacity(_display->_simpleShell, _id, opacity);
-        wl_display_flush( _display->_display );
+        wl_display_flush(_display->_display);
         Redraw();
     }
 
     void Display::SurfaceImplementation::ZOrder(const uint32_t order)
     {
         wl_simple_shell_set_zorder(_display->_simpleShell, _id, order);
-        wl_display_flush( _display->_display );
+        wl_display_flush(_display->_display);
         Redraw();
     }
 
     void Display::SurfaceImplementation::BringToFront()
     {
         wl_shell_surface_set_toplevel(_shellSurface);
-        wl_display_flush( _display->_display );
+        wl_display_flush(_display->_display);
         Redraw();
     }
 
     void Display::SurfaceImplementation::SetTop()
     {
         wl_simple_shell_set_zorder(_display->_simpleShell, _id, 0);
-        wl_display_flush( _display->_display );
+        wl_display_flush(_display->_display);
         Redraw();
     }
 
@@ -567,8 +557,7 @@ namespace Wayland {
                 Trace("Resizing surface %d from [%d x %d] to [%d x %d]\n", _id, _width, _height, width, height);
                 wl_egl_window_resize(_native, _width, _height, x, y);
             }
-        }
-        else {
+        } else {
             // Update this surface
             Trace("Update surface %d from [%d x %d] to [%d x %d]\n", _id, _width, _height, width, height);
             _x = x;
@@ -577,7 +566,7 @@ namespace Wayland {
             _height = height;
         }
 
-        wl_display_flush( _display->_display );
+        wl_display_flush(_display->_display);
 
         Trace("Current surfaceId=%d width=%d  height=%d x=%d, y=%d, visible=%d opacity=%d zorder=%d\n", _id, _width, _height, _x, _y, _visible, _opacity, _ZOrder);
     }
@@ -630,8 +619,7 @@ namespace Wayland {
     {
         if (surface != EGL_NO_SURFACE) {
             _eglSurfaceWindow = surface;
-        }
-        else {
+        } else {
             if (_display->_eglContext == EGL_NO_CONTEXT) {
                 _display->InitializeEGL();
             }
@@ -762,16 +750,14 @@ namespace Wayland {
 
         if (_eglDisplay == EGL_NO_DISPLAY) {
             Trace("Oops bad Display: %p\n", _eglDisplay);
-        }
-        else {
+        } else {
             /*
              * Initialize display
              */
             EGLint major, minor;
             if (eglInitialize(_eglDisplay, &major, &minor) != EGL_TRUE) {
                 Trace("Unable to initialize EGL: %X\n", eglGetError());
-            }
-            else {
+            } else {
                 /*
                  * Get number of available configurations
                  */
@@ -876,7 +862,6 @@ namespace Wayland {
         _waylandSurfaces.clear();
         _surfaces.clear();
 
-
         if (_eglContext != EGL_NO_CONTEXT) {
             eglMakeCurrent(_eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
             eglTerminate(_eglDisplay);
@@ -972,8 +957,7 @@ namespace Wayland {
             index->second->_id = id;
             index->second->AddRef();
             _surfaces.insert(std::pair<uint32_t, Display::SurfaceImplementation*>(id, index->second));
-        }
-        else if (_collect == true) {
+        } else if (_collect == true) {
             // Seems this is a surface, we did not create.
             Display::SurfaceImplementation* entry(new Display::SurfaceImplementation(*this, id, surface));
             entry->AddRef();
@@ -1029,8 +1013,7 @@ namespace Wayland {
         if (index != _surfaces.end()) {
             Trace("Updated Dimensions surfaceId=%d name=%s width=%d  height=%d x=%d, y=%d visible=%d opacity=%d zorder=%d\n", id, index->second->Name().c_str(), width, height, x, y, visible, opacity, zorder);
             index->second->Dimensions(visible, x, y, width, height, opacity, zorder);
-        }
-        else {
+        } else {
             // TODO: Seems this is a surface, we did not create. maybe we need to collect it in future.
             //Trace("Unidentified surface: id=%d.\n");
         }
@@ -1095,8 +1078,7 @@ namespace Wayland {
         if (index == _displays.end()) {
             result = new Display(displayName);
             _displays.insert(std::pair<const std::string, Display*>(displayName, result));
-        }
-        else {
+        } else {
             result = index->second;
         }
         result->AddRef();
@@ -1150,14 +1132,12 @@ namespace Wayland {
             if (data != 0) {
                 if (wl_display_read_events(_display) < 0) {
                     result = -2;
-                }
-                else {
+                } else {
                     if (wl_display_dispatch_pending(_display) < 0) {
                         result = 1;
-                     }
+                    }
                 }
-            }
-            else {
+            } else {
                 wl_display_cancel_read(_display);
                 result = -3;
             }
@@ -1178,7 +1158,8 @@ namespace Wayland {
     }
 }
 
-    /* static */ Compositor::IDisplay* Compositor::IDisplay::Instance(const std::string& displayName) {
-        return (&(Wayland::Display::Instance(displayName)));
-    }
+/* static */ Compositor::IDisplay* Compositor::IDisplay::Instance(const std::string& displayName)
+{
+    return (&(Wayland::Display::Instance(displayName)));
+}
 }

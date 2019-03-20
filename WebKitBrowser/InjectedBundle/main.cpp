@@ -6,94 +6,94 @@
 #include <memory>
 #include <syslog.h>
 
-#include "WhiteListedOriginDomainsList.h"
+#include "ClassDefinition.h"
 #include "NotifyWPEFramework.h"
 #include "Utils.h"
-#include "ClassDefinition.h"
+#include "WhiteListedOriginDomainsList.h"
 
 using namespace WPEFramework;
-using WebKit::WhiteListedOriginDomainsList;
 using JavaScript::ClassDefinition;
+using WebKit::WhiteListedOriginDomainsList;
 
 WKBundleRef g_Bundle;
 
-static Core::NodeId GetConnectionNode() {
+static Core::NodeId GetConnectionNode()
+{
     string nodeName;
 
     Core::SystemInfo::GetEnvironment(string(_T("COMMUNICATOR_CONNECTOR")), nodeName);
 
-    return (Core::NodeId (nodeName.c_str()));
+    return (Core::NodeId(nodeName.c_str()));
 }
 
-static class PluginHost 
-{
-    private:
-        PluginHost(const PluginHost&) = delete;
-        PluginHost& operator= (const PluginHost&) = delete;
+static class PluginHost {
+private:
+    PluginHost(const PluginHost&) = delete;
+    PluginHost& operator=(const PluginHost&) = delete;
 
-    public:
-        PluginHost()
-            : _comClient(Core::ProxyType< RPC::CommunicatorClient >::Create(GetConnectionNode(), Core::ProxyType< RPC::InvokeServerType<16,2> >::Create() ) )
-        {
-        }
-        ~PluginHost()
-        {
-            TRACE_L1("Destructing injected bundle stuff!!! [%d]", __LINE__);
-            Deinitialize();
-        }
+public:
+    PluginHost()
+        : _comClient(Core::ProxyType<RPC::CommunicatorClient>::Create(GetConnectionNode(), Core::ProxyType<RPC::InvokeServerType<16, 2>>::Create()))
+    {
+    }
+    ~PluginHost()
+    {
+        TRACE_L1("Destructing injected bundle stuff!!! [%d]", __LINE__);
+        Deinitialize();
+    }
 
-    public:
-        void Initialize (WKBundleRef bundle)
-        {
+public:
+    void Initialize(WKBundleRef bundle)
+    {
 
-            Trace::TraceType<Trace::Information, &Core::System::MODULE_NAME>::Enable(true);
+        Trace::TraceType<Trace::Information, &Core::System::MODULE_NAME>::Enable(true);
 
-            // We have something to report back, do so...
-             uint32_t result = _comClient->Open(RPC::CommunicationTimeOut);
-            if ( result != Core::ERROR_NONE ) { 
-                TRACE(Trace::Error, (_T("Could not open connection to node %s. Error: %s"), _comClient  ->Source().RemoteId(), Core::NumberType<uint32_t>(result).Text()));
-            }
-            else {
-                _comClient.Release();
-            }
-
-            _bundle = bundle;
-                
-            _whiteListedOriginDomainPairs = WhiteListedOriginDomainsList::RequestFromWPEFramework(bundle);
+        // We have something to report back, do so...
+        uint32_t result = _comClient->Open(RPC::CommunicationTimeOut);
+        if (result != Core::ERROR_NONE) {
+            TRACE(Trace::Error, (_T("Could not open connection to node %s. Error: %s"), _comClient->Source().RemoteId(), Core::NumberType<uint32_t>(result).Text()));
+        } else {
+            _comClient.Release();
         }
 
-        void Deinitialize() 
-        {
-            if( _comClient.IsValid() == true ) {
-                _comClient.Release();
-            }
+        _bundle = bundle;
 
-	    Core::Singleton::Dispose();
+        _whiteListedOriginDomainPairs = WhiteListedOriginDomainsList::RequestFromWPEFramework(bundle);
+    }
+
+    void Deinitialize()
+    {
+        if (_comClient.IsValid() == true) {
+            _comClient.Release();
         }
 
-        void WhiteList(WKBundleRef bundle) {
+        Core::Singleton::Dispose();
+    }
 
-            // Whitelist origin/domain pairs for CORS, if set.
-            if (_whiteListedOriginDomainPairs) {
-                _whiteListedOriginDomainPairs->AddWhiteListToWebKit(bundle);
-            }
+    void WhiteList(WKBundleRef bundle)
+    {
+
+        // Whitelist origin/domain pairs for CORS, if set.
+        if (_whiteListedOriginDomainPairs) {
+            _whiteListedOriginDomainPairs->AddWhiteListToWebKit(bundle);
         }
+    }
 
-    private:
-        Core::ProxyType<RPC::CommunicatorClient> _comClient;
+private:
+    Core::ProxyType<RPC::CommunicatorClient> _comClient;
 
-        // White list for CORS.
-        std::unique_ptr<WhiteListedOriginDomainsList> _whiteListedOriginDomainPairs;
+    // White list for CORS.
+    std::unique_ptr<WhiteListedOriginDomainsList> _whiteListedOriginDomainPairs;
 
-        // Handle of bundle.
-        WKBundleRef _bundle;
+    // Handle of bundle.
+    WKBundleRef _bundle;
 
 } _wpeFrameworkClient;
 
 extern "C" {
 
-__attribute__((destructor))
-static void unload() {
+__attribute__((destructor)) static void unload()
+{
     _wpeFrameworkClient.Deinitialize();
 }
 
@@ -258,14 +258,12 @@ static WKBundleClientV1 s_bundleClient = {
 // Declare module name for tracer.
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-
 void WKBundleInitialize(WKBundleRef bundle, WKTypeRef)
 {
-	g_Bundle = bundle;
+    g_Bundle = bundle;
 
     _wpeFrameworkClient.Initialize(bundle);
 
     WKBundleSetClient(bundle, &s_bundleClient.base);
 }
-
 }

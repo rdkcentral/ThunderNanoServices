@@ -27,7 +27,8 @@ namespace Remotes {
         }
 
     public:
-        inline Iterator Producers() {
+        inline Iterator Producers()
+        {
             return (Iterator(_remotes));
         }
         uint32_t Error(const string& device)
@@ -42,8 +43,7 @@ namespace Remotes {
                 if (device == (*index)->Name()) {
                     result = (*index)->Error();
                     index = _remotes.end();
-                }
-                else {
+                } else {
                     index++;
                 }
             }
@@ -64,12 +64,10 @@ namespace Remotes {
                 if (device.empty() == true) {
                     result = (*index)->Pair() && result;
                     index++;
-                }
-                else if (device == (*index)->Name()) {
+                } else if (device == (*index)->Name()) {
                     result = (*index)->Pair();
                     index = _remotes.end();
-                }
-                else {
+                } else {
                     index++;
                 }
             }
@@ -78,7 +76,6 @@ namespace Remotes {
 
             return (result);
         }
-
 
         bool Unpair(const string& device, string bindingId)
         {
@@ -92,12 +89,10 @@ namespace Remotes {
                 if (device.empty() == true) {
                     result = (*index)->Unpair(bindingId) && result;
                     index++;
-                }
-                else if (device == (*index)->Name()) {
+                } else if (device == (*index)->Name()) {
                     result = (*index)->Unpair(bindingId);
                     index = _remotes.end();
-                }
-                else {
+                } else {
                     index++;
                 }
             }
@@ -119,21 +114,18 @@ namespace Remotes {
                 string entry;
 
                 if (device.empty() == true) {
-                    entry = '\"' + string((*index)->Name()) + _T("\":\"") + (*index)->MetaData() + '\"' ;
+                    entry = '\"' + string((*index)->Name()) + _T("\":\"") + (*index)->MetaData() + '\"';
                     index++;
-                }
-                else if (device == (*index)->Name()) {
-                    entry = '\"' + string((*index)->Name()) + _T("\":\"") + (*index)->MetaData() + '\"' ;
+                } else if (device == (*index)->Name()) {
+                    entry = '\"' + string((*index)->Name()) + _T("\":\"") + (*index)->MetaData() + '\"';
                     index = _remotes.end();
-                }
-                else {
+                } else {
                     index++;
                 }
 
                 if (result.empty() == true) {
                     result = '{' + entry;
-                }
-                else {
+                } else {
                     result += ',' + entry;
                 }
             }
@@ -220,8 +212,7 @@ namespace Remotes {
                 if (result != Core::ERROR_NONE) {
                     if (callback == nullptr) {
                         SYSLOG(Logging::Startup, (_T("Failed to initialize %s, error [%d]"), (*index)->Name(), result));
-                    }
-                    else {
+                    } else {
                         SYSLOG(Logging::Shutdown, (_T("Failed to deinitialize %s, error [%d]"), (*index)->Name(), result));
                     }
                 }

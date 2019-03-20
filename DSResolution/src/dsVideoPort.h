@@ -21,15 +21,12 @@
  * @file dsVideoPort.h
  */
 
-
-
 /**
 * @defgroup devicesettings
 * @{
 * @defgroup hal
 * @{
 **/
-
 
 #ifndef _DS_VIDEOPORT_H
 #define _DS_VIDEOPORT_H
@@ -39,8 +36,8 @@ extern "C" {
 #endif
 
 #include "dsError.h"
-#include "dsTypes.h"
 #include "dsHost.h"
+#include "dsTypes.h"
 
 bool initConfig();
 
@@ -62,7 +59,7 @@ bool initConfig();
  * @retval dsERR_NONE If sucessfully dsVideoportinit api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t  dsVideoPortInit();
+dsError_t dsVideoPortInit();
 
 /**
  * @brief Get the video port handle.
@@ -77,7 +74,7 @@ dsError_t  dsVideoPortInit();
  * @retval dsERR_NONE If sucessfully dsgetvideoport api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t  dsGetVideoPort(dsVideoPortType_t type, int index, int *handle);
+dsError_t dsGetVideoPort(dsVideoPortType_t type, int index, int* handle);
 
 /**
  * @brief Indicate whether a video port is enabled.
@@ -91,7 +88,7 @@ dsError_t  dsGetVideoPort(dsVideoPortType_t type, int index, int *handle);
  * @retval dsERR_NONE If sucessfully dsIsVideoPortEnabled api has been called using IARM support.
  * @retval dsERR_GENERAL General failure .
  */
-dsError_t  dsIsVideoPortEnabled(int handle, bool *enabled);
+dsError_t dsIsVideoPortEnabled(int handle, bool* enabled);
 
 /**
  * @brief Indicate whether a video port is connected to a display.
@@ -105,7 +102,7 @@ dsError_t  dsIsVideoPortEnabled(int handle, bool *enabled);
  * @retval dsERR_NONE If sucessfully dsIsDisplayConnected api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t  dsIsDisplayConnected(int handle, bool *connected);
+dsError_t dsIsDisplayConnected(int handle, bool* connected);
 
 /**
  * @brief This function is used to indicate if the display connected supports surround audio.
@@ -117,8 +114,8 @@ dsError_t  dsIsDisplayConnected(int handle, bool *connected);
  * @retval dsERR_NONE Indicates dsIsDisplaySurround api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t  dsIsDisplaySurround(int handle, bool *surround);
-  
+dsError_t dsIsDisplaySurround(int handle, bool* surround);
+
 /**
  * @brief This function is used to get supported surround mode.
  *
@@ -129,8 +126,7 @@ dsError_t  dsIsDisplaySurround(int handle, bool *surround);
  * @retval dsERR_NONE Indicates dsGetSurroundMode api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t  dsGetSurroundMode(int handle, int *surround);
-
+dsError_t dsGetSurroundMode(int handle, int* surround);
 
 /**
  * @brief This function is used to indicate whether a video port is connected to a display.
@@ -142,8 +138,7 @@ dsError_t  dsGetSurroundMode(int handle, int *surround);
  * @retval dsERR_NONE If sucessfully dsIsDisplayConnected api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t  dsIsVideoPortActive(int handle, bool *active);
-
+dsError_t dsIsVideoPortActive(int handle, bool* active);
 
 /**
  * @brief Toggle DTCP protection of a video port.
@@ -158,7 +153,7 @@ dsError_t  dsIsVideoPortActive(int handle, bool *active);
  * @return Device Settings error code
  * @retval    ::dsError_t
  */
-dsError_t  dsEnableDTCP(int handle, bool contentProtect);
+dsError_t dsEnableDTCP(int handle, bool contentProtect);
 
 /**
  * @brief Toggle HDCP protection of a video port.
@@ -177,7 +172,7 @@ dsError_t  dsEnableDTCP(int handle, bool contentProtect);
  * @retval dsERR_GENERAL General failure.
  * @retval dsERR_INVALID_PARAM If invalid HCDP key is used.
  */
-dsError_t  dsEnableHDCP(int handle, bool contentProtect, char *hdcpKey, size_t keySize);
+dsError_t dsEnableHDCP(int handle, bool contentProtect, char* hdcpKey, size_t keySize);
 
 /**
  * @brief Indicate whether a video port is DTCP protected.
@@ -193,9 +188,9 @@ dsError_t  dsEnableHDCP(int handle, bool contentProtect, char *hdcpKey, size_t k
  * @return Device Settings error code
  * @retval    ::dsError_t
  */
-dsError_t  dsIsDTCPEnabled (int handle, bool* pContentProtected);
+dsError_t dsIsDTCPEnabled(int handle, bool* pContentProtected);
 
- /**
+/**
  * @brief Indicate whether a video port is HDCP protected.
  *
  * @param[in]  handle                Handle of the video port.
@@ -206,9 +201,9 @@ dsError_t  dsIsDTCPEnabled (int handle, bool* pContentProtected);
  * @retval dsERR_NONE If sucessfully dsIsHDCPEnabled api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t  dsIsHDCPEnabled (int handle, bool* pContentProtected);
+dsError_t dsIsHDCPEnabled(int handle, bool* pContentProtected);
 
- /**
+/**
  * @brief Enable/disable a video port.
  *
  * This function enables or disables the specified video port.
@@ -220,9 +215,9 @@ dsError_t  dsIsHDCPEnabled (int handle, bool* pContentProtected);
  * @retval dsERR_NONE If sucessfully dsEnableVideoPort api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t  dsEnableVideoPort(int handle, bool enabled);
+dsError_t dsEnableVideoPort(int handle, bool enabled);
 
- /**
+/**
  * @brief Enable/disable all video port.
  *
  * This function enables or disables the all video port.
@@ -233,7 +228,7 @@ dsError_t  dsEnableVideoPort(int handle, bool enabled);
  * @retval dsERR_NONE If sucessfully dsEnableAllVideoPort api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t  dsEnableAllVideoPort(bool enabled);
+dsError_t dsEnableAllVideoPort(bool enabled);
 
 /**
  * @brief Set video port's display resolution.
@@ -247,7 +242,7 @@ dsError_t  dsEnableAllVideoPort(bool enabled);
  * @retval dsERR_NONE If sucessfully dsSetResolution api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t  dsSetResolution(int handle, dsVideoPortResolution_t *resolution);
+dsError_t dsSetResolution(int handle, dsVideoPortResolution_t* resolution);
 
 /**
  * @brief Get the video display platform resolution.
@@ -261,7 +256,7 @@ dsError_t  dsSetResolution(int handle, dsVideoPortResolution_t *resolution);
  * @retval dsERR_NONE If sucessfully dsGetPlatformResolution api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t  dsGetPlatformResolution(int handle, dsVideoPortResolution_t *resolution);
+dsError_t dsGetPlatformResolution(int handle, dsVideoPortResolution_t* resolution);
 
 /**
  * @brief Get the video display resolution.
@@ -275,8 +270,7 @@ dsError_t  dsGetPlatformResolution(int handle, dsVideoPortResolution_t *resoluti
  * @retval dsERR_NONE If sucessfully dsGetResolution api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t  dsGetResolution(int handle, dsVideoPortResolution_t *resolution);
-
+dsError_t dsGetResolution(int handle, dsVideoPortResolution_t* resolution);
 
 /**
  * @brief Set the port to the the active source.
@@ -288,7 +282,7 @@ dsError_t  dsGetResolution(int handle, dsVideoPortResolution_t *resolution);
  */
 dsError_t dsSetActiveSource(int handle);
 
- /**
+/**
  * @brief Terminate the Video Port sub-system.
  *
  * This function must terminate all the video output ports. It must reset any data
@@ -310,8 +304,7 @@ dsError_t dsVideoPortTerm();
  * @return Device Settings error code
  * @retval    ::dsError_t
  */
-dsError_t  dsInitResolution(dsVideoPortResolution_t *);
-
+dsError_t dsInitResolution(dsVideoPortResolution_t*);
 
 /**
  * @brief Callback function used to notify applications of HDCP status
@@ -328,7 +321,6 @@ dsError_t  dsInitResolution(dsVideoPortResolution_t *);
  */
 typedef void (*dsHDCPStatusCallback_t)(int handle, dsHdcpStatus_t status);
 
-
 /**
  * @brief Register a callback function to listen for HDCP status
  *
@@ -343,9 +335,9 @@ typedef void (*dsHDCPStatusCallback_t)(int handle, dsHdcpStatus_t status);
  * @return       Error code.
  * @retval       ::dsError_t 
  */
- dsError_t dsRegisterHdcpStatusCallback (int handle, dsHDCPStatusCallback_t cb);
+dsError_t dsRegisterHdcpStatusCallback(int handle, dsHDCPStatusCallback_t cb);
 
- /**
+/**
  * @brief Get current HDCP status
  *
  * @param[in] status Handle HDCP status
@@ -353,7 +345,7 @@ typedef void (*dsHDCPStatusCallback_t)(int handle, dsHdcpStatus_t status);
  * @retval dsERR_NONE If sucessfully dsGetHDCPStatus api has been called using IARM support.
  * @retval dsERR_GENERAL General failure.
  */
-dsError_t dsGetHDCPStatus (int handle, dsHdcpStatus_t *status);
+dsError_t dsGetHDCPStatus(int handle, dsHdcpStatus_t* status);
 
 /**
 * @brief Get STB HDCP protocol version
@@ -364,7 +356,7 @@ dsError_t dsGetHDCPStatus (int handle, dsHdcpStatus_t *status);
 * @retval dsERR_NONE If sucessfully dsGetHDCPProtocol api has been called.
 * @retval dsERR_GENERAL General failure.
 */
-dsError_t dsGetHDCPProtocol (int handle,dsHdcpProtocolVersion_t *protocolVersion);
+dsError_t dsGetHDCPProtocol(int handle, dsHdcpProtocolVersion_t* protocolVersion);
 
 /**
 * @brief Get Receiver/TV HDCP protocol version
@@ -375,7 +367,7 @@ dsError_t dsGetHDCPProtocol (int handle,dsHdcpProtocolVersion_t *protocolVersion
 * @retval dsERR_NONE If sucessfully dsGetHDCPProtocol api has been called.
 * @retval dsERR_GENERAL General failure.
 */
-dsError_t dsGetHDCPReceiverProtocol (int handle,dsHdcpProtocolVersion_t *protocolVersion);
+dsError_t dsGetHDCPReceiverProtocol(int handle, dsHdcpProtocolVersion_t* protocolVersion);
 
 /**
 * @brief Get current used HDCP protocol version
@@ -386,7 +378,7 @@ dsError_t dsGetHDCPReceiverProtocol (int handle,dsHdcpProtocolVersion_t *protoco
 * @retval dsERR_NONE If sucessfully dsGetHDCPProtocol api has been called.
 * @retval dsERR_GENERAL General failure.
 */
-dsError_t dsGetHDCPCurrentProtocol (int handle,dsHdcpProtocolVersion_t *protocolVersion);
+dsError_t dsGetHDCPCurrentProtocol(int handle, dsHdcpProtocolVersion_t* protocolVersion);
 
 /**
  * @brief To find the HDR capabilities of TV
@@ -397,7 +389,7 @@ dsError_t dsGetHDCPCurrentProtocol (int handle,dsHdcpProtocolVersion_t *protocol
  * @param [out] *capabilities OR-ed value of supported HDR standards.
  * @return dsError_t Error code.
  */
-dsError_t dsGetTVHDRCapabilities(int handle, int *capabilities);
+dsError_t dsGetTVHDRCapabilities(int handle, int* capabilities);
 
 /**
  * @brief To find the TV supported resolutions.
@@ -408,11 +400,11 @@ dsError_t dsGetTVHDRCapabilities(int handle, int *capabilities);
  * @param [out] *resolution OR-ed value supported by TV.
  * @return dsError_t Error code.
  */
-dsError_t dsSupportedTvResolutions(int handle, int *resolutions);
+dsError_t dsSupportedTvResolutions(int handle, int* resolutions);
 dsError_t dsSetForceDisable4KSupport(int handle, bool disable);
-dsError_t dsGetForceDisable4KSupport(int handle, bool *disable);
+dsError_t dsGetForceDisable4KSupport(int handle, bool* disable);
 
- /**
+/**
  * @brief Sets various SCART parameters
  *
  * Supported values:
@@ -437,7 +429,6 @@ dsError_t dsGetForceDisable4KSupport(int handle, bool *disable);
  */
 dsError_t dsSetScartParameter(int handle, const char* parameter_str, const char* value_str);
 
-
 /**
  * @}
  */
@@ -446,7 +437,6 @@ dsError_t dsSetScartParameter(int handle, const char* parameter_str, const char*
 }
 #endif
 #endif /* _DS_VIDEOPORT_H */
-
 
 /** @} */
 /** @} */

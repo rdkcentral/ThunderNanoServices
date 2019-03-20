@@ -1,7 +1,7 @@
+#include <com/com.h>
 #include <core/core.h>
 #include <interfaces/IGuide.h>
 #include <interfaces/IStreaming.h>
-#include <com/com.h>
 
 using namespace WPEFramework;
 
@@ -36,7 +36,7 @@ public:
     }
 
     BEGIN_INTERFACE_MAP(StreamingNotificationListener)
-        INTERFACE_ENTRY(Exchange::IStreaming::INotification)
+    INTERFACE_ENTRY(Exchange::IStreaming::INotification)
     END_INTERFACE_MAP
 };
 
@@ -82,7 +82,7 @@ public:
     }
 
     BEGIN_INTERFACE_MAP(GuideNotificationListener)
-        INTERFACE_ENTRY(Exchange::IGuide::INotification)
+    INTERFACE_ENTRY(Exchange::IGuide::INotification)
     END_INTERFACE_MAP
 };
 
@@ -94,6 +94,7 @@ public:
     void init();
     void loop();
     void help();
+
 private:
     TVControlTestClient(const TVControlTestClient&) = delete;
 
@@ -106,7 +107,7 @@ private:
     Exchange::IStreaming* _tuner;
     GuideNotificationListener* _guideNotificationListener;
     StreamingNotificationListener* _streamingNotificationListener;
-    std::list <Core::Library> proxyStubs;
+    std::list<Core::Library> proxyStubs;
     Core::ProxyType<RPC::CommunicatorClient> _client;
 };
 
@@ -146,7 +147,6 @@ void TVControlTestClient::init()
     } else
         _client.Release();
 
-
     if (_tuner != nullptr) {
         printf("got IStreaming. The interface pointer = %p\n", _tuner);
         _streamingNotificationListener = Core::Service<StreamingNotificationListener>::Create<StreamingNotificationListener>();
@@ -162,7 +162,6 @@ void TVControlTestClient::init()
         _guide->Register(_guideNotificationListener);
     } else
         printf("Could not load the IGuide interface pointer = %p\n", _guide);
-
 }
 
 void TVControlTestClient::loop()
@@ -175,7 +174,8 @@ void TVControlTestClient::loop()
     do {
         printf(">>");
         inp = ::toupper(::getc(stdin));
-        while ((::getc(stdin)) != '\n') { } // clear the rest.
+        while ((::getc(stdin)) != '\n') {
+        } // clear the rest.
 
         switch (inp) {
         case 'S':
@@ -184,13 +184,13 @@ void TVControlTestClient::loop()
             break;
         case 'P': {
             printf(">> Enter oldPin: ");
-            fgets(str, sizeof(str)-1, stdin);
+            fgets(str, sizeof(str) - 1, stdin);
             if (str[strlen(str) - 1] == '\n')
                 str[strlen(str) - 1] = '\0';
             std::string oldPin = str;
             printf("oldPin = %s\n", oldPin.c_str());
             printf(">> Enter newPin: ");
-            fgets(str, sizeof(str)-1, stdin);
+            fgets(str, sizeof(str) - 1, stdin);
             if (str[strlen(str) - 1] == '\n')
                 str[strlen(str) - 1] = '\0';
             std::string newPin = str;
@@ -200,9 +200,9 @@ void TVControlTestClient::loop()
         }
         case 'Y': {
             printf(">> Enter isLocked ");
-            int isLocked = ::atoi(::fgets(str, sizeof(str)-1, stdin));
+            int isLocked = ::atoi(::fgets(str, sizeof(str) - 1, stdin));
             printf(">> Enter Pin: ");
-            fgets(str, sizeof(str)-1, stdin);
+            fgets(str, sizeof(str) - 1, stdin);
             if (str[strlen(str) - 1] == '\n')
                 str[strlen(str) - 1] = '\0';
             std::string pin = str;
@@ -216,15 +216,15 @@ void TVControlTestClient::loop()
         }
         case 'L': {
             printf(">> Enter Pin: ");
-            fgets(str, sizeof(str)-1, stdin);
+            fgets(str, sizeof(str) - 1, stdin);
             if (str[strlen(str) - 1] == '\n')
                 str[strlen(str) - 1] = '\0';
             std::string pin = str;
             printf("pin = %s\n", pin.c_str());
             printf(">> Enter isLocked ");
-            int isLocked = ::atoi(::fgets(str, sizeof(str)-1, stdin));
+            int isLocked = ::atoi(::fgets(str, sizeof(str) - 1, stdin));
             printf(">> Enter channelNumber ");
-            std::string channelNumber = ::fgets(str, sizeof(str)-1, stdin);
+            std::string channelNumber = ::fgets(str, sizeof(str) - 1, stdin);
             printf(" Set lock to %s \n", channelNumber.c_str());
             _guide->SetParentalLock(pin, (bool)isLocked, channelNumber);
             break;
@@ -236,28 +236,28 @@ void TVControlTestClient::loop()
             break;
         }
         case 'E': {
-            std::string program =  _guide->GetPrograms();
+            std::string program = _guide->GetPrograms();
             if (program.size() > 0)
                 printf("Programs = %s\n", program.c_str());
             break;
         }
         case 'F': {
             printf(">> Enter channelNumber ");
-            std::string channelNumber = ::fgets(str, sizeof(str)-1, stdin);
+            std::string channelNumber = ::fgets(str, sizeof(str) - 1, stdin);
             std::string program = _guide->GetCurrentProgram(channelNumber);
-            if  (program.size() > 0)
+            if (program.size() > 0)
                 printf("CurrentProgram = %s\n", program.c_str());
             break;
         }
         case 'A': {
             printf(">> Enter event id ");
-            uint32_t channelNumber = ::atoi(::fgets(str, sizeof(str)-1, stdin));
+            uint32_t channelNumber = ::atoi(::fgets(str, sizeof(str) - 1, stdin));
             printf("AudioLanguages = %s\n", _guide->GetAudioLanguages(channelNumber).c_str());
             break;
         }
         case 'B': {
             printf(">> Enter event id ");
-            uint32_t channelNumber = ::atoi(::fgets(str, sizeof(str)-1, stdin));
+            uint32_t channelNumber = ::atoi(::fgets(str, sizeof(str) - 1, stdin));
             printf("SubtileLanguages = %s\n", _guide->GetSubtitleLanguages(channelNumber).c_str());
             break;
         }
@@ -271,24 +271,24 @@ void TVControlTestClient::loop()
 
         case 'T': {
             printf(">> Enter channel number(lcn) : ");
-            std::string channelNumber = ::fgets(str, sizeof(str)-1, stdin);
+            std::string channelNumber = ::fgets(str, sizeof(str) - 1, stdin);
             _tuner->SetCurrentChannel(channelNumber);
             break;
         }
 
-        case 'M' : {
+        case 'M': {
             printf(">> Enter channel number(lcn) : ");
-            std::string channelNumber = ::fgets(str, sizeof(str)-1, stdin);
+            std::string channelNumber = ::fgets(str, sizeof(str) - 1, stdin);
             printf("Channel %s is %s\n", channelNumber.c_str(), (_guide->IsParentalLocked(channelNumber)) ? "locked." : "not locked.");
             break;
         }
-        case 'D' : {
+        case 'D': {
             std::string channel = _tuner->GetCurrentChannel();
             if (channel.size() > 0)
                 printf("Current channel = %s\n", channel.c_str());
             break;
         }
-        case 'X' : {
+        case 'X': {
             printf("Is scanning = %d\n", _tuner->IsScanning());
             break;
         }
@@ -324,7 +324,7 @@ void TVControlTestClient::help()
     printf(" q: Quit application\n");
 }
 
-int main(int argc, char ** argv)
+int main(int argc, char** argv)
 {
     {
         TVControlTestClient testClient;

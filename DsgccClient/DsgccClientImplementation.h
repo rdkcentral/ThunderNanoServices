@@ -12,7 +12,6 @@ namespace Plugin {
 
     class DsgccClientImplementation : public Exchange::IDsgccClient {
     private:
-
         class Config : public Core::JSON::Container {
         private:
             Config(const Config&) = delete;
@@ -24,7 +23,7 @@ namespace Plugin {
             {
                 Add(_T("dsgPort"), &DsgPort);
                 Add(_T("dsgType"), &DsgType);
-                Add(_T("dsgId"),   &DsgId);
+                Add(_T("dsgId"), &DsgId);
                 Add(_T("vctId"), &VctId);
                 Add(_T("dsgHeaderSize"), &DsgHeaderSize);
             }
@@ -46,12 +45,14 @@ namespace Plugin {
             Activity& operator=(const Activity&) = delete;
 
         public:
-            Activity(DsgccClientImplementation::Config &config)
+            Activity(DsgccClientImplementation::Config& config)
                 : Core::Thread(Core::Thread::DefaultStackSize(), _T("DsgccClient"))
                 , _config(config)
                 , _isRunning(true) {
             }
-            virtual ~Activity() {
+
+            virtual ~Activity()
+            {
             }
 
             string getChannels() const {
@@ -59,18 +60,19 @@ namespace Plugin {
             }
 
         public:
-            void Dispose() {
+            void Dispose()
+            {
                 TRACE_L1("%s: Done!!! ", __FUNCTION__);
             }
 
         private:
-            DsgccClientImplementation::Config &_config;
+            DsgccClientImplementation::Config& _config;
             bool _isRunning;
             string _channels;
 
             virtual uint32_t Worker() override;
             void Setup(unsigned int port, unsigned int dsgType, unsigned int dsgId);
-            void process(unsigned char *pBuf, ssize_t len);
+            void process(unsigned char* pBuf, ssize_t len);
             void HexDump(const char* label, const std::string& msg, uint16_t charsPerLine = 32);
         };
 
@@ -81,13 +83,16 @@ namespace Plugin {
 
         public:
             ClientCallbackService()
-                : Core::Thread(Core::Thread::DefaultStackSize(), _T("DsgClientCallbackService")) {
+                : Core::Thread(Core::Thread::DefaultStackSize(), _T("DsgClientCallbackService"))
+            {
             }
-            virtual ~ClientCallbackService() {
+            virtual ~ClientCallbackService()
+            {
             }
 
         public:
-            void Dispose() {
+            void Dispose()
+            {
                 TRACE_L1("%s: Done!!! ", __FUNCTION__);
             }
 

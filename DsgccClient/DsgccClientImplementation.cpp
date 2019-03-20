@@ -1,20 +1,19 @@
-#include <sstream>
 #include "DsgccClientImplementation.h"
+#include <iomanip>
+#include <sstream>
 
 #include <refsw/dsgcc_client_api.h>
 #define CLIENTPORTKEEPALIVE 50
-#define MAXLINE     4096
+#define MAXLINE 4096
 
 extern "C" {
 #include "refsw/BcmSharedMemory.h"
-#include "refsw/dsgccClientRegistration_rpcClient.h"
 #include "refsw/dsgccClientCallback_rpcServer.h"
+#include "refsw/dsgccClientRegistration_rpcClient.h"
 
-void dsgcc_ClientNotification(struct dsgccClientNotification *clientNotification);
-extern char* TunnelStatusTypeName( unsigned int value );
+void dsgcc_ClientNotification(struct dsgccClientNotification* clientNotification);
+extern char* TunnelStatusTypeName(unsigned int value);
 }
-
-bool parse_svct(unsigned char *buf, int len, struct vcm **vcmlist, int vctidfilter, int &vct_lookup_index);
 
 namespace WPEFramework {
 namespace Plugin {
@@ -43,6 +42,7 @@ namespace Plugin {
     {
         this->str = str;
     }
+
     string DsgccClientImplementation::GetChannels() const
     {
         TRACE_L1("Entering %s", __FUNCTION__);
@@ -50,6 +50,7 @@ namespace Plugin {
     }
 
     uint32_t DsgccClientImplementation::Activity::Worker() {
+
         TRACE_L1("Entering %s state=%d", __PRETTY_FUNCTION__, Core::Thread::State());
         Setup(_config.DsgPort, _config.DsgType, _config.DsgId);
 
@@ -69,7 +70,7 @@ namespace Plugin {
         int len;
         int sharedMemoryId;
 
-        CLIENT *handle = NULL;
+        CLIENT* handle = NULL;
 
         bzero((char *) regInfo, sizeof(struct dsgClientRegInfo));
         regInfo->clientPort = port;
@@ -89,12 +90,12 @@ namespace Plugin {
         regInfo->idType |= 0x00010000;    // strip IP/UDP headers
         retVal = registerdsgclient(regInfo);
 
-        if( retVal == DSGCC_SUCCESS ) {
+        if (retVal == DSGCC_SUCCESS) {
             TRACE_L1("Tunnel request is registered successfully and tunnel is pending.");
         }
 
         retVal = dsgcc_KeepAliveClient(&regInfoData);
-        if(retVal & DSGCC_CLIENT_REGISTERED) {
+        if (retVal & DSGCC_CLIENT_REGISTERED) {
             // Get tunnel status = MSB 16 bits
             retVal >>= 16;
             TRACE_L1("tunnel status %s", TunnelStatusTypeName(retVal));
@@ -136,17 +137,16 @@ namespace Plugin {
     }
 
     uint32_t DsgccClientImplementation::ClientCallbackService::Worker() {
+      
         TRACE_L1("Starting ClientCallbackService::%s", __FUNCTION__);
         dsgClientCallbackSvcRun();
         return (Core::infinite);
     }
 
-    void dsgcc_ClientNotification(struct dsgccClientNotification *clientNotification)
+    void dsgcc_ClientNotification(struct dsgccClientNotification* clientNotification)
     {
-       TRACE_L1("%s: NOTIFICATION from DSG-CC -> %s", __FUNCTION__, TunnelStatusTypeName(clientNotification->eventType));
+        TRACE_L1("%s: NOTIFICATION from DSG-CC -> %s", __FUNCTION__, TunnelStatusTypeName(clientNotification->eventType));
     }
 
 } // namespace Plugin
 } // namespace WPEFramework
-
-

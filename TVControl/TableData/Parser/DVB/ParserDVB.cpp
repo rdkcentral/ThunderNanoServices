@@ -1,18 +1,15 @@
-#include "Module.h"
 #include "ParserDVB.h"
+#include "Module.h"
 
 using namespace WPEFramework;
 #define READ_16(buf1, buf0) ((uint16_t)(buf1 << 8 | buf0))
 #define READ_32(buf3, buf2, buf1, buf0) ((uint32_t)((buf3 << 24) | (buf2 << 16) | (buf1 << 8) | buf0))
-#define      GETBITS(Source, MSBit, LSBit)   ( \
-            ((((1 << (MSBit - LSBit + 1))-1) << LSBit) & Source) >> LSBit)
+#define GETBITS(Source, MSBit, LSBit) ( \
+    ((((1 << (MSBit - LSBit + 1)) - 1) << LSBit) & Source) >> LSBit)
 
 uint32_t Bcd32ToInteger(const uint8_t b0, const uint8_t b1, const uint8_t b2, const uint8_t b3)
 {
-    return ((b0 >> 4) & 0x0f) * 10000000 + (b0 & 0x0f) * 1000000 +
-        ((b1 >> 4) & 0x0f) * 100000   + (b1 & 0x0f) * 10000 +
-        ((b2 >> 4) & 0x0f) * 1000     + (b2 & 0x0f) * 100 +
-        ((b3 >> 4) & 0x0f) * 10       + (b3 & 0x0f);
+    return ((b0 >> 4) & 0x0f) * 10000000 + (b0 & 0x0f) * 1000000 + ((b1 >> 4) & 0x0f) * 100000 + (b1 & 0x0f) * 10000 + ((b2 >> 4) & 0x0f) * 1000 + (b2 & 0x0f) * 100 + ((b3 >> 4) & 0x0f) * 10 + (b3 & 0x0f);
 }
 
 uint32_t BcdToInteger(uint32_t bcd)
@@ -41,9 +38,9 @@ time_t DvbdateToUnixtime(DvbDate dvbDate)
     memset(&tm, 0, sizeof(tm));
     mjd = READ_16(dvbDate[0], dvbDate[1]);
 
-    tm.tm_year = (int) ((mjd - 15078.2) / 365.25);
-    tm.tm_mon = (int) (((mjd - 14956.1) - (int) (tm.tm_year * 365.25)) / 30.6001);
-    tm.tm_mday = (int) mjd - 14956 - (int) (tm.tm_year * 365.25) - (int) (tm.tm_mon * 30.6001);
+    tm.tm_year = (int)((mjd - 15078.2) / 365.25);
+    tm.tm_mon = (int)(((mjd - 14956.1) - (int)(tm.tm_year * 365.25)) / 30.6001);
+    tm.tm_mday = (int)mjd - 14956 - (int)(tm.tm_year * 365.25) - (int)(tm.tm_mon * 30.6001);
     if ((tm.tm_mon == 14) || (tm.tm_mon == 15))
         k = 1;
     tm.tm_year += k;
@@ -79,10 +76,10 @@ time_t DvbhhmmToSeconds(DvbHHMM dvbhhmm)
 void ParserDVB::ReleaseFilters()
 {
     if (_baseFiltersSet) {
-        GetSIHandler()->StopFilter(SDT_PID, 0/*Placeholder*/);
-        GetSIHandler()->StopFilter(NIT_PID, 0/*Placeholder*/);
-        GetSIHandler()->StopFilter(EIT_PID, 0/*Placeholder*/);
-        GetSIHandler()->StopFilter(TDT_PID, 0/*Placeholder*/);
+        GetSIHandler()->StopFilter(SDT_PID, 0 /*Placeholder*/);
+        GetSIHandler()->StopFilter(NIT_PID, 0 /*Placeholder*/);
+        GetSIHandler()->StopFilter(EIT_PID, 0 /*Placeholder*/);
+        GetSIHandler()->StopFilter(TDT_PID, 0 /*Placeholder*/);
         _baseFiltersSet = false;
     }
 }
@@ -149,7 +146,7 @@ ParserDVB::~ParserDVB()
     TRACE(Trace::Information, (_T("Destructor Completed")));
 }
 
-std::string ParserDVB::ConvertToUnicode(uint8_t *sourceAddr, uint8_t sourceLength)
+std::string ParserDVB::ConvertToUnicode(uint8_t* sourceAddr, uint8_t sourceLength)
 {
     std::string unicode;
     switch (*sourceAddr) {
@@ -165,37 +162,37 @@ std::string ParserDVB::ConvertToUnicode(uint8_t *sourceAddr, uint8_t sourceLengt
     case ISO8859_15:
         if (sourceLength > 1) {
             sourceAddr++;
-            unicode = GetUnicode(sourceAddr, sourceLength-1);
+            unicode = GetUnicode(sourceAddr, sourceLength - 1);
         }
         break;
     case ISO8859:
         sourceAddr += 1;
-        if ((sourceLength > 3) && (*(sourceAddr) == 0x00) ) {
+        if ((sourceLength > 3) && (*(sourceAddr) == 0x00)) {
             sourceAddr += 1;
             if (*(sourceAddr) > 0x00 && *(sourceAddr) < 0x10) {
                 sourceAddr += 1;
-                unicode = GetUnicode(sourceAddr, sourceLength-3);
+                unicode = GetUnicode(sourceAddr, sourceLength - 3);
             }
         }
         break;
     case ISO10646_1:
         if (sourceLength > 1) {
             sourceAddr += 1;
-            unicode = GetUnicode(sourceAddr, sourceLength-1);
+            unicode = GetUnicode(sourceAddr, sourceLength - 1);
         }
         break;
     case 0x13:
         break;
     case 0x15:
         break;
-    default :
+    default:
         unicode = GetUnicode(sourceAddr, sourceLength);
         break;
     }
     return unicode;
 }
 
-std::string ParserDVB::GetUnicode(uint8_t *sourceAddr, uint8_t sourceLength)
+std::string ParserDVB::GetUnicode(uint8_t* sourceAddr, uint8_t sourceLength)
 {
     std::string name;
     uint8_t length;
@@ -275,8 +272,20 @@ void ParserDVB::ParseData(uint8_t* siData, uint32_t frequency)
 
     case EVENT_INFORMATION_PF_TABLE_ID:
     case EVENT_INFORMATION_TABLE_ID_START:
-    case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x56: case 0x57: // EIT section for actual schedule.
-    case 0x58: case 0x59: case 0x5a: case 0x5b: case 0x5c: case 0x5d: case 0x5e:
+    case 0x51:
+    case 0x52:
+    case 0x53:
+    case 0x54:
+    case 0x55:
+    case 0x56:
+    case 0x57: // EIT section for actual schedule.
+    case 0x58:
+    case 0x59:
+    case 0x5a:
+    case 0x5b:
+    case 0x5c:
+    case 0x5d:
+    case 0x5e:
     case EVENT_INFORMATION_TABLE_ID_END: {
         if (_isTimeParsed)
             ParseEIT(siData, sectionLength, tableIdExt, versionNo, sectionNo);
@@ -310,13 +319,13 @@ void ParserDVB::ParseData(uint8_t* siData, uint32_t frequency)
 void ParserDVB::SendBaseTableRequest()
 {
     TRACE(Trace::Information, (_T("Requesting SDT")));
-    GetSIHandler()->StartFilter(SDT_PID, 0/*Placeholder*/);
+    GetSIHandler()->StartFilter(SDT_PID, 0 /*Placeholder*/);
     TRACE(Trace::Information, (_T("Requesting NIT")));
-    GetSIHandler()->StartFilter(NIT_PID, 0/*Placeholder*/);
+    GetSIHandler()->StartFilter(NIT_PID, 0 /*Placeholder*/);
     TRACE(Trace::Information, (_T("Requesting EIT")));
-    GetSIHandler()->StartFilter(EIT_PID, 0/*Placeholder*/);
-    GetSIHandler()->StartFilter(TDT_PID, 0/*Placeholder*/);
-    _baseFiltersSet  =  true;
+    GetSIHandler()->StartFilter(EIT_PID, 0 /*Placeholder*/);
+    GetSIHandler()->StartFilter(TDT_PID, 0 /*Placeholder*/);
+    _baseFiltersSet = true;
 }
 
 void ParserDVB::ParseTerrestrialDeliverySystemDescriptor(uint8_t* buf)
@@ -427,12 +436,12 @@ void ParserDVB::ParseContentDescriptor(uint8_t* buf)
     buf += DESCR_HEADER_LEN;
     uint8_t contentNibbleLevel1;
     uint8_t contentNibbleLevel2;
-    char gen[16][50] = {"Undefined Content", "Movie/Drama", "News/Current Affairs",
+    char gen[16][50] = { "Undefined Content", "Movie/Drama", "News/Current Affairs",
         "Show/Game Show", "Sports", "Children's/Youth Programmes", "Music/Ballet/Dance",
         "Arts/Culture (without music)", "Social/Political Issues/Economics",
         "Education/Science/Factual Topics", "Leisure Hobbies",
         "Special Characteristics", "reserved for future use",
-        "reserved for future use", "reserved for future use", "User Defined"};
+        "reserved for future use", "reserved for future use", "User Defined" };
     while (descriptorLength > 0) {
         contentNibbleLevel1 = GETBITS(buf[0], 7, 4);
         contentNibbleLevel2 = GETBITS(buf[0], 3, 0);
@@ -603,8 +612,8 @@ void ParserDVB::ParsePMT(uint8_t* buf, uint16_t sectionLength, uint16_t programN
 
         if (sectionLength < descriptorsLoopLen) {
             TRACE(Trace::Error, (_T("section too short: service_id == 0x%02x, sectionLength == %i, "
-                "descriptorsLoopLen == %i"),
-                programNum, sectionLength, descriptorsLoopLen));
+                                    "descriptorsLoopLen == %i"),
+                                    programNum, sectionLength, descriptorsLoopLen));
             break;
         }
 
@@ -620,8 +629,8 @@ void ParserDVB::ParseNIT(uint8_t* buf, uint16_t sectionLength, uint16_t networkI
     uint16_t descriptorsLoopLen = READ_16(GETBITS(buf[0], 3, 0), buf[1]);
     if (sectionLength < descriptorsLoopLen) {
         TRACE(Trace::Error, (_T("section too short: networkId == 0x%04x, sectionLength == %i, "
-            "descriptorsLoopLen == %i"),
-            networkId, sectionLength, descriptorsLoopLen));
+                                "descriptorsLoopLen == %i"),
+                                networkId, sectionLength, descriptorsLoopLen));
         return;
     }
 
@@ -683,8 +692,8 @@ void ParserDVB::ParseBAT(uint8_t* buf, uint16_t sectionLength, uint16_t bouquetI
 
     if (sectionLength < descriptorsLoopLen) {
         TRACE(Trace::Error, (_T("section too short: bouquetId == 0x%04x, sectionLength == %i, "
-            "descriptorsLoopLen == %i"),
-            bouquetId, sectionLength, descriptorsLoopLen));
+                                "descriptorsLoopLen == %i"),
+                                bouquetId, sectionLength, descriptorsLoopLen));
         return;
     }
 
@@ -747,7 +756,7 @@ void ParserDVB::ParseSDT(uint8_t* buf, uint16_t sectionLength, uint16_t transpor
     if (it != _sdtHeaderMap.end()) {
         if (sdtHeader->Version() == it->second->Version()) {
             if (lastSectionNo == it->second->SectionNumber())
-                return;                 // Skip.
+                return; // Skip.
         }
         it->second = sdtHeader;
         TRACE_L1("%s: originalNetworkId=%d transportStreamId=%d versionNo=%d sectionNo=%d lastSectionNo=%d",
@@ -758,7 +767,7 @@ void ParserDVB::ParseSDT(uint8_t* buf, uint16_t sectionLength, uint16_t transpor
 
         _sdtHeaderMap.insert(std::make_pair(key, sdtHeader));
         TRACE_L1("%s: originalNetworkId=%d transportStreamId=%d versionNo=%d sectionNo=%d lastSectionNo=%d, _sdtHeaderMap.size=%d",
-                __FUNCTION__, originalNetworkId, transportStreamId, versionNo, sectionNo, lastSectionNo, _sdtHeaderMap.size());
+            __FUNCTION__, originalNetworkId, transportStreamId, versionNo, sectionNo, lastSectionNo, _sdtHeaderMap.size());
     }
 
     while (sectionLength >= SDT_LOOP_LEN) {
@@ -770,17 +779,15 @@ void ParserDVB::ParseSDT(uint8_t* buf, uint16_t sectionLength, uint16_t transpor
 
         if (sectionLength < descriptorsLoopLen) {
             TRACE(Trace::Error, (_T("section too short: service_id == 0x%02x, sectionLength == %i, "
-                "descriptorsLoopLen == %i"),
-            serviceId, sectionLength,
-            descriptorsLoopLen));
+                                    "descriptorsLoopLen == %i"),
+                                    serviceId, sectionLength, descriptorsLoopLen));
             break;
         }
 
         RunningMode running;
         running = static_cast<RunningMode>((buf[3] >> 5) & 0x7);
         TRACE_L4("running_status = %s",
-            running == NotRunning ? "not running" : running == StartsSoon ?
-            "starts soon" : running == Pausing ? "pausing" : running == Running ? "running" : "???");
+            running == NotRunning ? "not running" : running == StartsSoon ? "starts soon" : running == Pausing ? "pausing" : running == Running ? "running" : "???");
 
         std::tuple<uint16_t, uint16_t, uint16_t> key(originalNetworkId, transportStreamId, serviceId);
         _sdtInfo.insert(key);
@@ -797,8 +804,7 @@ void ParserDVB::ParseSDT(uint8_t* buf, uint16_t sectionLength, uint16_t transpor
             _serviceIdLCNMap[_channel.serviceId] = lcn;
         }
         _channel.channelNum = _serviceIdLCNMap[_channel.serviceId];
-        _epgDB.InsertChannelInfo(frequency, modulation, _channel.serviceName.c_str(), _channel.serviceId, _channel.transportStreamId
-        , originalNetworkId, std::to_string(_channel.channelNum), _channel.serviceId, "");
+        _epgDB.InsertChannelInfo(frequency, modulation, _channel.serviceName.c_str(), _channel.serviceId, _channel.transportStreamId, originalNetworkId, std::to_string(_channel.channelNum), _channel.serviceId, "");
         sectionLength -= descriptorsLoopLen + SDT_LOOP_LEN;
         buf += descriptorsLoopLen + SDT_LOOP_LEN;
     }
@@ -860,8 +866,7 @@ void ParserDVB::ParseEIT(uint8_t* buf, uint16_t sectionLength, uint16_t serviceI
         ParseDescriptors(EitTable, buf + EIT_LOOP_LEN, descriptorsLoopLen);
         std::string audioLanguages, subtitleLanguages;
         GetLanguages(audioLanguages, subtitleLanguages);
-        _epgDB.InsertProgramInfo(_event.serviceId, _event.eventId, _event.startTime, _event.duration, _event.eventName.c_str()
-            , "", subtitleLanguages, _event.genre, audioLanguages);
+        _epgDB.InsertProgramInfo(_event.serviceId, _event.eventId, _event.startTime, _event.duration, _event.eventName.c_str(), "", subtitleLanguages, _event.genre, audioLanguages);
         sectionLength -= descriptorsLoopLen + EIT_LOOP_LEN;
         buf += descriptorsLoopLen + EIT_LOOP_LEN;
     }
@@ -961,7 +966,7 @@ uint32_t ParserDVB::Worker()
     }
     while (IsRunning() == true) {
         TRACE_L4(_T("Parser running = %d \n"), IsRunning());
-        std::pair<uint8_t*, uint16_t>  dataElement;
+        std::pair<uint8_t*, uint16_t> dataElement;
         dataElement = DataQueue::GetInstance().Pop();
         TRACE_L4("Worker data obtained", NULL);
         if (std::get<0>(dataElement)) {

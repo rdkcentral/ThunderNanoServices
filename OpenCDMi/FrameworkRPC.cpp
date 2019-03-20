@@ -4,10 +4,10 @@
 // DRM engines.
 #include <interfaces/IDRM.h>
 
-// Get in the definitions required for access to the OCDM 
+// Get in the definitions required for access to the OCDM
 // counter part living in the applications
-#include <ocdm/IOCDM.h>
 #include <ocdm/DataExchange.h>
+#include <ocdm/IOCDM.h>
 
 #include <interfaces/IContentDecryption.h>
 
@@ -18,7 +18,6 @@
 extern "C" {
 
 typedef ::CDMi::ISystemFactory* (*GetDRMSystemFunction)();
-
 }
 
 namespace WPEFramework {
@@ -36,75 +35,77 @@ namespace Plugin {
             std::string Name;
             CDMi::ISystemFactory* Factory;
         };
- 
-        class ExternalAccess : public RPC::Communicator
-        {
+
+        class ExternalAccess : public RPC::Communicator {
         private:
             ExternalAccess() = delete;
-            ExternalAccess(const ExternalAccess &) = delete;
-            ExternalAccess & operator=(const ExternalAccess &) = delete;
+            ExternalAccess(const ExternalAccess&) = delete;
+            ExternalAccess& operator=(const ExternalAccess&) = delete;
 
         public:
-            ExternalAccess(const Core::NodeId & source, ::OCDM::IAccessorOCDM* parentInterface)
-                : RPC::Communicator(source, Core::ProxyType< RPC::InvokeServerType<4, 1> >::Create(), _T(""))
-		, _parentInterface(parentInterface)
+            ExternalAccess(const Core::NodeId& source, ::OCDM::IAccessorOCDM* parentInterface)
+                : RPC::Communicator(source, Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create(), _T(""))
+                , _parentInterface(parentInterface)
             {
-		Open(Core::infinite);
+                Open(Core::infinite);
             }
             ~ExternalAccess()
             {
                 Close(Core::infinite);
             }
 
-		private:
-			virtual void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) {
-				void* result = nullptr;
+        private:
+            virtual void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId)
+            {
+                void* result = nullptr;
 
-				// Currently we only support version 1 of the IRPCLink :-)
-				if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) &&
-					((interfaceId == ::OCDM::IAccessorOCDM::ID) || (interfaceId == Core::IUnknown::ID))) {
-					// Reference count our parent
-					_parentInterface->AddRef();
+                // Currently we only support version 1 of the IRPCLink :-)
+                if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) && ((interfaceId == ::OCDM::IAccessorOCDM::ID) || (interfaceId == Core::IUnknown::ID))) {
+                    // Reference count our parent
+                    _parentInterface->AddRef();
 
-					// Allright, respond with the interface.
-					result = _parentInterface;
-				}
-				return (result);
-			}
+                    // Allright, respond with the interface.
+                    result = _parentInterface;
+                }
+                return (result);
+            }
 
         private:
-		::OCDM::IAccessorOCDM* _parentInterface;
+            ::OCDM::IAccessorOCDM* _parentInterface;
         };
 
         class AccessorOCDM : public ::OCDM::IAccessorOCDM {
         private:
-            AccessorOCDM () = delete;
-            AccessorOCDM (const AccessorOCDM&) = delete;
-            AccessorOCDM& operator= (const AccessorOCDM&) = delete;
-        
+            AccessorOCDM() = delete;
+            AccessorOCDM(const AccessorOCDM&) = delete;
+            AccessorOCDM& operator=(const AccessorOCDM&) = delete;
+
             class BufferAdministrator {
             private:
                 BufferAdministrator() = delete;
                 BufferAdministrator(const BufferAdministrator&) = delete;
-                BufferAdministrator& operator= (const BufferAdministrator&) = delete;
+                BufferAdministrator& operator=(const BufferAdministrator&) = delete;
 
             public:
                 BufferAdministrator(const string pathName)
                     : _adminLock()
-                    , _basePath(Core::Directory::Normalize(pathName)) 
-                    , _occupation(0) {
+                    , _basePath(Core::Directory::Normalize(pathName))
+                    , _occupation(0)
+                {
                 }
-                ~BufferAdministrator() {
+                ~BufferAdministrator()
+                {
                 }
 
             public:
-                bool AquireBuffer (string& locator) {
+                bool AquireBuffer(string& locator)
+                {
                     uint8_t index = 0;
-                 
+
                     locator.clear();
 
                     _adminLock.Lock();
-   
+
                     while ((index < (sizeof(_occupation) * 8)) && ((_occupation & (1 << index)) != 0)) {
                         index++;
                     }
@@ -122,13 +123,14 @@ namespace Plugin {
 
                     return (locator.empty() == false);
                 }
-                bool ReleaseBuffer (const string& locator) {
+                bool ReleaseBuffer(const string& locator)
+                {
 
                     bool released = false;
 
                     if (locator.compare(0, _basePath.length(), _basePath) == 0) {
-                        string actualFile (locator.substr(_basePath.length()));
-                        uint8_t baseLength((sizeof(BufferFileName)/sizeof(TCHAR))-1);
+                        string actualFile(locator.substr(_basePath.length()));
+                        uint8_t baseLength((sizeof(BufferFileName) / sizeof(TCHAR)) - 1);
 
                         if (actualFile.compare(0, baseLength, BufferFileName) == 0) {
                             // Than the last part is the number..
@@ -136,24 +138,22 @@ namespace Plugin {
 
                             if (number <= (sizeof(_occupation) * 8)) {
                                 _adminLock.Lock();
- 
+
                                 if ((_occupation & (1 << number)) != 0) {
                                     _occupation ^= (1 << number);
                                     released = true;
-                                }
-                                else {
+                                } else {
                                     // Freeing a buffer that is already free sounds dangerous !!!
                                     ASSERT(false);
                                 }
 
                                 _adminLock.Unlock();
-
                             }
                         }
                     }
                     return (released);
                 }
-               
+
             private:
                 Core::CriticalSection _adminLock;
                 string _basePath;
@@ -165,25 +165,27 @@ namespace Plugin {
             private:
                 SessionImplementation() = delete;
                 SessionImplementation(const SessionImplementation&) = delete;
-                SessionImplementation& operator= (const SessionImplementation&) = delete;
+                SessionImplementation& operator=(const SessionImplementation&) = delete;
 
-                class DataExchange: public ::OCDM::DataExchange, public Core::Thread {
+                class DataExchange : public ::OCDM::DataExchange, public Core::Thread {
                 private:
                     DataExchange() = delete;
                     DataExchange(const DataExchange&) = delete;
-                    DataExchange& operator= (const DataExchange&) = delete;
+                    DataExchange& operator=(const DataExchange&) = delete;
 
                 public:
-                    DataExchange(CDMi::IMediaKeySession* mediaKeys, const string& name, const uint32_t defaultSize) 
+                    DataExchange(CDMi::IMediaKeySession* mediaKeys, const string& name, const uint32_t defaultSize)
                         : ::OCDM::DataExchange(name, defaultSize)
                         , Core::Thread(Core::Thread::DefaultStackSize(), _T("DRMSessionThread"))
                         , _mediaKeys(mediaKeys)
                         , _sessionKey(nullptr)
-                        , _sessionKeyLength(0) {
+                        , _sessionKeyLength(0)
+                    {
                         Core::Thread::Run();
                         TRACE_L1("Constructing buffer server side: %p - %s", this, name.c_str());
                     }
-                    ~DataExchange() {
+                    ~DataExchange()
+                    {
                         TRACE_L1("Destructing buffer server side: %p - %s", this, ::OCDM::DataExchange::Name().c_str());
                         // Make sure the thread reaches a HALT.. We are done.
                         Core::Thread::Stop();
@@ -191,14 +193,15 @@ namespace Plugin {
                         // If the thread is waiting for a semaphore, fake a signal :-)
                         Produced();
 
-                        Core::Thread::Wait (Core::Thread::STOPPED, Core::infinite);
+                        Core::Thread::Wait(Core::Thread::STOPPED, Core::infinite);
                     }
 
                 private:
-                    virtual uint32_t Worker () override {
+                    virtual uint32_t Worker() override
+                    {
 
                         while (IsRunning() == true) {
-                        
+
                             uint32_t clearContentSize = 0;
                             uint8_t* clearContent = nullptr;
 
@@ -206,12 +209,12 @@ namespace Plugin {
 
                             if (IsRunning() == true) {
                                 uint8_t keyIdLength = 0;
-				const uint8_t* keyIdData = KeyId(keyIdLength);
+                                const uint8_t* keyIdData = KeyId(keyIdLength);
                                 int cr = _mediaKeys->Decrypt(
                                     _sessionKey,
                                     _sessionKeyLength,
-                                    nullptr,       //subsamples
-                                    0,          //number of subsamples
+                                    nullptr, //subsamples
+                                    0, //number of subsamples
                                     IVKey(),
                                     IVKeyLength(),
                                     Buffer(),
@@ -244,7 +247,7 @@ namespace Plugin {
 
                         return (Core::infinite);
                     }
- 
+
                 private:
                     CDMi::IMediaKeySession* _mediaKeys;
                     uint8_t* _sessionKey;
@@ -252,19 +255,21 @@ namespace Plugin {
                 };
 
                 // IMediaKeys defines the MediaKeys interface.
-                class Sink: public CDMi::IMediaKeySessionCallback {
+                class Sink : public CDMi::IMediaKeySessionCallback {
                 private:
                     Sink() = delete;
                     Sink(const Sink&) = delete;
-                    Sink& operator= (const Sink&) = delete;
+                    Sink& operator=(const Sink&) = delete;
 
                 public:
-                    Sink(SessionImplementation* parent, ::OCDM::ISession::ICallback* callback) 
+                    Sink(SessionImplementation* parent, ::OCDM::ISession::ICallback* callback)
                         : _parent(*parent)
-                        , _callback(callback) {
+                        , _callback(callback)
+                    {
                         _callback->AddRef();
                     }
-                    virtual ~Sink() {
+                    virtual ~Sink()
+                    {
                         if (_callback != nullptr) {
                             Revoke(_callback);
                         }
@@ -273,32 +278,36 @@ namespace Plugin {
                 public:
                     // Event fired when a key message is successfully created.
                     virtual void OnKeyMessage(
-                        const uint8_t *f_pbKeyMessage, //__in_bcount(f_cbKeyMessage)
+                        const uint8_t* f_pbKeyMessage, //__in_bcount(f_cbKeyMessage)
                         uint32_t f_cbKeyMessage, //__in
-                        char *f_pszUrl) override {
+                        char* f_pszUrl) override
+                    {
                         TRACE(Trace::Information, ("OnKeyMessage(%s)", f_pszUrl));
-			if (_callback != nullptr) {
+                        if (_callback != nullptr) {
                             std::string url(f_pszUrl, strlen(f_pszUrl));
                             _callback->OnKeyMessage(f_pbKeyMessage, f_cbKeyMessage, url);
                         }
                     }
                     // Event fired when MediaKeySession has found a usable key.
-                    virtual void OnKeyReady() override {
+                    virtual void OnKeyReady() override
+                    {
                         TRACE(Trace::Information, ("OnKeyReady()"));
-			if (_callback != nullptr) {
+                        if (_callback != nullptr) {
                             _callback->OnKeyReady();
                         }
                     }
                     // Event fired when MediaKeySession encounters an error.
-                    virtual void OnKeyError( int16_t f_nError, ::OCDM::OCDM_RESULT f_crSysError, const char* errorMessage) override {
+                    virtual void OnKeyError(int16_t f_nError, ::OCDM::OCDM_RESULT f_crSysError, const char* errorMessage) override
+                    {
                         TRACE(Trace::Information, ("OnKeyError(%d,%s)", f_nError, errorMessage));
-			if (_callback != nullptr) {
+                        if (_callback != nullptr) {
                             std::string message(errorMessage, strlen(errorMessage));
                             _callback->OnKeyError(f_nError, f_crSysError, message);
                         }
                     }
                     //Event fired on key status update
-                    virtual void OnKeyStatusUpdate(const char* keyMessage, const uint8_t buffer[], const uint8_t length) override {
+                    virtual void OnKeyStatusUpdate(const char* keyMessage, const uint8_t buffer[], const uint8_t length) override
+                    {
                         ::OCDM::ISession::KeyStatus key;
 
                         TRACE(Trace::Information, ("OnKeyStatusUpdate(%s)", keyMessage));
@@ -314,21 +323,21 @@ namespace Plugin {
 
                         _parent.UpdateKeyStatus(key, buffer, length);
 
-			if (_callback != nullptr) {
+                        if (_callback != nullptr) {
                             _callback->OnKeyStatusUpdate(key);
                         }
                     }
-                    void Revoke (::OCDM::ISession::ICallback* callback) {
+                    void Revoke(::OCDM::ISession::ICallback* callback)
+                    {
                         if ((_callback != nullptr) && (_callback == callback)) {
                             _callback->Release();
                             _callback = nullptr;
-                        }
-                        else {
+                        } else {
                             TRACE_L1("Additional request for Revoking the callback!! %p", callback);
                         }
                     }
 
-               private:
+                private:
                     SessionImplementation& _parent;
                     ::OCDM::ISession::ICallback* _callback;
                 };
@@ -336,12 +345,12 @@ namespace Plugin {
             public:
                 SessionImplementation(
                     AccessorOCDM* parent,
-                    const std::string keySystem, 
-                    CDMi::IMediaKeySession* mediaKeySession, 
-                    ::OCDM::ISession::ICallback* callback, 
-                    const string bufferName, 
+                    const std::string keySystem,
+                    CDMi::IMediaKeySession* mediaKeySession,
+                    ::OCDM::ISession::ICallback* callback,
+                    const string bufferName,
                     const uint32_t defaultSize,
-                    const CommonEncryptionData* sessionData) 
+                    const CommonEncryptionData* sessionData)
                     : _parent(*parent)
                     , _refCount(1)
                     , _keySystem(keySystem)
@@ -349,20 +358,22 @@ namespace Plugin {
                     , _mediaKeySession(mediaKeySession)
                     , _sink(this, callback)
                     , _buffer(new DataExchange(mediaKeySession, bufferName, defaultSize))
-                    , _cencData(*sessionData) {
+                    , _cencData(*sessionData)
+                {
 
-                    ASSERT (parent != nullptr);
-                    ASSERT (sessionData != nullptr);
-                    ASSERT (_mediaKeySession != nullptr);
+                    ASSERT(parent != nullptr);
+                    ASSERT(sessionData != nullptr);
+                    ASSERT(_mediaKeySession != nullptr);
 
                     _mediaKeySession->Run(&_sink);
                     TRACE(Trace::Information, ("Server::Session::Session(%s,%s,%s) => %p", _keySystem.c_str(), _sessionId.c_str(), bufferName.c_str(), this));
                     TRACE_L1("Constructed the Session Server side: %p", this);
                 }
-                virtual ~SessionImplementation() {
+                virtual ~SessionImplementation()
+                {
 
                     TRACE_L1("Destructing the Session Server side: %p", this);
-                    // this needs to be done in a thread safe way. Leave it up to 
+                    // this needs to be done in a thread safe way. Leave it up to
                     // the parent to lock handing out new entries before we clear.
                     _parent.Remove(this, _keySystem, _mediaKeySession);
 
@@ -373,58 +384,69 @@ namespace Plugin {
                 }
 
             public:
-                inline bool IsSupported (const CommonEncryptionData& keyIds, const string& keySystem) const {
+                inline bool IsSupported(const CommonEncryptionData& keyIds, const string& keySystem) const
+                {
                     return ((keySystem == _keySystem) && (_cencData.IsSupported(keyIds) == true));
                 }
-                inline bool HasKeyId(const uint8_t keyId[]) {
+                inline bool HasKeyId(const uint8_t keyId[])
+                {
                     return (_cencData.HasKeyId(keyId));
                 }
-                virtual std::string SessionId() const override {
+                virtual std::string SessionId() const override
+                {
                     return (_sessionId);
                 }
 
-                virtual ::OCDM::ISession::KeyStatus Status() const override {
+                virtual ::OCDM::ISession::KeyStatus Status() const override
+                {
                     return (_cencData.Status());
                 }
-                
-                virtual std::string BufferId() const override {
+
+                virtual std::string BufferId() const override
+                {
                     return (_buffer->Name());
                 }
 
                 // Loads the data stored for the specified session into the cdm object
-                virtual ::OCDM::OCDM_RESULT Load() override {
+                virtual ::OCDM::OCDM_RESULT Load() override
+                {
                     TRACE(Trace::Information, ("Load()"));
-                    return(_mediaKeySession->Load());
+                    return (_mediaKeySession->Load());
                 }
 
                 // Process a key message response.
-                virtual void Update( const uint8_t* keyMessage, const uint16_t keyLength) override {
+                virtual void Update(const uint8_t* keyMessage, const uint16_t keyLength) override
+                {
                     TRACE(Trace::Information, ("Update(%d)", keyLength));
-                    return(_mediaKeySession->Update(keyMessage, keyLength));
+                    return (_mediaKeySession->Update(keyMessage, keyLength));
                 }
 
                 //Removes all license(s) and key(s) associated with the session
-                virtual ::OCDM::OCDM_RESULT Remove() override {
+                virtual ::OCDM::OCDM_RESULT Remove() override
+                {
                     TRACE(Trace::Information, ("Remove()"));
-                    return(_mediaKeySession->Remove());
+                    return (_mediaKeySession->Remove());
                 }
 
                 //We are done with the Session, close what we can..
-                virtual void Close() override {
+                virtual void Close() override
+                {
                     TRACE(Trace::Information, ("Close()"));
 
                     _mediaKeySession->Close();
                 }
 
-                virtual void Revoke(OCDM::ISession::ICallback* callback) override {
-                    _sink.Revoke (callback);
+                virtual void Revoke(OCDM::ISession::ICallback* callback) override
+                {
+                    _sink.Revoke(callback);
                 }
 
                 BEGIN_INTERFACE_MAP(Session)
-                    INTERFACE_ENTRY(::OCDM::ISession)
+                INTERFACE_ENTRY(::OCDM::ISession)
                 END_INTERFACE_MAP
 
-                void ReportKeyIds(::OCDM::IAccessorOCDM::INotification* callback) const {
+                void ReportKeyIds(::OCDM::IAccessorOCDM::INotification* callback) const
+                {
 
                     _adminLock.Lock();
 
@@ -432,7 +454,7 @@ namespace Plugin {
                     CommonEncryptionData::Iterator index(_cencData.Keys());
 
                     while (index.Next() == true) {
-                        const CommonEncryptionData::KeyId& entry (index.Current());
+                        const CommonEncryptionData::KeyId& entry(index.Current());
                         callback->KeyChange(_sessionId, entry.Id(), entry.Length(), entry.Status());
                     }
 
@@ -440,11 +462,12 @@ namespace Plugin {
                 }
 
             private:
-                inline void UpdateKeyStatus(::OCDM::ISession::KeyStatus status, const uint8_t* buffer, const uint8_t length) {
+                inline void UpdateKeyStatus(::OCDM::ISession::KeyStatus status, const uint8_t* buffer, const uint8_t length)
+                {
 
                     // We assume that these UpdateKeyStatusses do not occure in a multithreaded fashion, otherwise we need to lock it.
                     CommonEncryptionData::KeyId keyId;
-		    if (buffer != nullptr) {
+                    if (buffer != nullptr) {
                         keyId = CommonEncryptionData::KeyId(CommonEncryptionData::COMMON, buffer, length);
                     }
 
@@ -457,11 +480,9 @@ namespace Plugin {
                         TRACE_L1("Reporting a new status for a KeyId. New state: %d", status);
 
                         _parent.ReportKeyChange(_sessionId, id, length, status);
-                    }
-                    else {
+                    } else {
                         TRACE(Trace::Information, ("There was no key to update !!!"));
                     }
-                    
                 }
 
             private:
@@ -475,40 +496,46 @@ namespace Plugin {
                 DataExchange* _buffer;
                 CommonEncryptionData _cencData;
             };
- 
+
         public:
-            AccessorOCDM(OCDMImplementation* parent, const string& name, const uint32_t defaultSize) 
-                : _parent(*parent) 
+            AccessorOCDM(OCDMImplementation* parent, const string& name, const uint32_t defaultSize)
+                : _parent(*parent)
                 , _adminLock()
                 , _administrator(name)
                 , _defaultSize(defaultSize)
-                , _sessionList() 
-                , _observers() {
-                ASSERT (parent != nullptr);
+                , _sessionList()
+                , _observers()
+            {
+                ASSERT(parent != nullptr);
             }
-            virtual ~AccessorOCDM() {
+            virtual ~AccessorOCDM()
+            {
                 TRACE_L1("Released the AccessorOCDM server side [%d]", __LINE__);
             }
 
         public:
             virtual ::OCDM::OCDM_RESULT IsTypeSupported(
                 const std::string keySystem,
-                const std::string mimeType) const override {
+                const std::string mimeType) const override
+            {
 
                 return (_parent.IsTypeSupported(keySystem, mimeType) ? 0 : 1);
             }
 
-            virtual ::OCDM::ISession* Session(const std::string sessionId) override {
+            virtual ::OCDM::ISession* Session(const std::string sessionId) override
+            {
                 ::OCDM::ISession* result = nullptr;
 
                 _adminLock.Lock();
 
-                std::list<SessionImplementation*>::const_iterator index (_sessionList.begin());
-                while ( (index != _sessionList.end()) && ((*index)->SessionId() != sessionId) ) { index++; }
+                std::list<SessionImplementation*>::const_iterator index(_sessionList.begin());
+                while ((index != _sessionList.end()) && ((*index)->SessionId() != sessionId)) {
+                    index++;
+                }
 
                 if (index != _sessionList.end()) {
                     result = *index;
-                    ASSERT (result != nullptr);
+                    ASSERT(result != nullptr);
                     result->AddRef();
                 }
 
@@ -517,29 +544,30 @@ namespace Plugin {
                 return (result);
             }
 
-            virtual ::OCDM::ISession* Session(const uint8_t data[], const uint8_t keyLength) override {
+            virtual ::OCDM::ISession* Session(const uint8_t data[], const uint8_t keyLength) override
+            {
                 ::OCDM::ISession* result = nullptr;
-
 
                 if (keyLength >= CommonEncryptionData::KeyId::Length()) {
 
                     _adminLock.Lock();
 
-                    std::list<SessionImplementation*>::const_iterator index (_sessionList.begin());
+                    std::list<SessionImplementation*>::const_iterator index(_sessionList.begin());
 
-                    while ( (index != _sessionList.end()) && ((*index)->HasKeyId(data) == false) ) { index++; }
+                    while ((index != _sessionList.end()) && ((*index)->HasKeyId(data) == false)) {
+                        index++;
+                    }
 
                     if (index != _sessionList.end()) {
 
-		        //printf("Selected session out of list count: %d\n", _sessionList.size());
+                        //printf("Selected session out of list count: %d\n", _sessionList.size());
                         result = *index;
-                        ASSERT (result != nullptr);
+                        ASSERT(result != nullptr);
                         result->AddRef();
                     }
 
                     _adminLock.Unlock();
                 }
-
 
                 return (result);
             }
@@ -555,27 +583,20 @@ namespace Plugin {
                 const uint16_t CDMDataLength,
                 ::OCDM::ISession::ICallback* callback,
                 std::string& sessionId,
-                ::OCDM::ISession*& session) override {
+                ::OCDM::ISession*& session) override
+            {
 
                 CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
 
                 if (system == nullptr) {
                     session = nullptr;
-                }
-                else {
+                } else {
                     CDMi::IMediaKeySession* sessionInterface = nullptr;
-                    CommonEncryptionData keyIds (initData, initDataLength);
+                    CommonEncryptionData keyIds(initData, initDataLength);
 
                     // OKe we got a buffer machanism to transfer the raw data, now create
                     // the session.
-                    if ((session == nullptr) && (system->CreateMediaKeySession(
-                        licenseType,
-                        initDataType.c_str(),
-                        initData,
-                        initDataLength,
-                        CDMData,
-                        CDMDataLength,
-                        &sessionInterface) == 0)) {
+                    if ((session == nullptr) && (system->CreateMediaKeySession(licenseType, initDataType.c_str(), initData, initDataLength, CDMData, CDMDataLength, &sessionInterface) == 0)) {
 
                         if (sessionInterface != nullptr) {
 
@@ -595,13 +616,12 @@ namespace Plugin {
                                 ReportCreate(sessionId);
 
                                 _adminLock.Unlock();
-                            }
-                            else {
+                            } else {
                                 TRACE_L1("Could not allocate a buffer for session: %s", sessionId.c_str());
 
                                 // TODO: We need to drop the session somehow...
                             }
-                        } 
+                        }
                     }
                 }
 
@@ -616,45 +636,46 @@ namespace Plugin {
             virtual ::OCDM::OCDM_RESULT SetServerCertificate(
                 const std::string keySystem,
                 const uint8_t* serverCertificate,
-                const uint16_t serverCertificateLength) override {
+                const uint16_t serverCertificateLength) override
+            {
 
                 CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
 
                 if (system != nullptr) {
                     TRACE(Trace::Information, ("Set ServerCertificate()"));
                     system->SetServerCertificate(serverCertificate, serverCertificateLength);
-                }
-                else {
+                } else {
                     TRACE_L1("Could not set the Server Certificates for system: %s", keySystem.c_str());
                 }
-		return (0);
+                return (0);
             }
 
-            virtual void Register (::OCDM::IAccessorOCDM::INotification* callback) override {
+            virtual void Register(::OCDM::IAccessorOCDM::INotification* callback) override
+            {
 
                 _adminLock.Lock();
 
-                ASSERT (std::find(_observers.begin(), _observers.end(), callback) == _observers.end());
+                ASSERT(std::find(_observers.begin(), _observers.end(), callback) == _observers.end());
 
                 callback->AddRef();
 
                 _observers.push_back(callback);
 
-                std::list<SessionImplementation*>::const_iterator index (_sessionList.begin());
-                while (index != _sessionList.end()) { 
+                std::list<SessionImplementation*>::const_iterator index(_sessionList.begin());
+                while (index != _sessionList.end()) {
                     (*index)->ReportKeyIds(callback);
-                    index++; 
+                    index++;
                 }
 
- 
                 _adminLock.Unlock();
             }
 
-            virtual void Unregister (::OCDM::IAccessorOCDM::INotification* callback) override {
+            virtual void Unregister(::OCDM::IAccessorOCDM::INotification* callback) override
+            {
 
                 _adminLock.Lock();
 
-                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator  index (std::find(_observers.begin(), _observers.end(), callback));
+                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), callback));
 
                 if (index != _observers.end()) {
                     (*index)->Release();
@@ -663,58 +684,62 @@ namespace Plugin {
 
                 _adminLock.Unlock();
             }
- 
+
             BEGIN_INTERFACE_MAP(AccessorOCDM)
-                INTERFACE_ENTRY(::OCDM::IAccessorOCDM)
+            INTERFACE_ENTRY(::OCDM::IAccessorOCDM)
             END_INTERFACE_MAP
 
         private:
-            void ReportCreate(const string& sessionId) {
-                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator  index (_observers.begin());
+            void ReportCreate(const string& sessionId)
+            {
+                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator index(_observers.begin());
                 while (index != _observers.end()) {
                     (*index)->Create(sessionId);
                     index++;
                 }
             }
-            void ReportDestroy(const string& sessionId) {
-                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator  index (_observers.begin());
+            void ReportDestroy(const string& sessionId)
+            {
+                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator index(_observers.begin());
                 while (index != _observers.end()) {
                     (*index)->Destroy(sessionId);
                     index++;
                 }
             }
-            void ReportKeyChange(const string& sessionId, const uint8_t keyId[], const uint8_t length, const OCDM::ISession::KeyStatus status) {
+            void ReportKeyChange(const string& sessionId, const uint8_t keyId[], const uint8_t length, const OCDM::ISession::KeyStatus status)
+            {
                 _adminLock.Lock();
-                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator  index (_observers.begin());
+                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator index(_observers.begin());
                 while (index != _observers.end()) {
                     (*index)->KeyChange(sessionId, keyId, length, status);
                     index++;
                 }
-                
+
                 _adminLock.Unlock();
             }
-            ::OCDM::ISession* FindSession (const CommonEncryptionData& keyIds, const string& keySystem) const {
+            ::OCDM::ISession* FindSession(const CommonEncryptionData& keyIds, const string& keySystem) const
+            {
                 ::OCDM::ISession* result = nullptr;
 
                 std::list<SessionImplementation*>::const_iterator index(_sessionList.begin());
 
-                while ( (index != _sessionList.end()) && (result == nullptr) ) { 
+                while ((index != _sessionList.end()) && (result == nullptr)) {
 
                     if ((*index)->IsSupported(keyIds, keySystem) == true) {
                         result = *index;
                         result->AddRef();
-                    }
-                    else {
-                        index++; 
+                    } else {
+                        index++;
                     }
                 }
                 return (result);
             }
-            void Remove(SessionImplementation* session, const string& keySystem, CDMi::IMediaKeySession* mediaKeySession ) {
+            void Remove(SessionImplementation* session, const string& keySystem, CDMi::IMediaKeySession* mediaKeySession)
+            {
 
                 _adminLock.Lock();
 
-                ASSERT (session != nullptr);
+                ASSERT(session != nullptr);
 
                 if (mediaKeySession != nullptr) {
 
@@ -726,29 +751,30 @@ namespace Plugin {
                         system->DestroyMediaKeySession(mediaKeySession);
                     }
                 }
- 
+
                 if (session != nullptr) {
 
                     _administrator.ReleaseBuffer(session->BufferId());
 
                     std::list<SessionImplementation*>::iterator index(_sessionList.begin());
 
-                    while ( (index != _sessionList.end()) && (session != (*index)) ) { index++; }
+                    while ((index != _sessionList.end()) && (session != (*index))) {
+                        index++;
+                    }
 
-                    ASSERT (index != _sessionList.end());
-                
+                    ASSERT(index != _sessionList.end());
+
                     if (index != _sessionList.end()) {
                         const string sessionId(session->SessionId());
-	                // Before we remove it here, release it.
+                        // Before we remove it here, release it.
                         _sessionList.erase(index);
                         ReportDestroy(sessionId);
                     }
                 }
 
                 _adminLock.Unlock();
-
             }
- 
+
         private:
             OCDMImplementation& _parent;
             mutable Core::CriticalSection _adminLock;
@@ -758,38 +784,38 @@ namespace Plugin {
             std::list<::OCDM::IAccessorOCDM::INotification*> _observers;
         };
 
-
-
         class Config : public Core::JSON::Container {
         private:
             Config(const Config&);
             Config& operator=(const Config&);
 
-        public: 
+        public:
             class Systems : public Core::JSON::Container {
             private:
-                Systems& operator= (const Systems&);
+                Systems& operator=(const Systems&);
 
             public:
-                Systems () 
+                Systems()
                     : Core::JSON::Container()
                     , Name()
                     , Designators()
-                    , Configuration() {
+                    , Configuration()
+                {
                     Add("name", &Name);
                     Add("designators", &Designators);
                     Add("configuration", &Configuration);
                 }
-                Systems (const Systems& copy) 
+                Systems(const Systems& copy)
                     : Core::JSON::Container()
                     , Name(copy.Name)
                     , Designators(copy.Designators)
-                    , Configuration(copy.Configuration) {
+                    , Configuration(copy.Configuration)
+                {
                     Add("name", &Name);
                     Add("designators", &Designators);
                     Add("configuration", &Configuration);
                 }
-                
+
                 virtual ~Systems() = default;
 
             public:
@@ -864,10 +890,10 @@ namespace Plugin {
             ASSERT(subSystem != nullptr);
 
             // Start loading the configured factories
-            Config config; 
+            Config config;
             config.FromString(service->ConfigLine());
 
-            const string locator (service->DataPath() + config.Location.Value());
+            const string locator(service->DataPath() + config.Location.Value());
 
             // Before we start loading the mapping of the Keys to the factories, load the factories :-)
             Core::Directory entry(locator.c_str(), _T("*.drm"));
@@ -891,45 +917,42 @@ namespace Plugin {
                             _systemLibraries.push_back(library);
                         }
                     }
-                }
-                else {
+                } else {
                     SYSLOG(Logging::Startup, (_T("Could not load factory [%s], error [%s]"), Core::File::FileNameExtended(entry.Current()).c_str(), library.Error().c_str()));
                 }
             }
 
-            Core::JSON::ArrayType< Config::Systems >::ConstIterator index (static_cast<const Config&>(config).KeySystems.Elements());
+            Core::JSON::ArrayType<Config::Systems>::ConstIterator index(static_cast<const Config&>(config).KeySystems.Elements());
 
-            while (index.Next () == true) {
+            while (index.Next() == true) {
 
-                const string system (index.Current().Name.Value());
+                const string system(index.Current().Name.Value());
 
-                if ( (system.empty() == false) && (index.Current().Designators.IsSet() == true) ) {
-                    Core::JSON::ArrayType< Core::JSON::String >::ConstIterator designators (static_cast<const Core::JSON::ArrayType< Core::JSON::String >&>( index.Current().Designators).Elements() );                   
-                    
+                if ((system.empty() == false) && (index.Current().Designators.IsSet() == true)) {
+                    Core::JSON::ArrayType<Core::JSON::String>::ConstIterator designators(static_cast<const Core::JSON::ArrayType<Core::JSON::String>&>(index.Current().Designators).Elements());
+
                     // Find a factory for the key system:
-                    std::map<const string, SystemFactory>::iterator factory (factories.find(system));
-                    
-                    while ( designators.Next() == true ) {
-                        const string designator( designators.Current().Value() );
-                        if ( designator.empty() == false )  {
-                            if( factory != factories.end() ) {
+                    std::map<const string, SystemFactory>::iterator factory(factories.find(system));
+
+                    while (designators.Next() == true) {
+                        const string designator(designators.Current().Value());
+                        if (designator.empty() == false) {
+                            if (factory != factories.end()) {
                                 _systemToFactory.insert(std::pair<const std::string, SystemFactory>(designator, factory->second));
 
-                            }
-                            else {
+                            } else {
                                 SYSLOG(Logging::Startup, (_T("Required factory [%s], not found for [%s]"), system.c_str(), designator.c_str()));
                             }
                         }
                     }
 
                     //now handle the configiguration
-                    const string configuration( index.Current().Configuration.Value() );
-                    if( configuration.empty() == false && factory != factories.end() ) {
+                    const string configuration(index.Current().Configuration.Value());
+                    if (configuration.empty() == false && factory != factories.end()) {
 
                         factory->second.Factory->SystemConfig(configuration);
                     }
-
-               }
+                }
             }
 
             if (_systemToFactory.size() == 0) {
@@ -946,43 +969,46 @@ namespace Plugin {
                     _entryPoint->Release();
                     _service = nullptr;
                     _entryPoint = nullptr;
-                }
-                else {
+                } else {
                     if (subSystem != nullptr) {
 
-						// Announce the port on which we are listening
-						Core::SystemInfo::SetEnvironment(_T("OPEN_CDM_SERVER"), config.Connector.Value(), true);
+                        // Announce the port on which we are listening
+                        Core::SystemInfo::SetEnvironment(_T("OPEN_CDM_SERVER"), config.Connector.Value(), true);
 
-                        ASSERT (subSystem->IsActive(PluginHost::ISubSystem::DECRYPTION) == false);
+                        ASSERT(subSystem->IsActive(PluginHost::ISubSystem::DECRYPTION) == false);
                         subSystem->Set(PluginHost::ISubSystem::DECRYPTION, this);
                     }
                     if (_systemToFactory.size() == 0) {
                         SYSLOG(Logging::Startup, (string(_T("OCDM server has NO key systems registered!!!"))));
                     }
                 }
-
             }
             return (result);
         }
-        virtual uint32_t Reset() {
+        virtual uint32_t Reset()
+        {
             return (Core::ERROR_NONE);
         }
-        virtual RPC::IStringIterator* Systems() const {
+        virtual RPC::IStringIterator* Systems() const
+        {
             return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(_keySystems));
         }
-        virtual RPC::IStringIterator* Designators(const string& keySystem) const {
+        virtual RPC::IStringIterator* Designators(const string& keySystem) const
+        {
             std::list<string> designators;
             LoadDesignators(keySystem, designators);
             return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(designators));
         }
-        virtual RPC::IStringIterator* Sessions(const string& keySystem) const {
+        virtual RPC::IStringIterator* Sessions(const string& keySystem) const
+        {
             std::list<string> sessions;
             LoadSessions(keySystem, sessions);
             return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(sessions));
         }
 
     public:
-        bool IsTypeSupported(const std::string& keySystem, const std::string& mimeType) {
+        bool IsTypeSupported(const std::string& keySystem, const std::string& mimeType)
+        {
 
             // FIXME: The dead code below this statement has at least the following issues,
             //  - The MIME checking code is **very far** from compliant (no codec= support is one major issue, there are more)
@@ -1000,16 +1026,15 @@ namespace Plugin {
             bool result = (keySystem.empty() == false);
 
             if (result == true) {
-                std::map<const std::string, SystemFactory>::iterator index (_systemToFactory.find(keySystem));
+                std::map<const std::string, SystemFactory>::iterator index(_systemToFactory.find(keySystem));
 
                 if (index == _systemToFactory.end()) {
                     result = false;
-                }
-                else {
+                } else {
                     //const std::vector<std::string>& mimes (index->second->MimeTypes());
-		    //mime type still needs to be parsed.
-                    result = true;//((mimeType.empty() == true) || std::find(mimes.begin(), mimes.end(), mimeType) != mimes.end());
-                } 
+                    //mime type still needs to be parsed.
+                    result = true; //((mimeType.empty() == true) || std::find(mimes.begin(), mimes.end(), mimeType) != mimes.end());
+                }
             }
 
             TRACE(Trace::Information, ("IsTypeSupported(%s,%s) => %s", keySystem.c_str(), mimeType.c_str(), result ? _T("True") : _T("False")));
@@ -1017,24 +1042,26 @@ namespace Plugin {
             return result;
         }
 
-        CDMi::IMediaKeys* KeySystem(const std::string& keySystem) {
+        CDMi::IMediaKeys* KeySystem(const std::string& keySystem)
+        {
             CDMi::IMediaKeys* result = nullptr;
 
             if (keySystem.empty() == false) {
-                std::map<const std::string, SystemFactory>::iterator index (_systemToFactory.find(keySystem));
+                std::map<const std::string, SystemFactory>::iterator index(_systemToFactory.find(keySystem));
 
                 if (_systemToFactory.end() != index) {
                     result = index->second.Factory->Instance();
                 }
             }
-	
+
             TRACE(Trace::Information, ("KeySystem(%s) => %p", keySystem.c_str(), result));
             return (result);
         }
 
     private:
-        void LoadDesignators(const string& keySystem, std::list<string>& designators) const {
-            std::map<const std::string, SystemFactory>::const_iterator index (_systemToFactory.begin());
+        void LoadDesignators(const string& keySystem, std::list<string>& designators) const
+        {
+            std::map<const std::string, SystemFactory>::const_iterator index(_systemToFactory.begin());
             while (index != _systemToFactory.end()) {
                 if (keySystem == index->second.Name) {
                     designators.push_back(index->first);
@@ -1042,8 +1069,9 @@ namespace Plugin {
                 index++;
             }
         }
-        void LoadSessions(const string& keySystem, std::list<string>& designators) const {
-            std::map<const std::string, SystemFactory>::const_iterator index (_systemToFactory.begin());
+        void LoadSessions(const string& keySystem, std::list<string>& designators) const
+        {
+            std::map<const std::string, SystemFactory>::const_iterator index(_systemToFactory.begin());
             while (index != _systemToFactory.end()) {
                 if (keySystem == index->second.Name) {
                     designators.push_back(index->first);
@@ -1057,14 +1085,14 @@ namespace Plugin {
         // IDecryption methods
         // -------------------------------------------------------------------------------------------------------------
         BEGIN_INTERFACE_MAP(OCDMImplementation)
-            INTERFACE_ENTRY(Exchange::IContentDecryption)
+        INTERFACE_ENTRY(Exchange::IContentDecryption)
         END_INTERFACE_MAP
 
     private:
         ::OCDM::IAccessorOCDM* _entryPoint;
         ExternalAccess* _service;
         bool _compliant;
-        std::map<const std::string,SystemFactory> _systemToFactory;
+        std::map<const std::string, SystemFactory> _systemToFactory;
         std::list<Core::Library> _systemLibraries;
         std::list<string> _keySystems;
 #ifdef _MSVC_LANG
@@ -1073,5 +1101,5 @@ namespace Plugin {
     };
 
     SERVICE_REGISTRATION(OCDMImplementation, 1, 0);
-
-} } /* namespace WPEFramework::Plugin */
+}
+} /* namespace WPEFramework::Plugin */

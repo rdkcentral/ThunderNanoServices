@@ -1,22 +1,21 @@
 #include "../Module.h"
 
-#include <interfaces/ICapture.h>
 #include <bcm_host.h>
+#include <interfaces/ICapture.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class Initializer
-    {
+    class Initializer {
     private:
         Initializer(const Initializer&) = delete;
-        Initializer& operator= (const Initializer&) = delete;
+        Initializer& operator=(const Initializer&) = delete;
 
     public:
         Initializer()
         {
             // Init GPU resources.
-                bcm_host_init();
+            bcm_host_init();
         }
 
         ~Initializer()
@@ -28,8 +27,8 @@ namespace Plugin {
 
     class Dispmanx : public Exchange::ICapture {
     private:
-        Dispmanx(const Dispmanx &) = delete;
-        Dispmanx &operator=(const Dispmanx &) = delete;
+        Dispmanx(const Dispmanx&) = delete;
+        Dispmanx& operator=(const Dispmanx&) = delete;
 
     public:
         Dispmanx()
@@ -41,13 +40,13 @@ namespace Plugin {
         }
 
         BEGIN_INTERFACE_MAP(Dispmanx)
-            INTERFACE_ENTRY(Exchange::ICapture)
+        INTERFACE_ENTRY(Exchange::ICapture)
         END_INTERFACE_MAP
 
         void Initialize();
         void Deinitialize();
 
-        virtual const TCHAR *Name() const
+        virtual const TCHAR* Name() const
         {
             return (_T("Dispmanx"));
         }
@@ -69,7 +68,7 @@ namespace Plugin {
             status = vc_dispmanx_display_get_info(display, &info);
             ASSERT(status == 0);
 
-            uint8_t *buffer = new uint8_t[info.width * 4 * info.height];
+            uint8_t* buffer = new uint8_t[info.width * 4 * info.height];
             ASSERT(buffer != nullptr);
 
             resource = vc_dispmanx_resource_create(type, info.width, info.height, &vc_image_ptr);
@@ -89,7 +88,7 @@ namespace Plugin {
             ASSERT(status == 0);
 
             // Save the buffer to file
-            bool result = storer.R8_G8_B8_A8(static_cast<const unsigned char *>(buffer), info.width, info.height);
+            bool result = storer.R8_G8_B8_A8(static_cast<const unsigned char*>(buffer), info.width, info.height);
 
             delete[] buffer;
 
@@ -98,9 +97,10 @@ namespace Plugin {
     };
 }
 
-    /* static */ Exchange::ICapture* Exchange::ICapture::Instance() {
-        static Plugin::Initializer initializeDisplay;
+/* static */ Exchange::ICapture* Exchange::ICapture::Instance()
+{
+    static Plugin::Initializer initializeDisplay;
 
-            return (Core::Service<Plugin::Dispmanx>::Create<Exchange::ICapture>());
-    }
+    return (Core::Service<Plugin::Dispmanx>::Create<Exchange::ICapture>());
+}
 }

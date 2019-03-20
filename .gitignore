@@ -9,3 +9,5 @@ CTestTestfile.cmake
 output/
 .DS_Store
 .vscode
+/.vs
+/artifacts

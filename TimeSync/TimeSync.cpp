@@ -7,7 +7,7 @@ namespace Plugin {
     SERVICE_REGISTRATION(TimeSync, 1, 0);
 
     static Core::ProxyPoolType<Web::Response> responseFactory(4);
-    static Core::ProxyPoolType<Web::JSONBodyType<TimeSync::Data> > jsonResponseFactory(4);
+    static Core::ProxyPoolType<Web::JSONBodyType<TimeSync::Data>> jsonResponseFactory(4);
 
     static const uint16_t NTPPort = 123;
 
@@ -79,7 +79,7 @@ namespace Plugin {
         result->Message = "OK";
 
         if (request.Verb == Web::Request::HTTP_GET) {
-            Core::ProxyType<Web::JSONBodyType<Data> > response(jsonResponseFactory.Element());
+            Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
             uint64_t syncTime(_client->SyncTime());
 
             response->TimeSource = _client->Source();

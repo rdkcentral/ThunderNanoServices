@@ -1,6 +1,6 @@
 #include "Module.h"
-#include <interfaces/IRtspClient.h>
 #include <interfaces/IMemory.h>
+#include <interfaces/IRtspClient.h>
 
 #include "RtspSession.h"
 
@@ -9,7 +9,6 @@ namespace Plugin {
 
     class RtspClientImplementation : public Exchange::IRtspClient, RtspSession::AnnouncementHandler {
     private:
-
         class Config : public Core::JSON::Container {
         private:
             Config(const Config&) = delete;
@@ -79,7 +78,7 @@ namespace Plugin {
         {
             RtspReturnCode rc = ERR_OK;
 
-            rc = _rtspSession.Play((float_t) scale/1000, position);
+            rc = _rtspSession.Play((float_t)scale / 1000, position);
 
             return rc;
         }

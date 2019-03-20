@@ -8,4 +8,3 @@
 
 #undef EXTERNAL
 #define EXTERNAL
-

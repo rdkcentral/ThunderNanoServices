@@ -1,8 +1,5 @@
-#include "Module.h"
-#include <westeros-compositor.h>
 #include "Wayland.h"
-
-#include <virtualinput/VirtualKeyboard.h>
+#include <westeros-compositor.h>
 
 namespace WPEFramework {
 namespace Westeros {
@@ -44,7 +41,7 @@ namespace Westeros {
                 WstCompositorSetDisplayName(_compositor, display.c_str());
                 WstCompositorSetRendererModule(_compositor, renderModule.c_str());
                 WstCompositorSetOutputSize(_compositor, width, height);
-                
+
                 if (WstCompositorStart(_compositor) != true) {
                     TRACE(Trace::Information, (_T("Error Starting Compositor")));
                 };
@@ -102,9 +99,7 @@ namespace Westeros {
     private:
         static void VirtualKeyboardCallback(actiontype type, unsigned int code)
         {
-            TRACE_GLOBAL(Trace::Information, (_T("VirtualKeyboardCallback keycode 0x%04x is %s."),
-                                                 code,
-                                                 type == PRESSED ? "pressed" : type == RELEASED ? "released" : type == REPEAT ? "repeated" : type == COMPLETED ? "completed" : "unknown"));
+            TRACE_GLOBAL(Trace::Information, (_T("VirtualKeyboardCallback keycode 0x%04x is %s."), code, type == PRESSED ? "pressed" : type == RELEASED ? "released" : type == REPEAT ? "repeated" : type == COMPLETED ? "completed" : "unknown"));
 
             // TODO: no key repeat handled by westeros.
 

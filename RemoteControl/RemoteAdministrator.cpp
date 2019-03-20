@@ -3,10 +3,10 @@
 namespace WPEFramework {
 namespace Remotes {
 
-/* static */ RemoteAdministrator& RemoteAdministrator::Instance() {
-    static RemoteAdministrator singleton;
-    return (singleton);
-}
-
+    /* static */ RemoteAdministrator& RemoteAdministrator::Instance()
+    {
+        static RemoteAdministrator singleton;
+        return (singleton);
+    }
 }
 }

@@ -1,5 +1,8 @@
-#include "PlayerImplementation.h" 
+#include "PlayerImplementation.h"
 
-namespace WPEFramework { namespace Player { namespace Implementation {
-
-} } } // namespace WPEFramework::Player::Implementation
+namespace WPEFramework {
+namespace Player {
+    namespace Implementation {
+    }
+}
+} // namespace WPEFramework::Player::Implementation

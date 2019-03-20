@@ -85,12 +85,12 @@ private:
     };
 
 public:
-
     FrontPanelHAL();
     virtual ~FrontPanelHAL();
     void Init();
     void Uninit();
-    inline bool IsOperational () const {
+    inline bool IsOperational() const
+    {
         return (_isOperational);
     }
     bool GetFPState(Indicator, State&);

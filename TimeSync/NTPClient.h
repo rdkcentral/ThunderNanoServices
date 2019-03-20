@@ -7,7 +7,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class EXTERNAL NTPClient : public Core::SocketDatagram, public Exchange::ITimeSync, public PluginHost::ISubSystem::ITime  {
+    class EXTERNAL NTPClient : public Core::SocketDatagram, public Exchange::ITimeSync, public PluginHost::ISubSystem::ITime {
     public:
         static constexpr uint32_t MilliSeconds = 1000;
         static constexpr uint32_t MicroSeconds = 1000 * MilliSeconds;
@@ -49,12 +49,9 @@ namespace Plugin {
                 static constexpr uint32_t SecondsPerHour = SecondsPerMinute * MinutesPerHour;
                 static constexpr uint32_t SecondsPerDay = SecondsPerHour * HoursPerDay;
 
-                static constexpr uint32_t NTPToUNIXSeconds =
-                    (DayUNIXEpochStarts - DayNTPStarts) * SecondsPerDay;
+                static constexpr uint32_t NTPToUNIXSeconds = (DayUNIXEpochStarts - DayNTPStarts) * SecondsPerDay;
 
-                static constexpr double NanoSecondFraction =
-                    4294967296.0 /* 2^32 as a double*/ /
-                    NanoSeconds;
+                static constexpr double NanoSecondFraction = 4294967296.0 /* 2^32 as a double*/ / NanoSeconds;
 
             public:
                 // Initialize default
@@ -90,10 +87,12 @@ namespace Plugin {
                     uint32_t microseconds = static_cast<uint32_t>(ticks % (1000 /* MilliSeconds */ * 1000 /* MicroSeconds */));
                     _source.tv_nsec = microseconds * 1000 /* microseconds */;
                 }
-                ~Timestamp() {
+                ~Timestamp()
+                {
                 }
 
-                Timestamp& operator= (const Timestamp& rhs) {
+                Timestamp& operator=(const Timestamp& rhs)
+                {
 
                     _source = rhs._source;
 
@@ -101,10 +100,12 @@ namespace Plugin {
                 }
 
             public:
-                uint32_t Seconds() const {
+                uint32_t Seconds() const
+                {
                     return (static_cast<uint32_t>(_source.tv_sec) + NTPToUNIXSeconds);
                 }
-                uint32_t Fraction() const {
+                uint32_t Fraction() const
+                {
                     return static_cast<uint32_t>((_source.tv_nsec * NanoSecondFraction) + 0.5);
                 }
 
@@ -133,7 +134,7 @@ namespace Plugin {
                             _source.tv_sec++;
                         } while (_source.tv_nsec >= static_cast<int32_t>(NanoSeconds));
 
-                        /*
+                    /*
                         if (_source.tv_nsec < 0) {
                         _source.tv_sec -= ((NanoSeconds - _source.tv_nsec) % NanoSeconds);
                         _source.tv_nsec += (_source.tv_nsec / NanoSeconds) * NanoSeconds;
@@ -150,7 +151,7 @@ namespace Plugin {
 
         private:
             NTPPacket(const NTPPacket&) = delete;
-            NTPPacket& operator= (const NTPPacket&) = delete;
+            NTPPacket& operator=(const NTPPacket&) = delete;
 
         public:
             NTPPacket()
@@ -166,12 +167,13 @@ namespace Plugin {
                 , recvTimestamp()
                 , xmitTimestamp()
             {
-                static_assert (sizeof(uint8_t) == 1, "This only works if the size of the uint8_t is 1 byte");
-                static_assert (sizeof(int8_t) == 1, "This only works if the size of the int8_t is 1 byte");
-                static_assert (sizeof(uint32_t) == 4, "This only works if the size of the uint32_t is 4 bytes");
-                static_assert (sizeof(int32_t) == 4, "This only works if the size of the int32_t is 4 bytes");
+                static_assert(sizeof(uint8_t) == 1, "This only works if the size of the uint8_t is 1 byte");
+                static_assert(sizeof(int8_t) == 1, "This only works if the size of the int8_t is 1 byte");
+                static_assert(sizeof(uint32_t) == 4, "This only works if the size of the uint32_t is 4 bytes");
+                static_assert(sizeof(int32_t) == 4, "This only works if the size of the int32_t is 4 bytes");
             }
-            ~NTPPacket() {
+            ~NTPPacket()
+            {
             }
 
             static const uint16_t PacketSize = 48;
@@ -198,15 +200,13 @@ namespace Plugin {
                 if (stratum <= 1) {
                     if (referenceID == 0) {
                         result = _T("zero");
-                    }
-                    else {
+                    } else {
                         char name[5];
                         memcpy(name, &referenceID, 4);
                         name[4] = '\0';
                         result = name;
                     }
-                }
-                else {
+                } else {
                     TCHAR buffer[20];
                     _stprintf(buffer, "%d.%d.%d.%d",
                         ((referenceID >> 24) & 0xFF),
@@ -257,7 +257,7 @@ namespace Plugin {
                 Unpack(frame, xmitTimestamp);
             }
 
-            #ifdef __DEBUG__
+#ifdef __DEBUG__
             void DisplayPacket()
             {
                 TRACE_L1("Leap indicator:      %d", LeapIndicator());
@@ -277,7 +277,7 @@ namespace Plugin {
                 TRACE_L1("Receive timestamp:   %s", Core::Time(ReceiveTimestamp()).ToRFC1123(false).c_str());
                 TRACE_L1("Transmit timestamp:  %s", Core::Time(TransmitTimestamp()).ToRFC1123(false).c_str());
             }
-            #endif
+#endif
 
         private:
             void Pack(DataFrame::Writer& frame, Timestamp const& data) const
@@ -292,10 +292,10 @@ namespace Plugin {
             }
 
             uint8_t leapVersionMode; // LLVVVMMM for LL = Leap Indicator, VVV = NTP version, MMM = mode
-                                   // LL: 0 = No warning, 1 = insert leap second, 2 = delete leap second, 3 = unsynchronized
-                                   // VVV: 1, 2, 3, 4
-                                   // MMM: 0 = reserved, 1 = symmetric active, 2 = symmetric passive, 3 = client
-                                   //      4 = server, 5 = broadcast, 6 = NTP control, 7 = private use
+                // LL: 0 = No warning, 1 = insert leap second, 2 = delete leap second, 3 = unsynchronized
+                // VVV: 1, 2, 3, 4
+                // MMM: 0 = reserved, 1 = symmetric active, 2 = symmetric passive, 3 = client
+                //      4 = server, 5 = broadcast, 6 = NTP control, 7 = private use
             uint8_t stratum; // Stratum number (0 = invalid)
             uint8_t poll; // Log2 poll interval (seconds)
             int8_t precision; // Log2 precision (seconds)
@@ -306,7 +306,7 @@ namespace Plugin {
             Timestamp origTimestamp; // Timestamp time send request, fixed precision 32.32 bit (NTP time)
             Timestamp recvTimestamp; // Timestamp time receive request, fixed precision 32.32 bit (NTP time)
             Timestamp xmitTimestamp; // Timestamp time transmit request / response, fixed precision 32.32
-                                     // bit (NTP time)
+                // bit (NTP time)
         };
 
         class Activity : public Core::IDispatchType<void> {
@@ -354,13 +354,14 @@ namespace Plugin {
         virtual uint64_t SyncTime() const override;
 
         // ITime methods
-        virtual uint64_t TimeSync() const override{
+        virtual uint64_t TimeSync() const override
+        {
             return SyncTime();
         }
 
         BEGIN_INTERFACE_MAP(NTPClient)
-            INTERFACE_ENTRY(Exchange::ITimeSync)
-            INTERFACE_ENTRY(PluginHost::ISubSystem::ITime)
+        INTERFACE_ENTRY(Exchange::ITimeSync)
+        INTERFACE_ENTRY(PluginHost::ISubSystem::ITime)
         END_INTERFACE_MAP
 
     private:
@@ -385,7 +386,7 @@ namespace Plugin {
         uint32_t _retryAttempts;
         ServerList _servers;
         ServerIterator _serverIndex;
-        Core::ProxyType<Core::IDispatchType<void> > _activity;
+        Core::ProxyType<Core::IDispatchType<void>> _activity;
         std::list<Exchange::ITimeSync::INotification*> _clients;
     };
 
