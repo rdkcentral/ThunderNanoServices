@@ -5,6 +5,8 @@
 #include <interfaces/IDsgccClient.h>
 #include <interfaces/IMemory.h>
 
+#include "DsgParser.h"
+
 namespace WPEFramework {
 namespace Plugin {
 
@@ -23,6 +25,7 @@ namespace Plugin {
                 Add(_T("dsgType"), &DsgType);
                 Add(_T("dsgId"), &DsgId);
                 Add(_T("vctId"), &VctId);
+                Add(_T("dsgHeaderSize"), &DsgHeaderSize);
             }
             ~Config()
             {
@@ -33,6 +36,7 @@ namespace Plugin {
             Core::JSON::DecUInt16 DsgType;
             Core::JSON::DecUInt16 DsgId;
             Core::JSON::DecUInt16 VctId;
+            Core::JSON::DecUInt16 DsgHeaderSize;
         };
 
         class Activity : public Core::Thread {
@@ -44,10 +48,15 @@ namespace Plugin {
             Activity(DsgccClientImplementation::Config& config)
                 : Core::Thread(Core::Thread::DefaultStackSize(), _T("DsgccClient"))
                 , _config(config)
-            {
+                , _isRunning(true) {
             }
+
             virtual ~Activity()
             {
+            }
+
+            string getChannels() const {
+                return _channels;
             }
 
         public:
@@ -59,8 +68,9 @@ namespace Plugin {
         private:
             DsgccClientImplementation::Config& _config;
             bool _isRunning;
+            string _channels;
 
-            uint32_t Worker() override;
+            virtual uint32_t Worker() override;
             void Setup(unsigned int port, unsigned int dsgType, unsigned int dsgId);
             void process(unsigned char* pBuf, ssize_t len);
             void HexDump(const char* label, const std::string& msg, uint16_t charsPerLine = 32);
@@ -102,7 +112,7 @@ namespace Plugin {
 
         uint32_t Configure(PluginHost::IShell* service);
         void DsgccClientSet(const string& str);
-        string DsgccClientGet() const;
+        string GetChannels() const;
 
         BEGIN_INTERFACE_MAP(DsgccClientImplementation)
         INTERFACE_ENTRY(Exchange::IDsgccClient)
@@ -110,7 +120,7 @@ namespace Plugin {
 
     private:
         std::list<PluginHost::IStateControl::INotification*> _observers;
-        Config config;
+        Config _config;
         Activity _worker;
         ClientCallbackService _dsgCallback;
         string str;
