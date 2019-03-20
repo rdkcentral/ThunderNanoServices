@@ -3,9 +3,11 @@
 
 #include "Module.h"
 #include <interfaces/IDsgccClient.h>
+#include "DsgParser.h"
 
 namespace WPEFramework {
 namespace Plugin {
+//using namespace Dsg;
 
     class DsgccClient : public PluginHost::IPlugin, public PluginHost::IWeb {
     private:
@@ -78,6 +80,7 @@ namespace Plugin {
                 , Str()
             {
                 Add(_T("Str"), &Str);
+                Add(_T("channels"), &Channels);
             }
             ~Data()
             {
@@ -85,6 +88,7 @@ namespace Plugin {
 
         public:
             Core::JSON::String Str;
+            Core::JSON::ArrayType<Channel> Channels;
         };
 
     public:
@@ -150,8 +154,8 @@ namespace Plugin {
         Exchange::IDsgccClient* _implementation;
         Core::Sink<Notification> _notification;
     };
-} //namespace Plugin
 
-} //namespace Solution
+} //namespace Plugin
+} //namespace WPEFramework
 
 #endif // __DSGCCCLIENT_H
