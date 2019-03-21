@@ -574,6 +574,11 @@ namespace Plugin {
                     _mediaKeySession->Close();
                 }
 
+                virtual void PlaybackStopped() override {
+                    TRACE_L1("PlaybackStopped! %p", this);
+                    _mediaKeySession->PlaybackStopped();
+                }
+
                 virtual void Revoke(OCDM::ISession::ICallback* callback) override
                 {
                     _sink.Revoke(callback);
