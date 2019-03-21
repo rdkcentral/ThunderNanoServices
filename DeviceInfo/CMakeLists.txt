@@ -11,12 +11,14 @@ add_library(${MODULE_NAME} SHARED
 
 if(PROVIDE_NEXUS_OTP_ID)
     find_package(NEXUS REQUIRED)
+    find_package(NXCLIENT REQUIRED)
     target_compile_definitions(${MODULE_NAME} 
         PRIVATE 
             PROVIDE_NEXUS_OTP_ID)
     target_link_libraries(${MODULE_NAME} 
         PRIVATE
-            NEXUS::NEXUS)
+            NEXUS::NEXUS
+            NXCLIENT::NXCLIENT)
 endif()
 
 set_target_properties(${MODULE_NAME} PROPERTIES
