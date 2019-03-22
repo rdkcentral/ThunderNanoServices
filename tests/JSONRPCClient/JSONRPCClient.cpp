@@ -1,6 +1,6 @@
 #define MODULE_NAME JSONRPC_Test
 
-#include <../WPEFrameworkPlugins/tests/JSONRPCPlugin/Data.h>
+#include <JSONRPCPlugin/Data.h>
 #include <core/core.h>
 #include <jsonrpc/jsonrpc.h>
 
