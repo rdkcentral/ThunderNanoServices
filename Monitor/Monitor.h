@@ -618,7 +618,7 @@ namespace Plugin {
                         if ((_operationalInterval != 0) && (_operationalSlots == 0)) {
                             bool operational = _source->IsOperational();
                             _measurement.Operational(operational);
-                            if ((operational == false) && (_operationalEvaluate == true)) {
+                            if (operational == false) {
                                 status |= NOT_OPERATIONAL;
                                 TRACE_L1("Status not operational. %d", __LINE__);
                             }
