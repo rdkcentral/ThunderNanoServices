@@ -39,8 +39,16 @@ namespace Plugin {
         if ((request.Verb == Web::Request::HTTP_PUT || request.Verb == Web::Request::HTTP_POST) && index.Next()) {
 
             if (index.Current().Text() == "USBReset") {
-                if (index.Next()) {
-                    string device = index.Current().Text();
+                string device;
+                Core::URL::KeyValue options(request.Query.Value());
+                if (options.Exists(_T("device"), true) == true) {
+                    constexpr int kDeviceNameMaxLength = 255;
+                    std::array<char, kDeviceNameMaxLength> deviceName {0};
+                    device = options[_T("device")].Text();
+                    Core::URL::Decode(device.c_str(), device.length(), deviceName.data(), deviceName.size());
+                    device = deviceName.data();
+                }
+                if (!device.empty()) {
                     uint32_t status = USBReset(device);
                     if (status != Core::ERROR_NONE) {
                         result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;

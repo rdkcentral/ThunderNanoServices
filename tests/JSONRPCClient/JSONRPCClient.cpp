@@ -1,8 +1,9 @@
 #define MODULE_NAME JSONRPC_Test
 
-#include "../JSONRPCPlugin/Data.h"
 #include <core/core.h>
 #include <jsonrpc/jsonrpc.h>
+
+#include "../JSONRPCPlugin/Data.h"
 
 using namespace WPEFramework;
 
@@ -10,7 +11,7 @@ namespace WPEFramework {
 
 ENUM_CONVERSION_BEGIN(::JsonValue::type)
 
-    { JsonValue::type::EMPTY,   _TXT("empty")   },
+    { JsonValue::type::EMPTY, _TXT("empty") },
     { JsonValue::type::BOOLEAN, _TXT("boolean") },
     { JsonValue::type::NUMBER, _TXT("number") },
     { JsonValue::type::STRING, _TXT("string") },
@@ -71,6 +72,8 @@ void ShowMenu()
            "\tO : Set properties using an opaque variant JSON parameter\n"
            "\tV : Get properties using an opaque variant JSON parameter\n"
            "\tE : Invoke and exchange an opaque variant JSON parameter\n"
+           "\tC : Callback, using a static method, wait for a response from the otherside a-synchronously\n"
+           "\tG : Callback, using a class method, wait for a response from the otherside a-synchronously\n"
            "\tH : Help\n"
            "\tQ : Quit\n");
 }
@@ -87,6 +90,18 @@ static void clock(const Core::JSON::String& parameters)
 {
     printf("Received a new time: %s\n", parameters.Value().c_str());
 }
+
+static void async_callback(const Data::Response& response)
+{
+    printf("Finally we are triggered. GLOBAL: @ %s\n", Core::Time(response.Time.Value(), false).ToRFC1123().c_str());
+}
+
+class Callbacks {
+public:
+	void async_callback_complete(const Data::Response& response, const Core::JSONRPC::Error* result) {
+        printf("Finally we are triggered. Pointer to: %p @ %s\n", result, Core::Time(response.Time.Value(), false).ToRFC1123().c_str());
+	}
+};
 }
 
 static void PrintObject(const JsonObject::Iterator& iterator)
@@ -108,6 +123,7 @@ int main(int argc, char** argv)
         Core::NodeId jsonrpcChannel;
         ShowMenu();
         int element;
+        Handlers::Callbacks testCallback;
 
         ParseOptions(argc, argv, jsonrpcChannel);
 
@@ -117,7 +133,7 @@ int main(int argc, char** argv)
 
         // This is not mandatory, just an easy way to use the VisualStudio environment to Start 2 projects at once, 1 project
         // being the JSONRPC Server running the plugins and the other one this client. However, give the sevrver a bit of time
-        // to bring up Plugin JSONRPCPlugin, before we hook up to it. If one starts this App, after the Server is up and running 
+        // to bring up Plugin JSONRPCPlugin, before we hook up to it. If one starts this App, after the Server is up and running
         // this is not nessecary.
         SleepMs(2000);
 
@@ -192,7 +208,7 @@ int main(int argc, char** argv)
                 // 3. [mandatory] Parameters to be send to the other side.
                 // 4. [mandatory] Response to be received from the other side.
                 Core::JSON::String result;
-                remoteObject.Invoke<Core::JSON::String, Core::JSON::String>(1000, _T("time"), _T(""), result);
+                remoteObject.Invoke<Core::JSON::String>(1000, _T("time"), result);
                 printf("received time: %s\n", result.Value().c_str());
                 break;
             }
@@ -205,7 +221,7 @@ int main(int argc, char** argv)
                 // 4. [mandatory] Response to be received from the other side.
                 Data::Response response;
                 remoteObject.Invoke<Data::Parameters, Data::Response>(1000, _T("extended"), Data::Parameters(_T("JustSomeText"), true), response);
-                printf("received time: %llu - %d\n", response.Time.Value(), response.State.Value());
+                printf("received time: %llu - %s\n", response.Time.Value(), response.State.Data());
                 break;
             }
             case 'R': {
@@ -228,12 +244,12 @@ int main(int argc, char** argv)
                 // 1. [mandatory] Time to wait for the round trip to complete to the server to register.
                 // 2. [mandatory] Event name which was used during the registration
                 remoteObject.Unsubscribe(1000, _T("clock"));
-                printf("Unregistered and renmoved a notification handler\n");
+                printf("Unregistered and removed a notification handler\n");
                 break;
             }
             case 'O': {
-				// Set properties, using a n Opaque value:
-                remoteObject.SetProperty("window", {{{ "x", 123 }, { "y", 456 }, { "width", 789 }, { "height", 1112 }}});
+                // Set properties, using a n Opaque value:
+                remoteObject.SetProperty("window", { { { "x", 123 }, { "y", 456 }, { "width", 789 }, { "height", 1112 } } });
                 printf("Send out an opaque struct to set the window properties\n");
                 break;
             }
@@ -276,22 +292,34 @@ int main(int argc, char** argv)
                 break;
             }
             case 'E': {
-				// Set this one up, the old fasion way
+                // Set this one up, the old fasion way
                 JsonObject parameters;
                 JsonObject response;
                 parameters["x"] = 67;
                 parameters["y"] = 99;
-                parameters["width"] = false;  // Deliberate error, see what happens..
+                parameters["width"] = false; // Deliberate error, see what happens..
                 parameters["height"] = -1299; // Interesting a negative hide... No one is warning us :-)
                 PrintObject(parameters.Variants());
                 if (remoteObject.Invoke("swap", parameters, response) == Core::ERROR_NONE) {
                     PrintObject(response.Variants());
-				} else {
-                    printf("Something went wrong during the invoke\n");                
-				}
+                } else {
+                    printf("Something went wrong during the invoke\n");
+                }
 
                 break;
-			}
+            }
+            case 'C': {
+                if (remoteObject.Dispatch<Core::JSON::DecUInt8>(30000, "async", { 10, true }, &Handlers::async_callback) != Core::ERROR_NONE) {
+                    printf("Something went wrong during the invoke\n");
+				}
+                break;
+            }
+            case 'G': {
+                if (remoteObject.Dispatch<void>(30000, "waitcall", &Handlers::Callbacks::async_callback_complete, &testCallback) != Core::ERROR_NONE) {
+                    printf("Something went wrong during the invoke\n");
+                }
+                break;
+            }
             case '?':
             case 'H':
                 ShowMenu();

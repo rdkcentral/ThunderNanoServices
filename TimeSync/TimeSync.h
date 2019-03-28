@@ -7,8 +7,9 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class TimeSync : public PluginHost::IPlugin, public PluginHost::IWeb {
+    class TimeSync : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     public:
+        template <typename TimeRep = Core::JSON::String>
         class Data : public Core::JSON::Container {
         public:
             Data(Data const& other) = delete;
@@ -16,11 +17,9 @@ namespace Plugin {
 
             Data()
                 : Core::JSON::Container()
-                , IsTimeSynced()
                 , TimeSource()
                 , SyncTime()
             {
-                Add(_T("synced"), &IsTimeSynced);
                 Add(_T("source"), &TimeSource);
                 Add(_T("time"), &SyncTime);
             }
@@ -30,9 +29,8 @@ namespace Plugin {
             }
 
         public:
-            Core::JSON::Boolean IsTimeSynced;
             Core::JSON::String TimeSource;
-            Core::JSON::String SyncTime;
+            TimeRep SyncTime;
         };
 
     private:
@@ -189,6 +187,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(TimeSync)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(Exchange::ITimeSync, _client)
         END_INTERFACE_MAP
 
@@ -206,6 +205,8 @@ namespace Plugin {
 
     private:
         void SyncedTime(const uint64_t timeTicks);
+        uint32_t time(Data<Core::JSON::DecUInt64>& data);
+        uint32_t synchronize();
 
     private:
         uint16_t _skipURL;

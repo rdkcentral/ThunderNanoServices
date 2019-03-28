@@ -68,16 +68,18 @@ namespace Plugin {
 
     /* virtual */ uint32_t NTPClient::Synchronize()
     {
-        uint32_t result = Core::ERROR_ILLEGAL_STATE;
+        uint32_t result = Core::ERROR_INCOMPLETE_CONFIG;
 
         TRACE(Trace::Information, (_T("TimeSync: Synchronize")));
 
         _adminLock.Lock();
 
         if ((_state == INITIAL) || (_state == SUCCESS) || ((_state == FAILED) && (_serverIndex.IsValid() == false))) {
-            result = Core::ERROR_INPROGRESS;
+            result = Core::ERROR_NONE;
             _state = SENDREQUEST;
             PluginHost::WorkerPool::Instance().Submit(_activity);
+        } else if (_state == SENDREQUEST || _state == INPROGRESS) {
+            result = Core::ERROR_INPROGRESS;
         }
 
         _adminLock.Unlock();

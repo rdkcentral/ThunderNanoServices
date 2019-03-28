@@ -7,9 +7,11 @@ namespace Plugin {
     SERVICE_REGISTRATION(TimeSync, 1, 0);
 
     static Core::ProxyPoolType<Web::Response> responseFactory(4);
-    static Core::ProxyPoolType<Web::JSONBodyType<TimeSync::Data>> jsonResponseFactory(4);
+    static Core::ProxyPoolType<Web::JSONBodyType<TimeSync::Data<>>> jsonResponseFactory(4);
 
     static const uint16_t NTPPort = 123;
+    static constexpr auto* kTimeMethodName = _T("time");
+    static constexpr auto* kSyncMethodName = _T("synchronize");
 
 #ifdef __WIN32__
 #pragma warning(disable : 4355)
@@ -21,6 +23,8 @@ namespace Plugin {
         , _activity(Core::ProxyType<PeriodicSync>::Create(_client))
         , _sink(this)
     {
+        Register<void, Data<Core::JSON::DecUInt64>>(kTimeMethodName, &TimeSync::time, this);
+        Register<void, void>(kSyncMethodName, &TimeSync::synchronize, this);
     }
 #ifdef __WIN32__
 #pragma warning(default : 4355)
@@ -28,6 +32,8 @@ namespace Plugin {
 
     /* virtual */ TimeSync::~TimeSync()
     {
+        Unregister(kTimeMethodName);
+        Unregister(kSyncMethodName);
         _client->Release();
     }
 
@@ -79,7 +85,7 @@ namespace Plugin {
         result->Message = "OK";
 
         if (request.Verb == Web::Request::HTTP_GET) {
-            Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
+            Core::ProxyType<Web::JSONBodyType<Data<>>> response(jsonResponseFactory.Element());
             uint64_t syncTime(_client->SyncTime());
 
             response->TimeSource = _client->Source();
@@ -120,5 +126,18 @@ namespace Plugin {
             PluginHost::WorkerPool::Instance().Schedule(newSyncTime, _activity);
         }
     }
+
+    uint32_t TimeSync::time(Data<Core::JSON::DecUInt64>& response)
+    {
+        response.TimeSource = _client->Source();
+        response.SyncTime = _client->SyncTime();
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t TimeSync::synchronize()
+    {
+        return _client->Synchronize();
+    }
+
 } // namespace Plugin
 } // namespace WPEFramework
