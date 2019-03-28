@@ -74,6 +74,7 @@ void ShowMenu()
            "\tE : Invoke and exchange an opaque variant JSON parameter\n"
            "\tC : Callback, using a static method, wait for a response from the otherside a-synchronously\n"
            "\tG : Callback, using a class method, wait for a response from the otherside a-synchronously\n"
+           "\tD : Demonstrating the possibilities with JsonObject\n"
            "\tH : Help\n"
            "\tQ : Quit\n");
 }
@@ -318,6 +319,28 @@ int main(int argc, char** argv)
                 if (remoteObject.Dispatch<void>(30000, "waitcall", &Handlers::Callbacks::async_callback_complete, &testCallback) != Core::ERROR_NONE) {
                     printf("Something went wrong during the invoke\n");
                 }
+                break;
+            }
+            case 'D': {
+                string serialized;
+                JsonObject demoObject;
+                demoObject["x"] = 12;
+                demoObject["name"] = "Pierre";
+                demoObject["switch"] = true;
+                demoObject.ToString(serialized);
+                printf("The serialized values are: %s\n", serialized.c_str());
+
+				JsonObject newObject;
+                newObject = serialized;
+                string newString;
+                newObject.ToString(newString);
+                printf("The serialized values are [instantiated from the string, printed above]: %s\n", newString.c_str());
+
+				JsonObject otherObject = R"({"zoomSetting": "FULL", "SomethingElse": true, "Numbers": 123 })";
+                otherObject["member"] = 76;
+                string otherString;
+                otherObject.ToString(otherString);
+                printf("The serialized values are [otherObject]: %s\n", otherString.c_str());
                 break;
             }
             case '?':
