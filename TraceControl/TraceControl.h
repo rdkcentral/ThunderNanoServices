@@ -6,7 +6,12 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    class TraceControl : public PluginHost::IPlugin, public PluginHost::IWeb {
+namespace {
+    constexpr TCHAR kStatusMethodName[] = _T("status");
+    constexpr TCHAR kSetMethodName[] = _T("set");
+}
+
+    class TraceControl : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
 
     public:
         enum state {
@@ -810,6 +815,25 @@ namespace Plugin {
         };
         class Data : public Core::JSON::Container {
         public:
+            class StatusParam final : public Core::JSON::Container {
+            public:
+                StatusParam()
+                    : Core::JSON::Container()
+                    , Module()
+                    , Category()
+                {
+                    Add(_T("module"), &Module);
+                    Add(_T("category"), &Category);
+                }
+
+                StatusParam(const StatusParam&) = delete;
+                StatusParam& operator=(const StatusParam&) = delete;
+
+            public:
+                Core::JSON::String Module; // Module name
+                Core::JSON::String Category; // Category name
+            }; // class StatusDataParam
+
             class Trace : public Core::JSON::Container {
             private:
                 Trace& operator=(const Trace&);
@@ -885,17 +909,22 @@ namespace Plugin {
             , _outputs()
             , _observer(*this)
         {
+            Register<Data::StatusParam, TraceControl::Data>(kStatusMethodName, &TraceControl::status, this);
+            Register<Data::Trace, void>(kSetMethodName, &TraceControl::set, this);
         }
 #ifdef __WIN32__
 #pragma warning(default : 4355)
 #endif
         virtual ~TraceControl()
         {
+            Unregister(kStatusMethodName);
+            Unregister(kSetMethodName);
         }
 
         BEGIN_INTERFACE_MAP(TraceControl)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
@@ -934,6 +963,10 @@ namespace Plugin {
 
     private:
         void Dispatch(Observer::Source& information);
+
+        // JSONRPC endpoints definition
+        uint32_t status(const Data::StatusParam& parameters, TraceControl::Data& response);
+        uint32_t set(const Data::Trace& parameters);
 
     private:
         uint8_t _skipURL;
