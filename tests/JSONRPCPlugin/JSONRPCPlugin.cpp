@@ -33,6 +33,10 @@ namespace Plugin
 		// Opaque method examples 
         Register<JsonObject, JsonObject>("swap", &JSONRPCPlugin::swap, this);
         Property<JsonObject>(_T("window"), &JSONRPCPlugin::get_opaque_geometry, &JSONRPCPlugin::set_opaque_geometry, this);
+
+		// Methods to test a-synchronpud callbacks
+        Register<Core::JSON::DecUInt8>("async", &JSONRPCPlugin::async_callback, this);
+
     }
 
     /* virtual */ JSONRPCPlugin::~JSONRPCPlugin()
@@ -66,6 +70,9 @@ namespace Plugin
         Notify(_T("clock"), Core::JSON::String(Core::Time::Now().ToRFC1123()));
     }
 
+	void JSONRPCPlugin::SendTime(Core::JSONRPC::Connection & channel) {
+        Response(channel, Data::Response(Core::Time::Now().Ticks(), Data::Response::FAILURE));
+	}
 } // namespace Plugin
 
 } // namespace WPEFramework

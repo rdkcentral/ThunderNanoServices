@@ -312,12 +312,16 @@ namespace Plugin {
             while (it != _clients.end()) {
                 if (it->second.clientInterface == client) {
                     TRACE(Trace::Information, (_T("Removed client %s."), it->first.c_str()));
-                    //                for( auto index : _observers) {
-                    //                    index->Detached(it->second.clientInterface); //note as we have the name here, we could more efficiently pass the name to the caller as it is not allowed to get it from the pointer passes, but we are going to restructure the interface anyway
-                    //                }
+                    // for( auto index : _observers) {
+                    //     // note as we have the name here, we could more efficiently pass the name to the 
+                    //     // caller as it is not allowed to get it from the pointer passes, but we are going 
+                    //     // to restructure the interface anyway
+                    //     index->Detached(it->second.clientInterface); 
+                    // }
 
                     uint32_t result = it->second.clientInterface->Release();
 
+                    DEBUG_VARIABLE(result);
                     TRACE_L1("Releasing Compositor Client result: %s", result == Core::ERROR_DESTRUCTION_SUCCEEDED ? "succeeded" : "failed");
 
                     _clients.erase(it);
