@@ -3,12 +3,13 @@
 
 #include "Module.h"
 #include "RemoteAdministrator.h"
+#include <interfaces/json/RemoteControl_JsonData.h>
 #include <interfaces/IKeyHandler.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class RemoteControl : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IKeyHandler {
+    class RemoteControl : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IKeyHandler, public PluginHost::JSONRPC {
     private:
         RemoteControl(const RemoteControl&);
         RemoteControl& operator=(const RemoteControl&);
@@ -150,6 +151,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(Exchange::IKeyHandler)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
@@ -239,6 +241,25 @@ namespace Plugin {
         const string FindDevice(Core::TextSegmentIterator& index) const;
         bool ParseRequestBody(const Web::Request& request, uint32_t& code, uint16_t& key, uint32_t& modifiers);
         Core::ProxyType<Web::IBody> CreateResponseBody(uint32_t code, uint32_t key, uint16_t modifiers) const;
+
+        void RegisterAll();
+        void UnregisterAll();
+        Core::JSON::ArrayType<Core::JSON::EnumType<JsonData::RemoteControl::ModifiersType>> Modifiers(uint16_t modifiers) const;
+        uint16_t Modifiers(const Core::JSON::ArrayType<Core::JSON::EnumType<JsonData::RemoteControl::ModifiersType>>& param) const;
+
+        uint32_t endpoint_devices(Core::JSON::ArrayType<Core::JSON::String>& response);
+        uint32_t endpoint_device(const JsonData::RemoteControl::DeviceParamsInfo& params, JsonData::RemoteControl::DeviceResultData& response);
+        uint32_t endpoint_key(const JsonData::RemoteControl::KeyParamsInfo& params, JsonData::RemoteControl::KeyResultData& response);
+        uint32_t endpoint_delete(const JsonData::RemoteControl::KeyParamsInfo& params);
+        uint32_t endpoint_modify(const JsonData::RemoteControl::ModifyParamsInfo& params);
+        uint32_t endpoint_pair(const JsonData::RemoteControl::DeviceParamsInfo& params);
+        uint32_t endpoint_unpair(const JsonData::RemoteControl::UnpairParamsData& params);
+        uint32_t endpoint_send(const JsonData::RemoteControl::ModifyParamsInfo& params);
+        uint32_t endpoint_press(const JsonData::RemoteControl::ModifyParamsInfo& params);
+        uint32_t endpoint_release(const JsonData::RemoteControl::ModifyParamsInfo& params);
+        uint32_t endpoint_save(const JsonData::RemoteControl::DeviceParamsInfo& params);
+        uint32_t endpoint_load(const JsonData::RemoteControl::DeviceParamsInfo& params);
+        uint32_t endpoint_add(const JsonData::RemoteControl::ModifyParamsInfo& params);
 
     private:
         uint32_t _skipURL;
