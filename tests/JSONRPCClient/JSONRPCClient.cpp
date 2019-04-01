@@ -222,7 +222,7 @@ int main(int argc, char** argv)
                 // 4. [mandatory] Response to be received from the other side.
                 Data::Response response;
                 remoteObject.Invoke<Data::Parameters, Data::Response>(1000, _T("extended"), Data::Parameters(_T("JustSomeText"), true), response);
-                printf("received time: %llu - %s\n", response.Time.Value(), response.State.Data());
+                printf("received time: %ju - %s\n", (intmax_t)response.Time.Value(), response.State.Data());
                 break;
             }
             case 'R': {
