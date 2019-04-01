@@ -118,6 +118,8 @@ namespace Plugin {
         , _persistentPath()
     {
         ASSERT(_inputHandler != nullptr);
+
+        RegisterAll();
     }
 #ifdef __WIN32__
 #pragma warning(default : 4355)
@@ -125,6 +127,7 @@ namespace Plugin {
 
     /* virtual */ RemoteControl::~RemoteControl()
     {
+        UnregisterAll();
     }
 
     /* virtual */ const string RemoteControl::Initialize(PluginHost::IShell* service)

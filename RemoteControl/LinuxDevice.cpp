@@ -234,7 +234,7 @@ namespace Plugin {
             int result = ::read(fd, entry, sizeof(entry));
 
             if (result > 0) {
-                while (result >= sizeof(input_event)) {
+                while (result >= static_cast<int>(sizeof(input_event))) {
 
                     ASSERT(index < (sizeof(entry) / sizeof(input_event)));
 
@@ -261,8 +261,9 @@ namespace Plugin {
         udev_monitor* _monitor;
         int _update;
         Exchange::IKeyHandler* _callback;
+        static LinuxDevice* _singleton;
     };
 
-    static LinuxDevice* _singleton(Core::Service<LinuxDevice>::Create<LinuxDevice>());
+    /* static */ LinuxDevice* LinuxDevice::_singleton = Core::Service<LinuxDevice>::Create<LinuxDevice>();
 }
 }

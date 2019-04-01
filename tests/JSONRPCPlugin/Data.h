@@ -126,6 +126,17 @@ namespace Data {
             Add(_T("state"), &State);
             Add(_T("time"), &Time);
         }
+        Response(const uint64_t time, const state value)
+            : Core::JSON::Container()
+            , State(FAILURE)
+            , Time(0)
+        {
+            Add(_T("state"), &State);
+            Add(_T("time"), &Time);
+
+			Time = time;
+            State = value;
+        }
         virtual ~Response()
         {
         }

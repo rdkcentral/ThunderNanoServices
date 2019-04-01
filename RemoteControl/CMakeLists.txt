@@ -14,7 +14,8 @@ find_package(NXCLIENT QUIET)
 add_library(${MODULE_NAME} 
     Module.cpp 
     RemoteControl.cpp 
-    RemoteAdministrator.cpp)
+    RemoteAdministrator.cpp
+    RemoteControl_JsonRpcImpl.cpp)
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE 

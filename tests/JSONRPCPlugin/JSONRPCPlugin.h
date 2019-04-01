@@ -63,6 +63,35 @@ namespace Plugin {
             uint32_t _nextSlot;
             JSONRPCPlugin& _parent;
         };
+        class Callback : public Core::IDispatch {
+        private:
+            Callback() = delete;
+            Callback(const Callback&) = delete;
+            Callback& operator=(const Callback&) = delete;
+
+        public:
+            Callback(JSONRPCPlugin* parent, const Core::JSONRPC::Connection& channel)
+                : _parent(*parent)
+                , _channel(channel)
+            {
+            }
+            ~Callback()
+            {
+            }
+
+        public:
+            // This method is called by the main process ThreadPool at the scheduled time.
+            // After the parent has been called to send out a-synchronous notifications, it
+            // will schedule itself again, to be triggered after the set period.
+            virtual void Dispatch() override
+            {
+                _parent.SendTime(_channel);
+            }
+
+        private:
+            JSONRPCPlugin& _parent;
+            Core::JSONRPC::Connection _channel;
+        };
 
         // Define a handler for incoming JSONRPC messages. This method does not take any
         // parameters, it just returns the current time of this server, if it is called.
@@ -122,19 +151,19 @@ namespace Plugin {
             _data = data.Value();
             return (Core::ERROR_NONE);
         }
-		uint32_t swap(const JsonObject& parameters, JsonObject& response) {
+        uint32_t swap(const JsonObject& parameters, JsonObject& response)
+        {
             response = JsonObject({ { "x", 111 }, { "y", 222 }, { "width", _window.Width }, { "height", _window.Height } });
-            
-			// Now lets see what we got we can set..
+
+            // Now lets see what we got we can set..
             Core::JSON::Variant value = parameters.Get("x");
-            if (value.Content() == Core::JSON::Variant::type::NUMBER) 
-            {
+            if (value.Content() == Core::JSON::Variant::type::NUMBER) {
                 _window.X = static_cast<uint32_t>(value.Number());
             } else if (value.Content() == Core::JSON::Variant::type::EMPTY) {
                 TRACE(Trace::Information, ("The <x> is not available"));
             } else {
-                TRACE(Trace::Information, ("The <x> is not defined as a number"));           
-			}
+                TRACE(Trace::Information, ("The <x> is not defined as a number"));
+            }
             value = parameters.Get("y");
             if (value.Content() == Core::JSON::Variant::type::NUMBER) {
                 _window.X = static_cast<uint32_t>(value.Number());
@@ -179,6 +208,11 @@ namespace Plugin {
             window = JsonObject({ { "x", _window.X }, { "y", _window.Y }, { "width", _window.Width }, { "height", _window.Height } });
             return (Core::ERROR_NONE);
         }
+        void async_callback(const Core::JSONRPC::Connection& connection, const Core::JSON::DecUInt8& seconds)
+        {
+            Core::ProxyType<Callback> job(Core::ProxyType<Callback>::Create(this, connection));
+            PluginHost::WorkerPool::Instance().Schedule(Core::Time::Now().Add(seconds * 1000), job);
+        }
 
     public:
         JSONRPCPlugin();
@@ -200,9 +234,10 @@ namespace Plugin {
         //   Private methods specific to this class.
         // -------------------------------------------------------------------------------------------------------
         void SendTime();
+        void SendTime(Core::JSONRPC::Connection& channel);
 
-    private:
-        Core::ProxyType<PeriodicSync> _job;
+    private: 
+		Core::ProxyType<PeriodicSync> _job;
         Data::Window _window;
         string _data;
     };
