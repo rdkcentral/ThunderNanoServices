@@ -82,7 +82,7 @@ namespace Plugin {
 
             PluginHost::ISubSystem* subSystem = _service->SubSystems();
 
-            ASSERT(subSystem == nullptr);
+            ASSERT(subSystem != nullptr);
 
             const PluginHost::ISubSystem::IInternet* internet(subSystem->Get<PluginHost::ISubSystem::IInternet>());
             const PluginHost::ISubSystem::ILocation* location(subSystem->Get<PluginHost::ISubSystem::ILocation>());
@@ -96,8 +96,8 @@ namespace Plugin {
             result->ContentType = Web::MIMETypes::MIME_JSON;
             result->Body(Core::proxy_cast<Web::IBody>(response));
         } else if (request.Verb == Web::Request::HTTP_POST) {
-
             if (index.Next()) {
+                index.Next();
                 if ((index.Current() == "Sync") && (_source.empty() == false)) {
                     uint32_t error = _sink.Probe(_source, 1, 1);
 

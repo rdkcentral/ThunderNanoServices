@@ -360,6 +360,7 @@ namespace Plugin {
             ASSERT(_response.IsValid() == true);
 
             element->Body<Web::IBody>(_response);
+            _response.Release();
         }
     }
 
