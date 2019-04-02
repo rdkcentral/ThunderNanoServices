@@ -17,6 +17,7 @@ namespace Plugin {
         , _sink(this)
         , _service(nullptr)
     {
+        RegisterAll();
     }
 #ifdef __WIN32__
 #pragma warning(default : 4355)
@@ -24,6 +25,7 @@ namespace Plugin {
 
     /* virtual */ LocationSync::~LocationSync()
     {
+        UnregisterAll();
     }
 
     /* virtual */ const string LocationSync::Initialize(PluginHost::IShell* service)
