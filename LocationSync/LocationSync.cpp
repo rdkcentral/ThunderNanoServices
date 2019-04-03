@@ -98,8 +98,8 @@ namespace Plugin {
             result->ContentType = Web::MIMETypes::MIME_JSON;
             result->Body(Core::proxy_cast<Web::IBody>(response));
         } else if (request.Verb == Web::Request::HTTP_POST) {
+            index.Next();
             if (index.Next()) {
-                index.Next();
                 if ((index.Current() == "Sync") && (_source.empty() == false)) {
                     uint32_t error = _sink.Probe(_source, 1, 1);
 
