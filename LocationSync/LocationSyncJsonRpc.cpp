@@ -1,7 +1,7 @@
 
 // Note: This code is inherently not thread safe. If required, proper synchronisation must be added.
 
-#include <interfaces/json/LocationSync_JsonData.h>
+#include <interfaces/json/JsonData_LocationSync.h>
 #include "LocationSync.h"
 #include "Module.h"
 

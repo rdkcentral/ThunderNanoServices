@@ -1,5 +1,5 @@
 
-#include <interfaces/json/WebKitBrowser_JsonData.h>
+#include <interfaces/json/JsonData_WebKitBrowser.h>
 #include "WebKitBrowser.h"
 #include "Module.h"
 

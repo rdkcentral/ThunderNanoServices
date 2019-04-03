@@ -1,8 +1,7 @@
 
-#include <interfaces/json/RemoteControl_JsonData.h>
+#include <interfaces/json/JsonData_RemoteControl.h>
 #include "RemoteControl.h"
 #include "Module.h"
-
 
 namespace WPEFramework {
 
@@ -28,15 +27,15 @@ namespace Plugin {
         Register<DeviceParamsInfo,DeviceResultData>(_T("device"), &RemoteControl::endpoint_device, this);
         Register<KeyParamsInfo,KeyResultData>(_T("key"), &RemoteControl::endpoint_key, this);
         Register<KeyParamsInfo,void>(_T("delete"), &RemoteControl::endpoint_delete, this);
-        Register<ModifyParamsInfo,void>(_T("modify"), &RemoteControl::endpoint_modify, this);
+        Register<RcinfoInfo,void>(_T("modify"), &RemoteControl::endpoint_modify, this);
         Register<DeviceParamsInfo,void>(_T("pair"), &RemoteControl::endpoint_pair, this);
         Register<UnpairParamsData,void>(_T("unpair"), &RemoteControl::endpoint_unpair, this);
-        Register<ModifyParamsInfo,void>(_T("send"), &RemoteControl::endpoint_send, this);
-        Register<ModifyParamsInfo,void>(_T("press"), &RemoteControl::endpoint_press, this);
-        Register<ModifyParamsInfo,void>(_T("release"), &RemoteControl::endpoint_release, this);
+        Register<RcinfoInfo,void>(_T("send"), &RemoteControl::endpoint_send, this);
+        Register<RcinfoInfo,void>(_T("press"), &RemoteControl::endpoint_press, this);
+        Register<RcinfoInfo,void>(_T("release"), &RemoteControl::endpoint_release, this);
         Register<DeviceParamsInfo,void>(_T("save"), &RemoteControl::endpoint_save, this);
         Register<DeviceParamsInfo,void>(_T("load"), &RemoteControl::endpoint_load, this);
-        Register<ModifyParamsInfo,void>(_T("add"), &RemoteControl::endpoint_add, this);
+        Register<RcinfoInfo,void>(_T("add"), &RemoteControl::endpoint_add, this);
     }
 
     void RemoteControl::UnregisterAll()
@@ -230,7 +229,7 @@ namespace Plugin {
     }
 
     // Key mapping actions.
-    uint32_t RemoteControl::endpoint_modify(const ModifyParamsInfo& params)
+    uint32_t RemoteControl::endpoint_modify(const RcinfoInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -274,9 +273,9 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_NONE;
 
-        if ((params.Device.IsSet() == true) && (params.BindId.IsSet())) {
+        if ((params.Device.IsSet() == true) && (params.Bindid.IsSet())) {
             if (IsPhysicalDevice(params.Device.Value()) == true) {
-                if (Remotes::RemoteAdministrator::Instance().Unpair(params.Device.Value(), params.BindId.Value()) == false) {
+                if (Remotes::RemoteAdministrator::Instance().Unpair(params.Device.Value(), params.Bindid.Value()) == false) {
                     result = Core::ERROR_GENERAL;
                 }
             } else {
@@ -289,7 +288,7 @@ namespace Plugin {
     }
 
     // Key mapping actions.
-    uint32_t RemoteControl::endpoint_send(const ModifyParamsInfo& params)
+    uint32_t RemoteControl::endpoint_send(const RcinfoInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -309,7 +308,7 @@ namespace Plugin {
     }
 
     // Key mapping actions.
-    uint32_t RemoteControl::endpoint_press(const ModifyParamsInfo& params)
+    uint32_t RemoteControl::endpoint_press(const RcinfoInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -326,7 +325,7 @@ namespace Plugin {
     }
 
     // Key mapping actions.
-    uint32_t RemoteControl::endpoint_release(const ModifyParamsInfo& params)
+    uint32_t RemoteControl::endpoint_release(const RcinfoInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -400,7 +399,7 @@ namespace Plugin {
     }
 
     // Key mapping actions.
-    uint32_t RemoteControl::endpoint_add(const ModifyParamsInfo& params)
+    uint32_t RemoteControl::endpoint_add(const RcinfoInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
         if ((params.Device.IsSet() == true) && (params.Code.IsSet() == true) && (params.Code.Value() != 0) && (params.Key.IsSet()) && (params.Modifiers.IsSet())) {

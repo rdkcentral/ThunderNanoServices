@@ -2,7 +2,7 @@
 #define LOCATIONSYNC_LOCATIONSYNC_H
 
 #include "LocationService.h"
-#include <interfaces/json/LocationSync_JsonData.h>
+#include <interfaces/json/JsonData_LocationSync.h>
 #include "Module.h"
 
 namespace WPEFramework {

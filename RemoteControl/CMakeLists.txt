@@ -15,7 +15,7 @@ add_library(${MODULE_NAME}
     Module.cpp 
     RemoteControl.cpp 
     RemoteAdministrator.cpp
-    RemoteControl_JsonRpcImpl.cpp)
+    RemoteControlJsonRpc.cpp)
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE 
