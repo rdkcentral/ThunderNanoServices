@@ -35,6 +35,7 @@ find_package(WPEWebKit REQUIRED)
 add_library(${MODULE_NAME} SHARED  
     Module.cpp
     WebKitBrowser.cpp
+    WebKitBrowser_JsonRpcImpl.cpp
     WebKitImplementation.cpp
     InjectedBundle/WhiteListedOriginDomainsList.cpp
     InjectedBundle/Utils.cpp
