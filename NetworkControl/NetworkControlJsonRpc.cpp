@@ -7,12 +7,6 @@
 
 namespace WPEFramework {
 
-ENUM_CONVERSION_BEGIN(JsonData::NetworkControl::NetworkResultData::ModeType)
-    { JsonData::NetworkControl::NetworkResultData::ModeType::MANUAL, _TXT("Manual") },
-    { JsonData::NetworkControl::NetworkResultData::ModeType::STATIC, _TXT("Static") },
-    { JsonData::NetworkControl::NetworkResultData::ModeType::DYNAMIC, _TXT("Dynamic") },
-ENUM_CONVERSION_END(JsonData::NetworkControl::NetworkResultData::ModeType);
-
 namespace Plugin {
 
     using namespace JsonData::NetworkControl;
