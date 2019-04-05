@@ -5,19 +5,17 @@
 #include "Module.h"
 
 #include <interfaces/IIPNetwork.h>
+#include <interfaces/json/JsonData_NetworkControl.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
     class NetworkControl : public Exchange::IIPNetwork,
                            public PluginHost::IPlugin,
-                           public PluginHost::IWeb {
+                           public PluginHost::IWeb,
+                           public PluginHost::JSONRPC {
     public:
-        enum mode {
-            MANUAL,
-            STATIC,
-            DYNAMIC
-        };
+        using mode = JsonData::NetworkControl::NetworkResultData::ModeType;
 
         class Entry : public Core::JSON::Container {
         private:
@@ -27,7 +25,7 @@ namespace Plugin {
             Entry()
                 : Core::JSON::Container()
                 , Interface()
-                , Mode(MANUAL)
+                , Mode(mode::MANUAL)
                 , Address()
                 , Mask(32)
                 , Gateway()
@@ -214,7 +212,7 @@ namespace Plugin {
 
         public:
             StaticInfo()
-                : _mode(MANUAL)
+                : _mode(mode::MANUAL)
                 , _address()
                 , _gateway()
                 , _broadcast()
@@ -385,6 +383,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(Exchange::IIPNetwork)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
@@ -423,6 +422,16 @@ namespace Plugin {
         {
             return (_retries);
         }
+
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_network(const JsonData::NetworkControl::NetworkParamsInfo& params, Core::JSON::ArrayType<JsonData::NetworkControl::NetworkResultData>& response);
+        uint32_t endpoint_reload(const JsonData::NetworkControl::NetworkParamsInfo& params);
+        uint32_t endpoint_request(const JsonData::NetworkControl::NetworkParamsInfo& params);
+        uint32_t endpoint_assign(const JsonData::NetworkControl::NetworkParamsInfo& params);
+        uint32_t endpoint_up(const JsonData::NetworkControl::NetworkParamsInfo& params);
+        uint32_t endpoint_down(const JsonData::NetworkControl::NetworkParamsInfo& params);
+        uint32_t endpoint_flush(const JsonData::NetworkControl::NetworkParamsInfo& params);
 
     private:
         Core::CriticalSection _adminLock;

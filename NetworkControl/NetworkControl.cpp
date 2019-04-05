@@ -2,15 +2,7 @@
 
 namespace WPEFramework {
 
-ENUM_CONVERSION_BEGIN(Plugin::NetworkControl::mode)
-
-    { Plugin::NetworkControl::MANUAL, _TXT("Manual") },
-    { Plugin::NetworkControl::STATIC, _TXT("Static") },
-    { Plugin::NetworkControl::DYNAMIC, _TXT("Dynamic") },
-
-    ENUM_CONVERSION_END(Plugin::NetworkControl::mode)
-
-        namespace Plugin
+namespace Plugin
 {
 
     SERVICE_REGISTRATION(NetworkControl, 1, 0);
@@ -75,6 +67,7 @@ ENUM_CONVERSION_BEGIN(Plugin::NetworkControl::mode)
         , _dhcpInterfaces()
         , _observer(Core::ProxyType<AdapterObserver>::Create(this))
     {
+        RegisterAll();
     }
 #ifdef __WIN32__
 #pragma warning(default : 4355)
@@ -82,6 +75,7 @@ ENUM_CONVERSION_BEGIN(Plugin::NetworkControl::mode)
 
     /* virtual */ NetworkControl::~NetworkControl()
     {
+        UnregisterAll();
     }
 
     /* virtual */ const string NetworkControl::Initialize(PluginHost::IShell * service)
@@ -139,10 +133,10 @@ ENUM_CONVERSION_BEGIN(Plugin::NetworkControl::mode)
                         std::make_tuple(index.Current()));
 
                     mode how(index.Current().Mode);
-                    if (how == MANUAL) {
+                    if (how == mode::MANUAL) {
                         SYSLOG(Logging::Startup, (_T("Interface [%s] activated, no IP associated"), interfaceName.c_str()));
                     } else {
-                        if (how == DYNAMIC) {
+                        if (how == mode::DYNAMIC) {
                             SYSLOG(Logging::Startup, (_T("Interface [%s] activated, DHCP request issued"), interfaceName.c_str()));
                             Reload(interfaceName, true);
                         } else {
@@ -288,7 +282,7 @@ ENUM_CONVERSION_BEGIN(Plugin::NetworkControl::mode)
 
                 bool reload = (index.Current() == _T("Reload"));
 
-                if (((reload == true) && (entry->second.Mode() != STATIC)) || (index.Current() == _T("Request"))) {
+                if (((reload == true) && (entry->second.Mode() != mode::STATIC)) || (index.Current() == _T("Request"))) {
 
                     if (Reload(entry->first, true) == Core::ERROR_NONE) {
                         result->ErrorCode = Web::STATUS_OK;
@@ -297,7 +291,7 @@ ENUM_CONVERSION_BEGIN(Plugin::NetworkControl::mode)
                         result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
                         result->Message = "Could not activate the server";
                     }
-                } else if (((reload == true) && (entry->second.Mode() == STATIC)) || (index.Current() == _T("Assign"))) {
+                } else if (((reload == true) && (entry->second.Mode() == mode::STATIC)) || (index.Current() == _T("Assign"))) {
 
                     if (Reload(entry->first, false) == Core::ERROR_NONE) {
                         result->ErrorCode = Web::STATUS_OK;
@@ -743,8 +737,8 @@ ENUM_CONVERSION_BEGIN(Plugin::NetworkControl::mode)
                 if (index != _interfaces.end()) {
 
                     mode how(index->second.Mode());
-                    if (how != MANUAL) {
-                        Reload(interfaceName, how == DYNAMIC);
+                    if (how != mode::MANUAL) {
+                        Reload(interfaceName, how == mode::DYNAMIC);
                     }
                 }
             }
