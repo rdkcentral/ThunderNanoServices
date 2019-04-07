@@ -86,7 +86,7 @@ namespace Data {
             Add(_T("location"), &Location);
             Add(_T("utc"), &UTC);
         }
-        Parameters(const string location, const bool utc)
+        Parameters(const string& location, const bool utc)
             : Core::JSON::Container()
             , Location(_T("DefaultValue"))
             , UTC(false)
@@ -103,6 +103,38 @@ namespace Data {
     public:
         Core::JSON::String Location;
         Core::JSON::Boolean UTC;
+    };
+    class EXTERNAL MessageParameters : public Core::JSON::Container {
+    private:
+        MessageParameters(const MessageParameters&) = delete;
+        MessageParameters& operator=(const MessageParameters&) = delete;
+
+    public:
+        MessageParameters()
+            : Core::JSON::Container()
+            , Recipient()
+            , Message(false)
+        {
+            Add(_T("recipient"), &Recipient);
+            Add(_T("message"), &Message);
+        }
+        MessageParameters(const string& recipient, const string& message)
+            : Core::JSON::Container()
+            , Recipient()
+            , Message()
+        {
+            Add(_T("recipient"), &Recipient);
+            Add(_T("message"), &Message);
+            Recipient = recipient;
+            Message = message;
+        }
+        virtual ~MessageParameters()
+        {
+        }
+
+    public:
+        Core::JSON::String Recipient;
+        Core::JSON::String Message;
     };
     class EXTERNAL Response : public Core::JSON::Container {
     private:
