@@ -65,10 +65,11 @@ namespace Plugin {
                 , _eventLoop()
                 , _view(nullptr)
                 , _closed(false)
-                , _initialized(false)
                 , _width(~0)
                 , _height(~0)
                 , _animationFPS(~0)
+                , _url()
+                , _fullPath()
                 , _scene(nullptr)
                 , _sceneContainer(nullptr)
             {
@@ -80,20 +81,11 @@ namespace Plugin {
 
                 Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
 
-                if (_view != nullptr) {
-                    //context.term();
-
-                    // pxScene.cpp:104:12: warning: deleting object of abstract class type
-                    // ‘pxIView’ which has non-virtual destructor will cause undefined
-                    // behaviour [-Wdelete-non-virtual-dtor]
-                    static_cast<pxIView*>(_view)->setViewContainer(nullptr);
-                    static_cast<pxIView*>(_view)->Release(); //FIXME: Could not able to delete it, that means it is still in use.
-                    _view = nullptr;
-                }
                 if (_sceneContainer != nullptr) {
                     delete _sceneContainer;
                     _sceneContainer = nullptr;
                 }
+
                 if (_scene != nullptr) {
                     delete _scene;
                     _scene = nullptr;
@@ -158,31 +150,10 @@ namespace Plugin {
                 Core::SystemInfo::SetEnvironment(_T("NODE_PATH"), service->DataPath());
                 Core::SystemInfo::SetEnvironment(_T("PXSCENE_PATH"), service->DataPath());
 
+                Init();
+                SetURL(_url);
+
                 return result;
-            }
-
-            void InitScene ()
-            {
-                ENTERSCENELOCK()
-                if (!_initialized) {
-                    script.init();
-
-                    pxWindow::init(0, 0, _width, _height);
-
-                    context.init();
-                    TCHAR buffer[64];
-
-                    setAnimationFPS(_animationFPS);
-
-                    sprintf(buffer, "Spark: %s", PX_SCENE_VERSION);
-                    setTitle(buffer);
-
-                    _scene = new pxScene2d();
-                    _sceneContainer = new pxSceneContainer(_scene);
-
-                    _initialized = true;
-                }
-                ENTERSCENELOCK()
             }
 
             string GetURL() const {
@@ -193,68 +164,50 @@ namespace Plugin {
             {
                 _url = url;
 
-                if (_initialized == true) { // Ensure the sceneWindow is properly initialized before setting URL
+                Quit();
 
-                    if (url.empty() == true)
-                    {
-                        ENTERSCENELOCK()
+                Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
 
-                        if (_view != nullptr) {
-                            delete _view;
-                            _view = nullptr;
-                        }
+                if (url.empty() == true)
+                {
+                    _fullPath.clear();
 
-                        Quit();
+                } else {
+                    TCHAR prefix[] = _T("shell.js?url=");
+                    TCHAR buffer[MAX_URL_SIZE + sizeof(prefix)];
+                    Core::URL analyser(url.c_str());
+                    uint16_t length = 0;
 
-                        EXITSCENELOCK()
-
-                    } else {
-                        TCHAR prefix[] = _T("shell.js?url=");
-                        TCHAR buffer[MAX_URL_SIZE + sizeof(prefix)];
-                        Core::URL analyser(url.c_str());
-                        uint16_t length = 0;
-
-                        strncpy(buffer, prefix, sizeof(prefix));
-                        if ((analyser.IsValid() == true) && ((analyser.Type() == Core::URL::SCHEME_HTTP) || (analyser.Type() == Core::URL::SCHEME_HTTPS))) {
-                            length = Core::URL::Encode(
+                    strncpy(buffer, prefix, sizeof(prefix));
+                    if ((analyser.IsValid() == true) && ((analyser.Type() == Core::URL::SCHEME_HTTP) || (analyser.Type() == Core::URL::SCHEME_HTTPS))) {
+                        length = Core::URL::Encode(
                                          url.c_str(),
                                          static_cast<uint16_t>(url.length()),
                                          &(buffer[sizeof(prefix)]),
                                          sizeof(buffer) - sizeof(prefix));
 
-                        } else {
-                            length = std::min(url.length(), sizeof(buffer) - sizeof(prefix));
+                    } else {
+                        length = std::min(url.length(), sizeof(buffer) - sizeof(prefix));
 
-                            strncat(buffer, url.c_str(), length);
-                        }
-
-                        if (length >= (sizeof(buffer) - sizeof(prefix))) {
-
-                            SYSLOG(Trace::Warning, (_T("URL size greater than 8000 bytes, so resetting url to browser.js")));
-                            ::strcat(buffer, _T("browser.js"));
-                        } else {
-                            ::strncat(buffer, url.c_str(), length);
-                        }
-
-                        ENTERSCENELOCK()
-
-                        _closed = false;
-
-                        if (_view != nullptr) {
-                            static_cast<pxIView*>(_view)->setViewContainer(nullptr);
-                            static_cast<pxIView*>(_view)->Release(); //FIXME: Could not able to delete it, that means it is still in use.
-                        }
-
-                        _view = new pxScriptView(buffer,"javascript/node/v8", _sceneContainer);
-
-                        ASSERT (_view != nullptr);
-
-                        static_cast<pxIView*>(_view)->setViewContainer(this);
-                        static_cast<pxIView*>(_view)->onSize(_width, _height);
-
-                        EXITSCENELOCK()
-                        Run();
+                        strncat(buffer, url.c_str(), length);
                     }
+
+                    if (length >= (sizeof(buffer) - sizeof(prefix))) {
+
+                        SYSLOG(Trace::Warning, (_T("URL size greater than 8000 bytes, so resetting url to browser.js")));
+                        ::strcat(buffer, _T("browser.js"));
+                    } else {
+                        ::strncat(buffer, url.c_str(), length);
+                    }
+
+                    ENTERSCENELOCK()
+
+                    _closed = false;
+
+                    _fullPath = buffer;
+
+                    EXITSCENELOCK()
+                    Run();
                 }
             }
 
@@ -267,6 +220,7 @@ namespace Plugin {
                 pxScriptView::getScene(1, &args, &scene, static_cast<void*>(_view));
                 pxScene2d* pxScene = (pxScene2d*)(scene.toObject().getPtr());
                 EXITSCENELOCK()
+
                 return pxScene;
             }
 
@@ -459,28 +413,65 @@ namespace Plugin {
         private:
             virtual bool Initialize()
             {
-                InitScene();
+                script.init();
+                pxWindow::init(0, 0, _width, _height);
 
-                SetURL(_url);
+                context.init();
+                TCHAR buffer[64];
+
+                setAnimationFPS(_animationFPS);
+
+                sprintf(buffer, "Spark: %s", PX_SCENE_VERSION);
+                setTitle(buffer);
+
+                _scene = new pxScene2d();
+                _sceneContainer = new pxSceneContainer(_scene);
 
                 return true;
-           }
+            }
             virtual uint32_t Worker()
             {
-                _eventLoop.run();
+                ENTERSCENELOCK()
+
+                if (_fullPath.empty() == true) {
+                    Block();
+                }
+                else {
+                    pxIView* window = new pxScriptView(_fullPath.c_str(),"javascript/node/v8", _sceneContainer);
+
+                    _view = window;
+
+                    ASSERT (_view != nullptr);
+
+                    static_cast<pxIView*>(_view)->setViewContainer(this);
+                    static_cast<pxIView*>(_view)->onSize(_width, _height);
+
+                    EXITSCENELOCK()
+                    if (IsRunning() == true) {
+                        _eventLoop.run();
+                    }
+                    ENTERSCENELOCK()
+
+                    if (_view != nullptr) {
+                        static_cast<pxIView*>(_view)->setViewContainer(nullptr);
+                        static_cast<pxIView*>(_view)->Release(); //FIXME: Could not able to delete it, that means it is still in use.
+                    }
+                }
+
+                EXITSCENELOCK()
+
                 return (Core::infinite);
             }
 
-
         private:
             pxEventLoop _eventLoop;
-            pxScriptView* _view;
+            pxIView* _view;
             bool _closed;
-            bool _initialized;
             uint32_t _width;
             uint32_t _height;
             uint8_t _animationFPS;
             string _url;
+            string _fullPath;
 
             pxScene2d* _scene;
             pxSceneContainer* _sceneContainer;
@@ -506,8 +497,6 @@ namespace Plugin {
         virtual uint32_t Configure(PluginHost::IShell* service)
         {
             uint32_t result = _window.Configure(service);
-
-            _window.Init();
 
             _state = PluginHost::IStateControl::RESUMED;
 
