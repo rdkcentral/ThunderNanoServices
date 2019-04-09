@@ -178,7 +178,6 @@ int main(int argc, char** argv)
         JSONRPC::Client remoteObject(_T("JSONRPCPlugin.1"), _T("client.events.1"));
         Handlers::MessageHandler testMessageHandlerJohn("john");
         Handlers::MessageHandler testMessageHandlerJames("james");
-        @PierreWielders: bij afsluiten gaat dit mis Channel wordt denk ik bij de eerste Client van de drie opgeruimd (gokje, niet gedebugged)
 
         do {
             printf("\n>");
@@ -242,7 +241,7 @@ int main(int argc, char** argv)
                 // 3. [mandatory] Parameters to be send to the other side.
                 // 4. [mandatory] Response to be received from the other side.
                 Core::JSON::String result;
-                remoteObject.Invoke<Core::JSON::String>(1000, _T("time"), result);
+                remoteObject.Invoke<void, Core::JSON::String>(1000, _T("time"), result);
                 printf("received time: %s\n", result.Value().c_str());
                 break;
             }
@@ -297,8 +296,7 @@ int main(int argc, char** argv)
                 // 3. [mandatory] Parameters to be send to the other side.
                 // 4. [mandatory] Response to be received from the other side.
                 static string recipient("all");
-                Core::JSON::VariantContainer test; //@PierreWielders: bij de Invoke geen void mogelijk? (Response verplicht?)
-                remoteObject.Invoke<Data::MessageParameters>(1000, _T("postmessage"), Data::MessageParameters(recipient, _T("message for ") + recipient), test);
+                remoteObject.Invoke<Data::MessageParameters, void>(1000, _T("postmessage"), Data::MessageParameters(recipient, _T("message for ") + recipient));
                 printf("message send to %s\n", recipient.c_str());
                 recipient == "all" ? recipient = "john" : (recipient == "john" ? recipient = "james" : (recipient == "james" ? recipient = "all" : recipient = "all" ) );
                 break;
