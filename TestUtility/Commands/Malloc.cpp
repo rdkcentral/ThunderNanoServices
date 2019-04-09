@@ -9,32 +9,13 @@ public:
     Malloc(const Malloc&) = delete;
     Malloc& operator=(const Malloc&) = delete;
 
-private:
-    class MallocInputMetadata : public Core::JSON::Container {
-    public:
-        MallocInputMetadata(const MallocInputMetadata&) = delete;
-        MallocInputMetadata& operator=(const MallocInputMetadata&) = delete;
-
-    public:
-        MallocInputMetadata()
-            : Core::JSON::Container()
-            , Size(0)
-        {
-            Add(_T("size"), &Size);
-        }
-        ~MallocInputMetadata() = default;
-
-    public:
-        Core::JSON::DecSInt32 Size;
-    };
-
 public:
-    using Parameter = TestCore::TestCommandSignature::Parameter;
+    using Parameter = JsonData::TestUtility::InputInfo;
 
     Malloc()
         : TestCommandBase(TestCommandBase::DescriptionBuilder("Allocates desired kB in memory and holds it"),
-              TestCommandBase::SignatureBuilder(Parameter("memory", Parameter::JSType::NUMBER, "memory statistics in KB"))
-                  .InputParameter(Parameter("size", Parameter::JSType::NUMBER, "memory in kB for allocation")))
+              TestCommandBase::SignatureBuilder(Parameter("memory", Parameter::ParamType::NUMBER, "memory statistics in KB"))
+                  .InputParameter(Parameter("size", Parameter::ParamType::NUMBER, "memory in kB for allocation")))
         , _memoryAdmin(MemoryAllocation::Instance())
     {
         TestCore::TestCommandController::Instance().Announce(this);
@@ -49,11 +30,11 @@ public:
     // ICommand methods
     string Execute(const string& params) final
     {
-        MallocInputMetadata input;
+        JsonData::TestUtility::RunmemoryParamsData input;
         uint32_t size;
 
-        if (input.FromString(params)) {
-            size = input.Size;
+        if ((input.FromString(params) == true) && (input.Size.IsSet())) {
+            size = input.Size.Value();
             _memoryAdmin.Malloc(size);
         }
         return _memoryAdmin.CreateResponse();

@@ -1,4 +1,4 @@
-#include "TestCommandMetadata.h"
+#include <interfaces/json/JsonData_TestUtility.h>
 #include "interfaces/ITestUtility.h"
 
 #include "../Module.h"
@@ -19,13 +19,13 @@ public:
         SignatureBuilder& operator=(const SignatureBuilder&) = delete;
 
     public:
-        explicit SignatureBuilder(const TestCore::TestCommandSignature::Parameter& returnParam)
+        explicit SignatureBuilder(const JsonData::TestUtility::InputInfo& returnParam)
             : _jsonSignature()
         {
             _jsonSignature.Output = returnParam;
         }
 
-        SignatureBuilder& InputParameter(const TestCore::TestCommandSignature::Parameter& inputParam)
+        SignatureBuilder& InputParameter(const JsonData::TestUtility::InputInfo& inputParam)
         {
             _jsonSignature.Input.Add(inputParam);
 
@@ -44,7 +44,7 @@ public:
             return outString;
         }
 
-        TestCore::TestCommandSignature _jsonSignature;
+        JsonData::TestUtility::ParametersResultData _jsonSignature;
     };
 
     class DescriptionBuilder {
@@ -72,7 +72,7 @@ public:
             return outString;
         }
 
-        TestCore::TestCommandDescription _jsonDescription;
+        JsonData::TestUtility::DescriptionResultData _jsonDescription;
     };
 
 public:

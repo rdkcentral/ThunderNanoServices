@@ -10,11 +10,11 @@ public:
     Statm& operator=(const Statm&) = delete;
 
 public:
-    using Parameter = TestCore::TestCommandSignature::Parameter;
+    using Parameter = JsonData::TestUtility::InputInfo;
 
     Statm()
         : TestCommandBase(TestCommandBase::DescriptionBuilder("Provides information about system memory allocation"),
-              TestCommandBase::SignatureBuilder(Parameter("memory", Parameter::JSType::NUMBER, "memory statistics in KB")))
+              TestCommandBase::SignatureBuilder(Parameter("memory", Parameter::ParamType::NUMBER, "memory statistics in KB")))
         , _memoryAdmin(MemoryAllocation::Instance())
     {
         TestCore::TestCommandController::Instance().Announce(this);
