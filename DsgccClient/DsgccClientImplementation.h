@@ -22,10 +22,11 @@ namespace Plugin {
                 : Core::JSON::Container()
             {
                 Add(_T("dsgPort"), &DsgPort);
-                Add(_T("dsgType"), &DsgType);
                 Add(_T("dsgId"), &DsgId);
+                Add(_T("dsgCaId"), &DsgCaId);
                 Add(_T("vctId"), &VctId);
-                Add(_T("dsgHeaderSize"), &DsgHeaderSize);
+                Add(_T("dsgSiHeaderSize"), &DsgSiHeaderSize);
+                Add(_T("dsgCaHeaderSize"), &DsgCaHeaderSize);
             }
             ~Config()
             {
@@ -33,25 +34,26 @@ namespace Plugin {
 
         public:
             Core::JSON::DecUInt16 DsgPort;
-            Core::JSON::DecUInt16 DsgType;
             Core::JSON::DecUInt16 DsgId;
+            Core::JSON::DecUInt16 DsgCaId;
             Core::JSON::DecUInt16 VctId;
-            Core::JSON::DecUInt16 DsgHeaderSize;
+            Core::JSON::DecUInt16 DsgSiHeaderSize;
+            Core::JSON::DecUInt16 DsgCaHeaderSize;
         };
 
-        class Activity : public Core::Thread {
+        class SiThread : public Core::Thread {
         private:
-            Activity(const Activity&) = delete;
-            Activity& operator=(const Activity&) = delete;
+            SiThread(const SiThread&) = delete;
+            SiThread& operator=(const SiThread&) = delete;
 
         public:
-            Activity(DsgccClientImplementation::Config& config)
+            SiThread(DsgccClientImplementation::Config& config)
                 : Core::Thread(Core::Thread::DefaultStackSize(), _T("DsgccClient"))
                 , _config(config)
                 , _isRunning(true) {
             }
 
-            virtual ~Activity()
+            virtual ~SiThread()
             {
             }
 
@@ -62,7 +64,7 @@ namespace Plugin {
         public:
             void Dispose()
             {
-                TRACE_L1("%s: Done!!! ", __FUNCTION__);
+                TRACE_L1("SiThread::%s: Done!!! ", __FUNCTION__);
             }
 
         private:
@@ -72,8 +74,37 @@ namespace Plugin {
 
             virtual uint32_t Worker() override;
             void Setup(unsigned int port, unsigned int dsgType, unsigned int dsgId);
-            void process(unsigned char* pBuf, ssize_t len);
             void HexDump(const char* label, const std::string& msg, uint16_t charsPerLine = 32);
+        };
+
+        class CaThread : public Core::Thread {
+        private:
+            CaThread(const CaThread&) = delete;
+            CaThread& operator=(const CaThread&) = delete;
+
+        public:
+            CaThread(DsgccClientImplementation::Config& config)
+                : Core::Thread(Core::Thread::DefaultStackSize(), _T("DsgccClient"))
+                , _config(config)
+                , _isRunning(true) {
+            }
+
+            virtual ~CaThread()
+            {
+            }
+
+        public:
+            void Dispose()
+            {
+                TRACE_L1("CaThread::%s: Done!!! ", __FUNCTION__);
+            }
+
+        private:
+            DsgccClientImplementation::Config& _config;
+            bool _isRunning;
+            string _channels;
+
+            virtual uint32_t Worker() override;
         };
 
         class ClientCallbackService : public Core::Thread {
@@ -121,7 +152,8 @@ namespace Plugin {
     private:
         std::list<PluginHost::IStateControl::INotification*> _observers;
         Config _config;
-        Activity _worker;
+        SiThread _siThread;
+        CaThread _caThread;
         ClientCallbackService _dsgCallback;
         string str;
     };
