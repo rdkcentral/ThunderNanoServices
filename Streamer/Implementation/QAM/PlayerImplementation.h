@@ -20,12 +20,31 @@ namespace Player {
             PlayerPlatform(const PlayerPlatform&) = delete;
             PlayerPlatform& operator=(const PlayerPlatform&) = delete;
 
+            class Sink : public Broadcast::ITuner::ICallback {
+            public:
+                Sink() = delete;
+                Sink(const Sink&) = delete;
+                Sink& operator= (const Sink&) = delete;
+
+                Sink (PlayerPlatform& parent) : _parent(parent) {
+                }
+                ~Sink() {
+                }
+
+            private:
+                virtual void StateChange() override {
+                    _parent.StateChange();
+                }
+
+            private:
+                PlayerPlatform& _parent;
+            };
+
         public:
-            PlayerPlatform(const Exchange::IStream::streamtype type, const uint8_t index,
-                ICallback* callbacks)
-                : _state(Exchange::IStream::NotAvailable)
-                , _streamType(type)
+            PlayerPlatform(const Exchange::IStream::streamtype type, const uint8_t index, ICallback* callbacks)
+                : _state(Exchange::IStream::Idle)
                 , _drmType(Exchange::IStream::Unknown)
+                , _streamType(type)
                 , _speed(0)
                 , _absoluteTime(0)
                 , _begin(0)
@@ -34,7 +53,9 @@ namespace Player {
                 , _z(0)
                 , _callback(callbacks)
                 , _player(Broadcast::ITuner::Create(Core::NumberType<uint8_t>(index).Text()))
+                , _sink(*this)
             {
+                _player->Callback(&_sink);
             }
             virtual ~PlayerPlatform() { Terminate(); }
 
@@ -64,23 +85,27 @@ namespace Player {
             }
             inline uint32_t Load(const string& configuration)
             {
-
                 uint32_t result = Core::ERROR_UNAVAILABLE;
 
                 if (_player != nullptr) {
 
-                    Broadcast::Designator parser(configuration);
+                    result = Core::ERROR_ILLEGAL_STATE;
 
-                    result = _player->Tune(parser.Frequency(), parser.Modulation(),
-                        parser.SymbolRate(), Broadcast::FEC_INNER_UNKNOWN, parser.Spectral());
+                    if (_state <= Exchange::IStream::Prepared) {
 
-                    if (result != Core::ERROR_NONE) {
-                        TRACE(Trace::Error, (_T("Error in player load :%d"), result));
-                    } else {
-                        _player->Prepare(parser.ProgramNumber());
-                        _state = Exchange::IStream::Paused;
-                        if (_callback != nullptr) {
-                            _callback->StateChange(_state);
+                        Broadcast::Designator parser(configuration);
+
+                        result = _player->Tune(parser.Frequency(), parser.Modulation(),
+                            parser.SymbolRate(), Broadcast::FEC_INNER_UNKNOWN, parser.Spectral());
+
+                        if (result != Core::ERROR_NONE) {
+                            TRACE(Trace::Error, (_T("Error in player load :%d"), result));
+                        } else {
+                            _player->Prepare(parser.ProgramNumber());
+                            _state = Exchange::IStream::Loading;
+                            if (_callback != nullptr) {
+                                _callback->StateChange(_state);
+                            }
                         }
                     }
                 }
@@ -89,30 +114,34 @@ namespace Player {
             }
             inline uint32_t Speed(const int32_t request)
             {
-
                 uint32_t result = Core::ERROR_UNAVAILABLE;
 
                 if (_player != nullptr) {
 
-                    Exchange::IStream::state newState = _state;
+                    result = Core::ERROR_ILLEGAL_STATE;
 
-                    result = Core::ERROR_NONE; // PLAYER_RESULT status =
+                    if (_state > Exchange::IStream::Prepared) {
+
+                        Exchange::IStream::state newState = _state;
+
+                        result = Core::ERROR_NONE; // PLAYER_RESULT status =
                         // _player->setSpeed(request);
-                    if (result == Core::ERROR_NONE) {
-                        _speed = request;
-                        if (_speed != 0) {
-                            newState = Exchange::IStream::state::Playing;
+                        if (result == Core::ERROR_NONE) {
+                            _speed = request;
+                            if (_speed != 0) {
+                                newState = Exchange::IStream::state::Playing;
+                            } else {
+                                newState = Exchange::IStream::state::Paused;
+                            }
                         } else {
-                            newState = Exchange::IStream::state::Paused;
+                            TRACE(Trace::Error, (_T("Error in pause playback:%d"), result));
+                            newState = Exchange::IStream::state::Error;
                         }
-                    } else {
-                        TRACE(Trace::Error, (_T("Error in pause playback:%d"), result));
-                        newState = Exchange::IStream::state::Error;
-                    }
 
-                    if ((newState != _state) && (_callback != nullptr)) {
-                        _state = newState;
-                        _callback->StateChange(_state);
+                        if ((newState != _state) && (_callback != nullptr)) {
+                            _state = newState;
+                            _callback->StateChange(_state);
+                        }
                     }
                 }
 
@@ -139,17 +168,22 @@ namespace Player {
 
                 if (_player != nullptr) {
 
-                    Exchange::IStream::state newState = _state;
+                    result = Core::ERROR_ILLEGAL_STATE;
 
-                    result = _player->Attach(index);
-                    if (result != Core::ERROR_NONE) {
-                        TRACE(Trace::Error, (_T("Error in attach decoder %d"), result));
-                        newState = Exchange::IStream::state::Error;
-                    }
+                    if (_state == Exchange::IStream::Prepared) {
 
-                    if ((newState != _state) && (_callback != nullptr)) {
-                        _state = newState;
-                        _callback->StateChange(_state);
+                        Exchange::IStream::state newState = _state;
+
+                        result = _player->Attach(index);
+                        if (result != Core::ERROR_NONE) {
+                            TRACE(Trace::Error, (_T("Error in attach decoder %d"), result));
+                            newState = Exchange::IStream::state::Error;
+                        }
+
+                        if ((newState != _state) && (_callback != nullptr)) {
+                            _state = newState;
+                            _callback->StateChange(_state);
+                        }
                     }
                 }
                 return (result);
@@ -161,23 +195,56 @@ namespace Player {
 
                 if (_player != nullptr) {
 
-                    Exchange::IStream::state newState = _state;
+                    result = Core::ERROR_ILLEGAL_STATE;
 
-                    result = _player->Detach(index);
-                    if (result != Core::ERROR_NONE) {
-                        TRACE(Trace::Error, (_T("Error in detach decoder %d"), result));
-                        newState = Exchange::IStream::state::Error;
-                    }
+                    if (_state == Exchange::IStream::Prepared) {
 
-                    if ((newState != _state) && (_callback != nullptr)) {
-                        _state = newState;
-                        _callback->StateChange(_state);
+                        Exchange::IStream::state newState = _state;
+
+                        result = _player->Detach(index);
+                        if (result != Core::ERROR_NONE) {
+                            TRACE(Trace::Error, (_T("Error in detach decoder %d"), result));
+                            newState = Exchange::IStream::state::Error;
+                        }
+
+                        if ((newState != _state) && (_callback != nullptr)) {
+                            _state = newState;
+                            _callback->StateChange(_state);
+                        }
                     }
                 }
                 return (result);
             }
 
-            inline void Terminate() { delete _player; }
+            inline void Terminate() { 
+
+                _player->Callback(nullptr);
+
+                delete _player; 
+            }
+
+            void StateChange() {
+                Exchange::IStream::state oldState = _state;
+                Broadcast::ITuner::state result = _player->State();
+
+                if (result == Broadcast::ITuner::IDLE) {
+                    TRACE(Trace::Information, (_T("Player internal substate moved to: IDLE")));
+                    _state = Exchange::IStream::Idle;
+                }
+                else if (result == Broadcast::ITuner::LOCKED) {
+                    TRACE(Trace::Information, (_T("Player internal substate moved to: LOCKED")));
+                }
+                else if (result == Broadcast::ITuner::PREPARED) {
+                    TRACE(Trace::Information, (_T("Player internal substate moved to: PREPARED")));
+                    if (_state == Exchange::IStream::Loading) {
+                        _state = Exchange::IStream::Prepared;
+                    }
+                }
+
+                if ( (oldState != _state) && (_callback != nullptr)) {
+                    _callback->StateChange(_state);    
+                }
+            }
 
         private:
             Exchange::IStream::state _state;
@@ -193,6 +260,7 @@ namespace Player {
 
             ICallback* _callback;
             Broadcast::ITuner* _player;
+            Sink _sink;
         };
 
     } // namespace Implementation

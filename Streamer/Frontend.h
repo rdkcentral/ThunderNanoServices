@@ -314,15 +314,19 @@ namespace Player {
             }
             uint32_t Release() const
             {
+                uint32_t result = Core::ERROR_NONE;
 
                 if (_administrator != nullptr) {
                     if (Core::InterlockedDecrement(_refCount) == 0) {
                         _administrator->Destroy(const_cast<FrontendType<IMPLEMENTATION>*>(this));
                         delete this;
+                        result = Core::ERROR_DESTRUCTION_SUCCEEDED;
                     }
                 } else if (Core::InterlockedDecrement(_refCount) == 0) {
                     delete this;
+                    result = Core::ERROR_DESTRUCTION_SUCCEEDED;
                 }
+                return (result);
             }
             virtual uint8_t Index() const
             {
@@ -386,11 +390,11 @@ namespace Player {
             virtual state State() const
             {
                 _adminLock.Lock();
-                state result = (_administrator != nullptr ? _player.State() : NotAvailable);
+                state result = (_administrator != nullptr ? _player.State() : Idle);
                 _adminLock.Unlock();
                 return (result);
             }
-            virtual uint32_t Load(std::string configuration)
+            virtual uint32_t Load(const string& configuration)
             {
                 _adminLock.Lock();
                 uint32_t result = (_administrator != nullptr ? _player.Load(configuration) : 0x80000001);

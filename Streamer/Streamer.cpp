@@ -170,7 +170,7 @@ namespace Plugin {
             }
         } else {
             TRACE(Trace::Information, (string(__FUNCTION__)));
-            for (int8_t position; position < _streams.size(); ++position) {
+            for (int8_t position = 0; position < static_cast<int8_t>(_streams.size()); ++position) {
                 Streams::iterator stream = _streams.find(position);
                 if (stream != _streams.end()) {
                     Core::JSON::DecUInt8 id;
@@ -289,7 +289,11 @@ namespace Plugin {
                                         break;
                                     }
                                 }
-                                _streams.insert(std::make_pair(position, stream));
+
+                                _streams.emplace(std::piecewise_construct,
+                                    std::forward_as_tuple(position),
+                                    std::forward_as_tuple(*this, position, stream));
+
                                 response->Id = position;
                                 result->Body(response);
                                 result->ErrorCode = Web::STATUS_OK;
