@@ -251,10 +251,13 @@ namespace Plugin {
                                 result->ErrorCode = Web::STATUS_OK;
                                 result->Message = _T("Window set");
                             } else if (index.Remainder() == _T("Detach")) {
-                                control->second->Release();
-                                _controls.erase(position);
+                                if (control->second->Release() == Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                                    _controls.erase(position);
+                                    result->Message = _T("Decoder is detached");
+                                } else {
+                                    result->Message = _T("Decoder is still in use");
+                                }
                                 result->ErrorCode = Web::STATUS_OK;
-                                result->Message = _T("Decoder is detached");
                             }
                         }
                     }
