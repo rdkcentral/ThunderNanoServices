@@ -178,6 +178,7 @@ int main(int argc, char** argv)
         JSONRPC::Client remoteObject(_T("JSONRPCPlugin.1"), _T("client.events.1"));
         Handlers::MessageHandler testMessageHandlerJohn("john");
         Handlers::MessageHandler testMessageHandlerJames("james");
+        // @PierreWielders: bij afsluiten gaat dit mis Channel wordt denk ik bij de eerste Client van de drie opgeruimd (gokje, niet gedebugged)
 
         do {
             printf("\n>");
@@ -338,7 +339,7 @@ int main(int argc, char** argv)
                 value = result.Get("height");
                 if (value.Content() == JsonValue::type::EMPTY) {
                     printf("<height> value not available\n");
-                } else if (value.Content() != JsonValue::type::NUMBER) {
+                } else if (value.Content() != JsonValue::type::NUMBER) {	
                     printf("<height> is expected to be a number but it is: %s\n", Core::EnumerateType<JsonValue::type>(value.Content()).Data());
                 } else {
                     printf("<height>: %d\n", static_cast<uint32_t>(value.Number()));
