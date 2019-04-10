@@ -297,7 +297,7 @@ namespace Plugin {
             _service->Notify(_T("{ \"id\": ") + 
                              Core::NumberType<uint8_t>(index).Text() + 
                              _T(", \"stream\": \"") + 
-                             stateText + 
+                             Core::EnumerateType<Exchange::IStream::state>(state).Data() + 
                              _T("\" }"));
         }
         void TimeUpdate(const uint8_t index, const uint64_t position)

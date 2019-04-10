@@ -9,9 +9,9 @@ ENUM_CONVERSION_BEGIN(Plugin::WifiControl::ConfigList::Config::keyType)
     { Plugin::WifiControl::ConfigList::Config::WPA, _TXT("WPA") },
     { Plugin::WifiControl::ConfigList::Config::ENTERPRISE, _TXT("Enterprise") },
 
-    ENUM_CONVERSION_END(Plugin::WifiControl::ConfigList::Config::keyType)
+ENUM_CONVERSION_END(Plugin::WifiControl::ConfigList::Config::keyType)
 
-        namespace Plugin
+namespace Plugin
 {
 
     SERVICE_REGISTRATION(WifiControl, 1, 0);

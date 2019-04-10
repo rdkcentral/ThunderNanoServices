@@ -1,6 +1,7 @@
 #include "Streamer.h"
 
 namespace WPEFramework {
+
 namespace Plugin {
 
     SERVICE_REGISTRATION(Streamer, 1, 0);
