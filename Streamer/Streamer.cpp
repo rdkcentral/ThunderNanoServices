@@ -208,11 +208,18 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Stream loaded");
                     } else if (index.Remainder() == _T("Attach")) {
-                        Exchange::IStream::IControl* control = stream->second->Control();
-                        if (control != nullptr) {
-                            _controls.insert(std::make_pair(position, control));
-                            result->Message = _T("Decoder Attached");
-                            result->ErrorCode = Web::STATUS_OK;
+                        if (stream->second->State() == Exchange::IStream::Prepared) {
+                            Exchange::IStream::IControl* control = stream->second->Control();
+                            if (control != nullptr) {
+                                _controls.insert(std::make_pair(position, control));
+                                result->Message = _T("Decoder Attached");
+                                result->ErrorCode = Web::STATUS_OK;
+                            }
+                        }
+                        else 
+                        {
+                            result->Message = _T("Decoder already attached");
+                            result->ErrorCode = Web::STATUS_ACCEPTED;
                         }
                     } else {
                         TRACE(Trace::Information, (string(__FUNCTION__)));

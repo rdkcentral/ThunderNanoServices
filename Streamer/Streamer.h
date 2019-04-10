@@ -293,6 +293,8 @@ namespace Plugin {
         }
         void StateChange(const uint8_t index, Exchange::IStream::state state)
         {
+            TRACE(Trace::Information, (_T("Stream [%d] moved state: [%s]"), index, Core::EnumerateType<Exchange::IStream::state>(state).Data()));
+
             _service->Notify(_T("{ \"id\": ") + 
                              Core::NumberType<uint8_t>(index).Text() + 
                              _T(", \"stream\": \"") + 

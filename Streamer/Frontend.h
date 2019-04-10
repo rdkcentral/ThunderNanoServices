@@ -356,7 +356,6 @@ namespace Player {
                 if (_administrator != nullptr) {
 
                     uint8_t decoderId;
-
                     if ((_decoder == nullptr) && ((decoderId = _administrator->Allocate()) != static_cast<uint8_t>(~0))) {
 
                         _decoder = new DecoderImplementation<IMPLEMENTATION>(this, decoderId);

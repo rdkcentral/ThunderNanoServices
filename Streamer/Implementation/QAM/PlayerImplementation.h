@@ -91,13 +91,13 @@ namespace Player {
 
                     result = Core::ERROR_ILLEGAL_STATE;
 
-                    if (_state <= Exchange::IStream::Prepared) {
+                    if (_state != Exchange::IStream::Error) {
 
                         Broadcast::Designator parser(configuration);
 
                         TRACE(Trace::Information, (_T("Tuning to %u MHz mode=%s sym=%d Annex=%s spectralMode=%s"),
                             parser.Frequency(), 
-                            Core::EnumerateType<Broadcast::Modulation>(parser.Modulation()), 
+                            Core::EnumerateType<Broadcast::Modulation>(parser.Modulation()).Data(), 
                             parser.SymbolRate(),
                             Core::EnumerateType<Broadcast::ITuner::annex>(_player->Annex()).Data(),
                             Core::EnumerateType<Broadcast::SpectralInversion>(parser.Spectral()).Data()));
@@ -106,13 +106,12 @@ namespace Player {
                             parser.SymbolRate(), Broadcast::FEC_INNER_UNKNOWN, parser.Spectral());
 
                         if (result != Core::ERROR_NONE) {
+                            _state = Exchange::IStream::Error;
                             TRACE(Trace::Error, (_T("Error in player load :%d"), result));
+                            _callback->StateChange(_state);
                         } else {
                             _player->Prepare(parser.ProgramNumber());
-                            _state = Exchange::IStream::Loading;
-                            if (_callback != nullptr) {
-                                _callback->StateChange(_state);
-                            }
+                            _state = Exchange::IStream::Idle;
                         }
                     }
                 }
@@ -127,11 +126,11 @@ namespace Player {
 
                     result = Core::ERROR_ILLEGAL_STATE;
 
-                    if (_state > Exchange::IStream::Prepared) {
-
+                    if ( (_state > Exchange::IStream::Prepared) && (_state != Exchange::IStream::Error) ) {
                         Exchange::IStream::state newState = _state;
 
                         result = Core::ERROR_NONE; // PLAYER_RESULT status =
+                         
                         // _player->setSpeed(request);
                         if (result == Core::ERROR_NONE) {
                             _speed = request;
@@ -179,16 +178,10 @@ namespace Player {
 
                     if (_state == Exchange::IStream::Prepared) {
 
-                        Exchange::IStream::state newState = _state;
-
                         result = _player->Attach(index);
                         if (result != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Error in attach decoder %d"), result));
-                            newState = Exchange::IStream::state::Error;
-                        }
-
-                        if ((newState != _state) && (_callback != nullptr)) {
-                            _state = newState;
+                            _state = Exchange::IStream::state::Error;
                             _callback->StateChange(_state);
                         }
                     }
@@ -204,18 +197,12 @@ namespace Player {
 
                     result = Core::ERROR_ILLEGAL_STATE;
 
-                    if (_state == Exchange::IStream::Prepared) {
-
-                        Exchange::IStream::state newState = _state;
+                    if ( (_state > Exchange::IStream::Prepared) && (_state != Exchange::IStream::Error) ) {
 
                         result = _player->Detach(index);
                         if (result != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Error in detach decoder %d"), result));
-                            newState = Exchange::IStream::state::Error;
-                        }
-
-                        if ((newState != _state) && (_callback != nullptr)) {
-                            _state = newState;
+                            _state = Exchange::IStream::state::Error;
                             _callback->StateChange(_state);
                         }
                     }
@@ -235,17 +222,23 @@ namespace Player {
                 Broadcast::ITuner::state result = _player->State();
 
                 if (result == Broadcast::ITuner::IDLE) {
-                    TRACE(Trace::Information, (_T("Player internal substate moved to: IDLE")));
                     _state = Exchange::IStream::Idle;
                 }
                 else if (result == Broadcast::ITuner::LOCKED) {
-                    TRACE(Trace::Information, (_T("Player internal substate moved to: LOCKED")));
+                    if (_state == Exchange::IStream::Idle) {
+                        _state = Exchange::IStream::Loading;
+                    }
                 }
                 else if (result == Broadcast::ITuner::PREPARED) {
-                    TRACE(Trace::Information, (_T("Player internal substate moved to: PREPARED")));
                     if (_state == Exchange::IStream::Loading) {
                         _state = Exchange::IStream::Prepared;
                     }
+                    else if (_state > Exchange::IStream::Prepared) {
+                        _state = Exchange::IStream::Prepared;
+                    }
+                }
+                else if (result == Broadcast::ITuner::STREAMING) {
+                    _state = Exchange::IStream::Playing;
                 }
 
                 if ( (oldState != _state) && (_callback != nullptr)) {
