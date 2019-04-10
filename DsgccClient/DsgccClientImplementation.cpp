@@ -190,10 +190,6 @@ namespace Plugin {
                     char *pBuf = &msg[_config.DsgCaHeaderSize];
                     len -= _config.DsgCaHeaderSize;
                     //TRACE_L1("CA Data: %p len=%d", pBuf, len);
-                    printf("CA ");
-                    for (int i = 0; i < std::min(len,64); i++)
-                        printf("%02x ", pBuf[i]);
-                    printf("\n");
                 }
             }
 
