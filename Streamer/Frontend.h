@@ -251,8 +251,12 @@ namespace Player {
 
                         if (_player != nullptr) {
                             _callback = callback;
+                            _callback->AddRef();
                         }
                     } else {
+                        if(_callback != nullptr) {
+                            _callback->Release();
+                        }
                         _callback = nullptr;
                     }
 
@@ -381,8 +385,12 @@ namespace Player {
 
                     if (_administrator != nullptr) {
                         _callback = callback;
+                        _callback->AddRef();
                     }
                 } else {
+                    if (_callback != nullptr) {
+                        _callback->Release();
+                    }
                     _callback = nullptr;
                 }
                 _adminLock.Unlock();

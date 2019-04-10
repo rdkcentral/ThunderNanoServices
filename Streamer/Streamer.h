@@ -293,7 +293,6 @@ namespace Plugin {
         }
         void StateChange(const uint8_t index, Exchange::IStream::state state)
         {
-            string stateText (_T("playready"));
             _service->Notify(_T("{ \"id\": ") + 
                              Core::NumberType<uint8_t>(index).Text() + 
                              _T(", \"stream\": \"") + 
