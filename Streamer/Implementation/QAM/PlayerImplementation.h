@@ -95,6 +95,13 @@ namespace Player {
 
                         Broadcast::Designator parser(configuration);
 
+                        TRACE(Trace::Information, (_T("Tuning to %u MHz mode=%s sym=%d Annex=%s spectralMode=%s"),
+                            parser.Frequency(), 
+                            Core::EnumerateType<Broadcast::Modulation>(parser.Modulation()), 
+                            parser.SymbolRate(),
+                            Core::EnumerateType<Broadcast::ITuner::annex>(_player->Annex()).Data(),
+                            Core::EnumerateType<Broadcast::SpectralInversion>(parser.Spectral()).Data()));
+
                         result = _player->Tune(parser.Frequency(), parser.Modulation(),
                             parser.SymbolRate(), Broadcast::FEC_INNER_UNKNOWN, parser.Spectral());
 
