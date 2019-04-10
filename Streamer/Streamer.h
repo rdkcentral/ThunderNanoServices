@@ -95,6 +95,7 @@ namespace Plugin {
             }
             ~StreamProxy() {
                 _implementation->Callback(nullptr);
+                _implementation->Release();
             }
 
             Exchange::IStream* operator->() {

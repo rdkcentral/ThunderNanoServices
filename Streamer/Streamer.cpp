@@ -116,68 +116,63 @@ namespace Plugin {
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
         Core::ProxyType<Web::JSONBodyType<Data>> response(jsonBodyDataFactory.Element());
 
-        if (index.IsValid() == true) {
-            if (index.Next() && index.IsValid()) {
-                TRACE(Trace::Information, (string(__FUNCTION__)));
-                uint8_t position = Core::NumberType<uint8_t>(index.Current());
-                Streams::iterator stream = _streams.find(position);
-                if ((stream != _streams.end()) && (index.Next() == true)) {
-                    if (index.Remainder() == _T("Type")) {
-                        response->Type = stream->second->Type();
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->ContentType = Web::MIMETypes::MIME_JSON;
-                        result->Body(response);
-                    } else if (index.Remainder() == _T("DRM")) {
-                        response->DRM = stream->second->DRM();
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->ContentType = Web::MIMETypes::MIME_JSON;
-                        result->Body(response);
-                    } else if (index.Remainder() == _T("Metadata")) {
-                        response->Metadata = stream->second->Metadata();
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->ContentType = Web::MIMETypes::MIME_JSON;
-                        result->Body(response);
-                    } else if (index.Remainder() == _T("State")) {
-                        response->State = stream->second->State();
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->ContentType = Web::MIMETypes::MIME_JSON;
-                        result->Body(response);
-                    } else {
-                        Controls::iterator control = _controls.find(position);
-                        if (control != _controls.end()) {
-                            if (index.Remainder() == _T("Speed")) {
-                                response->Speed = control->second->Speed();
-                                result->ErrorCode = Web::STATUS_OK;
-                                result->ContentType = Web::MIMETypes::MIME_JSON;
-                                result->Body(response);
-                            } else if (index.Remainder() == _T("Position")) {
-                                response->Position = control->second->Position();
-                                result->ErrorCode = Web::STATUS_OK;
-                                result->ContentType = Web::MIMETypes::MIME_JSON;
-                                result->Body(response);
-                            } else if (index.Remainder() == _T("Window")) {
-                                Exchange::IStream::IControl::IGeometry* geometry = control->second->Geometry();
-                                response->X = geometry->X();
-                                response->Y = geometry->Y();
-                                response->Width = geometry->Width();
-                                response->Height = geometry->Height();
-                                result->ErrorCode = Web::STATUS_OK;
-                                result->ContentType = Web::MIMETypes::MIME_JSON;
-                                result->Body(response);
-                            }
+        if (index.Next()) {
+            uint8_t position = Core::NumberType<uint8_t>(index.Current());
+            Streams::iterator stream = _streams.find(position);
+            if ((stream != _streams.end()) && (index.Next() == true)) {
+                if (index.Remainder() == _T("Type")) {
+                    response->Type = stream->second->Type();
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->ContentType = Web::MIMETypes::MIME_JSON;
+                    result->Body(response);
+                } else if (index.Remainder() == _T("DRM")) {
+                    response->DRM = stream->second->DRM();
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->ContentType = Web::MIMETypes::MIME_JSON;
+                    result->Body(response);
+                } else if (index.Remainder() == _T("Metadata")) {
+                    response->Metadata = stream->second->Metadata();
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->ContentType = Web::MIMETypes::MIME_JSON;
+                    result->Body(response);
+                } else if (index.Remainder() == _T("State")) {
+                    response->State = stream->second->State();
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->ContentType = Web::MIMETypes::MIME_JSON;
+                    result->Body(response);
+                } else {
+                    Controls::iterator control = _controls.find(position);
+                    if (control != _controls.end()) {
+                        if (index.Remainder() == _T("Speed")) {
+                            response->Speed = control->second->Speed();
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->ContentType = Web::MIMETypes::MIME_JSON;
+                            result->Body(response);
+                        } else if (index.Remainder() == _T("Position")) {
+                            response->Position = control->second->Position();
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->ContentType = Web::MIMETypes::MIME_JSON;
+                            result->Body(response);
+                        } else if (index.Remainder() == _T("Window")) {
+                            Exchange::IStream::IControl::IGeometry* geometry = control->second->Geometry();
+                            response->X = geometry->X();
+                            response->Y = geometry->Y();
+                            response->Width = geometry->Width();
+                            response->Height = geometry->Height();
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->ContentType = Web::MIMETypes::MIME_JSON;
+                            result->Body(response);
                         }
                     }
                 }
             }
         } else {
-            TRACE(Trace::Information, (string(__FUNCTION__)));
-            for (int8_t position = 0; position < static_cast<int8_t>(_streams.size()); ++position) {
-                Streams::iterator stream = _streams.find(position);
-                if (stream != _streams.end()) {
-                    Core::JSON::DecUInt8 id;
-                    id = stream->first;
-                    response->Ids.Add(id);
-                }
+            Streams::iterator stream = _streams.begin();
+            while (stream != _streams.end()) {
+                Core::JSON::DecUInt8 id;
+                id = stream->first;
+                response->Ids.Add(id);
+                stream++;
             }
             if (response->Ids.Length() != 0) {
                 result->ErrorCode = Web::STATUS_OK;

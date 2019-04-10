@@ -42,7 +42,6 @@ namespace Player {
                 while ((index < _frontends) && (_streams[index] != element)) {
                     index++;
                 }
-
                 ASSERT(index < _frontends);
 
                 if (index < _frontends) {
@@ -356,16 +355,19 @@ namespace Player {
                 if (_administrator != nullptr) {
 
                     uint8_t decoderId;
-                    if ((_decoder == nullptr) && ((decoderId = _administrator->Allocate()) != static_cast<uint8_t>(~0))) {
+                    if (_decoder == nullptr) {
 
-                        _decoder = new DecoderImplementation<IMPLEMENTATION>(this, decoderId);
+                        if ((decoderId = _administrator->Allocate()) != static_cast<uint8_t>(~0)) {
 
-                        if (_decoder != nullptr) {
-                            _player.AttachDecoder(decoderId);
+                            _decoder = new DecoderImplementation<IMPLEMENTATION>(this, decoderId);
 
-                            // AddRef ourselves as the Control, being handed out, needs the
-                            // Frontend created in this class. This is his parent class.....
-                            AddRef();
+                            if (_decoder != nullptr) {
+                                _player.AttachDecoder(decoderId);
+
+                                // AddRef ourselves as the Control, being handed out, needs the
+                                // Frontend created in this class. This is his parent class.....
+                                AddRef();
+                            }
                         }
                     } else {
                         _decoder->AddRef();
