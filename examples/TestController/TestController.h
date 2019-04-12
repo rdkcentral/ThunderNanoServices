@@ -4,13 +4,14 @@
 
 #include <interfaces/IMemory.h>
 #include <interfaces/ITestController.h>
+#include <interfaces/json/JsonData_TestController.h>
 
 #include "Core/TestMetadata.h"
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class TestController : public PluginHost::IPlugin, public PluginHost::IWeb {
+    class TestController : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     public:
         // maximum wait time for process to be spawned
         static constexpr uint32_t ImplWaitTime = 1000;
@@ -104,13 +105,18 @@ namespace Plugin {
             , _pid(0)
             , _prevCategory(EMPTY_STRING)
         {
+            RegisterAll();
         }
 
-        virtual ~TestController() {}
+        virtual ~TestController()
+        {
+            UnregisterAll();
+        }
 
         BEGIN_INTERFACE_MAP(TestController)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
         INTERFACE_AGGREGATE(Exchange::ITestController, _testControllerImp)
         END_INTERFACE_MAP
@@ -141,6 +147,13 @@ namespace Plugin {
         string /*JSON*/ Tests(Exchange::ITestController::ITest::IIterator* tests);
         string /*JSON*/ RunAll(const string& body, const string& categoryName = EMPTY_STRING);
         string /*JSON*/ RunTest(const string& body, const string& categoryName, const string& testName);
+
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_categories(Core::JSON::ArrayType<Core::JSON::String>& response);
+        uint32_t endpoint_tests(const JsonData::TestController::TestsParamsData& params, Core::JSON::ArrayType<Core::JSON::String>& response);
+        uint32_t endpoint_description(const JsonData::TestController::DescriptionParamsInfo& params, JsonData::TestController::DescriptionResultData& response);
+        uint32_t endpoint_run(const JsonData::TestController::DescriptionParamsInfo& params, Core::JSON::ArrayType<JsonData::TestController::RunResultData>& response);
 
         PluginHost::IShell* _service;
         Core::Sink<Notification> _notification;
