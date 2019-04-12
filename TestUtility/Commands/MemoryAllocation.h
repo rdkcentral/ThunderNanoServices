@@ -9,31 +9,6 @@ public:
     MemoryAllocation(const MemoryAllocation&) = delete;
     MemoryAllocation& operator=(const MemoryAllocation&) = delete;
 
-private:
-    class MemoryOutputMetadata : public Core::JSON::Container {
-    private:
-        MemoryOutputMetadata(const MemoryOutputMetadata&) = delete;
-        MemoryOutputMetadata& operator=(const MemoryOutputMetadata&) = delete;
-
-    public:
-        MemoryOutputMetadata()
-            : Core::JSON::Container()
-            , Allocated(0)
-            , Size(0)
-            , Resident(0)
-        {
-            Add(_T("allocated"), &Allocated);
-            Add(_T("size"), &Size);
-            Add(_T("resident"), &Resident);
-        }
-        ~MemoryOutputMetadata() = default;
-
-    public:
-        Core::JSON::DecSInt32 Allocated;
-        Core::JSON::DecSInt32 Size;
-        Core::JSON::DecSInt32 Resident;
-    };
-
     MemoryAllocation()
         : _lock()
         , _process()
@@ -115,7 +90,7 @@ public:
     {
         string jsonResponse = EMPTY_STRING;
 
-        MemoryOutputMetadata response;
+        JsonData::TestUtility::RunmemoryResultData response;
         uint32_t allocated, size, resident;
 
         Statm(allocated, size, resident);
