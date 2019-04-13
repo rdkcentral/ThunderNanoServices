@@ -1,36 +1,46 @@
 #include "SecurityOfficer.h"
+#include "SecurityContext.h"
 
 namespace WPEFramework {
 namespace Plugin {
 
     SERVICE_REGISTRATION(SecurityOfficer, 1, 0);
 
-    static Core::ProxyPoolType<Web::Response> responseFactory(4);
-    static Core::ProxyPoolType<Web::JSONBodyType<SecurityOfficer::Data<>>> jsonResponseFactory(4);
+	class SecurityCallsign : public PluginHost::ISubSystem::ISecurity {
+    public:
+        SecurityCallsign() = delete;
+        SecurityCallsign(const SecurityCallsign&) = delete;
+        SecurityCallsign& operator= (const SecurityCallsign&) = delete;
 
-    static const uint16_t NTPPort = 123;
-    static constexpr auto* kTimeMethodName = _T("time");
-    static constexpr auto* kSyncMethodName = _T("synchronize");
+		SecurityCallsign(const string callsign) : _callsign (callsign) {
+		}
+        virtual ~SecurityCallsign() {
+        }
 
-#ifdef __WIN32__
-#pragma warning(disable : 4355)
-#endif
+	public:
+        // Security information
+		virtual string Callsign() const {
+            return (_callsign);
+		}
+
+	private:
+        BEGIN_INTERFACE_MAP(SecurityCallsign)
+        INTERFACE_ENTRY(PluginHost::ISubSystem::ISecurity)
+        END_INTERFACE_MAP
+
+    private:
+        const string _callsign;
+    };
+
     SecurityOfficer::SecurityOfficer()
-        : _skipURL(0)
-        , _periodicity(0)
-        , _sink(this)
     {
-        Register<void, Data<Core::JSON::DecUInt64>>(kTimeMethodName, &SecurityOfficer::time, this);
-        Register<void, void>(kSyncMethodName, &SecurityOfficer::synchronize, this);
+        for (uint8_t index = 0; index < sizeof(_secretKey); index++) {
+            Crypto::Random(_secretKey[index]);
+		}
     }
-#ifdef __WIN32__
-#pragma warning(default : 4355)
-#endif
 
     /* virtual */ SecurityOfficer::~SecurityOfficer()
     {
-        Unregister(kTimeMethodName);
-        Unregister(kSyncMethodName);
     }
 
     /* virtual */ const string SecurityOfficer::Initialize(PluginHost::IShell* service)
@@ -38,10 +48,21 @@ namespace Plugin {
         Config config;
         config.FromString(service->ConfigLine());
         string version = service->Version();
-        _skipURL = static_cast<uint16_t>(service->WebPrefix().length());
-        _periodicity = config.Periodicity.Value() * 60 /* minutes */ * 60 /* seconds */ * 1000 /* milliSeconds */;
 
-        _sink.Initialize(service, _client);
+		PluginHost::ISubSystem* subSystem = service->SubSystems();
+
+        ASSERT(subSystem != nullptr);
+
+        if (subSystem != nullptr) {
+            Core::Sink<SecurityCallsign> information(service->Callsign());
+
+            ASSERT(subSystem->IsActive(PluginHost::ISubSystem::SECURITY) == false);
+
+			subSystem->Set(PluginHost::ISubSystem::SECURITY, &information);
+
+			subSystem->Release();
+        }
+
 
         // On success return empty, to indicate there is no error text.
         return _T("");
@@ -49,7 +70,6 @@ namespace Plugin {
 
     /* virtual */ void SecurityOfficer::Deinitialize(PluginHost::IShell* service)
     {
-        _sink.Deinitialize();
     }
 
     /* virtual */ string SecurityOfficer::Information() const
@@ -58,16 +78,33 @@ namespace Plugin {
         return (string());
     }
 
-    uint32_t SecurityOfficer::time(Data<Core::JSON::DecUInt64>& response)
+    /* virtual */ uint32_t SecurityOfficer::CreateToken(const uint16_t length, const uint8_t buffer[], string& token)
     {
-        response.TimeSource = _client->Source();
-        response.SyncTime = _client->SyncTime();
-        return Core::ERROR_NONE;
+        // Generate the token from the buffer coming in...
+        Web::JSONWebToken newToken(Web::JSONWebToken::SHA256, sizeof(_secretKey), _secretKey);
+
+		return (newToken.Encode(token, length, buffer) > 0 ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
     }
 
-    uint32_t SecurityOfficer::synchronize()
-    {
-        return _client->Synchronize();
+    /* virtual */ PluginHost::ISecurity* SecurityOfficer::Officer(const string& token) {
+        PluginHost::ISecurity* result = nullptr;
+
+        Web::JSONWebToken webToken(Web::JSONWebToken::SHA256, sizeof(_secretKey), _secretKey);
+        uint16_t load = webToken.PayloadLength(token);
+
+        // Validate the token 
+        if (load != static_cast<uint16_t> (~0)) {
+			// It is potentially a valid token, extract the payload.
+            uint8_t* payload = reinterpret_cast<uint8_t*>(ALLOCA(load));
+
+            load = webToken.Decode(token, load, payload);
+
+			if (load != ~0) {
+				// Seems like we extracted a valid payload, time to create an security context
+                result = Core::Service<SecurityContext>::Create<SecurityContext>(load, payload);
+			}
+		}
+        return (result);
     }
 
 } // namespace Plugin
