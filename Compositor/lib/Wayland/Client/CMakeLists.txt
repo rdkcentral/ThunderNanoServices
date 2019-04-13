@@ -29,6 +29,14 @@ if(BCM_HOST_FOUND)
             BCM_HOST=ON)
 endif(BCM_HOST_FOUND)
 
+if (PLUGIN_COMPOSITOR_NXSERVER)
+    if (V3D_DRM_DISABLE)
+        target_compile_definitions(${TARGET}
+            PRIVATE
+                V3D_DRM_DISABLE=1)
+    endif ()
+endif ()
+
 target_include_directories(${TARGET}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../Client>

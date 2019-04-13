@@ -5,11 +5,12 @@
 #include "CommandCore/TestCommandController.h"
 #include <interfaces/IMemory.h>
 #include <interfaces/ITestUtility.h>
+#include <interfaces/json/JsonData_TestUtility.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class TestUtility : public PluginHost::IPlugin, public PluginHost::IWeb {
+    class TestUtility : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     public:
         // maximum wait time for process to be spawned
         static constexpr uint32_t ImplWaitTime = 1000;
@@ -72,13 +73,18 @@ namespace Plugin {
             , _skipURL(0)
             , _pid(0)
         {
+            RegisterAll();
         }
 
-        virtual ~TestUtility() = default;
+        virtual ~TestUtility()
+        {
+            UnregisterAll();
+        }
 
         BEGIN_INTERFACE_MAP(TestUtility)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
         INTERFACE_AGGREGATE(Exchange::ITestUtility, _testUtilityImp)
         END_INTERFACE_MAP
@@ -101,6 +107,14 @@ namespace Plugin {
         void ProcessTermination(uint32_t pid);
         string /*JSON*/ HandleRequest(Web::Request::type type, const string& path, const uint8_t skipUrl, const string& body /*JSON*/);
         string /*JSON*/ TestCommands(void);
+
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_commands(Core::JSON::ArrayType<Core::JSON::String>& response);
+        uint32_t endpoint_description(const JsonData::TestUtility::DescriptionParamsInfo& params, JsonData::TestUtility::DescriptionResultData& response);
+        uint32_t endpoint_parameters(const JsonData::TestUtility::DescriptionParamsInfo& params, JsonData::TestUtility::ParametersResultData& response);
+        uint32_t endpoint_runmemory(const JsonData::TestUtility::RunmemoryParamsData& params, JsonData::TestUtility::RunmemoryResultData& response);
+        uint32_t endpoint_runcrash(const JsonData::TestUtility::RuncrashParamsData& params);
 
         PluginHost::IShell* _service;
         Core::Sink<Notification> _notification;

@@ -11,13 +11,13 @@ public:
     Crash& operator=(const Crash&) = delete;
 
 public:
-    using Parameter = TestCore::TestCommandSignature::Parameter;
+    using Parameter = JsonData::TestUtility::InputInfo;
 
     Crash()
         : TestCommandBase(
               TestCommandBase::DescriptionBuilder(_T("Cause segmenation fault resulting in crash")),
               TestCommandBase::SignatureBuilder(Parameter())
-                  .InputParameter(Parameter("crashDelay", Parameter::JSType::NUMBER, "delay in ms before actual crash")))
+                  .InputParameter(Parameter("crashDelay", Parameter::ParamType::NUMBER, "delay in ms before actual crash")))
         , _crashCore(CrashCore::Instance())
         , _name(_T("Crash"))
     {
@@ -30,34 +30,15 @@ public:
     INTERFACE_ENTRY(Exchange::ITestUtility::ICommand)
     END_INTERFACE_MAP
 
-private:
-    class CrashInputMetadata : public Core::JSON::Container {
-    public:
-        CrashInputMetadata(const CrashInputMetadata&) = delete;
-        CrashInputMetadata& operator=(const CrashInputMetadata&) = delete;
-
-    public:
-        CrashInputMetadata()
-            : Core::JSON::Container()
-            , CrashDelay(0)
-        {
-            Add(_T("crashDelay"), &CrashDelay);
-        }
-        ~CrashInputMetadata() = default;
-
-    public:
-        Core::JSON::DecUInt8 CrashDelay;
-    };
-
 public:
     virtual string /*JSON*/ Execute(const string& params) final
     {
-        CrashInputMetadata input;
+        JsonData::TestUtility::RuncrashParamsData input;
         uint8_t crashDelay = CrashCore::DefaultCrashDelay;
         string responseString = _T("");
 
-        if (input.FromString(params)) {
-            crashDelay = input.CrashDelay;
+        if ((input.FromString(params) == true) && (input.Delay.IsSet() == true)) {
+            crashDelay = input.Delay.Value();
         }
 
         responseString = _crashCore.Crash(crashDelay);

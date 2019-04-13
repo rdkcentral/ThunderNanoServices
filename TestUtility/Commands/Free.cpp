@@ -10,11 +10,11 @@ public:
     Free& operator=(const Free&) = delete;
 
 public:
-    using Parameter = TestCore::TestCommandSignature::Parameter;
+    using Parameter = JsonData::TestUtility::InputInfo;
 
     Free()
         : TestCommandBase(TestCommandBase::DescriptionBuilder("Releases previously allocated memory"),
-              TestCommandBase::SignatureBuilder(Parameter("memory", Parameter::JSType::NUMBER, "memory statistics in KB")))
+              TestCommandBase::SignatureBuilder(Parameter("memory", Parameter::ParamType::NUMBER, "memory statistics in KB")))
         , _memoryAdmin(MemoryAllocation::Instance())
     {
         TestCore::TestCommandController::Instance().Announce(this);
