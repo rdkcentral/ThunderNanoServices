@@ -33,9 +33,7 @@ target_link_libraries(${TARGET}
         ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces
         WaylandServer::WaylandServer
         WaylandEGL::WaylandEGL
-        compositorclient
-        ${EGL_LIBRARIES}
-)
+        compositorclient)
 
 target_include_directories(${TARGET}
     PRIVATE
