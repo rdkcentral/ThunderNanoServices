@@ -66,8 +66,8 @@ namespace Plugin
     }
 
     void JSONRPCPlugin::PostMessage(const string& recipient, const string& message) {
-        // PluginHost::JSONRPC method to send out a JSONRPC message to all subscribers to the event "clock".
-        Notify(_T("message"), Core::JSON::String(message)); /*, [&](const string& designator) -> bool {
+        // PluginHost::JSONRPC method to send out a JSONRPC message to all subscribers to the event "message".
+        Notify(_T("message"), Core::JSON::String(message) , [&](const string& designator) -> bool {
             bool sendmessage(true);
             if (recipient != "all") {
                 size_t pos = designator.find('.');
@@ -75,7 +75,7 @@ namespace Plugin
                 sendmessage = client == recipient;
             }
             return sendmessage;
-        }); */
+        }); 
     }
 
     void JSONRPCPlugin::SendTime()
