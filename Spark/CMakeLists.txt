@@ -14,6 +14,7 @@ find_package(Freetype2 REQUIRED)
 add_library(${MODULE_NAME} SHARED 
     Spark.cpp
     SparkImplementation.cpp
+    SparkJsonRpc.cpp
     Module.cpp)
 
 if(PLUGIN_SPARK_NAME)
