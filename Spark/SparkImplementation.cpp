@@ -164,6 +164,7 @@ namespace Plugin {
             {
                 _url = url;
 
+                _closed = true;
                 Quit();
 
                 Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
@@ -211,19 +212,6 @@ namespace Plugin {
                 }
             }
 
-            inline pxScene2d* GetScene()
-            {
-                ENTERSCENELOCK()
-                rtValue args;
-                args.setString("scene");
-                rtValue scene;
-                pxScriptView::getScene(1, &args, &scene, static_cast<void*>(_view));
-                pxScene2d* pxScene = (pxScene2d*)(scene.toObject().getPtr());
-                EXITSCENELOCK()
-
-                return pxScene;
-            }
-
             void Quit()
             { 
                 Block();
@@ -236,9 +224,31 @@ namespace Plugin {
                 setVisibility(!hidden);
             }
 
+            bool Suspend(const bool suspend)
+            {
+                bool status = false;
+                rtValue r;
+
+                pxScene2d* scene = GetScene();
+                if (suspend == true) {
+                    scene->suspend(r, status);
+                    sleep(1); //TODO:Suspend not clearing the background always, hence added the sleep, need to recheck
+                    _closed = true; //TODO: Added to suspend rendering on offscreen buffer also, need to recheck
+                }
+                else {
+                    scene->resume(r, status);
+                    _closed = false;
+                }
+                return status;
+            }
+
             uint8_t AnimationFPS() const
             {
                 return (_animationFPS);
+            }
+
+            virtual void onClose() override
+            {
             }
 
         protected:
@@ -259,20 +269,15 @@ namespace Plugin {
             virtual void onCloseRequest() override
             {
                 ENTERSCENELOCK();
-                if ((_view != nullptr) && (_closed == false)) {
-                    _closed = true;
+                if ((_view != nullptr) /*&& (_closed == false)*/) {
 
+                    script.collectGarbage();
                     static_cast<pxIView*>(_view)->onCloseRequest();
 
                     pxFontManager::clearAllFonts();
                     script.pump();
-                    script.collectGarbage();
                 }
                 EXITSCENELOCK();
-            }
-
-            virtual void onClose() override 
-            {
             }
 
             virtual void onAnimationTimer() override
@@ -426,6 +431,7 @@ namespace Plugin {
 
                 _scene = new pxScene2d();
                 _sceneContainer = new pxSceneContainer(_scene);
+                _scene->setViewContainer(_sceneContainer);
 
                 return true;
             }
@@ -437,9 +443,8 @@ namespace Plugin {
                     Block();
                 }
                 else {
-                    pxIView* window = new pxScriptView(_fullPath.c_str(),"javascript/node/v8", _sceneContainer);
-
-                    _view = window;
+                    pxScriptView* window = new pxScriptView(_fullPath.c_str(),"javascript/node/v8", _sceneContainer);
+                    _view = static_cast<pxIView*>(window);
 
                     ASSERT (_view != nullptr);
 
@@ -451,10 +456,12 @@ namespace Plugin {
                         _eventLoop.run();
                     }
                     ENTERSCENELOCK()
-
+                    //onCloseRequest(); //TODO need to ensure the close sequence is clearing all the things properly, seems suspend after setUrl is showing some background black screen
                     if (_view != nullptr) {
                         static_cast<pxIView*>(_view)->setViewContainer(nullptr);
                         static_cast<pxIView*>(_view)->Release(); //FIXME: Could not able to delete it, that means it is still in use.
+                        //delete window;
+                        _view = nullptr;
                     }
                 }
 
@@ -463,9 +470,23 @@ namespace Plugin {
                 return (Core::infinite);
             }
 
+            inline pxScene2d* GetScene()
+            {
+                ENTERSCENELOCK()
+                rtValue args;
+                args.setString("scene");
+                rtValue scene;
+                pxScriptView::getScene(1, &args, &scene, static_cast<void*>(_view));
+                pxScene2d* pxScene = (pxScene2d*)(scene.toObject().getPtr());
+
+                EXITSCENELOCK()
+
+                return pxScene;
+            }
+
         private:
             pxEventLoop _eventLoop;
-            pxIView* _view;
+            rtRef<pxIView> _view;
             bool _closed;
             uint32_t _width;
             uint32_t _height;
@@ -595,20 +616,18 @@ namespace Plugin {
                 switch (command) {
                 case PluginHost::IStateControl::SUSPEND:
                     if (_state == PluginHost::IStateControl::RESUMED) {
-                        bool status = false;
-                        rtValue r;
-                        pxScene2d* scene = _window.GetScene();
-                        scene->suspend(r, status);
+
+                        bool status = _window.Suspend(true);
+
                         StateChangeCompleted(status, PluginHost::IStateControl::SUSPEND);
                         result = Core::ERROR_NONE;
                     }
                     break;
                 case PluginHost::IStateControl::RESUME:
                     if (_state == PluginHost::IStateControl::SUSPENDED) {
-                        bool status = false;
-                        rtValue r;
-                        pxScene2d* scene = _window.GetScene();
-                        scene->resume(r, status);
+
+                        bool status = _window.Suspend(false);
+
                         StateChangeCompleted(status, PluginHost::IStateControl::RESUME);
                         result = Core::ERROR_NONE;
                     }
@@ -630,7 +649,6 @@ namespace Plugin {
     private:
         void StateChangeCompleted(bool success, const PluginHost::IStateControl::command request)
         {
-
             if (success) {
                 switch (request) {
                 case PluginHost::IStateControl::RESUME:

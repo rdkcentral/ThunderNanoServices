@@ -195,6 +195,31 @@ namespace Plugin {
     }
     ------------------------------------------------------------- */
 
+    void Spark::LoadFinished(const string& URL)
+    {
+        string message(string("{ \"url\": \"") + URL + string("\", \"loaded\":true }"));
+        TRACE(Trace::Information, (_T("LoadFinished: %s"), message.c_str()));
+        _service->Notify(message);
+
+        event_urlchange(URL, true);
+    }
+    void Spark::URLChanged(const string& URL)
+    {
+        string message(string("{ \"url\": \"") + URL + string("\" }"));
+        TRACE(Trace::Information, (_T("URLChanged: %s"), message.c_str()));
+        _service->Notify(message);
+
+        event_urlchange(URL, false);
+    }
+    void Spark::Hidden(const bool hidden)
+    {
+        TRACE(Trace::Information, (_T("Hidden: %s }"), (hidden ? "true" : "false")));
+        string message(string("{ \"hidden\": ") + (hidden ? _T("true") : _T("false")) + string("}"));
+        _hidden = hidden;
+        _service->Notify(message);
+
+        event_visibilitychange(hidden);
+    }
     void Spark::StateChange(const PluginHost::IStateControl::state state)
     {
         switch (state) {
@@ -221,7 +246,6 @@ namespace Plugin {
             break;
         }
     }
-
     void Spark::Deactivated(RPC::IRemoteProcess* process)
     {
         if (process->Id() == _pid) {
