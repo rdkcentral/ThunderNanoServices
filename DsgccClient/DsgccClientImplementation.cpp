@@ -37,7 +37,7 @@ namespace Plugin {
         _config.FromString(service->ConfigLine());
 
         _siThread.Run();
-        _caThread.Run();
+        //_caThread.Run();
         //_dsgCallback.Run();
 
         return (result);
@@ -106,6 +106,7 @@ namespace Plugin {
             TRACE_L1("tunnel status %s", TunnelStatusTypeName(retVal));
         }
 
+        uint64_t startTime = Core::Time::Now().Ticks();
         DsgParser _parser(_config.VctId);
         while ( _isRunning ) {
             len = BcmSharedMemoryRead(sharedMemoryId, msg, 0);
@@ -133,6 +134,7 @@ namespace Plugin {
             }
         } // while
 
+        TRACE_L1("Channel Map loaded in %d seconds", static_cast<uint32_t>((Core::Time::Now().Ticks() - startTime) / 1000000));
         TRACE_L1("Unregistering DsgCC client.");
         retVal = dsgcc_UnregisterClient(regInfo);
         BcmSharedMemoryDelete(sharedMemoryId);
