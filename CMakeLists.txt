@@ -35,6 +35,7 @@ option(PLUGIN_TVCONTROL "Include TVControl plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_JSONRPC "Include JSONRPCExamplePlugin plugin" ON)
+option(PLUGIN_SPARK "Include SparkEngine plugin" OFF)
 
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
@@ -178,4 +179,8 @@ endif()
 if(PLUGIN_JSONRPC)
     add_subdirectory(tests/JSONRPCPlugin)
     add_subdirectory(tests/JSONRPCClient)
+endif()
+
+if(PLUGIN_SPARK)
+    add_subdirectory(Spark)
 endif()

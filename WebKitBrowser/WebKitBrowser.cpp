@@ -181,12 +181,16 @@ namespace Plugin {
         string message(string("{ \"url\": \"") + URL + string("\", \"loaded\":true }"));
         TRACE(Trace::Information, (_T("LoadFinished: %s"), message.c_str()));
         _service->Notify(message);
+
+        event_urlchange(URL, true);
     }
     void WebKitBrowser::URLChanged(const string& URL)
     {
         string message(string("{ \"url\": \"") + URL + string("\" }"));
         TRACE(Trace::Information, (_T("URLChanged: %s"), message.c_str()));
         _service->Notify(message);
+
+        event_urlchange(URL, false);
     }
     void WebKitBrowser::Hidden(const bool hidden)
     {
@@ -194,11 +198,15 @@ namespace Plugin {
         string message(string("{ \"hidden\": ") + (hidden ? _T("true") : _T("false")) + string("}"));
         _hidden = hidden;
         _service->Notify(message);
+
+        event_visibilitychange(hidden);
     }
     void WebKitBrowser::Closure()
     {
         TRACE(Trace::Information, (_T("Closure: \"true\"")));
         _service->Notify(_T("{\"Closure\": true }"));
+
+        event_pageclosure();
     }
     void WebKitBrowser::StateChange(const PluginHost::IStateControl::state state)
     {
@@ -208,6 +216,8 @@ namespace Plugin {
             string("{ \"suspended\": ") + (state == PluginHost::IStateControl::SUSPENDED ? _T("true") : _T("false")) + string(" }"));
 
         _service->Notify(message);
+
+        event_statechange(state == PluginHost::IStateControl::SUSPENDED);
     }
     void WebKitBrowser::Deactivated(RPC::IRemoteProcess* process)
     {

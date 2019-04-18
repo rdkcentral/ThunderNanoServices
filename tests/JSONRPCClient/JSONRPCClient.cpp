@@ -58,10 +58,11 @@ void ShowMenu()
 {
     printf("Enter\n"
            "\tI : Invoke a synchronous method for getting the server time\n"
-           "\tT : Invoke a synchronous method woth aggregated parameters\n"
+           "\tT : Invoke a synchronous method with aggregated parameters\n"
            "\tR : Register for a-synchronous feedback\n"
            "\tU : Unregister for a-synchronous feedback\n"
-           "\tP : Read Property.\n"
+           "\tS : Send message to registered clients\n"
+		   "\tP : Read Property.\n"
            "\t0 : Set property @ value 0.\n"
            "\t1 : Set property @ value 1.\n"
            "\t2 : Set property @ value 2.\n"
@@ -102,6 +103,35 @@ public:
 	void async_callback_complete(const Data::Response& response, const Core::JSONRPC::Error* result) {
         printf("Finally we are triggered. Pointer to: %p @ %s\n", result, Core::Time(response.Time.Value(), false).ToRFC1123().c_str());
 	}
+};
+
+class MessageHandler {
+public:
+    explicit MessageHandler(const string& recipient)
+        : _recipient(recipient)
+        , _remoteObject(_T("JSONRPCPlugin.1"), (recipient + _T(".client.events.1")).c_str()) {
+    }
+
+    void message_received(string message) {
+        printf("Message received for %s: %s\n", _recipient.c_str(), message.c_str());
+    }
+
+    void Subscribe() {
+        if (_remoteObject.Subscribe(1000, _T("message"), &MessageHandler::message_received, this) == Core::ERROR_NONE) {
+            printf("Installed a notification handler and registered for the notifications for message events for %s\n", _recipient.c_str());
+        }
+        else {
+            printf("Failed to install a notification handler\n");
+        }
+    }
+
+    void Unsubscribe() {
+        _remoteObject.Unsubscribe(1000, _T("message"));
+    }
+
+private:
+    string _recipient;
+    JSONRPC::Client _remoteObject;
 };
 }
 
@@ -146,6 +176,9 @@ int main(int argc, char** argv)
         //                or will it be rlayed through thejsonrpc dispatcher (default,
         //                use jsonrpc dispatcher)
         JSONRPC::Client remoteObject(_T("JSONRPCPlugin.1"), _T("client.events.1"));
+        Handlers::MessageHandler testMessageHandlerJohn("john");
+        Handlers::MessageHandler testMessageHandlerJames("james");
+        // @PierreWielders: bij afsluiten gaat dit mis Channel wordt denk ik bij de eerste Client van de drie opgeruimd (gokje, niet gedebugged)
 
         do {
             printf("\n>");
@@ -209,7 +242,7 @@ int main(int argc, char** argv)
                 // 3. [mandatory] Parameters to be send to the other side.
                 // 4. [mandatory] Response to be received from the other side.
                 Core::JSON::String result;
-                remoteObject.Invoke<Core::JSON::String>(1000, _T("time"), result);
+                remoteObject.Invoke<void, Core::JSON::String>(1000, _T("time"), result);
                 printf("received time: %s\n", result.Value().c_str());
                 break;
             }
@@ -233,19 +266,40 @@ int main(int argc, char** argv)
                 // 2. [mandatory] Event name to subscribe to on server side (See JSONRPCPlugin::SendTime - 44)
                 // 3. [mandatory] Code to handle this event, it is allowed to use a lambda here, or a object method (see plugin)
                 if (remoteObject.Subscribe<Core::JSON::String>(1000, _T("clock"), &Handlers::clock) == Core::ERROR_NONE) {
-                    printf("Installed a notification handler and registered for the notifications\n");
+                    printf("Installed a notification handler and registered for the notifications for clock events\n");
                 } else {
                     printf("Failed to install a notification handler\n");
                 }
+
+                testMessageHandlerJohn.Subscribe();
+                testMessageHandlerJames.Subscribe();
+
                 break;
+
             }
             case 'U': {
                 // We are no longer interested inm the events, ets get ride of the notifications.
                 // The parameters:
                 // 1. [mandatory] Time to wait for the round trip to complete to the server to register.
                 // 2. [mandatory] Event name which was used during the registration
+
                 remoteObject.Unsubscribe(1000, _T("clock"));
-                printf("Unregistered and removed a notification handler\n");
+                testMessageHandlerJohn.Unsubscribe();
+                testMessageHandlerJames.Unsubscribe();
+                printf("Unregistered and removed all notification handlers\n");
+                break;
+            }
+            case 'S': {
+                // Lets trigger some action on server side to get some messages back. The regular synchronous RPC call.
+                // The parameters:
+                // 1. [mandatory] Time to wait for the round trip to complete to the server to register.
+                // 2. [mandatory] Method name to call (See JSONRPCPlugin::JSONRPCPlugin - 14)
+                // 3. [mandatory] Parameters to be send to the other side.
+                // 4. [mandatory] Response to be received from the other side.
+                static string recipient("all");
+                remoteObject.Invoke<Data::MessageParameters, void>(1000, _T("postmessage"), Data::MessageParameters(recipient, _T("message for ") + recipient));
+                printf("message send to %s\n", recipient.c_str());
+                recipient == "all" ? recipient = "john" : (recipient == "john" ? recipient = "james" : (recipient == "james" ? recipient = "all" : recipient = "all" ) );
                 break;
             }
             case 'O': {
@@ -285,7 +339,7 @@ int main(int argc, char** argv)
                 value = result.Get("height");
                 if (value.Content() == JsonValue::type::EMPTY) {
                     printf("<height> value not available\n");
-                } else if (value.Content() != JsonValue::type::NUMBER) {
+                } else if (value.Content() != JsonValue::type::NUMBER) {	
                     printf("<height> is expected to be a number but it is: %s\n", Core::EnumerateType<JsonValue::type>(value.Content()).Data());
                 } else {
                     printf("<height>: %d\n", static_cast<uint32_t>(value.Number()));

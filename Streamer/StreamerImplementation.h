@@ -58,8 +58,8 @@ namespace Plugin {
     public:
         StreamerImplementation()
             : _adminLock()
-            , _externalAccess(nullptr)
             , _administrator()
+            , _externalAccess(nullptr)
         {
         }
 

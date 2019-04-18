@@ -25,6 +25,7 @@ namespace Plugin
         Register<void, void>(_T("clueless"), &JSONRPCPlugin::clueless, this);
         Register<Core::JSON::String, void>(_T("input"), &JSONRPCPlugin::input, this);
         Register<Data::Parameters, Data::Response>(_T("extended"), &JSONRPCPlugin::extended, this);
+        Register<Data::MessageParameters, void>(_T("postmessage"), &JSONRPCPlugin::postmessage, this);
 
         // PluginHost::JSONRPC method to register a JSONRPC method invocation for the method "time".
         Property<Data::Geometry>(_T("geometry"), &JSONRPCPlugin::get_geometry, &JSONRPCPlugin::set_geometry, this);
@@ -62,6 +63,19 @@ namespace Plugin
     {
         // No additional info to report.
         return (string());
+    }
+
+    void JSONRPCPlugin::PostMessage(const string& recipient, const string& message) {
+        // PluginHost::JSONRPC method to send out a JSONRPC message to all subscribers to the event "message".
+        Notify(_T("message"), Core::JSON::String(message) , [&](const string& designator) -> bool {
+            bool sendmessage(true);
+            if (recipient != "all") {
+                size_t pos = designator.find('.');
+                string client( designator.substr(0, pos) ); // note also works if no . found
+                sendmessage = client == recipient;
+            }
+            return sendmessage;
+        }); 
     }
 
     void JSONRPCPlugin::SendTime()

@@ -2,12 +2,13 @@
 #define LOCATIONSYNC_LOCATIONSYNC_H
 
 #include "LocationService.h"
+#include <interfaces/json/JsonData_LocationSync.h>
 #include "Module.h"
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class LocationSync : public PluginHost::IPlugin, public PluginHost::IWeb {
+    class LocationSync : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     public:
         class Data : public Core::JSON::Container {
         public:
@@ -158,6 +159,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(LocationSync)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
@@ -173,6 +175,11 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_location(JsonData::LocationSync::LocationResultData& response);
+        uint32_t endpoint_sync();
+
         void SyncedLocation();
 
     private:

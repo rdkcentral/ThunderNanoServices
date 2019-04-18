@@ -42,7 +42,6 @@ namespace Player {
                 while ((index < _frontends) && (_streams[index] != element)) {
                     index++;
                 }
-
                 ASSERT(index < _frontends);
 
                 if (index < _frontends) {
@@ -251,8 +250,12 @@ namespace Player {
 
                         if (_player != nullptr) {
                             _callback = callback;
+                            _callback->AddRef();
                         }
                     } else {
+                        if(_callback != nullptr) {
+                            _callback->Release();
+                        }
                         _callback = nullptr;
                     }
 
@@ -314,15 +317,19 @@ namespace Player {
             }
             uint32_t Release() const
             {
+                uint32_t result = Core::ERROR_NONE;
 
                 if (_administrator != nullptr) {
                     if (Core::InterlockedDecrement(_refCount) == 0) {
                         _administrator->Destroy(const_cast<FrontendType<IMPLEMENTATION>*>(this));
                         delete this;
+                        result = Core::ERROR_DESTRUCTION_SUCCEEDED;
                     }
                 } else if (Core::InterlockedDecrement(_refCount) == 0) {
                     delete this;
+                    result = Core::ERROR_DESTRUCTION_SUCCEEDED;
                 }
+                return (result);
             }
             virtual uint8_t Index() const
             {
@@ -348,17 +355,19 @@ namespace Player {
                 if (_administrator != nullptr) {
 
                     uint8_t decoderId;
+                    if (_decoder == nullptr) {
 
-                    if ((_decoder == nullptr) && ((decoderId = _administrator->Allocate()) != static_cast<uint8_t>(~0))) {
+                        if ((decoderId = _administrator->Allocate()) != static_cast<uint8_t>(~0)) {
 
-                        _decoder = new DecoderImplementation<IMPLEMENTATION>(this, decoderId);
+                            _decoder = new DecoderImplementation<IMPLEMENTATION>(this, decoderId);
 
-                        if (_decoder != nullptr) {
-                            _player.AttachDecoder(decoderId);
+                            if (_decoder != nullptr) {
+                                _player.AttachDecoder(decoderId);
 
-                            // AddRef ourselves as the Control, being handed out, needs the
-                            // Frontend created in this class. This is his parent class.....
-                            AddRef();
+                                // AddRef ourselves as the Control, being handed out, needs the
+                                // Frontend created in this class. This is his parent class.....
+                                AddRef();
+                            }
                         }
                     } else {
                         _decoder->AddRef();
@@ -377,8 +386,12 @@ namespace Player {
 
                     if (_administrator != nullptr) {
                         _callback = callback;
+                        _callback->AddRef();
                     }
                 } else {
+                    if (_callback != nullptr) {
+                        _callback->Release();
+                    }
                     _callback = nullptr;
                 }
                 _adminLock.Unlock();
@@ -386,11 +399,11 @@ namespace Player {
             virtual state State() const
             {
                 _adminLock.Lock();
-                state result = (_administrator != nullptr ? _player.State() : NotAvailable);
+                state result = (_administrator != nullptr ? _player.State() : Idle);
                 _adminLock.Unlock();
                 return (result);
             }
-            virtual uint32_t Load(std::string configuration)
+            virtual uint32_t Load(const string& configuration)
             {
                 _adminLock.Lock();
                 uint32_t result = (_administrator != nullptr ? _player.Load(configuration) : 0x80000001);

@@ -2,21 +2,30 @@
 
 #include "Module.h"
 #include <interfaces/ISystemCommands.h>
+#include <interfaces/json/JsonData_SystemCommands.h>
 
 #include "SystemCommandsImplementation.h"
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class SystemCommands : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::ISystemCommands {
+    class SystemCommands : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::ISystemCommands, public PluginHost::JSONRPC {
     public:
-        SystemCommands() = default;
-        ~SystemCommands() override = default;
+        SystemCommands()
+        {
+            RegisterAll();
+        }
+
+        ~SystemCommands() override
+        {
+            UnregisterAll();
+        }
 
         BEGIN_INTERFACE_MAP(SystemCommands)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(Exchange::ISystemCommands)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
         //   IPlugin methods
@@ -34,6 +43,10 @@ namespace Plugin {
     private:
         SystemCommands(const SystemCommands&) = delete;
         SystemCommands& operator=(const SystemCommands&) = delete;
+
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_usbreset(const JsonData::SystemCommands::UsbresetParamsData& params);
 
         SystemCommandsImplementation _implemetation;
 

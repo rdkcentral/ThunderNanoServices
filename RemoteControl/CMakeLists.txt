@@ -8,6 +8,7 @@ set(PLUGIN_REMOTECONTROL_RFCE_MODULE "/lib/modules/misc/gpK5.ko" CACHE STRING "p
 set(PLUGIN_REMOTECONTROL_RFCE_NODE_ID 249 CACHE STRING "Node ID for the device to be created")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Interfaces REQUIRED)
 find_package(NEXUS QUIET)
 find_package(NXCLIENT QUIET)
 
@@ -15,11 +16,12 @@ add_library(${MODULE_NAME}
     Module.cpp 
     RemoteControl.cpp 
     RemoteAdministrator.cpp
-    RemoteControl_JsonRpcImpl.cpp)
+    RemoteControlJsonRpc.cpp)
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE 
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces)
 
 set_target_properties(${MODULE_NAME} PROPERTIES 
     CXX_STANDARD 11

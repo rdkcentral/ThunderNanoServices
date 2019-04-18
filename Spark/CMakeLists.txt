@@ -1,0 +1,59 @@
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+set(PLUGIN_NAME Spark)
+set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+
+find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(Spark REQUIRED)
+find_package(Freetype2 REQUIRED)
+
+add_library(${MODULE_NAME} SHARED 
+    Spark.cpp
+    SparkImplementation.cpp
+    SparkJsonRpc.cpp
+    Module.cpp)
+
+if(PLUGIN_SPARK_NAME)
+    target_compile_definitions(${MODULE_NAME} 
+        PRIVATE 
+            FRIENDLY_NAME="${PLUGIN_SPARK_NAME}")
+endif()
+
+if (PLATFORM_LINUX)
+    target_compile_definitions(${MODULE_NAME}
+        PRIVATE
+            RT_PLATFORM_LINUX=ON)
+endif()
+
+if (PLATFORM_GENERIC_EGL)
+    target_compile_definitions(${MODULE_NAME}
+        PRIVATE
+            PX_PLATFORM_GENERIC_EGL=ON)
+endif()
+
+target_compile_definitions(${MODULE_NAME}
+    PRIVATE
+        ANIMATION_ROTATE_XYZ=ON
+        PX_SCENE_VERSION="dev")
+
+target_include_directories(${MODULE_NAME} 
+    PRIVATE 
+        ${FREETYPE2_INCLUDE_DIRS}) 
+
+target_link_libraries(${MODULE_NAME} 
+    PRIVATE 
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        Spark::Spark)
+
+# Library installation section
+string(TOLOWER ${NAMESPACE} STORAGENAME)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
+
+set(PLUGIN_SPARK_AUTOSTART false CACHE STRING "Automatically start Spark plugin")
+set(PLUGIN_SPARK_STARTURL "about:blank" CACHE STRING "Initial URL for Spark plugin")
+
+write_config(${PLUGIN_NAME})

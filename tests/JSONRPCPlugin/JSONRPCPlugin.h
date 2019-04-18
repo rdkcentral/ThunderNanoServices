@@ -101,6 +101,12 @@ namespace Plugin {
             return (Core::ERROR_NONE);
         }
 
+        uint32_t postmessage(const Data::MessageParameters& params)
+        {
+            PostMessage(params.Recipient.Value(), params.Message.Value());
+            return (Core::ERROR_NONE);
+        }
+
         uint32_t clueless()
         {
             TRACE(Trace::Information, (_T("A parameter less method that returns nothing was triggered")));
@@ -233,6 +239,7 @@ namespace Plugin {
 
         //   Private methods specific to this class.
         // -------------------------------------------------------------------------------------------------------
+        void PostMessage(const string& recipient, const string& message);
         void SendTime();
         void SendTime(Core::JSONRPC::Connection& channel);
 

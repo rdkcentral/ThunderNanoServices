@@ -3,7 +3,7 @@
 
 #include "Module.h"
 #include "RemoteAdministrator.h"
-#include <interfaces/json/RemoteControl_JsonData.h>
+#include <interfaces/json/JsonData_RemoteControl.h>
 #include <interfaces/IKeyHandler.h>
 
 namespace WPEFramework {
@@ -246,20 +246,19 @@ namespace Plugin {
         void UnregisterAll();
         Core::JSON::ArrayType<Core::JSON::EnumType<JsonData::RemoteControl::ModifiersType>> Modifiers(uint16_t modifiers) const;
         uint16_t Modifiers(const Core::JSON::ArrayType<Core::JSON::EnumType<JsonData::RemoteControl::ModifiersType>>& param) const;
-
         uint32_t endpoint_devices(Core::JSON::ArrayType<Core::JSON::String>& response);
         uint32_t endpoint_device(const JsonData::RemoteControl::DeviceParamsInfo& params, JsonData::RemoteControl::DeviceResultData& response);
         uint32_t endpoint_key(const JsonData::RemoteControl::KeyParamsInfo& params, JsonData::RemoteControl::KeyResultData& response);
         uint32_t endpoint_delete(const JsonData::RemoteControl::KeyParamsInfo& params);
-        uint32_t endpoint_modify(const JsonData::RemoteControl::ModifyParamsInfo& params);
+        uint32_t endpoint_modify(const JsonData::RemoteControl::RcinfoInfo& params);
         uint32_t endpoint_pair(const JsonData::RemoteControl::DeviceParamsInfo& params);
         uint32_t endpoint_unpair(const JsonData::RemoteControl::UnpairParamsData& params);
-        uint32_t endpoint_send(const JsonData::RemoteControl::ModifyParamsInfo& params);
-        uint32_t endpoint_press(const JsonData::RemoteControl::ModifyParamsInfo& params);
-        uint32_t endpoint_release(const JsonData::RemoteControl::ModifyParamsInfo& params);
+        uint32_t endpoint_send(const JsonData::RemoteControl::RcinfoInfo& params);
+        uint32_t endpoint_press(const JsonData::RemoteControl::RcinfoInfo& params);
+        uint32_t endpoint_release(const JsonData::RemoteControl::RcinfoInfo& params);
         uint32_t endpoint_save(const JsonData::RemoteControl::DeviceParamsInfo& params);
         uint32_t endpoint_load(const JsonData::RemoteControl::DeviceParamsInfo& params);
-        uint32_t endpoint_add(const JsonData::RemoteControl::ModifyParamsInfo& params);
+        uint32_t endpoint_add(const JsonData::RemoteControl::RcinfoInfo& params);
 
     private:
         uint32_t _skipURL;

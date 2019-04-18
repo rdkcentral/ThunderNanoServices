@@ -11,12 +11,12 @@ public:
     CrashNTimes& operator=(const CrashNTimes&) = delete;
 
 public:
-    using Parameter = TestCore::TestCommandSignature::Parameter;
+    using Parameter = JsonData::TestUtility::InputInfo;
 
     CrashNTimes()
         : TestCommandBase(TestCommandBase::DescriptionBuilder(_T("Cause segmenation fault N times in a row")),
               TestCommandBase::SignatureBuilder(Parameter())
-                  .InputParameter(Parameter("crashCount", Parameter::JSType::NUMBER, "how many times Crash will be executed consecutively")))
+                  .InputParameter(Parameter("crashCount", Parameter::ParamType::NUMBER, "how many times Crash will be executed consecutively")))
         , _crashCore(CrashCore::Instance())
         , _name(_T("CrashNTimes"))
     {
@@ -31,35 +31,15 @@ public:
     INTERFACE_ENTRY(Exchange::ITestUtility::ICommand)
     END_INTERFACE_MAP
 
-private:
-    class CrashNTimesInputMetadata : public Core::JSON::Container {
-    public:
-        CrashNTimesInputMetadata(const CrashNTimesInputMetadata&) = delete;
-        CrashNTimesInputMetadata& operator=(const CrashNTimesInputMetadata&) = delete;
-
-    public:
-        CrashNTimesInputMetadata()
-            : Core::JSON::Container()
-            , CrashCount(0)
-        {
-            Add(_T("crashCount"), &CrashCount);
-        }
-
-        ~CrashNTimesInputMetadata() = default;
-
-    public:
-        Core::JSON::DecUInt8 CrashCount;
-    };
-
 public:
     virtual string Execute(const string& params) final
     {
-        CrashNTimesInputMetadata input;
+        JsonData::TestUtility::RuncrashParamsData input;
         string responseString = _T("");
         uint8_t crashCount = 0;
 
-        if (input.FromString(params)) {
-            crashCount = input.CrashCount;
+        if ((input.FromString(params) == true) && (input.Count.IsSet() == true)) {
+            crashCount = input.Count.Value();
         }
 
         if (crashCount > 0) {

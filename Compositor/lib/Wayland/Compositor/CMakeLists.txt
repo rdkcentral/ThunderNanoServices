@@ -13,14 +13,17 @@ find_package(${NAMESPACE}Interfaces REQUIRED)
 find_package(EGL REQUIRED)
 
 if (PLUGIN_COMPOSITOR_NXSERVER)
-    find_package(NEXUS REQUIRED)
-    find_package(NXSERVER REQUIRED)
     target_link_libraries(${TARGET} 
         PRIVATE 
            ${NAMESPACE}nexusserver::${NAMESPACE}nexusserver)
     target_compile_definitions(${TARGET}
         PRIVATE
             ENABLE_NXSERVER=1)
+    if (V3D_DRM_DISABLE)
+        target_compile_definitions(${TARGET}
+            PRIVATE
+                V3D_DRM_DISABLE=1)
+    endif ()
 endif ()
 
 target_link_libraries(${TARGET}
@@ -30,9 +33,7 @@ target_link_libraries(${TARGET}
         ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces
         WaylandServer::WaylandServer
         WaylandEGL::WaylandEGL
-        compositorclient
-        ${EGL_LIBRARIES}
-)
+        compositorclient)
 
 target_include_directories(${TARGET}
     PRIVATE

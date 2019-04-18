@@ -12,69 +12,123 @@ namespace Plugin {
         Streamer(const Streamer&) = delete;
         Streamer& operator=(const Streamer&) = delete;
 
-        typedef std::map<uint8_t, Exchange::IStream*> Streams;
+        class StreamProxy {
+        private:
+            class StreamSink : public Exchange::IStream::ICallback {
+            private:
+                StreamSink() = delete;
+                StreamSink(const StreamSink&) = delete;
+                StreamSink& operator=(const StreamSink&) = delete;
+
+            public:
+                StreamSink(StreamProxy* parent)
+                    : _parent(*parent)
+                {
+                    ASSERT(parent != nullptr);
+                }
+                virtual ~StreamSink()
+                {
+                }
+
+            public:
+                virtual void DRM(const uint32_t state) override
+                {
+                    _parent.DRM(state);
+                }
+                virtual void StateChange(const Exchange::IStream::state state) override
+                {
+                    _parent.StateChange(state);
+                }
+
+                BEGIN_INTERFACE_MAP(StreamSink)
+                INTERFACE_ENTRY(Exchange::IStream::ICallback)
+                END_INTERFACE_MAP
+
+            private:
+                StreamProxy& _parent;
+            };
+
+            class StreamControlSink : public Exchange::IStream::IControl::ICallback {
+            private:
+                StreamControlSink() = delete;
+                StreamControlSink(const StreamControlSink&) = delete;
+                StreamControlSink& operator=(const StreamControlSink&) = delete;
+
+            public:
+                StreamControlSink(StreamProxy* parent)
+                    : _parent(*parent)
+                {
+                    ASSERT(parent != nullptr);
+                }
+                virtual ~StreamControlSink()
+                {
+                }
+
+            public:
+                virtual void TimeUpdate(const uint64_t position) override
+                {
+                    _parent.TimeUpdate(position);
+                }
+
+                BEGIN_INTERFACE_MAP(StreamControlSink)
+                INTERFACE_ENTRY(Exchange::IStream::IControl::ICallback)
+                END_INTERFACE_MAP
+
+            private:
+                StreamProxy& _parent;
+            };
+
+        public:
+            StreamProxy() = delete;
+            StreamProxy(const StreamProxy&) = delete;
+            StreamProxy& operator= (const StreamProxy&) = delete;
+
+            StreamProxy(Streamer& parent, const uint8_t index, Exchange::IStream* implementation) 
+                : _parent(parent)
+                , _index(index)
+                , _implementation(implementation) 
+                , _streamSink(this)
+                , _streamControlSink(this) {
+                ASSERT (_implementation != nullptr);
+                _implementation->AddRef();
+                _implementation->Callback(&_streamSink);
+            }
+            ~StreamProxy() {
+                _implementation->Callback(nullptr);
+                _implementation->Release();
+            }
+
+            Exchange::IStream* operator->() {
+                return (_implementation);
+            }
+            const Exchange::IStream* operator->() const {
+                return (_implementation);
+            }
+
+        private:
+            void DRM(uint32_t state)
+            {
+                _parent.DRM(_index, state);
+            }
+            void StateChange(Exchange::IStream::state state)
+            {
+                _parent.StateChange(_index, state);
+            }
+            void TimeUpdate(const uint64_t position)
+            {
+                _parent.TimeUpdate(_index, position);
+            }
+ 
+        private:
+            Streamer& _parent;
+            uint8_t _index;
+            Exchange::IStream* _implementation;
+            Core::Sink<StreamSink> _streamSink;
+            Core::Sink<StreamControlSink> _streamControlSink;
+        };
+
+        typedef std::map<uint8_t, StreamProxy> Streams;
         typedef std::map<uint8_t, Exchange::IStream::IControl*> Controls;
-
-        class StreamSink : public Exchange::IStream::ICallback {
-        private:
-            StreamSink() = delete;
-            StreamSink(const StreamSink&) = delete;
-            StreamSink& operator=(const StreamSink&) = delete;
-
-        public:
-            StreamSink(Streamer* parent)
-                : _parent(*parent)
-            {
-                ASSERT(parent != nullptr);
-            }
-            virtual ~StreamSink()
-            {
-            }
-
-        public:
-            virtual void DRM(uint32_t state)
-            {
-            }
-            virtual void StateChange(Exchange::IStream::state state)
-            {
-            }
-
-            BEGIN_INTERFACE_MAP(StreamSink)
-            INTERFACE_ENTRY(Exchange::IStream::ICallback)
-            END_INTERFACE_MAP
-
-        private:
-            Streamer& _parent;
-        };
-
-        class StreamControlSink : public Exchange::IStream::IControl::ICallback {
-        private:
-            StreamControlSink() = delete;
-            StreamControlSink(const StreamControlSink&) = delete;
-            StreamControlSink& operator=(const StreamControlSink&) = delete;
-
-        public:
-            StreamControlSink(Streamer* parent)
-                : _parent(*parent)
-            {
-                ASSERT(parent != nullptr);
-            }
-            virtual ~StreamControlSink()
-            {
-            }
-
-        public:
-            virtual void TimeUpdate(uint64_t position)
-            {
-            }
-
-            BEGIN_INTERFACE_MAP(StreamControlSink)
-            INTERFACE_ENTRY(Exchange::IStream::IControl::ICallback)
-            END_INTERFACE_MAP
-
-        private:
-            Streamer& _parent;
-        };
 
         class Config : public Core::JSON::Container {
         private:
@@ -229,6 +283,33 @@ namespace Plugin {
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index);
         void Deactivated(RPC::IRemoteProcess* process);
 
+        void DRM(const uint8_t index, uint32_t state)
+        {
+            string stateText (_T("playready"));
+            _service->Notify(_T("{ \"id\": ") + 
+                             Core::NumberType<uint8_t>(index).Text() + 
+                             _T(", \"drm\": \"") + 
+                             stateText + 
+                             _T("\" }"));
+        }
+        void StateChange(const uint8_t index, Exchange::IStream::state state)
+        {
+            TRACE(Trace::Information, (_T("Stream [%d] moved state: [%s]"), index, Core::EnumerateType<Exchange::IStream::state>(state).Data()));
+
+            _service->Notify(_T("{ \"id\": ") + 
+                             Core::NumberType<uint8_t>(index).Text() + 
+                             _T(", \"stream\": \"") + 
+                             Core::EnumerateType<Exchange::IStream::state>(state).Data() + 
+                             _T("\" }"));
+        }
+        void TimeUpdate(const uint8_t index, const uint64_t position)
+        {
+            _service->Notify(_T("{ \"id\": ") + 
+                             Core::NumberType<uint8_t>(index).Text() + 
+                             _T(", \"time\": ") + 
+                             Core::NumberType<uint64_t>(position).Text()+ _T(" }"));
+        }
+ 
     private:
         uint32_t _skipURL;
         uint32_t _pid;

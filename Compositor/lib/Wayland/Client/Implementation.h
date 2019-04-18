@@ -320,6 +320,9 @@ namespace Wayland {
 #ifdef BCM_HOST
             bcm_host_init();
 #endif
+#ifdef V3D_DRM_DISABLE
+            ::setenv("V3D_DRM_DISABLE", "1", 1);
+#endif
         }
 
     public:

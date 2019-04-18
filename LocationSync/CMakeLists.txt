@@ -9,6 +9,7 @@ add_library(${MODULE_NAME} SHARED
     Module.cpp
     LocationSync.cpp
     LocationService.cpp
+    LocationSyncJsonRpc.cpp
 )
 
 set_target_properties(${MODULE_NAME} PROPERTIES

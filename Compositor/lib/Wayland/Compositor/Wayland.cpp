@@ -274,6 +274,10 @@ namespace Plugin {
             ASSERT(_server == nullptr);
 
 #ifdef ENABLE_NXSERVER
+
+#ifdef V3D_DRM_DISABLE
+            ::setenv("V3D_DRM_DISABLE", "1", 1);
+#endif
             // If we run on a broadcom platform first start the nxserver, then we start the compositor...
             ASSERT(_nxserver == nullptr);
 
@@ -282,13 +286,12 @@ namespace Plugin {
             }
 
             if (_config.Join == false) {
-                _nxserver = new Broadcom::Platform(&_sink, nullptr, _service->ConfigLine());
+                _nxserver = new Broadcom::Platform(_service->Callsign(), &_sink, nullptr, _service->ConfigLine());
             } else {
                 StartImplementation();
             }
 
             ASSERT(_nxserver != nullptr);
-
             return (((_nxserver != nullptr) || (_server != nullptr)) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
 #else
             StartImplementation();

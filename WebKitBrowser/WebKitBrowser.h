@@ -5,11 +5,12 @@
 #include <interfaces/IBrowser.h>
 #include <interfaces/IComposition.h>
 #include <interfaces/IMemory.h>
+#include <interfaces/json/JsonData_WebKitBrowser.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class WebKitBrowser : public PluginHost::IPlugin, public PluginHost::IWeb {
+    class WebKitBrowser : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
         WebKitBrowser(const WebKitBrowser&);
         WebKitBrowser& operator=(const WebKitBrowser&);
@@ -134,10 +135,13 @@ namespace Plugin {
             , _memory(nullptr)
             , _notification(this)
         {
+            RegisterAll();
         }
+
         virtual ~WebKitBrowser()
         {
             TRACE_L1("Destructor WebKitBrowser.%d", __LINE__);
+            UnregisterAll();
         }
 
         inline static bool EnvironmentOverride(const bool configFlag)
@@ -156,6 +160,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(WebKitBrowser)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(PluginHost::IStateControl, _browser)
         INTERFACE_AGGREGATE(Exchange::IBrowser, _browser)
         INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
@@ -195,6 +200,21 @@ namespace Plugin {
         void Hidden(const bool hidden);
         void Closure();
         void StateChange(const PluginHost::IStateControl::state state);
+
+        // JsonRpc
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t StateControlCommand(WPEFramework::PluginHost::IStateControl::command command);
+        uint32_t endpoint_status(JsonData::WebKitBrowser::StatusResultData& response);
+        uint32_t endpoint_suspend();
+        uint32_t endpoint_resume();
+        uint32_t endpoint_hide();
+        uint32_t endpoint_show();
+        uint32_t endpoint_seturl(const JsonData::WebKitBrowser::SeturlParamsData& params);
+        void event_urlchange(const string& url, const bool& loaded);
+        void event_statechange(const bool& suspended);
+        void event_visibilitychange(const bool& hidden);
+        void event_pageclosure();
 
     private:
         uint8_t _skipURL;

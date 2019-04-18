@@ -2,12 +2,13 @@ set(PLUGIN_NAME NetworkControl)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Interfaces REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     NetworkControl.cpp
+    NetworkControlJsonRpc.cpp
     DHCPClientImplementation.cpp
     Module.cpp)
-
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
@@ -15,7 +16,8 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces)
 
 install(TARGETS ${MODULE_NAME} 
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
