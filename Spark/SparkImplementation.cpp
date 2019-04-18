@@ -437,14 +437,8 @@ namespace Plugin {
                     Block();
                 }
                 else {
-                    pxScene2d scene;
-                    pxSceneContainer sceneContainer(&scene);
-
-                    // This, too me, looks a bit odd. It creates a cyclic dependency, see constructor of sceneContainer;
-                    scene.setViewContainer(&sceneContainer);
-
                     // This results in a reference counted object!!!
-                    _view = new pxScriptView(_fullPath.c_str(),"javascript/node/v8", &sceneContainer);
+                    _view = new pxScriptView(_fullPath.c_str(),"javascript/node/v8");
 
                     ASSERT (_view != nullptr);
 
@@ -462,18 +456,10 @@ namespace Plugin {
                     ENTERSCENELOCK()
 
                     if (_view != nullptr) {
-                        script.collectGarbage();
+                        onCloseRequest();
 
-                        //TODO: need to ensure the close sequence is clearing all the things properly, seems suspend 
-                        //      after setUrl is showing some background black screen.
-
-                        pxFontManager::clearAllFonts();
-                        script.pump();
- 
                         _view->setViewContainer(nullptr);
-                        if (_view->Release() != 0) {
-                            TRACE(Trace::Error, (_T("View has *NOT* been destructed. We are leaking !!!")));
-                        }
+                        _view = nullptr;
                     }
                 }
 
@@ -498,7 +484,7 @@ namespace Plugin {
 
         private:
             pxEventLoop _eventLoop;
-            pxIView* _view;
+            pxViewRef _view;
             bool _closed;
             uint32_t _width;
             uint32_t _height;
