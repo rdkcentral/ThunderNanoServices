@@ -17,6 +17,7 @@ using namespace std;
 #define SI_NTT_TABLE_ID  0xc3
 #define SI_SVCT_TABLE_ID 0xc4
 
+#define ELAPSED_TIME()  ((float_t)(Core::Time::Now().Ticks() - startTime) / 1000000)
 namespace WPEFramework {
 namespace Plugin {
 //namespace Dsg {
@@ -68,13 +69,13 @@ void DsgParser::parse(unsigned char *pBuf, ssize_t len)
                   TRACE_L2("short NIT, got %d bytes (expected >7)", section_len);
                 } else if (1 == (pBuf[6] & 0xf)) {
                     if (!cdsDone) {
-                        TRACE_L1("Network Information Table  : CDS"); //1 CDS  Carrier Definition Subtable
+                        TRACE_L1("[%3.3f] Network Information Table  : CDS", ELAPSED_TIME()); //1 CDS  Carrier Definition Subtable
                         HexDump("NIT-CDS:", std::string((char *)pBuf, len));
                         cdsDone = parse_cds(pBuf, section_len, &cds);
                     }
                 } else if (2 == (pBuf[6] & 0xf)) {
                     if (!mmsDone) {
-                        TRACE_L1("Network Information Table  : MMS"); //2 MMS  Modulation Mode Subtable
+                        TRACE_L1("[%3.3f] Network Information Table  : MMS", ELAPSED_TIME()); //2 MMS  Modulation Mode Subtable
                         HexDump("NIT-MMS:", std::string((char *)pBuf, len));
                         mmsDone = parse_mms(pBuf, section_len, &mms);
                     }
@@ -85,7 +86,7 @@ void DsgParser::parse(unsigned char *pBuf, ssize_t len)
             break;
         case SI_NTT_TABLE_ID:
             if(!nttDone) {
-                TRACE_L1("Network text Table");
+                TRACE_L1("[%3.3f] Network text Table", ELAPSED_TIME());
                 HexDump("NTT:", std::string((char *)pBuf, len));
 
                 nttDone = parse_ntt(pBuf, section_len, &ntt);
@@ -94,7 +95,7 @@ void DsgParser::parse(unsigned char *pBuf, ssize_t len)
         case SI_SVCT_TABLE_ID:
             if(!svctDone) {
                 int vct_lookup_index = -1;
-                TRACE_L1("Short-form Virtual Channel Table");
+                TRACE_L1("[%3.3f] Short-form Virtual Channel Table", ELAPSED_TIME());
                 HexDump("SVCT:", std::string((char *)pBuf, len));
 
                 svctDone = parse_svct(pBuf, section_len, &vcm_list, _vctId, vct_lookup_index);
@@ -354,7 +355,9 @@ bool DsgParser::parse_svct(unsigned char *buf, int len, struct vcm **vcmlist, in
     vctid = (buf[n] << 8) | buf[n+1];
     n+=2;
 
-    TRACE_L1("VCT_ID Received from Stream : %d from Application : %d", vctid, vctidfilter);
+
+    TRACE(Trace::Information, ("[%3.3f] VCT_ID Received from Stream : %d from Application : %d (table_subtype=%d)",
+        ELAPSED_TIME(), vctid, vctidfilter, table_subtype));
 
     if (table_subtype > 2)
         TRACE_L2("Invalid SVCT subtype %d", table_subtype);
@@ -380,6 +383,7 @@ bool DsgParser::parse_svct(unsigned char *buf, int len, struct vcm **vcmlist, in
         return false;
     }
 
+    TRACE_L1("[%3.3f] VCT_ID Received from Stream : %d from Application : %d", ELAPSED_TIME(), vctid, vctidfilter);
     // walk the list for matching vctid
     while (vcm && vcm->vctid != vctid) {
         vcm = vcm->next;
@@ -387,15 +391,15 @@ bool DsgParser::parse_svct(unsigned char *buf, int len, struct vcm **vcmlist, in
     // add new vct/vcm to head if not found
     if (NULL == vcm) {
 
-        TRACE_L3("add new vct/vcm to head if not found ");
+        TRACE_L2("add new vct/vcm to head if not found ");
         struct vcm *new_vcm = (struct vcm *)calloc(1, sizeof(*new_vcm));
 
         new_vcm->next = *vcmlist;
         new_vcm->vctid = vctid;
         *vcmlist = vcm = new_vcm;
-        TRACE_L3("adding to list new VCT_ID=0x%04x", vctid);
+        TRACE_L2("adding to list new VCT_ID=0x%04x", vctid);
     }
-#if 1
+
     // now process the rest of the VCT we got from the demod (VCM starts here)
     descriptors_included = buf[n++] & 0x20;
     splice = buf[n++] & 0x80;
@@ -421,9 +425,10 @@ bool DsgParser::parse_svct(unsigned char *buf, int len, struct vcm **vcmlist, in
             memcpy(newvc_rec, &demodvc_rec, sizeof(demodvc_rec));
             newvc_rec->next = vcm->vc_list;
             vcm->vc_list = newvc_rec;
+            TRACE_L2("adding new rec");
         }
     }
-#endif
+
     // parse S-VCT descriptors
     while (n < (len - 4 + 3)) { // 4 bytes CRC, 3 bytes header
         unsigned char d_tag = buf[n++];
@@ -592,13 +597,11 @@ void DsgParser::HexDump(const char* label, const std::string& msg, uint16_t char
         ss << char((byte < ' ' || byte > 127) ? '.' : byte);
 
         if (!((i+1) % charsPerLine)) {
-            TRACE(Trace::Information, ("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str()));
             TRACE_L4("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
             ss.str(std::string());
             ssHex.str(std::string());
         }
     }
-    TRACE(Trace::Information, ("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str()));
     TRACE_L4("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
 }
 

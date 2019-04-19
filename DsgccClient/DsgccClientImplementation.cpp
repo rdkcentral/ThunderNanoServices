@@ -4,8 +4,6 @@
 
 #include <refsw/dsgcc_client_api.h>
 
-#define DSG_TYPE_BROADCAST 1
-#define DSG_TYPE_CA 3
 #define CLIENTPORTKEEPALIVE 50
 #define MAXLINE 4096
 
@@ -37,7 +35,9 @@ namespace Plugin {
         _config.FromString(service->ConfigLine());
 
         _siThread.Run();
-        _caThread.Run();
+        if (_config.DsgCaId)
+            _caThread.Run();
+
         //_dsgCallback.Run();
 
         return (result);
@@ -57,7 +57,7 @@ namespace Plugin {
     uint32_t DsgccClientImplementation::SiThread::Worker() {
 
         TRACE_L1("Entering %s state=%d", __PRETTY_FUNCTION__, Core::Thread::State());
-        Setup(_config.DsgPort, DSG_TYPE_BROADCAST, _config.DsgId);
+        Setup(_config.DsgPort, _config.DsgType, _config.DsgId);
 
         Stop();                         // XXX:
 
@@ -106,6 +106,7 @@ namespace Plugin {
             TRACE_L1("tunnel status %s", TunnelStatusTypeName(retVal));
         }
 
+        uint64_t startTime = Core::Time::Now().Ticks();
         DsgParser _parser(_config.VctId);
         while ( _isRunning ) {
             len = BcmSharedMemoryRead(sharedMemoryId, msg, 0);
@@ -133,6 +134,7 @@ namespace Plugin {
             }
         } // while
 
+        TRACE_L1("Channel Map loaded in %d seconds", static_cast<uint32_t>((Core::Time::Now().Ticks() - startTime) / 1000000));
         TRACE_L1("Unregistering DsgCC client.");
         retVal = dsgcc_UnregisterClient(regInfo);
         BcmSharedMemoryDelete(sharedMemoryId);
@@ -156,7 +158,7 @@ namespace Plugin {
 
         bzero((char *) regInfo, sizeof(struct dsgClientRegInfo));
         regInfo->clientPort = _config.DsgPort;
-        regInfo->idType = DSG_TYPE_CA;
+        regInfo->idType = _config.DsgCaType;
         regInfo->clientId = _config.DsgCaId;
 
         sharedMemoryId = BcmSharedMemoryCreate(regInfo->clientPort, 1);
