@@ -7,12 +7,13 @@ find_package(EGL REQUIRED)
 find_package(WaylandEGL REQUIRED)
 find_package(WesterosClient REQUIRED)
 find_package(${NAMESPACE}Core REQUIRED)
-find_package(NXCLIENT REQUIRED)
+find_package(NXCLIENT)
 
 add_library(${TARGET} SHARED Westeros.cpp)
 
 target_link_libraries(${TARGET}
     PRIVATE
+        ${EGL_LIBRARIES}
         WaylandEGL::WaylandEGL
         ${NAMESPACE}Core::${NAMESPACE}Core
         WesterosClient::WesterosClient

@@ -22,7 +22,9 @@ namespace Plugin {
                 : Core::JSON::Container()
             {
                 Add(_T("dsgPort"), &DsgPort);
+                Add(_T("dsgType"), &DsgType);
                 Add(_T("dsgId"), &DsgId);
+                Add(_T("dsgCaType"), &DsgCaType);
                 Add(_T("dsgCaId"), &DsgCaId);
                 Add(_T("vctId"), &VctId);
                 Add(_T("dsgSiHeaderSize"), &DsgSiHeaderSize);
@@ -34,7 +36,9 @@ namespace Plugin {
 
         public:
             Core::JSON::DecUInt16 DsgPort;
+            Core::JSON::DecUInt16 DsgType;
             Core::JSON::DecUInt16 DsgId;
+            Core::JSON::DecUInt16 DsgCaType;
             Core::JSON::DecUInt16 DsgCaId;
             Core::JSON::DecUInt16 VctId;
             Core::JSON::DecUInt16 DsgSiHeaderSize;

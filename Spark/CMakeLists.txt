@@ -38,7 +38,11 @@ endif()
 target_compile_definitions(${MODULE_NAME}
     PRIVATE
         ANIMATION_ROTATE_XYZ=ON
-        PX_SCENE_VERSION="dev")
+        PX_SCENE_VERSION="dev"
+        ENABLE_PERMISSIONS_CHECK=ON
+        ENABLE_RT_NODE=ON
+        ENABLE_HTTP_CACHE=ON
+        RUNINMAIN=ON)
 
 target_include_directories(${MODULE_NAME} 
     PRIVATE 

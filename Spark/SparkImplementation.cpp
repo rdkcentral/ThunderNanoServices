@@ -39,11 +39,13 @@ namespace Plugin {
                 , Width(1280)
                 , Height(720)
                 , AnimationFPS(60)
+                , EGLProvider(_T("/usr/lib/libEGL.so"))
             {
                 Add(_T("url"), &Url);
                 Add(_T("width"), &Width);
                 Add(_T("height"), &Height);
                 Add(_T("animationfps"), &AnimationFPS);
+                Add(_T("egl"), &EGLProvider);
             }
             ~Config() {}
 
@@ -52,6 +54,7 @@ namespace Plugin {
             Core::JSON::DecUInt32 Width;
             Core::JSON::DecUInt32 Height;
             Core::JSON::DecUInt8 AnimationFPS;
+            Core::JSON::String EGLProvider;
         };
 
         class SceneWindow : public Core::Thread, public pxWindow, public pxIViewContainer {
@@ -70,8 +73,6 @@ namespace Plugin {
                 , _animationFPS(~0)
                 , _url()
                 , _fullPath()
-                , _scene(nullptr)
-                , _sceneContainer(nullptr)
             {
             }
             virtual ~SceneWindow()
@@ -80,16 +81,6 @@ namespace Plugin {
                 Quit();
 
                 Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
-
-                if (_sceneContainer != nullptr) {
-                    delete _sceneContainer;
-                    _sceneContainer = nullptr;
-                }
-
-                if (_scene != nullptr) {
-                    delete _scene;
-                    _scene = nullptr;
-                }
             }
 
             uint32_t Configure(PluginHost::IShell* service) {
@@ -122,6 +113,7 @@ namespace Plugin {
                     fpsFile = service->DataPath() + baseFPS;
                 }
 
+                printf("Setting permissions file: %s\n", permissionsFile.c_str());
                 if (Core::File(permissionsFile).Exists() == true) {
                     Core::SystemInfo::SetEnvironment(_T("SPARK_PERMISSIONS_ENABLED"), _T("true"));
                     Core::SystemInfo::SetEnvironment(_T("SPARK_PERMISSIONS_CONFIG"), permissionsFile);
@@ -149,6 +141,7 @@ namespace Plugin {
                 }
                 Core::SystemInfo::SetEnvironment(_T("NODE_PATH"), service->DataPath());
                 Core::SystemInfo::SetEnvironment(_T("PXSCENE_PATH"), service->DataPath());
+                Core::SystemInfo::SetEnvironment(_T("RT_EGL_PROVIDER"), config.EGLProvider.Value());
 
                 Init();
                 SetURL(_url);
@@ -208,6 +201,9 @@ namespace Plugin {
                     _fullPath = buffer;
 
                     EXITSCENELOCK()
+
+                    TRACE(Trace::Information, (_T("Request URL: %s"), url.c_str()));
+
                     Run();
                 }
             }
@@ -232,11 +228,13 @@ namespace Plugin {
                 pxScene2d* scene = GetScene();
                 if (suspend == true) {
                     scene->suspend(r, status);
+                    TRACE(Trace::Information, (_T("Suspend requested. Success: %s"), status ? _T("true") : _T("false")));
                     sleep(1); //TODO:Suspend not clearing the background always, hence added the sleep, need to recheck
                     _closed = true; //TODO: Added to suspend rendering on offscreen buffer also, need to recheck
                 }
                 else {
                     scene->resume(r, status);
+                    TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
                     _closed = false;
                 }
                 return status;
@@ -251,7 +249,7 @@ namespace Plugin {
             {
             }
 
-        protected:
+        private:
             virtual void invalidateRect(pxRect* r) override
             {
                 pxWindow::invalidateRect(r);
@@ -272,7 +270,7 @@ namespace Plugin {
                 if ((_view != nullptr) /*&& (_closed == false)*/) {
 
                     script.collectGarbage();
-                    static_cast<pxIView*>(_view)->onCloseRequest();
+                    _view->onCloseRequest();
 
                     pxFontManager::clearAllFonts();
                     script.pump();
@@ -284,7 +282,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if ((_view != nullptr) && (!_closed)) {
-                    static_cast<pxIView*>(_view)->onUpdate(pxSeconds());
+                    _view->onUpdate(pxSeconds());
                 }
                 EXITSCENELOCK();
                 script.pump();
@@ -294,7 +292,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onSize(w, h);
+                    _view->onSize(w, h);
                 }
                 EXITSCENELOCK();
             }
@@ -303,7 +301,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onMouseDown(x, y, flags);
+                    _view->onMouseDown(x, y, flags);
                 }
                 EXITSCENELOCK();
             }
@@ -311,7 +309,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onMouseUp(x, y, flags);
+                    _view->onMouseUp(x, y, flags);
                 }
                 EXITSCENELOCK();
             }
@@ -320,7 +318,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onMouseLeave();
+                    _view->onMouseLeave();
                 }
                 EXITSCENELOCK();
             }
@@ -329,7 +327,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onMouseMove(x, y);
+                    _view->onMouseMove(x, y);
                 }
                 EXITSCENELOCK();
             }
@@ -338,7 +336,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onKeyDown(keycode, flags);
+                    _view->onKeyDown(keycode, flags);
                 }
                 EXITSCENELOCK();
             }
@@ -347,7 +345,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onKeyUp(keycode, flags);
+                    _view->onKeyUp(keycode, flags);
                 }
                 EXITSCENELOCK();
             }
@@ -356,7 +354,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onChar(c);
+                    _view->onChar(c);
                 }
                 EXITSCENELOCK();
             }
@@ -365,7 +363,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onDraw();
+                    _view->onDraw();
                 }
                 EXITSCENELOCK();
             }
@@ -374,7 +372,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onMouseEnter();
+                    _view->onMouseEnter();
                 }
                 EXITSCENELOCK();
             }
@@ -383,7 +381,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onFocus();
+                    _view->onFocus();
                 }
                 EXITSCENELOCK();
             }
@@ -392,7 +390,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onBlur();
+                    _view->onBlur();
                 }
                 EXITSCENELOCK();
             }
@@ -401,7 +399,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onScrollWheel(dx, dy);
+                    _view->onScrollWheel(dx, dy);
                 }
                 EXITSCENELOCK();
             }
@@ -410,7 +408,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    static_cast<pxIView*>(_view)->onDragDrop(x, y, type, dropped);
+                    _view->onDragDrop(x, y, type, dropped);
                 }
                 EXITSCENELOCK();
             }
@@ -429,10 +427,6 @@ namespace Plugin {
                 sprintf(buffer, "Spark: %s", PX_SCENE_VERSION);
                 setTitle(buffer);
 
-                _scene = new pxScene2d();
-                _sceneContainer = new pxSceneContainer(_scene);
-                _scene->setViewContainer(_sceneContainer);
-
                 return true;
             }
             virtual uint32_t Worker()
@@ -443,24 +437,28 @@ namespace Plugin {
                     Block();
                 }
                 else {
-                    pxScriptView* window = new pxScriptView(_fullPath.c_str(),"javascript/node/v8", _sceneContainer);
-                    _view = static_cast<pxIView*>(window);
+                    // This results in a reference counted object!!!
+                    _view = new pxScriptView(_fullPath.c_str(),"javascript/node/v8");
 
                     ASSERT (_view != nullptr);
 
-                    static_cast<pxIView*>(_view)->setViewContainer(this);
-                    static_cast<pxIView*>(_view)->onSize(_width, _height);
+                    _view->setViewContainer(this);
+                    _view->onSize(_width, _height);
 
                     EXITSCENELOCK()
+
+                    TRACE(Trace::Information, (_T("Showing URL: %s"), _fullPath.c_str()));
+
                     if (IsRunning() == true) {
                         _eventLoop.run();
                     }
+
                     ENTERSCENELOCK()
-                    //onCloseRequest(); //TODO need to ensure the close sequence is clearing all the things properly, seems suspend after setUrl is showing some background black screen
+
                     if (_view != nullptr) {
-                        static_cast<pxIView*>(_view)->setViewContainer(nullptr);
-                        static_cast<pxIView*>(_view)->Release(); //FIXME: Could not able to delete it, that means it is still in use.
-                        //delete window;
+                        onCloseRequest();
+
+                        _view->setViewContainer(nullptr);
                         _view = nullptr;
                     }
                 }
@@ -476,7 +474,7 @@ namespace Plugin {
                 rtValue args;
                 args.setString("scene");
                 rtValue scene;
-                pxScriptView::getScene(1, &args, &scene, static_cast<void*>(_view));
+                pxScriptView::getScene(1, &args, &scene, _view);
                 pxScene2d* pxScene = (pxScene2d*)(scene.toObject().getPtr());
 
                 EXITSCENELOCK()
@@ -486,16 +484,13 @@ namespace Plugin {
 
         private:
             pxEventLoop _eventLoop;
-            rtRef<pxIView> _view;
+            pxViewRef _view;
             bool _closed;
             uint32_t _width;
             uint32_t _height;
             uint8_t _animationFPS;
             string _url;
             string _fullPath;
-
-            pxScene2d* _scene;
-            pxSceneContainer* _sceneContainer;
         };
 
         SparkImplementation(const SparkImplementation&) = delete;
@@ -606,6 +601,9 @@ namespace Plugin {
             uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
             _adminLock.Lock();
+
+            PluginHost::IStateControl::state lastState = _state;
+
             if (_state == PluginHost::IStateControl::UNINITIALIZED) {
                 // Seems we are passing state changes before we reached an operational Spark.
                 // Just move the state to what we would like it to be :-)
@@ -617,19 +615,19 @@ namespace Plugin {
                 case PluginHost::IStateControl::SUSPEND:
                     if (_state == PluginHost::IStateControl::RESUMED) {
 
-                        bool status = _window.Suspend(true);
-
-                        StateChangeCompleted(status, PluginHost::IStateControl::SUSPEND);
-                        result = Core::ERROR_NONE;
+                        if (_window.Suspend(true) == true) {
+                            _state = PluginHost::IStateControl::SUSPENDED;
+                            result = Core::ERROR_NONE;
+                        }
                     }
                     break;
                 case PluginHost::IStateControl::RESUME:
                     if (_state == PluginHost::IStateControl::SUSPENDED) {
 
-                        bool status = _window.Suspend(false);
-
-                        StateChangeCompleted(status, PluginHost::IStateControl::RESUME);
-                        result = Core::ERROR_NONE;
+                        if (_window.Suspend(false) == true) {
+                            _state = PluginHost::IStateControl::RESUMED;
+                            result = Core::ERROR_NONE;
+                        }
                     }
                     break;
                 default:
@@ -637,7 +635,17 @@ namespace Plugin {
                 }
             }
 
+            if (lastState != _state) {
+                std::list<PluginHost::IStateControl::INotification*>::iterator index(_stateControlClients.begin());
+
+                while (index != _stateControlClients.end()) {
+                    (*index)->StateChange(_state);
+                    index++;
+                }
+            }
+
             _adminLock.Unlock();
+
             return result;
         }
 
@@ -646,55 +654,6 @@ namespace Plugin {
             INTERFACE_ENTRY(PluginHost::IStateControl)
         END_INTERFACE_MAP
 
-    private:
-        void StateChangeCompleted(bool success, const PluginHost::IStateControl::command request)
-        {
-            if (success) {
-                switch (request) {
-                case PluginHost::IStateControl::RESUME:
-
-                    _adminLock.Lock();
-
-                    if (_state != PluginHost::IStateControl::RESUMED) {
-                        StateChange(PluginHost::IStateControl::RESUMED);
-                    }
-
-                    _adminLock.Unlock();
-                    break;
-                case PluginHost::IStateControl::SUSPEND:
-
-                    _adminLock.Lock();
-
-                    if (_state != PluginHost::IStateControl::SUSPENDED) {
-                        StateChange(PluginHost::IStateControl::SUSPENDED);
-                    }
-
-                    _adminLock.Unlock();
-                    break;
-                default:
-                    ASSERT(false);
-                    break;
-                }
-            }
-            else {
-
-                StateChange(PluginHost::IStateControl::EXITED);
-            }
-        }
-
-        void StateChange(const PluginHost::IStateControl::state newState)
-        {
-            _adminLock.Lock();
-
-            _state = newState;
-            std::list<PluginHost::IStateControl::INotification*>::iterator index(_stateControlClients.begin());
-
-            while (index != _stateControlClients.end()) {
-                (*index)->StateChange(newState);
-                index++;
-            }
-            _adminLock.Unlock();
-        }
     private:
         mutable Core::CriticalSection _adminLock;
         SceneWindow _window;

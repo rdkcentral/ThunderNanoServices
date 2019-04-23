@@ -337,6 +337,7 @@ static GSourceFuncs _handlerIntervention =
                 , Height(720)
                 , PTSOffset(0)
                 , ScaleFactor(1.0)
+                , MaxFPS(60)
             {
                 Add(_T("useragent"), &UserAgent);
                 Add(_T("url"), &URL);
@@ -372,6 +373,7 @@ static GSourceFuncs _handlerIntervention =
                 Add(_T("height"), &Height);
                 Add(_T("ptsoffset"), &PTSOffset);
                 Add(_T("scalefactor"), &ScaleFactor);
+                Add(_T("maxfps"), &MaxFPS);
             }
             ~Config()
             {
@@ -412,6 +414,7 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::DecUInt16 Height;
             Core::JSON::DecSInt16 PTSOffset;
             Core::JSON::DecUInt16 ScaleFactor;
+            Core::JSON::DecUInt8 MaxFPS; // A value between 1 and 100...
         };
 
     private:
@@ -789,8 +792,10 @@ static GSourceFuncs _handlerIntervention =
 
             string width(Core::NumberType<uint16_t>(_config.Width.Value()).Text());
             string height(Core::NumberType<uint16_t>(_config.Height.Value()).Text());
+            string maxFPS(Core::NumberType<uint16_t>(_config.MaxFPS.Value()).Text());
             Core::SystemInfo::SetEnvironment(_T("WEBKIT_RESOLUTION_WIDTH"), width, !environmentOverride);
             Core::SystemInfo::SetEnvironment(_T("WEBKIT_RESOLUTION_HEIGHT"), height, !environmentOverride);
+            Core::SystemInfo::SetEnvironment(_T("WEBKIT_MAXIMUM_FPS"), maxFPS, !environmentOverride);
 
             if (width.empty() == false) {
                 Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_WIDTH"), width, !environmentOverride);

@@ -129,12 +129,10 @@ public:
 
 class DsgParser {
 public:
-    DsgParser(int vctId) {
-        SetVctId(vctId);
-    }
-
-    void SetVctId(int vctId) {
-        _vctId = vctId;
+    DsgParser(int vctId)
+        : _vctId(vctId)
+        , startTime (Core::Time::Now().Ticks())
+    {
         TRACE_L1("VctId=%d", _vctId);
     }
 
@@ -160,6 +158,7 @@ public:
 private:
     int _vctId;
     string channels;
+    uint64_t startTime;
 
     struct cds_table cds;
     // 8bit S-VCT MMS_reference means...
