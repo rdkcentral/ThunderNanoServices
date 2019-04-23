@@ -210,10 +210,11 @@ namespace Plugin {
                                 result->Message = _T("Decoder Attached");
                                 result->ErrorCode = Web::STATUS_OK;
                             }
-                        }
-                        else 
-                        {
+                        } else if (stream->second->State() == Exchange::IStream::Playing) {
                             result->Message = _T("Decoder already attached");
+                            result->ErrorCode = Web::STATUS_ACCEPTED;
+                        } else {
+                            result->Message = _T("Decoder NOT Prepared");
                             result->ErrorCode = Web::STATUS_ACCEPTED;
                         }
                     } else {
