@@ -1,6 +1,9 @@
 #include "OCDM.h"
 #include <interfaces/IDRM.h>
 
+// TODO: figure out how to force linking of libocdm.so
+void ForceLinkingOfOpenCDM();
+
 namespace WPEFramework {
 
 namespace OCDM {
@@ -75,6 +78,8 @@ namespace Plugin {
 
     /* virtual */ const string OCDM::Initialize(PluginHost::IShell* service)
     {
+        ForceLinkingOfOpenCDM();
+
         Config config;
         string message;
 
