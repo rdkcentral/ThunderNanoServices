@@ -202,26 +202,34 @@ namespace Plugin {
         NEXUS_InputRouterCode inputRouterCode;
         unsigned num = 0;
         int rc;
+        static int _lastRepeat = 0;
 
         if (_NxInputClient) {
             // always get the key, else the queue fills up and weird things happen
             rc = NEXUS_InputClient_GetCodes((NEXUS_InputClientHandle)_NxInputClient, &inputRouterCode, 2, &num);
             int rawCode = inputRouterCode.data.irInput.code & _codeMask;
             int repeat = inputRouterCode.data.irInput.repeat;
-            TRACE_L1("%s: RawCode 0x%X Codemask:0x%X Code:0x%X", __FUNCTION__, inputRouterCode.data.irInput.code, _codeMask, rawCode);
+            TRACE_L1("%s: RawCode 0x%X Codemask:0x%X Code:0x%X repeat=%d", __FUNCTION__, inputRouterCode.data.irInput.code, _codeMask, rawCode, repeat);
             if ((rc == 0) && (num != 0)) {
 
                 uint64_t currentTicks = Core::Time::Now().Ticks();
 
                 // See if this key is coming in more than 150ms aftre the last one..
-                if (((currentTicks - _lastKeyTicks) < 150000) && (true == repeat)) {
+                if (((currentTicks - _lastKeyTicks) < 150000) && (false == repeat) ) {
 
                     TRACE_L1("%s: Ignoring key <150ms", __FUNCTION__);
                 } else {
-                    TRACE_L1("%s: sending keycode=%x", __FUNCTION__, rawCode);
+                    TRACE_L1("%s: _lastRepeat=%d repeat=%d diff=%uld", __FUNCTION__, _lastRepeat, repeat, (currentTicks - _lastKeyTicks));
+                    if ((_lastRepeat == 0)  && (repeat == 1) && ((currentTicks - _lastKeyTicks) < 500000))  {
+
+                        TRACE_L1("%s: Ignoring initial repeats for 500ms", __FUNCTION__);
+                    } else {
+                    TRACE_L1("%s: >>>>>>>>>> sending keycode=%x", __FUNCTION__, rawCode);
                     _callback->KeyEvent(true, rawCode, _resourceName);
                     _callback->KeyEvent(false, rawCode, _resourceName);
                     _lastKeyTicks = currentTicks;
+                    _lastRepeat = repeat;
+                    }
                 }
             }
         } else {
