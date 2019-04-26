@@ -13,6 +13,7 @@
 #include <WPE/WebKit/WKNotificationProvider.h>
 #include <WPE/WebKit/WKSoupSession.h>
 #include <WPE/WebKit/WKUserMediaPermissionRequest.h>
+#include <wpe/wpe.h>
 
 #include <glib.h>
 
@@ -1041,7 +1042,7 @@ static GSourceFuncs _handlerIntervention =
             auto cookieManager = WKContextGetCookieManager(context);
             WKCookieManagerSetCookiePersistentStorage(cookieManager, path, kWKCookieStorageTypeSQLite);
 
-            _view = WKViewCreate(pageConfiguration);
+            _view = WKViewCreate(wpe_view_backend_create(), pageConfiguration);
             if (_config.FPS.Value() == true) {
                 _viewClient.base.clientInfo = static_cast<void*>(this);
                 WKViewSetViewClient(_view, &_viewClient.base);
