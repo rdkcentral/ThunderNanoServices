@@ -1042,7 +1042,11 @@ static GSourceFuncs _handlerIntervention =
             auto cookieManager = WKContextGetCookieManager(context);
             WKCookieManagerSetCookiePersistentStorage(cookieManager, path, kWKCookieStorageTypeSQLite);
 
+#ifdef WPE_WEBKIT_DEPRECATED_API
+            _view = WKViewCreate(pageConfiguration);
+#else
             _view = WKViewCreate(wpe_view_backend_create(), pageConfiguration);
+#endif
             if (_config.FPS.Value() == true) {
                 _viewClient.base.clientInfo = static_cast<void*>(this);
                 WKViewSetViewClient(_view, &_viewClient.base);

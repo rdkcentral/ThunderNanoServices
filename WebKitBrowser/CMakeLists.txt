@@ -60,6 +60,10 @@ target_include_directories(${MODULE_NAME}
         ${WPE_WEBKIT_INCLUDE_DIRS}/WPE
         ${GLIB_INCLUDE_DIRS})
 
+if(WPE_WEBKIT_DEPRECATED_API)
+    target_compile_definitions(${MODULE_NAME} PRIVATE WPE_WEBKIT_DEPRECATED_API=${WPE_WEBKIT_DEPRECATED_API})
+endif()
+
 install(
     TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
