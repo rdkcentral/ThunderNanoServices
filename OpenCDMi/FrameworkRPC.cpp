@@ -741,15 +741,13 @@ namespace Plugin {
             }
 
             virtual OCDM::OCDM_RESULT CreateSessionExt(
+                const std::string keySystem,
                 const uint8_t drmHeader[],
                 uint32_t drmHeaderLength,
                 ::OCDM::ISession::ICallback* callback,
                 std::string& sessionId,
                 OCDM::ISessionExt*& session) override
             {
-
-                // TODO: key system
-                const string keySystem = "com.microsoft.playready";
                 CDMi::IMediaKeysExt* system = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
 
                 if (system == nullptr) {
@@ -764,7 +762,7 @@ namespace Plugin {
 
                     // OKe we got a buffer machanism to transfer the raw data, now create
                     // the session.
-                    if ((session == nullptr) && (system->CreateMediaKeySessionExt(drmHeader, drmHeaderLength, &sessionInterface) == 0)) {
+                    if ((session == nullptr) && (system->CreateMediaKeySessionExt(keySystem, drmHeader, drmHeaderLength, &sessionInterface) == 0)) {
 
                         if (sessionInterface != nullptr) {
 
