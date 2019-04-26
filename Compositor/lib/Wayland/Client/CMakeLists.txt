@@ -35,6 +35,10 @@ if(BCM_HOST_FOUND)
             BCM_HOST=ON)
 endif(BCM_HOST_FOUND)
 
+if(EGL_FOUND)
+    add_definitions(${EGL_CFLAGS})
+endif(EGL_FOUND)
+
 if (PLUGIN_COMPOSITOR_NXSERVER)
     if (V3D_DRM_DISABLE)
         target_compile_definitions(${TARGET}

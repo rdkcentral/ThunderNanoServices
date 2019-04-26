@@ -26,6 +26,10 @@ if (PLUGIN_COMPOSITOR_NXSERVER)
     endif ()
 endif ()
 
+if(EGL_FOUND)
+    add_definitions(${EGL_CFLAGS})
+endif(EGL_FOUND)
+
 target_link_libraries(${TARGET}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
