@@ -3,6 +3,7 @@
 
 #include "Module.h"
 #include <interfaces/IMemory.h>
+#include <interfaces/json/JsonData_Monitor.h>
 #include <limits>
 #include <string>
 
@@ -14,7 +15,7 @@ static uint32_t gcd(uint32_t a, uint32_t b)
 namespace WPEFramework {
 namespace Plugin {
 
-    class Monitor : public PluginHost::IPlugin, public PluginHost::IWeb {
+    class Monitor : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
         struct RestartSettings : public Core::JSON::Container {
             RestartSettings& operator=(const RestartSettings& other) = delete;
@@ -660,11 +661,12 @@ namespace Plugin {
 #ifdef __WIN32__
 #pragma warning(disable : 4355)
 #endif
-            MonitorObjects()
+            MonitorObjects(Monitor* parent)
                 : _adminLock()
                 , _monitor()
                 , _job(Core::ProxyType<Job>::Create(this))
                 , _service(nullptr)
+                , _parent(*parent)
             {
             }
 #ifdef __WIN32__
@@ -763,9 +765,11 @@ namespace Plugin {
                             TRACE(Trace::Error, (_T("Giving up restarting of %s: Failed more than %d times within %d seconds.\n"), service->Callsign().c_str(), index->second.RestartLimit(service->Reason()), index->second.RestartWindow(service->Reason())));
                             const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Restart\", \"reason\":\"" + (std::to_string(index->second.RestartLimit(service->Reason()))).c_str() + " Attempts Failed within the restart window\"}");
                             _service->Notify(message);
+                            _parent.event_action(service->Callsign(), "StoppedRestaring", std::to_string(index->second.RestartLimit(service->Reason())) + " attempts failed within the restart window");
                         } else {
                             const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Activate\", \"reason\": \"Automatic\" }");
                             _service->Notify(message);
+                            _parent.event_action(service->Callsign(), "Activate", "Automatic");
                             TRACE(Trace::Information, (_T("Restarting %s again because we detected it misbehaved.\n"), service->Callsign().c_str()));
                             PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(service, PluginHost::IShell::ACTIVATED, PluginHost::IShell::AUTOMATIC));
                         }
@@ -806,6 +810,44 @@ namespace Plugin {
 
                 return (found);
             }
+
+            void Snapshot(const string& callsign, Core::JSON::ArrayType<JsonData::Monitor::InfoInfo>* response)
+            {
+                _adminLock.Lock();
+
+                auto AddElement = [this, &response](const string& callsign, MonitorObject& object) {
+                    const MetaData& metaData = object.Measurement();
+                    JsonData::Monitor::InfoInfo info;
+                    info.Observable = callsign;
+                    if (object.HasRestartAllowed()) {
+                        info.Memoryrestartsettings.Limit = object.RestartLimit(PluginHost::IShell::MEMORY_EXCEEDED);
+                        info.Memoryrestartsettings.Windowseconds = object.RestartWindow(PluginHost::IShell::MEMORY_EXCEEDED);
+                        info.Operationalrestartsettings.Limit = object.RestartLimit(PluginHost::IShell::FAILURE);
+                        info.Operationalrestartsettings.Windowseconds = object.RestartWindow(PluginHost::IShell::FAILURE);
+                    }
+                    translate(metaData.Allocated(), &info.Measurements.Allocated);
+                    translate(metaData.Resident(), &info.Measurements.Resident);
+                    translate(metaData.Shared(), &info.Measurements.Shared);
+                    translate(metaData.Process(), &info.Measurements.Process);
+                    info.Measurements.Operational = metaData.Operational();
+                    info.Measurements.Count = metaData.Allocated().Measurements();
+
+                    response->Add(info);
+                };
+
+                if (callsign.empty() == false) {
+                    auto element = _monitor.find(callsign);
+                    if (element != _monitor.end()) {
+                        AddElement(element->first, element->second);
+                    }
+                } else {
+                    for (auto& element : _monitor)
+                        AddElement(element.first, element.second);
+                }
+
+                _adminLock.Unlock();
+            }
+
             bool Reset(const string& name, Monitor::MetaData& result)
             {
                 bool found = false;
@@ -816,6 +858,24 @@ namespace Plugin {
 
                 if (index != _monitor.end()) {
                     result = index->second.Measurement();
+                    index->second.Reset();
+                    found = true;
+                }
+
+                _adminLock.Unlock();
+
+                return (found);
+            }
+
+            bool Reset(const string& name)
+            {
+                bool found = false;
+
+                _adminLock.Lock();
+
+                std::map<string, MonitorObject>::iterator index(_monitor.find(name));
+
+                if (index != _monitor.end()) {
                     index->second.Reset();
                     found = true;
                 }
@@ -857,6 +917,8 @@ namespace Plugin {
 
                                 _service->Notify(message);
 
+                                _parent.event_action(plugin->Callsign(), "Deactivate", why.Data());
+
                                 PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(plugin, PluginHost::IShell::DEACTIVATED, why.Value()));
 
                                 plugin->Release();
@@ -883,26 +945,38 @@ namespace Plugin {
             }
 
         private:
+            template <typename T>
+            void translate(const Core::MeasurementType<T>& from, JsonData::Monitor::MeasurementInfo* to) {
+                to->Min = from.Min();
+                to->Max = from.Max();
+                to->Average = from.Average();
+                to->Last = from.Last();
+            }
+
             Core::CriticalSection _adminLock;
             std::map<string, MonitorObject> _monitor;
             Core::ProxyType<Core::IDispatchType<void>> _job;
             PluginHost::IShell* _service;
+            Monitor& _parent;
         };
 
     public:
         Monitor()
             : _skipURL(0)
-            , _monitor(Core::Service<MonitorObjects>::Create<MonitorObjects>())
+            , _monitor(Core::Service<MonitorObjects>::Create<MonitorObjects>(this))
         {
+            RegisterAll();
         }
         virtual ~Monitor()
         {
+            UnregisterAll();
             _monitor->Release();
         }
 
         BEGIN_INTERFACE_MAP(Monitor)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
@@ -947,6 +1021,14 @@ namespace Plugin {
         uint8_t _skipURL;
         Config _config;
         MonitorObjects* _monitor;
+
+    private:
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_status(const JsonData::Monitor::StatusParamsInfo& params, Core::JSON::ArrayType<JsonData::Monitor::InfoInfo>& response);
+        uint32_t endpoint_resetstats(const JsonData::Monitor::StatusParamsInfo& params, JsonData::Monitor::InfoInfo& response);
+        uint32_t endpoint_restartlimits(const JsonData::Monitor::RestartlimitsParamsData& params);
+        void event_action(const string& callsign, const string& action, const string& reason);
     };
 }
 }
