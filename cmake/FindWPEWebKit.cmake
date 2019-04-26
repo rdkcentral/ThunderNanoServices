@@ -9,7 +9,7 @@
 # So here we purposely left one underscore away
 
 find_package(PkgConfig)
-pkg_check_modules(PC_WPE_WEBKIT wpe-webkit-deprecated-0.1)
+pkg_check_modules(PC_WPE_WEBKIT wpe-webkit)
 
 if(PC_WPE_WEBKIT_FOUND)
     if(WPE_WEBKIT_FIND_VERSION AND PC_WPE_WEBKIT_VERSION)
@@ -20,10 +20,16 @@ if(PC_WPE_WEBKIT_FOUND)
         endif()
     endif()
 else()
-    set(WPE_WEBKIT_FOUND_TEXT "Not found")
+    pkg_check_modules(PC_WPE_WEBKIT wpe-webkit-deprecated-0.1)
+    if(NOT PC_WPE_WEBKIT_FOUND)
+        set(WPE_WEBKIT_FOUND_TEXT "Not found")
+    endif()
 endif()
 
 if(PC_WPE_WEBKIT_FOUND)
+    if("${PC_WPE_WEBKIT_VERSION}" STREQUAL "0.0.20170728")
+        set(WPE_WEBKIT_DEPRECATED_API TRUE)
+    endif()
     find_path(
         WPE_WEBKIT_INCLUDE_DIRS
         NAMES WPE/WebKit.h
