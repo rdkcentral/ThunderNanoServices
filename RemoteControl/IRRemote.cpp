@@ -26,10 +26,12 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
+                , CodeMask(static_cast<uint32_t>(~0))
                 , RepeatStart(500)
                 , RepeatInterval(100)
                 , ReleaseTimeout(30000)
             {
+                Add(_T("codemask"), &CodeMask);
                 Add(_T("repeatstart"), &RepeatStart);
                 Add(_T("repeatinterval"), &RepeatInterval);
                 Add(_T("releasetimeout"), &ReleaseTimeout);
@@ -38,6 +40,7 @@ namespace Plugin {
             {
             }
 
+            Core::JSON::HexUInt32 CodeMask;
             Core::JSON::DecUInt16 RepeatStart;
             Core::JSON::DecUInt16 RepeatInterval;
             Core::JSON::DecUInt16 ReleaseTimeout;
@@ -61,6 +64,8 @@ namespace Plugin {
 
         virtual void Configure(const string& configure)
         {
+            _config.FromString(configure);
+            _codeMask = _config.CodeMask.Value();
         }
 
         virtual bool Pair();
@@ -74,7 +79,7 @@ namespace Plugin {
         void SendEvent();
 
     private:
-        Config config;
+        Config _config;
         uint64_t _lastKeyTicks;
         uint64_t _repeatStart;
         uint32_t _error;
@@ -182,7 +187,7 @@ namespace Plugin {
         } else {
 
             Initialize();
-            TRACE_L1("%s: callback=%p _callback=%p", __FUNCTION__, callback, _callback);
+            TRACE_L1("IRRemote::%s: callback=%p _callback=%p", __FUNCTION__, callback, _callback);
             _callback = callback;
         }
 
@@ -229,11 +234,11 @@ namespace Plugin {
 
                 int repeatDiff = (currentTicks - _repeatStart) / 1000;
                 TRACE_L1("%s: repeat=%d diff=%d repeat start diff %d", __FUNCTION__, repeat, diff, repeatDiff);
-                if (repeat && (repeatDiff < config.RepeatStart.Value()))  {
-                    TRACE_L1("%s: Ignoring initial repeats for %ds", __FUNCTION__, config.RepeatStart.Value());
-                } else if (!repeat && (diff < config.RepeatInterval.Value())) {
-                    // See if this key is coming in more than X  aftre the last one..
-                    TRACE_L1("%s: Ignoring key < %dms", __FUNCTION__, config.RepeatInterval.Value());
+                if (repeat && (repeatDiff < _config.RepeatStart.Value()))  {
+                    TRACE_L1("%s: Ignoring initial repeats for %ds", __FUNCTION__, _config.RepeatStart.Value());
+                } else if (!repeat && (diff < _config.RepeatInterval.Value())) {
+                    // See if this key is coming in more than X after the last one..
+                    TRACE_L1("%s: Ignoring key < %dms", __FUNCTION__, _config.RepeatInterval.Value());
                 } else {
                     TRACE_L1("%s: >>>>>>>>>> sending keycode=%x", __FUNCTION__, rawCode);
                     _callback->KeyEvent(true, rawCode, _resourceName);
