@@ -5,6 +5,7 @@
 #include <interfaces/IDsgccClient.h>
 #include <interfaces/IMemory.h>
 
+#include <refsw/dsgcc_client_api.h>
 #include "DsgParser.h"
 
 namespace WPEFramework {
@@ -29,6 +30,8 @@ namespace Plugin {
                 Add(_T("vctId"), &VctId);
                 Add(_T("dsgSiHeaderSize"), &DsgSiHeaderSize);
                 Add(_T("dsgCaHeaderSize"), &DsgCaHeaderSize);
+                Add(_T("dsgCacheFile"), &DsgCacheFile);
+
             }
             ~Config()
             {
@@ -43,42 +46,38 @@ namespace Plugin {
             Core::JSON::DecUInt16 VctId;
             Core::JSON::DecUInt16 DsgSiHeaderSize;
             Core::JSON::DecUInt16 DsgCaHeaderSize;
+            Core::JSON::String DsgCacheFile;
         };
 
         class SiThread : public Core::Thread {
-        private:
-            SiThread(const SiThread&) = delete;
-            SiThread& operator=(const SiThread&) = delete;
 
         public:
-            SiThread(DsgccClientImplementation::Config& config)
-                : Core::Thread(Core::Thread::DefaultStackSize(), _T("DsgccClient"))
-                , _config(config)
-                , _isRunning(true) {
-            }
-
-            virtual ~SiThread()
-            {
-            }
+            SiThread(DsgccClientImplementation::Config& config);
+            virtual ~SiThread();
+            void Setup();
 
             string getChannels() const {
                 return _channels;
             }
 
-        public:
             void Dispose()
             {
                 TRACE_L1("SiThread::%s: Done!!! ", __FUNCTION__);
             }
+        private:
+            SiThread(const SiThread&) = delete;
+            SiThread& operator=(const SiThread&) = delete;
+            uint32_t Worker() override;
+            void LoadFromCache();
+            void SaveToCache();
 
         private:
             DsgccClientImplementation::Config& _config;
             bool _isRunning;
+            bool _isInitialized;
             string _channels;
-
-            virtual uint32_t Worker() override;
-            void Setup(unsigned int port, unsigned int dsgType, unsigned int dsgId);
-            void HexDump(const char* label, const std::string& msg, uint16_t charsPerLine = 32);
+            struct dsgClientRegInfo regInfoData;
+            int sharedMemoryId;
         };
 
         class CaThread : public Core::Thread {
@@ -88,9 +87,10 @@ namespace Plugin {
 
         public:
             CaThread(DsgccClientImplementation::Config& config)
-                : Core::Thread(Core::Thread::DefaultStackSize(), _T("DsgccClient"))
+                : Core::Thread(Core::Thread::DefaultStackSize(), _T("DsgCaThread"))
                 , _config(config)
-                , _isRunning(true) {
+                , _isRunning(true)
+                , _isInitialized(false) {
             }
 
             virtual ~CaThread()
@@ -106,9 +106,10 @@ namespace Plugin {
         private:
             DsgccClientImplementation::Config& _config;
             bool _isRunning;
+            bool _isInitialized;
             string _channels;
 
-            virtual uint32_t Worker() override;
+            uint32_t Worker() override;
         };
 
         class ClientCallbackService : public Core::Thread {
