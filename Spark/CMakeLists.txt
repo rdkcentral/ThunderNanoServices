@@ -58,6 +58,6 @@ string(TOLOWER ${NAMESPACE} STORAGENAME)
 install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
 
 set(PLUGIN_SPARK_AUTOSTART false CACHE STRING "Automatically start Spark plugin")
-set(PLUGIN_SPARK_STARTURL "" CACHE STRING "Initial URL for Spark plugin")
+set(PLUGIN_SPARK_STARTURL "browser.js" CACHE STRING "Initial URL for Spark plugin")
 
 write_config(${PLUGIN_NAME})

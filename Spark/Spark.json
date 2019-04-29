@@ -7,6 +7,6 @@
  ],
  "autostart":false,
  "configuration":{
-  "url":null
+  "url":"browser.js"
  }
 }
