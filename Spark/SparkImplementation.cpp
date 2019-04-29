@@ -18,9 +18,7 @@
 
 pxContext context;
 extern rtScript script;
-
-#define ENTERSCENELOCK() rtWrapperSceneUpdateEnter();
-#define EXITSCENELOCK()  rtWrapperSceneUpdateExit();
+extern bool gDirtyRectsEnabled;
 
 namespace WPEFramework {
 namespace Plugin {
@@ -129,6 +127,17 @@ namespace Plugin {
                     if (RT_OK == rtSettings::instance()->value("screenHeight", screenHeight)) {
                         _height = screenHeight.toInt32();
                     }
+
+                    rtValue dirtyRectsSetting;
+                    if (RT_OK == rtSettings::instance()->value("enableDirtyRects", dirtyRectsSetting)) {
+                        gDirtyRectsEnabled = dirtyRectsSetting.toString().compare("true") == 0;
+                    }
+
+                    rtValue optimizedUpdateSetting;
+                    if (RT_OK == rtSettings::instance()->value("enableOptimizedUpdate", optimizedUpdateSetting)) {
+                        bool enable = optimizedUpdateSetting.toString().compare("true") == 0;
+                        pxScene2d::enableOptimizedUpdate(enable);
+                    }
                 }
 
                 if (Core::File(fpsFile).Exists() == true) {
@@ -182,16 +191,14 @@ namespace Plugin {
 
                     } else {
                         length = std::min(url.length(), sizeof(buffer) - sizeof(prefix));
-
-                        strncat(buffer, url.c_str(), length);
                     }
 
                     if (length >= (sizeof(buffer) - sizeof(prefix))) {
 
                         SYSLOG(Trace::Warning, (_T("URL size greater than 8000 bytes, so resetting url to browser.js")));
-                        ::strcat(buffer, _T("browser.js"));
+                        ::strcpy(buffer, _T("browser.js"));
                     } else {
-                        ::strncat(buffer, url.c_str(), length);
+                        strncat(buffer, url.c_str(), length);
                     }
 
                     ENTERSCENELOCK()
@@ -361,6 +368,7 @@ namespace Plugin {
 
             virtual void onDraw(pxSurfaceNative) override
             {
+                context.updateRenderTick();
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
                     _view->onDraw();
