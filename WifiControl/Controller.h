@@ -1165,7 +1165,7 @@ namespace WPASupplicant {
             EnabledContainer::iterator index(_enabled.find(SSID));
 
             if (index != _enabled.end()) {
-
+                result = Core::ERROR_NONE;
                 CustomRequest exchange(string(_TXT("SELECT_NETWORK ")) + Core::NumberType<uint32_t>(index->second.Id()).Text());
 
                 Submit(&exchange);
@@ -1216,7 +1216,7 @@ namespace WPASupplicant {
             EnabledContainer::iterator index(_enabled.find(SSID));
 
             if ((index != _enabled.end()) && (index->second.IsEnabled() == true)) {
-
+                result = Core::ERROR_NONE;
                 CustomRequest exchange(string(_TXT("DISCONNECT")));
 
                 Submit(&exchange);
