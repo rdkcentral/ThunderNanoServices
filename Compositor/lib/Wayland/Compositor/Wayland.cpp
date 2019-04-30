@@ -242,6 +242,7 @@ namespace Plugin {
             if (_controller != nullptr) {
                 // Exit Wayland loop
                 _controller->Signal();
+                _controller->Release();
                 delete _controller;
             }
 
