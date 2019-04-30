@@ -75,6 +75,11 @@ namespace Plugin
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
         _service = service;
 
+        if (Core::Directory(service->PersistentPath().c_str()).CreatePath())
+            _configurationStore = service->PersistentPath() + "wpa_supplicant.conf";
+        else
+            SYSLOG(Logging::Startup, ("Config directory %s doesn't exist and could not be created!\n", service->PersistentPath().c_str()));
+
         TRACE_L1("Starting the application for wifi called: [%s]", config.Application.Value().c_str());
 #ifdef USE_WIFI_HAL
         _controller = WPASupplicant::WifiHAL::Create();
@@ -96,7 +101,6 @@ namespace Plugin
                     _controller.Release();
                     result = _T("Could not establish a link with WPA_SUPPLICANT");
                 } else {
-                    _configurationStore = service->PersistentPath() + "wpa_supplicant.conf";
                     _controller->Callback(&_sink);
                     _controller->Scan();
 
