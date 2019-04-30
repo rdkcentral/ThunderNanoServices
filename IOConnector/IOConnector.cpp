@@ -35,9 +35,9 @@ ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
         IOState& operator=(const IOState& a_RHS) = delete;
 
     public:
-        inline IOState(const GPIO::Pin& pin)
+        inline IOState(const GPIO::Pin* pin)
         {
-            Trace::Format(_text, _T("IO Activity on pin: %d, current state: %s"), (pin.Identifier() & 0xFFFF), (pin.Get() ? _T("true") : _T("false")));
+            Trace::Format(_text, _T("IO Activity on pin: %d, current state: %s"), (pin->Identifier() & 0xFFFF), (pin->Get() ? _T("true") : _T("false")));
         }
         ~IOState()
         {
@@ -175,11 +175,11 @@ ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
         ASSERT(_service == service);
 
         while (_pins.size() > 0) {
-            delete _pins.front().first;
+            _pins.front().first->Unsubscribe(&_sink);
             if (_pins.front().second != nullptr) {
-                _pins.front().first->Unsubscribe(&_sink);
                 delete _pins.front().second;
             }
+            _pins.front().first->Release();
             _pins.pop_front();
         }
 
@@ -244,7 +244,7 @@ ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
             result.Body(element);
             result.ErrorCode = Web::STATUS_OK;
             result.Message = "Pin value retrieved";
-            TRACE(IOState, (pin));
+            TRACE(IOState, (&pin));
         }
     }
 
@@ -254,7 +254,7 @@ ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
         pin.Set(value);
         result.ErrorCode = Web::STATUS_BAD_REQUEST;
         result.Message = "No Pin instance number found";
-        TRACE(IOState, (pin));
+        TRACE(IOState, (&pin));
     }
 
     void IOConnector::Activity()
@@ -272,7 +272,7 @@ ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
 
                 pin.Align();
 
-                TRACE(IOState, (pin));
+                TRACE(IOState, (&pin));
 
                 if (index->second != nullptr) {
                     index->second->Trigger(pin);
