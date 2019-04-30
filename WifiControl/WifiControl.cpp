@@ -2,55 +2,23 @@
 
 namespace WPEFramework {
 
-ENUM_CONVERSION_BEGIN(Plugin::WifiControl::ConfigList::Config::keyType)
-
-    { Plugin::WifiControl::ConfigList::Config::UNKNOWN, _TXT("Unknown") },
-    { Plugin::WifiControl::ConfigList::Config::UNSECURE, _TXT("Unsecure") },
-    { Plugin::WifiControl::ConfigList::Config::WPA, _TXT("WPA") },
-    { Plugin::WifiControl::ConfigList::Config::ENTERPRISE, _TXT("Enterprise") },
-
-ENUM_CONVERSION_END(Plugin::WifiControl::ConfigList::Config::keyType)
-
 namespace Plugin
 {
 
+    using namespace JsonData::WifiControl;
+
     SERVICE_REGISTRATION(WifiControl, 1, 0);
 
-    static Core::ProxyPoolType<Web::JSONBodyType<WifiControl::Status>> jsonResponseFactoryStatus(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<StatusResultData>> jsonResponseFactoryStatus(1);
     static Core::ProxyPoolType<Web::JSONBodyType<WifiControl::NetworkList>> jsonResponseFactoryNetworkList(1);
     static Core::ProxyPoolType<Web::JSONBodyType<WifiControl::ConfigList>> jsonResponseFactoryConfigList(1);
-    static Core::ProxyPoolType<Web::JSONBodyType<WifiControl::ConfigList::Config>> jsonResponseFactoryConfig(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<JsonData::WifiControl::ConfigInfo>> jsonResponseFactoryConfig(1);
 
     static string SSIDDecode(const string& item)
     {
         TCHAR converted[256];
 
         return (string(converted, Core::URL::Decode(item.c_str(), item.length(), converted, (sizeof(converted) / sizeof(TCHAR)))));
-    }
-
-    static void Update(WPASupplicant::Config & profile, const WifiControl::ConfigList::Config& settings)
-    {
-
-        if (settings.Hash.IsSet() == true) {
-            // Seems we are in WPA mode !!!
-            profile.Hash(settings.Hash.Value());
-        } else if (settings.PSK.IsSet() == true) {
-            // Seems we are in WPA mode !!!
-            profile.PresharedKey(settings.PSK.Value());
-        } else if ((settings.Identity.IsSet() == true) && (settings.Password.IsSet() == true)) {
-            // Seems we are in Enterprise mode !!!
-            profile.Enterprise(settings.Identity.Value(), settings.Password.Value());
-        } else if ((settings.Identity.IsSet() == false) && (settings.Password.IsSet() == false)) {
-            // Seems we are in UNSECURE mode !!!
-            profile.Unsecure();
-        }
-
-        if (settings.AccessPoint.IsSet() == true) {
-            profile.Mode(settings.AccessPoint.Value() ? 2 : 0);
-        }
-        if (settings.Hidden.IsSet() == true) {
-            profile.Hidden(settings.Hidden.Value());
-        }
     }
 
     WifiControl::WifiControl()
@@ -61,6 +29,7 @@ namespace Plugin
         , _wpaSupplicant()
         , _controller()
     {
+        RegisterAll();
     }
 
     /* virtual */ const string WifiControl::Initialize(PluginHost::IShell * service)
@@ -111,11 +80,11 @@ namespace Plugin
 
                         while (index.Next()) {
 
-                            WPASupplicant::Config profile(_controller->Create(SSIDDecode(index.Current().SSID.Value())));
+                            WPASupplicant::Config profile(_controller->Create(SSIDDecode(index.Current().Ssid.Value())));
 
-                            ASSERT(index.Current().SSID.Value().empty() == false);
+                            ASSERT(index.Current().Ssid.Value().empty() == false);
 
-                            Update(profile, index.Current());
+                            UpdateConfig(profile, index.Current());
                         }
                     }
                 }
@@ -226,26 +195,26 @@ namespace Plugin
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = _T("Empty config.");
                     } else {
-                        Core::ProxyType<Web::JSONBodyType<WifiControl::ConfigList::Config>> config(jsonResponseFactoryConfig.Element());
+                        Core::ProxyType<Web::JSONBodyType<JsonData::WifiControl::ConfigInfo>> config(jsonResponseFactoryConfig.Element());
 
-                        config->Set(entry);
+                        WifiControl::FillConfig(entry, *config);
 
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Get configuration.");
                         result->Body(config);
                     }
                 }
+            } else {
+                Core::ProxyType<Web::JSONBodyType<StatusResultData>> status(jsonResponseFactoryStatus.Element());
+
+                result->ErrorCode = Web::STATUS_OK;
+                result->Message = _T("Current status.");
+
+                status->Connected = _controller->Current();
+                status->Scanning = _controller->IsScanning();
+
+                result->Body(status);
             }
-        } else {
-            Core::ProxyType<Web::JSONBodyType<WifiControl::Status>> status(jsonResponseFactoryStatus.Element());
-
-            result->ErrorCode = Web::STATUS_OK;
-            result->Message = _T("Current status.");
-
-            status->Connected = _controller->Current();
-            status->Scanning = _controller->IsScanning();
-
-            result->Body(status);
         }
 
         return result;
@@ -260,15 +229,15 @@ namespace Plugin
         if (index.IsValid() == true) {
             if (index.Next()) {
                 if (index.Current().Text() == _T("Config")) {
-                    Core::ProxyType<const ConfigList::Config> config(request.Body<const ConfigList::Config>());
+                    Core::ProxyType<const JsonData::WifiControl::ConfigInfo> config(request.Body<const JsonData::WifiControl::ConfigInfo>());
                     if (config.IsValid() == false) {
                         result->ErrorCode = Web::STATUS_NO_CONTENT;
                         result->Message = _T("Nothing to set in the config.");
                     } else {
 
-                        WPASupplicant::Config settings(_controller->Create(SSIDDecode(config->SSID.Value())));
+                        WPASupplicant::Config settings(_controller->Create(SSIDDecode(config->Ssid.Value())));
 
-                        Update(settings, *config);
+                        UpdateConfig(settings, *config);
 
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Config set.");
@@ -322,20 +291,20 @@ namespace Plugin
         result->Message = _T("Unsupported POST requestservice.");
 
         if ((index.IsValid() == true) && (index.Next() && (index.Current().Text() == _T("Config")))) {
-            Core::ProxyType<const ConfigList::Config> config(request.Body<const ConfigList::Config>());
-            if ((config.IsValid() == false) || (config->SSID.Value().empty() == true)) {
+            Core::ProxyType<const JsonData::WifiControl::ConfigInfo> config(request.Body<const JsonData::WifiControl::ConfigInfo>());
+            if ((config.IsValid() == false) || (config->Ssid.Value().empty() == true)) {
                 result->ErrorCode = Web::STATUS_NO_CONTENT;
                 result->Message = _T("Nothing to set in the config.");
             } else {
 
-                WPASupplicant::Config settings(_controller->Get(SSIDDecode(config->SSID.Value())));
+                WPASupplicant::Config settings(_controller->Get(SSIDDecode(config->Ssid.Value())));
 
                 if (settings.IsValid() == false) {
                     result->ErrorCode = Web::STATUS_NOT_FOUND;
                     result->Message = _T("Config key not found.");
                 } else {
 
-                    Update(settings, *config);
+                    UpdateConfig(settings, *config);
 
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("Config set.");
@@ -385,6 +354,8 @@ namespace Plugin
 
             networks.Set(list);
 
+            event_scanresults(networks.Networks);
+
             string message;
 
             networks.ToString(message);
@@ -395,16 +366,19 @@ namespace Plugin
         case WPASupplicant::Controller::CTRL_EVENT_CONNECTED: {
             string message("{ \"event\": \"Connected\", \"ssid\": \"" + _controller->Current() + "\" }");
             _service->Notify(message);
+            event_connectionchange(_controller->Current());
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_DISCONNECTED: {
             string message("{ \"event\": \"Disconnected\" }");
             _service->Notify(message);
+            event_connectionchange(string());
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_NETWORK_CHANGED: {
             string message("{ \"event\": \"NetworkUpdate\" }");
             _service->Notify(message);
+            event_networkchange();
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_BSS_ADDED:

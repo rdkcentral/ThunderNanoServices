@@ -8,11 +8,12 @@
 #else
 #include "Controller.h"
 #endif
+#include <interfaces/json/JsonData_WifiControl.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class WifiControl : public PluginHost::IPlugin, public PluginHost::IWeb {
+    class WifiControl : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
         class Sink : public Core::IDispatchType<const WPASupplicant::Controller::events> {
         private:
@@ -139,176 +140,100 @@ namespace Plugin {
             Core::JSON::String Application;
         };
 
-        class Status : public Core::JSON::Container {
-        private:
-            Status(const Status&) = delete;
-            Status& operator=(const Status&) = delete;
+        static void FillNetworkInfo(const WPASupplicant::Network& info, JsonData::WifiControl::NetworkInfo& net)
+        {
+            net.Bssid = info.BSSID();
+            net.Frequency = info.Frequency();
+            net.Signal = info.Signal();
+            net.Ssid = info.SSID();
 
-        public:
-            Status()
-                : Scanning()
-                , Connected()
-            {
-                Add(_T("scanning"), &Scanning);
-                Add(_T("connected"), &Connected);
+            uint16_t bit = 0x1;
+            uint16_t pairs = info.Pair();
+            while (pairs != 0) {
+                if ((bit & pairs) != 0) {
+                    WPASupplicant::Network::pair method(static_cast<WPASupplicant::Network::pair>(bit));
+
+                    JsonData::WifiControl::PairsInfo pairing;
+                    WifiControl::FillPairing(method, info.Key(method), pairing);
+                    net.Pairs.Add(pairing);
+                    pairs &= ~bit;
+                }
+                bit = (bit << 1);
             }
-            virtual ~Status()
-            {
+        }
+
+        static void FillPairing(const enum WPASupplicant::Network::pair method, const uint8_t keys, JsonData::WifiControl::PairsInfo& pairing)
+        {
+            pairing.Method = string(Core::EnumerateType<WPASupplicant::Network::pair>(method).Data());
+
+            uint8_t bit = 0x1;
+            uint8_t value = keys;
+            while (value != 0) {
+                if ((bit & value) != 0) {
+                    Core::JSON::String textKey;
+                    textKey = string(Core::EnumerateType<WPASupplicant::Network::key>(static_cast<WPASupplicant::Network::key>(bit)).Data());
+                    pairing.Keys.Add(textKey);
+                    value &= ~bit;
+                }
+                bit = (bit << 1);
+            }
+        }
+
+        static void FillConfig(const WPASupplicant::Config& element, JsonData::WifiControl::ConfigInfo& info)
+        {
+            info.Ssid = element.SSID();
+
+            if (element.IsUnsecure() == true) {
+                info.Type = JsonData::WifiControl::TypeType::UNSECURE;
+            } else if (element.IsWPA() == true) {
+                info.Type = JsonData::WifiControl::TypeType::WPA;
+                if (element.Hash().empty() == false) {
+                    info.Hash = element.Hash();
+                } else {
+                    info.Psk = element.PresharedKey();
+                }
+            } else if (element.IsEnterprise() == true) {
+                info.Type = JsonData::WifiControl::TypeType::ENTERPRISE;
+                info.Identity = element.Identity();
+                info.Password = element.Password();
             }
 
-        public:
-            Core::JSON::Boolean Scanning;
-            Core::JSON::String Connected;
-        };
+            info.Accesspoint = element.IsAccessPoint();
+            info.Hidden = element.IsHidden();
+        }
+
+        static void UpdateConfig(WPASupplicant::Config& profile, const JsonData::WifiControl::ConfigInfo& settings)
+        {
+
+            if (settings.Hash.IsSet() == true) {
+                // Seems we are in WPA mode !!!
+                profile.Hash(settings.Hash.Value());
+            } else if (settings.Psk.IsSet() == true) {
+                // Seems we are in WPA mode !!!
+                profile.PresharedKey(settings.Psk.Value());
+            } else if ((settings.Identity.IsSet() == true) && (settings.Password.IsSet() == true)) {
+                // Seems we are in Enterprise mode !!!
+                profile.Enterprise(settings.Identity.Value(), settings.Password.Value());
+            } else if ((settings.Identity.IsSet() == false) && (settings.Password.IsSet() == false)) {
+                // Seems we are in UNSECURE mode !!!
+                profile.Unsecure();
+            }
+
+            if (settings.Accesspoint.IsSet() == true) {
+                profile.Mode(settings.Accesspoint.Value() ? 2 : 0);
+            }
+            if (settings.Hidden.IsSet() == true) {
+                profile.Hidden(settings.Hidden.Value());
+            }
+        }
+
 
         class NetworkList : public Core::JSON::Container {
         public:
-            class Network : public Core::JSON::Container {
-            private:
-                Network& operator=(const Network&) = delete;
-
-            public:
-                class Pairing : public Core::JSON::Container {
-                private:
-                    Pairing& operator=(const Pairing&) = delete;
-
-                public:
-                    Pairing()
-                        : Core::JSON::Container()
-                        , Method()
-                        , Keys()
-                    {
-                        Add(_T("method"), &Method);
-                        Add(_T("keys"), &Keys);
-                    }
-                    Pairing(const enum WPASupplicant::Network::pair method, const uint8_t keys)
-                        : Core::JSON::Container()
-                        , Method()
-                        , Keys()
-                    {
-                        Core::JSON::String textKey;
-
-                        Add(_T("method"), &Method);
-                        Add(_T("keys"), &Keys);
-
-                        Method = string(Core::EnumerateType<WPASupplicant::Network::pair>(method).Data());
-
-                        uint8_t bit = 0x1;
-                        uint8_t value = keys;
-                        while (value != 0) {
-                            if ((bit & value) != 0) {
-                                textKey = string(Core::EnumerateType<WPASupplicant::Network::key>(static_cast<WPASupplicant::Network::key>(bit)).Data());
-                                Keys.Add(textKey);
-                                value &= ~bit;
-                            }
-                            bit = (bit << 1);
-                        }
-                    }
-                    Pairing(const Pairing& copy)
-                        : Core::JSON::Container()
-                        , Method(copy.Method)
-                        , Keys(copy.Keys)
-                    {
-                        Add(_T("method"), &Method);
-                        Add(_T("keys"), &Keys);
-                    }
-                    ~Pairing()
-                    {
-                    }
-
-                public:
-                    Core::JSON::String Method;
-                    Core::JSON::ArrayType<Core::JSON::String> Keys;
-                };
-
-                Network()
-                    : Core::JSON::Container()
-                    , BSSID()
-                    , Frequency()
-                    , Signal()
-                    , Pairs()
-                    , SSID()
-                {
-                    Add(_T("bssid"), &BSSID);
-                    Add(_T("frequency"), &Frequency);
-                    Add(_T("signal"), &Signal);
-                    Add(_T("pairs"), &Pairs);
-                    Add(_T("ssid"), &SSID);
-                }
-                Network(const WPASupplicant::Network& info)
-                    : Core::JSON::Container()
-                    , BSSID()
-                    , Frequency()
-                    , Signal()
-                    , Pairs()
-                    , SSID()
-                {
-                    Add(_T("bssid"), &BSSID);
-                    Add(_T("frequency"), &Frequency);
-                    Add(_T("signal"), &Signal);
-                    Add(_T("pairs"), &Pairs);
-                    Add(_T("ssid"), &SSID);
-
-                    BSSID = info.BSSID();
-                    Frequency = info.Frequency();
-                    Signal = info.Signal();
-                    SSID = info.SSID();
-
-                    uint16_t bit = 0x1;
-                    uint16_t pairs = info.Pair();
-                    while (pairs != 0) {
-                        if ((bit & pairs) != 0) {
-                            WPASupplicant::Network::pair method(static_cast<WPASupplicant::Network::pair>(bit));
-
-                            Pairs.Add(Pairing(method, info.Key(method)));
-                            pairs &= ~bit;
-                        }
-                        bit = (bit << 1);
-                    }
-                }
-                Network(const Network& copy)
-                    : Core::JSON::Container()
-                    , BSSID(copy.BSSID)
-                    , Frequency(copy.Frequency)
-                    , Signal(copy.Signal)
-                    , Pairs(copy.Pairs)
-                    , SSID(copy.SSID)
-                {
-                    Add(_T("bssid"), &BSSID);
-                    Add(_T("frequency"), &Frequency);
-                    Add(_T("signal"), &Signal);
-                    Add(_T("pairs"), &Pairs);
-                    Add(_T("ssid"), &SSID);
-                }
-
-                /*
-                Network& operator=(const Network& RHS)
-                {
-                    BSSID = RHS.BSSID;
-                    Frequency = RHS.Frequency;
-                    Signal = RHS.Signal;
-                    Pairs = RHS.Pairs;
-                    SSID = RHS.SSID;
-
-                    return *this;
-                }
-*/
-
-                virtual ~Network()
-                {
-                }
-
-            public:
-                Core::JSON::String BSSID;
-                Core::JSON::DecUInt32 Frequency;
-                Core::JSON::DecSInt32 Signal;
-                Core::JSON::ArrayType<Pairing> Pairs;
-                Core::JSON::String SSID;
-            };
-
         private:
             NetworkList(const NetworkList&) = delete;
             NetworkList& operator=(const NetworkList&) = delete;
+
 
         public:
             NetworkList()
@@ -327,139 +252,16 @@ namespace Plugin {
             {
                 list.Reset();
                 while (list.Next() == true) {
-                    Networks.Add(Network(list.Current()));
+                    JsonData::WifiControl::NetworkInfo net;
+                    WifiControl::FillNetworkInfo(list.Current(), net);
+                    Networks.Add(net);
                 }
             }
 
-            Core::JSON::ArrayType<Network> Networks;
+            Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo> Networks;
         };
 
         class ConfigList : public Core::JSON::Container {
-        public:
-            class Config : public Core::JSON::Container {
-            public:
-                enum keyType {
-                    UNKNOWN,
-                    UNSECURE,
-                    WPA,
-                    ENTERPRISE
-                };
-
-            public:
-                Config()
-                    : Core::JSON::Container()
-                    , SSID()
-                    , Identity()
-                    , Password()
-                    , PSK()
-                    , Hash()
-                    , KeyType(UNKNOWN)
-                    , AccessPoint(false)
-                    , Hidden(false)
-                {
-                    Add(_T("ssid"), &SSID);
-                    Add(_T("identity"), &Identity);
-                    Add(_T("password"), &Password);
-                    Add(_T("psk"), &PSK);
-                    Add(_T("hash"), &Hash);
-                    Add(_T("type"), &KeyType);
-                    Add(_T("accesspoint"), &AccessPoint);
-                    Add(_T("hidden"), &Hidden);
-                }
-                Config(const WPASupplicant::Config& element)
-                    : Core::JSON::Container()
-                    , SSID()
-                    , Identity()
-                    , Password()
-                    , PSK()
-                    , Hash()
-                    , KeyType(UNKNOWN)
-                    , AccessPoint(false)
-                    , Hidden(false)
-                {
-                    Add(_T("ssid"), &SSID);
-                    Add(_T("identity"), &Identity);
-                    Add(_T("password"), &Password);
-                    Add(_T("psk"), &PSK);
-                    Add(_T("hash"), &Hash);
-                    Add(_T("type"), &KeyType);
-                    Add(_T("accesspoint"), &AccessPoint);
-                    Add(_T("hidden"), &Hidden);
-
-                    Set(element);
-                }
-                Config(const Config& copy)
-                    : Core::JSON::Container()
-                    , SSID(copy.SSID)
-                    , Identity(copy.Identity)
-                    , Password(copy.Password)
-                    , PSK(copy.PSK)
-                    , Hash(copy.Hash)
-                    , KeyType(copy.KeyType)
-                    , AccessPoint(copy.AccessPoint)
-                    , Hidden(copy.Hidden)
-                {
-                    Add(_T("ssid"), &SSID);
-                    Add(_T("identify"), &Identity);
-                    Add(_T("password"), &Password);
-                    Add(_T("psk"), &PSK);
-                    Add(_T("hash"), &Hash);
-                    Add(_T("type"), &KeyType);
-                    Add(_T("accesspoint"), &AccessPoint);
-                    Add(_T("hidden"), &Hidden);
-                }
-                Config& operator=(const Config& RHS)
-                {
-                    SSID = RHS.SSID;
-                    Identity = RHS.Identity;
-                    Password = RHS.Password;
-                    PSK = RHS.PSK;
-                    Hash = RHS.Hash;
-                    KeyType = RHS.KeyType;
-                    AccessPoint = RHS.AccessPoint;
-                    Hidden = RHS.Hidden;
-
-                    return *this;
-                }
-                virtual ~Config()
-                {
-                }
-
-            public:
-                void Set(const WPASupplicant::Config& element)
-                {
-                    SSID = element.SSID();
-
-                    if (element.IsUnsecure() == true) {
-                        KeyType = UNSECURE;
-                    } else if (element.IsWPA() == true) {
-                        KeyType = WPA;
-                        if (element.Hash().empty() == false) {
-                            Hash = element.Hash();
-                        } else {
-                            PSK = element.PresharedKey();
-                        }
-                    } else if (element.IsEnterprise() == true) {
-                        KeyType = ENTERPRISE;
-                        Identity = element.Identity();
-                        Password = element.Password();
-                    }
-
-                    AccessPoint = element.IsAccessPoint();
-                    Hidden = element.IsHidden();
-                }
-
-            public:
-                Core::JSON::String SSID;
-                Core::JSON::String Identity;
-                Core::JSON::String Password;
-                Core::JSON::String PSK;
-                Core::JSON::String Hash;
-                Core::JSON::EnumType<keyType> KeyType;
-                Core::JSON::Boolean AccessPoint;
-                Core::JSON::Boolean Hidden;
-            };
-
         private:
             ConfigList(const ConfigList&) = delete;
             ConfigList& operator=(const ConfigList&) = delete;
@@ -480,11 +282,13 @@ namespace Plugin {
             void Set(WPASupplicant::Config::Iterator& list)
             {
                 while (list.Next() == true) {
-                    Configs.Add(Config(list.Current()));
+                    JsonData::WifiControl::ConfigInfo conf;
+                    WifiControl::FillConfig(list.Current(), conf);
+                    Configs.Add(conf);
                 }
             }
 
-            Core::JSON::ArrayType<Config> Configs;
+            Core::JSON::ArrayType<JsonData::WifiControl::ConfigInfo> Configs;
         };
 
     private:
@@ -496,11 +300,13 @@ namespace Plugin {
 
         virtual ~WifiControl()
         {
+            UnregisterAll();
         }
 
         BEGIN_INTERFACE_MAP(WifiControl)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
@@ -530,6 +336,21 @@ namespace Plugin {
         Sink _sink;
         WifiDriver _wpaSupplicant;
         Core::ProxyType<WPASupplicant::Controller> _controller;
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_status(JsonData::WifiControl::StatusResultData& response);
+        uint32_t endpoint_networks(Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& response);
+        uint32_t endpoint_config(const JsonData::WifiControl::ConfigParamsInfo& params, Core::JSON::ArrayType<JsonData::WifiControl::ConfigInfo>& response);
+        uint32_t endpoint_delete(const JsonData::WifiControl::ConfigParamsInfo& params);
+        uint32_t endpoint_setconfig(const JsonData::WifiControl::SetconfigParamsData& params);
+        uint32_t endpoint_store();
+        uint32_t endpoint_scan();
+        uint32_t endpoint_connect(const JsonData::WifiControl::ConfigParamsInfo& params);
+        uint32_t endpoint_disconnect(const JsonData::WifiControl::ConfigParamsInfo& params);
+        uint32_t endpoint_debug(const JsonData::WifiControl::DebugParamsData& params);
+        void event_scanresults(const Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& list);
+        void event_networkchange();
+        void event_connectionchange(const string& ssid);
     };
 
 } // namespace Plugin
