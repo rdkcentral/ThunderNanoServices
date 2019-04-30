@@ -1,15 +1,14 @@
 #pragma once
 
 #include "Module.h"
+#include "AccessControlList.h"
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class SecurityOfficer : 
-        public PluginHost::IAuthenticate,
-        public PluginHost::IPlugin, 
-        public PluginHost::JSONRPC 
-    {
+    class SecurityOfficer : public PluginHost::IAuthenticate,
+                            public PluginHost::IPlugin,
+                            public PluginHost::JSONRPC {
     private:
         class Config : public Core::JSON::Container {
         private:
@@ -18,8 +17,8 @@ namespace Plugin {
 
         public:
             Config()
-                :Core::JSON::Container()
-                , ACL()
+                : Core::JSON::Container()
+                , ACL(_T("acl.json"))
             {
                 Add(_T("acl"), &ACL);
             }
@@ -42,7 +41,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(SecurityOfficer)
 			INTERFACE_ENTRY(PluginHost::IPlugin)
 			INTERFACE_ENTRY(PluginHost::IAuthenticate)
-            INTERFACE_ENTRY(PluginHost::IDispatcher)
+			INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
@@ -57,8 +56,9 @@ namespace Plugin {
         virtual uint32_t CreateToken(const uint16_t length, const uint8_t buffer[], string& token);
         virtual PluginHost::ISecurity* Officer(const string& token);
 
-	private:
+    private:
         uint8_t _secretKey[Crypto::SHA256::Length];
+        AccessControlList _acl;
     };
 
 } // namespace Plugin

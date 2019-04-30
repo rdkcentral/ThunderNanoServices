@@ -49,20 +49,43 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
         string version = service->Version();
 
-		PluginHost::ISubSystem* subSystem = service->SubSystems();
+        Core::File aclFile(service->PersistentPath() + config.ACL.Value(), true);
+
+		if (aclFile.Exists() == false) {
+            aclFile = service->DataPath() + config.ACL.Value();
+        }
+        if ( (aclFile.Exists() == true) && (aclFile.Open(true) ==true) ) {
+
+			if (_acl.Load(aclFile) == Core::ERROR_INCOMPLETE_CONFIG) {
+                AccessControlList::Iterator index(_acl.Unreferenced());
+                while (index.Next()) {
+                    SYSLOG(Logging::Startup, (_T("Role: %s not referenced"), index.Current().c_str()));
+                }
+                index = _acl.Undefined();
+                while (index.Next()) {
+                    SYSLOG(Logging::Startup, (_T("Role: %s is undefined"), index.Current().c_str()));
+                }
+            }
+		}
+
+        PluginHost::ISubSystem* subSystem = service->SubSystems();
 
         ASSERT(subSystem != nullptr);
 
         if (subSystem != nullptr) {
             Core::Sink<SecurityCallsign> information(service->Callsign());
 
-            ASSERT(subSystem->IsActive(PluginHost::ISubSystem::SECURITY) == false);
-
-			subSystem->Set(PluginHost::ISubSystem::SECURITY, &information);
+			if (subSystem->IsActive(PluginHost::ISubSystem::SECURITY) != false)
+			{
+                SYSLOG(Logging::Startup, (_T("Security is not defined as External !!")));
+			}
+			else
+			{
+                subSystem->Set(PluginHost::ISubSystem::SECURITY, &information);
+			}
 
 			subSystem->Release();
         }
-
 
         // On success return empty, to indicate there is no error text.
         return _T("");
@@ -70,6 +93,15 @@ namespace Plugin {
 
     /* virtual */ void SecurityOfficer::Deinitialize(PluginHost::IShell* service)
     {
+        PluginHost::ISubSystem* subSystem = service->SubSystems();
+
+        ASSERT(subSystem != nullptr);
+
+        if (subSystem != nullptr) {
+            subSystem->Set(PluginHost::ISubSystem::SECURITY, nullptr);
+            subSystem->Release();
+        }
+        _acl.Clear();
     }
 
     /* virtual */ string SecurityOfficer::Information() const

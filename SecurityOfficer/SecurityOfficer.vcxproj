@@ -27,9 +27,13 @@
     <ClCompile Include="SecurityOfficer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AccessControlList.h" />
     <ClInclude Include="Module.h" />
     <ClInclude Include="SecurityContext.h" />
     <ClInclude Include="SecurityOfficer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="data.json" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
