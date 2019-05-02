@@ -96,8 +96,8 @@ namespace Player {
                         Broadcast::Designator parser(configuration);
 
                         TRACE(Trace::Information, (_T("Tuning to %u MHz mode=%s sym=%d Annex=%s spectralMode=%s"),
-                            parser.Frequency(), 
-                            Core::EnumerateType<Broadcast::Modulation>(parser.Modulation()).Data(), 
+                            parser.Frequency(),
+                            Core::EnumerateType<Broadcast::Modulation>(parser.Modulation()).Data(),
                             parser.SymbolRate(),
                             Core::EnumerateType<Broadcast::ITuner::annex>(_player->Annex()).Data(),
                             Core::EnumerateType<Broadcast::SpectralInversion>(parser.Spectral()).Data()));
@@ -110,6 +110,7 @@ namespace Player {
                             TRACE(Trace::Error, (_T("Error in player load :%d"), result));
                             _callback->StateChange(_state);
                         } else {
+                            TRACE(Trace::Information, (_T("Tuning to ProgramNumber %d"), parser.ProgramNumber()));
                             _player->Prepare(parser.ProgramNumber());
                             _state = Exchange::IStream::Idle;
                         }
@@ -130,7 +131,7 @@ namespace Player {
                         Exchange::IStream::state newState = _state;
 
                         result = Core::ERROR_NONE; // PLAYER_RESULT status =
-                         
+
                         // _player->setSpeed(request);
                         if (result == Core::ERROR_NONE) {
                             _speed = request;
@@ -210,11 +211,11 @@ namespace Player {
                 return (result);
             }
 
-            inline void Terminate() { 
+            inline void Terminate() {
 
                 _player->Callback(nullptr);
 
-                delete _player; 
+                delete _player;
             }
 
             void StateChange() {
@@ -242,7 +243,7 @@ namespace Player {
                 }
 
                 if ( (oldState != _state) && (_callback != nullptr)) {
-                    _callback->StateChange(_state);    
+                    _callback->StateChange(_state);
                 }
             }
 

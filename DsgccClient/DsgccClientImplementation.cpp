@@ -20,11 +20,21 @@ namespace WPEFramework {
 namespace Plugin {
 
     DsgccClientImplementation::DsgccClientImplementation()
-        : _observers()
-        , _siThread(_config)
+        : _service(nullptr)
+        , _state(IDsgccClient::Unknown)
+        , _observers()
+        , _siThread(this)
         , _caThread(_config)
+        , _callback(nullptr)
         //, _dsgCallback()
     {
+    }
+
+    void DsgccClientImplementation::Callback(IDsgccClient::INotification* callback)
+    {
+        ASSERT(callback != nullptr);
+
+        _callback = callback;
     }
 
     uint32_t DsgccClientImplementation::Configure(PluginHost::IShell* service)
@@ -32,6 +42,7 @@ namespace Plugin {
         uint32_t result = 0;
         ASSERT(service != nullptr);
 
+        _service = service;
         _config.FromString(service->ConfigLine());
 
         _siThread.Run();
@@ -45,8 +56,6 @@ namespace Plugin {
 
     void DsgccClientImplementation::DsgccClientSet(const string& str)
     {
-        TRACE_L1("%s: Restarting SI Thread", __FUNCTION__);
-        _siThread.Run();    // just for test
         this->str = str;
     }
 
@@ -55,9 +64,25 @@ namespace Plugin {
         return (_siThread.getChannels());
     }
 
-    DsgccClientImplementation::SiThread::SiThread(DsgccClientImplementation::Config& config)
+    string DsgccClientImplementation::State() const
+    {
+        return Core::EnumerateType<IDsgccClient::state>(_state).Data() ;
+    }
+
+    void DsgccClientImplementation::Restart()
+    {
+        if (_siThread.State() != Core::Thread::RUNNING) {
+            TRACE_L1("%s: Restarting SI Thread", __FUNCTION__);
+            _siThread.Run();
+        } else {
+            TRACE_L1("%s: SI Thread already running", __FUNCTION__);
+        }
+    }
+
+    DsgccClientImplementation::SiThread::SiThread(DsgccClientImplementation* parent)
         : Core::Thread(Core::Thread::DefaultStackSize(), _T("DsgSiThread"))
-        , _config(config)
+        , _parent(parent)
+        , _config(parent->_config)
         , _isRunning(false)
         , _isInitialized(false)
     {
@@ -117,8 +142,8 @@ namespace Plugin {
         DsgParser _parser(_config.VctId);
         _isRunning = true;
 
-        LoadFromCache();
         Setup();
+        LoadFromCache();
         while ( _isRunning ) {
             len = BcmSharedMemoryRead(sharedMemoryId, msg, 0);
             if (len > 0) {
@@ -151,7 +176,7 @@ namespace Plugin {
         } else {
             _channels = new_channels;
             SaveToCache();
-            // XXX: Notify App
+            _parent->StateChange(Exchange::IDsgccClient::Changed);
             TRACE_L1("Channel map has changed.  Size new=%d old=%d", new_channels.size(), _channels.size());
         }
 
@@ -174,6 +199,7 @@ namespace Plugin {
             delete[] buffer;
             if (fs.gcount() == fileSize) {
                 _channels = string (buffer, fileSize);
+                _parent->StateChange(Exchange::IDsgccClient::Ready);
             } else {
                 TRACE_L1("Failed to load full channel map. bytes read=%d fileSize=%d",  fs.gcount(), fileSize);
             }

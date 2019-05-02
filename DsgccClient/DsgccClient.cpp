@@ -1,6 +1,16 @@
 #include "DsgccClient.h"
 
 namespace WPEFramework {
+
+ENUM_CONVERSION_BEGIN(Exchange::IDsgccClient::state)
+
+    { Exchange::IDsgccClient::Unknown,  _TXT("Unknown") },
+    { Exchange::IDsgccClient::Ready,    _TXT("Ready")   },
+    { Exchange::IDsgccClient::Changed,  _TXT("Changed")  },
+    { Exchange::IDsgccClient::Error,    _TXT("Error")    },
+
+ENUM_CONVERSION_END(Exchange::IDsgccClient::state)
+
 namespace Plugin {
 
     SERVICE_REGISTRATION(DsgccClient, 1, 0);
@@ -32,6 +42,8 @@ namespace Plugin {
             _service->Unregister(&_notification);
             _service = nullptr;
         } else {
+            TRACE_L1("%s: _sink=%p", __FUNCTION__, &_sink);
+            _implementation->Callback(&_sink);
             _implementation->Configure(_service);
         }
 
@@ -99,13 +111,23 @@ namespace Plugin {
 
                 result->ContentType = Web::MIMETypes::MIME_JSON;
                 result->Body(data);
+            } else if (index.Current().Text() == _T("State")) {
+                Core::ProxyType<Web::JSONBodyType<Data> > data (jsonDataFactory.Element());
+                data->State = _implementation->State();
+
+                result->ContentType = Web::MIMETypes::MIME_JSON;
+                result->Body(data);
             } else {
                 result->ErrorCode = Web::STATUS_BAD_REQUEST;
                 result->Message = _T("Unsupported GET Request");
             }
         } else if ((request.Verb == Web::Request::HTTP_POST) && ((index.Next()) && (index.Next()))) {
 
-            if (index.Current().Text() == _T("Test")) {
+            if (index.Current().Text() == _T("Restart")) {
+                _implementation->Restart();
+                result->ErrorCode = Web::STATUS_OK;
+                result->Message = "OK";
+            } else if (index.Current().Text() == _T("Test")) {
                 std::string str = request.Body<const Data>()->Str.Value();
 
                 _implementation->DsgccClientSet(str);

@@ -2,7 +2,6 @@
 #define __DSGCCCLIENTIMPLEMENTATION_H
 
 #include "Module.h"
-#include <interfaces/IDsgccClient.h>
 #include <interfaces/IMemory.h>
 
 #include <refsw/dsgcc_client_api.h>
@@ -11,7 +10,9 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class DsgccClientImplementation : public Exchange::IDsgccClient {
+    class DsgccClientImplementation
+        : public Exchange::IDsgccClient
+    {
     private:
         class Config : public Core::JSON::Container {
         private:
@@ -52,7 +53,7 @@ namespace Plugin {
         class SiThread : public Core::Thread {
 
         public:
-            SiThread(DsgccClientImplementation::Config& config);
+            SiThread(DsgccClientImplementation* parent);
             virtual ~SiThread();
             void Setup();
 
@@ -72,6 +73,7 @@ namespace Plugin {
             void SaveToCache();
 
         private:
+            DsgccClientImplementation* _parent;
             DsgccClientImplementation::Config& _config;
             bool _isRunning;
             bool _isInitialized;
@@ -146,19 +148,34 @@ namespace Plugin {
         {
         }
 
+        void Callback(IDsgccClient::INotification* callback);
         uint32_t Configure(PluginHost::IShell* service);
         void DsgccClientSet(const string& str);
         string GetChannels() const;
+        string State() const;
+        void Restart();
+
+        void StateChange(IDsgccClient::state state)
+        {
+            TRACE_L1("%s: _callback=%p", __FUNCTION__, _callback);
+
+            ASSERT(_callback != nullptr);
+            _state = state;
+            _callback->StateChange(_state);
+        }
 
         BEGIN_INTERFACE_MAP(DsgccClientImplementation)
         INTERFACE_ENTRY(Exchange::IDsgccClient)
         END_INTERFACE_MAP
 
     private:
+        PluginHost::IShell* _service;
+        IDsgccClient::state _state;
         std::list<PluginHost::IStateControl::INotification*> _observers;
         Config _config;
         SiThread _siThread;
         CaThread _caThread;
+        IDsgccClient::INotification* _callback;
         ClientCallbackService _dsgCallback;
         string str;
     };
