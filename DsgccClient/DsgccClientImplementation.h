@@ -157,11 +157,10 @@ namespace Plugin {
 
         void StateChange(IDsgccClient::state state)
         {
-            TRACE_L1("%s: _callback=%p", __FUNCTION__, _callback);
-
-            ASSERT(_callback != nullptr);
             _state = state;
-            _callback->StateChange(_state);
+            if (_callback) {
+                _callback->StateChange(_state);
+            }
         }
 
         BEGIN_INTERFACE_MAP(DsgccClientImplementation)

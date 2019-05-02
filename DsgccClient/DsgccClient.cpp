@@ -56,6 +56,7 @@ namespace Plugin {
         ASSERT(_implementation != nullptr);
 
         _service->Unregister(&_notification);
+        _implementation->Callback(nullptr);
 
         if (_implementation->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 

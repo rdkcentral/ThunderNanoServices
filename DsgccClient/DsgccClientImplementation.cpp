@@ -32,9 +32,16 @@ namespace Plugin {
 
     void DsgccClientImplementation::Callback(IDsgccClient::INotification* callback)
     {
-        ASSERT(callback != nullptr);
-
-        _callback = callback;
+        if (callback != nullptr) {
+            ASSERT(_callback == nullptr);   // Never registered but got Unregister
+            _callback = callback;
+            _callback->AddRef();
+        } else {
+            if(_callback != nullptr) {
+                _callback->Release();
+            }
+            _callback = nullptr;
+        }
     }
 
     uint32_t DsgccClientImplementation::Configure(PluginHost::IShell* service)
