@@ -42,7 +42,6 @@ namespace Plugin {
             _service->Unregister(&_notification);
             _service = nullptr;
         } else {
-            TRACE_L1("%s: _sink=%p", __FUNCTION__, &_sink);
             _implementation->Callback(&_sink);
             _implementation->Configure(_service);
         }
@@ -157,6 +156,17 @@ namespace Plugin {
                 PluginHost::IShell::FAILURE));
         }
     }
+
+    void DsgccClient::StateChange(Exchange::IDsgccClient::state state)
+    {
+        Data data;
+        data.State = Core::EnumerateType<Exchange::IDsgccClient::state>(state).Data();
+        string message;
+        data.ToString(message);
+        TRACE_L1("%s: %s", __FUNCTION__, message.c_str());
+        _service->Notify(message);
+    }
+
 
 }
 } //namespace WPEFramework::Plugin

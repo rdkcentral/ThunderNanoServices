@@ -110,7 +110,7 @@ namespace Plugin {
                 , Str()
             {
                 Add(_T("channels"), &Channels);
-                Add(_T("Ssate"), &State);
+                Add(_T("State"), &State);
                 Add(_T("Str"), &Str);
             }
             ~Data()
@@ -172,13 +172,7 @@ namespace Plugin {
 
     private:
         void Deactivated(RPC::IRemoteProcess* process);
-
-        void StateChange(Exchange::IDsgccClient::state state)
-        {
-            string message(string("{ \"state\": \"") + Core::EnumerateType<Exchange::IDsgccClient::state>(state).Data() + string("\" }"));
-            TRACE_L1("%s: %s", __FUNCTION__, message.c_str());
-            _service->Notify(message);
-        }
+        void StateChange(Exchange::IDsgccClient::state state);
 
     private:
         uint8_t _skipURL;
