@@ -13,8 +13,8 @@ add_library(${TARGET} SHARED Westeros.cpp)
 
 target_link_libraries(${TARGET}
     PRIVATE
-        ${EGL_LIBRARIES}
         WaylandEGL::WaylandEGL
+        ${EGL_LIBRARIES}
         ${NAMESPACE}Core::${NAMESPACE}Core
         WesterosClient::WesterosClient
         WaylandClient::WaylandClient)
