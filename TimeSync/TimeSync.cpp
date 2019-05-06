@@ -85,9 +85,8 @@ namespace Plugin {
             false,
             '/');
 
-        // By default, we assume everything works..
-        result->ErrorCode = Web::STATUS_OK;
-        result->Message = "OK";
+        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+        result->Message = "Unsupported request for the TimeSync service";
 
         index.Next();
 
@@ -100,11 +99,22 @@ namespace Plugin {
 
             result->ContentType = Web::MIMETypes::MIME_JSON;
             result->Body(Core::proxy_cast<Web::IBody>(response));
+            result->ErrorCode = Web::STATUS_OK;
+            result->Message = "OK";
         } else if (request.Verb == Web::Request::HTTP_POST) {
             if (index.IsValid() && index.Next()) {
                 if (index.Current() == "Sync") {
                     _client->Synchronize();
-                } else if (index.Current() == "Set") {
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->Message = "OK";
+                }
+            }
+        } else if (request.Verb == Web::Request::HTTP_PUT) {
+            if (index.IsValid() && index.Next()) {
+                if (index.Current() == "Set") {
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->Message = "OK";
+
                     if (index.Next()) {
                         Core::Time newTime(std::stoll(index.Current().Text()));
                         if (newTime.IsValid()) {
@@ -120,15 +130,7 @@ namespace Plugin {
                         EnsureSubsystemIsActive();
                     }
                 }
-                else
-                {
-                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                    result->Message = _T("Unknown POST request for the [TimeSync] service.");
-                }
             }
-        } else {
-            result->ErrorCode = Web::STATUS_BAD_REQUEST;
-            result->Message = _T("Unsupported request for the [TimeSync] service.");
         }
 
         return result;
