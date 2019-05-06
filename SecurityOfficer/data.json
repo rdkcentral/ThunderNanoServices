@@ -1,10 +1,6 @@
 {
   "groups": [
     {
-      "url": "*",
-      "role": "default"
-    },
-    {
       "url": "*://localhost",
       "role": "local"
     },
@@ -127,6 +123,14 @@
     {
       "url": "*://tvxcts-c5-c00001-b.ch.tvx.comcast.com",
       "role": "cts"
+    },
+    {
+      "url": "*://metrological.com",
+      "role": "metrological"
+    },
+    {
+      "url": "*",
+      "role": "default"
     }
   ],
   "roles": {
@@ -219,30 +223,24 @@
       }
     },
     "comcast": {
-      "url": {
-        "allow": [
-          "*"
-        ],
-        "block": [
-          "file://*"
-        ]
-      },
-      "serviceManager": {
+      "DeviceInfo": {
         "allow": [
           "*"
         ]
       },
-      "rtRemote": {
+      "Tracing": {
         "block": [
           "*"
         ]
-      },
-      "features": {
+      }
+    },
+    "metrological": {
+      "DeviceInfo": {
         "allow": [
           "*"
         ]
       },
-      "applications": {
+      "Tracing": {
         "allow": [
           "*"
         ]

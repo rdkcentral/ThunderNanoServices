@@ -1,7 +1,7 @@
 // C++ program to demonstrate working of regex_search()
 #include <iostream>
-#include <regex>
 #include <string.h>
+#include <regex>
 
 int testApp()
 {
@@ -33,23 +33,49 @@ int testApp()
 namespace WPEFramework {
 namespace Plugin {
 
-	SecurityContext::SecurityContext(const uint16_t length, const uint8_t payload[]) {
-
-	}
-
-	/* virtual */ SecurityContext::~SecurityContext()
+    SecurityContext::SecurityContext(const AccessControlList* acl, const uint16_t length, const uint8_t payload[])
+        : _accessControlList(nullptr)
     {
-	}
-    
-	//! Allow a request to be checked before it is offered for processing.
-	/* virtual */ bool SecurityContext::Allowed(const Web::Request& request) const {
-        return (true);
-	}
+        _context.FromString(string(reinterpret_cast<const TCHAR*>(payload), length));
+
+        if ( (_context.URL.IsSet() == true) && (acl != nullptr) ) {
+            _accessControlList = acl->FilterMapFromURL(_context.URL.Value());
+        }
+    }
+
+    /* virtual */ SecurityContext::~SecurityContext()
+    {
+    }
+
+    //! Allow a request to be checked before it is offered for processing.
+    /* virtual */ bool SecurityContext::Allowed(const Web::Request& request) const
+    {
+        bool allowed = (_accessControlList != nullptr);
+
+		if (allowed == true) {
+			
+		}
+
+        return (allowed);
+    }
 
     //! Allow a JSONRPC message to be checked before it is offered for processing.
-	/* virtual */ bool SecurityContext::Allowed(const Core::JSONRPC::Message& message) const {
-        return (true);
-    }
+    /* virtual */ bool SecurityContext::Allowed(const Core::JSONRPC::Message& message) const
+    {
+        bool allowed = (_accessControlList != nullptr);
 
+        if (allowed == true) {
+            const string& callsign(message.Callsign());
+            AccessControlList::FilterMap::const_iterator index(_accessControlList->find(callsign));
+
+			if (index == _accessControlList->end()) {
+                allowed = false;
+            } else {
+                allowed = index->second.Allowed(message.Method());
+			}
+        }
+
+        return (allowed);
     }
+}
 }

@@ -110,7 +110,7 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
-                , Port(8080)
+                , Port(8888)
                 , Binding(_T("0.0.0.0"))
                 , Interface()
                 , Path(_T("www"))
@@ -668,15 +668,7 @@ namespace Plugin {
             if (result == Core::ERROR_NONE) {
 
                 result = _channelServer.Open(2000);
-
-                PluginHost::ISubSystem* subSystem = service->SubSystems();
-
-                if (subSystem != nullptr) {
-                    ASSERT(subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == false);
-                    subSystem->Set(PluginHost::ISubSystem::WEBSOURCE, nullptr);
-                    subSystem->Release();
-                }
-            }
+			}
 
             return (result);
         }

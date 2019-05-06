@@ -2,6 +2,8 @@
 
 #include "Module.h"
 
+#include <regex>
+
 namespace WPEFramework {
 namespace Plugin {
 
@@ -168,6 +170,7 @@ namespace Plugin {
             Filter& operator=(const Filter&) = delete;
 
             Filter(const JSONACL::Filter& filter)
+                : _allowSet(true)
             {
                 Core::JSON::ArrayType<Core::JSON::String>::ConstIterator index(filter.Allow.Elements());
                 while (index.Next() == true) {
@@ -177,18 +180,35 @@ namespace Plugin {
                 while (index.Next() == true) {
                     _block.emplace_back(index.Current().Value());
                 }
+                _allowSet = !filter.Block.IsSet();
             }
             ~Filter()
             {
             }
 
         public:
-            bool Allowed(const string& method)
+            bool Allowed(const string& method) const
             {
-                return (true);
+                bool allowed = false;
+                if (_allowSet) {
+                    std::list<string>::const_iterator index(_allow.begin());
+                    while ((index != _allow.end()) && (allowed == false)) {
+                        allowed = strncmp(index->c_str(), method.c_str(), index->length()) == 0;
+                        index++;
+                    }
+                } else {
+                    allowed = true;
+                    std::list<string>::const_iterator index(_block.begin());
+                    while ((index != _block.end()) && (allowed == true)) {
+                        allowed = strncmp(index->c_str(), method.c_str(), index->length()) != 0;
+                        index++;
+                    }
+                }
+                return (allowed);
             }
 
         private:
+            bool _allowSet;
             std::list<string> _allow;
             std::list<string> _block;
         };
@@ -227,6 +247,26 @@ namespace Plugin {
             _filterMap.clear();
             _unusedRoles.clear();
             _undefinedURLS.clear();
+        }
+        const FilterMap* FilterMapFromURL(const string& URL) const
+        {
+            const FilterMap* result = nullptr;
+            std::smatch matchList;
+            URLList::const_iterator index = _urlMap.begin();
+
+            while ((index != _urlMap.end()) && (result == nullptr)) {
+                // regex_search() for searching the regex pattern
+                // 'r' in the string 's'. 'm' is flag for determining
+                // matching behavior.
+                std::regex expression(index->first.c_str());
+
+                if (std::regex_search(URL, matchList, expression) == true) {
+                    result = &(index->second);
+                }
+                index++;
+            }
+
+            return (result);
         }
         uint32_t Load(Core::File& source)
         {

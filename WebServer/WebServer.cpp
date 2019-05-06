@@ -53,6 +53,17 @@ namespace Plugin {
                 ASSERT(_memory != nullptr);
 
                 _memory->Observe(true);
+
+				PluginHost::ISubSystem* subSystem = service->SubSystems();
+
+                if (subSystem != nullptr) {
+                    if (subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
+                        SYSLOG(Logging::Startup, (_T("WebSource is not defined as External !!")));
+                    } else {
+                        subSystem->Set(PluginHost::ISubSystem::WEBSOURCE, nullptr);
+                    }
+                    subSystem->Release();
+                }
             }
         }
 
