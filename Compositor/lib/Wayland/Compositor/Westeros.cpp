@@ -72,6 +72,7 @@ namespace Westeros {
             if (_virtualKeyboardHandle != nullptr) {
                 Destruct(_virtualKeyboardHandle);
             }
+            _instance = nullptr;
         }
 
     public:

@@ -567,6 +567,11 @@ namespace Wayland {
         ~Display()
         {
             ASSERT(_refCount == 0);
+            DisplayMap::iterator index(_displays.find(_displayName));
+
+            if (index != _displays.end()) {
+                _displays.erase(index);
+            }
 #ifdef BCM_HOST
             bcm_host_deinit();
 #endif

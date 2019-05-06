@@ -254,6 +254,7 @@ namespace Plugin {
             if (_service != nullptr) {
                 _service->Release();
             }
+            g_implementation = nullptr;
         }
 
     public:
@@ -491,15 +492,10 @@ namespace Plugin {
         }
         static void CloseDown()
         {
-            // Make sure we get exclusive access to the Destruction of this Resource Center.
-            g_implementationLock.Lock();
-
             // Seems we are destructed.....If we still have a pointer to the implementation, Kill it..
             if (g_implementation != nullptr) {
                 delete g_implementation;
-                g_implementation = nullptr;
             }
-            g_implementationLock.Unlock();
         }
         void StartImplementation()
         {
