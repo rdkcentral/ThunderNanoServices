@@ -8,6 +8,7 @@ namespace Plugin {
 
     static Core::ProxyPoolType<Web::Response> responseFactory(4);
     static Core::ProxyPoolType<Web::JSONBodyType<TimeSync::Data<>>> jsonResponseFactory(4);
+    static Core::ProxyPoolType<Web::JSONBodyType<TimeSync::SetData<>>> jsonBodyDataFactory(2);
 
     static const uint16_t NTPPort = 123;
 
@@ -72,8 +73,11 @@ namespace Plugin {
         return (string());
     }
 
-    /* virtual */ void TimeSync::Inbound(Web::Request& /* request */)
+    /* virtual */ void TimeSync::Inbound(Web::Request& request)
     {
+        if (request.Verb == Web::Request::HTTP_PUT) {
+            request.Body(jsonBodyDataFactory.Element());
+        }
     }
 
     /* virtual */ Core::ProxyType<Web::Response>
@@ -115,14 +119,18 @@ namespace Plugin {
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = "OK";
 
-                    if (index.Next()) {
-                        Core::Time newTime(std::stoll(index.Current().Text()));
-                        if (newTime.IsValid()) {
-                            Core::SystemInfo::Instance().SetTime(newTime);
-                        }
-                        else {
-                            result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                            result->Message = _T("Invalid time.");
+                    if (request.HasBody()) {
+                        Core::JSON::String time = request.Body<const TimeSync::SetData<>>()->Time;
+                        if (time.IsSet()) {
+                            Core::Time newTime(0);
+                            newTime.FromISO8601(time.Value());
+                            if (newTime.IsValid()) {
+                                Core::SystemInfo::Instance().SetTime(newTime);
+                            }
+                            else {
+                                result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                                result->Message = "Invalid time given.";
+                            }
                         }
                     }
 

@@ -34,6 +34,27 @@ namespace Plugin {
             TimeRep SyncTime;
         };
 
+        template <typename TimeRep = Core::JSON::String>
+        class SetData : public Core::JSON::Container {
+        public:
+            SetData(SetData const& other) = delete;
+            SetData& operator=(SetData const& other) = delete;
+
+            SetData()
+                : Core::JSON::Container()
+                , Time()
+            {
+                Add(_T("time"), &Time);
+            }
+
+            virtual ~SetData()
+            {
+            }
+
+        public:
+            TimeRep Time;
+        };
+
     private:
         class Notification : protected Exchange::ITimeSync::INotification {
         private:

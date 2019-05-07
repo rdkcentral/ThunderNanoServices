@@ -34,8 +34,10 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     uint32_t TimeSync::endpoint_time(TimeResultData& response)
     {
-        response.Time =  _client->SyncTime();
-        response.Source = _client->Source();
+        response.Time = Core::Time(_client->SyncTime()).ToISO8601(/* local */ true);
+        if (response.Time.Value().length() != 0) {
+            response.Source = _client->Source();
+        }
 
         return Core::ERROR_NONE;
     }
@@ -65,8 +67,10 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
 
         if (params.Time.IsSet()) {
-            const uint64_t& time = params.Time.Value();
-            Core::Time newTime(time);
+            const string& time = params.Time.Value();
+            Core::Time newTime(0);
+            newTime.FromISO8601(time);
+
             if (newTime.IsValid()) {
                 Core::SystemInfo::Instance().SetTime(newTime);
             }
