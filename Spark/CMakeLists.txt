@@ -29,10 +29,10 @@ if (PLATFORM_LINUX)
             RT_PLATFORM_LINUX=ON)
 endif()
 
-if (PLATFORM_WPEFRAMEOWRK)
+if (PLATFORM_WPEFRAMEWORK)
     target_compile_definitions(${MODULE_NAME}
         PRIVATE
-            PX_PLATFORM_WPEFRAMEOWRK=ON)
+            PX_PLATFORM_WPEFRAMEWORK=ON)
 endif()
 
 if (PLATFORM_WAYLAND_EGL)
