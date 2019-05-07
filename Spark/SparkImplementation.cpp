@@ -232,17 +232,20 @@ namespace Plugin {
                 bool status = false;
                 rtValue r;
 
-                pxScene2d* scene = GetScene();
-                if (suspend == true) {
-                    scene->suspend(r, status);
-                    TRACE(Trace::Information, (_T("Suspend requested. Success: %s"), status ? _T("true") : _T("false")));
-                    sleep(1); //TODO:Suspend not clearing the background always, hence added the sleep, need to recheck
-                    _closed = true; //TODO: Added to suspend rendering on offscreen buffer also, need to recheck
-                }
-                else {
-                    scene->resume(r, status);
-                    TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
-                    _closed = false;
+                if (_view != nullptr) {
+                    pxScriptView* realClass = reinterpret_cast<pxScriptView*>(_view.getPtr());
+                    
+                    if (realClass != nullptr) {
+                        if (suspend == true) {
+                            realClass->suspend(r, status);
+                            TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
+                        }
+                        else {
+                            realClass->resume(r, status);
+                            TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
+                            _closed = false;
+                        }
+                    }
                 }
                 return status;
             }
