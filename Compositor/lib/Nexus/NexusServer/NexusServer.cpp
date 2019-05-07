@@ -150,11 +150,11 @@ namespace Broadcom {
             , DRMPath()
             , SVPType(NONE)
             , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
+            , Memory()
             , HDCPLevel(HDCP_NONE)
             , HDCPVersion(AUTO)
             , HDCP1xBinFile()
             , HDCP2xBinFile()
-            , Memory()
         {
             Add(_T("irmode"), &IRMode);
             Add(_T("authentication"), &Authentication);
@@ -363,7 +363,6 @@ namespace Broadcom {
                     /* create a dedicated heap for the client */
                     int mainIndex = nxserver_heap_by_type(&_platformSettings, NEXUS_HEAP_TYPE_GRAPHICS);
                     if (mainIndex != -1) {
-                        uint32_t unused = 0;
                         int unused_heap = find_unused_heap(_platformSettings);
                         if (unused_heap != -1) {
                             TRACE_L1("Setting client heap[%d] to %dMB", unused_heap, memory.Client.Value());
