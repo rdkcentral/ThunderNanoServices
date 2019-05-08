@@ -2,6 +2,7 @@ set(TARGET compositorclient)
 
 message("Setup ${TARGET} v${VERSION}...")
 
+find_package(EGL REQUIRED)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}VirtualInput REQUIRED)
