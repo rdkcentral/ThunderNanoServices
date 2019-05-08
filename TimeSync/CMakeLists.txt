@@ -5,6 +5,7 @@ find_package(${NAMESPACE}Plugins REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
     TimeSync.cpp
+    TimeSyncJsonRpc.cpp
     NTPClient.cpp
     Module.cpp)
 

@@ -3,6 +3,7 @@
 
 #include "Module.h"
 #include <interfaces/ITimeSync.h>
+#include <interfaces/json/JsonData_TimeSync.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -33,6 +34,27 @@ namespace Plugin {
             TimeRep SyncTime;
         };
 
+        template <typename TimeRep = Core::JSON::String>
+        class SetData : public Core::JSON::Container {
+        public:
+            SetData(SetData const& other) = delete;
+            SetData& operator=(SetData const& other) = delete;
+
+            SetData()
+                : Core::JSON::Container()
+                , Time()
+            {
+                Add(_T("time"), &Time);
+            }
+
+            virtual ~SetData()
+            {
+            }
+
+        public:
+            TimeRep Time;
+        };
+
     private:
         class Notification : protected Exchange::ITimeSync::INotification {
         private:
@@ -44,7 +66,6 @@ namespace Plugin {
             explicit Notification(TimeSync* parent)
                 : _adminLock()
                 , _parent(*parent)
-                , _service(nullptr)
                 , _client(nullptr)
             {
                 ASSERT(parent != nullptr);
@@ -54,18 +75,13 @@ namespace Plugin {
             }
 
         public:
-            void Initialize(PluginHost::IShell* service, Exchange::ITimeSync* client)
+            void Initialize(Exchange::ITimeSync* client)
             {
-                ASSERT(_service == nullptr);
-                ASSERT(service != nullptr);
                 ASSERT(_client == nullptr);
                 ASSERT(client != nullptr);
 
                 _client = client;
                 _client->AddRef();
-
-                _service = service;
-                _service->AddRef();
 
                 _client->Synchronize();
                 _client->Register(this);
@@ -73,7 +89,6 @@ namespace Plugin {
             void Deinitialize()
             {
 
-                ASSERT(_service != nullptr);
                 ASSERT(_client != nullptr);
 
                 if (_client != nullptr) {
@@ -81,9 +96,6 @@ namespace Plugin {
                     _client->Release();
                     _client = nullptr;
                 }
-
-                _service->Release();
-                _service = nullptr;
             }
 
             virtual void Completed()
@@ -92,17 +104,7 @@ namespace Plugin {
 
                 if (timeTicks != 0) {
                     _parent.SyncedTime(timeTicks);
-                    // On activation subscribe, on deactivation un-subscribe
-                    PluginHost::ISubSystem* subSystem = _service->SubSystems();
-
-                    ASSERT(subSystem != nullptr);
-
-                    if (subSystem != nullptr) {
-                        if (subSystem->IsActive(PluginHost::ISubSystem::TIME) == false) {
-                            subSystem->Set(PluginHost::ISubSystem::TIME, _client);
-                        }
-                        subSystem->Release();
-                    }
+                    _parent.EnsureSubsystemIsActive();
                 }
             }
 
@@ -113,7 +115,6 @@ namespace Plugin {
         private:
             Core::CriticalSection _adminLock;
             TimeSync& _parent;
-            PluginHost::IShell* _service;
             Exchange::ITimeSync* _client;
         };
 
@@ -205,8 +206,14 @@ namespace Plugin {
 
     private:
         void SyncedTime(const uint64_t timeTicks);
-        uint32_t time(Data<Core::JSON::DecUInt64>& data);
-        uint32_t synchronize();
+        void EnsureSubsystemIsActive();
+
+        // JSON RPC
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_time(JsonData::TimeSync::TimeResultData& response);
+        uint32_t endpoint_synchronize();
+        uint32_t endpoint_set(const JsonData::TimeSync::SetParamsData& params);
 
     private:
         uint16_t _skipURL;
@@ -214,6 +221,7 @@ namespace Plugin {
         Exchange::ITimeSync* _client;
         Core::ProxyType<Core::IDispatchType<void>> _activity;
         Core::Sink<Notification> _sink;
+        PluginHost::IShell* _service;
     };
 
 } // namespace Plugin

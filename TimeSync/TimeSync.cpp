@@ -8,10 +8,9 @@ namespace Plugin {
 
     static Core::ProxyPoolType<Web::Response> responseFactory(4);
     static Core::ProxyPoolType<Web::JSONBodyType<TimeSync::Data<>>> jsonResponseFactory(4);
+    static Core::ProxyPoolType<Web::JSONBodyType<TimeSync::SetData<>>> jsonBodyDataFactory(2);
 
     static const uint16_t NTPPort = 123;
-    static constexpr auto* kTimeMethodName = _T("time");
-    static constexpr auto* kSyncMethodName = _T("synchronize");
 
 #ifdef __WIN32__
 #pragma warning(disable : 4355)
@@ -23,8 +22,7 @@ namespace Plugin {
         , _activity(Core::ProxyType<PeriodicSync>::Create(_client))
         , _sink(this)
     {
-        Register<void, Data<Core::JSON::DecUInt64>>(kTimeMethodName, &TimeSync::time, this);
-        Register<void, void>(kSyncMethodName, &TimeSync::synchronize, this);
+        RegisterAll();
     }
 #ifdef __WIN32__
 #pragma warning(default : 4355)
@@ -32,8 +30,7 @@ namespace Plugin {
 
     /* virtual */ TimeSync::~TimeSync()
     {
-        Unregister(kTimeMethodName);
-        Unregister(kSyncMethodName);
+        UnregisterAll();
         _client->Release();
     }
 
@@ -49,7 +46,12 @@ namespace Plugin {
 
         static_cast<NTPClient*>(_client)->Initialize(index, config.Retries.Value(), config.Interval.Value());
 
-        _sink.Initialize(service, _client);
+        ASSERT(service != nullptr);
+        ASSERT(_service == nullptr);
+        _service = service;
+        _service->AddRef();
+
+        _sink.Initialize(_client);
 
         // On success return empty, to indicate there is no error text.
         return _T("");
@@ -59,6 +61,10 @@ namespace Plugin {
     {
         PluginHost::WorkerPool::Instance().Revoke(_activity);
         _sink.Deinitialize();
+
+        ASSERT(_service != nullptr);
+        _service->Release();
+        _service = nullptr;
     }
 
     /* virtual */ string TimeSync::Information() const
@@ -67,8 +73,11 @@ namespace Plugin {
         return (string());
     }
 
-    /* virtual */ void TimeSync::Inbound(Web::Request& /* request */)
+    /* virtual */ void TimeSync::Inbound(Web::Request& request)
     {
+        if (request.Verb == Web::Request::HTTP_PUT) {
+            request.Body(jsonBodyDataFactory.Element());
+        }
     }
 
     /* virtual */ Core::ProxyType<Web::Response>
@@ -80,9 +89,10 @@ namespace Plugin {
             false,
             '/');
 
-        // By default, we assume everything works..
-        result->ErrorCode = Web::STATUS_OK;
-        result->Message = "OK";
+        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+        result->Message = "Unsupported request for the TimeSync service";
+
+        index.Next();
 
         if (request.Verb == Web::Request::HTTP_GET) {
             Core::ProxyType<Web::JSONBodyType<Data<>>> response(jsonResponseFactory.Element());
@@ -93,16 +103,42 @@ namespace Plugin {
 
             result->ContentType = Web::MIMETypes::MIME_JSON;
             result->Body(Core::proxy_cast<Web::IBody>(response));
+            result->ErrorCode = Web::STATUS_OK;
+            result->Message = "OK";
         } else if (request.Verb == Web::Request::HTTP_POST) {
-
-            if (index.Next()) {
+            if (index.IsValid() && index.Next()) {
                 if (index.Current() == "Sync") {
                     _client->Synchronize();
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->Message = "OK";
                 }
             }
-        } else {
-            result->ErrorCode = Web::STATUS_BAD_REQUEST;
-            result->Message = _T("Unsupported request for the [TimeSync] service.");
+        } else if (request.Verb == Web::Request::HTTP_PUT) {
+            if (index.IsValid() && index.Next()) {
+                if (index.Current() == "Set") {
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->Message = "OK";
+
+                    if (request.HasBody()) {
+                        Core::JSON::String time = request.Body<const TimeSync::SetData<>>()->Time;
+                        if (time.IsSet()) {
+                            Core::Time newTime(0);
+                            newTime.FromISO8601(time.Value());
+                            if (newTime.IsValid()) {
+                                Core::SystemInfo::Instance().SetTime(newTime);
+                            }
+                            else {
+                                result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                                result->Message = "Invalid time given.";
+                            }
+                        }
+                    }
+
+                    if (result->ErrorCode == Web::STATUS_OK) {
+                        EnsureSubsystemIsActive();
+                    }
+                }
+            }
         }
 
         return result;
@@ -127,16 +163,18 @@ namespace Plugin {
         }
     }
 
-    uint32_t TimeSync::time(Data<Core::JSON::DecUInt64>& response)
+    void TimeSync::EnsureSubsystemIsActive()
     {
-        response.TimeSource = _client->Source();
-        response.SyncTime = _client->SyncTime();
-        return Core::ERROR_NONE;
-    }
+        PluginHost::ISubSystem* subSystem = _service->SubSystems();
+        ASSERT(subSystem != nullptr);
 
-    uint32_t TimeSync::synchronize()
-    {
-        return _client->Synchronize();
+        if (subSystem != nullptr) {
+            if (subSystem->IsActive(PluginHost::ISubSystem::TIME) == false) {
+                subSystem->Set(PluginHost::ISubSystem::TIME, _client);
+            }
+
+            subSystem->Release();
+        }
     }
 
 } // namespace Plugin
