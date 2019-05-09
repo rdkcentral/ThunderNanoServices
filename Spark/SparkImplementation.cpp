@@ -239,6 +239,7 @@ namespace Plugin {
                         if (suspend == true) {
                             realClass->suspend(r, status);
                             TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
+                            _closed = true;
                         }
                         else {
                             realClass->resume(r, status);
@@ -477,20 +478,6 @@ namespace Plugin {
                 EXITSCENELOCK()
 
                 return (Core::infinite);
-            }
-
-            inline pxScene2d* GetScene()
-            {
-                ENTERSCENELOCK()
-                rtValue args;
-                args.setString("scene");
-                rtValue scene;
-                pxScriptView::getScene(1, &args, &scene, _view);
-                pxScene2d* pxScene = (pxScene2d*)(scene.toObject().getPtr());
-
-                EXITSCENELOCK()
-
-                return pxScene;
             }
 
         private:
