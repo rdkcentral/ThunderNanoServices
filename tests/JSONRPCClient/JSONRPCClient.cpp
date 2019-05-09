@@ -109,7 +109,7 @@ class MessageHandler {
 public:
     explicit MessageHandler(const string& recipient)
         : _recipient(recipient)
-        , _remoteObject(_T("JSONRPCPlugin.1"), (recipient + _T(".client.events.1")).c_str()) {
+        , _remoteObject(_T("JSONRPCPlugin.1"), (recipient + _T(".client.events")).c_str()) {
     }
 
     void message_received(string message) {
