@@ -62,20 +62,7 @@ namespace Plugin {
     //! Allow a JSONRPC message to be checked before it is offered for processing.
     /* virtual */ bool SecurityContext::Allowed(const Core::JSONRPC::Message& message) const
     {
-        bool allowed = (_accessControlList != nullptr);
-
-        if (allowed == true) {
-            const string& callsign(message.Callsign());
-            AccessControlList::FilterMap::const_iterator index(_accessControlList->find(callsign));
-
-			if (index == _accessControlList->end()) {
-                allowed = false;
-            } else {
-                allowed = index->second.Allowed(message.Method());
-			}
-        }
-
-        return (allowed);
+        return ((_accessControlList != nullptr) && (_accessControlList->Allowed(message.Callsign())));
     }
 }
 }

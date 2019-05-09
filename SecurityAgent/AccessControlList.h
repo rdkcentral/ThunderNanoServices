@@ -15,17 +15,17 @@ namespace Plugin {
     private:
         class EXTERNAL JSONACL : public Core::JSON::Container {
         public:
-            class Filter : public Core::JSON::Container {
+            class Config : public Core::JSON::Container {
             public:
-                Filter(const Filter&) = delete;
-                Filter& operator=(const Filter&) = delete;
+                Config(const Config&) = delete;
+                Config& operator=(const Config&) = delete;
 
-                Filter()
+                Config()
                 {
                     Add(_T("allow"), &Allow);
                     Add(_T("block"), &Block);
                 }
-                virtual ~Filter()
+                virtual ~Config()
                 {
                 }
 
@@ -34,42 +34,21 @@ namespace Plugin {
                 Core::JSON::ArrayType<Core::JSON::String> Block;
             };
             class Role : public Core::JSON::Container {
-            private:
-                using RoleMap = std::map<string, Filter>;
-
             public:
-                using Iterator = Core::IteratorMapType<const RoleMap, const Filter&, const string&, RoleMap::const_iterator>;
-
                 Role(const Role&) = delete;
                 Role& operator=(const Role&) = delete;
 
                 Role()
-                    : _filters()
+                    : Configuration()
                 {
+                    Add(_T("thunder"), &Configuration);
                 }
                 virtual ~Role()
                 {
                 }
 
-                inline Iterator Elements() const
-                {
-                    return (Iterator(_filters));
-                }
-
-            private:
-                virtual bool Request(const TCHAR label[])
-                {
-                    if (_filters.find(label) == _filters.end()) {
-                        auto element = _filters.emplace(std::piecewise_construct,
-                            std::forward_as_tuple(label),
-                            std::forward_as_tuple());
-                        Add(element.first->first.c_str(), &(element.first->second));
-                    }
-                    return (true);
-                }
-
-            private:
-                RoleMap _filters;
+            public:
+                Config Configuration;
             };
             class Roles : public Core::JSON::Container {
             private:
@@ -150,7 +129,7 @@ namespace Plugin {
             JSONACL& operator=(const JSONACL&) = delete;
             JSONACL()
             {
-                Add(_T("groups"), &Groups);
+                Add(_T("assign"), &Groups);
                 Add(_T("roles"), &ACL);
             }
             virtual ~JSONACL()
@@ -169,8 +148,7 @@ namespace Plugin {
             Filter(const Filter&) = delete;
             Filter& operator=(const Filter&) = delete;
 
-            Filter(const JSONACL::Filter& filter)
-                : _allowSet(true)
+            Filter(const JSONACL::Config& filter)
             {
                 Core::JSON::ArrayType<Core::JSON::String>::ConstIterator index(filter.Allow.Elements());
                 while (index.Next() == true) {
@@ -180,7 +158,6 @@ namespace Plugin {
                 while (index.Next() == true) {
                     _block.emplace_back(index.Current().Value());
                 }
-                _allowSet = !filter.Block.IsSet();
             }
             ~Filter()
             {
@@ -213,8 +190,7 @@ namespace Plugin {
             std::list<string> _block;
         };
 
-        using FilterMap = std::map<string, Filter>;
-        using URLList = std::list<std::pair<string, FilterMap&>>;
+        using URLList = std::list<std::pair<string, Filter&>>;
         using Iterator = Core::IteratorType<const std::list<string>, const string&, std::list<string>::const_iterator>;
 
     public:
@@ -248,9 +224,9 @@ namespace Plugin {
             _unusedRoles.clear();
             _undefinedURLS.clear();
         }
-        const FilterMap* FilterMapFromURL(const string& URL) const
+        const Filter* FilterMapFromURL(const string& URL) const
         {
-            const FilterMap* result = nullptr;
+            const Filter* result = nullptr;
             std::smatch matchList;
             URLList::const_iterator index = _urlMap.begin();
 
@@ -279,21 +255,12 @@ namespace Plugin {
             // Now iterate over the Rules
             while (rolesIndex.Next() == true) {
                 const string& roleName = rolesIndex.Key();
-                const JSONACL::Role& contents = rolesIndex.Current();
-
-                JSONACL::Role::Iterator filterIndex = contents.Elements();
-                FilterMap& entry = _filterMap.emplace(std::piecewise_construct,
-                                                 std::forward_as_tuple(roleName),
-                                                 std::forward_as_tuple())
-                                       .first->second;
 
                 _unusedRoles.push_back(roleName);
 
-                while (filterIndex.Next() == true) {
-                    entry.emplace(std::piecewise_construct,
-                        std::forward_as_tuple(filterIndex.Key()),
-                        std::forward_as_tuple(filterIndex.Current()));
-                }
+                _filterMap.emplace(std::piecewise_construct,
+                    std::forward_as_tuple(roleName),
+                    std::forward_as_tuple(rolesIndex.Current().Configuration));
             }
 
             Core::JSON::ArrayType<JSONACL::Group>::Iterator index = controlList.Groups.Elements();
@@ -303,7 +270,7 @@ namespace Plugin {
                 const string& role(index.Current().Role.Value());
 
                 // Try to find the Role..
-                std::map<string, FilterMap>::iterator selectedFilter(_filterMap.find(role));
+                std::map<string, Filter>::iterator selectedFilter(_filterMap.find(role));
 
                 if (selectedFilter == _filterMap.end()) {
                     std::list<string>::iterator found = std::find(_undefinedURLS.begin(), _undefinedURLS.end(), role);
@@ -311,9 +278,9 @@ namespace Plugin {
                         _undefinedURLS.push_front(role);
                     }
                 } else {
-                    FilterMap& entry(selectedFilter->second);
+                    Filter& entry(selectedFilter->second);
 
-                    _urlMap.emplace_back(std::pair<string, FilterMap&>(
+                    _urlMap.emplace_back(std::pair<string, Filter&>(
                         index.Current().URL.Value(), entry));
 
                     std::list<string>::iterator found = std::find(_unusedRoles.begin(), _unusedRoles.end(), role);
@@ -328,7 +295,7 @@ namespace Plugin {
 
     private:
         URLList _urlMap;
-        std::map<string, FilterMap> _filterMap;
+        std::map<string, Filter> _filterMap;
         std::list<string> _unusedRoles;
         std::list<string> _undefinedURLS;
     };

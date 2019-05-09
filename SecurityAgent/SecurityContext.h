@@ -55,7 +55,7 @@ namespace Plugin {
 
     private:
         Payload _context;
-        const AccessControlList::FilterMap* _accessControlList;
+        const AccessControlList::Filter* _accessControlList;
     };
 }
 }

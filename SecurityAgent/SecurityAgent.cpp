@@ -1,10 +1,10 @@
-#include "SecurityOfficer.h"
+#include "SecurityAgent.h"
 #include "SecurityContext.h"
 
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(SecurityOfficer, 1, 0);
+    SERVICE_REGISTRATION(SecurityAgent, 1, 0);
 
     static Core::ProxyPoolType<Web::TextBody> textFactory(1);
 
@@ -38,18 +38,18 @@ namespace Plugin {
         const string _callsign;
     };
 
-    SecurityOfficer::SecurityOfficer()
+    SecurityAgent::SecurityAgent()
     {
         for (uint8_t index = 0; index < sizeof(_secretKey); index++) {
             Crypto::Random(_secretKey[index]);
         }
     }
 
-    /* virtual */ SecurityOfficer::~SecurityOfficer()
+    /* virtual */ SecurityAgent::~SecurityAgent()
     {
     }
 
-    /* virtual */ const string SecurityOfficer::Initialize(PluginHost::IShell* service)
+    /* virtual */ const string SecurityAgent::Initialize(PluginHost::IShell* service)
     {
         Config config;
         config.FromString(service->ConfigLine());
@@ -95,7 +95,7 @@ namespace Plugin {
         return _T("");
     }
 
-    /* virtual */ void SecurityOfficer::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void SecurityAgent::Deinitialize(PluginHost::IShell* service)
     {
         PluginHost::ISubSystem* subSystem = service->SubSystems();
 
@@ -108,13 +108,13 @@ namespace Plugin {
         _acl.Clear();
     }
 
-    /* virtual */ string SecurityOfficer::Information() const
+    /* virtual */ string SecurityAgent::Information() const
     {
         // No additional info to report.
         return (string());
     }
 
-    /* virtual */ uint32_t SecurityOfficer::CreateToken(const uint16_t length, const uint8_t buffer[], string& token)
+    /* virtual */ uint32_t SecurityAgent::CreateToken(const uint16_t length, const uint8_t buffer[], string& token)
     {
         // Generate the token from the buffer coming in...
         Web::JSONWebToken newToken(Web::JSONWebToken::SHA256, sizeof(_secretKey), _secretKey);
@@ -122,7 +122,7 @@ namespace Plugin {
         return (newToken.Encode(token, length, buffer) > 0 ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
     }
 
-    /* virtual */ PluginHost::ISecurity* SecurityOfficer::Officer(const string& token)
+    /* virtual */ PluginHost::ISecurity* SecurityAgent::Officer(const string& token)
     {
         PluginHost::ISecurity* result = nullptr;
 
@@ -144,12 +144,12 @@ namespace Plugin {
         return (result);
     }
 
-    /* virtual */ void SecurityOfficer::Inbound(Web::Request& request)
+    /* virtual */ void SecurityAgent::Inbound(Web::Request& request)
     {
         request.Body(textFactory.Element());
     }
 
-    /* virtual */ Core::ProxyType<Web::Response> SecurityOfficer::Process(const Web::Request& request)
+    /* virtual */ Core::ProxyType<Web::Response> SecurityAgent::Process(const Web::Request& request)
     {
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
         Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length() - _skipURL)), false, '/');
@@ -168,7 +168,7 @@ namespace Plugin {
                     if (data.IsValid() == true) {
                         Core::ProxyType<Web::TextBody> token = textFactory.Element();
                         const string& byteBag(static_cast<const string&>(*data));
-                        uint32_t code = CreateToken(byteBag.length(), reinterpret_cast<const uint8_t*>(byteBag.c_str()), static_cast<string&>(*token));
+                        uint32_t code = CreateToken(static_cast<uint16_t>(byteBag.length()), reinterpret_cast<const uint8_t*>(byteBag.c_str()), static_cast<string&>(*token));
 
                         if (code == Core::ERROR_NONE) {
 

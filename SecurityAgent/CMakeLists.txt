@@ -1,10 +1,10 @@
-set(PLUGIN_NAME SecurityOfficer)
+set(PLUGIN_NAME SecurityAgent)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
-    SecurityOfficer.cpp
+    SecurityAgent.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES

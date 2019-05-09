@@ -6,7 +6,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class SecurityOfficer : public PluginHost::IAuthenticate,
+    class SecurityAgent : public PluginHost::IAuthenticate,
                             public PluginHost::IPlugin,
                             public PluginHost::JSONRPC,
                             public PluginHost::IWeb {
@@ -33,14 +33,14 @@ namespace Plugin {
         };
 
     public:
-        SecurityOfficer(const SecurityOfficer&) = delete;
-        SecurityOfficer& operator=(const SecurityOfficer&) = delete;
+        SecurityAgent(const SecurityAgent&) = delete;
+        SecurityAgent& operator=(const SecurityAgent&) = delete;
 
-        SecurityOfficer();
-        virtual ~SecurityOfficer();
+        SecurityAgent();
+        virtual ~SecurityAgent();
 
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
-        BEGIN_INTERFACE_MAP(SecurityOfficer)
+        BEGIN_INTERFACE_MAP(SecurityAgent)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IAuthenticate)
