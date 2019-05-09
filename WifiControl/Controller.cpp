@@ -200,7 +200,7 @@ namespace WPASupplicant {
                 if ((event == CTRL_EVENT_CONNECTED) || (event == CTRL_EVENT_DISCONNECTED) || (event == WPS_AP_AVAILABLE)) {
                     _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
-                } else if ((_networks.size() == 0) && (event.Value() == CTRL_EVENT_SCAN_RESULTS) && (_scanRequest.Set() == true)) {
+                } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS) && (_scanRequest.Set() == true)) {
                     Submit(&_scanRequest);
                 } else if ((event == CTRL_EVENT_BSS_ADDED) || (event == CTRL_EVENT_BSS_REMOVED)) {
 
