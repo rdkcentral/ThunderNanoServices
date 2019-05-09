@@ -41,6 +41,7 @@ namespace Plugin {
         string version = service->Version();
         _skipURL = static_cast<uint16_t>(service->WebPrefix().length());
         _periodicity = config.Periodicity.Value() * 60 /* minutes */ * 60 /* seconds */ * 1000 /* milliSeconds */;
+        bool start = (((config.Disabled.IsSet() == true) && (config.Disabled.Value() == true)) == false);
 
         NTPClient::SourceIterator index(config.Sources.Elements());
 
@@ -51,7 +52,7 @@ namespace Plugin {
         _service = service;
         _service->AddRef();
 
-        _sink.Initialize(_client);
+        _sink.Initialize(_client, start);
 
         // On success return empty, to indicate there is no error text.
         return _T("");
@@ -118,16 +119,13 @@ namespace Plugin {
                 if (index.Current() == "Set") {
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = "OK";
+                    Core::Time newTime(0);
 
                     if (request.HasBody()) {
                         Core::JSON::String time = request.Body<const TimeSync::SetData<>>()->Time;
                         if (time.IsSet()) {
-                            Core::Time newTime(0);
                             newTime.FromISO8601(time.Value());
-                            if (newTime.IsValid()) {
-                                Core::SystemInfo::Instance().SetTime(newTime);
-                            }
-                            else {
+                            if (!newTime.IsValid()) {
                                 result->ErrorCode = Web::STATUS_BAD_REQUEST;
                                 result->Message = "Invalid time given.";
                             }
@@ -135,6 +133,14 @@ namespace Plugin {
                     }
 
                     if (result->ErrorCode == Web::STATUS_OK) {
+                        // Stop automatic synchronisation
+                        _client->Cancel();
+                        PluginHost::WorkerPool::Instance().Revoke(_activity);
+
+                        if (newTime.IsValid()) {
+                            Core::SystemInfo::Instance().SetTime(newTime);
+                        }
+
                         EnsureSubsystemIsActive();
                     }
                 }

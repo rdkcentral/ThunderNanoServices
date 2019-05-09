@@ -75,7 +75,7 @@ namespace Plugin {
             }
 
         public:
-            void Initialize(Exchange::ITimeSync* client)
+            void Initialize(Exchange::ITimeSync* client, bool start = true)
             {
                 ASSERT(_client == nullptr);
                 ASSERT(client != nullptr);
@@ -83,7 +83,10 @@ namespace Plugin {
                 _client = client;
                 _client->AddRef();
 
-                _client->Synchronize();
+                if (start == true) {
+                    _client->Synchronize();
+                }
+
                 _client->Register(this);
             }
             void Deinitialize()
@@ -125,11 +128,13 @@ namespace Plugin {
 
         public:
             Config()
-                : Interval(30)
+                : Disabled(false)
+                , Interval(30)
                 , Retries(8)
                 , Sources()
                 , Periodicity(0)
             {
+                Add(_T("disabled"), &Disabled);
                 Add(_T("interval"), &Interval);
                 Add(_T("retries"), &Retries);
                 Add(_T("sources"), &Sources);
@@ -140,6 +145,7 @@ namespace Plugin {
             }
 
         public:
+            Core::JSON::Boolean Disabled;
             Core::JSON::DecUInt16 Interval;
             Core::JSON::DecUInt8 Retries;
             Core::JSON::ArrayType<Core::JSON::String> Sources;

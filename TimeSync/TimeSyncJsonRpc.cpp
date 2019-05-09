@@ -65,21 +65,26 @@ namespace Plugin {
     uint32_t TimeSync::endpoint_set(const SetParamsData& params)
     {
         uint32_t result = Core::ERROR_NONE;
+        Core::Time newTime(0);
 
         if (params.Time.IsSet()) {
             const string& time = params.Time.Value();
-            Core::Time newTime(0);
             newTime.FromISO8601(time);
 
-            if (newTime.IsValid()) {
-                Core::SystemInfo::Instance().SetTime(newTime);
-            }
-            else {
+            if (!newTime.IsValid()) {
                 result = Core::ERROR_BAD_REQUEST;
             }
         }
 
         if (result == Core::ERROR_NONE) {
+            // Stop automatic synchronisation
+            _client->Cancel();
+            PluginHost::WorkerPool::Instance().Revoke(_activity);
+
+            if (newTime.IsValid()) {
+                Core::SystemInfo::Instance().SetTime(newTime);
+            }
+
             EnsureSubsystemIsActive();
         }
 
