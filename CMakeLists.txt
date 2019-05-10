@@ -36,6 +36,7 @@ option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_JSONRPC "Include JSONRPCExamplePlugin plugin" ON)
 option(PLUGIN_SPARK "Include SparkEngine plugin" OFF)
+option(PLUGIN_MESSENGER "Include Messenger plugin" OFF)
 option(WPEFRAMEWORK_CREATE_IPKG_TARGETS "Generate the CPack configuration for package generation" OFF)
 
 # Library installation section
@@ -184,6 +185,10 @@ endif()
 
 if(PLUGIN_SPARK)
     add_subdirectory(Spark)
+endif()
+
+if(PLUGIN_MESSENGER)
+    add_subdirectory(Messenger)
 endif()
 
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
