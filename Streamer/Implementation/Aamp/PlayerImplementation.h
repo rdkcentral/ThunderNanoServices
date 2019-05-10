@@ -1,12 +1,11 @@
 #ifndef _PLAYER_IMPLEMENTATION_H
 #define _PLAYER_IMPLEMENTATION_H
 
+#include "Module.h"
 #include <interfaces/ITVControl.h>
 #include <plugins/plugins.h>
 #include <tracing/tracing.h>
 
-#include <gst/gst.h>
-#include <gst/video/videooverlay.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string>
@@ -30,7 +29,7 @@ namespace WPEFramework {
 namespace Player {
 
     namespace Implementation {
-
+        class GstWrapper;
         class PlayerPlatform : public Core::Thread {
         private:
             PlayerPlatform() = delete;
@@ -38,31 +37,8 @@ namespace Player {
             PlayerPlatform& operator=(const PlayerPlatform&) = delete;
 
         public:
-            PlayerPlatform(const Exchange::IStream::streamtype type, const uint8_t index, ICallback* callbacks)
-                : _uri("")
-                , _state(Exchange::IStream::NotAvailable)
-                , _streamType(type)
-                , _drmType(Exchange::IStream::Unknown)
-                , _speed(0)
-                , _rate(0)
-                , _absoluteTime(0)
-                , _begin(0)
-                , _end(~0)
-                , _z(0)
-                , _rectangle()
-                , _callback(callbacks)
-                , _mainLoop(nullptr)
-                , _playbin(nullptr)
-                , _videoSink(nullptr)
-            {
-                CreateMediaPipeline();
-            }
-            virtual ~PlayerPlatform()
-            {
-                Terminate();
-                gst_object_unref(_playbin);
-                _instances--;
-            }
+            PlayerPlatform(const Exchange::IStream::streamtype type, const uint8_t index, ICallback* callbacks);
+            virtual ~PlayerPlatform();
 
         public:
             inline string Metadata() const
@@ -81,77 +57,14 @@ namespace Player {
             {
                 return (Exchange::IStream::state)_state;
             }
-            inline uint32_t Load(const string& uri)
-            {
-                TRACE(Trace::Information, (string(__FUNCTION__)));
-                TRACE(Trace::Information, (_T("uri = %s"), uri.c_str()));
-                if (IsRunning() == true) {
-                    g_main_loop_quit(_mainLoop);
-                }
-                TRACE(Trace::Information, (_T("uri = %s"), uri.c_str()));
-                Block();
-                Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
-                if (Core::Thread::State() == Thread::BLOCKED) {
-                    TRACE(Trace::Information, (_T("uri = %s"), uri.c_str()));
-
-                    if (uri.empty() == false) {
-                        TRACE(Trace::Information, (_T("uri = %s"), uri.c_str()));
-                        string uriType = UriType(uri);
-                        if ((uriType == "m3u8") || (uriType == "mpd")) {
-                            TRACE(Trace::Information, (_T("URI type is %s"), uriType.c_str()));
-                            _uri = uri;
-                            _rate = 1.0; //Normal playback
-                            ChangeSrcType(_uri);
-                            TRACE(Trace::Information, (_T("URI = %s"), _uri.c_str()));
-                            Run();
-                        } else {
-                            _state = Exchange::IStream::state::Error;
-                            TRACE(Trace::Error, (_T("URI is not dash/hls")));
-                        }
-                    } else {
-                        TRACE(Trace::Error, (_T("URI is not provided")));
-                    }
-                }
-                return 0;
-            }
+            uint32_t Load(const string& uri);
             void Speed(const int32_t speed);
             inline int32_t Speed() const
             {
                 return _speed;
             }
-            inline void Position(const uint64_t absoluteTime)
-            {
-                uint64_t time = GetPosition(absoluteTime);
-                if (time) {
-                    if (IsValidPipelineState() == true) {
-                        gint64 cur = GST_CLOCK_TIME_NONE;
-                        if (!gst_element_query_position(_playbin, GST_FORMAT_TIME, &cur)) {
-                            TRACE(Trace::Error, (_T("Query position failed")));
-                        } else {
-                            TRACE(Trace::Information, (_T("Query position Success")));
-                            if (time != ((cur / GST_SECOND) + _absoluteTime)) { //Avoid seek, if media already in the same position
-                                cur = GST_SECOND * time;
-                                if (!gst_element_seek(_playbin, 1.0, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH, GST_SEEK_TYPE_SET, cur, GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE)) {
-                                    TRACE(Trace::Error, (_T("Seek failed")));
-                                } else {
-                                    TRACE(Trace::Information, (_T("Seek Success")));
-                                    _absoluteTime = time;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            inline uint64_t Position() const
-            {
-                gint64 cur = GST_CLOCK_TIME_NONE;
-                if (!gst_element_query_position(_playbin, GST_FORMAT_TIME, &cur)) {
-                    TRACE(Trace::Error, (_T("Query position failed")));
-                } else {
-                    TRACE(Trace::Information, (_T("Query position Success")));
-                }
-                return ((cur / GST_SECOND) + _absoluteTime);
-            }
+            void Position(const uint64_t absoluteTime);
+            uint64_t Position() const;
             inline void TimeRange(uint64_t& begin, uint64_t& end) const
             {
                 begin = _begin;
@@ -161,13 +74,7 @@ namespace Player {
             {
                 return (_rectangle);
             }
-            inline void Window(const Rectangle& rectangle)
-            {
-                _rectangle = rectangle;
-                if (_videoSink != nullptr) {
-                    gst_video_overlay_set_render_rectangle(GST_VIDEO_OVERLAY(_videoSink), _rectangle.X, _rectangle.Y, _rectangle.Width, _rectangle.Height);
-                }
-            }
+            void Window(const Rectangle& rectangle);
             inline uint32_t Order() const
             {
                 return (_z);
@@ -184,48 +91,28 @@ namespace Player {
             {
                 Terminate(); //Calling Terminate since there is no decoder specified
             }
-            inline void Terminate()
-            {
-                if (IsRunning() == true) {
-                    g_main_loop_quit(_mainLoop);
-                }
-
-                TRACE(Trace::Information, (string(__FUNCTION__)));
-                Block();
-                Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
-
-                gst_element_set_state(_playbin, GST_STATE_NULL);
-            }
+            void Terminate();
+            GstWrapper* GetGstWrapper() const { return _gstWrapper; }
 
         private:
             virtual uint32_t Worker() override;
 
             void CreateMediaPipeline();
             bool IsValidPipelineState();
-            bool SetRate(int rate, GstState state);
             inline string UriType(const string& uri)
             {
                 if (uri.find_last_of(".") != std::string::npos)
                     return uri.substr(uri.find_last_of(".") + 1);
                 return "";
             }
-            inline string ChangeSrcType(string& uri)
+            inline void ChangeSrcType(string& uri)
             {
                 string prefix("aamp");
                 if (uri.compare(0, prefix.size(), prefix))
                     uri.replace(0, prefix.size(), prefix);
             }
-            static gboolean HandleBusMessage(GstBus* bus, GstMessage* msg, void* arg);
 
-            inline uint64_t GetPosition(uint64_t absoluteTime)
-            {
-                gint64 duration;
-                if (!gst_element_query_duration(_playbin, GST_FORMAT_TIME, &duration)) {
-                    TRACE(Trace::Error, (_T("Unable to retrieve duration")));
-                }
-
-                return ((absoluteTime < duration) ? absoluteTime : duration);
-            }
+            inline uint64_t GetPosition(uint64_t absoluteTime);
 
         private:
             string _uri;
@@ -242,11 +129,8 @@ namespace Player {
             uint32_t _z;
             Rectangle _rectangle;
 
+            GstWrapper* _gstWrapper;
             ICallback* _callback;
-            GMainLoop* _mainLoop;
-            GstElement* _playbin;
-            GstElement* _videoSink;
-
             static uint8_t _instances;
         };
     }
