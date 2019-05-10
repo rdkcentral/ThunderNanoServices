@@ -281,9 +281,13 @@ namespace Player {
                 g_object_set(playbin, "video-sink", vidsink, NULL);
 #endif
                 GetGstWrapper()->Playbin(playbin);
+                _state = Exchange::IStream::state::Prepared;
             } else {
                 TRACE(Trace::Error, (_T("Error in player creation")));
                 _state = Exchange::IStream::state::Error;
+            }
+            if (_callback != nullptr) {
+                _callback->StateChange(_state);
             }
         }
 
