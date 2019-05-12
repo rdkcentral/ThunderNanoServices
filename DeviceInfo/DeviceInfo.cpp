@@ -88,7 +88,7 @@ namespace Plugin {
 
             Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
 
-            Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
+            Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length()) - _skipURL), false, '/');
 
             // Always skip the first one, it is an empty part because we start with a '/' if there are more parameters.
             index.Next();

@@ -241,7 +241,7 @@ namespace Plugin {
                 }
             }
 
-            _skipURL = service->WebPrefix().length();
+            _skipURL = static_cast<uint32_t>(service->WebPrefix().length());
             _inputHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value());
             uint16_t repeatLimit = ((config.ReleaseTimeout.Value() - config.RepeatStart.Value()) / config.RepeatInterval.Value()) + 1;
             _inputHandler->RepeatLimit(repeatLimit);
@@ -296,7 +296,7 @@ namespace Plugin {
         ASSERT(_skipURL <= request.Path.length());
 
         Core::ProxyType<Web::Response> result;
-        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
+        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length()) - _skipURL), false, '/');
 
         // By default, we are in front of any element, jump onto the first element, which is if, there is something an empty slot.
         index.Next();

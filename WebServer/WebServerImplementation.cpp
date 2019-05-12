@@ -329,7 +329,7 @@ namespace Plugin {
 
                     proxyPath = (*index)->Path();
 
-                    uint32_t checkSize(proxyPath.length());
+                    uint32_t checkSize(static_cast<uint32_t>(proxyPath.length()));
 
                     // If path starts with mapped string, we should relay.
                     if (((originalPath.length() == checkSize) || ((originalPath.length() > checkSize) && (originalPath[checkSize] == '/'))) && (originalPath.compare(0, checkSize, proxyPath) == 0)) {

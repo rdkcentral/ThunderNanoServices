@@ -213,19 +213,19 @@ namespace {
                                 uint32_t offset = /* length */ 2 /* clock */ + 8 /* Skip line number */ + 4;
 
                                 // Skip file name.
-                                offset += strlen(reinterpret_cast<char*>(_traceBuffer + offset)) + 1;
+                                offset += static_cast<uint32_t>(strlen(reinterpret_cast<char*>(_traceBuffer + offset)) + 1);
 
                                 // Get module offset.
                                 _module = offset;
-                                offset += strlen(reinterpret_cast<char*>(_traceBuffer + _module)) + 1;
+                                offset += static_cast<uint32_t>(strlen(reinterpret_cast<char*>(_traceBuffer + _module)) + 1);
 
                                 // Get category offset.
                                 _category = offset;
-                                offset += strlen(reinterpret_cast<char*>(_traceBuffer + _category)) + 1;
+                                offset += static_cast<uint32_t>(strlen(reinterpret_cast<char*>(_traceBuffer + _category)) + 1);
 
                                 // Get class name offset.
                                 _classname = offset;
-                                offset += strlen(reinterpret_cast<char*>(_traceBuffer + _classname)) + 1;
+                                offset += static_cast<uint32_t>(strlen(reinterpret_cast<char*>(_traceBuffer + _classname)) + 1);
 
                                 ASSERT(length >= offset);
 
