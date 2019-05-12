@@ -9,7 +9,7 @@ find_package(WaylandServer REQUIRED)
 find_package(WaylandEGL REQUIRED)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
-find_package(${NAMESPACE}Interfaces REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(EGL REQUIRED)
 
 if (PLUGIN_COMPOSITOR_NXSERVER)
@@ -34,7 +34,7 @@ target_link_libraries(${TARGET}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         WaylandServer::WaylandServer
         WaylandEGL::WaylandEGL
         compositorclient)

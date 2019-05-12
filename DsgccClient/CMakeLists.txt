@@ -1,7 +1,7 @@
 set(PLUGIN_NAME DsgccClient)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-find_package(${NAMESPACE}Interfaces REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
@@ -24,7 +24,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
-        ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         # TODO: write a proper find module for dsgclient to supply all link and compile options.
         #       check: FindNXSERVER.cmake, FindEGL.cmake

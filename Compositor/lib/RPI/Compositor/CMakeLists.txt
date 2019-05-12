@@ -4,7 +4,7 @@ message("Setting up ${TARGET} for RPI platfrom")
 
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
-find_package(${NAMESPACE}Interfaces REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 
 add_library(${TARGET}
         RPI.cpp)
@@ -13,7 +13,7 @@ target_link_libraries(${TARGET}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces)
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 set_target_properties(${TARGET} PROPERTIES
         CXX_STANDARD 11

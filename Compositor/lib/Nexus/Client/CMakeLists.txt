@@ -5,7 +5,7 @@ message("Setup ${TARGET} v${VERSION}...")
 find_package(EGL REQUIRED)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}VirtualInput REQUIRED)
-find_package(${NAMESPACE}Interfaces REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(NXCLIENT REQUIRED)
 
 add_library(${TARGET} SHARED Implementation.cpp)
@@ -14,7 +14,7 @@ target_link_libraries(${TARGET}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}VirtualInput::${NAMESPACE}VirtualInput
-        ${NAMESPACE}Interfaces::${NAMESPACE}Interfaces
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         NXCLIENT::NXCLIENT
         ${EGL_LIBRARIES}
         )
