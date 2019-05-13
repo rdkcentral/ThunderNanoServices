@@ -1,7 +1,7 @@
 #ifndef PROJECT_WAYLAND_H
 #define PROJECT_WAYLAND_H
 
-#include "../Client/Implementation.h"
+#include <compositorclient/Implementation.h>
 #include "Module.h"
 #include <interfaces/IComposition.h>
 
