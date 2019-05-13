@@ -1,0 +1,19 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "WiFi Control Plugin",
+    "callsign": "WifiControl",
+    "locator": "libWPEWifiControl.so",
+    "class": {
+      "$ref": "WifiControlAPI.json#/info/class"
+    },
+    "description": "The WiFi Control plugin allows to manage various aspects of wireless connectivity.",
+    "version": "1.0"
+  },
+  "methods": {
+    "$ref": "WifiControlAPI.json#/methods"
+  },
+  "events": {
+    "$ref": "WifiControlAPI.json#/events"
+  }
+}

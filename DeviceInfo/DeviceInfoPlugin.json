@@ -1,0 +1,16 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Device Info Plugin",
+    "callsign": "DeviceInfo",
+    "locator": "libWPEFrameworkDeviceInfo.so",
+    "class": {
+      "$ref": "DeviceInfoAPI.json#/info/class"
+    },
+    "description": "The DeviceInfo plugin allows retrieving of various device-related information.",
+    "version": "1.0"
+  },
+  "methods": {
+    "$ref": "DeviceInfoAPI.json#/methods"
+  }
+}

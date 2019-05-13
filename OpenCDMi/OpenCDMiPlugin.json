@@ -1,0 +1,15 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "OpenCDMi Plugin",
+    "callsign": "OCDM",
+    "locator": "libWPEFrameworkOCDM.so",
+    "class": {
+      "$ref": "OpenCDMiAPI.json#/info/class"
+    },
+    "version": "1.0"
+  },
+  "methods": {
+    "$ref": "OpenCDMiAPI.json#/methods"
+  }
+}

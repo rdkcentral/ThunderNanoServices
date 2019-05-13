@@ -1,0 +1,22 @@
+{
+  "$schema": "plugin.schema.json",
+  "document": {
+    "$ref": "document.json"
+  },
+  "info": {
+    "title": "Messenger Plugin",
+    "version": "1.0",
+    "callsign": "Messenger",
+    "locator": "libWPEFrameworkMessenger.so",
+    "description": "The Messenger allows exchanging text messages between users gathered in virtual rooms. The rooms are dynamically created and destroyed based on user attendance. Upon joining a room the client receives a unique token (room ID) to be used for sending and receiving the messages.",
+    "class": {
+      "$ref": "MessengerAPI.json#/info/class"
+    }
+  },
+  "methods": {
+    "$ref": "MessengerAPI.json#/methods"
+  },
+  "events": {
+    "$ref": "MessengerAPI.json#/events"
+  }
+}
