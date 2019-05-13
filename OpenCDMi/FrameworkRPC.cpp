@@ -288,7 +288,7 @@ namespace Plugin {
                     virtual void OnKeyMessage(
                         const uint8_t* f_pbKeyMessage, //__in_bcount(f_cbKeyMessage)
                         uint32_t f_cbKeyMessage, //__in
-                        char* f_pszUrl) override
+                        const char* f_pszUrl) override
                     {
                         TRACE(Trace::Information, ("OnKeyMessage(%s)", f_pszUrl));
                         if (_callback != nullptr) {
