@@ -267,6 +267,9 @@ namespace WPASupplicant {
 #endif // __DEBUG__
             virtual void Completed(const string& response, const bool abort) = 0;
 
+        protected:
+            void Reset() { _request.clear(); }
+
         private:
             string _request;
 #ifdef __DEBUG__
@@ -294,6 +297,7 @@ namespace WPASupplicant {
             inline bool Activated()
             {
                 if (_scanning == false) {
+                    Reset();
                     _scanning = true;
                     return (true);
                 }
@@ -417,6 +421,14 @@ namespace WPASupplicant {
             inline void Event(const events value)
             {
                 _eventReporting = value;
+            }
+
+            void Reset()
+            {
+                _bssid = 0;
+                _ssid.clear();
+                _pair = 0;
+                _key = 0;
             }
 
         private:
@@ -1068,7 +1080,7 @@ namespace WPASupplicant {
             // See if the given SSID is enabled.
             EnabledContainer::iterator entry(_enabled.find(SSID));
 
-            if ((entry != _enabled.end()) && (entry->second.Id() != 0)) {
+            if ((entry != _enabled.end()) && (entry->second.Id() != static_cast<uint32_t>(~0))) {
 
                 // This is an existing config. Easy Piecie.
                 //Config internally calls Lock so unlocking here to avoid dead lock
@@ -1226,10 +1238,14 @@ namespace WPASupplicant {
                 if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
 
                     result = Core::ERROR_ASYNC_ABORTED;
+                } else {
+                    _statusRequest.Reset();
                 }
 
                 Revoke(&exchange);
             } else {
+                if (_statusRequest.SSID() == SSID)
+                    _statusRequest.Reset();
                 _adminLock.Unlock();
             }
 
@@ -1466,7 +1482,7 @@ namespace WPASupplicant {
 
             Submit(&exchange);
 
-            if ((exchange.Wait(MaxConnectionTime) == false) && (exchange.Response() != _T("FAIL"))) {
+            if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() == _T("FAIL"))) {
                 result = Core::ERROR_ASYNC_ABORTED;
             } else {
                 result = Core::ERROR_NONE;
