@@ -2,7 +2,7 @@
 #define _PLAYER_IMPLEMENTATION_H
 
 #include <broadcast/broadcast.h>
-#include <interfaces/ITVControl.h>
+#include <interfaces/IStream.h>
 #include <plugins/plugins.h>
 #include <tracing/tracing.h>
 

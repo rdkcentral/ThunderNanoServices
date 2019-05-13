@@ -3,7 +3,7 @@
 
 #include "Module.h"
 
-#include <interfaces/ITVControl.h>
+#include <interfaces/IStream.h>
 
 namespace WPEFramework {
 

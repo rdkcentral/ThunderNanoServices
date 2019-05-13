@@ -5,7 +5,7 @@
 #define MODULE_NAME Plugin_Streamer
 #endif
 
-#include <interfaces/ITVControl.h>
+#include <interfaces/IStream.h>
 #include <plugins/plugins.h>
 #include <tracing/tracing.h>
 
