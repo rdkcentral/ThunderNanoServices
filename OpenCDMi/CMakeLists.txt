@@ -32,10 +32,10 @@ install(TARGETS ${MODULE_NAME}
 
 if("${CMAKE_FIND_ROOT_PATH}" STREQUAL "")
    # Desktop case: not cross compiling
-   target_link_libraries(${MODULE_NAME} "${CMAKE_INSTALL_PREFIX}/lib/libocdm.so")
+   target_link_libraries(${MODULE_NAME} PRIVATE "${CMAKE_INSTALL_PREFIX}/lib/libocdm.so")
 else()
    # Cross compiling: buildroot
-   target_link_libraries(${MODULE_NAME} ${PLUGINS_LIBRARIES} ${OCDM_LIBRARIES})
+   target_link_libraries(${MODULE_NAME} PRIVATE ${PLUGINS_LIBRARIES} ${OCDM_LIBRARIES})
 endif()
 
 # Library installation section
