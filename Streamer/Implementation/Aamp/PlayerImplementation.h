@@ -58,7 +58,7 @@ namespace Player {
                 return (Exchange::IStream::state)_state;
             }
             uint32_t Load(const string& uri);
-            void Speed(const int32_t speed);
+            uint32_t Speed(const int32_t speed);
             inline int32_t Speed() const
             {
                 return _speed;

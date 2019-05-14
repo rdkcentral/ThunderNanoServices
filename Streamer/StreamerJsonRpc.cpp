@@ -91,6 +91,9 @@ namespace Plugin {
         Unregister(_T("Load"));
         Unregister(_T("Window"));
         Unregister(_T("Position"));
+        Unregister(_T("GetSpeed"));
+        Unregister(_T("GetWindow"));
+        Unregister(_T("GetPosition"));
         Unregister(_T("Speed"));
         Unregister(_T("Metadata"));
         Unregister(_T("State"));
@@ -244,6 +247,9 @@ namespace Plugin {
     // Set speed of the stream.
     // Return codes:
     //  - ERROR_NONE: Success
+    //  - ERROR_ILLEGAL_STATE: Player is invalid state
+    //  - ERROR_UNAVAILABLE: Player is not available
+    //  - ERROR_GENERAL: Generic error
     uint32_t Streamer::endpoint_Speed(const SpeedParamsData& params)
     {
         uint32_t result = Core::ERROR_NONE;
@@ -308,7 +314,8 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_ILLEGAL_STATE: Player is invalid state
-    //  - ERROR_INCOMPLETE_CONFIG: Passed in config is invalid
+    //  - ERROR_UNAVAILABLE: Player is not available
+    //  - ERROR_INCORRECT_URL: Incorrect URL given
     uint32_t Streamer::endpoint_Load(const LoadParamsData& params)
     {
         uint32_t result = Core::ERROR_NONE;
@@ -324,7 +331,9 @@ namespace Plugin {
 
     // Attach a decoder to the primer of stream <Number>.
     // Return codes:
-    //   - ERROR_NONE: Success
+    //  - ERROR_NONE: Success
+    //  - ERROR_ILLEGAL_STATE: Player is invalid state
+    //  - ERROR_UNAVAILABLE: Player is not available
     uint32_t Streamer::endpoint_Attach(const Core::JSON::DecUInt32& params)
     {
         uint32_t result = Core::ERROR_NONE;
@@ -350,6 +359,8 @@ namespace Plugin {
     // Detach a decoder to the primer of stream <Number>.
     // Return codes:
     //  - ERROR_NONE: Success
+    //  - ERROR_ILLEGAL_STATE: Player is invalid state
+    //  - ERROR_UNAVAILABLE: Player is not available
     uint32_t Streamer::endpoint_Detach(const Core::JSON::DecUInt32& params)
     {
         uint32_t result = Core::ERROR_NONE;

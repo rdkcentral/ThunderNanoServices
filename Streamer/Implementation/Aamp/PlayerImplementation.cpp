@@ -187,8 +187,10 @@ namespace Player {
 
         uint32_t PlayerPlatform::Load(const string& uri)
         {
+            uint32_t result = Core::ERROR_NONE;
             TRACE(Trace::Information, (string(__FUNCTION__)));
             TRACE(Trace::Information, (_T("uri = %s"), uri.c_str()));
+
             if (IsRunning() == true) {
                 g_main_loop_quit(GetGstWrapper()->MainLoop());
             }
@@ -209,14 +211,16 @@ namespace Player {
                         TRACE(Trace::Information, (_T("URI = %s"), _uri.c_str()));
                         Run();
                     } else {
+                        result = Core::ERROR_INCORRECT_URL;
                         _state = Exchange::IStream::state::Error;
                         TRACE(Trace::Error, (_T("URI is not dash/hls")));
                     }
                 } else {
+                    result = Core::ERROR_INCORRECT_URL;
                     TRACE(Trace::Error, (_T("URI is not provided")));
                 }
             }
-            return 0;
+            return result;
         }
 
         uint64_t PlayerPlatform::Position() const
@@ -346,10 +350,11 @@ namespace Player {
             return WPEFramework::Core::infinite;
         }
 
-        void PlayerPlatform::Speed(const int32_t speed)
+        uint32_t PlayerPlatform::Speed(const int32_t speed)
         {
             TRACE(Trace::Information, (string(__FUNCTION__)));
             TRACE(Trace::Information, (_T("speed = %d"), speed));
+            uint32_t result = Core::ERROR_NONE;
 
             _speed = speed;
 
@@ -381,6 +386,7 @@ namespace Player {
                 GstStateChangeReturn ret = gst_element_set_state(GetGstWrapper()->Playbin(), newGstState);
                 if (ret == GST_STATE_CHANGE_FAILURE) {
                     TRACE(Trace::Error, (_T("Player state change to %s is failed"), Core::EnumerateType<Exchange::IStream::state>(newState).Data()));
+                    result = Core::ERROR_GENERAL;
                     newState = Exchange::IStream::state::Error;
                 } else {
                     TRACE(Trace::Information, (_T("Player successfully changed to %s"), Core::EnumerateType<Exchange::IStream::state>(newState).Data()));
