@@ -194,13 +194,13 @@ namespace WPASupplicant {
             Core::EnumerateType<Controller::events> event(position == string::npos ? message.c_str() : message.substr(0, position).c_str());
 
             if (event.IsSet() == true) {
-
                 TRACE(Communication, (_T("Dispatch message: [%s]"), message.c_str()));
 
                 if ((event == CTRL_EVENT_CONNECTED) || (event == CTRL_EVENT_DISCONNECTED) || (event == WPS_AP_AVAILABLE)) {
                     _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
-                } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS) && (_scanRequest.Set() == true)) {
+                } else if ((std::find(_requests.begin(), _requests.end(), &_scanRequest) == _requests.end()) &&
+                           (event.Value() == CTRL_EVENT_SCAN_RESULTS) && (_scanRequest.Set() == true)) {
                     Submit(&_scanRequest);
                 } else if ((event == CTRL_EVENT_BSS_ADDED) || (event == CTRL_EVENT_BSS_REMOVED)) {
 
