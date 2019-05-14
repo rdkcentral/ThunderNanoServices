@@ -74,25 +74,7 @@ The table below lists configuration options of the plugin.
 | locator | string | Library name: *libWPEFrameworkSpark.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.useragent | string | <sup>*(optional)*</sup> The UserAgent used during communication with the web server |
 | configuration?.url | string | <sup>*(optional)*</sup> The URL that is loaded upon starting the browser |
-| configuration?.injectedbundle | string | <sup>*(optional)*</sup> The name of the .so loaded to extend the HTML5 with customized JavaScript handlers |
-| configuration?.cookiestorage | string | <sup>*(optional)*</sup> Post-fixed path to the persistent location on where cookies will be stored |
-| configuration?.localstorage | string | <sup>*(optional)*</sup> Post-fixed path to the persistent location on where local-storage will be stored |
-| configuration?.certificatecheck | boolean | <sup>*(optional)*</sup> If enabled, SSL certificate error will lead to a page error |
-| configuration?.javascript | object | <sup>*(optional)*</sup>  |
-| configuration?.javascript?.useLLInt | boolean | <sup>*(optional)*</sup> Enable Low Level Interpreter |
-| configuration?.javascript?.useJIT | boolean | <sup>*(optional)*</sup> Enable JIT |
-| configuration?.javascript?.useDFG | boolean | <sup>*(optional)*</sup> Enable Data-Flow-Graph-JIT compiler |
-| configuration?.javascript?.useFTL | boolean | <sup>*(optional)*</sup> Enable Faster-Than-Light-JIT compiler |
-| configuration?.javascript?.useDOM | boolean | <sup>*(optional)*</sup> Enable the DOM-JIT compiler |
-| configuration?.javascript?.dumpOptions | string | <sup>*(optional)*</sup> Dump options: 0 = None, 1 = Overridden only, 2 = All, 3 = Verbose |
-| configuration?.secure | boolean | <sup>*(optional)*</sup> If false, every domain can access any other domain, otherwise fill in fields in whitelist definition table |
-| configuration?.whitelist | object | <sup>*(optional)*</sup>  |
-| configuration?.whitelist?.origin | string | <sup>*(optional)*</sup> Origin domain allowed to access domains in domain |
-| configuration?.whitelist?.domain | array | <sup>*(optional)*</sup>  |
-| configuration?.whitelist?.domain[#] | string | <sup>*(optional)*</sup> Domain allowed to access from origin |
-| configuration?.whitelist?.subdomain | string | <sup>*(optional)*</sup> whether it is also OK to access subdomains of domains listed in domain |
 
 <a name="head.Methods"></a>
 # Methods
