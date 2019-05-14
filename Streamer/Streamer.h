@@ -1,13 +1,13 @@
-#ifndef __STREAMERPLUGIN_H
-#define __STREAMERPLUGIN_H
+#pragma once
 
-#include "Geometry.h"
 #include "Module.h"
+#include "Geometry.h"
+#include <interfaces/json/JsonData_Streamer.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class Streamer : public PluginHost::IPlugin, public PluginHost::IWeb {
+    class Streamer : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
         Streamer(const Streamer&) = delete;
         Streamer& operator=(const Streamer&) = delete;
@@ -235,18 +235,21 @@ namespace Plugin {
             , _streams()
             , _controls()
         {
+            RegisterAll();
         }
 #ifdef __WIN32__
 #pragma warning(default : 4355)
 #endif
         virtual ~Streamer()
         {
+            UnregisterAll();
         }
 
     public:
         BEGIN_INTERFACE_MAP(Streamer)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
@@ -309,7 +312,27 @@ namespace Plugin {
                              _T(", \"time\": ") + 
                              Core::NumberType<uint64_t>(position).Text()+ _T(" }"));
         }
- 
+
+        // JsonRpc
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_Ids(Core::JSON::ArrayType<Core::JSON::DecUInt32>& response);
+        uint32_t endpoint_Type(const Core::JSON::DecUInt32& params, JsonData::Streamer::TypeResultData& response);
+        uint32_t endpoint_DRM(const Core::JSON::DecUInt32& params, JsonData::Streamer::DRMResultData& response);
+        uint32_t endpoint_State(const Core::JSON::DecUInt32& params, JsonData::Streamer::StateResultData& response);
+        uint32_t endpoint_Metadata(const Core::JSON::DecUInt32& params, Core::JSON::String& response);
+        uint32_t endpoint_GetSpeed(const Core::JSON::DecUInt32& params, Core::JSON::DecUInt32& response);
+        uint32_t endpoint_GetPosition(const Core::JSON::DecUInt32& params, Core::JSON::DecUInt32& response);
+        uint32_t endpoint_GetWindow(const Core::JSON::DecUInt32& params, JsonData::Streamer::GeometryInfo& response);
+        uint32_t endpoint_Speed(const JsonData::Streamer::SpeedParamsData& params);
+        uint32_t endpoint_Position(const JsonData::Streamer::PositionParamsData& params);
+        uint32_t endpoint_Window(const JsonData::Streamer::WindowParamsData& params);
+        uint32_t endpoint_Load(const JsonData::Streamer::LoadParamsData& params);
+        uint32_t endpoint_Attach(const Core::JSON::DecUInt32& params);
+        uint32_t endpoint_Detach(const Core::JSON::DecUInt32& params);
+        uint32_t endpoint_CreateStream(const Core::JSON::DecUInt32& params, Core::JSON::DecUInt32& response);
+        uint32_t endpoint_DeleteStream(const Core::JSON::DecUInt32& params);
+
     private:
         uint32_t _skipURL;
         uint32_t _pid;
@@ -323,5 +346,3 @@ namespace Plugin {
     };
 } //namespace Plugin
 } //namespace WPEFramework
-
-#endif // __STREAMERPLUGIN_H

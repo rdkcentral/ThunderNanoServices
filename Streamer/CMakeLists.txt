@@ -11,6 +11,7 @@ add_library(${MODULE_NAME} SHARED
     Frontend.cpp
     Streamer.cpp
     StreamerImplementation.cpp
+    StreamerJsonRpc.cpp
 )
 
 add_subdirectory(Implementation/${STREAMER_IMPLEMENTATION})
