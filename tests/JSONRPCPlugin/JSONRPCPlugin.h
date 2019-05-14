@@ -3,6 +3,8 @@
 #include "Data.h"
 #include "Module.h"
 
+#include <interfaces/IPerformance.h>
+
 namespace WPEFramework {
 
 namespace Plugin {
@@ -19,11 +21,104 @@ namespace Plugin {
     // As the registration/unregistration of notifications is realized by the class PluginHost::JSONRPC,
     // this class exposes a public method called, Notify(), using this methods, all subscribed clients
     // will receive a JSONRPC message as a notification, in case this method is called.
-    class JSONRPCPlugin : public PluginHost::IPlugin, public PluginHost::JSONRPC {
+    class JSONRPCPlugin : public PluginHost::IPlugin, public PluginHost::JSONRPC, public Exchange::IPerformance {
+    public:
+
+        // The next class describes configuration information for this plugin.
+        class JSONDataBuffer : public Core::JSON::Container {
+        private:
+            JSONDataBuffer(const JSONDataBuffer&) = delete;
+            JSONDataBuffer& operator=(const JSONDataBuffer&) = delete;
+
+        public:
+            JSONDataBuffer()
+                : Core::JSON::Container()
+                , Data()
+                , Length(0)
+                , Duration(0)
+            {
+                Add(_T("data"), &Data);
+                Add(_T("length"), &Length);
+                Add(_T("duration"), &Duration);
+            }
+            ~JSONDataBuffer()
+            {
+            }
+
+        public:
+            Core::JSON::String Data;
+            Core::JSON::DecUInt16 Length;
+            Core::JSON::DecUInt32 Duration;
+        };
+
     private:
         // We do not allow this plugin to be copied !!
         JSONRPCPlugin(const JSONRPCPlugin&) = delete;
         JSONRPCPlugin& operator=(const JSONRPCPlugin&) = delete;
+
+        // The next class describes configuration information for this plugin.
+        class Config : public Core::JSON::Container {
+        private:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+
+        public:
+            Config()
+                : Core::JSON::Container()
+                , Connector("0.0.0.0:8899")
+            {
+                Add(_T("connector"), &Connector);
+            }
+            ~Config()
+            {
+            }
+
+        public:
+            Core::JSON::String Connector;
+        };
+
+        // For measuring differnt performance times, also expose a COMRPC server. The transport protocol is binairy and the invocation of the
+        // calls requires less thread switches.
+        // The following class exposes a server that exposes the Exchange::IRPCLink interface to be retrieved from another process. The client
+        // process can than measure the overhead of the call towards the Exchange::IRPCLink methods.
+        // The processing time of these methods will also be acounted for internally and "send" back as well
+        class COMServer : public RPC::Communicator {
+        private:
+            COMServer() = delete;
+            COMServer(const COMServer&) = delete;
+            COMServer& operator=(const COMServer&) = delete;
+
+        public:
+            COMServer(const Core::NodeId& source, Exchange::IPerformance* parentInterface)
+                : RPC::Communicator(source, Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create(), _T(""))
+                , _parentInterface(parentInterface)
+            {
+                Open(Core::infinite);
+            }
+            ~COMServer()
+            {
+                Close(Core::infinite);
+            }
+
+        private:
+            virtual void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId)
+            {
+                void* result = nullptr;
+
+                // Currently we only support version 1 of the IRPCLink :-)
+                if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) && ((interfaceId == Exchange::IPerformance::ID) || (interfaceId == Core::IUnknown::ID))) {
+                    // Reference count our parent
+                    _parentInterface->AddRef();
+
+                    // Allright, respond with the interface.
+                    result = _parentInterface;
+                }
+                return (result);
+            }
+
+        private:
+            Exchange::IPerformance* _parentInterface;
+        };
 
         // The next class is a helper class, just to trigger an a-synchronous callback every Period()
         // amount of time.
@@ -118,6 +213,7 @@ namespace Plugin {
             TRACE(Trace::Information, (_T("Received the text: %s"), info.Value().c_str()));
             return (Core::ERROR_NONE);
         }
+
         // If the parameters are more complex (aggregated JSON objects) us JSON container
         // classes.
         uint32_t extended(const Data::Parameters& params, Data::Response& response)
@@ -220,6 +316,39 @@ namespace Plugin {
             PluginHost::WorkerPool::Instance().Schedule(Core::Time::Now().Add(seconds * 1000), job);
         }
 
+		// Methods for performance measurements
+		uint32_t send(const JSONDataBuffer& data, Core::JSON::DecUInt32& result) 
+		{
+            uint16_t length = (((data.Data.Value().length() * 6) + 7) / 8);
+            uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
+            Core::FromString(data.Data.Value(), buffer, length);
+            result = Send(length, buffer); 
+            return (Core::ERROR_NONE);
+        }
+        uint32_t receive(const Core::JSON::DecUInt16& maxSize, JSONDataBuffer& data)
+        {
+            string convertedBuffer;
+            uint16_t length = maxSize.Value();
+            uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
+            data.Duration = Receive(length, buffer);
+            Core::ToString(buffer, length, false, convertedBuffer);
+            data.Data = convertedBuffer;
+
+            return (Core::ERROR_NONE);
+        }
+        uint32_t exchange(const JSONDataBuffer& data, JSONDataBuffer& result)
+        {
+            string convertedBuffer;
+            uint16_t length = (((data.Data.Value().length() * 6) + 7) / 8);
+            uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
+            Core::FromString(data.Data.Value(), buffer, length);
+            result.Duration = Exchange(length, buffer, data.Length.Value());
+            Core::ToString(buffer, length, false, convertedBuffer);
+            result.Data = convertedBuffer;
+
+            return (Core::ERROR_NONE);
+        }
+
     public:
         JSONRPCPlugin();
         virtual ~JSONRPCPlugin();
@@ -228,6 +357,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(JSONRPCPlugin)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
+        INTERFACE_ENTRY(Exchange::IPerformance)
         END_INTERFACE_MAP
 
     public:
@@ -243,10 +373,17 @@ namespace Plugin {
         void SendTime();
         void SendTime(Core::JSONRPC::Connection& channel);
 
-    private: 
-		Core::ProxyType<PeriodicSync> _job;
+        //   Exchange::IPerformance methods
+        // -------------------------------------------------------------------------------------------------------
+        virtual uint32_t Send(const uint16_t sendSize, const uint8_t buffer[]) override;
+        virtual uint32_t Receive(uint16_t& bufferSize, uint8_t buffer[]) const override;
+        virtual uint32_t Exchange(uint16_t& bufferSize, uint8_t buffer[], const uint16_t maxBufferSize) override;
+
+    private:
+        Core::ProxyType<PeriodicSync> _job;
         Data::Window _window;
         string _data;
+        COMServer* _rpcServer;
     };
 
 } // namespace Plugin

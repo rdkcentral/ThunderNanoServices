@@ -19,6 +19,9 @@ namespace Plugin
     JSONRPCPlugin::JSONRPCPlugin()
         : PluginHost::JSONRPC()
         , _job(Core::ProxyType<PeriodicSync>::Create(this))
+        , _window()
+        , _data()
+        , _rpcServer(nullptr)
     {
         // PluginHost::JSONRPC method to register a JSONRPC method invocation for the method "time".
         Register<void, Core::JSON::String>(_T("time"), &JSONRPCPlugin::time, this);
@@ -31,21 +34,29 @@ namespace Plugin
         Property<Data::Geometry>(_T("geometry"), &JSONRPCPlugin::get_geometry, &JSONRPCPlugin::set_geometry, this);
         Property<Core::JSON::String>(_T("data"), &JSONRPCPlugin::get_data, &JSONRPCPlugin::set_data, this);
 
-		// Opaque method examples 
+        // Opaque method examples
         Register<JsonObject, JsonObject>("swap", &JSONRPCPlugin::swap, this);
         Property<JsonObject>(_T("window"), &JSONRPCPlugin::get_opaque_geometry, &JSONRPCPlugin::set_opaque_geometry, this);
 
-		// Methods to test a-synchronpud callbacks
+        // Methods to test a-synchronpud callbacks
         Register<Core::JSON::DecUInt8>("async", &JSONRPCPlugin::async_callback, this);
 
+        Register<JSONDataBuffer, Core::JSON::DecUInt32>(_T("send"), &JSONRPCPlugin::send, this);
+        Register<Core::JSON::DecUInt16, JSONDataBuffer>(_T("receive"), &JSONRPCPlugin::receive, this);
+        Register<JSONDataBuffer, JSONDataBuffer>(_T("exchange"), &JSONRPCPlugin::exchange, this);
     }
 
     /* virtual */ JSONRPCPlugin::~JSONRPCPlugin()
     {
     }
 
-    /* virtual */ const string JSONRPCPlugin::Initialize(PluginHost::IShell * /* service */)
+    /* virtual */ const string JSONRPCPlugin::Initialize(PluginHost::IShell* service)
     {
+        Config config;
+        config.FromString(service->ConfigLine());
+
+		_rpcServer = new COMServer(Core::NodeId(config.Connector.Value().c_str()), this);
+
         _job->Period(5);
         PluginHost::WorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), _job);
 
@@ -57,7 +68,8 @@ namespace Plugin
     {
         _job->Period(0);
         PluginHost::WorkerPool::Instance().Revoke(_job);
-    }
+        delete _rpcServer;
+	}
 
     /* virtual */ string JSONRPCPlugin::Information() const
     {
@@ -65,17 +77,18 @@ namespace Plugin
         return (string());
     }
 
-    void JSONRPCPlugin::PostMessage(const string& recipient, const string& message) {
+    void JSONRPCPlugin::PostMessage(const string& recipient, const string& message)
+    {
         // PluginHost::JSONRPC method to send out a JSONRPC message to all subscribers to the event "message".
-        Notify(_T("message"), Core::JSON::String(message) , [&](const string& designator) -> bool {
+        Notify(_T("message"), Core::JSON::String(message), [&](const string& designator) -> bool {
             bool sendmessage(true);
             if (recipient != "all") {
                 size_t pos = designator.find('.');
-                string client( designator.substr(0, pos) ); // note also works if no . found
+                string client(designator.substr(0, pos)); // note also works if no . found
                 sendmessage = client == recipient;
             }
             return sendmessage;
-        }); 
+        });
     }
 
     void JSONRPCPlugin::SendTime()
@@ -84,9 +97,31 @@ namespace Plugin
         Notify(_T("clock"), Core::JSON::String(Core::Time::Now().ToRFC1123()));
     }
 
-	void JSONRPCPlugin::SendTime(Core::JSONRPC::Connection & channel) {
+    void JSONRPCPlugin::SendTime(Core::JSONRPC::Connection & channel)
+    {
         Response(channel, Data::Response(Core::Time::Now().Ticks(), Data::Response::FAILURE));
+    }
+
+    //   Exchange::IPerformance methods
+    // -------------------------------------------------------------------------------------------------------
+    /* virtual */ uint32_t JSONRPCPlugin::Send(const uint16_t sendSize, const uint8_t buffer[])
+    {
+        uint32_t result = 0;
+        return (result);
 	}
+
+	/* virtual */ uint32_t JSONRPCPlugin::Receive(uint16_t & bufferSize, uint8_t buffer[]) const 
+	{
+        uint32_t result = 0;
+        return (result);
+    }
+
+    /* virtual */ uint32_t JSONRPCPlugin::Exchange(uint16_t & bufferSize, uint8_t buffer[], const uint16_t maxBufferSize)
+    {
+        uint32_t result = 0;
+        return (result);
+    }
+
 } // namespace Plugin
 
 } // namespace WPEFramework
