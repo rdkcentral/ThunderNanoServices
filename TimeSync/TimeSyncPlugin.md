@@ -72,7 +72,7 @@ The table below lists configuration options of the plugin.
 | classname | string | Class name: *TimeSync* |
 | locator | string | Library name: *libWPEFrameworkTimeSync.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
-| disabled | boolean | <sup>*(optional)*</sup> Determines if automatic time sync shall be initially disabled |
+| deferred | boolean | <sup>*(optional)*</sup> Determines if automatic time sync shall be initially disabled |
 | periodicity | number | <sup>*(optional)*</sup> Periodicity of time synchronisation (in hours), 0 for one-off synchronisation |
 | retries | number | <sup>*(optional)*</sup> Number of synchronisation attempts if the source cannot be reached (may be 0) |
 | interval | number | <sup>*(optional)*</sup> Time to wait (in miliseconds) before retrying a synchronisation attempt after a failure |

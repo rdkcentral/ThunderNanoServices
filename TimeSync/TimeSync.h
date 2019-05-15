@@ -128,13 +128,13 @@ namespace Plugin {
 
         public:
             Config()
-                : Disabled(false)
+                : Deferred(false)
                 , Interval(30)
                 , Retries(8)
                 , Sources()
                 , Periodicity(0)
             {
-                Add(_T("disabled"), &Disabled);
+                Add(_T("deferred"), &Deferred);
                 Add(_T("interval"), &Interval);
                 Add(_T("retries"), &Retries);
                 Add(_T("sources"), &Sources);
@@ -145,7 +145,7 @@ namespace Plugin {
             }
 
         public:
-            Core::JSON::Boolean Disabled;
+            Core::JSON::Boolean Deferred;
             Core::JSON::DecUInt16 Interval;
             Core::JSON::DecUInt8 Retries;
             Core::JSON::ArrayType<Core::JSON::String> Sources;

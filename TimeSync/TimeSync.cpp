@@ -41,7 +41,7 @@ namespace Plugin {
         string version = service->Version();
         _skipURL = static_cast<uint16_t>(service->WebPrefix().length());
         _periodicity = config.Periodicity.Value() * 60 /* minutes */ * 60 /* seconds */ * 1000 /* milliSeconds */;
-        bool start = (((config.Disabled.IsSet() == true) && (config.Disabled.Value() == true)) == false);
+        bool start = (((config.Deferred.IsSet() == true) && (config.Deferred.Value() == true)) == false);
 
         NTPClient::SourceIterator index(config.Sources.Elements());
 
@@ -171,6 +171,7 @@ namespace Plugin {
 
     void TimeSync::EnsureSubsystemIsActive()
     {
+        ASSERT(_service != nullptr);
         PluginHost::ISubSystem* subSystem = _service->SubSystems();
         ASSERT(subSystem != nullptr);
 

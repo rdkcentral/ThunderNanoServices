@@ -13,7 +13,7 @@
   "configuration": {
     "type": "object",
     "properties": {
-      "disabled": {
+      "deferred": {
         "type": "boolean",
         "description": "Determines if automatic time sync shall be initially disabled"
       },
