@@ -22,35 +22,6 @@ namespace Plugin {
     // this class exposes a public method called, Notify(), using this methods, all subscribed clients
     // will receive a JSONRPC message as a notification, in case this method is called.
     class JSONRPCPlugin : public PluginHost::IPlugin, public PluginHost::JSONRPC, public Exchange::IPerformance {
-    public:
-
-        // The next class describes configuration information for this plugin.
-        class JSONDataBuffer : public Core::JSON::Container {
-        private:
-            JSONDataBuffer(const JSONDataBuffer&) = delete;
-            JSONDataBuffer& operator=(const JSONDataBuffer&) = delete;
-
-        public:
-            JSONDataBuffer()
-                : Core::JSON::Container()
-                , Data()
-                , Length(0)
-                , Duration(0)
-            {
-                Add(_T("data"), &Data);
-                Add(_T("length"), &Length);
-                Add(_T("duration"), &Duration);
-            }
-            ~JSONDataBuffer()
-            {
-            }
-
-        public:
-            Core::JSON::String Data;
-            Core::JSON::DecUInt16 Length;
-            Core::JSON::DecUInt32 Duration;
-        };
-
     private:
         // We do not allow this plugin to be copied !!
         JSONRPCPlugin(const JSONRPCPlugin&) = delete;
@@ -89,8 +60,8 @@ namespace Plugin {
             COMServer& operator=(const COMServer&) = delete;
 
         public:
-            COMServer(const Core::NodeId& source, Exchange::IPerformance* parentInterface)
-                : RPC::Communicator(source, Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create(), _T(""))
+            COMServer(const Core::NodeId& source, Exchange::IPerformance* parentInterface, const string& proxyStubPath)
+                : RPC::Communicator(source, Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create(), proxyStubPath)
                 , _parentInterface(parentInterface)
             {
                 Open(Core::infinite);
@@ -112,6 +83,8 @@ namespace Plugin {
 
                     // Allright, respond with the interface.
                     result = _parentInterface;
+
+					printf("Pointer => %p\n", result);
                 }
                 return (result);
             }
@@ -317,7 +290,7 @@ namespace Plugin {
         }
 
 		// Methods for performance measurements
-		uint32_t send(const JSONDataBuffer& data, Core::JSON::DecUInt32& result) 
+		uint32_t send(const Data::JSONDataBuffer& data, Core::JSON::DecUInt32& result) 
 		{
             uint16_t length = (((data.Data.Value().length() * 6) + 7) / 8);
             uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
@@ -325,7 +298,7 @@ namespace Plugin {
             result = Send(length, buffer); 
             return (Core::ERROR_NONE);
         }
-        uint32_t receive(const Core::JSON::DecUInt16& maxSize, JSONDataBuffer& data)
+        uint32_t receive(const Core::JSON::DecUInt16& maxSize, Data::JSONDataBuffer& data)
         {
             string convertedBuffer;
             uint16_t length = maxSize.Value();
@@ -336,7 +309,7 @@ namespace Plugin {
 
             return (Core::ERROR_NONE);
         }
-        uint32_t exchange(const JSONDataBuffer& data, JSONDataBuffer& result)
+        uint32_t exchange(const Data::JSONDataBuffer& data, Data::JSONDataBuffer& result)
         {
             string convertedBuffer;
             uint16_t length = (((data.Data.Value().length() * 6) + 7) / 8);

@@ -177,5 +177,32 @@ namespace Data {
         Core::JSON::EnumType<state> State;
         Core::JSON::DecUInt64 Time;
     };
+
+    // The next class describes configuration information for this plugin.
+    class JSONDataBuffer : public Core::JSON::Container {
+    private:
+        JSONDataBuffer(const JSONDataBuffer&) = delete;
+        JSONDataBuffer& operator=(const JSONDataBuffer&) = delete;
+
+    public:
+        JSONDataBuffer()
+            : Core::JSON::Container()
+            , Data()
+            , Length(0)
+            , Duration(0)
+        {
+            Add(_T("data"), &Data);
+            Add(_T("length"), &Length);
+            Add(_T("duration"), &Duration);
+        }
+        ~JSONDataBuffer()
+        {
+        }
+
+    public:
+        Core::JSON::String Data;
+        Core::JSON::DecUInt16 Length;
+        Core::JSON::DecUInt32 Duration;
+    };
 }
 }

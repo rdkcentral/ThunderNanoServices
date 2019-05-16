@@ -41,9 +41,9 @@ namespace Plugin
         // Methods to test a-synchronpud callbacks
         Register<Core::JSON::DecUInt8>("async", &JSONRPCPlugin::async_callback, this);
 
-        Register<JSONDataBuffer, Core::JSON::DecUInt32>(_T("send"), &JSONRPCPlugin::send, this);
-        Register<Core::JSON::DecUInt16, JSONDataBuffer>(_T("receive"), &JSONRPCPlugin::receive, this);
-        Register<JSONDataBuffer, JSONDataBuffer>(_T("exchange"), &JSONRPCPlugin::exchange, this);
+        Register<Data::JSONDataBuffer, Core::JSON::DecUInt32>(_T("send"), &JSONRPCPlugin::send, this);
+        Register<Core::JSON::DecUInt16, Data::JSONDataBuffer>(_T("receive"), &JSONRPCPlugin::receive, this);
+        Register<Data::JSONDataBuffer, Data::JSONDataBuffer>(_T("exchange"), &JSONRPCPlugin::exchange, this);
     }
 
     /* virtual */ JSONRPCPlugin::~JSONRPCPlugin()
@@ -55,7 +55,7 @@ namespace Plugin
         Config config;
         config.FromString(service->ConfigLine());
 
-		_rpcServer = new COMServer(Core::NodeId(config.Connector.Value().c_str()), this);
+		_rpcServer = new COMServer(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath());
 
         _job->Period(5);
         PluginHost::WorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), _job);
@@ -106,6 +106,7 @@ namespace Plugin
     // -------------------------------------------------------------------------------------------------------
     /* virtual */ uint32_t JSONRPCPlugin::Send(const uint16_t sendSize, const uint8_t buffer[])
     {
+        printf("Received a send for size: %d\n", sendSize);
         uint32_t result = 0;
         return (result);
 	}

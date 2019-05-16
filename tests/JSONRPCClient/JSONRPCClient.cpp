@@ -2,6 +2,7 @@
 
 #include <core/core.h>
 #include <jsonrpc/jsonrpc.h>
+#include <interfaces/IPerformance.h>
 
 #include "../JSONRPCPlugin/Data.h"
 
@@ -29,26 +30,24 @@ ENUM_CONVERSION_END(Data::Response::state)
 
 }
 
-bool ParseOptions(int argc, char** argv, Core::NodeId& jsonrpcChannel)
+bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel)
 {
     int index = 1;
-    bool domain = false;
+    const char* hostname = _T("127.0.0.1:8899");
     bool showHelp = false;
 
     while ((index < argc) && (!showHelp)) {
-        if (strcmp(argv[index], "-domain") == 0)
-            domain = true;
-        else if (strcmp(argv[index], "-h") == 0)
+        if (strcmp(argv[index], "-remote") == 0) {
+            hostname = argv[index + 1];
+			index++;
+		} else if (strcmp(argv[index], "-h") == 0) {
             showHelp = true;
+        }
         index++;
     }
 
     if (!showHelp) {
-        if (domain) {
-            jsonrpcChannel = Core::NodeId("/tmp/testserver0");
-        } else {
-            jsonrpcChannel = Core::NodeId("127.0.0.1", 80);
-        }
+        comChannel = Core::NodeId(hostname);
     }
 
     return (showHelp);
@@ -75,7 +74,10 @@ void ShowMenu()
            "\tE : Invoke and exchange an opaque variant JSON parameter\n"
            "\tC : Callback, using a static method, wait for a response from the otherside a-synchronously\n"
            "\tG : Callback, using a class method, wait for a response from the otherside a-synchronously\n"
-           "\tD : Demonstrating the possibilities with JsonObject\n"
+           "\tD : Demonstrating the possibilities with JsonObject\n\n"
+           "\tX : Measure COM Performance\n"
+           "\tY : Measure JSONRPC performance\n"
+           "\tZ : Measure MessagePack performance\n"
            "\tH : Help\n"
            "\tQ : Quit\n");
 }
@@ -135,6 +137,82 @@ private:
 };
 }
 
+// Performance measurement functions/methods and definitions
+// ---------------------------------------------------------------------------------------------
+typedef std::function<uint32_t(const uint16_t size, const uint8_t buffer[])> PerformanceFunction;
+constexpr uint32_t MeasurementLoops = 20;
+static uint8_t swapPattern[] = { 0x00, 0x55, 0xAA, 0xFF };
+
+static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8_t pattern[], PerformanceFunction& subject)
+{
+    uint8_t dataFrame[4096];
+    uint16_t index = 0;
+    uint8_t patternIndex = 0;
+
+    ASSERT(patternLength != 0);
+
+    while (index < sizeof(dataFrame)) {
+
+        dataFrame[index++] = pattern[patternIndex++];
+
+        patternIndex %= (patternLength - 1);
+    }
+
+    printf("Measurements [%s]:\n", info);
+    uint64_t time;
+    Core::StopWatch measurement;
+
+	for (uint32_t run = 0; run < MeasurementLoops; run++) {
+        subject(0, dataFrame);
+    }
+    time = measurement.Elapsed();
+    printf("Data outbound:    [0], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+
+    measurement.Reset();
+    for (uint32_t run = 0; run < MeasurementLoops; run++)
+    {
+        subject(16, dataFrame);
+    }
+    time = measurement.Elapsed();
+    printf("Data outbound:   [16], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+
+    measurement.Reset();
+    for (uint32_t run = 0; run < MeasurementLoops; run++)
+    {
+        subject(128, dataFrame);
+    }
+    time = measurement.Elapsed();
+    printf("Data outbound:  [128], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+
+    measurement.Reset();
+    for (uint32_t run = 0; run < MeasurementLoops; run++) {
+        subject(256, dataFrame);
+    }
+    time = measurement.Elapsed();
+    printf("Data outbound:  [256], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+
+    measurement.Reset();
+    for (uint32_t run = 0; run < MeasurementLoops; run++) {
+        subject(512, dataFrame);
+    }
+    time = measurement.Elapsed();
+    printf("Data outbound:  [512], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+
+    measurement.Reset();
+    for (uint32_t run = 0; run < MeasurementLoops; run++) {
+        subject(1024, dataFrame);
+    }
+    time = measurement.Elapsed();
+    printf("Data outbound: [1024], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+
+    measurement.Reset();
+    for (uint32_t run = 0; run < MeasurementLoops; run++) {
+        subject(2048, dataFrame);
+    }
+    time = measurement.Elapsed();
+    printf("Data outbound: [2048], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+}
+
 static void PrintObject(const JsonObject::Iterator& iterator)
 {
     JsonObject::Iterator index = iterator;
@@ -151,22 +229,44 @@ int main(int argc, char** argv)
     // Additional scoping neede to have a proper shutdown of the STACK object:
     // JSONRPC::Client remoteObject
     {
-        Core::NodeId jsonrpcChannel;
+
+        Core::NodeId comChannel;
         ShowMenu();
         int element;
         Handlers::Callbacks testCallback;
 
-        ParseOptions(argc, argv, jsonrpcChannel);
+        ParseOptions(argc, argv, comChannel);
+
+		SleepMs(2000);
+
+		// Lets also open up channels over the COMRPC protocol to do performance measurements
+        // to compare JSONRPC v.s. COMRPC
+
+        // Make sure we have an engine to handle the incoming requests over the COMRPC channel.
+        // They are time multiplexed so 1 engine to rule them all. The nex line instantiates the
+        // framework to connect to a COMRPC server running at the <connector> address. once the
+        // connection is established, interfaces can be requested.
+        Core::ProxyType<RPC::CommunicatorClient> client(Core::ProxyType<RPC::CommunicatorClient>::Create(
+            comChannel,
+            Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create(Core::Thread::DefaultStackSize())));
+
+        ASSERT(client.IsValid() == true);
+
+        // Open up the COMRPC Client connection.
+        if (client->Open(2000) != Core::ERROR_NONE) {
+            printf("Failed to open up a COMRPC link with the server. Is the server running ?");
+        }
 
         // The JSONRPC Client library is expecting the THUNDER_ACCESS environment variable to be set and pointing
-        // to the JSONRPC Server, this can be a domain socket (use at least 1 sleash in it, or a TCP address.
+        // to the JSONRPC Server, this can be a domain socket (use at least 1 slash in it, or a TCP address.
         Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:80")));
 
         // This is not mandatory, just an easy way to use the VisualStudio environment to Start 2 projects at once, 1 project
         // being the JSONRPC Server running the plugins and the other one this client. However, give the sevrver a bit of time
         // to bring up Plugin JSONRPCPlugin, before we hook up to it. If one starts this App, after the Server is up and running
         // this is not nessecary.
-        SleepMs(2000);
+        SleepMs(1000);
+        printf("Preparing JSONRPC!!!\n");
 
         // Create a remoteObject.  This is the way we can communicate with the Server.
         // The parameters:
@@ -178,8 +278,7 @@ int main(int argc, char** argv)
         JSONRPC::Client remoteObject(_T("JSONRPCPlugin.1"), _T("client.events.1"));
         Handlers::MessageHandler testMessageHandlerJohn("john");
         Handlers::MessageHandler testMessageHandlerJames("james");
-        // @PierreWielders: bij afsluiten gaat dit mis Channel wordt denk ik bij de eerste Client van de drie opgeruimd (gokje, niet gedebugged)
-
+        
         do {
             printf("\n>");
             element = toupper(getchar());
@@ -397,12 +496,58 @@ int main(int argc, char** argv)
                 printf("The serialized values are [otherObject]: %s\n", otherString.c_str());
                 break;
             }
+            case 'X':
+			{
+                if ((client.IsValid() == false) || (client->IsOpen() == false)) {
+                    printf("Can not measure the performance of COMRPC, there is no connection.\n");
+                } else {
+                    Core::StopWatch measurement;
+                    Exchange::IPerformance* perf = client->Aquire<Exchange::IPerformance>(2000, _T("JSONRPCPlugin"), ~0);
+                    if (perf == nullptr) {
+                        printf("Instantiation failed. An performance interface was not returned. It took: %lld ticks\n", measurement.Elapsed());
+                    } else {
+                        printf("Instantiating and retrieving the interface took: %lld ticks\n", measurement.Elapsed());
+
+						PerformanceFunction implementation = [perf](const uint16_t length, const uint8_t buffer[]) -> uint32_t {
+                            return (perf->Send(length, buffer));
+                        };
+
+                        Measure(_T("COMRPC"), sizeof(swapPattern), swapPattern, implementation);
+
+						perf->Release();
+                    }
+				}
+                break;
+			}
+            case 'Y':
+			{
+                PerformanceFunction implementation = [&remoteObject](const uint16_t length, const uint8_t buffer[]) -> uint32_t {
+                    string stringBuffer;
+                    Data::JSONDataBuffer message;
+                    Core::JSON::DecUInt32 result;
+                    Core::ToString(buffer, length, false, stringBuffer);
+                    message.Data = stringBuffer;
+                    remoteObject.Invoke<Data::JSONDataBuffer, Core::JSON::DecUInt32>(3000, _T("send"), message, result);
+                    return (result.Value());
+                };
+
+                Measure(_T("JSONRPC"), sizeof(swapPattern), swapPattern, implementation);
+                break;
+			}
+            case 'Z':
+			{
+                break;
+			}
+
             case '?':
             case 'H':
                 ShowMenu();
             }
 
         } while (element != 'Q');
+
+		// We are done with the COMRPC connections, no need to create new ones.
+		client.Release();
     }
 
     printf("Leaving app.\n");
