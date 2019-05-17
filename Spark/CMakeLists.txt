@@ -56,7 +56,7 @@ target_link_libraries(${MODULE_NAME}
 # Library installation section
 install(
     TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 set(PLUGIN_SPARK_AUTOSTART false CACHE STRING "Automatically start Spark plugin")
 set(PLUGIN_SPARK_STARTURL "browser.js" CACHE STRING "Initial URL for Spark plugin")
