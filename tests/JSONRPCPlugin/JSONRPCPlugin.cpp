@@ -93,8 +93,12 @@ namespace Plugin
 
     void JSONRPCPlugin::SendTime()
     {
+        Core::JSON::String currentTime;
+        
+		currentTime = Core::Time::Now().ToRFC1123();
+
         // PluginHost::JSONRPC method to send out a JSONRPC message to all subscribers to the event "clock".
-        Notify(_T("clock"), Core::JSON::String(Core::Time::Now().ToRFC1123()));
+        Notify(_T("clock"), currentTime);
     }
 
     void JSONRPCPlugin::SendTime(Core::JSONRPC::Connection & channel)

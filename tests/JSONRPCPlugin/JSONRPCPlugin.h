@@ -165,6 +165,7 @@ namespace Plugin {
         // parameters, it just returns the current time of this server, if it is called.
         uint32_t time(Core::JSON::String& response)
         {
+            response.SetQuoted(true);
             response = Core::Time::Now().ToRFC1123();
             return (Core::ERROR_NONE);
         }
@@ -218,6 +219,7 @@ namespace Plugin {
         }
         uint32_t get_data(Core::JSON::String& data) const
         {
+            data.SetQuoted(true);
             data = _data;
             return (Core::ERROR_NONE);
         }
@@ -292,7 +294,7 @@ namespace Plugin {
 		// Methods for performance measurements
 		uint32_t send(const Data::JSONDataBuffer& data, Core::JSON::DecUInt32& result) 
 		{
-            uint16_t length = (((data.Data.Value().length() * 6) + 7) / 8);
+            uint16_t length = static_cast<uint16_t>(((data.Data.Value().length() * 6) + 7) / 8);
             uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
             Core::FromString(data.Data.Value(), buffer, length);
             result = Send(length, buffer); 
@@ -312,7 +314,7 @@ namespace Plugin {
         uint32_t exchange(const Data::JSONDataBuffer& data, Data::JSONDataBuffer& result)
         {
             string convertedBuffer;
-            uint16_t length = (((data.Data.Value().length() * 6) + 7) / 8);
+            uint16_t length = static_cast<uint16_t>(((data.Data.Value().length() * 6) + 7) / 8);
             uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
             Core::FromString(data.Data.Value(), buffer, length);
             result.Duration = Exchange(length, buffer, data.Length.Value());

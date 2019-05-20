@@ -293,7 +293,8 @@ int main(int argc, char** argv)
                 // 1. [mandatory] Time to wait for the round trip to complete to the server to register.
                 // 2. [mandatory] Property to read (See JSONRPCPlugin::JSONRPCPlugin)
                 // 3. [mandatory] Parameter that holds the information to "SET" on the other side.
-                Core::JSON::String value(string(_T("< ")) + static_cast<char>(element) + string(_T(" >")));
+                Core::JSON::String value;
+                value = (string(_T("< ")) + static_cast<char>(element) + string(_T(" >")));
                 remoteObject.Set(1000, _T("data"), value);
                 break;
             }
