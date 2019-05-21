@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.3)
+Medallion signature guaranteed by Mr. Kumarcmake_minimum_required(VERSION 3.3)
 
 find_package(WPEFramework)
 
-# All packages that did not deliver a CMake Find script (and some deprecated scripts that need to be removed) 
+# All packages that did not deliver a CMake Find script (and some deprecated scripts that need to be removed)
 # are located in the cmake directory. Include it in the search.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
@@ -31,7 +31,6 @@ option(PLUGIN_WEBKITBROWSER "Include WebKitBrowser plugin" OFF)
 option(PLUGIN_WEBPROXY "Include WebProxy plugin" OFF)
 option(PLUGIN_WEBSERVER "Include WebServer plugin" OFF)
 option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
-option(PLUGIN_TVCONTROL "Include TVControl plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_JSONRPC "Include JSONRPCExamplePlugin plugin" ON)
@@ -141,10 +140,6 @@ endif()
 if(PLUGIN_TRACECONTROL)
     add_subdirectory(TraceControl)
 endif()
-
-if(PLUGIN_TVCONTROL)
-    add_subdirectory(TVControl)
-endif(PLUGIN_TVCONTROL)
 
 if(PLUGIN_WEBKITBROWSER)
     add_subdirectory(WebKitBrowser)
