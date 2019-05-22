@@ -1,5 +1,6 @@
 
 #include <interfaces/json/JsonData_WebKitBrowser.h>
+#include <interfaces/json/JsonData_StateControl.h>
 #include "WebKitBrowser.h"
 #include "Module.h"
 
@@ -8,6 +9,7 @@ namespace WPEFramework {
 namespace Plugin {
 
     using namespace JsonData::WebKitBrowser;
+    using namespace JsonData::StateControl;
 
     // Registration
     //
@@ -15,8 +17,8 @@ namespace Plugin {
     void WebKitBrowser::RegisterAll()
     {
         Register<void,StatusResultData>(_T("status"), &WebKitBrowser::endpoint_status, this);
-        Register<void,void>(_T("suspend"), &WebKitBrowser::endpoint_suspend, this);
-        Register<void,void>(_T("resume"), &WebKitBrowser::endpoint_resume, this);
+        Register<void,void>(_T("suspend"), &WebKitBrowser::endpoint_suspend, this); /* StateControl */
+        Register<void,void>(_T("resume"), &WebKitBrowser::endpoint_resume, this); /* StateControl */
         Register<void,void>(_T("hide"), &WebKitBrowser::endpoint_hide, this);
         Register<void,void>(_T("show"), &WebKitBrowser::endpoint_show, this);
         Register<SeturlParamsData,void>(_T("seturl"), &WebKitBrowser::endpoint_seturl, this);
@@ -70,13 +72,13 @@ namespace Plugin {
     }
 
     // Suspends the WebKit Browser.
-    uint32_t WebKitBrowser::endpoint_suspend()
+    uint32_t WebKitBrowser::endpoint_suspend() /* StateControl */
     {
         return StateControlCommand(PluginHost::IStateControl::SUSPEND);
     }
 
     // Resumes the WebKit Browser.
-    uint32_t WebKitBrowser::endpoint_resume()
+    uint32_t WebKitBrowser::endpoint_resume() /* StateControl */
     {
         return StateControlCommand(PluginHost::IStateControl::RESUME);
     }
@@ -124,7 +126,7 @@ namespace Plugin {
     }
 
     // Signals a state change in the browser.
-    void WebKitBrowser::event_statechange(const bool& suspended)
+    void WebKitBrowser::event_statechange(const bool& suspended) /* StateControl */
     {
         StatechangeParamsData params;
         params.Suspended = suspended;

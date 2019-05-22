@@ -30,10 +30,7 @@
       "locator"
     ]
   },
-  "methods": {
-    "$ref": "SparkAPI.json#/methods"
-  },
-  "events": {
-    "$ref": "SparkAPI.json#/events"
+  "interface": {
+    "$ref": "SparkAPI.json#"
   }
 }

@@ -82,11 +82,14 @@ The table below lists configuration options of the plugin.
 The following API is provided by the plugin via JSON-RPC:
 
 - [status](#method.status)
-- [suspend](#method.suspend)
-- [resume](#method.resume)
 - [hide](#method.hide)
 - [show](#method.show)
 - [seturl](#method.seturl)
+
+StateControl methods:
+
+- [suspend](#method.suspend)
+- [resume](#method.resume)
 
 This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
 
@@ -137,88 +140,6 @@ This method takes no parameters.
         "suspended": false, 
         "hidden": false
     }
-}
-```
-<a name="method.suspend"></a>
-## *suspend*
-
-Suspends the Spark Browser.
-
-### Description
-
-With this method the Spark Browser can be suspended. Suspending when already in suspended mode has no effect.
-
-Also see: [statechange](#event.statechange)
-
-### Parameters
-
-This method takes no parameters.
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Spark.1.suspend"
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.resume"></a>
-## *resume*
-
-Resumes the Spark Browser.
-
-### Description
-
-With this method the Spark Browser can be resumed from suspended mode. Resuming from a not suspended mode has no effect.
-
-Also see: [statechange](#event.statechange)
-
-### Parameters
-
-This method takes no parameters.
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Spark.1.resume"
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
 }
 ```
 <a name="method.hide"></a>
@@ -356,6 +277,88 @@ Also see: [urlchange](#event.urlchange)
     "result": null
 }
 ```
+<a name="method.suspend"></a>
+## *suspend <sup>(StateControl)</sup>*
+
+Suspends the service.
+
+### Description
+
+With this method the service can be suspended. Suspending when already in suspended mode has no effect.
+
+Also see: [statechange](#event.statechange)
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Spark.1.suspend"
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": null
+}
+```
+<a name="method.resume"></a>
+## *resume <sup>(StateControl)</sup>*
+
+Resumes the service.
+
+### Description
+
+With this method the service can be resumed from suspended mode. Resuming from a not suspended mode has no effect.
+
+Also see: [statechange](#event.statechange)
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Spark.1.resume"
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": null
+}
+```
 <a name="head.Notifications"></a>
 # Notifications
 
@@ -364,8 +367,11 @@ Notifications are autonomous events, triggered by the internals of the plugin, a
 The following notifications are provided by the plugin:
 
 - [urlchange](#event.urlchange)
-- [statechange](#event.statechange)
 - [visibilitychange](#event.visibilitychange)
+
+StateControl events:
+
+- [statechange](#event.statechange)
 
 <a name="event.urlchange"></a>
 ## *urlchange*
@@ -392,29 +398,6 @@ Signals a URL change in the browser.
     }
 }
 ```
-<a name="event.statechange"></a>
-## *statechange*
-
-Signals a state change in the browser.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.suspended | boolean | Determines if the browser has reached suspended state (true) or resumed state (false) |
-
-### Example
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.statechange", 
-    "params": {
-        "suspended": false
-    }
-}
-```
 <a name="event.visibilitychange"></a>
 ## *visibilitychange*
 
@@ -435,6 +418,29 @@ Signals a visibility change of the browser.
     "method": "client.events.1.visibilitychange", 
     "params": {
         "hidden": false
+    }
+}
+```
+<a name="event.statechange"></a>
+## *statechange <sup>(StateControl)</sup>*
+
+Signals a state change of the service.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.suspended | boolean | Determines if the service has entered suspended state (true) or resumed state (false) |
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "method": "client.events.1.statechange", 
+    "params": {
+        "suspended": false
     }
 }
 ```

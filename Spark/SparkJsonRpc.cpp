@@ -1,5 +1,6 @@
 
 #include <interfaces/json/JsonData_Spark.h>
+#include <interfaces/json/JsonData_StateControl.h>
 #include "Spark.h"
 #include "Module.h"
 
@@ -8,6 +9,7 @@ namespace WPEFramework {
 namespace Plugin {
 
     using namespace JsonData::Spark;
+    using namespace JsonData::StateControl;
 
     // Registration
     //
@@ -15,8 +17,8 @@ namespace Plugin {
     void Spark::RegisterAll()
     {
         Register<void,StatusResultData>(_T("status"), &Spark::endpoint_status, this);
-        Register<void,void>(_T("suspend"), &Spark::endpoint_suspend, this);
-        Register<void,void>(_T("resume"), &Spark::endpoint_resume, this);
+        Register<void,void>(_T("suspend"), &Spark::endpoint_suspend, this); /* StateControl */
+        Register<void,void>(_T("resume"), &Spark::endpoint_resume, this); /* StateControl */
         Register<void,void>(_T("hide"), &Spark::endpoint_hide, this);
         Register<void,void>(_T("show"), &Spark::endpoint_show, this);
         Register<SeturlParamsData,void>(_T("seturl"), &Spark::endpoint_seturl, this);
@@ -75,7 +77,7 @@ namespace Plugin {
     // Suspends the Spark Browser.
     // Return codes:
     //  - ERROR_NONE: Success
-    uint32_t Spark::endpoint_suspend()
+    uint32_t Spark::endpoint_suspend() /* StateControl */
     {
         printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
         return StateControlCommand(PluginHost::IStateControl::SUSPEND);
@@ -84,7 +86,7 @@ namespace Plugin {
     // Resumes the Spark Browser.
     // Return codes:
     //  - ERROR_NONE: Success
-    uint32_t Spark::endpoint_resume()
+    uint32_t Spark::endpoint_resume() /* StateControl */
     {
         printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
         return StateControlCommand(PluginHost::IStateControl::RESUME);
@@ -142,7 +144,7 @@ namespace Plugin {
     }
 
     // Signals a state change in the browser.
-    void Spark::event_statechange(const bool& suspended)
+    void Spark::event_statechange(const bool& suspended) /* StateControl */
     {
         StatechangeParamsData params;
         params.Suspended = suspended;
