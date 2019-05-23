@@ -181,6 +181,12 @@ namespace Plugin {
             TRACE(Trace::Information, (_T("A parameter less method that returns nothing was triggered")));
             return (Core::ERROR_NONE);
         }
+        uint32_t clueless2(const Core::JSON::String& inbound, Core::JSON::String& response)
+        {
+            TRACE(Trace::Information, (_T("Versioning, this is only on version 1")));
+            response = _T("CLUELESS RESPONSE: ") + inbound.Value();
+            return (Core::ERROR_NONE);
+        }       
 
         uint32_t input(const Core::JSON::String& info)
         {

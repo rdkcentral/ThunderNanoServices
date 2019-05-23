@@ -72,6 +72,44 @@ namespace Data {
         Core::JSON::DecUInt32 Width;
         Core::JSON::DecUInt32 Height;
     };
+    class EXTERNAL Time : public Core::JSON::Container {
+    private:
+        Time(const Time&) = delete;
+        Time& operator=(const Time&) = delete;
+
+    public:
+        Time()
+            : Core::JSON::Container()
+            , Hours(0)
+            , Minutes(0)
+            , Seconds(0)
+        {
+            Add(_T("hours"), &Hours);
+            Add(_T("minutes"), &Minutes);
+            Add(_T("seconds"), &Seconds);
+        }
+        Time(const uint8_t hours, const uint8_t minutes, const uint8_t seconds)
+            : Core::JSON::Container()
+            , Hours(0)
+            , Minutes(0)
+            , Seconds(0)
+        {
+            Add(_T("hours"), &Hours);
+            Add(_T("minutes"), &Minutes);
+            Add(_T("seconds"), &Seconds);
+            Hours = hours;
+            Minutes = minutes;
+            Seconds = seconds;
+        }
+        virtual ~Time()
+        {
+        }
+
+    public:
+        Core::JSON::DecUInt8 Hours;
+        Core::JSON::DecUInt8 Minutes;
+        Core::JSON::DecUInt8 Seconds;
+    };
     class EXTERNAL Parameters : public Core::JSON::Container {
     private:
         Parameters(const Parameters&) = delete;
