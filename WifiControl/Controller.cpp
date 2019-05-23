@@ -244,7 +244,7 @@ namespace WPASupplicant {
             } else {
                 TRACE(Communication, (_T("RAW EVENT MESSAGE: [%s]"), message.c_str()));
             }
-        } else {
+        } else if (_requests.size() > 0) {
             _adminLock.Lock();
 
             Request* current = _requests.front();
@@ -253,9 +253,9 @@ namespace WPASupplicant {
 
             _adminLock.Unlock();
 
-            if (_requests.size() > 0) {
-                Trigger();
-            }
+            Trigger();
+        } else {
+            TRACE_L1("There is no pending request to process");
         }
 
         return (receivedSize);
