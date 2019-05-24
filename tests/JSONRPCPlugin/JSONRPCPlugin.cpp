@@ -34,6 +34,10 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         Property<Data::Geometry>(_T("geometry"), &JSONRPCPlugin::get_geometry, &JSONRPCPlugin::set_geometry, this);
         Property<Core::JSON::String>(_T("data"), &JSONRPCPlugin::get_data, &JSONRPCPlugin::set_data, this);
 
+		//Readonly and writeonly properties
+		Property<Core::JSON::String>(_T("status"), &JSONRPCPlugin::get_status, nullptr, this);
+		Property<Core::JSON::String>(_T("value"), nullptr, &JSONRPCPlugin::set_value, this);
+
         // Opaque method examples
         Register<JsonObject, JsonObject>("swap", &JSONRPCPlugin::swap, this);
         Property<JsonObject>(_T("window"), &JSONRPCPlugin::get_opaque_geometry, &JSONRPCPlugin::set_opaque_geometry, this);

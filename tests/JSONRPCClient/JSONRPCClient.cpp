@@ -71,6 +71,7 @@ void ShowMenu()
            "\t5 : Set property @ value { 200, 300, 720, 100 }.\n"
            "\tO : Set properties using an opaque variant JSON parameter\n"
            "\tV : Get properties using an opaque variant JSON parameter\n"
+		   "\tB : Get and Set readonly and writeonly properties\n"
            "\tE : Invoke and exchange an opaque variant JSON parameter\n"
            "\tC : Callback, using a static method, wait for a response from the otherside a-synchronously\n"
            "\tG : Callback, using a class method, wait for a response from the otherside a-synchronously\n"
@@ -343,7 +344,25 @@ int main(int argc, char** argv)
                 printf("Read propety from the remote object: %s\n", value.Value().c_str());
                 break;
             }
-            case 'I': {
+			case 'B': {
+				// read readonly property
+				Core::JSON::String value;
+				uint32_t result = remoteObject.Get(1000, _T("status"), value);
+				printf("Read readonly propety from the remote object (result = %s): %s\n", Core::ErrorToString(result), value.Value().c_str());
+				// write readonly property -> should fail
+				value = (string(_T("Bogus")));
+				result = remoteObject.Set(1000, _T("status"), value);
+				printf("Write readonly propety from the remote object result: %s\n", Core::ErrorToString(result));
+				// write writeonly property 
+				value = (string(_T("<5>")));
+				result = remoteObject.Set(1000, _T("value"), value);
+				printf("Write writeonly propety from the remote object result: %s\n", Core::ErrorToString(result));
+				// read writeonly property -> should fail
+				result = remoteObject.Get(1000, _T("value"), value);
+				printf("Read writeonly propety from the remote object, result = %s\n", Core::ErrorToString(result));
+				break;
+			}
+			case 'I': {
                 // Lets trigger some action on server side to get some feedback. The regular synchronous RPC call.
                 // The parameters:
                 // 1. [mandatory] Time to wait for the round trip to complete to the server to register.
