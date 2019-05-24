@@ -44,12 +44,12 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         Register<Core::JSON::DecUInt16, Data::JSONDataBuffer>(_T("receive"), &JSONRPCPlugin::receive, this);
         Register<Data::JSONDataBuffer, Data::JSONDataBuffer>(_T("exchange"), &JSONRPCPlugin::exchange, this);
 
-        // Methods for a "second version of the interfaces...
-		// Enabling the next line still crashes the system. Copy constructor of the union member in Functions fails to copy a entry!!!
-        // Core::JSONRPC::Handler& legacyVersion = JSONRPC::CreateHandler({ 1 }, *this); 
-        Core::JSONRPC::Handler& legacyVersion = JSONRPC::CreateHandler({ 1 }); // This was a legacy interface and has a different interface, so create a different handler for it.
-        legacyVersion.Register<Core::JSON::String, Core::JSON::String>(_T("clueless"), &JSONRPCPlugin::clueless2, this);
+        // Methods for a "legaccy" version of the interfaces, the last parameter makes sure that all handlers are copied from the 
+		// base interface to this "legacy" one...
+        Core::JSONRPC::Handler& legacyVersion = JSONRPC::CreateHandler({ 1 }, *this); 
 
+		// The only method that is really differnt in version "1" needs to be registered. That is done by the next line.
+        legacyVersion.Register<Core::JSON::String, Core::JSON::String>(_T("clueless"), &JSONRPCPlugin::clueless2, this);
     }
 
     /* virtual */ JSONRPCPlugin::~JSONRPCPlugin()
