@@ -93,7 +93,7 @@ namespace Plugin {
         if(params.Device.IsSet() == true) {
             std::map<const string, StaticInfo>::iterator entry(_interfaces.find(params.Device.Value()));
             if (entry != _interfaces.end()) {
-                if (entry->second.Mode() == mode::STATIC) {
+                if (entry->second.Mode() == NetworkResultData::ModeType::STATIC) {
                     result = Reload(entry->first, false);
                 } else {
                     result = Reload(entry->first, true);

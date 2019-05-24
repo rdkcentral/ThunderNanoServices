@@ -15,8 +15,6 @@ namespace Plugin {
                            public PluginHost::IWeb,
                            public PluginHost::JSONRPC {
     public:
-        using mode = JsonData::NetworkControl::NetworkResultData::ModeType;
-
         class Entry : public Core::JSON::Container {
         private:
             Entry& operator=(const Entry&) = delete;
@@ -25,7 +23,7 @@ namespace Plugin {
             Entry()
                 : Core::JSON::Container()
                 , Interface()
-                , Mode(mode::MANUAL)
+                , Mode(JsonData::NetworkControl::NetworkResultData::ModeType::MANUAL)
                 , Address()
                 , Mask(32)
                 , Gateway()
@@ -60,7 +58,7 @@ namespace Plugin {
 
         public:
             Core::JSON::String Interface;
-            Core::JSON::EnumType<mode> Mode;
+            Core::JSON::EnumType<JsonData::NetworkControl::NetworkResultData::ModeType> Mode;
             Core::JSON::String Address;
             Core::JSON::DecUInt8 Mask;
             Core::JSON::String Gateway;
@@ -212,7 +210,7 @@ namespace Plugin {
 
         public:
             StaticInfo()
-                : _mode(mode::MANUAL)
+                : _mode(JsonData::NetworkControl::NetworkResultData::ModeType::MANUAL)
                 , _address()
                 , _gateway()
                 , _broadcast()
@@ -237,7 +235,7 @@ namespace Plugin {
             }
 
         public:
-            inline mode Mode() const
+            inline JsonData::NetworkControl::NetworkResultData::ModeType Mode() const
             {
                 return (_mode);
             }
@@ -271,7 +269,7 @@ namespace Plugin {
             }
 
         private:
-            mode _mode;
+            JsonData::NetworkControl::NetworkResultData::ModeType _mode;
             Core::IPNode _address;
             Core::NodeId _gateway;
             Core::NodeId _broadcast;
