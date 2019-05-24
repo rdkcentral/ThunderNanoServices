@@ -255,7 +255,7 @@ namespace WPASupplicant {
 
             Trigger();
         } else {
-            TRACE_L1("There is no pending request to process");
+            TRACE(Trace::Error, ("There is no pending request to process"));
         }
 
         return (receivedSize);
