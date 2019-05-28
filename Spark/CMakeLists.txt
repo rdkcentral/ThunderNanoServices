@@ -2,6 +2,7 @@ set(PLUGIN_NAME Spark)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(Spark REQUIRED)
 find_package(Freetype2 REQUIRED)
 
@@ -51,6 +52,7 @@ target_include_directories(${MODULE_NAME}
 target_link_libraries(${MODULE_NAME} 
     PRIVATE 
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Plugins::${NAMESPACE}Definitions
         Spark::Spark)
 
 # Library installation section

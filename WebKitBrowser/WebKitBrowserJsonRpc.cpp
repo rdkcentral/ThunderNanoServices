@@ -1,14 +1,15 @@
 
-#include <interfaces/json/JsonData_WebKitBrowser.h>
+#include <interfaces/json/JsonData_Browser.h>
 #include <interfaces/json/JsonData_StateControl.h>
 #include "WebKitBrowser.h"
 #include "Module.h"
 
 namespace WPEFramework {
 
+
 namespace Plugin {
 
-    using namespace JsonData::WebKitBrowser;
+    using namespace JsonData::Browser;
     using namespace JsonData::StateControl;
 
     // Registration
@@ -16,43 +17,103 @@ namespace Plugin {
 
     void WebKitBrowser::RegisterAll()
     {
-        Register<void,StatusResultData>(_T("status"), &WebKitBrowser::endpoint_status, this);
-        Register<void,void>(_T("suspend"), &WebKitBrowser::endpoint_suspend, this); /* StateControl */
-        Register<void,void>(_T("resume"), &WebKitBrowser::endpoint_resume, this); /* StateControl */
-        Register<void,void>(_T("hide"), &WebKitBrowser::endpoint_hide, this);
-        Register<void,void>(_T("show"), &WebKitBrowser::endpoint_show, this);
-        Register<SeturlParamsData,void>(_T("seturl"), &WebKitBrowser::endpoint_seturl, this);
+        Property<Core::JSON::String>(_T("url"), &WebKitBrowser::get_url, &WebKitBrowser::set_url, this); /* Browser */
+        Property<Core::JSON::EnumType<VisibilityType>>(_T("visibility"), &WebKitBrowser::get_visibility, &WebKitBrowser::set_visibility, this); /* Browser */
+        Property<Core::JSON::DecUInt32>(_T("fps"), &WebKitBrowser::get_fps, nullptr, this); /* Browser */
+        Property<Core::JSON::EnumType<StateType>>(_T("state"), &WebKitBrowser::get_state, &WebKitBrowser::set_state, this); /* StateControl */
+
     }
 
     void WebKitBrowser::UnregisterAll()
     {
-        Unregister(_T("seturl"));
-        Unregister(_T("show"));
-        Unregister(_T("hide"));
-        Unregister(_T("resume"));
-        Unregister(_T("suspend"));
-        Unregister(_T("status"));
-    }
-
-    uint32_t WebKitBrowser::StateControlCommand(PluginHost::IStateControl::command command)
-    {
-        ASSERT(_browser != nullptr);
-
-        PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
-        ASSERT(stateControl != nullptr);
-
-        stateControl->Request(command);
-
-        stateControl->Release();
-
-        return Core::ERROR_NONE;
+        Unregister(_T("state"));
+        Unregister(_T("fps"));
+        Unregister(_T("visibility"));
+        Unregister(_T("url"));
     }
 
     // API implementation
     //
 
-    // Retrieves the WebKit Browser information.
-    uint32_t WebKitBrowser::endpoint_status(StatusResultData& response)
+   // Property: url - URL loaded in the browser
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t WebKitBrowser::get_url(Core::JSON::String& response) const /* Browser */
+    {
+        ASSERT(_browser != nullptr);
+
+        response = _browser->GetURL();
+
+        return Core::ERROR_NONE;
+    }
+
+    // Property: url - URL loaded in the browser
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_INCORRECT_URL: Incorrect URL given
+    uint32_t WebKitBrowser::set_url(const Core::JSON::String& param) /* Browser */
+    {
+        ASSERT(_browser != nullptr);
+
+        uint32_t result = Core::ERROR_INCORRECT_URL;
+
+        if (param.IsSet() && !param.Value().empty()) {
+            _browser->SetURL(param.Value());
+            result = Core::ERROR_NONE;
+        }
+
+        return result;
+    }
+
+    // Property: visibility - Current browser visibility
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t WebKitBrowser::get_visibility(Core::JSON::EnumType<VisibilityType>& response) const /* Browser */
+    {
+        response = (_hidden? VisibilityType::HIDDEN : VisibilityType::VISIBLE);
+
+        return Core::ERROR_NONE;
+    }
+
+    // Property: visibility - Current browser visibility
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t WebKitBrowser::set_visibility(const Core::JSON::EnumType<VisibilityType>& param) /* Browser */
+    {
+        ASSERT(_browser != nullptr);
+
+        uint32_t result = Core::ERROR_BAD_REQUEST;
+
+        if (param.IsSet()) {
+            if (param == VisibilityType::VISIBLE) {
+                _browser->Hide(true);
+            }
+            else {
+                _browser->Hide(false);
+            }
+
+            result =  Core::ERROR_NONE;
+        }
+
+        return result;
+    }
+
+    // Property: fps - Current number of frames per second the browser is rendering
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t WebKitBrowser::get_fps(Core::JSON::DecUInt32& response) const /* Browser */
+    {
+        ASSERT(_browser != nullptr);
+
+        response = _browser->GetFPS();
+
+        return Core::ERROR_NONE;
+    }
+
+    // Property: state - Running state of the service
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t WebKitBrowser::get_state(Core::JSON::EnumType<StateType>& response) const /* StateControl */
     {
         ASSERT(_browser != nullptr);
 
@@ -60,63 +121,36 @@ namespace Plugin {
         ASSERT(stateControl != nullptr);
 
         PluginHost::IStateControl::state currentState = stateControl->State();
-
-        response.Url = _browser->GetURL();
-        response.Fps = _browser->GetFPS();
-        response.Suspended = (currentState == PluginHost::IStateControl::SUSPENDED);
-        response.Hidden = _hidden;
-
-        stateControl->Release();
+        response = (currentState == PluginHost::IStateControl::SUSPENDED? StateType::SUSPENDED : StateType::RESUMED);
 
         return Core::ERROR_NONE;
     }
 
-    // Suspends the WebKit Browser.
-    uint32_t WebKitBrowser::endpoint_suspend() /* StateControl */
-    {
-        return StateControlCommand(PluginHost::IStateControl::SUSPEND);
-    }
-
-    // Resumes the WebKit Browser.
-    uint32_t WebKitBrowser::endpoint_resume() /* StateControl */
-    {
-        return StateControlCommand(PluginHost::IStateControl::RESUME);
-    }
-
-    // Hides the WebKit Browser.
-    uint32_t WebKitBrowser::endpoint_hide()
+    // Property: state - Running state of the service
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t WebKitBrowser::set_state(const Core::JSON::EnumType<StateType>& param) /* StateControl */
     {
         ASSERT(_browser != nullptr);
-        _browser->Hide(true);
 
-        return Core::ERROR_NONE;
-    }
+        uint32_t result = Core::ERROR_BAD_REQUEST;
 
-    // Shows the WebKit Browser.
-    uint32_t WebKitBrowser::endpoint_show()
-    {
-        ASSERT(_browser != nullptr);
-        _browser->Hide(false);
+        if (param.IsSet()) {
+            PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
+            ASSERT(stateControl != nullptr);
 
-        return Core::ERROR_NONE;
-    }
+            stateControl->Request(param == StateType::SUSPENDED? PluginHost::IStateControl::SUSPEND : PluginHost::IStateControl::RESUME);
 
-    // Sets a URL in the WebKit Browser.
-    uint32_t WebKitBrowser::endpoint_seturl(const SeturlParamsData& params)
-    {
-        ASSERT(_browser != nullptr);
-        uint32_t result = Core::ERROR_INCORRECT_URL;
+            stateControl->Release();
 
-        if (params.Url.IsSet() && !params.Url.Value().empty()) {
-            _browser->SetURL(params.Url.Value());
             result = Core::ERROR_NONE;
         }
 
         return result;
     }
 
-    // Signals a URL change in the browser.
-    void WebKitBrowser::event_urlchange(const string& url, const bool& loaded)
+    // Event: urlchange - Signals a URL change in the browser
+    void WebKitBrowser::event_urlchange(const string& url, const bool& loaded) /* Browser */
     {
         UrlchangeParamsData params;
         params.Url = url;
@@ -125,17 +159,8 @@ namespace Plugin {
         Notify(_T("urlchange"), params);
     }
 
-    // Signals a state change in the browser.
-    void WebKitBrowser::event_statechange(const bool& suspended) /* StateControl */
-    {
-        StatechangeParamsData params;
-        params.Suspended = suspended;
-
-        Notify(_T("statechange"), params);
-    }
-
-    // Signals a visibility change of the browser.
-    void WebKitBrowser::event_visibilitychange(const bool& hidden)
+    // Event: visibilitychange - Signals a visibility change of the browser
+    void WebKitBrowser::event_visibilitychange(const bool& hidden) /* Browser */
     {
         VisibilitychangeParamsData params;
         params.Hidden = hidden;
@@ -143,10 +168,19 @@ namespace Plugin {
         Notify(_T("visibilitychange"), params);
     }
 
-    // Notifies that the web page requests to close its window.
-    void WebKitBrowser::event_pageclosure()
+    // Event: pageclosure - Notifies that the web page requests to close its window
+    void WebKitBrowser::event_pageclosure() /* Browser */
     {
         Notify(_T("pageclosure"));
+    }
+
+    // Event: statechange - Signals a state change of the service
+    void WebKitBrowser::event_statechange(const bool& suspended) /* StateControl */
+    {
+        StatechangeParamsData params;
+        params.Suspended = suspended;
+
+        Notify(_T("statechange"), params);
     }
 
 } // namespace Plugin

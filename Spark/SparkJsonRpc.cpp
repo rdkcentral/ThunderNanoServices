@@ -1,5 +1,5 @@
 
-#include <interfaces/json/JsonData_Spark.h>
+#include <interfaces/json/JsonData_Browser.h>
 #include <interfaces/json/JsonData_StateControl.h>
 #include "Spark.h"
 #include "Module.h"
@@ -8,7 +8,7 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    using namespace JsonData::Spark;
+    using namespace JsonData::Browser;
     using namespace JsonData::StateControl;
 
     // Registration
@@ -16,125 +16,140 @@ namespace Plugin {
 
     void Spark::RegisterAll()
     {
-        Register<void,StatusResultData>(_T("status"), &Spark::endpoint_status, this);
-        Register<void,void>(_T("suspend"), &Spark::endpoint_suspend, this); /* StateControl */
-        Register<void,void>(_T("resume"), &Spark::endpoint_resume, this); /* StateControl */
-        Register<void,void>(_T("hide"), &Spark::endpoint_hide, this);
-        Register<void,void>(_T("show"), &Spark::endpoint_show, this);
-        Register<SeturlParamsData,void>(_T("seturl"), &Spark::endpoint_seturl, this);
+        Property<Core::JSON::String>(_T("url"), &Spark::get_url, &Spark::set_url, this); /* Browser */
+        Property<Core::JSON::EnumType<VisibilityType>>(_T("visibility"), &Spark::get_visibility, &Spark::set_visibility, this); /* Browser */
+        Property<Core::JSON::DecUInt32>(_T("fps"), &Spark::get_fps, nullptr, this); /* Browser */
+        Property<Core::JSON::EnumType<StateType>>(_T("state"), &Spark::get_state, &Spark::set_state, this); /* StateControl */
+
     }
 
     void Spark::UnregisterAll()
     {
-        Unregister(_T("seturl"));
-        Unregister(_T("show"));
-        Unregister(_T("hide"));
-        Unregister(_T("resume"));
-        Unregister(_T("suspend"));
-        Unregister(_T("status"));
-    }
-
-    uint32_t Spark::StateControlCommand(PluginHost::IStateControl::command command)
-    {
-        ASSERT(_spark != nullptr);
-
-        PluginHost::IStateControl* stateControl(_spark->QueryInterface<PluginHost::IStateControl>());
-        ASSERT(stateControl != nullptr);
-
-        stateControl->Request(command);
-
-        stateControl->Release();
-
-        return Core::ERROR_NONE;
+        Unregister(_T("state"));
+        Unregister(_T("fps"));
+        Unregister(_T("visibility"));
+        Unregister(_T("url"));
     }
 
     // API implementation
     //
 
-    // Retrieves the Spark Engine information.
+   // Property: url - URL loaded in the browser
     // Return codes:
     //  - ERROR_NONE: Success
-    uint32_t Spark::endpoint_status(StatusResultData& response)
+    uint32_t Spark::get_url(Core::JSON::String& response) const /* Browser */
     {
-        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
+        ASSERT(_spark != nullptr);
+
+        response = _spark->GetURL();
+
+        return Core::ERROR_NONE;
+    }
+
+    // Property: url - URL loaded in the browser
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_INCORRECT_URL: Incorrect URL given
+    uint32_t Spark::set_url(const Core::JSON::String& param) /* Browser */
+    {
+        ASSERT(_spark != nullptr);
+
+        uint32_t result = Core::ERROR_INCORRECT_URL;
+
+        if (param.IsSet() && !param.Value().empty()) {
+            _spark->SetURL(param.Value());
+            result = Core::ERROR_NONE;
+        }
+
+        return result;
+    }
+
+    // Property: visibility - Current browser visibility
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t Spark::get_visibility(Core::JSON::EnumType<VisibilityType>& response) const /* Browser */
+    {
+        response = (_hidden? VisibilityType::HIDDEN : VisibilityType::VISIBLE);
+
+        return Core::ERROR_NONE;
+    }
+
+    // Property: visibility - Current browser visibility
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t Spark::set_visibility(const Core::JSON::EnumType<VisibilityType>& param) /* Browser */
+    {
+        ASSERT(_spark != nullptr);
+
+        uint32_t result = Core::ERROR_BAD_REQUEST;
+
+        if (param.IsSet()) {
+            if (param == VisibilityType::VISIBLE) {
+                _spark->Hide(true);
+            }
+            else {
+                _spark->Hide(false);
+            }
+
+            result =  Core::ERROR_NONE;
+        }
+
+        return result;
+    }
+
+    // Property: fps - Current number of frames per second the browser is rendering
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t Spark::get_fps(Core::JSON::DecUInt32& response) const /* Browser */
+    {
+        ASSERT(_spark != nullptr);
+
+        response = _spark->GetFPS();
+
+        return Core::ERROR_NONE;
+    }
+
+    // Property: state - Running state of the service
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t Spark::get_state(Core::JSON::EnumType<StateType>& response) const /* StateControl */
+    {
         ASSERT(_spark != nullptr);
 
         PluginHost::IStateControl* stateControl(_spark->QueryInterface<PluginHost::IStateControl>());
         ASSERT(stateControl != nullptr);
 
         PluginHost::IStateControl::state currentState = stateControl->State();
-
-        response.Url = _spark->GetURL();
-        response.Fps = _spark->GetFPS();
-        response.Suspended = (currentState == PluginHost::IStateControl::SUSPENDED);
-        response.Hidden = _hidden;
-
-        stateControl->Release();
+        response = (currentState == PluginHost::IStateControl::SUSPENDED? StateType::SUSPENDED : StateType::RESUMED);
 
         return Core::ERROR_NONE;
     }
 
-    // Suspends the Spark Browser.
+    // Property: state - Running state of the service
     // Return codes:
     //  - ERROR_NONE: Success
-    uint32_t Spark::endpoint_suspend() /* StateControl */
+    uint32_t Spark::set_state(const Core::JSON::EnumType<StateType>& param) /* StateControl */
     {
-        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
-        return StateControlCommand(PluginHost::IStateControl::SUSPEND);
-    }
-
-    // Resumes the Spark Browser.
-    // Return codes:
-    //  - ERROR_NONE: Success
-    uint32_t Spark::endpoint_resume() /* StateControl */
-    {
-        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
-        return StateControlCommand(PluginHost::IStateControl::RESUME);
-    }
-
-    // Hides the Spark Browser.
-    // Return codes:
-    //  - ERROR_NONE: Success
-    uint32_t Spark::endpoint_hide()
-    {
-        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
         ASSERT(_spark != nullptr);
-        _spark->Hide(true);
 
-        return Core::ERROR_NONE;
-    }
+        uint32_t result = Core::ERROR_BAD_REQUEST;
 
-    // Shows the Spark Browser.
-    // Return codes:
-    //  - ERROR_NONE: Success
-    uint32_t Spark::endpoint_show()
-    {
-        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
-        ASSERT(_spark != nullptr);
-        _spark->Hide(false);
+        if (param.IsSet()) {
+            PluginHost::IStateControl* stateControl(_spark->QueryInterface<PluginHost::IStateControl>());
+            ASSERT(stateControl != nullptr);
 
-        return Core::ERROR_NONE;
-    }
+            stateControl->Request(param == StateType::SUSPENDED? PluginHost::IStateControl::SUSPEND : PluginHost::IStateControl::RESUME);
 
-    // Sets a URL in the Spark Browser.
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_INCORRECT_URL: Incorrect URL given
-    uint32_t Spark::endpoint_seturl(const SeturlParamsData& params)
-    {
-        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
-        ASSERT(_spark != nullptr);
-        uint32_t result = Core::ERROR_INCORRECT_URL;
+            stateControl->Release();
 
-        if (params.Url.IsSet() && !params.Url.Value().empty()) {
-            _spark->SetURL(params.Url.Value());
             result = Core::ERROR_NONE;
         }
+
         return result;
     }
 
-    // Signals a URL change in the browser.
-    void Spark::event_urlchange(const string& url, const bool& loaded)
+    // Event: urlchange - Signals a URL change in the browser
+    void Spark::event_urlchange(const string& url, const bool& loaded) /* Browser */
     {
         UrlchangeParamsData params;
         params.Url = url;
@@ -143,7 +158,16 @@ namespace Plugin {
         Notify(_T("urlchange"), params);
     }
 
-    // Signals a state change in the browser.
+    // Event: visibilitychange - Signals a visibility change of the browser
+    void Spark::event_visibilitychange(const bool& hidden) /* Browser */
+    {
+        VisibilitychangeParamsData params;
+        params.Hidden = hidden;
+
+        Notify(_T("visibilitychange"), params);
+    }
+
+    // Event: statechange - Signals a state change of the service
     void Spark::event_statechange(const bool& suspended) /* StateControl */
     {
         StatechangeParamsData params;
@@ -152,16 +176,6 @@ namespace Plugin {
         Notify(_T("statechange"), params);
     }
 
-    // Signals a visibility change of the browser.
-    void Spark::event_visibilitychange(const bool& hidden)
-    {
-        VisibilitychangeParamsData params;
-        params.Hidden = hidden;
-
-        Notify(_T("visibilitychange"), params);
-    }
-
 } // namespace Plugin
 
-}
-
+} // namespace WPEFramework

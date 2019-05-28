@@ -4,14 +4,14 @@
 
 **Version: 1.0**
 
-WebKitBrowser functionality for WPEFramework.
+WebKitBrowser plugin for WPEFramework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
-- [Methods](#head.Methods)
+- [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
 
 <a name="head.Introduction"></a>
@@ -20,7 +20,7 @@ WebKitBrowser functionality for WPEFramework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the WebKitBrowser plugin. It includes detailed specification of its configuration, methods provided and notifications sent.
+This document describes purpose and functionality of the WebKitBrowser plugin. It includes detailed specification of its configuration, properties provided and notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -94,177 +94,38 @@ The table below lists configuration options of the plugin.
 | configuration?.whitelist?.domain[#] | string | <sup>*(optional)*</sup> Domain allowed to access from origin |
 | configuration?.whitelist?.subdomain | string | <sup>*(optional)*</sup> whether it is also OK to access subdomains of domains listed in domain |
 
-<a name="head.Methods"></a>
-# Methods
+<a name="head.Properties"></a>
+# Properties
 
-The following API is provided by the plugin via JSON-RPC:
-
-- [status](#method.status)
-- [hide](#method.hide)
-- [show](#method.show)
-- [seturl](#method.seturl)
-
-StateControl methods:
-
-- [suspend](#method.suspend)
-- [resume](#method.resume)
-
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
+The following properties are provided by the WebKitBrowser plugin:
 
 
-<a name="method.status"></a>
-## *status*
+Browser interface properties:
 
-Retrieves the WebKit Browser information.
+| Property | Description |
+| :-------- | :-------- |
+| [url](#property.url) | URL loaded in the browser |
+| [visibility](#property.visibility) | Current browser visibility |
+| [fps](#property.fps) <sup>RO</sup> | Current number of frames per second the browser is rendering |
 
-### Description
+StateControl interface properties:
 
-With this method current running state can be retrieved from the WebKit Browser.
+| Property | Description |
+| :-------- | :-------- |
+| [state](#property.state) | Running state of the service |
 
-### Parameters
+<a name="property.url"></a>
+## *url*
 
-This method takes no parameters.
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result.url | string | The currently loaded URL in the browser |
-| result.fps | number | The current number of frames per second the browser is rendering |
-| result.suspended | boolean | Determines if the browser is in suspended mode (true) or resumed mode (false) |
-| result.hidden | boolean | Determines if the browser is hidden (true) or visible (false) |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WebKitBrowser.1.status"
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": {
-        "url": "https://www.google.com", 
-        "fps": 30, 
-        "suspended": false, 
-        "hidden": false
-    }
-}
-```
-<a name="method.hide"></a>
-## *hide*
-
-Hides the WebKit Browser.
-
-### Description
-
-With this method rendering of the WebKit Browser can be stopped. Hiding an already hidden browser has no effect.
-
-Also see: [visibilitychange](#event.visibilitychange)
-
-### Parameters
-
-This method takes no parameters.
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WebKitBrowser.1.hide"
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.show"></a>
-## *show*
-
-Shows the WebKit Browser.
-
-### Description
-
-With this method rendering of the WebKit Browser can be (re)started. Showing a not hidden browser has no effect.
-
-Also see: [visibilitychange](#event.visibilitychange)
-
-### Parameters
-
-This method takes no parameters.
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WebKitBrowser.1.show"
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.seturl"></a>
-## *seturl*
-
-Sets a URL in the WebKit Browser.
-
-### Description
-
-With this method a new URL can be loaded in the WebKit Browser.
+URL loaded in the browser
 
 Also see: [urlchange](#event.urlchange)
 
-### Parameters
+### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| params | object |  |
-| params.url | string | The URL to load |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| (property) | string | URL loaded in the browser |
 
 ### Errors
 
@@ -274,107 +135,180 @@ Also see: [urlchange](#event.urlchange)
 
 ### Example
 
-#### Request
+#### Set Request
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "WebKitBrowser.1.seturl", 
-    "params": {
-        "url": "https://www.google.com"
-    }
+    "method": "WebKitBrowser.1.url", 
+    "params": "https://www.google.com"
 }
 ```
-#### Response
+#### Set Response
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "result": null
+    "result": "null"
 }
 ```
-<a name="method.suspend"></a>
-## *suspend <sup>(StateControl)</sup>*
+#### Get Request
 
-Suspends the service.
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "WebKitBrowser.1.url"
+}
+```
+#### Get Response
 
-### Description
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "https://www.google.com"
+}
+```
+<a name="property.visibility"></a>
+## *visibility*
 
-With this method the service can be suspended. Suspending when already in suspended mode has no effect.
+Current browser visibility
 
-Also see: [statechange](#event.statechange)
+Also see: [visibilitychange](#event.visibilitychange)
 
-### Parameters
-
-This method takes no parameters.
-
-### Result
+### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | null | Always null |
+| (property) | string | Current browser visibility (must be one of the following: *visible*, *hidden*) |
 
 ### Example
 
-#### Request
+#### Set Request
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "WebKitBrowser.1.suspend"
+    "method": "WebKitBrowser.1.visibility", 
+    "params": "visible"
 }
 ```
-#### Response
+#### Set Response
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "result": null
+    "result": "null"
 }
 ```
-<a name="method.resume"></a>
-## *resume <sup>(StateControl)</sup>*
+#### Get Request
 
-Resumes the service.
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "WebKitBrowser.1.visibility"
+}
+```
+#### Get Response
 
-### Description
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "visible"
+}
+```
+<a name="property.fps"></a>
+## *fps*
 
-With this method the service can be resumed from suspended mode. Resuming from a not suspended mode has no effect.
+Current number of frames per second the browser is rendering
 
-Also see: [statechange](#event.statechange)
+*This property is read-only.*
 
-### Parameters
-
-This method takes no parameters.
-
-### Result
+### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | null | Always null |
+| (property) | number | Current number of frames per second the browser is rendering |
 
 ### Example
 
-#### Request
+#### Set Request
+
+#### Get Request
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "WebKitBrowser.1.resume"
+    "method": "WebKitBrowser.1.fps"
 }
 ```
-#### Response
+#### Get Response
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "result": null
+    "result": 30
+}
+```
+<a name="property.state"></a>
+## *state*
+
+Running state of the service
+
+Also see: [statechange](#event.statechange)
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | string | Running state of the service (must be one of the following: *resumed*, *suspended*) |
+
+### Example
+
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "WebKitBrowser.1.state", 
+    "params": "resumed"
+}
+```
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "null"
+}
+```
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "WebKitBrowser.1.state"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "resumed"
 }
 ```
 <a name="head.Notifications"></a>
@@ -382,20 +316,27 @@ This method takes no parameters.
 
 Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[WPEF](#ref.WPEF)] for information on how to register for a notification.
 
-The following notifications are provided by the plugin:
+The following events are provided by the WebKitBrowser plugin:
 
-- [urlchange](#event.urlchange)
-- [visibilitychange](#event.visibilitychange)
-- [pageclosure](#event.pageclosure)
 
-StateControl events:
+Browser interface events:
 
-- [statechange](#event.statechange)
+| Event | Description |
+| :-------- | :-------- |
+| [urlchange](#event.urlchange) | Signals a URL change in the browser |
+| [visibilitychange](#event.visibilitychange) | Signals a visibility change of the browser |
+| [pageclosure](#event.pageclosure) | Notifies that the web page requests to close its window |
+
+StateControl interface events:
+
+| Event | Description |
+| :-------- | :-------- |
+| [statechange](#event.statechange) | Signals a state change of the service |
 
 <a name="event.urlchange"></a>
 ## *urlchange*
 
-Signals a URL change in the browser.
+Signals a URL change in the browser
 
 ### Parameters
 
@@ -420,7 +361,7 @@ Signals a URL change in the browser.
 <a name="event.visibilitychange"></a>
 ## *visibilitychange*
 
-Signals a visibility change of the browser.
+Signals a visibility change of the browser
 
 ### Parameters
 
@@ -443,7 +384,7 @@ Signals a visibility change of the browser.
 <a name="event.pageclosure"></a>
 ## *pageclosure*
 
-Notifies that the web page requests to close its window.
+Notifies that the web page requests to close its window
 
 ### Parameters
 
@@ -458,9 +399,9 @@ This event has no parameters.
 }
 ```
 <a name="event.statechange"></a>
-## *statechange <sup>(StateControl)</sup>*
+## *statechange*
 
-Signals a state change of the service.
+Signals a state change of the service
 
 ### Parameters
 
