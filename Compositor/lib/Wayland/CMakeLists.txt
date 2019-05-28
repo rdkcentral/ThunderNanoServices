@@ -4,4 +4,3 @@ add_subdirectory (NexusServer)
 endif ()
 
 add_subdirectory (Compositor)
-add_subdirectory (Client)
