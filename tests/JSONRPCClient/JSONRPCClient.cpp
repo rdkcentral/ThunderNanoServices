@@ -72,6 +72,8 @@ void ShowMenu()
            "\tO : Set properties using an opaque variant JSON parameter\n"
            "\tV : Get properties using an opaque variant JSON parameter\n"
 		   "\tB : Get and Set readonly and writeonly properties\n"
+           "\tF : Read Property with index\n"
+           "\tJ : Write Property with index\n"
            "\tE : Invoke and exchange an opaque variant JSON parameter\n"
            "\tC : Callback, using a static method, wait for a response from the otherside a-synchronously\n"
            "\tG : Callback, using a class method, wait for a response from the otherside a-synchronously\n"
@@ -344,7 +346,18 @@ int main(int argc, char** argv)
                 printf("Read propety from the remote object: %s\n", value.Value().c_str());
                 break;
             }
-			case 'B': {
+            case 'F': {
+                Core::JSON::DecUInt32 value;
+                value = 12;
+                remoteObject.Set(1000, "array", 1, value);
+                break;
+            }
+            case 'J': {
+                Core::JSON::DecUInt32 value;
+                remoteObject.Get(1000, "array", 1, value);
+                break;
+            }
+            case 'B': {
 				// read readonly property
 				Core::JSON::String value;
 				uint32_t result = remoteObject.Get(1000, _T("status"), value);
