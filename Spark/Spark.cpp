@@ -227,11 +227,13 @@ namespace Plugin {
             TRACE(Trace::Information,
                 (string(_T("StateChange: { \"suspend\":false }"))));
             _service->Notify("{ \"suspended\":false }");
+            event_statechange(false);
             break;
         case PluginHost::IStateControl::SUSPENDED:
             TRACE(Trace::Information,
                 (string(_T("StateChange: { \"suspend\":true }"))));
             _service->Notify("{ \"suspended\":true }");
+            event_statechange(true);
             break;
         case PluginHost::IStateControl::EXITED:
             // Exited by Spark app
