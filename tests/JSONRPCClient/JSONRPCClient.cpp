@@ -348,13 +348,22 @@ int main(int argc, char** argv)
             }
             case 'F': {
                 Core::JSON::DecUInt32 value;
-                value = 12;
-                remoteObject.Set(1000, "array", 1, value);
+                if (remoteObject.Get(1000, "array", 1, value) == Core::ERROR_NONE) {
+                    printf("Requested the value of: %d from index 1\n", value.Value());
+                } else {
+                    printf("Indexed property failed to get!!\n");
+                }
                 break;
             }
             case 'J': {
                 Core::JSON::DecUInt32 value;
-                remoteObject.Get(1000, "array", 1, value);
+                value = 12;
+
+                if (remoteObject.Set(1000, "array", 1, value) == Core::ERROR_NONE) {
+                    printf("Assigned the value of: %d to index 1\n", value.Value());
+                } else {
+                    printf("Indexed property failed to set!!\n");                
+				}
                 break;
             }
             case 'B': {

@@ -21,7 +21,7 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         , _job(Core::ProxyType<PeriodicSync>::Create(this))
         , _window()
         , _data()
-        , _array()
+        , _array(255)
         , _rpcServer(nullptr)
     {
         // PluginHost::JSONRPC method to register a JSONRPC method invocation for the method "time".
