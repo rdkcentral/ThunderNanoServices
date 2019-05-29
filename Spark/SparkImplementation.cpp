@@ -37,6 +37,7 @@ namespace Plugin {
                 , Width(1280)
                 , Height(720)
                 , AnimationFPS(60)
+                , ClientIdentifier()
                 , EGLProvider(_T("/usr/lib/libEGL.so"))
             {
                 Add(_T("url"), &Url);
@@ -44,6 +45,7 @@ namespace Plugin {
                 Add(_T("height"), &Height);
                 Add(_T("animationfps"), &AnimationFPS);
                 Add(_T("egl"), &EGLProvider);
+                Add(_T("clientidentifier"), &ClientIdentifier);
             }
             ~Config() {}
 
@@ -52,6 +54,7 @@ namespace Plugin {
             Core::JSON::DecUInt32 Width;
             Core::JSON::DecUInt32 Height;
             Core::JSON::DecUInt8 AnimationFPS;
+            Core::JSON::String ClientIdentifier;
             Core::JSON::String EGLProvider;
         };
 
@@ -151,6 +154,13 @@ namespace Plugin {
                 Core::SystemInfo::SetEnvironment(_T("NODE_PATH"), service->DataPath());
                 Core::SystemInfo::SetEnvironment(_T("PXSCENE_PATH"), service->DataPath());
                 Core::SystemInfo::SetEnvironment(_T("RT_EGL_PROVIDER"), config.EGLProvider.Value());
+
+                if (config.ClientIdentifier.IsSet() == true) {
+                    string value(service->Callsign() + ',' + config.ClientIdentifier.Value());
+                    Core::SystemInfo::SetEnvironment(_T("CLIENT_IDENTIFIER"), value);
+                } else {
+                    Core::SystemInfo::SetEnvironment(_T("CLIENT_IDENTIFIER"), service->Callsign());
+                }
 
                 Init();
                 SetURL(_url);
