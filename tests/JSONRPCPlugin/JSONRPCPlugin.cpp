@@ -21,6 +21,7 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         , _job(Core::ProxyType<PeriodicSync>::Create(this))
         , _window()
         , _data()
+        , _array()
         , _rpcServer(nullptr)
     {
         // PluginHost::JSONRPC method to register a JSONRPC method invocation for the method "time".
@@ -47,6 +48,11 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         Register<Data::JSONDataBuffer, Core::JSON::DecUInt32>(_T("send"), &JSONRPCPlugin::send, this);
         Register<Core::JSON::DecUInt16, Data::JSONDataBuffer>(_T("receive"), &JSONRPCPlugin::receive, this);
         Register<Data::JSONDataBuffer, Data::JSONDataBuffer>(_T("exchange"), &JSONRPCPlugin::exchange, this);
+
+		// Add property wich is indexed..
+        Property<Core::JSON::DecUInt32>(_T("array"), &JSONRPCPlugin::get_array_value, &JSONRPCPlugin::set_array_value, this);
+        Property<Core::JSON::DecUInt32>(_T("lookup"), &JSONRPCPlugin::get_array_value, nullptr, this);
+        Property<Core::JSON::DecUInt32>(_T("store"), nullptr, &JSONRPCPlugin::set_array_value, this);
 
         // Methods for a "legaccy" version of the interfaces, the last parameter makes sure that all handlers are copied from the 
 		// base interface to this "legacy" one...

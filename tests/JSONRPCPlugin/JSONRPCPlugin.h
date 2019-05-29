@@ -234,7 +234,19 @@ namespace Plugin {
             _data = data.Value();
             return (Core::ERROR_NONE);
         }
-		uint32_t get_status(Core::JSON::String& data) const
+        uint32_t get_array_value(const string& id, Core::JSON::DecUInt32& data) const
+        {
+            uint8_t index = Core::NumberType<uint8_t>(id.c_str(), static_cast<uint32_t>(id.length())).Value();
+            data = _array[index];
+            return (Core::ERROR_NONE);
+        }
+        uint32_t set_array_value(const string& id, const Core::JSON::DecUInt32& data)
+        {
+            uint8_t index = Core::NumberType<uint8_t>(id.c_str(), static_cast<uint32_t>(id.length()));
+            _array[index] = data.Value();
+            return (Core::ERROR_NONE);
+        }
+        uint32_t get_status(Core::JSON::String& data) const
 		{
 			data.SetQuoted(true);
 			data = "Readonly value retrieved";
@@ -375,6 +387,7 @@ namespace Plugin {
         Core::ProxyType<PeriodicSync> _job;
         Data::Window _window;
         string _data;
+        std::vector<uint32_t> _array;
         COMServer* _rpcServer;
     };
 
