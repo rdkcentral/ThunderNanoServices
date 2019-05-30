@@ -217,9 +217,10 @@ namespace Plugin {
         // JSON RPC
         void RegisterAll();
         void UnregisterAll();
-        uint32_t endpoint_time(JsonData::TimeSync::TimeResultData& response);
         uint32_t endpoint_synchronize();
-        uint32_t endpoint_set(const JsonData::TimeSync::SetParamsData& params);
+        uint32_t get_synctime(JsonData::TimeSync::SynctimeParamsData& response) const;
+        uint32_t get_time(Core::JSON::String& response) const;
+        uint32_t set_time(const Core::JSON::String& param);
 
     private:
         uint16_t _skipURL;
