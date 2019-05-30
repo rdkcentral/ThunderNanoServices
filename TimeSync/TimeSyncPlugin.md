@@ -4,7 +4,7 @@
 
 **Version: 1.0**
 
-TimeSync functionality for WPEFramework.
+TimeSync plugin for WPEFramework.
 
 ### Table of Contents
 
@@ -12,6 +12,7 @@ TimeSync functionality for WPEFramework.
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
+- [Properties](#head.Properties)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -19,7 +20,7 @@ TimeSync functionality for WPEFramework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the TimeSync plugin. It includes detailed specification of its configuration and methods provided.
+This document describes purpose and functionality of the TimeSync plugin. It includes detailed specification of its configuration, methods and properties provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -82,61 +83,16 @@ The table below lists configuration options of the plugin.
 <a name="head.Methods"></a>
 # Methods
 
-The following API is provided by the plugin via JSON-RPC:
+The following methods are provided by the TimeSync plugin:
 
-- [time](#method.time)
-- [synchronize](#method.synchronize)
-- [set](#method.set)
+TimeSync interface methods:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
+| Method | Description |
+| :-------- | :-------- |
+| [synchronize](#method.synchronize) | Synchronizes time |
 
-
-<a name="method.time"></a>
-## *time*
-
-Returns the synchronized time
-
-### Description
-
-Use this method to retrieve the last synchronized time.
-
-### Parameters
-
-This method takes no parameters.
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result.time | string | Synchronized time (in ISO8601 format); empty string if the time has never been synchronized |
-| result?.source | string | <sup>*(optional)*</sup> The synchronization source e.g. an NTP server |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "TimeSync.1.time"
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": {
-        "time": "2019-05-07T07:20:26Z", 
-        "source": "ntp://example.com"
-    }
-}
-```
 <a name="method.synchronize"></a>
-## *synchronize*
+## *synchronize <sup>method</sup>*
 
 Synchronizes time
 
@@ -158,7 +114,7 @@ This method takes no parameters.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 12 | ```ERROR_INPROGRESS``` | Operation in progress |
+| 12 | ```ERROR_INPROGRESS``` | Returned when the method is called while previously triggered synchronization is in progress. |
 | 23 | ```ERROR_INCOMPLETE_CONFIG``` | Returned when the source configuration is missing or invalid. |
 
 ### Example
@@ -181,54 +137,113 @@ This method takes no parameters.
     "result": null
 }
 ```
-<a name="method.set"></a>
-## *set*
+<a name="head.Properties"></a>
+# Properties
 
-Sets the current time from an external source
+The following properties are provided by the TimeSync plugin:
+
+TimeSync interface properties:
+
+| Property | Description |
+| :-------- | :-------- |
+| [synctime](#property.synctime) <sup>RO</sup> | Most recent synchronized time |
+| [time](#property.time) | Current system time |
+
+<a name="property.synctime"></a>
+## *synctime <sup>property</sup>*
+
+Provides access to the most recent synchronized time.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Most recent synchronized time |
+| (property).time | string | Synchronized time (in ISO8601 format); empty string if the time has never been synchronized |
+| (property)?.source | string | <sup>*(optional)*</sup> The synchronization source e.g. an NTP server |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "TimeSync.1.synctime"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": {
+        "time": "2019-05-07T07:20:26Z", 
+        "source": "ntp://example.com"
+    }
+}
+```
+<a name="property.time"></a>
+## *time <sup>property</sup>*
+
+Provides access to the current system time.
 
 ### Description
 
-Use this method to set the current system time to an arbitrary value. Automatic synchronization will be stopped. If not already active, the framework's *time* subsystem will also become activated after this call.
+Upon setting this property automatic time synchronization will be stopped. If not already active, the framework's *time* subsystem will become activated. If the property is set empty then the *time* subsystem will still become activated but without setting the time (thereby notifying the framework that the time has been set externally).
 
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params?.time | string | <sup>*(optional)*</sup> New system time (in ISO8601 format); if this parameter is omitted then the *time* subsystem will still become activated but without setting the time (thereby notifying the framework that the time has been set externally); also automatic synchronization will be stopped |
-
-### Result
+### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | null | Always null |
+| (property) | string | System time (in ISO8601 format) |
 
 ### Errors
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 30 | ```ERROR_BAD_REQUEST``` | Returned when the requested time was invalid |
+| 30 | ```ERROR_BAD_REQUEST``` | The time is invalid |
 
 ### Example
 
-#### Request
+#### Get Request
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "TimeSync.1.set", 
-    "params": {
-        "time": "2019-05-07T07:20:26Z"
-    }
+    "method": "TimeSync.1.time"
 }
 ```
-#### Response
+#### Get Response
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "result": null
+    "result": "2019-05-07T07:20:26Z"
+}
+```
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "TimeSync.1.time", 
+    "params": "2019-05-07T07:20:26Z"
+}
+```
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "null"
 }
 ```

@@ -38,10 +38,11 @@
         }
       }
     },
-    "required": [ "sources" ]
+    "required": [
+      "sources"
+    ]
   },
-  "methods": {
-    "$ref": "TimeSyncAPI.json#/methods"
+  "interface": {
+    "$ref": "TimeSyncAPI.json#"
   }
 }
-
