@@ -116,7 +116,7 @@ namespace Plugin {
         return result;
     }
 
-    void DeviceInfo::SysInfo(Data::SysInfo& systemInfo)
+    void DeviceInfo::SysInfo(JsonData::DeviceInfo::SysteminfoParamsData& systemInfo) const
     {
         Core::SystemInfo& singleton(Core::SystemInfo::Instance());
 
@@ -124,32 +124,32 @@ namespace Plugin {
             _deviceId = GetDeviceId();
         }
         if (_deviceId.empty() == false) {
-            systemInfo.DeviceId = _deviceId;
+            systemInfo.Deviceid = _deviceId;
         }
 
         systemInfo.Time = Core::Time::Now().ToRFC1123(true);
         systemInfo.Version = _service->Version() + _T("#") + _subSystem->BuildTreeHash();
         systemInfo.Uptime = singleton.GetUpTime();
-        systemInfo.FreeRam = singleton.GetFreeRam();
-        systemInfo.TotalRam = singleton.GetTotalRam();
-        systemInfo.Hostname = singleton.GetHostName();
-        systemInfo.CpuLoad = Core::NumberType<uint32_t>(static_cast<uint32_t>(singleton.GetCpuLoad())).Text();
-        systemInfo.TotalGpuRam = singleton.GetTotalGpuRam();
-        systemInfo.FreeGpuRam = singleton.GetFreeGpuRam();
-        systemInfo.SerialNumber = _systemId;
+        systemInfo.Freeram = singleton.GetFreeRam();
+        systemInfo.Totalram = singleton.GetTotalRam();
+        systemInfo.Devicename = singleton.GetHostName();
+        systemInfo.Cpuload = Core::NumberType<uint32_t>(static_cast<uint32_t>(singleton.GetCpuLoad())).Text();
+        systemInfo.Totalgpuram = singleton.GetTotalGpuRam();
+        systemInfo.Freegpuram = singleton.GetFreeGpuRam();
+        systemInfo.Serialnumber = _systemId;
     }
 
-    void DeviceInfo::AddressInfo(Core::JSON::ArrayType<Data::AddressInfo>& addressInfo)
+    void DeviceInfo::AddressInfo(Core::JSON::ArrayType<JsonData::DeviceInfo::AddressesParamsData>& addressInfo) const
     {
         // Get the point of entry on WPEFramework..
         Core::AdapterIterator interfaces;
 
         while (interfaces.Next() == true) {
 
-            Data::AddressInfo newElement;
+            JsonData::DeviceInfo::AddressesParamsData newElement;
             newElement.Name = interfaces.Name();
-            newElement.MACAddress = interfaces.MACAddress(':');
-            Data::AddressInfo& element(addressInfo.Add(newElement));
+            newElement.Mac = interfaces.MACAddress(':');
+            JsonData::DeviceInfo::AddressesParamsData& element(addressInfo.Add(newElement));
 
             // get an interface with a public IP address, then we will have a proper MAC address..
             Core::IPV4AddressIterator selectedNode(interfaces.Index());
@@ -158,12 +158,12 @@ namespace Plugin {
                 Core::JSON::String nodeName;
                 nodeName = selectedNode.Address().HostAddress();
 
-                element.IPAddress.Add(nodeName);
+                element.Ip.Add(nodeName);
             }
         }
     }
 
-    void DeviceInfo::SocketPortInfo(Data::SocketPortInfo& socketPortInfo)
+    void DeviceInfo::SocketPortInfo(JsonData::DeviceInfo::SocketinfoParamsData& socketPortInfo) const
     {
         socketPortInfo.Runs = Core::ResourceMonitor::Instance().Runs();
     }

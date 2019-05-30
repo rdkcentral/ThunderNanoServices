@@ -1,6 +1,7 @@
 #ifndef DEVICEINFO_DEVICEINFO_H
 #define DEVICEINFO_DEVICEINFO_H
 
+#include <interfaces/json/JsonData_DeviceInfo.h>
 #include "Module.h"
 
 namespace WPEFramework {
@@ -9,159 +10,6 @@ namespace Plugin {
     class DeviceInfo : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     public:
         class Data : public Core::JSON::Container {
-        public:
-            class SocketPortInfo : public Core::JSON::Container {
-            private:
-                SocketPortInfo(const SocketPortInfo&) = delete;
-                SocketPortInfo& operator=(const SocketPortInfo&) = delete;
-
-            public:
-                SocketPortInfo()
-                    : Core::JSON::Container()
-                    , Total(0)
-                    , Open(0)
-                    , Link(0)
-                    , Exception(0)
-                    , Shutdown(0)
-                    , Runs(0)
-                {
-                    Add(_T("total"), &Total);
-                    Add(_T("link"), &Link);
-                    Add(_T("open"), &Open);
-                    Add(_T("exception"), &Exception);
-                    Add(_T("shutdown"), &Shutdown);
-                    Add(_T("runs"), &Runs);
-                }
-                ~SocketPortInfo()
-                {
-                }
-
-            public:
-                Core::JSON::DecUInt32 Total;
-                Core::JSON::DecUInt32 Open;
-                Core::JSON::DecUInt32 Link;
-                Core::JSON::DecUInt32 Exception;
-                Core::JSON::DecUInt32 Shutdown;
-                Core::JSON::DecUInt32 Runs;
-            };
-            class SysInfo : public Core::JSON::Container {
-            private:
-                SysInfo(const SysInfo&) = delete;
-                SysInfo& operator=(const SysInfo&) = delete;
-
-            public:
-                SysInfo()
-                    : Time("No information")
-                    , Version("0.0")
-                    , Uptime(0)
-                    , TotalRam(0)
-                    , FreeRam(0)
-                    , Hostname("No information")
-                    , CpuLoad("No information")
-                    , TotalGpuRam(0)
-                    , FreeGpuRam(0)
-                    , SerialNumber("No information")
-                    , DeviceId("No information")
-                {
-                    Add(_T("version"), &Version);
-                    Add(_T("uptime"), &Uptime);
-                    Add(_T("totalram"), &TotalRam);
-                    Add(_T("freeram"), &FreeRam);
-                    Add(_T("devicename"), &Hostname);
-                    Add(_T("cpuload"), &CpuLoad);
-                    Add(_T("totalgpuram"), &TotalGpuRam);
-                    Add(_T("freegpuram"), &FreeGpuRam);
-                    Add(_T("serialnumber"), &SerialNumber);
-                    Add(_T("deviceid"), &DeviceId);
-                    Add(_T("time"), &Time);
-                }
-
-                ~SysInfo()
-                {
-                }
-
-                void Update(void);
-
-            public:
-                Core::JSON::String Time;
-                Core::JSON::String Version;
-                Core::JSON::DecUInt32 Uptime;
-                Core::JSON::DecUInt64 TotalRam;
-                Core::JSON::DecUInt64 FreeRam;
-                Core::JSON::String Hostname;
-                Core::JSON::String CpuLoad;
-                Core::JSON::DecUInt64 TotalGpuRam;
-                Core::JSON::DecUInt64 FreeGpuRam;
-                Core::JSON::String SerialNumber;
-                Core::JSON::String DeviceId;
-            };
-            class AddressInfo : public Core::JSON::Container {
-            public:
-                AddressInfo()
-                    : Core::JSON::Container()
-                    , Name()
-                    , MACAddress()
-                    , IPAddress()
-                {
-                    Add(_T("name"), &Name);
-                    Add(_T("mac"), &MACAddress);
-                    Add(_T("ip"), &IPAddress);
-                }
-                AddressInfo(const string& name, const string& mac)
-                    : Core::JSON::Container()
-                    , Name(name)
-                    , MACAddress(mac)
-                    , IPAddress()
-                {
-                    Add(_T("name"), &Name);
-                    Add(_T("mac"), &MACAddress);
-                    Add(_T("ip"), &IPAddress);
-                }
-                AddressInfo(const AddressInfo& copy)
-                    : Core::JSON::Container()
-                    , Name(copy.Name)
-                    , MACAddress(copy.MACAddress)
-                    , IPAddress()
-                {
-
-                    Add(_T("name"), &Name);
-                    Add(_T("mac"), &MACAddress);
-                    Add(_T("ip"), &IPAddress);
-
-                    auto index(copy.IPAddress.Elements());
-
-                    while (index.Next() == true) {
-                        IPAddress.Add(index.Current());
-                    }
-                }
-                AddressInfo& operator=(const AddressInfo& RHS)
-                {
-                    auto index(RHS.IPAddress.Elements());
-
-                    Name = RHS.Name;
-                    MACAddress = RHS.MACAddress;
-
-                    while (index.Next() == true) {
-                        IPAddress.Add(index.Current());
-                    }
-
-                    return *this;
-                }
-
-                virtual ~AddressInfo()
-                {
-                }
-
-            public:
-                Core::JSON::String Name;
-                Core::JSON::String MACAddress;
-                Core::JSON::ArrayType<Core::JSON::String> IPAddress;
-            };
-
-        private:
-            Data(const Data&) = delete;
-            Data& operator=(const Data&) = delete;
-
         public:
             Data()
                 : Core::JSON::Container()
@@ -178,26 +26,26 @@ namespace Plugin {
             }
 
         public:
-            Core::JSON::ArrayType<AddressInfo> Addresses;
-            SysInfo SystemInfo;
-            SocketPortInfo Sockets;
+            Core::JSON::ArrayType<JsonData::DeviceInfo::AddressesParamsData> Addresses;
+            JsonData::DeviceInfo::SysteminfoParamsData SystemInfo;
+            JsonData::DeviceInfo::SocketinfoParamsData Sockets;
         };
 
     private:
         DeviceInfo(const DeviceInfo&) = delete;
         DeviceInfo& operator=(const DeviceInfo&) = delete;
 
-        uint32_t addresses(const Core::JSON::String& parameters, Core::JSON::ArrayType<Data::AddressInfo>& response)
+        uint32_t addresses(const Core::JSON::String& parameters, Core::JSON::ArrayType<JsonData::DeviceInfo::AddressesParamsData>& response)
         {
             AddressInfo(response);
             return (Core::ERROR_NONE);
         }
-        uint32_t system(const Core::JSON::String& parameters, Data::SysInfo& response)
+        uint32_t system(const Core::JSON::String& parameters, JsonData::DeviceInfo::SysteminfoParamsData& response)
         {
             SysInfo(response);
             return (Core::ERROR_NONE);
         }
-        uint32_t sockets(const Core::JSON::String& parameters, Data::SocketPortInfo& response)
+        uint32_t sockets(const Core::JSON::String& parameters, JsonData::DeviceInfo::SocketinfoParamsData& response)
         {
             SocketPortInfo(response);
             return (Core::ERROR_NONE);
@@ -212,13 +60,12 @@ namespace Plugin {
             , _systemId()
             , _deviceId()
         {
-            Register<Core::JSON::String, Core::JSON::ArrayType<Data::AddressInfo>>(_T("addresses"), &DeviceInfo::addresses, this);
-            Register<Core::JSON::String, Data::SysInfo>(_T("system"), &DeviceInfo::system, this);
-            Register<Core::JSON::String, Data::SocketPortInfo>(_T("sockets"), &DeviceInfo::sockets, this);
+            RegisterAll();
         }
 
         virtual ~DeviceInfo()
         {
+            UnregisterAll();
         }
 
         BEGIN_INTERFACE_MAP(DeviceInfo)
@@ -240,9 +87,16 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
-        void SysInfo(Data::SysInfo& systemInfo);
-        void AddressInfo(Core::JSON::ArrayType<Data::AddressInfo>& addressInfo);
-        void SocketPortInfo(Data::SocketPortInfo& socketPortInfo);
+        // JsonRpc
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t get_systeminfo(JsonData::DeviceInfo::SysteminfoParamsData& response) const;
+        uint32_t get_addresses(Core::JSON::ArrayType<JsonData::DeviceInfo::AddressesParamsData>& response) const;
+        uint32_t get_socketinfo(JsonData::DeviceInfo::SocketinfoParamsData& response) const;
+
+        void SysInfo(JsonData::DeviceInfo::SysteminfoParamsData& systemInfo) const;
+        void AddressInfo(Core::JSON::ArrayType<JsonData::DeviceInfo::AddressesParamsData>& addressInfo) const;
+        void SocketPortInfo(JsonData::DeviceInfo::SocketinfoParamsData& socketPortInfo) const;
         string GetDeviceId() const;
 
         class IdentityProvider : public PluginHost::ISubSystem::IIdentifier {
@@ -270,7 +124,7 @@ namespace Plugin {
                 }
 
                 return (result);
-            }         
+            }
         private:
             uint8_t* _identifier;
         };
@@ -281,7 +135,7 @@ namespace Plugin {
         PluginHost::ISubSystem* _subSystem;
         IdentityProvider* _idProvider;
         string _systemId;
-        string _deviceId;
+        mutable string _deviceId;
     };
 
 } // namespace Plugin

@@ -4,14 +4,14 @@
 
 **Version: 1.0**
 
-DeviceInfo functionality for WPEFramework.
+DeviceInfo plugin for WPEFramework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
-- [Methods](#head.Methods)
+- [Properties](#head.Properties)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -19,7 +19,7 @@ DeviceInfo functionality for WPEFramework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the DeviceInfo plugin. It includes detailed specification of its configuration and methods provided.
+This document describes purpose and functionality of the DeviceInfo plugin. It includes detailed specification of its configuration and properties provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -73,104 +73,55 @@ The table below lists configuration options of the plugin.
 | locator | string | Library name: *libWPEFrameworkDeviceInfo.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
 
-<a name="head.Methods"></a>
-# Methods
+<a name="head.Properties"></a>
+# Properties
 
-The following API is provided by the plugin via JSON-RPC:
+The following properties are provided by the DeviceInfo plugin:
 
-- [addresses](#method.addresses)
-- [system](#method.system)
-- [sockets](#method.sockets)
+DeviceInfo interface properties:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
+| Property | Description |
+| :-------- | :-------- |
+| [systeminfo](#property.systeminfo) <sup>RO</sup> | System general information |
+| [addresses](#property.addresses) <sup>RO</sup> | Network interface addresses |
+| [socketinfo](#property.socketinfo) <sup>RO</sup> | Socket information |
 
+<a name="property.systeminfo"></a>
+## *systeminfo <sup>property</sup>*
 
-<a name="method.addresses"></a>
-## *addresses*
+Provides access to the system general information.
 
-Retrieves network interface addresses.
+> This property is **read-only**.
 
-### Parameters
-
-This method takes no parameters.
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array |  |
-| result[#] | object |  |
-| result[#].name | string | Interface name |
-| result[#].mac | string | Interface MAC address |
-| result[#]?.ips | array | <sup>*(optional)*</sup>  |
-| result[#]?.ips[#] | string | <sup>*(optional)*</sup> Interface IP address |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "DeviceInfo.1.addresses"
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": [
-        {
-            "name": "lo", 
-            "mac": "00:00:00:00:00", 
-            "ips": [
-                "127.0.0.1"
-            ]
-        }
-    ]
-}
-```
-<a name="method.system"></a>
-## *system*
-
-Retrieves system general information.
-
-### Parameters
-
-This method takes no parameters.
-
-### Result
+### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | object |  |
-| result.version | string | Software version (in form "version#hashtag") |
-| result.uptime | number | System uptime (in seconds) |
-| result.totalram | number | Total installed system RAM memory (in bytes) |
-| result.freeram | number | Free system RAM memory (in bytes) |
-| result.devicename | string | Host name |
-| result.cpuload | number | Current CPU load (percentage) |
-| result.togalgpuram | number | Total GPU DRAM memory (in bytes) |
-| result.freegpuram | number | Free GPU DRAM memory (in bytes) |
-| result.serialnumber | string | Device serial number |
-| result.deviceid | string | Device ID |
-| result.time | string | Current system date and time |
+| (property) | object | System general information |
+| (property).version | string | Software version (in form "version#hashtag") |
+| (property).uptime | number | System uptime (in seconds) |
+| (property).totalram | number | Total installed system RAM memory (in bytes) |
+| (property).freeram | number | Free system RAM memory (in bytes) |
+| (property).devicename | string | Host name |
+| (property).cpuload | string | Current CPU load (percentage) |
+| (property)?.totalgpuram | number | <sup>*(optional)*</sup> Total GPU DRAM memory (in bytes) |
+| (property).freegpuram | number | Free GPU DRAM memory (in bytes) |
+| (property).serialnumber | string | Device serial number |
+| (property).deviceid | string | Device ID |
+| (property).time | string | Current system date and time |
 
 ### Example
 
-#### Request
+#### Get Request
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "DeviceInfo.1.system"
+    "method": "DeviceInfo.1.systeminfo"
 }
 ```
-#### Response
+#### Get Response
 
 ```json
 {
@@ -182,8 +133,8 @@ This method takes no parameters.
         "totalram": 655757312, 
         "freeram": 563015680, 
         "devicename": "buildroot", 
-        "cpuload": 2, 
-        "togalgpuram": 381681664, 
+        "cpuload": "2", 
+        "totalgpuram": 381681664, 
         "freegpuram": 358612992, 
         "serialnumber": "WPEuCfrLF45", 
         "deviceid": "WPEuCfrLF45", 
@@ -191,40 +142,94 @@ This method takes no parameters.
     }
 }
 ```
-<a name="method.sockets"></a>
-## *sockets*
+<a name="property.addresses"></a>
+## *addresses <sup>property</sup>*
 
-Retrieves socket port information.
+Provides access to the network interface addresses.
 
-### Parameters
+> This property is **read-only**.
 
-This method takes no parameters.
-
-### Result
+### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | object |  |
-| result.runs | number | Number of runs |
+| (property) | array | Network interface addresses |
+| (property)[#] | object |  |
+| (property)[#].name | string | Interface name |
+| (property)[#].mac | string | Interface MAC address |
+| (property)[#]?.ip | array | <sup>*(optional)*</sup>  |
+| (property)[#]?.ip[#] | string | <sup>*(optional)*</sup> Interface IP address |
 
 ### Example
 
-#### Request
+#### Get Request
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "DeviceInfo.1.sockets"
+    "method": "DeviceInfo.1.addresses"
 }
 ```
-#### Response
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": [
+        {
+            "name": "lo", 
+            "mac": "00:00:00:00:00", 
+            "ip": [
+                "127.0.0.1"
+            ]
+        }
+    ]
+}
+```
+<a name="property.socketinfo"></a>
+## *socketinfo <sup>property</sup>*
+
+Provides access to the socket information.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Socket information |
+| (property)?.total | number | <sup>*(optional)*</sup>  |
+| (property)?.open | number | <sup>*(optional)*</sup>  |
+| (property)?.link | number | <sup>*(optional)*</sup>  |
+| (property)?.exception | number | <sup>*(optional)*</sup>  |
+| (property)?.shutdown | number | <sup>*(optional)*</sup>  |
+| (property).runs | number | Number of runs |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "DeviceInfo.1.socketinfo"
+}
+```
+#### Get Response
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": {
+        "total": 0, 
+        "open": 0, 
+        "link": 0, 
+        "exception": 0, 
+        "shutdown": 0, 
         "runs": 1
     }
 }

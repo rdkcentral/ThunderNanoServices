@@ -7,6 +7,7 @@ find_package(${NAMESPACE}Plugins REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     DeviceInfo.cpp
+    DeviceInfoJsonRpc.cpp
     Module.cpp)
 
 if(PROVIDE_NEXUS_OTP_ID)
