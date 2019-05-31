@@ -1,5 +1,4 @@
 #include "BlueDriver.h"
-#include "Module.h"
 
 namespace WPEFramework {
 

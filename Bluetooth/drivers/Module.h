@@ -1,7 +1,11 @@
 #ifndef __MODULE_PLUGIN_BLUETOOTH_DRIVERS_H
 #define __MODULE_PLUGIN_BLUETOOTH_DRIVERS_H
 
-#include <core/core.h>
+#ifndef MODULE_NAME
+#define MODULE_NAME Plugin_Bluetooth
+#endif
+
+#include <tracing/tracing.h>
 
 #undef EXTERNAL
 #define EXTERNAL

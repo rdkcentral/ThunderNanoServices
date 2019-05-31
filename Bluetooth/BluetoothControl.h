@@ -2,7 +2,6 @@
 
 #include "BlueDriver.h"
 #include "Bluetooth.h"
-#include "Module.h"
 
 #include <functional>
 #include <interfaces/IBluetooth.h>
@@ -429,7 +428,7 @@ namespace Plugin {
                         break;
                     }
                     case METADATA_ID: {
-                        printf("Checking for METADATA_ID, length: %d\n", length);
+                        TRACE(Trace::Information, (_T("Checking for METADATA_ID, length: %d"), length));
                         _state = METADATA_NAME_HANDLE;
                         _metadata._vendorId = (data[0] << 8) | data[1];
                         _metadata._productId = (data[2] << 8) | data[3];
@@ -448,7 +447,7 @@ namespace Plugin {
                         break;
                     }
                     case METADATA_NAME: {
-                        printf("Checking for METADATA_NAME\n");
+                        TRACE(Trace::Information, (_T("Checking for METADATA_NAME")));
                         _state = METADATA_DESCRIPTORS_HANDLE;
                         _metadata._name = string(reinterpret_cast<const char*>(data), length);
                         ReadByType(10000, 0x0001, 0xFFFF, GATTSocket::UUID(REPORT_MAP_UUID), &_sink);
@@ -465,7 +464,7 @@ namespace Plugin {
                         break;
                     }
                     case METADATA_DESCRIPTORS: {
-                        printf("Checking for METADATA_DESCRIPTORS\n");
+                        TRACE(Trace::Information, (_T("Checking for METADATA_DESCRIPTORS")));
                         _state = METADATA_ENABLE;
                         uint16_t copyLength = std::min(length, static_cast<uint16_t>(sizeof(_metadata._blob)));
                         ::memcpy(_metadata._blob, data, copyLength);
@@ -774,6 +773,7 @@ namespace Plugin {
         public:
             virtual uint32_t Pair() override
             {
+                _state.SetState(PAIRED);
                 uint8_t type((_state & LOWENERGY) != 0 ? Bluetooth::Address::LE_PUBLIC_ADDRESS : Bluetooth::Address::BREDR_ADDRESS);
 
                 return (_administrator->Pair(_address, type, Bluetooth::HCISocket::capabilities::NO_INPUT_NO_OUTPUT));
@@ -864,7 +864,6 @@ namespace Plugin {
                     _application->Send(waitTime, static_cast<Core::IOutbound&>(message), callback, &message);
                     result = Core::ERROR_NONE;
                 } else if ((_state & ACTION_MASK) == value) {
-
                     _state.SetState(static_cast<state>(_state.GetState() & (~value)));
                 }
 
@@ -970,11 +969,9 @@ namespace Plugin {
             }
             virtual uint32_t Disconnect(const uint16_t reason) override
             {
-
                 uint32_t result = Core::ERROR_INPROGRESS;
 
                 if (SetState(DISCONNECTING) == Core::ERROR_NONE) {
-
                     _disconnect->handle = htobs(_handle);
                     _disconnect->reason = (reason & 0xFF);
                     result = Send(MAX_ACTION_TIMEOUT, this, DISCONNECTING, _disconnect);
@@ -1004,21 +1001,23 @@ namespace Plugin {
                     }
 
                     SetName(std::string(longName, index));
-                    printf("Loaded Long Device Name: %s\n", longName);
+                    TRACE(Trace::Information, (_T("Loaded Long Device Name: %s"),longName));
                     ClearState(METADATA);
                 } else if (data.Id() == Bluetooth::HCISocket::Command::Connect::ID) {
+                    TRACE(Trace::Information, (_T("Connected")));
                     // looks like we are connected..
                     _handle = _connect.Response().handle;
-                    printf("Connected using handle: %d\n", _handle);
                     ClearState(CONNECTING);
                 } else if (data.Id() == Bluetooth::HCISocket::Command::Disconnect::ID) {
                     if (error_code == Core::ERROR_NONE) {
-                        printf("Disconnected\n");
+                        TRACE(Trace::Information, (_T("Disconnected")));
+                        ClearState(DISCONNECTING);
                         _handle = ~0;
                     } else {
-                        printf("Disconnected Failed!\n");
+                        TRACE(Trace::Error, (_T("Disconnected Failed!")));
                     }
-                    ClearState(DISCONNECTING);
+                    // Seems no need to clear the state, since the Disconnected Failed.
+                    //ClearState(DISCONNECTING);
                 }
             }
 
@@ -1056,7 +1055,6 @@ namespace Plugin {
         private:
             virtual uint32_t Connect() override
             {
-
                 uint32_t result = Core::ERROR_INPROGRESS;
 
                 if (SetState(CONNECTING) == Core::ERROR_NONE) {
@@ -1081,12 +1079,11 @@ namespace Plugin {
             }
             virtual uint32_t Disconnect(const uint16_t reason) override
             {
-
                 uint32_t result = Core::ERROR_INPROGRESS;
 
                 if (SetState(DISCONNECTING) == Core::ERROR_NONE) {
 
-                    // _disconnect->handle = htobs(_handle);
+                    _disconnect->handle = htobs(_handle);
                     _disconnect->reason = reason & 0xFF;
                     result = Send(MAX_ACTION_TIMEOUT, this, DISCONNECTING, _disconnect);
                 }
@@ -1104,7 +1101,7 @@ namespace Plugin {
                     // const le_advertising_info* advertisingInfo = reinterpret_cast<const le_advertising_info*>(dataFrame);
                     // uint16_t len = advertisingInfo->length;
                     // const uint8_t* buffer = advertisingInfo->data;
-                    printf("++EVT_LE_ADVERTISING_REPORT: What to do?\n");
+                    TRACE(Trace::Error, (_T("++EVT_LE_ADVERTISING_REPORT: What to do?")));
                 }
             }
             virtual void Updated(const Core::IOutbound& data, const uint32_t error_code) override
@@ -1112,16 +1109,19 @@ namespace Plugin {
                 if (data.Id() == Bluetooth::HCISocket::Command::ConnectLE::ID) {
                     if ((error_code == Core::ERROR_NONE) && (_connect.Response().status == 0)) {
                         _handle = _connect.Response().handle;
-                        printf("Connected using handle: %d\n", _handle);
+                        ClearState(CONNECTING);
+                        TRACE(Trace::Information, (_T("Connected using handle: %d"),_handle));
+                    } else {
+                        TRACE(Trace::Error, (_T("Connec Failed!")));
                     }
-                    ClearState(CONNECTING);
                 } else if (data.Id() == Bluetooth::HCISocket::Command::Disconnect::ID) {
                     if (error_code == Core::ERROR_NONE) {
-                        printf("Disconnected\n");
+                        TRACE(Trace::Information, (_T("Disconnected")));
+                        _handle = ~0;
+                        ClearState(DISCONNECTING);
                     } else {
-                        printf("Disconnected Failed!\n");
+                        TRACE(Trace::Error, (_T("Disconnected Failed!")));
                     }
-                    ClearState(DISCONNECTING);
                 }
             }
 

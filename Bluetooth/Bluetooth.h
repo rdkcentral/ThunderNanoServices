@@ -729,9 +729,9 @@ namespace Bluetooth {
                                 _error = cs->status;
                             }
                             result = length;
-                            printf(">>EVT_CMD_STATUS: %X-%03X expected: %d\n", (cs->opcode >> 10) & 0xF, (cs->opcode & 0x3FF), cs->status);
+                            TRACE(Trace::Information, (_T(">>EVT_CMD_STATUS: %X-%03X expected: %d"), (cs->opcode >> 10) & 0xF, (cs->opcode & 0x3FF), cs->status ));
                         } else {
-                            printf(">>EVT_CMD_STATUS: %X-%03X unexpected: %d\n", (cs->opcode >> 10) & 0xF, (cs->opcode & 0x3FF), cs->status);
+                            TRACE(Trace::Information, (_T(">>EVT_CMD_STATUS: %X-%03X unexpected: %d"), (cs->opcode >> 10) & 0xF, (cs->opcode & 0x3FF), cs->status));
                         }
                     } else if (hdr->evt == EVT_CMD_COMPLETE) {
                         const evt_cmd_complete* cc = reinterpret_cast<const evt_cmd_complete*>(ptr);
@@ -745,23 +745,23 @@ namespace Bluetooth {
                                 _error = Core::ERROR_NONE;
                             }
                             result = length;
-                            printf(">>EVT_CMD_COMPLETED: %X-%03X expected: %d\n", (cc->opcode >> 10) & 0xF, (cc->opcode & 0x3FF), _error);
+                            TRACE(Trace::Information, (_T(">>EVT_CMD_COMPLETED: %X-%03X expected: %d"), (cc->opcode >> 10) & 0xF, (cc->opcode & 0x3FF), _error));
                         } else {
-                            printf(">>EVT_CMD_COMPLETED: %X-%03X unexpected: %d\n", (cc->opcode >> 10) & 0xF, (cc->opcode & 0x3FF), _error);
+                            TRACE(Trace::Information, (_T(">>EVT_CMD_COMPLETED: %X-%03X unexpected: %d"), (cc->opcode >> 10) & 0xF, (cc->opcode & 0x3FF), _error));
                         }
                     } else if ((((CommandType<OPCODE, OUTBOUND>::ID >> 10) & 0x3F) == OGF_LE_CTL) && (hdr->evt == EVT_LE_META_EVENT)) {
                         const evt_le_meta_event* eventMetaData = reinterpret_cast<const evt_le_meta_event*>(ptr);
 
                         if (eventMetaData->subevent == RESPONSECODE) {
+                            TRACE(Trace::Information, (_T(">>EVT_COMPLETE: expected")));
 
-                            printf(">>EVT_COMPLETE: expected\n");
                             uint16_t toCopy = std::min(static_cast<uint16_t>(sizeof(INBOUND)), static_cast<uint16_t>(len - EVT_LE_META_EVENT_SIZE));
                             ::memcpy(reinterpret_cast<uint8_t*>(&_response), &(ptr[EVT_LE_META_EVENT_SIZE]), toCopy);
 
                             _error = Core::ERROR_NONE;
                             result = length;
                         } else {
-                            printf(">>EVT_COMPLETE: unexpected [%d]\n", eventMetaData->subevent);
+                            TRACE(Trace::Information, (_T(">>EVT_COMPLETE: unexpected [%d]"), eventMetaData->subevent));
                         }
                     }
                 }
@@ -1115,24 +1115,24 @@ namespace Bluetooth {
             switch (hdr->evt) {
             case EVT_CMD_STATUS: {
                 const evt_cmd_status* cs = reinterpret_cast<const evt_cmd_status*>(ptr);
-                printf("==EVT_CMD_STATUS: %X-%03X status: %d\n", (cs->opcode >> 10) & 0xF, (cs->opcode & 0x3FF), cs->status);
+                TRACE(Trace::Information, (_T("==EVT_CMD_STATUS: %X-%03X status: %d"), (((cs->opcode >> 10) & 0xF), (cs->opcode & 0x3FF), cs->status)));
                 break;
             }
             case EVT_CMD_COMPLETE: {
                 const evt_cmd_complete* cc = reinterpret_cast<const evt_cmd_complete*>(ptr);
                 ;
-                printf("==EVT_CMD_COMPLETE: %X-%03X\n", (cc->opcode >> 10) & 0xF, (cc->opcode & 0x3FF));
+                TRACE(Trace::Information, (_T("==EVT_CMD_COMPLETE: %X-%03X"), (((cc->opcode >> 10) & 0xF), (cc->opcode & 0x3FF))));
                 break;
             }
             case EVT_LE_META_EVENT: {
                 const evt_le_meta_event* eventMetaData = reinterpret_cast<const evt_le_meta_event*>(ptr);
 
                 if (eventMetaData->subevent == EVT_LE_CONN_COMPLETE) {
-                    printf("==EVT_LE_CONN_COMPLETE: unexpected\n");
+                    TRACE(Trace::Information, (_T("==EVT_LE_CONN_COMPLETE: unexpected")));
                 } else if (eventMetaData->subevent == EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE) {
-                    printf("==EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE: unexpected\n");
+                    TRACE(Trace::Information, (_T("==EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE: unexpected")));
                 } else if (eventMetaData->subevent == EVT_DISCONNECT_PHYSICAL_LINK_COMPLETE) {
-                    printf("==EVT_DISCONNECT_PHYSICAL_LINK_COMPLETE: unexpected\n");
+                    TRACE(Trace::Information, (_T("==EVT_DISCONNECT_PHYSICAL_LINK_COMPLETE: unexpected")));
                 } else if (eventMetaData->subevent == EVT_LE_ADVERTISING_REPORT) {
                     string shortName;
                     string longName;
@@ -1161,14 +1161,14 @@ namespace Bluetooth {
                         _state.Unlock();
                     }
                 } else {
-                    printf("==EVT_LE_META_EVENT: unexpected subevent: %d\n", eventMetaData->subevent);
+                    TRACE(Trace::Information, (_T("==EVT_LE_META_EVENT: unexpected subevent: %d"), eventMetaData->subevent));
                 }
                 break;
             }
             case 0:
                 break;
             default:
-                printf("==UNKNOWN: event %X\n", hdr->evt);
+                TRACE(Trace::Information, (_T("==UNKNOWN: event %X"), hdr->evt));
                 break;
             }
 
@@ -1787,16 +1787,16 @@ namespace Bluetooth {
 
                 // See if we need to retrigger..
                 if ((stream[0] != _id) && ((stream[0] != ATT_OP_ERROR) && (stream[1] == _id))) {
-                    printf("Unexpected L2CapSocket message. Expected: %d, got %d [%d]\n", _id, stream[0], stream[1]);
+                    TRACE(Trace::Error, (_T("Unexpected L2CapSocket message. Expected: %d, got %d [%d]"), _id, stream[0], stream[1]));
                 } else {
                     result = length;
 
-                    printf("L2CapSocket Receive [%d], Type: %02X\n", length, stream[0]);
+                    TRACE(Trace::Information, (_T("L2CapSocket Receive [%d], Type: %02X"), length, stream[0]));
 
                     // This is what we are expecting, so process it...
                     switch (stream[0]) {
                     case ATT_OP_ERROR: {
-                        printf("Houston we got an error... %d \n", stream[4]);
+                        TRACE(Trace::Error, (_T("Houston we got an error... %d"), stream[4]));
                         _error = stream[4];
                         break;
                     }
@@ -1807,7 +1807,7 @@ namespace Bluetooth {
                         break;
                     }
                     case ATT_OP_READ_BY_GROUP_RESP: {
-                        printf("L2CapSocket Read By Group Type\n");
+                        TRACE(Trace::Information, (_T("L2CapSocket Read By Group Type")));
                         _error = Core::ERROR_NONE;
                         break;
                     }
@@ -1852,7 +1852,7 @@ namespace Bluetooth {
                         break;
                     }
                     case ATT_OP_WRITE_RESP: {
-                        printf("We have written: %d\n", length);
+                        TRACE(Trace::Information, (_T("We have written: %d"),length));
                         _error = Core::ERROR_NONE;
                         break;
                     }
@@ -1870,10 +1870,10 @@ namespace Bluetooth {
                         } else {
                             _response.Extend(length - 1, &(stream[1]));
                         }
-                        printf("Received a blob of length %d, BufferSize %d\n", length, _bufferSize);
+                        TRACE(Trace::Information, (_T("Received a blob of length %d, BufferSize %d"),length, _bufferSize));
                         if (length == _bufferSize) {
                             _id = _frame.ReadBlob(_frame.Handle(), _response.Offset());
-                            printf("Now we need to see a send....\n");
+                            TRACE(Trace::Information, (_T("Now we need to see a send....")));
                         } else {
                             ASSERT(length < _bufferSize);
                             _error = Core::ERROR_NONE;
