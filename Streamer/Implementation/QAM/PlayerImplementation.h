@@ -119,6 +119,10 @@ namespace Player {
 
                 return result;
             }
+            const vector<int32_t>& Speeds() const
+            {
+                 return vector<int32_t>();
+            }
             inline uint32_t Speed(const int32_t request)
             {
                 uint32_t result = Core::ERROR_UNAVAILABLE;

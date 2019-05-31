@@ -5,14 +5,6 @@
 
 namespace WPEFramework {
 
-ENUM_CONVERSION_BEGIN(Exchange::IStream::state)
-
-    { Exchange::IStream::state::Paused, _TXT("Paused") },
-    { Exchange::IStream::state::Playing, _TXT("Playing") },
-    { Exchange::IStream::state::Idle, _TXT("Idle") },
-
-    ENUM_CONVERSION_END(Exchange::IStream::state);
-
 namespace Player {
 
     namespace Implementation {
@@ -56,6 +48,28 @@ namespace Player {
             GstElement* _playbin;
             GstElement* _videoSink;
         };
+
+        class Config : public Core::JSON::Container {
+        private:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+
+        public:
+            Config()
+                : Core::JSON::Container()
+                , Speeds()
+            {
+                Add(_T("speeds"), &Speeds);
+            }
+            ~Config()
+            {
+            }
+
+        public:
+            Core::JSON::ArrayType<Core::JSON::DecSInt32> Speeds;
+        };
+
+        string PlayerPlatform::_configuration = "";
 
         bool GstWrapper::SetRate(int newRate, int& currentRate, uint64_t absoluteTime, GstState state)
         {
@@ -164,6 +178,26 @@ namespace Player {
         {
             _gstWrapper = new GstWrapper();
 
+            Config config;
+            config.FromString(_configuration);
+
+            if ((config.Speeds.IsSet() == true) && (config.Speeds.Length() != 0)) {
+                Core::JSON::ArrayType<Core::JSON::DecSInt32>::Iterator index(config.Speeds.Elements());
+
+                while (index.Next() == true) {
+                    _speeds.push_back(index.Current().Value());
+                }
+            }
+            else {
+
+                int32_t speeds[] = { 100, 200, -200, 400, -400, 800, -800, 1600, -1600, 3200, -3200 };
+                _speeds.assign(std::begin(speeds), std::end(speeds));
+            }
+            _rectangle.X = 0;
+            _rectangle.Y = 0;
+            _rectangle.Width = 1080;
+            _rectangle.Height = 720;
+
             CreateMediaPipeline();
         }
 
@@ -171,6 +205,9 @@ namespace Player {
         {
             Terminate();
             _instances--;
+
+            _speeds.clear();
+
             if (_gstWrapper) {
                 delete _gstWrapper;
                 _gstWrapper = nullptr;
@@ -212,7 +249,7 @@ namespace Player {
                         Run();
                     } else {
                         result = Core::ERROR_INCORRECT_URL;
-                        _state = Exchange::IStream::state::Error;
+                        _state = Exchange::IStream::Error;
                         TRACE(Trace::Error, (_T("URI is not dash/hls")));
                     }
                 } else {
@@ -285,10 +322,10 @@ namespace Player {
                 g_object_set(playbin, "video-sink", vidsink, NULL);
 #endif
                 GetGstWrapper()->Playbin(playbin);
-                _state = Exchange::IStream::state::Prepared;
+                _state = Exchange::IStream::Prepared;
             } else {
                 TRACE(Trace::Error, (_T("Error in player creation")));
-                _state = Exchange::IStream::state::Error;
+                _state = Exchange::IStream::Error;
             }
             if (_callback != nullptr) {
                 _callback->StateChange(_state);
@@ -327,7 +364,6 @@ namespace Player {
             GstBus* bus = gst_element_get_bus(GetGstWrapper()->Playbin());
             gst_bus_add_watch(bus, (GstBusFunc)GstWrapper::HandleBusMessage, this);
 
-            _state = Exchange::IStream::state::Paused;
             if (_callback != nullptr) {
                 _callback->StateChange(_state);
             }
@@ -356,32 +392,34 @@ namespace Player {
             TRACE(Trace::Information, (_T("speed = %d"), speed));
             uint32_t result = Core::ERROR_NONE;
 
-            _speed = speed;
-
             GstState gstState;
             GstState pending;
 
             gst_element_get_state(GetGstWrapper()->Playbin(), &gstState, &pending, 0);
 
-            GstState newGstState;
-            Exchange::IStream::state newState;
-            if (speed != 0) {
-                int rate = 1;
-                if ((speed <= 4) && (speed >= -4)) { //limiting the rate to get a working version
-                    rate = speed;
-                    newGstState = gstState; //No state change is required
-                    newState = _state;
-                } else {
+            GstState newGstState = gstState;
+            Exchange::IStream::state newState = _state;
+
+            if (speed != 0 && (speed != _speed)) {
+                SpeedList::iterator index =  std::find(_speeds.begin(), _speeds.end(), speed);
+                if (index != _speeds.end()) {
+                    int rate = speed/100;
+
                     newGstState = GST_STATE_PLAYING;
-                    newState = Exchange::IStream::state::Playing;
-                }
-                if (GetGstWrapper()->SetRate(rate, _rate, _absoluteTime, gstState) != true) {
-                    newState = Exchange::IStream::state::Error;
+                    newState = Exchange::IStream::Playing;
+                    if (GetGstWrapper()->SetRate(rate, _rate, _absoluteTime, gstState) != true) {
+                        newState = Exchange::IStream::Error;
+                    }
+                } else {
+                    result = Core::ERROR_BAD_REQUEST;
                 }
             } else {
                 newGstState = GST_STATE_PAUSED;
-                newState = Exchange::IStream::state::Paused;
+                newState = Exchange::IStream::Paused;
             }
+
+            _speed = speed;
+
             if (newGstState != gstState) {
                 GstStateChangeReturn ret = gst_element_set_state(GetGstWrapper()->Playbin(), newGstState);
                 if (ret == GST_STATE_CHANGE_FAILURE) {
@@ -398,7 +436,8 @@ namespace Player {
                     _callback->StateChange(_state);
                 }
             }
-        }
-    }
+            return result;
+       }
+}
 }
 } //namespace WPEFramework::Player::Implementation

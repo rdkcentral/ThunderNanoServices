@@ -37,10 +37,22 @@ namespace Player {
             PlayerPlatform& operator=(const PlayerPlatform&) = delete;
 
         public:
+            typedef std::vector<int32_t> SpeedList;
+
+        public:
             PlayerPlatform(const Exchange::IStream::streamtype type, const uint8_t index, ICallback* callbacks);
             virtual ~PlayerPlatform();
 
         public:
+            static uint32_t Initialize(const string& configuration)
+            {
+                _configuration = configuration;
+                return (Core::ERROR_NONE);
+            }
+            static uint32_t Deinitialize()
+            {
+                return (Core::ERROR_NONE);
+            }
             inline string Metadata() const
             {
                 return string("{}");
@@ -58,6 +70,11 @@ namespace Player {
                 return (Exchange::IStream::state)_state;
             }
             uint32_t Load(const string& uri);
+
+            const SpeedList& Speeds() const
+            {
+                 return _speeds;
+            }
             uint32_t Speed(const int32_t speed);
             inline int32_t Speed() const
             {
@@ -89,7 +106,6 @@ namespace Player {
             }
             inline void DetachDecoder(const uint8_t index)
             {
-                Terminate(); //Calling Terminate since there is no decoder specified
             }
             void Terminate();
             GstWrapper* GetGstWrapper() const { return _gstWrapper; }
@@ -121,6 +137,7 @@ namespace Player {
             Exchange::IStream::drmtype _drmType;
             Exchange::IStream::streamtype _streamType;
 
+            SpeedList _speeds;
             int32_t _speed;
             int32_t _rate;
             uint64_t _absoluteTime;
@@ -132,6 +149,7 @@ namespace Player {
             GstWrapper* _gstWrapper;
             ICallback* _callback;
             static uint8_t _instances;
+            static string _configuration;
         };
     }
 }

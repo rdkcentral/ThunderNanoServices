@@ -170,6 +170,10 @@ namespace Player {
                 {
                     return (_index);
                 }
+                virtual RPC::IValueIterator* Speeds() const
+                {
+                    return (Core::Service<RPC::ValueIterator>::Create<RPC::IValueIterator>(_player->Speeds()));
+                }
                 virtual void Speed(const int32_t request) override
                 {
                     _parent.Lock();
