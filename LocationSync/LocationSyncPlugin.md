@@ -4,7 +4,7 @@
 
 **Version: 1.0**
 
-LocationSync functionality for WPEFramework.
+LocationSync plugin for WPEFramework.
 
 ### Table of Contents
 
@@ -12,6 +12,7 @@ LocationSync functionality for WPEFramework.
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
+- [Properties](#head.Properties)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -19,7 +20,7 @@ LocationSync functionality for WPEFramework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the LocationSync plugin. It includes detailed specification of its configuration and methods provided.
+This document describes purpose and functionality of the LocationSync plugin. It includes detailed specification of its configuration, methods and properties provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -76,64 +77,18 @@ The table below lists configuration options of the plugin.
 <a name="head.Methods"></a>
 # Methods
 
-The following API is provided by the plugin via JSON-RPC:
+The following methods are provided by the LocationSync plugin:
 
-- [location](#method.location)
-- [sync](#method.sync)
+LocationSync interface methods:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
+| Method | Description |
+| :-------- | :-------- |
+| [sync](#method.sync) | Runs sync command |
 
-
-<a name="method.location"></a>
-## *location*
-
-Retrieves location information.
-
-### Parameters
-
-This method takes no parameters.
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result.city | string | City name |
-| result.country | string | Country name |
-| result.region | string | Region name |
-| result.timezone | string | Time zone information |
-| result.publicip | string | Public IP |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "LocationSync.1.location"
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": {
-        "city": "Wroclaw", 
-        "country": "Poland", 
-        "region": "Wroclaw", 
-        "timezone": "CET-1CEST,M3.5.0,M10.5.0/3", 
-        "publicip": "78.11.117.118"
-    }
-}
-```
 <a name="method.sync"></a>
-## *sync*
+## *sync <sup>method</sup>*
 
-Runs sync command.
+Runs sync command
 
 ### Parameters
 
@@ -151,8 +106,8 @@ This method takes no parameters.
 | :-------- | :-------- | :-------- |
 | 1 | ```ERROR_GENERAL``` | General error |
 | 2 | ```ERROR_UNAVAILABLE``` | Unavailable locator |
-| 15 | ```ERROR_INCORRECT_URL``` | Incorrect URL given |
-| 12 | ```ERROR_INPROGRESS``` | Operation in progress |
+| 15 | ```ERROR_INCORRECT_URL``` | Incorrect URL |
+| 12 | ```ERROR_INPROGRESS``` | Probing in progress |
 
 ### Example
 
@@ -172,5 +127,60 @@ This method takes no parameters.
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": null
+}
+```
+<a name="head.Properties"></a>
+# Properties
+
+The following properties are provided by the LocationSync plugin:
+
+LocationSync interface properties:
+
+| Property | Description |
+| :-------- | :-------- |
+| [location](#property.location) <sup>RO</sup> | Location information |
+
+<a name="property.location"></a>
+## *location <sup>property</sup>*
+
+Provides access to the location information.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Location information |
+| (property).city | string | City name |
+| (property).country | string | Country name |
+| (property).region | string | Region name |
+| (property).timezone | string | Time zone information |
+| (property).publicip | string | Public IP |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "LocationSync.1.location"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": {
+        "city": "Wroclaw", 
+        "country": "Poland", 
+        "region": "Wroclaw", 
+        "timezone": "CET-1CEST,M3.5.0,M10.5.0/3", 
+        "publicip": "78.11.117.118"
+    }
 }
 ```
