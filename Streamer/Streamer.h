@@ -316,26 +316,27 @@ namespace Plugin {
         // JsonRpc
         void RegisterAll();
         void UnregisterAll();
-        uint32_t endpoint_status(const JsonData::Streamer::StatusParamsInfo& params, JsonData::Streamer::StatusResultData& response);
+        uint32_t endpoint_status(const Core::JSON::DecUInt8& params, JsonData::Streamer::StatusResultData& response);
         uint32_t endpoint_create(const JsonData::Streamer::CreateParamsData& params, Core::JSON::DecUInt8& response);
-        uint32_t endpoint_destroy(const JsonData::Streamer::StatusParamsInfo& params);
+        uint32_t endpoint_destroy(const Core::JSON::DecUInt8& params);
         uint32_t endpoint_load(const JsonData::Streamer::LoadParamsData& params);
-        uint32_t endpoint_attach(const JsonData::Streamer::StatusParamsInfo& params);
-        uint32_t endpoint_detach(const JsonData::Streamer::StatusParamsInfo& params);
-        uint32_t endpoint_speeds(const JsonData::Streamer::StatusParamsInfo& params, Core::JSON::ArrayType<Core::JSON::DecSInt32>& response);
-        uint32_t set_speed(const JsonData::Streamer::SpeedParamsData& params);
-        uint32_t get_speed(JsonData::Streamer::SpeedParamsData& params) const;
-        uint32_t set_position(const JsonData::Streamer::PositionParamsData& params);
-        uint32_t get_position(JsonData::Streamer::PositionParamsData& params) const;
-        uint32_t set_window(const JsonData::Streamer::WindowParamsData& params);
-        uint32_t get_window(JsonData::Streamer::WindowParamsData& params) const;
-        uint32_t endpoint_streams(Core::JSON::ArrayType<Core::JSON::DecUInt32>& response);
-        uint32_t endpoint_type(const JsonData::Streamer::StatusParamsInfo& params, JsonData::Streamer::TypeResultData& response);
-        uint32_t endpoint_drm(const JsonData::Streamer::StatusParamsInfo& params, JsonData::Streamer::DrmResultInfo& response);
-        uint32_t endpoint_state(const JsonData::Streamer::StatusParamsInfo& params, JsonData::Streamer::StateResultInfo& response);
+        uint32_t endpoint_attach(const Core::JSON::DecUInt8& params);
+        uint32_t endpoint_detach(const Core::JSON::DecUInt8& params);
+        uint32_t get_speed(const string& index, Core::JSON::DecSInt32& response) const;
+        uint32_t set_speed(const string& index, const Core::JSON::DecSInt32& param);
+        uint32_t get_position(const string& index, Core::JSON::DecUInt64& response) const;
+        uint32_t set_position(const string& index, const Core::JSON::DecUInt64& param);
+        uint32_t get_window(const string& index, JsonData::Streamer::WindowParamsData& response) const;
+        uint32_t set_window(const string& index, const JsonData::Streamer::WindowParamsData& param);
+        uint32_t get_speeds(const string& index, Core::JSON::ArrayType<Core::JSON::DecSInt32>& response) const;
+        uint32_t get_streams(Core::JSON::ArrayType<Core::JSON::DecUInt32>& response) const;
+        uint32_t get_type(const string& index, JsonData::Streamer::TypeParamsData& response) const;
+        uint32_t get_drm(const string& index, JsonData::Streamer::DrmParamsInfo& response) const;
+        uint32_t get_state(const string& index, JsonData::Streamer::StateParamsInfo& response) const;
         void event_statechange(const string& id, const JsonData::Streamer::StateType& state);
         void event_drmchange(const string& id, const JsonData::Streamer::DrmType& drm);
         void event_timeupdate(const string& id, const uint64_t& time);
+
 
     private:
         uint32_t _skipURL;
