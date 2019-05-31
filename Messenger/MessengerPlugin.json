@@ -13,10 +13,7 @@
       "$ref": "MessengerAPI.json#/info/class"
     }
   },
-  "methods": {
-    "$ref": "MessengerAPI.json#/methods"
-  },
-  "events": {
-    "$ref": "MessengerAPI.json#/events"
+  "interface": {
+    "$ref": "MessengerAPI.json#"
   }
 }

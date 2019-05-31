@@ -4,7 +4,7 @@
 
 **Version: 1.0**
 
-Messenger functionality for WPEFramework.
+Messenger plugin for WPEFramework.
 
 ### Table of Contents
 
@@ -77,19 +77,20 @@ The table below lists configuration options of the plugin.
 <a name="head.Methods"></a>
 # Methods
 
-The following API is provided by the plugin via JSON-RPC:
+The following methods are provided by the Messenger plugin:
 
-- [join](#method.join)
-- [leave](#method.leave)
-- [send](#method.send)
+Messenger interface methods:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
-
+| Method | Description |
+| :-------- | :-------- |
+| [join](#method.join) | Joins a messaging room |
+| [leave](#method.leave) | Leaves a messaging room |
+| [send](#method.send) | Sends a message to a room |
 
 <a name="method.join"></a>
-## *join*
+## *join <sup>method</sup>*
 
-Joins a messaging room.
+Joins a messaging room
 
 ### Description
 
@@ -146,9 +147,9 @@ Also see: [userupdate](#event.userupdate)
 }
 ```
 <a name="method.leave"></a>
-## *leave*
+## *leave <sup>method</sup>*
 
-Leaves a messaging room.
+Leaves a messaging room
 
 ### Description
 
@@ -199,9 +200,9 @@ Also see: [userupdate](#event.userupdate)
 }
 ```
 <a name="method.send"></a>
-## *send*
+## *send <sup>method</sup>*
 
-Sends a message to a room.
+Sends a message to a room
 
 ### Description
 
@@ -258,16 +259,24 @@ Also see: [message](#event.message)
 
 Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[WPEF](#ref.WPEF)] for information on how to register for a notification.
 
-The following notifications are provided by the plugin:
+The following events are provided by the Messenger plugin:
 
-- [roomupdate](#event.roomupdate)
-- [userupdate](#event.userupdate)
-- [message](#event.message)
+Messenger interface events:
+
+| Event | Description |
+| :-------- | :-------- |
+| [roomupdate](#event.roomupdate) | Notifies about room status updates |
+| [userupdate](#event.userupdate) | Notifies about user status updates |
+| [message](#event.message) | Notifies about new messages in a room |
 
 <a name="event.roomupdate"></a>
-## *roomupdate*
+## *roomupdate <sup>event</sup>*
 
-Notifies about room status updates. Upon registering to this notification the listener will sequentially receive updates of all rooms that have been created so far.
+Notifies about room status updates
+
+### Description
+
+Register to this event to be notified about room status updates. Immediately after registering to this notification the listener will sequentially receive updates of all rooms that have been created so far.
 
 ### Parameters
 
@@ -290,9 +299,13 @@ Notifies about room status updates. Upon registering to this notification the li
 }
 ```
 <a name="event.userupdate"></a>
-## *userupdate*
+## *userupdate <sup>event</sup>*
 
-Notifies about user status updates. The room ID shall be specified within the designator. Upon registering to this notification the listener will sequentially receive updates of all users that have joined the room so far.
+Notifies about user status updates.
+
+### Description
+
+Register to this event to be notified about room status updates. Immediately after registering to this notification the listener will sequentially receive updates of all users that have joined the room so far.
 
 ### Parameters
 
@@ -301,6 +314,8 @@ Notifies about user status updates. The room ID shall be specified within the de
 | params | object |  |
 | params.user | string | Name of the user that has this notification relates to |
 | params.action | string | Specifies the user status change, e.g. join or leave a room (must be one of the following: *joined*, *left*) |
+
+> The *room ID* shall be passed within the designator, e.g. *1e217990dd1cd4f66124.client.events.1*.
 
 ### Example
 
@@ -315,9 +330,13 @@ Notifies about user status updates. The room ID shall be specified within the de
 }
 ```
 <a name="event.message"></a>
-## *message*
+## *message <sup>event</sup>*
 
-Notifies about new messages in a room. The room ID shall be specified within the designator.
+Notifies about new messages in a room
+
+### Description
+
+Register to this event to be notified about new messages in a room.
 
 ### Parameters
 
@@ -326,6 +345,8 @@ Notifies about new messages in a room. The room ID shall be specified within the
 | params | object |  |
 | params.user | string | Name of the user that has sent the message |
 | params.message | string | Content of the message |
+
+> The *room ID* shall be passed within the designator, e.g. *1e217990dd1cd4f66124.client.events.1*.
 
 ### Example
 
