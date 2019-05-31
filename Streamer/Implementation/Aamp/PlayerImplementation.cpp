@@ -64,36 +64,45 @@ namespace Player {
             _rectangle.Height = 720;
 
             Core::SystemInfo::SetEnvironment(_T("PLAYERSINKBIN_USE_WESTEROSSINK"), _T("true"));
-            InitializePlayerInstance();
-
+            gst_init(0, nullptr);
             _aampPlayer = new PlayerInstanceAAMP();
 
             _state = Exchange::IStream::Prepared;
-            Run();
         }
 
         PlayerPlatform::~PlayerPlatform()
         {
-            Terminate();
             _speeds.clear();
+            delete _aampPlayer;
         }
 
-        void PlayerPlatform::InitializePlayerInstance()
+        void PlayerPlatform::InitializePlayerLoop()
         {
             if (!_initialized) {
                 _initialized = true;
-                gst_init(0, nullptr);
                 _aampGstPlayerMainLoop = g_main_loop_new(nullptr, false);
             }
         }
 
-        void PlayerPlatform::DeinitializePlayerInstance()
+        void PlayerPlatform::DeinitializePlayerLoop()
         {
             if (_initialized == true) {
                 if (_aampGstPlayerMainLoop)
                     g_main_loop_quit(_aampGstPlayerMainLoop);
                 _initialized = false;
             }
+        }
+
+        void PlayerPlatform::AttachDecoder(const uint8_t index)
+        {
+            InitializePlayerLoop();
+
+            Run();
+        }
+
+        void PlayerPlatform::DetachDecoder(const uint8_t index)
+        {
+            Terminate();
         }
 
         void PlayerPlatform::Window(const Rectangle& rectangle)
@@ -142,14 +151,15 @@ namespace Player {
 
         void PlayerPlatform::Terminate()
         {
-            _aampPlayer->Stop();
-            Block();
+            if (_initialized == true) {
+                _aampPlayer->Stop();
+                Block();
 
-            delete _aampPlayer;
-            DeinitializePlayerInstance();
+                DeinitializePlayerLoop();
 
-            TRACE(Trace::Information, (string(__FUNCTION__)));
-            Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
+                TRACE(Trace::Information, (string(__FUNCTION__)));
+                Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
+            }
         }
 
         uint32_t PlayerPlatform::Worker()
@@ -158,9 +168,9 @@ namespace Player {
             if (_aampGstPlayerMainLoop) {
                 g_main_loop_run(_aampGstPlayerMainLoop); // blocks
                 TRACE(Trace::Information, (string(__FUNCTION__)));
+                g_main_loop_unref(_aampGstPlayerMainLoop);
+                _aampGstPlayerMainLoop = nullptr;
             }
-            g_main_loop_unref(_aampGstPlayerMainLoop);
-            _aampGstPlayerMainLoop = nullptr;
             return WPEFramework::Core::infinite;
         }
 

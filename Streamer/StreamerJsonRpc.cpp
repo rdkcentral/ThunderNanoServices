@@ -267,7 +267,8 @@ namespace Plugin {
 
         Streams::iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
-            if (stream->second->State() == Exchange::IStream::Prepared) {
+
+            if (stream->second->State() != Exchange::IStream::Idle) {
                 Controls::iterator control = _controls.find(id);
                 if (control != _controls.end()) {
                     if (control->second->Release() == Core::ERROR_DESTRUCTION_SUCCEEDED) {
@@ -438,7 +439,7 @@ namespace Plugin {
             Controls::iterator control = _controls.find(id);
             if (control != _controls.end()) {
                 Exchange::IStream::IControl::IGeometry* geometry;
-                geometry = Core::Service<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(param.Window.X, param.Window.Y, control->second->Geometry()->Z(), param.Window.Width, param.Window.Height);
+                geometry = Core::Service<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(param.Window.X.Value(), param.Window.Y.Value(), control->second->Geometry()->Z(), param.Window.Width.Value(), param.Window.Height.Value());
                 control->second->Geometry(geometry);
             } else {
                 result = Core::ERROR_ILLEGAL_STATE;

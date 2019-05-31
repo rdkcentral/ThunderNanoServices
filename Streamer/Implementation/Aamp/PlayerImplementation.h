@@ -87,19 +87,14 @@ namespace Player {
             {
                 _z = order;
             }
-            inline void AttachDecoder(const uint8_t index)
-            {
-                //Auto decoders are used for the pipeline
-            }
-            inline void DetachDecoder(const uint8_t index)
-            {
-            }
+            void AttachDecoder(const uint8_t index);
+            void DetachDecoder(const uint8_t index);
             void Terminate();
 
         private:
             virtual uint32_t Worker() override;
-            void InitializePlayerInstance();
-            void DeinitializePlayerInstance();
+            void InitializePlayerLoop();
+            void DeinitializePlayerLoop();
 
             inline string UriType(const string& uri)
             {
