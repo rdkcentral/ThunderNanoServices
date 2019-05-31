@@ -1176,9 +1176,6 @@ namespace Plugin {
             , _systemLibraries()
         {
             TRACE_L1("Constructing OCDMImplementation Service: %p", this);
-
-            // Make sure we link the OCDM, also in case no-ass-needed is added to the compiler flags..
-            opencdm_announce_proxy_stubs();
         }
         virtual ~OCDMImplementation()
         {
@@ -1411,9 +1408,6 @@ namespace Plugin {
         std::map<const std::string, SystemFactory> _systemToFactory;
         std::list<Core::Library> _systemLibraries;
         std::list<string> _keySystems;
-#ifdef _MSVC_LANG
-        void* _proxystubs;
-#endif
     };
 
     SERVICE_REGISTRATION(OCDMImplementation, 1, 0);
