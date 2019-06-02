@@ -1,7 +1,6 @@
 #define _TRACE_LEVEL 2
 
 #include "BlueDriver.h"
-#include "Module.h"
 
 namespace WPEFramework {
 

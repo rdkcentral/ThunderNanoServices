@@ -203,7 +203,7 @@ namespace Plugin {
         // By default, we are in front of any element, jump onto the first element, which is if, there is something an empty slot.
         index.Next();
 
-        if ((request.Verb == Web::Request::HTTP_PUT) || (request.Verb == Web::Request::HTTP_POST)) {
+        if ((request.Verb == Web::Request::HTTP_PUT) || (request.Verb == Web::Request::HTTP_POST) || (request.Verb == Web::Request::HTTP_DELETE)) {
             if ((index.IsValid() == true) && (index.Next() && index.IsValid())) {
                 if ((index.Remainder() == _T("Pair")) || (index.Remainder() == _T("Connect")) || (index.Remainder() == _T("Disconnect")))
                     request.Body(jsonResponseFactoryDevice.Element());
@@ -375,8 +375,6 @@ namespace Plugin {
                 }
             }
         }
-
-        return result;
 
         return result;
     }
