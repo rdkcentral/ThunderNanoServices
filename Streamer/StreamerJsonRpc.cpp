@@ -20,13 +20,13 @@
         uint32_t set_speed(const string& index, const Core::JSON::DecSInt32& param);
         uint32_t get_position(const string& index, Core::JSON::DecUInt64& response) const;
         uint32_t set_position(const string& index, const Core::JSON::DecUInt64& param);
-        uint32_t get_window(const string& index, JsonData::Streamer::WindowParamsData& response) const;
-        uint32_t set_window(const string& index, const JsonData::Streamer::WindowParamsData& param);
+        uint32_t get_window(const string& index, JsonData::Streamer::WindowData& response) const;
+        uint32_t set_window(const string& index, const JsonData::Streamer::WindowData& param);
         uint32_t get_speeds(const string& index, Core::JSON::ArrayType<Core::JSON::DecSInt32>& response) const;
         uint32_t get_streams(Core::JSON::ArrayType<Core::JSON::DecUInt32>& response) const;
-        uint32_t get_type(const string& index, JsonData::Streamer::TypeParamsData& response) const;
-        uint32_t get_drm(const string& index, JsonData::Streamer::DrmParamsInfo& response) const;
-        uint32_t get_state(const string& index, JsonData::Streamer::StateParamsInfo& response) const;
+        uint32_t get_type(const string& index, JsonData::Streamer::TypeData& response) const;
+        uint32_t get_drm(const string& index, JsonData::Streamer::DrmInfo& response) const;
+        uint32_t get_state(const string& index, JsonData::Streamer::StateInfo& response) const;
         void event_statechange(const string& id, const JsonData::Streamer::StateType& state);
         void event_drmchange(const string& id, const JsonData::Streamer::DrmType& drm);
         void event_timeupdate(const string& id, const uint64_t& time);
@@ -84,12 +84,12 @@ namespace Plugin {
         Register<Core::JSON::DecUInt8,void>(_T("detach"), &Streamer::endpoint_detach, this);
         Property<Core::JSON::DecSInt32>(_T("speed"), &Streamer::get_speed, &Streamer::set_speed, this);
         Property<Core::JSON::DecUInt64>(_T("position"), &Streamer::get_position, &Streamer::set_position, this);
-        Property<WindowParamsData>(_T("window"), &Streamer::get_window, &Streamer::set_window, this);
+        Property<WindowData>(_T("window"), &Streamer::get_window, &Streamer::set_window, this);
         Property<Core::JSON::ArrayType<Core::JSON::DecSInt32>>(_T("speeds"), &Streamer::get_speeds, nullptr, this);
         Property<Core::JSON::ArrayType<Core::JSON::DecUInt32>>(_T("streams"), &Streamer::get_streams, nullptr, this);
-        Property<TypeParamsData>(_T("type"), &Streamer::get_type, nullptr, this);
-        Property<DrmParamsInfo>(_T("drm"), &Streamer::get_drm, nullptr, this);
-        Property<StateParamsInfo>(_T("state"), &Streamer::get_state, nullptr, this);
+        Property<TypeData>(_T("type"), &Streamer::get_type, nullptr, this);
+        Property<DrmInfo>(_T("drm"), &Streamer::get_drm, nullptr, this);
+        Property<StateInfo>(_T("state"), &Streamer::get_state, nullptr, this);
     }
 
     void Streamer::UnregisterAll()
@@ -149,7 +149,6 @@ namespace Plugin {
 
             Exchange::IStream* stream = _player->CreateStream(static_cast<const WPEFramework::Exchange::IStream::streamtype>(type.Value()));
             if (stream != nullptr) {
-
                 uint8_t id = 0;
                 for (; id < _streams.size(); ++id) {
                     Streams::iterator stream = _streams.find(id);
@@ -399,7 +398,7 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
-    uint32_t Streamer::get_window(const string& index, WindowParamsData& response) const
+    uint32_t Streamer::get_window(const string& index, WindowData& response) const
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -429,7 +428,7 @@ namespace Plugin {
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
     //  - ERROR_BAD_REQUEST: Invalid window geometry given
     //  - ERROR_ILLEGAL_STATE: Player is not in a valid state or decoder not attached
-    uint32_t Streamer::set_window(const string& index, const WindowParamsData& param)
+    uint32_t Streamer::set_window(const string& index, const WindowData& param)
     {
         uint32_t result = Core::ERROR_NONE;
         const uint32_t& id = stoul(index);
@@ -507,7 +506,7 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
-    uint32_t Streamer::get_type(const string& index, TypeParamsData& response) const
+    uint32_t Streamer::get_type(const string& index, TypeData& response) const
     {
         uint32_t result = Core::ERROR_NONE;
         const uint32_t& id = stoul(index);
@@ -526,7 +525,7 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
-    uint32_t Streamer::get_drm(const string& index, DrmParamsInfo& response) const
+    uint32_t Streamer::get_drm(const string& index, DrmInfo& response) const
     {
         uint32_t result = Core::ERROR_NONE;
         const uint32_t& id = stoul(index);
@@ -545,7 +544,7 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
-    uint32_t Streamer::get_state(const string& index, StateParamsInfo& response) const
+    uint32_t Streamer::get_state(const string& index, StateInfo& response) const
     {
         uint32_t result = Core::ERROR_NONE;
         const uint32_t& id = stoul(index);
@@ -563,7 +562,7 @@ namespace Plugin {
     // Event: statechange - Notifies of stream state change
     void Streamer::event_statechange(const string& id, const StateType& state)
     {
-        StateParamsInfo params;
+        StateInfo params;
         params.State = state;
 
         Notify(_T("statechange"), params, [&](const string& designator) -> bool {
@@ -575,7 +574,7 @@ namespace Plugin {
     // Event: drmchange - Notifies of stream DRM system change
     void Streamer::event_drmchange(const string& id, const DrmType& drm)
     {
-        DrmParamsInfo params;
+        DrmInfo params;
         params.Drm = drm;
 
         Notify(_T("drmchange"), params, [&](const string& designator) -> bool {

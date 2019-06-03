@@ -35,7 +35,7 @@ namespace Player {
             , _state(Exchange::IStream::Idle)
             , _drmType(Exchange::IStream::Unknown)
             , _streamType(type)
-            , _speed(0)
+            , _speed(-1)
             , _begin(0)
             , _end(~0)
             , _z(0)
@@ -43,7 +43,9 @@ namespace Player {
             , _callback(callbacks)
             , _initialized(false)
             , _aampGstPlayerMainLoop(nullptr)
+            , _scheduler()
         {
+            ASSERT (_scheduler.IsValid() == false);
 
             Config config;
             config.FromString(_configuration);
@@ -68,15 +70,21 @@ namespace Player {
             _aampPlayer = new PlayerInstanceAAMP();
 
             _state = Exchange::IStream::Prepared;
+
+            _scheduler = Core::ProxyType<Job>::Create(this);
+            ASSERT(_scheduler.IsValid() == true);
+
         }
 
         PlayerPlatform::~PlayerPlatform()
         {
             _speeds.clear();
             delete _aampPlayer;
+
+            _scheduler.Release();
         }
 
-        void PlayerPlatform::InitializePlayerLoop()
+        void PlayerPlatform::InitializePlayerInstance()
         {
             if (!_initialized) {
                 _initialized = true;
@@ -84,7 +92,7 @@ namespace Player {
             }
         }
 
-        void PlayerPlatform::DeinitializePlayerLoop()
+        void PlayerPlatform::DeinitializePlayerInstance()
         {
             if (_initialized == true) {
                 if (_aampGstPlayerMainLoop)
@@ -95,7 +103,7 @@ namespace Player {
 
         void PlayerPlatform::AttachDecoder(const uint8_t index)
         {
-            InitializePlayerLoop();
+            InitializePlayerInstance();
 
             Run();
         }
@@ -111,6 +119,22 @@ namespace Player {
             _aampPlayer->SetVideoRectangle(_rectangle.X, _rectangle.Y, _rectangle.Width, _rectangle.Height);
         }
 
+        void PlayerPlatform::QueryDRMSystem()
+        {
+            string drm = _aampPlayer->GetCurrentDRM();
+            if (drm.empty() != true) {
+                if (!strcmp(drm.c_str(), "WideVine")) {
+                    _drmType = Exchange::IStream::Widevine;
+                } else if (!strcmp(drm.c_str(), "PlayReady")) {
+                    _drmType = Exchange::IStream::PlayReady;
+                } else {
+                    _drmType = Exchange::IStream::Unknown;
+                }
+            } else {
+                _drmType = Exchange::IStream::None;
+            }
+        }
+
         uint32_t PlayerPlatform::Load(const string& uri)
         {
             uint32_t result = Core::ERROR_NONE;
@@ -123,9 +147,13 @@ namespace Player {
                 if ((uriType == "m3u8") || (uriType == "mpd")) {
                     TRACE(Trace::Information, (_T("URI type is %s"), uriType.c_str()));
 
+                    _speed = -1;
+                    _drmType = Exchange::IStream::Unknown;
+
                     _uri = uri;
                     _aampPlayer->Tune(_uri.c_str());
-                    _aampPlayer->SetRate(0);
+
+                    Speed(0);
                 } else {
                     result = Core::ERROR_INCORRECT_URL;
                     _state = Exchange::IStream::Error;
@@ -149,13 +177,23 @@ namespace Player {
             return _aampPlayer->Seek(absoluteTime/1000);
         }
 
+        void PlayerPlatform::TimeUpdate()
+        {
+            if ((_callback != nullptr) && (_state == Exchange::IStream::Playing)) {
+                _callback->TimeUpdate(_aampPlayer->GetPlaybackPosition());
+            }
+        }
+
         void PlayerPlatform::Terminate()
         {
             if (_initialized == true) {
+                ASSERT (_scheduler.IsValid() == true);
+                //PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_scheduler));//TODO:check the hang 
+
                 _aampPlayer->Stop();
                 Block();
 
-                DeinitializePlayerLoop();
+                DeinitializePlayerInstance();
 
                 TRACE(Trace::Information, (string(__FUNCTION__)));
                 Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
@@ -188,11 +226,15 @@ namespace Player {
                     SpeedList::iterator index =  std::find(_speeds.begin(), _speeds.end(), speed);
                     if (index != _speeds.end()) {
                         newState = Exchange::IStream::Playing;
+
+                        //PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(_scheduler));
                     } else {
                         result = Core::ERROR_BAD_REQUEST;
                     }
 
                 } else {
+                    //PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_scheduler));
+
                     newState = Exchange::IStream::Paused;
                 }
                 _speed = speed;

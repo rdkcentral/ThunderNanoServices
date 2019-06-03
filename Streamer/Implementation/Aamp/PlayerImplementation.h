@@ -25,6 +25,32 @@ namespace Player {
 
         public:
             typedef std::vector<int32_t> SpeedList;
+            static constexpr uint32_t TimeToGetPlaybackPosition = 1000;
+
+        class Job: public Core::IDispatchType<void> {
+        private:
+            Job() = delete;
+            Job(const Job&) = delete;
+            Job& operator=(const Job&) = delete;
+
+        public:
+            Job(PlayerPlatform* player)
+            : _parent(player)
+            {
+            }
+            ~Job() {}
+
+        private:
+            virtual void Dispatch() override
+            {
+                Core::Time nextRun (Core::Time::Now());
+                nextRun.Add(TimeToGetPlaybackPosition);
+                PluginHost::WorkerPool::Instance().Schedule(nextRun, Core::ProxyType<Core::IDispatch>(*this));
+                _parent->TimeUpdate();
+            }
+        private:
+            PlayerPlatform* _parent;
+        };
 
         public:
             PlayerPlatform(const Exchange::IStream::streamtype type, const uint8_t index, ICallback* callbacks);
@@ -50,6 +76,9 @@ namespace Player {
             }
             inline Exchange::IStream::drmtype DRM() const
             {
+                if (_drmType == Exchange::IStream::Unknown) {
+                    const_cast<PlayerPlatform*>(this)->QueryDRMSystem();
+                }
                 return (Exchange::IStream::drmtype)_drmType;
             }
             inline Exchange::IStream::state State() const
@@ -69,6 +98,8 @@ namespace Player {
             }
             void Position(const uint64_t absoluteTime);
             uint64_t Position() const;
+            void TimeUpdate();
+
             inline void TimeRange(uint64_t& begin, uint64_t& end) const
             {
                 begin = _begin;
@@ -93,8 +124,9 @@ namespace Player {
 
         private:
             virtual uint32_t Worker() override;
-            void InitializePlayerLoop();
-            void DeinitializePlayerLoop();
+            void InitializePlayerInstance();
+            void DeinitializePlayerInstance();
+            void QueryDRMSystem();
 
             inline string UriType(const string& uri)
             {
@@ -124,6 +156,7 @@ namespace Player {
             GMainLoop *_aampGstPlayerMainLoop;
 
             static string _configuration;
+            Core::ProxyType<Job> _scheduler;
         };
     }
 }

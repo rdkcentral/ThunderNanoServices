@@ -294,6 +294,7 @@ namespace Plugin {
                              _T(", \"drm\": \"") + 
                              stateText + 
                              _T("\" }"));
+            //event_drmchange(std::to_string(index), state);//TODO: check the required functionality first
         }
         void StateChange(const uint8_t index, Exchange::IStream::state state)
         {
@@ -304,6 +305,7 @@ namespace Plugin {
                              _T(", \"stream\": \"") + 
                              Core::EnumerateType<Exchange::IStream::state>(state).Data() + 
                              _T("\" }"));
+            event_statechange(std::to_string(index), static_cast<JsonData::Streamer::StateType>(state));
         }
         void TimeUpdate(const uint8_t index, const uint64_t position)
         {
@@ -311,6 +313,7 @@ namespace Plugin {
                              Core::NumberType<uint8_t>(index).Text() + 
                              _T(", \"time\": ") + 
                              Core::NumberType<uint64_t>(position).Text()+ _T(" }"));
+            event_timeupdate(std::to_string(index), position);
         }
 
         // JsonRpc
@@ -326,13 +329,13 @@ namespace Plugin {
         uint32_t set_speed(const string& index, const Core::JSON::DecSInt32& param);
         uint32_t get_position(const string& index, Core::JSON::DecUInt64& response) const;
         uint32_t set_position(const string& index, const Core::JSON::DecUInt64& param);
-        uint32_t get_window(const string& index, JsonData::Streamer::WindowParamsData& response) const;
-        uint32_t set_window(const string& index, const JsonData::Streamer::WindowParamsData& param);
+        uint32_t get_window(const string& index, JsonData::Streamer::WindowData& response) const;
+        uint32_t set_window(const string& index, const JsonData::Streamer::WindowData& param);
         uint32_t get_speeds(const string& index, Core::JSON::ArrayType<Core::JSON::DecSInt32>& response) const;
         uint32_t get_streams(Core::JSON::ArrayType<Core::JSON::DecUInt32>& response) const;
-        uint32_t get_type(const string& index, JsonData::Streamer::TypeParamsData& response) const;
-        uint32_t get_drm(const string& index, JsonData::Streamer::DrmParamsInfo& response) const;
-        uint32_t get_state(const string& index, JsonData::Streamer::StateParamsInfo& response) const;
+        uint32_t get_type(const string& index, JsonData::Streamer::TypeData& response) const;
+        uint32_t get_drm(const string& index, JsonData::Streamer::DrmInfo& response) const;
+        uint32_t get_state(const string& index, JsonData::Streamer::StateInfo& response) const;
         void event_statechange(const string& id, const JsonData::Streamer::StateType& state);
         void event_drmchange(const string& id, const JsonData::Streamer::DrmType& drm);
         void event_timeupdate(const string& id, const uint64_t& time);
