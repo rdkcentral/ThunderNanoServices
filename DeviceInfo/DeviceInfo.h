@@ -1,8 +1,8 @@
 #ifndef DEVICEINFO_DEVICEINFO_H
 #define DEVICEINFO_DEVICEINFO_H
 
-#include <interfaces/json/JsonData_DeviceInfo.h>
 #include "Module.h"
+#include <interfaces/json/JsonData_DeviceInfo.h>
 
 namespace WPEFramework {
 namespace Plugin {

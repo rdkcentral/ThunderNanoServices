@@ -1,7 +1,8 @@
 
-#include <interfaces/json/JsonData_RemoteControl.h>
-#include "RemoteControl.h"
 #include "Module.h"
+#include "RemoteControl.h"
+
+#include <interfaces/json/JsonData_RemoteControl.h>
 
 namespace WPEFramework {
 

@@ -1,7 +1,5 @@
 
-#include <interfaces/json/JsonData_DeviceInfo.h>
 #include "DeviceInfo.h"
-#include "Module.h"
 
 namespace WPEFramework {
 
