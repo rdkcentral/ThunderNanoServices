@@ -19,4 +19,4 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME} 
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
-# write_config(${PLUGIN_NAME})
+write_config(${PLUGIN_NAME})
