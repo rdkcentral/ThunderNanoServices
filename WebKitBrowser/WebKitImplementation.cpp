@@ -1287,7 +1287,7 @@ namespace WebKitBrowser {
         MemoryObserverImpl(const uint32_t id)
             : _main(id == 0 ? Core::ProcessInfo().Id() : id)
             , _children(_main.Id())
-            , _startTime(Core::Time::Now().Ticks() + (TYPICAL_STARTUP_TIME * 1000000))
+            , _startTime(0)
         { // IsOperation true till calculated time (microseconds)
         }
         ~MemoryObserverImpl()
