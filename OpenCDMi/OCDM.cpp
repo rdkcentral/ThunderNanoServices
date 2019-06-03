@@ -251,42 +251,5 @@ namespace Plugin {
                 PluginHost::IShell::FAILURE));
         }
     }
-
-    uint32_t OCDM::drms(Core::JSON::ArrayType<Drm>& result)
-    {
-        RPC::IStringIterator* drmsIter(_opencdmi->Systems());
-        string element;
-        if (drmsIter != nullptr) {
-            while (drmsIter->Next(element) == true) {
-                Drm drm;
-                drm.Name = element;
-                KeySystems(element, drm.KeySystems);
-                result.Add(drm);
-            }
-
-            drmsIter->Release();
-        }
-
-        return Core::ERROR_NONE;
-    }
-
-    uint32_t OCDM::keysystems(const DrmName& name, Core::JSON::ArrayType<Core::JSON::String>& result)
-    {
-        KeySystems(name.Name.Value(), result);
-        return Core::ERROR_NONE;
-    }
-
-    void OCDM::KeySystems(const string& name, Core::JSON::ArrayType<Core::JSON::String>& result) {
-        RPC::IStringIterator* keySystemsIter(_opencdmi->Designators(name));
-        if (keySystemsIter != nullptr) {
-            string element;
-            while (keySystemsIter->Next(element) == true) {
-                Core::JSON::String keySystem;
-                keySystem.FromString(element);
-                result.Add(keySystem);
-            }
-            keySystemsIter->Release();
-        }
-    }
 }
 } //namespace WPEFramework::Plugin

@@ -4,13 +4,13 @@
 
 **Version: 1.0**
 
-OCDM functionality for WPEFramework.
+OCDM plugin for WPEFramework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Configuration](#head.Configuration)
-- [Methods](#head.Methods)
+- [Properties](#head.Properties)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -18,7 +18,7 @@ OCDM functionality for WPEFramework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the OCDM plugin. It includes detailed specification of its configuration and methods provided.
+This document describes purpose and functionality of the OCDM plugin. It includes detailed specification of its configuration and properties provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -65,39 +65,38 @@ The table below lists configuration options of the plugin.
 | locator | string | Library name: *libWPEFrameworkOCDM.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
 
-<a name="head.Methods"></a>
-# Methods
+<a name="head.Properties"></a>
+# Properties
 
-The following API is provided by the plugin via JSON-RPC:
+The following properties are provided by the OCDM plugin:
 
-- [drms](#method.drms)
-- [keysystems](#method.keysystems)
+OCDM interface properties:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
+| Property | Description |
+| :-------- | :-------- |
+| [drms](#property.drms) <sup>RO</sup> | Supported DRM systems |
+| [keysystems](#property.keysystems) <sup>RO</sup> | DRM key systems |
 
+<a name="property.drms"></a>
+## *drms <sup>property</sup>*
 
-<a name="method.drms"></a>
-## *drms*
+Provides access to the supported DRM systems.
 
-Returns the supported DRMs
+> This property is **read-only**.
 
-### Parameters
-
-This method takes no parameters.
-
-### Result
+### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | array |  |
-| result[#] | object |  |
-| result[#].name | string | Name of the DRM |
-| result[#].keysystems | array |  |
-| result[#].keysystems[#] | string | Identifier of a key system |
+| (property) | array | Supported DRM systems |
+| (property)[#] | object |  |
+| (property)[#].name | string | Name of the DRM |
+| (property)[#].keysystems | array |  |
+| (property)[#].keysystems[#] | string | Identifier of a key system |
 
 ### Example
 
-#### Request
+#### Get Request
 
 ```json
 {
@@ -106,7 +105,7 @@ This method takes no parameters.
     "method": "OCDM.1.drms"
 }
 ```
-#### Response
+#### Get Response
 
 ```json
 {
@@ -122,40 +121,40 @@ This method takes no parameters.
     ]
 }
 ```
-<a name="method.keysystems"></a>
-## *keysystems*
+<a name="property.keysystems"></a>
+## *keysystems <sup>property</sup>*
 
-Returns key systems for the given DRM
+Provides access to the DRM key systems.
 
-### Parameters
+> This property is **read-only**.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.name | string | DRM name |
-
-### Result
+### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | array |  |
-| result[#] | string | Identifier of a key system |
+| (property) | array | DRM key systems |
+| (property)[#] | string | Identifier of a key system |
+
+> The *DRM system* shall be passed as the index to the property, e.g. *OCDM.1.keysystems@PlayReady*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 30 | ```ERROR_BAD_REQUEST``` | Invalid DRM name |
 
 ### Example
 
-#### Request
+#### Get Request
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "OCDM.1.keysystems", 
-    "params": {
-        "name": "PlayReady"
-    }
+    "method": "OCDM.1.keysystems@PlayReady"
 }
 ```
-#### Response
+#### Get Response
 
 ```json
 {

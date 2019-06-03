@@ -10,6 +10,7 @@ set(PLUGIN_OPENCDMI_PLAYREADY_STORE_LOCATION "/root/Netflix/dpi/playready/storag
 
 add_library(${MODULE_NAME} SHARED 
         OCDM.cpp
+        OCDMJsonRpc.cpp
         CENCParser.cpp
         FrameworkRPC.cpp
         Module.cpp)

@@ -21,6 +21,9 @@
     <ClCompile Include="OCDM.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="OCDMJsonRpc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Module.h">

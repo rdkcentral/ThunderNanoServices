@@ -9,7 +9,7 @@
     },
     "version": "1.0"
   },
-  "methods": {
-    "$ref": "OpenCDMiAPI.json#/methods"
+  "interface": {
+    "$ref": "OpenCDMiAPI.json#"
   }
 }

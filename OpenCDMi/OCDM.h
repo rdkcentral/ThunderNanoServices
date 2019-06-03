@@ -4,15 +4,13 @@
 #include "Module.h"
 #include <interfaces/IContentDecryption.h>
 #include <interfaces/IMemory.h>
+#include <interfaces/json/JsonData_OpenCDMi.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
     class OCDM : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
-        static constexpr auto* kDrmsMethodName = _T("drms");
-        static constexpr auto* kKeySystemsMethodName = _T("keysystems");
-
         OCDM(const OCDM&) = delete;
         OCDM& operator=(const OCDM&) = delete;
 
@@ -68,58 +66,6 @@ namespace Plugin {
 
         public:
             Core::JSON::Boolean OutOfProcess;
-        };
-
-        class DrmName : public Core::JSON::Container {
-        private:
-            DrmName& operator=(const DrmName&) = delete;
-
-        public:
-            DrmName()
-                : Name()
-            {
-                Add(_T("name"), &Name);
-            }
-
-            DrmName(const DrmName& copy)
-                : Name(copy.Name)
-            {
-                Add(_T("name"), &Name);
-            }
-
-            virtual ~DrmName()
-            {
-            }
-
-        public:
-            Core::JSON::String Name;
-        };
-
-        class Drm : public DrmName {
-        private:
-            Drm& operator=(const Drm&) = delete;
-
-        public:
-            Drm()
-                : DrmName()
-                , KeySystems()
-            {
-                Add(_T("keysystems"), &KeySystems);
-            }
-
-            Drm(const Drm& copy)
-                : DrmName(copy)
-                , KeySystems(copy.KeySystems)
-            {
-                Add(_T("keysystems"), &KeySystems);
-            }
-
-            virtual ~Drm()
-            {
-            }
-
-        public:
-            Core::JSON::ArrayType<Core::JSON::String> KeySystems;
         };
 
     public:
@@ -201,14 +147,12 @@ namespace Plugin {
             , _memory(nullptr)
             , _notification(this)
         {
-            Register<void, Core::JSON::ArrayType<OCDM::Drm>>(kDrmsMethodName, &OCDM::drms, this);
-            Register<DrmName, Core::JSON::ArrayType<Core::JSON::String>>(kKeySystemsMethodName, &OCDM::keysystems, this);
+            RegisterAll();
         }
 
         virtual ~OCDM()
         {
-            Unregister(kDrmsMethodName);
-            Unregister(kKeySystemsMethodName);
+            UnregisterAll();
         }
 
     public:
@@ -249,9 +193,14 @@ namespace Plugin {
 
     private:
         void Deactivated(RPC::IRemoteProcess* process);
-        uint32_t drms(Core::JSON::ArrayType<Drm>& result);
-        uint32_t keysystems(const DrmName& name, Core::JSON::ArrayType<Core::JSON::String>& result);
-        void KeySystems(const string& name, Core::JSON::ArrayType<Core::JSON::String>& result);
+
+        bool KeySystems(const string& name, Core::JSON::ArrayType<Core::JSON::String>& response) const;
+
+        // JsonRpc
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t get_drms(Core::JSON::ArrayType<JsonData::OCDM::DrmData>& response) const;
+        uint32_t get_keysystems(const string& index, Core::JSON::ArrayType<Core::JSON::String>& response) const;
 
     private:
         uint8_t _skipURL;

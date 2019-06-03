@@ -136,6 +136,7 @@
     <ClCompile Include="FrameworkRPC.cpp" />
     <ClCompile Include="Module.cpp" />
     <ClCompile Include="OCDM.cpp" />
+    <ClCompile Include="OCDMJsonRpc.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
