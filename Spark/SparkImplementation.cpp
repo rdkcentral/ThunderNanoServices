@@ -302,7 +302,7 @@ namespace Plugin {
             virtual void onAnimationTimer() override
             {
                 ENTERSCENELOCK();
-                if ((_view != nullptr) && (!_closed)) {
+                if (_view != nullptr) {
                     _view->onUpdate(pxSeconds());
                 }
                 EXITSCENELOCK();
