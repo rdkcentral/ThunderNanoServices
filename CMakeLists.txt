@@ -12,6 +12,7 @@ option(PLUGIN_COMPOSITOR "Include Compsitor plugin" OFF)
 option(PLUGIN_DEVICEINFO "Include DeviceInfo plugin" OFF)
 option(PLUGIN_DSRESOLUTION "Include DSResolution plugin" OFF)
 option(PLUGIN_DHCPSERVER "Include DHCPServer plugin" OFF)
+option(PLUGIN_DIALSERVER " Include DIALServer plugin" OFF)
 option(PLUGIN_DICTIONARY "Include Dictionary plugin" OFF)
 option(PLUGIN_IOCONNECTOR "Include IOConnector plugin" OFF)
 option(PLUGIN_FRONTPANEL "Include FrontPanel plugin" OFF)
@@ -71,6 +72,10 @@ endif()
 
 if(PLUGIN_DHCPSERVER)
     add_subdirectory(DHCPServer)
+endif()
+
+if(PLUGIN_DIALSERVER)
+    add_subdirectory(DIALServer)
 endif()
 
 if(PLUGIN_DICTIONARY)
