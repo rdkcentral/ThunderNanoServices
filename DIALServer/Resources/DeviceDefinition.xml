@@ -1,0 +1,42 @@
+<? xml version ="1.0" ? >
+<root xmlns ="urn:schemas-upnp-org:device-1-0">
+	<specVersion>
+		<major>1</major>
+		<minor>0</minor>
+	</specVersion >
+	<URLBase>base URL for all relative URLs </URLBase>
+	<device>
+		<deviceType>urn:schemas-upnp-org:device:deviceType:v</deviceType>
+		<friendlyName>Metrological Test Device</friendlyName>
+		<manufacturer>Metrological</manufacturer>
+		<manufacturerURL>https://www.metrological.com</manufacturerURL>
+		<modelDescription>RaspberryPi development platform running custom middleware</modelDescription>
+		<modelName>RaspberryPi2</modelName>
+		<modelNumber>BCM2907</modelNumber>
+		<modelURL>http://broadcom.com</modelURL>
+		<serialNumber>000000000000000000</serialNumber>
+		<UDN>uuid:000000000000000</UDN>
+		<UPC>Universal Product Code </UPC>
+		<iconList>
+			<icon>
+				<mimetype>image/format</mimetype>
+				<width>600</width>
+				<height>720</height>
+				<depth>32</depth>
+				<url>URL to icon </url>
+			</icon>
+		</iconList>
+		<serviceList>
+			<service>
+				<serviceType>urn:schemas-upnp-org:service:serviceType:v</serviceType >
+				<serviceId >urn:upnp-org:serviceId:serviceID</serviceId>
+				<SCPDURL>URL to service description</SCPDURL>
+				<controlURL>URL for control </controlURL>
+				<eventSubURL >URL for eventing </eventSubURL>
+			</service>
+		</serviceList>
+		<deviceList>
+		</deviceList>
+		<presentationURL>URL for presentation </presentationURL>
+	</device>
+</root>
