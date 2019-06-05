@@ -5,6 +5,7 @@
 #include <interfaces/IStream.h>
 #include <plugins/plugins.h>
 #include <tracing/tracing.h>
+#include <vector>
 
 #include "Designator.h"
 
@@ -119,9 +120,9 @@ namespace Player {
 
                 return result;
             }
-            const vector<int32_t>& Speeds() const
+            const std::vector<int32_t>& Speeds() const
             {
-                 return vector<int32_t>();
+                 return std::vector<int32_t>();
             }
             inline uint32_t Speed(const int32_t request)
             {
