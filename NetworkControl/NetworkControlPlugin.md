@@ -4,7 +4,9 @@
 
 **Version: 1.0**
 
-NetworkControl functionality for WPEFramework.
+**Status: :black_circle::black_circle::black_circle:**
+
+NetworkControl plugin for WPEFramework.
 
 ### Table of Contents
 
@@ -76,21 +78,26 @@ The table below lists configuration options of the plugin.
 <a name="head.Methods"></a>
 # Methods
 
-The following API is provided by the plugin via JSON-RPC:
+The following methods are provided by the NetworkControl plugin:
 
-- [network](#method.network)
-- [reload](#method.reload)
-- [request](#method.request)
-- [assign](#method.assign)
-- [up](#method.up)
-- [down](#method.down)
-- [flush](#method.flush)
+NetworkControl interface methods:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
-
+| Method | Description |
+| :-------- | :-------- |
+| [network](#method.network) | Retrieves network information |
+| [reload](#method.reload) | Reloads static and non-static network interface adapters |
+| [request](#method.request) | Reloads non-static network interface adapters |
+| [assign](#method.assign) | Reloads static network interface adapters |
+| [up](#method.up) | Sets up network interface adapters |
+| [down](#method.down) | Sets down network interface adapters |
+| [flush](#method.flush) | Flushes a network interface adapters |
 
 <a name="method.network"></a>
-## *network*
+## *network <sup>method</sup>*
+
+Retrieves network information
+
+### Description
 
 Retrieves the actual network information for targeted network interface, if network interface is not given, all network interfaces are returned.
 
@@ -153,9 +160,9 @@ Retrieves the actual network information for targeted network interface, if netw
 }
 ```
 <a name="method.reload"></a>
-## *reload*
+## *reload <sup>method</sup>*
 
-Reload static and non-static network interface adapter.
+Reloads static and non-static network interface adapters
 
 ### Parameters
 
@@ -200,9 +207,9 @@ Reload static and non-static network interface adapter.
 }
 ```
 <a name="method.request"></a>
-## *request*
+## *request <sup>method</sup>*
 
-Reload non-static network interface adapter.
+Reloads non-static network interface adapters
 
 ### Parameters
 
@@ -247,9 +254,9 @@ Reload non-static network interface adapter.
 }
 ```
 <a name="method.assign"></a>
-## *assign*
+## *assign <sup>method</sup>*
 
-Reload static network interface adapter.
+Reloads static network interface adapters
 
 ### Parameters
 
@@ -294,9 +301,9 @@ Reload static network interface adapter.
 }
 ```
 <a name="method.up"></a>
-## *up*
+## *up <sup>method</sup>*
 
-Set up network interface adapter.
+Sets up network interface adapters
 
 ### Parameters
 
@@ -341,9 +348,9 @@ Set up network interface adapter.
 }
 ```
 <a name="method.down"></a>
-## *down*
+## *down <sup>method</sup>*
 
-Set down network interface adapter.
+Sets down network interface adapters
 
 ### Parameters
 
@@ -388,9 +395,9 @@ Set down network interface adapter.
 }
 ```
 <a name="method.flush"></a>
-## *flush*
+## *flush <sup>method</sup>*
 
-Flush network interface adapter.
+Flushes a network interface adapters
 
 ### Parameters
 

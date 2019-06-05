@@ -4,9 +4,7 @@
     "title": "WebKit Browser Plugin",
     "callsign": "WebKitBrowser",
     "locator": "libWPEFrameworkWebKitBrowser.so",
-    "class": {
-      "$ref": "WebKitBrowserAPI.json#/info/class"
-    },
+    "status": "production",
     "description": "The WebKitBrowser plugin provides web browsing functionality based on the WebKit engine.",
     "version": "1.0"
   },
@@ -106,6 +104,6 @@
     ]
   },
   "interface": {
-    "$ref": "WebKitBrowserAPI.json#"
+    "$ref": "{interfacedir}/WebKitBrowserAPI.json#"
   }
 }

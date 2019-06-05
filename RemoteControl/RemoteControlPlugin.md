@@ -4,7 +4,9 @@
 
 **Version: 1.0**
 
-RemoteControl functionality for WPEFramework.
+**Status: :black_circle::black_circle::black_circle:**
+
+RemoteControl plugin for WPEFramework.
 
 ### Table of Contents
 
@@ -76,33 +78,34 @@ The table below lists configuration options of the plugin.
 <a name="head.Methods"></a>
 # Methods
 
-The following API is provided by the plugin via JSON-RPC:
+The following methods are provided by the RemoteControl plugin:
 
-- [devices](#method.devices)
-- [device](#method.device)
-- [key](#method.key)
-- [delete](#method.delete)
-- [modify](#method.modify)
-- [pair](#method.pair)
-- [unpair](#method.unpair)
-- [send](#method.send)
-- [press](#method.press)
-- [release](#method.release)
-- [save](#method.save)
-- [load](#method.load)
-- [add](#method.add)
+RemoteControl interface methods:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
-
+| Method | Description |
+| :-------- | :-------- |
+| [devices](#method.devices) | Retrieves device information |
+| [device](#method.device) | Retrieves device metadata |
+| [key](#method.key) | Retrieves key actions |
+| [delete](#method.delete) | Deletes key actions |
+| [modify](#method.modify) | Modifies key actions |
+| [pair](#method.pair) | Pairs a device |
+| [unpair](#method.unpair) | Unpairs a device |
+| [send](#method.send) | Sends key actions |
+| [press](#method.press) | Presses a key |
+| [release](#method.release) | Releases a key |
+| [save](#method.save) | Saves the key map |
+| [load](#method.load) | Loads a keymap |
+| [add](#method.add) | Adds a key |
 
 <a name="method.devices"></a>
-## *devices*
+## *devices <sup>method</sup>*
 
-General information.
+Retrieves device information
 
 ### Description
 
-Retrieves the names of all available devices.
+Retrieves names of all available devices.
 
 ### Parameters
 
@@ -138,9 +141,9 @@ This method takes no parameters.
 }
 ```
 <a name="method.device"></a>
-## *device*
+## *device <sup>method</sup>*
 
-Get device.
+Retrieves device metadata
 
 ### Description
 
@@ -196,9 +199,9 @@ Retrieves the metadata of specific devices.
 }
 ```
 <a name="method.key"></a>
-## *key*
+## *key <sup>method</sup>*
 
-Key action.
+Retrieves key actions
 
 ### Description
 
@@ -261,9 +264,9 @@ Retrieves the key code details.
 }
 ```
 <a name="method.delete"></a>
-## *delete*
+## *delete <sup>method</sup>*
 
-Key mapping actions.
+Deletes key actions
 
 ### Description
 
@@ -316,9 +319,9 @@ Deletes the key code from map.
 }
 ```
 <a name="method.modify"></a>
-## *modify*
+## *modify <sup>method</sup>*
 
-Key mapping actions.
+Modifies key actions
 
 ### Description
 
@@ -378,9 +381,9 @@ Modifies the key code in the map.
 }
 ```
 <a name="method.pair"></a>
-## *pair*
+## *pair <sup>method</sup>*
 
-Pairing device.
+Pairs a device
 
 ### Description
 
@@ -431,13 +434,13 @@ Activates pairing mode of specific device.
 }
 ```
 <a name="method.unpair"></a>
-## *unpair*
+## *unpair <sup>method</sup>*
 
-Pairing device.
+Unpairs a device
 
 ### Description
 
-Unpairs of specific device.
+Unpairs a specific device.
 
 ### Parameters
 
@@ -486,9 +489,9 @@ Unpairs of specific device.
 }
 ```
 <a name="method.send"></a>
-## *send*
+## *send <sup>method</sup>*
 
-Key mapping actions.
+Sends key actions
 
 ### Description
 
@@ -550,13 +553,13 @@ Sends a code to a device.
 }
 ```
 <a name="method.press"></a>
-## *press*
+## *press <sup>method</sup>*
 
-Key mapping actions.
+Presses a key
 
 ### Description
 
-Sends a code 'Press' to a device.
+Sends a 'Press' code to a device.
 
 ### Parameters
 
@@ -614,9 +617,9 @@ Sends a code 'Press' to a device.
 }
 ```
 <a name="method.release"></a>
-## *release*
+## *release <sup>method</sup>*
 
-Key mapping actions.
+Releases a key.
 
 ### Description
 
@@ -678,9 +681,9 @@ Sends a code 'Release' to a device.
 }
 ```
 <a name="method.save"></a>
-## *save*
+## *save <sup>method</sup>*
 
-Key mapping actions.
+Saves the key map
 
 ### Description
 
@@ -732,9 +735,9 @@ Saves the loaded key map as DEVICE_NAME.json into persistent path.
 }
 ```
 <a name="method.load"></a>
-## *load*
+## *load <sup>method</sup>*
 
-Key mapping actions.
+Loads a keymap
 
 ### Description
 
@@ -787,9 +790,9 @@ Re-loads DEVICE_NAME.json key map into memory.
 }
 ```
 <a name="method.add"></a>
-## *add*
+## *add <sup>method</sup>*
 
-Key mapping actions.
+Adds a key
 
 ### Description
 

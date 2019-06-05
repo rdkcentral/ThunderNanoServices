@@ -4,6 +4,8 @@
 
 **Version: 1.0**
 
+**Status: :black_circle::white_circle::white_circle:**
+
 Messenger plugin for WPEFramework.
 
 ### Table of Contents

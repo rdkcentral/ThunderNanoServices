@@ -1,0 +1,16 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Streamer Plugin",
+    "callsign": "Streamer",
+    "locator": "libWPEFrameworkStreamer.so",
+    "status": "alpha",
+    "description": [
+      ""
+    ],
+    "version": "1.0"
+  },
+  "interface": {
+    "$ref": "{interfacedir}/StreamerAPI.json#"
+  }
+}

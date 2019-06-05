@@ -4,7 +4,9 @@
 
 **Version: 1.0**
 
-TraceControl functionality for WPEFramework.
+**Status: :black_circle::black_circle::black_circle:**
+
+TraceControl plugin for WPEFramework.
 
 ### Table of Contents
 
@@ -76,18 +78,19 @@ The table below lists configuration options of the plugin.
 <a name="head.Methods"></a>
 # Methods
 
-The following API is provided by the plugin via JSON-RPC:
+The following methods are provided by the TraceControl plugin:
 
-- [status](#method.status)
-- [set](#method.set)
+TraceControl interface methods:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
-
+| Method | Description |
+| :-------- | :-------- |
+| [status](#method.status) | Retrieves general information |
+| [set](#method.set) | Sets traces |
 
 <a name="method.status"></a>
-## *status*
+## *status <sup>method</sup>*
 
-General information.
+Retrieves general information
 
 ### Description
 
@@ -154,9 +157,9 @@ Retrieves the actual trace status information for targeted module and category, 
 }
 ```
 <a name="method.set"></a>
-## *set*
+## *set <sup>method</sup>*
 
-State changes.
+Sets traces
 
 ### Description
 

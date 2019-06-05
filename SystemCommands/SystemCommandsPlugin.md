@@ -4,7 +4,9 @@
 
 **Version: 1.0**
 
-SystemCommands functionality for WPEFramework.
+**Status: :black_circle::black_circle::white_circle:**
+
+SystemCommands plugin for WPEFramework.
 
 ### Table of Contents
 
@@ -76,17 +78,18 @@ The table below lists configuration options of the plugin.
 <a name="head.Methods"></a>
 # Methods
 
-The following API is provided by the plugin via JSON-RPC:
+The following methods are provided by the SystemCommands plugin:
 
-- [usbreset](#method.usbreset)
+SystemCommands interface methods:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
-
+| Method | Description |
+| :-------- | :-------- |
+| [usbreset](#method.usbreset) | Resets a USB device |
 
 <a name="method.usbreset"></a>
-## *usbreset*
+## *usbreset <sup>method</sup>*
 
-Resets a USB device.
+Resets a USB device
 
 ### Description
 

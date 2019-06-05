@@ -4,13 +4,11 @@
     "title": "Location Sync Plugin",
     "callsign": "LocationSync",
     "locator": "libWPELocationSync.so",
-    "class": {
-      "$ref": "LocationSyncAPI.json#/info/class"
-    },
+    "status": "production",
     "description": "The LocationSync plugin provides geo-location functionality.",
     "version": "1.0"
   },
   "interface": {
-    "$ref": "LocationSyncAPI.json#"
+    "$ref": "{interfacedir}/LocationSyncAPI.json#"
   }
 }

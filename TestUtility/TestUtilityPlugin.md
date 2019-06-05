@@ -4,7 +4,9 @@
 
 **Version: 1.0**
 
-TestUtility functionality for WPEFramework.
+**Status: :black_circle::white_circle::white_circle:**
+
+TestUtility plugin for WPEFramework.
 
 ### Table of Contents
 
@@ -76,21 +78,22 @@ The table below lists configuration options of the plugin.
 <a name="head.Methods"></a>
 # Methods
 
-The following API is provided by the plugin via JSON-RPC:
+The following methods are provided by the TestUtility plugin:
 
-- [commands](#method.commands)
-- [description](#method.description)
-- [parameters](#method.parameters)
-- [runmemory](#method.runmemory)
-- [runcrash](#method.runcrash)
+TestUtility interface methods:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
-
+| Method | Description |
+| :-------- | :-------- |
+| [commands](#method.commands) | Retrieves the list of test commands |
+| [description](#method.description) | Retrieves the description of selected test command |
+| [parameters](#method.parameters) | Retrieves parameters of the selected test command |
+| [runmemory](#method.runmemory) | Runs a memory test command |
+| [runcrash](#method.runcrash) | Runs a crash test command |
 
 <a name="method.commands"></a>
-## *commands*
+## *commands <sup>method</sup>*
 
-Retrieves the list of test commands.
+Retrieves the list of test commands
 
 ### Parameters
 
@@ -126,9 +129,9 @@ This method takes no parameters.
 }
 ```
 <a name="method.description"></a>
-## *description*
+## *description <sup>method</sup>*
 
-Retrieves the description of selected test command.
+Retrieves the description of selected test command
 
 ### Parameters
 
@@ -177,9 +180,9 @@ Retrieves the description of selected test command.
 }
 ```
 <a name="method.parameters"></a>
-## *parameters*
+## *parameters <sup>method</sup>*
 
-Retrieves parameters of the selected test command.
+Retrieves parameters of the selected test command
 
 ### Parameters
 
@@ -247,9 +250,9 @@ Retrieves parameters of the selected test command.
 }
 ```
 <a name="method.runmemory"></a>
-## *runmemory*
+## *runmemory <sup>method</sup>*
 
-Runs a memory test command.
+Runs a memory test command
 
 ### Parameters
 
@@ -304,9 +307,9 @@ Runs a memory test command.
 }
 ```
 <a name="method.runcrash"></a>
-## *runcrash*
+## *runcrash <sup>method</sup>*
 
-Runs a crash test command.
+Runs a crash test command
 
 ### Parameters
 

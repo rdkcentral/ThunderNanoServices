@@ -4,13 +4,11 @@
     "title": "Trace Control Plugin",
     "callsign": "TraceControl",
     "locator": "libWPEFrameworkTraceControl.so",
-    "class": {
-      "$ref": "TraceControlAPI.json#/info/class"
-    },
+    "status": "production",
     "description": "The Trace Control plugin provides ability to disable/enable trace output an set its verbosity level.",
     "version": "1.0"
   },
-  "methods": {
-    "$ref": "TraceControlAPI.json#/methods"
+  "interface": {
+    "$ref": "{interfacedir}/TraceControlAPI.json#"
   }
 }

@@ -4,7 +4,9 @@
 
 **Version: 1.0**
 
-WifiControl functionality for WPEFramework.
+**Status: :black_circle::black_circle::white_circle:**
+
+WifiControl plugin for WPEFramework.
 
 ### Table of Contents
 
@@ -77,24 +79,25 @@ The table below lists configuration options of the plugin.
 <a name="head.Methods"></a>
 # Methods
 
-The following API is provided by the plugin via JSON-RPC:
+The following methods are provided by the WifiControl plugin:
 
-- [status](#method.status)
-- [networks](#method.networks)
-- [config](#method.config)
-- [delete](#method.delete)
-- [setconfig](#method.setconfig)
-- [store](#method.store)
-- [scan](#method.scan)
-- [connect](#method.connect)
-- [disconnect](#method.disconnect)
-- [debug](#method.debug)
+WifiControl interface methods:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
-
+| Method | Description |
+| :-------- | :-------- |
+| [status](#method.status) | Returns the current status information |
+| [networks](#method.networks) | Returns information about available networks |
+| [config](#method.config) | Returns information about configuration of the specified network(s) (FIXME!!!) |
+| [delete](#method.delete) | Forgets configuration of the specified network |
+| [setconfig](#method.setconfig) | Updates or creates a configuration for the specified network |
+| [store](#method.store) | Stores configurations in the permanent storage |
+| [scan](#method.scan) | Searches for available networks |
+| [connect](#method.connect) | Attempts connection to the specified network |
+| [disconnect](#method.disconnect) | Disconnects from the specified network |
+| [debug](#method.debug) | Sets specified debug level |
 
 <a name="method.status"></a>
-## *status*
+## *status <sup>method</sup>*
 
 Returns the current status information
 
@@ -134,7 +137,7 @@ This method takes no parameters.
 }
 ```
 <a name="method.networks"></a>
-## *networks*
+## *networks <sup>method</sup>*
 
 Returns information about available networks
 
@@ -153,7 +156,7 @@ This method takes no parameters.
 | result[#].pairs[#] | object |  |
 | result[#].pairs[#].method | string | Encryption method used by a network |
 | result[#].pairs[#].keys | array |  |
-| result[#].pairs[#].keys[#] | string | Type of a supported key |
+| result[#].pairs[#].keys[#] | string | Types of supported keys |
 | result[#]?.bssid | string | <sup>*(optional)*</sup> 48-bits long BSS' identifier (might be MAC format) |
 | result[#].frequency | number | Network's frequency in MHz |
 | result[#].signal | number | Network's signal level in dBm |
@@ -194,7 +197,7 @@ This method takes no parameters.
 }
 ```
 <a name="method.config"></a>
-## *config*
+## *config <sup>method</sup>*
 
 Returns information about configuration of the specified network(s) (FIXME!!!)
 
@@ -203,7 +206,7 @@ Returns information about configuration of the specified network(s) (FIXME!!!)
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.ssid | string | Identifier of a network (32-bytes long) |
+| params.ssid | string | Identifier of a network (32-bytes long). If not specified all configs are returned. |
 
 ### Result
 
@@ -255,7 +258,7 @@ Returns information about configuration of the specified network(s) (FIXME!!!)
 }
 ```
 <a name="method.delete"></a>
-## *delete*
+## *delete <sup>method</sup>*
 
 Forgets configuration of the specified network
 
@@ -296,7 +299,7 @@ Forgets configuration of the specified network
 }
 ```
 <a name="method.setconfig"></a>
-## *setconfig*
+## *setconfig <sup>method</sup>*
 
 Updates or creates a configuration for the specified network
 
@@ -363,7 +366,7 @@ Updates or creates a configuration for the specified network
 }
 ```
 <a name="method.store"></a>
-## *store*
+## *store <sup>method</sup>*
 
 Stores configurations in the permanent storage
 
@@ -404,9 +407,9 @@ This method takes no parameters.
 }
 ```
 <a name="method.scan"></a>
-## *scan*
+## *scan <sup>method</sup>*
 
-Searches for an available networks
+Searches for available networks
 
 Also see: [scanresults](#event.scanresults)
 
@@ -424,7 +427,7 @@ This method takes no parameters.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 12 | ```ERROR_INPROGRESS``` | Operation in progress |
+| 12 | ```ERROR_INPROGRESS``` | Returned when scan is already in progress |
 | 2 | ```ERROR_UNAVAILABLE``` | Returned when scanning is not available for some reason |
 
 ### Example
@@ -448,9 +451,9 @@ This method takes no parameters.
 }
 ```
 <a name="method.connect"></a>
-## *connect*
+## *connect <sup>method</sup>*
 
-Attempt connection to the specified network
+Attempts connection to the specified network
 
 Also see: [connectionchange](#event.connectionchange)
 
@@ -498,7 +501,7 @@ Also see: [connectionchange](#event.connectionchange)
 }
 ```
 <a name="method.disconnect"></a>
-## *disconnect*
+## *disconnect <sup>method</sup>*
 
 Disconnects from the specified network
 
@@ -548,7 +551,7 @@ Also see: [connectionchange](#event.connectionchange)
 }
 ```
 <a name="method.debug"></a>
-## *debug*
+## *debug <sup>method</sup>*
 
 Sets specified debug level
 
@@ -599,14 +602,18 @@ Sets specified debug level
 
 Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[WPEF](#ref.WPEF)] for information on how to register for a notification.
 
-The following notifications are provided by the plugin:
+The following events are provided by the WifiControl plugin:
 
-- [scanresults](#event.scanresults)
-- [networkchange](#event.networkchange)
-- [connectionchange](#event.connectionchange)
+WifiControl interface events:
+
+| Event | Description |
+| :-------- | :-------- |
+| [scanresults](#event.scanresults) | Signals that the scan operation has finished and carries results of it |
+| [networkchange](#event.networkchange) | Informs that something has changed with the network |
+| [connectionchange](#event.connectionchange) | Notifies about connection state change |
 
 <a name="event.scanresults"></a>
-## *scanresults*
+## *scanresults <sup>event</sup>*
 
 Signals that the scan operation has finished and carries results of it
 
@@ -621,7 +628,7 @@ Signals that the scan operation has finished and carries results of it
 | params[#].pairs[#] | object |  |
 | params[#].pairs[#].method | string | Encryption method used by a network |
 | params[#].pairs[#].keys | array |  |
-| params[#].pairs[#].keys[#] | string | Type of a supported key |
+| params[#].pairs[#].keys[#] | string | Types of supported keys |
 | params[#]?.bssid | string | <sup>*(optional)*</sup> 48-bits long BSS' identifier (might be MAC format) |
 | params[#].frequency | number | Network's frequency in MHz |
 | params[#].signal | number | Network's signal level in dBm |
@@ -651,13 +658,13 @@ Signals that the scan operation has finished and carries results of it
 }
 ```
 <a name="event.networkchange"></a>
-## *networkchange*
+## *networkchange <sup>event</sup>*
 
 Informs that something has changed with the network e.g. frequency
 
 ### Parameters
 
-This event has no parameters.
+This event carries no parameters.
 
 ### Example
 
@@ -668,7 +675,7 @@ This event has no parameters.
 }
 ```
 <a name="event.connectionchange"></a>
-## *connectionchange*
+## *connectionchange <sup>event</sup>*
 
 Notifies about connection state change i.e. connected/disconnected
 
@@ -676,7 +683,7 @@ Notifies about connection state change i.e. connected/disconnected
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| params | string | Identifier of a network (32-bytes long) |
+| params | string | SSID of the connected network in case of connect or empty in case of disconnect |
 
 ### Example
 
