@@ -22,7 +22,7 @@ namespace Plugin {
         ASSERT(_service == nullptr);
 
         // Setup skip URL for right offset.
-        _pid = 0;
+        _connectionId = 0;
         _service = service;
         _skipURL = static_cast<uint32_t>(_service->WebPrefix().length());
 
@@ -32,7 +32,7 @@ namespace Plugin {
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
         _service->Register(&_notification);
 
-        _server = _service->Root<Exchange::IWebServer>(_pid, 2000, _T("WebServerImplementation"));
+        _server = _service->Root<Exchange::IWebServer>(_connectionId, Core::infinite, _T("WebServerImplementation"));
 
         if (_server != nullptr) {
 
@@ -48,7 +48,7 @@ namespace Plugin {
                 stateControl->Configure(_service);
                 stateControl->Release();
 
-                _memory = WPEFramework::WebServer::MemoryObserver(_pid);
+                _memory = WPEFramework::WebServer::MemoryObserver(_connectionId);
 
                 ASSERT(_memory != nullptr);
 
@@ -88,18 +88,18 @@ namespace Plugin {
         // Stop processing of the browser:
         if (_server->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 
-            ASSERT(_pid != 0);
+            ASSERT(_connectionId != 0);
 
-            TRACE_L1("OutOfProcess Plugin is not properly destructed. PID: %d", _pid);
+            TRACE_L1("OutOfProcess Plugin is not properly destructed. PID: %d", _connectionId);
 
-            RPC::IRemoteProcess* process(_service->RemoteProcess(_pid));
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // The process can disappear in the meantime...
-            if (process != nullptr) {
+            if (connection != nullptr) {
 
                 // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                process->Terminate();
-                process->Release();
+                connection->Terminate();
+                connection->Release();
             }
         }
 
@@ -122,11 +122,11 @@ namespace Plugin {
         return (string());
     }
 
-    void WebServer::Deactivated(RPC::IRemoteProcess* process)
+    void WebServer::Deactivated(RPC::IRemoteConnection* connection)
     {
         // This can potentially be called on a socket thread, so the deactivation (wich in turn kills this object) must be done
         // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
-        if (_pid == process->Id()) {
+        if (_connectionId == connection->Id()) {
 
             ASSERT(_service != nullptr);
 

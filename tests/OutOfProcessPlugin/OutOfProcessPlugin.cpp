@@ -28,22 +28,22 @@ namespace Plugin {
         ASSERT(_memory == nullptr);
         ASSERT(_service == nullptr);
 
-        _pid = 0;
+        _connectionId = 0;
         _service = service;
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
         _service->EnableWebServer(_T("UI"), EMPTY_STRING);
-        _service->Register(static_cast<RPC::IRemoteProcess::INotification*>(_notification));
+        _service->Register(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
 
         config.FromString(_service->ConfigLine());
 
         if (config.OutOfProcess.Value() == true) {
-            _browser = _service->Instantiate<Exchange::IBrowser>(5000, _T("OutOfProcessImplementation"), static_cast<uint32_t>(~0), _pid, service->Locator());
+            _browser = _service->Instantiate<Exchange::IBrowser>(5000, _T("OutOfProcessImplementation"), static_cast<uint32_t>(~0), _connectionId, service->Locator());
         } else {
             _browser = Core::ServiceAdministrator::Instance().Instantiate<Exchange::IBrowser>(Core::Library(), _T("OutOfProcessImplementation"), static_cast<uint32_t>(~0));
         }
 
         if (_browser == nullptr) {
-            _service->Unregister(static_cast<RPC::IRemoteProcess::INotification*>(_notification));
+            _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
             _service = nullptr;
             message = _T("OutOfProcessPlugin could not be instantiated.");
         } else {
@@ -57,7 +57,7 @@ namespace Plugin {
             stateControl->Register(_notification);
             stateControl->Release();
 
-            _memory = WPEFramework::OutOfProcessPlugin::MemoryObserver(_pid);
+            _memory = WPEFramework::OutOfProcessPlugin::MemoryObserver(_connectionId);
             ASSERT(_memory != nullptr);
         }
 
@@ -70,7 +70,7 @@ namespace Plugin {
         ASSERT(_browser != nullptr);
 
         _service->DisableWebServer();
-        _service->Unregister(static_cast<RPC::IRemoteProcess::INotification*>(_notification));
+        _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
         _browser->Unregister(_notification);
         _memory->Release();
 
@@ -86,15 +86,15 @@ namespace Plugin {
         // Stop processing of the browser:
         if (_browser->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 
-            ASSERT(_pid != 0);
-            TRACE_L1("OutOfProcess Plugin is not properly destructed. PID: %d", _pid);
+            ASSERT(_connectionId != 0);
+            TRACE_L1("OutOfProcess Plugin is not properly destructed. PID: %d", _connectionId);
 
-            RPC::IRemoteProcess* process(_service->RemoteProcess(_pid));
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // The process can disappear in the meantime...
-            if (process != nullptr) {
-                process->Terminate();
-                process->Release();
+            if (connection != nullptr) {
+                connection->Terminate();
+                connection->Release();
             }
         }
 
@@ -233,11 +233,11 @@ namespace Plugin {
         _service->Notify(message);
     }
 
-    void OutOfProcessPlugin::Deactivated(RPC::IRemoteProcess* process)
+    void OutOfProcessPlugin::Deactivated(RPC::IRemoteConnection* connection)
     {
         // This can potentially be called on a socket thread, so the deactivation (wich in turn kills this object) must be done
         // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
-        if (_pid == process->Id()) {
+        if (_connectionId == connection->Id()) {
 
             ASSERT(_service != nullptr);
 

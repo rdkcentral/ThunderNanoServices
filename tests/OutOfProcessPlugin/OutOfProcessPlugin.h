@@ -15,7 +15,7 @@ namespace Plugin {
 
         class Notification : public Exchange::IBrowser::INotification,
                              public PluginHost::IStateControl::INotification,
-                             public RPC::IRemoteProcess::INotification {
+                             public RPC::IRemoteConnection::INotification {
         private:
             Notification();
             Notification(const Notification&);
@@ -49,12 +49,12 @@ namespace Plugin {
             {
                 _parent.StateChange(value);
             }
-            virtual void Activated(RPC::IRemoteProcess* /* process */)
+            virtual void Activated(RPC::IRemoteConnection* /* connection */)
             {
             }
-            virtual void Deactivated(RPC::IRemoteProcess* process)
+            virtual void Deactivated(RPC::IRemoteConnection* connection)
             {
-                _parent.Deactivated(process);
+                _parent.Deactivated(connection);
             }
             virtual void Closure()
             {
@@ -63,7 +63,7 @@ namespace Plugin {
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(Exchange::IBrowser::INotification)
             INTERFACE_ENTRY(PluginHost::IStateControl::INotification)
-            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -206,12 +206,12 @@ namespace Plugin {
         void URLChanged(const string& URL);
         void Hidden(const bool hidden);
         void StateChange(const PluginHost::IStateControl::state value);
-        void Deactivated(RPC::IRemoteProcess* process);
+        void Deactivated(RPC::IRemoteConnection* connection);
 
     private:
         Core::CriticalSection _adminLock;
         uint8_t _skipURL;
-        uint32_t _pid;
+        uint32_t _connectionId;
         string _webPath;
         PluginHost::IShell* _service;
         Exchange::IBrowser* _browser;

@@ -13,7 +13,7 @@ namespace Plugin {
         WebServer(const WebServer&) = delete;
         WebServer& operator=(const WebServer&) = delete;
 
-        class Notification : public RPC::IRemoteProcess::INotification {
+        class Notification : public RPC::IRemoteConnection::INotification {
         private:
             Notification() = delete;
             Notification(const Notification&) = delete;
@@ -30,16 +30,16 @@ namespace Plugin {
             }
 
         public:
-            virtual void Activated(RPC::IRemoteProcess* /* process */)
+            virtual void Activated(RPC::IRemoteConnection* /* connection */)
             {
             }
-            virtual void Deactivated(RPC::IRemoteProcess* process)
+            virtual void Deactivated(RPC::IRemoteConnection* connectionId)
             {
-                _parent.Deactivated(process);
+                _parent.Deactivated(connectionId);
             }
 
             BEGIN_INTERFACE_MAP(Notification)
-            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -113,11 +113,11 @@ namespace Plugin {
         virtual string Information() const;
 
     private:
-        void Deactivated(RPC::IRemoteProcess* process);
+        void Deactivated(RPC::IRemoteConnection* connection);
 
     private:
         uint32_t _skipURL;
-        uint32_t _pid;
+        uint32_t _connectionId;
         PluginHost::IShell* _service;
         Exchange::IWebServer* _server;
         Exchange::IMemory* _memory;
