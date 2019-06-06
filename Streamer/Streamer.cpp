@@ -39,21 +39,20 @@ namespace Plugin {
         ASSERT(_service == service);
         ASSERT(_player != nullptr);
 
-        // Stop processing of the browser:
         if (_player->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 
             ASSERT(_pid != 0);
 
             TRACE(Trace::Error, (_T("OutOfProcess Plugin is not properly destructed. PID: %d"), _pid));
 
-            RPC::IRemoteProcess* process(_service->RemoteProcess(_pid));
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_pid));
 
-            // The process can disappear in the meantime...
-            if (process != nullptr) {
+            // The connection can disappear in the meantime...
+            if (connection != nullptr) {
 
                 // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                process->Terminate();
-                process->Release();
+                connection->Terminate();
+                connection->Release();
             }
         }
 
@@ -343,11 +342,11 @@ namespace Plugin {
         return result;
     }
 
-    void Streamer::Deactivated(RPC::IRemoteProcess* process)
+    void Streamer::Deactivated(RPC::IRemoteConnection* connection)
     {
         // This can potentially be called on a socket thread, so the deactivation (wich in turn kills this object) must be done
         // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
-        if (_pid == process->Id()) {
+        if (_pid == connection->Id()) {
             ASSERT(_service != nullptr);
             PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }

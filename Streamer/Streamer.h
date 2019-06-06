@@ -284,7 +284,7 @@ namespace Plugin {
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> PostMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index);
-        void Deactivated(RPC::IRemoteProcess* process);
+        void Deactivated(RPC::IRemoteConnection* connection);
 
         void DRM(const uint8_t index, uint32_t state)
         {
