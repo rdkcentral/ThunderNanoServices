@@ -2,335 +2,347 @@
 #define __PLUGINDIALSERVER_H
 
 #include "Module.h"
-#include <interfaces/IWebServer.h>
 #include <interfaces/ISwitchBoard.h>
+#include <interfaces/IWebServer.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
     class DIALServer : public PluginHost::IPlugin, public PluginHost::IWeb {
-	public:
-		class Config : public Core::JSON::Container {
-		public:
-			class App : public Core::JSON::Container {
-			private:
-				App& operator=(const App&) = delete;
+    public:
+        class Config : public Core::JSON::Container {
+        public:
+            class App : public Core::JSON::Container {
+            private:
+                App& operator=(const App&) = delete;
 
-			public:
-				App()
-					: Core::JSON::Container()
-					, Name()
-					, Callsign()
-					, AllowStop(false)
-					, Handler()
-					, URL()
-					, Config()
-				{
-					Add(_T("name"), &Name);
-					Add(_T("callsign"), &Callsign);
-					Add(_T("allowstop"), &AllowStop);
-					Add(_T("handler"), &Handler);
-					Add(_T("url"), &URL);
-					Add(_T("config"), &Config);
-				}
-				App(const App& copy)
-					: Core::JSON::Container()
-					, Name(copy.Name)
-					, Callsign(copy.Callsign)
-					, AllowStop(copy.AllowStop)
-					, Handler(copy.Handler)
-					, URL(copy.URL)
-					, Config(copy.Config)
-				{
-					Add(_T("name"), &Name);
-					Add(_T("callsign"), &Callsign);
-					Add(_T("allowstop"), &AllowStop);
-					Add(_T("handler"), &Handler);
-					Add(_T("url"), &URL);
-					Add(_T("config"), &Config);
-				}
-				virtual ~App()
-				{
-				}
-
-			public:
-				Core::JSON::String Name;
-				Core::JSON::String Callsign;
-				Core::JSON::Boolean AllowStop;
-				Core::JSON::String Handler;
-				Core::JSON::String URL;
-				Core::JSON::String Config;
-			};
-
-		private:
-			Config(const Config&) = delete;
-			Config& operator=(const Config&) = delete;
-
-		public:
-			Config()
-				: Core::JSON::Container()
-				, Name()
-				, Model()
-				, Manufacturer()
-				, Description()
-				, Interface()
-				, ServerURL()
-				, WebServer()
-				, SwitchBoard()
-			{
-				Add(_T("interface"), &Interface);
-				Add(_T("name"), &Name);
-				Add(_T("model"), &Model);
-				Add(_T("manufacturer"), &Manufacturer);
-				Add(_T("description"), &Description);
-				Add(_T("serverurl"), &ServerURL);
-				Add(_T("webserver"), &WebServer);
-				Add(_T("switchboard"), &SwitchBoard);
-				Add(_T("apps"), &Apps);
-			}
-			~Config()
-			{
-			}
-
-		public:
-			Core::JSON::String Name;
-			Core::JSON::String Model;
-			Core::JSON::String Manufacturer;
-			Core::JSON::String Description;
-			Core::JSON::String Interface;
-			Core::JSON::String ServerURL;
-			Core::JSON::String WebServer;
-			Core::JSON::String SwitchBoard;
-			Core::JSON::Boolean Notify;
-			Core::JSON::ArrayType<App> Apps;
-		};
-
-		struct IApplication {
-			virtual ~IApplication() {}
-
-			// Methods that the DIALServer requires.
-			virtual bool IsRunning() const = 0;
-			virtual bool HasAllowStop() const = 0;
-			virtual void Start(const string& data) = 0;
-			virtual void Stop(const string& data) = 0;
-			virtual string URL () const = 0;
-			virtual string AdditionalData() const = 0;
-			virtual void Running(const bool isRunning) = 0;
-			virtual void SwitchBoard(Exchange::ISwitchBoard* switchBoard) = 0;
-		};
-
-		struct IApplicationFactory {
-			virtual ~IApplicationFactory() {}
-
-			virtual IApplication* Create(PluginHost::IShell* shell, const Config::App& config) = 0;
-		};
-
-		class Default : public Plugin::DIALServer::IApplication {
-		private:
-			Default() = delete;
-			Default(const Default&) = delete;
-			Default& operator= (const Default&) = delete;
-
-		public:
-			Default(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config)
-				: _switchBoard(nullptr)
-				, _service(service)
-				, _callsign(config.Callsign.IsSet() == true ? config.Callsign.Value() : config.Name.Value())
-				, _hasAllowStop(config.AllowStop.Value())
-				, _passiveMode(config.Callsign.IsSet() == false)
-				, _isRunning(false)
-			{
-				// The switchboard should be located on the Controller. If the Switchboard is configured
-				// it should always result in an non-null ptr.
-				if (_passiveMode == false) {
-					// We are in active mode, no need to do reporting from DIALSserver, move
-					// to the required plugin
-					_service = _service->QueryInterfaceByCallsign<PluginHost::IShell>(_callsign);
-
-					if (_service == nullptr) {
-						// Oops the service we want to use does not exist, move to Passive more..
-						_passiveMode = true;
-						_service = service;
-					}
-				}
-
-				if (_passiveMode == true) {
-					// Just need an addRef on the Service
-					_service->AddRef();
-				}
-			}
-			virtual ~Default() {
-				if (_switchBoard != nullptr) {
-					_switchBoard->Release();
-				}
-				if (_service != nullptr) {
-					_service->Release();
-				}
-			}
-
-		public:
-			// Methods that the DIALServer requires.
-			virtual bool IsRunning() const {
-				return (_passiveMode == true ? _isRunning : (_switchBoard != nullptr ? _switchBoard->IsActive(_callsign) : (_service->State() == PluginHost::IShell::ACTIVATED)));
-			}
-			virtual bool HasAllowStop() const {
-				return (_hasAllowStop);
-			}
-			virtual void Start(const string& data) {
-				if (_passiveMode == true) {
-					const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"start\", \"data\":\"" + data + "\" }"));
-					_service->Notify(message);
-				}
-				else {
-					if (_switchBoard != nullptr) {
-                        printf("%s:%s:%d -Switchboard Mode\n",__FILE__,__func__,__LINE__);
-						_switchBoard->Activate(_callsign);
-					}
-					else {
-                        printf("%s:%s:%d -Active Mode\n",__FILE__,__func__,__LINE__);
-						_service->Activate(PluginHost::IShell::REQUESTED);
-					}
-
-					if (IsRunning() == true) {
-                        printf("%s:%s:%d\n",__FILE__,__func__,__LINE__);
-						Started(data);
-					}
+            public:
+                App()
+                    : Core::JSON::Container()
+                    , Name()
+                    , Callsign()
+                    , AllowStop(false)
+                    , Handler()
+                    , URL()
+                    , Config()
+                {
+                    Add(_T("name"), &Name);
+                    Add(_T("callsign"), &Callsign);
+                    Add(_T("allowstop"), &AllowStop);
+                    Add(_T("handler"), &Handler);
+                    Add(_T("url"), &URL);
+                    Add(_T("config"), &Config);
                 }
-			}
-			virtual void Stop(const string& data) {
-				if (_passiveMode == true) {
-					const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"stop\", \"data\":\"" + data + "\"}"));
-					_service->Notify(message);
+                App(const App& copy)
+                    : Core::JSON::Container()
+                    , Name(copy.Name)
+                    , Callsign(copy.Callsign)
+                    , AllowStop(copy.AllowStop)
+                    , Handler(copy.Handler)
+                    , URL(copy.URL)
+                    , Config(copy.Config)
+                {
+                    Add(_T("name"), &Name);
+                    Add(_T("callsign"), &Callsign);
+                    Add(_T("allowstop"), &AllowStop);
+                    Add(_T("handler"), &Handler);
+                    Add(_T("url"), &URL);
+                    Add(_T("config"), &Config);
                 }
-				else {
-					Stopped(data);
+                virtual ~App()
+                {
+                }
 
-					if (_switchBoard != nullptr) {
-						_switchBoard->Deactivate(_callsign);
-					}
-					else {
-						_service->Deactivate(PluginHost::IShell::REQUESTED);
+            public:
+                Core::JSON::String Name;
+                Core::JSON::String Callsign;
+                Core::JSON::Boolean AllowStop;
+                Core::JSON::String Handler;
+                Core::JSON::String URL;
+                Core::JSON::String Config;
+            };
+
+        private:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+
+        public:
+            Config()
+                : Core::JSON::Container()
+                , Name()
+                , Model()
+                , Manufacturer()
+                , Description()
+                , Interface()
+                , ServerURL()
+                , WebServer()
+                , SwitchBoard()
+            {
+                Add(_T("interface"), &Interface);
+                Add(_T("name"), &Name);
+                Add(_T("model"), &Model);
+                Add(_T("manufacturer"), &Manufacturer);
+                Add(_T("description"), &Description);
+                Add(_T("serverurl"), &ServerURL);
+                Add(_T("webserver"), &WebServer);
+                Add(_T("switchboard"), &SwitchBoard);
+                Add(_T("apps"), &Apps);
+            }
+            ~Config()
+            {
+            }
+
+        public:
+            Core::JSON::String Name;
+            Core::JSON::String Model;
+            Core::JSON::String Manufacturer;
+            Core::JSON::String Description;
+            Core::JSON::String Interface;
+            Core::JSON::String ServerURL;
+            Core::JSON::String WebServer;
+            Core::JSON::String SwitchBoard;
+            Core::JSON::Boolean Notify;
+            Core::JSON::ArrayType<App> Apps;
+        };
+
+        struct IApplication {
+            virtual ~IApplication() {}
+
+            // Methods that the DIALServer requires.
+            virtual bool IsRunning() const = 0;
+            virtual bool HasAllowStop() const = 0;
+            virtual void Start(const string& data) = 0;
+            virtual void Stop(const string& data) = 0;
+            virtual string URL() const = 0;
+            virtual string AdditionalData() const = 0;
+            virtual void Running(const bool isRunning) = 0;
+            virtual void SwitchBoard(Exchange::ISwitchBoard* switchBoard) = 0;
+        };
+
+        struct IApplicationFactory {
+            virtual ~IApplicationFactory() {}
+
+            virtual IApplication* Create(PluginHost::IShell* shell, const Config::App& config) = 0;
+        };
+
+        class Default : public Plugin::DIALServer::IApplication {
+        private:
+            Default() = delete;
+            Default(const Default&) = delete;
+            Default& operator=(const Default&) = delete;
+
+        public:
+            Default(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config)
+                : _switchBoard(nullptr)
+                , _service(service)
+                , _callsign(config.Callsign.IsSet() == true ? config.Callsign.Value() : config.Name.Value())
+                , _hasAllowStop(config.AllowStop.Value())
+                , _passiveMode(config.Callsign.IsSet() == false)
+                , _isRunning(false)
+            {
+                // The switchboard should be located on the Controller. If the Switchboard is configured
+                // it should always result in an non-null ptr.
+                if (_passiveMode == false) {
+                    // We are in active mode, no need to do reporting from DIALSserver, move
+                    // to the required plugin
+                    _service = _service->QueryInterfaceByCallsign<PluginHost::IShell>(_callsign);
+
+                    if (_service == nullptr) {
+                        // Oops the service we want to use does not exist, move to Passive more..
+                        _passiveMode = true;
+                        _service = service;
                     }
                 }
-			}
-			virtual void Started(const string& /* data */) {
-			}
-			virtual void Stopped(const string& /* data */) {
-			}
-			virtual string URL() const {
-				return ("");
-			}
-			virtual string AdditionalData() const {
-				return ("");
-			}
-			virtual void Running(const bool isRunning) {
-				// This method is only for the Passive mode..
-				if (_passiveMode != true) {
-					TRACE_L1(_T("This app is not configured to be Passive !!!!%s"), "");
-				}
 
-				_isRunning = isRunning;
-			}
-			virtual void SwitchBoard(Exchange::ISwitchBoard* switchBoard) {
-				ASSERT ((_switchBoard != nullptr) ^ (switchBoard != nullptr));
+                if (_passiveMode == true) {
+                    // Just need an addRef on the Service
+                    _service->AddRef();
+                }
+            }
+            virtual ~Default()
+            {
+                if (_switchBoard != nullptr) {
+                    _switchBoard->Release();
+                }
+                if (_service != nullptr) {
+                    _service->Release();
+                }
+            }
 
-				if (_switchBoard != nullptr) {
-					_switchBoard->Release();
-				}
-				_switchBoard = switchBoard;
+        public:
+            // Methods that the DIALServer requires.
+            virtual bool IsRunning() const
+            {
+                return (_passiveMode == true ? _isRunning : (_switchBoard != nullptr ? _switchBoard->IsActive(_callsign) : (_service->State() == PluginHost::IShell::ACTIVATED)));
+            }
+            virtual bool HasAllowStop() const
+            {
+                return (_hasAllowStop);
+            }
+            virtual void Start(const string& data)
+            {
+                if (_passiveMode == true) {
+                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"start\", \"data\":\"" + data + "\" }"));
+                    _service->Notify(message);
+                } else {
+                    if (_switchBoard != nullptr) {
+                        printf("%s:%s:%d -Switchboard Mode\n", __FILE__, __func__, __LINE__);
+                        _switchBoard->Activate(_callsign);
+                    } else {
+                        printf("%s:%s:%d -Active Mode\n", __FILE__, __func__, __LINE__);
+                        _service->Activate(PluginHost::IShell::REQUESTED);
+                    }
 
-				if (_switchBoard != nullptr) {
-					_switchBoard->AddRef();
-				}
-			}
+                    if (IsRunning() == true) {
+                        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
+                        Started(data);
+                    }
+                }
+            }
+            virtual void Stop(const string& data)
+            {
+                if (_passiveMode == true) {
+                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"stop\", \"data\":\"" + data + "\"}"));
+                    _service->Notify(message);
+                } else {
+                    Stopped(data);
 
-		protected:
+                    if (_switchBoard != nullptr) {
+                        _switchBoard->Deactivate(_callsign);
+                    } else {
+                        _service->Deactivate(PluginHost::IShell::REQUESTED);
+                    }
+                }
+            }
+            virtual void Started(const string& /* data */)
+            {
+            }
+            virtual void Stopped(const string& /* data */)
+            {
+            }
+            virtual string URL() const
+            {
+                return ("");
+            }
+            virtual string AdditionalData() const
+            {
+                return ("");
+            }
+            virtual void Running(const bool isRunning)
+            {
+                // This method is only for the Passive mode..
+                if (_passiveMode != true) {
+                    TRACE_L1(_T("This app is not configured to be Passive !!!!%s"), "");
+                }
+
+                _isRunning = isRunning;
+            }
+            virtual void SwitchBoard(Exchange::ISwitchBoard* switchBoard)
+            {
+                ASSERT((_switchBoard != nullptr) ^ (switchBoard != nullptr));
+
+                if (_switchBoard != nullptr) {
+                    _switchBoard->Release();
+                }
+                _switchBoard = switchBoard;
+
+                if (_switchBoard != nullptr) {
+                    _switchBoard->AddRef();
+                }
+            }
+
+        protected:
             template <typename REQUESTEDINTERFACE>
-			REQUESTEDINTERFACE* QueryInterface()
-			{
+            REQUESTEDINTERFACE* QueryInterface()
+            {
                 return (_service->QueryInterface<REQUESTEDINTERFACE>());
-			}
+            }
 
-		private:
-			Exchange::ISwitchBoard* _switchBoard;
-			PluginHost::IShell* _service;
-			string _callsign;
-			bool _hasAllowStop;
-			bool _passiveMode;
-			bool _isRunning;
-		};
+        private:
+            Exchange::ISwitchBoard* _switchBoard;
+            PluginHost::IShell* _service;
+            string _callsign;
+            bool _hasAllowStop;
+            bool _passiveMode;
+            bool _isRunning;
+        };
 
-	private:
+    private:
         DIALServer(const DIALServer&) = delete;
         DIALServer& operator=(const DIALServer&) = delete;
 
         static const uint32_t MaxDialQuerySize = 4096;
 
-		template <typename HANDLER>
-		class ApplicationFactoryType : public IApplicationFactory {
-			private:
-				ApplicationFactoryType(const ApplicationFactoryType&) = delete;
-				ApplicationFactoryType& operator= (const ApplicationFactoryType&) = delete;
+        template <typename HANDLER>
+        class ApplicationFactoryType : public IApplicationFactory {
+        private:
+            ApplicationFactoryType(const ApplicationFactoryType&) = delete;
+            ApplicationFactoryType& operator=(const ApplicationFactoryType&) = delete;
 
-			public:
-				ApplicationFactoryType() {}
-				virtual ~ApplicationFactoryType() {}
+        public:
+            ApplicationFactoryType() {}
+            virtual ~ApplicationFactoryType() {}
 
-			public:
-				virtual IApplication* Create(PluginHost::IShell* shell, const Config::App& config) {
-					return (new HANDLER(shell, config));
-				}
-		};
-		class EXTERNAL Protocol {
-		private:
-			// -------------------------------------------------------------------
-			// This object should not be copied or assigned. Prevent the copy
-			// constructor and assignment constructor from being used. Compiler
-			// generated assignment and copy methods will be blocked by the
-			// following statments.
-			// Define them but do not implement them, compile error/link error.
-			// -------------------------------------------------------------------
-			Protocol(const Protocol& a_Copy) = delete;
-			Protocol& operator=(const Protocol& a_RHS) = delete;
+        public:
+            virtual IApplication* Create(PluginHost::IShell* shell, const Config::App& config)
+            {
+                return (new HANDLER(shell, config));
+            }
+        };
+        class EXTERNAL Protocol {
+        private:
+            // -------------------------------------------------------------------
+            // This object should not be copied or assigned. Prevent the copy
+            // constructor and assignment constructor from being used. Compiler
+            // generated assignment and copy methods will be blocked by the
+            // following statments.
+            // Define them but do not implement them, compile error/link error.
+            // -------------------------------------------------------------------
+            Protocol(const Protocol& a_Copy) = delete;
+            Protocol& operator=(const Protocol& a_RHS) = delete;
 
-		public:
-			Protocol(const Web::Request* request)
-			{
-				_text = Core::ToString(string("IN: ") + Web::Request::ToString(request->Verb) + ' ' + request->Path);
-			}
-			Protocol(const Web::Response* response) {
-				_text = Core::ToString(string("OUT: ") + response->Location.Value());
-			}
-			Protocol(const string& response) {
-				_text = Core::ToString(string("OUT: ") + response);
-			}
-			Protocol(const string& response, const Core::URL* url) {
-				_text = Core::ToString(string("OUT: [") + url->Text().Text() + "] " + response);
-			}
-			~Protocol()
-			{
-			}
+        public:
+            Protocol(const Web::Request* request)
+            {
+                _text = Core::ToString(string("IN: ") + Web::Request::ToString(request->Verb) + ' ' + request->Path);
+            }
+            Protocol(const Web::Response* response)
+            {
+                _text = Core::ToString(string("OUT: ") + response->Location.Value());
+            }
+            Protocol(const string& response)
+            {
+                _text = Core::ToString(string("OUT: ") + response);
+            }
+            Protocol(const string& response, const Core::URL* url)
+            {
+                _text = Core::ToString(string("OUT: [") + url->Text().Text() + "] " + response);
+            }
+            ~Protocol()
+            {
+            }
 
-		public:
-			inline const char* Data() const
-			{
-				return (_text.c_str());
-			}
-			inline uint16_t Length() const
-			{
-				return (static_cast<uint16_t>(_text.length()));
-			}
+        public:
+            inline const char* Data() const
+            {
+                return (_text.c_str());
+            }
+            inline uint16_t Length() const
+            {
+                return (static_cast<uint16_t>(_text.length()));
+            }
 
-		private:
-			std::string _text;
-		};
+        private:
+            std::string _text;
+        };
         class WebTransform {
         private:
             WebTransform(const WebTransform&);
             WebTransform& operator=(const WebTransform&);
 
         public:
-            inline WebTransform() : _keywordLength (static_cast<uint8_t>(_tcslen(Web::Request::MSEARCH)))
+            inline WebTransform()
+                : _keywordLength(static_cast<uint8_t>(_tcslen(Web::Request::MSEARCH)))
             {
             }
             inline ~WebTransform()
@@ -340,8 +352,8 @@ namespace Plugin {
             // Methods to extract and insert data into the socket buffers
             uint16_t Transform(Web::Request::Deserializer& deserializer, uint8_t* dataFrame, const uint16_t maxSendSize);
 
-		private:
-			uint8_t _keywordLength;
+        private:
+            uint8_t _keywordLength;
         };
         class DIALServerImpl : public Web::WebLinkType<Core::SocketDatagram, Web::Request, Web::Response, Core::ProxyPoolType<Web::Request>, WebTransform> {
         private:
@@ -404,8 +416,8 @@ namespace Plugin {
         class AppInformation {
         private:
             AppInformation() = delete;
-			AppInformation (const AppInformation&) = delete;
-			AppInformation& operator=(const AppInformation&) = delete;
+            AppInformation(const AppInformation&) = delete;
+            AppInformation& operator=(const AppInformation&) = delete;
 
         public:
             AppInformation(PluginHost::IShell* service, const Config::App& info)
@@ -413,31 +425,31 @@ namespace Plugin {
                 , _name(info.Name.Value())
                 , _url(info.URL.Value())
                 , _application(nullptr)
-			{
-				if ((info.Handler.IsSet() == true) && (info.Handler.Value().empty() == false)) {
-					std::map<string, IApplicationFactory*>::iterator index(_applicationFactory.find(info.Handler.Value()));
-					if (index != _applicationFactory.end()) {
-						_application = index->second->Create(service, info);
-					}
-				}
+            {
+                if ((info.Handler.IsSet() == true) && (info.Handler.Value().empty() == false)) {
+                    std::map<string, IApplicationFactory*>::iterator index(_applicationFactory.find(info.Handler.Value()));
+                    if (index != _applicationFactory.end()) {
+                        _application = index->second->Create(service, info);
+                    }
+                }
 
-				if (_application == nullptr) {
-					std::map<string, IApplicationFactory*>::iterator index(_applicationFactory.find(info.Name.Value()));
-					if (index != _applicationFactory.end()) {
-						_application = index->second->Create(service, info);
-					}
-				}
+                if (_application == nullptr) {
+                    std::map<string, IApplicationFactory*>::iterator index(_applicationFactory.find(info.Name.Value()));
+                    if (index != _applicationFactory.end()) {
+                        _application = index->second->Create(service, info);
+                    }
+                }
 
-				if (_application == nullptr) {
-					// since we still have nothing, fall back to the default
-					_application = new DIALServer::Default(service, info);
-				}
+                if (_application == nullptr) {
+                    // since we still have nothing, fall back to the default
+                    _application = new DIALServer::Default(service, info);
+                }
             }
             ~AppInformation()
             {
-				if (_application != nullptr) {
-					delete _application;
-				}
+                if (_application != nullptr) {
+                    delete _application;
+                }
             }
 
         public:
@@ -453,49 +465,52 @@ namespace Plugin {
             {
                 return (_application->IsRunning());
             }
-			inline void Running(const bool isRunning) {
-				_application->Running(isRunning);
-			}
-			inline void Start(const string& data)
+            inline void Running(const bool isRunning)
             {
-				_application->Start(data);
+                _application->Running(isRunning);
+            }
+            inline void Start(const string& data)
+            {
+                _application->Start(data);
             }
             inline void Stop(const string& data)
             {
-				_application->Stop(data);
-			}
+                _application->Stop(data);
+            }
             inline bool HasAllowStop() const
             {
                 return (_application->HasAllowStop());
             }
-			inline const string AdditionalData() const
-			{
-				return (_application->AdditionalData());
-			}
-			inline const string URL() const
+            inline const string AdditionalData() const
+            {
+                return (_application->AdditionalData());
+            }
+            inline const string URL() const
             {
                 return (_application->URL());
             }
-			inline void SwitchBoard(Exchange::ISwitchBoard* switchBoard) {
-				_application->SwitchBoard(switchBoard);
-			}
-			inline static void Announce(const string& name, IApplicationFactory* factory) {
+            inline void SwitchBoard(Exchange::ISwitchBoard* switchBoard)
+            {
+                _application->SwitchBoard(switchBoard);
+            }
+            inline static void Announce(const string& name, IApplicationFactory* factory)
+            {
 
-				ASSERT(AppInformation::_applicationFactory.find(name) == AppInformation::_applicationFactory.end());
+                ASSERT(AppInformation::_applicationFactory.find(name) == AppInformation::_applicationFactory.end());
 
-				AppInformation::_applicationFactory.insert(std::pair<string, IApplicationFactory*>(name, factory));
-			}
-			inline static void Revoke(const string& name) {
+                AppInformation::_applicationFactory.insert(std::pair<string, IApplicationFactory*>(name, factory));
+            }
+            inline static void Revoke(const string& name)
+            {
 
-				std::map<string, IApplicationFactory*>::iterator index = AppInformation::_applicationFactory.find(name);
+                std::map<string, IApplicationFactory*>::iterator index = AppInformation::_applicationFactory.find(name);
 
-				ASSERT(index != AppInformation::_applicationFactory.end());
+                ASSERT(index != AppInformation::_applicationFactory.end());
 
-				delete index->second;
+                delete index->second;
 
-				AppInformation::_applicationFactory.erase(index);
-			}
-
+                AppInformation::_applicationFactory.erase(index);
+            }
 
             void GetData(string& data) const;
             void SetData(const string& data);
@@ -536,157 +551,156 @@ namespace Plugin {
             mutable Core::CriticalSection _lock;
             const string _name;
             const string _url;
-			IApplication* _application;
+            IApplication* _application;
 
-			static std::map<string, IApplicationFactory*> _applicationFactory;
-		};
-		class Notification : public PluginHost::IPlugin::INotification {
-		private:
-			Notification() = delete;
-			Notification(const Notification&) = delete;
-			Notification& operator=(const Notification&) = delete;
+            static std::map<string, IApplicationFactory*> _applicationFactory;
+        };
+        class Notification : public PluginHost::IPlugin::INotification {
+        private:
+            Notification() = delete;
+            Notification(const Notification&) = delete;
+            Notification& operator=(const Notification&) = delete;
 
-		public:
-			Notification(DIALServer* parent)
-				: _parent(*parent)
-				, _webServer()
-				, _switchBoard()
-				, _webServerPtr(nullptr)
-				, _switchBoardPtr(nullptr)
-			{
-				ASSERT(parent != nullptr);
-			}
-			~Notification()
-			{
-			}
+        public:
+            Notification(DIALServer* parent)
+                : _parent(*parent)
+                , _webServer()
+                , _switchBoard()
+                , _webServerPtr(nullptr)
+                , _switchBoardPtr(nullptr)
+            {
+                ASSERT(parent != nullptr);
+            }
+            ~Notification()
+            {
+            }
 
-		public:
-			void Register(PluginHost::IShell* service, const string& webServer, const string& switchBoard)
-			{
-				// This method needs to be Unregistered, before you can Regsiter it..
-				ASSERT ((_webServer.empty() == true) && (_switchBoard.empty() == true));
+        public:
+            void Register(PluginHost::IShell* service, const string& webServer, const string& switchBoard)
+            {
+                // This method needs to be Unregistered, before you can Regsiter it..
+                ASSERT((_webServer.empty() == true) && (_switchBoard.empty() == true));
 
-				_webServer = webServer;
-				_switchBoard = switchBoard;
+                _webServer = webServer;
+                _switchBoard = switchBoard;
 
-				if ((_webServer.empty() == false) || (_switchBoard.empty() == false)) {
-					service->Register(this);
-				}
-			}
+                if ((_webServer.empty() == false) || (_switchBoard.empty() == false)) {
+                    service->Register(this);
+                }
+            }
 
-			void Unregister(PluginHost::IShell* service)
-			{
-				if ((_webServer.empty() == false) || (_switchBoard.empty() == false)) {
-					service->Unregister(this);
+            void Unregister(PluginHost::IShell* service)
+            {
+                if ((_webServer.empty() == false) || (_switchBoard.empty() == false)) {
+                    service->Unregister(this);
 
-					if (_webServerPtr != nullptr) {
-						_parent.Deactivated(_webServerPtr);
-						_webServerPtr->Release();
-						_webServerPtr = nullptr;
-					}
-					if (_switchBoardPtr != nullptr) {
-						_parent.Deactivated(_switchBoardPtr);
-						_switchBoardPtr->Release();
-						_switchBoardPtr = nullptr;
-					}
-				}
-			}
+                    if (_webServerPtr != nullptr) {
+                        _parent.Deactivated(_webServerPtr);
+                        _webServerPtr->Release();
+                        _webServerPtr = nullptr;
+                    }
+                    if (_switchBoardPtr != nullptr) {
+                        _parent.Deactivated(_switchBoardPtr);
+                        _switchBoardPtr->Release();
+                        _switchBoardPtr = nullptr;
+                    }
+                }
+            }
 
-			BEGIN_INTERFACE_MAP(ThisClass)
-				INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
-			END_INTERFACE_MAP
+            BEGIN_INTERFACE_MAP(ThisClass)
+            INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
+            END_INTERFACE_MAP
 
-		private:
-			virtual void StateChange(PluginHost::IShell* shell)
-			{
-				if (shell->Callsign() == _webServer) {
+        private:
+            virtual void StateChange(PluginHost::IShell* shell)
+            {
+                if (shell->Callsign() == _webServer) {
 
-					if (shell->State() == PluginHost::IShell::ACTIVATED) {
-						ASSERT(_webServerPtr == nullptr);
+                    if (shell->State() == PluginHost::IShell::ACTIVATED) {
+                        ASSERT(_webServerPtr == nullptr);
 
-						_webServerPtr = shell->QueryInterface<Exchange::IWebServer>();
+                        _webServerPtr = shell->QueryInterface<Exchange::IWebServer>();
 
-						if (_webServerPtr != nullptr) {
-							_parent.Activated(_webServerPtr);
-						}
-					}
-					else if (shell->State() == PluginHost::IShell::DEACTIVATION) {
+                        if (_webServerPtr != nullptr) {
+                            _parent.Activated(_webServerPtr);
+                        }
+                    } else if (shell->State() == PluginHost::IShell::DEACTIVATION) {
 
-						if (_webServerPtr != nullptr) {
-							_parent.Deactivated(_webServerPtr);
-							_webServerPtr->Release();
-							_webServerPtr = nullptr;
-						}
-					}
-				}
-				else if (shell->Callsign() == _switchBoard) {
+                        if (_webServerPtr != nullptr) {
+                            _parent.Deactivated(_webServerPtr);
+                            _webServerPtr->Release();
+                            _webServerPtr = nullptr;
+                        }
+                    }
+                } else if (shell->Callsign() == _switchBoard) {
 
-					if (shell->State() == PluginHost::IShell::ACTIVATED) {
-	
-						_switchBoardPtr = shell->QueryInterface<Exchange::ISwitchBoard>();
+                    if (shell->State() == PluginHost::IShell::ACTIVATED) {
 
-						if (_switchBoardPtr != nullptr) {
-							_parent.Activated(_switchBoardPtr);
-						}
-					}
-					else if (shell->State() == PluginHost::IShell::DEACTIVATION) {
+                        _switchBoardPtr = shell->QueryInterface<Exchange::ISwitchBoard>();
 
-						if (_switchBoardPtr != nullptr) {
-							_parent.Deactivated(_switchBoardPtr);
-							_switchBoardPtr->Release();
-							_switchBoardPtr = nullptr;
-						}
-					}
-				}
-			}
+                        if (_switchBoardPtr != nullptr) {
+                            _parent.Activated(_switchBoardPtr);
+                        }
+                    } else if (shell->State() == PluginHost::IShell::DEACTIVATION) {
 
-		private:
-			DIALServer& _parent;
-			string _webServer;
-			string _switchBoard;
-			Exchange::IWebServer* _webServerPtr;
-			Exchange::ISwitchBoard* _switchBoardPtr;
-		};
+                        if (_switchBoardPtr != nullptr) {
+                            _parent.Deactivated(_switchBoardPtr);
+                            _switchBoardPtr->Release();
+                            _switchBoardPtr = nullptr;
+                        }
+                    }
+                }
+            }
 
-	public:
-		template <typename HANDLER>
-		class ApplicationRegistrationType {
-		private:
-			ApplicationRegistrationType(const ApplicationRegistrationType<HANDLER>&) = delete;
-			ApplicationRegistrationType& operator= (const ApplicationRegistrationType<HANDLER>&) = delete;
-
-		public:
-			ApplicationRegistrationType() {
-				string name(Core::ClassNameOnly(typeid(HANDLER).name()).Text());
-
-				AppInformation::Announce(name, new ApplicationFactoryType<HANDLER>());
-			}
-			virtual ~ApplicationRegistrationType() {
-				string name(Core::ClassNameOnly(typeid(HANDLER).name()).Text());
-
-				AppInformation::Revoke(name);
-			}
-		};
+        private:
+            DIALServer& _parent;
+            string _webServer;
+            string _switchBoard;
+            Exchange::IWebServer* _webServerPtr;
+            Exchange::ISwitchBoard* _switchBoardPtr;
+        };
 
     public:
-		#ifdef __WIN32__ 
-		#pragma warning( disable : 4355 )
-		#endif
-		DIALServer()
+        template <typename HANDLER>
+        class ApplicationRegistrationType {
+        private:
+            ApplicationRegistrationType(const ApplicationRegistrationType<HANDLER>&) = delete;
+            ApplicationRegistrationType& operator=(const ApplicationRegistrationType<HANDLER>&) = delete;
+
+        public:
+            ApplicationRegistrationType()
+            {
+                string name(Core::ClassNameOnly(typeid(HANDLER).name()).Text());
+
+                AppInformation::Announce(name, new ApplicationFactoryType<HANDLER>());
+            }
+            virtual ~ApplicationRegistrationType()
+            {
+                string name(Core::ClassNameOnly(typeid(HANDLER).name()).Text());
+
+                AppInformation::Revoke(name);
+            }
+        };
+
+    public:
+#ifdef __WIN32__
+#pragma warning(disable : 4355)
+#endif
+        DIALServer()
             : _adminLock()
             , _config()
             , _service(NULL)
             , _dialURL()
-			, _dialPath()
+            , _dialPath()
             , _dialServiceImpl(NULL)
             , _deviceInfo(Core::ProxyType<Web::TextBody>::Create())
             , _sink(this)
             , _appInfo()
         {
         }
-		#ifdef __WIN32__ 
-		#pragma warning( default : 4355 )
-		#endif
+#ifdef __WIN32__
+#pragma warning(default : 4355)
+#endif
         virtual ~DIALServer()
         {
         }
@@ -733,18 +747,18 @@ namespace Plugin {
     private:
         void Activated(Exchange::IWebServer* webserver);
         void Deactivated(Exchange::IWebServer* webserver);
-		void Activated(Exchange::ISwitchBoard* switchBoard);
-		void Deactivated(Exchange::ISwitchBoard* switchBoard);
-		void StartApplication(const Web::Request& request, Core::ProxyType<Web::Response>& response, AppInformation& app);
-		void StopApplication(const Web::Request& request, Core::ProxyType<Web::Response>& response, AppInformation& app);
+        void Activated(Exchange::ISwitchBoard* switchBoard);
+        void Deactivated(Exchange::ISwitchBoard* switchBoard);
+        void StartApplication(const Web::Request& request, Core::ProxyType<Web::Response>& response, AppInformation& app);
+        void StopApplication(const Web::Request& request, Core::ProxyType<Web::Response>& response, AppInformation& app);
 
     private:
         Core::CriticalSection _adminLock;
         uint32_t _skipURL;
         Config _config;
         PluginHost::IShell* _service;
-		Core::URL _dialURL;
-		string _dialPath;
+        Core::URL _dialURL;
+        string _dialPath;
         DIALServerImpl* _dialServiceImpl;
         Core::ProxyType<Web::TextBody> _deviceInfo;
         Core::Sink<Notification> _sink;
