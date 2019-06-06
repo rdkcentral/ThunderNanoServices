@@ -74,6 +74,7 @@ namespace Plugin {
                 , _animationFPS(~0)
                 , _url()
                 , _fullPath()
+                , _sharedContext(context.createSharedContext())
             {
             }
             virtual ~SceneWindow()
@@ -242,6 +243,7 @@ namespace Plugin {
                 bool status = false;
                 rtValue r;
 
+                _sharedContext->makeCurrent(true);
                 if (_view != nullptr) {
                     pxScriptView* realClass = reinterpret_cast<pxScriptView*>(_view.getPtr());
                     
@@ -258,6 +260,7 @@ namespace Plugin {
                         }
                     }
                 }
+                _sharedContext->makeCurrent(false);
                 return status;
             }
 
@@ -499,6 +502,7 @@ namespace Plugin {
             uint8_t _animationFPS;
             string _url;
             string _fullPath;
+            pxSharedContextRef _sharedContext;
         };
 
         SparkImplementation(const SparkImplementation&) = delete;
