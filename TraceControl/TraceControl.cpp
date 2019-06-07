@@ -26,9 +26,9 @@ namespace Plugin {
         pathName = Core::Directory::Normalize(pathName) + TRACE_CYCLIC_BUFFER_PREFIX + '.';
 
         if (connection == nullptr) {
-            pathName += _T("pid.") + Core::NumberType<uint32_t>(Core::ProcessInfo().Id()).Text();
+            pathName += '0';
         } else {
-            pathName += _T("con.") + Core::NumberType<uint32_t>(connection->Id()).Text();
+            pathName += Core::NumberType<uint32_t>(connection->Id()).Text();
         }
 
         return (pathName);
