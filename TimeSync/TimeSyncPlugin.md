@@ -4,6 +4,8 @@
 
 **Version: 1.0**
 
+**Status: :black_circle::black_circle::black_circle:**
+
 TimeSync plugin for WPEFramework.
 
 ### Table of Contents
@@ -58,7 +60,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-The Time Sync plugin provides time synchronisation functionality from various time sources (e.g. NTP).
+The Time Sync plugin provides time synchronization functionality from various time sources (e.g. NTP).
 
 The plugin is designed to be loaded and executed within the WPEFramework. For more information on WPEFramework refer to [[WPEF](#ref.WPEF)].
 
@@ -74,9 +76,9 @@ The table below lists configuration options of the plugin.
 | locator | string | Library name: *libWPEFrameworkTimeSync.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
 | deferred | boolean | <sup>*(optional)*</sup> Determines if automatic time sync shall be initially disabled |
-| periodicity | number | <sup>*(optional)*</sup> Periodicity of time synchronisation (in hours), 0 for one-off synchronisation |
-| retries | number | <sup>*(optional)*</sup> Number of synchronisation attempts if the source cannot be reached (may be 0) |
-| interval | number | <sup>*(optional)*</sup> Time to wait (in miliseconds) before retrying a synchronisation attempt after a failure |
+| periodicity | number | <sup>*(optional)*</sup> Periodicity of time synchronization (in hours), 0 for one-off synchronization |
+| retries | number | <sup>*(optional)*</sup> Number of synchronization attempts if the source cannot be reached (may be 0) |
+| interval | number | <sup>*(optional)*</sup> Time to wait (in milliseconds) before retrying a synchronization attempt after a failure |
 | sources | array | Time sources |
 | sources[#] | string | (a time source entry) |
 

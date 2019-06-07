@@ -4,12 +4,10 @@
     "title": "OpenCDMi Plugin",
     "callsign": "OCDM",
     "locator": "libWPEFrameworkOCDM.so",
-    "class": {
-      "$ref": "OpenCDMiAPI.json#/info/class"
-    },
+    "status": "production",
     "version": "1.0"
   },
   "interface": {
-    "$ref": "OpenCDMiAPI.json#"
+    "$ref": "{interfacedir}/OpenCDMiAPI.json#"
   }
 }

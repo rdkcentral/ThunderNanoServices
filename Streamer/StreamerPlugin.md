@@ -4,7 +4,9 @@
 
 **Version: 1.0**
 
-Streamer functionality for WPEFramework.
+**Status: :black_circle::white_circle::white_circle:**
+
+Streamer plugin for WPEFramework.
 
 ### Table of Contents
 
@@ -12,6 +14,7 @@ Streamer functionality for WPEFramework.
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
+- [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
 
 <a name="head.Introduction"></a>
@@ -20,7 +23,7 @@ Streamer functionality for WPEFramework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Streamer plugin. It includes detailed specification of its configuration, methods provided and notifications sent.
+This document describes purpose and functionality of the Streamer plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -58,7 +61,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-The Streamer plugin provides player functionality for live and vod streams.
+
 
 The plugin is designed to be loaded and executed within the WPEFramework. For more information on WPEFramework refer to [[WPEF](#ref.WPEF)].
 
@@ -73,288 +76,55 @@ The table below lists configuration options of the plugin.
 | classname | string | Class name: *Streamer* |
 | locator | string | Library name: *libWPEFrameworkStreamer.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
-| configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.frontends | string | <sup>*(optional)*</sup> number of frontends to be attached |
-| configuration?.decoders | number | <sup>*(optional)*</sup> number of decoders to be attached |
-| configuration?.scan | boolean | <sup>*(optional)*</sup> Scanning to be done for live stream |
 
 <a name="head.Methods"></a>
 # Methods
 
-The following API is provided by the plugin via JSON-RPC:
+The following methods are provided by the Streamer plugin:
 
-- [Count](#method.Count)
-- [Type](#method.Type)
-- [DRM](#method.DRM)
-- [State](#method.State)
-- [Metadata](#method.Metadata)
-- [Speed](#method.Speed)
-- [Position](#method.Position)
-- [Window](#method.Window)
-- [Load](#method.Load)
-- [Attach](#method.Attach)
-- [Detach](#method.Detach)
-- [CreateStream](#method.CreateStream)
-- [DeleteStream](#method.DeleteStream)
+Streamer interface methods:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
+| Method | Description |
+| :-------- | :-------- |
+| [status](#method.status) | Retrieves the status of a stream |
+| [create](#method.create) | Creates a stream instance |
+| [destroy](#method.destroy) | Destroys a stream instance |
+| [load](#method.load) | Loads a source into a stream |
+| [attach](#method.attach) | Attaches a decoder to the streamer |
+| [detach](#method.detach) | Detaches a decoder from the streamer |
 
+<a name="method.status"></a>
+## *status <sup>method</sup>*
 
-<a name="method.Count"></a>
-## *Count*
-
-Returns the player numbers in use
-
-### Parameters
-
-This method takes no parameters.
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | number | number of player instances are running |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.Count"
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": 0
-}
-```
-<a name="method.Type"></a>
-## *Type*
-
-Returns the streame type - DVB or VOD
+Retrieves the status of a stream.
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| params | number | index of the streamer instance |
+| params | number | ID of the streamer instance |
 
 ### Result
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | string | Type of the stream (must be one of the following: *Stubbed*, *DVB*, *VOD*) |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.Type", 
-    "params": 0
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": "DVB"
-}
-```
-<a name="method.DRM"></a>
-## *DRM*
-
-Returns the DRM Type attached with stream
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | number | index of the streamer instance |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | DRM/CAS attached with stream (must be one of the following: *UnKnown*, *ClearKey*, *PlayReady*, *Widevine*) |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.DRM", 
-    "params": 0
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": "PlayeReady"
-}
-```
-<a name="method.State"></a>
-## *State*
-
-Returns the current state of Player
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | number | index of the streamer instance |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | Player State (must be one of the following: *Idle*, *Loading*, *Prepared*, *Paused*, *Playing*, *Error*) |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.State", 
-    "params": 0
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": "Playing"
-}
-```
-<a name="method.Metadata"></a>
-## *Metadata*
-
-Return stream metadata
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | number | index of the streamer instance |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string |  |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.Metadata", 
-    "params": 0
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": "It is based on the stream"
-}
-```
-<a name="method.Speed"></a>
-## *Speed*
-
-Set speed of the stream
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params?.index | number | <sup>*(optional)*</sup> index of the streamer instance |
-| params?.speed | number | <sup>*(optional)*</sup> speed value to be set |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.Speed", 
-    "params": {
-        "index": 0, 
-        "speed": 0
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.Position"></a>
-## *Position*
-
-Set position of the stream
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params?.index | number | <sup>*(optional)*</sup> index of the streamer instance |
-| params?.position | number | <sup>*(optional)*</sup> absolute position value to be set |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| result | object |  |
+| result.type | string | Stream type (must be one of the following: *stubbed*, *dvb*, *atsc*, *vod*) |
+| result.state | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *paused*, *playing*, *error*) |
+| result.metadata | string | Custom metadata associated with the stream |
+| result.drm | string | DRM used (must be one of the following: *unknown*, *clearkey*, *playready*, *widevine*) |
+| result?.position | number | <sup>*(optional)*</sup> Stream position (in milliseconds) |
+| result?.window | object | <sup>*(optional)*</sup> Geometry of the window |
+| result?.window.x | number | Horizontal position of the window (in pixels) |
+| result?.window.y | number | Vertical position of the window (in pixels) |
+| result?.window.width | number | Width of the window (in pixels) |
+| result?.window.height | number | Height of the window (in pixels) |
 
 ### Errors
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Player is invalid state |
-| 2 | ```ERROR_UNAVAILABLE``` | Player instance not avaialbe |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
 
 ### Example
 
@@ -364,11 +134,8 @@ Set position of the stream
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "Streamer.1.Position", 
-    "params": {
-        "index": 0, 
-        "position": 0
-    }
+    "method": "Streamer.1.status", 
+    "params": 0
 }
 ```
 #### Response
@@ -377,84 +144,45 @@ Set position of the stream
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.Window"></a>
-## *Window*
-
-Set geometry value of the screen
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params?.index | number | <sup>*(optional)*</sup> index of the streamer instance |
-| params?.geometry | object | <sup>*(optional)*</sup> geometry value of the window |
-| params?.geometry?.x | number | <sup>*(optional)*</sup> X co-ordinate |
-| params?.geometry?.y | number | <sup>*(optional)*</sup> Y co-ordinate |
-| params?.geometry?.width | number | <sup>*(optional)*</sup> Width of the window |
-| params?.geometry?.height | number | <sup>*(optional)*</sup> Height of the window |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.Window", 
-    "params": {
-        "index": 0, 
-        "geometry": {
+    "result": {
+        "type": "vod", 
+        "state": "playing", 
+        "metadata": "", 
+        "drm": "clearkey", 
+        "position": 60000, 
+        "window": {
             "x": 0, 
             "y": 0, 
-            "width": 0, 
-            "height": 0
+            "width": 1080, 
+            "height": 720
         }
     }
 }
 ```
-#### Response
+<a name="method.create"></a>
+## *create <sup>method</sup>*
 
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.Load"></a>
-## *Load*
-
-Load the URL given in the body onto this stream
+Creates a stream instance.
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| params | string |  |
+| params | object |  |
+| params.type | string | Stream type (must be one of the following: *stubbed*, *dvb*, *atsc*, *vod*) |
 
 ### Result
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | null | Always null |
+| result | number | Streamer ID |
 
 ### Errors
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Player is invalid state |
-| 23 | ```ERROR_INCOMPLETE_CONFIG``` | Passed in config is invalid |
+| 30 | ```ERROR_BAD_REQUEST``` | Invalid stream type given |
+| 2 | ```ERROR_UNAVAILABLE``` | Streamer instance is not available |
 
 ### Example
 
@@ -464,122 +192,10 @@ Load the URL given in the body onto this stream
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "Streamer.1.Load", 
-    "params": ""
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.Attach"></a>
-## *Attach*
-
-Attach a decoder to the primer of stream <Number>
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | number | index of the streamer instance |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.Attach", 
-    "params": 0
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.Detach"></a>
-## *Detach*
-
-Detach a decoder to the primer of stream <Number>
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | number | index of the streamer instance |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.Detach", 
-    "params": 0
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.CreateStream"></a>
-## *CreateStream*
-
-Create an instance of a stream of type <Type>, Body return the stream index for reference in the other calls.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | string | Type of the streamer to be created |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | number | index of the streamer |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.CreateStream", 
-    "params": "DVB"
+    "method": "Streamer.1.create", 
+    "params": {
+        "type": "vod"
+    }
 }
 ```
 #### Response
@@ -591,22 +207,28 @@ Create an instance of a stream of type <Type>, Body return the stream index for 
     "result": 0
 }
 ```
-<a name="method.DeleteStream"></a>
-## *DeleteStream*
+<a name="method.destroy"></a>
+## *destroy <sup>method</sup>*
 
-Delete the given streamer instance
+Destroys a stream instance.
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| params | number | index of the streamer instance |
+| params | number | ID of the streamer instance to be destroyed |
 
 ### Result
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
 
 ### Example
 
@@ -616,7 +238,7 @@ Delete the given streamer instance
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "Streamer.1.DeleteStream", 
+    "method": "Streamer.1.destroy", 
     "params": 0
 }
 ```
@@ -627,6 +249,598 @@ Delete the given streamer instance
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": null
+}
+```
+<a name="method.load"></a>
+## *load <sup>method</sup>*
+
+Loads a source into a stream.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params?.index | number | <sup>*(optional)*</sup> ID of the streamer instance |
+| params.location | string | Location of the source to load |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| 30 | ```ERROR_BAD_REQUEST``` | Invalid location given |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state |
+| 2 | ```ERROR_UNAVAILABLE``` | Player instance is not available |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.load", 
+    "params": {
+        "index": 0, 
+        "location": "http://example.com/sample.m3u8"
+    }
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": null
+}
+```
+<a name="method.attach"></a>
+## *attach <sup>method</sup>*
+
+Attaches a decoder to the streamer.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | number | ID of the streamer instance to attach a decoder to |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| 12 | ```ERROR_INPROGRESS``` | Decoder already attached |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Stream not prepared |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.attach", 
+    "params": 0
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": null
+}
+```
+<a name="method.detach"></a>
+## *detach <sup>method</sup>*
+
+Detaches a decoder from the streamer
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | number | ID of the streamer instance to detach the decoder from |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Decoder not attached to the stream |
+| 12 | ```ERROR_INPROGRESS``` | Decoder is in use |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.detach", 
+    "params": 0
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": null
+}
+```
+<a name="head.Properties"></a>
+# Properties
+
+The following properties are provided by the Streamer plugin:
+
+Streamer interface properties:
+
+| Property | Description |
+| :-------- | :-------- |
+| [speed](#property.speed) | Playback speed |
+| [position](#property.position) | Stream position |
+| [window](#property.window) | Stream playback window |
+| [speeds](#property.speeds) <sup>RO</sup> | Retrieves the speeds supported by the player |
+| [streams](#property.streams) <sup>RO</sup> | Retrieves all created stream instance IDs |
+| [type](#property.type) <sup>RO</sup> | Retrieves the streame type - DVB, ATSC or VOD |
+| [drm](#property.drm) <sup>RO</sup> | Retrieves the DRM Type attached with stream |
+| [state](#property.state) <sup>RO</sup> | Retrieves the current state of Player |
+
+<a name="property.speed"></a>
+## *speed <sup>property</sup>*
+
+Provides access to the playback speed..
+
+### Description
+
+Speed in percentage, -200, -100, 0, 100, 200, 400 etc
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | number | Speed to set; 0 - pause, 100 - normal playback forward, -100 - normal playback back, -200 - reverse at twice the speed, 50 - forward at half speed |
+
+> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.speed@0*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| 30 | ```ERROR_BAD_REQUEST``` | Invalid speed given |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
+| 2 | ```ERROR_UNAVAILABLE``` | Player instance is not available |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.speed@0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": 100
+}
+```
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.speed@0", 
+    "params": 100
+}
+```
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "null"
+}
+```
+<a name="property.position"></a>
+## *position <sup>property</sup>*
+
+Provides access to the stream position..
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | number | Position to set (in milliseconds) |
+
+> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.position@0*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| 30 | ```ERROR_BAD_REQUEST``` | Invalid position given |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.position@0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": 60000
+}
+```
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.position@0", 
+    "params": 60000
+}
+```
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "null"
+}
+```
+<a name="property.window"></a>
+## *window <sup>property</sup>*
+
+Provides access to the stream playback window..
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Stream playback window. |
+| (property).window | object | Geometry of the window |
+| (property).window.x | number | Horizontal position of the window (in pixels) |
+| (property).window.y | number | Vertical position of the window (in pixels) |
+| (property).window.width | number | Width of the window (in pixels) |
+| (property).window.height | number | Height of the window (in pixels) |
+
+> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.window@0*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| 30 | ```ERROR_BAD_REQUEST``` | Invalid window geometry given |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.window@0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": {
+        "window": {
+            "x": 0, 
+            "y": 0, 
+            "width": 1080, 
+            "height": 720
+        }
+    }
+}
+```
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.window@0", 
+    "params": {
+        "window": {
+            "x": 0, 
+            "y": 0, 
+            "width": 1080, 
+            "height": 720
+        }
+    }
+}
+```
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "null"
+}
+```
+<a name="property.speeds"></a>
+## *speeds <sup>property</sup>*
+
+Provides access to the retrieves the speeds supported by the player.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | array | Supported streams in percentage, 100, 200, 400, .. |
+| (property)[#] | integer | (Speeds in percentage) |
+
+> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.speeds@0*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Decoder not attached to the stream |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.speeds@0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": [
+        0, 
+        100, 
+        -100, 
+        200, 
+        -200, 
+        400, 
+        -400
+    ]
+}
+```
+<a name="property.streams"></a>
+## *streams <sup>property</sup>*
+
+Provides access to the retrieves all created stream instance IDs..
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | array | Streamer IDs |
+| (property)[#] | number | (a streamer ID) |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.streams"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": [
+        0, 
+        1, 
+        2, 
+        3
+    ]
+}
+```
+<a name="property.type"></a>
+## *type <sup>property</sup>*
+
+Provides access to the retrieves the streame type - DVB, ATSC or VOD.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Retrieves the streame type - DVB, ATSC or VOD |
+| (property).stream | string | Stream type (must be one of the following: *stubbed*, *dvb*, *atsc*, *vod*) |
+
+> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.type@0*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.type@0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": {
+        "stream": "vod"
+    }
+}
+```
+<a name="property.drm"></a>
+## *drm <sup>property</sup>*
+
+Provides access to the retrieves the DRM Type attached with stream.
+
+> This property is **read-only**.
+
+Also see: [drmchange](#event.drmchange)
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Retrieves the DRM Type attached with stream |
+| (property).drm | string | DRM used (must be one of the following: *unknown*, *clearkey*, *playready*, *widevine*) |
+
+> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.drm@0*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.drm@0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": {
+        "drm": "clearkey"
+    }
+}
+```
+<a name="property.state"></a>
+## *state <sup>property</sup>*
+
+Provides access to the retrieves the current state of Player.
+
+> This property is **read-only**.
+
+Also see: [statechange](#event.statechange)
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Retrieves the current state of Player |
+| (property).state | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *paused*, *playing*, *error*) |
+
+> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.state@0*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.state@0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": {
+        "state": "playing"
+    }
 }
 ```
 <a name="head.Notifications"></a>
@@ -634,6 +848,88 @@ Delete the given streamer instance
 
 Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[WPEF](#ref.WPEF)] for information on how to register for a notification.
 
-The following notifications are provided by the plugin:
+The following events are provided by the Streamer plugin:
 
+Streamer interface events:
 
+| Event | Description |
+| :-------- | :-------- |
+| [statechange](#event.statechange) | Notifies of stream state change |
+| [drmchange](#event.drmchange) | Notifies of stream DRM system change |
+| [timeupdate](#event.timeupdate) | Event fired to indicate the position in the stream |
+
+<a name="event.statechange"></a>
+## *statechange <sup>event</sup>*
+
+Notifies of stream state change. ID of the streamer instance shall be passed within the designator.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.state | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *paused*, *playing*, *error*) |
+
+> The *Streamer ID* shall be passed within the designator, e.g. *0.client.events.1*.
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "method": "0.client.events.1.statechange", 
+    "params": {
+        "state": "playing"
+    }
+}
+```
+<a name="event.drmchange"></a>
+## *drmchange <sup>event</sup>*
+
+Notifies of stream DRM system change. ID of the streamer instance shall be passed within the designator.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.drm | string | DRM used (must be one of the following: *unknown*, *clearkey*, *playready*, *widevine*) |
+
+> The *Streamer ID* shall be passed within the designator, e.g. *0.client.events.1*.
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "method": "0.client.events.1.drmchange", 
+    "params": {
+        "drm": "clearkey"
+    }
+}
+```
+<a name="event.timeupdate"></a>
+## *timeupdate <sup>event</sup>*
+
+Event fired to indicate the position in the stream. This event is fired every second to indicate that the stream has progressed by a second, and event does not fire, if the stream is in paused state
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.time | number | Time in seconds |
+
+> The *Streamer ID* shall be passed within the designator, e.g. *0.client.events.1*.
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "method": "0.client.events.1.timeupdate", 
+    "params": {
+        "time": 30
+    }
+}
+```

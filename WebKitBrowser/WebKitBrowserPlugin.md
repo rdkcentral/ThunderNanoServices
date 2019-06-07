@@ -4,6 +4,8 @@
 
 **Version: 1.0**
 
+**Status: :black_circle::black_circle::black_circle:**
+
 WebKitBrowser plugin for WPEFramework.
 
 ### Table of Contents
@@ -115,9 +117,9 @@ StateControl interface properties:
 | [state](#property.state) | Running state of the service |
 
 <a name="property.url"></a>
-## *url*
+## *url <sup>property</sup>*
 
-URL loaded in the browser
+Provides access to the URL loaded in the browser.
 
 Also see: [urlchange](#event.urlchange)
 
@@ -135,6 +137,24 @@ Also see: [urlchange](#event.urlchange)
 
 ### Example
 
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "WebKitBrowser.1.url"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "https://www.google.com"
+}
+```
 #### Set Request
 
 ```json
@@ -154,28 +174,10 @@ Also see: [urlchange](#event.urlchange)
     "result": "null"
 }
 ```
-#### Get Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WebKitBrowser.1.url"
-}
-```
-#### Get Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": "https://www.google.com"
-}
-```
 <a name="property.visibility"></a>
-## *visibility*
+## *visibility <sup>property</sup>*
 
-Current browser visibility
+Provides access to the current browser visibility.
 
 Also see: [visibilitychange](#event.visibilitychange)
 
@@ -185,8 +187,32 @@ Also see: [visibilitychange](#event.visibilitychange)
 | :-------- | :-------- | :-------- |
 | (property) | string | Current browser visibility (must be one of the following: *visible*, *hidden*) |
 
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 30 | ```ERROR_BAD_REQUEST``` | The property value is invalid |
+
 ### Example
 
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "WebKitBrowser.1.visibility"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "visible"
+}
+```
 #### Set Request
 
 ```json
@@ -206,30 +232,12 @@ Also see: [visibilitychange](#event.visibilitychange)
     "result": "null"
 }
 ```
-#### Get Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WebKitBrowser.1.visibility"
-}
-```
-#### Get Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": "visible"
-}
-```
 <a name="property.fps"></a>
-## *fps*
+## *fps <sup>property</sup>*
 
-Current number of frames per second the browser is rendering
+Provides access to the current number of frames per second the browser is rendering.
 
-*This property is read-only.*
+> This property is **read-only**.
 
 ### Value
 
@@ -238,8 +246,6 @@ Current number of frames per second the browser is rendering
 | (property) | number | Current number of frames per second the browser is rendering |
 
 ### Example
-
-#### Set Request
 
 #### Get Request
 
@@ -260,9 +266,9 @@ Current number of frames per second the browser is rendering
 }
 ```
 <a name="property.state"></a>
-## *state*
+## *state <sup>property</sup>*
 
-Running state of the service
+Provides access to the running state of the service.
 
 Also see: [statechange](#event.statechange)
 
@@ -272,8 +278,32 @@ Also see: [statechange](#event.statechange)
 | :-------- | :-------- | :-------- |
 | (property) | string | Running state of the service (must be one of the following: *resumed*, *suspended*) |
 
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 30 | ```ERROR_BAD_REQUEST``` | The property value is invalid |
+
 ### Example
 
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "WebKitBrowser.1.state"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "resumed"
+}
+```
 #### Set Request
 
 ```json
@@ -291,24 +321,6 @@ Also see: [statechange](#event.statechange)
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": "null"
-}
-```
-#### Get Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WebKitBrowser.1.state"
-}
-```
-#### Get Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": "resumed"
 }
 ```
 <a name="head.Notifications"></a>
@@ -334,7 +346,7 @@ StateControl interface events:
 | [statechange](#event.statechange) | Signals a state change of the service |
 
 <a name="event.urlchange"></a>
-## *urlchange*
+## *urlchange <sup>event</sup>*
 
 Signals a URL change in the browser
 
@@ -359,7 +371,7 @@ Signals a URL change in the browser
 }
 ```
 <a name="event.visibilitychange"></a>
-## *visibilitychange*
+## *visibilitychange <sup>event</sup>*
 
 Signals a visibility change of the browser
 
@@ -382,13 +394,13 @@ Signals a visibility change of the browser
 }
 ```
 <a name="event.pageclosure"></a>
-## *pageclosure*
+## *pageclosure <sup>event</sup>*
 
 Notifies that the web page requests to close its window
 
 ### Parameters
 
-This event has no parameters.
+This event carries no parameters.
 
 ### Example
 
@@ -399,7 +411,7 @@ This event has no parameters.
 }
 ```
 <a name="event.statechange"></a>
-## *statechange*
+## *statechange <sup>event</sup>*
 
 Signals a state change of the service
 

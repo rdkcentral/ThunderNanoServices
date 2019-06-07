@@ -4,15 +4,13 @@
     "title": "Network Control Plugin",
     "callsign": "NetworkControl",
     "locator": "libWPEFrameworkNetworkControl.so",
-    "class": {
-      "$ref": "NetworkControlAPI.json#/info/class"
-    },
+    "status": "production",
     "description": [
       "The Network Control plugin provides functionality for network interface management."
     ],
     "version": "1.0"
   },
-  "methods": {
-    "$ref": "NetworkControlAPI.json#/methods"
+  "interface": {
+    "$ref": "{interfacedir}/NetworkControlAPI.json#"
   }
 }

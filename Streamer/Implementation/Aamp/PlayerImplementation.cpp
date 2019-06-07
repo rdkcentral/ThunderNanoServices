@@ -1,6 +1,6 @@
 #include "PlayerImplementation.h"
 #include <gst/gst.h>
-#include <priv_aamp.h>
+#include <main_aamp.h>
 
 namespace WPEFramework {
 
@@ -32,7 +32,7 @@ namespace Player {
 
         PlayerPlatform::PlayerPlatform(const Exchange::IStream::streamtype type, const uint8_t index, ICallback* callbacks)
             : _uri("")
-            , _state(Exchange::IStream::Idle)
+            , _state(Exchange::IStream::Error)
             , _drmType(Exchange::IStream::Unknown)
             , _streamType(type)
             , _speed(-1)
@@ -67,13 +67,14 @@ namespace Player {
 
             Core::SystemInfo::SetEnvironment(_T("PLAYERSINKBIN_USE_WESTEROSSINK"), _T("true"));
             gst_init(0, nullptr);
-            _aampPlayer = new PlayerInstanceAAMP();
 
-            _state = Exchange::IStream::Prepared;
+            _aampPlayer = new PlayerInstanceAAMP();
+            ASSERT(_aampPlayer);
 
             _scheduler = Core::ProxyType<Job>::Create(this);
             ASSERT(_scheduler.IsValid() == true);
 
+            _state = Exchange::IStream::Idle;
         }
 
         PlayerPlatform::~PlayerPlatform()
@@ -152,8 +153,13 @@ namespace Player {
 
                     _uri = uri;
                     _aampPlayer->Tune(_uri.c_str());
+                    _aampPlayer->SetRate(0);
 
-                    Speed(0);
+                    // TODO: wait for aaamp tune event before setting this
+                    _state = Exchange::IStream::Prepared;
+                    if (_callback != nullptr) {
+                       _callback->StateChange(_state);
+                    }
                 } else {
                     result = Core::ERROR_INCORRECT_URL;
                     _state = Exchange::IStream::Error;

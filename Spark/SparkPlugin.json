@@ -4,9 +4,7 @@
     "title": "Spark Plugin",
     "callsign": "Spark",
     "locator": "libWPEFrameworkSpark.so",
-    "class": {
-      "$ref": "SparkAPI.json#/info/class"
-    },
+    "status": "alpha",
     "description": "The Spark plugin provides web browsing functionality based on the Spark engine.",
     "version": "1.0"
   },
@@ -31,6 +29,6 @@
     ]
   },
   "interface": {
-    "$ref": "SparkAPI.json#"
+    "$ref": "{interfacedir}/SparkAPI.json#"
   }
 }

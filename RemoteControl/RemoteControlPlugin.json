@@ -4,13 +4,11 @@
     "title": "Remote Control Plugin",
     "callsign": "RemoteControl",
     "locator": "libWPEFrameworkRemoteControl.so",
-    "class": {
-      "$ref": "RemoteControlAPI.json#/info/class"
-    },
+    "status": "production",
     "description": "The RemoteControl plugin provides user-input functionality from various key-code sources (e.g. STB RC).",
     "version": "1.0"
   },
-  "methods": {
-    "$ref": "RemoteControlAPI.json#/methods"
+  "interface": {
+    "$ref": "{interfacedir}/RemoteControlAPI.json#"
   }
 }

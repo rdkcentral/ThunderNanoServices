@@ -4,7 +4,9 @@
 
 **Version: 1.0**
 
-Monitor functionality for WPEFramework.
+**Status: :black_circle::black_circle::black_circle:**
+
+Monitor plugin for WPEFramework.
 
 ### Table of Contents
 
@@ -77,17 +79,18 @@ The table below lists configuration options of the plugin.
 <a name="head.Methods"></a>
 # Methods
 
-The following API is provided by the plugin via JSON-RPC:
+The following methods are provided by the Monitor plugin:
 
-- [status](#method.status)
-- [resetstats](#method.resetstats)
-- [restartlimits](#method.restartlimits)
+Monitor interface methods:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
-
+| Method | Description |
+| :-------- | :-------- |
+| [status](#method.status) | Returns the memory and process statistics either for a single plugin or all plugins watched by the Monitor |
+| [resetstats](#method.resetstats) | Resets memory and process statistics for a single plugin watched by the Monitor |
+| [restartlimits](#method.restartlimits) | Sets new restart limits for a plugin |
 
 <a name="method.status"></a>
-## *status*
+## *status <sup>method</sup>*
 
 Returns the memory and process statistics either for a single plugin or all plugins watched by the Monitor
 
@@ -199,7 +202,7 @@ Returns the memory and process statistics either for a single plugin or all plug
 }
 ```
 <a name="method.resetstats"></a>
-## *resetstats*
+## *resetstats <sup>method</sup>*
 
 Resets memory and process statistics for a single plugin watched by the Monitor
 
@@ -308,7 +311,7 @@ Resets memory and process statistics for a single plugin watched by the Monitor
 }
 ```
 <a name="method.restartlimits"></a>
-## *restartlimits*
+## *restartlimits <sup>method</sup>*
 
 Sets new restart limits for a plugin
 
@@ -367,12 +370,16 @@ Sets new restart limits for a plugin
 
 Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[WPEF](#ref.WPEF)] for information on how to register for a notification.
 
-The following notifications are provided by the plugin:
+The following events are provided by the Monitor plugin:
 
-- [action](#event.action)
+Monitor interface events:
+
+| Event | Description |
+| :-------- | :-------- |
+| [action](#event.action) | Signals action taken by the monitor |
 
 <a name="event.action"></a>
-## *action*
+## *action <sup>event</sup>*
 
 Signals action taken by the monitor
 
@@ -382,7 +389,7 @@ Signals action taken by the monitor
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.callsign | string | Callsign of the plugin the monitor acted upon |
-| params.action | string | The action executed by the monitor on a plugin. One of: "Activate", "Deactivate", "StoppedRestarting" |
+| params.action | string | The action executed by the monitor on a plugin. (must be one of the following: *Activate*, *Deactivate*, *StoppedRestarting*) |
 | params.reason | string | A message describing the reason the action was taken of |
 
 ### Example
