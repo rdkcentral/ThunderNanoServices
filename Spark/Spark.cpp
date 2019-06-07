@@ -26,17 +26,17 @@ namespace Plugin {
 
         config.FromString(service->ConfigLine());
 
-        _pid = 0;
+        _connectionId = 0;
         _service = service;
         _skipURL = _service->WebPrefix().length();
 
-        // Register the Process::Notification stuff. The Remote process might die
+        // Register the Connection::Notification stuff. The Remote process might die
         // before we get a
         // change to "register" the sink for these events !!! So do it ahead of
         // instantiation.
         _service->Register(&_notification);
 
-        _spark = _service->Root<Exchange::IBrowser>(_pid, 2000, _T("SparkImplementation"));
+        _spark = _service->Root<Exchange::IBrowser>(_connectionId, 2000, _T("SparkImplementation"));
 
         if (_spark != nullptr) {
 
@@ -47,7 +47,7 @@ namespace Plugin {
                 _spark = nullptr;
             } else {
 
-                _memory = WPEFramework::Spark::MemoryObserver(_pid);
+                _memory = WPEFramework::Spark::MemoryObserver(_connectionId);
 
                 ASSERT(_memory != nullptr);
 
@@ -95,16 +95,16 @@ namespace Plugin {
 
         if (_spark->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 
-            ASSERT(_pid != 0);
+            ASSERT(_connectionId != 0);
 
-            TRACE_L1("Spark Plugin is not properly destructed. %d", _pid);
+            TRACE_L1("Spark Plugin is not properly destructed. %d", _connectionId);
 
-            RPC::IRemoteProcess* process(_service->RemoteProcess(_pid));
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // The process can disappear in the meantime...
-            if (process != nullptr) {
-                process->Terminate();
-                process->Release();
+            if (connection != nullptr) {
+                connection->Terminate();
+                connection->Release();
             }
         }
 
@@ -248,9 +248,9 @@ namespace Plugin {
             break;
         }
     }
-    void Spark::Deactivated(RPC::IRemoteProcess* process)
+    void Spark::Deactivated(RPC::IRemoteConnection* connection)
     {
-        if (process->Id() == _pid) {
+        if (connection->Id() == _connectionId) {
 
             ASSERT(_service != nullptr);
 

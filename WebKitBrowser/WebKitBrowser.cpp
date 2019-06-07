@@ -24,17 +24,17 @@ namespace Plugin {
         ASSERT(_browser == nullptr);
         ASSERT(_memory == nullptr);
 
-        _pid = 0;
+        _connectionId = 0;
         _service = service;
         _skipURL = _service->WebPrefix().length();
 
         config.FromString(_service->ConfigLine());
 
-        // Register the Process::Notification stuff. The Remote process might die before we get a
+        // Register the Connection::Notification stuff. The Remote process might die before we get a
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
         _service->Register(&_notification);
 
-        _browser = service->Root<Exchange::IBrowser>(_pid, 2000, _T("WebKitImplementation"));
+        _browser = service->Root<Exchange::IBrowser>(_connectionId, 2000, _T("WebKitImplementation"));
 
         if ((_browser != nullptr) && (_service != nullptr)) {
             PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
@@ -46,7 +46,7 @@ namespace Plugin {
                 _browser = nullptr;
             } else {
                 _browser->Register(&_notification);
-                _memory = WPEFramework::WebKitBrowser::MemoryObserver(_pid);
+                _memory = WPEFramework::WebKitBrowser::MemoryObserver(_connectionId);
 
                 ASSERT(_memory != nullptr);
 
@@ -89,18 +89,18 @@ namespace Plugin {
         // Stop processing of the browser:
         if (_browser->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 
-            ASSERT(_pid != 0);
+            ASSERT(_connectionId != 0);
 
-            TRACE_L1("Browser Plugin is not properly destructed. %d", _pid);
+            TRACE_L1("Browser Plugin is not properly destructed. %d", _connectionId);
 
-            RPC::IRemoteProcess* process(_service->RemoteProcess(_pid));
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // The process can disappear in the meantime...
-            if (process != nullptr) {
+            if (connection != nullptr) {
 
                 // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                process->Terminate();
-                process->Release();
+                connection->Terminate();
+                connection->Release();
             }
         }
 
@@ -219,9 +219,9 @@ namespace Plugin {
 
         event_statechange(state == PluginHost::IStateControl::SUSPENDED);
     }
-    void WebKitBrowser::Deactivated(RPC::IRemoteProcess* process)
+    void WebKitBrowser::Deactivated(RPC::IRemoteConnection* connection)
     {
-        if (process->Id() == _pid) {
+        if (connection->Id() == _connectionId) {
 
             ASSERT(_service != nullptr);
 

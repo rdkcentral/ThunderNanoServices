@@ -14,7 +14,7 @@ namespace Plugin {
         Spark(const Spark&);
         Spark& operator=(const Spark&);
 
-        class Notification : public RPC::IRemoteProcess::INotification,
+        class Notification : public RPC::IRemoteConnection::INotification,
                              public PluginHost::IStateControl::INotification,
                              public Exchange::IBrowser::INotification {
 
@@ -37,7 +37,7 @@ namespace Plugin {
             BEGIN_INTERFACE_MAP(Notification)
                 INTERFACE_ENTRY(PluginHost::IStateControl::INotification)
                 INTERFACE_ENTRY(Exchange::IBrowser::INotification)
-                INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+                INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -58,12 +58,12 @@ namespace Plugin {
             virtual void Closure() override
             {
             }
-            virtual void Activated(RPC::IRemoteProcess*) override
+            virtual void Activated(RPC::IRemoteConnection*) override
             {
             }
-            virtual void Deactivated(RPC::IRemoteProcess* process) override
+            virtual void Deactivated(RPC::IRemoteConnection* connection) override
             {
-                _parent.Deactivated(process);
+                _parent.Deactivated(connection);
             }
 
         private:
@@ -140,7 +140,7 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
 
     private:
-        void Deactivated(RPC::IRemoteProcess* process);
+        void Deactivated(RPC::IRemoteConnection* connection);
         void StateChange(const PluginHost::IStateControl::state state);
         void LoadFinished(const string& URL);
         void URLChanged(const string& URL);
@@ -163,7 +163,7 @@ namespace Plugin {
 
     private:
         uint8_t _skipURL;
-        uint32_t _pid;
+        uint32_t _connectionId;
         bool _hidden;
         Exchange::IBrowser* _spark;
         Exchange::IMemory* _memory;

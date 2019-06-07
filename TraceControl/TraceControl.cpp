@@ -19,12 +19,19 @@ namespace Plugin {
     /* static */ TraceControl::Observer::Source::LocalIterator TraceControl::Observer::Source::_localIterator;
     static Core::ProxyPoolType<Web::JSONBodyType<TraceControl::Data>> jsonBodyDataFactory(4);
 
-    /* static */ string TraceControl::Observer::Source::SourceName(RPC::IRemoteProcess* process)
+    /* static */ string TraceControl::Observer::Source::SourceName(RPC::IRemoteConnection* connection)
     {
         string pathName;
         Core::SystemInfo::GetEnvironment(TRACE_CYCLIC_BUFFER_ENVIRONMENT, pathName);
+        pathName = Core::Directory::Normalize(pathName) + TRACE_CYCLIC_BUFFER_PREFIX + '.';
 
-        return (Core::Directory::Normalize(pathName) + TRACE_CYCLIC_BUFFER_PREFIX + '.' + Core::NumberType<uint32_t>(process == nullptr ? Core::ProcessInfo().Id() : process->Id()).Text());
+        if (connection == nullptr) {
+            pathName += '0';
+        } else {
+            pathName += Core::NumberType<uint32_t>(connection->Id()).Text();
+        }
+
+        return (pathName);
     }
 
     /* virtual */ const string TraceControl::Initialize(PluginHost::IShell* service)
@@ -201,13 +208,11 @@ namespace Plugin {
             string moduleName(Core::ToString(index.Module()));
             Observer::ModuleIterator::CategoryIterator categories(index.Categories());
 
-            if((parameters.Module.IsSet() == false) || ((parameters.Module.IsSet() == true) && (moduleName == parameters.Module.Value())))
-            {
+            if ((parameters.Module.IsSet() == false) || ((parameters.Module.IsSet() == true) && (moduleName == parameters.Module.Value()))) {
                 while (categories.Next()) {
                     string categoryName(Core::ToString(categories.Category()));
 
-                    if((parameters.Category.IsSet() == false) || ((parameters.Category.IsSet() == true) && (categoryName == parameters.Category.Value())))
-                    {
+                    if ((parameters.Category.IsSet() == false) || ((parameters.Category.IsSet() == true) && (categoryName == parameters.Category.Value()))) {
                         response.Settings.Add(Data::Trace(moduleName, categoryName, categories.State()));
                     }
                 }
@@ -220,8 +225,8 @@ namespace Plugin {
     uint32_t TraceControl::set(const Data::Trace& parameters)
     {
         _observer.Set((parameters.State.Value() == TraceControl::state::ENABLED),
-                      (parameters.Module.IsSet() == true ? parameters.Module.Value() : std::string(EMPTY_STRING)),
-                      (parameters.Category.IsSet() == true ? parameters.Category.Value() : std::string(EMPTY_STRING)));
+            (parameters.Module.IsSet() == true ? parameters.Module.Value() : std::string(EMPTY_STRING)),
+            (parameters.Category.IsSet() == true ? parameters.Category.Value() : std::string(EMPTY_STRING)));
 
         return (Core::ERROR_NONE);
     }

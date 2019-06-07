@@ -24,7 +24,7 @@ namespace {
         TraceControl(const TraceControl&) = delete;
         TraceControl& operator=(const TraceControl&) = delete;
 
-        class Observer : public Core::Thread, public RPC::IRemoteProcess::INotification {
+        class Observer : public Core::Thread, public RPC::IRemoteConnection::INotification {
         private:
             Observer() = delete;
             Observer(const Observer&) = delete;
@@ -93,7 +93,7 @@ namespace {
                     mutable Trace::TraceUnit::Iterator _index;
                 };
 
-                static string SourceName(RPC::IRemoteProcess* process);
+                static string SourceName(RPC::IRemoteConnection* connection);
 
             public:
                 enum state {
@@ -103,43 +103,43 @@ namespace {
                 };
 
             public:
-                Source(RPC::IRemoteProcess* process)
-                    : Core::CyclicBuffer(SourceName(process), 0, true)
-                    , _iterator(process == nullptr ? &_localIterator : nullptr)
-                    , _control(process == nullptr ? &_localIterator : nullptr)
-                    , _process(process)
+                Source(RPC::IRemoteConnection* connection)
+                    : Core::CyclicBuffer(SourceName(connection), 0, true)
+                    , _iterator(connection == nullptr ? &_localIterator : nullptr)
+                    , _control(connection == nullptr ? &_localIterator : nullptr)
+                    , _connection(connection)
                     , _module(0)
                     , _category(0)
                     , _classname(0)
                     , _information()
                     , _state(EMPTY)
                 {
-                    if (_process != nullptr) {
-                        TRACE_L1("Constructing TraceControl::Source (%d)", process->Id());
-                        _process->AddRef();
+                    if (_connection != nullptr) {
+                        TRACE_L1("Constructing TraceControl::Source (%d)", connection->Id());
+                        _connection->AddRef();
                     }
                 }
                 ~Source()
                 {
-                    if (_process != nullptr) {
-                        TRACE_L1("Destructing TraceControl::Source (%d)", _process->Id());
+                    if (_connection != nullptr) {
+                        TRACE_L1("Destructing TraceControl::Source (%d)", _connection->Id());
                         if (_iterator != nullptr) {
                             _iterator->Release();
                             _iterator = nullptr;
                         }
-                        _process->Release();
-                        _process = nullptr;
+                        _connection->Release();
+                        _connection = nullptr;
                     }
                 }
 
             public:
                 uint32_t Id() const
                 {
-                    return (_process != nullptr ? _process->Id() : 0);
+                    return (_connection != nullptr ? _connection->Id() : 0);
                 }
                 void Relinguish()
                 {
-                    if (_process != nullptr) {
+                    if (_connection != nullptr) {
                         if (_iterator != nullptr) {
                             _iterator->Release();
                             _iterator = nullptr;
@@ -153,8 +153,8 @@ namespace {
                 void Reset()
                 {
                     // Lazy creation, get the interface, if we want to iterate over the trace categories.
-                    if ((_iterator == nullptr) && (_process != nullptr)) {
-                        _iterator = _process->Aquire<Trace::ITraceIterator>(Core::infinite, _T("TraceIterator"), static_cast<uint32_t>(~0));
+                    if ((_iterator == nullptr) && (_connection != nullptr)) {
+                        _iterator = _connection->Aquire<Trace::ITraceIterator>(Core::infinite, _T("TraceIterator"), static_cast<uint32_t>(~0));
                     }
 
                     if (_iterator != nullptr) {
@@ -166,8 +166,8 @@ namespace {
                     bool result = false;
 
                     // Lazy creation, get the interface, if we want to iterate over the trace categories.
-                    if ((_iterator == nullptr) && (_process != nullptr)) {
-                        _iterator = _process->Aquire<Trace::ITraceIterator>(Core::infinite, _T("TraceIterator"), static_cast<uint32_t>(~0));
+                    if ((_iterator == nullptr) && (_connection != nullptr)) {
+                        _iterator = _connection->Aquire<Trace::ITraceIterator>(Core::infinite, _T("TraceIterator"), static_cast<uint32_t>(~0));
                     }
 
                     if (_iterator != nullptr) {
@@ -179,7 +179,7 @@ namespace {
                 void Set(const bool enabled, const string& module, const string& category)
                 {
                     if (_control == nullptr) {
-                        _control = _process->Aquire<Trace::ITraceController>(Core::infinite, _T("TraceController"), static_cast<uint32_t>(~0));
+                        _control = _connection->Aquire<Trace::ITraceController>(Core::infinite, _T("TraceController"), static_cast<uint32_t>(~0));
                     }
 
                     if (_control != nullptr) {
@@ -302,7 +302,7 @@ namespace {
 
                 Trace::ITraceIterator* _iterator;
                 Trace::ITraceController* _control;
-                RPC::IRemoteProcess* _process;
+                RPC::IRemoteConnection* _connection;
                 uint16_t _module;
                 uint16_t _category;
                 uint16_t _classname;
@@ -566,22 +566,22 @@ namespace {
 
                 _adminLock.Unlock();
             }
-            virtual void Activated(RPC::IRemoteProcess* process)
+            virtual void Activated(RPC::IRemoteConnection* connection)
             {
                 _adminLock.Lock();
 
-                ASSERT(_buffers.find(process->Id()) == _buffers.end());
+                ASSERT(_buffers.find(connection->Id()) == _buffers.end());
 
                 // By definition, get the buffer file from WPEFramework (local source)
-                _buffers.insert(std::pair<const uint32_t, Source*>(process->Id(), new Source(process)));
+                _buffers.insert(std::pair<const uint32_t, Source*>(connection->Id(), new Source(connection)));
 
                 _adminLock.Unlock();
             }
-            virtual void Deactivated(RPC::IRemoteProcess* process)
+            virtual void Deactivated(RPC::IRemoteConnection* connection)
             {
                 _adminLock.Lock();
 
-                std::map<const uint32_t, Source*>::iterator index(_buffers.find(process->Id()));
+                std::map<const uint32_t, Source*>::iterator index(_buffers.find(connection->Id()));
 
                 if (index != _buffers.end()) {
                     delete (index->second);
@@ -635,7 +635,7 @@ namespace {
 
         private:
             BEGIN_INTERFACE_MAP(Observer)
-            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
             virtual void AddRef() const
