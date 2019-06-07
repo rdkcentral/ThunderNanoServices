@@ -16,7 +16,7 @@ namespace Plugin {
         WebKitBrowser(const WebKitBrowser&);
         WebKitBrowser& operator=(const WebKitBrowser&);
 
-        class Notification : public RPC::IRemoteProcess::INotification,
+        class Notification : public RPC::IRemoteConnection::INotification,
                              public PluginHost::IStateControl::INotification,
                              public Exchange::IBrowser::INotification {
 
@@ -56,18 +56,18 @@ namespace Plugin {
             {
                 _parent.StateChange(state);
             }
-            virtual void Activated(RPC::IRemoteProcess* /*process*/) override
+            virtual void Activated(RPC::IRemoteConnection* /* connection */) override
             {
             }
-            virtual void Deactivated(RPC::IRemoteProcess* process) override
+            virtual void Deactivated(RPC::IRemoteConnection* connection) override
             {
-                _parent.Deactivated(process);
+                _parent.Deactivated(connection);
             }
 
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(Exchange::IBrowser::INotification)
             INTERFACE_ENTRY(PluginHost::IStateControl::INotification)
-            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -195,7 +195,7 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
 
     private:
-        void Deactivated(RPC::IRemoteProcess* process);
+        void Deactivated(RPC::IRemoteConnection* connection);
         void LoadFinished(const string& URL);
         void URLChanged(const string& URL);
         void Hidden(const bool hidden);
@@ -219,7 +219,7 @@ namespace Plugin {
 
     private:
         uint8_t _skipURL;
-        uint32_t _pid;
+        uint32_t _connectionId;
         bool _hidden;
         PluginHost::IShell* _service;
         Exchange::IBrowser* _browser;
