@@ -58,6 +58,58 @@ namespace Plugin {
             Core::JSON::String EGLProvider;
         };
 
+       class NotificationSink : public Core::Thread {
+        private:
+            NotificationSink() = delete;
+            NotificationSink(const NotificationSink&) = delete;
+            NotificationSink& operator=(const NotificationSink&) = delete;
+
+        public:
+            NotificationSink(SparkImplementation& parent)
+                : _parent(parent)
+                , _waitTime(0)
+                , _command(PluginHost::IStateControl::SUSPEND)
+            {
+            }
+            virtual ~NotificationSink()
+            {
+                Block();
+                Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
+            }
+
+        public:
+            void RequestForStateChange(const PluginHost::IStateControl::command command)
+            {
+
+                _command = command;
+
+                Run();
+            }
+
+        private:
+            virtual uint32_t Worker()
+            {
+
+                bool success = false;
+
+                if ((IsRunning() == true) && (success == false)) {
+
+                    success = _parent.RequestForStateChange(_command);
+                }
+
+                Block();
+
+                _parent.StateChangeCompleted(success, _command);
+
+                return (Core::infinite);
+            }
+
+        private:
+            SparkImplementation& _parent;
+            uint32_t _waitTime;
+            PluginHost::IStateControl::command _command;
+        };
+
         class SceneWindow : public Core::Thread, public pxWindow, public pxIViewContainer {
         private:
             SceneWindow(const SceneWindow&) = delete;
@@ -251,12 +303,10 @@ namespace Plugin {
                         if (suspend == true) {
                             realClass->suspend(r, status);
                             TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
-                            _closed = true;
                         }
                         else {
                             realClass->resume(r, status);
                             TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
-                            _closed = false;
                         }
                     }
                 }
@@ -515,6 +565,7 @@ namespace Plugin {
             , _state(PluginHost::IStateControl::UNINITIALIZED)
             , _sparkClients()
             , _stateControlClients()
+            , _sink(*this)
         {
         }
 
@@ -614,8 +665,6 @@ namespace Plugin {
 
             _adminLock.Lock();
 
-            PluginHost::IStateControl::state lastState = _state;
-
             if (_state == PluginHost::IStateControl::UNINITIALIZED) {
                 // Seems we are passing state changes before we reached an operational Spark.
                 // Just move the state to what we would like it to be :-)
@@ -626,33 +675,18 @@ namespace Plugin {
                 switch (command) {
                 case PluginHost::IStateControl::SUSPEND:
                     if (_state == PluginHost::IStateControl::RESUMED) {
-
-                        if (_window.Suspend(true) == true) {
-                            _state = PluginHost::IStateControl::SUSPENDED;
-                            result = Core::ERROR_NONE;
-                        }
+                        _sink.RequestForStateChange(PluginHost::IStateControl::SUSPEND);
+                        result = Core::ERROR_NONE;
                     }
                     break;
                 case PluginHost::IStateControl::RESUME:
                     if (_state == PluginHost::IStateControl::SUSPENDED) {
-
-                        if (_window.Suspend(false) == true) {
-                            _state = PluginHost::IStateControl::RESUMED;
-                            result = Core::ERROR_NONE;
-                        }
+                        _sink.RequestForStateChange(PluginHost::IStateControl::RESUME);
+                        result = Core::ERROR_NONE;
                     }
                     break;
                 default:
                     break;
-                }
-            }
-
-            if (lastState != _state) {
-                std::list<PluginHost::IStateControl::INotification*>::iterator index(_stateControlClients.begin());
-
-                while (index != _stateControlClients.end()) {
-                    (*index)->StateChange(_state);
-                    index++;
                 }
             }
 
@@ -661,17 +695,95 @@ namespace Plugin {
             return result;
         }
 
+        void StateChangeCompleted(bool success, const PluginHost::IStateControl::command request)
+        {
+            if (success) {
+                switch (request) {
+                case PluginHost::IStateControl::RESUME:
+
+                    _adminLock.Lock();
+
+                    if (_state != PluginHost::IStateControl::RESUMED) {
+                        StateChange(PluginHost::IStateControl::RESUMED);
+                    }
+
+                    _adminLock.Unlock();
+                    break;
+                case PluginHost::IStateControl::SUSPEND:
+
+                    _adminLock.Lock();
+
+                    if (_state != PluginHost::IStateControl::SUSPENDED) {
+                        StateChange(PluginHost::IStateControl::SUSPENDED);
+                    }
+
+                    _adminLock.Unlock();
+                    break;
+                default:
+                    ASSERT(false);
+                    break;
+                }
+            } else {
+                StateChange(PluginHost::IStateControl::EXITED);
+            }
+        }
+
         BEGIN_INTERFACE_MAP(SparkImplementation)
             INTERFACE_ENTRY(Exchange::IBrowser)
             INTERFACE_ENTRY(PluginHost::IStateControl)
         END_INTERFACE_MAP
 
     private:
+
+        inline bool RequestForStateChange(const PluginHost::IStateControl::command command)
+        {
+            bool result = false;
+
+                switch (command) {
+                case PluginHost::IStateControl::SUSPEND: {
+
+                    if (_window.Suspend(true) == true) {
+                        result = true;
+                    }
+                    break;
+                }
+                case PluginHost::IStateControl::RESUME: {
+
+                    if (_window.Suspend(false) == true) {
+                        result = true;
+                    }
+
+                    break;
+                }
+                default:
+                    ASSERT(false);
+                    break;
+                }
+
+            return result;
+        }
+
+        void StateChange(const PluginHost::IStateControl::state newState)
+        {
+            _adminLock.Lock();
+
+            _state = newState;
+
+            std::list<PluginHost::IStateControl::INotification*>::iterator index(_stateControlClients.begin());
+
+            while (index != _stateControlClients.end()) {
+                (*index)->StateChange(newState);
+                index++;
+            }
+
+            _adminLock.Unlock();
+        }
         mutable Core::CriticalSection _adminLock;
         SceneWindow _window;
         PluginHost::IStateControl::state _state;
         std::list<Exchange::IBrowser::INotification*> _sparkClients;
         std::list<PluginHost::IStateControl::INotification*> _stateControlClients;
+        NotificationSink _sink;
     };
 
     SERVICE_REGISTRATION(SparkImplementation, 1, 0);
