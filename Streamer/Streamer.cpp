@@ -16,12 +16,12 @@ namespace Plugin {
         ASSERT(_service == nullptr);
 
         // Setup skip URL for right offset.
-        _pid = 0;
+        _connectionId = 0;
         _service = service;
         _skipURL = _service->WebPrefix().length();
 
         config.FromString(_service->ConfigLine());
-        _player = _service->Root<Exchange::IPlayer>(_pid, 2000, _T("StreamerImplementation"));
+        _player = _service->Root<Exchange::IPlayer>(_connectionId, 2000, _T("StreamerImplementation"));
 
         if ((_player != nullptr) && (_service != nullptr)) {
             TRACE(Trace::Information, (_T("Successfully instantiated Streamer")));
@@ -41,11 +41,11 @@ namespace Plugin {
 
         if (_player->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 
-            ASSERT(_pid != 0);
+            ASSERT(_connectionId != 0);
 
-            TRACE(Trace::Error, (_T("OutOfProcess Plugin is not properly destructed. PID: %d"), _pid));
+            TRACE(Trace::Error, (_T("OutOfProcess Plugin is not properly destructed. PID: %d"), _connectionId));
 
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_pid));
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // The connection can disappear in the meantime...
             if (connection != nullptr) {
@@ -346,7 +346,7 @@ namespace Plugin {
     {
         // This can potentially be called on a socket thread, so the deactivation (wich in turn kills this object) must be done
         // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
-        if (_pid == connection->Id()) {
+        if (_connectionId == connection->Id()) {
             ASSERT(_service != nullptr);
             PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }

@@ -229,7 +229,7 @@ namespace Plugin {
 #endif
         Streamer()
             : _skipURL(0)
-            , _pid(0)
+            , _connectionId(0)
             , _service(nullptr)
             , _player(nullptr)
             , _streams()
@@ -343,7 +343,7 @@ namespace Plugin {
 
     private:
         uint32_t _skipURL;
-        uint32_t _pid;
+        uint32_t _connectionId;
         PluginHost::IShell* _service;
 
         Exchange::IPlayer* _player;
