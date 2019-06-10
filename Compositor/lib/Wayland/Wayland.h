@@ -9,7 +9,7 @@
 #include <virtualinput/VirtualKeyboard.h>
 
 #ifdef ENABLE_NXSERVER
-#include "../NexusServer/NexusServer.h"
+#include "NexusServer/NexusServer.h"
 #endif
 
 extern "C" {
