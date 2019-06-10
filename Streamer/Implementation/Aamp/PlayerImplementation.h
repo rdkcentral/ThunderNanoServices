@@ -76,14 +76,20 @@ namespace Player {
             }
             inline Exchange::IStream::drmtype DRM() const
             {
+                _adminLock.Lock();
                 if (_drmType == Exchange::IStream::Unknown) {
                     const_cast<PlayerPlatform*>(this)->QueryDRMSystem();
                 }
-                return (Exchange::IStream::drmtype)_drmType;
+                Exchange::IStream::drmtype drmType = _drmType;
+                _adminLock.Unlock();
+                return drmType;
             }
             inline Exchange::IStream::state State() const
             {
-                return (Exchange::IStream::state)_state;
+                _adminLock.Lock();
+                Exchange::IStream::state curState = _state;
+                _adminLock.Unlock();
+                return curState;
             }
             uint32_t Load(const string& uri);
 
@@ -94,7 +100,10 @@ namespace Player {
             uint32_t Speed(const int32_t speed);
             inline int32_t Speed() const
             {
-                return _speed;
+                _adminLock.Lock();
+                int32_t speed = _speed;
+                _adminLock.Unlock();
+                return speed;
             }
             void Position(const uint64_t absoluteTime);
             uint64_t Position() const;
@@ -102,8 +111,10 @@ namespace Player {
 
             inline void TimeRange(uint64_t& begin, uint64_t& end) const
             {
+                _adminLock.Lock();
                 begin = _begin;
                 end = _end;
+                _adminLock.Unlock();
             }
             inline const Rectangle& Window() const
             {
@@ -112,11 +123,16 @@ namespace Player {
             void Window(const Rectangle& rectangle);
             inline uint32_t Order() const
             {
-                return (_z);
+                _adminLock.Lock();
+                uint32_t z = _z;
+                _adminLock.Unlock();
+                return (z);
             }
             inline void Order(const uint32_t order)
             {
+                _adminLock.Lock();
                 _z = order;
+                _adminLock.Unlock();
             }
             void AttachDecoder(const uint8_t index);
             void DetachDecoder(const uint8_t index);
@@ -157,6 +173,7 @@ namespace Player {
 
             static string _configuration;
             Core::ProxyType<Job> _scheduler;
+            mutable Core::CriticalSection _adminLock;
         };
     }
 }

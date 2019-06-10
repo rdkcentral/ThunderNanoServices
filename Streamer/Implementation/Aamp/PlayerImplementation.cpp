@@ -44,6 +44,7 @@ namespace Player {
             , _initialized(false)
             , _aampGstPlayerMainLoop(nullptr)
             , _scheduler()
+            , _adminLock()
         {
             ASSERT (_scheduler.IsValid() == false);
 
@@ -87,19 +88,23 @@ namespace Player {
 
         void PlayerPlatform::InitializePlayerInstance()
         {
+            _adminLock.Lock();
             if (!_initialized) {
                 _initialized = true;
                 _aampGstPlayerMainLoop = g_main_loop_new(nullptr, false);
             }
+            _adminLock.Unlock();
         }
 
         void PlayerPlatform::DeinitializePlayerInstance()
         {
+            _adminLock.Lock();
             if (_initialized == true) {
                 if (_aampGstPlayerMainLoop)
                     g_main_loop_quit(_aampGstPlayerMainLoop);
                 _initialized = false;
             }
+            _adminLock.Unlock();
         }
 
         void PlayerPlatform::AttachDecoder(const uint8_t index)
@@ -116,8 +121,10 @@ namespace Player {
 
         void PlayerPlatform::Window(const Rectangle& rectangle)
         {
+            _adminLock.Lock();
             _rectangle = rectangle;
             _aampPlayer->SetVideoRectangle(_rectangle.X, _rectangle.Y, _rectangle.Width, _rectangle.Height);
+            _adminLock.Unlock();
         }
 
         void PlayerPlatform::QueryDRMSystem()
@@ -148,6 +155,7 @@ namespace Player {
                 if ((uriType == "m3u8") || (uriType == "mpd")) {
                     TRACE(Trace::Information, (_T("URI type is %s"), uriType.c_str()));
 
+                    _adminLock.Lock();
                     _speed = -1;
                     _drmType = Exchange::IStream::Unknown;
 
@@ -160,9 +168,12 @@ namespace Player {
                     if (_callback != nullptr) {
                        _callback->StateChange(_state);
                     }
+                    _adminLock.Unlock();
                 } else {
                     result = Core::ERROR_INCORRECT_URL;
+                    _adminLock.Lock();
                     _state = Exchange::IStream::Error;
+                    _adminLock.Unlock();
                     TRACE(Trace::Error, (_T("URI is not dash/hls")));
                 }
             } else {
@@ -175,24 +186,34 @@ namespace Player {
 
         uint64_t PlayerPlatform::Position() const
         {
-            return (_aampPlayer->GetPlaybackPosition() * 1000);
+            uint64_t position = 0;
+            _adminLock.Lock();
+            position = (_aampPlayer->GetPlaybackPosition() * 1000);
+            _adminLock.Unlock();
+            return position;
         }
 
         void PlayerPlatform::Position(const uint64_t absoluteTime)
         {
-            return _aampPlayer->Seek(absoluteTime/1000);
+            _adminLock.Lock();
+            _aampPlayer->Seek(absoluteTime/1000);
+            _adminLock.Unlock();
         }
 
         void PlayerPlatform::TimeUpdate()
         {
+            _adminLock.Lock();
             if ((_callback != nullptr) && (_state == Exchange::IStream::Playing)) {
                 _callback->TimeUpdate(_aampPlayer->GetPlaybackPosition());
             }
+            _adminLock.Unlock();
         }
 
         void PlayerPlatform::Terminate()
         {
+            _adminLock.Lock();
             if (_initialized == true) {
+                _adminLock.Unlock();
                 ASSERT (_scheduler.IsValid() == true);
                 //PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_scheduler));//TODO:check the hang 
 
@@ -203,6 +224,8 @@ namespace Player {
 
                 TRACE(Trace::Information, (string(__FUNCTION__)));
                 Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
+            } else {
+                _adminLock.Unlock();
             }
         }
 
@@ -224,6 +247,7 @@ namespace Player {
             TRACE(Trace::Information, (_T("speed = %d"), speed));
             uint32_t result = Core::ERROR_NONE;
 
+            _adminLock.Lock();
             if (speed != _speed) {
 
                 Exchange::IStream::state newState = _state;
@@ -253,6 +277,8 @@ namespace Player {
                     }
                 }
             }
+
+            _adminLock.Unlock();
             return result;
        }
     }
