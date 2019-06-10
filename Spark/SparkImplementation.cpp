@@ -254,7 +254,7 @@ namespace Plugin {
                     uint16_t length = 0;
 
                     if (!prefix.empty()) {
-                        strncpy(buffer, prefix, sizeof(prefix));
+                        strncpy(buffer, prefix.c_str(), prefix.size());
                     }
                     if ((analyser.IsValid() == true) && ((analyser.Type() == Core::URL::SCHEME_HTTP) || (analyser.Type() == Core::URL::SCHEME_HTTPS))) {
                         length = Core::URL::Encode(
