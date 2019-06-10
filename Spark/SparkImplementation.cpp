@@ -17,6 +17,7 @@
 #include <rtSettings.h>
 
 pxContext context;
+extern rtMutex glContextLock;
 extern rtScript script;
 extern bool gDirtyRectsEnabled;
 
@@ -295,6 +296,7 @@ namespace Plugin {
                 bool status = false;
                 rtValue r;
 
+                glContextLock.lock();
                 _sharedContext->makeCurrent(true);
                 if (_view != nullptr) {
                     pxScriptView* realClass = reinterpret_cast<pxScriptView*>(_view.getPtr());
@@ -311,6 +313,7 @@ namespace Plugin {
                     }
                 }
                 _sharedContext->makeCurrent(false);
+                glContextLock.unlock();
                 return status;
             }
 
