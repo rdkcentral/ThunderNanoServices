@@ -121,7 +121,6 @@ namespace Plugin {
                 : Core::Thread(Core::Thread::DefaultStackSize(), _T("Spark"))
                 , _eventLoop()
                 , _view(nullptr)
-                , _closed(false)
                 , _width(~0)
                 , _height(~0)
                 , _animationFPS(~0)
@@ -136,6 +135,13 @@ namespace Plugin {
                 Quit();
 
                 Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
+
+                if (_view != nullptr) {
+                    onCloseRequest();
+
+                    _view->setViewContainer(nullptr);
+                    _view = nullptr;
+                }
             }
 
             uint32_t Configure(PluginHost::IShell* service) {
@@ -217,7 +223,9 @@ namespace Plugin {
                 }
 
                 Init();
-                SetURL(_url);
+
+                string prefix = "shell.js?url="; //Use prefix only first launch.
+                SetURL(_url, prefix);
 
                 return result;
             }
@@ -226,11 +234,10 @@ namespace Plugin {
                 return (_url);
             }
 
-            void SetURL(const string& url)
+            void SetURL(const string& url, const string prefix = "")
             {
                 _url = url;
 
-                _closed = true;
                 Quit();
 
                 Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
@@ -240,21 +247,24 @@ namespace Plugin {
                     _fullPath.clear();
 
                 } else {
-                    TCHAR prefix[] = _T("shell.js?url=");
-                    TCHAR buffer[MAX_URL_SIZE + sizeof(prefix)];
+                    TCHAR buffer[MAX_URL_SIZE + prefix.size()];
+                    memset(buffer, 0, MAX_URL_SIZE + prefix.size());
+
                     Core::URL analyser(url.c_str());
                     uint16_t length = 0;
 
-                    strncpy(buffer, prefix, sizeof(prefix));
+                    if (!prefix.empty()) {
+                        strncpy(buffer, prefix, sizeof(prefix));
+                    }
                     if ((analyser.IsValid() == true) && ((analyser.Type() == Core::URL::SCHEME_HTTP) || (analyser.Type() == Core::URL::SCHEME_HTTPS))) {
                         length = Core::URL::Encode(
                                          url.c_str(),
                                          static_cast<uint16_t>(url.length()),
-                                         &(buffer[sizeof(prefix)]),
-                                         sizeof(buffer) - sizeof(prefix));
+                                         &(buffer[prefix.size()]),
+                                         sizeof(buffer) - prefix.size());
 
                     } else {
-                        length = std::min(url.length(), sizeof(buffer) - sizeof(prefix));
+                        length = std::min(url.length(), sizeof(buffer) - prefix.size());
                     }
 
                     if (length >= (sizeof(buffer) - sizeof(prefix))) {
@@ -267,7 +277,6 @@ namespace Plugin {
 
                     ENTERSCENELOCK()
 
-                    _closed = false;
 
                     _fullPath = buffer;
 
@@ -344,7 +353,7 @@ namespace Plugin {
             virtual void onCloseRequest() override
             {
                 ENTERSCENELOCK();
-                if ((_view != nullptr) /*&& (_closed == false)*/) {
+                if (_view != nullptr) {
 
                     script.collectGarbage();
                     _view->onCloseRequest();
@@ -516,12 +525,20 @@ namespace Plugin {
                 }
                 else {
                     // This results in a reference counted object!!!
-                    _view = new pxScriptView(_fullPath.c_str(),"javascript/node/v8");
+                    if (_view == nullptr) {
+                        _view = new pxScriptView(_fullPath.c_str(),"javascript/node/v8");
 
-                    ASSERT (_view != nullptr);
+                        ASSERT (_view != nullptr);
 
-                    _view->setViewContainer(this);
-                    _view->onSize(_width, _height);
+                        _view->setViewContainer(this);
+                        _view->onSize(_width, _height);
+                    } else {
+                        pxScriptView* realClass = reinterpret_cast<pxScriptView*>(_view.getPtr());
+
+                        ASSERT (realClass != nullptr);
+
+                        realClass->setUrl(_fullPath.c_str());
+                    }
 
                     EXITSCENELOCK()
 
@@ -530,18 +547,7 @@ namespace Plugin {
                     if (IsRunning() == true) {
                         _eventLoop.run();
                     }
-
-                    ENTERSCENELOCK()
-
-                    if (_view != nullptr) {
-                        onCloseRequest();
-
-                        _view->setViewContainer(nullptr);
-                        _view = nullptr;
-                    }
                 }
-
-                EXITSCENELOCK()
 
                 return (Core::infinite);
             }
@@ -549,7 +555,6 @@ namespace Plugin {
         private:
             pxEventLoop _eventLoop;
             pxViewRef _view;
-            bool _closed;
             uint32_t _width;
             uint32_t _height;
             uint8_t _animationFPS;
