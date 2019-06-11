@@ -226,6 +226,7 @@ namespace WPASupplicant {
         public:
             Request()
                 : _request()
+                , _settable(false)
             {
             }
             Request(const string& message)
@@ -233,6 +234,7 @@ namespace WPASupplicant {
 #ifdef __DEBUG__
                 , _original(message)
 #endif // __DEBUG__
+                , _settable(false)
             {
             }
             virtual ~Request()
@@ -266,18 +268,20 @@ namespace WPASupplicant {
                 return (_original);
             }
 #endif // __DEBUG__
-            void Completed(const string& response, const bool abort) {
-                _settable = true;
-                OnCompleted(response, abort);
+
+            void Processing(const bool processing)
+            {
+                _settable = processing == false;
             }
 
+            virtual void Completed(const string& response, const bool abort) = 0;
+
         private:
-            virtual void OnCompleted(const string& response, const bool abort) = 0;
             string _request;
 #ifdef __DEBUG__
             string _original;
 #endif // __DEBUG__
-            bool _settable = true;
+            bool _settable;
         };
         class ScanRequest : public Request {
         private:
@@ -317,7 +321,7 @@ namespace WPASupplicant {
             {
                 return (Request::Set(string(_TXT("SCAN_RESULTS"))));
             }
-            virtual void OnCompleted(const string& response, const bool abort) override
+            virtual void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
                     Core::TextFragment data(response.c_str(), response.length());
@@ -434,7 +438,7 @@ namespace WPASupplicant {
             }
 
         private:
-            virtual void OnCompleted(const string& response, const bool abort) override
+            virtual void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
                     Core::TextFragment data(response.c_str(), response.length());
@@ -517,7 +521,7 @@ namespace WPASupplicant {
                 }
                 return (false);
             }
-            virtual void OnCompleted(const string& response, const bool abort) override
+            virtual void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
                     Core::TextFragment data(response);
@@ -591,7 +595,7 @@ namespace WPASupplicant {
             {
                 return (Request::Set(string(_TXT("LIST_NETWORKS"))));
             }
-            virtual void OnCompleted(const string& response, const bool abort) override
+            virtual void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
                     Core::TextFragment data(response.c_str(), response.length());
@@ -681,7 +685,7 @@ namespace WPASupplicant {
 
                 return (*this);
             }
-            virtual void OnCompleted(const string& response, const bool abort) override
+            virtual void Completed(const string& response, const bool abort) override
             {
 
                 _result = (abort == false ? Core::ERROR_NONE : Core::ERROR_ASYNC_ABORTED);
@@ -799,11 +803,17 @@ namespace WPASupplicant {
         }
         inline bool IsScanning() const
         {
-            return (_scanRequest.IsScanning());
+            _adminLock.Lock();
+            const bool result = _scanRequest.IsScanning();
+            _adminLock.Unlock();
+            return result;
         }
         inline const string& Current() const
         {
-            return (_statusRequest.SSID());
+            _adminLock.Lock();
+            const string& current = (_statusRequest.SSID());
+            _adminLock.Unlock();
+            return current;
         }
         inline uint32_t Error() const
         {
@@ -813,8 +823,11 @@ namespace WPASupplicant {
         {
 
             uint32_t result = Core::ERROR_INPROGRESS;
+            _adminLock.Lock();
+            const bool activated = _scanRequest.Activated();
+            _adminLock.Unlock();
 
-            if (_scanRequest.Activated() == true) {
+            if (activated == true) {
                 result = Core::ERROR_NONE;
 
                 CustomRequest exchange(string(_TXT("SCAN")));
@@ -822,8 +835,9 @@ namespace WPASupplicant {
                 Submit(&exchange);
 
                 if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
-
+                    _adminLock.Lock();
                     _scanRequest.Aborted();
+                    _adminLock.Unlock();
                     result = Core::ERROR_UNAVAILABLE;
                 }
 
@@ -980,9 +994,15 @@ namespace WPASupplicant {
             if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
 
                 result = Core::ERROR_ASYNC_ABORTED;
-            } else if (_networkRequest.Set() == true) {
-                // Refresh the enabled network list !!
-                Submit(&_networkRequest);
+            } else {
+                _adminLock.Lock();
+                if (_networkRequest.Set() == true) {
+                    _adminLock.Unlock();
+                    // Refresh the enabled network list !!
+                    Submit(&_networkRequest);
+                } else {
+                    _adminLock.Unlock();
+                }
             }
 
             Revoke(&exchange);
@@ -1000,9 +1020,6 @@ namespace WPASupplicant {
             if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
 
                 result = Core::ERROR_ASYNC_ABORTED;
-            } else if (_networkRequest.Set() == true) {
-                // Refresh the enabled network list !!
-                Submit(&_networkRequest);
             }
 
             Revoke(&exchange);
@@ -1544,6 +1561,7 @@ namespace WPASupplicant {
 
             if (index != _requests.end()) {
                 bool retrigger(index == _requests.begin());
+                (*index)->Processing(false);
                 _requests.erase(index);
 
                 if (retrigger == true) {
@@ -1565,6 +1583,7 @@ namespace WPASupplicant {
             while (_requests.size() != 0) {
                 Request* current = _requests.front();
                 _requests.pop_front();
+                current->Processing(false);
                 current->Completed(EMPTY_STRING, true);
             }
 
@@ -1578,6 +1597,7 @@ namespace WPASupplicant {
 
             ASSERT(std::find(_requests.begin(), _requests.end(), data) == _requests.end());
 
+            data->Processing(true);
             _requests.push_back(data);
 
             if (_requests.size() == 1) {

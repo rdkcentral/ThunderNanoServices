@@ -157,7 +157,7 @@ namespace WPASupplicant {
     /* virtual */ uint16_t Controller::SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
     {
         uint16_t result = 0;
-
+        _adminLock.Lock();
         if ((_requests.size() > 0) && (_requests.front()->Message().empty() == false)) {
             string& data = _requests.front()->Message();
             TRACE(Communication, (_T("Send: [%s]"), data.c_str()));
@@ -165,6 +165,7 @@ namespace WPASupplicant {
             memcpy(dataFrame, data.c_str(), result);
             data = data.substr(result);
         }
+        _adminLock.Unlock();
         return (result);
     }
     /* virtual */ uint16_t Controller::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
@@ -199,8 +200,14 @@ namespace WPASupplicant {
                 if ((event == CTRL_EVENT_CONNECTED) || (event == CTRL_EVENT_DISCONNECTED) || (event == WPS_AP_AVAILABLE)) {
                     _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
-                } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS) && (_scanRequest.Set() == true)) {
-                    Submit(&_scanRequest);
+                } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS)) {
+                    _adminLock.Lock();
+                    if (_scanRequest.Set() == true) {
+                        _adminLock.Unlock();
+                        Submit(&_scanRequest);
+                    } else {
+                        _adminLock.Unlock();
+                    }
                 } else if ((event == CTRL_EVENT_BSS_ADDED) || (event == CTRL_EVENT_BSS_REMOVED)) {
 
                     ASSERT(position != string::npos);
@@ -243,18 +250,23 @@ namespace WPASupplicant {
             } else {
                 TRACE(Communication, (_T("RAW EVENT MESSAGE: [%s]"), message.c_str()));
             }
-        } else if (_requests.size() > 0) {
-            _adminLock.Lock();
-
-            Request* current = _requests.front();
-            _requests.pop_front();
-            current->Completed(response, false);
-
-            _adminLock.Unlock();
-
-            Trigger();
         } else {
-            TRACE(Trace::Error, ("There is no pending request to process"));
+            _adminLock.Lock();
+            size_t requestsNumber = _requests.size();
+            _adminLock.Unlock();
+            if (requestsNumber > 0) {
+                _adminLock.Lock();
+                Request* current = _requests.front();
+                _requests.pop_front();
+                current->Processing(false);
+                current->Completed(response, false);
+
+                _adminLock.Unlock();
+
+                Trigger();
+            } else {
+                TRACE(Trace::Error, ("There is no pending request to process"));
+            }
         }
 
         return (receivedSize);
