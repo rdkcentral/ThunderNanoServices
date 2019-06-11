@@ -242,8 +242,9 @@ namespace WPASupplicant {
         public:
             bool Set(const string& message)
             {
-                if (_request.empty() == true) {
+                if (_settable == true) {
                     _request = message;
+                    _settable = false;
 #ifdef __DEBUG__
                     _original = _request;
 #endif // __DEBUG__
@@ -265,16 +266,18 @@ namespace WPASupplicant {
                 return (_original);
             }
 #endif // __DEBUG__
-            virtual void Completed(const string& response, const bool abort) = 0;
-
-        protected:
-            void Reset() { _request.clear(); }
+            void Completed(const string& response, const bool abort) {
+                _settable = true;
+                OnCompleted(response, abort);
+            }
 
         private:
+            virtual void OnCompleted(const string& response, const bool abort) = 0;
             string _request;
 #ifdef __DEBUG__
             string _original;
 #endif // __DEBUG__
+            bool _settable = true;
         };
         class ScanRequest : public Request {
         private:
@@ -297,7 +300,6 @@ namespace WPASupplicant {
             inline bool Activated()
             {
                 if (_scanning == false) {
-                    Reset();
                     _scanning = true;
                     return (true);
                 }
@@ -315,7 +317,7 @@ namespace WPASupplicant {
             {
                 return (Request::Set(string(_TXT("SCAN_RESULTS"))));
             }
-            virtual void Completed(const string& response, const bool abort) override
+            virtual void OnCompleted(const string& response, const bool abort) override
             {
                 if (abort == false) {
                     Core::TextFragment data(response.c_str(), response.length());
@@ -432,7 +434,7 @@ namespace WPASupplicant {
             }
 
         private:
-            virtual void Completed(const string& response, const bool abort) override
+            virtual void OnCompleted(const string& response, const bool abort) override
             {
                 if (abort == false) {
                     Core::TextFragment data(response.c_str(), response.length());
@@ -515,7 +517,7 @@ namespace WPASupplicant {
                 }
                 return (false);
             }
-            virtual void Completed(const string& response, const bool abort) override
+            virtual void OnCompleted(const string& response, const bool abort) override
             {
                 if (abort == false) {
                     Core::TextFragment data(response);
@@ -589,7 +591,7 @@ namespace WPASupplicant {
             {
                 return (Request::Set(string(_TXT("LIST_NETWORKS"))));
             }
-            virtual void Completed(const string& response, const bool abort) override
+            virtual void OnCompleted(const string& response, const bool abort) override
             {
                 if (abort == false) {
                     Core::TextFragment data(response.c_str(), response.length());
@@ -679,7 +681,7 @@ namespace WPASupplicant {
 
                 return (*this);
             }
-            virtual void Completed(const string& response, const bool abort) override
+            virtual void OnCompleted(const string& response, const bool abort) override
             {
 
                 _result = (abort == false ? Core::ERROR_NONE : Core::ERROR_ASYNC_ABORTED);
