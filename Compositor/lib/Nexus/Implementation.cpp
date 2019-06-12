@@ -1,6 +1,6 @@
 #include "Module.h"
 
-#include "../NexusServer/NexusServer.h"
+#include "NexusServer/NexusServer.h"
 
 #include <interfaces/IComposition.h>
 
