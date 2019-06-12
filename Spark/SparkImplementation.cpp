@@ -256,16 +256,7 @@ namespace Plugin {
                     if (!prefix.empty()) {
                         strncpy(buffer, prefix.c_str(), prefix.size());
                     }
-                    if ((analyser.IsValid() == true) && ((analyser.Type() == Core::URL::SCHEME_HTTP) || (analyser.Type() == Core::URL::SCHEME_HTTPS))) {
-                        length = Core::URL::Encode(
-                                         url.c_str(),
-                                         static_cast<uint16_t>(url.length()),
-                                         &(buffer[prefix.size()]),
-                                         sizeof(buffer) - prefix.size());
-
-                    } else {
-                        length = std::min(url.length(), sizeof(buffer) - prefix.size());
-                    }
+                    length = std::min(url.length(), sizeof(buffer) - prefix.size());
 
                     if (length >= (sizeof(buffer) - sizeof(prefix))) {
 
