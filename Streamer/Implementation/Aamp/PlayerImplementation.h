@@ -27,7 +27,7 @@ namespace Player {
 
         public:
             typedef std::vector<int32_t> SpeedList;
-            static constexpr uint32_t TimeToGetPlaybackPosition = 1000;
+            static constexpr uint32_t TimeToGetPlaybackPosition = 1;
 
         class Scheduler: public Core::Thread {
         private:
@@ -52,7 +52,7 @@ namespace Player {
             virtual uint32_t Worker() override
             {
                 if (IsRunning() == true) {
-                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                    std::this_thread::sleep_for(std::chrono::seconds(TimeToGetPlaybackPosition));
                     _parent->TimeUpdate();
                 }
                 return (Core::infinite);
