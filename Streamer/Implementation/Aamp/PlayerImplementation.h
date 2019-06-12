@@ -1,9 +1,11 @@
 #pragma once
 
 #include "Module.h"
+#include <chrono>
 #include <interfaces/IStream.h>
 #include <plugins/plugins.h>
 #include <tracing/tracing.h>
+#include <thread>
 
 #include <signal.h>
 #include <stdlib.h>
@@ -27,27 +29,35 @@ namespace Player {
             typedef std::vector<int32_t> SpeedList;
             static constexpr uint32_t TimeToGetPlaybackPosition = 1000;
 
-        class Job: public Core::IDispatchType<void> {
+        class Scheduler: public Core::Thread {
         private:
-            Job() = delete;
-            Job(const Job&) = delete;
-            Job& operator=(const Job&) = delete;
+            Scheduler() = delete;
+            Scheduler(const Scheduler&) = delete;
+            Scheduler& operator=(const Scheduler&) = delete;
 
         public:
-            Job(PlayerPlatform* player)
+            Scheduler(PlayerPlatform* player)
             : _parent(player)
             {
             }
-            ~Job() {}
+            ~Scheduler() {}
+
+            void Quit()
+            {
+                Block();
+                Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
+            }
 
         private:
-            virtual void Dispatch() override
+            virtual uint32_t Worker() override
             {
-                Core::Time nextRun (Core::Time::Now());
-                nextRun.Add(TimeToGetPlaybackPosition);
-                PluginHost::WorkerPool::Instance().Schedule(nextRun, Core::ProxyType<Core::IDispatch>(*this));
-                _parent->TimeUpdate();
+                if (IsRunning() == true) {
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                    _parent->TimeUpdate();
+                }
+                return (Core::infinite);
             }
+
         private:
             PlayerPlatform* _parent;
         };
@@ -172,7 +182,7 @@ namespace Player {
             GMainLoop *_aampGstPlayerMainLoop;
 
             static string _configuration;
-            Core::ProxyType<Job> _scheduler;
+            Scheduler _scheduler;
             mutable Core::CriticalSection _adminLock;
         };
     }

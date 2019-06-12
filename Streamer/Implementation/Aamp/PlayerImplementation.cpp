@@ -43,11 +43,9 @@ namespace Player {
             , _callback(callbacks)
             , _initialized(false)
             , _aampGstPlayerMainLoop(nullptr)
-            , _scheduler()
+            , _scheduler(this)
             , _adminLock()
         {
-            ASSERT (_scheduler.IsValid() == false);
-
             Config config;
             config.FromString(_configuration);
 
@@ -72,18 +70,14 @@ namespace Player {
             _aampPlayer = new PlayerInstanceAAMP();
             ASSERT(_aampPlayer);
 
-            _scheduler = Core::ProxyType<Job>::Create(this);
-            ASSERT(_scheduler.IsValid() == true);
-
             _state = Exchange::IStream::Idle;
         }
 
         PlayerPlatform::~PlayerPlatform()
         {
+            _scheduler.Quit();
             _speeds.clear();
             delete _aampPlayer;
-
-            _scheduler.Release();
         }
 
         void PlayerPlatform::InitializePlayerInstance()
@@ -214,8 +208,8 @@ namespace Player {
             _adminLock.Lock();
             if (_initialized == true) {
                 _adminLock.Unlock();
-                ASSERT (_scheduler.IsValid() == true);
-                //PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_scheduler));//TODO:check the hang 
+
+                _scheduler.Block();
 
                 _aampPlayer->Stop();
                 Block();
@@ -256,16 +250,15 @@ namespace Player {
                     SpeedList::iterator index =  std::find(_speeds.begin(), _speeds.end(), speed);
                     if (index != _speeds.end()) {
                         newState = Exchange::IStream::Playing;
-
-                        //PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(_scheduler));
+                        _scheduler.Run();
                     } else {
                         result = Core::ERROR_BAD_REQUEST;
                     }
 
                 } else {
-                    //PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_scheduler));
 
                     newState = Exchange::IStream::Paused;
+                    _scheduler.Block();
                 }
                 _speed = speed;
 
