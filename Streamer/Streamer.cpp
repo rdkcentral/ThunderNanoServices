@@ -205,7 +205,9 @@ namespace Plugin {
                         if (stream->second->State() == Exchange::IStream::Prepared) {
                             Exchange::IStream::IControl* control = stream->second->Control();
                             if (control != nullptr) {
-                                _controls.insert(std::make_pair(position, control));
+                                _controls.emplace(std::piecewise_construct,
+                                    std::forward_as_tuple(position),
+                                    std::forward_as_tuple(*this, position, control));
                                 result->Message = _T("Decoder Attached");
                                 result->ErrorCode = Web::STATUS_OK;
                             }

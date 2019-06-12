@@ -48,47 +48,16 @@ namespace Plugin {
                 StreamProxy& _parent;
             };
 
-            class StreamControlSink : public Exchange::IStream::IControl::ICallback {
-            private:
-                StreamControlSink() = delete;
-                StreamControlSink(const StreamControlSink&) = delete;
-                StreamControlSink& operator=(const StreamControlSink&) = delete;
-
-            public:
-                StreamControlSink(StreamProxy* parent)
-                    : _parent(*parent)
-                {
-                    ASSERT(parent != nullptr);
-                }
-                virtual ~StreamControlSink()
-                {
-                }
-
-            public:
-                virtual void TimeUpdate(const uint64_t position) override
-                {
-                    _parent.TimeUpdate(position);
-                }
-
-                BEGIN_INTERFACE_MAP(StreamControlSink)
-                INTERFACE_ENTRY(Exchange::IStream::IControl::ICallback)
-                END_INTERFACE_MAP
-
-            private:
-                StreamProxy& _parent;
-            };
-
         public:
             StreamProxy() = delete;
             StreamProxy(const StreamProxy&) = delete;
             StreamProxy& operator= (const StreamProxy&) = delete;
 
-            StreamProxy(Streamer& parent, const uint8_t index, Exchange::IStream* implementation) 
+            StreamProxy(Streamer& parent, const uint8_t index, Exchange::IStream* implementation)
                 : _parent(parent)
                 , _index(index)
-                , _implementation(implementation) 
-                , _streamSink(this)
-                , _streamControlSink(this) {
+                , _implementation(implementation)
+                , _streamSink(this) {
                 ASSERT (_implementation != nullptr);
                 _implementation->AddRef();
                 _implementation->Callback(&_streamSink);
@@ -114,21 +83,86 @@ namespace Plugin {
             {
                 _parent.StateChange(_index, state);
             }
-            void TimeUpdate(const uint64_t position)
-            {
-                _parent.TimeUpdate(_index, position);
-            }
- 
+
         private:
             Streamer& _parent;
             uint8_t _index;
             Exchange::IStream* _implementation;
             Core::Sink<StreamSink> _streamSink;
-            Core::Sink<StreamControlSink> _streamControlSink;
+        };
+
+        class ControlProxy {
+        private:
+            class ControlSink : public Exchange::IStream::IControl::ICallback {
+            private:
+                ControlSink() = delete;
+                ControlSink(const ControlSink&) = delete;
+                ControlSink& operator=(const ControlSink&) = delete;
+
+            public:
+                ControlSink(ControlProxy* parent)
+                    : _parent(*parent)
+                {
+                    ASSERT(parent != nullptr);
+                }
+                virtual ~ControlSink()
+                {
+                }
+
+            public:
+                virtual void TimeUpdate(const uint64_t position) override
+                {
+                    _parent.TimeUpdate(position);
+                }
+
+                BEGIN_INTERFACE_MAP(ControlSink)
+                INTERFACE_ENTRY(Exchange::IStream::IControl::ICallback)
+                END_INTERFACE_MAP
+
+            private:
+                ControlProxy& _parent;
+            };
+        public:
+            ControlProxy() = delete;
+            ControlProxy(const ControlProxy&) = delete;
+            ControlProxy& operator= (const ControlProxy&) = delete;
+
+            ControlProxy(Streamer& parent, const uint8_t index, Exchange::IStream::IControl* implementation)
+                : _parent(parent)
+                , _index(index)
+                , _implementation(implementation) 
+                , _controlSink(this) {
+                ASSERT (_implementation != nullptr);
+                _implementation->AddRef();
+                _implementation->Callback(&_controlSink);
+            }
+            ~ControlProxy() {
+                _implementation->Callback(nullptr);
+                _implementation->Release();
+            }
+
+            Exchange::IStream::IControl* operator->() {
+                return (_implementation);
+            }
+            const Exchange::IStream::IControl* operator->() const {
+                return (_implementation);
+            }
+
+        private:
+            void TimeUpdate(const uint64_t position)
+            {
+                _parent.TimeUpdate(_index, position);
+            }
+
+         private:
+            Streamer& _parent;
+            uint8_t _index;
+            Exchange::IStream::IControl* _implementation;
+            Core::Sink<ControlSink> _controlSink;
         };
 
         typedef std::map<uint8_t, StreamProxy> Streams;
-        typedef std::map<uint8_t, Exchange::IStream::IControl*> Controls;
+        typedef std::map<uint8_t, ControlProxy> Controls;
 
         class Config : public Core::JSON::Container {
         private:

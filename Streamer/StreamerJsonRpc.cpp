@@ -239,7 +239,9 @@ namespace Plugin {
             if (stream->second->State() == Exchange::IStream::Prepared) {
                 Exchange::IStream::IControl* control = stream->second->Control();
                 if (control != nullptr) {
-                    _controls.insert(std::make_pair(id, control));
+                    _controls.emplace(std::piecewise_construct,
+                    std::forward_as_tuple(id),
+                    std::forward_as_tuple(*this, id, control));
                 }
             } else if (stream->second->State() == Exchange::IStream::Playing) {
                 result = Core::ERROR_INPROGRESS;
