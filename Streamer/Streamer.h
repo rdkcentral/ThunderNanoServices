@@ -133,12 +133,9 @@ namespace Plugin {
                 , _implementation(implementation) 
                 , _controlSink(this) {
                 ASSERT (_implementation != nullptr);
-                _implementation->AddRef();
                 _implementation->Callback(&_controlSink);
             }
             ~ControlProxy() {
-                _implementation->Callback(nullptr);
-                _implementation->Release();
             }
 
             Exchange::IStream::IControl* operator->() {
