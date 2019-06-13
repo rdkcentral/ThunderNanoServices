@@ -308,7 +308,7 @@ namespace Plugin {
         while (it != _clients.end()) {
             if (it->second == client) {
                 //                removedclient = it->second;
-                TRACE(Trace::Information, (_T("Client %s detached"), it->first));
+                TRACE(Trace::Information, (_T("Client %s detached"), it->first.c_str()));
                 _clients.erase(it);
                 break;
             }

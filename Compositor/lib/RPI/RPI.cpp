@@ -19,8 +19,13 @@ namespace Plugin {
             ExternalAccess& operator=(const ExternalAccess&) = delete;
 
         public:
-            ExternalAccess(CompositorImplementation& parent, const Core::NodeId& source, const string& proxyStubPath)
-                : RPC::Communicator(source, Core::ProxyType<RPC::InvokeServerType<16, 1>>::Create(), proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath)
+            ExternalAccess(
+                CompositorImplementation& parent, 
+                const Core::NodeId& source, 
+                const string& proxyStubPath, 
+                const Core::ProxyType<RPC::ServerType<RPC::InvokeMessage> > & invoke,
+                const Core::ProxyType<RPC::ServerType<RPC::AnnounceMessage> > & announce)
+                : RPC::Communicator(source,  proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath, invoke, announce)
                 , _parent(parent)
             {
                 uint32_t result = RPC::Communicator::Open(RPC::CommunicationTimeOut);
@@ -33,7 +38,7 @@ namespace Plugin {
                 }
             }
 
-            ~ExternalAccess() override = default;
+            virtual ~ExternalAccess() override = default;
 
         private:
             void Offer(Core::IUnknown* element, const uint32_t interfaceID) override
@@ -58,7 +63,8 @@ namespace Plugin {
         CompositorImplementation()
             : _adminLock()
             , _service(nullptr)
-            , _externalAccess()
+            , _engine()
+            , _externalAccess(nullptr)
             , _observers()
             , _clients()
         {
@@ -66,8 +72,9 @@ namespace Plugin {
 
         ~CompositorImplementation()
         {
-            if (_service != nullptr) {
-                _service->Release();
+            if (_externalAccess != nullptr) {
+                delete _externalAccess;
+                _engine.Release();
             }
         }
 
@@ -122,17 +129,21 @@ namespace Plugin {
         {
             uint32_t result = Core::ERROR_NONE;
             _service = service;
-            _service->AddRef();
 
             string configuration(service->ConfigLine());
             Config config;
             config.FromString(service->ConfigLine());
 
-            _externalAccess.reset(new ExternalAccess(*this, Core::NodeId(config.Connector.Value().c_str()), service->ProxyStubPath()));
+            _engine = Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create();
+            _externalAccess = new ExternalAccess(*this, Core::NodeId(config.Connector.Value().c_str()), service->ProxyStubPath(), _engine->InvokeHandler(), _engine->AnnounceHandler());
 
             if (_externalAccess->IsListening() == true) {
                 PlatformReady();
+                
             } else {
+                delete _externalAccess;
+                _externalAccess = nullptr;
+                _engine.Release();
                 TRACE(Trace::Error, (_T("Could not report PlatformReady as there was a problem starting the Compositor RPC %s"), _T("server")));
                 result = Core::ERROR_OPENING_FAILED;
             }
@@ -422,7 +433,8 @@ namespace Plugin {
 
         mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
-        std::unique_ptr<ExternalAccess> _externalAccess;
+        Core::ProxyType<RPC::InvokeServerType<4, 1>> _engine;
+        ExternalAccess* _externalAccess;
         std::list<Exchange::IComposition::INotification*> _observers;
         ClientDataContainer _clients;
     };

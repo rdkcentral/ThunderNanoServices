@@ -257,9 +257,9 @@ int main(int argc, char** argv)
         // They are time multiplexed so 1 engine to rule them all. The nex line instantiates the
         // framework to connect to a COMRPC server running at the <connector> address. once the
         // connection is established, interfaces can be requested.
+        Core::ProxyType<RPC::InvokeServerType<4, 1>> engine(Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create(Core::Thread::DefaultStackSize()));
         Core::ProxyType<RPC::CommunicatorClient> client(Core::ProxyType<RPC::CommunicatorClient>::Create(
-            comChannel,
-            Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create(Core::Thread::DefaultStackSize())));
+            comChannel, engine->InvokeHandler(), engine->AnnounceHandler()));
 
         ASSERT(client.IsValid() == true);
 

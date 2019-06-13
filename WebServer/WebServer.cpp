@@ -35,26 +35,30 @@ namespace Plugin {
         _server = _service->Root<Exchange::IWebServer>(_connectionId, Core::infinite, _T("WebServerImplementation"));
 
         if (_server != nullptr) {
-
+            uint32_t remoteId;
             PluginHost::IStateControl* stateControl(_server->QueryInterface<PluginHost::IStateControl>());
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-            // Potentially the WebServer implementation could crashes before it reaches this point, than there is
+            // We see that sometimes the implementation crashes before it reaches this point, than there is
             // no StateControl. Cope with this situation.
-            if (stateControl == nullptr) {
-
+            if ( (stateControl == nullptr) || (connection == nullptr) || ((remoteId = connection->RemoteId()) == 0) ) {
                 _server->Release();
                 _server = nullptr;
+
+                if (stateControl != nullptr) stateControl->Release();
+                if (connection   != nullptr) connection->Release();
+
             } else {
                 stateControl->Configure(_service);
                 stateControl->Release();
 
-                _memory = WPEFramework::WebServer::MemoryObserver(_connectionId);
+                _memory = WPEFramework::WebServer::MemoryObserver(remoteId);
 
                 ASSERT(_memory != nullptr);
 
                 _memory->Observe(true);
 
-				PluginHost::ISubSystem* subSystem = service->SubSystems();
+                PluginHost::ISubSystem* subSystem = service->SubSystems();
 
                 if (subSystem != nullptr) {
                     if (subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
