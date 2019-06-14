@@ -4,6 +4,7 @@
 * Compositor
 * [DeviceInfo](DeviceInfo/DeviceInfoPlugin.md)
 * DHCPServer
+* [DIALServer](DIALServer/DIALServerPlugin.md)
 * Dictionary
 * DSResolution
 * DsgccClient
