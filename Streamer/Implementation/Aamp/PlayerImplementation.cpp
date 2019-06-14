@@ -17,8 +17,10 @@ namespace Player {
             Config()
                 : Core::JSON::Container()
                 , Speeds()
+                , WesterosSink(false)
             {
                 Add(_T("speeds"), &Speeds);
+                Add(_T("westerossink"), &WesterosSink);
             }
             ~Config()
             {
@@ -26,6 +28,7 @@ namespace Player {
 
         public:
             Core::JSON::ArrayType<Core::JSON::DecSInt32> Speeds;
+            Core::JSON::Boolean WesterosSink;
         };
 
         string PlayerPlatform::_configuration = "";
@@ -64,7 +67,10 @@ namespace Player {
             _rectangle.Width = 1080;
             _rectangle.Height = 720;
 
-            Core::SystemInfo::SetEnvironment(_T("PLAYERSINKBIN_USE_WESTEROSSINK"), _T("true"));
+            if (config.WesterosSink.Value() == true) {
+                Core::SystemInfo::SetEnvironment(_T("PLAYERSINKBIN_USE_WESTEROSSINK"), _T("true"));
+            }
+
             gst_init(0, nullptr);
 
             _aampPlayer = new PlayerInstanceAAMP();
