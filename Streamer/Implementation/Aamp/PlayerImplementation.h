@@ -19,6 +19,8 @@ namespace WPEFramework {
 namespace Player {
 
     namespace Implementation {
+        class AampEventListener;
+
         class PlayerPlatform : public Core::Thread {
         private:
             PlayerPlatform() = delete;
@@ -94,6 +96,13 @@ namespace Player {
                 _adminLock.Unlock();
                 return drmType;
             }
+            inline void State(Exchange::IStream::state curState)
+            {
+                _adminLock.Lock();
+                _state = curState;
+                _adminLock.Unlock();
+            }
+
             inline Exchange::IStream::state State() const
             {
                 _adminLock.Lock();
@@ -179,6 +188,7 @@ namespace Player {
 
             bool _initialized;
             PlayerInstanceAAMP* _aampPlayer;
+            AampEventListener *_aampEventListener;
             GMainLoop *_aampGstPlayerMainLoop;
 
             static string _configuration;
