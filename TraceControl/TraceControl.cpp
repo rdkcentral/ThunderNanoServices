@@ -19,17 +19,19 @@ namespace Plugin {
     /* static */ TraceControl::Observer::Source::LocalIterator TraceControl::Observer::Source::_localIterator;
     static Core::ProxyPoolType<Web::JSONBodyType<TraceControl::Data>> jsonBodyDataFactory(4);
 
-    /* static */ string TraceControl::Observer::Source::SourceName(RPC::IRemoteConnection* connection)
+    /* static */ string TraceControl::Observer::Source::SourceName(const string& prefix, RPC::IRemoteConnection* connection)
     {
         string pathName;
-        Core::SystemInfo::GetEnvironment(TRACE_CYCLIC_BUFFER_ENVIRONMENT, pathName);
-        pathName = Core::Directory::Normalize(pathName) + TRACE_CYCLIC_BUFFER_PREFIX + '.';
+        pathName = Core::Directory::Normalize(prefix) + TRACE_CYCLIC_BUFFER_PREFIX + '.';
 
         if (connection == nullptr) {
             pathName += '0';
-        } else {
+        } else if (connection->Parent() == 0) {
             pathName += Core::NumberType<uint32_t>(connection->Id()).Text();
+        } else {
+            pathName += Core::NumberType<uint32_t>(connection->Parent()).Text() + '.' + Core::NumberType<uint32_t>(connection->RemoteId()).Text();
         }
+
 
         return (pathName);
     }

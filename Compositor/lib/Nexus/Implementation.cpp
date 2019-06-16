@@ -213,7 +213,7 @@ namespace Plugin {
 
             while (index != _clients.end()) {
 
-                notification->Attached(*index);
+                notification->Attached((*index)->Name(), *index);
                 index++;
             }
 
@@ -367,7 +367,7 @@ namespace Plugin {
                             std::list<Exchange::IComposition::INotification*>::iterator index(_observers.begin());
 
                             while (index != _observers.end()) {
-                                (*index)->Attached(client);
+                                (*index)->Attached(name, client);
                                 index++;
                             }
                         }
@@ -401,7 +401,7 @@ namespace Plugin {
                         std::list<Exchange::IComposition::INotification*>::iterator index(_observers.begin());
 
                         while (index != _observers.end()) {
-                            (*index)->Detached(entry);
+                            (*index)->Detached(name);
                             index++;
                         }
                     }

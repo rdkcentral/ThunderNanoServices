@@ -46,6 +46,8 @@ public:
 public:
     void Initialize(WKBundleRef bundle)
     {
+        // Due to the LXC container support all ID's get mapped. For the TraceBuffer, use the host given ID.
+        Trace::TraceUnit::Instance().Open(Core::ProcessInfo().Id());
 
         Trace::TraceType<Trace::Information, &Core::System::MODULE_NAME>::Enable(true);
 

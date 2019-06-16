@@ -62,13 +62,13 @@ namespace Plugin {
 
             //   IComposition INotification methods
             // -------------------------------------------------------------------------------------------------------
-            virtual void Attached(Exchange::IComposition::IClient* client) override
+            virtual void Attached(const string& name, Exchange::IComposition::IClient* client) override
             {
-                _parent.Attached(client);
+                _parent.Attached(name, client);
             }
-            virtual void Detached(Exchange::IComposition::IClient* client) override
+            virtual void Detached(const string& name) override
             {
-                _parent.Detached(client);
+                _parent.Detached(name);
             }
 
             BEGIN_INTERFACE_MAP(PluginSink)
@@ -161,8 +161,8 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
-        void Attached(Exchange::IComposition::IClient* client);
-        void Detached(Exchange::IComposition::IClient* client);
+        void Attached(const string& name, Exchange::IComposition::IClient* client);
+        void Detached(const string& name);
 
         template <typename ClientOperation>
         uint32_t CallOnClientByCallsign(const string& callsign, ClientOperation&& operation) const;

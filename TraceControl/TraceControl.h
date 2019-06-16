@@ -93,7 +93,7 @@ namespace {
                     mutable Trace::TraceUnit::Iterator _index;
                 };
 
-                static string SourceName(RPC::IRemoteConnection* connection);
+                static string SourceName(const string& pathName, RPC::IRemoteConnection* connection);
 
             public:
                 enum state {
@@ -103,8 +103,8 @@ namespace {
                 };
 
             public:
-                Source(RPC::IRemoteConnection* connection)
-                    : Core::CyclicBuffer(SourceName(connection), 0, true)
+                Source(const string& tracePath, RPC::IRemoteConnection* connection)
+                    : Core::CyclicBuffer(SourceName(tracePath, connection), 0, true)
                     , _iterator(connection == nullptr ? &_localIterator : nullptr)
                     , _control(connection == nullptr ? &_localIterator : nullptr)
                     , _connection(connection)
@@ -541,7 +541,7 @@ namespace {
                 , _refcount(0)
             {
                 // By definition, get the buffer file from WPEFramework (local source)
-                _buffers.insert(std::pair<const uint32_t, Source*>(Core::ProcessInfo().Id(), new Source(nullptr)));
+                _buffers.insert(std::pair<const uint32_t, Source*>(Core::ProcessInfo().Id(), new Source(_parent.TracePath(), nullptr)));
             }
             ~Observer()
             {
@@ -573,7 +573,7 @@ namespace {
                 ASSERT(_buffers.find(connection->Id()) == _buffers.end());
 
                 // By definition, get the buffer file from WPEFramework (local source)
-                _buffers.insert(std::pair<const uint32_t, Source*>(connection->Id(), new Source(connection)));
+                _buffers.insert(std::pair<const uint32_t, Source*>(connection->Id(), new Source(_parent.TracePath(), connection)));
 
                 _adminLock.Unlock();
             }
@@ -967,6 +967,7 @@ namespace {
         // JSONRPC endpoints definition
         uint32_t status(const Data::StatusParam& parameters, TraceControl::Data& response);
         uint32_t set(const Data::Trace& parameters);
+        const string& TracePath() const;
 
     private:
         uint8_t _skipURL;
