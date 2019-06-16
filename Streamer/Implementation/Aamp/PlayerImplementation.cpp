@@ -8,6 +8,57 @@ namespace Player {
 
     namespace Implementation {
 
+        class AampEventListener :public AAMPEventListener {
+        private:
+            AampEventListener() = delete;
+            AampEventListener(const AampEventListener&) = delete;
+            AampEventListener& operator=(const AampEventListener&) = delete;
+
+        public:
+           AampEventListener(PlayerPlatform* player)
+           : _player(player)
+           {
+           }
+           void Event(const AAMPEvent & e)
+           {
+               switch (e.type)
+               {
+               case AAMP_EVENT_TUNED:
+                   TRACE(Trace::Information, (_T("AAMP_EVENT_TUNED")));
+                   break;
+               case AAMP_EVENT_TUNE_FAILED:
+                   TRACE(Trace::Information, (_T("AAMP_EVENT_TUNE_FAILED")));
+                   break;
+               case AAMP_EVENT_SPEED_CHANGED:
+                   TRACE(Trace::Information, (_T("AAMP_EVENT_SPEED_CHANGED")));
+                   break;
+               case AAMP_EVENT_DRM_METADATA:
+                   TRACE(Trace::Information, (_T("AAMP_DRM_FAILED")));
+                   break;
+               case AAMP_EVENT_EOS:
+                   //_player->Speed(0);//FIXME change state to pause : recheck
+                   //_player->State(Exchange::IStream::Idle); //Handle EOS state properly
+                   TRACE(Trace::Information, (_T("AAMP_EVENT_EOS")));
+                   break;
+               case AAMP_EVENT_PLAYLIST_INDEXED:
+                   TRACE(Trace::Information, (_T("AAMP_EVENT_PLAYLIST_INDEXED")));
+                   break;
+               case AAMP_EVENT_PROGRESS:
+                   break;
+               case AAMP_EVENT_CC_HANDLE_RECEIVED:
+                   TRACE(Trace::Information, (_T("AAMP_EVENT_CC_HANDLE_RECEIVED")));
+                   break;
+               case AAMP_EVENT_BITRATE_CHANGED:
+                   TRACE(Trace::Information, (_T("AAMP_EVENT_BITRATE_CHANGED")));
+                   break;
+               default:
+                   break;
+              }
+           }
+        private:
+            PlayerPlatform* _player;
+        };
+
         class Config : public Core::JSON::Container {
         private:
             Config(const Config&) = delete;
@@ -17,8 +68,10 @@ namespace Player {
             Config()
                 : Core::JSON::Container()
                 , Speeds()
+                , WesterosSink(false)
             {
                 Add(_T("speeds"), &Speeds);
+                Add(_T("westerossink"), &WesterosSink);
             }
             ~Config()
             {
@@ -26,6 +79,7 @@ namespace Player {
 
         public:
             Core::JSON::ArrayType<Core::JSON::DecSInt32> Speeds;
+            Core::JSON::Boolean WesterosSink;
         };
 
         string PlayerPlatform::_configuration = "";
@@ -42,6 +96,7 @@ namespace Player {
             , _rectangle()
             , _callback(callbacks)
             , _initialized(false)
+            , _aampEventListener(nullptr)
             , _aampGstPlayerMainLoop(nullptr)
             , _scheduler(this)
             , _adminLock()
@@ -64,11 +119,17 @@ namespace Player {
             _rectangle.Width = 1080;
             _rectangle.Height = 720;
 
-            Core::SystemInfo::SetEnvironment(_T("PLAYERSINKBIN_USE_WESTEROSSINK"), _T("true"));
+            if (config.WesterosSink.Value() == true) {
+                Core::SystemInfo::SetEnvironment(_T("PLAYERSINKBIN_USE_WESTEROSSINK"), _T("true"));
+            }
+
             gst_init(0, nullptr);
 
             _aampPlayer = new PlayerInstanceAAMP();
             ASSERT(_aampPlayer);
+
+            _aampEventListener = new AampEventListener(this);
+            _aampPlayer->RegisterEvents(_aampEventListener);
 
             _state = Exchange::IStream::Idle;
         }
@@ -77,7 +138,12 @@ namespace Player {
         {
             _scheduler.Quit();
             _speeds.clear();
+
             delete _aampPlayer;
+            _aampPlayer = nullptr;
+
+            delete _aampEventListener;
+            _aampEventListener = nullptr;
         }
 
         void PlayerPlatform::InitializePlayerInstance()
