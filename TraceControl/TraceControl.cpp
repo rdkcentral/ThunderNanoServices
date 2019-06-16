@@ -32,7 +32,6 @@ namespace Plugin {
             pathName += Core::NumberType<uint32_t>(connection->Parent()).Text() + '.' + Core::NumberType<uint32_t>(connection->RemoteId()).Text();
         }
 
-
         return (pathName);
     }
 
@@ -68,7 +67,7 @@ namespace Plugin {
         _service->Register(&_observer);
 
         // Start observing..
-        _observer.Run();
+        _observer.Start();
 
         // On succes return a name as a Callsign to be used in the URL, after the "service"prefix
         return (_T(""));
@@ -81,7 +80,7 @@ namespace Plugin {
         _service->Unregister(&_observer);
 
         // Stop observing..
-        _observer.Pause();
+        _observer.Stop();
 
         while (_outputs.size() != 0) {
             delete _outputs.front();

@@ -55,12 +55,9 @@ public:
         uint32_t result = _comClient->Open(RPC::CommunicationTimeOut);
         if (result != Core::ERROR_NONE) {
             TRACE(Trace::Error, (_T("Could not open connection to node %s. Error: %s"), _comClient->Source().RemoteId(), Core::NumberType<uint32_t>(result).Text()));
-        } else {
-            _comClient.Release();
         }
 
         _bundle = bundle;
-
         _whiteListedOriginDomainPairs = WhiteListedOriginDomainsList::RequestFromWPEFramework(bundle);
     }
 

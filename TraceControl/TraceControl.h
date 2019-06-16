@@ -540,13 +540,12 @@ namespace {
                 , _parent(parent)
                 , _refcount(0)
             {
-                // By definition, get the buffer file from WPEFramework (local source)
-                _buffers.insert(std::pair<const uint32_t, Source*>(Core::ProcessInfo().Id(), new Source(_parent.TracePath(), nullptr)));
             }
             ~Observer()
             {
                 ASSERT(_refcount == 0);
-                Clear();
+                ASSERT(_buffers.size() == 0);
+                Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
             }
 
         public:
@@ -554,8 +553,19 @@ namespace {
             {
                 _doorBell.Ring();
             }
-            void Clear()
+            void Start() 
             {
+                _buffers.insert(std::pair<const uint32_t, Source*>(0, new Source(_parent.TracePath(), nullptr)));
+                Thread::Run();
+            }
+            void Stop()
+            {
+                Block();
+
+                _doorBell.Ring();
+
+                Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
+
                 _adminLock.Lock();
 
                 while (_buffers.size() != 0) {
@@ -622,15 +632,6 @@ namespace {
             inline ModuleIterator Modules() const
             {
                 return (ModuleIterator(_buffers));
-            }
-
-            inline void Pause()
-            {
-                Block();
-
-                _doorBell.Ring();
-
-                Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
             }
 
         private:
