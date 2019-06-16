@@ -43,6 +43,13 @@ namespace Plugin {
 
         _service = service;
         _config.FromString(_service->ConfigLine());
+        _tracePath = service->VolatilePath();
+       
+        size_t pos = service->Callsign().length(); 
+        if ( (pos = _tracePath.find_last_of('/', (_tracePath.length() >= pos ? _tracePath.length() - pos : string::npos))) != string::npos ) 
+        {
+            _tracePath = _tracePath.substr(0, pos);
+        }
 
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
 

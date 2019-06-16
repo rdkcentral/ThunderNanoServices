@@ -907,6 +907,7 @@ namespace {
             : _skipURL(0)
             , _service(nullptr)
             , _outputs()
+            , _tracePath()
             , _observer(*this)
         {
             Register<Data::StatusParam, TraceControl::Data>(kStatusMethodName, &TraceControl::status, this);
@@ -967,13 +968,17 @@ namespace {
         // JSONRPC endpoints definition
         uint32_t status(const Data::StatusParam& parameters, TraceControl::Data& response);
         uint32_t set(const Data::Trace& parameters);
-        const string& TracePath() const;
+        inline const string& TracePath() const 
+        {
+            return (_tracePath);
+        }
 
     private:
         uint8_t _skipURL;
         PluginHost::IShell* _service;
         Config _config;
         std::list<Trace::ITraceMedia*> _outputs;
+        string _tracePath;
         Observer _observer;
     };
 }
