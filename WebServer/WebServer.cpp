@@ -32,7 +32,7 @@ namespace Plugin {
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
         _service->Register(&_notification);
 
-        _server = _service->Root<Exchange::IWebServer>(_connectionId, Core::infinite, _T("WebServerImplementation"));
+        _server = _service->Root<Exchange::IWebServer>(_connectionId, 2000, _T("WebServerImplementation"));
 
         if (_server != nullptr) {
             uint32_t remoteId;
