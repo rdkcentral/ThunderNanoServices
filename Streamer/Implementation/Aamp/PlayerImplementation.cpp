@@ -27,6 +27,7 @@ namespace Player {
                    TRACE(Trace::Information, (_T("AAMP_EVENT_TUNED")));
                    break;
                case AAMP_EVENT_TUNE_FAILED:
+                   _player->Stop();
                    TRACE(Trace::Information, (_T("AAMP_EVENT_TUNE_FAILED")));
                    break;
                case AAMP_EVENT_SPEED_CHANGED:
@@ -267,6 +268,12 @@ namespace Player {
                 _callback->TimeUpdate(_aampPlayer->GetPlaybackPosition());
             }
             _adminLock.Unlock();
+        }
+
+        void PlayerPlatform::Stop()
+        {
+            Speed(0);
+            _aampPlayer->Stop();
         }
 
         void PlayerPlatform::Terminate()

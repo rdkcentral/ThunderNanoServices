@@ -155,6 +155,7 @@ namespace Player {
             }
             void AttachDecoder(const uint8_t index);
             void DetachDecoder(const uint8_t index);
+            void Stop();
             void Terminate();
 
         private:
