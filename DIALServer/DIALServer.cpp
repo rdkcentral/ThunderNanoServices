@@ -276,8 +276,7 @@ namespace Plugin {
 
             while (index.Next() == true) {
                 if (index.Current().Name.IsSet() == true) {
-
-                    _appInfo.emplace(std::piecewise_construct, std::make_tuple(index.Current().Name.Value()), std::make_tuple(service, index.Current()));
+                    _appInfo.emplace(std::piecewise_construct, std::make_tuple(index.Current().Name.Value()), std::make_tuple(service, index.Current(), this));
                 }
             }
 
