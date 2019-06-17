@@ -27,6 +27,7 @@ namespace Player {
                    TRACE(Trace::Information, (_T("AAMP_EVENT_TUNED")));
                    break;
                case AAMP_EVENT_TUNE_FAILED:
+                   _player->State(Exchange::IStream::Error);
                    _player->Stop();
                    TRACE(Trace::Information, (_T("AAMP_EVENT_TUNE_FAILED")));
                    break;
