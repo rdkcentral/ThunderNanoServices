@@ -27,6 +27,8 @@ namespace Player {
                    TRACE(Trace::Information, (_T("AAMP_EVENT_TUNED")));
                    break;
                case AAMP_EVENT_TUNE_FAILED:
+                   _player->State(Exchange::IStream::Error);
+                   _player->Stop();
                    TRACE(Trace::Information, (_T("AAMP_EVENT_TUNE_FAILED")));
                    break;
                case AAMP_EVENT_SPEED_CHANGED:
@@ -36,8 +38,8 @@ namespace Player {
                    TRACE(Trace::Information, (_T("AAMP_DRM_FAILED")));
                    break;
                case AAMP_EVENT_EOS:
-                   //_player->Speed(0);//FIXME change state to pause : recheck
-                   //_player->State(Exchange::IStream::Idle); //Handle EOS state properly
+                   _player->Position(0);
+                   _player->Speed(0);
                    TRACE(Trace::Information, (_T("AAMP_EVENT_EOS")));
                    break;
                case AAMP_EVENT_PLAYLIST_INDEXED:
@@ -267,6 +269,12 @@ namespace Player {
                 _callback->TimeUpdate(_aampPlayer->GetPlaybackPosition());
             }
             _adminLock.Unlock();
+        }
+
+        void PlayerPlatform::Stop()
+        {
+            Speed(0);
+            _aampPlayer->Stop();
         }
 
         void PlayerPlatform::Terminate()

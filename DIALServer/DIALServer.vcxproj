@@ -128,6 +128,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DIALServer.cpp" />
+    <ClCompile Include="DIALServerJsonRpc.cpp" />
     <ClCompile Include="Module.cpp" />
     <ClCompile Include="Netflix.cpp" />
     <ClCompile Include="YouTube.cpp" />

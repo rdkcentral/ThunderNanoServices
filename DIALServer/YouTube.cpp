@@ -13,8 +13,8 @@ namespace DIALHandlers {
         YouTube& operator=(const YouTube&) = delete;
 
     public:
-        YouTube(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config)
-            : Default(service, config)
+        YouTube(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config, Plugin::DIALServer* parent)
+            : Default(service, config, parent)
         {
         }
         virtual ~YouTube()

@@ -12,8 +12,8 @@ namespace DIALHandlers {
         Netflix& operator=(const Netflix&) = delete;
 
     public:
-        Netflix(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config)
-            : Default(service, config)
+        Netflix(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config, Plugin::DIALServer *parent)
+            : Default(service, config, parent)
         {
         }
         virtual ~Netflix()

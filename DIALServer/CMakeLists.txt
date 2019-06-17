@@ -9,6 +9,7 @@ set(PLUGIN_DIALSERVER_NAME "${MODULE_NAME}" CACHE STRING "DIAL server name")
 
 add_library(${MODULE_NAME} SHARED
     DIALServer.cpp
+    DIALServerJsonRpc.cpp
     Module.cpp)
 
 if(PLUGIN_DIALSERVER_ENABLE_YOUTUBE)
