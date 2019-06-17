@@ -309,7 +309,7 @@ namespace {
                 uint16_t _information;
                 uint16_t _length;
                 state _state;
-                uint8_t _traceBuffer[TRACE_CYCLIC_BUFFER_SIZE];
+                uint8_t _traceBuffer[Trace::CyclicBufferSize];
                 static LocalIterator _localIterator;
             };
 
@@ -535,8 +535,8 @@ namespace {
         public:
             Observer(TraceControl& parent)
                 : Thread(Core::Thread::DefaultStackSize(), _T("TraceWorker"))
-                , _doorBell(Trace::TraceUnit::Instance().TraceAnnouncement())
                 , _buffers()
+                , _traceControl(Trace::TraceUnit::Instance())
                 , _parent(parent)
                 , _refcount(0)
             {
@@ -551,7 +551,7 @@ namespace {
         public:
             void Reevaluate()
             {
-                _doorBell.Ring();
+                _traceControl.Announce();
             }
             void Start() 
             {
@@ -562,7 +562,7 @@ namespace {
             {
                 Block();
 
-                _doorBell.Ring();
+                _traceControl.Announce();
 
                 Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
 
@@ -651,9 +651,10 @@ namespace {
             }
             virtual uint32_t Worker()
             {
-                while ((IsRunning() == true) && (_doorBell.Wait(Core::infinite) == Core::ERROR_NONE)) {
+                
+                while ((IsRunning() == true) && (_traceControl.Wait(Core::infinite) == Core::ERROR_NONE)) {
                     // Before we start we reset the flag, if new info is coming in, we will get a retrigger flag.
-                    _doorBell.Acknowledge();
+                    _traceControl.Acknowledge();
 
                     Source* selected;
 
@@ -711,8 +712,8 @@ namespace {
 
         private:
             Core::CriticalSection _adminLock;
-            Core::DoorBell& _doorBell;
             std::map<const uint32_t, Source*> _buffers;
+            Trace::TraceUnit& _traceControl;
             TraceControl& _parent;
             mutable uint32_t _refcount;
         };
