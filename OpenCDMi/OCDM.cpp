@@ -6,7 +6,7 @@ namespace WPEFramework {
 
 namespace OCDM {
 
-    Exchange::IMemory* MemoryObserver(const uint32_t PID)
+    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
         class MemoryObserverImpl : public Exchange::IMemory {
         private:
@@ -15,8 +15,8 @@ namespace OCDM {
             MemoryObserverImpl& operator=(const MemoryObserverImpl&);
 
         public:
-            MemoryObserverImpl(const uint32_t id)
-                : _main(id == 0 ? Core::ProcessInfo().Id() : id)
+            MemoryObserverImpl(const RPC::IRemoteConnection* connection)
+                : _main(connection  == 0 ? Core::ProcessInfo().Id() : connection->RemoteId())
             {
             }
             ~MemoryObserverImpl()
@@ -63,7 +63,13 @@ namespace OCDM {
             bool _observable;
         };
 
-        return (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(PID));
+        Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
+
+        if (connection != nullptr) {
+            connection->Release();
+        }
+
+        return (result);
     }
 }
 
@@ -103,7 +109,7 @@ namespace Plugin {
         } else {
             _opencdmi->Configure(_service);
 
-            _memory = WPEFramework::OCDM::MemoryObserver(_connectionId);
+            _memory = WPEFramework::OCDM::MemoryObserver(_service->RemoteConnection(_connectionId));
 
             ASSERT(_memory != nullptr);
         }

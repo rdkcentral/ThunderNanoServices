@@ -5,7 +5,7 @@ namespace WPEFramework {
 namespace WebKitBrowser {
 
     // An implementation file needs to implement this method to return an operational browser, wherever that would be :-)
-    extern Exchange::IMemory* MemoryObserver(const uint32_t pid);
+    extern Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection);
 }
 
 namespace Plugin {
@@ -37,30 +37,25 @@ namespace Plugin {
         _browser = service->Root<Exchange::IBrowser>(_connectionId, 2000, _T("WebKitImplementation"));
 
         if ((_browser != nullptr) && (_service != nullptr)) {
-            uint32_t remoteId;
             PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // We see that sometimes the WPE implementation crashes before it reaches this point, than there is
             // no StateControl. Cope with this situation.
-            if ( (stateControl == nullptr) || (connection == nullptr) || ((remoteId = connection->RemoteId()) == 0) ) {
+            if (stateControl == nullptr) {
                 _browser->Release();
                 _browser = nullptr;
 
-                if (stateControl != nullptr) stateControl->Release();
-                if (connection   != nullptr) connection->Release();
+                stateControl->Release();
 
             } else {
                 _browser->Register(&_notification);
-                printf ("------------------> REMOTEID: %d\n", remoteId);
-                _memory = WPEFramework::WebKitBrowser::MemoryObserver(remoteId);
+                _memory = WPEFramework::WebKitBrowser::MemoryObserver(_service->RemoteConnection(_connectionId));
 
                 ASSERT(_memory != nullptr);
 
                 stateControl->Configure(_service);
                 stateControl->Register(&_notification);
                 stateControl->Release();
-                connection->Release();
             }
         }
 

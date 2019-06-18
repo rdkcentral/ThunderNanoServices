@@ -1284,8 +1284,8 @@ namespace WebKitBrowser {
 
         enum { TYPICAL_STARTUP_TIME = 10 }; /* in Seconds */
     public:
-        MemoryObserverImpl(const uint32_t id)
-            : _main(id == 0 ? Core::ProcessInfo().Id() : id)
+        MemoryObserverImpl(const RPC::IRemoteConnection* connection)
+            : _main(connection == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
             , _children(_main.Id())
             , _startTime(0)
         { // IsOperation true till calculated time (microseconds)
@@ -1426,9 +1426,13 @@ namespace WebKitBrowser {
         uint64_t _startTime; // !< Reference for monitor
     };
 
-    Exchange::IMemory* MemoryObserver(const uint32_t PID)
+    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
-        return (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(PID));
+        Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
+        if (connection != nullptr) {
+            connection->Release();
+        }
+        return (result);
     }
 }
 } // namespace WebKitBrowser

@@ -5,7 +5,7 @@ namespace WPEFramework {
 namespace WebServer {
 
     // An implementation file needs to implement this method to return an operational webserver, wherever that would be :-)
-    extern Exchange::IMemory* MemoryObserver(const uint32_t pid);
+    extern Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection);
 }
 
 namespace Plugin {
@@ -35,24 +35,21 @@ namespace Plugin {
         _server = _service->Root<Exchange::IWebServer>(_connectionId, 2000, _T("WebServerImplementation"));
 
         if (_server != nullptr) {
-            uint32_t remoteId;
             PluginHost::IStateControl* stateControl(_server->QueryInterface<PluginHost::IStateControl>());
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // We see that sometimes the implementation crashes before it reaches this point, than there is
             // no StateControl. Cope with this situation.
-            if ( (stateControl == nullptr) || (connection == nullptr) || ((remoteId = connection->RemoteId()) == 0) ) {
+            if (stateControl == nullptr) {
                 _server->Release();
                 _server = nullptr;
 
-                if (stateControl != nullptr) stateControl->Release();
-                if (connection   != nullptr) connection->Release();
+                stateControl->Release();
 
             } else {
                 stateControl->Configure(_service);
                 stateControl->Release();
 
-                _memory = WPEFramework::WebServer::MemoryObserver(remoteId);
+                _memory = WPEFramework::WebServer::MemoryObserver(_service->RemoteConnection(_connectionId));
 
                 ASSERT(_memory != nullptr);
 
