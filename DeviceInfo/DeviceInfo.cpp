@@ -158,7 +158,7 @@ namespace Plugin {
                 Core::JSON::String nodeName;
                 nodeName = selectedNode.Address().HostAddress();
 
-                element.Ips.Add(nodeName);
+                element.Ip.Add(nodeName);
             }
         }
     }
