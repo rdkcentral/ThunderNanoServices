@@ -1,0 +1,16 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Device Info Plugin",
+    "callsign": "DeviceIdentification",
+    "locator": "libWPEFrameworkDeviceIdentification.so",
+    "class": {
+      "$ref": "DeviceIdentificationAPI.json#/info/class"
+    },
+    "description": "The DeviceIdentification plugin provides a device unique identifier.",
+    "version": "1.0"
+  },
+  "methods": {
+    "$ref": "DeviceIdentificationAPI.json#/methods"
+  }
+}

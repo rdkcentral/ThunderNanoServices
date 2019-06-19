@@ -9,6 +9,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(PLUGIN_COMMANDER "Include Commander plugin" OFF)
 option(PLUGIN_COMPOSITOR "Include Compsitor plugin" OFF)
+option(PLUGIN_DEVICEIDENTIFICATION "Include DeviceIdentification plugin" OFF)
 option(PLUGIN_DEVICEINFO "Include DeviceInfo plugin" OFF)
 option(PLUGIN_DSRESOLUTION "Include DSResolution plugin" OFF)
 option(PLUGIN_DHCPSERVER "Include DHCPServer plugin" OFF)
@@ -60,6 +61,10 @@ endif()
 
 if(PLUGIN_COMPOSITOR)
     add_subdirectory(Compositor)
+endif()
+
+if(PLUGIN_DEVICEIDENTIFICATION)
+    add_subdirectory(DeviceIdentification)
 endif()
 
 if(PLUGIN_DEVICEINFO)
