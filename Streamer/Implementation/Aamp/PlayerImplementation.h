@@ -3,9 +3,9 @@
 #include "Module.h"
 #include <chrono>
 #include <interfaces/IStream.h>
-#include <plugins/plugins.h>
 #include <tracing/tracing.h>
 #include <thread>
+#include "PlayerPlatform.h"
 
 #include <signal.h>
 #include <stdlib.h>
@@ -18,12 +18,14 @@ namespace WPEFramework {
 
 namespace Player {
 
-    namespace Implementation {
+namespace Implementation {
+
+    namespace Aamp {
+
         class AampEventListener;
 
-        class PlayerPlatform : public Core::Thread {
+        class PlayerPlatform : public IPlayerPlatform, Core::Thread {
         private:
-            PlayerPlatform() = delete;
             PlayerPlatform(const PlayerPlatform&) = delete;
             PlayerPlatform& operator=(const PlayerPlatform&) = delete;
 
@@ -65,28 +67,28 @@ namespace Player {
         };
 
         public:
-            PlayerPlatform(const Exchange::IStream::streamtype type, const uint8_t index, ICallback* callbacks);
+            PlayerPlatform(const Exchange::IStream::streamtype streamType, const uint8_t index);
             virtual ~PlayerPlatform();
 
-        public:
-            static uint32_t Initialize(const string& configuration)
+            uint32_t Setup() override;
+            uint32_t Teardown() override;
+
+            void Callback(ICallback* callback) override
             {
-                _configuration = configuration;
-                return (Core::ERROR_NONE);
+                _adminLock.Lock();
+                _callback = callback;
+                _adminLock.Unlock();
             }
-            static uint32_t Deinitialize()
+
+            inline string Metadata() const override
             {
-                return (Core::ERROR_NONE);
+                return string();
             }
-            inline string Metadata() const
+            inline Exchange::IStream::streamtype Type() const override
             {
-                return string("{}");
+                return _streamtype;
             }
-            inline Exchange::IStream::streamtype Type() const
-            {
-                return (Exchange::IStream::streamtype)_streamType;
-            }
-            inline Exchange::IStream::drmtype DRM() const
+            inline Exchange::IStream::drmtype DRM() const override
             {
                 _adminLock.Lock();
                 if (_drmType == Exchange::IStream::Unknown) {
@@ -96,39 +98,50 @@ namespace Player {
                 _adminLock.Unlock();
                 return drmType;
             }
-            inline void State(Exchange::IStream::state curState)
+            inline void StateChange(Exchange::IStream::state newState)
             {
                 _adminLock.Lock();
-                _state = curState;
+                if (_state != newState) {
+                    _state = newState;
+                    if (_callback != nullptr) {
+                        _callback->StateChange(_state);
+                    }
+                }
                 _adminLock.Unlock();
             }
 
-            inline Exchange::IStream::state State() const
+            inline Exchange::IStream::state State() const override
             {
                 _adminLock.Lock();
                 Exchange::IStream::state curState = _state;
                 _adminLock.Unlock();
                 return curState;
             }
-            uint32_t Load(const string& uri);
 
-            const SpeedList& Speeds() const
+            uint8_t Index() const override
+            {
+                return _index;
+            }
+
+            uint32_t Load(const string& uri) override;
+
+            const SpeedList& Speeds() const override
             {
                  return _speeds;
             }
-            uint32_t Speed(const int32_t speed);
-            inline int32_t Speed() const
+            uint32_t Speed(const int32_t speed) override;
+            inline int32_t Speed() const override
             {
                 _adminLock.Lock();
                 int32_t speed = _speed;
                 _adminLock.Unlock();
                 return speed;
             }
-            void Position(const uint64_t absoluteTime);
-            uint64_t Position() const;
+            void Position(const uint64_t absoluteTime) override;
+            uint64_t Position() const override;
             void TimeUpdate();
 
-            inline void TimeRange(uint64_t& begin, uint64_t& end) const
+            inline void TimeRange(uint64_t& begin, uint64_t& end) const override
             {
                 _adminLock.Lock();
                 begin = _begin;
@@ -139,22 +152,22 @@ namespace Player {
             {
                 return (_rectangle);
             }
-            void Window(const Rectangle& rectangle);
-            inline uint32_t Order() const
+            void Window(const Rectangle& rectangle) override;
+            inline uint32_t Order() const override
             {
                 _adminLock.Lock();
                 uint32_t z = _z;
                 _adminLock.Unlock();
                 return (z);
             }
-            inline void Order(const uint32_t order)
+            inline void Order(const uint32_t order) override
             {
                 _adminLock.Lock();
                 _z = order;
                 _adminLock.Unlock();
             }
-            void AttachDecoder(const uint8_t index);
-            void DetachDecoder(const uint8_t index);
+            uint32_t AttachDecoder(const uint8_t index) override;
+            uint32_t DetachDecoder(const uint8_t index) override;
             void Stop();
             void Terminate();
 
@@ -176,7 +189,7 @@ namespace Player {
 
             Exchange::IStream::state _state;
             Exchange::IStream::drmtype _drmType;
-            Exchange::IStream::streamtype _streamType;
+            Exchange::IStream::streamtype _streamtype;
 
             SpeedList _speeds;
             int32_t _speed;
@@ -184,6 +197,7 @@ namespace Player {
             uint64_t _end;
             uint32_t _z;
             Rectangle _rectangle;
+            uint8_t _index;
 
             ICallback* _callback;
 
@@ -192,10 +206,14 @@ namespace Player {
             AampEventListener *_aampEventListener;
             GMainLoop *_aampGstPlayerMainLoop;
 
-            static string _configuration;
             Scheduler _scheduler;
             mutable Core::CriticalSection _adminLock;
         };
-    }
+
+    } // namespace Aamp
+
+}// namespace Implementation
+
+} // namespace Player
+
 }
-} // namespace WPEFramework::Player::Implementation

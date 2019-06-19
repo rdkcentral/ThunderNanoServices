@@ -1,21 +1,32 @@
 set(PLUGIN_NAME Streamer)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-option(STREAMER_IMPLEMENTATION "Define the actual implementation to be used for this player" Stub)
-
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     Module.cpp
-    Frontend.cpp
+    Administrator.cpp
     Streamer.cpp
     StreamerImplementation.cpp
     StreamerJsonRpc.cpp
 )
 
-add_subdirectory(Implementation/${STREAMER_IMPLEMENTATION})
-include_directories(Implementation/${STREAMER_IMPLEMENTATION})
+if ("${PLUGIN_STREAMER_IMPLEMENTATIONS}" STREQUAL "")
+    message(FATAL_ERROR "No players selected! Select at least one player for the Streamer." )
+endif ("${PLUGIN_STREAMER_IMPLEMENTATIONS}" STREQUAL "")
+
+# Make it an array
+string(REPLACE " " ";" PLUGIN_STREAMER_IMPLEMENTATIONS ${PLUGIN_STREAMER_IMPLEMENTATIONS})
+
+foreach(IMPL ${PLUGIN_STREAMER_IMPLEMENTATIONS})
+    add_subdirectory(Implementation/${IMPL})
+
+    list(APPEND PLAYER_DIRS "Implementation/${IMPL}")
+    list(APPEND PLAYER_LIBS "PlayerPlatform${IMPL}")
+endforeach(IMPL)
+
+include_directories(${PLAYER_DIRS})
 
 target_include_directories(${MODULE_NAME}
     PRIVATE
@@ -25,11 +36,12 @@ set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
+# "whole-archive" to force linking of the static player libs
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        PlayerPlatform)
+        -Wl,--whole-archive ${PLAYER_LIBS} -Wl,--no-whole-archive)
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
