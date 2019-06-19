@@ -102,14 +102,14 @@ Retrieves the status of a stream.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| params | number | ID of the streamer instance |
+| params | number | Stream ID |
 
 ### Result
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | result | object |  |
-| result.type | string | Stream type (must be one of the following: *stubbed*, *dvb*, *atsc*, *vod*) |
+| result.type | string | Stream type (must be one of the following: *undefined*, *cable*, *handheld*, *satellite*, *terrestrial*, *dab*, *rf*, *unicast*, *multicast*, *ip*) |
 | result.state | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *paused*, *playing*, *error*) |
 | result.metadata | string | Custom metadata associated with the stream |
 | result.drm | string | DRM used (must be one of the following: *unknown*, *clearkey*, *playready*, *widevine*) |
@@ -145,7 +145,7 @@ Retrieves the status of a stream.
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": {
-        "type": "vod", 
+        "type": "cable", 
         "state": "playing", 
         "metadata": "", 
         "drm": "clearkey", 
@@ -169,13 +169,13 @@ Creates a stream instance.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.type | string | Stream type (must be one of the following: *stubbed*, *dvb*, *atsc*, *vod*) |
+| params.type | string | Stream type (must be one of the following: *undefined*, *cable*, *handheld*, *satellite*, *terrestrial*, *dab*, *rf*, *unicast*, *multicast*, *ip*) |
 
 ### Result
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | number | Streamer ID |
+| result | number | Stream ID |
 
 ### Errors
 
@@ -194,7 +194,7 @@ Creates a stream instance.
     "id": 1234567890, 
     "method": "Streamer.1.create", 
     "params": {
-        "type": "vod"
+        "type": "cable"
     }
 }
 ```
@@ -326,7 +326,8 @@ Attaches a decoder to the streamer.
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
 | 12 | ```ERROR_INPROGRESS``` | Decoder already attached |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Stream not prepared |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Stream not loaded |
+| 2 | ```ERROR_UNAVAILABLE``` | No free decoders available |
 
 ### Example
 
@@ -352,7 +353,7 @@ Attaches a decoder to the streamer.
 <a name="method.detach"></a>
 ## *detach <sup>method</sup>*
 
-Detaches a decoder from the streamer
+Detaches a decoder from the streamer.
 
 ### Parameters
 
@@ -407,20 +408,20 @@ Streamer interface properties:
 | [speed](#property.speed) | Playback speed |
 | [position](#property.position) | Stream position |
 | [window](#property.window) | Stream playback window |
-| [speeds](#property.speeds) <sup>RO</sup> | Retrieves the speeds supported by the player |
-| [streams](#property.streams) <sup>RO</sup> | Retrieves all created stream instance IDs |
-| [type](#property.type) <sup>RO</sup> | Retrieves the streame type - DVB, ATSC or VOD |
-| [drm](#property.drm) <sup>RO</sup> | Retrieves the DRM Type attached with stream |
-| [state](#property.state) <sup>RO</sup> | Retrieves the current state of Player |
+| [speeds](#property.speeds) <sup>RO</sup> | Speeds supported by the stream player |
+| [streams](#property.streams) <sup>RO</sup> | All created stream instance IDs |
+| [type](#property.type) <sup>RO</sup> | Type of a stream |
+| [drm](#property.drm) <sup>RO</sup> | DRM type associated with a stream |
+| [state](#property.state) <sup>RO</sup> | Current state of a stream |
 
 <a name="property.speed"></a>
 ## *speed <sup>property</sup>*
 
-Provides access to the playback speed..
+Provides access to the playback speed.
 
 ### Description
 
-Speed in percentage, -200, -100, 0, 100, 200, 400 etc
+Speed in percentage, -200, -100, 0, 100, 200, 400, etc.
 
 ### Value
 
@@ -428,7 +429,7 @@ Speed in percentage, -200, -100, 0, 100, 200, 400 etc
 | :-------- | :-------- | :-------- |
 | (property) | number | Speed to set; 0 - pause, 100 - normal playback forward, -100 - normal playback back, -200 - reverse at twice the speed, 50 - forward at half speed |
 
-> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.speed@0*.
+> The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.speed@0*.
 
 ### Errors
 
@@ -481,7 +482,7 @@ Speed in percentage, -200, -100, 0, 100, 200, 400 etc
 <a name="property.position"></a>
 ## *position <sup>property</sup>*
 
-Provides access to the stream position..
+Provides access to the stream position.
 
 ### Value
 
@@ -489,7 +490,7 @@ Provides access to the stream position..
 | :-------- | :-------- | :-------- |
 | (property) | number | Position to set (in milliseconds) |
 
-> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.position@0*.
+> The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.position@0*.
 
 ### Errors
 
@@ -541,20 +542,20 @@ Provides access to the stream position..
 <a name="property.window"></a>
 ## *window <sup>property</sup>*
 
-Provides access to the stream playback window..
+Provides access to the stream playback window.
 
 ### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Stream playback window. |
+| (property) | object | Stream playback window |
 | (property).window | object | Geometry of the window |
 | (property).window.x | number | Horizontal position of the window (in pixels) |
 | (property).window.y | number | Vertical position of the window (in pixels) |
 | (property).window.width | number | Width of the window (in pixels) |
 | (property).window.height | number | Height of the window (in pixels) |
 
-> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.window@0*.
+> The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.window@0*.
 
 ### Errors
 
@@ -620,7 +621,7 @@ Provides access to the stream playback window..
 <a name="property.speeds"></a>
 ## *speeds <sup>property</sup>*
 
-Provides access to the retrieves the speeds supported by the player.
+Provides access to the speeds supported by the stream player.
 
 > This property is **read-only**.
 
@@ -631,7 +632,7 @@ Provides access to the retrieves the speeds supported by the player.
 | (property) | array | Supported streams in percentage, 100, 200, 400, .. |
 | (property)[#] | integer | (Speeds in percentage) |
 
-> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.speeds@0*.
+> The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.speeds@0*.
 
 ### Errors
 
@@ -671,7 +672,7 @@ Provides access to the retrieves the speeds supported by the player.
 <a name="property.streams"></a>
 ## *streams <sup>property</sup>*
 
-Provides access to the retrieves all created stream instance IDs..
+Provides access to the all created stream instance IDs.
 
 > This property is **read-only**.
 
@@ -679,8 +680,8 @@ Provides access to the retrieves all created stream instance IDs..
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | Streamer IDs |
-| (property)[#] | number | (a streamer ID) |
+| (property) | array | Stream IDs |
+| (property)[#] | number | (a stream ID) |
 
 ### Example
 
@@ -710,7 +711,7 @@ Provides access to the retrieves all created stream instance IDs..
 <a name="property.type"></a>
 ## *type <sup>property</sup>*
 
-Provides access to the retrieves the streame type - DVB, ATSC or VOD.
+Provides access to the type of a stream.
 
 > This property is **read-only**.
 
@@ -718,10 +719,10 @@ Provides access to the retrieves the streame type - DVB, ATSC or VOD.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Retrieves the streame type - DVB, ATSC or VOD |
-| (property).stream | string | Stream type (must be one of the following: *stubbed*, *dvb*, *atsc*, *vod*) |
+| (property) | object | Type of a stream |
+| (property).stream | string | Stream type (must be one of the following: *undefined*, *cable*, *handheld*, *satellite*, *terrestrial*, *dab*, *rf*, *unicast*, *multicast*, *ip*) |
 
-> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.type@0*.
+> The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.type@0*.
 
 ### Errors
 
@@ -747,14 +748,14 @@ Provides access to the retrieves the streame type - DVB, ATSC or VOD.
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": {
-        "stream": "vod"
+        "stream": "cable"
     }
 }
 ```
 <a name="property.drm"></a>
 ## *drm <sup>property</sup>*
 
-Provides access to the retrieves the DRM Type attached with stream.
+Provides access to the DRM type associated with a stream.
 
 > This property is **read-only**.
 
@@ -764,10 +765,10 @@ Also see: [drmchange](#event.drmchange)
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Retrieves the DRM Type attached with stream |
+| (property) | object | DRM type associated with a stream |
 | (property).drm | string | DRM used (must be one of the following: *unknown*, *clearkey*, *playready*, *widevine*) |
 
-> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.drm@0*.
+> The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.drm@0*.
 
 ### Errors
 
@@ -800,7 +801,7 @@ Also see: [drmchange](#event.drmchange)
 <a name="property.state"></a>
 ## *state <sup>property</sup>*
 
-Provides access to the retrieves the current state of Player.
+Provides access to the current state of a stream.
 
 > This property is **read-only**.
 
@@ -810,10 +811,10 @@ Also see: [statechange](#event.statechange)
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Retrieves the current state of Player |
+| (property) | object | Current state of a stream |
 | (property).state | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *paused*, *playing*, *error*) |
 
-> The *Streamer ID* shall be passed as the index to the property, e.g. *Streamer.1.state@0*.
+> The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.state@0*.
 
 ### Errors
 
@@ -861,7 +862,7 @@ Streamer interface events:
 <a name="event.statechange"></a>
 ## *statechange <sup>event</sup>*
 
-Notifies of stream state change. ID of the streamer instance shall be passed within the designator.
+Notifies of stream state change.
 
 ### Parameters
 
@@ -870,7 +871,7 @@ Notifies of stream state change. ID of the streamer instance shall be passed wit
 | params | object |  |
 | params.state | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *paused*, *playing*, *error*) |
 
-> The *Streamer ID* shall be passed within the designator, e.g. *0.client.events.1*.
+> The *Streamr ID* shall be passed within the designator, e.g. *0.client.events.1*.
 
 ### Example
 
@@ -886,7 +887,7 @@ Notifies of stream state change. ID of the streamer instance shall be passed wit
 <a name="event.drmchange"></a>
 ## *drmchange <sup>event</sup>*
 
-Notifies of stream DRM system change. ID of the streamer instance shall be passed within the designator.
+Notifies of stream DRM system change.
 
 ### Parameters
 
@@ -895,7 +896,7 @@ Notifies of stream DRM system change. ID of the streamer instance shall be passe
 | params | object |  |
 | params.drm | string | DRM used (must be one of the following: *unknown*, *clearkey*, *playready*, *widevine*) |
 
-> The *Streamer ID* shall be passed within the designator, e.g. *0.client.events.1*.
+> The *Stream ID* shall be passed within the designator, e.g. *0.client.events.1*.
 
 ### Example
 
@@ -918,9 +919,9 @@ Event fired to indicate the position in the stream. This event is fired every se
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.time | number | Time in seconds |
+| params.time | number | Position in seconds |
 
-> The *Streamer ID* shall be passed within the designator, e.g. *0.client.events.1*.
+> The *Stream ID* shall be passed within the designator, e.g. *0.client.events.1*.
 
 ### Example
 

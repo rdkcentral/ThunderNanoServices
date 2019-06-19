@@ -7,6 +7,8 @@ namespace WPEFramework {
 
 namespace Plugin {
 
+    const int MAX_STREAMS = 255;
+
     using namespace JsonData::Streamer;
 
     // Registration
@@ -76,32 +78,31 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_BAD_REQUEST: Invalid stream type given
-    //  - ERROR_UNAVAILABLE: Streamer instance is not available
+    //  - ERROR_UNAVAILABLE: Fronted of the selected stream type is not available
     uint32_t Streamer::endpoint_create(const CreateParamsData& params, Core::JSON::DecUInt8& response)
     {
-        uint32_t result = Core::ERROR_NONE;
-        const StreamType& streamType = params.Type.Value();
+        uint32_t result = Core::ERROR_UNAVAILABLE;
 
-        Core::EnumerateType<JsonData::Streamer::StreamType> type(streamType);
-        if (type.IsSet()) {
+        if (params.Type.IsSet()) {
+            const StreamType& streamType = params.Type.Value();
 
-            Exchange::IStream* stream = _player->CreateStream(static_cast<const WPEFramework::Exchange::IStream::streamtype>(type.Value()));
-            if (stream != nullptr) {
-                uint8_t id = 0;
-                for (; id < _streams.size(); ++id) {
-                    Streams::iterator stream = _streams.find(id);
-                    if (stream == _streams.end()) {
-                        break;
-                    }
+            uint8_t id = 0;
+            for (; id < _streams.size(); ++id) {
+                Streams::iterator stream = _streams.find(id);
+                if (stream == _streams.end()) {
+                    break;
                 }
+            }
 
-                _streams.emplace(std::piecewise_construct,
-                std::forward_as_tuple(id),
-                std::forward_as_tuple(*this, id, stream));
+            if (id < MAX_STREAMS) {
+                Core::EnumerateType<JsonData::Streamer::StreamType> type(streamType);
+                Exchange::IStream* stream = _player->CreateStream(static_cast<const WPEFramework::Exchange::IStream::streamtype>(type.Value()));
 
-                response = id;
-            } else {
-                result = Core::ERROR_UNAVAILABLE;
+                if (stream != nullptr) {
+                    _streams.emplace(std::piecewise_construct, std::forward_as_tuple(id), std::forward_as_tuple(*this, id, stream));
+                    response = id;
+                    result = Core::ERROR_NONE;
+                }
             }
         }
         else {
@@ -120,13 +121,14 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
         const uint8_t& id = params.Value();
 
-        Controls::iterator control = _controls.find(id);
-        if (control != _controls.end()) {
-            control->second->Release();
-            _controls.erase(control);
-        }
         Streams::iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
+            Controls::iterator control = _controls.find(id);
+            if (control != _controls.end()) {
+                control->second->Release();
+                _controls.erase(control);
+            }
+
             stream->second->Release();
             _streams.erase(id);
         }
@@ -141,18 +143,28 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
-    //  - ERROR_BAD_REQUEST: Invalid location given
-    //  - ERROR_ILLEGAL_STATE: Player is not in a valid state
-    //  - ERROR_UNAVAILABLE: Player instance is not available
+    //  - ERROR_INCORRECT_URL: Invalid location given
+    //  - ERROR_GENERAL: Undefined loading error
+    //  - ERROR_ILLEGAL_STATE: Stream is not in a valid state
     uint32_t Streamer::endpoint_load(const LoadParamsData& params)
     {
         uint32_t result = Core::ERROR_NONE;
-        const uint8_t& index = params.Index.Value();
+        const uint8_t& id = params.Index.Value();
         const string& location = params.Location.Value();
 
-        Streams::iterator stream = _streams.find(index);
+        Streams::iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
-            result = stream->second->Load(location);
+            if (((stream->second->State() == Exchange::IStream::Idle)
+                    || (stream->second->State() == Exchange::IStream::Prepared)
+                    || (stream->second->State() == Exchange::IStream::Error))
+                    && (_controls.find(id) == _controls.end())) {
+                result = stream->second->Load(location);
+                if ((result != Core::ERROR_NONE) && (result != Core::ERROR_INCORRECT_URL)) {
+                    result = Core::ERROR_GENERAL;
+                }
+            } else {
+                result = Core::ERROR_ILLEGAL_STATE;
+            }
         } else {
             result = Core::ERROR_UNKNOWN_KEY;
         }
@@ -160,12 +172,13 @@ namespace Plugin {
         return result;
     }
 
-    // Method: attach - Attaches a decoder to the streamer
+   // Method: attach - Attaches a decoder to the streamer
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
     //  - ERROR_INPROGRESS: Decoder already attached
-    //  - ERROR_ILLEGAL_STATE: Stream not prepared
+    //  - ERROR_ILLEGAL_STATE: Stream is not in a valid state
+    //  - ERROR_UNAVAILABLE: No free decoders available
     uint32_t Streamer::endpoint_attach(const Core::JSON::DecUInt8& params)
     {
         uint32_t result = Core::ERROR_NONE;
@@ -173,15 +186,16 @@ namespace Plugin {
 
         Streams::iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
-
-            if (stream->second->State() == Exchange::IStream::Prepared) {
+            if ((stream->second->State() == Exchange::IStream::Prepared) && (_controls.find(id) == _controls.end())) {
                 Exchange::IStream::IControl* control = stream->second->Control();
                 if (control != nullptr) {
                     _controls.emplace(std::piecewise_construct,
                     std::forward_as_tuple(id),
                     std::forward_as_tuple(*this, id, control));
+                } else {
+                    result = Core::ERROR_UNAVAILABLE;
                 }
-            } else if (stream->second->State() == Exchange::IStream::Playing) {
+            } else if ((stream->second->State() == Exchange::IStream::Playing) || (stream->second->State() == Exchange::IStream::Prepared)) {
                 result = Core::ERROR_INPROGRESS;
             } else {
                 result = Core::ERROR_ILLEGAL_STATE;
@@ -197,7 +211,7 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
-    //  - ERROR_ILLEGAL_STATE: Decoder not attached to the stream
+    //  - ERROR_ILLEGAL_STATE: Stream is not in a valid state or decoder not attached
     //  - ERROR_INPROGRESS: Decoder is in use
     uint32_t Streamer::endpoint_detach(const Core::JSON::DecUInt8& params)
     {
@@ -206,18 +220,15 @@ namespace Plugin {
 
         Streams::iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
-
-            if (stream->second->State() != Exchange::IStream::Idle) {
-                Controls::iterator control = _controls.find(id);
-                if (control != _controls.end()) {
-                    if (control->second->Release() == Core::ERROR_DESTRUCTION_SUCCEEDED) {
-                        _controls.erase(id);
-                    } else {
-                        result = Core::ERROR_INPROGRESS;
-                    }
+            Controls::iterator control = _controls.find(id);
+            if (control != _controls.end()) {
+                if (control->second->Release() == Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                    _controls.erase(id);
                 } else {
-                    result = Core::ERROR_ILLEGAL_STATE;
+                    result = Core::ERROR_INPROGRESS;
                 }
+            } else {
+                result = Core::ERROR_ILLEGAL_STATE;
             }
         } else {
             result = Core::ERROR_UNKNOWN_KEY;
@@ -229,6 +240,7 @@ namespace Plugin {
     // Property: speed - Playback speed
     // Return codes:
     //  - ERROR_NONE: Success
+    //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
     //  - ERROR_ILLEGAL_STATE: Player is not in a valid state or decoder not attached
     uint32_t Streamer::get_speed(const string& index, Core::JSON::DecSInt32& response) const
     {
@@ -251,13 +263,12 @@ namespace Plugin {
         return result;
     }
 
+
     // Property: speed - Playback speed
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
-    //  - ERROR_BAD_REQUEST: Invalid speed given
     //  - ERROR_ILLEGAL_STATE: Player is not in a valid state or decoder not attached
-    //  - ERROR_UNAVAILABLE: Player instance is not available
     uint32_t Streamer::set_speed(const string& index, const Core::JSON::DecSInt32& param)
     {
         uint32_t result = Core::ERROR_NONE;
@@ -269,7 +280,7 @@ namespace Plugin {
         if (stream != _streams.end()) {
             Controls::iterator control = _controls.find(id);
             if (control != _controls.end()) {
-               control->second->Speed(speed);
+                control->second->Speed(speed);
             } else {
                 result = Core::ERROR_ILLEGAL_STATE;
             }
@@ -284,6 +295,7 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
+    //  - ERROR_ILLEGAL_STATE: Player is not in a valid state or decoder not attached
     uint32_t Streamer::get_position(const string& index, Core::JSON::DecUInt64& response) const
     {
         uint32_t result = Core::ERROR_NONE;
@@ -338,6 +350,7 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
+    //  - ERROR_ILLEGAL_STATE: Player is not in a valid state or decoder not attached
     uint32_t Streamer::get_window(const string& index, WindowData& response) const
     {
         uint32_t result = Core::ERROR_NONE;
@@ -366,7 +379,6 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
-    //  - ERROR_BAD_REQUEST: Invalid window geometry given
     //  - ERROR_ILLEGAL_STATE: Player is not in a valid state or decoder not attached
     uint32_t Streamer::set_window(const string& index, const WindowData& param)
     {
@@ -390,10 +402,10 @@ namespace Plugin {
         return result;
     }
 
-    // Property: speeds - Retrieves the speeds supported by the player
+    // Property: speeds - Speeds supported by the stream player
     // Return codes:
+    //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
-    //  - ERROR_ILLEGAL_STATE: Decoder not attached to the stream
     uint32_t Streamer::get_speeds(const string& index, Core::JSON::ArrayType<Core::JSON::DecSInt32>& response) const
     {
         uint32_t result = Core::ERROR_NONE;
@@ -416,7 +428,6 @@ namespace Plugin {
                     iterator->Release();
                 }
             } else {
-
                 result = Core::ERROR_ILLEGAL_STATE;
             }
         } else {
@@ -426,7 +437,7 @@ namespace Plugin {
         return result;
     }
 
-    // Property: streams - Retrieves all created stream instance IDs
+    // Property: streams - All created stream instance IDs
     // Return codes:
     //  - ERROR_NONE: Success
     uint32_t Streamer::get_streams(Core::JSON::ArrayType<Core::JSON::DecUInt32>& response) const
@@ -442,7 +453,7 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
-    // Property: type - Retrieves the streame type - DVB, ATSC or VOD
+    // Property: type - Type of a stream
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
@@ -461,7 +472,7 @@ namespace Plugin {
         return result;
     }
 
-    // Property: drm - Retrieves the DRM Type attached with stream
+    // Property: drm - DRM type associated with a stream
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
@@ -480,7 +491,7 @@ namespace Plugin {
         return result;
     }
 
-    // Property: state - Retrieves the current state of Player
+    // Property: state - Current state of a stream
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
@@ -523,7 +534,7 @@ namespace Plugin {
         });
     }
 
-    // Event: timeupdate - Event fired to indicate the position in the stream
+    // Event: timeupdate - Notifies of stream position change
     void Streamer::event_timeupdate(const string& id, const uint64_t& time)
     {
         TimeupdateParamsData params;

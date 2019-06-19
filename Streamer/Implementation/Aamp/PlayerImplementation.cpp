@@ -1,14 +1,17 @@
 #include "PlayerImplementation.h"
 #include <gst/gst.h>
 #include <main_aamp.h>
+#include "Administrator.h"
 
 namespace WPEFramework {
 
 namespace Player {
 
-    namespace Implementation {
+namespace Implementation {
 
-        class AampEventListener :public AAMPEventListener {
+    namespace Aamp {
+
+    class AampEventListener :public AAMPEventListener {
         private:
             AampEventListener() = delete;
             AampEventListener(const AampEventListener&) = delete;
@@ -24,10 +27,11 @@ namespace Player {
                switch (e.type)
                {
                case AAMP_EVENT_TUNED:
+                   _player->StateChange(Exchange::IStream::Prepared);
                    TRACE(Trace::Information, (_T("AAMP_EVENT_TUNED")));
                    break;
                case AAMP_EVENT_TUNE_FAILED:
-                   _player->State(Exchange::IStream::Error);
+                   _player->StateChange(Exchange::IStream::Error);
                    _player->Stop();
                    TRACE(Trace::Information, (_T("AAMP_EVENT_TUNE_FAILED")));
                    break;
@@ -35,7 +39,7 @@ namespace Player {
                    TRACE(Trace::Information, (_T("AAMP_EVENT_SPEED_CHANGED")));
                    break;
                case AAMP_EVENT_DRM_METADATA:
-                   TRACE(Trace::Information, (_T("AAMP_DRM_FAILED")));
+                   TRACE(Trace::Information, (_T("AAMP_EVENT_DRM_METADATA")));
                    break;
                case AAMP_EVENT_EOS:
                    _player->Position(0);
@@ -61,7 +65,7 @@ namespace Player {
             PlayerPlatform* _player;
         };
 
-        class Config : public Core::JSON::Container {
+        static class Config : public Core::JSON::Container {
         private:
             Config(const Config&) = delete;
             Config& operator=(const Config&) = delete;
@@ -82,71 +86,101 @@ namespace Player {
         public:
             Core::JSON::ArrayType<Core::JSON::DecSInt32> Speeds;
             Core::JSON::Boolean WesterosSink;
-        };
+        } config;
 
-        string PlayerPlatform::_configuration = "";
-
-        PlayerPlatform::PlayerPlatform(const Exchange::IStream::streamtype type, const uint8_t index, ICallback* callbacks)
+        PlayerPlatform::PlayerPlatform(const Exchange::IStream::streamtype streamType, const uint8_t index)
             : _uri("")
             , _state(Exchange::IStream::Error)
             , _drmType(Exchange::IStream::Unknown)
-            , _streamType(type)
+            , _streamtype(streamType)
             , _speed(-1)
             , _begin(0)
             , _end(~0)
             , _z(0)
             , _rectangle()
-            , _callback(callbacks)
+            , _index(index)
+            , _callback(nullptr)
             , _initialized(false)
+            , _aampPlayer(nullptr)
             , _aampEventListener(nullptr)
             , _aampGstPlayerMainLoop(nullptr)
             , _scheduler(this)
             , _adminLock()
         {
-            Config config;
-            config.FromString(_configuration);
+            ASSERT(_initialized == false)
+            ASSERT(_aampPlayer == nullptr);
+            ASSERT(_aampGstPlayerMainLoop == nullptr);
 
-            if ((config.Speeds.IsSet() == true) && (config.Speeds.Length() != 0)) {
-                Core::JSON::ArrayType<Core::JSON::DecSInt32>::Iterator index(config.Speeds.Elements());
+            if((config.Speeds.IsSet() == true) && (config.Speeds.IsNull() == false) && (config.Speeds.Length() != 0)) {
+                auto index(config.Speeds.Elements());
                 while (index.Next() == true) {
                     _speeds.push_back(index.Current().Value());
                 }
-            }
-            else {
+            } else {
                 int32_t speeds[] = { 100, -100, 200, -200, 400, -400, 800, -800, 1600, -1600, 3200, -3200};
-                _speeds.assign(std::begin(speeds), std::end(speeds));
-            }
+               _speeds.assign(std::begin(speeds), std::end(speeds));
+             }
+
             _rectangle.X = 0;
             _rectangle.Y = 0;
             _rectangle.Width = 1080;
             _rectangle.Height = 720;
-
-            if (config.WesterosSink.Value() == true) {
-                Core::SystemInfo::SetEnvironment(_T("PLAYERSINKBIN_USE_WESTEROSSINK"), _T("true"));
-            }
-
-            gst_init(0, nullptr);
-
-            _aampPlayer = new PlayerInstanceAAMP();
-            ASSERT(_aampPlayer);
-
-            _aampEventListener = new AampEventListener(this);
-            _aampPlayer->RegisterEvents(_aampEventListener);
-
-            _state = Exchange::IStream::Idle;
         }
 
         PlayerPlatform::~PlayerPlatform()
         {
             _scheduler.Quit();
             _speeds.clear();
+        }
+
+        uint32_t PlayerPlatform::Setup()
+        {
+            uint32_t result = Core::ERROR_GENERAL;
+            gst_init(0, nullptr); // no op after first call anyway...
+
+            _adminLock.Lock();
+            ASSERT(_state == Exchange::IStream::Error);
+
+            _aampPlayer = new PlayerInstanceAAMP();
+            if (_aampPlayer != nullptr) {
+                _aampEventListener = new AampEventListener(this);
+                if (_aampEventListener != nullptr) {
+                    _aampPlayer->RegisterEvents(_aampEventListener);
+                    _state = Exchange::IStream::Idle;
+                    result = Core::ERROR_NONE;
+                }
+                else {
+                    delete _aampPlayer;
+                    _aampPlayer = nullptr;
+                }
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+
+        uint32_t PlayerPlatform::Teardown()
+        {
+            Terminate();
+
+            _adminLock.Lock();
+
+            _aampPlayer->RegisterEvents(nullptr);
+
+            delete _aampEventListener;
+            _aampEventListener = nullptr;
 
             delete _aampPlayer;
             _aampPlayer = nullptr;
 
-            delete _aampEventListener;
-            _aampEventListener = nullptr;
+            _state = Exchange::IStream::Error;
+
+            _adminLock.Unlock();
+
+            return Core::ERROR_NONE;
         }
+
 
         void PlayerPlatform::InitializePlayerInstance()
         {
@@ -169,19 +203,22 @@ namespace Player {
             _adminLock.Unlock();
         }
 
-        void PlayerPlatform::AttachDecoder(const uint8_t index)
+        uint32_t PlayerPlatform::AttachDecoder(const uint8_t index)
         {
             InitializePlayerInstance();
 
             Run();
+
+            return 0;
         }
 
-        void PlayerPlatform::DetachDecoder(const uint8_t index)
+        uint32_t PlayerPlatform::DetachDecoder(const uint8_t index)
         {
             Terminate();
+            return 0;
         }
 
-        void PlayerPlatform::Window(const Rectangle& rectangle)
+        void PlayerPlatform::Window(const Implementation::Rectangle& rectangle)
         {
             _adminLock.Lock();
             _rectangle = rectangle;
@@ -218,6 +255,7 @@ namespace Player {
                     TRACE(Trace::Information, (_T("URI type is %s"), uriType.c_str()));
 
                     _adminLock.Lock();
+                    StateChange(Exchange::IStream::Loading);
                     _speed = -1;
                     _drmType = Exchange::IStream::Unknown;
 
@@ -225,17 +263,10 @@ namespace Player {
                     _aampPlayer->Tune(_uri.c_str());
                     _aampPlayer->SetRate(0);
 
-                    // TODO: wait for aaamp tune event before setting this
-                    _state = Exchange::IStream::Prepared;
-                    if (_callback != nullptr) {
-                       _callback->StateChange(_state);
-                    }
                     _adminLock.Unlock();
                 } else {
                     result = Core::ERROR_INCORRECT_URL;
-                    _adminLock.Lock();
-                    _state = Exchange::IStream::Error;
-                    _adminLock.Unlock();
+                    StateChange(Exchange::IStream::Error);
                     TRACE(Trace::Error, (_T("URI is not dash/hls")));
                 }
             } else {
@@ -289,6 +320,7 @@ namespace Player {
                 Block();
 
                 DeinitializePlayerInstance();
+                StateChange(Exchange::IStream::Prepared);
 
                 TRACE(Trace::Information, (string(__FUNCTION__)));
                 Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
@@ -337,17 +369,29 @@ namespace Player {
                 _speed = speed;
 
                 _aampPlayer->SetRate((speed/100));
-                if (_state != newState) {
-                    _state = newState;
-                    if (_callback != nullptr) {
-                       _callback->StateChange(_state);
-                    }
-                }
+
+                StateChange(newState);
             }
 
             _adminLock.Unlock();
             return result;
        }
+
+    } // namespace Aamp
+
+    namespace {
+        static PlayerPlatformRegistrationType<Aamp::PlayerPlatform> Register(PLAYER_NAME, Exchange::IStream::streamtype::Unicast,
+            /*  Initialize */ [](const string& configuration) -> uint32_t {
+                Aamp::config.FromString(configuration);
+                if (Aamp::config.WesterosSink.Value() == true) {
+                    Core::SystemInfo::SetEnvironment(_T("PLAYERSINKBIN_USE_WESTEROSSINK"), _T("true"));
+                }
+                return (Core::ERROR_NONE);
+            });
     }
+
+} // namespace Implementation
+
+} // namespace Player
+
 }
-} //namespace WPEFramework::Player::Implementation

@@ -1,6 +1,4 @@
 #include "StreamerImplementation.h"
-#include "Frontend.h"
-#include "PlayerImplementation.h"
 
 namespace WPEFramework {
 
@@ -68,11 +66,12 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        result = _administrator.Aquire(streamType);
+        result = _administrator.Acquire(streamType);
 
         _adminLock.Unlock();
 
         return (result);
     }
 }
-} // namespace WPEFramework::Plugin
+
+}

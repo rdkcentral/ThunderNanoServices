@@ -1,10 +1,10 @@
-#ifndef _PLAYER_IMPLEMENTATION_H
-#define _PLAYER_IMPLEMENTATION_H
+#pragma once
 
+#include "Module.h"
 #include <broadcast/broadcast.h>
 #include <interfaces/IStream.h>
-#include <plugins/plugins.h>
 #include <tracing/tracing.h>
+#include "PlayerPlatform.h"
 #include <vector>
 
 #include "Designator.h"
@@ -13,9 +13,11 @@ namespace WPEFramework {
 
 namespace Player {
 
-    namespace Implementation {
+namespace Implementation {
 
-        class PlayerPlatform {
+    namespace Bcast {
+
+        class PlayerPlatform : public IPlayerPlatform {
         private:
             PlayerPlatform() = delete;
             PlayerPlatform(const PlayerPlatform&) = delete;
@@ -42,188 +44,220 @@ namespace Player {
             };
 
         public:
-            PlayerPlatform(const Exchange::IStream::streamtype type, const uint8_t index, ICallback* callbacks)
+            PlayerPlatform(const Exchange::IStream::streamtype streamType, const uint8_t index)
                 : _state(Exchange::IStream::Idle)
                 , _drmType(Exchange::IStream::Unknown)
-                , _streamType(type)
+                , _streamType(streamType)
                 , _speed(0)
                 , _absoluteTime(0)
                 , _begin(0)
                 , _end(~0)
                 , _rectangle()
                 , _z(0)
-                , _callback(callbacks)
-                , _player(Broadcast::ITuner::Create(Core::NumberType<uint8_t>(index).Text()))
+                , _callback(nullptr)
+                , _player(nullptr)
                 , _sink(*this)
+                , _index(index)
             {
-                _player->Callback(&_sink);
+                _speeds.push_back(100);
             }
-            virtual ~PlayerPlatform() { Terminate(); }
+            virtual ~PlayerPlatform()
+            {
+            }
 
         public:
-            static uint32_t Initialize(const string& configuration)
+            uint32_t Setup() override
             {
-                Broadcast::ITuner::Initialize(configuration);
-                return (Core::ERROR_NONE);
+                _player = Broadcast::ITuner::Create(Core::NumberType<uint8_t>(_index).Text());
+                if (_player != nullptr) {
+                    _player->Callback(&_sink);
+                }
+
+                return (_player != nullptr? Core::ERROR_NONE : Core::ERROR_GENERAL);
             }
-            static uint32_t Deinitialize()
+            uint32_t Teardown() override
             {
-                Broadcast::ITuner::Deinitialize();
-                return (Core::ERROR_NONE);
+                if (_player != nullptr) {
+                    _player->Callback(nullptr);
+                    delete _player;
+                }
+                return Core::ERROR_NONE;
             }
-            inline string Metadata() const { return string(); }
-            inline Exchange::IStream::streamtype Type() const
+            void Callback(ICallback* callback) override
+            {
+                _callback = callback;
+            }
+            inline string Metadata() const override
+            {
+                return string();
+            }
+            inline Exchange::IStream::streamtype Type() const override
             {
                 return (Exchange::IStream::streamtype)_streamType;
             }
-            inline Exchange::IStream::drmtype DRM() const
+            inline Exchange::IStream::drmtype DRM() const override
             {
                 return (Exchange::IStream::drmtype)_drmType;
             }
-            inline Exchange::IStream::state State() const
+            inline Exchange::IStream::state State() const override
             {
                 return (Exchange::IStream::state)_state;
             }
-            inline uint32_t Load(const string& configuration)
+            uint8_t Index() const override
+            {
+                return _index;
+            }
+            inline uint32_t Load(const string& configuration) override
             {
                 uint32_t result = Core::ERROR_UNAVAILABLE;
 
-                if (_player != nullptr) {
+                ASSERT(_player != nullptr);
 
-                    result = Core::ERROR_ILLEGAL_STATE;
+                result = Core::ERROR_ILLEGAL_STATE;
 
-                    if (_state != Exchange::IStream::Error) {
+                if (_state != Exchange::IStream::Error) {
 
-                        Broadcast::Designator parser(configuration);
+                    Broadcast::Designator parser(configuration);
 
-                        TRACE(Trace::Information, (_T("Tuning to %u MHz mode=%s sym=%d Annex=%s spectralMode=%s"),
-                            parser.Frequency(),
-                            Core::EnumerateType<Broadcast::Modulation>(parser.Modulation()).Data(),
-                            parser.SymbolRate(),
-                            Core::EnumerateType<Broadcast::ITuner::annex>(_player->Annex()).Data(),
-                            Core::EnumerateType<Broadcast::SpectralInversion>(parser.Spectral()).Data()));
+                    TRACE(Trace::Information, (_T("Tuning to %u MHz mode=%s sym=%d Annex=%s spectralMode=%s"),
+                        parser.Frequency(),
+                        Core::EnumerateType<Broadcast::Modulation>(parser.Modulation()).Data(),
+                        parser.SymbolRate(),
+                        Core::EnumerateType<Broadcast::ITuner::annex>(_player->Annex()).Data(),
+                        Core::EnumerateType<Broadcast::SpectralInversion>(parser.Spectral()).Data()));
 
-                        result = _player->Tune(parser.Frequency(), parser.Modulation(),
-                            parser.SymbolRate(), Broadcast::FEC_INNER_UNKNOWN, parser.Spectral());
+                    result = _player->Tune(parser.Frequency(), parser.Modulation(),
+                        parser.SymbolRate(), Broadcast::FEC_INNER_UNKNOWN, parser.Spectral());
 
-                        if (result != Core::ERROR_NONE) {
-                            _state = Exchange::IStream::Error;
-                            TRACE(Trace::Error, (_T("Error in player load :%d"), result));
-                            _callback->StateChange(_state);
-                        } else {
-                            TRACE(Trace::Information, (_T("Tuning to ProgramNumber %d"), parser.ProgramNumber()));
-                            _player->Prepare(parser.ProgramNumber());
-                            _state = Exchange::IStream::Idle;
-                        }
+                    if (result != Core::ERROR_NONE) {
+                        _state = Exchange::IStream::Error;
+                        TRACE(Trace::Error, (_T("Error in player load :%d"), result));
+                        _callback->StateChange(_state);
+                    } else {
+                        TRACE(Trace::Information, (_T("Tuning to ProgramNumber %d"), parser.ProgramNumber()));
+                        _player->Prepare(parser.ProgramNumber());
+                        _state = Exchange::IStream::Prepared;
                     }
                 }
 
                 return result;
             }
-            const std::vector<int32_t>& Speeds() const
+            const std::vector<int32_t>& Speeds() const override
             {
-                 return std::vector<int32_t>();
+                 return _speeds;
             }
-            inline uint32_t Speed(const int32_t request)
+            inline uint32_t Speed(const int32_t request) override
             {
                 uint32_t result = Core::ERROR_UNAVAILABLE;
 
-                if (_player != nullptr) {
+                ASSERT(_player != nullptr);
 
-                    result = Core::ERROR_ILLEGAL_STATE;
+                result = Core::ERROR_ILLEGAL_STATE;
 
-                    if ( (_state > Exchange::IStream::Prepared) && (_state != Exchange::IStream::Error) ) {
-                        Exchange::IStream::state newState = _state;
+                if ( (_state > Exchange::IStream::Prepared) && (_state != Exchange::IStream::Error) ) {
+                    Exchange::IStream::state newState = _state;
 
-                        result = Core::ERROR_NONE; // PLAYER_RESULT status =
+                    result = Core::ERROR_NONE; // PLAYER_RESULT status =
 
-                        // _player->setSpeed(request);
-                        if (result == Core::ERROR_NONE) {
-                            _speed = request;
-                            if (_speed != 0) {
-                                newState = Exchange::IStream::state::Playing;
-                            } else {
-                                newState = Exchange::IStream::state::Paused;
-                            }
+                    // _player->setSpeed(request);
+                    if (result == Core::ERROR_NONE) {
+                        _speed = request;
+                        if (_speed != 0) {
+                            newState = Exchange::IStream::state::Playing;
                         } else {
-                            TRACE(Trace::Error, (_T("Error in pause playback:%d"), result));
-                            newState = Exchange::IStream::state::Error;
+                            newState = Exchange::IStream::state::Paused;
                         }
+                    } else {
+                        TRACE(Trace::Error, (_T("Error in pause playback:%d"), result));
+                        newState = Exchange::IStream::state::Error;
+                    }
 
-                        if ((newState != _state) && (_callback != nullptr)) {
-                            _state = newState;
-                            _callback->StateChange(_state);
-                        }
+                    if ((newState != _state) && (_callback != nullptr)) {
+                        _state = newState;
+                        _callback->StateChange(_state);
                     }
                 }
 
                 return (result);
             }
-            inline int32_t Speed() const { return _speed; }
-            inline void Position(const uint64_t absoluteTime)
+            inline int32_t Speed() const  override
+            {
+                return _speed;
+            }
+            inline void Position(const uint64_t absoluteTime) override
             {
                 _absoluteTime = absoluteTime;
             }
-            inline uint64_t Position() const { return _absoluteTime; }
-            inline void TimeRange(uint64_t& begin, uint64_t& end) const
+            inline uint64_t Position() const override
+            {
+                return _absoluteTime;
+            }
+            inline void TimeRange(uint64_t& begin, uint64_t& end) const override
             {
                 begin = _begin;
                 end = _end;
             }
-            inline const Rectangle& Window() const { return (_rectangle); }
-            inline void Window(const Rectangle& rectangle) { _rectangle = rectangle; }
-            inline uint32_t Order() const { return (_z); }
-            inline void Order(const uint32_t order) { _z = order; }
-            inline uint32_t AttachDecoder(const uint8_t index)
+            inline const Rectangle& Window() const override
+            {
+                return (_rectangle);
+            }
+            inline void Window(const Rectangle& rectangle) override
+            {
+                _rectangle = rectangle;
+            }
+            inline uint32_t Order() const override
+            {
+                return (_z);
+            }
+            inline void Order(const uint32_t order) override
+            {
+                _z = order;
+            }
+            inline uint32_t AttachDecoder(const uint8_t index) override
             {
                 uint32_t result = Core::ERROR_UNAVAILABLE;
 
-                if (_player != nullptr) {
+                ASSERT(_player != nullptr);
 
-                    result = Core::ERROR_ILLEGAL_STATE;
+                result = Core::ERROR_ILLEGAL_STATE;
 
-                    if (_state == Exchange::IStream::Prepared) {
+                if (_state == Exchange::IStream::Prepared) {
 
-                        result = _player->Attach(index);
-                        if (result != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, (_T("Error in attach decoder %d"), result));
-                            _state = Exchange::IStream::state::Error;
-                            _callback->StateChange(_state);
-                        }
+                    result = _player->Attach(index);
+                    if (result != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Error in attach decoder %d"), result));
+                        _state = Exchange::IStream::state::Error;
+                        _callback->StateChange(_state);
                     }
                 }
+
                 return (result);
             }
 
-            inline uint32_t DetachDecoder(const uint8_t index)
+            inline uint32_t DetachDecoder(const uint8_t index) override
             {
                 uint32_t result = Core::ERROR_UNAVAILABLE;
 
-                if (_player != nullptr) {
+                ASSERT(_player != nullptr);
 
-                    result = Core::ERROR_ILLEGAL_STATE;
+                result = Core::ERROR_ILLEGAL_STATE;
 
-                    if ( (_state > Exchange::IStream::Prepared) && (_state != Exchange::IStream::Error) ) {
+                if ( (_state > Exchange::IStream::Prepared) && (_state != Exchange::IStream::Error) ) {
 
-                        result = _player->Detach(index);
-                        if (result != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, (_T("Error in detach decoder %d"), result));
-                            _state = Exchange::IStream::state::Error;
-                            _callback->StateChange(_state);
-                        }
+                    result = _player->Detach(index);
+                    if (result != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Error in detach decoder %d"), result));
+                        _state = Exchange::IStream::state::Error;
+                        _callback->StateChange(_state);
                     }
                 }
+
                 return (result);
-            }
-
-            inline void Terminate() {
-
-                _player->Callback(nullptr);
-
-                delete _player;
             }
 
             void StateChange() {
+                ASSERT(_player != nullptr);
+
                 Exchange::IStream::state oldState = _state;
                 Broadcast::ITuner::state result = _player->State();
 
@@ -258,6 +292,7 @@ namespace Player {
             Exchange::IStream::streamtype _streamType;
 
             int32_t _speed;
+            std::vector<int32_t> _speeds;
             uint64_t _absoluteTime;
             uint64_t _begin;
             uint64_t _end;
@@ -267,10 +302,11 @@ namespace Player {
             ICallback* _callback;
             Broadcast::ITuner* _player;
             Sink _sink;
+            uint8_t _index;
         };
 
-    } // namespace Implementation
+    } // namespace Bcast
+
+} // namespace Implementation
 } // namespace Player
 } // namespace WPEFramework
-
-#endif // _PLAYER_IMPLEMENTATION_H
