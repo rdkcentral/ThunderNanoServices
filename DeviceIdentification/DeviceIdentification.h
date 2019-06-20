@@ -2,15 +2,16 @@
 #define DeviceIdentification_DeviceIdentification_H
 
 #include "Module.h"
-#include <IdentityProvider.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class DeviceIdentification : public PluginHost::IPlugin {
+    class DeviceIdentification : public PluginHost::IPlugin, public PluginHost::ISubSystem::IIdentifier {
     public:
+        DeviceIdentification(const DeviceIdentification&) = delete;
+        DeviceIdentification& operator=(const DeviceIdentification&) = delete;
+
         DeviceIdentification()
-            :  _idProvider(nullptr)
         {
         }
 
@@ -19,7 +20,8 @@ namespace Plugin {
         }
 
         BEGIN_INTERFACE_MAP(DeviceIdentification)
-        INTERFACE_ENTRY(PluginHost::IPlugin)
+            INTERFACE_ENTRY(PluginHost::IPlugin)
+            INTERFACE_ENTRY(PluginHost::ISubSystem::IIdentifier)
         END_INTERFACE_MAP
 
     public:
@@ -29,8 +31,9 @@ namespace Plugin {
         virtual void Deinitialize(PluginHost::IShell* service) override;
         virtual string Information() const override;
 
-    private:
-        IdentityProvider* _idProvider;
+        //   IIdentifier methods
+        // -------------------------------------------------------------------------------------------------------
+        virtual uint8_t Identifier(const uint8_t length, uint8_t buffer[]) const override;
     };
 
 } // namespace Plugin

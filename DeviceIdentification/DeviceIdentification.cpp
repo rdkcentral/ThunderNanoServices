@@ -1,4 +1,5 @@
 #include "DeviceIdentification.h"
+#include "IdentityProvider.h"
 
 namespace WPEFramework {
 namespace Plugin {
@@ -9,11 +10,7 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
 
-        ASSERT(_idProvider == nullptr);
-        
-        _idProvider = Core::Service<IdentityProvider>::Create<IdentityProvider>();
-        
-        service->SubSystems()->Set(PluginHost::ISubSystem::IDENTIFIER, _idProvider);
+        service->SubSystems()->Set(PluginHost::ISubSystem::IDENTIFIER, this);
 
         return (string());
     }
@@ -21,19 +18,29 @@ namespace Plugin {
     /* virtual */ void DeviceIdentification::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
-
-        service->SubSystems()->Set(PluginHost::ISubSystem::NOT_IDENTIFIER, nullptr);
-
-        if (_idProvider != nullptr) {
-            delete _idProvider;
-            _idProvider = nullptr;
-        }
     }
 
     /* virtual */ string DeviceIdentification::Information() const
     {
         // No additional info to report.
         return (string());
+    }
+
+    /* virtual*/ uint8_t DeviceIdentification::Identifier(const uint8_t length, uint8_t buffer[]) const
+    {
+        uint8_t result = 0;
+        unsigned char length_error;
+        const unsigned char* identity = GetIdentity(&length_error);
+
+        if (identity != nullptr) {
+            result = length_error;
+            ::memcpy(buffer, identity, (result > length ? length : result));
+        }
+        else {
+            SYSLOG(Logging::Notification, (_T("System identity can not be determined. Error: [%d]!"), length_error));
+        }
+
+        return (result);
     }
 
 } // namespace Plugin
