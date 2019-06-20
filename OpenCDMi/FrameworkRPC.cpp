@@ -673,15 +673,14 @@ namespace Plugin {
 
                 CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
 
-                if (system == nullptr) {
-                    session = nullptr;
-                } else {
+                session = nullptr;
+                if (system != nullptr) {
                     CDMi::IMediaKeySession* sessionInterface = nullptr;
                     CommonEncryptionData keyIds(initData, initDataLength);
 
                     // OKe we got a buffer machanism to transfer the raw data, now create
                     // the session.
-                    if ((session == nullptr) && (system->CreateMediaKeySession(keySystem, licenseType, initDataType.c_str(), initData, initDataLength, CDMData, CDMDataLength, &sessionInterface) == 0)) {
+                    if (system->CreateMediaKeySession(keySystem, licenseType, initDataType.c_str(), initData, initDataLength, CDMData, CDMDataLength, &sessionInterface) == 0) {
 
                         if (sessionInterface != nullptr) {
 

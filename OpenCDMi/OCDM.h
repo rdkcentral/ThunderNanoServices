@@ -101,7 +101,7 @@ namespace Plugin {
                     string entry;
                     while (entries->Next(entry) == true) {
                         TRACE_L1("Designator: %s", entry.c_str());
-                        Designators.Add(Core::JSON::String(entry));
+                        Designators.Add() = entry;
                     }
                 }
             };
