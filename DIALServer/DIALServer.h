@@ -198,7 +198,6 @@ namespace Plugin {
                     }
 
                     if (IsRunning() == true) {
-                        printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
                         Started(data);
                     }
                 }
@@ -503,7 +502,6 @@ namespace Plugin {
             }
             inline static void Announce(const string& name, IApplicationFactory* factory)
             {
-                printf("DIALLLLL: %s", name.c_str());
                 ASSERT(AppInformation::_applicationFactory.find(name) == AppInformation::_applicationFactory.end());
 
                 AppInformation::_applicationFactory.insert(std::pair<string, IApplicationFactory*>(name, factory));

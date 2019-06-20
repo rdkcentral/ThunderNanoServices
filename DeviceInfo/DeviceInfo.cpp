@@ -116,7 +116,7 @@ namespace Plugin {
         return result;
     }
 
-    void DeviceInfo::SysInfo(JsonData::DeviceInfo::SysteminfoParamsData& systemInfo) const
+    void DeviceInfo::SysInfo(JsonData::DeviceInfo::SysteminfoData& systemInfo) const
     {
         Core::SystemInfo& singleton(Core::SystemInfo::Instance());
 
@@ -139,17 +139,17 @@ namespace Plugin {
         systemInfo.Serialnumber = _systemId;
     }
 
-    void DeviceInfo::AddressInfo(Core::JSON::ArrayType<JsonData::DeviceInfo::AddressesParamsData>& addressInfo) const
+    void DeviceInfo::AddressInfo(Core::JSON::ArrayType<JsonData::DeviceInfo::AddressesData>& addressInfo) const
     {
         // Get the point of entry on WPEFramework..
         Core::AdapterIterator interfaces;
 
         while (interfaces.Next() == true) {
 
-            JsonData::DeviceInfo::AddressesParamsData newElement;
+            JsonData::DeviceInfo::AddressesData newElement;
             newElement.Name = interfaces.Name();
             newElement.Mac = interfaces.MACAddress(':');
-            JsonData::DeviceInfo::AddressesParamsData& element(addressInfo.Add(newElement));
+            JsonData::DeviceInfo::AddressesData& element(addressInfo.Add(newElement));
 
             // get an interface with a public IP address, then we will have a proper MAC address..
             Core::IPV4AddressIterator selectedNode(interfaces.Index());
@@ -163,7 +163,7 @@ namespace Plugin {
         }
     }
 
-    void DeviceInfo::SocketPortInfo(JsonData::DeviceInfo::SocketinfoParamsData& socketPortInfo) const
+    void DeviceInfo::SocketPortInfo(JsonData::DeviceInfo::SocketinfoData& socketPortInfo) const
     {
         socketPortInfo.Runs = Core::ResourceMonitor::Instance().Runs();
     }
