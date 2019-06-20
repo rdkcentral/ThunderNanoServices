@@ -218,7 +218,7 @@ namespace Plugin {
         void RegisterAll();
         void UnregisterAll();
         uint32_t endpoint_synchronize();
-        uint32_t get_synctime(JsonData::TimeSync::SynctimeParamsData& response) const;
+        uint32_t get_synctime(JsonData::TimeSync::SynctimeData& response) const;
         uint32_t get_time(Core::JSON::String& response) const;
         uint32_t set_time(const Core::JSON::String& param);
 

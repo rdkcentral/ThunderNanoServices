@@ -15,7 +15,7 @@ namespace Plugin {
     void TimeSync::RegisterAll()
     {
         Register<void,void>(_T("synchronize"), &TimeSync::endpoint_synchronize, this);
-        Property<SynctimeParamsData>(_T("synctime"), &TimeSync::get_synctime, nullptr, this);
+        Property<SynctimeData>(_T("synctime"), &TimeSync::get_synctime, nullptr, this);
         Property<Core::JSON::String>(_T("time"), &TimeSync::get_time, &TimeSync::set_time, this);
     }
 
@@ -48,7 +48,7 @@ namespace Plugin {
     // Property: synctime - Most recent synchronized time
     // Return codes:
     //  - ERROR_NONE: Success
-    uint32_t TimeSync::get_synctime(SynctimeParamsData& response) const
+    uint32_t TimeSync::get_synctime(SynctimeData& response) const
     {
         response.Time = Core::Time(_client->SyncTime()).ToISO8601(/* local */ true);
 
