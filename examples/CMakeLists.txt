@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.3)
 
-option(PLUGIN_JSONRPC "Include JSONRPCExamplePlugin plugin" ON)
+option(PLUGIN_JSONRPC "Include JSONRPCExamplePlugin plugin" OFF)
 option(PLUGIN_TESTUTILITY "Include TestUtility plugin" OFF)
 option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 

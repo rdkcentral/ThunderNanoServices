@@ -160,7 +160,7 @@ namespace Plugin {
             _observers.push_back(notification);
             auto index(_clients.begin());
             while (index != _clients.end()) {
-                notification->Attached(index->second.clientInterface);
+                notification->Attached(index->first, index->second.clientInterface);
                 index++;
             }
             _adminLock.Unlock();
@@ -301,7 +301,7 @@ namespace Plugin {
                     TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
 
                     for (auto&& index : _observers) {
-                        index->Attached(client);
+                        index->Attached(name, client);
                     }
 
                     client->AddRef(); // for call to RecalculateZOrder
