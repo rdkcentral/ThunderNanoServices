@@ -93,7 +93,7 @@ namespace {
                     mutable Trace::TraceUnit::Iterator _index;
                 };
 
-                static string SourceName(RPC::IRemoteConnection* connection);
+                static string SourceName(const string& pathName, RPC::IRemoteConnection* connection);
 
             public:
                 enum state {
@@ -103,8 +103,8 @@ namespace {
                 };
 
             public:
-                Source(RPC::IRemoteConnection* connection)
-                    : Core::CyclicBuffer(SourceName(connection), 0, true)
+                Source(const string& tracePath, RPC::IRemoteConnection* connection)
+                    : Core::CyclicBuffer(SourceName(tracePath, connection), 0, true)
                     , _iterator(connection == nullptr ? &_localIterator : nullptr)
                     , _control(connection == nullptr ? &_localIterator : nullptr)
                     , _connection(connection)
@@ -309,7 +309,7 @@ namespace {
                 uint16_t _information;
                 uint16_t _length;
                 state _state;
-                uint8_t _traceBuffer[TRACE_CYCLIC_BUFFER_SIZE];
+                uint8_t _traceBuffer[Trace::CyclicBufferSize];
                 static LocalIterator _localIterator;
             };
 
@@ -535,27 +535,38 @@ namespace {
         public:
             Observer(TraceControl& parent)
                 : Thread(Core::Thread::DefaultStackSize(), _T("TraceWorker"))
-                , _doorBell(Trace::TraceUnit::Instance().TraceAnnouncement())
                 , _buffers()
+                , _traceControl(Trace::TraceUnit::Instance())
                 , _parent(parent)
                 , _refcount(0)
             {
-                // By definition, get the buffer file from WPEFramework (local source)
-                _buffers.insert(std::pair<const uint32_t, Source*>(Core::ProcessInfo().Id(), new Source(nullptr)));
             }
             ~Observer()
             {
                 ASSERT(_refcount == 0);
-                Clear();
+                ASSERT(_buffers.size() == 0);
+                _traceControl.Relinquish();
+                Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
             }
 
         public:
             void Reevaluate()
             {
-                _doorBell.Ring();
+                _traceControl.Announce();
             }
-            void Clear()
+            void Start() 
             {
+                _buffers.insert(std::pair<const uint32_t, Source*>(0, new Source(_parent.TracePath(), nullptr)));
+                Thread::Run();
+            }
+            void Stop()
+            {
+                Block();
+
+                _traceControl.Announce();
+
+                Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
+
                 _adminLock.Lock();
 
                 while (_buffers.size() != 0) {
@@ -573,7 +584,7 @@ namespace {
                 ASSERT(_buffers.find(connection->Id()) == _buffers.end());
 
                 // By definition, get the buffer file from WPEFramework (local source)
-                _buffers.insert(std::pair<const uint32_t, Source*>(connection->Id(), new Source(connection)));
+                _buffers.insert(std::pair<const uint32_t, Source*>(connection->Id(), new Source(_parent.TracePath(), connection)));
 
                 _adminLock.Unlock();
             }
@@ -624,15 +635,6 @@ namespace {
                 return (ModuleIterator(_buffers));
             }
 
-            inline void Pause()
-            {
-                Block();
-
-                _doorBell.Ring();
-
-                Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
-            }
-
         private:
             BEGIN_INTERFACE_MAP(Observer)
             INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
@@ -650,9 +652,10 @@ namespace {
             }
             virtual uint32_t Worker()
             {
-                while ((IsRunning() == true) && (_doorBell.Wait(Core::infinite) == Core::ERROR_NONE)) {
+                
+                while ((IsRunning() == true) && (_traceControl.Wait(Core::infinite) == Core::ERROR_NONE)) {
                     // Before we start we reset the flag, if new info is coming in, we will get a retrigger flag.
-                    _doorBell.Acknowledge();
+                    _traceControl.Acknowledge();
 
                     Source* selected;
 
@@ -710,8 +713,8 @@ namespace {
 
         private:
             Core::CriticalSection _adminLock;
-            Core::DoorBell& _doorBell;
             std::map<const uint32_t, Source*> _buffers;
+            Trace::TraceUnit& _traceControl;
             TraceControl& _parent;
             mutable uint32_t _refcount;
         };
@@ -907,6 +910,7 @@ namespace {
             : _skipURL(0)
             , _service(nullptr)
             , _outputs()
+            , _tracePath()
             , _observer(*this)
         {
             Register<Data::StatusParam, TraceControl::Data>(kStatusMethodName, &TraceControl::status, this);
@@ -967,12 +971,17 @@ namespace {
         // JSONRPC endpoints definition
         uint32_t status(const Data::StatusParam& parameters, TraceControl::Data& response);
         uint32_t set(const Data::Trace& parameters);
+        inline const string& TracePath() const 
+        {
+            return (_tracePath);
+        }
 
     private:
         uint8_t _skipURL;
         PluginHost::IShell* _service;
         Config _config;
         std::list<Trace::ITraceMedia*> _outputs;
+        string _tracePath;
         Observer _observer;
     };
 }

@@ -236,7 +236,7 @@ namespace Plugin {
             if (result > 0) {
                 while (result >= static_cast<int>(sizeof(input_event))) {
 
-                    ASSERT(index < (sizeof(entry) / sizeof(input_event)));
+                    ASSERT(index < static_cast<int>((sizeof(entry) / sizeof(input_event))));
 
                     // If it is a KEY and it is *NOT* a repeat, send it..
                     // Repeat gets constructed by the framework anyway.

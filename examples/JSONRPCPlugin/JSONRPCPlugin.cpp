@@ -71,7 +71,8 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         Config config;
         config.FromString(service->ConfigLine());
 
-        _rpcServer = new COMServer(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath());
+		Core::ProxyType < RPC::InvokeServerType<4, 1>  > engine (Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create());
+        _rpcServer = new COMServer(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath(), engine->InvokeHandler(), engine->AnnounceHandler());
 
         _job->Period(5);
         PluginHost::WorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), _job);

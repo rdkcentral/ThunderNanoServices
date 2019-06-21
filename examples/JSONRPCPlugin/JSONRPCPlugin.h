@@ -60,8 +60,13 @@ namespace Plugin {
             COMServer& operator=(const COMServer&) = delete;
 
         public:
-            COMServer(const Core::NodeId& source, Exchange::IPerformance* parentInterface, const string& proxyStubPath)
-                : RPC::Communicator(source, Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create(), proxyStubPath)
+            COMServer(
+				const Core::NodeId& source, 
+				Exchange::IPerformance* parentInterface, 
+				const string& proxyStubPath, 
+				const Core::ProxyType<Core::IPCServerType<RPC::InvokeMessage> >& invoke,
+                const Core::ProxyType<Core::IPCServerType<RPC::AnnounceMessage> >& announcement)
+                : RPC::Communicator(source, proxyStubPath, invoke, announcement)
                 , _parentInterface(parentInterface)
             {
                 Open(Core::infinite);

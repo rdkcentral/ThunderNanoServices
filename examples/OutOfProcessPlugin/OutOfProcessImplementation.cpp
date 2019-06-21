@@ -282,7 +282,7 @@ namespace Plugin {
             std::list<PluginHost::IStateControl::INotification*>::iterator index(_notificationClients.begin());
 
             while (index != _notificationClients.end()) {
-                TRACE_L1("State change from OutofPorcessTest 0x%X", state);
+                TRACE_L1("State change from OutofProcessTest 0x%X", state);
                 (*index)->StateChange(state);
                 index++;
             }
@@ -296,7 +296,7 @@ namespace Plugin {
             std::list<Exchange::IBrowser::INotification*>::iterator index(_browserClients.begin());
 
             while (index != _browserClients.end()) {
-                TRACE_L1("State change from OutofPorcessTest 0x%X", __LINE__);
+                TRACE_L1("State change from OutofProcessTest 0x%X", __LINE__);
                 (*index)->Hidden(hidden);
                 index++;
             }

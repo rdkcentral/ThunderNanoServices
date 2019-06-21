@@ -270,13 +270,11 @@ namespace Plugin {
         return result;
     }
 
-    void Compositor::Attached(Exchange::IComposition::IClient* client)
+    void Compositor::Attached(const string& name, Exchange::IComposition::IClient* client)
     {
         ASSERT(client != nullptr);
 
         if (client != nullptr) {
-            string name(client->Name());
-
             _adminLock.Lock();
             std::map<string, Exchange::IComposition::IClient*>::iterator it = _clients.find(name);
 
@@ -295,30 +293,21 @@ namespace Plugin {
         }
     }
 
-    void Compositor::Detached(Exchange::IComposition::IClient* client)
+    void Compositor::Detached(const string& name)
     {
         // note do not release by looking up the name, client might live in another process and the name call might fail if the connection is gone
-        ASSERT(client != nullptr);
-
         TRACE(Trace::Information, (_T("Client detached starting")));
         //        Exchange::IComposition::IClient* removedclient;
 
         _adminLock.Lock();
-        auto it = _clients.begin();
-        while (it != _clients.end()) {
-            if (it->second == client) {
-                //                removedclient = it->second;
-                TRACE(Trace::Information, (_T("Client %s detached"), it->first));
-                _clients.erase(it);
-                break;
-            }
-            ++it;
+        auto it = _clients.find(name);
+        if (it != _clients.end()) {
+            TRACE(Trace::Information, (_T("Client %s detached"), it->first.c_str()));
+            _clients.erase(it);
+
+            // TODO: Unreference the client but seems to lead to a dedlock, needs further investigation!!!
         }
         _adminLock.Unlock();
-
-        //        if( removedclient != nullptr ) {
-        //            removedclient->Release();
-        //        }
 
         TRACE(Trace::Information, (_T("Client detached completed")));
     }

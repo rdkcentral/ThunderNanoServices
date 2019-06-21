@@ -56,7 +56,6 @@ namespace Plugin {
             : _skipURL(0)
             , _service(nullptr)
             , _subSystem(nullptr)
-            , _idProvider(nullptr)
             , _systemId()
             , _deviceId()
         {
@@ -99,41 +98,10 @@ namespace Plugin {
         void SocketPortInfo(JsonData::DeviceInfo::SocketinfoData& socketPortInfo) const;
         string GetDeviceId() const;
 
-        class IdentityProvider : public PluginHost::ISubSystem::IIdentifier {
-        public:
-            IdentityProvider();
-            virtual ~IdentityProvider(){
-                if (_identifier != nullptr) {
-                    delete (_identifier);
-                }
-            };
-
-            IdentityProvider(const IdentityProvider&) = delete;
-            IdentityProvider& operator=(const IdentityProvider&) = delete;
-
-            BEGIN_INTERFACE_MAP(IdentityProvider)
-                INTERFACE_ENTRY(PluginHost::ISubSystem::IIdentifier)
-            END_INTERFACE_MAP
-
-            virtual uint8_t Identifier(const uint8_t length, uint8_t buffer[]) const override{
-                uint8_t result = 0;
-
-                if (_identifier != nullptr) {
-                    result = _identifier[0];
-                    ::memcpy(buffer, &(_identifier[1]), (result > length ? length : result));
-                }
-
-                return (result);
-            }
-        private:
-            uint8_t* _identifier;
-        };
-
     private:
         uint8_t _skipURL;
         PluginHost::IShell* _service;
         PluginHost::ISubSystem* _subSystem;
-        IdentityProvider* _idProvider;
         string _systemId;
         mutable string _deviceId;
     };

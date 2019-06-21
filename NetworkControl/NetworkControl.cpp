@@ -628,7 +628,7 @@ namespace Plugin
 
     void NetworkControl::RefreshDNS()
     {
-        Core::DataElementFile file(_dnsFile, Core::DataElementFile::SHAREABLE | Core::DataElementFile::READABLE | Core::DataElementFile::WRITABLE);
+        Core::DataElementFile file(_dnsFile, Core::File::SHAREABLE|Core::File::USER_READ|Core::File::USER_WRITE|Core::File::USER_EXECUTE|Core::File::GROUP_READ|Core::File::GROUP_WRITE);
 
         if (file.IsValid() == false) {
             SYSLOG(Logging::Startup, (_T("DNS functionality could NOT be updated [%s]"), _dnsFile.c_str()));

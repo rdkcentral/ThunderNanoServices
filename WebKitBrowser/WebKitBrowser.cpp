@@ -5,7 +5,7 @@ namespace WPEFramework {
 namespace WebKitBrowser {
 
     // An implementation file needs to implement this method to return an operational browser, wherever that would be :-)
-    extern Exchange::IMemory* MemoryObserver(const uint32_t pid);
+    extern Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection);
 }
 
 namespace Plugin {
@@ -44,9 +44,12 @@ namespace Plugin {
             if (stateControl == nullptr) {
                 _browser->Release();
                 _browser = nullptr;
+
+                stateControl->Release();
+
             } else {
                 _browser->Register(&_notification);
-                _memory = WPEFramework::WebKitBrowser::MemoryObserver(_connectionId);
+                _memory = WPEFramework::WebKitBrowser::MemoryObserver(_service->RemoteConnection(_connectionId));
 
                 ASSERT(_memory != nullptr);
 

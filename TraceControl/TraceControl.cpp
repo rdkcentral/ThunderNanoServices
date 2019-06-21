@@ -19,16 +19,17 @@ namespace Plugin {
     /* static */ TraceControl::Observer::Source::LocalIterator TraceControl::Observer::Source::_localIterator;
     static Core::ProxyPoolType<Web::JSONBodyType<TraceControl::Data>> jsonBodyDataFactory(4);
 
-    /* static */ string TraceControl::Observer::Source::SourceName(RPC::IRemoteConnection* connection)
+    /* static */ string TraceControl::Observer::Source::SourceName(const string& prefix, RPC::IRemoteConnection* connection)
     {
         string pathName;
-        Core::SystemInfo::GetEnvironment(TRACE_CYCLIC_BUFFER_ENVIRONMENT, pathName);
-        pathName = Core::Directory::Normalize(pathName) + TRACE_CYCLIC_BUFFER_PREFIX + '.';
+        pathName = Core::Directory::Normalize(prefix) + Trace::CyclicBufferName + '.';
 
         if (connection == nullptr) {
             pathName += '0';
-        } else {
+        } else if (connection->Parent() == 0) {
             pathName += Core::NumberType<uint32_t>(connection->Id()).Text();
+        } else {
+            pathName += Core::NumberType<uint32_t>(connection->Parent()).Text() + '.' + Core::NumberType<uint32_t>(connection->RemoteId()).Text();
         }
 
         return (pathName);
@@ -41,6 +42,13 @@ namespace Plugin {
 
         _service = service;
         _config.FromString(_service->ConfigLine());
+        _tracePath = service->VolatilePath();
+       
+        size_t pos = service->Callsign().length(); 
+        if ( (pos = _tracePath.find_last_of('/', (_tracePath.length() >= pos ? _tracePath.length() - pos : string::npos))) != string::npos ) 
+        {
+            _tracePath = _tracePath.substr(0, pos);
+        }
 
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
 
@@ -59,7 +67,7 @@ namespace Plugin {
         _service->Register(&_observer);
 
         // Start observing..
-        _observer.Run();
+        _observer.Start();
 
         // On succes return a name as a Callsign to be used in the URL, after the "service"prefix
         return (_T(""));
@@ -72,7 +80,7 @@ namespace Plugin {
         _service->Unregister(&_observer);
 
         // Stop observing..
-        _observer.Pause();
+        _observer.Stop();
 
         while (_outputs.size() != 0) {
             delete _outputs.front();

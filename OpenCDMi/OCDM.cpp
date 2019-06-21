@@ -1,14 +1,12 @@
 #include "OCDM.h"
+#include <ocdm/open_cdm.h>
 #include <interfaces/IDRM.h>
-
-// TODO: figure out how to force linking of libocdm.so
-void ForceLinkingOfOpenCDM();
 
 namespace WPEFramework {
 
 namespace OCDM {
 
-    Exchange::IMemory* MemoryObserver(const uint32_t PID)
+    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
         class MemoryObserverImpl : public Exchange::IMemory {
         private:
@@ -17,8 +15,8 @@ namespace OCDM {
             MemoryObserverImpl& operator=(const MemoryObserverImpl&);
 
         public:
-            MemoryObserverImpl(const uint32_t id)
-                : _main(id == 0 ? Core::ProcessInfo().Id() : id)
+            MemoryObserverImpl(const RPC::IRemoteConnection* connection)
+                : _main(connection  == 0 ? Core::ProcessInfo().Id() : connection->RemoteId())
             {
             }
             ~MemoryObserverImpl()
@@ -65,7 +63,13 @@ namespace OCDM {
             bool _observable;
         };
 
-        return (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(PID));
+        Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
+
+        if (connection != nullptr) {
+            connection->Release();
+        }
+
+        return (result);
     }
 }
 
@@ -78,9 +82,10 @@ namespace Plugin {
 
     /* virtual */ const string OCDM::Initialize(PluginHost::IShell* service)
     {
+		#ifdef __WIN32__
         ForceLinkingOfOpenCDM();
+		#endif
 
-        Config config;
         string message;
 
         ASSERT(_service == nullptr);
@@ -90,7 +95,6 @@ namespace Plugin {
         _connectionId = 0;
         _service = service;
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
-        config.FromString(_service->ConfigLine());
 
         // Register the Process::Notification stuff. The Remote process might die before we get a
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
@@ -105,7 +109,7 @@ namespace Plugin {
         } else {
             _opencdmi->Configure(_service);
 
-            _memory = WPEFramework::OCDM::MemoryObserver(_connectionId);
+            _memory = WPEFramework::OCDM::MemoryObserver(_service->RemoteConnection(_connectionId));
 
             ASSERT(_memory != nullptr);
         }
@@ -172,7 +176,7 @@ namespace Plugin {
         TRACE(Trace::Information, (string(_T("Received OCDM request"))));
 
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
-        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
+        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length() - _skipURL)), false, '/');
 
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported GET request.");

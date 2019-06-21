@@ -48,26 +48,6 @@ namespace Plugin {
             OCDM& _parent;
         };
 
-        class Config : public Core::JSON::Container {
-        private:
-            Config(const Config&) = delete;
-            Config& operator=(const Config&) = delete;
-
-        public:
-            Config()
-                : Core::JSON::Container()
-                , OutOfProcess(true)
-            {
-                Add(_T("outofprocess"), &OutOfProcess);
-            }
-            ~Config()
-            {
-            }
-
-        public:
-            Core::JSON::Boolean OutOfProcess;
-        };
-
     public:
         class Data : public Core::JSON::Container {
         private:
@@ -121,7 +101,7 @@ namespace Plugin {
                     string entry;
                     while (entries->Next(entry) == true) {
                         TRACE_L1("Designator: %s", entry.c_str());
-                        Designators.Add(Core::JSON::String(entry));
+                        Designators.Add() = entry;
                     }
                 }
             };

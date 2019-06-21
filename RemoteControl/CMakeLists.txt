@@ -12,7 +12,7 @@ find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(NEXUS QUIET)
 find_package(NXCLIENT QUIET)
 
-add_library(${MODULE_NAME} 
+add_library(${MODULE_NAME} SHARED
     Module.cpp 
     RemoteControl.cpp 
     RemoteAdministrator.cpp

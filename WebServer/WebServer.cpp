@@ -5,7 +5,7 @@ namespace WPEFramework {
 namespace WebServer {
 
     // An implementation file needs to implement this method to return an operational webserver, wherever that would be :-)
-    extern Exchange::IMemory* MemoryObserver(const uint32_t pid);
+    extern Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection);
 }
 
 namespace Plugin {
@@ -32,29 +32,30 @@ namespace Plugin {
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
         _service->Register(&_notification);
 
-        _server = _service->Root<Exchange::IWebServer>(_connectionId, Core::infinite, _T("WebServerImplementation"));
+        _server = _service->Root<Exchange::IWebServer>(_connectionId, 2000, _T("WebServerImplementation"));
 
         if (_server != nullptr) {
-
             PluginHost::IStateControl* stateControl(_server->QueryInterface<PluginHost::IStateControl>());
 
-            // Potentially the WebServer implementation could crashes before it reaches this point, than there is
+            // We see that sometimes the implementation crashes before it reaches this point, than there is
             // no StateControl. Cope with this situation.
             if (stateControl == nullptr) {
-
                 _server->Release();
                 _server = nullptr;
+
+                stateControl->Release();
+
             } else {
                 stateControl->Configure(_service);
                 stateControl->Release();
 
-                _memory = WPEFramework::WebServer::MemoryObserver(_connectionId);
+                _memory = WPEFramework::WebServer::MemoryObserver(_service->RemoteConnection(_connectionId));
 
                 ASSERT(_memory != nullptr);
 
                 _memory->Observe(true);
 
-				PluginHost::ISubSystem* subSystem = service->SubSystems();
+                PluginHost::ISubSystem* subSystem = service->SubSystems();
 
                 if (subSystem != nullptr) {
                     if (subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
