@@ -241,8 +241,17 @@ namespace Plugin {
                     entry = &(*index);
                 }
             } else if (_keyIds.size() > 0) {
-                // Just update the first key
-                entry = &(*(_keyIds.begin()));
+               // Just update the first Playready key since
+               // Widevine OCDM will call keyupdate() with valid keyids.
+               std::list<KeyId>::iterator index(_keyIds.begin());
+
+               while (index != _keyIds.end()) {
+                   if (index->Systems() & PLAYREADY) {
+                       entry = &(*index);
+                       break;
+                   }
+                   index++;
+               }
             }
 
             if (entry != nullptr) {
