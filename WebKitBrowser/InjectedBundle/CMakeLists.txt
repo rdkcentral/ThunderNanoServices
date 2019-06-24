@@ -11,6 +11,7 @@ add_library(${MODULE_NAME} SHARED
     NotifyWPEFramework.cpp
     Milestone.cpp
     ClassDefinition.cpp
+    HawaiiMessage.cpp
 )
 
 set_target_properties(${MODULE_NAME} PROPERTIES
