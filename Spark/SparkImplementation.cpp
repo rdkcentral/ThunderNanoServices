@@ -212,7 +212,7 @@ namespace Plugin {
                     }
                 }
                 Core::SystemInfo::SetEnvironment(_T("NODE_PATH"), service->DataPath());
-                Core::SystemInfo::SetEnvironment(_T("PXSCENE_PATH"), service->DataPath());
+                Core::SystemInfo::SetEnvironment(_T("SPARK_PATH"), service->DataPath());
                 Core::SystemInfo::SetEnvironment(_T("RT_EGL_PROVIDER"), config.EGLProvider.Value());
 
                 if (config.ClientIdentifier.IsSet() == true) {
