@@ -1,8 +1,6 @@
 #include "JavaScriptFunctionType.h"
 #include "Utils.h"
 
-#include <iostream>
-
 namespace WPEFramework {
 namespace JavaScript {
 namespace Amazon {
