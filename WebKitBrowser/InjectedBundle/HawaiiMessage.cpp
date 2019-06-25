@@ -1,4 +1,4 @@
-#include "HawaiiMessage.h"
+#include "JavaScriptFunctionType.h"
 #include "Utils.h"
 
 #include <iostream>
@@ -9,149 +9,149 @@ namespace Amazon {
 
     static char amazonLibrary[] = _T("libamazon_player.so");
 
-    JSContextRef registerMessageListener::jsContext = nullptr;
-    JSObjectRef registerMessageListener::jsListener = nullptr;
-
-    class Loader {
+    class AmazonPlayer {
     private:
-        Loader()
-            : library(amazonLibrary)
-        {
+        typedef void ( *MessageListenerType )( const std::string& msg );
+        typedef bool ( *RegisterMessageListenerType )( MessageListenerType inMessageListener );
+        typedef std::string ( *SendMessageType )( const std::string& );
 
+        static void ListenerCallback (const std::string& msg)
+        {
+            AmazonPlayer& instance(AmazonPlayer::Instance());
+
+            if (instance._jsContext) {
+                //std::cerr << "MESSAGE: " << msg << std::endl;
+
+                JSValueRef passedArgs;
+
+                JSStringRef message = JSStringCreateWithUTF8CString(msg.c_str());
+                passedArgs = JSValueMakeString(instance._jsContext, message);
+
+                JSObjectRef globalObject = JSContextGetGlobalObject(instance._jsContext);
+                JSObjectCallAsFunction(instance._jsContext, instance._jsListener, globalObject, 1, &passedArgs, NULL);
+                JSStringRelease(message);
+            }
+        }
+
+        AmazonPlayer()
+            : library(amazonLibrary)
+            , _registerMessageListener(nullptr)
+            , _sendMessage(nullptr)
+            , _jsContext()
+            , _jsListener()
+        {
             if (library.IsLoaded() == true) {
-                std::cerr << "Library loaded: " << amazonLibrary << std::endl;
-            } else {
-                std::cerr << "FAILED Library loading: %s" << amazonLibrary << std::endl;
+                _registerMessageListener = reinterpret_cast<RegisterMessageListenerType>(library.LoadFunction(_T("registerMessageListener")));
+                _sendMessage = reinterpret_cast<SendMessageType >(library.LoadFunction(_T("sendMessage")));
+            } 
+
+            if ((_registerMessageListener == nullptr) || (_sendMessage == nullptr)) {
+                TRACE(Trace::Fatal, (_T("FAILED Library loading: %s"), amazonLibrary));
+            }
+        }
+ 
+    public:
+        AmazonPlayer(const AmazonPlayer&) = delete;
+        AmazonPlayer& operator= (const AmazonPlayer&) = delete;
+
+        static AmazonPlayer& Instance() {
+            static AmazonPlayer _singleton;
+            return (_singleton);
+        }
+
+       ~AmazonPlayer() 
+        {
+            if (_jsListener != nullptr) {
+                JSValueUnprotect(_jsContext, _jsListener);
             }
         }
 
     public:
-        typedef void (*MessageListenerType)( const std::string& msg );
-        typedef bool ( *RegisterMessageListenerType )( MessageListenerType inMessageListener );
-        typedef std::string ( *SendMessageType )( const std::string& );
+        void RegisterMessageListener(JSContextRef& context, JSObjectRef& listener) {
+            if ( (_jsListener == nullptr) && (_registerMessageListener != nullptr))  {
+                assert (_jsContext == nullptr);
 
-        static Loader& Instance() {
-            static Loader singleton;
-            return (singleton);
-        }
-
-        RegisterMessageListenerType RegisterMessageListener() {
-            
-            if (!registerMessageListenerFunction) {
-                registerMessageListenerFunction = reinterpret_cast<RegisterMessageListenerType>(library.LoadFunction(_T("registerMessageListener")));
-                if (registerMessageListenerFunction == nullptr) {
-                    std::cerr << "Failed read symbol registerMessageListener" << std::endl;
-                }
+                _jsListener = listener;
+                JSValueProtect(context, _jsListener);
+                _jsContext  = JSContextGetGlobalContext(context);
+                _registerMessageListener(ListenerCallback);
             }
-            return (registerMessageListenerFunction);
         }
-
-        SendMessageType SendMessage() {
-            
-            if (!sendMessageFunction) {
-                sendMessageFunction = reinterpret_cast<SendMessageType >(library.LoadFunction(_T("sendMessage")));
-                if (sendMessageFunction == nullptr) {
-                    std::cerr << "Failed read symbol sendMessage" << std::endl;
-                }
+        void SendMessage(const string& message) {
+            if (_sendMessage != nullptr) {
+                _sendMessage(message);
             }
-            return (sendMessageFunction);
         }
 
     private:
         Core::Library library;
-        RegisterMessageListenerType registerMessageListenerFunction;
-        SendMessageType sendMessageFunction;
+        RegisterMessageListenerType _registerMessageListener;
+        SendMessageType _sendMessage;
+        JSContextRef _jsContext;
+        JSObjectRef _jsListener;
     };
 
-    registerMessageListener::registerMessageListener()
-    {
-    }
+    class RegisterMessageListener {
+    public:
+        RegisterMessageListener() = default;
+        ~RegisterMessageListener() = default;
 
-    registerMessageListener::~registerMessageListener()
-    {
-         JSValueUnprotect(jsContext, jsListener);
-        jsContext = nullptr;
-    }
-
-    /*static*/ void registerMessageListener::listenerCallback (const std::string& msg)
-    {
-        if (jsContext) {
-            //std::cerr << "MESSAGE: " << msg << std::endl;
-
-            JSValueRef passedArgs;
-
-            JSStringRef message = JSStringCreateWithUTF8CString(msg.c_str());
-            passedArgs = JSValueMakeString(jsContext, message);
-
-            JSObjectRef globalObject = JSContextGetGlobalObject(jsContext);
-            JSObjectCallAsFunction(jsContext, jsListener, globalObject, 1, &passedArgs, NULL);
-            JSStringRelease(message);
-        }
-    }
-
-    JSValueRef registerMessageListener::HandleMessage(JSContextRef context, JSObjectRef,
-                                        JSObjectRef, size_t argumentCount, const JSValueRef arguments[], JSValueRef*)
-    {
-        const int acceptedArgCount = 1;
-
-        if (argumentCount != acceptedArgCount) {
-            std::cerr << "registerMessageListener expects one argument" << std::endl;
-            return JSValueMakeNull(context);
-        }
-
-        jsListener = JSValueToObject(context, arguments[0], NULL);
+        JSValueRef HandleMessage(JSContextRef context, JSObjectRef,
+                                 JSObjectRef, size_t argumentCount, const JSValueRef arguments[], JSValueRef*)
+        {
+            if (argumentCount != 1) {
+                TRACE(Trace::Information, (_T("Hawaii::RegisterMessageListener expects 1 argument")));
+            }
+            else {
+                JSObjectRef jsListener = JSValueToObject(context, arguments[0], nullptr);
         
-        if (!JSObjectIsFunction(context, jsListener)) {
-            std::cerr << "registerMessageListener expects one function as argument" << std::endl;
+                if (!JSObjectIsFunction(context, jsListener)) {
+                    TRACE(Trace::Information, (_T("Hawaii::RegisterMessageListener expects a funtion argument")));
+                }
+                else {
+                    AmazonPlayer::Instance().RegisterMessageListener(context, jsListener);
+                }
+            }
+
             return JSValueMakeNull(context);
         }
-        JSValueProtect(context, jsListener);
-        jsContext = JSContextGetGlobalContext(context);
-        
-        Loader loader = Loader::Instance();
-        Loader::RegisterMessageListenerType registerFunction = reinterpret_cast<Loader::RegisterMessageListenerType>(loader.RegisterMessageListener());
-        registerFunction (reinterpret_cast<Loader::MessageListenerType>(registerMessageListener::listenerCallback));
+    };
 
-        return JSValueMakeNull(context);
-    }
+    class SendMessage {
+    public:
+        SendMessage() = default;
+        ~SendMessage() = default;
 
-    sendMessage::sendMessage()
-    {
-    }
+        JSValueRef HandleMessage(JSContextRef context, JSObjectRef,
+                                 JSObjectRef, size_t argumentCount, const JSValueRef arguments[], JSValueRef*)
+        {
+            if (argumentCount != 1) {
+                TRACE(Trace::Information, (_T("Hawaii::SendMessage expects one argument")));
+                std::cerr << "sendMessage expects one argument" << std::endl;
+            }
+            else if (!JSValueIsString(context, arguments[0])) {
+                TRACE(Trace::Information, (_T("Hawaii::SendMessage expects a string argument")));
+            }
+            else {
+                JSStringRef jsString = JSValueToStringCopy(context, arguments[0], nullptr);
+                size_t bufferSize = JSStringGetLength(jsString) + 1;
+                char stringBuffer[bufferSize];
 
-    JSValueRef sendMessage::HandleMessage(JSContextRef context, JSObjectRef,
-                                                      JSObjectRef, size_t argumentCount, const JSValueRef arguments[], JSValueRef*)
-    {
+                JSStringGetUTF8CString(jsString, stringBuffer, bufferSize);
 
-        if (argumentCount != 1) {
-            std::cerr << "sendMessage expects one argument" << std::endl;
+                TRACE(Trace::Information, (_T("Hawaii::SendMessage(%s)"), stringBuffer));
+
+                AmazonPlayer::Instance().SendMessage(stringBuffer);
+
+                JSStringRelease(jsString);
+            }
+
             return JSValueMakeNull(context);
         }
+    };
 
-        if (!JSValueIsString(context, arguments[0])) {
-            std::cerr << "sendMessage only accepts string arguments" << std::endl;
-            return JSValueMakeNull(context);
-        }
-
-        JSStringRef jsString = JSValueToStringCopy(context, arguments[0], nullptr);
-        size_t bufferSize = JSStringGetLength(jsString) + 1;
-        char stringBuffer[bufferSize];
-
-        JSStringGetUTF8CString(jsString, stringBuffer, bufferSize);
-
-        //std::cerr << "sendMessage:: " << std::string(stringBuffer) << std::endl;
-
-        Loader loader = Loader::Instance();
-        Loader::SendMessageType sendFunction = reinterpret_cast<Loader::SendMessageType >(loader.SendMessage());
-        sendFunction (std::string(stringBuffer));
-
-        JSStringRelease(jsString);
-
-        return JSValueMakeNull(context);
-    }
-
-    static JavaScriptFunctionType<registerMessageListener> _registerInstance(_T("hawaii"));
-    static JavaScriptFunctionType<sendMessage> _sendInstance(_T("hawaii"));
+    static JavaScriptFunctionType<RegisterMessageListener> _registerInstance(_T("hawaii"));
+    static JavaScriptFunctionType<SendMessage> _sendInstance(_T("hawaii"));
 
 } // namespace Amazon
 } // namespace JavaScript
