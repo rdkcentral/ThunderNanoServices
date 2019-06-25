@@ -21,6 +21,7 @@ namespace Plugin {
         , _client(Core::Service<NTPClient>::Create<Exchange::ITimeSync>())
         , _activity(Core::ProxyType<PeriodicSync>::Create(_client))
         , _sink(this)
+        , _service(nullptr)
     {
         RegisterAll();
     }
