@@ -1260,7 +1260,7 @@ namespace Plugin {
                         }
                     }
 
-                    //now handle the configiguration
+                    //now handle the configuration
                     const string configuration(index.Current().Configuration.Value());
                     if (configuration.empty() == false && factory != factories.end()) {
 
