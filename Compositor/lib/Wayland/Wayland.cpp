@@ -315,7 +315,7 @@ namespace Plugin {
             while (index != _clients.end()) {
 
                 if ((*index)->IsActive() == true) {
-                    notification->Attached(index->Name(), *index);
+                    notification->Attached((*index)->Name(), *index);
                 }
                 index++;
             }
@@ -476,7 +476,7 @@ namespace Plugin {
                     std::list<Exchange::IComposition::INotification*>::iterator index(_compositionClients.begin());
 
                     while (index != _compositionClients.end()) {
-                        (*index)->Detached(entry);
+                        (*index)->Detached(entry->Name());
                         index++;
                     }
                 }
