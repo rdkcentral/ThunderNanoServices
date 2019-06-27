@@ -3,69 +3,7 @@
 #include "Streamer.h"
 #include "Module.h"
 
-/*
-    // Copy the code below to Streamer class definition
-    // Note: The Streamer class must inherit from PluginHost::JSONRPC
-
-    private:
-        void RegisterAll();
-        void UnregisterAll();
-        uint32_t endpoint_status(const Core::JSON::DecUInt8& params, JsonData::Streamer::StatusResultData& response);
-        uint32_t endpoint_create(const JsonData::Streamer::CreateParamsData& params, Core::JSON::DecUInt8& response);
-        uint32_t endpoint_destroy(const Core::JSON::DecUInt8& params);
-        uint32_t endpoint_load(const JsonData::Streamer::LoadParamsData& params);
-        uint32_t endpoint_attach(const Core::JSON::DecUInt8& params);
-        uint32_t endpoint_detach(const Core::JSON::DecUInt8& params);
-        uint32_t get_speed(const string& index, Core::JSON::DecSInt32& response) const;
-        uint32_t set_speed(const string& index, const Core::JSON::DecSInt32& param);
-        uint32_t get_position(const string& index, Core::JSON::DecUInt64& response) const;
-        uint32_t set_position(const string& index, const Core::JSON::DecUInt64& param);
-        uint32_t get_window(const string& index, JsonData::Streamer::WindowData& response) const;
-        uint32_t set_window(const string& index, const JsonData::Streamer::WindowData& param);
-        uint32_t get_speeds(const string& index, Core::JSON::ArrayType<Core::JSON::DecSInt32>& response) const;
-        uint32_t get_streams(Core::JSON::ArrayType<Core::JSON::DecUInt32>& response) const;
-        uint32_t get_type(const string& index, JsonData::Streamer::TypeData& response) const;
-        uint32_t get_drm(const string& index, JsonData::Streamer::DrmInfo& response) const;
-        uint32_t get_state(const string& index, JsonData::Streamer::StateInfo& response) const;
-        void event_statechange(const string& id, const JsonData::Streamer::StateType& state);
-        void event_drmchange(const string& id, const JsonData::Streamer::DrmType& drm);
-        void event_timeupdate(const string& id, const uint64_t& time);
-*/
-
 namespace WPEFramework {
-
-/*
-    // Copy the code below to interfaces/json/Enumerations.cpp
-
-    ENUM_CONVERSION_BEGIN(JsonData::Streamer::TypeType)
-        { JsonData::Streamer::TypeType::STUBBED, _TXT("stubbed") },
-        { JsonData::Streamer::TypeType::DVB, _TXT("dvb") },
-        { JsonData::Streamer::TypeType::ATSC, _TXT("atsc") },
-        { JsonData::Streamer::TypeType::VOD, _TXT("vod") },
-    ENUM_CONVERSION_END(JsonData::Streamer::TypeType);
-
-    ENUM_CONVERSION_BEGIN(JsonData::Streamer::StateType)
-        { JsonData::Streamer::StateType::IDLE, _TXT("idle") },
-        { JsonData::Streamer::StateType::LOADING, _TXT("loading") },
-        { JsonData::Streamer::StateType::PREPARED, _TXT("prepared") },
-        { JsonData::Streamer::StateType::PAUSED, _TXT("paused") },
-        { JsonData::Streamer::StateType::PLAYING, _TXT("playing") },
-        { JsonData::Streamer::StateType::ERROR, _TXT("error") },
-    ENUM_CONVERSION_END(JsonData::Streamer::StateType);
-
-    ENUM_CONVERSION_BEGIN(JsonData::Streamer::DrmType)
-        { JsonData::Streamer::DrmType::UNKNOWN, _TXT("unknown") },
-        { JsonData::Streamer::DrmType::CLEARKEY, _TXT("clearkey") },
-        { JsonData::Streamer::DrmType::PLAYREADY, _TXT("playready") },
-        { JsonData::Streamer::DrmType::WIDEVINE, _TXT("widevine") },
-    ENUM_CONVERSION_END(JsonData::Streamer::DrmType);
-
-    // Copy the code below to interfaces/definitions.h
-
-    ENUM_CONVERSION_HANDLER(JsonData::Streamer::TypeType);
-    ENUM_CONVERSION_HANDLER(JsonData::Streamer::StateType);
-    ENUM_CONVERSION_HANDLER(JsonData::Streamer::DrmType);
-*/
 
 namespace Plugin {
 
@@ -124,7 +62,7 @@ namespace Plugin {
 
         Streams::iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
-            response.Type = static_cast<TypeType>(stream->second->Type());
+            response.Type = static_cast<StreamType>(stream->second->Type());
             response.Drm = static_cast<DrmType>(stream->second->DRM());
             response.State = static_cast<StateType>(stream->second->State());
         } else {
@@ -142,9 +80,9 @@ namespace Plugin {
     uint32_t Streamer::endpoint_create(const CreateParamsData& params, Core::JSON::DecUInt8& response)
     {
         uint32_t result = Core::ERROR_NONE;
-        const TypeType& streamType = params.Type.Value();
+        const StreamType& streamType = params.Type.Value();
 
-        Core::EnumerateType<JsonData::Streamer::TypeType> type(streamType);
+        Core::EnumerateType<JsonData::Streamer::StreamType> type(streamType);
         if (type.IsSet()) {
 
             Exchange::IStream* stream = _player->CreateStream(static_cast<const WPEFramework::Exchange::IStream::streamtype>(type.Value()));
@@ -515,7 +453,7 @@ namespace Plugin {
 
         Streams::const_iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
-            response.Stream = static_cast<TypeType>(stream->second->Type());
+            response.Stream = static_cast<StreamType>(stream->second->Type());
         } else {
             result = Core::ERROR_UNKNOWN_KEY;
         }
