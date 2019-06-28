@@ -18,49 +18,76 @@ namespace Implementation {
             AampEventListener& operator=(const AampEventListener&) = delete;
 
         public:
-           AampEventListener(PlayerPlatform* player)
-           : _player(player)
-           {
-           }
-           void Event(const AAMPEvent & e)
-           {
-               switch (e.type)
-               {
-               case AAMP_EVENT_TUNED:
-                   _player->StateChange(Exchange::IStream::Prepared);
-                   TRACE(Trace::Information, (_T("AAMP_EVENT_TUNED")));
-                   break;
-               case AAMP_EVENT_TUNE_FAILED:
-                   _player->StateChange(Exchange::IStream::Error);
-                   _player->Stop();
-                   TRACE(Trace::Information, (_T("AAMP_EVENT_TUNE_FAILED")));
-                   break;
-               case AAMP_EVENT_SPEED_CHANGED:
-                   TRACE(Trace::Information, (_T("AAMP_EVENT_SPEED_CHANGED")));
-                   break;
-               case AAMP_EVENT_DRM_METADATA:
-                   TRACE(Trace::Information, (_T("AAMP_EVENT_DRM_METADATA")));
-                   break;
-               case AAMP_EVENT_EOS:
-                   _player->Position(0);
-                   _player->Speed(0);
-                   TRACE(Trace::Information, (_T("AAMP_EVENT_EOS")));
-                   break;
-               case AAMP_EVENT_PLAYLIST_INDEXED:
-                   TRACE(Trace::Information, (_T("AAMP_EVENT_PLAYLIST_INDEXED")));
-                   break;
-               case AAMP_EVENT_PROGRESS:
-                   break;
-               case AAMP_EVENT_CC_HANDLE_RECEIVED:
-                   TRACE(Trace::Information, (_T("AAMP_EVENT_CC_HANDLE_RECEIVED")));
-                   break;
-               case AAMP_EVENT_BITRATE_CHANGED:
-                   TRACE(Trace::Information, (_T("AAMP_EVENT_BITRATE_CHANGED")));
-                   break;
-               default:
-                   break;
-              }
-           }
+            AampEventListener(PlayerPlatform* player)
+            : _player(player)
+            {
+                ASSERT(_player != nullptr);
+            }
+            void Event(const AAMPEvent& event)
+            {
+                ASSERT(_player != nullptr);
+                switch (event.type)
+                {
+                case AAMP_EVENT_STATE_CHANGED:
+                    TRACE(Trace::Information, (_T("AAMP_EVENT_STATE_CHANGED")));
+                    switch (event.data.stateChanged.state)
+                    {
+                    case eSTATE_RELEASED:
+                    case eSTATE_IDLE:
+                    case eSTATE_STOPPED:
+                    case eSTATE_COMPLETE:
+                        _player->StateChange(Exchange::IStream::Idle);
+                        break;
+                    case eSTATE_PREPARING:
+                        _player->StateChange(Exchange::IStream::Loading);
+                        break;
+                    case eSTATE_PREPARED:
+                        _player->Speed(0);
+                        _player->StateChange(Exchange::IStream::Prepared);
+                        break;
+                    case eSTATE_PAUSED:
+                        _player->StateChange(Exchange::IStream::Paused);
+                        break;
+                    case eSTATE_PLAYING:
+                        _player->StateChange(Exchange::IStream::Playing);
+                        break;
+                    case eSTATE_ERROR:
+                        _player->StateChange(Exchange::IStream::Error);
+                        break;
+                    default:
+                        break;
+                    }
+                    break;
+                case AAMP_EVENT_TUNED:
+                    TRACE(Trace::Information, (_T("AAMP_EVENT_TUNED")));
+                    break;
+                case AAMP_EVENT_TUNE_FAILED:
+                    TRACE(Trace::Information, (_T("AAMP_EVENT_TUNE_FAILED")));
+                    _player->StateChange(Exchange::IStream::Error);
+                    /* this never seems to trigger... */
+                    break;
+                case AAMP_EVENT_DRM_METADATA:
+                    TRACE(Trace::Information, (_T("AAMP_EVENT_DRM_METADATA")));
+                    break;
+                case AAMP_EVENT_EOS:
+                    TRACE(Trace::Information, (_T("AAMP_EVENT_EOS")));
+                    _player->Position(0);
+                    _player->Speed(0);
+                    break;
+                case AAMP_EVENT_PROGRESS:
+                    /* TODO: Use this for progress notifications. */
+                    break;
+                case AAMP_EVENT_SPEED_CHANGED:
+                    TRACE(Trace::Information, (_T("AAMP_EVENT_SPEED_CHANGED")));
+                    _player->UpdateSpeed(event.data.speedChanged.rate * 100);
+                    break;
+                case AAMP_EVENT_BITRATE_CHANGED:
+                    TRACE(Trace::Information, (_T("AAMP_EVENT_BITRATE_CHANGED")));
+                    break;
+                default:
+                    break;
+                }
+            }
         private:
             PlayerPlatform* _player;
         };
@@ -129,6 +156,9 @@ namespace Implementation {
 
         PlayerPlatform::~PlayerPlatform()
         {
+            ASSERT(_aampPlayer == nullptr);
+            ASSERT(_aampEventListener == nullptr);
+
             _scheduler.Quit();
             _speeds.clear();
         }
@@ -140,13 +170,15 @@ namespace Implementation {
 
             _adminLock.Lock();
             ASSERT(_state == Exchange::IStream::Error);
+            ASSERT(_aampPlayer == nullptr);
+            ASSERT(_aampEventListener == nullptr);
 
             _aampPlayer = new PlayerInstanceAAMP();
             if (_aampPlayer != nullptr) {
                 _aampEventListener = new AampEventListener(this);
                 if (_aampEventListener != nullptr) {
                     _aampPlayer->RegisterEvents(_aampEventListener);
-                    _state = Exchange::IStream::Idle;
+                    StateChange(Exchange::IStream::Idle);
                     result = Core::ERROR_NONE;
                 }
                 else {
@@ -166,6 +198,7 @@ namespace Implementation {
 
             _adminLock.Lock();
 
+            _aampPlayer->Stop();
             _aampPlayer->RegisterEvents(nullptr);
 
             delete _aampEventListener;
@@ -203,19 +236,20 @@ namespace Implementation {
             _adminLock.Unlock();
         }
 
-        uint32_t PlayerPlatform::AttachDecoder(const uint8_t index)
+        uint32_t PlayerPlatform::AttachDecoder(const uint8_t index VARIABLE_IS_NOT_USED)
         {
             InitializePlayerInstance();
 
             Run();
 
-            return 0;
+            return Core::ERROR_NONE;
         }
 
-        uint32_t PlayerPlatform::DetachDecoder(const uint8_t index)
+        uint32_t PlayerPlatform::DetachDecoder(const uint8_t index VARIABLE_IS_NOT_USED)
         {
             Terminate();
-            return 0;
+
+            return Core::ERROR_NONE;
         }
 
         void PlayerPlatform::Window(const Implementation::Rectangle& rectangle)
@@ -255,18 +289,13 @@ namespace Implementation {
                     TRACE(Trace::Information, (_T("URI type is %s"), uriType.c_str()));
 
                     _adminLock.Lock();
-                    StateChange(Exchange::IStream::Loading);
                     _speed = -1;
                     _drmType = Exchange::IStream::Unknown;
-
                     _uri = uri;
                     _aampPlayer->Tune(_uri.c_str());
-                    _aampPlayer->SetRate(0);
-
                     _adminLock.Unlock();
                 } else {
                     result = Core::ERROR_INCORRECT_URL;
-                    StateChange(Exchange::IStream::Error);
                     TRACE(Trace::Error, (_T("URI is not dash/hls")));
                 }
             } else {
@@ -320,7 +349,6 @@ namespace Implementation {
                 Block();
 
                 DeinitializePlayerInstance();
-                StateChange(Exchange::IStream::Prepared);
 
                 TRACE(Trace::Information, (string(__FUNCTION__)));
                 Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
@@ -349,28 +377,20 @@ namespace Implementation {
 
             _adminLock.Lock();
             if (speed != _speed) {
+                int rate = speed/100;
 
-                Exchange::IStream::state newState = _state;
-
-                if (speed != 0) {
+                if (rate != 0) {
                     SpeedList::iterator index =  std::find(_speeds.begin(), _speeds.end(), speed);
                     if (index != _speeds.end()) {
-                        newState = Exchange::IStream::Playing;
                         _scheduler.Run();
                     } else {
                         result = Core::ERROR_BAD_REQUEST;
                     }
-
                 } else {
-
-                    newState = Exchange::IStream::Paused;
                     _scheduler.Block();
                 }
-                _speed = speed;
 
-                _aampPlayer->SetRate((speed/100));
-
-                StateChange(newState);
+                _aampPlayer->SetRate(rate);
             }
 
             _adminLock.Unlock();

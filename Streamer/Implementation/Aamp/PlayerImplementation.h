@@ -170,6 +170,11 @@ namespace Implementation {
             uint32_t DetachDecoder(const uint8_t index) override;
             void Stop();
             void Terminate();
+            void UpdateSpeed(int speed)
+            {
+                _adminLock.Lock();
+                _speed = speed;
+                _adminLock.Unlock();            }
 
         private:
             virtual uint32_t Worker() override;
