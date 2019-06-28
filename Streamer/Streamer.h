@@ -350,12 +350,11 @@ namespace Plugin {
         // JsonRpc
         void RegisterAll();
         void UnregisterAll();
-        uint32_t endpoint_status(const Core::JSON::DecUInt8& params, JsonData::Streamer::StatusResultData& response);
         uint32_t endpoint_create(const JsonData::Streamer::CreateParamsData& params, Core::JSON::DecUInt8& response);
-        uint32_t endpoint_destroy(const Core::JSON::DecUInt8& params);
+        uint32_t endpoint_destroy(const JsonData::Streamer::IdInfo& params);
         uint32_t endpoint_load(const JsonData::Streamer::LoadParamsData& params);
-        uint32_t endpoint_attach(const Core::JSON::DecUInt8& params);
-        uint32_t endpoint_detach(const Core::JSON::DecUInt8& params);
+        uint32_t endpoint_attach(const JsonData::Streamer::IdInfo& params);
+        uint32_t endpoint_detach(const JsonData::Streamer::IdInfo& params);
         uint32_t get_speed(const string& index, Core::JSON::DecSInt32& response) const;
         uint32_t set_speed(const string& index, const Core::JSON::DecSInt32& param);
         uint32_t get_position(const string& index, Core::JSON::DecUInt64& response) const;
@@ -364,13 +363,13 @@ namespace Plugin {
         uint32_t set_window(const string& index, const JsonData::Streamer::WindowData& param);
         uint32_t get_speeds(const string& index, Core::JSON::ArrayType<Core::JSON::DecSInt32>& response) const;
         uint32_t get_streams(Core::JSON::ArrayType<Core::JSON::DecUInt32>& response) const;
-        uint32_t get_type(const string& index, JsonData::Streamer::TypeData& response) const;
-        uint32_t get_drm(const string& index, JsonData::Streamer::DrmInfo& response) const;
-        uint32_t get_state(const string& index, JsonData::Streamer::StateInfo& response) const;
+        uint32_t get_type(const string& index, Core::JSON::EnumType<JsonData::Streamer::StreamType>& response) const;
+        uint32_t get_drm(const string& index, Core::JSON::EnumType<JsonData::Streamer::DrmType>& response) const;
+        uint32_t get_state(const string& index, Core::JSON::EnumType<JsonData::Streamer::StateType>& response) const;
+        uint32_t get_metadata(const string& index, Core::JSON::String& response) const;
         void event_statechange(const string& id, const JsonData::Streamer::StateType& state);
         void event_drmchange(const string& id, const JsonData::Streamer::DrmType& drm);
         void event_timeupdate(const string& id, const uint64_t& time);
-
 
     private:
         uint32_t _skipURL;
