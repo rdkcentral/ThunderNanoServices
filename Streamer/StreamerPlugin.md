@@ -86,79 +86,12 @@ Streamer interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [status](#method.status) | Retrieves the status of a stream |
 | [create](#method.create) | Creates a stream instance |
 | [destroy](#method.destroy) | Destroys a stream instance |
 | [load](#method.load) | Loads a source into a stream |
 | [attach](#method.attach) | Attaches a decoder to the streamer |
 | [detach](#method.detach) | Detaches a decoder from the streamer |
 
-<a name="method.status"></a>
-## *status <sup>method</sup>*
-
-Retrieves the status of a stream.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | number | Stream ID |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result.type | string | Stream type (must be one of the following: *undefined*, *cable*, *handheld*, *satellite*, *terrestrial*, *dab*, *rf*, *unicast*, *multicast*, *ip*) |
-| result.state | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *paused*, *playing*, *error*) |
-| result.metadata | string | Custom metadata associated with the stream |
-| result.drm | string | DRM used (must be one of the following: *unknown*, *clearkey*, *playready*, *widevine*) |
-| result?.position | number | <sup>*(optional)*</sup> Stream position (in milliseconds) |
-| result?.window | object | <sup>*(optional)*</sup> Geometry of the window |
-| result?.window.x | number | Horizontal position of the window (in pixels) |
-| result?.window.y | number | Vertical position of the window (in pixels) |
-| result?.window.width | number | Width of the window (in pixels) |
-| result?.window.height | number | Height of the window (in pixels) |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.status", 
-    "params": 0
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": {
-        "type": "cable", 
-        "state": "playing", 
-        "metadata": "", 
-        "drm": "clearkey", 
-        "position": 60000, 
-        "window": {
-            "x": 0, 
-            "y": 0, 
-            "width": 1080, 
-            "height": 720
-        }
-    }
-}
-```
 <a name="method.create"></a>
 ## *create <sup>method</sup>*
 
@@ -182,7 +115,7 @@ Creates a stream instance.
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 30 | ```ERROR_BAD_REQUEST``` | Invalid stream type given |
-| 2 | ```ERROR_UNAVAILABLE``` | Streamer instance is not available |
+| 2 | ```ERROR_UNAVAILABLE``` | Fronted of the selected stream type is not available |
 
 ### Example
 
@@ -216,7 +149,8 @@ Destroys a stream instance.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| params | number | ID of the streamer instance to be destroyed |
+| params | object |  |
+| params.id | number | Stream ID |
 
 ### Result
 
@@ -239,7 +173,9 @@ Destroys a stream instance.
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "method": "Streamer.1.destroy", 
-    "params": 0
+    "params": {
+        "id": 0
+    }
 }
 ```
 #### Response
@@ -256,12 +192,14 @@ Destroys a stream instance.
 
 Loads a source into a stream.
 
+Also see: [s](#event.s), [t](#event.t), [a](#event.a), [t](#event.t), [e](#event.e), [c](#event.c), [h](#event.h), [a](#event.a), [n](#event.n), [g](#event.g), [e](#event.e)
+
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params?.index | number | <sup>*(optional)*</sup> ID of the streamer instance |
+| params.id | number | Stream ID |
 | params.location | string | Location of the source to load |
 
 ### Result
@@ -275,9 +213,9 @@ Loads a source into a stream.
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 30 | ```ERROR_BAD_REQUEST``` | Invalid location given |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state |
-| 2 | ```ERROR_UNAVAILABLE``` | Player instance is not available |
+| 15 | ```ERROR_INCORRECT_URL``` | Invalid location given |
+| 1 | ```ERROR_GENERAL``` | Undefined loading error |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Stream is not in a valid state |
 
 ### Example
 
@@ -289,7 +227,7 @@ Loads a source into a stream.
     "id": 1234567890, 
     "method": "Streamer.1.load", 
     "params": {
-        "index": 0, 
+        "id": 0, 
         "location": "http://example.com/sample.m3u8"
     }
 }
@@ -312,7 +250,8 @@ Attaches a decoder to the streamer.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| params | number | ID of the streamer instance to attach a decoder to |
+| params | object |  |
+| params.id | number | Stream ID |
 
 ### Result
 
@@ -326,7 +265,7 @@ Attaches a decoder to the streamer.
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
 | 12 | ```ERROR_INPROGRESS``` | Decoder already attached |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Stream not loaded |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Stream is not in a valid state |
 | 2 | ```ERROR_UNAVAILABLE``` | No free decoders available |
 
 ### Example
@@ -338,7 +277,9 @@ Attaches a decoder to the streamer.
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "method": "Streamer.1.attach", 
-    "params": 0
+    "params": {
+        "id": 0
+    }
 }
 ```
 #### Response
@@ -359,7 +300,8 @@ Detaches a decoder from the streamer.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| params | number | ID of the streamer instance to detach the decoder from |
+| params | object |  |
+| params.id | number | Stream ID |
 
 ### Result
 
@@ -372,7 +314,7 @@ Detaches a decoder from the streamer.
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Decoder not attached to the stream |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Stream is not in a valid state or decoder not attached |
 | 12 | ```ERROR_INPROGRESS``` | Decoder is in use |
 
 ### Example
@@ -384,7 +326,9 @@ Detaches a decoder from the streamer.
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "method": "Streamer.1.detach", 
-    "params": 0
+    "params": {
+        "id": 0
+    }
 }
 ```
 #### Response
@@ -413,6 +357,7 @@ Streamer interface properties:
 | [type](#property.type) <sup>RO</sup> | Type of a stream |
 | [drm](#property.drm) <sup>RO</sup> | DRM type associated with a stream |
 | [state](#property.state) <sup>RO</sup> | Current state of a stream |
+| [metadata](#property.metadata) <sup>RO</sup> | Metadata associated with the stream |
 
 <a name="property.speed"></a>
 ## *speed <sup>property</sup>*
@@ -421,13 +366,15 @@ Provides access to the playback speed.
 
 ### Description
 
-Speed in percentage, -200, -100, 0, 100, 200, 400, etc.
+Speed (in percentage)
+
+Also see: [s](#event.s), [t](#event.t), [a](#event.a), [t](#event.t), [e](#event.e), [c](#event.c), [h](#event.h), [a](#event.a), [n](#event.n), [g](#event.g), [e](#event.e)
 
 ### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | number | Speed to set; 0 - pause, 100 - normal playback forward, -100 - normal playback back, -200 - reverse at twice the speed, 50 - forward at half speed |
+| (property) | number | Speed percentage; e.g.: 0 - pause, 100 - normal playback, -100 - rewind, -200 - reverse at twice the speed, 50 - forward at half speed, etc. Must be one of the speeds supported by the player |
 
 > The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.speed@0*.
 
@@ -436,9 +383,7 @@ Speed in percentage, -200, -100, 0, 100, 200, 400, etc.
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 30 | ```ERROR_BAD_REQUEST``` | Invalid speed given |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
-| 2 | ```ERROR_UNAVAILABLE``` | Player instance is not available |
 
 ### Example
 
@@ -488,7 +433,7 @@ Provides access to the stream position.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | number | Position to set (in milliseconds) |
+| (property) | number | Position (in milliseconds) |
 
 > The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.position@0*.
 
@@ -497,7 +442,6 @@ Provides access to the stream position.
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 30 | ```ERROR_BAD_REQUEST``` | Invalid position given |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
 
 ### Example
@@ -548,12 +492,11 @@ Provides access to the stream playback window.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Stream playback window |
-| (property).window | object | Geometry of the window |
-| (property).window.x | number | Horizontal position of the window (in pixels) |
-| (property).window.y | number | Vertical position of the window (in pixels) |
-| (property).window.width | number | Width of the window (in pixels) |
-| (property).window.height | number | Height of the window (in pixels) |
+| (property) | object | Geometry of the window |
+| (property).x | number | Horizontal position of the window (in pixels) |
+| (property).y | number | Vertical position of the window (in pixels) |
+| (property).width | number | Width of the window (in pixels) |
+| (property).height | number | Height of the window (in pixels) |
 
 > The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.window@0*.
 
@@ -562,7 +505,6 @@ Provides access to the stream playback window.
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 30 | ```ERROR_BAD_REQUEST``` | Invalid window geometry given |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
 
 ### Example
@@ -583,12 +525,10 @@ Provides access to the stream playback window.
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": {
-        "window": {
-            "x": 0, 
-            "y": 0, 
-            "width": 1080, 
-            "height": 720
-        }
+        "x": 0, 
+        "y": 0, 
+        "width": 1080, 
+        "height": 720
     }
 }
 ```
@@ -600,12 +540,10 @@ Provides access to the stream playback window.
     "id": 1234567890, 
     "method": "Streamer.1.window@0", 
     "params": {
-        "window": {
-            "x": 0, 
-            "y": 0, 
-            "width": 1080, 
-            "height": 720
-        }
+        "x": 0, 
+        "y": 0, 
+        "width": 1080, 
+        "height": 720
     }
 }
 ```
@@ -629,8 +567,8 @@ Provides access to the speeds supported by the stream player.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | Supported streams in percentage, 100, 200, 400, .. |
-| (property)[#] | integer | (Speeds in percentage) |
+| (property) | array | Supported speeds (in percentage) |
+| (property)[#] | integer | (speeds in percentage) |
 
 > The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.speeds@0*.
 
@@ -639,7 +577,7 @@ Provides access to the speeds supported by the stream player.
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Decoder not attached to the stream |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
 
 ### Example
 
@@ -719,8 +657,7 @@ Provides access to the type of a stream.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Type of a stream |
-| (property).stream | string | Stream type (must be one of the following: *undefined*, *cable*, *handheld*, *satellite*, *terrestrial*, *dab*, *rf*, *unicast*, *multicast*, *ip*) |
+| (property) | string | Stream type (must be one of the following: *undefined*, *cable*, *handheld*, *satellite*, *terrestrial*, *dab*, *rf*, *unicast*, *multicast*, *ip*) |
 
 > The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.type@0*.
 
@@ -747,9 +684,7 @@ Provides access to the type of a stream.
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "result": {
-        "stream": "cable"
-    }
+    "result": "cable"
 }
 ```
 <a name="property.drm"></a>
@@ -765,8 +700,7 @@ Also see: [drmchange](#event.drmchange)
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | DRM type associated with a stream |
-| (property).drm | string | DRM used (must be one of the following: *unknown*, *clearkey*, *playready*, *widevine*) |
+| (property) | string | DRM used (must be one of the following: *unknown*, *clearkey*, *playready*, *widevine*) |
 
 > The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.drm@0*.
 
@@ -793,9 +727,7 @@ Also see: [drmchange](#event.drmchange)
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "result": {
-        "drm": "clearkey"
-    }
+    "result": "clearkey"
 }
 ```
 <a name="property.state"></a>
@@ -811,8 +743,7 @@ Also see: [statechange](#event.statechange)
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Current state of a stream |
-| (property).state | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *paused*, *playing*, *error*) |
+| (property) | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *paused*, *playing*, *error*) |
 
 > The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.state@0*.
 
@@ -839,9 +770,48 @@ Also see: [statechange](#event.statechange)
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "result": {
-        "state": "playing"
-    }
+    "result": "playing"
+}
+```
+<a name="property.metadata"></a>
+## *metadata <sup>property</sup>*
+
+Provides access to the metadata associated with the stream.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | string | Custom player-specific metadata |
+
+> The *Stream ID* shall be passed as the index to the property, e.g. *Streamer.1.metadata@0*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.metadata@0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": ""
 }
 ```
 <a name="head.Notifications"></a>
@@ -857,7 +827,7 @@ Streamer interface events:
 | :-------- | :-------- |
 | [statechange](#event.statechange) | Notifies of stream state change |
 | [drmchange](#event.drmchange) | Notifies of stream DRM system change |
-| [timeupdate](#event.timeupdate) | Event fired to indicate the position in the stream |
+| [timeupdate](#event.timeupdate) | Notifies of stream position change |
 
 <a name="event.statechange"></a>
 ## *statechange <sup>event</sup>*
@@ -912,7 +882,7 @@ Notifies of stream DRM system change.
 <a name="event.timeupdate"></a>
 ## *timeupdate <sup>event</sup>*
 
-Event fired to indicate the position in the stream. This event is fired every second to indicate that the stream has progressed by a second, and event does not fire, if the stream is in paused state
+Notifies of stream position change. This event is fired every second to indicate that the stream has progressed by a second, and event does not fire, if the stream is in paused state.
 
 ### Parameters
 
