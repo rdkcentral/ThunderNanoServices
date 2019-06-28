@@ -46,11 +46,11 @@ namespace Plugin {
             ExternalAccess(
                 const Core::NodeId& source, 
                 ::OCDM::IAccessorOCDM* parentInterface, 
-                const Core::ProxyType<RPC::ServerType<RPC::InvokeMessage> > & invoke,
-                const Core::ProxyType<RPC::ServerType<RPC::AnnounceMessage> > & announce)
-                : RPC::Communicator(source, _T(""), invoke, announce)
+                const Core::ProxyType<RPC::InvokeServer> & engine)
+                : RPC::Communicator(source, _T(""), engine)
                 , _parentInterface(parentInterface)
             {
+                engine->Announcements(Announcement());
                 Open(Core::infinite);
             }
             ~ExternalAccess()
@@ -1274,8 +1274,7 @@ namespace Plugin {
             }
 
             _entryPoint = Core::Service<AccessorOCDM>::Create<::OCDM::IAccessorOCDM>(this, config.SharePath.Value(), config.ShareSize.Value());
-            _engine = Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create(); 
-            _service = new ExternalAccess(Core::NodeId(config.Connector.Value().c_str()), _entryPoint, _engine->InvokeHandler(), _engine->AnnounceHandler());
+            _service = new ExternalAccess(Core::NodeId(config.Connector.Value().c_str()), _entryPoint, Core::ProxyType<RPC::InvokeServer>::Create());
 
             if (_service != nullptr) {
 
