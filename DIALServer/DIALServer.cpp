@@ -262,13 +262,18 @@ namespace Plugin {
                 + _config.Name.Value() + _T("</friendlyName>")
                                          _T("<manufacturer>")
                 + _config.Manufacturer.Value() + _T("</manufacturer>")
-                                                 _T("<modelDescription>")
+                + ( _config.ManufacturerURL.IsSet() == true ? _T("<manufacturerURL>") + _config.ManufacturerURL.Value() + _T("</manufacturerURL>") : _T("") )
+                +                                 _T("<modelDescription>")
                 + _config.Description.Value() + _T("</modelDescription>")
                                                 _T("<modelName>")
                 + _config.Model.Value() + _T("</modelName>")
-                                          _T("<UDN>uuid:")
+                + ( _config.ModelNumber.IsSet() == true ? _T("<modelNumber>") + _config.ModelNumber.Value() + _T("</modelNumber>") : _T("") )
+                + ( _config.ModelURL.IsSet() == true ? _T("<modelURL>") + _config.ModelURL.Value() + _T("</modelURL>") : _T("") )
+                + ( _config.SerialNumber.IsSet() == true ? _T("<serialNumber>") + _config.SerialNumber.Value() + _T("</serialNumber>") : _T("") )
+                +                          _T("<UDN>uuid:")
                 + deviceId + _T("</UDN>")
-                             _T("</device>")
+                + ( _config.UPC.IsSet() == true ? _T("<UPC>") + _config.UPC.Value() + _T("</UPC>") : _T("") )
+                +            _T("</device>")
                              _T("</root>");
 
             // Create a list of all servicable Apps:
