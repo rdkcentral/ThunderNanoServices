@@ -47,7 +47,7 @@ namespace Plugin {
                 const Core::NodeId& source, 
                 ::OCDM::IAccessorOCDM* parentInterface, 
                 const Core::ProxyType<RPC::InvokeServer> & engine)
-                : RPC::Communicator(source, _T(""), engine)
+                : RPC::Communicator(source, _T(""), Core::ProxyType<Core::IIPCServer>(engine))
                 , _parentInterface(parentInterface)
             {
                 engine->Announcements(Announcement());
