@@ -71,19 +71,27 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , Name()
                 , Model()
-                , Manufacturer()
                 , Description()
+                , ModelNumber()
+                , ModelURL()
+                , Manufacturer()
+                , ManufacturerURL()
+                , SerialNumber()
+                , UPC()
                 , Interface()
-                , ServerURL()
                 , WebServer()
                 , SwitchBoard()
             {
                 Add(_T("interface"), &Interface);
                 Add(_T("name"), &Name);
                 Add(_T("model"), &Model);
-                Add(_T("manufacturer"), &Manufacturer);
                 Add(_T("description"), &Description);
-                Add(_T("serverurl"), &ServerURL);
+                Add(_T("modelnumber"), &ModelNumber);
+                Add(_T("modelurl"), &ModelURL);
+                Add(_T("manufacturer"), &Manufacturer);
+                Add(_T("manufacturerurl"), &ManufacturerURL);
+                Add(_T("serialnumber"), &SerialNumber);
+                Add(_T("upc"), &UPC);
                 Add(_T("webserver"), &WebServer);
                 Add(_T("switchboard"), &SwitchBoard);
                 Add(_T("apps"), &Apps);
@@ -95,13 +103,16 @@ namespace Plugin {
         public:
             Core::JSON::String Name;
             Core::JSON::String Model;
-            Core::JSON::String Manufacturer;
             Core::JSON::String Description;
+            Core::JSON::String ModelNumber;
+            Core::JSON::String ModelURL;
+            Core::JSON::String Manufacturer;
+            Core::JSON::String ManufacturerURL;
+            Core::JSON::String SerialNumber;
+            Core::JSON::String UPC;
             Core::JSON::String Interface;
-            Core::JSON::String ServerURL;
             Core::JSON::String WebServer;
             Core::JSON::String SwitchBoard;
-            Core::JSON::Boolean Notify;
             Core::JSON::ArrayType<App> Apps;
         };
 
