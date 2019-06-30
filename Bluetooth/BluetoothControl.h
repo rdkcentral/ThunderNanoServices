@@ -102,7 +102,7 @@ namespace Plugin {
             }
             virtual ~Scanner()
             {
-                PluginHost::WorkerPool::Instance().Revoke(_activity);
+                PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_activity));
             }
 
         public:
