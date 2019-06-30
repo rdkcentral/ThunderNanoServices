@@ -23,12 +23,14 @@ namespace Plugin {
                 CompositorImplementation& parent, 
                 const Core::NodeId& source, 
                 const string& proxyStubPath, 
-                const Core::ProxyType<RPC::ServerType<RPC::InvokeMessage> > & invoke,
-                const Core::ProxyType<RPC::ServerType<RPC::AnnounceMessage> > & announce)
-                : RPC::Communicator(source,  proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath, invoke, announce)
+                const Core::ProxyType<RPC::InvokeServer>& handler)
+                : RPC::Communicator(source,  proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath, Core::ProxyType<Core::IIPCServer>(handler))
                 , _parent(parent)
             {
                 uint32_t result = RPC::Communicator::Open(RPC::CommunicationTimeOut);
+
+                handler->Announcements(Announcement());
+
                 if (result != Core::ERROR_NONE) {
                     TRACE(Trace::Error, (_T("Could not open RPI Compositor RPCLink server. Error: %s"), Core::NumberType<uint32_t>(result).Text()));
                 } else {
@@ -134,8 +136,8 @@ namespace Plugin {
             Config config;
             config.FromString(service->ConfigLine());
 
-            _engine = Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create();
-            _externalAccess = new ExternalAccess(*this, Core::NodeId(config.Connector.Value().c_str()), service->ProxyStubPath(), _engine->InvokeHandler(), _engine->AnnounceHandler());
+            _engine = Core::ProxyType<RPC::InvokeServer>::Create();
+            _externalAccess = new ExternalAccess(*this, Core::NodeId(config.Connector.Value().c_str()), service->ProxyStubPath(), _engine);
 
             if (_externalAccess->IsListening() == true) {
                 PlatformReady();
@@ -433,7 +435,7 @@ namespace Plugin {
 
         mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
-        Core::ProxyType<RPC::InvokeServerType<4, 1>> _engine;
+        Core::ProxyType<RPC::InvokeServer> _engine;
         ExternalAccess* _externalAccess;
         std::list<Exchange::IComposition::INotification*> _observers;
         ClientDataContainer _clients;

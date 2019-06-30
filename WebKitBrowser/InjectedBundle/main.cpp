@@ -33,9 +33,10 @@ private:
 
 public:
     PluginHost()
-        : _engine(Core::ProxyType<RPC::InvokeServerType<4, 2>>::Create())
-        , _comClient(Core::ProxyType<RPC::CommunicatorClient>::Create(GetConnectionNode(), _engine->InvokeHandler(), _engine->AnnounceHandler()))
+        : _engine(Core::ProxyType<RPC::InvokeServerType<4, 2>>::Create(Core::Thread::DefaultStackSize()))
+        , _comClient(Core::ProxyType<RPC::CommunicatorClient>::Create(GetConnectionNode(), Core::ProxyType<Core::IIPCServer>(_engine)))
     {
+        _engine->Announcements(_comClient->Announcement());
     }
     ~PluginHost()
     {
