@@ -24,8 +24,7 @@ namespace Player {
             virtual void StateChange(Exchange::IStream::state newState) = 0;
         };
 
-        struct IPlayerPlatform
-        {
+        struct IPlayerPlatform {
             virtual ~IPlayerPlatform() { }
 
             virtual uint32_t Setup() = 0;
@@ -60,8 +59,7 @@ namespace Player {
             virtual void Order(const uint32_t order) = 0;
         };
 
-        struct IPlayerPlatformFactory
-        {
+        struct IPlayerPlatformFactory {
             virtual ~IPlayerPlatformFactory() { }
 
             virtual uint32_t Initialize(const string& configuration) = 0;
@@ -76,16 +74,81 @@ namespace Player {
             virtual const string& Configuration() const = 0;
         };
 
-        template<class PLAYER>
-        class PlayerPlatformFactoryType : public IPlayerPlatformFactory
+        template<uint8_t MAXBITS>
+        class BitArrayType
         {
+        public:
+            static_assert(MAXBITS <= 64, "MAXBITS is too big");
+            using T = typename std::conditional<MAXBITS <= 8, std::uint8_t,
+                            typename std::conditional<MAXBITS <= 16, std::uint16_t,
+                                    typename std::conditional<MAXBITS <= 32, std::uint32_t, std::uint64_t>::type>::type>::type;
+
+            BitArrayType(uint8_t max = 0, T initial = 0)
+            {
+                Reset(max, initial);
+            }
+
+            void Set(uint8_t index)
+            {
+                ASSERT(index < Size());
+                _value |= ((1 << index) & ((1 << Size()) - 1));
+            }
+
+            void Clr(uint8_t index)
+            {
+                ASSERT(index < Size());
+                _value &= ~(1 << index);
+            }
+
+            bool IsSet(uint8_t index) const
+            {
+                ASSERT(index < Size());
+                return (_value & (1 << index));
+            }
+
+            uint8_t Size() const
+            {
+                return _max;
+            }
+
+            bool Empty() const
+            {
+                return (_value == 0);
+            }
+
+            void Reset(uint8_t max = 0, T initial = 0)
+            {
+                ASSERT(max <= MAXBITS);
+                _max = max;
+                if ((max == 0) ||  (max > MAXBITS)) {
+                    _max = MAXBITS;
+                }
+                _value = (initial & ((1 << _max) - 1));
+            }
+
+            uint8_t Find() const
+            {
+                for (uint8_t i = 0; i < Size(); i++) {
+                    if (!IsSet(i)) {
+                        return i;
+                    }
+                }
+                return (~0);
+            }
+
+        private:
+            T _value;
+            uint8_t _max;
+        };
+
+        template<class PLAYER>
+        class PlayerPlatformFactoryType : public IPlayerPlatformFactory {
         public:
             PlayerPlatformFactoryType(const PlayerPlatformFactoryType&) = delete;
             PlayerPlatformFactoryType& operator=(const PlayerPlatformFactoryType&) = delete;
 
             PlayerPlatformFactoryType(Exchange::IStream::streamtype streamType, InitializerType initializer = nullptr, DeinitializerType deinitializer = nullptr)
-                : _slots(nullptr)
-                , _max_slots(0)
+                : _slots()
                 , _name(Core::ClassNameOnly(typeid(PLAYER).name()).Text())
                 , _streamType(streamType)
                 , _Initialize(initializer)
@@ -100,14 +163,11 @@ namespace Player {
 
             ~PlayerPlatformFactoryType()
             {
-                delete[] _slots;
+                ASSERT(_slots.Empty() == true);
             }
 
             uint32_t Initialize(const string& configuration) override
             {
-                ASSERT(_max_slots == 0);
-                ASSERT(_slots == nullptr);
-
                 uint32_t result = Core::ERROR_GENERAL;
 
                 // Extract the particular player configuration
@@ -123,6 +183,7 @@ namespace Player {
                 config.FromString(configuration);
 
                 _adminLock.Lock();
+                ASSERT(_slots.Empty() == true);
                 _configuration = config.PlayerConfig.Value();
 
                 result = (_Initialize != nullptr? _Initialize(_configuration) : Core::ERROR_NONE);
@@ -142,18 +203,7 @@ namespace Player {
                     } config;
 
                     config.FromString(_configuration);
-                    _max_slots = config.Frontends.Value();
-
-                    if (_max_slots > 0) {
-                        _slots = new bool[_max_slots];
-                        ASSERT(_slots != nullptr);
-
-                        if (_slots) {
-                            memset(_slots, 0, (sizeof(*_slots) * _max_slots));
-                        }
-                    } else {
-                        TRACE(Trace::Warning, (_T("No frontends defined for player '%s'"), Name().c_str()));
-                    }
+                    _slots.Reset(config.Frontends.Value());
                 }
 
                 _adminLock.Unlock();
@@ -169,26 +219,19 @@ namespace Player {
                     _Deinitialize();
                 }
 
-                delete[] _slots;
-
-                _slots = nullptr;
-                _max_slots = 0;
+                _slots.Reset();
 
                 _adminLock.Unlock();
             }
 
             IPlayerPlatform* Create() override
             {
-                uint8_t index = 0;
                 IPlayerPlatform* player = nullptr;
 
                 _adminLock.Lock();
 
-                while ((index < _max_slots) && (_slots[index] == true)) {
-                    index++;
-                }
-
-                if (index < _max_slots) {
+                uint8_t index = _slots.Find();
+                if (index < _slots.Size()) {
                     player =  new PLAYER(_streamType, index);
 
                     if ((player != nullptr) && (player->Setup() != Core::ERROR_NONE)) {
@@ -199,7 +242,7 @@ namespace Player {
 
                     if (player != nullptr) {
                         _players.emplace(player);
-                        _slots[index] = true;
+                        _slots.Set(index);
                     }
                 }
 
@@ -218,10 +261,10 @@ namespace Player {
                 auto it = _players.find(player);
                 if (it != _players.end()) {
                     uint8_t index = player->Index();
-                    ASSERT((index < _max_slots) &&  (_slots[index] == true));
+                    ASSERT(_slots.IsSet(index) == true);
 
-                    if ((index < _max_slots) && (_slots[index] == true)) {
-                        _slots[index] = false;
+                    if (_slots.IsSet(index) == true) {
+                        _slots.Clr(index);
 
                         if (player->Teardown() != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Player %s[%i] teardown failed!"), Name().c_str(), player->Index()));
@@ -250,7 +293,7 @@ namespace Player {
 
             uint8_t Frontends() const override
             {
-                return (_max_slots);
+                return (_slots.Size());
             }
 
             const string& Configuration() const override
@@ -259,8 +302,7 @@ namespace Player {
             }
 
         private:
-            bool* _slots;
-            uint8_t _max_slots;
+            BitArrayType<16> _slots;
             string _name;
             Exchange::IStream::streamtype _streamType;
             InitializerType _Initialize;

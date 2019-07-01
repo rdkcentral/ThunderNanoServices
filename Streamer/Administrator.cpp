@@ -55,13 +55,11 @@ namespace Player {
 
         uint32_t Administrator::Initialize(const string& configuration)
         {
-            ASSERT(_decoder_slots == nullptr);
-            ASSERT(_decoders == 0);
-
             Config config;
             config.FromString(configuration);
 
             _adminLock.Lock();
+            ASSERT(_slots.Empty() == true);
 
             for (auto& streamer : _streamers) {
                 ASSERT(streamer.second != nullptr);
@@ -75,18 +73,10 @@ namespace Player {
                 }
             }
 
-            _decoders = config.Decoders.Value();
-            if (_decoders > 0) {
-                _decoder_slots = new bool[_decoders];
-                ASSERT(_decoder_slots != nullptr);
-
-                if (_decoder_slots != nullptr) {
-                    memset(_decoder_slots, 0, (sizeof(*_decoder_slots)*_decoders));
-                }
-            }
+            _slots.Reset(config.Decoders.Value());
 
             TRACE(Trace::Information, (_T("Initialized stream administrator (%i decoder(s), %i streamer(s) available)"),
-                    _decoders, _streamers.size()));
+                    _slots.Size(), _streamers.size()));
 
             _adminLock.Unlock();
 
@@ -104,11 +94,7 @@ namespace Player {
                 streamer.second->Deinitialize();
             }
 
-            if (_decoders) {
-                delete[] _decoder_slots;
-                _decoder_slots = nullptr;
-                _decoders = 0;
-            }
+            _slots.Reset();
 
             _adminLock.Unlock();
 
@@ -163,8 +149,9 @@ namespace Player {
             auto it = _streamers.begin();
             for (; it != _streamers.end(); ++it) {
                 ASSERT((*it).second != nullptr);
+                const uint8_t index = player->Index();
                 if ((*it).second->Destroy(player) == true) {
-                    TRACE(Trace::Information, (_T("Released frontend %s[%i]..."), (*it).second->Name().c_str(), player->Index()));
+                    TRACE(Trace::Information, (_T("Released frontend %s[%i]..."), (*it).second->Name().c_str(), index));
                     break;
                 }
             }
@@ -179,19 +166,14 @@ namespace Player {
 
         uint8_t Administrator::Allocate()
         {
-            uint8_t index = 0;
-
             _adminLock.Lock();
 
-            while ((index < _decoders) && (_decoder_slots[index] == true)) {
-                index++;
-            }
+            uint8_t index = _slots.Find();
 
-            if (index < _decoders) {
-                _decoder_slots[index] = true;
+            if (index < _slots.Size()) {
+                _slots.Set(index);
                 TRACE(Trace::Information, (_T("Allocated a decoder at slot %i"), index));
             } else {
-                index = ~0;
                 TRACE(Trace::Information, (_T("Failed to allocate a decoder; out of free decoders!")));
             }
 
@@ -202,12 +184,12 @@ namespace Player {
 
         void Administrator::Deallocate(uint8_t index)
         {
-            ASSERT(index < _decoders);
-
             _adminLock.Lock();
 
-            if ((index < _decoders) && (_decoder_slots[index] == true)) {
-                _decoder_slots[index] = false;
+            ASSERT(index < _slots.Size());
+
+            if (_slots.IsSet(index)) {
+                _slots.Clr(index);
                 TRACE(Trace::Information, (_T("Deallocated the decoder at slot %i"), index));
             } else {
                 ASSERT(!"Decoder slot not allocated");
