@@ -18,9 +18,13 @@ namespace Player {
             Administrator()
                 : _adminLock()
                 , _streamers()
-                , _decoders(0)
-                , _decoder_slots(nullptr)
+                , _slots()
             {
+            }
+
+            ~Administrator()
+            {
+                ASSERT(_slots.Empty() == true);
             }
 
         public:
@@ -44,8 +48,7 @@ namespace Player {
         private:
             Core::CriticalSection _adminLock;
             std::map<string, IPlayerPlatformFactory*> _streamers;
-            uint8_t _decoders;
-            bool* _decoder_slots;
+            BitArrayType<16> _slots;
         };
 
         template<class PLAYER>
