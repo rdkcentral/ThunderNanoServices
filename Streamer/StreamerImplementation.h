@@ -23,9 +23,8 @@ namespace Plugin {
             ExternalAccess(const Core::NodeId& source,
                 Exchange::IPlayer* parentInterface,
                 const string& proxyStubPath,
-                const Core::ProxyType<Core::IPCServerType<RPC::InvokeMessage> >& invoke,
-                const Core::ProxyType<Core::IPCServerType<RPC::AnnounceMessage> >& announcement)
-                : RPC::Communicator(source, proxyStubPath, invoke, announcement)
+                const Core::ProxyType<RPC::InvokeServer> & engine)
+                : RPC::Communicator(source, proxyStubPath, Core::ProxyType<Core::IIPCServer>(engine))
                 , _parentInterface(parentInterface)
             {
             }
