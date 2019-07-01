@@ -24,40 +24,33 @@ namespace Player {
             Core::JSON::DecUInt8 Decoders;
         };
 
-        void Administrator::Announce(IPlayerPlatformFactory* streamer)
+        void Administrator::Announce(const string& name, IPlayerPlatformFactory* streamer)
         {
+            ASSERT(name.empty() == false);
             ASSERT(streamer != nullptr);
 
             _adminLock.Lock();
 
-            if (_streamers.emplace(streamer->Type(), streamer).second == false) {
-                TRACE(Trace::Error, (_T("Failed to register streamer '%s' (type %i); streamer type already registered!"),
-                        streamer->Name().c_str(), streamer->Type()));
+            if (_streamers.emplace(name, streamer).second == false) {
+                TRACE(Trace::Error, (_T("Failed to register streamer '%s' (type %i); streamer already registered!"),
+                        name.c_str(), streamer->Type()));
             }
 
             _adminLock.Unlock();
         }
 
-        void Administrator::Revoke(IPlayerPlatformFactory* streamer)
+        void Administrator::Revoke(const string& name)
         {
-            ASSERT(streamer != nullptr);
-            bool unregistered = false;
-
             _adminLock.Lock();
 
-            auto it = _streamers.find(streamer->Type());
+            auto it = _streamers.find(name);
             if (it != _streamers.end()) {
-                if (streamer == (*it).second) {
-                    _streamers.erase(it);
-                    unregistered = true;
-                }
+                _streamers.erase(name);
+            } else {
+                TRACE(Trace::Error, (_T("Failed to unregister streamer '%s'"), name.c_str()));
             }
 
             _adminLock.Unlock();
-
-            if (unregistered == false) {
-                TRACE(Trace::Error, (_T("Failed to unregister streamer '%s'"), streamer->Name().c_str()));
-            }
         }
 
         uint32_t Administrator::Initialize(const string& configuration)
@@ -134,22 +127,16 @@ namespace Player {
 
             auto it = _streamers.begin();
             for (; it != _streamers.end(); ++it) {
-                if (((*it).first & streamType) != 0) {
-                    ASSERT((*it).second != nullptr);
+                ASSERT((*it).second != nullptr);
+                if (((*it).second->Type() & streamType) != 0) {
                     IPlayerPlatform* player = (*it).second->Create();
-
-                    if ((player != nullptr) && (player->Setup() != Core::ERROR_NONE)) {
-                        TRACE(Trace::Error, (_T("Player '%s' setup failed!"), (*it).second->Name().c_str()));
-                        delete player;
-                        player = nullptr;
-                    }
-
                     if (player != nullptr) {
                         frontend = new Frontend(this, player);
                         ASSERT(frontend != nullptr);
-
-                        TRACE(Trace::Information, (_T("Acquired frontend '%s' for stream type %i at index %i"),
-                                (*it).second->Name().c_str(), streamType, frontend->Index()));
+                        if (frontend != nullptr) {
+                            TRACE(Trace::Information, (_T("Acquired frontend '%s' for stream type %i at index %i"),
+                                    (*it).second->Name().c_str(), streamType, frontend->Index()));
+                        }
                     } else {
                         TRACE(Trace::Error, (_T("No more frontends available for stream type %i"), streamType));
                     }
@@ -173,18 +160,18 @@ namespace Player {
 
             _adminLock.Lock();
 
-            auto it = _streamers.find(player->Type());
-            ASSERT(it != _streamers.end());
-
-            if (it != _streamers.end()) {
+            auto it = _streamers.begin();
+            for (; it != _streamers.end(); ++it) {
                 ASSERT((*it).second != nullptr);
-                TRACE(Trace::Information, (_T("Releasing frontend '%s' at index %i..."), (*it).second->Name().c_str(), player->Index()));
-
-                if (player->Teardown() != Core::ERROR_NONE) {
-                    TRACE(Trace::Error, (_T("Player '%s' index %i teardown failed!"), (*it).second->Name().c_str(), player->Index()));
+                if ((*it).second->Destroy(player) == true) {
+                    TRACE(Trace::Information, (_T("Released frontend %s[%i]..."), (*it).second->Name().c_str(), player->Index()));
+                    break;
                 }
+            }
 
-                (*it).second->Destroy(player);
+            if (it == _streamers.end()) {
+                ASSERT("Player instance not found");
+                TRACE(Trace::Error, (_T("Failed to release a frontend")));
             }
 
             _adminLock.Unlock();

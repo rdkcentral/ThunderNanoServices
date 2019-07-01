@@ -19,10 +19,6 @@ if (PLUGIN_STREAMER_TS_SCANNING)
             ENABLE_TS_SCANNING)
 endif(PLUGIN_STREAMER_TS_SCANNING)
 
-target_compile_definitions(${LIB_NAME}
-    PRIVATE
-        PLAYER_NAME="${PLAYER_NAME}")
-
 target_include_directories(${LIB_NAME}
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../../)
