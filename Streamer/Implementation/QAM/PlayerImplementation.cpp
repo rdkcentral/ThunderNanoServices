@@ -297,7 +297,7 @@ namespace Implementation {
             uint8_t _index;
         };
 
-        static PlayerPlatformRegistrationType<QAM> Register(PLAYER_NAME, Exchange::IStream::streamtype::Cable,
+        static PlayerPlatformRegistrationType<QAM> Register(Exchange::IStream::streamtype::Cable,
             /*  Initialize */ [](const string& configuration) -> uint32_t {
                 Broadcast::ITuner::Initialize(configuration);
                 return (Core::ERROR_NONE);

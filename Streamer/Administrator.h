@@ -32,8 +32,8 @@ namespace Player {
             uint32_t Initialize(const string& config);
             uint32_t Deinitialize();
 
-            void Announce(IPlayerPlatformFactory* streamer);
-            void Revoke(IPlayerPlatformFactory* streamer);
+            void Announce(const string& name, IPlayerPlatformFactory* factory);
+            void Revoke(const string& name);
 
             Exchange::IStream* Acquire(const Exchange::IStream::streamtype streamType);
             void Relinquish(IPlayerPlatform* player);
@@ -43,7 +43,7 @@ namespace Player {
 
         private:
             Core::CriticalSection _adminLock;
-            std::map<Exchange::IStream::streamtype, IPlayerPlatformFactory*> _streamers;
+            std::map<string, IPlayerPlatformFactory*> _streamers;
             uint8_t _decoders;
             bool* _decoder_slots;
         };
@@ -55,27 +55,25 @@ namespace Player {
             PlayerPlatformRegistrationType(const PlayerPlatformRegistrationType<PLAYER>&) = delete;
             PlayerPlatformRegistrationType& operator=(const PlayerPlatformRegistrationType<PLAYER>&) = delete;
 
-            PlayerPlatformRegistrationType(const string& name, Exchange::IStream::streamtype streamType,
+            PlayerPlatformRegistrationType(Exchange::IStream::streamtype streamType,
                     InitializerType initializer = nullptr, DeinitializerType deinitializer = nullptr)
-                : _factory(nullptr)
             {
-                IPlayerPlatformFactory* factory = new PlayerPlatformFactoryType<PLAYER>(name, streamType, initializer, deinitializer);
+                string name(Core::ClassNameOnly(typeid(PLAYER).name()).Text());
+
+                IPlayerPlatformFactory* factory = new PlayerPlatformFactoryType<PLAYER>(streamType, initializer, deinitializer);
                 ASSERT(factory != nullptr);
 
                 if (factory) {
-                    Administrator::Instance().Announce(factory);
-                    _factory = factory;
+                    Administrator::Instance().Announce(name, factory);
                 }
             }
 
             ~PlayerPlatformRegistrationType()
             {
-                ASSERT(_factory != nullptr);
-                Administrator::Instance().Revoke(_factory);
-            }
+                string name(Core::ClassNameOnly(typeid(PLAYER).name()).Text());
 
-        private:
-            IPlayerPlatformFactory* _factory;
+                Administrator::Instance().Revoke(name);
+            }
         };
 
     } // namespace Implementation

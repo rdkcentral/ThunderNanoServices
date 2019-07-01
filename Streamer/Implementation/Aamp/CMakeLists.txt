@@ -12,10 +12,6 @@ set(LIB_NAME PlayerPlatform${PLAYER_NAME})
 add_library(${LIB_NAME} STATIC
     PlayerImplementation.cpp)
 
-target_compile_definitions(${LIB_NAME}
-    PRIVATE
-        PLAYER_NAME="${PLAYER_NAME}")
-
 target_include_directories(${LIB_NAME}
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../../
