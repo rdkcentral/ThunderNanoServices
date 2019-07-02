@@ -1170,7 +1170,6 @@ namespace Plugin {
     public:
         OCDMImplementation()
             : _entryPoint(nullptr)
-            , _engine()
             , _service(nullptr)
             , _compliant(false)
             , _systemToFactory()
@@ -1404,7 +1403,6 @@ namespace Plugin {
 
     private:
         ::OCDM::IAccessorOCDM* _entryPoint;
-        Core::ProxyType<RPC::InvokeServerType<4, 1> > _engine; 
         ExternalAccess* _service;
         bool _compliant;
         std::map<const std::string, SystemFactory> _systemToFactory;
