@@ -425,7 +425,7 @@ namespace Broadcom {
 #if NEXUS_PLATFORM_VERSION_MAJOR < 16 || (NEXUS_PLATFORM_VERSION_MAJOR == 16 && NEXUS_PLATFORM_VERSION_MINOR < 3)
                 _serverSettings.session[i].ir_input_mode = static_cast<NEXUS_IrInputMode>(config.IRMode.Value());
 #else
-                for (unsigned int irInputIndex = 0; i < NXSERVER_IR_INPUTS; i++)
+                for (unsigned int irInputIndex = 0; irInputIndex < NXSERVER_IR_INPUTS; irInputIndex++)
                     _serverSettings.session[i].ir_input.mode[irInputIndex] = static_cast<NEXUS_IrInputMode>(config.IRMode.Value());
 #endif // NEXUS_PLATFORM_VERSION_MAJOR < 17
 #endif // NEXUS_HAS_IR_INPUT
