@@ -1,8 +1,9 @@
-#ifndef __LINEARBROADCAST_FRONTEND_H
-#define __LINEARBROADCAST_FRONTEND_H
+#pragma once
 
-#include "Geometry.h"
 #include "Module.h"
+#include "Geometry.h"
+#include "PlayerPlatform.h"
+#include "Administrator.h"
 
 namespace WPEFramework {
 
@@ -10,92 +11,11 @@ namespace Player {
 
     namespace Implementation {
 
-        class Administrator {
+        class Frontend : public Exchange::IStream {
         private:
-            Administrator(const Administrator&) = delete;
-            Administrator& operator=(const Administrator&) = delete;
-
-        public:
-            Administrator()
-                : _adminLock()
-                , _frontends(0)
-                , _decoders(0)
-                , _streams(nullptr)
-                , _slots(nullptr)
-            {
-            }
-            ~Administrator() {}
-
-        public:
-            uint32_t Initialize(const string& config);
-            uint32_t Deinitialize();
-
-        public:
-            // These methods create and destroy the Exchange::IStream administration slots.
-            // -----------------------------------------------------------------------------
-            Exchange::IStream* Aquire(const Exchange::IStream::streamtype streamType);
-
-            void Destroy(Exchange::IStream* element)
-            {
-                uint8_t index = 0;
-                _adminLock.Lock();
-                while ((index < _frontends) && (_streams[index] != element)) {
-                    index++;
-                }
-                ASSERT(index < _frontends);
-
-                if (index < _frontends) {
-                    _streams[index] = nullptr;
-                }
-                _adminLock.Unlock();
-            }
-
-            // These methods allocate and deallocate a Decoder slot
-            // -----------------------------------------------------------------------------
-            uint8_t Allocate()
-            {
-                uint8_t index = 0;
-                _adminLock.Lock();
-                while ((index < _decoders) && (_slots[index] == 1)) {
-                    index++;
-                }
-                if (index < _decoders) {
-                    _slots[index] = 1;
-                } else {
-                    index = ~0;
-                }
-                _adminLock.Unlock();
-
-                return (index);
-            }
-            void Deallocate(uint8_t index)
-            {
-                ASSERT(index < _decoders);
-
-                _adminLock.Lock();
-
-                if ((index < _decoders) && (_slots[index] == 1)) {
-                    _slots[index] = 0;
-                }
-                _adminLock.Unlock();
-            }
-
-        private:
-            // This list does not maintain a ref count. The interface is ref counted
-            // and determines the lifetime of the IStream!!!!
-            Core::CriticalSection _adminLock;
-            uint8_t _frontends;
-            uint8_t _decoders;
-            Exchange::IStream** _streams;
-            uint8_t* _slots;
-        };
-
-        template <typename IMPLEMENTATION>
-        class FrontendType : public Exchange::IStream {
-        private:
-            FrontendType() = delete;
-            FrontendType(const FrontendType<IMPLEMENTATION>&) = delete;
-            FrontendType<IMPLEMENTATION>& operator=(const FrontendType<IMPLEMENTATION>&) = delete;
+            Frontend() = delete;
+            Frontend(const Frontend&) = delete;
+            Frontend& operator=(const Frontend&) = delete;
 
             class CallbackImplementation : public Player::Implementation::ICallback {
             private:
@@ -104,7 +24,7 @@ namespace Player {
                 CallbackImplementation& operator=(const CallbackImplementation&) = delete;
 
             public:
-                CallbackImplementation(FrontendType<IMPLEMENTATION>* parent)
+                CallbackImplementation(Frontend* parent)
                     : _parent(*parent)
                 {
                 }
@@ -127,10 +47,9 @@ namespace Player {
                 }
 
             private:
-                FrontendType<IMPLEMENTATION>& _parent;
+                Frontend& _parent;
             };
 
-            template <typename ACTUALCLASS>
             class DecoderImplementation : public Exchange::IStream::IControl {
             private:
                 DecoderImplementation() = delete;
@@ -138,12 +57,12 @@ namespace Player {
                 DecoderImplementation& operator=(const DecoderImplementation&) = delete;
 
             public:
-                DecoderImplementation(FrontendType<ACTUALCLASS>* parent, const uint8_t decoderId)
+                DecoderImplementation(Frontend* parent, const uint8_t decoderId)
                     : _referenceCount(1)
                     , _parent(*parent)
                     , _index(decoderId)
                     , _geometry()
-                    , _player(&(parent->Implementation()))
+                    , _player(parent->Implementation())
                     , _callback(nullptr)
                 {
                 }
@@ -161,7 +80,6 @@ namespace Player {
                 {
                     if (Core::InterlockedDecrement(_referenceCount) == 0) {
                         delete this;
-
                         return (Core::ERROR_DESTRUCTION_SUCCEEDED);
                     }
                     return (Core::ERROR_NONE);
@@ -172,104 +90,82 @@ namespace Player {
                 }
                 virtual RPC::IValueIterator* Speeds() const
                 {
+                    ASSERT(_player != nullptr);
                     return (Core::Service<RPC::ValueIterator>::Create<RPC::IValueIterator>(_player->Speeds()));
                 }
                 virtual void Speed(const int32_t request) override
                 {
                     _parent.Lock();
-                    if (_player != nullptr) {
-                        _player->Speed(request);
-                    }
+                    ASSERT(_player != nullptr);
+                    _player->Speed(request);
                     _parent.Unlock();
                 }
                 virtual int32_t Speed() const
                 {
                     uint32_t result = 0;
                     _parent.Lock();
-                    if (_player != nullptr) {
-                        result = _player->Speed();
-                    }
+                    ASSERT(_player != nullptr);
+                    result = _player->Speed();
                     _parent.Unlock();
                     return (result);
                 }
                 virtual void Position(const uint64_t absoluteTime)
                 {
                     _parent.Lock();
-                    if (_player != nullptr) {
-                        _player->Position(absoluteTime);
-                    }
+                    ASSERT(_player != nullptr);
+                    _player->Position(absoluteTime);
                     _parent.Unlock();
                 }
                 virtual uint64_t Position() const
                 {
                     uint64_t result = 0;
                     _parent.Lock();
-                    if (_player != nullptr) {
-                        result = _player->Position();
-                    }
+                    ASSERT(_player != nullptr);
+                    result = _player->Position();
                     _parent.Unlock();
                     return (result);
                 }
                 virtual void TimeRange(uint64_t& begin, uint64_t& end) const
                 {
                     _parent.Lock();
-                    if (_player != nullptr) {
-                        _player->TimeRange(begin, end);
-                    }
+                    ASSERT(_player != nullptr);
+                    _player->TimeRange(begin, end);
                     _parent.Unlock();
                 }
                 virtual IGeometry* Geometry() const
                 {
                     IGeometry* result = nullptr;
                     _parent.Lock();
-                    if (_player != nullptr) {
-                        _geometry.Window(_player->Window());
-                        _geometry.Order(_player->Order());
-                        result = &_geometry;
-                    }
+                    ASSERT(_player != nullptr);
+                    _geometry.Window(_player->Window());
+                    _geometry.Order(_player->Order());
+                    result = &_geometry;
                     _parent.Unlock();
                     return (result);
                 }
                 virtual void Geometry(const IGeometry* settings)
                 {
                     _parent.Lock();
-                    if (_player != nullptr) {
-                        Rectangle window;
-                        window.X = settings->X();
-                        window.Y = settings->Y();
-                        window.Width = settings->Width();
-                        window.Height = settings->Height();
-                        _player->Window(window);
-                        _player->Order(settings->Z());
-                    }
+                    ASSERT(_player != nullptr);
+                    Rectangle window;
+                    window.X = settings->X();
+                    window.Y = settings->Y();
+                    window.Width = settings->Width();
+                    window.Height = settings->Height();
+                    _player->Window(window);
+                    _player->Order(settings->Z());
                     _parent.Unlock();
                 }
                 virtual void Callback(IControl::ICallback* callback)
                 {
                     _parent.Lock();
-
-                    if (callback != nullptr) {
-
-                        ASSERT(_callback == nullptr);
-
-                        if (_player != nullptr) {
-                            _callback = callback;
-                            _callback->AddRef();
-                        }
-                    } else {
-                        if(_callback != nullptr) {
-                            _callback->Release();
-                        }
-                        _callback = nullptr;
+                    if (_callback != nullptr) {
+                        _callback->Release();
                     }
-
-                    _parent.Unlock();
-                }
-                void Terminate()
-                {
-                    _parent.Lock();
-                    ASSERT(_player != nullptr);
-                    _player = nullptr;
+                    if (callback != nullptr) {
+                        callback->AddRef();
+                    }
+                    _callback = callback;
                     _parent.Unlock();
                 }
 
@@ -279,39 +175,44 @@ namespace Player {
 
                 inline void TimeUpdate(uint64_t position)
                 {
+                    _parent.Lock();
                     if (_callback != nullptr) {
                         _callback->TimeUpdate(position);
                     }
+                    _parent.Unlock();
                 }
 
             private:
                 mutable uint32_t _referenceCount;
-                FrontendType<ACTUALCLASS>& _parent;
+                Frontend& _parent;
                 uint8_t _index;
                 mutable Core::Sink<Implementation::Geometry> _geometry;
-                ACTUALCLASS* _player;
+                IPlayerPlatform* _player;
                 IControl::ICallback* _callback;
             };
 
         public:
-            FrontendType(Administrator* administration, const streamtype type, const uint8_t index)
+            Frontend(Administrator* administration, IPlayerPlatform* player)
                 : _refCount(1)
                 , _adminLock()
-                , _index(index)
                 , _administrator(administration)
                 , _decoder(nullptr)
                 , _callback(nullptr)
                 , _sink(this)
-                , _player(type, index, &_sink)
+                , _player(player)
             {
+                ASSERT(_administrator != nullptr);
+                ASSERT(_player != nullptr);
+
+                _player->Callback(&_sink);
             }
-            virtual ~FrontendType()
+            virtual ~Frontend()
             {
+                ASSERT(_decoder == nullptr);
                 if (_decoder != nullptr) {
                     TRACE_L1("Forcefull destruction of a stream. Forcefully removing decoder: %d", __LINE__);
                     delete _decoder;
                 }
-                ASSERT(_decoder == nullptr);
             }
 
         public:
@@ -322,14 +223,11 @@ namespace Player {
             uint32_t Release() const
             {
                 uint32_t result = Core::ERROR_NONE;
-
-                if (_administrator != nullptr) {
-                    if (Core::InterlockedDecrement(_refCount) == 0) {
-                        _administrator->Destroy(const_cast<FrontendType<IMPLEMENTATION>*>(this));
-                        delete this;
-                        result = Core::ERROR_DESTRUCTION_SUCCEEDED;
-                    }
-                } else if (Core::InterlockedDecrement(_refCount) == 0) {
+                if (Core::InterlockedDecrement(_refCount) == 0) {
+                    ASSERT(_player != nullptr);
+                    ASSERT(_administrator != nullptr);
+                    _player->Callback(nullptr);
+                    _administrator->Relinquish(_player);
                     delete this;
                     result = Core::ERROR_DESTRUCTION_SUCCEEDED;
                 }
@@ -337,45 +235,49 @@ namespace Player {
             }
             virtual uint8_t Index() const
             {
-                return (_index);
+                _adminLock.Lock();
+                ASSERT(_player != nullptr);
+                uint8_t result = _player->Index();
+                _adminLock.Unlock();
+                return (result);
             }
             virtual streamtype Type() const
             {
                 _adminLock.Lock();
-                streamtype result = (_administrator != nullptr ? _player.Type() : streamtype::Stubbed);
+                ASSERT(_player != nullptr);
+                streamtype result = _player->Type();
                 _adminLock.Unlock();
                 return (result);
             }
             virtual drmtype DRM() const
             {
                 _adminLock.Lock();
-                drmtype result = (_administrator != nullptr ? _player.DRM() : drmtype::Unknown);
+                ASSERT(_player != nullptr);
+                drmtype result = _player->DRM();
                 _adminLock.Unlock();
                 return (result);
             }
             virtual IControl* Control()
             {
                 _adminLock.Lock();
-                if (_administrator != nullptr) {
+                if (_decoder == nullptr) {
+                    ASSERT(_administrator != nullptr);
+                    uint8_t decoderId =_administrator->Allocate();
 
-                    uint8_t decoderId;
-                    if (_decoder == nullptr) {
+                    if (decoderId != static_cast<uint8_t>(~0)) {
+                        _decoder = new DecoderImplementation(this, decoderId);
+                        ASSERT(_decoder != nullptr);
 
-                        if ((decoderId = _administrator->Allocate()) != static_cast<uint8_t>(~0)) {
+                        if (_decoder != nullptr) {
+                            _player->AttachDecoder(decoderId);
 
-                            _decoder = new DecoderImplementation<IMPLEMENTATION>(this, decoderId);
-
-                            if (_decoder != nullptr) {
-                                _player.AttachDecoder(decoderId);
-
-                                // AddRef ourselves as the Control, being handed out, needs the
-                                // Frontend created in this class. This is his parent class.....
-                                AddRef();
-                            }
+                            // AddRef ourselves as the Control, being handed out, needs the
+                            // Frontend created in this class. This is his parent class.....
+                            AddRef();
                         }
-                    } else {
-                        _decoder->AddRef();
                     }
+                } else {
+                    _decoder->AddRef();
                 }
                 _adminLock.Unlock();
                 return (_decoder);
@@ -383,115 +285,49 @@ namespace Player {
             virtual void Callback(IStream::ICallback* callback)
             {
                 _adminLock.Lock();
-
-                if (callback != nullptr) {
-
-                    ASSERT(_callback == nullptr);
-
-                    if (_administrator != nullptr) {
-                        _callback = callback;
-                        _callback->AddRef();
-                    }
-                } else {
-                    if (_callback != nullptr) {
-                        _callback->Release();
-                    }
-                    _callback = nullptr;
+                if (_callback != nullptr) {
+                    _callback->Release();
                 }
+                if (callback != nullptr) {
+                    callback->AddRef();
+                }
+                _callback = callback;
                 _adminLock.Unlock();
             }
             virtual state State() const
             {
                 _adminLock.Lock();
-                state result = (_administrator != nullptr ? _player.State() : Idle);
+                ASSERT(_player != nullptr);
+                state result = _player->State();
                 _adminLock.Unlock();
                 return (result);
             }
             virtual uint32_t Load(const string& configuration)
             {
                 _adminLock.Lock();
-                uint32_t result = (_administrator != nullptr ? _player.Load(configuration) : 0x80000001);
+                ASSERT(_player != nullptr);
+                uint32_t result = _player->Load(configuration);
                 _adminLock.Unlock();
                 return (result);
             }
             virtual string Metadata() const
             {
                 _adminLock.Lock();
-                string result = (_administrator != nullptr ? _player.Metadata() : string());
+                ASSERT(_player != nullptr);
+                string result = _player->Metadata();
                 _adminLock.Unlock();
                 return (result);
             }
-            void Terminate()
-            {
-                _adminLock.Lock();
 
-                ASSERT(_administrator != nullptr);
-
-                if (_decoder != nullptr) {
-                    _player.DetachDecoder(_decoder->Index());
-                    _administrator->Deallocate(_decoder->Index());
-                }
-
-                _player.Terminate();
-
-                _administrator = nullptr;
-
-                _adminLock.Unlock();
-            }
-
-            static uint32_t Initialize(const string& configuration)
-            {
-                return (__Initialize<IMPLEMENTATION>(configuration));
-            }
-            static uint32_t Deinitialize()
-            {
-                return (__Deinitialize<IMPLEMENTATION>());
-            }
-
-            BEGIN_INTERFACE_MAP(FrontendType<IMPLEMENTATION>)
+            BEGIN_INTERFACE_MAP(Frontend)
             INTERFACE_ENTRY(Exchange::IStream)
             END_INTERFACE_MAP
 
         private:
-            HAS_STATIC_MEMBER(Initialize, hasInitialize);
-            HAS_STATIC_MEMBER(Deinitialize, hasDeinitialize);
-
-            typedef hasInitialize<IMPLEMENTATION, uint32_t (IMPLEMENTATION::*)(const string&)> TraitInitialize;
-            typedef hasDeinitialize<IMPLEMENTATION, uint32_t (IMPLEMENTATION::*)()> TraitDeinitialize;
-
-            template <typename TYPE>
-            inline static typename Core::TypeTraits::enable_if<FrontendType<TYPE>::TraitInitialize::value, uint32_t>::type
-            __Initialize(const string& config)
-            {
-                return (IMPLEMENTATION::Initialize(config));
-            }
-
-            template <typename TYPE>
-            inline static typename Core::TypeTraits::enable_if<!FrontendType<TYPE>::TraitInitialize::value, uint32_t>::type
-            __Initialize(const string&)
-            {
-                return (Core::ERROR_NONE);
-            }
-
-            template <typename TYPE>
-            inline static typename Core::TypeTraits::enable_if<FrontendType<TYPE>::TraitDeinitialize::value, uint32_t>::type
-            __Deinitialize()
-            {
-                return (IMPLEMENTATION::Deinitialize());
-            }
-
-            template <typename TYPE>
-            inline static typename Core::TypeTraits::enable_if<!FrontendType<TYPE>::TraitDeinitialize::value, uint32_t>::type
-            __Deinitialize()
-            {
-                return (Core::ERROR_NONE);
-            }
-
             inline void TimeUpdate(uint64_t position)
             {
                 _adminLock.Lock();
-
-                if ((_administrator != nullptr) && (_decoder != nullptr)) {
+                if (_decoder != nullptr) {
                     _decoder->TimeUpdate(position);
                 }
                 _adminLock.Unlock();
@@ -499,7 +335,7 @@ namespace Player {
             void DRM(uint32_t state)
             {
                 _adminLock.Lock();
-                if ((_administrator != nullptr) && (_callback != nullptr)) {
+                if (_callback != nullptr) {
                     _callback->DRM(state);
                 }
                 _adminLock.Unlock();
@@ -507,7 +343,7 @@ namespace Player {
             void StateChange(Exchange::IStream::state newState)
             {
                 _adminLock.Lock();
-                if ((_administrator != nullptr) && (_callback != nullptr)) {
+                if (_callback != nullptr) {
                     _callback->StateChange(newState);
                 }
                 _adminLock.Unlock();
@@ -515,18 +351,18 @@ namespace Player {
             void Detach()
             {
                 _adminLock.Lock();
-                if (_administrator != nullptr) {
-                    ASSERT(_decoder != nullptr);
-                    _player.DetachDecoder(_decoder->Index());
-                    _administrator->Deallocate(_decoder->Index());
-                }
+                ASSERT(_decoder != nullptr);
                 if (_decoder != nullptr) {
+                    ASSERT(_player != nullptr);
+                    ASSERT(_administrator != nullptr);
+                    _player->DetachDecoder(_decoder->Index());
+                    _administrator->Deallocate(_decoder->Index());
                     _decoder = nullptr;
+                    Release();
                 }
                 _adminLock.Unlock();
-                Release();
             }
-            IMPLEMENTATION& Implementation()
+            IPlayerPlatform* Implementation()
             {
                 return (_player);
             }
@@ -542,15 +378,16 @@ namespace Player {
         private:
             mutable uint32_t _refCount;
             mutable Core::CriticalSection _adminLock;
-            uint8_t _index;
-            mutable Administrator* _administrator;
-            DecoderImplementation<IMPLEMENTATION>* _decoder;
+            Administrator* _administrator;
+            DecoderImplementation* _decoder;
             IStream::ICallback* _callback;
             CallbackImplementation _sink;
-            IMPLEMENTATION _player;
+            IPlayerPlatform* _player;
         };
-    }
-}
-} // WPEFramework::Player::Implementation
 
-#endif // __LINEARBROADCAST_FRONTEND_H
+    } // Implementation
+
+} // Player
+
+}
+

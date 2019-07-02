@@ -1,5 +1,4 @@
-#ifndef __GEOMETRY_IMPLEMENTATION_H
-#define __GEOMETRY_IMPLEMENTATION_H
+#pragma once
 
 #include "Module.h"
 
@@ -10,6 +9,13 @@ namespace WPEFramework {
 namespace Player {
 
     namespace Implementation {
+
+        struct Rectangle {
+            uint32_t X;
+            uint32_t Y;
+            uint32_t Width;
+            uint32_t Height;
+        };
 
         class Geometry : public Exchange::IStream::IControl::IGeometry {
         private:
@@ -94,6 +100,4 @@ namespace Player {
         };
     }
 }
-} // namespace WPEFramework::Player::Implementation
-
-#endif // __GEOMETRY_IMPLEMENTATION_H
+}
