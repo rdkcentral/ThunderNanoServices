@@ -325,12 +325,12 @@ namespace Plugin {
             while (it != _clients.end()) {
                 if (it->second.clientInterface == client) {
                     TRACE(Trace::Information, (_T("Removed client %s."), it->first.c_str()));
-                    // for( auto index : _observers) {
-                    //     // note as we have the name here, we could more efficiently pass the name to the 
-                    //     // caller as it is not allowed to get it from the pointer passes, but we are going 
-                    //     // to restructure the interface anyway
-                    //     index->Detached(it->second.clientInterface); 
-                    // }
+                    for (auto index : _observers) {
+                        // note as we have the name here, we could more efficiently pass the name to the
+                        // caller as it is not allowed to get it from the pointer passes, but we are going
+                        // to restructure the interface anyway
+                        index->Detached(it->first.c_str());
+                    }
 
                     uint32_t result = it->second.clientInterface->Release();
 
