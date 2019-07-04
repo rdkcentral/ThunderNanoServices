@@ -226,7 +226,7 @@ namespace WPASupplicant {
         public:
             Request()
                 : _request()
-                , _settable(false)
+                , _settable(true)
             {
             }
             Request(const string& message)
@@ -234,7 +234,7 @@ namespace WPASupplicant {
 #ifdef __DEBUG__
                 , _original(message)
 #endif // __DEBUG__
-                , _settable(false)
+                , _settable(true)
             {
             }
             virtual ~Request()
