@@ -1,5 +1,4 @@
-#ifndef __PLUGINWEBPROXY_H
-#define __PLUGINWEBPROXY_H
+#pragma once
 
 #include "Module.h"
 #include "RemoteAdministrator.h"
@@ -9,7 +8,9 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class RemoteControl : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IKeyHandler, public PluginHost::JSONRPC {
+    class RemoteControl : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC,
+                          public Exchange::IKeyHandler,  public Exchange::IWheelHandler,
+                          public Exchange::IPointerHandler,  public Exchange::ITouchHandler {
     private:
         RemoteControl(const RemoteControl&);
         RemoteControl& operator=(const RemoteControl&);
@@ -151,6 +152,9 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(Exchange::IKeyHandler)
+        INTERFACE_ENTRY(Exchange::IWheelHandler)
+        INTERFACE_ENTRY(Exchange::IPointerHandler)
+        INTERFACE_ENTRY(Exchange::ITouchHandler)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
@@ -207,13 +211,17 @@ namespace Plugin {
         // Whenever a key is pressed or release, let this plugin now, it will take the proper arrangements and timings
         // to announce this key event to the linux system. Repeat event is triggered by the watchdog implementation
         // in this plugin. No need to signal this.
-        virtual uint32_t KeyEvent(const bool pressed, const uint32_t code, const string& table) override;
+        uint32_t KeyEvent(const bool pressed, const uint32_t code, const string& mapName) override;
+
+        uint32_t AxisEvent(const int16_t x, const int16_t y) override;
+        uint32_t PointerButtonEvent(const bool pressed, const uint8_t button) override;
+        uint32_t PointerMotionEvent(const int16_t x, const int16_t y) override;
+        uint32_t TouchEvent(const uint8_t index, const ITouchHandler::touchstate state, const uint16_t x, const uint16_t y) override;
 
         // Next to handling keys, we also have a number of devices can produce keys. All these key producers have a name.
         // Using the next interface it is possible to retrieve the KeyProducers implemented by ths plugin.
         virtual Exchange::IKeyProducer* Producer(const string& name) override
         {
-
             Exchange::IKeyProducer* result = nullptr;
 
             Remotes::RemoteAdministrator::Iterator index(Remotes::RemoteAdministrator::Instance().Producers());
@@ -227,6 +235,57 @@ namespace Plugin {
 
                 ASSERT(result != nullptr);
 
+                result->AddRef();
+            }
+
+            return (result);
+        }
+
+        virtual Exchange::IWheelProducer* WheelProducer(const string& name) override
+        {
+            Exchange::IWheelProducer* result = nullptr;
+            auto index(Remotes::RemoteAdministrator::Instance().WheelProducers());
+
+            while ((index.Next() == true) && (name != index.Current()->Name())) /* Intentionally empty */
+                ;
+
+            if (index.IsValid() == true) {
+                result = index.Current();
+                ASSERT(result != nullptr);
+                result->AddRef();
+            }
+
+            return (result);
+        }
+
+        virtual Exchange::IPointerProducer* PointerProducer(const string& name) override
+        {
+            Exchange::IPointerProducer* result = nullptr;
+            auto index(Remotes::RemoteAdministrator::Instance().PointerProducers());
+
+            while ((index.Next() == true) && (name != index.Current()->Name())) /* Intentionally empty */
+                ;
+
+            if (index.IsValid() == true) {
+                result = index.Current();
+                ASSERT(result != nullptr);
+                result->AddRef();
+            }
+
+            return (result);
+        }
+
+        virtual Exchange::ITouchProducer* TouchProducer(const string& name) override
+        {
+            Exchange::ITouchProducer* result = nullptr;
+            auto index(Remotes::RemoteAdministrator::Instance().TouchProducers());
+
+            while ((index.Next() == true) && (name != index.Current()->Name())) /* Intentionally empty */
+                ;
+
+            if (index.IsValid() == true) {
+                result = index.Current();
+                ASSERT(result != nullptr);
                 result->AddRef();
             }
 
@@ -263,10 +322,10 @@ namespace Plugin {
     private:
         uint32_t _skipURL;
         std::list<string> _virtualDevices;
-        PluginHost::VirtualInput* _inputHandler;
+        PluginHost::VirtualInput* _keyHandler;
+        PluginHost::VirtualInput* _mouseHandler;
+        PluginHost::VirtualInput* _touchHandler;
         string _persistentPath;
     };
 }
 }
-
-#endif // __PLUGINWEBPROXY_H
