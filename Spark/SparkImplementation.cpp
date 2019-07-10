@@ -17,9 +17,9 @@
 #include <rtSettings.h>
 
 pxContext context;
-extern rtMutex glContextLock;
 extern rtScript script;
 extern bool gDirtyRectsEnabled;
+extern rtThreadQueue* gUIThreadQueue;
 
 namespace WPEFramework {
 namespace Plugin {
@@ -116,6 +116,79 @@ namespace Plugin {
             SceneWindow(const SceneWindow&) = delete;
             SceneWindow& operator=(const SceneWindow&) = delete;
 
+            struct ICommand {
+                virtual ~ICommand() {}
+
+                virtual void Execute() = 0;
+            };
+            class SuspendImplementation : public ICommand {
+            public:
+                SuspendImplementation() = delete;
+                SuspendImplementation(const SuspendImplementation&) = delete;
+                SuspendImplementation& operator= (const SuspendImplementation&) = delete;
+
+                SuspendImplementation(SceneWindow& parent, const bool value)
+                    : _parent(parent)
+                    , _suspend(value) {
+                }
+                virtual ~SuspendImplementation() {
+                }
+
+            public:
+                virtual void Execute() override {
+
+                    if (_parent._view != nullptr) {
+                        pxScriptView* realClass = reinterpret_cast<pxScriptView*>(_parent._view.getPtr());
+
+                        if (realClass != nullptr) {
+                            rtValue r;
+                            bool status = false;
+
+                            if (_suspend == true) {
+                                realClass->suspend(r, status);
+                                TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
+                            }
+                            else {
+                                realClass->resume(r, status);
+                                TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
+                            }
+                            _parent._adminLock.Lock();
+                            _parent._suspendStatus = status;
+                            _parent._adminLock.Unlock();
+                            _parent._signaled.SetEvent();
+                        }
+                    }
+                }
+
+            private:
+                SceneWindow& _parent;
+                bool _suspend;
+            };
+
+            class HideImplementation : public ICommand {
+            public:
+                HideImplementation() = delete;
+                HideImplementation(const HideImplementation&) = delete;
+                HideImplementation& operator= (const HideImplementation&) = delete;
+
+                HideImplementation(SceneWindow& parent, const bool hide)
+                    : _parent(parent)
+                    , _hide(hide) {
+                }
+                virtual ~HideImplementation() {
+                }
+
+            public:
+                virtual void Execute() override {
+                    // JRJR TODO Why aren't these necessary for glut... pxCore bug
+                    _parent.setVisibility(!_hide);
+                }
+
+            private:
+                SceneWindow& _parent;
+                bool _hide;
+            };
+
         public:
             SceneWindow()
                 : Core::Thread(Core::Thread::DefaultStackSize(), _T("Spark"))
@@ -127,10 +200,18 @@ namespace Plugin {
                 , _url()
                 , _fullPath()
                 , _sharedContext(context.createSharedContext())
+                , _suspendStatus(false)
+                , _signaled(false, true)
+                , _adminLock()
             {
             }
             virtual ~SceneWindow()
             {
+                if (gUIThreadQueue)
+                {
+                    gUIThreadQueue->removeAllTasksForObject(this);
+                }
+
                 Stop();
                 Quit();
 
@@ -287,34 +368,40 @@ namespace Plugin {
 
             void Hidden (const bool hidden) 
             {
-                // JRJR TODO Why aren't these necessary for glut... pxCore bug
-                setVisibility(!hidden);
+                if (gUIThreadQueue)
+                {
+                    gUIThreadQueue->addTask(
+                        windowThread,
+                        nullptr,
+                        static_cast<ICommand*>(new HideImplementation(*this, hidden)));
+                }
             }
 
             bool Suspend(const bool suspend)
             {
-                bool status = false;
-                rtValue r;
+                _adminLock.Lock();
+                _suspendStatus = false;
+                _adminLock.Unlock();
 
-                glContextLock.lock();
-                _sharedContext->makeCurrent(true);
-                if (_view != nullptr) {
-                    pxScriptView* realClass = reinterpret_cast<pxScriptView*>(_view.getPtr());
-                    
-                    if (realClass != nullptr) {
-                        if (suspend == true) {
-                            realClass->suspend(r, status);
-                            TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
-                        }
-                        else {
-                            realClass->resume(r, status);
-                            TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
-                        }
+                _signaled.ResetEvent();
+
+                bool result = false;
+
+                if (gUIThreadQueue)
+                {
+                    gUIThreadQueue->addTask(
+                        windowThread,
+                        nullptr,
+                        static_cast<ICommand*>(new SuspendImplementation(*this, suspend)));
+
+                    if (_signaled.Lock(MaxSuspendTime) == Core::ERROR_NONE) {
+                        _adminLock.Lock();
+                        result = _suspendStatus;
+                        _adminLock.Unlock();
                     }
                 }
-                _sharedContext->makeCurrent(false);
-                glContextLock.unlock();
-                return status;
+
+                return result;
             }
 
             uint8_t AnimationFPS() const
@@ -327,6 +414,13 @@ namespace Plugin {
             }
 
         private:
+            static void windowThread(void* context, void* data)
+            {
+                ICommand* command = reinterpret_cast<ICommand*>(data);
+                command->Execute();
+                delete command;
+            }
+
             virtual void invalidateRect(pxRect* r) override
             {
                 pxWindow::invalidateRect(r);
@@ -512,6 +606,7 @@ namespace Plugin {
                 ENTERSCENELOCK()
 
                 if (_fullPath.empty() == true) {
+                    EXITSCENELOCK()
                     Block();
                 }
                 else {
@@ -552,7 +647,13 @@ namespace Plugin {
             string _url;
             string _fullPath;
             pxSharedContextRef _sharedContext;
+            bool _suspendStatus;
+            Core::Event _signaled;
+            mutable Core::CriticalSection _adminLock;
         };
+
+   private:
+        static constexpr uint32_t MaxSuspendTime = 3000;
 
         SparkImplementation(const SparkImplementation&) = delete;
         SparkImplementation& operator=(const SparkImplementation&) = delete;
@@ -738,26 +839,23 @@ namespace Plugin {
         {
             bool result = false;
 
-                switch (command) {
-                case PluginHost::IStateControl::SUSPEND: {
-
-                    if (_window.Suspend(true) == true) {
-                        result = true;
-                    }
-                    break;
+            switch (command) {
+            case PluginHost::IStateControl::SUSPEND: {
+                if (_window.Suspend(true) == true) {
+                    result = true;
+               }
+                break;
+            }
+            case PluginHost::IStateControl::RESUME: {
+                if (_window.Suspend(false) == true) {
+                    result = true;
                 }
-                case PluginHost::IStateControl::RESUME: {
-
-                    if (_window.Suspend(false) == true) {
-                        result = true;
-                    }
-
-                    break;
-                }
-                default:
-                    ASSERT(false);
-                    break;
-                }
+                break;
+            }
+            default:
+                ASSERT(false);
+                break;
+            }
 
             return result;
         }
