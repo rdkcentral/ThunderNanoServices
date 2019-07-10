@@ -199,7 +199,6 @@ namespace Plugin {
                 , _animationFPS(~0)
                 , _url()
                 , _fullPath()
-                , _sharedContext(context.createSharedContext())
                 , _suspendStatus(false)
                 , _signaled(false, true)
                 , _adminLock()
@@ -646,7 +645,6 @@ namespace Plugin {
             uint8_t _animationFPS;
             string _url;
             string _fullPath;
-            pxSharedContextRef _sharedContext;
             bool _suspendStatus;
             Core::Event _signaled;
             mutable Core::CriticalSection _adminLock;
