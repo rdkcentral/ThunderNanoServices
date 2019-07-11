@@ -36,11 +36,13 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     uint32_t TestController::endpoint_categories(Core::JSON::ArrayType<Core::JSON::String>& response)
     {
-        uint32_t result = Core::ERROR_NONE;
+        auto categories = _testControllerImp->Categories();
+        ASSERT(categories != nullptr);
 
-        TRACE_L1("*** Call endpoint_categories ****");
+        // Get list of Categories
+        response = TestCategories(categories);
 
-        return result;
+        return (Core::ERROR_NONE);
     }
 
     // Retrieves the list of test for selected category.
@@ -51,9 +53,19 @@ namespace Plugin {
     uint32_t TestController::endpoint_tests(const TestsParamsData& params, Core::JSON::ArrayType<Core::JSON::String>& response)
     {
         uint32_t result = Core::ERROR_NONE;
-        const string& category = params.Category.Value();
 
-        TRACE_L1("*** Call endpoint_tests ****");
+        if (params.Category.IsSet() == true) {
+            auto category = _testControllerImp->Category(params.Category.Value());
+           if (category != nullptr)
+           {
+               // Get list of Categories
+               response = Tests(category->Tests());
+           } else {
+               result = Core::ERROR_UNAVAILABLE;
+           }
+        } else {
+            result = Core::ERROR_BAD_REQUEST;
+        }
 
         return result;
     }
