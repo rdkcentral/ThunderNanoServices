@@ -175,10 +175,9 @@ namespace Plugin {
         }
     }
 
-    string /*JSON*/ TestController::TestCategories(Exchange::ITestController::ICategory::IIterator* categories)
+    Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestController::TestCategories(Exchange::ITestController::ICategory::IIterator* categories)
     {
-        string response = EMPTY_STRING;
-        MetadataCategory testCategories;
+        Core::JSON::ArrayType<Core::JSON::String> testCategories;
 
         ASSERT(categories != nullptr);
 
@@ -186,17 +185,15 @@ namespace Plugin {
             while (categories->Next()) {
                 Core::JSON::String name;
                 name = categories->Category()->Name();
-                testCategories.TestCategories.Add(name);
+                testCategories.Add(name);
             }
-            testCategories.ToString(response);
         }
-        return response;
+        return testCategories;
     }
 
-    string /*JSON*/ TestController::Tests(Exchange::ITestController::ITest::IIterator* tests)
+    Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestController::Tests(Exchange::ITestController::ITest::IIterator* tests)
     {
-        string response = EMPTY_STRING;
-        MetadataTest testsItems;
+        Core::JSON::ArrayType<Core::JSON::String> testsItems;
 
         ASSERT(tests != nullptr);
 
@@ -204,12 +201,11 @@ namespace Plugin {
             while (tests->Next()) {
                 Core::JSON::String name;
                 name = tests->Test()->Name();
-                testsItems.Tests.Add(name);
+                testsItems.Add(name);
             }
-            testsItems.ToString(response);
         }
 
-        return response;
+        return testsItems;
     }
 
     string /*JSON*/ TestController::RunAll(const string& body, const string& categoryName)
@@ -302,76 +298,77 @@ namespace Plugin {
         Core::TextSegmentIterator index(Core::TextFragment(path, skipUrl, path.length() - skipUrl), false, '/');
 
         index.Next();
-        index.Next();
-        // Here process request other than:
-        // GET /Service/<CALLSIGN>/TestCategories
-        // GET /Service/<CALLSIGN>/<TEST_CATEGORY>/Tests
-        // GET /Service/<CALLSIGN>/<TEST_CATEGORY>/<TEST_NAME>/Description
-        // POST/PUT /Service/<CALLSIGN>/TestCategories/Run
-        // POST/PUT /Service/<CALLSIGN>/<TEST_CATEGORY>/Run
-        // POST/PUT /Service/<CALLSIGN>/<TEST_CATEGORY>/<TEST_NAME>
+        if (index.Next() == true) {
+            // Here process request other than:
+            // GET /Service/<CALLSIGN>/TestCategories
+            // GET /Service/<CALLSIGN>/<TEST_CATEGORY>/Tests
+            // GET /Service/<CALLSIGN>/<TEST_CATEGORY>/<TEST_NAME>/Description
+            // POST/PUT /Service/<CALLSIGN>/TestCategories/Run
+            // POST/PUT /Service/<CALLSIGN>/<TEST_CATEGORY>/Run
+            // POST/PUT /Service/<CALLSIGN>/<TEST_CATEGORY>/<TEST_NAME>
 
-        if (index.Current().Text() == _T("TestCategories")) {
-            if (type == Web::Request::HTTP_GET) {
-                if (!index.Next()) {
-                    auto categories = _testControllerImp->Categories();
-                    ASSERT(categories != nullptr);
-
-                    // Get list of Category
-                    response = TestCategories(categories);
-                    executed = true;
-                }
-            } else if ((type == Web::Request::HTTP_POST) || (type == Web::Request::HTTP_PUT)) {
-                index.Next();
-                if (index.Current().Text() == _T("Run")) {
+            if (index.Current().Text() == _T("TestCategories")) {
+                if (type == Web::Request::HTTP_GET) {
                     if (!index.Next()) {
-                        response = RunAll(body);
+                        auto categories = _testControllerImp->Categories();
+                        ASSERT(categories != nullptr);
+
+                        // Get list of Category
+                        TestCategories(categories).ToString(response);
                         executed = true;
                     }
-                }
-            }
-        } else {
-            string testCategory = index.Current().Text();
-
-            auto category = _testControllerImp->Category(testCategory);
-
-            if (category != nullptr) {
-                index.Next();
-                if (type == Web::Request::HTTP_GET) {
-                    if (index.Current().Text() == _T("Tests")) {
+                } else if ((type == Web::Request::HTTP_POST) || (type == Web::Request::HTTP_PUT)) {
+                    index.Next();
+                    if (index.Current().Text() == _T("Run")) {
                         if (!index.Next()) {
-                            // Get Tests list per Category
-                            response = Tests(category->Tests());
+                            response = RunAll(body);
                             executed = true;
                         }
-                    } else {
-                        auto test = category->Test(index.Current().Text());
+                    }
+                }
+            } else {
+                string testCategory = index.Current().Text();
 
-                        if (test != nullptr) {
-                            if (index.Current().Text() == test->Name()) {
-                                if (index.Next()) {
-                                    if (index.Current().Text() == _T("Description")) {
-                                        if (!index.Next()) {
-                                            response = test->Description();
-                                            executed = true;
+                auto category = _testControllerImp->Category(testCategory);
+
+                if (category != nullptr) {
+                    index.Next();
+                    if (type == Web::Request::HTTP_GET) {
+                        if (index.Current().Text() == _T("Tests")) {
+                            if (!index.Next()) {
+                                // Get Tests list per Category
+                                Tests(category->Tests()).ToString(response);
+                                executed = true;
+                            }
+                        } else {
+                            auto test = category->Test(index.Current().Text());
+
+                            if (test != nullptr) {
+                                if (index.Current().Text() == test->Name()) {
+                                    if (index.Next()) {
+                                        if (index.Current().Text() == _T("Description")) {
+                                            if (!index.Next()) {
+                                                response = test->Description();
+                                                executed = true;
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                } else if ((type == Web::Request::HTTP_POST) || (type == Web::Request::HTTP_PUT)) {
-                    string request = index.Current().Text();
-                    if (request == _T("Run")) {
-                        if (!index.Next()) {
-                            response = RunAll(body, category->Name());
-                            executed = true;
-                        }
-                    } else {
-                        if (!index.Next()) {
-                            //Process particular test requests if it is valid
-                            response = RunTest(body, category->Name(), request);
-                            executed = true;
+                    } else if ((type == Web::Request::HTTP_POST) || (type == Web::Request::HTTP_PUT)) {
+                        string request = index.Current().Text();
+                        if (request == _T("Run")) {
+                            if (!index.Next()) {
+                                response = RunAll(body, category->Name());
+                                executed = true;
+                            }
+                        } else {
+                            if (!index.Next()) {
+                                //Process particular test requests if it is valid
+                                response = RunTest(body, category->Name(), request);
+                                executed = true;
+                            }
                         }
                     }
                 }

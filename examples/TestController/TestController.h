@@ -42,23 +42,6 @@ namespace Plugin {
             TestController& _parent;
         };
 
-        class MetadataCategory : public Core::JSON::Container {
-        public:
-            MetadataCategory(const MetadataCategory&) = delete;
-            MetadataCategory& operator=(const MetadataCategory&) = delete;
-
-            MetadataCategory()
-                : Core::JSON::Container()
-                , TestCategories()
-            {
-                Add(_T("testCategories"), &TestCategories);
-            }
-            ~MetadataCategory() {}
-
-        public:
-            Core::JSON::ArrayType<Core::JSON::String> TestCategories;
-        };
-
         class MetadataTest : public Core::JSON::Container {
         public:
             MetadataTest(const MetadataTest&) = delete;
@@ -143,8 +126,8 @@ namespace Plugin {
 
         void TestPreparation(Exchange::ITestController::ICategory* const category, const string& categoryName);
         string /*JSON*/ HandleRequest(Web::Request::type type, const string& path, const uint8_t skipUrl, const string& body /*JSON*/);
-        string /*JSON*/ TestCategories(Exchange::ITestController::ICategory::IIterator* categories);
-        string /*JSON*/ Tests(Exchange::ITestController::ITest::IIterator* tests);
+        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestCategories(Exchange::ITestController::ICategory::IIterator* categories);
+        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ Tests(Exchange::ITestController::ITest::IIterator* tests);
         string /*JSON*/ RunAll(const string& body, const string& categoryName = EMPTY_STRING);
         string /*JSON*/ RunTest(const string& body, const string& categoryName, const string& testName);
 
