@@ -1,8 +1,6 @@
 set(PLUGIN_NAME TestUtility)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-message("Setting up ${PLUGIN_NAME}")
-
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 
@@ -16,8 +14,7 @@ add_library(${MODULE_NAME} SHARED
         Commands/Free.cpp
         Commands/Statm.cpp
         Commands/Crash.cpp
-        Commands/CrashNTimes.cpp
-)
+        Commands/CrashNTimes.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11

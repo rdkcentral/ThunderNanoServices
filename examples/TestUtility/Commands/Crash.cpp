@@ -17,7 +17,7 @@ public:
         : TestCommandBase(
               TestCommandBase::DescriptionBuilder(_T("Cause segmenation fault resulting in crash")),
               TestCommandBase::SignatureBuilder(Parameter())
-                  .InputParameter(Parameter("crashDelay", Parameter::ParamType::NUMBER, "delay in ms before actual crash")))
+                  .InputParameter("crashDelay", Parameter::TypeType::NUMBER, "delay in ms before actual crash"))
         , _crashCore(CrashCore::Instance())
         , _name(_T("Crash"))
     {
@@ -47,7 +47,6 @@ public:
     }
 
     virtual string Name() const final { return _name; }
-
 private:
     CrashCore& _crashCore;
     string _name;

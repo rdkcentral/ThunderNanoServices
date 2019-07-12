@@ -2,8 +2,7 @@
 
 namespace WPEFramework {
 namespace TestUtility {
-
-    Exchange::IMemory* MemoryObserver(const uint32_t pid)
+    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
         class MemoryObserverImpl : public Exchange::IMemory {
         private:
@@ -12,22 +11,17 @@ namespace TestUtility {
             MemoryObserverImpl& operator=(const MemoryObserverImpl&);
 
         public:
-            MemoryObserverImpl(const uint32_t id)
-                : _main(id == 0 ? Core::ProcessInfo().Id() : id)
-                , _observable(false)
+            MemoryObserverImpl(const RPC::IRemoteConnection* connection)
+                : _main(connection  == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
+                , _observable(true)
             {
+
             }
             ~MemoryObserverImpl() = default;
-
         public:
-            virtual void Observe(const uint32_t pid)
+            virtual void Observe(const uint32_t /* pid */)
             {
-                if (pid == 0) {
-                    _observable = false;
-                } else {
-                    _observable = true;
-                    _main = Core::ProcessInfo(pid);
-                }
+
             }
             virtual uint64_t Resident() const { return (_observable == false ? 0 : _main.Resident()); }
 
@@ -48,7 +42,14 @@ namespace TestUtility {
             bool _observable;
         };
 
-        return (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(pid));
+        Exchange::IMemory* memory_observer = (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection));
+
+        if (connection != nullptr) {
+            connection->Release();
+            connection = nullptr;
+        }
+
+        return memory_observer;
     }
 } // namespace TestUtility
 
@@ -58,27 +59,30 @@ namespace Plugin {
     /* virtual */ const string TestUtility::Initialize(PluginHost::IShell* service)
     {
         string message = EMPTY_STRING;
+        Config config;
 
         ASSERT(service != nullptr);
         ASSERT(_service == nullptr);
         ASSERT(_testUtilityImp == nullptr);
         ASSERT(_memory == nullptr);
+        ASSERT(_connection == 0);
 
         _service = service;
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
+        
+        config.FromString(_service->ConfigLine());
+        
         _service->Register(&_notification);
+        _testUtilityImp = _service->Root<Exchange::ITestUtility>(_connection, ImplWaitTime, _T("TestUtilityImp"));
 
-        _testUtilityImp = _service->Root<Exchange::ITestUtility>(_pid, ImplWaitTime, _T("TestUtilityImp"));
-
-        if ((_testUtilityImp != nullptr) && (_service != nullptr)) {
-            _memory = WPEFramework::TestUtility::MemoryObserver(_pid);
+        if (_testUtilityImp != nullptr) {
+            _memory = WPEFramework::TestUtility::MemoryObserver(_service->RemoteConnection(_connection));
             ASSERT(_memory != nullptr);
-            _memory->Observe(_pid);
         } else {
-            ProcessTermination(_pid);
-            _service = nullptr;
-            _testUtilityImp = nullptr;
+            ProcessTermination(_connection);
+
             _service->Unregister(&_notification);
+            _service = nullptr;
 
             TRACE(Trace::Fatal, (_T("*** TestUtility could not be instantiated ***")))
             message = _T("TestUtility could not be instantiated.");
@@ -93,16 +97,21 @@ namespace Plugin {
         ASSERT(_testUtilityImp != nullptr);
         ASSERT(_memory != nullptr);
 
+        _service->Unregister(&_notification);
+        _service = nullptr;
+        if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+            TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
+        }
+        _memory = nullptr;
+        
         if (_testUtilityImp->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
-            TRACE(Trace::Information, (_T("TestUtility is not properly destructed (pid=%d)"), _pid));
-            ProcessTermination(_pid);
+            TRACE(Trace::Information, (_T("TestUtility is not properly destructed (connection=%d)"), _connection));
+            ProcessTermination(_connection);
         }
 
         _testUtilityImp = nullptr;
-        _memory->Release();
-        _memory = nullptr;
-        _service->Unregister(&_notification);
-        _service = nullptr;
+        _skipURL = 0;
+        _connection = 0;
     }
 
     /* virtual */ string TestUtility::Information() const
@@ -150,25 +159,20 @@ namespace Plugin {
         return result;
     }
 
-    void TestUtility::ProcessTermination(uint32_t pid)
+    void TestUtility::ProcessTermination(uint32_t _connection)
     {
-        RPC::IRemoteProcess* process(_service->RemoteProcess(pid));
+        RPC::IRemoteConnection* process(_service->RemoteConnection(_connection));
         if (process != nullptr) {
             process->Terminate();
             process->Release();
         }
     }
 
-    void TestUtility::Activated(RPC::IRemoteProcess* /*process*/)
-    {
-        return;
-    }
-
-    void TestUtility::Deactivated(RPC::IRemoteProcess* process)
-    {
-        if (_pid == process->Id()) {
+    void TestUtility::Deactivated(RPC::IRemoteConnection* process)
+    { 
+        if (_connection == process->Id()) {
             ASSERT(_service != nullptr);
-            PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+            RPC::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
 
@@ -197,32 +201,31 @@ namespace Plugin {
         string /*JSON*/ response = EMPTY_STRING;
 
         Core::TextSegmentIterator index(Core::TextFragment(path, skipUrl, path.length() - skipUrl), false, '/');
-
         index.Next();
         index.Next();
         // Here process request other than:
         // /Service/<CALLSIGN>/TestCommands
         // /Service/<CALLSIGN>/<TEST_COMMAND_NAME>/...
 
-        if (index.Current().Text() == _T("TestCommands")) {
-            if ((!index.Next()) && (type == Web::Request::HTTP_GET)) {
-                response = TestCommands();
-                executed = true;
-            }
-        } else {
-            Exchange::ITestUtility::ICommand* command = _testUtilityImp->Command(index.Current().Text());
-
-            if (command) {
-                if (!index.Next() && ((type == Web::Request::HTTP_POST) || (type == Web::Request::HTTP_PUT))) {
-                    // Execute test command
-                    response = command->Execute(body);
+        if (index.IsValid()) {
+            if (index.Current().Text() == _T("TestCommands")) {
+                if ((!index.Next()) && (type == Web::Request::HTTP_GET)) {
+                    response = TestCommands();
                     executed = true;
-                } else {
-                    if (type == Web::Request::HTTP_GET) {
-                        if ((index.Current().Text() == _T("Description")) && (!index.Next())) {
+                }
+            } else {
+                Exchange::ITestUtility::ICommand* command = _testUtilityImp->Command(index.Current().Text());
+
+                if (command) {
+                    if (!index.Next() && ((type == Web::Request::HTTP_POST) || (type == Web::Request::HTTP_PUT))) {
+                        // Execute test command
+                        response = command->Execute(body);
+                        executed = true;
+                    } else  if (type == Web::Request::HTTP_GET) {
+                        if (index.IsValid() && (index.Current().Text() == _T("Description")) && (!index.Next())) {
                             response = command->Description();
                             executed = true;
-                        } else if ((index.Current().Text() == _T("Parameters")) && (!index.Next())) {
+                        } else if (index.IsValid() && (index.Current().Text() == _T("Parameters")) && (!index.Next())) {
                             response = command->Signature();
                             executed = true;
                         }
