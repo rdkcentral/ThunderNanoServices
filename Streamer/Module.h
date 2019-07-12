@@ -7,6 +7,7 @@
 
 #include <interfaces/IStream.h>
 #include <core/core.h>
+#include <core/Number.h>
 #include <plugins/plugins.h>
 #include <tracing/tracing.h>
 
