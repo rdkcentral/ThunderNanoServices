@@ -14,8 +14,8 @@ public:
 
     Malloc()
         : TestCommandBase(TestCommandBase::DescriptionBuilder("Allocates desired kB in memory and holds it"),
-              TestCommandBase::SignatureBuilder(Parameter("memory", Parameter::ParamType::NUMBER, "memory statistics in KB"))
-                  .InputParameter(Parameter("size", Parameter::ParamType::NUMBER, "memory in kB for allocation")))
+              TestCommandBase::SignatureBuilder("memory", Parameter::TypeType::NUMBER, "memory statistics in KB")
+                  .InputParameter("size", Parameter::TypeType::NUMBER, "memory in kB for allocation"))
         , _memoryAdmin(MemoryAllocation::Instance())
     {
         TestCore::TestCommandController::Instance().Announce(this);

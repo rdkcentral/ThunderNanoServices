@@ -12,9 +12,12 @@ namespace TestCore {
         TestUtilityImp& operator=(const TestUtilityImp&) = delete;
 
     public:
-        TestUtilityImp() {}
+        TestUtilityImp() {
+        }
 
-        virtual ~TestUtilityImp() = default;
+        virtual ~TestUtilityImp() {
+            TestCore::TestCommandController::Instance().Release();
+        };
 
         //  ITestUtility methods
         // -------------------------------------------------------------------------------------------------------

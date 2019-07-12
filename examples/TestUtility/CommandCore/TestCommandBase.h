@@ -19,14 +19,29 @@ public:
         SignatureBuilder& operator=(const SignatureBuilder&) = delete;
 
     public:
-        explicit SignatureBuilder(const JsonData::TestUtility::InputInfo& returnParam)
+        SignatureBuilder(string const& name, JsonData::TestUtility::InputInfo::TypeType type, string const& comment)
             : _jsonSignature()
         {
-            _jsonSignature.Output = returnParam;
+           	JsonData::TestUtility::InputInfo inputParam;
+			inputParam.Name = name;
+			inputParam.Type = type;
+			inputParam.Comment = comment;
+
+            _jsonSignature.Output = inputParam;
         }
 
-        SignatureBuilder& InputParameter(const JsonData::TestUtility::InputInfo& inputParam)
+        explicit SignatureBuilder(const JsonData::TestUtility::InputInfo& inputParam)
+                    : _jsonSignature()
+		{
+			_jsonSignature.Output = inputParam;
+		}
+
+        SignatureBuilder& InputParameter(const string& name, JsonData::TestUtility::InputInfo::TypeType type, const string& comment)
         {
+        	JsonData::TestUtility::InputInfo inputParam;
+        	inputParam.Name = name;
+        	inputParam.Type = type;
+        	inputParam.Comment = comment;
             _jsonSignature.Input.Add(inputParam);
 
             return (*this);
