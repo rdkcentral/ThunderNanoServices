@@ -500,7 +500,7 @@ namespace Plugin {
             result = Core::ERROR_UNKNOWN_KEY;
         }
 
-        return Core::ERROR_NONE;
+        return result;
     }
 
     // Event: statechange - Notifies of stream state change
