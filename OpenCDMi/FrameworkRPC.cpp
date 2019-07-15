@@ -1270,7 +1270,8 @@ namespace Plugin {
             }
 
             _entryPoint = Core::Service<AccessorOCDM>::Create<::OCDM::IAccessorOCDM>(this, config.SharePath.Value(), config.ShareSize.Value());
-            _service = new ExternalAccess(Core::NodeId(config.Connector.Value().c_str()), _entryPoint, Core::ProxyType<RPC::InvokeServer>::Create());
+            Core::ProxyType<RPC::InvokeServer> server = Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance());
+            _service = new ExternalAccess(Core::NodeId(config.Connector.Value().c_str()), _entryPoint, server);
 
             if (_service != nullptr) {
 
