@@ -71,11 +71,11 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         Config config;
         config.FromString(service->ConfigLine());
 
-		Core::ProxyType < RPC::InvokeServerType<4, 1>  > engine (Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create());
-        _rpcServer = new COMServer(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath(), engine->InvokeHandler(), engine->AnnounceHandler());
+        Core::ProxyType<RPC::InvokeServer> engine (Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance()));
+        _rpcServer = new COMServer(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath(), engine);
 
         _job->Period(5);
-        PluginHost::WorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), _job);
+        PluginHost::WorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(_job));
 
         // On success return empty, to indicate there is no error text.
         return (string());
@@ -84,7 +84,7 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
     /* virtual */ void JSONRPCPlugin::Deinitialize(PluginHost::IShell * /* service */)
     {
         _job->Period(0);
-        PluginHost::WorkerPool::Instance().Revoke(_job);
+        PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_job));
         delete _rpcServer;
     }
 

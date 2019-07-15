@@ -61,14 +61,14 @@ namespace Plugin {
 
         public:
             COMServer(
-				const Core::NodeId& source, 
-				Exchange::IPerformance* parentInterface, 
-				const string& proxyStubPath, 
-				const Core::ProxyType<Core::IPCServerType<RPC::InvokeMessage> >& invoke,
-                const Core::ProxyType<Core::IPCServerType<RPC::AnnounceMessage> >& announcement)
-                : RPC::Communicator(source, proxyStubPath, invoke, announcement)
+                const Core::NodeId& source, 
+                Exchange::IPerformance* parentInterface, 
+                const string& proxyStubPath, 
+                const Core::ProxyType<RPC::InvokeServer>& engine)
+                : RPC::Communicator(source, proxyStubPath, Core::ProxyType<Core::IIPCServer>(engine))
                 , _parentInterface(parentInterface)
             {
+                engine->Announcements(RPC::Communicator::Announcement());
                 Open(Core::infinite);
             }
             ~COMServer()
@@ -321,13 +321,13 @@ namespace Plugin {
         }
         void async_callback(const Core::JSONRPC::Connection& connection, const Core::JSON::DecUInt8& seconds)
         {
-            Core::ProxyType<Callback> job(Core::ProxyType<Callback>::Create(this, connection));
+            Core::ProxyType<Core::IDispatch> job(Core::ProxyType<Callback>::Create(this, connection));
             PluginHost::WorkerPool::Instance().Schedule(Core::Time::Now().Add(seconds * 1000), job);
         }
 
-		// Methods for performance measurements
-		uint32_t send(const Data::JSONDataBuffer& data, Core::JSON::DecUInt32& result) 
-		{
+        // Methods for performance measurements
+        uint32_t send(const Data::JSONDataBuffer& data, Core::JSON::DecUInt32& result) 
+        {
             uint16_t length = static_cast<uint16_t>(((data.Data.Value().length() * 6) + 7) / 8);
             uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
             Core::FromString(data.Data.Value(), buffer, length);
