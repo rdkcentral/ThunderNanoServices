@@ -138,6 +138,8 @@ namespace Plugin {
                 SuspendImplementation(SceneWindow& parent, const bool value)
                     : _parent(parent)
                     , _suspend(value)
+                    , _status(false)
+                    , _adminLock()
                     , _signaled(false, true) {
                 }
                 virtual ~SuspendImplementation() {
@@ -161,17 +163,31 @@ namespace Plugin {
                                 realClass->resume(r, status);
                                 TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
                             }
+                            _adminLock.Lock();
+                            _status = status;
+                            _adminLock.Unlock();
                         }
                     }
                     _signaled.SetEvent();
                 }
                 bool Wait(const uint32_t waitTime) {
-                    return (_signaled.Lock(waitTime) == Core::ERROR_NONE);
+                    bool status = false;
+
+                    if (_signaled.Lock(waitTime) == Core::ERROR_NONE) {
+                        _adminLock.Lock();
+                        status = _status;
+                        _adminLock.Unlock();
+                    }
+
+                    return status;
                 }
 
             private:
                 SceneWindow& _parent;
                 bool _suspend;
+                bool _status;
+
+                Core::CriticalSection _adminLock;
                 Core::Event _signaled;
             };
 
