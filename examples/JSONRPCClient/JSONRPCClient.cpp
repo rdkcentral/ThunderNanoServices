@@ -248,9 +248,10 @@ int main(int argc, char** argv)
 
         ParseOptions(argc, argv, comChannel);
 
-		SleepMs(2000);
+        // If oth are tarted at the same time (from Visual Studio :-) give the server a bit more time to start.
+        SleepMs(2000);
 
-		// Lets also open up channels over the COMRPC protocol to do performance measurements
+        // Lets also open up channels over the COMRPC protocol to do performance measurements
         // to compare JSONRPC v.s. COMRPC
 
         // Make sure we have an engine to handle the incoming requests over the COMRPC channel.
@@ -258,8 +259,12 @@ int main(int argc, char** argv)
         // framework to connect to a COMRPC server running at the <connector> address. once the
         // connection is established, interfaces can be requested.
         Core::ProxyType<RPC::InvokeServerType<4, 1>> engine(Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create(Core::Thread::DefaultStackSize()));
-        Core::ProxyType<RPC::CommunicatorClient> client(Core::ProxyType<RPC::CommunicatorClient>::Create(
-            comChannel, engine->InvokeHandler(), engine->AnnounceHandler()));
+        Core::ProxyType<RPC::CommunicatorClient> client(
+            Core::ProxyType<RPC::CommunicatorClient>::Create(
+                comChannel, 
+                Core::ProxyType<Core::IIPCServer>(engine)
+            ));
+        engine->Announcements(client->Announcement());
 
         ASSERT(client.IsValid() == true);
 

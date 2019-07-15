@@ -202,5 +202,4 @@ if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     include(CPack)
 endif()
 
-
 add_subdirectory(examples)
