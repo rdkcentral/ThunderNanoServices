@@ -139,7 +139,6 @@ namespace Plugin {
                     : _parent(parent)
                     , _suspend(value)
                     , _status(false)
-                    , _adminLock()
                     , _signaled(false, true) {
                 }
                 virtual ~SuspendImplementation() {
@@ -163,9 +162,7 @@ namespace Plugin {
                                 realClass->resume(r, status);
                                 TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
                             }
-                            _adminLock.Lock();
                             _status = status;
-                            _adminLock.Unlock();
                         }
                     }
                     _signaled.SetEvent();
@@ -174,9 +171,7 @@ namespace Plugin {
                     bool status = false;
 
                     if (_signaled.Lock(waitTime) == Core::ERROR_NONE) {
-                        _adminLock.Lock();
                         status = _status;
-                        _adminLock.Unlock();
                     }
 
                     return status;
@@ -187,7 +182,6 @@ namespace Plugin {
                 bool _suspend;
                 bool _status;
 
-                Core::CriticalSection _adminLock;
                 Core::Event _signaled;
             };
 
