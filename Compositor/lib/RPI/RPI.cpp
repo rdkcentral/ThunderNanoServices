@@ -136,7 +136,7 @@ namespace Plugin {
             Config config;
             config.FromString(service->ConfigLine());
 
-            _engine = Core::ProxyType<RPC::InvokeServer>::Create();
+            _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance());
             _externalAccess = new ExternalAccess(*this, Core::NodeId(config.Connector.Value().c_str()), service->ProxyStubPath(), _engine);
 
             if (_externalAccess->IsListening() == true) {

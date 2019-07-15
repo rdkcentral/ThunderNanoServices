@@ -250,7 +250,7 @@ namespace Plugin {
 
             ASSERT(_service != nullptr);
 
-            RPC::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service,
+            Core::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service,
                 PluginHost::IShell::DEACTIVATED,
                 PluginHost::IShell::FAILURE));
         }

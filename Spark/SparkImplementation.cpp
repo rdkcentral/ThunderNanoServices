@@ -117,10 +117,18 @@ namespace Plugin {
             SceneWindow& operator=(const SceneWindow&) = delete;
 
             struct ICommand {
+                ICommand() : _refCount(1) {}
                 virtual ~ICommand() {}
 
+                void AddRef() { _refCount++; }
+                void Release() { if (--_refCount == 0) { delete this; } }
+
                 virtual void Execute() = 0;
+
+            private:
+                std::atomic<uint32_t> _refCount;
             };
+
             class SuspendImplementation : public ICommand {
             public:
                 SuspendImplementation() = delete;
@@ -129,7 +137,8 @@ namespace Plugin {
 
                 SuspendImplementation(SceneWindow& parent, const bool value)
                     : _parent(parent)
-                    , _suspend(value) {
+                    , _suspend(value)
+                    , _signaled(false, true) {
                 }
                 virtual ~SuspendImplementation() {
                 }
@@ -152,17 +161,18 @@ namespace Plugin {
                                 realClass->resume(r, status);
                                 TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
                             }
-                            _parent._adminLock.Lock();
-                            _parent._suspendStatus = status;
-                            _parent._adminLock.Unlock();
-                            _parent._signaled.SetEvent();
                         }
                     }
+                    _signaled.SetEvent();
+                }
+                bool Wait(const uint32_t waitTime) {
+                    return (_signaled.Lock(waitTime) == Core::ERROR_NONE);
                 }
 
             private:
                 SceneWindow& _parent;
                 bool _suspend;
+                Core::Event _signaled;
             };
 
             class HideImplementation : public ICommand {
@@ -199,29 +209,21 @@ namespace Plugin {
                 , _animationFPS(~0)
                 , _url()
                 , _fullPath()
-                , _suspendStatus(false)
-                , _signaled(false, true)
-                , _adminLock()
             {
             }
             virtual ~SceneWindow()
             {
-                if (gUIThreadQueue)
-                {
-                    gUIThreadQueue->removeAllTasksForObject(this);
-                }
-
                 Stop();
                 Quit();
 
                 Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
 
-                if (_view != nullptr) {
-                    onCloseRequest();
-
-                    _view->setViewContainer(nullptr);
-                    _view = nullptr;
+                if (gUIThreadQueue)
+                {
+                    gUIThreadQueue->removeAllTasksForObject(this);
                 }
+
+                ASSERT (_view == nullptr);
             }
 
             uint32_t Configure(PluginHost::IShell* service) {
@@ -348,7 +350,6 @@ namespace Plugin {
 
                     ENTERSCENELOCK()
 
-
                     _fullPath = buffer;
 
                     EXITSCENELOCK()
@@ -378,29 +379,24 @@ namespace Plugin {
 
             bool Suspend(const bool suspend)
             {
-                _adminLock.Lock();
-                _suspendStatus = false;
-                _adminLock.Unlock();
-
-                _signaled.ResetEvent();
-
                 bool result = false;
 
                 if (gUIThreadQueue)
                 {
+                    SuspendImplementation* command = new SuspendImplementation(*this, suspend);
+
+                    command->AddRef();
+
                     gUIThreadQueue->addTask(
                         windowThread,
                         nullptr,
-                        static_cast<ICommand*>(new SuspendImplementation(*this, suspend)));
+                        command);
 
-                    if (_signaled.Lock(MaxSuspendTime) == Core::ERROR_NONE) {
-                        _adminLock.Lock();
-                        result = _suspendStatus;
-                        _adminLock.Unlock();
-                    }
+                    result = command->Wait(Core::infinite);
+                    command->Release();
                 }
 
-                return result;
+                return (result);
             }
 
             uint8_t AnimationFPS() const
@@ -417,23 +413,19 @@ namespace Plugin {
             {
                 ICommand* command = reinterpret_cast<ICommand*>(data);
                 command->Execute();
-                delete command;
+                command->Release();
             }
-
-            virtual void invalidateRect(pxRect* r) override
-            {
-                pxWindow::invalidateRect(r);
-            }
-
             virtual void* getInterface(const char* /* name */) override
             {
                 return nullptr;
             }
-
             virtual void onCreate() override 
             {
             }
-
+            virtual void invalidateRect(pxRect* r) override
+            {
+                pxWindow::invalidateRect(r);
+            }
             virtual void onCloseRequest() override
             {
                 ENTERSCENELOCK();
@@ -605,26 +597,13 @@ namespace Plugin {
                 ENTERSCENELOCK()
 
                 if (_fullPath.empty() == true) {
-                    EXITSCENELOCK()
                     Block();
                 }
                 else {
-                    // This results in a reference counted object!!!
-                    if (_view == nullptr) {
-                        _view = new pxScriptView(_fullPath.c_str(),"javascript/node/v8");
-
-                        ASSERT (_view != nullptr);
-
-                        _view->setViewContainer(this);
-                        _view->onSize(_width, _height);
-                    } else {
-                        pxScriptView* realClass = reinterpret_cast<pxScriptView*>(_view.getPtr());
-
-                        ASSERT (realClass != nullptr);
-
-                        realClass->setUrl(_fullPath.c_str());
-                    }
-
+                    _view = new pxScriptView(_fullPath.c_str(),"javascript/node/v8");
+                    _view->setViewContainer(this);
+                    _view->onSize(_width, _height);
+ 
                     EXITSCENELOCK()
 
                     TRACE(Trace::Information, (_T("Showing URL: %s"), _fullPath.c_str()));
@@ -632,7 +611,18 @@ namespace Plugin {
                     if (IsRunning() == true) {
                         _eventLoop.run();
                     }
+
+                    ENTERSCENELOCK();
+
+                    // The assumption is that the next line is automatically triggered on destructions, but
+                    // if not, maybe we should do it here!
+                    // onCloseRequest();
+
+                    _view->setViewContainer(nullptr);
+                    _view = nullptr;
                 }
+
+                EXITSCENELOCK()
 
                 return (Core::infinite);
             }
@@ -645,9 +635,6 @@ namespace Plugin {
             uint8_t _animationFPS;
             string _url;
             string _fullPath;
-            bool _suspendStatus;
-            Core::Event _signaled;
-            mutable Core::CriticalSection _adminLock;
         };
 
    private:
