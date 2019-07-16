@@ -1,7 +1,6 @@
-
-#include <interfaces/json/JsonData_Monitor.h>
-#include "Monitor.h"
 #include "Module.h"
+#include "Monitor.h"
+#include <interfaces/json/JsonData_Monitor.h>
 
 /*
     // Copy the code below to Monitor class definition
@@ -75,8 +74,8 @@ namespace Plugin {
         const string& callsign = params.Callsign.Value();
         _monitor->Update(
             callsign,
-            {params.Operationalrestartsettings.Limit.Value(), params.Operationalrestartsettings.Windowseconds.Value()},
-            {params.Memoryrestartsettings.Limit.Value(), params.Memoryrestartsettings.Windowseconds.Value()});
+            params.Operational.Window.Value(), params.Operational.Limit.Value(), 
+            params.Memory.Window.Value(), params.Memory.Limit.Value());
         return Core::ERROR_NONE;
     }
 
