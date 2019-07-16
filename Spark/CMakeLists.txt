@@ -36,6 +36,12 @@ if (PLATFORM_WAYLAND_EGL)
             PX_PLATFORM_WAYLAND_EGL=ON)
 endif()
 
+if (PLATFORM_ESSOS)
+    target_compile_definitions(${MODULE_NAME}
+        PRIVATE
+        PX_PLATFORM_WAYLAND_EGL=ON PX_PLATFORM_ESSOS=ON)
+endif()
+
 target_compile_definitions(${MODULE_NAME}
     PRIVATE
         ANIMATION_ROTATE_XYZ=ON
