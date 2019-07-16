@@ -17,6 +17,7 @@ namespace Plugin {
 
     string DropbearServer::Information() const
     {
+	// No additional info to report.
         return string();
     }
 
@@ -24,35 +25,68 @@ namespace Plugin {
     {
     }
 
+    // GET <- Return the player numbers in use.
+    // GET ../Window <- Return the Rectangle in which the player is running.
+    // POST ../Create/<Type> <- Create an instance of a stream of type <Type>, Body return the stream index for reference in the other calls.
+    // PUT ../<Number>/Load <- Load the URL given in the body onto this stream
+    // PUT ../<Number>/Attach <- Attach a decoder to the primer of stream <Number>
+    // PUT ../<Number>/Speed/<speed> <- Set the stream as a speed of <speed>
+    // PUT ../<Number>/Detach <- Detach a decoder to the primer of stream <Number>
+    // PUT ../<Number>/Window/X/Y/Width/Height <- Set Window size
+    // DELETE ../<Number> <- Drop the stream adn thus the decoder
+    //
+    // POST/PUT	<- StartService
+    // POST/PUT	<- StopService
+    // GET	<- GetTotalSessions
+    // GET	<- GetSessionsInfo
+    // GET	<- GetSessionsCount
+    // DELETE	<-CloseClientSession
+
     Core::ProxyType<Web::Response> DropbearServer::Process(const Web::Request& request)
     {
         ASSERT(_skipURL <= request.Path.length());
 
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::JSONBodyType<Data>> response(jsonBodyDataFactory.Element());
+
         Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
-        index.Next();
 
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
-        result->Message = _T("Unsupported request for the [DropbearServer] service9.");
+        result->Message = _T("Unsupported request for the [DropbearServer] service.");
 
-        if ((request.Verb == Web::Request::HTTP_PUT || request.Verb == Web::Request::HTTP_POST) && index.Next()) {
+        if ((request.Verb == Web::Request::HTTP_PUT || request.Verb == Web::Request::HTTP_POST && index.Next())) {
 
             if (index.Current().Text() == "StartService") {
-                string argv;
+                string sshport;
+                string hostkeys;
+                string portflag;
+
                 Core::URL::KeyValue options(request.Query.Value());
+
                 if (options.Exists(_T("port"), true) == true) {
                     constexpr int kPortNameMaxLength = 255;
                     std::array<char, kPortNameMaxLength> portNumber {0};
-                    argv = options[_T("port")].Text();
-                    Core::URL::Decode(argv.c_str(), argv.length(), portNumber.data(), portNumber.size());
-                    argv = portNumber.data();
+		    std::string hostKeys;
+		    std::string portFlag;
+
+                    sshport = options[_T("port")].Text();
+                    hostkeys = options[_T("hostkeys")].Text();
+                    portlag = options[_T("portflag")].Text();
+
+                    Core::URL::Decode(sshport.c_str(), sshport.length(), portNumber.data(), portNumber.size());
+                    Core::URL::Decode(hostkeys.c_str(), hostkeys.length(), hostKeys.data(), hostKeys.size());
+                    Core::URL::Decode(portflag.c_str(), portflag.length(), portFlag.data(), portFlag.size());
+
+                    sshport = portNumber.data();
+                    hostkeys = hostKeys.data();
+                    portflag = portFlag.data();
                 }
-                if (!argv.empty()) {
+                if (!sshport.empty()) {
         	    TRACE(Trace::Information, (_T("Entered into StartService method")));
-                    uint32_t status = StartService(argv);
+                    uint32_t status = StartService(hostkeys, portflag, sshport);
                     if (status != Core::ERROR_NONE) {
                         result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                        result->Message = _T("Dropbear StartService failed for ") + argv;
+                        result->Message = _T("Dropbear StartService failed for:") + sshport + _T("hostkeys:") + hostkeys + _T("portflag:") + portflag;
                     } else {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = "OK";
@@ -77,19 +111,97 @@ namespace Plugin {
                 result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
                 result->Message = _T("Unavailable method");
             }
-        }
+        } else if ((request.Verb == Web::Request::HTTP_GET && index.Next())) {
+		
+		if (index.Current().Text() == "GetTotalSessions") {
+			// GET	<- GetTotalSessions
+    			response->TotalCount = DropbearServer::GetTotalSessions();
+			result->ErrorCode = Web::STATUS_OK;
+			result->ContentType = Web::MIMETypes::MIME_JSON;
+			result->Body(response);
+		} else if (index.Current().Text() == "GetSessionsCount") {
+			// GET	<- GetSessionsInfo
+    			response->ActiveCount = DropbearServer::GetSessionsCount();
+			result->ErrorCode = Web::STATUS_OK;
+			result->ContentType = Web::MIMETypes::MIME_JSON;
+			result->Body(response);
+		} else if (index.Current().Text() == "GetSessionsInfo") {
+			// GET	<- GetSessionsCount
+    			uint32_t status = DropbearServer::GetSessionsInfo(response->SessionInfo);
+                	if (status != Core::ERROR_NONE) {
+	                    result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
+        	            result->Message = _T("Dropbear GetSessionsInfo failed for ");
+                	} else {
+				result->ErrorCode = Web::STATUS_OK;
+				result->ContentType = Web::MIMETypes::MIME_JSON;
+				result->Body(response);
+			}
+		} else {
+			result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
+			result->Message = _T("Unavailable method");
+		}
 
+	} else if ((request.Verb == Web::Request::HTTP_DELETE && index.Next())) {
+		
+		if (index.Current().Text() == "CloseClientSession") {
+	    		// DELETE	<-CloseClientSession
+                	uint32_t clientpid;
+
+	                Core::URL::KeyValue options(request.Query.Value());
+	
+        	        if (options.Exists(_T("clientpid"), true) == true) {
+		                clientpid = options[_T("clientpid")].Number();
+    				uint32_t status = DropbearServer::CloseClientSession(clientpid);
+	                	if (status != Core::ERROR_NONE) {
+		                    result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
+        		            result->Message = _T("Dropbear CloseClientSession failed for ");
+                		} else {
+					result->ErrorCode = Web::STATUS_OK;
+					result->ContentType = Web::MIMETypes::MIME_JSON;
+					result->Body(response);
+				}
+			}
+		} else {
+			result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
+			result->Message = _T("Unavailable method");
+		}
+	} else {
+		// Not supported HTTP Method
+		result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
+		result->Message = _T("Unavailable method");
+	}
+		
         return result;
     }
 
-    uint32_t DropbearServer::StartService(const std::string& port)
+    uint32_t DropbearServer::StartService(const std::string& hostkeys, const std::string& portflag, const std::string& port)
     {
-        return _implemetation.StartService(port);
+        return _implemetation.StartService(hostkeys, portflag, port);
     }
 
     uint32_t DropbearServer::StopService()
     {
         return _implemetation.StopService();
+    }
+
+    uint32_t DropbearServer::GetTotalSessions()
+    {
+        return _implemetation.GetTotalSessions();
+    }
+
+    uint32_t DropbearServer::GetSessionsInfo(Core::JSON::ArrayType<JsonData::DropbearServer::SessioninfoResultData>& sessioninfo)
+    {
+        return _implemetation.GetSessionsInfo(sessioninfo);
+    }
+
+    uint32_t DropbearServer::GetSessionsCount()
+    {
+        return _implemetation.GetSessionsCount();
+    }
+
+    uint32_t DropbearServer::CloseClientSession(uint32_t clientpid)
+    {
+        return _implemetation.CloseClientSession(clientpid);
     }
 
 } // namespace Plugin

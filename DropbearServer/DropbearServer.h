@@ -11,6 +11,39 @@ namespace Plugin {
 
     class DropbearServer : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IDropbearServer, public PluginHost::JSONRPC {
     public:
+        class Data : public Core::JSON::Container {
+        public:
+            Data()
+                : Core::JSON::Container()
+                , Sessioninfo()
+                , HostKeys()
+		, PortFlag()
+		, PortNumber()
+		, TotalCount()
+		, ActiveCount()
+            {
+                Add(_T("sessioninfo"), &SessionInfo);
+                Add(_T("hostkeys"), &HostKeys);
+                Add(_T("portflag"), &PortFlag);
+                Add(_T("portnumber"), &PortNumber);
+                Add(_T("totalcount"), &TotalCount);
+                Add(_T("activecount"), &ActiveCount);
+            }
+
+            virtual ~Data()
+            {
+            }
+
+        public:
+            Core::JSON::ArrayType<JsonData::DropbearServer::SessioninfoResultData> SessionInfo;
+	    Core::JSON::String HostKeys;
+	    Core::JSON::String PortFlag;
+	    Core::JSON::String PortNumber;
+	    Core::JSON::DecUInt32 TotalCount;
+	    Core::JSON::DecUInt32 ActiveCount;
+        };
+
+    public:
         DropbearServer()
         {
             RegisterAll();
@@ -38,8 +71,12 @@ namespace Plugin {
         Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         // DropbearServer methods
-        uint32_t StartService(const std::string& argv) override;
+        uint32_t StartService(const std::string& host_keys, const std::string& port_flag, const std::string& port) override;
         uint32_t StopService() override;
+        uint32_t GetTotalSessions()
+        uint32_t GetSessionsCount()
+        uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::DropbearServer::SessioninfoResultData>& response) const
+        uint32_t CloseClientSession(uint32_t client_pid)
 
     private:
         DropbearServer(const DropbearServer&) = delete;
@@ -47,8 +84,12 @@ namespace Plugin {
 
         void RegisterAll();
         void UnregisterAll();
-        uint32_t endpoint_startservice(const JsonData::DropbearServer::StartserviceParamsData& params);
+        uint32_t endpoint_startservice(const std::string& host_keys, const std::string& port_flag, const std::string& port);
         uint32_t endpoint_stopservice();
+	uint32_t DropbearServer::endpoint_gettotalsessions(Core::JSON::DecUInt32& response)
+	uint32_t DropbearServer::endpoint_getactivesessionscount(Core::JSON::DecUInt32& response)
+	uint32_t DropbearServer::endpoint_getactivesessionsinfo(Core::JSON::ArrayType<SessioninfoResultData>& response) const
+	uint32_t DropbearServer::endpoint_closeclientsession(Core::JSON::DecUInt32& pid) const
 
         DropbearServerImplementation _implemetation;
 
