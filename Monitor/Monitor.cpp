@@ -56,7 +56,7 @@ namespace Plugin {
         ASSERT(_skipURL <= request.Path.length());
 
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
-        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
+        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length() - _skipURL)), false, '/');
 
         // If there is an entry, the first one will alwys be a '/', skip this one..
         index.Next();
@@ -105,14 +105,22 @@ namespace Plugin {
         } else if ((request.Verb == Web::Request::HTTP_POST) && (request.HasBody())) {
             Core::ProxyType<const Monitor::Data> body(request.Body<const Monitor::Data>());
             string observable = body->Observable.Value();
-            MonitorObjects::MonitorObject::RestartSettings operationalRestartSettings;
-            operationalRestartSettings.Limit = body->OperationalRestartSettings.Limit.Value();
-            operationalRestartSettings.WindowSeconds = body->OperationalRestartSettings.WindowSeconds.Value();
-            MonitorObjects::MonitorObject::RestartSettings memoryRestartSettings;
-            memoryRestartSettings.Limit = body->MemoryRestartSettings.Limit.Value();
-            memoryRestartSettings.WindowSeconds = body->MemoryRestartSettings.WindowSeconds.Value();
-            TRACE(Trace::Information, (_T("Sets Restart Limits: MEMORY:[LIMIT:%d, WINDOW:%d], OPERATIONAL:[LIMIT:%d, WINDOW:%d]"), memoryRestartSettings.Limit, memoryRestartSettings.WindowSeconds, operationalRestartSettings.Limit, operationalRestartSettings.WindowSeconds));
-            _monitor->Update(observable, operationalRestartSettings, memoryRestartSettings);
+
+			uint16_t operationalWindow = 0;
+            uint8_t operationalLimit = 0;
+            uint16_t memoryWindow = 0;
+            uint8_t memoryLimit = 0;
+
+            if ((body->Restart.IsSet()) && (body->Restart.Memory.IsSet())) {
+                memoryWindow = body->Restart.Memory.Window;
+                memoryLimit = body->Restart.Memory.Limit;
+            }
+            if ((body->Restart.IsSet()) && (body->Restart.Operational.IsSet())) {
+                operationalWindow = body->Restart.Operational.Window;
+                operationalLimit = body->Restart.Operational.Limit;
+            }
+            TRACE(Trace::Information, (_T("Sets Restart Limits: MEMORY:[LIMIT:%d, WINDOW:%d], OPERATIONAL:[LIMIT:%d, WINDOW:%d]"), memoryLimit, memoryWindow, operationalLimit, operationalWindow));
+            _monitor->Update(observable, operationalWindow, operationalLimit, memoryWindow, memoryLimit);
         } else {
             result->ErrorCode = Web::STATUS_BAD_REQUEST;
             result->Message = _T(" could not handle your request.");

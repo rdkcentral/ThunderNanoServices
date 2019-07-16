@@ -17,25 +17,56 @@ namespace Plugin {
 
     class Monitor : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
-        struct RestartSettings : public Core::JSON::Container {
-            RestartSettings& operator=(const RestartSettings& other) = delete;
+        class RestartInfo : public Core::JSON::Container {
+        public:
+            class Settings : public Core::JSON::Container {
+            public:
+                Settings& operator=(const Settings& other) = delete;
 
-            RestartSettings()
-                : Core::JSON::Container()
+                Settings()
+                    : Core::JSON::Container()
+                {
+                    Add(_T("limit"), &Limit);
+                    Add(_T("window"), &Window);
+                }
+                Settings(const Settings& copy)
+                    : Limit(copy.Limit)
+                    , Window(copy.Window)
+                {
+                    Add(_T("limit"), &Limit);
+                    Add(_T("window"), &Window);
+                }
+                virtual ~Settings()
+                {
+                }
+
+                Core::JSON::DecUInt8 Limit;
+                Core::JSON::DecUInt16 Window;
+            };
+
+            RestartInfo& operator=(const RestartInfo&) = delete;
+
+            RestartInfo()
+                : Memory()
+                , Operational()
             {
-                Add(_T("limit"), &Limit);
-                Add(_T("windowseconds"), &WindowSeconds);
+                Add(_T("memory"), &Memory);
+                Add(_T("operational"), &Operational);
             }
-            RestartSettings(const RestartSettings& copy)
-                : Limit(copy.Limit)
-                , WindowSeconds(copy.WindowSeconds)
+            RestartInfo(const RestartInfo& copy)
+                : Memory(copy.Memory)
+                , Operational(copy.Operational)
             {
-                Add(_T("limit"), &Limit);
-                Add(_T("windowseconds"), &WindowSeconds);
+                Add(_T("memory"), &Memory);
+                Add(_T("operational"), &Operational);
+            }
+            virtual ~RestartInfo()
+            {
             }
 
-            Core::JSON::DecSInt32 Limit;
-            Core::JSON::DecSInt32 WindowSeconds;
+        public:
+            Settings Memory;
+            Settings Operational;
         };
 
     public:
@@ -301,18 +332,25 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , Name()
                 , Measurement()
+                , Observable()
+                , Restart()
             {
                 Add(_T("name"), &Name);
                 Add(_T("measurment"), &Measurement);
                 Add(_T("observable"), &Observable);
-                Add(_T("operationalrestartsettings"), &OperationalRestartSettings);
-                Add(_T("memoryrestartsettings"), &MemoryRestartSettings);
+                Add(_T("restart"), &Restart);
             }
             Data(const string& name, const Monitor::MetaData& info)
                 : Core::JSON::Container()
+                , Name()
+                , Measurement()
+                , Observable()
+                , Restart()
             {
                 Add(_T("name"), &Name);
                 Add(_T("measurment"), &Measurement);
+                Add(_T("observable"), &Observable);
+                Add(_T("restart"), &Restart);
 
                 Name = name;
                 Measurement = info;
@@ -322,14 +360,12 @@ namespace Plugin {
                 , Name(copy.Name)
                 , Measurement(copy.Measurement)
                 , Observable(copy.Observable)
-                , OperationalRestartSettings(copy.OperationalRestartSettings)
-                , MemoryRestartSettings(copy.MemoryRestartSettings)
+                , Restart(copy.Restart)
             {
                 Add(_T("name"), &Name);
                 Add(_T("measurment"), &Measurement);
                 Add(_T("observable"), &Observable);
-                Add(_T("operationalrestartsettings"), &OperationalRestartSettings);
-                Add(_T("memoryrestartsettings"), &MemoryRestartSettings);
+                Add(_T("restart"), &Restart);
             }
             ~Data()
             {
@@ -339,8 +375,7 @@ namespace Plugin {
             Core::JSON::String Name;
             MetaData Measurement;
             Core::JSON::String Observable;
-            RestartSettings OperationalRestartSettings;
-            RestartSettings MemoryRestartSettings;
+            RestartInfo Restart;
         };
 
     private:
@@ -365,8 +400,7 @@ namespace Plugin {
                     Add(_T("memory"), &MetaData);
                     Add(_T("memorylimit"), &MetaDataLimit);
                     Add(_T("operational"), &Operational);
-                    Add(_T("operationalrestartsettings"), &OperationalRestartSettings);
-                    Add(_T("memoryrestartsettings"), &MemoryRestartSettings);
+                    Add(_T("restart"), &Restart);
                 }
                 Entry(const Entry& copy)
                     : Core::JSON::Container()
@@ -374,15 +408,13 @@ namespace Plugin {
                     , MetaData(copy.MetaData)
                     , MetaDataLimit(copy.MetaDataLimit)
                     , Operational(copy.Operational)
-                    , OperationalRestartSettings(copy.OperationalRestartSettings)
-                    , MemoryRestartSettings(copy.MemoryRestartSettings)
+                    , Restart(copy.Restart)
                 {
                     Add(_T("callsign"), &Callsign);
                     Add(_T("memory"), &MetaData);
                     Add(_T("memorylimit"), &MetaDataLimit);
                     Add(_T("operational"), &Operational);
-                    Add(_T("operationalrestartsettings"), &OperationalRestartSettings);
-                    Add(_T("memoryrestartsettings"), &MemoryRestartSettings);
+                    Add(_T("restart"), &Restart);
                 }
                 ~Entry()
                 {
@@ -393,8 +425,7 @@ namespace Plugin {
                 Core::JSON::DecUInt32 MetaData;
                 Core::JSON::DecUInt32 MetaDataLimit;
                 Core::JSON::DecSInt32 Operational;
-                RestartSettings OperationalRestartSettings;
-                RestartSettings MemoryRestartSettings;
+                RestartInfo Restart;
             };
 
         public:
@@ -460,8 +491,16 @@ namespace Plugin {
                 } RestartSettings;
 
             public:
-                MonitorObject(const bool actOnOperational, const uint32_t operationalInterval, const uint32_t memoryInterval, const uint64_t memoryThreshold, const uint64_t absTime,
-                    const RestartSettings& operationalRestartSettings, const RestartSettings& memoryRestartSettings)
+                MonitorObject(
+                    const bool actOnOperational,
+                    const uint32_t operationalInterval,
+                    const uint32_t memoryInterval,
+                    const uint64_t memoryThreshold,
+                    const uint64_t absTime,
+                    const uint16_t operationalRestartWindow,
+                    const uint8_t operationalRestartLimit,
+                    const uint16_t memoryRestartWindow,
+                    const uint8_t memoryRestartLimit)
                     : _operationalInterval(operationalInterval)
                     , _memoryInterval(memoryInterval)
                     , _memoryThreshold(memoryThreshold * 1024)
@@ -472,8 +511,10 @@ namespace Plugin {
                     , _operationalRestartWindowStart()
                     , _memoryRestartCount(0)
                     , _memoryRestartWindowStart()
-                    , _operationalRestartSettings(operationalRestartSettings)
-                    , _memoryRestartSettings(memoryRestartSettings)
+                    , _operationalRestartWindow(operationalRestartWindow)
+                    , _operationalRestartLimit(operationalRestartLimit)
+                    , _memoryRestartWindow(memoryRestartWindow)
+                    , _memoryRestartLimit(memoryRestartLimit)
                     , _measurement()
                     , _operationalEvaluate(actOnOperational)
                     , _source(nullptr)
@@ -497,8 +538,10 @@ namespace Plugin {
                     , _operationalRestartWindowStart(copy._operationalRestartWindowStart)
                     , _memoryRestartCount(copy._memoryRestartCount)
                     , _memoryRestartWindowStart(copy._memoryRestartWindowStart)
-                    , _operationalRestartSettings(copy._operationalRestartSettings)
-                    , _memoryRestartSettings(copy._memoryRestartSettings)
+                    , _operationalRestartWindow(copy._operationalRestartWindow)
+                    , _operationalRestartLimit(copy._operationalRestartLimit)
+                    , _memoryRestartWindow(copy._memoryRestartWindow)
+                    , _memoryRestartLimit(copy._memoryRestartLimit)
                     , _measurement(copy._measurement)
                     , _operationalEvaluate(copy._operationalEvaluate)
                     , _source(copy._source)
@@ -521,53 +564,62 @@ namespace Plugin {
                 {
                     ASSERT(why == PluginHost::IShell::MEMORY_EXCEEDED || why == PluginHost::IShell::FAILURE);
                     ASSERT(HasRestartAllowed());
-                    Core::Time* restartWindowStart = nullptr;
-                    uint32_t* restartCount = 0;
-                    const RestartSettings* settings = nullptr;
+
+                    Core::Time* marker = nullptr;
+                    uint32_t* restartCount = nullptr;
+                    uint16_t interval;
+                    uint16_t maxRestart;
+
                     if (why == PluginHost::IShell::MEMORY_EXCEEDED) {
-                        restartWindowStart = &_memoryRestartWindowStart;
+                        marker = &_memoryRestartWindowStart;
                         restartCount = &_memoryRestartCount;
-                        settings = &_memoryRestartSettings;
+                        interval = _memoryRestartWindow;
+                        maxRestart = _memoryRestartLimit;
                     } else {
-                        restartWindowStart = &_operationalRestartWindowStart;
+                        marker = &_operationalRestartWindowStart;
                         restartCount = &_operationalRestartCount;
-                        settings = &_operationalRestartSettings;
+                        interval = _operationalRestartWindow;
+                        maxRestart = _operationalRestartLimit;
                     }
 
-                    if (restartWindowStart->IsValid()) {
-                        Core::Time windowEnd = *restartWindowStart;
-                        if (settings->WindowSeconds >= 0)
-                            windowEnd.Add(settings->WindowSeconds * 1000 /* in ms */);
-                        if (settings->WindowSeconds < 0 || windowEnd > Core::Time::Now()) {
-                            // It's within window.
-                            *restartCount = *restartCount + 1;
-                        } else {
-                            *restartCount = 0;
-                            *restartWindowStart = Core::Time::Now();
-                        }
+                    if (((marker->IsValid() == true) && (*marker > Core::Time::Now())) || (interval == 0)) {
+                        // It's within window.
+                        *restartCount += *restartCount + 1;
                     } else {
+                        *marker = Core::Time::Now().Add(interval * 1000 /* ms */);
                         *restartCount = 0;
-                        *restartWindowStart = Core::Time::Now();
                     }
-                    uint32_t actualLimit = settings->Limit >= 0 ? settings->Limit : std::numeric_limits<uint32_t>::max();
-                    return *restartCount < actualLimit;
+
+                    bool result = ((maxRestart == 0) || (*restartCount < maxRestart));
+
+                    if (result == false) {
+                        *restartCount = 0;
+                    }
+
+                    return result;
                 }
-                inline uint32_t RestartLimit(PluginHost::IShell::reason why)
+                inline uint8_t RestartLimit(PluginHost::IShell::reason why)
                 {
                     ASSERT(why == PluginHost::IShell::MEMORY_EXCEEDED || why == PluginHost::IShell::FAILURE);
                     ASSERT(HasRestartAllowed());
-                    return why == PluginHost::IShell::MEMORY_EXCEEDED ? _memoryRestartSettings.Limit : _operationalRestartSettings.Limit;
+                    return why == PluginHost::IShell::MEMORY_EXCEEDED ? _memoryRestartLimit : _operationalRestartLimit;
                 }
-                inline uint32_t RestartWindow(PluginHost::IShell::reason why)
+                inline uint16_t RestartWindow(PluginHost::IShell::reason why)
                 {
                     ASSERT(why == PluginHost::IShell::MEMORY_EXCEEDED || why == PluginHost::IShell::FAILURE);
                     ASSERT(HasRestartAllowed());
-                    return why == PluginHost::IShell::MEMORY_EXCEEDED ? _memoryRestartSettings.WindowSeconds : _operationalRestartSettings.WindowSeconds;
+                    return why == PluginHost::IShell::MEMORY_EXCEEDED ? _memoryRestartWindow : _operationalRestartWindow;
                 }
-                inline void UpdateRestartLimits(const RestartSettings& operational, const RestartSettings& memory)
+                inline void UpdateRestartLimits(
+                    const uint16_t operationalRestartWindow,
+                    const uint8_t operationalRestartLimit,
+                    const uint16_t memoryRestartWindow,
+                    const uint8_t memoryRestartLimit)
                 {
-                    _operationalRestartSettings = operational;
-                    _memoryRestartSettings = memory;
+                    _operationalRestartWindow = operationalRestartWindow;
+                    _operationalRestartLimit = operationalRestartLimit;
+                    _memoryRestartWindow = memoryRestartWindow;
+                    _memoryRestartLimit = memoryRestartLimit;
                 }
                 inline bool HasRestartAllowed() const
                 {
@@ -649,8 +701,10 @@ namespace Plugin {
                 Core::Time _operationalRestartWindowStart;
                 uint32_t _memoryRestartCount;
                 Core::Time _memoryRestartWindowStart;
-                RestartSettings _operationalRestartSettings;
-                RestartSettings _memoryRestartSettings;
+                uint16_t _operationalRestartWindow;
+                uint8_t _operationalRestartLimit;
+                uint16_t _memoryRestartWindow;
+                uint8_t _memoryRestartLimit;
                 MetaData _measurement;
                 bool _operationalEvaluate;
                 Exchange::IMemory* _source;
@@ -680,17 +734,23 @@ namespace Plugin {
         public:
             inline uint32_t Length() const
             {
-                return (_monitor.size());
+                return (static_cast<uint32_t>(_monitor.size()));
             }
-            inline void Update(string observable, const MonitorObject::RestartSettings& operational,
-                const MonitorObject::RestartSettings& memory)
+            inline void Update(
+                const string& observable,
+                const uint16_t operationalRestartWindow,
+                const uint8_t operationalRestartInterval,
+                const uint16_t memoryRestartWindow,
+                const uint8_t memoryRestartInterval)
             {
-                std::map<string, MonitorObject>::iterator index(_monitor.begin());
+                std::map<string, MonitorObject>::iterator index(_monitor.find(observable));
 
-                while (index != _monitor.end()) {
-                    if (index->first == observable)
-                        index->second.UpdateRestartLimits(operational, memory);
-                    index++;
+                if (index != _monitor.end()) {
+                    index->second.UpdateRestartLimits(
+                        operationalRestartWindow,
+                        operationalRestartInterval,
+                        memoryRestartWindow,
+                        memoryRestartInterval);
                 }
             }
             inline void Open(PluginHost::IShell* service, Core::JSON::ArrayType<Config::Entry>::Iterator& index)
@@ -711,15 +771,32 @@ namespace Plugin {
                     uint32_t interval = abs(element.Operational.Value());
                     interval = interval * 1000 * 1000; // Move from Seconds to MicroSecond
                     uint32_t memory(element.MetaData.Value() * 1000 * 1000); // Move from Seconds to MicroSeconds
-                    MonitorObject::RestartSettings operationalRestartSettings;
-                    operationalRestartSettings.Limit = element.OperationalRestartSettings.Limit.Value();
-                    operationalRestartSettings.WindowSeconds = element.OperationalRestartSettings.WindowSeconds.Value();
-                    MonitorObject::RestartSettings memoryRestartSettings;
-                    memoryRestartSettings.Limit = element.MemoryRestartSettings.Limit.Value();
-                    memoryRestartSettings.WindowSeconds = element.MemoryRestartSettings.WindowSeconds.Value();
+                    uint16_t operationalWindow = 0;
+                    uint8_t operationalLimit = 0;
+                    uint16_t memoryWindow = 0;
+                    uint8_t memoryLimit = 0;
+
+                    if ((element.Restart.IsSet()) && (element.Restart.Memory.IsSet())) {
+                        memoryWindow = element.Restart.Memory.Window;
+                        memoryLimit = element.Restart.Memory.Limit;
+                    }
+                    if ((element.Restart.IsSet()) && (element.Restart.Operational.IsSet())) {
+                        operationalWindow = element.Restart.Operational.Window;
+                        operationalLimit = element.Restart.Operational.Limit;
+                    }
+                    SYSLOG(Logging::Startup, (_T("Monitoring: %s (%d,%d).\n"), callSign.c_str(), (interval / 1000000), (memory / 1000000)));
                     if ((interval != 0) || (memory != 0)) {
                         _monitor.insert(
-                            std::pair<string, MonitorObject>(callSign, MonitorObject(element.Operational.Value() >= 0, interval, memory, memoryThreshold, baseTime, operationalRestartSettings, memoryRestartSettings)));
+                            std::pair<string, MonitorObject>(callSign, MonitorObject(
+								element.Operational.Value() >= 0, 
+								interval, 
+								memory, 
+								memoryThreshold, 
+								baseTime, 
+								operationalWindow, 
+								operationalLimit, 
+								memoryWindow, 
+								memoryLimit)));
                     }
                 }
 
@@ -762,7 +839,7 @@ namespace Plugin {
                         index->second.Set(nullptr);
                     } else if ((currentState == PluginHost::IShell::DEACTIVATED) && (index->second.HasRestartAllowed() == true) && ((service->Reason() == PluginHost::IShell::MEMORY_EXCEEDED) || (service->Reason() == PluginHost::IShell::FAILURE))) {
                         if (index->second.RegisterRestart(service->Reason()) == false) {
-                            TRACE(Trace::Error, (_T("Giving up restarting of %s: Failed more than %d times within %d seconds.\n"), service->Callsign().c_str(), index->second.RestartLimit(service->Reason()), index->second.RestartWindow(service->Reason())));
+                            TRACE(Trace::Fatal, (_T("Giving up restarting of %s: Failed more than %d times within %d seconds.\n"), service->Callsign().c_str(), index->second.RestartLimit(service->Reason()), index->second.RestartWindow(service->Reason())));
                             const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Restart\", \"reason\":\"" + (std::to_string(index->second.RestartLimit(service->Reason()))).c_str() + " Attempts Failed within the restart window\"}");
                             _service->Notify(message);
                             _parent.event_action(service->Callsign(), "StoppedRestaring", std::to_string(index->second.RestartLimit(service->Reason())) + " attempts failed within the restart window");
@@ -770,7 +847,7 @@ namespace Plugin {
                             const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Activate\", \"reason\": \"Automatic\" }");
                             _service->Notify(message);
                             _parent.event_action(service->Callsign(), "Activate", "Automatic");
-                            TRACE(Trace::Information, (_T("Restarting %s again because we detected it misbehaved.\n"), service->Callsign().c_str()));
+                            TRACE(Trace::Error, (_T("Restarting %s again because we detected it misbehaved.\n"), service->Callsign().c_str()));
                             PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(service, PluginHost::IShell::ACTIVATED, PluginHost::IShell::AUTOMATIC));
                         }
                     }
@@ -820,10 +897,10 @@ namespace Plugin {
                     JsonData::Monitor::InfoInfo info;
                     info.Observable = callsign;
                     if (object.HasRestartAllowed()) {
-                        info.Memoryrestartsettings.Limit = object.RestartLimit(PluginHost::IShell::MEMORY_EXCEEDED);
-                        info.Memoryrestartsettings.Windowseconds = object.RestartWindow(PluginHost::IShell::MEMORY_EXCEEDED);
-                        info.Operationalrestartsettings.Limit = object.RestartLimit(PluginHost::IShell::FAILURE);
-                        info.Operationalrestartsettings.Windowseconds = object.RestartWindow(PluginHost::IShell::FAILURE);
+                        info.Restart.Memory.Limit = object.RestartLimit(PluginHost::IShell::MEMORY_EXCEEDED);
+                        info.Restart.Memory.Window = object.RestartWindow(PluginHost::IShell::MEMORY_EXCEEDED);
+                        info.Restart.Operational.Limit = object.RestartLimit(PluginHost::IShell::FAILURE);
+                        info.Restart.Operational.Window = object.RestartWindow(PluginHost::IShell::FAILURE);
                     }
                     translate(metaData.Allocated(), &info.Measurements.Allocated);
                     translate(metaData.Resident(), &info.Measurements.Resident);
@@ -946,7 +1023,8 @@ namespace Plugin {
 
         private:
             template <typename T>
-            void translate(const Core::MeasurementType<T>& from, JsonData::Monitor::MeasurementInfo* to) {
+            void translate(const Core::MeasurementType<T>& from, JsonData::Monitor::MeasurementInfo* to)
+            {
                 to->Min = from.Min();
                 to->Max = from.Max();
                 to->Average = from.Average();
