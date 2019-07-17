@@ -18,16 +18,21 @@ namespace Plugin {
         return (Core::NodeId(sockaddr_broadcast));
     }
 
-    DHCPClientImplementation::DHCPClientImplementation(const string& interfaceName, ICallback* callback)
+    DHCPClientImplementation::DHCPClientImplementation(const string& interfaceName, ICallback* callback, const string& persistentStoragePath)
         : Core::SocketDatagram(false, Core::NodeId(_T("0.0.0.0"), DefaultDHCPClientPort, Core::NodeId::TYPE_IPV4), RemoteAddress(), 1024, 2048)
         , _adminLock()
         , _interfaceName(interfaceName)
         , _state(IDLE)
         , _xid(0)
         , _preferred()
+        , _last()
         , _callback(callback)
         , _offers()
+        , _persistentStorage(persistentStoragePath)
     {
+        _adminLock.Lock();
+         _last = Core::NodeId(ReadLastIP().c_str(), DefaultDHCPClientPort, Core::NodeId::TYPE_IPV4);
+        _adminLock.Unlock();
     }
 
     /* virtual */ DHCPClientImplementation::~DHCPClientImplementation()
@@ -63,5 +68,55 @@ namespace Plugin {
     /* virtual */ void DHCPClientImplementation::StateChange()
     {
     }
+
+    string DHCPClientImplementation::ReadLastIP() 
+    {
+        string result = _T("0.0.0.0");
+
+        if (!_persistentStorage.empty()) {
+            Core::File file(_persistentStorage + lastIPFileName);
+            if (file.Exists()) {
+                file.Open();
+                IPStorage storage;
+                storage.FromFile(file);
+
+                if (storage.ip_adress.IsSet()) 
+                    result = storage.ip_adress.Value();
+
+                file.Close();
+            } 
+        }
+
+        return result;
+    }
+
+    void DHCPClientImplementation::SaveLastIP(const string& last_ip) 
+    {
+        if (!_persistentStorage.empty()) {
+            Core::Directory directory(_persistentStorage.c_str());
+
+            if (directory.CreatePath()) {
+                Core::File file(_persistentStorage + lastIPFileName);
+                printf("SAVE FILE PATHNAME: %s", file.PathName().c_str());
+                if (file.Exists()) {
+                    file.Open(true);
+                    file.SetSize(0);
+                } else {
+                    file.Create();
+                }
+
+                IPStorage storage;
+                storage.ip_adress = last_ip.c_str();
+                storage.ToFile(file);
+                file.Close();
+            } else {
+                TRACE_L1("Failed to create presistent storage folder at %s\n", _persistentStorage.c_str());
+            }
+        } else {
+            TRACE_L1("Persistent path is empty. IP might not be retained over reboots");
+        } 
+    }
+
+    constexpr TCHAR DHCPClientImplementation::lastIPFileName[];
 }
 } // namespace WPEFramework::Plugin

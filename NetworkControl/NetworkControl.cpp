@@ -62,6 +62,7 @@ namespace Plugin
         , _service(nullptr)
         , _responseTime(0)
         , _retries(0)
+        , _persistentStoragePath()
         , _dns()
         , _interfaces()
         , _dhcpInterfaces()
@@ -88,6 +89,8 @@ namespace Plugin
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
         _responseTime = config.TimeOut.Value();
         _dnsFile = config.DNSFile.Value();
+
+        _persistentStoragePath = service->PersistentPath();
 
         // We will only "open" the DNS resolve file, so of ot does not exist yet, create an empty file.
         Core::File dnsFile(_dnsFile, true);
@@ -127,7 +130,7 @@ namespace Plugin
 
                     _dhcpInterfaces.emplace(std::piecewise_construct,
                         std::make_tuple(interfaceName),
-                        std::make_tuple(Core::ProxyType<DHCPEngine>::Create(this, interfaceName)));
+                        std::make_tuple(Core::ProxyType<DHCPEngine>::Create(this, interfaceName, _persistentStoragePath)));
                     _interfaces.emplace(std::piecewise_construct,
                         std::make_tuple(interfaceName),
                         std::make_tuple(index.Current()));
@@ -158,7 +161,7 @@ namespace Plugin
                 if (_interfaces.find(interfaceName) == _interfaces.end()) {
                     _dhcpInterfaces.emplace(std::piecewise_construct,
                         std::make_tuple(interfaceName),
-                        std::make_tuple(Core::ProxyType<DHCPEngine>::Create(this, interfaceName)));
+                        std::make_tuple(Core::ProxyType<DHCPEngine>::Create(this, interfaceName, _persistentStoragePath)));
                     _interfaces.emplace(std::piecewise_construct,
                         std::make_tuple(interfaceName),
                         std::make_tuple(StaticInfo()));
@@ -548,7 +551,6 @@ namespace Plugin
 
     void NetworkControl::Update(const string& interfaceName)
     {
-
         std::map<const string, Core::ProxyType<DHCPEngine>>::const_iterator entry(_dhcpInterfaces.find(interfaceName));
 
         if (entry != _dhcpInterfaces.end()) {
@@ -718,7 +720,7 @@ namespace Plugin
             if (_interfaces.find(interfaceName) == _interfaces.end()) {
                 _dhcpInterfaces.emplace(std::piecewise_construct,
                     std::make_tuple(interfaceName),
-                    std::make_tuple(Core::ProxyType<DHCPEngine>::Create(this, interfaceName)));
+                    std::make_tuple(Core::ProxyType<DHCPEngine>::Create(this, interfaceName, _persistentStoragePath)));
                 _interfaces.emplace(std::piecewise_construct,
                     std::make_tuple(interfaceName),
                     std::make_tuple(StaticInfo()));
