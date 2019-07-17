@@ -1,4 +1,4 @@
-# WPEFrameworkPlugins
+# ThunderNanoServices
 * Bluetooth
 * Commander
 * Compositor
