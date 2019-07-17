@@ -1299,6 +1299,7 @@ namespace WebKitBrowser {
         {
             if (pid != 0) {
                 _main = Core::ProcessInfo(pid);
+                _children = _main.Id();
                 _startTime = Core::Time::Now().Ticks() + (TYPICAL_STARTUP_TIME * 1000000);
             } else {
                 _startTime = 0;
