@@ -283,10 +283,10 @@ namespace Plugin {
             DHCPEngine& operator=(const DHCPEngine&) = delete;
 
         public:
-            DHCPEngine(NetworkControl* parent, const string& interfaceName)
+            DHCPEngine(NetworkControl* parent, const string& interfaceName, const string& persistentStoragePath)
                 : _parent(*parent)
                 , _retries(0)
-                , _client(interfaceName, this)
+                , _client(interfaceName, this, persistentStoragePath)
             {
             }
             ~DHCPEngine()
@@ -438,6 +438,7 @@ namespace Plugin {
         uint8_t _responseTime;
         uint8_t _retries;
         string _dnsFile;
+        string _persistentStoragePath;
         std::list<std::pair<uint16_t, Core::NodeId>> _dns;
         std::map<const string, StaticInfo> _interfaces;
         std::map<const string, Core::ProxyType<DHCPEngine>> _dhcpInterfaces;
