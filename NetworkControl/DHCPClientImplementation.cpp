@@ -97,16 +97,7 @@ namespace Plugin {
     {
         if (!_persistentStorage.empty()) {
             Core::File file(_persistentStorage + lastIPFileName);
-            bool isFileOpen = false;
-
-            if (file.Exists()) {
-                isFileOpen = file.Open(false);
-                file.SetSize(0);
-            } else {
-                isFileOpen = file.Create();
-            }
-
-            if (isFileOpen) {
+            if (file.Create()) {
                 IPStorage storage;
                 storage.ip_adress = last_ip.c_str();
                 storage.ToFile(file);
