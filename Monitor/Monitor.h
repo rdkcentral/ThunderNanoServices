@@ -633,6 +633,11 @@ namespace Plugin {
                 {
                     return (_measurement);
                 }
+                inline bool HasMeasurement() const
+                {
+                    return (((_measurement.Allocated().Min() == Core::NumberType<uint64_t>::Max()) &&
+                            (_measurement.Allocated().Max() == Core::NumberType<uint64_t>::Min())) ? false : true);
+                }
                 inline uint64_t TimeSlot() const
                 {
                     return (_nextSlot);
@@ -863,8 +868,9 @@ namespace Plugin {
 
                 // Go through the list of observations...
                 while (element != _monitor.end()) {
-                    snapshot.Add(Monitor::Data(element->first, element->second.Measurement()));
-
+                    if (element->second.HasMeasurement() == true) {
+                        snapshot.Add(Monitor::Data(element->first, element->second.Measurement()));
+                    }
                     element++;
                 }
 
@@ -879,8 +885,10 @@ namespace Plugin {
                 std::map<string, MonitorObject>::iterator index(_monitor.find(name));
 
                 if (index != _monitor.end()) {
-                    result = index->second.Measurement();
-                    found = true;
+                    if (index->second.HasMeasurement() == true) {
+                        result = index->second.Measurement();
+                        found = true;
+                    }
                 }
 
                 _adminLock.Unlock();
@@ -915,11 +923,17 @@ namespace Plugin {
                 if (callsign.empty() == false) {
                     auto element = _monitor.find(callsign);
                     if (element != _monitor.end()) {
-                        AddElement(element->first, element->second);
+                        if (element->second.HasMeasurement() == true) {
+                            AddElement(element->first, element->second);
+                        }
                     }
                 } else {
                     for (auto& element : _monitor)
-                        AddElement(element.first, element.second);
+                    {
+                        if (element.second.HasMeasurement() == true) {
+                            AddElement(element.first, element.second);
+                        }
+                    }
                 }
 
                 _adminLock.Unlock();
