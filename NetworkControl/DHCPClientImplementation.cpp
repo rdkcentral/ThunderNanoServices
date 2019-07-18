@@ -30,9 +30,12 @@ namespace Plugin {
         , _offers()
         , _persistentStorage(persistentStoragePath)
     {
-        _adminLock.Lock();
          _last = Core::NodeId(ReadLastIP().c_str(), DefaultDHCPClientPort, Core::NodeId::TYPE_IPV4);
-        _adminLock.Unlock();
+        if (!_persistentStorage.empty()) {
+            if (!Core::Directory(_persistentStorage.c_str()).CreatePath()) {
+                TRACE_L1("Could not create a NetworkControl persistent storage directory");
+            }
+        }
     }
 
     /* virtual */ DHCPClientImplementation::~DHCPClientImplementation()
@@ -93,24 +96,23 @@ namespace Plugin {
     void DHCPClientImplementation::SaveLastIP(const string& last_ip) 
     {
         if (!_persistentStorage.empty()) {
-            Core::Directory directory(_persistentStorage.c_str());
+            Core::File file(_persistentStorage + lastIPFileName);
+            bool isFileOpen = false;
 
-            if (directory.CreatePath()) {
-                Core::File file(_persistentStorage + lastIPFileName);
-                printf("SAVE FILE PATHNAME: %s", file.PathName().c_str());
-                if (file.Exists()) {
-                    file.Open(true);
-                    file.SetSize(0);
-                } else {
-                    file.Create();
-                }
+            if (file.Exists()) {
+                isFileOpen = file.Open(false);
+                file.SetSize(0);
+            } else {
+                isFileOpen = file.Create();
+            }
 
+            if (isFileOpen) {
                 IPStorage storage;
                 storage.ip_adress = last_ip.c_str();
                 storage.ToFile(file);
                 file.Close();
             } else {
-                TRACE_L1("Failed to create presistent storage folder at %s\n", _persistentStorage.c_str());
+                TRACE_L1("Failed to update last ip information");
             }
         } else {
             TRACE_L1("Persistent path is empty. IP might not be retained over reboots");
