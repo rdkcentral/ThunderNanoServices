@@ -32,6 +32,9 @@ namespace Plugin {
             RECEIVING
         };
 
+        // Name of file containing last ip
+        static constexpr TCHAR lastIPFileName[] = _T("dhcpclient.json");
+
         // RFC 2131 section 2
         enum operations {
             OPERATION_BOOTREQUEST = 1,
@@ -139,6 +142,22 @@ namespace Plugin {
         // DHCP constants (see RFC 2131 section 4.1)
         static constexpr uint16_t DefaultDHCPServerPort = 67;
         static constexpr uint16_t DefaultDHCPClientPort = 68;
+
+        class IPStorage : public Core::JSON::Container {
+        private:
+            IPStorage(const IPStorage&) = delete;
+            IPStorage& operator=(const IPStorage&) = delete;
+
+        public:
+            IPStorage() 
+                : Core::JSON::Container()
+                , ip_adress()
+            {
+                Add(_T("ip_address"), &ip_adress);
+            }
+        public:
+            Core::JSON::String ip_adress;
+        };
 
         class Offer {
         public:
@@ -357,7 +376,7 @@ namespace Plugin {
         typedef Core::IDispatchType<const string&> ICallback;
 
     public:
-        DHCPClientImplementation(const string& interfaceName, ICallback* notification);
+        DHCPClientImplementation(const string& interfaceName, ICallback* notification, const string& persistentStoragePath);
         virtual ~DHCPClientImplementation();
 
     public:
@@ -408,7 +427,7 @@ namespace Plugin {
 
                         _state = SENDING;
                         _modus = CLASSIFICATION_DISCOVER;
-                        _preferred = address;
+                        _preferred = address.IsEmpty() ? _last : address;
                         result = Core::ERROR_NONE;
 
                         TRACE_L1("Sending a Discover for %s", _interfaceName.c_str());
@@ -438,10 +457,14 @@ namespace Plugin {
 
             _adminLock.Lock();
 
+            if (acknowledged.HostAddress() != _last.HostAddress()) {
+                SaveLastIP(acknowledged.HostAddress());
+            }
+
             if (_state == RECEIVING) {
                 TRACE_L1("Sending an ACK for %s", acknowledged.HostAddress().c_str());
                 _state = SENDING;
-                _modus = CLASSIFICATION_ACK;
+                _modus = CLASSIFICATION_REQUEST;
                 _preferred = acknowledged;
                 result = Core::ERROR_NONE;
                 SocketDatagram::Trigger();
@@ -485,6 +508,10 @@ namespace Plugin {
         }
 
     private:
+        // Methods for retaining IP adress over reboots
+        string ReadLastIP();
+        void SaveLastIP(const string& last_ip);
+
         // Methods to extract and insert data into the socket buffers
         virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
         virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
@@ -550,6 +577,14 @@ namespace Plugin {
                 ::memcpy(&(options[index]), &(data->sin_addr.s_addr), 4);
                 index += 4;
             }
+
+            /* Add identifier so that DHCP server can recognize device */
+            options[index++] = OPTION_CLIENTIDENTIFIER;
+            options[index++] = frame.hlen + 1; // Identifier length
+            options[index++] = 1; // Ethernet hardware
+            ::memcpy(&(options[index]), _MAC, frame.hlen);
+            index += frame.hlen;
+
             if (_modus == CLASSIFICATION_DISCOVER) {
                 options[index++] = OPTION_REQUESTLIST;
                 options[index++] = 4;
@@ -557,7 +592,7 @@ namespace Plugin {
                 options[index++] = OPTION_ROUTER;
                 options[index++] = OPTION_DNS;
                 options[index++] = OPTION_BROADCASTADDRESS;
-            }
+            } 
 
             options[index++] = OPTION_END;
 
@@ -603,8 +638,10 @@ namespace Plugin {
         uint8_t _MAC[6];
         mutable uint32_t _xid;
         Core::NodeId _preferred;
+        Core::NodeId _last;
         ICallback* _callback;
         std::list<Offer> _offers;
+        string _persistentStorage;
     };
 }
 } // namespace WPEFramework::Plugin
