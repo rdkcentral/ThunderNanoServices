@@ -231,6 +231,7 @@ namespace Plugin {
                 , _abs_x_multiplier(0)
                 , _abs_y_multiplier(0)
                 , _have_abs(false)
+                , _have_multitouch(false)
             {
                 _abs_latch.fill(AbsInfo());
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
@@ -245,20 +246,46 @@ namespace Plugin {
             }
             bool Setup() override
             {
+                _have_multitouch = false;
+
                 for (int fd : _parent->Devices()) {
-                    // TODO: For now assume only one touchscreen is attached...
-                    struct input_absinfo absinfo;
-                    if (_abs_x_multiplier == 0) {
-                        if (ioctl(fd, EVIOCGABS(ABS_X), &absinfo) == 0) {
-                            _abs_x_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
-                        }
-                    }
-                    if (_abs_y_multiplier == 0) {
-                        if (ioctl(fd, EVIOCGABS(ABS_Y), &absinfo) == 0) {
-                            _abs_y_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
+                    uint8_t absbits[(ABS_MAX / 8) + 1];
+                    memset(absbits, 0, sizeof(absbits));
+
+                    if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(absbits)), absbits) >= 0) {
+                        if (CheckBit(absbits, ABS_X) == true) {
+                            // Note: Only multitouch protocol B supported. In case of protocol A multitouch device, will run as single-touch.
+                            _have_multitouch = (CheckBit(absbits, ABS_MT_SLOT) == true) && (CheckBit(absbits, ABS_MT_POSITION_X) == true);
+
+                            struct input_absinfo absinfo;
+                            if (_have_multitouch == true) {
+                                if (ioctl(fd, EVIOCGABS(ABS_MT_POSITION_X), &absinfo) >= 0) {
+                                    _abs_x_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
+                                }
+                                if (ioctl(fd, EVIOCGABS(ABS_MT_POSITION_Y), &absinfo) >= 0) {
+                                    _abs_y_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
+                                }
+                            } else {
+                                if (ioctl(fd, EVIOCGABS(ABS_X), &absinfo) >= 0) {
+                                    _abs_x_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
+                                }
+                                if (ioctl(fd, EVIOCGABS(ABS_Y), &absinfo) >= 0) {
+                                    _abs_y_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
+                                }
+                            }
+
+                            // Note: Only one connected touchscreen supported.
+                            break;
                         }
                     }
                 }
+                return (true);
+            }
+            bool Teardown() override
+            {
+                _have_multitouch = false;
+                _abs_x_multiplier = 0;
+                _abs_y_multiplier = 0;
                 return (true);
             }
             uint32_t Callback(Exchange::ITouchHandler* callback) override
@@ -283,11 +310,12 @@ namespace Plugin {
                         _have_abs = true;
                         if (value == 0) {
                             _abs_slot = 0;
-                            // This was the last finger released.
+                            // This was the last contact released.
                         } else if (_abs_slot == 0) {
-                            // The is the first finger, if any, move data from temporary slot to the first one.
-                            _abs_latch[1] = _abs_latch[0];
+                            // The is the first contact, if any, move data from temporary slot to the first one.
+                            // If only one contact is present, the device might not sent ABS_MT_SLOT information.
                             _abs_slot = 1;
+                            _abs_latch[1] = _abs_latch[0];
                         }
                         return true;
                     }
@@ -295,13 +323,19 @@ namespace Plugin {
                 else if (type == EV_ABS) {
                     switch(code)
                     {
+                    case ABS_X:
+                        if (_have_multitouch == false) { // fall-through
                     case ABS_MT_POSITION_X:
                         _abs_latch[_abs_slot].X(static_cast<uint16_t>((_abs_x_multiplier * value) >> ABS_MULTIPLIER_PRECISSION));
                         _have_abs = true;
+                        }
                         return true;
+                    case ABS_Y:
+                        if (_have_multitouch == false) { // fall-through
                     case ABS_MT_POSITION_Y:
                         _abs_latch[_abs_slot].Y(static_cast<uint16_t>((_abs_y_multiplier * value) >> ABS_MULTIPLIER_PRECISSION));
                         _have_abs = true;
+                        }
                         return true;
                     case ABS_MT_SLOT:
                         _abs_slot = (value + 1);
@@ -311,7 +345,7 @@ namespace Plugin {
                         _abs_latch[_abs_slot].Touch(value >= 0);
                         _have_abs = true;
                         if (value < 0) {
-                            // Touch released, if any, next events will go to a temporary slot until the finger index is known
+                            // Touch released, if any, next events will go to a temporary slot until the contact index is known
                             _abs_slot = 0;
                         }
                         return true;
@@ -322,7 +356,6 @@ namespace Plugin {
                         _have_abs = false;
                         for (size_t i = 1; i < _abs_latch.size(); i++) {
                             if (_abs_latch[i].Action() != AbsInfo::absaction::IDLE) {
-                                //printf("%i,%i @ (%i,%i) | ", i-1, _abs_latch[i].State(), _abs_latch[i].X(), _abs_latch[i].Y());
                                 _callback->TouchEvent((i - 1), _abs_latch[i].State(), _abs_latch[i].X(), _abs_latch[i].Y());
                                 _abs_latch[i].Reset();
                             }
@@ -333,6 +366,11 @@ namespace Plugin {
             }
 
         private:
+            bool CheckBit(const uint8_t bitfield[], const uint16_t bit)
+            {
+                return (bitfield[bit / 8] & (1 << (bit % 8)));
+            }
+
             class AbsInfo {
             public:
                 enum class absaction {
@@ -404,6 +442,7 @@ namespace Plugin {
             uint32_t _abs_x_multiplier;
             uint32_t _abs_y_multiplier;
             bool _have_abs;
+            bool _have_multitouch;
         };
 
     public:
