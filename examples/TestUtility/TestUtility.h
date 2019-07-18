@@ -20,7 +20,7 @@ namespace Plugin {
         TestUtility& operator=(const TestUtility&) = delete;
 
     private:
-        class Notification : public RPC::IRemoteProcess::INotification {
+        class Notification : public RPC::IRemoteConnection::INotification {
         public:
             Notification() = delete;
             Notification(const Notification&) = delete;
@@ -34,12 +34,12 @@ namespace Plugin {
             virtual ~Notification() = default;
 
         public:
-            virtual void Activated(RPC::IRemoteProcess* process) { _parent.Activated(process); }
+            virtual void Activated(RPC::IRemoteConnection* process) { /*_parent.Activated(process);*/ }
 
-            virtual void Deactivated(RPC::IRemoteProcess* process) { _parent.Deactivated(process); }
+            virtual void Deactivated(RPC::IRemoteConnection* process) { _parent.Deactivated(process); }
 
             BEGIN_INTERFACE_MAP(Notification)
-            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -71,7 +71,7 @@ namespace Plugin {
             , _memory(nullptr)
             , _testUtilityImp(nullptr)
             , _skipURL(0)
-            , _pid(0)
+            , _connection(0)
         {
             RegisterAll();
         }
@@ -101,10 +101,9 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
 
     private:
-        void Activated(RPC::IRemoteProcess* process);
-        void Deactivated(RPC::IRemoteProcess* process);
+        void Deactivated(RPC::IRemoteConnection* process);
 
-        void ProcessTermination(uint32_t pid);
+        void ProcessTermination(uint32_t _connection);
         string /*JSON*/ HandleRequest(Web::Request::type type, const string& path, const uint8_t skipUrl, const string& body /*JSON*/);
         string /*JSON*/ TestCommands(void);
 
@@ -121,7 +120,7 @@ namespace Plugin {
         Exchange::IMemory* _memory;
         Exchange::ITestUtility* _testUtilityImp;
         uint8_t _skipURL;
-        uint32_t _pid;
+        uint32_t _connection;
     };
 
 } // namespace Plugin

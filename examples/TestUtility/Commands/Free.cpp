@@ -14,7 +14,7 @@ public:
 
     Free()
         : TestCommandBase(TestCommandBase::DescriptionBuilder("Releases previously allocated memory"),
-              TestCommandBase::SignatureBuilder(Parameter("memory", Parameter::ParamType::NUMBER, "memory statistics in KB")))
+              TestCommandBase::SignatureBuilder("memory", Parameter::TypeType::NUMBER, "memory statistics in KB"))
         , _memoryAdmin(MemoryAllocation::Instance())
     {
         TestCore::TestCommandController::Instance().Announce(this);

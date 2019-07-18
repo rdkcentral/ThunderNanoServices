@@ -5,9 +5,21 @@ namespace TestCore {
 
     /* static */ TestCommandController& TestCommandController::Instance()
     {
-        static TestCommandController _singleton;
-        return (_singleton);
+        static TestCommandController*_singleton(Core::Service<TestCommandController>::Create<TestCommandController>());;
+        return (*_singleton);
     }
+
+    TestCommandController::~TestCommandController() {
+        _adminLock.Lock();
+        Exchange::ITestUtility::ICommand::IIterator* iterator = Commands();
+        while(iterator->Next()) {
+            if (iterator->Command()->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                TRACE(Trace::Information, (_T("Command %s in not properly destructed!"), iterator->Command()->Name().c_str()));
+            }
+        }
+        iterator->Release();
+        _adminLock.Unlock();
+    };
 
     void TestCommandController::Announce(Exchange::ITestUtility::ICommand* command)
     {

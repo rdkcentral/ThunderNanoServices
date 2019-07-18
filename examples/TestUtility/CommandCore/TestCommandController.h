@@ -7,11 +7,16 @@
 namespace WPEFramework {
 namespace TestCore {
 
-    class TestCommandController {
+    class TestCommandController : virtual public Core::IUnknown {
+    protected:
+        TestCommandController()
+            : _adminLock()
+            , _commands()
+        {
+        }
     public:
         TestCommandController(const TestCommandController&) = delete;
         TestCommandController& operator=(const TestCommandController&) = delete;
-
     private:
         using TestCommandContainer = std::map<string, Exchange::ITestUtility::ICommand*>;
         using TestCommandContainerPair = std::pair<string, Exchange::ITestUtility::ICommand*>;
@@ -61,16 +66,9 @@ namespace TestCore {
             TestCommandContainer _container;
             IteratorImpl _iterator;
         };
-
-        TestCommandController()
-            : _adminLock()
-            , _commands()
-        {
-        }
-
     public:
         static TestCommandController& Instance();
-        ~TestCommandController() = default;
+        ~TestCommandController();
 
         // ITestUtility methods
         Exchange::ITestUtility::ICommand* Command(const string& name);
@@ -80,6 +78,8 @@ namespace TestCore {
         void Announce(Exchange::ITestUtility::ICommand* command);
         void Revoke(Exchange::ITestUtility::ICommand* command);
 
+        BEGIN_INTERFACE_MAP(TestCommandController)
+        END_INTERFACE_MAP
     private:
         mutable Core::CriticalSection _adminLock;
         TestCommandContainer _commands;
