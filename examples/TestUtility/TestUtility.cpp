@@ -13,15 +13,20 @@ namespace TestUtility {
         public:
             MemoryObserverImpl(const RPC::IRemoteConnection* connection)
                 : _main(connection  == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
-                , _observable(true)
+                , _observable(false)
             {
 
             }
             ~MemoryObserverImpl() = default;
         public:
-            virtual void Observe(const uint32_t /* pid */)
+            virtual void Observe(const uint32_t pid)
             {
-
+                if (pid == 0) {
+                    _main = Core::ProcessInfo();
+                    _observable = false;
+                } else {
+                    _observable = true;
+                }
             }
             virtual uint64_t Resident() const { return (_observable == false ? 0 : _main.Resident()); }
 
@@ -43,11 +48,6 @@ namespace TestUtility {
         };
 
         Exchange::IMemory* memory_observer = (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection));
-
-        if (connection != nullptr) {
-            connection->Release();
-            connection = nullptr;
-        }
 
         return memory_observer;
     }
@@ -76,8 +76,15 @@ namespace Plugin {
         _testUtilityImp = _service->Root<Exchange::ITestUtility>(_connection, ImplWaitTime, _T("TestUtilityImp"));
 
         if (_testUtilityImp != nullptr) {
-            _memory = WPEFramework::TestUtility::MemoryObserver(_service->RemoteConnection(_connection));
-            ASSERT(_memory != nullptr);
+            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection):
+            if (remoteConnection) {
+                _memory = WPEFramework::TestUtility::MemoryObserver(remoteConnection);
+                _memory->Observe(remoteConnection->RemoteID());
+                remoteConnection->Release();
+            } else {
+                _memory = nullptr;
+                TRACE(Trace::Warning, (_T("Colud not create MemoryObserver in TestUtility")));
+            }
         } else {
             ProcessTermination(_connection);
 
@@ -172,7 +179,7 @@ namespace Plugin {
     { 
         if (_connection == process->Id()) {
             ASSERT(_service != nullptr);
-            RPC::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+            Core::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
 
