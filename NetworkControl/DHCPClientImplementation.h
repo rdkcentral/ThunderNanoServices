@@ -144,6 +144,10 @@ namespace Plugin {
         static constexpr uint16_t DefaultDHCPClientPort = 68;
 
         class IPStorage : public Core::JSON::Container {
+        private:
+            IPStorage(const IPStorage&) = delete;
+            IPStorage& operator=(const IPStorage&) = delete;
+
         public:
             IPStorage() 
                 : Core::JSON::Container()
