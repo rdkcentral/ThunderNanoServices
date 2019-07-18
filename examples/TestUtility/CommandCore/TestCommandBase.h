@@ -19,7 +19,7 @@ public:
         SignatureBuilder& operator=(const SignatureBuilder&) = delete;
 
     public:
-        SignatureBuilder(string const& name, JsonData::TestUtility::InputInfo::TypeType type, string const& comment)
+        explicit SignatureBuilder(string const& name, JsonData::TestUtility::InputInfo::TypeType type, string const& comment)
             : _jsonSignature()
         {
            	JsonData::TestUtility::InputInfo inputParam;
