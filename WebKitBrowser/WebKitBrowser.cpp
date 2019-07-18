@@ -51,12 +51,16 @@ namespace Plugin {
                 _browser->Register(&_notification);
 
                 const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
-
                 ASSERT(connection != nullptr);
-                _memory = WPEFramework::WebKitBrowser::MemoryObserver(connection);
 
-                ASSERT(_memory != nullptr);
-                _memory->Observe(connection->RemoteId());
+                if (connection != nullptr) {
+                    _memory = WPEFramework::WebKitBrowser::MemoryObserver(connection);
+
+                    ASSERT(_memory != nullptr);
+                    _memory->Observe(connection->RemoteId());
+
+                    connection->Release();
+                }
 
                 stateControl->Configure(_service);
                 stateControl->Register(&_notification);
