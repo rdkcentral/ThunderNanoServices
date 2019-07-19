@@ -15,19 +15,19 @@ namespace Plugin {
 
     void RemoteControl::RegisterAll()
     {
-        Register<void,Core::JSON::ArrayType<Core::JSON::String>>(_T("devices"), &RemoteControl::endpoint_devices, this);
-        Register<DeviceParamsInfo,DeviceResultData>(_T("device"), &RemoteControl::endpoint_device, this);
-        Register<KeyParamsInfo,KeyResultData>(_T("key"), &RemoteControl::endpoint_key, this);
-        Register<KeyParamsInfo,void>(_T("delete"), &RemoteControl::endpoint_delete, this);
+        Register<KeyInfo,KeyResultData>(_T("key"), &RemoteControl::endpoint_key, this);
+        Register<KeyInfo,void>(_T("delete"), &RemoteControl::endpoint_delete, this);
         Register<RcinfoInfo,void>(_T("modify"), &RemoteControl::endpoint_modify, this);
-        Register<DeviceParamsInfo,void>(_T("pair"), &RemoteControl::endpoint_pair, this);
+        Register<DeviceInfo,void>(_T("pair"), &RemoteControl::endpoint_pair, this);
         Register<UnpairParamsData,void>(_T("unpair"), &RemoteControl::endpoint_unpair, this);
         Register<RcinfoInfo,void>(_T("send"), &RemoteControl::endpoint_send, this);
         Register<RcinfoInfo,void>(_T("press"), &RemoteControl::endpoint_press, this);
         Register<RcinfoInfo,void>(_T("release"), &RemoteControl::endpoint_release, this);
-        Register<DeviceParamsInfo,void>(_T("save"), &RemoteControl::endpoint_save, this);
-        Register<DeviceParamsInfo,void>(_T("load"), &RemoteControl::endpoint_load, this);
+        Register<DeviceInfo,void>(_T("save"), &RemoteControl::endpoint_save, this);
+        Register<DeviceInfo,void>(_T("load"), &RemoteControl::endpoint_load, this);
         Register<RcinfoInfo,void>(_T("add"), &RemoteControl::endpoint_add, this);
+        Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("devices"), &RemoteControl::get_devices, nullptr, this);
+        Property<DeviceData>(_T("device"), &RemoteControl::get_device, nullptr, this);
     }
 
     void RemoteControl::UnregisterAll()
@@ -111,66 +111,76 @@ namespace Plugin {
     // API implementation
     //
 
-    // General information.
-    uint32_t RemoteControl::endpoint_devices(Core::JSON::ArrayType<Core::JSON::String>& response)
-    {
-        // Add virtual devices
-        std::list<string>::const_iterator index(_virtualDevices.begin());
+   // Property: devices - Names of all available devices
+   // Return codes:
+   //  - ERROR_NONE: Success
+   uint32_t RemoteControl::get_devices(Core::JSON::ArrayType<Core::JSON::String>& response) const
+   {
+       std::list<string>::const_iterator index(_virtualDevices.begin());
 
-        while (index != _virtualDevices.end()) {
-            Core::JSON::String newElement;
-            newElement = *index;
-            response.Add(newElement);
-            index++;
-        }
+       while (index != _virtualDevices.end()) {
+           Core::JSON::String newElement;
+           newElement = *index;
+           response.Add(newElement);
+           index++;
+       }
 
-        // Look at specific devices, if we have, append them to response
-        Remotes::RemoteAdministrator& admin(Remotes::RemoteAdministrator::Instance());
-        Remotes::RemoteAdministrator::Iterator remoteDevices(admin.Producers());
+       // Look at specific devices, if we have, append them to response
+       Remotes::RemoteAdministrator& admin(Remotes::RemoteAdministrator::Instance());
+       Remotes::RemoteAdministrator::Iterator remoteDevices(admin.Producers());
 
-        while (remoteDevices.Next() == true) {
-            Core::JSON::String newElement;
-            newElement = (*remoteDevices)->Name();
-            response.Add(newElement);
-        }
-        return (Core::ERROR_NONE);
-    }
+       while (remoteDevices.Next() == true) {
+           Core::JSON::String newElement;
+           newElement = (*remoteDevices)->Name();
+           response.Add(newElement);
+       }
+       return (Core::ERROR_NONE);
 
-    // Get device.
-    uint32_t RemoteControl::endpoint_device(const DeviceParamsInfo& params, DeviceResultData& response)
-    {
-        uint32_t result = Core::ERROR_NONE;
+       return Core::ERROR_NONE;
+   }
 
-        if(params.Device.IsSet() == true) {
-            if (IsVirtualDevice(params.Device.Value()) == true) {
-                result = Core::ERROR_GENERAL;
-            } else if (IsPhysicalDevice(params.Device.Value()) == true) {
-                Remotes::RemoteAdministrator& admin(Remotes::RemoteAdministrator::Instance());
-                uint32_t error = admin.Error(params.Device.Value());
+   // Property: device - Metadata of specific devices
+   // Return codes:
+   //  - ERROR_NONE: Success
+   //  - ERROR_GENERAL: Virtual device is loaded
+   //  - ERROR_UNAVAILABLE: Unknown device
+   //  - ERROR_BAD_REQUEST: Bad JSON param data format
+   uint32_t RemoteControl::get_device(const string& index, DeviceData& response) const
+   {
+       uint32_t result = Core::ERROR_NONE;
 
-                if (error == Core::ERROR_NONE) {
-                    // Look at specific devices, if we have, append them to response
-                    Remotes::RemoteAdministrator::Iterator remoteDevices(admin.Producers());
+       if(index.empty() == false) {
+           if (IsVirtualDevice(index) == true) {
+               result = Core::ERROR_GENERAL;
+           } else if (IsPhysicalDevice(index) == true) {
+               Remotes::RemoteAdministrator& admin(Remotes::RemoteAdministrator::Instance());
+               uint32_t error = admin.Error(index);
 
-                    while (remoteDevices.Next() == true) {
-                        if ((*remoteDevices)->Name() == params.Device.Value()) {
-                            response.Name = (*remoteDevices)->Name();
-                            response.Metadata = (*remoteDevices)->MetaData();
-                            break;
-                        }
-                    }
-                }
-            } else {
-                result = Core::ERROR_UNAVAILABLE;
-            }
-        } else {
-            result = Core::ERROR_BAD_REQUEST;
-        }
-        return result;
-    }
+               if (error == Core::ERROR_NONE) {
+                   // Look at specific devices, if we have, append them to response
+                   Remotes::RemoteAdministrator::Iterator remoteDevices(admin.Producers());
+
+                   while (remoteDevices.Next() == true) {
+                       if ((*remoteDevices)->Name() == index) {
+                           response.Name = (*remoteDevices)->Name();
+                           response.Metadata = (*remoteDevices)->MetaData();
+                           break;
+                       }
+                   }
+               }
+           } else {
+               result = Core::ERROR_UNAVAILABLE;
+           }
+       } else {
+           result = Core::ERROR_BAD_REQUEST;
+       }
+       return result;
+
+       return Core::ERROR_NONE;
+   }
 
     // Key action.
-    uint32_t RemoteControl::endpoint_key(const KeyParamsInfo& params, KeyResultData& response)
+    uint32_t RemoteControl::endpoint_key(const KeyInfo& params, KeyResultData& response)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -197,7 +207,7 @@ namespace Plugin {
     }
 
     // Key mapping actions.
-    uint32_t RemoteControl::endpoint_delete(const KeyParamsInfo& params)
+    uint32_t RemoteControl::endpoint_delete(const KeyInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -242,7 +252,7 @@ namespace Plugin {
     }
 
     // Pairing device.
-    uint32_t RemoteControl::endpoint_pair(const DeviceParamsInfo& params)
+    uint32_t RemoteControl::endpoint_pair(const DeviceInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -334,7 +344,7 @@ namespace Plugin {
     }
 
     // Key mapping actions.
-    uint32_t RemoteControl::endpoint_save(const DeviceParamsInfo& params)
+    uint32_t RemoteControl::endpoint_save(const DeviceInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -366,7 +376,7 @@ namespace Plugin {
     }
 
     // Key mapping actions.
-    uint32_t RemoteControl::endpoint_load(const DeviceParamsInfo& params)
+    uint32_t RemoteControl::endpoint_load(const DeviceInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -409,7 +419,6 @@ namespace Plugin {
         }
         return result;
     }
-
 } // namespace Plugin
 
 } // namespace WPEFramework
