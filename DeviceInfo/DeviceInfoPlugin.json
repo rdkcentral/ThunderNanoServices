@@ -9,6 +9,6 @@
     "version": "1.0"
   },
   "interface": {
-    "$ref": "{interfacedir}/DeviceInfoAPI.json#"
+    "$ref": "{interfacedir}/DeviceInfo.json#"
   }
 }

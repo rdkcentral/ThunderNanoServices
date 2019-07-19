@@ -11,6 +11,6 @@
     "version": "1.0"
   },
   "interface": {
-    "$ref": "{interfacedir}/StreamerAPI.json#"
+    "$ref": "{interfacedir}/Streamer.json#"
   }
 }

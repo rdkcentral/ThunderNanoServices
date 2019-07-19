@@ -6,7 +6,7 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-Spark plugin for WPEFramework.
+Spark plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -55,14 +55,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.WPEF">[WPEF](https://github.com/WebPlatformForEmbedded/WPEFramework/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | WPEFramework API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
 
 <a name="head.Description"></a>
 # Description
 
 The Spark plugin provides web browsing functionality based on the Spark engine.
 
-The plugin is designed to be loaded and executed within the WPEFramework. For more information on WPEFramework refer to [[WPEF](#ref.WPEF)].
+The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
 <a name="head.Configuration"></a>
 # Configuration
@@ -169,12 +169,6 @@ Also see: [visibilitychange](#event.visibilitychange)
 | :-------- | :-------- | :-------- |
 | (property) | string | Current browser visibility (must be one of the following: *visible*, *hidden*) |
 
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 30 | ```ERROR_BAD_REQUEST``` | The property value is invalid |
-
 ### Example
 
 #### Get Request
@@ -259,12 +253,6 @@ Also see: [statechange](#event.statechange)
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | (property) | string | Running state of the service (must be one of the following: *resumed*, *suspended*) |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 30 | ```ERROR_BAD_REQUEST``` | The property value is invalid |
 
 ### Example
 

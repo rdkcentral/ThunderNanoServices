@@ -22,7 +22,7 @@
 * SecurityAgent
 * Snapshot
 * [Spark](Spark/SparkPlugin.md)
-* Streamer
+* [Streamer](Streamer/StreamerPlugin.md)
 * [SystemCommands](SystemCommands/SystemCommandsPlugin.md)
 * SystemdConnector
 * TVControl
