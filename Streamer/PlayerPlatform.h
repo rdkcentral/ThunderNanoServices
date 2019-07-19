@@ -235,7 +235,7 @@ namespace Player {
             }
 
         private:
-            Core::BitArrayType<16> _slots;
+            Core::BitArrayFlexType<16> _slots;
             string _name;
             Exchange::IStream::streamtype _streamType;
             InitializerType _Initialize;
