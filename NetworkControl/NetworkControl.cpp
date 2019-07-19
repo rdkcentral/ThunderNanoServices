@@ -135,11 +135,11 @@ namespace Plugin
                         std::make_tuple(interfaceName),
                         std::make_tuple(index.Current()));
 
-                    JsonData::NetworkControl::NetworkResultData::ModeType how(index.Current().Mode);
-                    if (how == JsonData::NetworkControl::NetworkResultData::ModeType::MANUAL) {
+                    JsonData::NetworkControl::NetworkData::ModeType how(index.Current().Mode);
+                    if (how == JsonData::NetworkControl::NetworkData::ModeType::MANUAL) {
                         SYSLOG(Logging::Startup, (_T("Interface [%s] activated, no IP associated"), interfaceName.c_str()));
                     } else {
-                        if (how == JsonData::NetworkControl::NetworkResultData::ModeType::DYNAMIC) {
+                        if (how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) {
                             SYSLOG(Logging::Startup, (_T("Interface [%s] activated, DHCP request issued"), interfaceName.c_str()));
                             Reload(interfaceName, true);
                         } else {
@@ -285,7 +285,7 @@ namespace Plugin
 
                 bool reload = (index.Current() == _T("Reload"));
 
-                if (((reload == true) && (entry->second.Mode() != JsonData::NetworkControl::NetworkResultData::ModeType::STATIC)) || (index.Current() == _T("Request"))) {
+                if (((reload == true) && (entry->second.Mode() != JsonData::NetworkControl::NetworkData::ModeType::STATIC)) || (index.Current() == _T("Request"))) {
 
                     if (Reload(entry->first, true) == Core::ERROR_NONE) {
                         result->ErrorCode = Web::STATUS_OK;
@@ -294,7 +294,7 @@ namespace Plugin
                         result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
                         result->Message = "Could not activate the server";
                     }
-                } else if (((reload == true) && (entry->second.Mode() == JsonData::NetworkControl::NetworkResultData::ModeType::STATIC)) || (index.Current() == _T("Assign"))) {
+                } else if (((reload == true) && (entry->second.Mode() == JsonData::NetworkControl::NetworkData::ModeType::STATIC)) || (index.Current() == _T("Assign"))) {
 
                     if (Reload(entry->first, false) == Core::ERROR_NONE) {
                         result->ErrorCode = Web::STATUS_OK;
@@ -738,9 +738,9 @@ namespace Plugin
 
                 if (index != _interfaces.end()) {
 
-                    JsonData::NetworkControl::NetworkResultData::ModeType how(index->second.Mode());
-                    if (how != JsonData::NetworkControl::NetworkResultData::ModeType::MANUAL) {
-                        Reload(interfaceName, how == JsonData::NetworkControl::NetworkResultData::ModeType::DYNAMIC);
+                    JsonData::NetworkControl::NetworkData::ModeType how(index->second.Mode());
+                    if (how != JsonData::NetworkControl::NetworkData::ModeType::MANUAL) {
+                        Reload(interfaceName, how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC);
                     }
                 }
             }
