@@ -14,6 +14,7 @@ NetworkControl plugin for Thunder framework.
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
+- [Properties](#head.Properties)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -21,7 +22,7 @@ NetworkControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the NetworkControl plugin. It includes detailed specification of its configuration and methods provided.
+This document describes purpose and functionality of the NetworkControl plugin. It includes detailed specification of its configuration, methods and properties provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -84,77 +85,11 @@ NetworkControl interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [network](#method.network) | Retrieves the actual network information for targeted network interface, if network interface is not given, all network interfaces are returned |
 | [reload](#method.reload) | Reload static and non-static network interface adapter |
 | [request](#method.request) | Reload non-static network interface adapter |
 | [assign](#method.assign) | Reload static network interface adapter |
-| [up](#method.up) | Set up network interface adapter |
-| [down](#method.down) | Set down network interface adapter |
 | [flush](#method.flush) | Flush network interface adapter |
 
-<a name="method.network"></a>
-## *network <sup>method</sup>*
-
-Retrieves the actual network information for targeted network interface, if network interface is not given, all network interfaces are returned.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Network interface |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array |  |
-| result[#] | object |  |
-| result[#]?.interface | string | <sup>*(optional)*</sup> Interface name |
-| result[#]?.mode | string | <sup>*(optional)*</sup> Mode type (must be one of the following: *Manual*, *Static*, *Dynamic*) |
-| result[#]?.address | string | <sup>*(optional)*</sup> IP address |
-| result[#]?.mask | number | <sup>*(optional)*</sup> Network inteface mask |
-| result[#]?.gateway | string | <sup>*(optional)*</sup> Gateway address |
-| result[#]?.broadcast | string | <sup>*(optional)*</sup> Broadcast IP |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unavaliable network interface |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "NetworkControl.1.network", 
-    "params": {
-        "device": "eth0"
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": [
-        {
-            "interface": "eth0", 
-            "mode": "dynamic", 
-            "address": "192.168.1.158", 
-            "mask": 24, 
-            "gateway": "192.168.1.1", 
-            "broadcast": "192.168.1.255"
-        }
-    ]
-}
-```
 <a name="method.reload"></a>
 ## *reload <sup>method</sup>*
 
@@ -296,100 +231,6 @@ Reload static network interface adapter.
     "result": null
 }
 ```
-<a name="method.up"></a>
-## *up <sup>method</sup>*
-
-Set up network interface adapter.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Network interface |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unavaliable network interface |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "NetworkControl.1.up", 
-    "params": {
-        "device": "eth0"
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.down"></a>
-## *down <sup>method</sup>*
-
-Set down network interface adapter.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Network interface |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unavaliable network interface |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "NetworkControl.1.down", 
-    "params": {
-        "device": "eth0"
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
 <a name="method.flush"></a>
 ## *flush <sup>method</sup>*
 
@@ -435,5 +276,138 @@ Flush network interface adapter.
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": null
+}
+```
+<a name="head.Properties"></a>
+# Properties
+
+The following properties are provided by the NetworkControl plugin:
+
+NetworkControl interface properties:
+
+| Property | Description |
+| :-------- | :-------- |
+| [network](#property.network) <sup>RO</sup> | The actual network information for targeted network interface, if network interface is not given, all network interfaces are returned |
+| [up](#property.up) | Determines if interface is up |
+
+<a name="property.network"></a>
+## *network <sup>property</sup>*
+
+Provides access to the the actual network information for targeted network interface, if network interface is not given, all network interfaces are returned..
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | array | The actual network information for targeted network interface, if network interface is not given, all network interfaces are returned. |
+| (property)[#] | object |  |
+| (property)[#]?.interface | string | <sup>*(optional)*</sup> Interface name |
+| (property)[#]?.mode | string | <sup>*(optional)*</sup> Mode type (must be one of the following: *Manual*, *Static*, *Dynamic*) |
+| (property)[#]?.address | string | <sup>*(optional)*</sup> IP address |
+| (property)[#]?.mask | number | <sup>*(optional)*</sup> Network inteface mask |
+| (property)[#]?.gateway | string | <sup>*(optional)*</sup> Gateway address |
+| (property)[#]?.broadcast | string | <sup>*(optional)*</sup> Broadcast IP |
+
+> The *Interface Name* shall be passed as the index to the property, e.g. *NetworkControl.1.network@eth0*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Unavaliable network interface |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "NetworkControl.1.network@eth0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": [
+        {
+            "interface": "eth0", 
+            "mode": "dynamic", 
+            "address": "192.168.1.158", 
+            "mask": 24, 
+            "gateway": "192.168.1.1", 
+            "broadcast": "192.168.1.255"
+        }
+    ]
+}
+```
+<a name="property.up"></a>
+## *up <sup>property</sup>*
+
+Provides access to the determines if interface is up..
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | boolean | Determines if interface is up. |
+
+> The *Interface Name* shall be passed as the index to the property, e.g. *NetworkControl.1.up@eth0*.
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Unavaliable network interface |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "NetworkControl.1.up@eth0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": false
+}
+```
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "NetworkControl.1.up@eth0", 
+    "params": false
+}
+```
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "null"
 }
 ```
