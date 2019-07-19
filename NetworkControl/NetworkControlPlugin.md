@@ -6,7 +6,7 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-NetworkControl plugin for WPEFramework.
+NetworkControl plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -54,14 +54,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.WPEF">[WPEF](https://github.com/WebPlatformForEmbedded/WPEFramework/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | WPEFramework API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
 
 <a name="head.Description"></a>
 # Description
 
 The Network Control plugin provides functionality for network interface management.
 
-The plugin is designed to be loaded and executed within the WPEFramework. For more information on WPEFramework refer to [[WPEF](#ref.WPEF)].
+The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
 <a name="head.Configuration"></a>
 # Configuration
@@ -84,20 +84,16 @@ NetworkControl interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [network](#method.network) | Retrieves network information |
-| [reload](#method.reload) | Reloads static and non-static network interface adapters |
-| [request](#method.request) | Reloads non-static network interface adapters |
-| [assign](#method.assign) | Reloads static network interface adapters |
-| [up](#method.up) | Sets up network interface adapters |
-| [down](#method.down) | Sets down network interface adapters |
-| [flush](#method.flush) | Flushes a network interface adapters |
+| [network](#method.network) | Retrieves the actual network information for targeted network interface, if network interface is not given, all network interfaces are returned |
+| [reload](#method.reload) | Reload static and non-static network interface adapter |
+| [request](#method.request) | Reload non-static network interface adapter |
+| [assign](#method.assign) | Reload static network interface adapter |
+| [up](#method.up) | Set up network interface adapter |
+| [down](#method.down) | Set down network interface adapter |
+| [flush](#method.flush) | Flush network interface adapter |
 
 <a name="method.network"></a>
 ## *network <sup>method</sup>*
-
-Retrieves network information
-
-### Description
 
 Retrieves the actual network information for targeted network interface, if network interface is not given, all network interfaces are returned.
 
@@ -150,7 +146,7 @@ Retrieves the actual network information for targeted network interface, if netw
     "result": [
         {
             "interface": "eth0", 
-            "mode": "Dynamic", 
+            "mode": "dynamic", 
             "address": "192.168.1.158", 
             "mask": 24, 
             "gateway": "192.168.1.1", 
@@ -162,7 +158,7 @@ Retrieves the actual network information for targeted network interface, if netw
 <a name="method.reload"></a>
 ## *reload <sup>method</sup>*
 
-Reloads static and non-static network interface adapters
+Reload static and non-static network interface adapter.
 
 ### Parameters
 
@@ -209,7 +205,7 @@ Reloads static and non-static network interface adapters
 <a name="method.request"></a>
 ## *request <sup>method</sup>*
 
-Reloads non-static network interface adapters
+Reload non-static network interface adapter.
 
 ### Parameters
 
@@ -256,7 +252,7 @@ Reloads non-static network interface adapters
 <a name="method.assign"></a>
 ## *assign <sup>method</sup>*
 
-Reloads static network interface adapters
+Reload static network interface adapter.
 
 ### Parameters
 
@@ -303,7 +299,7 @@ Reloads static network interface adapters
 <a name="method.up"></a>
 ## *up <sup>method</sup>*
 
-Sets up network interface adapters
+Set up network interface adapter.
 
 ### Parameters
 
@@ -350,7 +346,7 @@ Sets up network interface adapters
 <a name="method.down"></a>
 ## *down <sup>method</sup>*
 
-Sets down network interface adapters
+Set down network interface adapter.
 
 ### Parameters
 
@@ -397,7 +393,7 @@ Sets down network interface adapters
 <a name="method.flush"></a>
 ## *flush <sup>method</sup>*
 
-Flushes a network interface adapters
+Flush network interface adapter.
 
 ### Parameters
 

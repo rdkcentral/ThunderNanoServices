@@ -8,6 +8,6 @@
     "version": "1.0"
   },
   "interface": {
-    "$ref": "{interfacedir}/OpenCDMiAPI.json#"
+    "$ref": "{interfacedir}/OpenCDMi.json#"
   }
 }

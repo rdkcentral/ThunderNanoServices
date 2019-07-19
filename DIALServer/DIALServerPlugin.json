@@ -103,6 +103,6 @@
     ]
   },
   "interface": {
-    "$ref": "{interfacedir}/DIALServerAPI.json#"
+    "$ref": "{interfacedir}/DIALServer.json#"
   }
 }

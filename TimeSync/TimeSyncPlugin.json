@@ -41,6 +41,6 @@
     ]
   },
   "interface": {
-    "$ref": "{interfacedir}/TimeSyncAPI.json#"
+    "$ref": "{interfacedir}/TimeSync.json#"
   }
 }

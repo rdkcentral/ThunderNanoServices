@@ -9,6 +9,6 @@
     "version": "1.0"
   },
   "interface": {
-    "$ref": "{interfacedir}/MonitorAPI.json#"
+    "$ref": "{interfacedir}/Monitor.json#"
   }
 }

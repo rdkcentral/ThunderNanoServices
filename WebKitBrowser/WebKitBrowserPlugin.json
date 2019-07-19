@@ -104,6 +104,6 @@
     ]
   },
   "interface": {
-    "$ref": "{interfacedir}/WebKitBrowserAPI.json#"
+    "$ref": "{interfacedir}/WebKitBrowser.json#"
   }
 }

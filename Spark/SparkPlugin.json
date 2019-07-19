@@ -29,6 +29,6 @@
     ]
   },
   "interface": {
-    "$ref": "{interfacedir}/SparkAPI.json#"
+    "$ref": "{interfacedir}/Spark.json#"
   }
 }

@@ -6,7 +6,7 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-DeviceInfo plugin for WPEFramework.
+DeviceInfo plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -54,14 +54,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.WPEF">[WPEF](https://github.com/WebPlatformForEmbedded/WPEFramework/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | WPEFramework API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
 
 <a name="head.Description"></a>
 # Description
 
 The DeviceInfo plugin allows retrieving of various device-related information.
 
-The plugin is designed to be loaded and executed within the WPEFramework. For more information on WPEFramework refer to [[WPEF](#ref.WPEF)].
+The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
 <a name="head.Configuration"></a>
 # Configuration
@@ -100,7 +100,7 @@ Provides access to the system general information.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | (property) | object | System general information |
-| (property).version | string | Software version (in form "version#hashtag") |
+| (property).version | string | Software version (in form *version#hashtag*) |
 | (property).uptime | number | System uptime (in seconds) |
 | (property).totalram | number | Total installed system RAM memory (in bytes) |
 | (property).freeram | number | Free system RAM memory (in bytes) |

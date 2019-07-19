@@ -6,7 +6,7 @@
 
 **Status: :black_circle::black_circle::white_circle:**
 
-WifiControl plugin for WPEFramework.
+WifiControl plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -55,14 +55,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.WPEF">[WPEF](https://github.com/WebPlatformForEmbedded/WPEFramework/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | WPEFramework API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
 
 <a name="head.Description"></a>
 # Description
 
 The WiFi Control plugin allows to manage various aspects of wireless connectivity.
 
-The plugin is designed to be loaded and executed within the WPEFramework. For more information on WPEFramework refer to [[WPEF](#ref.WPEF)].
+The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
 <a name="head.Configuration"></a>
 # Configuration
@@ -91,8 +91,8 @@ WifiControl interface methods:
 | [delete](#method.delete) | Forgets configuration of the specified network |
 | [setconfig](#method.setconfig) | Updates or creates a configuration for the specified network |
 | [store](#method.store) | Stores configurations in the permanent storage |
-| [scan](#method.scan) | Searches for available networks |
-| [connect](#method.connect) | Attempts connection to the specified network |
+| [scan](#method.scan) | Searches for an available networks |
+| [connect](#method.connect) | Attempt connection to the specified network |
 | [disconnect](#method.disconnect) | Disconnects from the specified network |
 | [debug](#method.debug) | Sets specified debug level |
 
@@ -409,7 +409,7 @@ This method takes no parameters.
 <a name="method.scan"></a>
 ## *scan <sup>method</sup>*
 
-Searches for available networks
+Searches for an available networks
 
 Also see: [scanresults](#event.scanresults)
 
@@ -453,7 +453,7 @@ This method takes no parameters.
 <a name="method.connect"></a>
 ## *connect <sup>method</sup>*
 
-Attempts connection to the specified network
+Attempt connection to the specified network
 
 Also see: [connectionchange](#event.connectionchange)
 

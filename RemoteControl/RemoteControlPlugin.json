@@ -9,6 +9,6 @@
     "version": "1.0"
   },
   "interface": {
-    "$ref": "{interfacedir}/RemoteControlAPI.json#"
+    "$ref": "{interfacedir}/RemoteControl.json#"
   }
 }

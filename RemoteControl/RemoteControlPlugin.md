@@ -6,7 +6,7 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-RemoteControl plugin for WPEFramework.
+RemoteControl plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -14,6 +14,7 @@ RemoteControl plugin for WPEFramework.
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
+- [Properties](#head.Properties)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -21,7 +22,7 @@ RemoteControl plugin for WPEFramework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the RemoteControl plugin. It includes detailed specification of its configuration and methods provided.
+This document describes purpose and functionality of the RemoteControl plugin. It includes detailed specification of its configuration, methods and properties provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -54,14 +55,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.WPEF">[WPEF](https://github.com/WebPlatformForEmbedded/WPEFramework/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | WPEFramework API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
 
 <a name="head.Description"></a>
 # Description
 
 The RemoteControl plugin provides user-input functionality from various key-code sources (e.g. STB RC).
 
-The plugin is designed to be loaded and executed within the WPEFramework. For more information on WPEFramework refer to [[WPEF](#ref.WPEF)].
+The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
 <a name="head.Configuration"></a>
 # Configuration
@@ -84,128 +85,22 @@ RemoteControl interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [devices](#method.devices) | Retrieves device information |
-| [device](#method.device) | Retrieves device metadata |
-| [key](#method.key) | Retrieves key actions |
-| [delete](#method.delete) | Deletes key actions |
-| [modify](#method.modify) | Modifies key actions |
-| [pair](#method.pair) | Pairs a device |
-| [unpair](#method.unpair) | Unpairs a device |
-| [send](#method.send) | Sends key actions |
-| [press](#method.press) | Presses a key |
-| [release](#method.release) | Releases a key |
-| [save](#method.save) | Saves the key map |
-| [load](#method.load) | Loads a keymap |
-| [add](#method.add) | Adds a key |
+| [key](#method.key) | Gets key code details |
+| [delete](#method.delete) | Deletes the key code from map |
+| [modify](#method.modify) | Modifies the key code in the map |
+| [pair](#method.pair) | Activates pairing mode of specific device |
+| [unpair](#method.unpair) | Unpairs of specific device |
+| [send](#method.send) | Sends a code to a device |
+| [press](#method.press) | Sends a code 'Press' to a device |
+| [release](#method.release) | Sends a code 'Release' to a device |
+| [save](#method.save) | Saves the loaded key map as DEVICE_NAME |
+| [load](#method.load) | Re-loads DEVICE_NAME |
+| [add](#method.add) | Adds the key code in the map |
 
-<a name="method.devices"></a>
-## *devices <sup>method</sup>*
-
-Retrieves device information
-
-### Description
-
-Retrieves names of all available devices.
-
-### Parameters
-
-This method takes no parameters.
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array |  |
-| result[#] | string | Available device name |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "RemoteControl.1.devices"
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": [
-        "Web"
-    ]
-}
-```
-<a name="method.device"></a>
-## *device <sup>method</sup>*
-
-Retrieves device metadata
-
-### Description
-
-Retrieves the metadata of specific devices.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result.name | string | Device name |
-| result.metadata | string | Device metadata |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 1 | ```ERROR_GENERAL``` | Virtual device is loaded |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "RemoteControl.1.device", 
-    "params": {
-        "device": "DevInput"
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": {
-        "name": "DevInput", 
-        "metadata": "It is based on protocol A"
-    }
-}
-```
 <a name="method.key"></a>
 ## *key <sup>method</sup>*
 
-Retrieves key actions
-
-### Description
-
-Retrieves the key code details.
+Gets key code details
 
 ### Parameters
 
@@ -266,10 +161,6 @@ Retrieves the key code details.
 <a name="method.delete"></a>
 ## *delete <sup>method</sup>*
 
-Deletes key actions
-
-### Description
-
 Deletes the key code from map.
 
 ### Parameters
@@ -320,10 +211,6 @@ Deletes the key code from map.
 ```
 <a name="method.modify"></a>
 ## *modify <sup>method</sup>*
-
-Modifies key actions
-
-### Description
 
 Modifies the key code in the map.
 
@@ -383,10 +270,6 @@ Modifies the key code in the map.
 <a name="method.pair"></a>
 ## *pair <sup>method</sup>*
 
-Pairs a device
-
-### Description
-
 Activates pairing mode of specific device.
 
 ### Parameters
@@ -436,11 +319,7 @@ Activates pairing mode of specific device.
 <a name="method.unpair"></a>
 ## *unpair <sup>method</sup>*
 
-Unpairs a device
-
-### Description
-
-Unpairs a specific device.
+Unpairs of specific device.
 
 ### Parameters
 
@@ -490,10 +369,6 @@ Unpairs a specific device.
 ```
 <a name="method.send"></a>
 ## *send <sup>method</sup>*
-
-Sends key actions
-
-### Description
 
 Sends a code to a device.
 
@@ -555,11 +430,7 @@ Sends a code to a device.
 <a name="method.press"></a>
 ## *press <sup>method</sup>*
 
-Presses a key
-
-### Description
-
-Sends a 'Press' code to a device.
+Sends a code 'Press' to a device.
 
 ### Parameters
 
@@ -618,10 +489,6 @@ Sends a 'Press' code to a device.
 ```
 <a name="method.release"></a>
 ## *release <sup>method</sup>*
-
-Releases a key.
-
-### Description
 
 Sends a code 'Release' to a device.
 
@@ -683,10 +550,6 @@ Sends a code 'Release' to a device.
 <a name="method.save"></a>
 ## *save <sup>method</sup>*
 
-Saves the key map
-
-### Description
-
 Saves the loaded key map as DEVICE_NAME.json into persistent path.
 
 ### Parameters
@@ -736,10 +599,6 @@ Saves the loaded key map as DEVICE_NAME.json into persistent path.
 ```
 <a name="method.load"></a>
 ## *load <sup>method</sup>*
-
-Loads a keymap
-
-### Description
 
 Re-loads DEVICE_NAME.json key map into memory.
 
@@ -791,10 +650,6 @@ Re-loads DEVICE_NAME.json key map into memory.
 ```
 <a name="method.add"></a>
 ## *add <sup>method</sup>*
-
-Adds a key
-
-### Description
 
 Adds the key code in the map.
 
@@ -849,5 +704,101 @@ Adds the key code in the map.
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": null
+}
+```
+<a name="head.Properties"></a>
+# Properties
+
+The following properties are provided by the RemoteControl plugin:
+
+RemoteControl interface properties:
+
+| Property | Description |
+| :-------- | :-------- |
+| [devices](#property.devices) <sup>RO</sup> | Names of all available devices |
+| [device](#property.device) <sup>RO</sup> | Metadata of specific devices |
+
+<a name="property.devices"></a>
+## *devices <sup>property</sup>*
+
+Provides access to the names of all available devices.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | array | Names of all available devices |
+| (property)[#] | string | Available device name |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "RemoteControl.1.devices"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": [
+        "Web"
+    ]
+}
+```
+<a name="property.device"></a>
+## *device <sup>property</sup>*
+
+Provides access to the metadata of specific devices.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Metadata of specific devices |
+| (property).name | string | Device name |
+| (property).metadata | string | Device metadata |
+
+> The *Device name* shall be passed as the index to the property, e.g. *RemoteControl.1.device@0*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 1 | ```ERROR_GENERAL``` | Virtual device is loaded |
+| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
+| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "RemoteControl.1.device@0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": {
+        "name": "DevInput", 
+        "metadata": "It is based on protocol A"
+    }
 }
 ```

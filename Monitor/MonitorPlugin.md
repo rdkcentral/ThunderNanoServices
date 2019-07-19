@@ -6,7 +6,7 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-Monitor plugin for WPEFramework.
+Monitor plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -55,14 +55,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.WPEF">[WPEF](https://github.com/WebPlatformForEmbedded/WPEFramework/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | WPEFramework API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
 
 <a name="head.Description"></a>
 # Description
 
 The Monitor plugin provides a watchdog-like functionality for framework processes.
 
-The plugin is designed to be loaded and executed within the WPEFramework. For more information on WPEFramework refer to [[WPEF](#ref.WPEF)].
+The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
 <a name="head.Configuration"></a>
 # Configuration
@@ -131,12 +131,13 @@ Returns the memory and process statistics either for a single plugin or all plug
 | result[#].measurements.operational | boolean | Whether the plugin is up and running |
 | result[#].measurements.count | number | Number of measurements |
 | result[#].observable | string | A callsign of the watched plugin |
-| result[#].memoryrestartsettings | object | Restart limits for memory consumption related failures applying to the plugin |
-| result[#].memoryrestartsettings.limit | number | Maximum number or restarts to be attempted |
-| result[#].memoryrestartsettings.windowseconds | number | Time period within which failures must happen for the limit to be considered crossed |
-| result[#].operationalrestartsettings | object | Restart limits for stability failures applying to the plugin |
-| result[#].operationalrestartsettings.limit | number | Maximum number or restarts to be attempted |
-| result[#].operationalrestartsettings.windowseconds | number | Time period within which failures must happen for the limit to be considered crossed |
+| result[#]?.restart | object | <sup>*(optional)*</sup> Restart limits for memory/operational failures applying to the plugin |
+| result[#]?.restart?.memory | object | <sup>*(optional)*</sup> Restart limits for memory consumption related failures applying to the plugin |
+| result[#]?.restart?.memory.limit | number | Maximum number or restarts to be attempted |
+| result[#]?.restart?.memory.window | number | Time period within which failures must happen for the limit to be considered crossed |
+| result[#]?.restart?.operational | object | <sup>*(optional)*</sup> Restart limits for stability failures applying to the plugin |
+| result[#]?.restart?.operational.limit | number | Maximum number or restarts to be attempted |
+| result[#]?.restart?.operational.window | number | Time period within which failures must happen for the limit to be considered crossed |
 
 ### Example
 
@@ -189,13 +190,15 @@ Returns the memory and process statistics either for a single plugin or all plug
                 "count": 100
             }, 
             "observable": "callsign", 
-            "memoryrestartsettings": {
-                "limit": 3, 
-                "windowseconds": 60
-            }, 
-            "operationalrestartsettings": {
-                "limit": 3, 
-                "windowseconds": 60
+            "restart": {
+                "memory": {
+                    "limit": 3, 
+                    "window": 60
+                }, 
+                "operational": {
+                    "limit": 3, 
+                    "window": 60
+                }
             }
         }
     ]
@@ -242,12 +245,13 @@ Resets memory and process statistics for a single plugin watched by the Monitor
 | result.measurements.operational | boolean | Whether the plugin is up and running |
 | result.measurements.count | number | Number of measurements |
 | result.observable | string | A callsign of the watched plugin |
-| result.memoryrestartsettings | object | Restart limits for memory consumption related failures applying to the plugin |
-| result.memoryrestartsettings.limit | number | Maximum number or restarts to be attempted |
-| result.memoryrestartsettings.windowseconds | number | Time period within which failures must happen for the limit to be considered crossed |
-| result.operationalrestartsettings | object | Restart limits for stability failures applying to the plugin |
-| result.operationalrestartsettings.limit | number | Maximum number or restarts to be attempted |
-| result.operationalrestartsettings.windowseconds | number | Time period within which failures must happen for the limit to be considered crossed |
+| result?.restart | object | <sup>*(optional)*</sup> Restart limits for memory/operational failures applying to the plugin |
+| result?.restart?.memory | object | <sup>*(optional)*</sup> Restart limits for memory consumption related failures applying to the plugin |
+| result?.restart?.memory.limit | number | Maximum number or restarts to be attempted |
+| result?.restart?.memory.window | number | Time period within which failures must happen for the limit to be considered crossed |
+| result?.restart?.operational | object | <sup>*(optional)*</sup> Restart limits for stability failures applying to the plugin |
+| result?.restart?.operational.limit | number | Maximum number or restarts to be attempted |
+| result?.restart?.operational.window | number | Time period within which failures must happen for the limit to be considered crossed |
 
 ### Example
 
@@ -299,13 +303,15 @@ Resets memory and process statistics for a single plugin watched by the Monitor
             "count": 100
         }, 
         "observable": "callsign", 
-        "memoryrestartsettings": {
-            "limit": 3, 
-            "windowseconds": 60
-        }, 
-        "operationalrestartsettings": {
-            "limit": 3, 
-            "windowseconds": 60
+        "restart": {
+            "memory": {
+                "limit": 3, 
+                "window": 60
+            }, 
+            "operational": {
+                "limit": 3, 
+                "window": 60
+            }
         }
     }
 }
@@ -321,12 +327,12 @@ Sets new restart limits for a plugin
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.callsign | string | The callsign of a plugin to reset measurements snapshot for |
-| params.operationalrestartsettings | object | Restart setting for memory consumption type of failures |
-| params.operationalrestartsettings.limit | number | Maximum number or restarts to be attempted |
-| params.operationalrestartsettings.windowseconds | number | Time period within which failures must happen for the limit to be considered crossed |
-| params.memoryrestartsettings | object | Restart setting for stability type of failures |
-| params.memoryrestartsettings.limit | number | Maximum number or restarts to be attempted |
-| params.memoryrestartsettings.windowseconds | number | Time period within which failures must happen for the limit to be considered crossed |
+| params.operational | object | Restart setting for memory consumption type of failures |
+| params.operational.limit | number | Maximum number or restarts to be attempted |
+| params.operational.window | number | Time period within which failures must happen for the limit to be considered crossed |
+| params.memory | object | Restart setting for stability type of failures |
+| params.memory.limit | number | Maximum number or restarts to be attempted |
+| params.memory.window | number | Time period within which failures must happen for the limit to be considered crossed |
 
 ### Result
 
@@ -345,13 +351,13 @@ Sets new restart limits for a plugin
     "method": "Monitor.1.restartlimits", 
     "params": {
         "callsign": "WebServer", 
-        "operationalrestartsettings": {
+        "operational": {
             "limit": 3, 
-            "windowseconds": 60
+            "window": 60
         }, 
-        "memoryrestartsettings": {
+        "memory": {
             "limit": 3, 
-            "windowseconds": 60
+            "window": 60
         }
     }
 }
@@ -389,7 +395,7 @@ Signals action taken by the monitor
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.callsign | string | Callsign of the plugin the monitor acted upon |
-| params.action | string | The action executed by the monitor on a plugin. (must be one of the following: *Activate*, *Deactivate*, *StoppedRestarting*) |
+| params.action | string | The action executed by the monitor on a plugin. One of: "Activate", "Deactivate", "StoppedRestarting" |
 | params.reason | string | A message describing the reason the action was taken of |
 
 ### Example
