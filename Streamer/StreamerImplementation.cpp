@@ -33,7 +33,7 @@ namespace Plugin {
 
         config.FromString(service->ConfigLine());
 
-        _externalAccess = new ExternalAccess(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath(), Core::ProxyType<RPC::InvokeServer>::Create());
+        _externalAccess = new ExternalAccess(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath(), Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance()));
         result = _externalAccess->Open(RPC::CommunicationTimeOut);
         if (result != Core::ERROR_NONE) {
             TRACE(Trace::Information, (_T("Could not open StreamerImplementation server.")));
