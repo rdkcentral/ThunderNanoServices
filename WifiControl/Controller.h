@@ -750,11 +750,16 @@ namespace WPASupplicant {
                     Submit(&exchange);
 
                     if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
-
-                        Submit(&_statusRequest);
-
-                        // We are hooked up and ready to go !!!
                         _error = Core::ERROR_COULD_NOT_SET_ADDRESS;
+                    }
+                    else if (SetKey("bss_expiration_age", "180") != Core::ERROR_NONE) {
+                        _error = Core::ERROR_GENERAL;
+                    }
+                    else if (SetKey("autoscan", "periodic:120") != Core::ERROR_NONE) {
+                        _error = Core::ERROR_GENERAL;
+                    }
+                    else {
+                        Submit(&_statusRequest);
                     }
 
                     Revoke(&exchange);
@@ -1457,6 +1462,52 @@ namespace WPASupplicant {
             } else {
                 _adminLock.Unlock();
             }
+
+            return (result);
+        }
+        inline uint32_t SetKey(const string& key, const string& value) 
+        {
+            uint32_t result = Core::ERROR_NONE;
+
+            _adminLock.Lock();
+
+            CustomRequest exchange(string(_TXT("SET ")) + key + ' ' + value);
+
+            Submit(&exchange);
+
+            _adminLock.Unlock();
+
+            if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
+
+                result = Core::ERROR_ASYNC_ABORTED;
+            } 
+
+            Revoke(&exchange);
+
+            return (result);
+        }
+        inline uint32_t GetKey(const string& key, string& value) const
+        {
+            uint32_t result;
+
+            _adminLock.Lock();
+
+            CustomRequest exchange(string(_TXT("GET ")) + key);
+
+            Submit(&exchange);
+
+            _adminLock.Unlock();
+
+            if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
+
+                result = Core::ERROR_ASYNC_ABORTED;
+            } 
+            else {
+                result = Core::ERROR_NONE;
+                value = exchange.Response();
+            }
+
+            Revoke(&exchange);
 
             return (result);
         }
