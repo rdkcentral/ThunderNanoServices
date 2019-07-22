@@ -4,7 +4,9 @@
 
 **Version: 1.0**
 
-Packager functionality for WPEFramework.
+**Status: :black_circle::white_circle::white_circle:**
+
+Packager plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -52,14 +54,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.WPEF">[WPEF](https://github.com/WebPlatformForEmbedded/WPEFramework/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | WPEFramework API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
 
 <a name="head.Description"></a>
 # Description
 
 The Packager plugin allows installation of OPKG, IPKG and DEB packages to the system from a remote repository.
 
-The plugin is designed to be loaded and executed within the WPEFramework. For more information on WPEFramework refer to [[WPEF](#ref.WPEF)].
+The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
 <a name="head.Configuration"></a>
 # Configuration
@@ -76,18 +78,19 @@ The table below lists configuration options of the plugin.
 <a name="head.Methods"></a>
 # Methods
 
-The following API is provided by the plugin via JSON-RPC:
+The following methods are provided by the Packager plugin:
 
-- [install](#method.install)
-- [synchronize](#method.synchronize)
+Packager interface methods:
 
-This API follows the JSON-RPC 2.0 specification. Refer to [[JSON-RPC](#ref.JSON-RPC)] for more information.
-
+| Method | Description |
+| :-------- | :-------- |
+| [install](#method.install) | Installs a package given by a name, an URL or a file path |
+| [synchronize](#method.synchronize) | Synchronizes repository manifest with a repository |
 
 <a name="method.install"></a>
-## *install*
+## *install <sup>method</sup>*
 
-Installs a package given by a name, an URL or a file path.
+Installs a package given by a name, an URL or a file path
 
 ### Parameters
 
@@ -108,7 +111,7 @@ Installs a package given by a name, an URL or a file path.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 12 | ```ERROR_INPROGRESS``` | Operation in progress |
+| 12 | ```ERROR_INPROGRESS``` | Returned when the function is called while other installation/synchronization is already in progress. |
 
 ### Example
 
@@ -136,9 +139,9 @@ Installs a package given by a name, an URL or a file path.
 }
 ```
 <a name="method.synchronize"></a>
-## *synchronize*
+## *synchronize <sup>method</sup>*
 
-Synchronizes repository manifest with a repository.
+Synchronizes repository manifest with a repository
 
 ### Parameters
 
@@ -154,7 +157,7 @@ This method takes no parameters.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 12 | ```ERROR_INPROGRESS``` | Operation in progress |
+| 12 | ```ERROR_INPROGRESS``` | Returned when the function is called while other installation/synchronization is already in progress. |
 
 ### Example
 
