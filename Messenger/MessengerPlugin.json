@@ -1,7 +1,7 @@
 {
   "$schema": "plugin.schema.json",
   "document": {
-    "$ref": "document.json"
+    "$ref": "docs_common.json"
   },
   "info": {
     "title": "Messenger Plugin",
