@@ -9,10 +9,441 @@ namespace Plugin {
 
     static char Locator[] = _T("/dev/input");
 
-    class LinuxDevice : public Exchange::IKeyProducer, Core::Thread {
+    class LinuxDevice : Core::Thread {
     private:
         LinuxDevice(const LinuxDevice&) = delete;
         LinuxDevice& operator=(const LinuxDevice&) = delete;
+
+        struct IDevInputDevice {
+            virtual ~IDevInputDevice() { }
+            virtual bool Setup() { return true; }
+            virtual bool Teardown() { return true; }
+            virtual bool HandleInput(uint16_t code, uint16_t type, int32_t value) = 0;
+        };
+
+        class KeyDevice : public Exchange::IKeyProducer, public IDevInputDevice {
+        public:
+            KeyDevice(const KeyDevice&) = delete;
+            KeyDevice& operator=(const KeyDevice&) = delete;
+
+            KeyDevice(LinuxDevice* parent)
+                : _parent(parent)
+                , _callback(nullptr)
+            {
+                ASSERT(_parent != nullptr);
+                Remotes::RemoteAdministrator::Instance().Announce(*this);
+            }
+            virtual ~KeyDevice()
+            {
+                Remotes::RemoteAdministrator::Instance().Revoke(*this);
+            }
+            const TCHAR* Name() const override
+            {
+                return (_T("DevInput"));
+            }
+            void Configure(const string&) override
+            {
+                Pair();
+            }
+            bool Pair() override
+            {
+                return _parent->Pair();
+            }
+            bool Unpair(string bindingId) override
+            {
+                return _parent->Unpair(bindingId);
+            }
+            uint32_t Callback(Exchange::IKeyHandler* callback) override
+            {
+                ASSERT((callback == nullptr) ^ (_callback == nullptr));
+                _callback = callback;
+                return (Core::ERROR_NONE);
+            }
+            uint32_t Error() const override
+            {
+                return (Core::ERROR_NONE);
+            }
+            string MetaData() const override
+            {
+                return (Name());
+            }
+            bool HandleInput(uint16_t code, uint16_t type, int32_t value) override
+            {
+                if (type == EV_KEY) {
+                    if ((code < BTN_MISC) || (code >= KEY_OK)) {
+                        if (value != 2) {
+                            _callback->KeyEvent((value != 0), code, Name());
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            BEGIN_INTERFACE_MAP(KeyDevice)
+            INTERFACE_ENTRY(Exchange::IKeyProducer)
+            END_INTERFACE_MAP
+
+        private:
+            LinuxDevice* _parent;
+            Exchange::IKeyHandler* _callback;
+        };
+
+        class WheelDevice : public Exchange::IWheelProducer, public IDevInputDevice {
+        public:
+            WheelDevice(const WheelDevice&) = delete;
+            WheelDevice& operator=(const WheelDevice&) = delete;
+
+            WheelDevice(LinuxDevice* parent)
+                : _parent(parent)
+                , _callback(nullptr)
+            {
+                Remotes::RemoteAdministrator::Instance().Announce(*this);
+            }
+            virtual ~WheelDevice()
+            {
+                //Remotes::RemoteAdministrator::Instance().Revoke(*this);
+            }
+            const TCHAR* Name() const override
+            {
+                return (_T("DevWheelInput"));
+            }
+            void Configure(const string&) override
+            {
+                _parent->Pair();
+            }
+            uint32_t Callback(Exchange::IWheelHandler* callback) override
+            {
+                ASSERT((callback == nullptr) ^ (_callback == nullptr));
+                _callback = callback;
+                return (Core::ERROR_NONE);
+            }
+            uint32_t Error() const override
+            {
+                return (Core::ERROR_NONE);
+            }
+            string MetaData() const override
+            {
+                return (Name());
+            }
+            bool HandleInput(uint16_t code, uint16_t type, int32_t value) override
+            {
+                if (type == EV_REL) {
+                    switch(code)
+                    {
+                    case REL_WHEEL:
+                        _callback->AxisEvent(0, value);
+                        return true;
+                    case REL_HWHEEL:
+                        _callback->AxisEvent(value, 0);
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            BEGIN_INTERFACE_MAP(WheelDevice)
+            INTERFACE_ENTRY(Exchange::IWheelProducer)
+            END_INTERFACE_MAP
+
+        private:
+            LinuxDevice* _parent;
+            Exchange::IWheelHandler* _callback;
+        };
+
+        class PointerDevice : public Exchange::IPointerProducer, public IDevInputDevice {
+        public:
+            PointerDevice(const PointerDevice&) = delete;
+            PointerDevice& operator=(const PointerDevice&) = delete;
+
+            PointerDevice(LinuxDevice* parent)
+                : _parent(parent)
+                , _callback(nullptr)
+            {
+                Remotes::RemoteAdministrator::Instance().Announce(*this);
+            }
+
+            const TCHAR* Name() const override
+            {
+                return (_T("DevPointerInput"));
+            }
+            void Configure(const string&) override
+            {
+                _parent->Pair();
+            }
+            uint32_t Callback(Exchange::IPointerHandler* callback) override
+            {
+                ASSERT((callback == nullptr) ^ (_callback == nullptr));
+                _callback = callback;
+                return (Core::ERROR_NONE);
+            }
+            uint32_t Error() const override
+            {
+                return (Core::ERROR_NONE);
+            }
+            string MetaData() const override
+            {
+                return (Name());
+            }
+            bool HandleInput(uint16_t code, uint16_t type, int32_t value) override
+            {
+                if (type == EV_REL) {
+                    switch(code)
+                    {
+                    case REL_X:
+                        _callback->PointerMotionEvent(value, 0);
+                        return true;
+                    case REL_Y:
+                        _callback->PointerMotionEvent(0, value);
+                        return true;
+                    }
+                }
+                else if (type == EV_KEY) {
+                    if ((code >= BTN_MOUSE) && (code <= BTN_TASK)) {
+                        _callback->PointerButtonEvent((value != 0), (code - BTN_MOUSE));
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            BEGIN_INTERFACE_MAP(PointerDevice)
+            INTERFACE_ENTRY(Exchange::IPointerProducer)
+            END_INTERFACE_MAP
+
+        private:
+            LinuxDevice* _parent;
+            Exchange::IPointerHandler* _callback;
+        };
+
+        class TouchDevice : public Exchange::ITouchProducer, public IDevInputDevice {
+        public:
+            static const int ABS_MULTIPLIER_PRECISSION = 12;
+
+            TouchDevice(const TouchDevice&) = delete;
+            TouchDevice& operator=(const TouchDevice&) = delete;
+
+            TouchDevice(LinuxDevice* parent)
+                : _parent(parent)
+                , _callback(nullptr)
+                , _abs_latch()
+                , _abs_slot(0)
+                , _abs_x_multiplier(0)
+                , _abs_y_multiplier(0)
+                , _have_abs(false)
+                , _have_multitouch(false)
+            {
+                _abs_latch.fill(AbsInfo());
+                Remotes::RemoteAdministrator::Instance().Announce(*this);
+            }
+            const TCHAR* Name() const override
+            {
+                return (_T("DevTouchInput"));
+            }
+            void Configure(const string&) override
+            {
+                _parent->Pair();
+            }
+            bool Setup() override
+            {
+                _have_multitouch = false;
+
+                for (int fd : _parent->Devices()) {
+                    uint8_t absbits[(ABS_MAX / 8) + 1];
+                    memset(absbits, 0, sizeof(absbits));
+
+                    if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(absbits)), absbits) >= 0) {
+                        if (CheckBit(absbits, ABS_X) == true) {
+                            // Note: Only multitouch protocol B supported. In case of protocol A multitouch device, will run as single-touch.
+                            _have_multitouch = (CheckBit(absbits, ABS_MT_SLOT) == true) && (CheckBit(absbits, ABS_MT_POSITION_X) == true);
+
+                            struct input_absinfo absinfo;
+                            if (_have_multitouch == true) {
+                                if (ioctl(fd, EVIOCGABS(ABS_MT_POSITION_X), &absinfo) >= 0) {
+                                    _abs_x_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
+                                }
+                                if (ioctl(fd, EVIOCGABS(ABS_MT_POSITION_Y), &absinfo) >= 0) {
+                                    _abs_y_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
+                                }
+                            } else {
+                                if (ioctl(fd, EVIOCGABS(ABS_X), &absinfo) >= 0) {
+                                    _abs_x_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
+                                }
+                                if (ioctl(fd, EVIOCGABS(ABS_Y), &absinfo) >= 0) {
+                                    _abs_y_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
+                                }
+                            }
+
+                            // Note: Only one connected touchscreen supported.
+                            break;
+                        }
+                    }
+                }
+                return (true);
+            }
+            bool Teardown() override
+            {
+                _have_multitouch = false;
+                _abs_x_multiplier = 0;
+                _abs_y_multiplier = 0;
+                return (true);
+            }
+            uint32_t Callback(Exchange::ITouchHandler* callback) override
+            {
+                ASSERT((callback == nullptr) ^ (_callback == nullptr));
+                _callback = callback;
+                return (Core::ERROR_NONE);
+            }
+            uint32_t Error() const override
+            {
+                return (Core::ERROR_NONE);
+            }
+            string MetaData() const override
+            {
+                return (Name());
+            }
+            bool HandleInput(uint16_t code, uint16_t type, int32_t value) override
+            {
+                if (type == EV_KEY) {
+                    if (code == BTN_TOUCH) {
+                       _abs_latch[_abs_slot].Touch(value >= 0);
+                        _have_abs = true;
+                        if (value == 0) {
+                            _abs_slot = 0;
+                            // This was the last contact released.
+                        } else if (_abs_slot == 0) {
+                            // The is the first contact, if any, move data from temporary slot to the first one.
+                            // If only one contact is present, the device might not sent ABS_MT_SLOT information.
+                            _abs_slot = 1;
+                            _abs_latch[1] = _abs_latch[0];
+                        }
+                        return true;
+                    }
+                }
+                else if (type == EV_ABS) {
+                    switch(code)
+                    {
+                    case ABS_X:
+                        if (_have_multitouch == false) { // fall-through
+                    case ABS_MT_POSITION_X:
+                        _abs_latch[_abs_slot].X(static_cast<uint16_t>((_abs_x_multiplier * value) >> ABS_MULTIPLIER_PRECISSION));
+                        _have_abs = true;
+                        }
+                        return true;
+                    case ABS_Y:
+                        if (_have_multitouch == false) { // fall-through
+                    case ABS_MT_POSITION_Y:
+                        _abs_latch[_abs_slot].Y(static_cast<uint16_t>((_abs_y_multiplier * value) >> ABS_MULTIPLIER_PRECISSION));
+                        _have_abs = true;
+                        }
+                        return true;
+                    case ABS_MT_SLOT:
+                        _abs_slot = (value + 1);
+                        return true;
+                    case ABS_MT_TRACKING_ID:
+                        // Multi-touch touch/release events
+                        _abs_latch[_abs_slot].Touch(value >= 0);
+                        _have_abs = true;
+                        if (value < 0) {
+                            // Touch released, if any, next events will go to a temporary slot until the contact index is known
+                            _abs_slot = 0;
+                        }
+                        return true;
+                    }
+                }
+                else if (type == EV_SYN) {
+                    if (_have_abs == true) {
+                        _have_abs = false;
+                        for (size_t i = 1; i < _abs_latch.size(); i++) {
+                            if (_abs_latch[i].Action() != AbsInfo::absaction::IDLE) {
+                                _callback->TouchEvent((i - 1), _abs_latch[i].State(), _abs_latch[i].X(), _abs_latch[i].Y());
+                                _abs_latch[i].Reset();
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+        private:
+            bool CheckBit(const uint8_t bitfield[], const uint16_t bit)
+            {
+                return (bitfield[bit / 8] & (1 << (bit % 8)));
+            }
+
+            class AbsInfo {
+            public:
+                enum class absaction {
+                    IDLE,
+                    POSITION,
+                    RELEASED,
+                    PRESSED,
+                };
+
+                AbsInfo()
+                {
+                    Reset();
+                    x = y = 0;
+                }
+                void Reset()
+                {
+                    action = absaction::IDLE;
+                }
+                void X(const uint16_t value)
+                {
+                    x = value;
+                    if (action == absaction::IDLE) {
+                        action = absaction::POSITION;
+                    }
+                }
+                uint16_t X()
+                {
+                    return x;
+                }
+                void Y(const uint16_t value)
+                {
+                    y = value;
+                    if (action == absaction::IDLE) {
+                        action = absaction::POSITION;
+                    }
+                }
+                uint16_t Y()
+                {
+                    return y;
+                }
+                void Touch(const bool touched)
+                {
+                    action = (touched? absaction::PRESSED : absaction::RELEASED);
+                }
+                absaction Action()
+                {
+                    return action;
+                }
+                Exchange::ITouchHandler::touchstate State()
+                {
+                    return ((Action() == absaction::RELEASED)? Exchange::ITouchHandler::touchstate::TOUCH_RELEASED
+                            : ((Action() == absaction::PRESSED)? Exchange::ITouchHandler::touchstate::TOUCH_PRESSED : Exchange::ITouchHandler::touchstate::TOUCH_MOTION));
+                }
+            private:
+                uint16_t x;
+                uint16_t y;
+                absaction action;
+            };
+
+            BEGIN_INTERFACE_MAP(TouchDevice)
+            INTERFACE_ENTRY(Exchange::ITouchProducer)
+            END_INTERFACE_MAP
+
+        private:
+            LinuxDevice* _parent;
+            Exchange::ITouchHandler* _callback;
+            std::array<AbsInfo,(1 + 10)> _abs_latch; // one extra slot!
+            int16_t _abs_slot;
+            uint32_t _abs_x_multiplier;
+            uint32_t _abs_y_multiplier;
+            bool _have_abs;
+            bool _have_multitouch;
+        };
 
     public:
         LinuxDevice()
@@ -20,7 +451,6 @@ namespace Plugin {
             , _devices()
             , _monitor(nullptr)
             , _update(-1)
-            , _callback(nullptr)
         {
             _pipe[0] = -1;
             _pipe[1] = -1;
@@ -45,19 +475,22 @@ namespace Plugin {
                 _update = udev_monitor_get_fd(_monitor);
 
                 udev_unref(udev);
-                Remotes::RemoteAdministrator::Instance().Announce(*this);
+
+                _inputDevices.emplace_back(Core::Service<KeyDevice>::Create<KeyDevice>(this));
+                _inputDevices.emplace_back(Core::Service<WheelDevice>::Create<WheelDevice>(this));
+                _inputDevices.emplace_back(Core::Service<PointerDevice>::Create<PointerDevice>(this));
+                _inputDevices.emplace_back(Core::Service<TouchDevice>::Create<TouchDevice>(this));
+
+                Pair();
             }
         }
         virtual ~LinuxDevice()
         {
-
             Block();
 
             Clear();
 
             if (_pipe[0] != -1) {
-                Remotes::RemoteAdministrator::Instance().Revoke(*this);
-
                 close(_pipe[0]);
                 close(_pipe[1]);
             }
@@ -69,18 +502,16 @@ namespace Plugin {
             if (_monitor != nullptr) {
                 udev_monitor_unref(_monitor);
             }
+
+            for (auto& device : _inputDevices) {
+                device->Teardown();
+            }
+
+            _inputDevices.clear();
         }
 
     public:
-        virtual const TCHAR* Name() const
-        {
-            return (_T("DevInput"));
-        }
-        virtual void Configure(const string&)
-        {
-            Pair();
-        }
-        virtual bool Pair()
+        bool Pair()
         {
             // Make sure we are not processing anything.
             Block();
@@ -92,7 +523,7 @@ namespace Plugin {
 
             return (true);
         }
-        virtual bool Unpair(string bindingId)
+        bool Unpair(string bindingId)
         {
             // Make sure we are not processing anything.
             Block();
@@ -104,33 +535,6 @@ namespace Plugin {
 
             return (true);
         }
-        virtual uint32_t Callback(Exchange::IKeyHandler* callback)
-        {
-            ASSERT((callback == nullptr) ^ (_callback == nullptr));
-
-            if (callback == nullptr) {
-                // We are unlinked. Deinitialize the stuff.
-                _callback = nullptr;
-            } else {
-
-                TRACE_L1("%s: callback=%p _callback=%p", __FUNCTION__, callback, _callback);
-                _callback = callback;
-            }
-
-            return (Core::ERROR_NONE);
-        }
-        virtual uint32_t Error() const
-        {
-            return (Core::ERROR_NONE);
-        }
-        virtual string MetaData() const
-        {
-            return (Name());
-        }
-
-        BEGIN_INTERFACE_MAP(LinuxDevice)
-        INTERFACE_ENTRY(Exchange::IKeyProducer)
-        END_INTERFACE_MAP
 
     private:
         void Refresh()
@@ -148,9 +552,15 @@ namespace Plugin {
                     TRACE(Trace::Information, (_T("Opening input device: %s"), entry.Name().c_str()));
 
                     if (entry.Open(true) == true) {
-                        _devices.push_back(entry.DuplicateHandle());
+                        int fd = entry.DuplicateHandle();
+                        _devices.push_back(fd);
                     }
                 }
+            }
+
+            for (auto& device : _inputDevices) {
+                device->Teardown();
+                device->Setup();
             }
         }
         void Clear()
@@ -169,7 +579,6 @@ namespace Plugin {
         }
         virtual uint32_t Worker()
         {
-
             while (IsRunning() == true) {
                 fd_set readset;
                 FD_ZERO(&readset);
@@ -235,17 +644,11 @@ namespace Plugin {
 
             if (result > 0) {
                 while (result >= static_cast<int>(sizeof(input_event))) {
-
                     ASSERT(index < static_cast<int>((sizeof(entry) / sizeof(input_event))));
-
-                    // If it is a KEY and it is *NOT* a repeat, send it..
-                    // Repeat gets constructed by the framework anyway.
-                    if ((entry[index].type == EV_KEY) && (entry[index].value != 2)) {
-
-                        const uint16_t code = entry[index].code;
-                        const bool pressed = entry[index].value != 0;
-                        TRACE(Trace::Information, (_T("Sending pressed: %s, code: 0x%04X"), (pressed ? _T("true") : _T("false")), code));
-                        _callback->KeyEvent(pressed, code, Name());
+                    for (auto& device : _inputDevices) {
+                        if (device->HandleInput(entry[index].code,  entry[index].type, entry[index].value) == true) {
+                            break;
+                        }
                     }
                     index++;
                     result -= sizeof(input_event);
@@ -255,15 +658,17 @@ namespace Plugin {
             return (result >= 0);
         }
 
+        std::vector<int> Devices() { return _devices; }
+
     private:
         std::vector<int> _devices;
         int _pipe[2];
         udev_monitor* _monitor;
         int _update;
-        Exchange::IKeyHandler* _callback;
+        std::vector<IDevInputDevice*> _inputDevices;
         static LinuxDevice* _singleton;
     };
 
-    /* static */ LinuxDevice* LinuxDevice::_singleton = Core::Service<LinuxDevice>::Create<LinuxDevice>();
+    /* static */ LinuxDevice* LinuxDevice::_singleton = new LinuxDevice();
 }
 }
