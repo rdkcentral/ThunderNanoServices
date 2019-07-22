@@ -16,10 +16,12 @@ namespace Plugin {
         , _service(nullptr)
         , _pid()
     {
+        RegisterAll();
     }
 
     Compositor::~Compositor()
     {
+        UnregisterAll();
     }
 
     /* virtual */ const string Compositor::Initialize(PluginHost::IShell* service)
