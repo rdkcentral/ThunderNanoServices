@@ -80,10 +80,15 @@ The table below lists configuration options of the plugin.
 | locator | string | Library name: *libWPEFrameworkDIALServer.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
 | configuration | object | Server configuration |
-| configuration.name | string | Friendly name of the device |
+| configuration.name | string | User-friendly name of the device |
 | configuration.model | string | Name of the device model |
-| configuration.manufacturer | string | Name of the device manufacturer |
 | configuration.description | string | Short description of the device |
+| configuration?.modelnumber | string | <sup>*(optional)*</sup> Device model number |
+| configuration?.modelurl | string | <sup>*(optional)*</sup> URL to device model website |
+| configuration.manufacturer | string | Name of the device manufacturer |
+| configuration?.manufacturerurl | string | <sup>*(optional)*</sup> URL to manufacturer website |
+| configuration?.serialnumber | string | <sup>*(optional)*</sup> Device serial number |
+| configuration?.upc | string | <sup>*(optional)*</sup> Device UPC barcode number (Universal Product Code) |
 | configuration?.interface | string | <sup>*(optional)*</sup> Server interface IP and port (default: SSDP multicast address and port) |
 | configuration?.webserver | string | <sup>*(optional)*</sup> Callsign of a service implementing the web server functionality (default: *WebServer*) |
 | configuration?.switchboard | string | <sup>*(optional)*</sup> Callsign of a service implementing the switchboard functionality (default: *SwitchBoard*). If defined and the service is available then start/stop requests will be relayed to the *SwitchBoard* rather than handled by the *Controller* directly. This is used only in non-passive mode. |
