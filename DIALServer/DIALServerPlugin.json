@@ -29,19 +29,39 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Friendly name of the device"
+            "description": "User-friendly name of the device"
           },
           "model": {
             "type": "string",
             "description": "Name of the device model"
           },
+          "description": {
+            "type": "string",
+            "description": "Short description of the device"
+          },
+          "modelnumber": {
+            "type": "string",
+            "description": "Device model number"
+          },
+          "modelurl": {
+            "type": "string",
+            "description": "URL to device model website"
+          },
           "manufacturer": {
             "type": "string",
             "description": "Name of the device manufacturer"
           },
-          "description": {
+          "manufacturerurl": {
             "type": "string",
-            "description": "Short description of the device"
+            "description": "URL to manufacturer website"
+          },
+          "serialnumber": {
+            "type": "string",
+            "description": "Device serial number"
+          },
+          "upc": {
+            "type": "string",
+            "description": "Device UPC barcode number (Universal Product Code)"
           },
           "interface": {
             "type": "string",
