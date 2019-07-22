@@ -316,7 +316,7 @@ namespace Plugin {
 
                 Init();
 
-                string prefix = "shell.js?url="; //Use prefix only first launch.
+                string prefix = service->DataPath() + "shell.js?url="; //Use prefix only first launch.
                 SetURL(_url, prefix);
 
                 return result;
@@ -441,11 +441,12 @@ namespace Plugin {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
 
-                    script.collectGarbage();
                     _view->onCloseRequest();
+                    _view = nullptr;
 
                     pxFontManager::clearAllFonts();
                     script.pump();
+                    script.collectGarbage();
                 }
                 EXITSCENELOCK();
             }
@@ -610,7 +611,8 @@ namespace Plugin {
                     Block();
                 }
                 else {
-                    _view = new pxScriptView(_fullPath.c_str(),"javascript/node/v8");
+                    pxScriptView *scriptView = new pxScriptView(_fullPath.c_str(),"javascript/node/v8");
+                    _view = static_cast<pxViewRef> (scriptView);
                     _view->setViewContainer(this);
                     _view->onSize(_width, _height);
  
@@ -624,12 +626,8 @@ namespace Plugin {
 
                     ENTERSCENELOCK();
 
-                    // The assumption is that the next line is automatically triggered on destructions, but
-                    // if not, maybe we should do it here!
-                    // onCloseRequest();
-
                     _view->setViewContainer(nullptr);
-                    _view = nullptr;
+                    onCloseRequest();
                 }
 
                 EXITSCENELOCK()
