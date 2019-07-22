@@ -17,7 +17,7 @@ namespace Plugin {
         static constexpr uint32_t ImplWaitTime = 1000;
 
     private:
-        class Notification : public RPC::IRemoteProcess::INotification {
+        class Notification : public RPC::IRemoteConnection::INotification {
         public:
             Notification() = delete;
             Notification(const Notification&) = delete;
@@ -30,12 +30,12 @@ namespace Plugin {
             virtual ~Notification() {}
 
         public:
-            virtual void Activated(RPC::IRemoteProcess* process) { _parent.Activated(process); }
+            virtual void Activated(RPC::IRemoteConnection* process) { _parent.Activated(process); }
 
-            virtual void Deactivated(RPC::IRemoteProcess* process) { _parent.Deactivated(process); }
+            virtual void Deactivated(RPC::IRemoteConnection* process) { _parent.Deactivated(process); }
 
             BEGIN_INTERFACE_MAP(Notification)
-            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -85,7 +85,7 @@ namespace Plugin {
             , _memory(nullptr)
             , _testControllerImp(nullptr)
             , _skipURL(0)
-            , _pid(0)
+            , _connection(0)
             , _prevCategory(EMPTY_STRING)
         {
             RegisterAll();
@@ -119,8 +119,8 @@ namespace Plugin {
         TestController& operator=(const TestController&) = delete;
 
     private:
-        void Activated(RPC::IRemoteProcess* process);
-        void Deactivated(RPC::IRemoteProcess* process);
+        void Activated(RPC::IRemoteConnection* process);
+        void Deactivated(RPC::IRemoteConnection* process);
 
         void ProcessTermination(uint32_t pid);
 
@@ -143,7 +143,7 @@ namespace Plugin {
         Exchange::IMemory* _memory;
         Exchange::ITestController* _testControllerImp;
         uint8_t _skipURL;
-        uint32_t _pid;
+        uint32_t _connection;
         string _prevCategory;
     };
 
