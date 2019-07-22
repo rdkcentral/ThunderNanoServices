@@ -6,7 +6,7 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-TestUtility plugin for WPEFramework.
+TestUtility plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -54,14 +54,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.WPEF">[WPEF](https://github.com/WebPlatformForEmbedded/WPEFramework/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | WPEFramework API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
 
 <a name="head.Description"></a>
 # Description
 
 The TestUtility plugin enables to execute embedded test commands on the platform.
 
-The plugin is designed to be loaded and executed within the WPEFramework. For more information on WPEFramework refer to [[WPEF](#ref.WPEF)].
+The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
 <a name="head.Configuration"></a>
 # Configuration
@@ -93,7 +93,7 @@ TestUtility interface methods:
 <a name="method.commands"></a>
 ## *commands <sup>method</sup>*
 
-Retrieves the list of test commands
+Retrieves the list of test commands.
 
 ### Parameters
 
@@ -131,7 +131,7 @@ This method takes no parameters.
 <a name="method.description"></a>
 ## *description <sup>method</sup>*
 
-Retrieves the description of selected test command
+Retrieves the description of selected test command.
 
 ### Parameters
 
@@ -182,7 +182,7 @@ Retrieves the description of selected test command
 <a name="method.parameters"></a>
 ## *parameters <sup>method</sup>*
 
-Retrieves parameters of the selected test command
+Retrieves parameters of the selected test command.
 
 ### Parameters
 
@@ -252,7 +252,7 @@ Retrieves parameters of the selected test command
 <a name="method.runmemory"></a>
 ## *runmemory <sup>method</sup>*
 
-Runs a memory test command
+Runs a memory test command.
 
 ### Parameters
 
@@ -309,7 +309,7 @@ Runs a memory test command
 <a name="method.runcrash"></a>
 ## *runcrash <sup>method</sup>*
 
-Runs a crash test command
+Runs a crash test command.
 
 ### Parameters
 
@@ -317,8 +317,8 @@ Runs a crash test command
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.command | string | The test command name |
-| params?.delay | number | <sup>*(optional)*</sup> Delay timeout |
-| params?.count | number | <sup>*(optional)*</sup> How many times a Crash command will be executed consecutively (applicable for "CrashNTimes" command) |
+| params?.delay | number | <sup>*(optional)*</sup> Delay (in seconds) before the crash attempt (applicable for *Crash* command) |
+| params?.count | number | <sup>*(optional)*</sup> How many times a Crash command will be executed consecutively (applicable for *CrashNTimes* command) |
 
 ### Result
 
