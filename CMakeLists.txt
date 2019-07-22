@@ -23,6 +23,7 @@ option(PLUGIN_MESSENGER "Include Messenger plugin" OFF)
 option(PLUGIN_MONITOR "Include Monitor plugin" OFF)
 option(PLUGIN_NETWORKCONTROL "Include NetworkControlplugin" OFF)
 option(PLUGIN_OPENCDMI "Include OpenCDMi plugin" OFF)
+option(PLUGIN_PACKAGER "Include Packager plugin" OFF)
 option(PLUGIN_POWER "Include Power plugin" OFF)
 option(PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
 option(PLUGIN_STREAMER "Include Streamer plugin" OFF)
@@ -123,6 +124,10 @@ endif()
 
 if(PLUGIN_POWER)
     add_subdirectory(Power)
+endif()
+
+if(PLUGIN_PACKAGER)
+    add_subdirectory(Packager)
 endif()
 
 if(PLUGIN_REMOTECONTROL)

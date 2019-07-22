@@ -1,0 +1,18 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Packager Plugin",
+    "callsign": "Packager",
+    "locator": "libWPEFrameworkPackager.so",
+    "class": {
+      "$ref": "PackagerAPI.json#/info/class"
+    },
+    "description": [
+      "The Packager plugin allows installation of OPKG, IPKG and DEB packages to the system from a remote repository."
+    ],
+    "version": "1.0"
+  },
+  "methods": {
+    "$ref": "PackagerAPI.json#/methods"
+  }
+}
