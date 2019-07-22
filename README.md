@@ -16,6 +16,7 @@
 * [Monitor](Monitor/MonitorPlugin.md)
 * [NetworkControl](NetworkControl/NetworkControlPlugin.md)
 * [OpenCDMi](OpenCDMi/OpenCDMiPlugin.md)
+* [Packager](Packager/Packager.md)
 * Power
 * [RemoteControl](RemoteControl/RemoteControlPlugin.md)
 * RtspClient
