@@ -3,7 +3,7 @@
 namespace WPEFramework {
 namespace TestController {
 
-    Exchange::IMemory* MemoryObserver(const uint32_t pid)
+    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
         class MemoryObserverImpl : public Exchange::IMemory {
         public:
@@ -11,8 +11,8 @@ namespace TestController {
             MemoryObserverImpl(const MemoryObserverImpl&) = delete;
             MemoryObserverImpl& operator=(const MemoryObserverImpl&) = delete;
 
-            MemoryObserverImpl(const uint32_t id)
-                : _main(id == 0 ? Core::ProcessInfo().Id() : id)
+            MemoryObserverImpl(const RPC::IRemoteConnection* connection)
+                : _main(connection  == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
                 , _observable(false)
             {
             }
@@ -47,7 +47,7 @@ namespace TestController {
             bool _observable;
         };
 
-        return (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(pid));
+        return (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection));
     }
 } // namespace TestController
 
@@ -68,15 +68,26 @@ namespace Plugin {
         _service = service;
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
         _service->Register(&_notification);
-        _testControllerImp = _service->Root<Exchange::ITestController>(_pid, ImplWaitTime, _T("TestControllerImp"));
+        _testControllerImp = _service->Root<Exchange::ITestController>(_connection, ImplWaitTime, _T("TestControllerImp"));
 
         if ((_testControllerImp != nullptr) && (_service != nullptr)) {
-            _memory = WPEFramework::TestController::MemoryObserver(_pid);
-            ASSERT(_memory != nullptr);
-            _memory->Observe(_pid);
-            _testControllerImp->Setup();
+            const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connection);
+            ASSERT(connection != nullptr);
+
+            if (connection != nullptr) {
+                _memory = WPEFramework::TestController::MemoryObserver(connection);
+
+                ASSERT(_memory != nullptr);
+                _memory->Observe(connection->RemoteId());
+
+                connection->Release();
+                _testControllerImp->Setup();
+            } else {
+                _memory = nullptr;
+                TRACE(Trace::Warning, (_T("Colud not create MemoryObserver in TestController")));
+            }
         } else {
-            ProcessTermination(_pid);
+            ProcessTermination(_connection);
             _service = nullptr;
             _testControllerImp = nullptr;
             _service->Unregister(&_notification);
@@ -97,8 +108,8 @@ namespace Plugin {
         _testControllerImp->TearDown();
 
         if (_testControllerImp->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
-            TRACE_L1("TestController Plugin is not properly destructed. %d", _pid);
-            ProcessTermination(_pid);
+            TRACE_L1("TestController Plugin is not properly destructed. %d", _connection);
+            ProcessTermination(_connection);
         }
 
         _testControllerImp = nullptr;
@@ -153,23 +164,23 @@ namespace Plugin {
         return result;
     }
 
-    void TestController::ProcessTermination(uint32_t pid)
+    void TestController::ProcessTermination(uint32_t connection)
     {
-        RPC::IRemoteProcess* process(_service->RemoteProcess(pid));
+        RPC::IRemoteConnection* process(_service->RemoteConnection(connection));
         if (process != nullptr) {
             process->Terminate();
             process->Release();
         }
     }
 
-    void TestController::Activated(RPC::IRemoteProcess* /*process*/)
+    void TestController::Activated(RPC::IRemoteConnection* /*connection*/)
     {
         return;
     }
 
-    void TestController::Deactivated(RPC::IRemoteProcess* process)
+    void TestController::Deactivated(RPC::IRemoteConnection* connection)
     {
-        if (_pid == process->Id()) {
+        if (_connection == connection->Id()) {
             ASSERT(_service != nullptr);
             PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
