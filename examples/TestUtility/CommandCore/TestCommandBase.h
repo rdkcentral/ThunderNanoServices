@@ -1,6 +1,5 @@
 #include <interfaces/json/JsonData_TestUtility.h>
 #include "interfaces/ITestUtility.h"
-
 #include "../Module.h"
 
 namespace WPEFramework {
@@ -59,7 +58,7 @@ public:
             return outString;
         }
 
-        JsonData::TestUtility::ParametersResultData _jsonSignature;
+        JsonData::TestUtility::ParametersData _jsonSignature;
     };
 
     class DescriptionBuilder {
@@ -87,7 +86,7 @@ public:
             return outString;
         }
 
-        JsonData::TestUtility::DescriptionResultData _jsonDescription;
+        JsonData::TestUtility::DescriptionData _jsonDescription;
     };
 
 public:
