@@ -126,17 +126,18 @@ namespace Plugin {
 
         void TestPreparation(Exchange::ITestController::ICategory* const category, const string& categoryName);
         string /*JSON*/ HandleRequest(Web::Request::type type, const string& path, const uint8_t skipUrl, const string& body /*JSON*/);
-        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestCategories(Exchange::ITestController::ICategory::IIterator* categories);
-        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ Tests(Exchange::ITestController::ITest::IIterator* tests);
+        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestCategories(Exchange::ITestController::ICategory::IIterator* categories) const;
+        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ Tests(Exchange::ITestController::ITest::IIterator* tests) const;
         string /*JSON*/ RunAll(const string& body, const string& categoryName = EMPTY_STRING);
         string /*JSON*/ RunTest(const string& body, const string& categoryName, const string& testName);
 
         void RegisterAll();
         void UnregisterAll();
-        uint32_t endpoint_categories(Core::JSON::ArrayType<Core::JSON::String>& response);
-        uint32_t endpoint_tests(const JsonData::TestController::TestsParamsData& params, Core::JSON::ArrayType<Core::JSON::String>& response);
-        uint32_t endpoint_description(const JsonData::TestController::DescriptionParamsInfo& params, JsonData::TestController::DescriptionResultData& response);
-        uint32_t endpoint_run(const JsonData::TestController::DescriptionParamsInfo& params, Core::JSON::ArrayType<JsonData::TestController::RunResultData>& response);
+        Core::JSON::ArrayType<JsonData::TestController::RunResultData> TestResults(const string& results);
+        uint32_t endpoint_run(const JsonData::TestController::RunParamsData& params, Core::JSON::ArrayType<JsonData::TestController::RunResultData>& response);
+        uint32_t get_categories(Core::JSON::ArrayType<Core::JSON::String>& response) const;
+        uint32_t get_tests(const string& index, Core::JSON::ArrayType<Core::JSON::String>& response) const;
+        uint32_t get_description(const string& index, JsonData::TestController::DescriptionData& response) const;
 
         PluginHost::IShell* _service;
         Core::Sink<Notification> _notification;
