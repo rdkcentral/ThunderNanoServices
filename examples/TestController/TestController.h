@@ -4,19 +4,20 @@
 
 #include <interfaces/IMemory.h>
 #include <interfaces/ITestController.h>
+#include <interfaces/json/JsonData_TestController.h>
 
 #include "Core/TestMetadata.h"
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class TestController : public PluginHost::IPlugin, public PluginHost::IWeb {
+    class TestController : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     public:
         // maximum wait time for process to be spawned
         static constexpr uint32_t ImplWaitTime = 1000;
 
     private:
-        class Notification : public RPC::IRemoteProcess::INotification {
+        class Notification : public RPC::IRemoteConnection::INotification {
         public:
             Notification() = delete;
             Notification(const Notification&) = delete;
@@ -29,33 +30,16 @@ namespace Plugin {
             virtual ~Notification() {}
 
         public:
-            virtual void Activated(RPC::IRemoteProcess* process) { _parent.Activated(process); }
+            virtual void Activated(RPC::IRemoteConnection* process) { _parent.Activated(process); }
 
-            virtual void Deactivated(RPC::IRemoteProcess* process) { _parent.Deactivated(process); }
+            virtual void Deactivated(RPC::IRemoteConnection* process) { _parent.Deactivated(process); }
 
             BEGIN_INTERFACE_MAP(Notification)
-            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
         private:
             TestController& _parent;
-        };
-
-        class MetadataCategory : public Core::JSON::Container {
-        public:
-            MetadataCategory(const MetadataCategory&) = delete;
-            MetadataCategory& operator=(const MetadataCategory&) = delete;
-
-            MetadataCategory()
-                : Core::JSON::Container()
-                , TestCategories()
-            {
-                Add(_T("testCategories"), &TestCategories);
-            }
-            ~MetadataCategory() {}
-
-        public:
-            Core::JSON::ArrayType<Core::JSON::String> TestCategories;
         };
 
         class MetadataTest : public Core::JSON::Container {
@@ -101,16 +85,21 @@ namespace Plugin {
             , _memory(nullptr)
             , _testControllerImp(nullptr)
             , _skipURL(0)
-            , _pid(0)
+            , _connection(0)
             , _prevCategory(EMPTY_STRING)
         {
+            RegisterAll();
         }
 
-        virtual ~TestController() {}
+        virtual ~TestController()
+        {
+            UnregisterAll();
+        }
 
         BEGIN_INTERFACE_MAP(TestController)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
         INTERFACE_AGGREGATE(Exchange::ITestController, _testControllerImp)
         END_INTERFACE_MAP
@@ -130,24 +119,32 @@ namespace Plugin {
         TestController& operator=(const TestController&) = delete;
 
     private:
-        void Activated(RPC::IRemoteProcess* process);
-        void Deactivated(RPC::IRemoteProcess* process);
+        void Activated(RPC::IRemoteConnection* process);
+        void Deactivated(RPC::IRemoteConnection* process);
 
         void ProcessTermination(uint32_t pid);
 
         void TestPreparation(Exchange::ITestController::ICategory* const category, const string& categoryName);
         string /*JSON*/ HandleRequest(Web::Request::type type, const string& path, const uint8_t skipUrl, const string& body /*JSON*/);
-        string /*JSON*/ TestCategories(Exchange::ITestController::ICategory::IIterator* categories);
-        string /*JSON*/ Tests(Exchange::ITestController::ITest::IIterator* tests);
+        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestCategories(Exchange::ITestController::ICategory::IIterator* categories) const;
+        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ Tests(Exchange::ITestController::ITest::IIterator* tests) const;
         string /*JSON*/ RunAll(const string& body, const string& categoryName = EMPTY_STRING);
         string /*JSON*/ RunTest(const string& body, const string& categoryName, const string& testName);
+
+        void RegisterAll();
+        void UnregisterAll();
+        Core::JSON::ArrayType<JsonData::TestController::RunResultData> TestResults(const string& results);
+        uint32_t endpoint_run(const JsonData::TestController::RunParamsData& params, Core::JSON::ArrayType<JsonData::TestController::RunResultData>& response);
+        uint32_t get_categories(Core::JSON::ArrayType<Core::JSON::String>& response) const;
+        uint32_t get_tests(const string& index, Core::JSON::ArrayType<Core::JSON::String>& response) const;
+        uint32_t get_description(const string& index, JsonData::TestController::DescriptionData& response) const;
 
         PluginHost::IShell* _service;
         Core::Sink<Notification> _notification;
         Exchange::IMemory* _memory;
         Exchange::ITestController* _testControllerImp;
         uint8_t _skipURL;
-        uint32_t _pid;
+        uint32_t _connection;
         string _prevCategory;
     };
 
