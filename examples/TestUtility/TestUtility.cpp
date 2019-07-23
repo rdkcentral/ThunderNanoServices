@@ -22,9 +22,9 @@ namespace TestUtility {
             virtual void Observe(const uint32_t pid)
             {
                 if (pid == 0) {
-                    _main = Core::ProcessInfo();
                     _observable = false;
                 } else {
+                    _main = Core::ProcessInfo(pid);
                     _observable = true;
                 }
             }
@@ -76,10 +76,10 @@ namespace Plugin {
         _testUtilityImp = _service->Root<Exchange::ITestUtility>(_connection, ImplWaitTime, _T("TestUtilityImp"));
 
         if (_testUtilityImp != nullptr) {
-            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection):
+            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection);
             if (remoteConnection) {
                 _memory = WPEFramework::TestUtility::MemoryObserver(remoteConnection);
-                _memory->Observe(remoteConnection->RemoteID());
+                _memory->Observe(remoteConnection->RemoteId());
                 remoteConnection->Release();
             } else {
                 _memory = nullptr;
