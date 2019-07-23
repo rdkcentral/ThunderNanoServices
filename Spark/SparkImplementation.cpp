@@ -316,8 +316,7 @@ namespace Plugin {
 
                 Init();
 
-                string prefix = service->DataPath() + "shell.js?url="; //Use prefix only first launch.
-                SetURL(_url, prefix);
+                SetURL(_url);
 
                 return result;
             }
@@ -326,7 +325,7 @@ namespace Plugin {
                 return (_url);
             }
 
-            void SetURL(const string& url, const string prefix = "")
+            void SetURL(const string& url)
             {
                 _url = url;
 
@@ -339,6 +338,7 @@ namespace Plugin {
                     _fullPath.clear();
 
                 } else {
+                    string prefix = "shell.js?url=";
                     TCHAR buffer[MAX_URL_SIZE + prefix.size()];
                     memset(buffer, 0, MAX_URL_SIZE + prefix.size());
 
@@ -440,7 +440,7 @@ namespace Plugin {
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-
+                    _view->setViewContainer(nullptr);
                     _view->onCloseRequest();
                     _view = nullptr;
 
@@ -626,7 +626,6 @@ namespace Plugin {
 
                     ENTERSCENELOCK();
 
-                    _view->setViewContainer(nullptr);
                     onCloseRequest();
                 }
 
