@@ -1,0 +1,14 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Test Controller Plugin",
+    "callsign": "TestController",
+    "locator": "libWPEFrameworkTestController.so",
+    "status": "alpha",
+    "description": "The TestController plugin enables executing of embedded test cases on the platform.",
+    "version": "1.0"
+  },
+  "interface": {
+    "$ref": "{interfacedir}/TestController.json#"
+  }
+}

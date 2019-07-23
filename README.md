@@ -27,7 +27,7 @@
 * [Streamer](Streamer/StreamerPlugin.md)
 * [SystemCommands](SystemCommands/SystemCommandsPlugin.md)
 * SystemdConnector
-* TestController
+* [TestController](examples/TestUtility/TestControllerPlugin.md)
 * [TestUtility](examples/TestUtility/TestUtilityPlugin.md)
 * [TimeSync](TimeSync/TimeSyncPlugin.md)
 * [TraceControl](TraceControl/TraceControlPlugin.md)
