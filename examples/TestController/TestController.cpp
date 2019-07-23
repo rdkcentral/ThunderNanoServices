@@ -186,7 +186,7 @@ namespace Plugin {
         }
     }
 
-    Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestController::TestCategories(Exchange::ITestController::ICategory::IIterator* categories)
+    Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestController::TestCategories(Exchange::ITestController::ICategory::IIterator* categories) const
     {
         Core::JSON::ArrayType<Core::JSON::String> testCategories;
 
@@ -202,7 +202,7 @@ namespace Plugin {
         return testCategories;
     }
 
-    Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestController::Tests(Exchange::ITestController::ITest::IIterator* tests)
+    Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestController::Tests(Exchange::ITestController::ITest::IIterator* tests) const
     {
         Core::JSON::ArrayType<Core::JSON::String> testsItems;
 
@@ -226,7 +226,6 @@ namespace Plugin {
 
         if (categoryName == EMPTY_STRING) {
             Exchange::ITestController::ICategory::IIterator* categories = _testControllerImp->Categories();
-            ASSERT(categories != nullptr);
 
             if (categories != nullptr) {
                 while (categories->Next()) {
@@ -245,7 +244,6 @@ namespace Plugin {
             }
         } else {
             Exchange::ITestController::ICategory* category = _testControllerImp->Category(categoryName);
-            ASSERT(category != nullptr);
 
             if (category != nullptr) {
                 TestPreparation(category, categoryName);
@@ -270,9 +268,9 @@ namespace Plugin {
     string /*JSON*/ TestController::RunTest(const string& body, const string& categoryName, const string& testName)
     {
         string response = EMPTY_STRING;
+        OverallTestResults jsonResults;
 
         Exchange::ITestController::ICategory* category = _testControllerImp->Category(categoryName);
-        ASSERT(category != nullptr);
 
         if (category != nullptr) {
             TestPreparation(category, categoryName);
@@ -281,9 +279,15 @@ namespace Plugin {
 
             if (test != nullptr) {
                 response = test->Execute(body);
+                TestCore::TestResult ret;
+                if (ret.FromString(response)) {
+                    jsonResults.Results.Add(ret);
+                }
             }
         }
 
+        response = EMPTY_STRING;
+        jsonResults.ToString(response);
         return response;
     }
 
