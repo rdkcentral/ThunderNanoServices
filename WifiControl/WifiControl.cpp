@@ -9,7 +9,7 @@ namespace Plugin
 
     SERVICE_REGISTRATION(WifiControl, 1, 0);
 
-    static Core::ProxyPoolType<Web::JSONBodyType<StatusResultData>> jsonResponseFactoryStatus(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<StatusData>> jsonResponseFactoryStatus(1);
     static Core::ProxyPoolType<Web::JSONBodyType<WifiControl::NetworkList>> jsonResponseFactoryNetworkList(1);
     static Core::ProxyPoolType<Web::JSONBodyType<WifiControl::ConfigList>> jsonResponseFactoryConfigList(1);
     static Core::ProxyPoolType<Web::JSONBodyType<JsonData::WifiControl::ConfigInfo>> jsonResponseFactoryConfig(1);
@@ -209,7 +209,7 @@ namespace Plugin
                     }
                 }
             } else {
-                Core::ProxyType<Web::JSONBodyType<StatusResultData>> status(jsonResponseFactoryStatus.Element());
+                Core::ProxyType<Web::JSONBodyType<StatusData>> status(jsonResponseFactoryStatus.Element());
 
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = _T("Current status.");
