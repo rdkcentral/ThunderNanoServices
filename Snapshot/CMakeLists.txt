@@ -10,7 +10,9 @@ find_package(NXCLIENT QUIET)
 
 add_library(${MODULE_NAME} SHARED
         Module.cpp
-        Snapshot.cpp)
+        StoreImpl.cpp
+        Snapshot.cpp
+        SnapshotJsonRpc.cpp)
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE 
