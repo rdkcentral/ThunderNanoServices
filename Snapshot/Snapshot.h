@@ -1,13 +1,13 @@
-#pragma once
+#ifndef __SNAPSHOT_H
+#define __SNAPSHOT_H
 
 #include "Module.h"
 #include <interfaces/ICapture.h>
-#include <interfaces/json/JsonData_Snapshot.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class Snapshot : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
+    class Snapshot : public PluginHost::IPlugin, public PluginHost::IWeb {
     private:
         Snapshot(const Snapshot&) = delete;
         Snapshot& operator=(const Snapshot&) = delete;
@@ -19,18 +19,15 @@ namespace Plugin {
             , _fileName()
             , _inProgress(false)
         {
-            RegisterAll();
         }
 
         virtual ~Snapshot()
         {
-            UnregisterAll();
         }
 
         BEGIN_INTERFACE_MAP(Snapshot)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
-        INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(Exchange::ICapture, _device)
         END_INTERFACE_MAP
 
@@ -47,18 +44,13 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
 
     private:
-        // JSON-RPC
-        void RegisterAll();
-        void UnregisterAll();
-        uint32_t endpoint_capture(JsonData::Snapshot::CaptureResultData& response);
-
-    private:
         uint8_t _skipURL;
         Exchange::ICapture* _device;
         string _fileName;
         Core::BinairySemaphore _inProgress;
     };
 
-} // namespace Plugin
+} // Namespace Plugin.
 }
 
+#endif // __SNAPSHOT_H
