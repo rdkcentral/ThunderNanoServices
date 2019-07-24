@@ -15,7 +15,7 @@ namespace Plugin {
         public:
             Data()
                 : Core::JSON::Container()
-                , Sessioninfo()
+                , SessionInfo()
                 , HostKeys()
 		, PortFlag()
 		, PortNumber()
@@ -71,12 +71,12 @@ namespace Plugin {
         Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         // DropbearServer methods
-        uint32_t StartService(const std::string& host_keys, const std::string& port_flag, const std::string& port) override;
+        uint32_t StartService(const std::string& host_keys, const std::string& port_flag, const std::string& port);
         uint32_t StopService() override;
-        uint32_t GetTotalSessions()
-        uint32_t GetSessionsCount()
-        uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::DropbearServer::SessioninfoResultData>& response) const
-        uint32_t CloseClientSession(uint32_t client_pid)
+        uint32_t GetTotalSessions();
+        uint32_t GetSessionsCount();
+        uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::DropbearServer::SessioninfoResultData>& response);
+        uint32_t CloseClientSession(uint32_t client_pid);
 
     private:
         DropbearServer(const DropbearServer&) = delete;
@@ -84,12 +84,13 @@ namespace Plugin {
 
         void RegisterAll();
         void UnregisterAll();
-        uint32_t endpoint_startservice(const std::string& host_keys, const std::string& port_flag, const std::string& port);
+        
+    	uint32_t endpoint_startservice(const JsonData::DropbearServer::StartserviceParamsData& params);
         uint32_t endpoint_stopservice();
-	uint32_t DropbearServer::endpoint_gettotalsessions(Core::JSON::DecUInt32& response)
-	uint32_t DropbearServer::endpoint_getactivesessionscount(Core::JSON::DecUInt32& response)
-	uint32_t DropbearServer::endpoint_getactivesessionsinfo(Core::JSON::ArrayType<SessioninfoResultData>& response) const
-	uint32_t DropbearServer::endpoint_closeclientsession(Core::JSON::DecUInt32& pid) const
+	uint32_t endpoint_gettotalsessions(Core::JSON::DecUInt32& response);
+	uint32_t endpoint_getactivesessionscount(Core::JSON::DecUInt32& response);
+	uint32_t endpoint_getactivesessionsinfo(Core::JSON::ArrayType<JsonData::DropbearServer::SessioninfoResultData>& response);
+	uint32_t endpoint_closeclientsession(Core::JSON::DecUInt32& pid);
 
         DropbearServerImplementation _implemetation;
 

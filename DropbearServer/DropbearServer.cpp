@@ -5,6 +5,8 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(DropbearServer, 1, 0);
 
+    static Core::ProxyPoolType<Web::JSONBodyType<DropbearServer::Data>> jsonBodyDataFactory(2);
+
     const string DropbearServer::Initialize(PluginHost::IShell* service)
     {
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
@@ -47,14 +49,14 @@ namespace Plugin {
         ASSERT(_skipURL <= request.Path.length());
 
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
-        Core::ProxyType<Web::JSONBodyType<Data>> response(jsonBodyDataFactory.Element());
+        Core::ProxyType<Web::JSONBodyType<DropbearServer::Data>> response(jsonBodyDataFactory.Element());
 
         Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
 
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported request for the [DropbearServer] service.");
 
-        if ((request.Verb == Web::Request::HTTP_PUT || request.Verb == Web::Request::HTTP_POST && index.Next())) {
+        if ((request.Verb == Web::Request::HTTP_PUT || (request.Verb == Web::Request::HTTP_POST && index.Next()))) {
 
             if (index.Current().Text() == "StartService") {
                 string sshport;
@@ -71,11 +73,11 @@ namespace Plugin {
 
                     sshport = options[_T("port")].Text();
                     hostkeys = options[_T("hostkeys")].Text();
-                    portlag = options[_T("portflag")].Text();
+                    portflag = options[_T("portflag")].Text();
 
-                    Core::URL::Decode(sshport.c_str(), sshport.length(), portNumber.data(), portNumber.size());
-                    Core::URL::Decode(hostkeys.c_str(), hostkeys.length(), hostKeys.data(), hostKeys.size());
-                    Core::URL::Decode(portflag.c_str(), portflag.length(), portFlag.data(), portFlag.size());
+                    Core::URL::Decode(sshport.c_str(), sshport.length(), const_cast<char*>(portNumber.data()), portNumber.size());
+                    Core::URL::Decode(hostkeys.c_str(), hostkeys.length(), const_cast<char*>(hostKeys.data()), hostKeys.size());
+                    Core::URL::Decode(portflag.c_str(), portflag.length(), const_cast<char*>(portFlag.data()), portFlag.size());
 
                     sshport = portNumber.data();
                     hostkeys = hostKeys.data();
@@ -150,7 +152,7 @@ namespace Plugin {
 	                Core::URL::KeyValue options(request.Query.Value());
 	
         	        if (options.Exists(_T("clientpid"), true) == true) {
-		                clientpid = options[_T("clientpid")].Number();
+		                clientpid = std::stoi(options[_T("clientpid")].Text());
     				uint32_t status = DropbearServer::CloseClientSession(clientpid);
 	                	if (status != Core::ERROR_NONE) {
 		                    result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;

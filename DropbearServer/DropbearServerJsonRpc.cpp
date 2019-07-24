@@ -18,10 +18,10 @@ namespace Plugin {
     {
         Register<StartserviceParamsData,void>(_T("startservice"), &DropbearServer::endpoint_startservice, this);
         Register<void,void>(_T("stopservice"), &DropbearServer::endpoint_stopservice, this);
-	Register<Core::JSON::DecUInt32>(_T("gettotalsessions"), &DropbearServer::endpoint_gettotalsessions, this);
-	Register<Core::JSON::DecUInt32>(_T("getactivesessionscount"), &DropbearServer::endpoint_getactivesessionscount, this);
-	Register<Core::JSON::ArrayType<SessioninfoResultData>>(_T("getactivesessionsinfo"), &DropbearServer::endpoint_getactivesessionsinfo, this);
-	Register<Core::JSON::DecUInt32, void>(_T("closeclientsession"), &DropbearServer::endpoint_closeclientsession, this);
+	Register<void, Core::JSON::DecUInt32>(_T("gettotalsessions"), &DropbearServer::endpoint_gettotalsessions, this);
+	Register<void, Core::JSON::DecUInt32>(_T("getactivesessionscount"), &DropbearServer::endpoint_getactivesessionscount, this);
+	Register<void, Core::JSON::ArrayType<SessioninfoResultData>>(_T("getactivesessionsinfo"), &DropbearServer::endpoint_getactivesessionsinfo, this);
+	Register<void, Core::JSON::DecUInt32>(_T("closeclientsession"), &DropbearServer::endpoint_closeclientsession, this);
     }
 
     void DropbearServer::UnregisterAll()
@@ -42,13 +42,13 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_INCORRECT_URL: Incorrect URL given
     // Start Dropbear Service.
-    uint32_t DropbearServer::endpoint_startservice(const JsonData::DropbearServer::StartserviceParamsData& params);
+    uint32_t DropbearServer::endpoint_startservice(const JsonData::DropbearServer::StartserviceParamsData& params)
     {
         uint32_t result = Core::ERROR_NONE;
-	TRACE(Trace::Information, (_T("BackgroundFlag: %s PortFlag: %s Port: %s"), params.BackgroundFlag.Value(), params.PortFlag.Value(), params.Port.Value()));
+	TRACE(Trace::Information, (_T("HostKeys: %s PortFlag: %s Port: %s"), params.HostKeys.Value(), params.PortFlag.Value(), params.Port.Value()));
 
         if(params.Port.IsSet() == true) {
-            result = StartService(params.Port.Value(), params.PortFlag.Value(), params.BackgroundFlag.Value());
+            result = StartService(params.Port.Value(), params.PortFlag.Value(), params.HostKeys.Value());
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
@@ -103,7 +103,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_INCORRECT_URL: Incorrect URL given
     // Get details of each active SSH client sessions managed by Dropbear Service.
-    uint32_t DropbearServer::endpoint_getactivesessionsinfo(Core::JSON::ArrayType<SessioninfoResultData>& response) const
+    uint32_t DropbearServer::endpoint_getactivesessionsinfo(Core::JSON::ArrayType<SessioninfoResultData>& response)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -117,10 +117,10 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_INCORRECT_URL: Incorrect URL given
     // Close a SSH client session.
-    uint32_t DropbearServer::endpoint_closeclientsession(Core::JSON::DecUInt32& pid) const
+    uint32_t DropbearServer::endpoint_closeclientsession(Core::JSON::DecUInt32& pid)
     {
         uint32_t result = Core::ERROR_NONE;
-	const uint32_t& client_pid = pid.Value();
+	uint32_t client_pid = pid.Value();
 
         result = CloseClientSession(client_pid);
 
