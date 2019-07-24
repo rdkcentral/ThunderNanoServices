@@ -1,15 +1,11 @@
 #pragma once
 
 #include "Module.h"
+#include <interfaces/json/JsonData_TraceControl.h>
 
 namespace WPEFramework {
 
 namespace Plugin {
-
-namespace {
-    constexpr TCHAR kStatusMethodName[] = _T("status");
-    constexpr TCHAR kSetMethodName[] = _T("set");
-}
 
     class TraceControl : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
 
@@ -913,16 +909,14 @@ namespace {
             , _tracePath()
             , _observer(*this)
         {
-            Register<Data::StatusParam, TraceControl::Data>(kStatusMethodName, &TraceControl::status, this);
-            Register<Data::Trace, void>(kSetMethodName, &TraceControl::set, this);
+            RegisterAll();
         }
 #ifdef __WIN32__
 #pragma warning(default : 4355)
 #endif
         virtual ~TraceControl()
         {
-            Unregister(kStatusMethodName);
-            Unregister(kSetMethodName);
+            UnregisterAll();
         }
 
         BEGIN_INTERFACE_MAP(TraceControl)
@@ -968,9 +962,11 @@ namespace {
     private:
         void Dispatch(Observer::Source& information);
 
-        // JSONRPC endpoints definition
-        uint32_t status(const Data::StatusParam& parameters, TraceControl::Data& response);
-        uint32_t set(const Data::Trace& parameters);
+        void RegisterAll();
+        void UnregisterAll();
+        JsonData::TraceControl::StateType TranslateState(TraceControl::state state);
+        uint32_t endpoint_status(const JsonData::TraceControl::StatusParamsData& params, JsonData::TraceControl::StatusResultData& response);
+        uint32_t endpoint_set(const JsonData::TraceControl::TraceInfo& params);
         inline const string& TracePath() const 
         {
             return (_tracePath);
