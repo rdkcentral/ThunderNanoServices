@@ -45,10 +45,9 @@ namespace Plugin {
     uint32_t DropbearServer::endpoint_startservice(const JsonData::DropbearServer::StartserviceParamsData& params)
     {
         uint32_t result = Core::ERROR_NONE;
-	TRACE(Trace::Information, (_T("HostKeys: %s PortFlag: %s Port: %s"), params.HostKeys.Value(), params.PortFlag.Value(), params.Port.Value()));
 
         if(params.Port.IsSet() == true) {
-            result = StartService(params.Port.Value(), params.PortFlag.Value(), params.HostKeys.Value());
+            result = StartService(params.HostKeys.Value(), params.PortFlag.Value(), params.Port.Value());
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }

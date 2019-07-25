@@ -57,9 +57,9 @@ namespace Plugin {
         {
             uint32_t result = Core::ERROR_NONE;
 
-            TRACE(Trace::Information, (_T("Get details of active SSH client sessions managed by Dropbear service")));
 	    
 	    int32_t count = get_active_sessions_count();
+            TRACE(Trace::Information, (_T("Get details of (%d)active SSH client sessions managed by Dropbear service"), count));
 
 	    struct client_info *info = static_cast<struct client_info*>(::malloc(sizeof(struct client_info) * count));
 
@@ -67,13 +67,13 @@ namespace Plugin {
 
 	    for(int32_t i=0; i<count; i++)
             {
-	            TRACE(Trace::Information, (_T("Count: %d index: %d pid: %s IP: %s Timestamp: %s"), 
+	            TRACE(Trace::Information, (_T("Count: %d index: %d pid: %d IP: %s Timestamp: %s"), 
 					    count, i, info[i].pid, info[i].ipaddress, info[i].timestamp));
 
 	            JsonData::DropbearServer::SessioninfoResultData newElement;
 
 	            newElement.IpAddress = info[i].ipaddress;
-	            newElement.Pid = info[i].pid;
+	            newElement.Pid = std::to_string(info[i].pid);
 		    newElement.TimeStamp = info[i].timestamp;
 
         	    JsonData::DropbearServer::SessioninfoResultData& element(response.Add(newElement));

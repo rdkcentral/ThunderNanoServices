@@ -27,16 +27,6 @@ namespace Plugin {
     {
     }
 
-    // GET <- Return the player numbers in use.
-    // GET ../Window <- Return the Rectangle in which the player is running.
-    // POST ../Create/<Type> <- Create an instance of a stream of type <Type>, Body return the stream index for reference in the other calls.
-    // PUT ../<Number>/Load <- Load the URL given in the body onto this stream
-    // PUT ../<Number>/Attach <- Attach a decoder to the primer of stream <Number>
-    // PUT ../<Number>/Speed/<speed> <- Set the stream as a speed of <speed>
-    // PUT ../<Number>/Detach <- Detach a decoder to the primer of stream <Number>
-    // PUT ../<Number>/Window/X/Y/Width/Height <- Set Window size
-    // DELETE ../<Number> <- Drop the stream adn thus the decoder
-    //
     // POST/PUT	<- StartService
     // POST/PUT	<- StopService
     // GET	<- GetTotalSessions
