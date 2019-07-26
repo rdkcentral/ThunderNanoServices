@@ -21,7 +21,7 @@ namespace Plugin {
 	Register<void, Core::JSON::DecUInt32>(_T("gettotalsessions"), &DropbearServer::endpoint_gettotalsessions, this);
 	Register<void, Core::JSON::DecUInt32>(_T("getactivesessionscount"), &DropbearServer::endpoint_getactivesessionscount, this);
 	Register<void, Core::JSON::ArrayType<SessioninfoResultData>>(_T("getactivesessionsinfo"), &DropbearServer::endpoint_getactivesessionsinfo, this);
-	Register<void, Core::JSON::DecUInt32>(_T("closeclientsession"), &DropbearServer::endpoint_closeclientsession, this);
+	Register<CloseclientsessionParamsData,void>(_T("closeclientsession"), &DropbearServer::endpoint_closeclientsession, this);
     }
 
     void DropbearServer::UnregisterAll()
@@ -116,15 +116,21 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_INCORRECT_URL: Incorrect URL given
     // Close a SSH client session.
-    uint32_t DropbearServer::endpoint_closeclientsession(Core::JSON::DecUInt32& pid)
+    uint32_t DropbearServer::endpoint_closeclientsession(const JsonData::DropbearServer::CloseclientsessionParamsData& params)
     {
         uint32_t result = Core::ERROR_NONE;
-	uint32_t client_pid = pid.Value();
 
-        result = CloseClientSession(client_pid);
+        if(params.ClientPid.IsSet() == true) {
+            result = CloseClientSession(params.ClientPid.Value());
+        } else {
+            result = Core::ERROR_UNAVAILABLE;
+        }
+
+        TRACE(Trace::Information, (_T("closing client session with pid: %s"), params.ClientPid.Value()));
 
         return result;
     }
+
 
 } // namespace Plugin
 

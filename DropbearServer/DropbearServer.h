@@ -76,7 +76,7 @@ namespace Plugin {
         uint32_t GetTotalSessions();
         uint32_t GetSessionsCount();
         uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::DropbearServer::SessioninfoResultData>& response);
-        uint32_t CloseClientSession(uint32_t client_pid);
+        uint32_t CloseClientSession(const std::string& clientpid);
 
     private:
         DropbearServer(const DropbearServer&) = delete;
@@ -90,7 +90,7 @@ namespace Plugin {
 	uint32_t endpoint_gettotalsessions(Core::JSON::DecUInt32& response);
 	uint32_t endpoint_getactivesessionscount(Core::JSON::DecUInt32& response);
 	uint32_t endpoint_getactivesessionsinfo(Core::JSON::ArrayType<JsonData::DropbearServer::SessioninfoResultData>& response);
-	uint32_t endpoint_closeclientsession(Core::JSON::DecUInt32& pid);
+	uint32_t endpoint_closeclientsession(const JsonData::DropbearServer::CloseclientsessionParamsData& params);
 
         DropbearServerImplementation _implemetation;
 

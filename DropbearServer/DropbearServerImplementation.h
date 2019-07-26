@@ -83,12 +83,12 @@ namespace Plugin {
             return result;
         }
 
-        uint32_t CloseClientSession(uint32_t client_pid)
+        uint32_t CloseClientSession(const std::string& client_pid)
         {
             uint32_t result = Core::ERROR_NONE;
 
-            TRACE(Trace::Information, (_T("closing client session with PID: %d"), client_pid));
-	    close_client_session(client_pid);
+            TRACE(Trace::Information, (_T("closing client session with PID: %s"), client_pid.c_str()));
+	    result = close_client_session(std::stoi(client_pid));
 
             return result;
         }

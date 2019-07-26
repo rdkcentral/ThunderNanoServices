@@ -137,12 +137,12 @@ namespace Plugin {
 		
 		if (index.Current().Text() == "CloseClientSession") {
 	    		// DELETE	<-CloseClientSession
-                	uint32_t clientpid;
+			std::string clientpid;
 
 	                Core::URL::KeyValue options(request.Query.Value());
 	
         	        if (options.Exists(_T("clientpid"), true) == true) {
-		                clientpid = std::stoi(options[_T("clientpid")].Text());
+		                clientpid = options[_T("clientpid")].Text();
     				uint32_t status = DropbearServer::CloseClientSession(clientpid);
 	                	if (status != Core::ERROR_NONE) {
 		                    result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
@@ -191,7 +191,7 @@ namespace Plugin {
         return _implemetation.GetSessionsCount();
     }
 
-    uint32_t DropbearServer::CloseClientSession(uint32_t clientpid)
+    uint32_t DropbearServer::CloseClientSession(const std::string& clientpid)
     {
         return _implemetation.CloseClientSession(clientpid);
     }
