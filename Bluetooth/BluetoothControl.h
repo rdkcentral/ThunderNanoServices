@@ -478,7 +478,7 @@ namespace Plugin {
                                 _state = OPERATIONAL;
                             }
                         } else {
-                            _inputHandler = PluginHost::InputHandler::KeyHandler();
+                            _inputHandler = PluginHost::InputHandler::Handler();
                             if (_inputHandler != nullptr) {
                                 _state = OPERATIONAL;
                             }

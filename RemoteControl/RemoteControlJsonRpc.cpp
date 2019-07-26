@@ -187,7 +187,7 @@ namespace Plugin {
         if ((params.Device.IsSet() == true) && (params.Code.IsSet() == true) && (params.Code.Value() != 0)) {
             if ((IsVirtualDevice(params.Device.Value()) == true) || (IsPhysicalDevice(params.Device.Value()) == true)) {
                 // Load default or specific device mapping
-                PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(params.Device.Value()));
+                PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(params.Device.Value()));
                 const PluginHost::VirtualInput::KeyMap::ConversionInfo* codeElements = map[params.Code.Value()];
 
                 if (codeElements != nullptr) {
@@ -214,7 +214,7 @@ namespace Plugin {
         if ((params.Device.IsSet() == true) && (params.Code.IsSet() == true) && (params.Code.Value() != 0)) {
             if ((IsVirtualDevice(params.Device.Value()) == true) || (IsPhysicalDevice(params.Device.Value()) == true)) {
                 // Load default or specific device mapping
-                PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(params.Device.Value()));
+                PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(params.Device.Value()));
                 const PluginHost::VirtualInput::KeyMap::ConversionInfo* codeElements = map[params.Code.Value()];
                 if (codeElements != nullptr) {
                     map.Delete(params.Code.Value());
@@ -238,7 +238,7 @@ namespace Plugin {
         if ((params.Device.IsSet() == true) && (params.Code.IsSet() == true) && (params.Code.Value() != 0) && (params.Key.IsSet()) && (params.Modifiers.IsSet())) {
             if ((IsVirtualDevice(params.Device.Value()) == true) || (IsPhysicalDevice(params.Device.Value()) == true)) {
                 // Load default or specific device mapping
-                PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(params.Device.Value()));
+                PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(params.Device.Value()));
                 if (map.Modify(params.Code.Value(), params.Key.Value(), Modifiers(params.Modifiers)) == false) {
                     result = Core::ERROR_UNKNOWN_KEY;
                 }
@@ -361,7 +361,7 @@ namespace Plugin {
 
                 if (fileName.empty() == false) {
                     // Seems like we have a default mapping file. Load it..
-                    PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(params.Device.Value()));
+                    PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(params.Device.Value()));
                     result = map.Save(fileName);
                 } else {
                     result = Core::ERROR_GENERAL;
@@ -386,7 +386,7 @@ namespace Plugin {
 
                 if (Core::File(fileName).Exists() == true) {
                     // Seems like we have a default mapping file. Load it..
-                    PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(params.Device.Value()));
+                    PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(params.Device.Value()));
                     result = map.Load(fileName);
                 } else {
                     result = Core::ERROR_OPENING_FAILED;
@@ -407,7 +407,7 @@ namespace Plugin {
         if ((params.Device.IsSet() == true) && (params.Code.IsSet() == true) && (params.Code.Value() != 0) && (params.Key.IsSet()) && (params.Modifiers.IsSet())) {
             if ((IsVirtualDevice(params.Device.Value()) == true) || (IsPhysicalDevice(params.Device.Value()) == true)) {
                 // Load default or specific device mapping
-                PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(params.Device.Value()));
+                PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(params.Device.Value()));
                 if (map.Add(params.Code.Value(), params.Key.Value(), Modifiers(params.Modifiers)) == false) {
                     result = Core::ERROR_UNKNOWN_KEY;
                 }

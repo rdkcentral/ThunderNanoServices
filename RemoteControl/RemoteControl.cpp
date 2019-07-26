@@ -114,14 +114,10 @@ namespace Plugin {
     RemoteControl::RemoteControl()
         : _skipURL(0)
         , _virtualDevices()
-        , _keyHandler(PluginHost::InputHandler::KeyHandler())
-        , _mouseHandler(PluginHost::InputHandler::MouseHandler())
-        , _touchHandler(PluginHost::InputHandler::TouchHandler())
+        , _inputHandler(PluginHost::InputHandler::Handler())
         , _persistentPath()
     {
-        ASSERT(_keyHandler != nullptr);
-        ASSERT(_mouseHandler != nullptr);
-        ASSERT(_touchHandler != nullptr);
+        ASSERT(_inputHandler != nullptr);
 
         RegisterAll();
     }
@@ -142,7 +138,7 @@ namespace Plugin {
         string mappingFile(MappingFile(config.MapFile.Value(), service->PersistentPath(), service->DataPath()));
 
         // First check that we at least can create a default lookup table.
-        if (_keyHandler == nullptr) {
+        if (_inputHandler == nullptr) {
             result = "Could not configure remote control.";
         } else {
             TRACE(Trace::Information, (_T("Opening default map file: %s"), mappingFile.c_str()));
@@ -152,7 +148,7 @@ namespace Plugin {
             _persistentPath = service->PersistentPath();
 
             // Seems like we have a default mapping file. Load it..
-            PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(DefaultMappingTable));
+            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(DefaultMappingTable));
 
             if (mappingFile.empty() == true) {
 
@@ -202,7 +198,7 @@ namespace Plugin {
                     TRACE_L1(_T("Opening map file: %s"), specific.c_str());
 
                     // Get our selves a table..
-                    PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(producer));
+                    PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(producer));
                     map.Load(specific);
                     if (configList.IsValid() == true) {
                         map.PassThrough(configList.Current().PassOn.Value());
@@ -228,7 +224,7 @@ namespace Plugin {
                     TRACE_L1(_T("Opening map file: %s"), specific.c_str());
 
                     // Get our selves a table..de
-                    PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(configList.Current().Name.Value()));
+                    PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(configList.Current().Name.Value()));
                     map.Load(specific);
                     map.PassThrough(configList.Current().PassOn.Value());
                 }
@@ -241,15 +237,15 @@ namespace Plugin {
             while (postLookup.Next() == true) {
                 string mappingFile(MappingFile(postLookup.Current().MapFile.Value(), service->PersistentPath(), service->DataPath()));
                 if ((mappingFile.empty() == false) && (postLookup.Current().Name.Value().empty() == false)) {
-                    _keyHandler->PostLookup(postLookup.Current().Name.Value(), mappingFile);
+                    _inputHandler->PostLookup(postLookup.Current().Name.Value(), mappingFile);
                 }
             }
 
             _skipURL = static_cast<uint32_t>(service->WebPrefix().length());
-            _keyHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value());
+            _inputHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value());
             uint16_t repeatLimit = ((config.ReleaseTimeout.Value() - config.RepeatStart.Value()) / config.RepeatInterval.Value()) + 1;
-            _keyHandler->RepeatLimit(repeatLimit);
-            _keyHandler->Default(DefaultMappingTable);
+            _inputHandler->RepeatLimit(repeatLimit);
+            _inputHandler->Default(DefaultMappingTable);
             admin.Callback(static_cast<IKeyHandler*>(this));
             admin.Callback(static_cast<IWheelHandler*>(this));
             admin.Callback(static_cast<IPointerHandler*>(this));
@@ -271,12 +267,12 @@ namespace Plugin {
 
             const TCHAR* producer((*index)->Name());
 
-            _keyHandler->ClearTable(producer);
+            _inputHandler->ClearTable(producer);
         }
 
         // Clear default key map
-        _keyHandler->Default(EMPTY_STRING);
-        _keyHandler->ClearTable(DefaultMappingTable);
+        _inputHandler->Default(EMPTY_STRING);
+        _inputHandler->ClearTable(DefaultMappingTable);
 
         // CLear the virtual devices.
         _virtualDevices.clear();
@@ -331,7 +327,7 @@ namespace Plugin {
 
     /* virtual */ uint32_t RemoteControl::KeyEvent(const bool pressed, const uint32_t code, const string& mapName)
     {
-        uint32_t result = _keyHandler->KeyEvent(pressed, code, mapName);
+        uint32_t result = _inputHandler->KeyEvent(pressed, code, mapName);
 
         if (result == Core::ERROR_NONE) {
             TRACE(KeyActivity, (mapName, code, pressed));
@@ -343,22 +339,22 @@ namespace Plugin {
 
     /* virtual */ uint32_t RemoteControl::AxisEvent(const int16_t x, const int16_t y)
     {
-        return (_mouseHandler->AxisEvent(x, y));
+        return (_inputHandler->AxisEvent(x, y));
     }
 
     /* virtual */ uint32_t RemoteControl::PointerButtonEvent(const bool pressed, const uint8_t button)
     {
-        return (_mouseHandler->PointerButtonEvent(pressed, button));
+        return (_inputHandler->PointerButtonEvent(pressed, button));
     }
 
     /* virtual */ uint32_t RemoteControl::PointerMotionEvent(const int16_t x, const int16_t y)
     {
-        return (_mouseHandler->PointerMotionEvent(x, y));
+        return (_inputHandler->PointerMotionEvent(x, y));
     }
 
     /* virtual */ uint32_t RemoteControl::TouchEvent(const uint8_t index, const ITouchHandler::touchstate state, const uint16_t x, const uint16_t y)
     {
-        return (_touchHandler->TouchEvent(index, ((state == touchstate::TOUCH_MOTION)? 0 : ((state == touchstate::TOUCH_RELEASED)? 1 : 2)), x, y));
+        return (_inputHandler->TouchEvent(index, ((state == touchstate::TOUCH_MOTION)? 0 : ((state == touchstate::TOUCH_RELEASED)? 1 : 2)), x, y));
     }
 
     bool RemoteControl::ParseRequestBody(const Web::Request& request, uint32_t& code, uint16_t& key, uint32_t& modifiers)
@@ -462,7 +458,7 @@ namespace Plugin {
 
                     if (code.Value() != static_cast<uint32_t>(~0)) {
                         // Load default or specific device mapping
-                        PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(deviceName));
+                        PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
                         const PluginHost::VirtualInput::KeyMap::ConversionInfo* codeElements = map[code];
                         if (codeElements != nullptr) {
@@ -646,7 +642,7 @@ namespace Plugin {
 
                         if (fileName.empty() == false) {
                             // Seems like we have a default mapping file. Load it..
-                            PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(deviceName));
+                            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
                             if (map.Save(fileName) == Core::ERROR_NONE) {
                                 result->ErrorCode = Web::STATUS_OK;
@@ -669,7 +665,7 @@ namespace Plugin {
                         }
 
                         if (fileName.empty() == false) {
-                            PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(deviceName));
+                            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
                             if (map.Load(fileName) == Core::ERROR_NONE) {
                                 result->ErrorCode = Web::STATUS_OK;
@@ -688,7 +684,7 @@ namespace Plugin {
                         // Valid code-key pair
                         if (code != 0 && key != 0) {
                             // Load default or specific device mapping
-                            PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(deviceName));
+                            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
                             if (map.Add(code, key, modifiers) == true) {
                                 result->ErrorCode = Web::STATUS_CREATED;
@@ -735,7 +731,7 @@ namespace Plugin {
                         if (code != 0) {
 
                             // Load default or specific device mapping
-                            PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(deviceName));
+                            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
                             map.Delete(code);
 
@@ -780,7 +776,7 @@ namespace Plugin {
                         // Valid code-key pair
                         if (code != 0 && key != 0) {
                             // Load default or specific device mapping
-                            PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(deviceName));
+                            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
                             if (map.Modify(code, key, modifiers) == true) {
                                 result->ErrorCode = Web::STATUS_OK;
