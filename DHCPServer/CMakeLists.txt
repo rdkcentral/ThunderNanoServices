@@ -3,8 +3,9 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 
-add_library(${MODULE_NAME} SHARED     
+add_library(${MODULE_NAME} SHARED
     DHCPServer.cpp
+    DHCPServerJsonRpc.cpp
     DHCPServerImplementation.cpp
     Module.cpp)
 
