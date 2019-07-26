@@ -4,7 +4,7 @@
 * Compositor
 * DeviceIdentification
 * [DeviceInfo](DeviceInfo/DeviceInfoPlugin.md)
-* DHCPServer
+* [DHCPServer](DHCPServer/DHCPServerPlugin.md)
 * [DIALServer](DIALServer/DIALServerPlugin.md)
 * Dictionary
 * DsgccClient
