@@ -428,11 +428,11 @@ namespace Plugin {
 
             uint32_t size = (data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24));
             uint16_t stringLength = (data[8] | (data[9] << 8));
-            bool result = ((size == length) && (stringLength == (length - 10)));
+            bool result = ((size == length) && (stringLength <= (length - 10)));
 
             if (result == true) {
                 uint16_t begin;
-                uint16_t size = (length - 10);
+                uint16_t size = stringLength;
                 const uint8_t* slot = &data[10];
 
                 // Now find the string <KID> in this text
