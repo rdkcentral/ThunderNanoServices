@@ -96,7 +96,7 @@ TimeSync interface methods:
 <a name="method.synchronize"></a>
 ## *synchronize <sup>method</sup>*
 
-Synchronizes time
+Synchronizes time.
 
 ### Description
 

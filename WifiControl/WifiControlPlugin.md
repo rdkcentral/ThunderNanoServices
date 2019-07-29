@@ -14,6 +14,7 @@ WifiControl plugin for Thunder framework.
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
+- [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
 
 <a name="head.Introduction"></a>
@@ -22,7 +23,7 @@ WifiControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the WifiControl plugin. It includes detailed specification of its configuration, methods provided and notifications sent.
+This document describes purpose and functionality of the WifiControl plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -85,189 +86,23 @@ WifiControl interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [status](#method.status) | Returns the current status information |
-| [networks](#method.networks) | Returns information about available networks |
-| [config](#method.config) | Returns information about configuration of the specified network(s) (FIXME!!!) |
-| [delete](#method.delete) | Forgets configuration of the specified network |
-| [setconfig](#method.setconfig) | Updates or creates a configuration for the specified network |
-| [store](#method.store) | Stores configurations in the permanent storage |
-| [scan](#method.scan) | Searches for an available networks |
-| [connect](#method.connect) | Attempt connection to the specified network |
-| [disconnect](#method.disconnect) | Disconnects from the specified network |
-| [debug](#method.debug) | Sets specified debug level |
+| [delete](#method.delete) | Forgets the configuration of a network |
+| [store](#method.store) | Stores the configurations in persistent storage |
+| [scan](#method.scan) | Searches for available networks |
+| [connect](#method.connect) | Attempts connection to a network |
+| [disconnect](#method.disconnect) | Disconnects from a network |
 
-<a name="method.status"></a>
-## *status <sup>method</sup>*
-
-Returns the current status information
-
-### Parameters
-
-This method takes no parameters.
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result.connected | string | Identifier of the connected network (32-bytes long) |
-| result.scanning | boolean | Indicates whether a scanning for available network is in progress |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WifiControl.1.status"
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": {
-        "connected": "MyCorporateNetwork", 
-        "scanning": false
-    }
-}
-```
-<a name="method.networks"></a>
-## *networks <sup>method</sup>*
-
-Returns information about available networks
-
-### Parameters
-
-This method takes no parameters.
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array |  |
-| result[#] | object |  |
-| result[#].ssid | string | Identifier of a network (32-bytes long) |
-| result[#].pairs | array |  |
-| result[#].pairs[#] | object |  |
-| result[#].pairs[#].method | string | Encryption method used by a network |
-| result[#].pairs[#].keys | array |  |
-| result[#].pairs[#].keys[#] | string | Types of supported keys |
-| result[#]?.bssid | string | <sup>*(optional)*</sup> 48-bits long BSS' identifier (might be MAC format) |
-| result[#].frequency | number | Network's frequency in MHz |
-| result[#].signal | number | Network's signal level in dBm |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WifiControl.1.networks"
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": [
-        {
-            "ssid": "MyCorporateNetwork", 
-            "pairs": [
-                {
-                    "method": "WPA", 
-                    "keys": [
-                        "psk"
-                    ]
-                }
-            ], 
-            "bssid": "94:b4:0f:77:cc:71", 
-            "frequency": 5180, 
-            "signal": -44
-        }
-    ]
-}
-```
-<a name="method.config"></a>
-## *config <sup>method</sup>*
-
-Returns information about configuration of the specified network(s) (FIXME!!!)
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.ssid | string | Identifier of a network (32-bytes long). If not specified all configs are returned. |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array |  |
-| result[#] | object |  |
-| result[#].ssid | string | Identifier of a network (32-bytes long) |
-| result[#]?.type | string | <sup>*(optional)*</sup> Level of security (must be one of the following: *Unknown*, *Unsecure*, *WPA*, *Enterprise*) |
-| result[#].hidden | boolean | Indicates whether a network is hidden |
-| result[#].accesspoint | boolean | Indicates if the network operates in AP mode |
-| result[#]?.psk | string | <sup>*(optional)*</sup> Network's PSK in plaintext (irrelevant if hash is provided) |
-| result[#]?.hash | string | <sup>*(optional)*</sup> Network's PSK as a hash |
-| result[#].identity | string | User credentials (username part) for EAP |
-| result[#].password | string | User credentials (password part) for EAP |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WifiControl.1.config", 
-    "params": {
-        "ssid": "MyCorporateNetwork"
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": [
-        {
-            "ssid": "MyCorporateNetwork", 
-            "type": "WPA", 
-            "hidden": false, 
-            "accesspoint": true, 
-            "psk": "secretpresharedkey", 
-            "hash": "59e0d07fa4c7741797a4e394f38a5c321e3bed51d54ad5fcbd3f84bc7415d73d", 
-            "identity": "user", 
-            "password": "password"
-        }
-    ]
-}
-```
 <a name="method.delete"></a>
 ## *delete <sup>method</sup>*
 
-Forgets configuration of the specified network
+Forgets the configuration of a network.
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.ssid | string | Identifier of a network (32-bytes long) |
+| params.ssid | string | Identifier of a network |
 
 ### Result
 
@@ -298,77 +133,10 @@ Forgets configuration of the specified network
     "result": null
 }
 ```
-<a name="method.setconfig"></a>
-## *setconfig <sup>method</sup>*
-
-Updates or creates a configuration for the specified network
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.ssid | string | Identifier of a network (32-bytes long) |
-| params.config | object |  |
-| params.config.ssid | string | Identifier of a network (32-bytes long) |
-| params.config?.type | string | <sup>*(optional)*</sup> Level of security (must be one of the following: *Unknown*, *Unsecure*, *WPA*, *Enterprise*) |
-| params.config.hidden | boolean | Indicates whether a network is hidden |
-| params.config.accesspoint | boolean | Indicates if the network operates in AP mode |
-| params.config?.psk | string | <sup>*(optional)*</sup> Network's PSK in plaintext (irrelevant if hash is provided) |
-| params.config?.hash | string | <sup>*(optional)*</sup> Network's PSK as a hash |
-| params.config.identity | string | User credentials (username part) for EAP |
-| params.config.password | string | User credentials (password part) for EAP |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Config does not exist |
-| 23 | ```ERROR_INCOMPLETE_CONFIG``` | Passed in config is invalid |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WifiControl.1.setconfig", 
-    "params": {
-        "ssid": "MyCorporateNetwork", 
-        "config": {
-            "ssid": "MyCorporateNetwork", 
-            "type": "WPA", 
-            "hidden": false, 
-            "accesspoint": true, 
-            "psk": "secretpresharedkey", 
-            "hash": "59e0d07fa4c7741797a4e394f38a5c321e3bed51d54ad5fcbd3f84bc7415d73d", 
-            "identity": "user", 
-            "password": "password"
-        }
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
 <a name="method.store"></a>
 ## *store <sup>method</sup>*
 
-Stores configurations in the permanent storage
+Stores the configurations in persistent storage.
 
 ### Parameters
 
@@ -409,7 +177,7 @@ This method takes no parameters.
 <a name="method.scan"></a>
 ## *scan <sup>method</sup>*
 
-Searches for an available networks
+Searches for available networks.
 
 Also see: [scanresults](#event.scanresults)
 
@@ -453,7 +221,7 @@ This method takes no parameters.
 <a name="method.connect"></a>
 ## *connect <sup>method</sup>*
 
-Attempt connection to the specified network
+Attempts connection to a network.
 
 Also see: [connectionchange](#event.connectionchange)
 
@@ -462,7 +230,7 @@ Also see: [connectionchange](#event.connectionchange)
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.ssid | string | Identifier of a network (32-bytes long) |
+| params.ssid | string | Identifier of a network |
 
 ### Result
 
@@ -503,7 +271,7 @@ Also see: [connectionchange](#event.connectionchange)
 <a name="method.disconnect"></a>
 ## *disconnect <sup>method</sup>*
 
-Disconnects from the specified network
+Disconnects from a network.
 
 Also see: [connectionchange](#event.connectionchange)
 
@@ -512,7 +280,7 @@ Also see: [connectionchange](#event.connectionchange)
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.ssid | string | Identifier of a network (32-bytes long) |
+| params.ssid | string | Identifier of a network |
 
 ### Result
 
@@ -550,23 +318,273 @@ Also see: [connectionchange](#event.connectionchange)
     "result": null
 }
 ```
-<a name="method.debug"></a>
-## *debug <sup>method</sup>*
+<a name="head.Properties"></a>
+# Properties
 
-Sets specified debug level
+The following properties are provided by the WifiControl plugin:
 
-### Parameters
+WifiControl interface properties:
+
+| Property | Description |
+| :-------- | :-------- |
+| [status](#property.status) <sup>RO</sup> | Network status |
+| [networks](#property.networks) <sup>RO</sup> | Available networks |
+| [configs](#property.configs) <sup>RO</sup> | All WiFi configurations |
+| [config](#property.config) | Single WiFi conifguration |
+| [debug](#property.debug) <sup>WO</sup> | Sets debug level |
+
+<a name="property.status"></a>
+## *status <sup>property</sup>*
+
+Provides access to the network status.
+
+> This property is **read-only**.
+
+### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| params | object |  |
-| params.level | number | Debul level |
+| (property) | object | Network status |
+| (property).connected | string | Identifier of the connected network |
+| (property).scanning | boolean | Indicates whether a scanning for available network is in progress |
 
-### Result
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "WifiControl.1.status"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": {
+        "connected": "MyCorporateNetwork", 
+        "scanning": false
+    }
+}
+```
+<a name="property.networks"></a>
+## *networks <sup>property</sup>*
+
+Provides access to the available networks.
+
+> This property is **read-only**.
+
+### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | null | Always null |
+| (property) | array | Available networks |
+| (property)[#] | object |  |
+| (property)[#].ssid | string | Identifier of a network |
+| (property)[#].pairs | array |  |
+| (property)[#].pairs[#] | object |  |
+| (property)[#].pairs[#].method | string | Encryption method used by the network |
+| (property)[#].pairs[#].keys | array |  |
+| (property)[#].pairs[#].keys[#] | string | Types of supported keys |
+| (property)[#]?.bssid | string | <sup>*(optional)*</sup> 48-bits long BSS identifier (might be MAC format) |
+| (property)[#].frequency | number | Network's frequency in MHz |
+| (property)[#].signal | number | Network's signal level in dBm |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "WifiControl.1.networks"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": [
+        {
+            "ssid": "MyCorporateNetwork", 
+            "pairs": [
+                {
+                    "method": "WPA", 
+                    "keys": [
+                        "psk"
+                    ]
+                }
+            ], 
+            "bssid": "94:b4:0f:77:cc:71", 
+            "frequency": 5180, 
+            "signal": -44
+        }
+    ]
+}
+```
+<a name="property.configs"></a>
+## *configs <sup>property</sup>*
+
+Provides access to the all WiFi configurations.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | array | All WiFi configurations |
+| (property)[#] | object |  |
+| (property)[#].ssid | string | Identifier of a network |
+| (property)[#]?.type | string | <sup>*(optional)*</sup> Level of security (must be one of the following: *Unknown*, *Unsecure*, *WPA*, *Enterprise*) |
+| (property)[#].hidden | boolean | Indicates whether a network is hidden |
+| (property)[#].accesspoint | boolean | Indicates if the network operates in AP mode |
+| (property)[#]?.psk | string | <sup>*(optional)*</sup> Network's PSK in plaintext (irrelevant if hash is provided) |
+| (property)[#]?.hash | string | <sup>*(optional)*</sup> Network's PSK as a hash |
+| (property)[#].identity | string | User credentials (username part) for EAP |
+| (property)[#].password | string | User credentials (password part) for EAP |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Configuration does not exist |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "WifiControl.1.configs"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": [
+        {
+            "ssid": "MyCorporateNetwork", 
+            "type": "WPA", 
+            "hidden": false, 
+            "accesspoint": true, 
+            "psk": "secretpresharedkey", 
+            "hash": "59e0d07fa4c7741797a4e394f38a5c321e3bed51d54ad5fcbd3f84bc7415d73d", 
+            "identity": "user", 
+            "password": "password"
+        }
+    ]
+}
+```
+<a name="property.config"></a>
+## *config <sup>property</sup>*
+
+Provides access to the single WiFi conifguration.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Single WiFi conifguration |
+| (property).ssid | string | Identifier of a network |
+| (property)?.type | string | <sup>*(optional)*</sup> Level of security (must be one of the following: *Unknown*, *Unsecure*, *WPA*, *Enterprise*) |
+| (property).hidden | boolean | Indicates whether a network is hidden |
+| (property).accesspoint | boolean | Indicates if the network operates in AP mode |
+| (property)?.psk | string | <sup>*(optional)*</sup> Network's PSK in plaintext (irrelevant if hash is provided) |
+| (property)?.hash | string | <sup>*(optional)*</sup> Network's PSK as a hash |
+| (property).identity | string | User credentials (username part) for EAP |
+| (property).password | string | User credentials (password part) for EAP |
+
+> The *ssid* shall be passed as the index to the property, e.g. *WifiControl.1.config@MyCorporateNetwork*. If not specified all configurations are returned.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Configuration does not exist |
+| 23 | ```ERROR_INCOMPLETE_CONFIG``` | Passed in configuration is invalid |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "WifiControl.1.config@MyCorporateNetwork"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": {
+        "ssid": "MyCorporateNetwork", 
+        "type": "WPA", 
+        "hidden": false, 
+        "accesspoint": true, 
+        "psk": "secretpresharedkey", 
+        "hash": "59e0d07fa4c7741797a4e394f38a5c321e3bed51d54ad5fcbd3f84bc7415d73d", 
+        "identity": "user", 
+        "password": "password"
+    }
+}
+```
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "WifiControl.1.config@MyCorporateNetwork", 
+    "params": {
+        "ssid": "MyCorporateNetwork", 
+        "type": "WPA", 
+        "hidden": false, 
+        "accesspoint": true, 
+        "psk": "secretpresharedkey", 
+        "hash": "59e0d07fa4c7741797a4e394f38a5c321e3bed51d54ad5fcbd3f84bc7415d73d", 
+        "identity": "user", 
+        "password": "password"
+    }
+}
+```
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "null"
+}
+```
+<a name="property.debug"></a>
+## *debug <sup>property</sup>*
+
+Provides access to the sets debug level.
+
+> This property is **write-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | number | Debug level |
 
 ### Errors
 
@@ -576,31 +594,29 @@ Sets specified debug level
 
 ### Example
 
-#### Request
+#### Set Request
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "method": "WifiControl.1.debug", 
-    "params": {
-        "level": 0
-    }
+    "params": 0
 }
 ```
-#### Response
+#### Set Response
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "result": null
+    "result": "null"
 }
 ```
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[WPEF](#ref.WPEF)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the WifiControl plugin:
 
@@ -608,14 +624,14 @@ WifiControl interface events:
 
 | Event | Description |
 | :-------- | :-------- |
-| [scanresults](#event.scanresults) | Signals that the scan operation has finished and carries results of it |
-| [networkchange](#event.networkchange) | Informs that something has changed with the network |
-| [connectionchange](#event.connectionchange) | Notifies about connection state change |
+| [scanresults](#event.scanresults) | Signals that the scan operation has finished |
+| [networkchange](#event.networkchange) | Signals that a network property has changed  |
+| [connectionchange](#event.connectionchange) | Notifies about connection state change  |
 
 <a name="event.scanresults"></a>
 ## *scanresults <sup>event</sup>*
 
-Signals that the scan operation has finished and carries results of it
+Signals that the scan operation has finished.
 
 ### Parameters
 
@@ -623,13 +639,13 @@ Signals that the scan operation has finished and carries results of it
 | :-------- | :-------- | :-------- |
 | params | array |  |
 | params[#] | object |  |
-| params[#].ssid | string | Identifier of a network (32-bytes long) |
+| params[#].ssid | string | Identifier of a network |
 | params[#].pairs | array |  |
 | params[#].pairs[#] | object |  |
-| params[#].pairs[#].method | string | Encryption method used by a network |
+| params[#].pairs[#].method | string | Encryption method used by the network |
 | params[#].pairs[#].keys | array |  |
 | params[#].pairs[#].keys[#] | string | Types of supported keys |
-| params[#]?.bssid | string | <sup>*(optional)*</sup> 48-bits long BSS' identifier (might be MAC format) |
+| params[#]?.bssid | string | <sup>*(optional)*</sup> 48-bits long BSS identifier (might be MAC format) |
 | params[#].frequency | number | Network's frequency in MHz |
 | params[#].signal | number | Network's signal level in dBm |
 
@@ -660,7 +676,7 @@ Signals that the scan operation has finished and carries results of it
 <a name="event.networkchange"></a>
 ## *networkchange <sup>event</sup>*
 
-Informs that something has changed with the network e.g. frequency
+Signals that a network property has changed (e.g. frequency).
 
 ### Parameters
 
@@ -677,7 +693,7 @@ This event carries no parameters.
 <a name="event.connectionchange"></a>
 ## *connectionchange <sup>event</sup>*
 
-Notifies about connection state change i.e. connected/disconnected
+Notifies about connection state change (i.e. connected/disconnected).
 
 ### Parameters
 

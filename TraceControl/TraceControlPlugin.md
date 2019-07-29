@@ -90,7 +90,7 @@ TraceControl interface methods:
 <a name="method.status"></a>
 ## *status <sup>method</sup>*
 
-Retrieves general information
+Retrieves general information.
 
 ### Description
 
@@ -117,7 +117,7 @@ Retrieves the actual trace status information for targeted module and category, 
 | result.settings[#] | object |  |
 | result.settings[#].module | string | Module name |
 | result.settings[#].category | string | Category name |
-| result.settings[#].state | string | State value (must be one of the following: *disabled*, *enabled*, *tristated*) |
+| result.settings[#].state | string | State value (must be one of the following: *enabled*, *disabled*, *tristated*) |
 
 ### Example
 
@@ -159,11 +159,11 @@ Retrieves the actual trace status information for targeted module and category, 
 <a name="method.set"></a>
 ## *set <sup>method</sup>*
 
-Sets traces
+Sets traces.
 
 ### Description
 
-Disables/Enables all/select category traces for particular module.
+Disables/enables all/select category traces for particular module.
 
 ### Parameters
 
@@ -172,7 +172,7 @@ Disables/Enables all/select category traces for particular module.
 | params | object |  |
 | params.module | string | Module name |
 | params.category | string | Category name |
-| params.state | string | State value (must be one of the following: *disabled*, *enabled*, *tristated*) |
+| params.state | string | State value (must be one of the following: *enabled*, *disabled*, *tristated*) |
 
 ### Result
 

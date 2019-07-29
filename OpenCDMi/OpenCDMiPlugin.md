@@ -137,7 +137,7 @@ Provides access to the DRM key systems.
 | (property) | array | DRM key systems |
 | (property)[#] | string | Identifier of a key system |
 
-> The *DRM system* shall be passed as the index to the property, e.g. *OCDM.1.keysystems@PlayReady*.
+> The *drm system* shall be passed as the index to the property, e.g. *OCDM.1.keysystems@PlayReady*.
 
 ### Errors
 

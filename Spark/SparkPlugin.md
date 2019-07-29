@@ -296,7 +296,7 @@ Also see: [statechange](#event.statechange)
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[WPEF](#ref.WPEF)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the Spark plugin:
 
@@ -317,7 +317,7 @@ StateControl interface events:
 <a name="event.urlchange"></a>
 ## *urlchange <sup>event</sup>*
 
-Signals a URL change in the browser
+Signals a URL change in the browser.
 
 ### Parameters
 
@@ -342,7 +342,7 @@ Signals a URL change in the browser
 <a name="event.visibilitychange"></a>
 ## *visibilitychange <sup>event</sup>*
 
-Signals a visibility change of the browser
+Signals a visibility change of the browser.
 
 ### Parameters
 
@@ -365,7 +365,7 @@ Signals a visibility change of the browser
 <a name="event.pageclosure"></a>
 ## *pageclosure <sup>event</sup>*
 
-Notifies that the web page requests to close its window
+Notifies that the web page requests to close its window.
 
 ### Parameters
 
@@ -382,7 +382,7 @@ This event carries no parameters.
 <a name="event.statechange"></a>
 ## *statechange <sup>event</sup>*
 
-Signals a state change of the service
+Signals a state change of the service.
 
 ### Parameters
 

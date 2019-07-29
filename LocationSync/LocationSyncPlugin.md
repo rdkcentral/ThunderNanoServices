@@ -85,12 +85,12 @@ LocationSync interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [sync](#method.sync) | Runs sync command |
+| [sync](#method.sync) | Synchronizes the location |
 
 <a name="method.sync"></a>
 ## *sync <sup>method</sup>*
 
-Runs sync command
+Synchronizes the location.
 
 ### Parameters
 
@@ -106,7 +106,7 @@ This method takes no parameters.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 1 | ```ERROR_GENERAL``` | General error |
+| 1 | ```ERROR_GENERAL``` | Failed to synchdonize the location |
 | 2 | ```ERROR_UNAVAILABLE``` | Unavailable locator |
 | 15 | ```ERROR_INCORRECT_URL``` | Incorrect URL |
 | 12 | ```ERROR_INPROGRESS``` | Probing in progress |

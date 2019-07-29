@@ -91,19 +91,19 @@ The table below lists configuration options of the plugin.
 | configuration?.upc | string | <sup>*(optional)*</sup> Device UPC barcode number (Universal Product Code) |
 | configuration?.interface | string | <sup>*(optional)*</sup> Server interface IP and port (default: SSDP multicast address and port) |
 | configuration?.webserver | string | <sup>*(optional)*</sup> Callsign of a service implementing the web server functionality (default: *WebServer*) |
-| configuration?.switchboard | string | <sup>*(optional)*</sup> Callsign of a service implementing the switchboard functionality (default: *SwitchBoard*). If defined and the service is available then start/stop requests will be relayed to the *SwitchBoard* rather than handled by the *Controller* directly. This is used only in non-passive mode. |
+| configuration?.switchboard | string | <sup>*(optional)*</sup> Callsign of a service implementing the switchboard functionality (default: *SwitchBoard*). If defined and the service is available then start/stop requests will be relayed to the *SwitchBoard* rather than handled by the *Controller* directly. This is used only in non-passive mode |
 | configuration.apps | array | List of supported applications |
 | configuration.apps[#] | object | (an application definition) |
 | configuration.apps[#].name | string | Name of the application |
-| configuration.apps[#]?.handler | string | <sup>*(optional)*</sup> Name of the application handler. If not defined then *name* will be used instead. |
-| configuration.apps[#]?.callsign | string | <sup>*(optional)*</sup> Callsign of the service implementing the application. If defined and the service is available then the *Controller* will be used to unconditionally start/stop the application by activating/deactivating its service directly (active mode), or by the *SwitchBoard* if selected and available (switchboard mode). If not defined then these operations will be handed over to JavaScript, by sending a notification and using *handler* (or *name*) property to identify the application (passive mode). |
+| configuration.apps[#]?.handler | string | <sup>*(optional)*</sup> Name of the application handler. If not defined then *name* will be used instead |
+| configuration.apps[#]?.callsign | string | <sup>*(optional)*</sup> Callsign of the service implementing the application. If defined and the service is available then the *Controller* will be used to unconditionally start/stop the application by activating/deactivating its service directly (active mode), or by the *SwitchBoard* if selected and available (switchboard mode). If not defined then these operations will be handed over to JavaScript, by sending a notification and using *handler* (or *name*) property to identify the application (passive mode) |
 | configuration.apps[#]?.url | string | <sup>*(optional)*</sup> A URL related to the application |
 | configuration.apps[#]?.allowstop | boolean | <sup>*(optional)*</sup> Denotes if the application can be stopped *(true)* or not *(false, default)* |
 
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[WPEF](#ref.WPEF)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the DIALServer plugin:
 
@@ -117,7 +117,7 @@ DIALServer interface events:
 <a name="event.start"></a>
 ## *start <sup>event</sup>*
 
-Signals that application start was requested over DIAL *(passive mode only)*
+Signals that application start was requested over DIAL *(passive mode only)*.
 
 ### Parameters
 
@@ -142,7 +142,7 @@ Signals that application start was requested over DIAL *(passive mode only)*
 <a name="event.stop"></a>
 ## *stop <sup>event</sup>*
 
-Signals that application stop was requested over DIAL *(passive mode only)*
+Signals that application stop was requested over DIAL *(passive mode only)*.
 
 ### Parameters
 
