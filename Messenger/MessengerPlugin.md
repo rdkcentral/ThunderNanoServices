@@ -92,7 +92,7 @@ Messenger interface methods:
 <a name="method.join"></a>
 ## *join <sup>method</sup>*
 
-Joins a messaging room
+Joins a messaging room.
 
 ### Description
 
@@ -151,7 +151,7 @@ Also see: [userupdate](#event.userupdate)
 <a name="method.leave"></a>
 ## *leave <sup>method</sup>*
 
-Leaves a messaging room
+Leaves a messaging room.
 
 ### Description
 
@@ -204,7 +204,7 @@ Also see: [userupdate](#event.userupdate)
 <a name="method.send"></a>
 ## *send <sup>method</sup>*
 
-Sends a message to a room
+Sends a message to a room.
 
 ### Description
 
@@ -259,7 +259,7 @@ Also see: [message](#event.message)
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[WPEF](#ref.WPEF)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the Messenger plugin:
 
@@ -274,7 +274,7 @@ Messenger interface events:
 <a name="event.roomupdate"></a>
 ## *roomupdate <sup>event</sup>*
 
-Notifies about room status updates
+Notifies about room status updates.
 
 ### Description
 
@@ -334,7 +334,7 @@ Register to this event to be notified about room status updates. Immediately aft
 <a name="event.message"></a>
 ## *message <sup>event</sup>*
 
-Notifies about new messages in a room
+Notifies about new messages in a room.
 
 ### Description
 

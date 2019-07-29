@@ -92,7 +92,7 @@ DHCPServer interface methods:
 <a name="method.activate"></a>
 ## *activate <sup>method</sup>*
 
-Activates a DHCP server
+Activates a DHCP server.
 
 ### Parameters
 
@@ -141,7 +141,7 @@ Activates a DHCP server
 <a name="method.deactivate"></a>
 ## *deactivate <sup>method</sup>*
 
-Deactivates a DHCP server
+Deactivates a DHCP server.
 
 ### Parameters
 
@@ -222,7 +222,7 @@ Provides access to the server status.
 | (property)[#]?.leases[#].ip | string | Client IP address |
 | (property)[#]?.leases[#]?.expires | string | <sup>*(optional)*</sup> Client IP expiration time (in ISO8601 format, empty: never expires) |
 
-> The *server* shall be passed as the index to the property, e.g. *DHCPServer.1.status@eth0*. If omitted, status of all configured servers is returned
+> The *server* shall be passed as the index to the property, e.g. *DHCPServer.1.status@eth0*. If omitted, status of all configured servers is returned.
 
 ### Errors
 

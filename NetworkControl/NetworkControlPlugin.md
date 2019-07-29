@@ -85,15 +85,15 @@ NetworkControl interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [reload](#method.reload) | Reload static and non-static network interface adapter |
-| [request](#method.request) | Reload non-static network interface adapter |
-| [assign](#method.assign) | Reload static network interface adapter |
-| [flush](#method.flush) | Flush network interface adapter |
+| [reload](#method.reload) | Reloads a static and non-static network interface adapter |
+| [request](#method.request) | Reloads a non-static network interface adapter |
+| [assign](#method.assign) | Reloads a static network interface adapter |
+| [flush](#method.flush) | Flushes a network interface adapter |
 
 <a name="method.reload"></a>
 ## *reload <sup>method</sup>*
 
-Reload static and non-static network interface adapter.
+Reloads a static and non-static network interface adapter.
 
 ### Parameters
 
@@ -112,7 +112,7 @@ Reload static and non-static network interface adapter.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unavaliable network interface |
+| 2 | ```ERROR_UNAVAILABLE``` | Unavailable network interface |
 
 ### Example
 
@@ -140,7 +140,7 @@ Reload static and non-static network interface adapter.
 <a name="method.request"></a>
 ## *request <sup>method</sup>*
 
-Reload non-static network interface adapter.
+Reloads a non-static network interface adapter.
 
 ### Parameters
 
@@ -187,7 +187,7 @@ Reload non-static network interface adapter.
 <a name="method.assign"></a>
 ## *assign <sup>method</sup>*
 
-Reload static network interface adapter.
+Reloads a static network interface adapter.
 
 ### Parameters
 
@@ -234,7 +234,7 @@ Reload static network interface adapter.
 <a name="method.flush"></a>
 ## *flush <sup>method</sup>*
 
-Flush network interface adapter.
+Flushes a network interface adapter.
 
 ### Parameters
 
@@ -287,13 +287,13 @@ NetworkControl interface properties:
 
 | Property | Description |
 | :-------- | :-------- |
-| [network](#property.network) <sup>RO</sup> | The actual network information for targeted network interface, if network interface is not given, all network interfaces are returned |
-| [up](#property.up) | Determines if interface is up |
+| [network](#property.network) <sup>RO</sup> | Current network information |
+| [up](#property.up) | Interface up status |
 
 <a name="property.network"></a>
 ## *network <sup>property</sup>*
 
-Provides access to the the actual network information for targeted network interface, if network interface is not given, all network interfaces are returned..
+Provides access to the current network information.
 
 > This property is **read-only**.
 
@@ -301,22 +301,22 @@ Provides access to the the actual network information for targeted network inter
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | The actual network information for targeted network interface, if network interface is not given, all network interfaces are returned. |
+| (property) | array | Current network information |
 | (property)[#] | object |  |
 | (property)[#]?.interface | string | <sup>*(optional)*</sup> Interface name |
-| (property)[#]?.mode | string | <sup>*(optional)*</sup> Mode type (must be one of the following: *Manual*, *Static*, *Dynamic*) |
+| (property)[#]?.mode | string | <sup>*(optional)*</sup> Mode (must be one of the following: *Manual*, *Static*, *Dynamic*) |
 | (property)[#]?.address | string | <sup>*(optional)*</sup> IP address |
-| (property)[#]?.mask | number | <sup>*(optional)*</sup> Network inteface mask |
+| (property)[#]?.mask | number | <sup>*(optional)*</sup> Network interface mask |
 | (property)[#]?.gateway | string | <sup>*(optional)*</sup> Gateway address |
 | (property)[#]?.broadcast | string | <sup>*(optional)*</sup> Broadcast IP |
 
-> The *Interface Name* shall be passed as the index to the property, e.g. *NetworkControl.1.network@eth0*.
+> The *interface* shall be passed as the index to the property, e.g. *NetworkControl.1.network@eth0*. If network interface is not given, all network interfaces are returned.
 
 ### Errors
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unavaliable network interface |
+| 2 | ```ERROR_UNAVAILABLE``` | Unavailable network interface |
 
 ### Example
 
@@ -350,15 +350,15 @@ Provides access to the the actual network information for targeted network inter
 <a name="property.up"></a>
 ## *up <sup>property</sup>*
 
-Provides access to the determines if interface is up..
+Provides access to the interface up status.
 
 ### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | boolean | Determines if interface is up. |
+| (property) | boolean | Interface up status |
 
-> The *Interface Name* shall be passed as the index to the property, e.g. *NetworkControl.1.up@eth0*.
+> The *interface* shall be passed as the index to the property, e.g. *NetworkControl.1.up@eth0*.
 
 ### Result
 
@@ -370,7 +370,7 @@ Provides access to the determines if interface is up..
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unavaliable network interface |
+| 2 | ```ERROR_UNAVAILABLE``` | Unavailable network interface |
 
 ### Example
 

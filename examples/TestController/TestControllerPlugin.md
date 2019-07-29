@@ -85,30 +85,30 @@ TestController interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [run](#method.run) | Run all tests - no arguments; <br /> A selected category group of test - specify category;<br /> A selected test - specify category and test name;<br /> |
+| [run](#method.run) | Runs a single test or multiple tests |
 
 <a name="method.run"></a>
 ## *run <sup>method</sup>*
 
-Run all tests - no arguments; <br /> A selected category group of test - specify category;<br /> A selected test - specify category and test name;<br />
+Runs a single test or multiple tests.
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.category | string | The test category name |
-| params.test | string | The test name |
+| params?.category | string | <sup>*(optional)*</sup> Test category name, if omitted: all tests are executed |
+| params?.test | string | <sup>*(optional)*</sup> Test name, if omitted: all tests of category are executed |
 | params?.args | string | <sup>*(optional)*</sup> The test arguments in JSON format |
 
 ### Result
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | array |  |
+| result | array | List of test results |
 | result[#] | object |  |
-| result[#].test | string | The test name |
-| result[#].status | string | The test status |
+| result[#].test | string | Test name |
+| result[#].status | string | Test status |
 
 ### Errors
 
@@ -129,7 +129,7 @@ Run all tests - no arguments; <br /> A selected category group of test - specify
     "params": {
         "category": "JSONRPC", 
         "test": "JSONRPCTest", 
-        "args": "sample JSON format arg for a test"
+        "args": "{ }"
     }
 }
 ```
@@ -157,13 +157,13 @@ TestController interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [categories](#property.categories) <sup>RO</sup> | List of test categories |
-| [tests](#property.tests) <sup>RO</sup> | List of test for selected category |
-| [description](#property.description) <sup>RO</sup> | Description of the selected test from particular category |
+| [tests](#property.tests) <sup>RO</sup> | List of tests for a category |
+| [description](#property.description) <sup>RO</sup> | Description of a test |
 
 <a name="property.categories"></a>
 ## *categories <sup>property</sup>*
 
-Provides access to the list of test categories..
+Provides access to the list of test categories.
 
 > This property is **read-only**.
 
@@ -171,7 +171,7 @@ Provides access to the list of test categories..
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | List of test categories. |
+| (property) | array | List of test categories |
 | (property)[#] | string | Test category name |
 
 ### Example
@@ -199,7 +199,7 @@ Provides access to the list of test categories..
 <a name="property.tests"></a>
 ## *tests <sup>property</sup>*
 
-Provides access to the list of test for selected category..
+Provides access to the list of tests for a category.
 
 > This property is **read-only**.
 
@@ -207,10 +207,10 @@ Provides access to the list of test for selected category..
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | List of test for selected category. |
-| (property)[#] | string | The test name |
+| (property) | array | List of tests for a category |
+| (property)[#] | string | Test name |
 
-> The *The test category name* shall be passed as the index to the property, e.g. *TestController.1.tests@JSONRPC*.
+> The *category* shall be passed as the index to the property, e.g. *TestController.1.tests@JSONRPC*.
 
 ### Errors
 
@@ -244,7 +244,7 @@ Provides access to the list of test for selected category..
 <a name="property.description"></a>
 ## *description <sup>property</sup>*
 
-Provides access to the description of the selected test from particular category..
+Provides access to the description of a test.
 
 > This property is **read-only**.
 
@@ -252,10 +252,10 @@ Provides access to the description of the selected test from particular category
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Description of the selected test from particular category. |
-| (property).description | string | The test description |
+| (property) | object | Description of a test |
+| (property).description | string | Test description |
 
-> The *The test name* shall be passed as the index to the property, e.g. *TestController.1.description@JSONRPC*.
+> The *test* shall be passed as the index to the property, e.g. *TestController.1.description@JSONRPC*.
 
 ### Errors
 

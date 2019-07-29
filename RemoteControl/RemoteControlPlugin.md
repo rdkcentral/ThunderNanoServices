@@ -86,21 +86,21 @@ RemoteControl interface methods:
 | Method | Description |
 | :-------- | :-------- |
 | [key](#method.key) | Gets key code details |
-| [delete](#method.delete) | Deletes the key code from map |
-| [modify](#method.modify) | Modifies the key code in the map |
-| [pair](#method.pair) | Activates pairing mode of specific device |
-| [unpair](#method.unpair) | Unpairs of specific device |
-| [send](#method.send) | Sends a code to a device |
-| [press](#method.press) | Sends a code 'Press' to a device |
-| [release](#method.release) | Sends a code 'Release' to a device |
-| [save](#method.save) | Saves the loaded key map as DEVICE_NAME |
-| [load](#method.load) | Re-loads DEVICE_NAME |
-| [add](#method.add) | Adds the key code in the map |
+| [delete](#method.delete) | Deletes a key code from the key map |
+| [modify](#method.modify) | Modifies a key code in the key map |
+| [pair](#method.pair) | Activates pairing mode of a device |
+| [unpair](#method.unpair) | Unpairs a device |
+| [send](#method.send) | Sends a key code to a device |
+| [press](#method.press) | Sends a 'Press' code to a device |
+| [release](#method.release) | Sends a 'Release' code to a device |
+| [save](#method.save) | Saves the loaded key map as *DEVICE_NAME |
+| [load](#method.load) | Re-loads *DEVICE_NAME |
+| [add](#method.add) | Adds a key code to the key map |
 
 <a name="method.key"></a>
 ## *key <sup>method</sup>*
 
-Gets key code details
+Gets key code details.
 
 ### Parameters
 
@@ -161,7 +161,7 @@ Gets key code details
 <a name="method.delete"></a>
 ## *delete <sup>method</sup>*
 
-Deletes the key code from map.
+Deletes a key code from the key map.
 
 ### Parameters
 
@@ -212,7 +212,7 @@ Deletes the key code from map.
 <a name="method.modify"></a>
 ## *modify <sup>method</sup>*
 
-Modifies the key code in the map.
+Modifies a key code in the key map.
 
 ### Parameters
 
@@ -270,7 +270,7 @@ Modifies the key code in the map.
 <a name="method.pair"></a>
 ## *pair <sup>method</sup>*
 
-Activates pairing mode of specific device.
+Activates pairing mode of a device.
 
 ### Parameters
 
@@ -319,7 +319,7 @@ Activates pairing mode of specific device.
 <a name="method.unpair"></a>
 ## *unpair <sup>method</sup>*
 
-Unpairs of specific device.
+Unpairs a device.
 
 ### Parameters
 
@@ -370,7 +370,7 @@ Unpairs of specific device.
 <a name="method.send"></a>
 ## *send <sup>method</sup>*
 
-Sends a code to a device.
+Sends a key code to a device.
 
 ### Parameters
 
@@ -430,7 +430,7 @@ Sends a code to a device.
 <a name="method.press"></a>
 ## *press <sup>method</sup>*
 
-Sends a code 'Press' to a device.
+Sends a 'Press' code to a device.
 
 ### Parameters
 
@@ -490,7 +490,7 @@ Sends a code 'Press' to a device.
 <a name="method.release"></a>
 ## *release <sup>method</sup>*
 
-Sends a code 'Release' to a device.
+Sends a 'Release' code to a device.
 
 ### Parameters
 
@@ -550,7 +550,7 @@ Sends a code 'Release' to a device.
 <a name="method.save"></a>
 ## *save <sup>method</sup>*
 
-Saves the loaded key map as DEVICE_NAME.json into persistent path.
+Saves the loaded key map as *DEVICE_NAME.json* into persistent path.
 
 ### Parameters
 
@@ -600,7 +600,7 @@ Saves the loaded key map as DEVICE_NAME.json into persistent path.
 <a name="method.load"></a>
 ## *load <sup>method</sup>*
 
-Re-loads DEVICE_NAME.json key map into memory.
+Re-loads *DEVICE_NAME.json* key map.
 
 ### Parameters
 
@@ -651,7 +651,7 @@ Re-loads DEVICE_NAME.json key map into memory.
 <a name="method.add"></a>
 ## *add <sup>method</sup>*
 
-Adds the key code in the map.
+Adds a key code to the key map.
 
 ### Parameters
 
@@ -716,7 +716,7 @@ RemoteControl interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [devices](#property.devices) <sup>RO</sup> | Names of all available devices |
-| [device](#property.device) <sup>RO</sup> | Metadata of specific devices |
+| [device](#property.device) <sup>RO</sup> | Metadata of a specific device |
 
 <a name="property.devices"></a>
 ## *devices <sup>property</sup>*
@@ -757,7 +757,7 @@ Provides access to the names of all available devices.
 <a name="property.device"></a>
 ## *device <sup>property</sup>*
 
-Provides access to the metadata of specific devices.
+Provides access to the metadata of a specific device.
 
 > This property is **read-only**.
 
@@ -765,11 +765,9 @@ Provides access to the metadata of specific devices.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Metadata of specific devices |
+| (property) | object | Metadata of a specific device |
 | (property).name | string | Device name |
 | (property).metadata | string | Device metadata |
-
-> The *Device name* shall be passed as the index to the property, e.g. *RemoteControl.1.device@0*.
 
 ### Errors
 
@@ -787,7 +785,7 @@ Provides access to the metadata of specific devices.
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "RemoteControl.1.device@0"
+    "method": "RemoteControl.1.device"
 }
 ```
 #### Get Response

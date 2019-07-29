@@ -14,6 +14,7 @@ TestUtility plugin for Thunder framework.
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
+- [Properties](#head.Properties)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -21,7 +22,7 @@ TestUtility plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the TestUtility plugin. It includes detailed specification of its configuration and methods provided.
+This document describes purpose and functionality of the TestUtility plugin. It includes detailed specification of its configuration, methods and properties provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -84,171 +85,9 @@ TestUtility interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [commands](#method.commands) | Retrieves the list of test commands |
-| [description](#method.description) | Retrieves the description of selected test command |
-| [parameters](#method.parameters) | Retrieves parameters of the selected test command |
 | [runmemory](#method.runmemory) | Runs a memory test command |
 | [runcrash](#method.runcrash) | Runs a crash test command |
 
-<a name="method.commands"></a>
-## *commands <sup>method</sup>*
-
-Retrieves the list of test commands.
-
-### Parameters
-
-This method takes no parameters.
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array |  |
-| result[#] | string | Available test commands |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "TestUtility.1.commands"
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": [
-        "Malloc"
-    ]
-}
-```
-<a name="method.description"></a>
-## *description <sup>method</sup>*
-
-Retrieves the description of selected test command.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.command | string | The test command name |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result.description | string | Test command description |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown category |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "TestUtility.1.description", 
-    "params": {
-        "command": "Malloc"
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": {
-        "description": "Allocates desired amount of memory (in KB) and holds it"
-    }
-}
-```
-<a name="method.parameters"></a>
-## *parameters <sup>method</sup>*
-
-Retrieves parameters of the selected test command.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.command | string | The test command name |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result?.input | array | <sup>*(optional)*</sup>  |
-| result?.input[#] | object | <sup>*(optional)*</sup>  |
-| result?.input[#].name | string | The test command input parameter |
-| result?.input[#].type | string | The test command input parameter type (must be one of the following: *Number*, *String*, *Boolean*, *Object*, *Symbol*) |
-| result?.input[#].comment | string | The test command input parameter description |
-| result.output | object |  |
-| result.output.name | string | The test command output parameter |
-| result.output.type | string | The test command output parameter type |
-| result.output.comment | string | The test command output parameter description |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown category |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "TestUtility.1.parameters", 
-    "params": {
-        "command": "Malloc"
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": {
-        "input": [
-            {
-                "name": "memory", 
-                "type": "Number", 
-                "comment": "Memory statistics in KB"
-            }
-        ], 
-        "output": {
-            "name": "memory", 
-            "type": "Number", 
-            "comment": "Memory statistics in KB"
-        }
-    }
-}
-```
 <a name="method.runmemory"></a>
 ## *runmemory <sup>method</sup>*
 
@@ -259,8 +98,8 @@ Runs a memory test command.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.command | string | The test command name |
-| params?.size | number | <sup>*(optional)*</sup> The amount of memory in KB for allocation (applicable for "Malloc" commands) |
+| params.command | string | Test command name |
+| params?.size | number | <sup>*(optional)*</sup> The amount of memory in KB for allocation (applicable for *Malloc* commands) |
 
 ### Result
 
@@ -316,7 +155,7 @@ Runs a crash test command.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.command | string | The test command name |
+| params.command | string | Test command name |
 | params?.delay | number | <sup>*(optional)*</sup> Delay (in seconds) before the crash attempt (applicable for *Crash* command) |
 | params?.count | number | <sup>*(optional)*</sup> How many times a Crash command will be executed consecutively (applicable for *CrashNTimes* command) |
 
@@ -356,5 +195,163 @@ Runs a crash test command.
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": null
+}
+```
+<a name="head.Properties"></a>
+# Properties
+
+The following properties are provided by the TestUtility plugin:
+
+TestUtility interface properties:
+
+| Property | Description |
+| :-------- | :-------- |
+| [commands](#property.commands) <sup>RO</sup> | List of test commands |
+| [description](#property.description) <sup>RO</sup> | Description of a test command |
+| [parameters](#property.parameters) <sup>RO</sup> | Parameters of a test command |
+
+<a name="property.commands"></a>
+## *commands <sup>property</sup>*
+
+Provides access to the list of test commands.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | array | List of test commands |
+| (property)[#] | string | Available test commands |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "TestUtility.1.commands"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": [
+        "Malloc"
+    ]
+}
+```
+<a name="property.description"></a>
+## *description <sup>property</sup>*
+
+Provides access to the description of a test command.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Description of a test command |
+| (property).description | string | Test command description |
+
+> The *command* shall be passed as the index to the property, e.g. *TestUtility.1.description@Malloc*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Unknown category |
+| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "TestUtility.1.description@Malloc"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": {
+        "description": "Allocates desired amount of memory (in KB) and holds it"
+    }
+}
+```
+<a name="property.parameters"></a>
+## *parameters <sup>property</sup>*
+
+Provides access to the parameters of a test command.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Parameters of a test command |
+| (property)?.input | array | <sup>*(optional)*</sup>  |
+| (property)?.input[#] | object | <sup>*(optional)*</sup>  |
+| (property)?.input[#].name | string | Test command input parameter |
+| (property)?.input[#].type | string | Test command input parameter type (must be one of the following: *Number*, *String*, *Boolean*, *Object*, *Symbol*) |
+| (property)?.input[#].comment | string | Test command input parameter description |
+| (property).output | object |  |
+| (property).output.name | string | Test command output parameter |
+| (property).output.type | string | Test command output parameter type |
+| (property).output.comment | string | Test command output parameter description |
+
+> The *command* shall be passed as the index to the property, e.g. *TestUtility.1.parameters@Malloc*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Unknown category |
+| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "TestUtility.1.parameters@Malloc"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": {
+        "input": [
+            {
+                "name": "memory", 
+                "type": "Number", 
+                "comment": "Memory statistics in KB"
+            }
+        ], 
+        "output": {
+            "name": "memory", 
+            "type": "Number", 
+            "comment": "Memory statistics in KB"
+        }
+    }
 }
 ```
