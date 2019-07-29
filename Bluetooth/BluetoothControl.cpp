@@ -2,110 +2,13 @@
 
 namespace WPEFramework {
 
-#define ADAPTER_INDEX 0X00
-#define ENABLE_MODE 0x01
-
-namespace Bluetooth {
-
-    /* LMP features mapping */
-    struct ConversionTable {
-        uint16_t id;
-        const TCHAR* text;
-    };
-
-    static ConversionTable lmp_features_map[] = {
-        /* Byte 0 */
-        { LMP_3SLOT | 0x0000, _T("3-slot packets") }, /* Bit 0 */
-        { LMP_5SLOT | 0x0000, _T("5-slot packets") }, /* Bit 1 */
-        { LMP_ENCRYPT | 0x0000, _T("encryption") }, /* Bit 2 */
-        { LMP_SOFFSET | 0x0000, _T("slot offset") }, /* Bit 3 */
-        { LMP_TACCURACY | 0x0000, _T("timing accuracy") }, /* Bit 4 */
-        { LMP_RSWITCH | 0x0000, _T("role switch") }, /* Bit 5 */
-        { LMP_HOLD | 0x0000, _T("hold mode") }, /* Bit 6 */
-        { LMP_SNIFF | 0x0000, _T("sniff mode") }, /* Bit 7 */
-
-        /* Byte 1 */
-        { LMP_PARK | 0x0100, _T("park state") }, /* Bit 0 */
-        { LMP_RSSI | 0x0100, _T("RSSI") }, /* Bit 1 */
-        { LMP_QUALITY | 0x0100, _T("channel quality") }, /* Bit 2 */
-        { LMP_SCO | 0x0100, _T("SCO link") }, /* Bit 3 */
-        { LMP_HV2 | 0x0100, _T("HV2 packets") }, /* Bit 4 */
-        { LMP_HV3 | 0x0100, _T("HV3 packets") }, /* Bit 5 */
-        { LMP_ULAW | 0x0100, _T("u-law log") }, /* Bit 6 */
-        { LMP_ALAW | 0x0100, _T("A-law log") }, /* Bit 7 */
-
-        /* Byte 2 */
-        { LMP_CVSD | 0x0200, _T("CVSD") }, /* Bit 0 */
-        { LMP_PSCHEME | 0x0200, _T("paging scheme") }, /* Bit 1 */
-        { LMP_PCONTROL | 0x0200, _T("power control") }, /* Bit 2 */
-        { LMP_TRSP_SCO | 0x0200, _T("transparent SCO") }, /* Bit 3 */
-        { LMP_BCAST_ENC | 0x0200, _T("broadcast encrypt") }, /* Bit 7 */
-
-        /* Byte 3 */
-        { LMP_EDR_ACL_2M | 0x0300, _T("EDR ACL 2 Mbps") }, /* Bit 1 */
-        { LMP_EDR_ACL_3M | 0x0300, _T("EDR ACL 3 Mbps") }, /* Bit 2 */
-        { LMP_ENH_ISCAN | 0x0300, _T("enhanced iscan") }, /* Bit 3 */
-        { LMP_ILACE_ISCAN | 0x0300, _T("interlaced iscan") }, /* Bit 4 */
-        { LMP_ILACE_PSCAN | 0x0300, _T("interlaced pscan") }, /* Bit 5 */
-        { LMP_RSSI_INQ | 0x0300, _T("inquiry with RSSI") }, /* Bit 6 */
-        { LMP_ESCO | 0x0300, _T("extended SCO") }, /* Bit 7 */
-
-        /* Byte 4 */
-        { LMP_EV4 | 0x0400, _T("EV4 packets") }, /* Bit 0 */
-        { LMP_EV5 | 0x0400, _T("EV5 packets") }, /* Bit 1 */
-        { LMP_AFH_CAP_SLV | 0x0400, _T("AFH cap. slave") }, /* Bit 3 */
-        { LMP_AFH_CLS_SLV | 0x0400, _T("AFH class. slave") }, /* Bit 4 */
-        { LMP_NO_BREDR | 0x0400, _T("BR/EDR not supp.") }, /* Bit 5 */
-        { LMP_LE | 0x0400, _T("LE support") }, /* Bit 6 */
-        { LMP_EDR_3SLOT | 0x0400, _T("3-slot EDR ACL") }, /* Bit 7 */
-
-        /* Byte 5 */
-        { LMP_EDR_5SLOT | 0x0500, _T("5-slot EDR ACL") }, /* Bit 0 */
-        { LMP_SNIFF_SUBR | 0x0500, _T("sniff subrating") }, /* Bit 1 */
-        { LMP_PAUSE_ENC | 0x0500, _T("pause encryption") }, /* Bit 2 */
-        { LMP_AFH_CAP_MST | 0x0500, _T("AFH cap. master") }, /* Bit 3 */
-        { LMP_AFH_CLS_MST | 0x0500, _T("AFH class. master") }, /* Bit 4 */
-        { LMP_EDR_ESCO_2M | 0x0500, _T("EDR eSCO 2 Mbps") }, /* Bit 5 */
-        { LMP_EDR_ESCO_3M | 0x0500, _T("EDR eSCO 3 Mbps") }, /* Bit 6 */
-        { LMP_EDR_3S_ESCO | 0x0500, _T("3-slot EDR eSCO") }, /* Bit 7 */
-
-        /* Byte 6 */
-        { LMP_EXT_INQ | 0x0600, _T("extended inquiry") }, /* Bit 0 */
-        { LMP_LE_BREDR | 0x0600, _T("LE and BR/EDR") }, /* Bit 1 */
-        { LMP_SIMPLE_PAIR | 0x0600, _T("simple pairing") }, /* Bit 3 */
-        { LMP_ENCAPS_PDU | 0x0600, _T("encapsulated PDU") }, /* Bit 4 */
-        { LMP_ERR_DAT_REP | 0x0600, _T("err. data report") }, /* Bit 5 */
-        { LMP_NFLUSH_PKTS | 0x0600, _T("non-flush flag") }, /* Bit 6 */
-
-        /* Byte 7 */
-        { LMP_LSTO | 0x0700, _T("LSTO") }, /* Bit 1 */
-        { LMP_INQ_TX_PWR | 0x0700, _T("inquiry TX power") }, /* Bit 2 */
-        { LMP_EPC | 0x0700, _T("EPC") }, /* Bit 2 */
-        { LMP_EXT_FEAT | 0x0700, _T("extended features") }, /* Bit 7 */
-
-        { 0x0000, nullptr }
-    };
-
-} // Namespace Bluetooth
-
 namespace Plugin {
 
     SERVICE_REGISTRATION(BluetoothControl, 1, 0);
 
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::DeviceImpl::JSON>> jsonResponseFactoryDevice(1);
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::Status>> jsonResponseFactoryStatus(1);
-    /* static */ string BluetoothControl::_HIDPath;
-
-    const TCHAR* BluetoothControl::DeviceImpl::FeatureIterator::FeatureToText(const uint16_t index) const
-    {
-        Bluetooth::ConversionTable* pos = Bluetooth::lmp_features_map;
-
-        while ((pos->text != nullptr) && (pos->id != index)) {
-            pos++;
-        }
-
-        return (pos->text != nullptr ? pos->text : _T("reserved"));
-    }
+    /* static */ Bluetooth::HCISocket BluetoothControl::_administrator;
 
     /* virtual */ const string BluetoothControl::Initialize(PluginHost::IShell* service)
     {
@@ -118,59 +21,35 @@ namespace Plugin {
         _skipURL = _service->WebPrefix().length();
         Config config;
         config.FromString(_service->ConfigLine());
-        _driver = Bluetooth::Driver::Instance(_service->ConfigLine());
-        _HIDPath = config.HIDPath.Value();
+        unsigned int driverCode = ::contruct_bluetooth_driver(_service->ConfigLine().c_str());
 
         // First see if we can bring up the Driver....
-        if (_driver == nullptr) {
+        if (driverCode != 0) {
             result = _T("Could not load the Bluetooth Driver.");
-        } else {
-            Bluetooth::HCISocket::Management::OperationalMode command(ADAPTER_INDEX);
-            command->val = htobs(ENABLE_MODE);
-
-            _interface = Bluetooth::Driver::Interface(config.Interface.Value());
-
-            if (_interface.IsValid() == false) {
-                result = _T("Could not bring up the interface.");
-            } else if (_interface.Up() == false) {
+        } else if (_administrator.IsOpen() == true) {
+            SYSLOG(Logging::Startup, (_T("Bluetooth Control connection is already open.")));
+        }
+        else {
+            _administrator.LocalNode(Core::NodeId(config.Interface.Value(), HCI_CHANNEL_CONTROL));
+           
+            if (_administrator.Open(Core::infinite) != Core::ERROR_NONE) {
+                result = "Could not open the Bluetooth Administrator channel";
+            } else if (_administrator.Up() == false) {
                 result = "Failed to bring up the Bluetooth interface";
+            } else if (_administrator.Config(true, true, true, true, true, true) != Core::ERROR_NONE) {
+                result = "Failed to configure the Bluetooth interface";
             } else if (_btAddress.Default() == false) {
                 result = "Could not get the default Bluetooth address";
-            } else if (_administrator.Open(Core::infinite) != Core::ERROR_NONE) {
-                result = "Could not open the Bluetooth Administrator channel";
-            } else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_POWERED)) != Core::ERROR_NONE) {
-                result = "Failed to power on bluetooth adaptor";
-            }
-            // Enable Bondable on adaptor.
-            else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_BONDABLE)) != Core::ERROR_NONE) {
-                result = "Failed to enable Bondable";
-            }
-            // Enable Simple Secure Simple Pairing.
-            else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_SSP)) != Core::ERROR_NONE) {
-                result = "Failed to enable Simple Secure Simple Pairing";
-            }
-            // Enable Low Energy
-            else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_LE)) != Core::ERROR_NONE) {
-                result = "Failed to enable Low Energy";
-            }
-            // Enable Secure Connections
-            else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_SECURE_CONN)) != Core::ERROR_NONE) {
-                result = "Failed to enable Secure Connections";
-            }
-            // Enable Advertising
-            else if (_administrator.Exchange(500, command.OpCode(MGMT_OP_SET_ADVERTISING)) != Core::ERROR_NONE) {
-                result = "Failed to enable Advertising";
             } else if (_application.Open(_btAddress) != Core::ERROR_NONE) {
                 result = "Could not open the Bluetooth Application channel";
             } else if (_application.Advertising(true, 0) != Core::ERROR_NONE) {
                 result = "Could not listen to advertisements on the Application channel";
             }
         }
-
-        if ((_driver != nullptr) && (result.empty() == false)) {
-            _interface.Down();
-            delete _driver;
-            _driver = nullptr;
+        if ((driverCode == 0) && (result.empty() == false)) {
+            _administrator.Down();
+            _administrator.Close(Core::infinite);
+            ::destruct_bluetooth_driver();
         }
         return result;
     }
@@ -183,12 +62,10 @@ namespace Plugin {
         // Deinitialize what we initialized..
         _service = nullptr;
 
-        if (_driver != nullptr) {
-            // We bring the interface up, so we should bring it down as well..
-            _interface.Down();
-            delete _driver;
-            _driver = nullptr;
-        }
+        // We bring the interface up, so we should bring it down as well..
+        _administrator.Down();
+        _administrator.Close(Core::infinite);
+        ::destruct_bluetooth_driver();
     }
 
     /* virtual */ string BluetoothControl::Information() const
@@ -368,7 +245,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Unknown device.");
                     } else {
-                        _gattRemotes.emplace_back(device->Locator(), _HIDPath);
+                        _gattRemotes.emplace_back(device->Locator(), _T("void"));
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Unpaired device.");
                     }
@@ -527,9 +404,45 @@ namespace Plugin {
         return (Core::Service<DeviceImpl::IteratorImpl>::Create<IBluetooth::IDevice::IIterator>(_devices));
     }
 
-    void BluetoothControl::DiscoveredDevice(const bool lowEnergy, const Bluetooth::Address& address, const string& name)
+    /* virtual */ void BluetoothControl::Update(const hci_event_hdr& eventData)
     {
+        const uint8_t* data = &(reinterpret_cast<const uint8_t*>(&eventData)[sizeof(hci_event_hdr&)]);
 
+        switch (eventData.evt) {
+            case EVT_CMD_STATUS: {
+                 const evt_cmd_status* cs = reinterpret_cast<const evt_cmd_status*>(data);
+                 TRACE(Trace::Information, (_T("==EVT_CMD_STATUS: %X-%03X status: %d"), (((cs->opcode >> 10) & 0xF), (cs->opcode & 0x3FF), cs->status)));
+                 break;
+            }
+            case EVT_CMD_COMPLETE: {
+                 const evt_cmd_complete* cc = reinterpret_cast<const evt_cmd_complete*>(data);
+                 TRACE(Trace::Information, (_T("==EVT_CMD_COMPLETE: %X-%03X"), (((cc->opcode >> 10) & 0xF), (cc->opcode & 0x3FF))));
+                 break;
+            }
+            case EVT_LE_META_EVENT: {
+                 const evt_le_meta_event* eventMetaData = reinterpret_cast<const evt_le_meta_event*>(data);
+
+                 if (eventMetaData->subevent == EVT_LE_CONN_COMPLETE) {
+                     TRACE(Trace::Information, (_T("==EVT_LE_CONN_COMPLETE: unexpected")));
+                 } else if (eventMetaData->subevent == EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE) {
+                     TRACE(Trace::Information, (_T("==EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE: unexpected")));
+                 } else if (eventMetaData->subevent == EVT_DISCONNECT_PHYSICAL_LINK_COMPLETE) {
+                     TRACE(Trace::Information, (_T("==EVT_DISCONNECT_PHYSICAL_LINK_COMPLETE: unexpected")));
+                 } else {
+                     ASSERT (eventMetaData->subevent != EVT_LE_ADVERTISING_REPORT);
+                     TRACE(Trace::Information, (_T("==EVT_LE_META_EVENT: unexpected subevent: %d"), eventMetaData->subevent));
+                 }
+                 break;
+            }
+            case 0:
+                break;
+            default:
+                TRACE(Trace::Information, (_T("==UNKNOWN: event %X"), eventData.evt));
+                break;
+        }
+    }    
+    void BluetoothControl::Discovered(const bool lowEnergy, const Bluetooth::Address& address, const string& name)
+    {
         _adminLock.Lock();
 
         std::list<DeviceImpl*>::iterator index = _devices.begin();
@@ -542,10 +455,10 @@ namespace Plugin {
             (*index)->Discovered();
         } else if (lowEnergy == true) {
             TRACE(Trace::Information, ("Added LowEnergy Bluetooth device: %s, name: %s", address.ToString().c_str(), name.c_str()));
-            _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(&_administrator, &_application, address, name));
+            _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(_btInterface, address, name));
         } else {
             TRACE(Trace::Information, ("Added Regular Bluetooth device: %s, name: %s", address.ToString().c_str(), name.c_str()));
-            _devices.push_back(Core::Service<DeviceRegular>::Create<DeviceImpl>(&_administrator, &_application, address, name));
+            _devices.push_back(Core::Service<DeviceRegular>::Create<DeviceImpl>(_btInterface, address, name));
         }
 
         _adminLock.Unlock();
@@ -553,7 +466,6 @@ namespace Plugin {
 
     void BluetoothControl::RemoveDevices(std::function<bool(DeviceImpl*)> filter)
     {
-
         _adminLock.Lock();
 
         for (std::list<DeviceImpl*>::iterator index = _devices.begin(), end = _devices.end(); index != end; ++index) {
@@ -577,15 +489,6 @@ namespace Plugin {
 
         return (index != _devices.end() ? (*index) : nullptr);
     }
-    void BluetoothControl::Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame)
-    {
-        _adminLock.Lock();
-        std::list<DeviceImpl*>::iterator index = _devices.begin();
-        while (index != _devices.end()) {
-            (*index)->Notification(subEvent, length, dataFrame);
-            index++;
-        }
-        _adminLock.Unlock();
-    }
+
 }
 }
