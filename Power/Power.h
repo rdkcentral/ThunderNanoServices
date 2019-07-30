@@ -221,7 +221,7 @@ namespace Plugin {
         inline Exchange::IPower::PCState TranslateIn(JsonData::Power::StateType value);
         inline JsonData::Power::StateType TranslateOut(Exchange::IPower::PCState value) const;
         uint32_t endpoint_set(const JsonData::Power::PowerData& params);
-        uint32_t get_state(JsonData::Power::StateData& response) const;
+        uint32_t get_state(Core::JSON::EnumType<JsonData::Power::StateType>& response) const;
 
     private:
         Core::CriticalSection _adminLock;

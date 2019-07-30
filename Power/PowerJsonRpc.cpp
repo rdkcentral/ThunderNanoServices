@@ -15,7 +15,7 @@ namespace Plugin {
     void Power::RegisterAll()
     {
         Register<PowerData,void>(_T("set"), &Power::endpoint_set, this);
-        Property<StateData>(_T("state"), &Power::get_state, nullptr, this);
+        Property<Core::JSON::EnumType<StateType>>(_T("state"), &Power::get_state, nullptr, this);
     }
 
     void Power::UnregisterAll()
@@ -150,9 +150,9 @@ namespace Plugin {
         // Property: state - Power state
         // Return codes:
         //  - ERROR_NONE: Success
-        uint32_t Power::get_state(StateData& response) const
+        uint32_t Power::get_state(Core::JSON::EnumType<StateType>& response) const
         {
-            response.State = TranslateOut(_power->GetState());
+            response = TranslateOut(_power->GetState());
 
             return Core::ERROR_NONE;
         }
