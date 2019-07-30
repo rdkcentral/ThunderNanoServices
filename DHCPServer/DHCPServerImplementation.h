@@ -236,7 +236,9 @@ namespace Plugin {
             }
             inline string Text() const
             {
-                return (Core::ToString(string(reinterpret_cast<const char*>(Id()), _length)));
+                string text;
+                Core::ToHexString(Id(), _length, text);
+                return (text);
             }
 
         private:
