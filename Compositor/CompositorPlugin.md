@@ -85,25 +85,25 @@ Compositor interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [totop](#method.totop) | Put client on top |
-| [putbelow](#method.putbelow) | Slide <below> just behind <above> |
-| [kill](#method.kill) | Use this method to kill the client |
+| [putontop](#method.putontop) | Puts client surface on top in z-order |
+| [putbelow](#method.putbelow) | Puts client surface below another surface |
+| [kill](#method.kill) | Kills a client |
 
-<a name="method.totop"></a>
-## *totop <sup>method</sup>*
+<a name="method.putontop"></a>
+## *putontop <sup>method</sup>*
 
-Put client on top.
+Puts client surface on top in z-order.
 
 ### Description
 
-Whenever you put client on top, it will shown on the screen and it will be in focus.
+Use this method to get a client's surface to the top position.
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.callsign | string | Client's callsign |
+| params.client | string | Client name |
 
 ### Result
 
@@ -116,7 +116,6 @@ Whenever you put client on top, it will shown on the screen and it will be in fo
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
-| 1 | ```ERROR_GENERAL``` | Compositor couldn't put service on top |
 
 ### Example
 
@@ -126,9 +125,9 @@ Whenever you put client on top, it will shown on the screen and it will be in fo
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "Compositor.1.totop", 
+    "method": "Compositor.1.putontop", 
     "params": {
-        "callsign": ""
+        "client": "Netflix"
     }
 }
 ```
@@ -144,19 +143,19 @@ Whenever you put client on top, it will shown on the screen and it will be in fo
 <a name="method.putbelow"></a>
 ## *putbelow <sup>method</sup>*
 
-Slide <below> just behind <above>
+Puts client surface below another surface.
 
 ### Description
 
-Whenever you want to reorder the client-list, you can slide a <client-a> just below a <client-b> in the client-list.
+Use this method to reorder client surfaces in the z-order list.
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params?.below | string | <sup>*(optional)*</sup> Client that will be put below second one |
-| params?.above | string | <sup>*(optional)*</sup> Client that will be put above fist one |
+| params.client | string | Client name to change z-order position |
+| params.relative | string | Client to put the other surface below |
 
 ### Result
 
@@ -168,8 +167,7 @@ Whenever you want to reorder the client-list, you can slide a <client-a> just be
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | At least one of clients not found |
-| 1 | ```ERROR_GENERAL``` | Compositor failed to put service on top |
+| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client(s) not found |
 
 ### Example
 
@@ -181,8 +179,8 @@ Whenever you want to reorder the client-list, you can slide a <client-a> just be
     "id": 1234567890, 
     "method": "Compositor.1.putbelow", 
     "params": {
-        "below": "Netflix", 
-        "above": "WebKitBrowser"
+        "client": "Netflix", 
+        "relative": "WebKitBrowser"
     }
 }
 ```
@@ -198,18 +196,18 @@ Whenever you want to reorder the client-list, you can slide a <client-a> just be
 <a name="method.kill"></a>
 ## *kill <sup>method</sup>*
 
-Use this method to kill the client
+Kills a client.
 
 ### Description
 
-Whenever a client is killed, the execution of the client is stopped and all its resources will be released..
+Use this method to kill a client. Whenever a client is killed, the execution of the client is stopped and all its resources are released.
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.callsign | string | Callsign of killed client |
+| params.client | string | Client name |
 
 ### Result
 
@@ -233,7 +231,7 @@ Whenever a client is killed, the execution of the client is stopped and all its 
     "id": 1234567890, 
     "method": "Compositor.1.kill", 
     "params": {
-        "callsign": "Netflix"
+        "client": "Netflix"
     }
 }
 ```
@@ -255,13 +253,74 @@ Compositor interface properties:
 
 | Property | Description |
 | :-------- | :-------- |
+| [resolution](#property.resolution) | Screen resolution |
 | [clients](#property.clients) <sup>RO</sup> | List of compositor clients |
-| [resolution](#property.resolution) | Output resolution |
 | [zorder](#property.zorder) <sup>RO</sup> | List of compositor clients sorted by z-order |
-| [geometry](#property.geometry) | Property describing nanoservice window on screen |
-| [visible](#property.visible) <sup>WO</sup> | Determines if client's surface is visible |
-| [opacity](#property.opacity) <sup>WO</sup> | Opacity of client |
+| [geometry](#property.geometry) | Client surface geometry |
+| [visiblity](#property.visiblity) <sup>WO</sup> | Client surface visibility |
+| [opacity](#property.opacity) <sup>WO</sup> | Client surface opacity |
 
+<a name="property.resolution"></a>
+## *resolution <sup>property</sup>*
+
+Provides access to the screen resolution.
+
+### Description
+
+Use this property to set or retrieve the current resolution of the screen.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | string | Screen resolution (must be one of the following: *unknown*, *480i*, *480p*, *720p50*, *720p60*, *1080p24*, *1080i50*, *1080p50*, *1080p60*, *2160p50*, *2160p60*) |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown resolution |
+| 1 | ```ERROR_GENERAL``` | Failed to set resolution |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Compositor.1.resolution"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "1080p24"
+}
+```
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Compositor.1.resolution", 
+    "params": "1080p24"
+}
+```
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "null"
+}
+```
 <a name="property.clients"></a>
 ## *clients <sup>property</sup>*
 
@@ -269,12 +328,16 @@ Provides access to the list of compositor clients.
 
 > This property is **read-only**.
 
+### Description
+
+Use this property to retrieve the information of actual running clients.
+
 ### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | (property) | array | List of compositor clients |
-| (property)[#] | string | Client callsign |
+| (property)[#] | string | Client name |
 
 ### Example
 
@@ -298,62 +361,6 @@ Provides access to the list of compositor clients.
     ]
 }
 ```
-<a name="property.resolution"></a>
-## *resolution <sup>property</sup>*
-
-Provides access to the output resolution.
-
-### Value
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | string | Output resolution (must be one of the following: *screenresolution_unknown*, *screenresolution_480i*, *screenresolution_480p*, *screenresolution_720p*, *screenresolution_720p50hz*, *screenresolution_1080p24hz*, *screenresolution_1080i50hz*, *screenresolution_1080p50hz *, *screenresolution_1080p60hz*, *screenresolution_2160p50hz*, *screenresolution_2160p60hz*) |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 28 | ```ERROR_UNKNOWN_TABLE``` | Unknown resolution |
-
-### Example
-
-#### Get Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Compositor.1.resolution"
-}
-```
-#### Get Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": "screenresolution_480i"
-}
-```
-#### Set Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Compositor.1.resolution", 
-    "params": "screenresolution_480i"
-}
-```
-#### Set Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": "null"
-}
-```
 <a name="property.zorder"></a>
 ## *zorder <sup>property</sup>*
 
@@ -361,12 +368,22 @@ Provides access to the list of compositor clients sorted by z-order.
 
 > This property is **read-only**.
 
+### Description
+
+Use this property to retrieve the list of all clients in z-order. Each client has an z-order-value that determines its position with respect to the screen. The ordering is that the top position is closest to the screen, the next z-order-value first behind the top, and so on.
+
 ### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | (property) | array | List of compositor clients sorted by z-order |
 | (property)[#] | string | Client name |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 1 | ```ERROR_GENERAL``` | Failed to get z-order |
 
 ### Example
 
@@ -393,30 +410,29 @@ Provides access to the list of compositor clients sorted by z-order.
 <a name="property.geometry"></a>
 ## *geometry <sup>property</sup>*
 
-Provides access to the property describing nanoservice window on screen.
+Provides access to the client surface geometry.
 
 ### Description
 
-Use this property to update or retrive the geometry of the client surface.
+Use this property to update or retrieve the geometry of a client's surface.
 
 ### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Property describing nanoservice window on screen |
-| (property).x | number | X position on screen |
-| (property).y | number | Y position on screen |
-| (property).width | number | Width of space taken by nanoservice |
-| (property).height | number | Height of space taken by nanoservice |
+| (property) | object | Client surface geometry |
+| (property).x | number | Horizontal coordinate of the surface |
+| (property).y | number | Vertical coordinate of the surface |
+| (property).width | number | Surface width |
+| (property).height | number | Surface height |
 
-> The *Nanoservice callsign* shall be passed as the index to the property, e.g. *Compositor.1.geometry@Netflix*.
+> The *client* shall be passed as the index to the property, e.g. *Compositor.1.geometry@Netflix*.
 
 ### Errors
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Callsign not found |
-| 1 | ```ERROR_GENERAL``` | Failed to set/get geometry |
+| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
 
 ### Example
 
@@ -467,26 +483,30 @@ Use this property to update or retrive the geometry of the client surface.
     "result": "null"
 }
 ```
-<a name="property.visible"></a>
-## *visible <sup>property</sup>*
+<a name="property.visiblity"></a>
+## *visiblity <sup>property</sup>*
 
-Provides access to the determines if client's surface is visible.
+Provides access to the client surface visibility.
 
 > This property is **write-only**.
+
+### Description
+
+Use this property to set the client's surface visibility.
 
 ### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | boolean | Determines if client's surface is visible |
+| (property) | string | Client surface visibility (must be one of the following: *visible*, *hidden*) |
 
-> The *Nanoservice callsign* shall be passed as the index to the property, e.g. *Compositor.1.visible@Netflix*.
+> The *client* shall be passed as the index to the property, e.g. *Compositor.1.visiblity@Netflix*.
 
 ### Errors
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Callsign not found |
+| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
 
 ### Example
 
@@ -496,8 +516,8 @@ Provides access to the determines if client's surface is visible.
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "Compositor.1.visible@Netflix", 
-    "params": true
+    "method": "Compositor.1.visiblity@Netflix", 
+    "params": "visible"
 }
 ```
 #### Set Response
@@ -512,27 +532,27 @@ Provides access to the determines if client's surface is visible.
 <a name="property.opacity"></a>
 ## *opacity <sup>property</sup>*
 
-Provides access to the opacity of client.
+Provides access to the client surface opacity.
 
 > This property is **write-only**.
 
 ### Description
 
-The opacity of a client surface can range from 0 till 255, that will represent an opacity of the surface from 0% till 100%.
+Use this property to set the client's surface opacity level.
 
 ### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | number | Opacity of client |
+| (property) | number | Opacity level (0 to 255; 0: fully transparent, 255: fully opaque) |
 
-> The *Nanoservice callsign* shall be passed as the index to the property, e.g. *Compositor.1.opacity@Netflix*.
+> The *client* shall be passed as the index to the property, e.g. *Compositor.1.opacity@Netflix*.
 
 ### Errors
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Callsign not found |
+| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
 
 ### Example
 
@@ -543,7 +563,7 @@ The opacity of a client surface can range from 0 till 255, that will represent a
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "method": "Compositor.1.opacity@Netflix", 
-    "params": 64
+    "params": 127
 }
 ```
 #### Set Response
