@@ -149,34 +149,12 @@ namespace Plugin {
 
         class GATTRemote : public Bluetooth::GATTSocket {
         private:
+            static constexpr uint8_t LE_ATT_CID = 4;
+            static constexpr uint8_t ATT_OP_HANDLE_NOTIFY = 0x1B;
+
             GATTRemote() = delete;
             GATTRemote(const GATTRemote&) = delete;
             GATTRemote& operator=(const GATTRemote&) = delete;
-
-            class Sink : public Command::ICallback {
-            private:
-                Sink() = delete;
-                Sink(const Sink&) = delete;
-                Sink& operator=(const Sink&) = delete;
-
-            public:
-                Sink(GATTRemote& parent)
-                    : _parent(parent)
-                {
-                }
-                virtual ~Sink()
-                {
-                }
-
-            public:
-                virtual void Completed(const uint32_t error) override
-                {
-                    _parent.Completed(error);
-                }
-
-            private:
-                GATTRemote& _parent;
-            };
 
             // UUID
             static constexpr uint16_t REPORT_UUID = 0x2a4d;
@@ -188,23 +166,15 @@ namespace Plugin {
             static constexpr uint16_t REPORT_MAP_UUID = 0x2a4b;
 
             enum state {
-                METADATA_TYPE,
-                METADATA_ID,
-                METADATA_NAME_HANDLE,
-                METADATA_NAME,
-                METADATA_DESCRIPTORS_HANDLE,
-                METADATA_DESCRIPTORS,
-                METADATA_ENABLE,
-                OPERATIONAL,
-                ERROR
+                REMOTE_OPERATIONAL,
+                REMOTE_ERROR
             };
-
+ 
             class Metadata {
-            private:
+            public:
                 Metadata(const Metadata&) = delete;
                 Metadata& operator=(const Metadata&) = delete;
 
-            public:
                 Metadata()
                     : _vendorId(0)
                     , _productId(0)
@@ -258,18 +228,16 @@ namespace Plugin {
             };
 
         public:
-            GATTRemote(const Bluetooth::Address& remoteNode, const string& hidPath)
+            GATTRemote(const Bluetooth::Address& remoteNode)
                 : Bluetooth::GATTSocket(
-                      Bluetooth::Address().AnyInterface().NodeId(Bluetooth::Address::LE_PUBLIC_ADDRESS, Bluetooth::GATTSocket::LE_ATT_CID, 0),
-                      remoteNode.NodeId(Bluetooth::Address::LE_PUBLIC_ADDRESS, Bluetooth::GATTSocket::LE_ATT_CID, 0),
+                      Bluetooth::Address().AnyInterface().NodeId(Bluetooth::Address::LE_PUBLIC_ADDRESS, LE_ATT_CID, 0),
+                      remoteNode.NodeId(Bluetooth::Address::LE_PUBLIC_ADDRESS, LE_ATT_CID, 0),
                       64)
+                , _state(REMOTE_ERROR)
                 , _inputHandler(nullptr)
-                , _hidPath(hidPath)
-                , _state(METADATA_TYPE)
                 , _metadata()
-                , _sink(*this)
+                , _command()
             {
-
                 GATTSocket::Open(1000);
             }
             virtual ~GATTRemote()
@@ -280,19 +248,27 @@ namespace Plugin {
             }
 
         private:
-            virtual uint16_t Deserialize(const uint8_t* /* dataFrame */, const uint16_t availableData) override
-            {
+            virtual uint16_t Deserialize(const uint8_t* /* dataFrame */, const uint16_t availableData) override {
                 return (availableData);
             }
             virtual void Operational() override
             {
-                _state = METADATA_TYPE;
                 Security(BT_SECURITY_MEDIUM, 0);
-                FindByType(1000, 0x0001, 0xFFFF, GATTSocket::UUID(PRIMARY_SERVICE_UUID), HID_UUID, &_sink);
+                _command.FindByType(0x0001, 0xFFFF, GATTSocket::UUID(PRIMARY_SERVICE_UUID), HID_UUID);
+                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
+                    ASSERT (&cmd == &_command);
+                    if (cmd.Error() == Core::ERROR_NONE) {
+                        Version();
+                    }
+                    else {
+                        _state = REMOTE_ERROR;
+                        TRACE(Trace::Information, (_T("The given bluetooth device is not a HID device !!")));
+                    }
+                });
             }
             virtual void Received(const uint8_t dataFrame[], const uint16_t availableData)
             {
-                if (_state == OPERATIONAL) {
+                if (_state == REMOTE_OPERATIONAL) {
                     if (dataFrame[0] == ATT_OP_HANDLE_NOTIFY) {
                         // We got a key press.. where to ?
                         printf ("Key type/mode: %d, value: %d", availableData - 2, dataFrame[2]);
@@ -300,86 +276,100 @@ namespace Plugin {
                     }
                 }
             }
-            void Completed(const uint32_t error)
+            void Version () 
             {
-                if (error == Core::ERROR_NONE) {
-                    const uint8_t* data(Result().Data()); // FAILS!!!!
-                    const uint16_t length(Result().Length());
-                    fprintf(stderr, "%s -- %d\n", __FUNCTION__, __LINE__);
-                    fflush(stderr);
-                    switch (_state) {
-                    case METADATA_TYPE: {
-                        if (Result().Empty() == false) {
-                            ReadByType(1000, 0x0001, 0xFFFF, GATTSocket::UUID(PNP_UUID), &_sink);
-                            _state = METADATA_ID;
-                        } else {
-                            _state = ERROR;
-                        }
-                        break;
-                    }
-                    case METADATA_ID: {
-                        TRACE(Trace::Information, (_T("Checking for METADATA_ID, length: %d"), length));
-                        _state = METADATA_NAME_HANDLE;
+                _command.ReadByType(0x0001, 0xFFFF, GATTSocket::UUID(PNP_UUID));
+                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
+                    ASSERT (&cmd == &_command);
+                    if ( (cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Length() >= 6) ) {
+                        const uint8_t* data(cmd.Result().Data());
                         _metadata._vendorId = (data[0] << 8) | data[1];
                         _metadata._productId = (data[2] << 8) | data[3];
                         _metadata._version = (data[4] << 8) | data[5];
-                        ReadByType(10000, 0x0001, 0xFFFF, GATTSocket::UUID(DEVICE_NAME_UUID), &_sink);
-                        break;
+
+                        Name();
                     }
-                    case METADATA_NAME_HANDLE: {
-                        Command::Response& response(Result());
-                        if (response.Next() == true) {
-                            _state = METADATA_NAME;
-                            ReadBlob(1000, response.Handle(), &_sink);
-                        } else {
-                            _state = ERROR;
-                        }
-                        break;
+                    else {
+                        _state = REMOTE_ERROR;
+                        TRACE(Trace::Information, (_T("The given bluetooth device does not report a proper Version!!")));
                     }
-                    case METADATA_NAME: {
-                        TRACE(Trace::Information, (_T("Checking for METADATA_NAME")));
-                        _state = METADATA_DESCRIPTORS_HANDLE;
-                        _metadata._name = string(reinterpret_cast<const char*>(data), length);
-                        ReadByType(10000, 0x0001, 0xFFFF, GATTSocket::UUID(REPORT_MAP_UUID), &_sink);
-                        break;
+                });
+            }
+            void Name() 
+            {
+                _command.ReadByType(0x0001, 0xFFFF, GATTSocket::UUID(DEVICE_NAME_UUID));
+                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
+                    ASSERT (&cmd == &_command);
+                    if (cmd.Error() == Core::ERROR_NONE) {
+                        _command.ReadBlob(cmd.Result().Handle());
+                        Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
+                            uint16_t length = cmd.Result().Length();
+                            if ( (cmd.Error() == Core::ERROR_NONE) && (length >= 0) ) {
+                                _metadata._name = string(reinterpret_cast<const char*>(cmd.Result().Data()), length);
+                                Descriptors();
+                            }
+                            else {
+                                _state = REMOTE_ERROR;
+                                TRACE(Trace::Information, (_T("The given bluetooth device does not report a proper Name!!")));
+                            }
+                       });
                     }
-                    case METADATA_DESCRIPTORS_HANDLE: {
-                        Command::Response& response(Result());
-                        if (response.Next() == true) {
-                            _state = METADATA_DESCRIPTORS;
-                            ReadBlob(1000, response.Handle(), &_sink);
-                        } else {
-                            _state = ERROR;
-                        }
-                        break;
+                    else {
+                        _state = REMOTE_ERROR;
+                        TRACE(Trace::Information, (_T("The given bluetooth device does not report a proper Name Handle!!")));
                     }
-                    case METADATA_DESCRIPTORS: {
-                        TRACE(Trace::Information, (_T("Checking for METADATA_DESCRIPTORS")));
-                        _state = METADATA_ENABLE;
-                        uint16_t copyLength = std::min(length, static_cast<uint16_t>(sizeof(_metadata._blob)));
-                        ::memcpy(_metadata._blob, data, copyLength);
-                        WriteByType(10000, 0x0001, 0xFFFF, GATTSocket::UUID(REPORT_UUID), GATTSocket::UUID(htobs(1)), &_sink);
-                        break;
+                });
+            }
+            void Descriptors() 
+            {
+                _command.ReadByType(0x0001, 0xFFFF, GATTSocket::UUID(REPORT_MAP_UUID));
+                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
+                    ASSERT (&cmd == &_command);
+                    if (cmd.Error() == Core::ERROR_NONE) {
+                        _command.ReadBlob(cmd.Result().Handle());
+                        Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
+                            uint16_t length = cmd.Result().Length();
+                            if ( (cmd.Error() == Core::ERROR_NONE) && (length >= 0) ) {
+                                uint16_t copyLength = std::min(length, static_cast<uint16_t>(sizeof(_metadata._blob)));
+                                ::memcpy(_metadata._blob, cmd.Result().Data(), copyLength);
+                                EnableEvents();
+                            }
+                            else {
+                                _state = REMOTE_ERROR;
+                                TRACE(Trace::Information, (_T("The given bluetooth device does not report proper descriptors!!")));
+                            }
+                       });
                     }
-                    case METADATA_ENABLE: {
+                    else {
+                        _state = REMOTE_ERROR;
+                        TRACE(Trace::Information, (_T("The given bluetooth device does not report a proper Descriptor Handles!!")));
+                    }
+                });
+            }
+            void EnableEvents() 
+            {
+                GATTSocket::UUID dataBlob(htobs(1));
+                _command.WriteByType(0x0001, 0xFFFF, GATTSocket::UUID(REPORT_UUID), dataBlob.Length(), dataBlob.Data());
+                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
+                    ASSERT (&cmd == &_command);
+                    if (cmd.Error() == Core::ERROR_NONE) {
                          _inputHandler = PluginHost::InputHandler::KeyHandler();
                          if (_inputHandler != nullptr) {
-                            _state = OPERATIONAL;
+                            _state = REMOTE_OPERATIONAL;
                          }
-                         break;
                     }
-                    default:
-                        ASSERT(false);
+                    else {
+                        _state = REMOTE_ERROR;
+                        TRACE(Trace::Information, (_T("The given bluetooth device could not enable Event reporting!!")));
                     }
-                }
+                });
             }
-
+ 
         private:
-            PluginHost::VirtualInput* _inputHandler;
-            const string _hidPath;
             state _state;
+            PluginHost::VirtualInput* _inputHandler;
             Metadata _metadata;
-            Sink _sink;
+            Command _command;
         };
 
         class Config : public Core::JSON::Container {
@@ -783,7 +773,7 @@ namespace Plugin {
         private:
             virtual void Updated(const Core::IOutbound& data, const uint32_t error_code) override
             {
-                if (data.Id() == Bluetooth::HCISocket::Command::RemoteName::ID) {
+                if (&_name == &data) {
                     // Metadata is flowing in, handle it..
                     // _cmds.name.Response().bdaddr;
                     const char* longName = reinterpret_cast<const char*>(_name.Response().name);
@@ -800,12 +790,12 @@ namespace Plugin {
                     SetName(std::string(longName, index));
                     TRACE(Trace::Information, (_T("Loaded Long Device Name: %s"),longName));
                     ClearState(METADATA);
-                } else if (data.Id() == Bluetooth::HCISocket::Command::Connect::ID) {
+                } else if (&_connect == &data) {
                     TRACE(Trace::Information, (_T("Connected")));
                     // looks like we are connected..
                     _handle = _connect.Response().handle;
                     ClearState(CONNECTING);
-                } else if (data.Id() == Bluetooth::HCISocket::Command::Disconnect::ID) {
+                } else if (&_disconnect == &data) {
                     if (error_code == Core::ERROR_NONE) {
                         TRACE(Trace::Information, (_T("Disconnected")));
                         ClearState(DISCONNECTING);
@@ -898,7 +888,7 @@ namespace Plugin {
             }
             virtual void Updated(const Core::IOutbound& data, const uint32_t error_code) override
             {
-                if (data.Id() == Bluetooth::HCISocket::Command::ConnectLE::ID) {
+                if (&data == &_connect) {
                     if ((error_code == Core::ERROR_NONE) && (_connect.Response().status == 0)) {
                         _handle = _connect.Response().handle;
                         ClearState(CONNECTING);
@@ -906,7 +896,7 @@ namespace Plugin {
                     } else {
                         TRACE(Trace::Error, (_T("Connec Failed!")));
                     }
-                } else if (data.Id() == Bluetooth::HCISocket::Command::Disconnect::ID) {
+                } else if (&data == &_disconnect) {
                     if (error_code == Core::ERROR_NONE) {
                         TRACE(Trace::Information, (_T("Disconnected")));
                         _handle = ~0;

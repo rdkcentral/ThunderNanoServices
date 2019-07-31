@@ -245,7 +245,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Unknown device.");
                     } else {
-                        _gattRemotes.emplace_back(device->Locator(), _T("void"));
+                        _gattRemotes.emplace_back(device->Locator());
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Unpaired device.");
                     }
