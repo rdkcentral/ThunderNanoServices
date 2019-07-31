@@ -448,8 +448,6 @@ namespace Plugin {
         ASSERT(_composition != nullptr);
         RPC::IStringIterator* iterator = _composition->ClientsInZorder();
 
-        ASSERT(iterator != nullptr)
-
         if (iterator != nullptr) {
             string currentElement;
             while (iterator->Next(currentElement) == true) {

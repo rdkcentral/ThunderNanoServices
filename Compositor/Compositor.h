@@ -186,17 +186,17 @@ namespace Plugin {
         /* JSON-RPC */
         void RegisterAll();
         void UnregisterAll();
-        uint32_t endpoint_totop(const JsonData::Compositor::TotopParamsInfo& params);
+        uint32_t endpoint_putontop(const JsonData::Compositor::PutontopParamsInfo& params);
         uint32_t endpoint_putbelow(const JsonData::Compositor::PutbelowParamsData& params);
-        uint32_t endpoint_kill(const JsonData::Compositor::TotopParamsInfo& params);
-        uint32_t get_clients(Core::JSON::ArrayType<Core::JSON::String>& response) const;
+        uint32_t endpoint_kill(const JsonData::Compositor::PutontopParamsInfo& params);
         uint32_t get_resolution(Core::JSON::EnumType<JsonData::Compositor::ResolutionType>& response) const;
         uint32_t set_resolution(const Core::JSON::EnumType<JsonData::Compositor::ResolutionType>& param);
+        uint32_t get_clients(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t get_zorder(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t get_geometry(const string& index, JsonData::Compositor::GeometryData& response) const;
         uint32_t set_geometry(const string& index, const JsonData::Compositor::GeometryData& param);
-        uint32_t set_visible(const string& index, const Core::JSON::Boolean& param);
-        uint32_t set_opacity(const string& index, const Core::JSON::DecUInt32& param);
+        uint32_t set_visiblity(const string& index, const Core::JSON::EnumType<JsonData::Compositor::VisiblityType>& param);
+        uint32_t set_opacity(const string& index, const Core::JSON::DecUInt8& param);
 
     private:
         mutable Core::CriticalSection _adminLock;

@@ -14,83 +14,166 @@ namespace Plugin {
 
     void Compositor::RegisterAll()
     {
-        Register<TotopParamsInfo,void>(_T("totop"), &Compositor::endpoint_totop, this);
+        Register<PutontopParamsInfo,void>(_T("putontop"), &Compositor::endpoint_putontop, this);
         Register<PutbelowParamsData,void>(_T("putbelow"), &Compositor::endpoint_putbelow, this);
-        Register<TotopParamsInfo,void>(_T("kill"), &Compositor::endpoint_kill, this);
-        Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("clients"), &Compositor::get_clients, nullptr, this);
+        Register<PutontopParamsInfo,void>(_T("kill"), &Compositor::endpoint_kill, this);
         Property<Core::JSON::EnumType<ResolutionType>>(_T("resolution"), &Compositor::get_resolution, &Compositor::set_resolution, this);
+        Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("clients"), &Compositor::get_clients, nullptr, this);
         Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("zorder"), &Compositor::get_zorder, nullptr, this);
         Property<GeometryData>(_T("geometry"), &Compositor::get_geometry, &Compositor::set_geometry, this);
-        Property<Core::JSON::Boolean>(_T("visible"), nullptr, &Compositor::set_visible, this);
-        Property<Core::JSON::DecUInt32>(_T("opacity"), nullptr, &Compositor::set_opacity, this);
+        Property<Core::JSON::EnumType<VisiblityType>>(_T("visiblity"), nullptr, &Compositor::set_visiblity, this);
+        Property<Core::JSON::DecUInt8>(_T("opacity"), nullptr, &Compositor::set_opacity, this);
     }
 
     void Compositor::UnregisterAll()
     {
         Unregister(_T("kill"));
         Unregister(_T("putbelow"));
-        Unregister(_T("totop"));
+        Unregister(_T("putontop"));
         Unregister(_T("opacity"));
-        Unregister(_T("visible"));
+        Unregister(_T("visiblity"));
         Unregister(_T("geometry"));
         Unregister(_T("zorder"));
-        Unregister(_T("resolution"));
         Unregister(_T("clients"));
+        Unregister(_T("resolution"));
     }
 
     // API implementation
     //
 
-    // Method: totop - Put client on top
+    // Method: putontop - Puts client surface on top in z-order
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
-    //  - ERROR_GENERAL: Compositor couldn't put service on top
-    uint32_t Compositor::endpoint_totop(const TotopParamsInfo& params)
+    uint32_t Compositor::endpoint_putontop(const PutontopParamsInfo& params)
     {
-        uint32_t result = Core::ERROR_NONE;
-        const string& callsign = params.Callsign.Value();
+        const string& client = params.Client.Value();
 
-        result = ToTop(callsign);
-
-         if (result != Core::ERROR_FIRST_RESOURCE_NOT_FOUND && result != Core::ERROR_NONE) {
-            TRACE_L1("Failed to put surface of client %s\n on top\n", callsign.c_str());
-            result = Core::ERROR_GENERAL;
-         }
-
-        return result;
+        return ToTop(client);
     }
 
-    // Method: putbelow - Slide <below> just behind <above>
+    // Method: putbelow - Puts client surface below another surface
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: At least one of clients not found
-    //  - ERROR_GENERAL: Compositor failed to put service on top
+    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client(s) not found
     uint32_t Compositor::endpoint_putbelow(const PutbelowParamsData& params)
     {
-        uint32_t result = Core::ERROR_NONE;
-        const string& below = params.Below.Value();
-        const string& above = params.Above.Value();
+        const string& client = params.Client.Value();
+        const string& relative = params.Relative.Value();
 
-        result = PutBelow(above, below);
+        return PutBelow(relative, client);
+    }
 
-        if (result != Core::ERROR_FIRST_RESOURCE_NOT_FOUND && result != Core::ERROR_NONE) {
-            TRACE_L1("Failed to put surface of client %s\n below %s\n", below.c_str(), above.c_str());
-            result = Core::ERROR_GENERAL;
+    // Method: kill - Kills a client
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
+    uint32_t Compositor::endpoint_kill(const PutontopParamsInfo& params)
+    {
+        const string& client = params.Client.Value();
+
+        return Kill(client);;
+    }
+
+    // Property: resolution - Screen resolution
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNKNOWN_KEY: Unknown resolution
+    uint32_t Compositor::get_resolution(Core::JSON::EnumType<ResolutionType>& response) const
+    {
+        switch (Resolution()) {
+            case Exchange::IComposition::ScreenResolution_480i:
+                response = ResolutionType::E480I;
+                break;
+            case Exchange::IComposition::ScreenResolution_480p:
+                response = ResolutionType::E480P;
+                break;
+            case Exchange::IComposition::ScreenResolution_720p:
+                response = ResolutionType::E720P60;
+                break;
+            case Exchange::IComposition::ScreenResolution_720p50Hz:
+                response = ResolutionType::E720P50;
+                break;
+            case Exchange::IComposition::ScreenResolution_1080p24Hz:
+                response = ResolutionType::E1080P24;
+                break;
+            case Exchange::IComposition::ScreenResolution_1080i50Hz:
+                response = ResolutionType::E1080I50;
+                break;
+            case Exchange::IComposition::ScreenResolution_1080p50Hz:
+                response = ResolutionType::E1080P50;
+                break;
+            case Exchange::IComposition::ScreenResolution_1080p60Hz:
+                response = ResolutionType::E1080P60;
+                break;
+            case Exchange::IComposition::ScreenResolution_2160p50Hz:
+                response = ResolutionType::E2160P50;
+                break;
+            case Exchange::IComposition::ScreenResolution_2160p60Hz:
+                response = ResolutionType::E2160P60;
+                break;
+            default:
+                response = ResolutionType::UNKNOWN;
+        }
+
+        return Core::ERROR_NONE;
+    }
+
+    // Property: resolution - Screen resolution
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - UNKNOWN_KEY: Unknown resolution
+    //  - ERROR_GENERAL: Failed to set resultion
+    uint32_t Compositor::set_resolution(const Core::JSON::EnumType<ResolutionType>& param)
+    {
+        uint32_t result = Core::ERROR_UNKNOWN_KEY;
+        Exchange::IComposition::ScreenResolution resolution = Exchange::IComposition::ScreenResolution_Unknown;
+
+        if (param != ResolutionType::UNKNOWN) {
+            switch(param) {
+            case ResolutionType::E480I:
+                resolution = Exchange::IComposition::ScreenResolution_480i;
+                break;
+            case ResolutionType::E480P:
+                resolution = Exchange::IComposition::ScreenResolution_480p;
+                break;
+            case ResolutionType::E720P60:
+                resolution = Exchange::IComposition::ScreenResolution_720p;
+                break;
+            case ResolutionType::E720P50:
+                resolution = Exchange::IComposition::ScreenResolution_720p50Hz;
+                break;
+            case ResolutionType::E1080P24:
+                resolution = Exchange::IComposition::ScreenResolution_1080p24Hz;
+                break;
+            case ResolutionType::E1080I50:
+                resolution = Exchange::IComposition::ScreenResolution_1080i50Hz;
+                break;
+            case ResolutionType::E1080P50:
+                resolution = Exchange::IComposition::ScreenResolution_1080p50Hz;
+                break;
+            case ResolutionType::E1080P60:
+                resolution = Exchange::IComposition::ScreenResolution_1080p60Hz;
+                break;
+            case ResolutionType::E2160P50:
+                resolution = Exchange::IComposition::ScreenResolution_2160p50Hz;
+                break;
+            case ResolutionType::E2160P60:
+                resolution = Exchange::IComposition::ScreenResolution_2160p60Hz;
+                break;
+            default:
+                resolution = Exchange::IComposition::ScreenResolution_Unknown;
+            }
+
+            Resolution(resolution);
+            if (Resolution() != resolution) {
+                result = Core::ERROR_GENERAL;
+            } else {
+                result = Core::ERROR_NONE;
+            }
         }
 
         return result;
-    }
-
-    // Method: kill - Use this method to kill the client
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
-    uint32_t Compositor::endpoint_kill(const TotopParamsInfo& params)
-    {
-        const string& callsign = params.Callsign.Value();
-
-        return Kill(callsign);
     }
 
     // Property: clients - List of compositor clients
@@ -103,170 +186,71 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
-    // Property: resolution - Output resolution
-    // Return codes:
-    //  - ERROR_NONE: Success
-    uint32_t Compositor::get_resolution(Core::JSON::EnumType<ResolutionType>& response) const
-    {
-        switch (Resolution()) {
-            case Exchange::IComposition::ScreenResolution_480i:
-                response = ResolutionType::SCREENRESOLUTION_480I;
-                break;
-            case Exchange::IComposition::ScreenResolution_480p:
-                response = ResolutionType::SCREENRESOLUTION_480P;
-                break;
-            case Exchange::IComposition::ScreenResolution_720p:
-                response = ResolutionType::SCREENRESOLUTION_720P;
-                break;
-            case Exchange::IComposition::ScreenResolution_720p50Hz:
-                response = ResolutionType::SCREENRESOLUTION_720P50HZ;
-                break;
-            case Exchange::IComposition::ScreenResolution_1080p24Hz:
-                response = ResolutionType::SCREENRESOLUTION_1080P24HZ;
-                break;
-            case Exchange::IComposition::ScreenResolution_1080i50Hz:
-                response = ResolutionType::SCREENRESOLUTION_1080I50HZ;
-                break;
-            case Exchange::IComposition::ScreenResolution_1080p50Hz:
-                response = ResolutionType::SCREENRESOLUTION_1080P50HZ;
-                break;
-            case Exchange::IComposition::ScreenResolution_1080p60Hz:
-                response = ResolutionType::SCREENRESOLUTION_1080P60HZ;
-                break;
-            case Exchange::IComposition::ScreenResolution_2160p50Hz:
-                response = ResolutionType::SCREENRESOLUTION_2160P50HZ;
-                break;
-            case Exchange::IComposition::ScreenResolution_2160p60Hz:
-                response = ResolutionType::SCREENRESOLUTION_2160P60HZ;
-                break;
-            default:
-                response = ResolutionType::SCREENRESOLUTION_UNKNOWN;
-        }
-
-        return Core::ERROR_NONE;
-    }
-
-    // Property: resolution - Output resolution
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_UNKNOWN_TABLE: Unknown resolution
-    uint32_t Compositor::set_resolution(const Core::JSON::EnumType<ResolutionType>& param)
-    {
-       uint32_t result = Core::ERROR_NONE;
-
-        switch(param) {
-            case ResolutionType::SCREENRESOLUTION_480I:
-                Resolution(Exchange::IComposition::ScreenResolution_480i);
-                break;
-            case ResolutionType::SCREENRESOLUTION_480P:
-                Resolution(Exchange::IComposition::ScreenResolution_480p);
-                break;
-            case ResolutionType::SCREENRESOLUTION_720P:
-                Resolution(Exchange::IComposition::ScreenResolution_720p);
-                break;
-            case ResolutionType::SCREENRESOLUTION_720P50HZ:
-                Resolution(Exchange::IComposition::ScreenResolution_720p50Hz);
-                break;
-            case ResolutionType::SCREENRESOLUTION_1080P24HZ:
-                Resolution(Exchange::IComposition::ScreenResolution_1080p24Hz);
-                break;
-            case ResolutionType::SCREENRESOLUTION_1080I50HZ:
-                Resolution(Exchange::IComposition::ScreenResolution_1080i50Hz);
-                break;
-            case ResolutionType::SCREENRESOLUTION_1080P50HZ:
-                Resolution(Exchange::IComposition::ScreenResolution_1080p50Hz);
-                break;
-            case ResolutionType::SCREENRESOLUTION_1080P60HZ:
-                Resolution(Exchange::IComposition::ScreenResolution_1080p60Hz);
-                break;
-            case ResolutionType::SCREENRESOLUTION_2160P50HZ:
-                Resolution(Exchange::IComposition::ScreenResolution_2160p50Hz);
-                break;
-            case ResolutionType::SCREENRESOLUTION_2160P60HZ:
-                Resolution(Exchange::IComposition::ScreenResolution_2160p60Hz);
-                break;
-            default:
-                result = Core::ERROR_UNKNOWN_TABLE;
-        }
-
-        return result;
-    }
-
     // Property: zorder - List of compositor clients sorted by z-order
     // Return codes:
     //  - ERROR_NONE: Success
+    //  - ERROR_GENERAL: Failed to get z-order list
     uint32_t Compositor::get_zorder(Core::JSON::ArrayType<Core::JSON::String>& response) const
     {
+        uint32_t result = Core::ERROR_NONE;
+
         ZOrder(response);
-
-        return Core::ERROR_NONE;
-    }
-
-    // Property: geometry - Property describing nanoservice window on screen
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Callsign not found
-    uint32_t Compositor::get_geometry(const string& index, GeometryData& response) const
-    {
-        uint32_t result = Core::ERROR_NONE;
-
-        if (index.empty() == false) {
-            Exchange::IComposition::Rectangle rectangle = Geometry(index);
-
-            if ((rectangle.x == 0) && (rectangle.y == 0) && (rectangle.width == 0) && (rectangle.height == 0)) {
-                result = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
-            } else {
-                response.X = rectangle.x;
-                response.Y = rectangle.y;
-                response.Width = rectangle.width;
-                response.Height = rectangle.height;
-            }
-        } else {
-            result = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
-        }
-
-        return result;
-    }
-
-    // Property: geometry - Property describing nanoservice window on screen
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Callsign not found
-    //  - ERROR_GENERAL: Failed to set/get geometry
-    uint32_t Compositor::set_geometry(const string& index, const GeometryData& param)
-    {
-        uint32_t result = Core::ERROR_NONE;
-        Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
-
-        rectangle.x = param.X.Value();
-        rectangle.y = param.Y.Value();
-        rectangle.width = param.Width.Value();
-        rectangle.height = param.Height.Value();
-
-        result = Geometry(index, rectangle);
-
-        if (result != Core::ERROR_FIRST_RESOURCE_NOT_FOUND && result != Core::ERROR_NONE) {
-            TRACE_L1("Failed to set surface geometry for client %s\n", index.c_str());
+        if ((response.Length() == 0) && (_clients.size() != 0)) {
             result = Core::ERROR_GENERAL;
         }
 
         return result;
     }
 
-    // Property: visible - Determines if client's surface is visible
+    // Property: geometry - Client surface geometry
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Callsign not found
-    uint32_t Compositor::set_visible(const string& index, const Core::JSON::Boolean& param)
+    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
+    uint32_t Compositor::get_geometry(const string& index, GeometryData& response) const
     {
-        return Visible(index, param.Value());;
+        uint32_t result = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
+
+        if (_clients.find(index) != _clients.end()) {
+            Exchange::IComposition::Rectangle rectangle = Geometry(index);
+            response.X = rectangle.x;
+            response.Y = rectangle.y;
+            response.Width = rectangle.width;
+            response.Height = rectangle.height;
+            result = Core::ERROR_NONE;
+        }
+
+        return result;
     }
 
-    // Property: opacity - Opacity of client
+    // Property: geometry - Client surface geometry
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Callsign not found
-    uint32_t Compositor::set_opacity(const string& index, const Core::JSON::DecUInt32& param)
+    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
+    uint32_t Compositor::set_geometry(const string& index, const GeometryData& param)
+    {
+        Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
+        rectangle.x = param.X.Value();
+        rectangle.y = param.Y.Value();
+        rectangle.width = param.Width.Value();
+        rectangle.height = param.Height.Value();
+
+        return Geometry(index, rectangle);
+    }
+
+    // Property: visiblity - Client surface visibility
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
+    uint32_t Compositor::set_visiblity(const string& index, const Core::JSON::EnumType<VisiblityType>& param)
+    {
+        return Visible(index, (param.Value() == VisiblityType::VISIBLE));
+    }
+
+    // Property: opacity - Client surface opacity
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
+    uint32_t Compositor::set_opacity(const string& index, const Core::JSON::DecUInt8& param)
     {
         return Opacity(index, param.Value());
     }
@@ -274,4 +258,3 @@ namespace Plugin {
 } // namespace Plugin
 
 }
-
