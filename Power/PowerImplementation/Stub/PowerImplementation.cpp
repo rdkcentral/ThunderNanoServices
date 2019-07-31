@@ -11,6 +11,7 @@ private:
 public:
     PowerImplementation()
     {
+        _currentState = PCState::On;
         TRACE(Trace::Information, (_T("PowerImplementation::Construct()")));
     }
 

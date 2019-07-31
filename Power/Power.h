@@ -3,11 +3,12 @@
 
 #include "Module.h"
 #include <interfaces/IPower.h>
+#include <interfaces/json/JsonData_Power.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class Power : public PluginHost::IPlugin, public PluginHost::IWeb {
+    class Power : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
         Power(const Power&) = delete;
         Power& operator=(const Power&) = delete;
@@ -164,12 +165,14 @@ namespace Plugin {
             , _power(nullptr)
             , _sink(this)
         {
+            RegisterAll();
         }
 #ifdef __WIN32__
 #pragma warning(default : 4355)
 #endif
         virtual ~Power()
         {
+            UnregisterAll();
         }
 
     public:
@@ -177,6 +180,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_AGGREGATE(Exchange::IPower, _power)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
@@ -210,6 +214,14 @@ namespace Plugin {
         void KeyEvent(const uint32_t keyCode);
         void StateChange(PluginHost::IShell* plugin);
         void ControlClients(Exchange::IPower::PCState state);
+
+        void RegisterAll();
+        void UnregisterAll();
+        inline bool InRange(Exchange::IPower::PCState value);
+        inline Exchange::IPower::PCState TranslateIn(JsonData::Power::StateType value);
+        inline JsonData::Power::StateType TranslateOut(Exchange::IPower::PCState value) const;
+        uint32_t endpoint_set(const JsonData::Power::PowerData& params);
+        uint32_t get_state(Core::JSON::EnumType<JsonData::Power::StateType>& response) const;
 
     private:
         Core::CriticalSection _adminLock;
