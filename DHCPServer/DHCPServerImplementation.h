@@ -492,7 +492,6 @@ namespace Plugin {
             }
             inline void Base(const std::string& serverName, const uint32_t server, const CoreMessage& message, const uint32_t router, const uint32_t dns)
             {
-
                 // Server message handling RFC 2131 section 4.3
                 _replyAddress = message.giaddr.s_addr;
                 _ciaddr = message.ciaddr.s_addr;
@@ -653,7 +652,7 @@ namespace Plugin {
             , _poolSize(poolSize)
             , _minAddress(0)
             , _maxAddress(0)
-            , _lastIssued(0)
+            , _nextFreeIp(0)
             , _server(0)
             , _router(router)
             , _dns(~0)
@@ -714,7 +713,6 @@ namespace Plugin {
         // The next three methods, Find,Find and Create need to be executed within the lock.
         inline Lease* Find(const uint32_t address)
         {
-
             LeaseList::iterator index(_leases.begin());
             while ((index != _leases.end()) && (index->Raw() != address)) {
                 index++;
@@ -743,32 +741,35 @@ namespace Plugin {
 
             // RFC 2131 section 4.3.1
             if ((result == nullptr) && (scratchPad.RequestedIP() != 0)) {
-                result = Find(scratchPad.RequestedIP());
+                // Make sure the preferred IP address is within the pool, otherwise offer a correct one anyway
+                if ((scratchPad.RequestedIP() >= _minAddress) && (scratchPad.RequestedIP() <= _maxAddress)) {
+                    result = Find(scratchPad.RequestedIP());
 
-                if (result == nullptr) {
-                    // Ip address has not been taken yet, time to "assign" it to this client.
-                    result = Create(scratchPad.Id(), scratchPad.RequestedIP());
-                } else if (result->IsExpired() == true) {
-                    result->Update(scratchPad.Id());
-                } else {
-                    // IP address is taken
-                    result = nullptr;
+                    if (result == nullptr) {
+                        // Ip address has not been taken yet, time to "assign" it to this client.
+                        result = Create(scratchPad.Id(), scratchPad.RequestedIP());
+                    } else if (result->IsExpired() == true) {
+                        result->Update(scratchPad.Id());
+                    } else {
+                        // IP address is taken
+                        result = nullptr;
+                    }
                 }
             }
 
             if (result == nullptr) {
-                // First look in previously unallocated slots
+                // First look in previously unallocated IP slots
                 uint32_t ip;
-                for (ip = (_lastIssued + 1); ip <= _maxAddress; ip++) {
+                for (ip = _nextFreeIp; ip <= _maxAddress; ip++) {
                     if (Find(ip) == nullptr) {
                         result = Create(scratchPad.Id(), ip);
-                        _lastIssued = ip;
+                        _nextFreeIp = (ip + 1);
                         break;
                     }
                 }
 
                 if (result == nullptr) {
-                    // Still not found a free slot, attempt picking up one of the expired ones
+                    // Still not found a free IP slot, attempt picking up one of the expired ones
                     for (ip = _minAddress; ip <= _maxAddress ; ip++) {
                         Lease* lease = Find(ip);
                         if ((lease != nullptr) && (lease->IsExpired() == true)) {
@@ -919,7 +920,7 @@ namespace Plugin {
         uint32_t _poolSize;
         uint32_t _minAddress;
         uint32_t _maxAddress;
-        uint32_t _lastIssued;
+        uint32_t _nextFreeIp;
         uint32_t _server;
         uint32_t _router;
         uint32_t _dns;
