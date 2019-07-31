@@ -248,7 +248,10 @@ namespace Plugin {
             // todo correct implementation
             using CliensCallsignArray = std::vector<string>;
             _adminLock.Lock();
-            CliensCallsignArray clients(_clients.size());
+
+            CliensCallsignArray clients;
+            clients.reserve(_clients.size());
+
             for (auto const& client : _clients) {
                 clients.push_back(client.first); // todo for now RPC call inside lock, later on we need some map anyway
             }
@@ -277,7 +280,6 @@ namespace Plugin {
 
         void NewClientOffered(Exchange::IComposition::IClient* client)
         {
-
             ASSERT(client != nullptr);
             if (client != nullptr) {
 

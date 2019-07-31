@@ -27,7 +27,8 @@ find_package(${NAMESPACE}Plugins REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
     Module.cpp
-    Compositor.cpp)
+    Compositor.cpp
+    CompositorJsonRpc.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
     CXX_STANDARD 11

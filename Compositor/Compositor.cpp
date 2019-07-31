@@ -16,10 +16,12 @@ namespace Plugin {
         , _service(nullptr)
         , _pid()
     {
+        RegisterAll();
     }
 
     Compositor::~Compositor()
     {
+        UnregisterAll();
     }
 
     /* virtual */ const string Compositor::Initialize(PluginHost::IShell* service)
@@ -445,8 +447,6 @@ namespace Plugin {
     {
         ASSERT(_composition != nullptr);
         RPC::IStringIterator* iterator = _composition->ClientsInZorder();
-
-        ASSERT(iterator != nullptr)
 
         if (iterator != nullptr) {
             string currentElement;

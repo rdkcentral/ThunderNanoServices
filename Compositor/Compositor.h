@@ -3,14 +3,16 @@
 
 #include "Module.h"
 #include <interfaces/IComposition.h>
+#include <interfaces/json/JsonData_Compositor.h>
+
 
 namespace WPEFramework {
 namespace Plugin {
-    class Compositor : public PluginHost::IPlugin, public PluginHost::IWeb {
+    class Compositor : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
         Compositor(const Compositor&) = delete;
         Compositor& operator=(const Compositor&) = delete;
-
+        
     private:
         class Notification : public Exchange::IComposition::INotification {
         private:
@@ -145,6 +147,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(Compositor)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(Exchange::IComposition, _composition)
         END_INTERFACE_MAP
 
@@ -178,6 +181,22 @@ namespace Plugin {
         uint32_t ToTop(const string& callsign);
         uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder);
         void ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const;
+
+    private:
+        /* JSON-RPC */
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_putontop(const JsonData::Compositor::PutontopParamsInfo& params);
+        uint32_t endpoint_putbelow(const JsonData::Compositor::PutbelowParamsData& params);
+        uint32_t endpoint_kill(const JsonData::Compositor::PutontopParamsInfo& params);
+        uint32_t get_resolution(Core::JSON::EnumType<JsonData::Compositor::ResolutionType>& response) const;
+        uint32_t set_resolution(const Core::JSON::EnumType<JsonData::Compositor::ResolutionType>& param);
+        uint32_t get_clients(Core::JSON::ArrayType<Core::JSON::String>& response) const;
+        uint32_t get_zorder(Core::JSON::ArrayType<Core::JSON::String>& response) const;
+        uint32_t get_geometry(const string& index, JsonData::Compositor::GeometryData& response) const;
+        uint32_t set_geometry(const string& index, const JsonData::Compositor::GeometryData& param);
+        uint32_t set_visiblity(const string& index, const Core::JSON::EnumType<JsonData::Compositor::VisiblityType>& param);
+        uint32_t set_opacity(const string& index, const Core::JSON::DecUInt8& param);
 
     private:
         mutable Core::CriticalSection _adminLock;
