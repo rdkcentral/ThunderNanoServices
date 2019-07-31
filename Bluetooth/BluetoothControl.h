@@ -6,7 +6,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IBluetooth {
+class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IBluetooth {
     private:
         BluetoothControl(const BluetoothControl&) = delete;
         BluetoothControl& operator=(const BluetoothControl&) = delete;
@@ -248,8 +248,18 @@ namespace Plugin {
             }
 
         private:
-            virtual uint16_t Deserialize(const uint8_t* /* dataFrame */, const uint16_t availableData) override {
-                return (availableData);
+            virtual uint16_t Deserialize(const uint8_t* dataFrame, const uint16_t availableData) override {
+                uint32_t result = 0;
+                if ( (_state != REMOTE_OPERATIONAL) || (dataFrame[0] != ATT_OP_HANDLE_NOTIFY) || (availableData <= 2) ) {
+                    result = GATTSocket::Deserialize(dataFrame, availableData);
+                }
+                else {
+                    // We got a key press.. where to ?
+                    printf ("Key type/mode: %d, value: %d", availableData - 2, dataFrame[2]);
+                    //    _device.Send(availableData - 2, &(dataFrame[2]));
+                    result = availableData;
+                }
+                return (result);
             }
             virtual void Operational() override
             {
@@ -265,16 +275,6 @@ namespace Plugin {
                         TRACE(Trace::Information, (_T("The given bluetooth device is not a HID device !!")));
                     }
                 });
-            }
-            virtual void Received(const uint8_t dataFrame[], const uint16_t availableData)
-            {
-                if (_state == REMOTE_OPERATIONAL) {
-                    if (dataFrame[0] == ATT_OP_HANDLE_NOTIFY) {
-                        // We got a key press.. where to ?
-                        printf ("Key type/mode: %d, value: %d", availableData - 2, dataFrame[2]);
-                        //    _device.Send(availableData - 2, &(dataFrame[2]));
-                    }
-                }
             }
             void Version () 
             {
@@ -300,8 +300,9 @@ namespace Plugin {
                 _command.ReadByType(0x0001, 0xFFFF, GATTSocket::UUID(DEVICE_NAME_UUID));
                 Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
                     ASSERT (&cmd == &_command);
-                    if (cmd.Error() == Core::ERROR_NONE) {
-                        _command.ReadBlob(cmd.Result().Handle());
+                    Command::Response& response (_command.Result());
+                    if ( (cmd.Error() == Core::ERROR_NONE) && (response.Next() == true) ) {
+                        _command.ReadBlob(response.Handle());
                         Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
                             uint16_t length = cmd.Result().Length();
                             if ( (cmd.Error() == Core::ERROR_NONE) && (length >= 0) ) {
@@ -325,8 +326,9 @@ namespace Plugin {
                 _command.ReadByType(0x0001, 0xFFFF, GATTSocket::UUID(REPORT_MAP_UUID));
                 Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
                     ASSERT (&cmd == &_command);
-                    if (cmd.Error() == Core::ERROR_NONE) {
-                        _command.ReadBlob(cmd.Result().Handle());
+                    Command::Response& response (_command.Result());
+                    if ( (cmd.Error() == Core::ERROR_NONE) && (response.Next() == true) ) {
+                        _command.ReadBlob(response.Handle());
                         Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
                             uint16_t length = cmd.Result().Length();
                             if ( (cmd.Error() == Core::ERROR_NONE) && (length >= 0) ) {
