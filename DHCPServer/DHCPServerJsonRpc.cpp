@@ -70,11 +70,7 @@ namespace Plugin {
             auto server(_servers.find(interface));
             if (server != _servers.end()) {
                 if (server->second.IsActive() == false) {
-                    if (server->second.Open() == Core::ERROR_NONE) {
-                        result = Core::ERROR_NONE;
-                    } else {
-                        result = Core::ERROR_GENERAL;
-                    }
+                    result = server->second.Open();
                 }
                 else {
                     result = Core::ERROR_ILLEGAL_STATE;
@@ -100,11 +96,7 @@ namespace Plugin {
             auto server(_servers.find(interface));
             if (server != _servers.end()) {
                 if (server->second.IsActive() == true) {
-                    if (server->second.Close() == Core::ERROR_NONE) {
-                        result = Core::ERROR_NONE;
-                    } else {
-                        result = Core::ERROR_GENERAL;
-                    }
+                    result = server->second.Close();
                 } else {
                     result = Core::ERROR_ILLEGAL_STATE;
                 }
