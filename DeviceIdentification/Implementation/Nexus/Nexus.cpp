@@ -1,4 +1,4 @@
-#include "../IdentityProvider.h"
+#include "../../IdentityProvider.h"
 
 #include <nexus_config.h>
 #include <nxclient.h>
