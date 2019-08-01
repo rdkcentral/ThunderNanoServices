@@ -21,7 +21,7 @@ namespace Plugin {
         _skipURL = _service->WebPrefix().length();
         Config config;
         config.FromString(_service->ConfigLine());
-        unsigned int driverCode = ::contruct_bluetooth_driver(_service->ConfigLine().c_str());
+        unsigned int driverCode = ::construct_bluetooth_driver(_service->ConfigLine().c_str());
 
         // First see if we can bring up the Driver....
         if (driverCode != 0) {
