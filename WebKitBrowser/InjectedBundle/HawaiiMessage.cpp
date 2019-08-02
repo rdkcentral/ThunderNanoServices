@@ -89,22 +89,22 @@ namespace Amazon {
         JSObjectRef _jsListener;
     };
 
-    class RegisterMessageListener {
+    class registerMessageListener {
     public:
-        RegisterMessageListener() = default;
-        ~RegisterMessageListener() = default;
+        registerMessageListener() = default;
+        ~registerMessageListener() = default;
 
         JSValueRef HandleMessage(JSContextRef context, JSObjectRef,
                                  JSObjectRef, size_t argumentCount, const JSValueRef arguments[], JSValueRef*)
         {
             if (argumentCount != 1) {
-                TRACE(Trace::Information, (_T("Hawaii::RegisterMessageListener expects 1 argument")));
+                TRACE(Trace::Information, (_T("Hawaii::registerMessageListener expects 1 argument")));
             }
             else {
                 JSObjectRef jsListener = JSValueToObject(context, arguments[0], nullptr);
         
                 if (!JSObjectIsFunction(context, jsListener)) {
-                    TRACE(Trace::Information, (_T("Hawaii::RegisterMessageListener expects a funtion argument")));
+                    TRACE(Trace::Information, (_T("Hawaii::registerMessageListener expects a funtion argument")));
                 }
                 else {
                     AmazonPlayer::Instance().RegisterMessageListener(context, jsListener);
@@ -115,20 +115,20 @@ namespace Amazon {
         }
     };
 
-    class SendMessage {
+    class sendMessage {
     public:
-        SendMessage() = default;
-        ~SendMessage() = default;
+        sendMessage() = default;
+        ~sendMessage() = default;
 
         JSValueRef HandleMessage(JSContextRef context, JSObjectRef,
                                  JSObjectRef, size_t argumentCount, const JSValueRef arguments[], JSValueRef*)
         {
             if (argumentCount != 1) {
-                TRACE(Trace::Information, (_T("Hawaii::SendMessage expects one argument")));
+                TRACE(Trace::Information, (_T("Hawaii::sendMessage expects one argument")));
                 std::cerr << "sendMessage expects one argument" << std::endl;
             }
             else if (!JSValueIsString(context, arguments[0])) {
-                TRACE(Trace::Information, (_T("Hawaii::SendMessage expects a string argument")));
+                TRACE(Trace::Information, (_T("Hawaii::sendMessage expects a string argument")));
             }
             else {
                 JSStringRef jsString = JSValueToStringCopy(context, arguments[0], nullptr);
@@ -137,7 +137,7 @@ namespace Amazon {
 
                 JSStringGetUTF8CString(jsString, stringBuffer, bufferSize);
 
-                TRACE(Trace::Information, (_T("Hawaii::SendMessage(%s)"), stringBuffer));
+                //TRACE(Trace::Information, (_T("Hawaii::sendMessage(%s)"), stringBuffer));
 
                 AmazonPlayer::Instance().SendMessage(stringBuffer);
 
@@ -148,8 +148,8 @@ namespace Amazon {
         }
     };
 
-    static JavaScriptFunctionType<RegisterMessageListener> _registerInstance(_T("hawaii"));
-    static JavaScriptFunctionType<SendMessage> _sendInstance(_T("hawaii"));
+    static JavaScriptFunctionType<registerMessageListener> _registerInstance(_T("hawaii"));
+    static JavaScriptFunctionType<sendMessage> _sendInstance(_T("hawaii"));
 
 } // namespace Amazon
 } // namespace JavaScript
