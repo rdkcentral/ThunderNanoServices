@@ -81,6 +81,11 @@ if(PLUGIN_WEBKITBROWSER_YOUTUBE)
     write_config( YouTube )
 endif()
 
+# amazon configuration
+if(PLUGIN_WEBKITBROWSER_AMAZON)
+    write_config( Amazon )
+endif()
+
 # Applications instance configuration
 if(PLUGIN_WEBKITBROWSER_APPS)
     write_config( Apps )
