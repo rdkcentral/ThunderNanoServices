@@ -382,7 +382,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         public:
             Config()
                 : Core::JSON::Container()
-                , Interface(HCI_DEV_NONE)
+                , Interface(0)
             {
                 Add(_T("interface"), &Interface);
             }
@@ -780,10 +780,12 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                     // _cmds.name.Response().bdaddr;
                     const char* longName = reinterpret_cast<const char*>(_name.Response().name);
                     uint8_t index = 0;
+                    printf("UPDATED => ");
                     while (index < HCI_MAX_NAME_LENGTH) {
                         printf("%c", ::isprint(longName[index]) ? longName[index] : '.');
                         index++;
                     }
+                    printf("\n");
                     index = 0;
                     while ((index < HCI_MAX_NAME_LENGTH) && (::isprint(longName[index]) != 0)) {
                         index++;
@@ -1023,6 +1025,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         std::list<DeviceImpl*> _devices;
         std::list<IBluetooth::INotification*> _observers;
         std::list<GATTRemote> _gattRemotes;
+        Config _config;
 
         static Bluetooth::HCISocket _administrator;
     };

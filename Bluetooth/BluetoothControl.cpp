@@ -15,30 +15,28 @@ namespace Plugin {
         string result;
 
         ASSERT(_service == nullptr);
-        ASSERT(_driver == nullptr);
 
         _service = service;
         _skipURL = _service->WebPrefix().length();
-        Config config;
-        config.FromString(_service->ConfigLine());
-        unsigned int driverCode = ::construct_bluetooth_driver(_service->ConfigLine().c_str());
+        _config.FromString(_service->ConfigLine());
+        const char* driverMessage = ::construct_bluetooth_driver(_service->ConfigLine().c_str());
 
         // First see if we can bring up the Driver....
-        if (driverCode != 0) {
-            result = _T("Could not load the Bluetooth Driver.");
+        if (driverMessage != nullptr) {
+            result = Core::ToString(driverMessage);
         } else if (_administrator.IsOpen() == true) {
             SYSLOG(Logging::Startup, (_T("Bluetooth Control connection is already open.")));
         }
         else {
-            _administrator.LocalNode(Core::NodeId(config.Interface.Value(), HCI_CHANNEL_CONTROL));
-           
-            if (_administrator.Open(Core::infinite) != Core::ERROR_NONE) {
-                result = "Could not open the Bluetooth Administrator channel";
-            } else if (_administrator.Up() == false) {
+            _administrator.LocalNode(Core::NodeId(HCI_DEV_NONE, HCI_CHANNEL_CONTROL));
+
+            if (Bluetooth::HCISocket::Up(_config.Interface.Value()) == false) {
                 result = "Failed to bring up the Bluetooth interface";
+            } else if (_administrator.Open(Core::infinite) != Core::ERROR_NONE) {
+                result = "Could not open the Bluetooth Administrator channel";
             } else if (_administrator.Config(true, true, true, true, true, true) != Core::ERROR_NONE) {
                 result = "Failed to configure the Bluetooth interface";
-            } else if (_btAddress.Default() == false) {
+            } else if (_btAddress.Default(_config.Interface.Value()) == false) {
                 result = "Could not get the default Bluetooth address";
             } else if (_application.Open(_btAddress) != Core::ERROR_NONE) {
                 result = "Could not open the Bluetooth Application channel";
@@ -46,10 +44,12 @@ namespace Plugin {
                 result = "Could not listen to advertisements on the Application channel";
             }
         }
-        if ((driverCode == 0) && (result.empty() == false)) {
-            _administrator.Down();
+        if ((driverMessage == nullptr) && (result.empty() == false)) {
+            Bluetooth::HCISocket::Down(_config.Interface.Value());
             _administrator.Close(Core::infinite);
+            printf("Going down step driver..\n");
             ::destruct_bluetooth_driver();
+            printf("We are down !!!!\n");
         }
         return result;
     }
@@ -57,13 +57,12 @@ namespace Plugin {
     /*virtual*/ void BluetoothControl::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
-        ASSERT(_driver != nullptr);
 
         // Deinitialize what we initialized..
         _service = nullptr;
 
         // We bring the interface up, so we should bring it down as well..
-        _administrator.Down();
+        Bluetooth::HCISocket::Down(_config.Interface.Value());
         _administrator.Close(Core::infinite);
         ::destruct_bluetooth_driver();
     }
