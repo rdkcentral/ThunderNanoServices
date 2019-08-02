@@ -34,7 +34,7 @@ namespace Plugin {
 
                 _minAddress = ((address & (~mask)) + (_poolStart & mask));
                 _maxAddress = ((address & (~mask)) + ((_poolStart + _poolSize) & mask));
-                _lastIssued = _minAddress;
+                _nextFreeIp = _minAddress;
 
                 if (_router != static_cast<uint32_t>(~0)) {
                     if (_router == 0) {

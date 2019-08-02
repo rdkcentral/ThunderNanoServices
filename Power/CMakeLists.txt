@@ -9,9 +9,11 @@ find_package(NEXUS REQUIRED)
 find_package(NXCLIENT REQUIRED)
 find_package(BcmPowerManager REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
     Power.cpp
+    PowerJsonRpc
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
@@ -37,6 +39,11 @@ else()
     message("Building the STUB....")
     target_sources(${MODULE_NAME} PRIVATE PowerImplementation/Stub/PowerImplementation.cpp)
 endif ()
+
+target_link_libraries(${MODULE_NAME} 
+    PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 if (BCM_PM_FOUND)
     set(POWER_LIBS -Wl,--whole-archive ${BCM_PM_LIBRARIES} -Wl,--no-whole-archive)

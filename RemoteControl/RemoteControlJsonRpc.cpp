@@ -15,33 +15,33 @@ namespace Plugin {
 
     void RemoteControl::RegisterAll()
     {
-        Register<KeyInfo,KeyResultData>(_T("key"), &RemoteControl::endpoint_key, this);
-        Register<KeyInfo,void>(_T("delete"), &RemoteControl::endpoint_delete, this);
-        Register<RcinfoInfo,void>(_T("modify"), &RemoteControl::endpoint_modify, this);
-        Register<DeviceInfo,void>(_T("pair"), &RemoteControl::endpoint_pair, this);
+        Register<KeyobjInfo,KeyResultData>(_T("key"), &RemoteControl::endpoint_key, this);
+        Register<KeyobjInfo,void>(_T("send"), &RemoteControl::endpoint_send, this);
+        Register<KeyobjInfo,void>(_T("press"), &RemoteControl::endpoint_press, this);
+        Register<KeyobjInfo,void>(_T("release"), &RemoteControl::endpoint_release, this);
+        Register<RcobjInfo,void>(_T("add"), &RemoteControl::endpoint_add, this);
+        Register<RcobjInfo,void>(_T("modify"), &RemoteControl::endpoint_modify, this);
+        Register<KeyobjInfo,void>(_T("delete"), &RemoteControl::endpoint_delete, this);
+        Register<LoadParamsInfo,void>(_T("load"), &RemoteControl::endpoint_load, this);
+        Register<LoadParamsInfo,void>(_T("save"), &RemoteControl::endpoint_save, this);
+        Register<LoadParamsInfo,void>(_T("pair"), &RemoteControl::endpoint_pair, this);
         Register<UnpairParamsData,void>(_T("unpair"), &RemoteControl::endpoint_unpair, this);
-        Register<RcinfoInfo,void>(_T("send"), &RemoteControl::endpoint_send, this);
-        Register<RcinfoInfo,void>(_T("press"), &RemoteControl::endpoint_press, this);
-        Register<RcinfoInfo,void>(_T("release"), &RemoteControl::endpoint_release, this);
-        Register<DeviceInfo,void>(_T("save"), &RemoteControl::endpoint_save, this);
-        Register<DeviceInfo,void>(_T("load"), &RemoteControl::endpoint_load, this);
-        Register<RcinfoInfo,void>(_T("add"), &RemoteControl::endpoint_add, this);
         Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("devices"), &RemoteControl::get_devices, nullptr, this);
         Property<DeviceData>(_T("device"), &RemoteControl::get_device, nullptr, this);
     }
 
     void RemoteControl::UnregisterAll()
     {
-        Unregister(_T("add"));
-        Unregister(_T("load"));
+        Unregister(_T("unpair"));
+        Unregister(_T("pair"));
         Unregister(_T("save"));
+        Unregister(_T("load"));
+        Unregister(_T("delete"));
+        Unregister(_T("modify"));
+        Unregister(_T("add"));
         Unregister(_T("release"));
         Unregister(_T("press"));
         Unregister(_T("send"));
-        Unregister(_T("unpair"));
-        Unregister(_T("pair"));
-        Unregister(_T("modify"));
-        Unregister(_T("delete"));
         Unregister(_T("key"));
         Unregister(_T("device"));
         Unregister(_T("devices"));
@@ -111,9 +111,6 @@ namespace Plugin {
     // API implementation
     //
 
-   // Property: devices - Names of all available devices
-   // Return codes:
-   //  - ERROR_NONE: Success
    uint32_t RemoteControl::get_devices(Core::JSON::ArrayType<Core::JSON::String>& response) const
    {
        std::list<string>::const_iterator index(_virtualDevices.begin());
@@ -134,17 +131,10 @@ namespace Plugin {
            newElement = (*remoteDevices)->Name();
            response.Add(newElement);
        }
-       return (Core::ERROR_NONE);
 
        return Core::ERROR_NONE;
    }
 
-   // Property: device - Metadata of specific devices
-   // Return codes:
-   //  - ERROR_NONE: Success
-   //  - ERROR_GENERAL: Virtual device is loaded
-   //  - ERROR_UNAVAILABLE: Unknown device
-   //  - ERROR_BAD_REQUEST: Bad JSON param data format
    uint32_t RemoteControl::get_device(const string& index, DeviceData& response) const
    {
        uint32_t result = Core::ERROR_NONE;
@@ -162,7 +152,6 @@ namespace Plugin {
 
                    while (remoteDevices.Next() == true) {
                        if ((*remoteDevices)->Name() == index) {
-                           response.Name = (*remoteDevices)->Name();
                            response.Metadata = (*remoteDevices)->MetaData();
                            break;
                        }
@@ -174,13 +163,11 @@ namespace Plugin {
        } else {
            result = Core::ERROR_BAD_REQUEST;
        }
-       return result;
 
-       return Core::ERROR_NONE;
+       return result;
    }
 
-    // Key action.
-    uint32_t RemoteControl::endpoint_key(const KeyInfo& params, KeyResultData& response)
+    uint32_t RemoteControl::endpoint_key(const KeyobjInfo& params, KeyResultData& response)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -193,7 +180,9 @@ namespace Plugin {
                 if (codeElements != nullptr) {
                     response.Code = params.Code.Value();
                     response.Key = codeElements->Code;
-                    response.Modifiers = Modifiers(codeElements->Modifiers);
+                    if (codeElements->Modifiers != 0) {
+                        response.Modifiers = Modifiers(codeElements->Modifiers);
+                    }
                 } else {
                     result = Core::ERROR_UNKNOWN_KEY;
                 }
@@ -206,8 +195,7 @@ namespace Plugin {
         return result;
     }
 
-    // Key mapping actions.
-    uint32_t RemoteControl::endpoint_delete(const KeyInfo& params)
+    uint32_t RemoteControl::endpoint_delete(const KeyobjInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -230,8 +218,7 @@ namespace Plugin {
         return result;
     }
 
-    // Key mapping actions.
-    uint32_t RemoteControl::endpoint_modify(const RcinfoInfo& params)
+    uint32_t RemoteControl::endpoint_modify(const RcobjInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -251,8 +238,7 @@ namespace Plugin {
         return result;
     }
 
-    // Pairing device.
-    uint32_t RemoteControl::endpoint_pair(const DeviceInfo& params)
+    uint32_t RemoteControl::endpoint_pair(const LoadParamsInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -270,7 +256,6 @@ namespace Plugin {
         return result;
     }
 
-    // Pairing device.
     uint32_t RemoteControl::endpoint_unpair(const UnpairParamsData& params)
     {
         uint32_t result = Core::ERROR_NONE;
@@ -289,12 +274,11 @@ namespace Plugin {
         return result;
     }
 
-    // Key mapping actions.
-    uint32_t RemoteControl::endpoint_send(const RcinfoInfo& params)
+    uint32_t RemoteControl::endpoint_send(const KeyobjInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
-        if ((params.Device.IsSet() == true) && (params.Code.IsSet() == true) && (params.Code.Value() != 0) && (params.Key.IsSet()) && (params.Modifiers.IsSet())) {
+        if ((params.Device.IsSet() == true) && (params.Code.IsSet() == true) && (params.Code.Value() != 0)) {
             if ((IsVirtualDevice(params.Device.Value()) == true) || (IsPhysicalDevice(params.Device.Value()) == true)) {
                 result = KeyEvent(true, params.Code.Value(), params.Device.Value());
                 if (result == Core::ERROR_NONE) {
@@ -309,8 +293,7 @@ namespace Plugin {
         return result;
     }
 
-    // Key mapping actions.
-    uint32_t RemoteControl::endpoint_press(const RcinfoInfo& params)
+    uint32_t RemoteControl::endpoint_press(const KeyobjInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -326,12 +309,11 @@ namespace Plugin {
         return result;
     }
 
-    // Key mapping actions.
-    uint32_t RemoteControl::endpoint_release(const RcinfoInfo& params)
+    uint32_t RemoteControl::endpoint_release(const KeyobjInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
-        if ((params.Device.IsSet() == true) && (params.Code.IsSet() == true) && (params.Code.Value() != 0) && (params.Key.IsSet()) && (params.Modifiers.IsSet())) {
+        if ((params.Device.IsSet() == true) && (params.Code.IsSet() == true) && (params.Code.Value() != 0)) {
             if ((IsVirtualDevice(params.Device.Value()) == true) || (IsPhysicalDevice(params.Device.Value()) == true)) {
                 result = KeyEvent(false, params.Code.Value(), params.Device.Value());
             } else {
@@ -343,8 +325,7 @@ namespace Plugin {
         return result;
     }
 
-    // Key mapping actions.
-    uint32_t RemoteControl::endpoint_save(const DeviceInfo& params)
+    uint32_t RemoteControl::endpoint_save(const LoadParamsInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -375,8 +356,7 @@ namespace Plugin {
         return result;
     }
 
-    // Key mapping actions.
-    uint32_t RemoteControl::endpoint_load(const DeviceInfo& params)
+    uint32_t RemoteControl::endpoint_load(const LoadParamsInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -400,11 +380,10 @@ namespace Plugin {
         return result;
     }
 
-    // Key mapping actions.
-    uint32_t RemoteControl::endpoint_add(const RcinfoInfo& params)
+    uint32_t RemoteControl::endpoint_add(const RcobjInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
-        if ((params.Device.IsSet() == true) && (params.Code.IsSet() == true) && (params.Code.Value() != 0) && (params.Key.IsSet()) && (params.Modifiers.IsSet())) {
+        if ((params.Device.IsSet() == true) && (params.Code.IsSet() == true) && (params.Code.Value() != 0) && (params.Key.IsSet() == true)) {
             if ((IsVirtualDevice(params.Device.Value()) == true) || (IsPhysicalDevice(params.Device.Value()) == true)) {
                 // Load default or specific device mapping
                 PluginHost::VirtualInput::KeyMap& map(_keyHandler->Table(params.Device.Value()));

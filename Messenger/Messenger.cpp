@@ -2,24 +2,6 @@
 #include "Messenger.h"
 #include "cryptalgo/Hash.h"
 
-namespace {
-    string BufferToString(const uint8_t buffer[], size_t size)
-    {
-        ASSERT(buffer != nullptr);
-        static constexpr char hex[] = "0123456789abcdef";
-
-        string result(size * 2, hex[buffer[0] >> 4]);
-        result[1] = hex[buffer[0] & 0xF];
-
-        for (size_t i = 1, j = 2; i < size; i++) {
-            result[j++] = hex[buffer[i] >> 4];
-            result[j++] = hex[buffer[i] & 0xF];
-        }
-
-        return result;
-    }
-}
-
 namespace WPEFramework {
 
 namespace Plugin {
@@ -179,7 +161,10 @@ namespace Plugin {
         string roomIdBase = roomName + userName + timenow;
         Crypto::SHA1 digest(reinterpret_cast<const uint8_t *>(roomIdBase.c_str()), roomIdBase.length());
 
-        return BufferToString(digest.Result(), digest.Length / 2); // let's take only half of the hash
+        string roomId;
+        Core::ToHexString(digest.Result(), (digest.Length / 2), roomId); // let's take only half of the hash
+
+        return roomId;
     }
 
 } // namespace Plugin

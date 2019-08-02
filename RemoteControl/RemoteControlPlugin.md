@@ -86,16 +86,16 @@ RemoteControl interface methods:
 | Method | Description |
 | :-------- | :-------- |
 | [key](#method.key) | Gets key code details |
-| [delete](#method.delete) | Deletes a key code from the key map |
+| [send](#method.send) | Sends a key to a device (press and release) |
+| [press](#method.press) | Presses a key on a device |
+| [release](#method.release) | Releases a key on a device |
+| [add](#method.add) | Adds a key code to the key map |
 | [modify](#method.modify) | Modifies a key code in the key map |
+| [delete](#method.delete) | Deletes a key code from the key map |
+| [load](#method.load) | Re-loads the device's key map from persistent memory |
+| [save](#method.save) | Saves the device's key map into persistent path |
 | [pair](#method.pair) | Activates pairing mode of a device |
 | [unpair](#method.unpair) | Unpairs a device |
-| [send](#method.send) | Sends a key code to a device |
-| [press](#method.press) | Sends a 'Press' code to a device |
-| [release](#method.release) | Sends a 'Release' code to a device |
-| [save](#method.save) | Saves the loaded key map as *DEVICE_NAME |
-| [load](#method.load) | Re-loads *DEVICE_NAME |
-| [add](#method.add) | Adds a key code to the key map |
 
 <a name="method.key"></a>
 ## *key <sup>method</sup>*
@@ -116,9 +116,9 @@ Gets key code details.
 | :-------- | :-------- | :-------- |
 | result | object |  |
 | result.code | number | Key code |
-| result.key | number | Key ingest code |
-| result.modifiers | array |  |
-| result.modifiers[#] | string | Key modifiers (must be one of the following: *leftshift*, *rightshift*, *leftalt*, *rightalt*, *leftctrl*, *rightctrl*) |
+| result.key | number | Key ingest value |
+| result?.modifiers | array | <sup>*(optional)*</sup> List of key modifiers |
+| result?.modifiers[#] | string | <sup>*(optional)*</sup> Key modifier (must be one of the following: *leftshift*, *rightshift*, *leftalt*, *rightalt*, *leftctrl*, *rightctrl*) |
 
 ### Errors
 
@@ -156,6 +156,280 @@ Gets key code details.
             "leftshift"
         ]
     }
+}
+```
+<a name="method.send"></a>
+## *send <sup>method</sup>*
+
+Sends a key to a device (press and release).
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.device | string | Device name |
+| params.code | number | Key code |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
+| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
+| 28 | ```ERROR_UNKNOWN_TABLE``` | Key map table does not exist |
+| 36 | ```ERROR_ALREADY_RELEASED``` | Key is already released |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "RemoteControl.1.send", 
+    "params": {
+        "device": "DevInput", 
+        "code": 1
+    }
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": null
+}
+```
+<a name="method.press"></a>
+## *press <sup>method</sup>*
+
+Presses a key on a device.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.device | string | Device name |
+| params.code | number | Key code |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
+| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
+| 28 | ```ERROR_UNKNOWN_TABLE``` | Key map table does not exist |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "RemoteControl.1.press", 
+    "params": {
+        "device": "DevInput", 
+        "code": 1
+    }
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": null
+}
+```
+<a name="method.release"></a>
+## *release <sup>method</sup>*
+
+Releases a key on a device.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.device | string | Device name |
+| params.code | number | Key code |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
+| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
+| 28 | ```ERROR_UNKNOWN_TABLE``` | Key map table does not exist |
+| 36 | ```ERROR_ALREADY_RELEASED``` | Key is already released |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "RemoteControl.1.release", 
+    "params": {
+        "device": "DevInput", 
+        "code": 1
+    }
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": null
+}
+```
+<a name="method.add"></a>
+## *add <sup>method</sup>*
+
+Adds a key code to the key map.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.device | string | Device name |
+| params.code | number | Key code |
+| params.key | number | Key ingest value |
+| params?.modifiers | array | <sup>*(optional)*</sup> List of key modifiers |
+| params?.modifiers[#] | string | <sup>*(optional)*</sup> Key modifier (must be one of the following: *leftshift*, *rightshift*, *leftalt*, *rightalt*, *leftctrl*, *rightctrl*) |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
+| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Code already exists |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "RemoteControl.1.add", 
+    "params": {
+        "device": "DevInput", 
+        "code": 1, 
+        "key": 103, 
+        "modifiers": [
+            "leftshift"
+        ]
+    }
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": null
+}
+```
+<a name="method.modify"></a>
+## *modify <sup>method</sup>*
+
+Modifies a key code in the key map.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.device | string | Device name |
+| params.code | number | Key code |
+| params.key | number | Key ingest value |
+| params?.modifiers | array | <sup>*(optional)*</sup> List of key modifiers |
+| params?.modifiers[#] | string | <sup>*(optional)*</sup> Key modifier (must be one of the following: *leftshift*, *rightshift*, *leftalt*, *rightalt*, *leftctrl*, *rightctrl*) |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
+| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "RemoteControl.1.modify", 
+    "params": {
+        "device": "DevInput", 
+        "code": 1, 
+        "key": 103, 
+        "modifiers": [
+            "leftshift"
+        ]
+    }
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": null
 }
 ```
 <a name="method.delete"></a>
@@ -209,10 +483,10 @@ Deletes a key code from the key map.
     "result": null
 }
 ```
-<a name="method.modify"></a>
-## *modify <sup>method</sup>*
+<a name="method.load"></a>
+## *load <sup>method</sup>*
 
-Modifies a key code in the key map.
+Re-loads the device's key map from persistent memory.
 
 ### Parameters
 
@@ -220,10 +494,6 @@ Modifies a key code in the key map.
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.device | string | Device name |
-| params.code | number | Key code |
-| params.key | number | Key ingest code |
-| params.modifiers | array |  |
-| params.modifiers[#] | string | Key modifiers (must be one of the following: *leftshift*, *rightshift*, *leftalt*, *rightalt*, *leftctrl*, *rightctrl*) |
 
 ### Result
 
@@ -236,8 +506,10 @@ Modifies a key code in the key map.
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
+| 1 | ```ERROR_GENERAL``` | File does not exist |
 | 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Illegal state |
+| 6 | ```ERROR_OPENING_FAILED``` | Opening failed |
 
 ### Example
 
@@ -247,14 +519,59 @@ Modifies a key code in the key map.
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "RemoteControl.1.modify", 
+    "method": "RemoteControl.1.load", 
     "params": {
-        "device": "DevInput", 
-        "code": 1, 
-        "key": 103, 
-        "modifiers": [
-            "leftshift"
-        ]
+        "device": "DevInput"
+    }
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": null
+}
+```
+<a name="method.save"></a>
+## *save <sup>method</sup>*
+
+Saves the device's key map into persistent path.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.device | string | Device name |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
+| 1 | ```ERROR_GENERAL``` | File is not created |
+| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Illegal state |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "RemoteControl.1.save", 
+    "params": {
+        "device": "DevInput"
     }
 }
 ```
@@ -327,7 +644,7 @@ Unpairs a device.
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.device | string | Device name |
-| params.bindid | string | Binding id |
+| params.bindid | string | Binding ID |
 
 ### Result
 
@@ -340,7 +657,7 @@ Unpairs a device.
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 1 | ```ERROR_GENERAL``` | Failed to unpair a specific device |
+| 1 | ```ERROR_GENERAL``` | Failed to unpair the device |
 | 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
 
 ### Example
@@ -355,345 +672,6 @@ Unpairs a device.
     "params": {
         "device": "DevInput", 
         "bindid": "id"
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.send"></a>
-## *send <sup>method</sup>*
-
-Sends a key code to a device.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-| params.code | number | Key code |
-| params.key | number | Key ingest code |
-| params.modifiers | array |  |
-| params.modifiers[#] | string | Key modifiers (must be one of the following: *leftshift*, *rightshift*, *leftalt*, *rightalt*, *leftctrl*, *rightctrl*) |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
-| 28 | ```ERROR_UNKNOWN_TABLE``` | Key map table does not exist |
-| 36 | ```ERROR_ALREADY_RELEASED``` | Key is already releases |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "RemoteControl.1.send", 
-    "params": {
-        "device": "DevInput", 
-        "code": 1, 
-        "key": 103, 
-        "modifiers": [
-            "leftshift"
-        ]
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.press"></a>
-## *press <sup>method</sup>*
-
-Sends a 'Press' code to a device.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-| params.code | number | Key code |
-| params.key | number | Key ingest code |
-| params.modifiers | array |  |
-| params.modifiers[#] | string | Key modifiers (must be one of the following: *leftshift*, *rightshift*, *leftalt*, *rightalt*, *leftctrl*, *rightctrl*) |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
-| 28 | ```ERROR_UNKNOWN_TABLE``` | Key map table does not exist |
-| 36 | ```ERROR_ALREADY_RELEASED``` | Key is already releases |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "RemoteControl.1.press", 
-    "params": {
-        "device": "DevInput", 
-        "code": 1, 
-        "key": 103, 
-        "modifiers": [
-            "leftshift"
-        ]
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.release"></a>
-## *release <sup>method</sup>*
-
-Sends a 'Release' code to a device.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-| params.code | number | Key code |
-| params.key | number | Key ingest code |
-| params.modifiers | array |  |
-| params.modifiers[#] | string | Key modifiers (must be one of the following: *leftshift*, *rightshift*, *leftalt*, *rightalt*, *leftctrl*, *rightctrl*) |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
-| 28 | ```ERROR_UNKNOWN_TABLE``` | Key map table does not exist |
-| 36 | ```ERROR_ALREADY_RELEASED``` | Key is already releases |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "RemoteControl.1.release", 
-    "params": {
-        "device": "DevInput", 
-        "code": 1, 
-        "key": 103, 
-        "modifiers": [
-            "leftshift"
-        ]
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.save"></a>
-## *save <sup>method</sup>*
-
-Saves the loaded key map as *DEVICE_NAME.json* into persistent path.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 1 | ```ERROR_GENERAL``` | File is not created |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Illegal state |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "RemoteControl.1.save", 
-    "params": {
-        "device": "DevInput"
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.load"></a>
-## *load <sup>method</sup>*
-
-Re-loads *DEVICE_NAME.json* key map.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 1 | ```ERROR_GENERAL``` | File does not exist |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Illegal state |
-| 6 | ```ERROR_OPENING_FAILED``` | Opening failed |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "RemoteControl.1.load", 
-    "params": {
-        "device": "DevInput"
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": null
-}
-```
-<a name="method.add"></a>
-## *add <sup>method</sup>*
-
-Adds a key code to the key map.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-| params.code | number | Key code |
-| params.key | number | Key ingest code |
-| params.modifiers | array |  |
-| params.modifiers[#] | string | Key modifiers (must be one of the following: *leftshift*, *rightshift*, *leftalt*, *rightalt*, *leftctrl*, *rightctrl*) |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Code already exists |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "RemoteControl.1.add", 
-    "params": {
-        "device": "DevInput", 
-        "code": 1, 
-        "key": 103, 
-        "modifiers": [
-            "leftshift"
-        ]
     }
 }
 ```
@@ -730,7 +708,7 @@ Provides access to the names of all available devices.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | (property) | array | Names of all available devices |
-| (property)[#] | string | Available device name |
+| (property)[#] | string | Device name |
 
 ### Example
 
@@ -766,14 +744,15 @@ Provides access to the metadata of a specific device.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | (property) | object | Metadata of a specific device |
-| (property).name | string | Device name |
 | (property).metadata | string | Device metadata |
+
+> The *device* shall be passed as the index to the property, e.g. *RemoteControl.1.device@DevInput*.
 
 ### Errors
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 1 | ```ERROR_GENERAL``` | Virtual device is loaded |
+| 1 | ```ERROR_GENERAL``` | Metadata not supported on a virtual device |
 | 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
 | 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
 
@@ -785,7 +764,7 @@ Provides access to the metadata of a specific device.
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "RemoteControl.1.device"
+    "method": "RemoteControl.1.device@DevInput"
 }
 ```
 #### Get Response
@@ -795,7 +774,6 @@ Provides access to the metadata of a specific device.
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": {
-        "name": "DevInput", 
         "metadata": "It is based on protocol A"
     }
 }

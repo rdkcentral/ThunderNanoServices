@@ -305,17 +305,17 @@ namespace Plugin {
         void UnregisterAll();
         Core::JSON::ArrayType<Core::JSON::EnumType<JsonData::RemoteControl::ModifiersType>> Modifiers(uint16_t modifiers) const;
         uint16_t Modifiers(const Core::JSON::ArrayType<Core::JSON::EnumType<JsonData::RemoteControl::ModifiersType>>& param) const;
-        uint32_t endpoint_key(const JsonData::RemoteControl::KeyInfo& params, JsonData::RemoteControl::KeyResultData& response);
-        uint32_t endpoint_delete(const JsonData::RemoteControl::KeyInfo& params);
-        uint32_t endpoint_modify(const JsonData::RemoteControl::RcinfoInfo& params);
-        uint32_t endpoint_pair(const JsonData::RemoteControl::DeviceInfo& params);
+        uint32_t endpoint_key(const JsonData::RemoteControl::KeyobjInfo& params, JsonData::RemoteControl::KeyResultData& response);
+        uint32_t endpoint_send(const JsonData::RemoteControl::KeyobjInfo& params);
+        uint32_t endpoint_press(const JsonData::RemoteControl::KeyobjInfo& params);
+        uint32_t endpoint_release(const JsonData::RemoteControl::KeyobjInfo& params);
+        uint32_t endpoint_add(const JsonData::RemoteControl::RcobjInfo& params);
+        uint32_t endpoint_modify(const JsonData::RemoteControl::RcobjInfo& params);
+        uint32_t endpoint_delete(const JsonData::RemoteControl::KeyobjInfo& params);
+        uint32_t endpoint_load(const JsonData::RemoteControl::LoadParamsInfo& params);
+        uint32_t endpoint_save(const JsonData::RemoteControl::LoadParamsInfo& params);
+        uint32_t endpoint_pair(const JsonData::RemoteControl::LoadParamsInfo& params);
         uint32_t endpoint_unpair(const JsonData::RemoteControl::UnpairParamsData& params);
-        uint32_t endpoint_send(const JsonData::RemoteControl::RcinfoInfo& params);
-        uint32_t endpoint_press(const JsonData::RemoteControl::RcinfoInfo& params);
-        uint32_t endpoint_release(const JsonData::RemoteControl::RcinfoInfo& params);
-        uint32_t endpoint_save(const JsonData::RemoteControl::DeviceInfo& params);
-        uint32_t endpoint_load(const JsonData::RemoteControl::DeviceInfo& params);
-        uint32_t endpoint_add(const JsonData::RemoteControl::RcinfoInfo& params);
         uint32_t get_devices(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t get_device(const string& index, JsonData::RemoteControl::DeviceData& response) const;
 
