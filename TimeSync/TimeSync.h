@@ -82,12 +82,12 @@ namespace Plugin {
 
                 _client = client;
                 _client->AddRef();
+                _client->Register(this);
 
                 if (start == true) {
                     _client->Synchronize();
                 }
 
-                _client->Register(this);
             }
             void Deinitialize()
             {
