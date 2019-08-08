@@ -33,7 +33,11 @@ find_path (DSHAL_VIDEOPORT_INCLUDE_DIR NAMES dsVideoPort.h PATHS usr/include/)
 
 find_path(DSHAL_FPD_INCLUDE_DIR NAMES dsFPD.h PATHS usr/include/)
 
-find_library(DSHAL_LIB NAMES ds-hal HINTS /usr/lib /usr/local/lib ${CMAKE_INSTALL_PREFIX}/usr/lib)
+if(DSRESOLUTION_WITH_DUMMY_DSHAL) # ds-hal is build during wpeframework compilation
+    set(DSHAL_LIB ds-hal)
+else(DSRESOLUTION_WITH_DUMMY_DSHAL) # ds-hal is an external dependency
+    find_library(DSHAL_LIB NAMES ds-hal HINTS /usr/lib /usr/local/lib ${CMAKE_INSTALL_PREFIX}/usr/lib ${CMAKE_INSTALL_PREFIX}/lib)
+endif(DSRESOLUTION_WITH_DUMMY_DSHAL)
 
 include(FindPackageHandleStandardArgs)
 set (DSHAL_INCLUDE_DIRS ${DSHAL_VIDEOPORT_INCLUDE_DIR} ${DSHAL_FPD_INCLUDE_DIR} CACHE PATH "Path to header")
