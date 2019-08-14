@@ -1,7 +1,7 @@
 # ThunderNanoServices
 * Bluetooth
 * Commander
-* Compositor
+* [Compositor](Compositor/CompositorPlugin.md)
 * DeviceIdentification
 * [DeviceInfo](DeviceInfo/DeviceInfoPlugin.md)
 * [DHCPServer](DHCPServer/DHCPServerPlugin.md)
