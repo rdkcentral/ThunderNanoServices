@@ -33,38 +33,42 @@ namespace Broadcom {
         { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz, NEXUS_VideoFormat_e3840x2160p60hz }
     };
 
-    static const std::map<std::string, NEXUS_IrInputMode> irInputModeLookup = {
-        { "NEXUS_IrInputMode_eTwirpKbd", NEXUS_IrInputMode_eTwirpKbd },
-        { "NEXUS_IrInputMode_eSejin38KhzKbd", NEXUS_IrInputMode_eSejin38KhzKbd },
-        { "NEXUS_IrInputMode_eSejin56KhzKbd", NEXUS_IrInputMode_eSejin56KhzKbd },
-        { "NEXUS_IrInputMode_eRemoteA", NEXUS_IrInputMode_eRemoteA },
-        { "NEXUS_IrInputMode_eRemoteB", NEXUS_IrInputMode_eRemoteB },
-        { "NEXUS_IrInputMode_eCirGI", NEXUS_IrInputMode_eCirGI },
-        { "NEXUS_IrInputMode_eCirSaE2050", NEXUS_IrInputMode_eCirSaE2050 },
-        { "NEXUS_IrInputMode_eCirTwirp", NEXUS_IrInputMode_eCirTwirp },
-        { "NEXUS_IrInputMode_eCirSony", NEXUS_IrInputMode_eCirSony },
-        { "NEXUS_IrInputMode_eCirRecs80", NEXUS_IrInputMode_eCirRecs80 },
-        { "NEXUS_IrInputMode_eCirRc5", NEXUS_IrInputMode_eCirRc5 },
-        { "NEXUS_IrInputMode_eCirUei", NEXUS_IrInputMode_eCirUei },
-        { "NEXUS_IrInputMode_eCirRfUei", NEXUS_IrInputMode_eCirRfUei },
-        { "NEXUS_IrInputMode_eCirEchoStar", NEXUS_IrInputMode_eCirEchoStar },
-        { "NEXUS_IrInputMode_eSonySejin", NEXUS_IrInputMode_eSonySejin },
-        { "NEXUS_IrInputMode_eCirNec", NEXUS_IrInputMode_eCirNec },
-        { "NEXUS_IrInputMode_eCirRC6", NEXUS_IrInputMode_eCirRC6 },
-        { "NEXUS_IrInputMode_eCirGISat", NEXUS_IrInputMode_eCirGISat },
-        { "NEXUS_IrInputMode_eCustom", NEXUS_IrInputMode_eCustom },
-        { "NEXUS_IrInputMode_eCirDirectvUhfr", NEXUS_IrInputMode_eCirDirectvUhfr },
-        { "NEXUS_IrInputMode_eCirEchostarUhfr", NEXUS_IrInputMode_eCirEchostarUhfr },
-        { "NEXUS_IrInputMode_eCirRcmmRcu", NEXUS_IrInputMode_eCirRcmmRcu },
-        { "NEXUS_IrInputMode_eCirRstep", NEXUS_IrInputMode_eCirRstep },
-        { "NEXUS_IrInputMode_eCirXmp", NEXUS_IrInputMode_eCirXmp },
-        { "NEXUS_IrInputMode_eCirXmp2Ack", NEXUS_IrInputMode_eCirXmp2Ack },
-        { "NEXUS_IrInputMode_eCirRC6Mode0", NEXUS_IrInputMode_eCirRC6Mode0 },
-        { "NEXUS_IrInputMode_eCirRca", NEXUS_IrInputMode_eCirRca },
-        { "NEXUS_IrInputMode_eCirToshibaTC9012", NEXUS_IrInputMode_eCirToshibaTC9012 },
-        { "NEXUS_IrInputMode_eCirXip", NEXUS_IrInputMode_eCirXip },
-        { "NEXUS_IrInputMode_eMax", NEXUS_IrInputMode_eMax }
-    };
+#define BEGIN_ENUMERATOR_STRING_MAP(ENUM_TYPE, NAME) static const std::map<std::string, ENUM_TYPE> NAME = {
+#define ENTRY_ENUMERATOR_STRING_MAP(ENUM) { #ENUM, ENUM },
+#define END_ENUMERATOR_STRING_MAP(ENUM_TYPE) };
+
+    BEGIN_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode, irInputModeLookup)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eTwirpKbd)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eSejin38KhzKbd)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eSejin56KhzKbd)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eRemoteA)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eRemoteB)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirGI)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirSaE2050)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirTwirp)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirSony)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRecs80)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRc5)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirUei)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRfUei)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirEchoStar)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eSonySejin)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirNec)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRC6)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirGISat)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCustom)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirDirectvUhfr)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirEchostarUhfr)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRcmmRcu)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRstep)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirXmp)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirXmp2Ack)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRC6Mode0)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRca)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirToshibaTC9012)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirXip)
+        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eMax)
+    END_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode)
 
     /* virtual */ string Platform::Client::Name() const
     {
