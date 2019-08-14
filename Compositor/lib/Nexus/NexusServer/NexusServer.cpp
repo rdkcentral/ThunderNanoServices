@@ -33,6 +33,39 @@ namespace Broadcom {
         { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz, NEXUS_VideoFormat_e3840x2160p60hz }
     };
 
+    static const std::map<std::string, NEXUS_IrInputMode> irInputModeLookup = {
+        { "NEXUS_IrInputMode_eTwirpKbd", NEXUS_IrInputMode_eTwirpKbd },
+        { "NEXUS_IrInputMode_eSejin38KhzKbd", NEXUS_IrInputMode_eSejin38KhzKbd },
+        { "NEXUS_IrInputMode_eSejin56KhzKbd", NEXUS_IrInputMode_eSejin56KhzKbd },
+        { "NEXUS_IrInputMode_eRemoteA", NEXUS_IrInputMode_eRemoteA },
+        { "NEXUS_IrInputMode_eRemoteB", NEXUS_IrInputMode_eRemoteB },
+        { "NEXUS_IrInputMode_eCirGI", NEXUS_IrInputMode_eCirGI },
+        { "NEXUS_IrInputMode_eCirSaE2050", NEXUS_IrInputMode_eCirSaE2050 },
+        { "NEXUS_IrInputMode_eCirTwirp", NEXUS_IrInputMode_eCirTwirp },
+        { "NEXUS_IrInputMode_eCirSony", NEXUS_IrInputMode_eCirSony },
+        { "NEXUS_IrInputMode_eCirRecs80", NEXUS_IrInputMode_eCirRecs80 },
+        { "NEXUS_IrInputMode_eCirRc5", NEXUS_IrInputMode_eCirRc5 },
+        { "NEXUS_IrInputMode_eCirUei", NEXUS_IrInputMode_eCirUei },
+        { "NEXUS_IrInputMode_eCirRfUei", NEXUS_IrInputMode_eCirRfUei },
+        { "NEXUS_IrInputMode_eCirEchoStar", NEXUS_IrInputMode_eCirEchoStar },
+        { "NEXUS_IrInputMode_eSonySejin", NEXUS_IrInputMode_eSonySejin },
+        { "NEXUS_IrInputMode_eCirNec", NEXUS_IrInputMode_eCirNec },
+        { "NEXUS_IrInputMode_eCirRC6", NEXUS_IrInputMode_eCirRC6 },
+        { "NEXUS_IrInputMode_eCirGISat", NEXUS_IrInputMode_eCirGISat },
+        { "NEXUS_IrInputMode_eCustom", NEXUS_IrInputMode_eCustom },
+        { "NEXUS_IrInputMode_eCirDirectvUhfr", NEXUS_IrInputMode_eCirDirectvUhfr },
+        { "NEXUS_IrInputMode_eCirEchostarUhfr", NEXUS_IrInputMode_eCirEchostarUhfr },
+        { "NEXUS_IrInputMode_eCirRcmmRcu", NEXUS_IrInputMode_eCirRcmmRcu },
+        { "NEXUS_IrInputMode_eCirRstep", NEXUS_IrInputMode_eCirRstep },
+        { "NEXUS_IrInputMode_eCirXmp", NEXUS_IrInputMode_eCirXmp },
+        { "NEXUS_IrInputMode_eCirXmp2Ack", NEXUS_IrInputMode_eCirXmp2Ack },
+        { "NEXUS_IrInputMode_eCirRC6Mode0", NEXUS_IrInputMode_eCirRC6Mode0 },
+        { "NEXUS_IrInputMode_eCirRca", NEXUS_IrInputMode_eCirRca },
+        { "NEXUS_IrInputMode_eCirToshibaTC9012", NEXUS_IrInputMode_eCirToshibaTC9012 },
+        { "NEXUS_IrInputMode_eCirXip", NEXUS_IrInputMode_eCirXip },
+        { "NEXUS_IrInputMode_eMax", NEXUS_IrInputMode_eMax }
+    };
+
     /* virtual */ string Platform::Client::Name() const
     {
         return (::std::string(Id()));
@@ -142,7 +175,7 @@ namespace Broadcom {
     public:
         Config()
             : Core::JSON::Container()
-            , IRMode(NEXUS_IrInputMode_eCirNec)
+            , IRMode("NEXUS_IrInputMode_eCirNec")
             , Authentication(true)
             , BoxMode(~0)
             , SagePath()
@@ -177,7 +210,7 @@ namespace Broadcom {
         }
 
     public:
-        Core::JSON::DecUInt16 IRMode;
+        Core::JSON::String IRMode;
         Core::JSON::Boolean Authentication;
         Core::JSON::DecUInt8 BoxMode;
         Core::JSON::String SagePath;
@@ -421,13 +454,20 @@ namespace Broadcom {
             }
 
 #if NEXUS_HAS_IR_INPUT
-            for (unsigned int i = 0; i < NXCLIENT_MAX_SESSIONS; i++)
+            auto inputMode = irInputModeLookup.find(config.IRMode.Value());
+            if (inputMode != irInputModeLookup.end()) {
+                TRACE_L1("setting ir_input_mode to %d (%s)\n", inputMode->second, config.IRMode.Value().c_str());
+                for (unsigned int i = 0; i < NXCLIENT_MAX_SESSIONS; i++)
 #if NEXUS_PLATFORM_VERSION_MAJOR < 16 || (NEXUS_PLATFORM_VERSION_MAJOR == 16 && NEXUS_PLATFORM_VERSION_MINOR < 3)
-                _serverSettings.session[i].ir_input_mode = static_cast<NEXUS_IrInputMode>(config.IRMode.Value());
+                    _serverSettings.session[i].ir_input_mode = inputMode->second;
 #else
-                for (unsigned int irInputIndex = 0; irInputIndex < NXSERVER_IR_INPUTS; irInputIndex++)
-                    _serverSettings.session[i].ir_input.mode[irInputIndex] = static_cast<NEXUS_IrInputMode>(config.IRMode.Value());
+                    for (unsigned int irInputIndex = 0; irInputIndex < NXSERVER_IR_INPUTS; irInputIndex++) {
+                        _serverSettings.session[i].ir_input.mode[irInputIndex] = inputMode->second;
+                    }
 #endif // NEXUS_PLATFORM_VERSION_MAJOR < 17
+            } else {
+                TRACE_L1("invalid ir_input_mode from config [%s]\n", config.IRMode.Value().c_str());
+            }
 #endif // NEXUS_HAS_IR_INPUT
 
             struct nxserver_cmdline_settings cmdline_settings;
@@ -503,6 +543,7 @@ namespace Broadcom {
 
         ASSERT(_state != FAILURE);
     }
+
     uint32_t Platform::Resolution(const Exchange::IComposition::ScreenResolution format)
     {
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
