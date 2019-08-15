@@ -33,6 +33,7 @@ option(PLUGIN_SYSTEMCOMMANDS "Include SystemCommands plugin" OFF)
 option(PLUGIN_TIMESYNC "Include TimeSync plugin" OFF)
 option(PLUGIN_TRACECONTROL "Include TraceControl plugin" OFF)
 option(PLUGIN_WEBKITBROWSER "Include WebKitBrowser plugin" OFF)
+option(PLUGIN_WEBPA "Include WebPA plugin" OFF)
 option(PLUGIN_WEBPROXY "Include WebProxy plugin" OFF)
 option(PLUGIN_WEBSERVER "Include WebServer plugin" OFF)
 option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
@@ -168,6 +169,10 @@ endif()
 
 if(PLUGIN_WEBKITBROWSER)
     add_subdirectory(WebKitBrowser)
+endif()
+
+if(PLUGIN_WEBPA)
+    add_subdirectory(WebPA)
 endif()
 
 if(PLUGIN_WEBPROXY)
