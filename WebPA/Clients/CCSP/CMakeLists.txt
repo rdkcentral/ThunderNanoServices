@@ -4,7 +4,6 @@ message("Setup ${TARGET} v${VERSION}...")
 find_package(WPEFramework)
 find_package(CJSON REQUIRED)
 find_package(WDMP-C REQUIRED)
-find_package(TinyXML REQUIRED)
 find_package(LibParodus REQUIRED)
 find_package(Parodus2CCSP REQUIRED)
 
@@ -14,10 +13,6 @@ target_link_libraries(${TARGET}
     PRIVATE
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        cjson::cjson
-        wdmp_c::wdmp_c
-        tinyxml::tinyxml
-        libparodus::libparodus
         parodus2ccsp::parodus2ccsp
 )
 

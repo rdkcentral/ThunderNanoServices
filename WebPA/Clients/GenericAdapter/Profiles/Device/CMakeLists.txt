@@ -28,7 +28,6 @@ target_link_libraries(${TARGET}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         jsonrpc::jsonrpc
         procps::procps
-        ${GLIB_GIO_LIBRARIES}
         ${GLIB_LIBRARIES}
 )
 

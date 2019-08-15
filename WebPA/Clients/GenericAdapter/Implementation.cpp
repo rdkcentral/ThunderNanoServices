@@ -1,7 +1,6 @@
 #include "Module.h"
 #include <signal.h>
 #include <string>
-#include <cJSON.h>
 
 #include "Adapter.h"
 #include "Handler.h"

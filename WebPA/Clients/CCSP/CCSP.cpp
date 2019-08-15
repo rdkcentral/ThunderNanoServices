@@ -3,14 +3,12 @@
 
 #include <signal.h>
 #include <string>
-#include <cJSON.h>
 #include <interfaces/IWebPA.h>
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-#include <libparodus.h>
 int Parodus2CCSPMain();
 #ifdef __cplusplus
 }

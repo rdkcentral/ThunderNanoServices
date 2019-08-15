@@ -37,7 +37,6 @@ target_link_libraries(${TARGET}
         wdmp_c::wdmp_c
         tinyxml::tinyxml
         libparodus::libparodus
-        ${GLIB_GIO_LIBRARIES}
         ${GLIB_LIBRARIES}
 )
 

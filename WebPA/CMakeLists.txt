@@ -3,9 +3,7 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
-find_package(CJSON REQUIRED)
 find_package(WDMP-C REQUIRED)
-find_package(TinyXML REQUIRED)
 find_package(ParodusService REQUIRED)
 
 
@@ -23,9 +21,8 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ParodusService::ParodusService
-        cjson::cjson
         wdmp_c::wdmp_c
-        tinyxml::tinyxml)
+)
 
 string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
 install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
