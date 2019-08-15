@@ -1,15 +1,6 @@
 
 #include "WalDB.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-#include <wdmp-c.h>
-#ifdef __cplusplus
-}
-#endif
-
 namespace WPEFramework {
 
 WalDB::WalDB(Handler* handler)

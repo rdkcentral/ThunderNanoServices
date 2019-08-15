@@ -1,15 +1,6 @@
 #include "cJSON.h"
 #include "Notifier.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-#include <wdmp-c.h>
-#ifdef __cplusplus
-}
-#endif
-
 namespace WPEFramework {
 namespace WebPA {
 
