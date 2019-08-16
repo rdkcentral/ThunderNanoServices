@@ -32,12 +32,12 @@ public:
     ~WalDB();
 
     DBStatus LoadDB(const std::string& filename);
-    DBStatus Parameters(const std::string& paramName, std::map<std::string, std::string>& paramList) const;
+    DBStatus Parameters(const std::string& paramName, std::map<uint32_t, std::pair<std::string, std::string>>& paramList) const;
     bool IsValidParameter(const std::string& paramName, std::string& dataType) const;
     int DBHandle() { return _dbHandle; }
 
 private:
-    TiXmlNode* Parameters(TiXmlNode* pParent, const std::string& paramName, std::string& currentParam, std::map<std::string, std::string>& paramList) const;
+    TiXmlNode* Parameters(TiXmlNode* pParent, const std::string& paramName, std::string& currentParam, std::map<uint32_t, std::pair<std::string, std::string>>& paramList) const;
     void CheckforParameterMatch(TiXmlNode *pParent, const std::string& paramName, bool& pMatch, std::string& dataType) const;
     bool IsParamEndsWithInstance(const std::string& paramName) const;
     void ReplaceWithInstanceNumber(string& paramName, uint16_t instanceNumber) const;

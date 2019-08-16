@@ -49,13 +49,12 @@ const WebPAStatus Parameter::Values(const std::string& parameterName, std::vecto
     if (dbHandle) {
         if (Utils::IsWildCardParam(parameterName)) { // It is a wildcard Param
             /* Translate wildcard to list of parameters */
-            std::map<std::string, std::string> dbParamters;
+            std::map<uint32_t, std::pair<std::string, std::string>> dbParamters;
             DBStatus dbRet = _walDB->Parameters(parameterName, dbParamters);
             if (dbRet == DB_SUCCESS && dbParamters.size() > 0) {
-                std::map<string, std::string>::iterator it;
                 for (auto&  dbParamter:  dbParamters) {
-                    Variant value(Utils::ConvertToParamType(dbParamter.second));
-                    Data param(dbParamter.first, value);
+                    Variant value(Utils::ConvertToParamType(dbParamter.second.second));
+                    Data param(dbParamter.second.first, value);
 
                     _adminLock.Lock();
                     WebPAStatus ret = (WebPAStatus) Utils::ConvertFaultCodeToWPAStatus((static_cast<const Handler&>(*_handler)).Parameter(param));

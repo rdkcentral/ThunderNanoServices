@@ -114,7 +114,7 @@ bool WalDB::CheckMatchingParameter(const char* attrValue, const char* paramName,
     return status;
 }
 
-TiXmlNode* WalDB::Parameters(TiXmlNode* parent, const std::string& paramName, std::string& currentParam, std::map<std::string, std::string>& paramList) const
+TiXmlNode* WalDB::Parameters(TiXmlNode* parent, const std::string& paramName, std::string& currentParam, std::map<uint32_t, std::pair<std::string, std::string>>& paramList) const
 {
     // If parent is Null Return
     if (!parent) {
@@ -204,6 +204,7 @@ TiXmlNode* WalDB::Parameters(TiXmlNode* parent, const std::string& paramName, st
 
                             // Replace {i} with current instance number and call recursively
                             ReplaceWithInstanceNumber(currentParam, i);
+
                             sChild = Parameters(child, tempParamName, currentParam, paramList);
                             i++;
                         }
@@ -231,7 +232,7 @@ TiXmlNode* WalDB::Parameters(TiXmlNode* parent, const std::string& paramName, st
                 if (paramList.size() <= MaxNumParameters) {
                     if (currentParam.length() > 0) {
                         if (child->ToElement()->Attribute("getIdx") && strtol(child->ToElement()->Attribute("getIdx"),nullptr,10) >= 1) {
-                            paramList.insert(std::pair<string, std::string>(currentParam + child->ToElement()->FirstAttribute()->Value(), child->FirstChild()->FirstChild()->Value()));
+                            paramList.insert(std::make_pair(paramList.size(), std::make_pair(currentParam + child->ToElement()->FirstAttribute()->Value(), child->FirstChild()->FirstChild()->Value())));
                         }
                     }
                 }
@@ -244,7 +245,7 @@ TiXmlNode* WalDB::Parameters(TiXmlNode* parent, const std::string& paramName, st
     return child;
 }
 
-DBStatus WalDB::Parameters(const std::string& paramName, std::map<std::string, std::string>& paramList) const
+DBStatus WalDB::Parameters(const std::string& paramName, std::map<uint32_t, std::pair<std::string, std::string>>& paramList) const
 {
     std::string currentParam;
     std::string parameterName = paramName;
