@@ -1,7 +1,7 @@
 #pragma once
 
-#include <glib.h>
 #include <interfaces/json/JsonData_DeviceInfo.h>
+#include <list>
 #include <proc/readproc.h>
 
 #include "ProfileUtils.h"
@@ -27,6 +27,9 @@ private:
 
 private:
     class Process {
+    public:
+    typedef std::map<uint32_t, Process*> ProcessList;
+
     private:
     typedef std::map<std::string, std::pair<FuncPtr<DeviceInfo::Process>::GetFunc, FuncPtr<DeviceInfo::Process>::SetFunc>> FunctionMap;
 
@@ -38,8 +41,8 @@ private:
         virtual ~Process();
 
         static Process* Instance(uint32_t id);
-        static void CloseInstance(Process *);
-        static GList* Instances();
+        static void CloseInstance(uint32_t id);
+        static ProcessList Instances();
         static void CloseInstances();
 
         FaultCode Parameter(const std::string& name, Data& parameter, bool& changed) const;
@@ -65,8 +68,8 @@ private:
         mutable std::string _command;
         mutable std::string _state;
 
-        static GHashTable* _hashTable;
         FunctionMap _functionMap;
+        static ProcessList _processList;
     };
 
 public:

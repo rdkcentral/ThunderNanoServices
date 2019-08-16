@@ -6,7 +6,7 @@
 
 namespace WPEFramework {
 
-GHashTable* DeviceInfo::Process::_hashTable = nullptr;
+DeviceInfo::Process::ProcessList DeviceInfo::Process::_processList;
 
 DeviceInfo::Process::Process(uint32_t id)
     : _id(id)
@@ -33,50 +33,45 @@ DeviceInfo::Process::~Process()
 DeviceInfo::Process* DeviceInfo::Process::Instance(uint32_t id)
 {
     TRACE_GLOBAL(Trace::Information, (string(__FUNCTION__)));
-    DeviceInfo::Process* pRet = nullptr;
+    DeviceInfo::Process* process = nullptr;
 
-    if (_hashTable) {
-        pRet = (DeviceInfo::Process *)g_hash_table_lookup(_hashTable, (gpointer) id);
-    } else {
-        _hashTable = g_hash_table_new(nullptr, nullptr);
+    if (_processList.size() > 0) {
+        ProcessList::iterator it = _processList.find(id);
+        if (it != _processList.end()) {
+            process = it->second;
+        }
     }
 
-    if (!pRet) {
-        pRet = new DeviceInfo::Process(id);
-        g_hash_table_insert(_hashTable, (gpointer)id, pRet);
+    if (!process) {
+        process = new DeviceInfo::Process(id);
+        _processList.insert(std::make_pair(id, process));
     }
-    return pRet;
+    return process;
 }
 
-void DeviceInfo::Process::CloseInstance(DeviceInfo::Process* process)
+void DeviceInfo::Process::CloseInstance(uint32_t id)
 {
     TRACE_GLOBAL(Trace::Information, (string(__FUNCTION__)));
-    if (process) {
-        g_hash_table_remove(_hashTable, (gconstpointer)process->_id);
-        delete process;
+    auto it = _processList.find(id);
+    if (it != _processList.end()) {
+        delete it->second;
+        _processList.erase(id);
     }
 }
 
-GList* DeviceInfo::Process::Instances()
+DeviceInfo::Process::ProcessList DeviceInfo::Process::Instances()
 {
     TRACE_GLOBAL(Trace::Information, (string(__FUNCTION__)));
-    if (_hashTable)
-        return g_hash_table_get_keys(_hashTable);
-    return nullptr;
+    return _processList;
 }
 
 void DeviceInfo::Process::CloseInstances()
 {
     TRACE_GLOBAL(Trace::Information, (string(__FUNCTION__)));
-    if (_hashTable) {
-        GList* tmpList = g_hash_table_get_values (_hashTable);
-
-        while (tmpList) {
-            DeviceInfo::Process* process = (DeviceInfo::Process *)tmpList->data;
-            tmpList = tmpList->next;
-            CloseInstance(process);
-        }
+    for (auto it: _processList){
+        delete it.second;
     }
+    _processList.clear();
 }
 
 bool DeviceInfo::Process::ProcessFields(proc_t& procTask) const
@@ -278,6 +273,7 @@ DeviceInfo::~DeviceInfo()
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     _functionMap.clear();
+    Process::CloseInstances();
 }
 
 DeviceInfo* DeviceInfo::Instance()

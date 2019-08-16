@@ -3,7 +3,6 @@ set(TARGET Device)
 find_package(WPEFramework REQUIRED)
 find_package(jsonrpc REQUIRED)
 find_package(Procps REQUIRED)
-find_package(GLIB REQUIRED)
 
 file(GLOB IFACE_CONTROL_PLUGIN_INCLUDES *.h)
 
@@ -19,7 +18,6 @@ target_include_directories(${TARGET}
         ../
         ../../
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${GLIB_INCLUDE_DIRS}
 )
 
 target_link_libraries(${TARGET}
@@ -28,7 +26,6 @@ target_link_libraries(${TARGET}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         jsonrpc::jsonrpc
         procps::procps
-        ${GLIB_LIBRARIES}
 )
 
 set_target_properties(${TARGET} PROPERTIES SUFFIX ".profile")
