@@ -71,7 +71,7 @@ uint32_t Handler::Configure(PluginHost::IShell* service)
             _systemLibraries.push_back(library);
         }
     }
-    Core::JSON::ArrayType< Config::Link >::ConstIterator index (static_cast<const Config&>(config).Mapping.Elements());
+    Core::JSON::ArrayType< Config::Link >::ConstIterator index (static_cast<const Config&>(config).Profiles.Elements());
 
     while (index.Next () == true) {
         const std::string name(index.Current().ProfileControl.Value());

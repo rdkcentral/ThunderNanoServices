@@ -30,13 +30,13 @@ private:
     public:
         Config()
             : Core::JSON::Container()
-            , DataFile(_T(""))
+            , DataModelFile(_T(""))
             , ClientURL(_T("tcp://127.0.0.1:6667"))
             , ParodusURL(_T("tcp://127.0.0.1:6666"))
             , NotifyConfigFile(_T(""))
         {
-            Add(_T("datafile"), &DataFile);
-            Add(_T("clienturl"), &ClientURL);
+            Add(_T("datamodelfile"), &DataModelFile);
+            Add(_T("genericclienturl"), &ClientURL);
             Add(_T("paroduslocalurl"), &ParodusURL);
             Add(_T("notifyconfigfile"), &NotifyConfigFile);
         }
@@ -45,7 +45,7 @@ private:
         }
 
     public:
-        Core::JSON::String DataFile;
+        Core::JSON::String DataModelFile;
         Core::JSON::String ClientURL;
         Core::JSON::String ParodusURL;
         Core::JSON::String NotifyConfigFile;
@@ -117,9 +117,9 @@ public:
         ASSERT(nullptr != service);
         Config config;
         config.FromString(service->ConfigLine());
-        TRACE_GLOBAL(Trace::Information, (_T("DataFile = [%s] ParodusURL = [%s] ClientURL = [%s]"), config.DataFile.Value().c_str(), config.ParodusURL.Value().c_str(), config.ClientURL.Value().c_str()));
-        if (config.DataFile.Value().empty() == false) {
-            _dataFile = config.DataFile.Value();
+        TRACE_GLOBAL(Trace::Information, (_T("DataModelFile = [%s] ParodusURL = [%s] ClientURL = [%s]"), config.DataModelFile.Value().c_str(), config.ParodusURL.Value().c_str(), config.ClientURL.Value().c_str()));
+        if (config.DataModelFile.Value().empty() == false) {
+            _dataModelFile = config.DataModelFile.Value();
         }
         _clientURL = config.ClientURL.Value();
         _parodusURL = config.ParodusURL.Value();
@@ -148,7 +148,7 @@ public:
             _msgHandler.ConfigureProfileControllers();
 
             TRACE_GLOBAL(Trace::Information, (_T("WebPAClient LoadDataModel() : ")));
-            status = _adapter->LoadDataModel(_dataFile);
+            status = _adapter->LoadDataModel(_dataModelFile);
             if (status == true) {
                 // First connect to parodus
                 ConnectToParodus();
@@ -178,7 +178,7 @@ private:
     Core::CriticalSection _adminLock;
     NotificationCallback*  _notificationCallback;
 
-    std::string _dataFile;
+    std::string _dataModelFile;
 
     Handler _msgHandler;
     WebPA::Adapter* _adapter;

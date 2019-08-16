@@ -70,10 +70,10 @@ public:
         Config()
             : Core::JSON::Container()
             , Location()
-            , Mapping()
+            , Profiles()
         {
             Add(_T("location"), &Location);
-            Add(_T("mapping"), &Mapping);
+            Add(_T("profiles"), &Profiles);
         }
         ~Config()
         {
@@ -81,7 +81,7 @@ public:
 
     public:
         Core::JSON::String Location;
-        Core::JSON::ArrayType<Link> Mapping;
+        Core::JSON::ArrayType<Link> Profiles;
     };
 
     class NotificationCallback : public IProfileControl::ICallback {

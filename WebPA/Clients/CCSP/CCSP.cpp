@@ -38,12 +38,12 @@ private:
             , DataFile(_T(""))
             , ClientURL(_T("tcp://127.0.0.1:6667"))
             , ParodusURL(_T("tcp://127.0.0.1:6666"))
-            , CCSPConfigFile(_T("/usr/share/ccspcommonlibrary/ccsp_msg.cfg"))
+            , ConfigFile(_T("/usr/share/ccspcommonlibrary/ccsp_msg.cfg"))
         {
-            Add(_T("datafile"), &DataFile);
-            Add(_T("clienturl"), &ClientURL);
+            Add(_T("ccspdatafile"), &DataFile);
+            Add(_T("ccspclienturl"), &ClientURL);
             Add(_T("paroduslocalurl"), &ParodusURL);
-            Add(_T("ccspconfigfile"), &CCSPConfigFile);
+            Add(_T("ccspconfigfile"), &ConfigFile);
         }
         ~Config()
         {
@@ -53,7 +53,7 @@ private:
         Core::JSON::String DataFile;
         Core::JSON::String ClientURL;
         Core::JSON::String ParodusURL;
-        Core::JSON::String CCSPConfigFile;
+        Core::JSON::String ConfigFile;
     };
 
 public:
@@ -94,7 +94,7 @@ public:
             Core::SystemInfo::SetEnvironment(_T("PARODUS2CCSP_CLIENT_URL"), config.ClientURL.Value().c_str());
         }
 
-        Core::File configFile(config.CCSPConfigFile.Value());
+        Core::File configFile(config.ConfigFile.Value());
         configFile.Link(CCSPConfigLink);
 
         return (Core::ERROR_NONE);
