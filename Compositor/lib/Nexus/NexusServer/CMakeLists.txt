@@ -34,6 +34,12 @@ else()
     find_package(NXSERVER REQUIRED)
     find_package(NEXUS REQUIRED)
     find_package(NXCLIENT_LOCAL REQUIRED)
+
+    target_include_directories(${TARGET}
+        PRIVATE
+            ${LIBNXSERVER_INCLUDE_DIR}
+    )
+
     target_link_libraries(${TARGET}
         PRIVATE
             ${NAMESPACE}Core::${NAMESPACE}Core

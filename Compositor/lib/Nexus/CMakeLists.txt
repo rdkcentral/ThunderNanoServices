@@ -38,6 +38,11 @@ else()
             INCLUDE_NEXUS_SERVER
             )
 
+    target_include_directories(${TARGET}
+        PRIVATE
+            ${LIBNXSERVER_INCLUDE_DIR}
+    )
+
     target_link_libraries(${TARGET}
         PRIVATE
             ${NAMESPACE}nexusserver::${NAMESPACE}nexusserver
