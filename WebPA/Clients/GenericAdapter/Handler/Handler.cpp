@@ -201,11 +201,13 @@ IProfileControl* Handler::GetProfileController(const std::string& name)
     IProfileControl* pRet = nullptr;
 
     std::vector<std::string> paramComponents = SplitParam(name, '.');
-    std::map<const std::string, SystemProfileController>::iterator index(_systemProfileControllers.find(paramComponents[1]));
-    if (_systemProfileControllers.end() != index) {
-        pRet = index->second.control;
-    } else {
-        TRACE(Trace::Information, (_T("Could not able to find Profile controller for %s"), name.c_str()));
+    if (paramComponents.size() > 1) {
+        std::map<const std::string, SystemProfileController>::iterator index(_systemProfileControllers.find(paramComponents[1]));
+        if (_systemProfileControllers.end() != index) {
+            pRet = index->second.control;
+        } else {
+            TRACE(Trace::Information, (_T("Could not able to find Profile controller for %s"), name.c_str()));
+        }
     }
 
     return pRet;
@@ -217,11 +219,13 @@ const IProfileControl* Handler::GetProfileController(const std::string& name) co
     const IProfileControl* pRet = nullptr;
 
     std::vector<std::string> paramComponents = SplitParam(name, '.');
-    std::map<const std::string, SystemProfileController>::const_iterator index(_systemProfileControllers.find(paramComponents[1]));
-    if (_systemProfileControllers.end() != index) {
-        pRet = index->second.control;
-    } else {
-        TRACE(Trace::Information, (_T("Could not able to find Profile controller for %s"), name.c_str()));
+    if (paramComponents.size() > 1) {
+        std::map<const std::string, SystemProfileController>::const_iterator index(_systemProfileControllers.find(paramComponents[1]));
+        if (_systemProfileControllers.end() != index) {
+            pRet = index->second.control;
+        } else {
+            TRACE(Trace::Information, (_T("Could not able to find Profile controller for %s"), name.c_str()));
+        }
     }
 
     return pRet;

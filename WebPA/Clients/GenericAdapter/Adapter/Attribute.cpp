@@ -55,7 +55,7 @@ const WebPAStatus Attribute::Values(const std::string& parameterName, Data& attr
             if (!parameterName.compare(notifyParameter)) {
                 Data param(parameterName);
                 _adminLock.Lock();
-                ret = Utils::ConvertFaultCodeToWPAStatus((static_cast<const Handler&>(*_handler)).Attribute(param)); //FIXME check the iteration required for the attributes
+                ret = Utils::ConvertFaultCodeToWPAStatus((static_cast<const Handler&>(*_handler)).Attribute(param));
                 _adminLock.Unlock();
                 if (ret == WEBPA_SUCCESS) {
                     attribute = param;
@@ -81,7 +81,7 @@ WebPAStatus Attribute::Values(const std::string& parameterName, const Data& attr
         for (auto& notifyParameter: notifyParameters) {
             if (!parameterName.compare(notifyParameter)) {
                 TRACE(Trace::Information, (_T("[%s:%s:%d] Inside Values, Param:%s is found"), __FILE__, __FUNCTION__, __LINE__, parameterName.c_str()));
-                const Data param(parameterName, attribute.Value()); //FIXME check the paramter name is same as attributes as well
+                const Data param(parameterName, attribute.Value());
                 _adminLock.Lock();
                 ret = Utils::ConvertFaultCodeToWPAStatus(_handler->Attribute(param));
                 _adminLock.Unlock();

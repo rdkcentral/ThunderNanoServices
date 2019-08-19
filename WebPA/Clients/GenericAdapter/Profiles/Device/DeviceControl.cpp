@@ -96,6 +96,7 @@ FaultCode DeviceControl::Attribute(Data& parameter) const {
     NotifierMap::const_iterator notifier = _notifier.find(parameter.Name());
     if (notifier != _notifier.end()) {
          parameter.Value(notifier->second);
+         ret = FaultCode::NoFault;
     } else {
         ret = FaultCode::InvalidParameterName;
     }

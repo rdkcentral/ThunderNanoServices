@@ -324,6 +324,7 @@ WebPAStatus Adapter::Helper::GetAttributes(const req_struct*& reqObj, res_struct
 
     resObj->retStatus = (WDMP_STATUS*) calloc(reqObj->u.getReq->paramCnt, sizeof(WDMP_STATUS));
     ASSERT(resObj->retStatus);
+
     AllocateParamResponse(reqObj, resObj, reqObj->u.getReq); // Need to be allocated for error case as well, since the wdmp-c lib is not validating the nullptr before accessing the members.
 
     std::vector<std::string> parameterNames;
