@@ -33,43 +33,6 @@ namespace Broadcom {
         { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz, NEXUS_VideoFormat_e3840x2160p60hz }
     };
 
-#define BEGIN_ENUMERATOR_STRING_MAP(ENUM_TYPE, NAME) static const std::map<std::string, ENUM_TYPE> NAME = {
-#define ENTRY_ENUMERATOR_STRING_MAP(ENUM) { #ENUM, ENUM },
-#define END_ENUMERATOR_STRING_MAP(ENUM_TYPE) };
-
-    BEGIN_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode, irInputModeLookup)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eTwirpKbd)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eSejin38KhzKbd)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eSejin56KhzKbd)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eRemoteA)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eRemoteB)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirGI)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirSaE2050)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirTwirp)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirSony)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRecs80)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRc5)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirUei)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRfUei)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirEchoStar)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eSonySejin)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirNec)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRC6)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirGISat)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCustom)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirDirectvUhfr)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirEchostarUhfr)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRcmmRcu)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRstep)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirXmp)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirXmp2Ack)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRC6Mode0)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirRca)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirToshibaTC9012)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eCirXip)
-        ENTRY_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode_eMax)
-    END_ENUMERATOR_STRING_MAP(NEXUS_IrInputMode)
-
     /* virtual */ string Platform::Client::Name() const
     {
         return (::std::string(Id()));
@@ -179,7 +142,7 @@ namespace Broadcom {
     public:
         Config()
             : Core::JSON::Container()
-            , IRMode("NEXUS_IrInputMode_eCirNec")
+            , IRMode(NEXUS_IrInputMode_eCirNec)
             , Authentication(true)
             , BoxMode(~0)
             , SagePath()
@@ -214,7 +177,7 @@ namespace Broadcom {
         }
 
     public:
-        Core::JSON::String IRMode;
+        Core::JSON::EnumType<NEXUS_IrInputMode> IRMode;
         Core::JSON::Boolean Authentication;
         Core::JSON::DecUInt8 BoxMode;
         Core::JSON::String SagePath;
@@ -458,19 +421,19 @@ namespace Broadcom {
             }
 
 #if NEXUS_HAS_IR_INPUT
-            auto inputMode = irInputModeLookup.find(config.IRMode.Value());
-            if (inputMode != irInputModeLookup.end()) {
-                TRACE_L1("setting ir_input_mode to %d (%s)\n", inputMode->second, config.IRMode.Value().c_str());
+            if (config.IRMode.IsSet()) {
+                TRACE_L1("setting ir_input_mode to %d (%s)", config.IRMode.Value(), config.IRMode.Data());
+
                 for (unsigned int i = 0; i < NXCLIENT_MAX_SESSIONS; i++)
 #if NEXUS_PLATFORM_VERSION_MAJOR < 16 || (NEXUS_PLATFORM_VERSION_MAJOR == 16 && NEXUS_PLATFORM_VERSION_MINOR < 3)
-                    _serverSettings.session[i].ir_input_mode = inputMode->second;
+                    _serverSettings.session[i].ir_input_mode = config.IRMode.Value();
 #else
                     for (unsigned int irInputIndex = 0; irInputIndex < NXSERVER_IR_INPUTS; irInputIndex++) {
-                        _serverSettings.session[i].ir_input.mode[irInputIndex] = inputMode->second;
+                        _serverSettings.session[i].ir_input.mode[irInputIndex] = config.IRMode.Value();
                     }
 #endif // NEXUS_PLATFORM_VERSION_MAJOR < 17
             } else {
-                TRACE_L1("invalid ir_input_mode from config [%s]\n", config.IRMode.Value().c_str());
+                TRACE_L1("invalid ir_input_mode from config");
             }
 #endif // NEXUS_HAS_IR_INPUT
 
@@ -655,5 +618,39 @@ ENUM_CONVERSION_BEGIN(Broadcom::Config::hdcpversion)
     { Broadcom::Config::HDCP22, _TXT("Hdcp22") },
 
     ENUM_CONVERSION_END(Broadcom::Config::hdcpversion);
+
+ENUM_CONVERSION_BEGIN(NEXUS_IrInputMode)
+
+    { NEXUS_IrInputMode_eTwirpKbd, _TXT("NEXUS_IrInputMode_eTwirpKbd") },
+    { NEXUS_IrInputMode_eSejin38KhzKbd, _TXT("NEXUS_IrInputMode_eSejin38KhzKbd") },
+    { NEXUS_IrInputMode_eSejin56KhzKbd, _TXT("NEXUS_IrInputMode_eSejin56KhzKbd") },
+    { NEXUS_IrInputMode_eRemoteA, _TXT("NEXUS_IrInputMode_eRemoteA") },
+    { NEXUS_IrInputMode_eRemoteB, _TXT("NEXUS_IrInputMode_eRemoteB") },
+    { NEXUS_IrInputMode_eCirGI, _TXT("NEXUS_IrInputMode_eCirGI") },
+    { NEXUS_IrInputMode_eCirSaE2050, _TXT("NEXUS_IrInputMode_eCirSaE2050") },
+    { NEXUS_IrInputMode_eCirTwirp, _TXT("NEXUS_IrInputMode_eCirTwirp") },
+    { NEXUS_IrInputMode_eCirSony, _TXT("NEXUS_IrInputMode_eCirSony") },
+    { NEXUS_IrInputMode_eCirRecs80, _TXT("NEXUS_IrInputMode_eCirRecs80") },
+    { NEXUS_IrInputMode_eCirRc5, _TXT("NEXUS_IrInputMode_eCirRc5") },
+    { NEXUS_IrInputMode_eCirUei, _TXT("NEXUS_IrInputMode_eCirUei") },
+    { NEXUS_IrInputMode_eCirRfUei, _TXT("NEXUS_IrInputMode_eCirRfUei") },
+    { NEXUS_IrInputMode_eCirEchoStar, _TXT("NEXUS_IrInputMode_eCirEchoStar") },
+    { NEXUS_IrInputMode_eSonySejin, _TXT("NEXUS_IrInputMode_eSonySejin") },
+    { NEXUS_IrInputMode_eCirNec, _TXT("NEXUS_IrInputMode_eCirNec") },
+    { NEXUS_IrInputMode_eCirRC6, _TXT("NEXUS_IrInputMode_eCirRC6") },
+    { NEXUS_IrInputMode_eCirGISat, _TXT("NEXUS_IrInputMode_eCirGISat") },
+    { NEXUS_IrInputMode_eCustom, _TXT("NEXUS_IrInputMode_eCustom") },
+    { NEXUS_IrInputMode_eCirDirectvUhfr, _TXT("NEXUS_IrInputMode_eCirDirectvUhfr") },
+    { NEXUS_IrInputMode_eCirEchostarUhfr, _TXT("NEXUS_IrInputMode_eCirEchostarUhfr") },
+    { NEXUS_IrInputMode_eCirRcmmRcu, _TXT("NEXUS_IrInputMode_eCirRcmmRcu") },
+    { NEXUS_IrInputMode_eCirRstep, _TXT("NEXUS_IrInputMode_eCirRstep") },
+    { NEXUS_IrInputMode_eCirXmp, _TXT("NEXUS_IrInputMode_eCirXmp") },
+    { NEXUS_IrInputMode_eCirXmp2Ack, _TXT("NEXUS_IrInputMode_eCirXmp2Ack") },
+    { NEXUS_IrInputMode_eCirRC6Mode0, _TXT("NEXUS_IrInputMode_eCirRC6Mode0") },
+    { NEXUS_IrInputMode_eCirRca, _TXT("NEXUS_IrInputMode_eCirRca") },
+    { NEXUS_IrInputMode_eCirToshibaTC9012, _TXT("NEXUS_IrInputMode_eCirToshibaTC9012") },
+    { NEXUS_IrInputMode_eCirXip, _TXT("NEXUS_IrInputMode_eCirXip") },
+
+    ENUM_CONVERSION_END(NEXUS_IrInputMode)
 
 } // WPEFramework
