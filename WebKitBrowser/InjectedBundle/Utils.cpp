@@ -44,6 +44,10 @@ namespace WebKit {
 
             return stringVector;
         }
+
+        const char* ConfigMessage() {
+            return ("Config.");
+        }
     }
 }
 }

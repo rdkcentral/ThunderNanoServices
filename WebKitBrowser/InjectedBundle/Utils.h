@@ -15,6 +15,8 @@ namespace WebKit {
         string GetStringFromWKArray(WKArrayRef array, unsigned int index);
         string WKStringToString(WKStringRef wkStringRef);
         std::vector<string> ConvertWKArrayToStringVector(WKArrayRef array);
+        WKBundleRef GetBundle();
+        const char* ConfigMessage();
     };
 }
 }

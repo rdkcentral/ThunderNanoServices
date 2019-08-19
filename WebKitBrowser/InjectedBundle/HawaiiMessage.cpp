@@ -1,6 +1,8 @@
 #include "JavaScriptFunctionType.h"
 #include "Utils.h"
 
+unsigend int amazon_player_deinitialize();
+
 namespace WPEFramework {
 namespace JavaScript {
 namespace Amazon {
@@ -9,10 +11,31 @@ namespace Amazon {
 
     class AmazonPlayer {
     private:
+        typedef unsigned int ( *Initialize ) (const char* config );
+        typedef unsigned int ( *Deinitialize ) ();
         typedef void ( *MessageListenerType )( const std::string& msg );
         typedef bool ( *RegisterMessageListenerType )( MessageListenerType inMessageListener );
         typedef std::string ( *SendMessageType )( const std::string& );
 
+        // Gets configuration for this handler from WPEWebKitBrowser via synchronous message.
+        static std::string Configuration()
+        {
+            std::string utf8MessageName(string(WebKit::Utils::ConfigMessage()) + "Hawaii");
+
+            WKStringRef jsMessageName = WKStringCreateWithUTF8CString(utf8MessageName.c_str());
+            WKMutableArrayRef messageBody = WKMutableArrayCreate();
+            WKTypeRef returnData;
+
+            WKBundlePostSynchronousMessage(WebKit::Utils::GetBundle(), jsMessageName, messageBody, &returnData);
+
+            std::string result (WebKit::Utils::WKStringToString(static_cast<WKStringRef>(returnData)));
+
+            WKRelease(returnData);
+            WKRelease(messageBody);
+            WKRelease(jsMessageName);
+
+            return result;
+        }
         static void ListenerCallback (const std::string& msg)
         {
             AmazonPlayer& instance(AmazonPlayer::Instance());
@@ -46,6 +69,17 @@ namespace Amazon {
             if ((_registerMessageListener == nullptr) || (_sendMessage == nullptr)) {
                 TRACE(Trace::Fatal, (_T("FAILED Library loading: %s"), amazonLibrary));
             }
+            else {
+                Initialize initializer = reinterpret_cast<Initialize>(library.LoadFunction(_T("amazon_player_initialize")));
+
+                if (initializer != nullptr) {
+                    // Time to initialize
+                    std::string config = Configuration();
+
+                    // Call the initailze on the library...
+                    unsigned int result = deinitializer(config.c_str());
+                }
+            }
         }
  
     public:
@@ -61,6 +95,14 @@ namespace Amazon {
         {
             if (_jsListener != nullptr) {
                 JSValueUnprotect(_jsContext, _jsListener);
+
+                // Also call the detinitailze on the library...
+                Deinitialize deinitializer = reinterpret_cast<Deinitialize>(library.LoadFunction(_T("amazon_player_deinitialize")));
+                unsigend int result;
+
+                if ((deinitializer != nullptr) && ( (result = deinitializer()) != 0)) {
+                    TRACE(Trace::Fatal, (_T("Could not preperly unload the Hawaii interface. Error: %d"), result));
+                }
             }
         }
 

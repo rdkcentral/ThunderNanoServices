@@ -17,6 +17,16 @@ using WebKit::WhiteListedOriginDomainsList;
 
 WKBundleRef g_Bundle;
 
+namespace WPEFramework {
+namespace WebKit {
+namespace Utils {
+
+WKBundleRef GetBundle() {
+    return (g_Bundle);
+}
+
+} } }
+
 static Core::NodeId GetConnectionNode()
 {
     string nodeName;
@@ -58,8 +68,7 @@ public:
             TRACE(Trace::Error, (_T("Could not open connection to node %s. Error: %s"), _comClient->Source().RemoteId(), Core::NumberType<uint32_t>(result).Text()));
         }
 
-        _bundle = bundle;
-        _whiteListedOriginDomainPairs = WhiteListedOriginDomainsList::RequestFromWPEFramework(bundle);
+        _whiteListedOriginDomainPairs = WhiteListedOriginDomainsList::RequestFromWPEFramework();
     }
 
     void Deinitialize()
@@ -86,9 +95,6 @@ private:
 
     // White list for CORS.
     std::unique_ptr<WhiteListedOriginDomainsList> _whiteListedOriginDomainPairs;
-
-    // Handle of bundle.
-    WKBundleRef _bundle;
 
 } _wpeFrameworkClient;
 

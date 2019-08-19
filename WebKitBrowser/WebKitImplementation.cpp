@@ -20,7 +20,6 @@
 #include "HTML5Notification.h"
 #include "InjectedBundle/NotifyWPEFramework.h"
 #include "InjectedBundle/Utils.h"
-#include "InjectedBundle/WhiteListedOriginDomainsList.h"
 #include "WebKitBrowser.h"
 
 #include <iostream>
@@ -261,6 +260,50 @@ static GSourceFuncs _handlerIntervention =
 
     class WebKitImplementation : public Core::Thread, public Exchange::IBrowser, public PluginHost::IStateControl {
     public:
+        class BundleConfig : public Core::JSON::Container {
+        private:
+            using BundleConfigMap = std::map<string, Core::JSON::String>;
+
+        public:
+            using Iterator = Core::IteratorMapType<const BundleConfigMap, const Core::JSON::String&, const string&, BundleConfigMap::const_iterator>;
+
+            BundleConfig(const BundleConfig&) = delete;
+            BundleConfig& operator=(const BundleConfig&) = delete;
+
+            BundleConfig() : _configs()
+            {
+            }
+            virtual ~BundleConfig()
+            {
+            }
+
+            inline bool Config(const string& index, string& value) const
+            {
+                BundleConfigMap::const_iterator position(_configs.find(index));
+                bool result = (position != _configs.cend());
+
+                if (result == true) {
+                    value = position->second.Value();
+                }
+
+                return (result);
+            }
+
+        private:
+            virtual bool Request(const TCHAR label[])
+            {
+                if (_configs.find(label) == _configs.end()) {
+                    auto element = _configs.emplace(std::piecewise_construct,
+                        std::forward_as_tuple(label),
+                        std::forward_as_tuple());
+                    Add(element.first->first.c_str(), &(element.first->second));
+                }
+                return (true);
+            }
+
+        private:
+            BundleConfigMap _configs;
+        };
         class Config : public Core::JSON::Container {
         private:
             Config(const Config&) = delete;
@@ -268,11 +311,10 @@ static GSourceFuncs _handlerIntervention =
 
         public:
             class JavaScriptSettings : public Core::JSON::Container {
-            private:
+            public:
                 JavaScriptSettings(const JavaScriptSettings&) = delete;
                 JavaScriptSettings& operator=(const JavaScriptSettings&) = delete;
 
-            public:
                 JavaScriptSettings()
                     : Core::JSON::Container()
                     , UseLLInt(true)
@@ -311,7 +353,6 @@ static GSourceFuncs _handlerIntervention =
                 , CookieStorage()
                 , LocalStorage()
                 , Secure(false)
-                , Whitelist()
                 , InjectedBundle()
                 , Transparent(false)
                 , Compositor()
@@ -346,7 +387,6 @@ static GSourceFuncs _handlerIntervention =
                 Add(_T("cookiestorage"), &CookieStorage);
                 Add(_T("localstorage"), &LocalStorage);
                 Add(_T("secure"), &Secure);
-                Add(_T("whitelist"), &Whitelist);
                 Add(_T("injectedbundle"), &InjectedBundle);
                 Add(_T("transparent"), &Transparent);
                 Add(_T("compositor"), &Compositor);
@@ -375,6 +415,7 @@ static GSourceFuncs _handlerIntervention =
                 Add(_T("ptsoffset"), &PTSOffset);
                 Add(_T("scalefactor"), &ScaleFactor);
                 Add(_T("maxfps"), &MaxFPS);
+                Add(_T("bundle"), &Bundle);
             }
             ~Config()
             {
@@ -387,7 +428,6 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::String CookieStorage;
             Core::JSON::String LocalStorage;
             Core::JSON::Boolean Secure;
-            Core::JSON::String Whitelist;
             Core::JSON::String InjectedBundle;
             Core::JSON::Boolean Transparent;
             Core::JSON::String Compositor;
@@ -416,6 +456,7 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::DecSInt16 PTSOffset;
             Core::JSON::DecUInt16 ScaleFactor;
             Core::JSON::DecUInt8 MaxFPS; // A value between 1 and 100...
+            BundleConfig Bundle;
         };
 
     private:
@@ -831,9 +872,11 @@ static GSourceFuncs _handlerIntervention =
             _fps = fps;
         }
 
-        string GetWhiteListJsonString() const
+        string GetConfig(const string& key) const
         {
-            return _config.Whitelist.Value();
+            string value;
+            _config.Bundle.Config(key,value);
+            return (value);
         }
 
         void OnRequestAutomationSession(WKContextRef context, WKStringRef sessionID)
@@ -1110,8 +1153,6 @@ static GSourceFuncs _handlerIntervention =
             return Core::infinite;
         }
 
-        inline void ParseWhiteListedOriginDomainPairs();
-
     private:
         Config _config;
         string _URL;
@@ -1124,7 +1165,6 @@ static GSourceFuncs _handlerIntervention =
         WKNotificationManagerRef _notificationManager;
         GMainLoop* _loop;
         GMainContext* _context;
-        std::unique_ptr<WhiteListedOriginDomainsList> WhiteListedOriginDomainPairs;
         std::list<Exchange::IBrowser::INotification*> _notificationClients;
         std::list<PluginHost::IStateControl::INotification*> _stateControlClients;
         PluginHost::IStateControl::state _state;
@@ -1140,6 +1180,7 @@ static GSourceFuncs _handlerIntervention =
     /* static */ void onDidReceiveSynchronousMessageFromInjectedBundle(WKContextRef context, WKStringRef messageName,
         WKTypeRef messageBodyObj, WKTypeRef* returnData, const void* clientInfo)
     {
+        static int configLen = strlen(WebKit::Utils::ConfigMessage());
         const WebKitImplementation* browser = static_cast<const WebKitImplementation*>(clientInfo);
 
         string name = Utils::WKStringToString(messageName);
@@ -1151,8 +1192,9 @@ static GSourceFuncs _handlerIntervention =
 
             std::vector<string> messageStrings = Utils::ConvertWKArrayToStringVector(messageLines);
             browser->OnJavaScript(messageStrings);
-        } else if (name == WhiteListedOriginDomainsList::GetMessageName()) {
-            std::string utf8Json = Core::ToString(browser->GetWhiteListJsonString().c_str());
+        } else if (name.compare(0, configLen, WebKit::Utils::ConfigMessage()) == 0) {
+            // Second part of this string is the key we are looking for, extract it...
+            std::string utf8Json = Core::ToString(browser->GetConfig(name.substr(configLen)));
             *returnData = WKStringCreateWithUTF8CString(utf8Json.c_str());
         } else {
             // Unexpected message name.

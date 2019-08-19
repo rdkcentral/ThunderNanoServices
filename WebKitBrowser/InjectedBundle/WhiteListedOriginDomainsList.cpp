@@ -71,16 +71,16 @@ namespace WebKit {
     }
 
     // Gets white list from WPEFramework via synchronous message.
-    /* static */ unique_ptr<WhiteListedOriginDomainsList> WhiteListedOriginDomainsList::RequestFromWPEFramework(WKBundleRef bundle)
+    /* static */ unique_ptr<WhiteListedOriginDomainsList> WhiteListedOriginDomainsList::RequestFromWPEFramework()
     {
-        string messageName = GetMessageName();
+        string messageName(string(WebKit::Utils::ConfigMessage()) + "Whitelist");
         std::string utf8MessageName = Core::ToString(messageName.c_str());
 
         WKStringRef jsMessageName = WKStringCreateWithUTF8CString(utf8MessageName.c_str());
         WKMutableArrayRef messageBody = WKMutableArrayCreate();
         WKTypeRef returnData;
 
-        WKBundlePostSynchronousMessage(bundle, jsMessageName, messageBody, &returnData);
+        WKBundlePostSynchronousMessage(WebKit::Utils::GetBundle(), jsMessageName, messageBody, &returnData);
 
         WKStringRef returnedString = static_cast<WKStringRef>(returnData);
 
