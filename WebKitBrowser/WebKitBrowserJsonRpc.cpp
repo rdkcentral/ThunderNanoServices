@@ -86,10 +86,10 @@ namespace Plugin {
 
         if (param.IsSet()) {
             if (param == VisibilityType::VISIBLE) {
-                _browser->Hide(true);
+                _browser->Hide(false);
             }
             else {
-                _browser->Hide(false);
+                _browser->Hide(true);
             }
 
             result =  Core::ERROR_NONE;
