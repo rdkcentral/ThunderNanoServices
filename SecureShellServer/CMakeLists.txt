@@ -1,6 +1,6 @@
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-set(PLUGIN_NAME DropbearServer)
+set(PLUGIN_NAME SecureShellServer)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
@@ -12,8 +12,8 @@ endif( NOT LIBDROPBEAR_FOUND)
 
 
 add_library(${MODULE_NAME} SHARED
-    DropbearServer.cpp
-    DropbearServerJsonRpc.cpp
+    SecureShellServer.cpp
+    SecureShellServerJsonRpc.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES

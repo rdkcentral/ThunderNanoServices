@@ -7,18 +7,18 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class DropbearServerImplementation {
+    class SecureShellServerImplementation {
     public:
-        DropbearServerImplementation() = default;
-        ~DropbearServerImplementation() = default;
+        SecureShellServerImplementation() = default;
+        ~SecureShellServerImplementation() = default;
 
-        uint32_t StartService(const std::string& host_keys, const std::string& port_flag, const std::string& port)
+        uint32_t StartService(const std::string& params)
         {
             uint32_t result = Core::ERROR_NONE;
 
-            TRACE(Trace::Information, (_T("Starting Dropbear Service with options as: %s %s %s"), host_keys.c_str(), port_flag.c_str(), port.c_str()));
+            TRACE(Trace::Information, (_T("Starting Dropbear Service with options as: %s"), params.c_str()));
 	    // TODO: Check the return value and based on that change result
-	    activate_dropbear(const_cast<char*>(host_keys.c_str()), const_cast<char*>(port_flag.c_str()), const_cast<char*>(port.c_str())); 
+	    activate_dropbear(const_cast<char*>(params.c_str())); 
 
             return result;
         }
@@ -33,16 +33,6 @@ namespace Plugin {
             return result;
         }
 
-        uint32_t GetTotalSessions()
-        {
-            uint32_t result = Core::ERROR_NONE;
-
-	    uint32_t count = get_total_sessions_served();
-            TRACE(Trace::Information, (_T("Get total number of SSH client sessions handled by Dropbear service: %d"), count));
-
-            return count;
-        }
-
         uint32_t GetSessionsCount()
         {
             uint32_t result = Core::ERROR_NONE;
@@ -53,7 +43,7 @@ namespace Plugin {
             return count;
         }
 
-        uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::DropbearServer::SessioninfoResultData>& response) const
+        uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& response) const
         {
             uint32_t result = Core::ERROR_NONE;
 
@@ -70,13 +60,13 @@ namespace Plugin {
 	            TRACE(Trace::Information, (_T("Count: %d index: %d pid: %d IP: %s Timestamp: %s"), 
 					    count, i, info[i].pid, info[i].ipaddress, info[i].timestamp));
 
-	            JsonData::DropbearServer::SessioninfoResultData newElement;
+	            JsonData::SecureShellServer::SessioninfoResultData newElement;
 
 	            newElement.IpAddress = info[i].ipaddress;
 	            newElement.Pid = std::to_string(info[i].pid);
 		    newElement.TimeStamp = info[i].timestamp;
 
-        	    JsonData::DropbearServer::SessioninfoResultData& element(response.Add(newElement));
+        	    JsonData::SecureShellServer::SessioninfoResultData& element(response.Add(newElement));
 	    }
 	    ::free(info);
 
@@ -94,8 +84,8 @@ namespace Plugin {
         }
 
     private:
-        DropbearServerImplementation(const DropbearServerImplementation&) = delete;
-        DropbearServerImplementation& operator=(const DropbearServerImplementation&) = delete;
+        SecureShellServerImplementation(const SecureShellServerImplementation&) = delete;
+        SecureShellServerImplementation& operator=(const SecureShellServerImplementation&) = delete;
     };
 
 } // namespace Plugin
