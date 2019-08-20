@@ -1,4 +1,3 @@
-#include "cJSON.h"
 #include "Notifier.h"
 
 namespace WPEFramework {
@@ -42,57 +41,63 @@ string Notifier::Process(const NotifyData& notifyData)
     {
         ParamNotify* param = notifyData.data.notify;
         if (param) {
-            cJSON* notifyPayload = cJSON_CreateObject();
-            cJSON_AddStringToObject(notifyPayload, "device_id", Source().c_str());
-            cJSON_AddNumberToObject(notifyPayload, "datatype", param->Value().Type());
-            cJSON_AddStringToObject(notifyPayload, "paramName", param->Name().c_str());
-            cJSON_AddStringToObject(notifyPayload, "notificationType", NotifyTypeStr);
+            TRACE(Trace::Information, (_T("Notification Processed")));
+            TRACE(Trace::Information, (_T("DeviceID: %s"), Source().c_str()));
+            NotifierPayload notfierPayload;
+            notfierPayload.DeviceID = Source();
+            TRACE(Trace::Information, (_T("ParameterName: %s"), param->Name().c_str()));
+            notfierPayload.Name = param->Name();
+            TRACE(Trace::Information, (_T("ParameterType: %d"), param->Value().Type()));
+            notfierPayload.Type = param->Value().Type();
+            TRACE(Trace::Information, (_T("NotificationType: %s"), NotifyTypeStr));
+
             switch(param->Value().Type())
             {
             case Variant::ParamType::TypeString:
             {
-                cJSON_AddStringToObject(notifyPayload, "paramValue", param->Value().String().c_str());
+                TRACE(Trace::Information, (_T("paramValue: %s"), param->Value().String().c_str()));
+                Core::JSON::Variant value(static_cast<string>(param->Value().String()));
+                notfierPayload.Value = value;
                 break;
             }
             case Variant::ParamType::TypeInteger:
             {
-                const int32_t* paramNewValue = reinterpret_cast<const int32_t*>(param->Value().Integer());
-                cJSON_AddNumberToObject(notifyPayload, "paramValue",* paramNewValue);
+                TRACE(Trace::Information, (_T("paramValue: %d"), param->Value().Integer()));
+                Core::JSON::Variant value(static_cast<int32_t>(param->Value().Integer()));
+                notfierPayload.Value = value;
                 break;
             }
             case Variant::ParamType::TypeUnsignedInteger:
             {
-                const uint32_t* paramNewValue = reinterpret_cast<const uint32_t*>(param->Value().UnsignedInteger());
-                cJSON_AddNumberToObject(notifyPayload, "paramValue",* paramNewValue);
+                TRACE(Trace::Information, (_T("paramValue: %d"), param->Value().UnsignedInteger()));
+                Core::JSON::Variant value(static_cast<uint32_t>(param->Value().Integer()));
+                notfierPayload.Value = value;
                 break;
             }
             case Variant::ParamType::TypeBoolean:
             {
-                const bool*  paramNewValue = reinterpret_cast<const bool*>(param->Value().Boolean());
-                cJSON_AddBoolToObject(notifyPayload, "paramValue",* paramNewValue);
-                break;
+                TRACE(Trace::Information, (_T("paramValue: %d"), param->Value().Boolean()));
+                Core::JSON::Variant value(static_cast<bool>(param->Value().Integer()));
+                notfierPayload.Value = value;
             }
             case Variant::ParamType::TypeUnsignedLong:
             {
-                const uint64_t* paramNewValue = reinterpret_cast<const uint64_t*>(param->Value().UnsignedLong());
-                cJSON_AddNumberToObject(notifyPayload, "paramValue",* paramNewValue);
+                TRACE(Trace::Information, (_T("paramValue: %d"), param->Value().UnsignedLong()));
+                Core::JSON::Variant value(static_cast<uint64_t>(param->Value().UnsignedLong()));
+                notfierPayload.Value = value;
                 break;
             }
             default:
             {
-                cJSON_AddStringToObject(notifyPayload, "paramValue", param->Value().String().c_str());
                 break;
             }
             }
-            payload = cJSON_PrintUnformatted(notifyPayload);
+            notfierPayload.ToString(payload);
             TRACE(Trace::Information, (_T("Notification Processed ,Payload = %s"), payload));
 
-            cJSON_Delete(notifyPayload);
-            delete param;
         } else {
             TRACE(Trace::Error, (_T("ParamNotify is nullptr.. !!")));
         }
-
         break;
     }
     }
@@ -108,13 +113,13 @@ std::string Notifier::Source()
     std::string notificationSource = _notificationSource;
     _adminLock.Unlock();
 
-    if (notificationSource.empty() == true) {
+    if ((notificationSource.empty() == true) || (notificationSource == UnknownParamValue)) {
 
-        std::vector<std::string> paramaterName = { DeviceStbMACParam };
+        std::vector<std::string> parameterName = { DeviceMACParam };
         std::map<std::vector<Data>, WebPAStatus> paramaters;
         notificationSource = UnknownParamValue;
 
-        _parameter->Values(paramaterName, paramaters);
+        _parameter->Values(parameterName, paramaters);
         if (paramaters.size() > 0) {
             auto it = paramaters.begin();
             if (it->first.size() > 0) {
@@ -159,42 +164,20 @@ uint32_t Notifier::Parameters(std::vector<std::string>& notifyParameters)
         _adminLock.Unlock();
         TRACE(Trace::Error, (_T("WebPA notification file path not set")));
     } else {
-        TRACE(Trace::Information, (_T("Inside getnotifyparamList trying to open %s\n"), _configFile.c_str()));
-        FILE* fp = fopen(_configFile.c_str(), "r");
-        if (fp == nullptr) {
-            TRACE(Trace::Error, (_T("Failed to open cfg file %s\n"), _configFile.c_str()));
-        } else {
-            fseek(fp, 0, SEEK_END);
-            int32_t chCount = ftell(fp);
-            fseek(fp, 0, SEEK_SET);
+        Core::File configFile(_configFile);
 
-            char* notifycfgFileContent = static_cast<char*> (malloc(sizeof(uint8_t) * (chCount + 1)));
-            if (nullptr != notifycfgFileContent) {
-                fread(notifycfgFileContent, 1, chCount,fp);
-                notifycfgFileContent[chCount] ='\0';
+        if (configFile.Open(true) == true) {
 
-                if (chCount < 1) {
-                    TRACE(Trace::Error, (_T("WebPA notification file is Empty %s\n"), _configFile.c_str()));
-                } else {
-                    cJSON* notifyCfg = cJSON_Parse(notifycfgFileContent);
-                    cJSON* notifyArray = cJSON_GetObjectItem(notifyCfg, "Notify");
-                    if (nullptr != notifyArray) {
-                        for (int32_t i = 0 ; i < cJSON_GetArraySize(notifyArray) ; i++) {
-                            char* tempPtr = cJSON_GetArrayItem(notifyArray, i)->valuestring;
-                            if (tempPtr) {
-                                notifyParameters.push_back(tempPtr);
-                                TRACE(Trace::Information, (_T("Notify Param  = %s\n"), tempPtr));
-                            }
-                        }
-                        result = Core::ERROR_NONE;
-                    } else {
-                        TRACE(Trace::Error, (_T("Unable to parse Configuration file")));
-                    }
-                }
-                free(notifycfgFileContent);
+            NotifierList notifierList;
+            notifierList.FromFile(configFile);
+
+            auto index(notifierList.Notifiers.Elements());
+            while (index.Next()) {
+                notifyParameters.push_back(index.Current().Value());
             }
-            fclose(fp);
+            result = Core::ERROR_NONE;
         }
+
         _adminLock.Unlock();
     }
 

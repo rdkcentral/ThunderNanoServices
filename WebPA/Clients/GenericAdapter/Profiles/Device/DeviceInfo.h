@@ -87,6 +87,7 @@ public:
 
 private:
     void Info();
+    FaultCode MACAddress(Data& parameter, bool& changed) const;
     FaultCode Manufacturer(Data& parameter, bool& changed) const;
     FaultCode ModelName(Data& parameter, bool& changed) const;
     FaultCode Description(Data& parameter, bool& changed) const;

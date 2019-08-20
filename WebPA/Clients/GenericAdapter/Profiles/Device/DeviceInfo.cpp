@@ -249,6 +249,7 @@ DeviceInfo::DeviceInfo()
     : _systemInfoData()
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
+    _functionMap.insert(std::make_pair("MACAddress:", std::make_pair(&DeviceInfo::MACAddress, nullptr))); //FIXME update function identifier string based on the actual
     _functionMap.insert(std::make_pair("Manufacturer", std::make_pair(&DeviceInfo::Manufacturer, nullptr)));
     _functionMap.insert(std::make_pair("ModelName", std::make_pair(&DeviceInfo::ModelName, nullptr)));
     _functionMap.insert(std::make_pair("Description", std::make_pair(static_cast<FuncPtr<DeviceInfo>::GetFunc>(&DeviceInfo::Description),
@@ -291,6 +292,24 @@ void DeviceInfo::Info()
     } else {
         TRACE(Trace::Information, (_T("Error in fetching device information through jsonrpc")));
     }
+}
+
+FaultCode DeviceInfo::MACAddress(Data& parameter, bool& changed) const
+{
+    TRACE(Trace::Information, (string(__FUNCTION__)));
+    FaultCode status = InvalidParameterValue;
+
+    Core::AdapterIterator interfaces;
+
+    while (interfaces.Next() == true) {
+        if (interfaces.IPV4Addresses().Count() > 1) {
+            parameter.Value(interfaces.MACAddress(':'));
+            status = NoFault;
+            break;
+        }
+    }
+
+    return status;
 }
 
 FaultCode DeviceInfo::SerialNumber(Data& parameter, bool& changed) const

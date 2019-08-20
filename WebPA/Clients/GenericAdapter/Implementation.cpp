@@ -297,11 +297,10 @@ uint32_t GenericAdapter::Worker()
 void GenericAdapter::NotificationCallback::NotifyEvent(const std::string& data, const std::string& source, const std::string& destination)
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
-
     wrp_msg_t *notifyWrpMsg = (wrp_msg_t *)malloc(sizeof(wrp_msg_t));
     memset(notifyWrpMsg, 0, sizeof(wrp_msg_t));
 
-    notifyWrpMsg ->msg_type = WRP_MSG_TYPE__EVENT;
+    notifyWrpMsg->msg_type = WRP_MSG_TYPE__EVENT;
     TRACE(Trace::Information, (_T("source: %s\n"), source.c_str()));
     notifyWrpMsg ->u.event.source = strdup(source.c_str());
     TRACE(Trace::Information, (_T("destination: %s\n"), destination.c_str()));
@@ -337,8 +336,6 @@ void GenericAdapter::NotificationCallback::NotifyEvent(const std::string& data, 
     }
 
     wrp_free_struct(notifyWrpMsg);
-    free(payload);
-    free(contentType);
     TRACE(Trace::Information, (_T("Freed notifyWrpMsg struct.\n")));
 }
 
