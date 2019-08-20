@@ -17,7 +17,7 @@ Attribute::~Attribute()
 void Attribute::Values(const std::vector<std::string>& parameterNames, std::map<Data, WebPAStatus>& attributesList) const
 {
     for (auto& name: parameterNames) {
-        Data attribute;
+        Data attribute(name, static_cast<bool>(0));
         const WebPAStatus ret = Values(name, attribute);
         if (ret == WEBPA_SUCCESS) {
             TRACE(Trace::Information, (_T( "Parameter Name: %s has attribute"), name.c_str()));

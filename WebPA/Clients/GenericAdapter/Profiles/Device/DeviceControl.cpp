@@ -111,7 +111,7 @@ FaultCode DeviceControl::Attribute(const Data& parameter) {
     FaultCode ret = FaultCode::Error;
 
     _adminLock.Lock();
-    _notifier.insert(std::make_pair(parameter.Name(), true));
+    _notifier.insert(std::make_pair(parameter.Name(), parameter.Value().Boolean()));
     _adminLock.Unlock();
 
     return ret;
