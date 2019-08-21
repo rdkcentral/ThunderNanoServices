@@ -105,7 +105,6 @@ namespace Plugin {
         ASSERT(_memory != nullptr);
 
         _service->Unregister(&_notification);
-        _service = nullptr;
         if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
             TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
         }
@@ -119,6 +118,7 @@ namespace Plugin {
         _testUtilityImp = nullptr;
         _skipURL = 0;
         _connection = 0;
+        _service = nullptr;
     }
 
     /* virtual */ string TestUtility::Information() const
