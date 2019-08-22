@@ -7,6 +7,9 @@ entries are enables in the following RPI files:
 enable_uart=1
 core_freq=250
 
+Note: /boot/config.txt must not include the following line:
+dtoverlay=pi3-miniuart-bt
+
 /boot/cmdline.txt
 ... console=ttyS0,115200
 
