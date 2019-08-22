@@ -228,9 +228,12 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             };
 
         public:
-            GATTRemote(const Bluetooth::Address& remoteNode)
+            GATTRemote(const uint16_t device, const Bluetooth::Address& remoteNode)
                 : Bluetooth::GATTSocket(
-                      Bluetooth::Address().AnyInterface().NodeId(Bluetooth::Address::LE_PUBLIC_ADDRESS, LE_ATT_CID, 0),
+                      // need to set local interface explicitly, "any" ends with "no route to host"
+                      Bluetooth::Address(device).NodeId(Bluetooth::Address::LE_PUBLIC_ADDRESS, LE_ATT_CID, 0),
+                      // TODO: public/private needs to be configurable
+                      // for cid ATT, PSM 0 is the only valid value
                       remoteNode.NodeId(Bluetooth::Address::LE_PUBLIC_ADDRESS, LE_ATT_CID, 0),
                       64)
                 , _state(REMOTE_ERROR)
@@ -238,7 +241,14 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 , _metadata()
                 , _command()
             {
-                GATTSocket::Open(1000);
+                TRACE_L1("Opening GATT socket... (local: %s, remote: %s)", Bluetooth::Address(device).ToString().c_str(), remoteNode.ToString().c_str());
+                uint32_t result = GATTSocket::Open(1000);
+                if (result != Core::ERROR_NONE) {
+                    TRACE_L1("Failed to open GATT socket <%i>", result);
+                }
+                else {
+                    TRACE_L1("Successfully opened GATT socket!");
+                }
             }
             virtual ~GATTRemote()
             {
@@ -561,7 +571,8 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 , _remote(remote)
                 , _state(static_cast<state>(lowEnergy ? LOWENERGY : 0))
             {
-                SocketPort::RemoteNode(SocketPort::LocalNode());
+                uint32_t result = SocketPort::Open(Core::infinite);
+                ASSERT(result == Core::ERROR_NONE);
             }
             ~DeviceImpl()
             {
@@ -650,20 +661,27 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             template<typename MESSAGE>
             uint32_t Send(const uint32_t waitTime, Core::IOutbound::ICallback* callback, const state value, MESSAGE& message)
             {
-                uint32_t result = Core::ERROR_ALREADY_RELEASED;
+                // the state is already set by the caller, hence setting the state here will always fail
+                /*
 
-                _state.Lock();
+                    uint32_t result = Core::ERROR_ALREADY_RELEASED;
 
-                if (SetState(value) == Core::ERROR_NONE) {
-                    Bluetooth::HCISocket::Send(waitTime, message, callback, &message);
-                    result = Core::ERROR_NONE;
-                } else if ((_state & ACTION_MASK) == value) {
-                    _state.SetState(static_cast<state>(_state.GetState() & (~value)));
-                }
+                    _state.Lock();
 
-                _state.Unlock();
+                    if (SetState(value) == Core::ERROR_NONE) {
+                        Bluetooth::HCISocket::Send(waitTime, message, callback, &message);
+                        result = Core::ERROR_NONE;
+                    } else if ((_state & ACTION_MASK) == value) {
+                        _state.SetState(static_cast<state>(_state.GetState() & (~value)));
+                    }
 
-                return (result);
+                    _state.Unlock();
+
+                    return (result);
+                */
+
+                Bluetooth::HCISocket::Send(waitTime, message, callback, &message);
+                return (Core::ERROR_NONE);
             }
             uint32_t SetState(const state value)
             {
@@ -830,11 +848,12 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 : DeviceImpl(true, deviceId, address, name)
                 , _handle(~0)
             {
-                Connect();
+                // don't connect on instantiation!
+                //Connect();
             }
             virtual ~DeviceLowEnergy()
             {
-                Disconnect(0);
+                //Disconnect(0);
             }
 
         public:
@@ -865,6 +884,8 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                     _connect->max_ce_length = htobs(0x0001);
                     result = Send(MAX_ACTION_TIMEOUT, this, CONNECTING, _connect);
                 }
+
+                TRACE_L1("DeviceLowEnergy Connect() status <%i>\n", result);
 
                 return (result);
             }
@@ -898,7 +919,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                         ClearState(CONNECTING);
                         TRACE(Trace::Information, (_T("Connected using handle: %d"),_handle));
                     } else {
-                        TRACE(Trace::Error, (_T("Connec Failed!")));
+                        TRACE(Trace::Error, (_T("Connect Failed! (%i)"), _connect.Response().status));
                     }
                 } else if (&data == &_disconnect) {
                     if (error_code == Core::ERROR_NONE) {
