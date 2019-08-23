@@ -242,7 +242,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 , _command()
             {
                 TRACE_L1("Opening GATT socket... (local: %s, remote: %s)", Bluetooth::Address(device).ToString().c_str(), remoteNode.ToString().c_str());
-                uint32_t result = GATTSocket::Open(1000);
+                uint32_t result = GATTSocket::Open(5000);
                 if (result != Core::ERROR_NONE) {
                     TRACE_L1("Failed to open GATT socket <%i>", result);
                 }
@@ -274,10 +274,22 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             virtual void Operational() override
             {
                 Security(BT_SECURITY_MEDIUM, 0);
+
                 _command.FindByType(0x0001, 0xFFFF, GATTSocket::UUID(PRIMARY_SERVICE_UUID), HID_UUID);
                 Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
                     ASSERT (&cmd == &_command);
                     if (cmd.Error() == Core::ERROR_NONE) {
+                        if (cmd.Result().Length() > 0) {
+                            const uint8_t* data(cmd.Result().Data());
+                            printf("Listing HID_UUID response (handles): ");
+                            for (int i = 0; i < cmd.Result().Length(); i++) {
+                                printf("%02x, ", data[i]);
+                            }
+                            printf("\n");
+                        } else {
+                            TRACE_L1("No HID handles?");
+                        }
+
                         Version();
                     }
                     else {
@@ -317,6 +329,10 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                             uint16_t length = cmd.Result().Length();
                             if ( (cmd.Error() == Core::ERROR_NONE) && (length >= 0) ) {
                                 _metadata._name = string(reinterpret_cast<const char*>(cmd.Result().Data()), length);
+
+                                TRACE(Trace::Information, (_T("BT device: '%s' version %i, vendor ID %02x, product ID %02x"),
+                                    _metadata._name.c_str(), _metadata._version, _metadata._vendorId, _metadata._productId));
+
                                 Descriptors();
                             }
                             else {
@@ -344,24 +360,25 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                             if ( (cmd.Error() == Core::ERROR_NONE) && (length >= 0) ) {
                                 uint16_t copyLength = std::min(length, static_cast<uint16_t>(sizeof(_metadata._blob)));
                                 ::memcpy(_metadata._blob, cmd.Result().Data(), copyLength);
-                                EnableEvents();
                             }
                             else {
-                                _state = REMOTE_ERROR;
+                                //_state = REMOTE_ERROR;
                                 TRACE(Trace::Information, (_T("The given bluetooth device does not report proper descriptors!!")));
                             }
                        });
                     }
                     else {
-                        _state = REMOTE_ERROR;
+                        // for now, do not stop in case of this error
+                        //_state = REMOTE_ERROR;
                         TRACE(Trace::Information, (_T("The given bluetooth device does not report a proper Descriptor Handles!!")));
                     }
+                    EnableEvents();
                 });
             }
             void EnableEvents() 
             {
-                GATTSocket::UUID dataBlob(htobs(1));
-                _command.WriteByType(0x0001, 0xFFFF, GATTSocket::UUID(REPORT_UUID), dataBlob.Length(), dataBlob.Data());
+                short val = htobs(1);
+                _command.Write(REPORT_UUID, sizeof(val), (const uint8_t *) &val);
                 Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
                     ASSERT (&cmd == &_command);
                     if (cmd.Error() == Core::ERROR_NONE) {
