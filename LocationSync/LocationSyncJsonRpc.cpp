@@ -70,6 +70,12 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
+    // Event: locationchange - Signals a location change
+    void LocationSync::event_locationchange()
+    {
+        Notify(_T("locationchange"));
+    }
+
 } // namespace Plugin
 
 }

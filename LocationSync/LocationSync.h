@@ -179,6 +179,7 @@ namespace Plugin {
         void UnregisterAll();
         uint32_t endpoint_sync();
         uint32_t get_location(JsonData::LocationSync::LocationData& response) const;
+        void event_locationchange();
 
         void SyncedLocation();
 
