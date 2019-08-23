@@ -131,6 +131,7 @@ namespace Plugin {
 
             if ((_sink.Location() != nullptr) && (_sink.Location()->TimeZone().empty() == false)) {
                 Core::SystemInfo::SetEnvironment(_T("TZ"), _sink.Location()->TimeZone());
+                event_locationchange();
             }
         }
     }
