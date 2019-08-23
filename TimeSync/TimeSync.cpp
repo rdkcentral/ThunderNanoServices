@@ -167,6 +167,8 @@ namespace Plugin {
             // Seems we are synchronised with the time. Schedule the next timesync.
             TRACE_L1("Waking up again at %s.", newSyncTime.ToRFC1123(false).c_str());
             PluginHost::WorkerPool::Instance().Schedule(newSyncTime, _activity);
+
+            event_timechange();
         }
     }
 
