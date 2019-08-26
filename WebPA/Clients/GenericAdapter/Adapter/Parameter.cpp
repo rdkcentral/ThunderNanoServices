@@ -57,7 +57,7 @@ const WebPAStatus Parameter::Values(const std::string& parameterName, std::vecto
                     Data param(dbParamter.second.first, value);
 
                     _adminLock.Lock();
-                    WebPAStatus ret = (WebPAStatus) Utils::ConvertFaultCodeToWPAStatus((static_cast<const Handler&>(*_handler)).Parameter(param));
+                    WebPAStatus ret = Utils::ConvertFaultCodeToWPAStatus((static_cast<const Handler&>(*_handler)).Parameter(param));
                     _adminLock.Unlock();
 
                     // Fill Only if we can able to get Proper value
@@ -84,7 +84,7 @@ const WebPAStatus Parameter::Values(const std::string& parameterName, std::vecto
                 // Convert param.paramType to ParamVal.type
                 TRACE(Trace::Information, (_T( " Values parameterType is %d"), dataType));
                 _adminLock.Lock();
-                status = (WebPAStatus) Utils::ConvertFaultCodeToWPAStatus((static_cast<const Handler&>(*_handler)).Parameter(param));
+                status = Utils::ConvertFaultCodeToWPAStatus((static_cast<const Handler&>(*_handler)).Parameter(param));
                 _adminLock.Unlock();
                 if (WEBPA_SUCCESS == status) {
                     parameters.push_back(param);
