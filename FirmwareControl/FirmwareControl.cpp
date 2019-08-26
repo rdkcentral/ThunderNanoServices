@@ -30,7 +30,7 @@ namespace Plugin {
         return (string());
     }
 
-    uint32_t FirmwareControl::Upgrade(const std::string& name, const std::string& path, const FirmwareControl::Type& type, const uint16_t& interval, const std::string& hash)
+    uint32_t FirmwareControl::Schedule(const std::string& name, const std::string& path, const FirmwareControl::Type& type, const uint16_t& interval, const std::string& hash)
     {
         uint32_t status = Core::ERROR_NONE;
 
@@ -39,57 +39,66 @@ namespace Plugin {
             _locator = path + name;
         }
 
-
         if (status == Core::ERROR_NONE) {
-            _signaled.ResetEvent();
+            _downloadSignal.ResetEvent();
+
+            _adminLock.Lock();
             _type = type;
             _interval = interval;
-            Run();
+            _hash = hash;
+
+            _upgrader.Schedule();
+            _adminLock.Unlock();
         }
+
         return status;
-     }
+    }
 
-     uint32_t FirmwareControl::Worker() {
-         while (IsRunning() == true) {
+    void FirmwareControl::Upgrade() {
 
-            Notifier notifier(this);
+        Notifier notifier(this);
 
-            uint32_t status = Core::ERROR_NONE;
-            ProgressStatus progressStatus = ProgressStatus::NONE;
-            PluginHost::DownloadEngine downloadEngine(&notifier, _destination + Name);
-            downloadEngine.Start(_locator, _destination + Name, _hashHex);
-            if (_signaled.Lock(_waitTime) == Core::ERROR_NONE) {
-                if (_downloadStatus == Core::ERROR_NONE) {
-                    if (_interval) {
-                        NotifyProgress(ProgressStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 100); //FIXME: relook later about the incremental values
-                    }
-                    //Setup callback handler;
-                    mfrUpgradeStatusNotify_t mfrNotifier;
-                    mfrNotifier.cbData = reinterpret_cast<void*>(this);
-                    mfrNotifier.interval = static_cast<int>(_interval);
-                    mfrNotifier.cb = Callback;
+        uint32_t status = Core::ERROR_NONE;
+        ProgressStatus progressStatus = ProgressStatus::NONE;
+        PluginHost::DownloadEngine downloadEngine(&notifier, _destination + Name);
+        downloadEngine.Start(_locator, _destination + Name, _hash);
+        _adminLock.Lock();
+        bool upgradeInProgress = _upgradeInProgress;
+        _adminLock.Unlock();
+        if ((_downloadSignal.Lock(_waitTime) == Core::ERROR_NONE) && (upgradeInProgress == true)) {
+            if (_downloadStatus == Core::ERROR_NONE) {
+                if (_interval) {
+                    NotifyProgress(ProgressStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 100); //FIXME: relook later about the incremental values
+                }
+                //Setup callback handler;
+                mfrUpgradeStatusNotify_t mfrNotifier;
+                mfrNotifier.cbData = reinterpret_cast<void*>(this);
+                mfrNotifier.interval = static_cast<int>(_interval);
+                mfrNotifier.cb = Callback;
 
-                    // Intiate image install
-                    mfrError_t mfrStatus = mfrWriteImage(Name, _destination.c_str(), static_cast<mfrImageType_t>(_type), mfrNotifier);
-                    if (mfrERR_NONE != mfrStatus) {
-                        progressStatus = ProgressStatus::INSTALL_ABORTED;
-                        status = ConvertMfrStatusToCore(mfrStatus);
-                    }
-                } else {
-                    progressStatus = ProgressStatus::DOWNLOAD_ABORTED;
-                    status = _downloadStatus;
+                // Initiate image install
+                mfrError_t mfrStatus = mfrWriteImage(Name, _destination.c_str(), static_cast<mfrImageType_t>(_type), mfrNotifier);
+                if (mfrERR_NONE != mfrStatus) {
+                    progressStatus = ProgressStatus::INSTALL_ABORTED;
+                    status = ConvertMfrStatusToCore(mfrStatus);
                 }
             } else {
                 progressStatus = ProgressStatus::DOWNLOAD_ABORTED;
-                status = Core::ERROR_UNAVAILABLE;
+                status = _downloadStatus;
             }
-            if (progressStatus !=  ProgressStatus::NONE) {
-                NotifyProgress(progressStatus, ConvertCoreErrorToUpgradeError(status), 0);
-            }
-
-            Block();
+        } else {
+            progressStatus = ProgressStatus::DOWNLOAD_ABORTED;
+            status = Core::ERROR_UNAVAILABLE;
         }
-        return Core::infinite;
+
+        _adminLock.Lock();
+        upgradeInProgress = _upgradeInProgress;
+        _adminLock.Unlock();
+
+        if ((progressStatus !=  ProgressStatus::NONE) && (upgradeInProgress == true)) {
+            NotifyProgress(progressStatus, ConvertCoreErrorToUpgradeError(status), 0);
+        }
+        return;
     }
 
 } // namespace Plugin

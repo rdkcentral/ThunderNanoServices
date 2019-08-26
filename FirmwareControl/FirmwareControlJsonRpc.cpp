@@ -41,13 +41,6 @@ namespace Plugin {
         bool upgradeInProgress = _upgradeInProgress;
         _adminLock.Unlock();
         if (upgradeInProgress != true) {
-           string hash;
-           if (params.Hmac.IsSet() == true) {
-               hash = params.Hmac.Value();
-               if (HashStringToBytes(hash, _hashHex) != true) {
-                   result = Core::ERROR_INCORRECT_HASH;
-                }
-            }
             if (result == Core::ERROR_NONE) {
                 if (name.empty() != true) {
 
@@ -67,8 +60,11 @@ namespace Plugin {
                     if (params.Progressinterval.IsSet() == true) {
                         progressInterval = params.Progressinterval.Value();
                     }
-            
-                    result = Upgrade(name, locator, type, progressInterval, hash);
+                    string hash;
+                    if (params.Hmac.IsSet() == true) {
+                        hash = params.Hmac.Value();
+                    }
+                    result = Schedule(name, locator, type, progressInterval, hash);
       
                 } else {
                     result = Core::ERROR_BAD_REQUEST;

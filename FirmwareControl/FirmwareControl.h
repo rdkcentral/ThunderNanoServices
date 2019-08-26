@@ -8,7 +8,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class FirmwareControl : public PluginHost::IPlugin, public PluginHost::JSONRPC, public Core::Thread {
+    class FirmwareControl : public PluginHost::IPlugin, public PluginHost::JSONRPC {
 
     public:
         enum Type {
@@ -85,6 +85,36 @@ namespace Plugin {
             FirmwareControl& _parent;
         };
 
+        class Upgrader : public Core::IDispatch {
+        public:
+            Upgrader() = delete;
+            Upgrader(const Upgrader&) = delete;
+            Upgrader& operator=(const Upgrader&) = delete;
+
+            Upgrader(FirmwareControl* parent)
+                : _parent(*parent)
+            {
+                ASSERT(parent != nullptr);
+            }
+
+            virtual ~Upgrader()
+            {
+            }
+            void Schedule() {
+                Core::ProxyType<Core::IDispatch> job(*this);
+                PluginHost::WorkerPool::Instance().Submit(job);
+            }
+            void Stop() {
+                Core::ProxyType<Core::IDispatch> job(*this);
+                PluginHost::WorkerPool::Instance().Revoke(job);
+            }
+            virtual void Dispatch() override {
+                _parent.Upgrade();
+            }
+
+        private:
+            FirmwareControl& _parent;
+        };
     public:
         FirmwareControl(const FirmwareControl&) = delete;
         FirmwareControl& operator=(const FirmwareControl&) = delete;
@@ -93,20 +123,28 @@ namespace Plugin {
             : _waitTime(WaitTime)
             , _locator("http://test.org/image")
             , _destination("/tmp")
-            , _signaled(false, true)
             , _adminLock()
             , _type(IMAGE_TYPE_CDL)
+            , _hash()
             , _interval(0)
             , _upgradeInProgress(false)
-            , _hashHex()
+            , _upgrader(this)
+            , _downloadSignal(false, true)
         {
             RegisterAll();
         }
 
         virtual ~FirmwareControl()
         {
-            _signaled.SetEvent();
             UnregisterAll();
+
+            _adminLock.Lock();
+            if (_upgradeInProgress == true) {
+                _upgradeInProgress = false;
+                _downloadSignal.SetEvent();
+                _upgrader.Stop();
+            }
+            _adminLock.Unlock();
         }
 
         BEGIN_INTERFACE_MAP(FirmwareControl)
@@ -125,7 +163,7 @@ namespace Plugin {
             _downloadStatus = status;
             _adminLock.Unlock();
 
-            _signaled.SetEvent();
+            _downloadSignal.SetEvent();
         }
 
         static void Callback(mfrUpgradeStatus_t mfrStatus, void *cbData)
@@ -155,34 +193,15 @@ namespace Plugin {
         }
 
     private:
-        uint32_t Upgrade(const std::string& name, const std::string& path, const Type& type, const uint16_t& interval, const std::string& hash);
+        uint32_t Schedule(const std::string& name, const std::string& path, const Type& type, const uint16_t& interval, const std::string& hash);
 
     private:
-        virtual uint32_t Worker() override;
-
+        void Upgrade();
         void RegisterAll();
         void UnregisterAll();
         uint32_t endpoint_upgrade(const JsonData::FirmwareControl::UpgradeParamsData& params);
         void event_upgradeprogress(const JsonData::FirmwareControl::UpgradeprogressParamsData::StatusType& status,
                                    const JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType& error, const uint16_t& percentage);
-
-        inline bool HashStringToBytes(const std::string& hash, std::vector<uint8_t>& hashHex)
-        {
-            bool status = false;
-            for (uint16_t i = 0; i < hash.length(); i += 2) {
-		std::string byteStr = hash.substr(i, 2);
-                char* end;
-		uint8_t byte = (uint8_t) strtol(byteStr.c_str(), &end, 16);
-                if (end != nullptr) {
-                    break;
-                }
-                hashHex.push_back(byte);
-            }
-	    if (hashHex.size() == Crypto::HASH_SHA256 ) {
-                status = true;
-            }
-	    return status;
-        }
 
         inline ErrorType ConvertCoreErrorToUpgradeError(uint32_t error)
         {
@@ -273,15 +292,19 @@ namespace Plugin {
     private:
         uint32_t _waitTime;
         uint32_t _downloadStatus;
-        std::string _locator;
-        std::string _destination;
-        Core::Event _signaled;
+        string _locator;
+        string _destination;
         Core::CriticalSection _adminLock;
 
         Type _type;
+        string _hash;
         uint16_t _interval;
+
         bool _upgradeInProgress;
-        std::vector<uint8_t> _hashHex;
+
+        Upgrader _upgrader;
+
+        Core::Event _downloadSignal;
     };
 
 } // namespace Plugin

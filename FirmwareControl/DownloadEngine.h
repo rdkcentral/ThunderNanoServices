@@ -31,7 +31,7 @@ namespace PluginHost {
         }
 
     public:
-        uint32_t Start(const string& locator, const string& destination, const std::vector<uint8_t>& hash)
+        uint32_t Start(const string& locator, const string& destination, const string& hash)
         {
             Core::URL url(locator);
             uint32_t result = (url.IsValid() == true ? Core::ERROR_INPROGRESS : Core::ERROR_INCORRECT_URL);
@@ -48,9 +48,7 @@ namespace PluginHost {
 
                         result = Core::ERROR_NONE;
 
-                        _current._destination = destination;
-                        _current._source = locator;
-                        _current._hash = hash;
+                        _hash = hash;
 
                         BaseClass::Download(url, _storage);
                     }
@@ -71,13 +69,17 @@ namespace PluginHost {
             // TODO: Implement above sequence
             uint32_t status = result;
             if (status == Core::ERROR_NONE) {
-                if (_current._hash.empty() != true) {
-                    const uint8_t* downloadedHash = destination.SerializedHashValue();
-                    if (downloadedHash != nullptr) {
-                        for (uint16_t i = 0; i < Crypto::HASH_SHA256; i++) {
-                            if (downloadedHash[i] != _current._hash[i]) {
-                                status = Core::ERROR_INCORRECT_HASH;
-                                break;
+                if (_hash.empty() != true) {
+                    uint8_t hashHex[Crypto::HASH_SHA256];
+                    if (HashStringToBytes(_hash, hashHex) == true) {
+
+                        const uint8_t* downloadedHash = destination.SerializedHashValue();
+                        if (downloadedHash != nullptr) {
+                            for (uint16_t i = 0; i < Crypto::HASH_SHA256; i++) {
+                                if (downloadedHash[i] != hashHex[i]) {
+                                    status = Core::ERROR_INCORRECT_HASH;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -106,13 +108,28 @@ namespace PluginHost {
             return (result);
         }
 
-    private:
-        struct DownloadInfo {
-            string _source;
-            string _destination;
-            std::vector<uint8_t> _hash;
-        } _current;
+        inline bool HashStringToBytes(const std::string& hash, uint8_t (&hashHex)[Crypto::HASH_SHA256])
+        {
+            bool status = true;
 
+            for (uint8_t i = 0; i < Crypto::HASH_SHA256; i++) {
+                char highNibble = hash.c_str()[i * 2];
+                char lowNibble = hash.c_str()[(i * 2) + 1];
+                if (isxdigit(highNibble) && isxdigit(lowNibble)) {
+                    std::string byteStr = hash.substr(i * 2, 2);
+                    hashHex[i] = static_cast<uint8_t>(strtol(byteStr.c_str(), nullptr, 16));
+                }
+                else {
+                    status = false;
+                    break;
+                }
+            }
+	    return status;
+        }
+
+
+    private:
+        string _hash;
         Core::CriticalSection _adminLock;
         INotifier* _notifier;
         Core::File _storage;
