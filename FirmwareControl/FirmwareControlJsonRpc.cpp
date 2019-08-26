@@ -15,11 +15,13 @@ namespace Plugin {
     void FirmwareControl::RegisterAll()
     {
         Register<UpgradeParamsData,void>(_T("upgrade"), &FirmwareControl::endpoint_upgrade, this);
+        Property<Core::JSON::EnumType<StatusType>>(_T("status"), &FirmwareControl::get_status, nullptr, this);
     }
 
     void FirmwareControl::UnregisterAll()
     {
         Unregister(_T("upgrade"));
+        Unregister(_T("status"));
     }
 
     // API implementation
@@ -41,14 +43,14 @@ namespace Plugin {
         const string& name = params.Name.Value();
 
         _adminLock.Lock();
-        bool upgradeInProgress = _upgradeInProgress;
+        UpgradeStatus upgradeStatus = _upgradeStatus;
         _adminLock.Unlock();
-        if (upgradeInProgress != true) {
+        if (upgradeStatus != UpgradeStatus::NONE) {
             if (result == Core::ERROR_NONE) {
                 if (name.empty() != true) {
 
                     _adminLock.Lock();
-                    _upgradeInProgress = true;
+                    _upgradeStatus = UPGRADE_STARTED;
                     _adminLock.Unlock();
 
                     string locator = _locator;
@@ -85,8 +87,19 @@ namespace Plugin {
         return result;
     }
 
+    // Property: status - Current status of a upgrade
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t FirmwareControl::get_status(Core::JSON::EnumType<StatusType>& response) const
+    {
+        _adminLock.Lock();
+        response = static_cast<JsonData::FirmwareControl::StatusType>(_upgradeStatus);
+        _adminLock.Unlock();
+        return Core::ERROR_NONE;
+    }
+
     // Event: upgradeprogress - Notifies progress of upgrade
-    void FirmwareControl::event_upgradeprogress(const UpgradeprogressParamsData::StatusType& status, const UpgradeprogressParamsData::ErrorType& error, const uint16_t& percentage)
+    void FirmwareControl::event_upgradeprogress(const StatusType& status, const UpgradeprogressParamsData::ErrorType& error, const uint16_t& percentage)
     {
         UpgradeprogressParamsData params;
         params.Status = status;

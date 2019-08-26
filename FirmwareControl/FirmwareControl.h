@@ -15,15 +15,17 @@ namespace Plugin {
             IMAGE_TYPE_CDL,
             IMAGE_TYPE_RCDL
         };
-        enum ProgressStatus {
+        enum UpgradeStatus {
             NONE,
-            DOWNLOAD_NOT_STARTED,
+            UPGRADE_STARTED,
+            DOWNLOAD_STARTED,
             DOWNLOAD_ABORTED,
             DOWNLOAD_COMPLETED,
             INSTALL_NOT_STARTED,
             INSTALL_ABORTED,
             INSTALL_STARTED,
-            UPGRADE_COMPLETED
+            UPGRADE_COMPLETED,
+            UPGRADE_CANCELLED
         };
         enum ErrorType {
             ERROR_NONE,
@@ -127,7 +129,7 @@ namespace Plugin {
             , _type(IMAGE_TYPE_CDL)
             , _hash()
             , _interval(0)
-            , _upgradeInProgress(false)
+            , _upgradeStatus(UpgradeStatus::NONE)
             , _upgrader(this)
             , _downloadSignal(false, true)
         {
@@ -139,8 +141,8 @@ namespace Plugin {
             UnregisterAll();
 
             _adminLock.Lock();
-            if (_upgradeInProgress == true) {
-                _upgradeInProgress = false;
+            if (_upgradeStatus != UpgradeStatus::NONE) {
+                _upgradeStatus = UPGRADE_CANCELLED;
                 _downloadSignal.SetEvent();
                 _upgrader.Stop();
             }
@@ -181,15 +183,17 @@ namespace Plugin {
             NotifyProgress(ConvertMfrWriteStatusToUpgradeStatus(mfrStatus.progress), ConvertMfrWriteErrorToUpgradeType(mfrStatus.error), mfrStatus.percentage);
         }
 
-        inline void NotifyProgress(const ProgressStatus& progressStatus, const ErrorType& errorType, const uint16_t& percentage)
+        inline void NotifyProgress(const UpgradeStatus& upgradeStatus, const ErrorType& errorType, const uint16_t& percentage)
         {
-            if ((progressStatus == UPGRADE_COMPLETED) || (INSTALL_ABORTED) || (DOWNLOAD_ABORTED)) {
-                _adminLock.Lock();
-                _upgradeInProgress = false;
-                _adminLock.Unlock();
+            if ((upgradeStatus == UPGRADE_COMPLETED) || (upgradeStatus == INSTALL_ABORTED) ||
+                (upgradeStatus == DOWNLOAD_ABORTED) || (upgradeStatus == UPGRADE_CANCELLED)) {
+                event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
+                                      static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), percentage);
+                ResetStatus();
+            } else if (_interval == true) { // Send intermediate staus/progress of upgrade
+                event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
+                                      static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), percentage);
             }
-            event_upgradeprogress(static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::StatusType>(progressStatus),
-                                  static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), percentage);
         }
 
     private:
@@ -200,10 +204,36 @@ namespace Plugin {
         void RegisterAll();
         void UnregisterAll();
         uint32_t endpoint_upgrade(const JsonData::FirmwareControl::UpgradeParamsData& params);
-        void event_upgradeprogress(const JsonData::FirmwareControl::UpgradeprogressParamsData::StatusType& status,
+        uint32_t get_status(Core::JSON::EnumType<JsonData::FirmwareControl::StatusType>& response) const;
+        void event_upgradeprogress(const JsonData::FirmwareControl::StatusType& status,
                                    const JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType& error, const uint16_t& percentage);
 
-        inline ErrorType ConvertCoreErrorToUpgradeError(uint32_t error)
+        inline void ResetStatus()
+        {
+            _adminLock.Lock();
+            _upgradeStatus = UpgradeStatus::NONE;
+            _adminLock.Unlock();
+        }
+
+        inline UpgradeStatus Status() const
+        {
+            _adminLock.Lock();
+            UpgradeStatus status = _upgradeStatus;
+            _adminLock.Unlock();
+
+            return status;
+        }
+
+        inline void Status(const UpgradeStatus& upgradeStatus, const uint32_t& error, const uint16_t& percentage)
+        {
+            _adminLock.Lock();
+            _upgradeStatus = upgradeStatus;
+            _adminLock.Unlock();
+
+            NotifyProgress(upgradeStatus, ConvertCoreErrorToUpgradeError(error), percentage);
+        }
+
+        inline ErrorType ConvertCoreErrorToUpgradeError(uint32_t error) const
         {
             ErrorType errorType = ErrorType::UNKNOWN;
             switch (error) {
@@ -218,7 +248,8 @@ namespace Plugin {
             }
             return errorType;
         }
-        inline uint32_t ConvertMfrStatusToCore(mfrError_t mfrStatus)
+
+        inline uint32_t ConvertMfrStatusToCore(mfrError_t mfrStatus) const
         {
             uint32_t status = Core::ERROR_GENERAL;
             switch (mfrStatus) {
@@ -240,21 +271,21 @@ namespace Plugin {
             return status;
         }
 
-        inline ProgressStatus ConvertMfrWriteStatusToUpgradeStatus(mfrUpgradeProgress_t progress)
+        inline UpgradeStatus ConvertMfrWriteStatusToUpgradeStatus(mfrUpgradeProgress_t progress) const
         {
-            ProgressStatus status = ProgressStatus::NONE;
+            UpgradeStatus status = UpgradeStatus::NONE;
             switch (progress) {
             case mfrUPGRADE_PROGRESS_NOT_STARTED:
-                status = ProgressStatus::INSTALL_NOT_STARTED;
+                status = UpgradeStatus::INSTALL_NOT_STARTED;
                 break;
             case mfrUPGRADE_PROGRESS_STARTED:
-                status = ProgressStatus::INSTALL_STARTED;
+                status = UpgradeStatus::INSTALL_STARTED;
                 break;
             case mfrUPGRADE_PROGRESS_ABORTED:
-                status = ProgressStatus::INSTALL_ABORTED;
+                status = UpgradeStatus::INSTALL_ABORTED;
                 break;
             case mfrUPGRADE_PROGRESS_COMPLETED:
-                status = ProgressStatus::UPGRADE_COMPLETED;
+                status = UpgradeStatus::UPGRADE_COMPLETED;
                 break;
             default:
                 break;
@@ -262,7 +293,7 @@ namespace Plugin {
             return status;
         }
 
-        inline ErrorType ConvertMfrWriteErrorToUpgradeType(mfrError_t error)
+        inline ErrorType ConvertMfrWriteErrorToUpgradeType(mfrError_t error) const
         {
             ErrorType errorType = ErrorType::UNKNOWN;
             switch (error) {
@@ -294,13 +325,13 @@ namespace Plugin {
         uint32_t _downloadStatus;
         string _locator;
         string _destination;
-        Core::CriticalSection _adminLock;
+        mutable Core::CriticalSection _adminLock;
 
         Type _type;
         string _hash;
         uint16_t _interval;
 
-        bool _upgradeInProgress;
+        UpgradeStatus _upgradeStatus;
 
         Upgrader _upgrader;
 

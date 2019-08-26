@@ -58,18 +58,12 @@ namespace Plugin {
 
         Notifier notifier(this);
 
-        uint32_t status = Core::ERROR_NONE;
-        ProgressStatus progressStatus = ProgressStatus::NONE;
         PluginHost::DownloadEngine downloadEngine(&notifier, _destination + Name);
         downloadEngine.Start(_locator, _destination + Name, _hash);
-        _adminLock.Lock();
-        bool upgradeInProgress = _upgradeInProgress;
-        _adminLock.Unlock();
-        if ((_downloadSignal.Lock(_waitTime) == Core::ERROR_NONE) && (upgradeInProgress == true)) {
+        Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
+        if ((_downloadSignal.Lock(_waitTime) == Core::ERROR_NONE) && (Status() != UpgradeStatus::UPGRADE_CANCELLED)) {
             if (_downloadStatus == Core::ERROR_NONE) {
-                if (_interval) {
-                    NotifyProgress(ProgressStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 100); //FIXME: relook later about the incremental values
-                }
+                Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 0);
                 //Setup callback handler;
                 mfrUpgradeStatusNotify_t mfrNotifier;
                 mfrNotifier.cbData = reinterpret_cast<void*>(this);
@@ -77,27 +71,20 @@ namespace Plugin {
                 mfrNotifier.cb = Callback;
 
                 // Initiate image install
+                Status(UpgradeStatus::INSTALL_STARTED, ErrorType::ERROR_NONE, 0);
                 mfrError_t mfrStatus = mfrWriteImage(Name, _destination.c_str(), static_cast<mfrImageType_t>(_type), mfrNotifier);
                 if (mfrERR_NONE != mfrStatus) {
-                    progressStatus = ProgressStatus::INSTALL_ABORTED;
-                    status = ConvertMfrStatusToCore(mfrStatus);
+                    Status(UpgradeStatus::INSTALL_ABORTED, ConvertMfrStatusToCore(mfrStatus), 0);
+                } else {
+                    Status(UpgradeStatus::UPGRADE_COMPLETED, Core::ERROR_NONE, 100);
                 }
             } else {
-                progressStatus = ProgressStatus::DOWNLOAD_ABORTED;
-                status = _downloadStatus;
+                Status(UpgradeStatus::DOWNLOAD_ABORTED, _downloadStatus, 0);
             }
         } else {
-            progressStatus = ProgressStatus::DOWNLOAD_ABORTED;
-            status = Core::ERROR_UNAVAILABLE;
+            Status(UpgradeStatus::DOWNLOAD_ABORTED, Core::ERROR_UNAVAILABLE, 0);
         }
 
-        _adminLock.Lock();
-        upgradeInProgress = _upgradeInProgress;
-        _adminLock.Unlock();
-
-        if ((progressStatus !=  ProgressStatus::NONE) && (upgradeInProgress == true)) {
-            NotifyProgress(progressStatus, ConvertCoreErrorToUpgradeError(status), 0);
-        }
         return;
     }
 
