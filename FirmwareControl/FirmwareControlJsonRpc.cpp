@@ -30,8 +30,11 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_INPROGRESS: Operation in progress
     //  - ERROR_INCORRECT_URL: Invalid location given
-    //  - ERROR_GENERAL: Error in download
+    //  - ERROR_UNAVAILABLE: Error in download
     //  - ERROR_BAD_REQUEST: Bad file name given
+    //  - ERROR_UNKNOWN_KEY: Bad hash value given
+    //  - ERROR_ILLEGAL_STATE: Invalid state of device
+    //  - ERROR_INCORRECT_HASH: Incorrect hash given
     uint32_t FirmwareControl::endpoint_upgrade(const UpgradeParamsData& params)
     {
         uint32_t result = Core::ERROR_NONE;
@@ -62,9 +65,15 @@ namespace Plugin {
                     }
                     string hash;
                     if (params.Hmac.IsSet() == true) {
-                        hash = params.Hmac.Value();
+                        if (params.Hmac.Value().size() == (Crypto::HASH_SHA256 * 2)) {
+                            hash = params.Hmac.Value();
+                        } else {
+                            result = Core::ERROR_INCORRECT_HASH;
+                        }
                     }
-                    result = Schedule(name, locator, type, progressInterval, hash);
+                    if (result == Core::ERROR_NONE) {
+                        result = Schedule(name, locator, type, progressInterval, hash);
+                    }
       
                 } else {
                     result = Core::ERROR_BAD_REQUEST;
