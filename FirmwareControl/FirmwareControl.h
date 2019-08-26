@@ -185,8 +185,9 @@ namespace Plugin {
 
         inline void NotifyProgress(const UpgradeStatus& upgradeStatus, const ErrorType& errorType, const uint16_t& percentage)
         {
-            if ((upgradeStatus == UPGRADE_COMPLETED) || (upgradeStatus == INSTALL_ABORTED) ||
-                (upgradeStatus == DOWNLOAD_ABORTED) || (upgradeStatus == UPGRADE_CANCELLED)) {
+            if ((upgradeStatus == UPGRADE_COMPLETED) ||
+                (upgradeStatus == INSTALL_ABORTED) ||
+                (upgradeStatus == DOWNLOAD_ABORTED)) {
                 event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
                                       static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), percentage);
                 ResetStatus();

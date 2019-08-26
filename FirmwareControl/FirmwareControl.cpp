@@ -61,25 +61,27 @@ namespace Plugin {
         PluginHost::DownloadEngine downloadEngine(&notifier, _destination + Name);
         downloadEngine.Start(_locator, _destination + Name, _hash);
         Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
-        if ((_downloadSignal.Lock(_waitTime) == Core::ERROR_NONE) && (Status() != UpgradeStatus::UPGRADE_CANCELLED)) {
-            if (_downloadStatus == Core::ERROR_NONE) {
-                Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 0);
-                //Setup callback handler;
-                mfrUpgradeStatusNotify_t mfrNotifier;
-                mfrNotifier.cbData = reinterpret_cast<void*>(this);
-                mfrNotifier.interval = static_cast<int>(_interval);
-                mfrNotifier.cb = Callback;
+        if (_downloadSignal.Lock(_waitTime) == Core::ERROR_NONE) {
+            if(Status() != UpgradeStatus::UPGRADE_CANCELLED) {
+                if (_downloadStatus == Core::ERROR_NONE) {
+                    Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 0);
+                    //Setup callback handler;
+                    mfrUpgradeStatusNotify_t mfrNotifier;
+                    mfrNotifier.cbData = reinterpret_cast<void*>(this);
+                    mfrNotifier.interval = static_cast<int>(_interval);
+                    mfrNotifier.cb = Callback;
 
-                // Initiate image install
-                Status(UpgradeStatus::INSTALL_STARTED, ErrorType::ERROR_NONE, 0);
-                mfrError_t mfrStatus = mfrWriteImage(Name, _destination.c_str(), static_cast<mfrImageType_t>(_type), mfrNotifier);
-                if (mfrERR_NONE != mfrStatus) {
-                    Status(UpgradeStatus::INSTALL_ABORTED, ConvertMfrStatusToCore(mfrStatus), 0);
+                    // Initiate image install
+                    Status(UpgradeStatus::INSTALL_STARTED, ErrorType::ERROR_NONE, 0);
+                    mfrError_t mfrStatus = mfrWriteImage(Name, _destination.c_str(), static_cast<mfrImageType_t>(_type), mfrNotifier);
+                    if (mfrERR_NONE != mfrStatus) {
+                        Status(UpgradeStatus::INSTALL_ABORTED, ConvertMfrStatusToCore(mfrStatus), 0);
+                    } else {
+                        Status(UpgradeStatus::UPGRADE_COMPLETED, Core::ERROR_NONE, 100);
+                    }
                 } else {
-                    Status(UpgradeStatus::UPGRADE_COMPLETED, Core::ERROR_NONE, 100);
+                    Status(UpgradeStatus::DOWNLOAD_ABORTED, _downloadStatus, 0);
                 }
-            } else {
-                Status(UpgradeStatus::DOWNLOAD_ABORTED, _downloadStatus, 0);
             }
         } else {
             Status(UpgradeStatus::DOWNLOAD_ABORTED, Core::ERROR_UNAVAILABLE, 0);
