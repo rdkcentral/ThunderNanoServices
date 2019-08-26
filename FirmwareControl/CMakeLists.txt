@@ -2,6 +2,7 @@ set(PLUGIN_NAME FirmwareControl)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(MFRLibs REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     FirmwareControl.cpp
@@ -15,7 +16,9 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        mfrlibs::mfrlibs
+)
 
 target_include_directories(${MODULE_NAME} 
     PRIVATE
