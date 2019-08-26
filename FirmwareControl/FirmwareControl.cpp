@@ -8,13 +8,13 @@ namespace Plugin {
     /* virtual */ const string FirmwareControl::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
-        Config config;
-        config.FromString(service->ConfigLine());
-        if (config.Locator.IsSet() == true) {
-            _locator = config.Locator.Value();
+        Location location;
+        location.FromString(service->ConfigLine());
+        if (location.Source.IsSet() == true) {
+            _source = location.Source.Value();
         }
-        if (config.Destination.IsSet() == true) {
-            _destination = config.Destination.Value();
+        if (location.Download.IsSet() == true) {
+            _destination = location.Download.Value();
         }
         return (string());
     }
@@ -36,7 +36,7 @@ namespace Plugin {
 
         //FIXME Add code to check the upgrade is already happening (here or jsonrpc call)
         if (path.empty() != true) {
-            _locator = path + name;
+            _source = path + name;
         }
 
         if (status == Core::ERROR_NONE) {
@@ -59,7 +59,7 @@ namespace Plugin {
         Notifier notifier(this);
 
         PluginHost::DownloadEngine downloadEngine(&notifier, _destination + Name);
-        downloadEngine.Start(_locator, _destination + Name, _hash);
+        downloadEngine.Start(_source, _destination + Name, _hash);
         Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
         if (_downloadSignal.Lock(_waitTime) == Core::ERROR_NONE) {
             if(Status() != UpgradeStatus::UPGRADE_CANCELLED) {

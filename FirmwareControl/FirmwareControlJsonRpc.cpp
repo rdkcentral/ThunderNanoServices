@@ -53,7 +53,7 @@ namespace Plugin {
                     _upgradeStatus = UPGRADE_STARTED;
                     _adminLock.Unlock();
 
-                    string locator = _locator;
+                    string locator = _source;
                     if (params.Location.IsSet() != true) {
                         locator = params.Location.Value();
                     }

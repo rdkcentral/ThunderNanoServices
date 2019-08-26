@@ -42,25 +42,25 @@ namespace Plugin {
         static uint32_t constexpr WaitTime = 60 * 60 * 1000;
 
     private:
-        class Config : public Core::JSON::Container {
+        class Location : public Core::JSON::Container {
         public:
-            Config(const Config&);
-            Config& operator=(const Config&);
+            Location(const Location&);
+            Location& operator=(const Location&);
 
-            Config()
+            Location()
             : Core::JSON::Container()
-            , Locator()
-            , Destination()
+            , Source()
+            , Download()
             {
-                Add(_T("locator"), &Locator);
-                Add(_T("destination"), &Destination);
+                Add(_T("source"), &Source);
+                Add(_T("download"), &Download);
             }
 
-            ~Config() {}
+            ~Location() {}
 
         public:
-            Core::JSON::String Locator;
-            Core::JSON::String Destination;
+            Core::JSON::String Source;
+            Core::JSON::String Download;
         };
 
         class Notifier : public INotifier {
@@ -123,7 +123,7 @@ namespace Plugin {
 
         FirmwareControl()
             : _waitTime(WaitTime)
-            , _locator("http://test.org/image")
+            , _source("http://test.org/image")
             , _destination("/tmp")
             , _adminLock()
             , _type(IMAGE_TYPE_CDL)
@@ -324,7 +324,7 @@ namespace Plugin {
     private:
         uint32_t _waitTime;
         uint32_t _downloadStatus;
-        string _locator;
+        string _source;
         string _destination;
         mutable Core::CriticalSection _adminLock;
 
