@@ -45,7 +45,7 @@ namespace Plugin {
         _adminLock.Lock();
         UpgradeStatus upgradeStatus = _upgradeStatus;
         _adminLock.Unlock();
-        if (upgradeStatus != UpgradeStatus::NONE) {
+        if (upgradeStatus == UpgradeStatus::NONE) {
             if (result == Core::ERROR_NONE) {
                 if (name.empty() != true) {
 
@@ -83,6 +83,10 @@ namespace Plugin {
             }
         } else {
             result = Core::ERROR_INPROGRESS;
+        }
+
+        if (result != Core::ERROR_NONE) {
+            ResetStatus();
         }
         return result;
     }
