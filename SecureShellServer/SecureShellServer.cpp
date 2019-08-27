@@ -15,9 +15,10 @@ namespace Plugin {
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
         Config config;
         config.FromString(_service->ConfigLine());
-        _InputParameters = config.InputParameters.Value();
+        //_InputParameters = config.InputParameters.Value();
 
-        _implementation.StartService(_InputParameters);
+        //_implementation.StartService(_InputParameters);
+        _implementation.StartService(_service->ConfigLine());
 
         return string();
     }
@@ -42,8 +43,6 @@ namespace Plugin {
     {
     }
 
-    // POST/PUT	<- StartService
-    // POST/PUT	<- StopService
     // GET	<- GetSessionsInfo
     // GET	<- GetSessionsCount
     // DELETE	<-CloseClientSession
@@ -60,48 +59,7 @@ namespace Plugin {
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported request for the [SecureShellServer] service.");
 
-        if ((request.Verb == Web::Request::HTTP_PUT || (request.Verb == Web::Request::HTTP_POST && index.Next()))) {
-
-            if (index.Current().Text() == "StartService") {
-                string inputparameters;
-
-                Core::URL::KeyValue options(request.Query.Value());
-
-		    std::string inputParameters;
-        	    TRACE(Trace::Information, (_T("Entered into StartService method")));
-
-                    inputparameters = options[_T("params")].Text();
-
-                    Core::URL::Decode(inputparameters.c_str(), inputparameters.length(), const_cast<char*>(inputParameters.data()), inputParameters.size());
-
-                    inputparameters = inputParameters.data();
-
-                    uint32_t status = StartService(inputparameters);
-
-                    if (status != Core::ERROR_NONE) {
-                        result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                        result->Message = _T("Dropbear StartService failed for:") + inputparameters;
-                    } else {
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = "OK";
-                    }
-            }
-	    else if (index.Current().Text() == "StopService") {
-        	TRACE(Trace::Information, (_T("Entered into StopService method")));
-                uint32_t status = StopService();
-                if (status != Core::ERROR_NONE) {
-                    result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                    result->Message = _T("Dropbear StopService failed for ");
-                } else {
-                    result->ErrorCode = Web::STATUS_OK;
-                    result->Message = "OK";
-                }
-            }
-	    else {
-                result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                result->Message = _T("Unavailable method");
-            }
-        } else if ((request.Verb == Web::Request::HTTP_GET && index.Next())) {
+        if ((request.Verb == Web::Request::HTTP_GET && index.Next())) {
 		
 		if (index.Current().Text() == "GetSessionsCount") {
 			// GET	<- GetSessionsInfo
@@ -156,16 +114,6 @@ namespace Plugin {
 	}
 		
         return result;
-    }
-
-    uint32_t SecureShellServer::StartService(const std::string& params)
-    {
-        return _implemetation.StartService(params);
-    }
-
-    uint32_t SecureShellServer::StopService()
-    {
-        return _implemetation.StopService();
     }
 
     uint32_t SecureShellServer::GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& sessioninfo)

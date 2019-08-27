@@ -16,8 +16,6 @@ namespace Plugin {
 
     void SecureShellServer::RegisterAll()
     {
-        Register<Core::JSON::String,void>(_T("startservice"), &SecureShellServer::endpoint_startservice, this);
-        Register<void,void>(_T("stopservice"), &SecureShellServer::endpoint_stopservice, this);
 	Register<void, Core::JSON::DecUInt32>(_T("getactivesessionscount"), &SecureShellServer::endpoint_getactivesessionscount, this);
 	Register<void, Core::JSON::ArrayType<SessioninfoResultData>>(_T("getactivesessionsinfo"), &SecureShellServer::endpoint_getactivesessionsinfo, this);
 	Register<CloseclientsessionParamsData,void>(_T("closeclientsession"), &SecureShellServer::endpoint_closeclientsession, this);
@@ -28,46 +26,11 @@ namespace Plugin {
         Unregister(_T("closeclientsession"));
         Unregister(_T("getactivesessionsinfo"));
         Unregister(_T("getactivesessionscount"));
-        Unregister(_T("stopservice"));
-        Unregister(_T("startservice"));
     }
 
     // API implementation
     //
     
-    // Property: 
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_INCORRECT_URL: Incorrect URL given
-    // Start Dropbear Service.
-    uint32_t SecureShellServer::endpoint_startservice(const Core::JSON::String& params)
-    {
-        uint32_t result = Core::ERROR_NONE;
-	std::string& argv = params.Value();
-
-        if(params.Port.IsSet() == true) {
-            result = StartService(argv);
-        } else {
-            result = Core::ERROR_UNAVAILABLE;
-        }
-
-        return result;
-    }
-
-    // Property: 
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_INCORRECT_URL: Incorrect URL given
-    // Stop Dropbear Service.
-    uint32_t SecureShellServer::endpoint_stopservice()
-    {
-        uint32_t result = Core::ERROR_NONE;
-
-        result = StopService();
-
-        return result;
-    }
-
     // Property: 
     // Return codes:
     //  - ERROR_NONE: Success

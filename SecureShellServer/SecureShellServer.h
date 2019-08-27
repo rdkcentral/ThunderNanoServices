@@ -16,11 +16,9 @@ namespace Plugin {
             Data()
                 : Core::JSON::Container()
                 , SessionInfo()
-		, InputParams()
 		, ActiveCount()
             {
                 Add(_T("sessioninfo"), &SessionInfo);
-                Add(_T("inputparams"), &InputParams);
                 Add(_T("activecount"), &ActiveCount);
             }
 
@@ -30,7 +28,6 @@ namespace Plugin {
 
         public:
             Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData> SessionInfo;
-	    Core::JSON::String InputParams;
 	    Core::JSON::DecUInt32 ActiveCount;
         };
 
@@ -82,8 +79,6 @@ namespace Plugin {
         Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         // SecureShellServer methods
-        uint32_t StartService(const Core::JSON::String& parameters);
-        uint32_t StopService() override;
         uint32_t GetSessionsCount();
         uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& response);
         uint32_t CloseClientSession(const std::string& clientpid);
@@ -95,8 +90,6 @@ namespace Plugin {
         void RegisterAll();
         void UnregisterAll();
         
-    	uint32_t endpoint_startservice(const Core::JSON::String& params);
-        uint32_t endpoint_stopservice();
 	uint32_t endpoint_getactivesessionscount(const Core::JSON::DecUInt32& response);
 	uint32_t endpoint_getactivesessionsinfo(const Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& response);
 	uint32_t endpoint_closeclientsession(const JsonData::SecureShellServer::CloseclientsessionParamsData& params);

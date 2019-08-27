@@ -12,7 +12,7 @@ namespace Plugin {
         SecureShellServerImplementation() = default;
         ~SecureShellServerImplementation() = default;
 
-        uint32_t StartService(const std::string& params)
+        uint32_t StartService(const string& params)
         {
             uint32_t result = Core::ERROR_NONE;
 
