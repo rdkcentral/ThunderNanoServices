@@ -12,9 +12,11 @@ namespace Plugin {
         location.FromString(service->ConfigLine());
         if (location.Source.IsSet() == true) {
             _source = location.Source.Value();
+            TRACE_L1("Source location : [%s]\n", _source.c_str());
         }
         if (location.Download.IsSet() == true) {
             _destination = location.Download.Value();
+            TRACE_L1("Destination location : [%s]\n", _destination.c_str());
         }
         return (string());
     }
@@ -32,62 +34,73 @@ namespace Plugin {
 
     uint32_t FirmwareControl::Schedule(const std::string& name, const std::string& path, const FirmwareControl::Type& type, const uint16_t& interval, const std::string& hash)
     {
-        uint32_t status = Core::ERROR_NONE;
-
-        //FIXME Add code to check the upgrade is already happening (here or jsonrpc call)
+        TRACE(Trace::Information, (string(__FUNCTION__)));
         if (path.empty() != true) {
-            _source = path + name;
+            _source = path + "/" + name;
         }
+        _downloadSignal.ResetEvent();
 
-        if (status == Core::ERROR_NONE) {
-            _downloadSignal.ResetEvent();
+        _adminLock.Lock();
+        _type = type;
+        _interval = interval;
+        _hash = hash;
 
-            _adminLock.Lock();
-            _type = type;
-            _interval = interval;
-            _hash = hash;
+        _upgrader.Schedule();
+        _adminLock.Unlock();
 
-            _upgrader.Schedule();
-            _adminLock.Unlock();
-        }
-
-        return status;
+        return Core::ERROR_NONE;
     }
 
     void FirmwareControl::Upgrade() {
+        TRACE(Trace::Information, (string(__FUNCTION__)));
+        uint32_t status = Download();
+        if (status == Core::ERROR_NONE && (Status() != UpgradeStatus::UPGRADE_CANCELLED)) {
+            Install();
+        }
+    }
 
+    void FirmwareControl::Install() {
+        //Setup callback handler;
+        mfrUpgradeStatusNotify_t mfrNotifier;
+        mfrNotifier.cbData = reinterpret_cast<void*>(this);
+        mfrNotifier.interval = static_cast<int>(_interval);
+        mfrNotifier.cb = Callback;
+
+        // Initiate image install
+        Status(UpgradeStatus::INSTALL_STARTED, ErrorType::ERROR_NONE, 0);
+        mfrError_t mfrStatus = mfrWriteImage(Name, _destination.c_str(), static_cast<mfrImageType_t>(_type), mfrNotifier);
+        if (mfrERR_NONE != mfrStatus) {
+            Status(UpgradeStatus::INSTALL_ABORTED, ConvertMfrStatusToCore(mfrStatus), 0);
+        } else {
+            Status(UpgradeStatus::UPGRADE_COMPLETED, Core::ERROR_NONE, 100);
+        }
+    }
+
+    uint32_t FirmwareControl::Download() {
+
+        TRACE(Trace::Information, (string(__FUNCTION__)));
         Notifier notifier(this);
+        string destination = _destination + "/" + Name;
 
-        PluginHost::DownloadEngine downloadEngine(&notifier, _destination + Name);
-        downloadEngine.Start(_source, _destination + Name, _hash);
-        Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
-        if (_downloadSignal.Lock(_waitTime) == Core::ERROR_NONE) {
-            if(Status() != UpgradeStatus::UPGRADE_CANCELLED) {
-                if (_downloadStatus == Core::ERROR_NONE) {
-                    Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 0);
-                    //Setup callback handler;
-                    mfrUpgradeStatusNotify_t mfrNotifier;
-                    mfrNotifier.cbData = reinterpret_cast<void*>(this);
-                    mfrNotifier.interval = static_cast<int>(_interval);
-                    mfrNotifier.cb = Callback;
+        PluginHost::DownloadEngine downloadEngine(&notifier, destination);
 
-                    // Initiate image install
-                    Status(UpgradeStatus::INSTALL_STARTED, ErrorType::ERROR_NONE, 0);
-                    mfrError_t mfrStatus = mfrWriteImage(Name, _destination.c_str(), static_cast<mfrImageType_t>(_type), mfrNotifier);
-                    if (mfrERR_NONE != mfrStatus) {
-                        Status(UpgradeStatus::INSTALL_ABORTED, ConvertMfrStatusToCore(mfrStatus), 0);
-                    } else {
-                        Status(UpgradeStatus::UPGRADE_COMPLETED, Core::ERROR_NONE, 100);
-                    }
-                } else {
-                    Status(UpgradeStatus::DOWNLOAD_ABORTED, _downloadStatus, 0);
-                }
+        uint32_t status = downloadEngine.Start(_source, destination, _hash);
+        if (status == Core::ERROR_NONE) {
+
+            Status(UpgradeStatus::DOWNLOAD_STARTED, status, 0);
+            status = _downloadSignal.Lock(_waitTime);
+            if ((status == Core::ERROR_NONE) && (DownloadStatus() == Core::ERROR_NONE)) {
+                 Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 0);
+            } else {
+                status = ((status != Core::ERROR_NONE)? status: DownloadStatus());
+                Status(UpgradeStatus::DOWNLOAD_ABORTED, status, 0);
             }
         } else {
-            Status(UpgradeStatus::DOWNLOAD_ABORTED, Core::ERROR_UNAVAILABLE, 0);
+            Status(UpgradeStatus::DOWNLOAD_ABORTED, status, 0);
         }
 
-        return;
+        TRACE(Trace::Information, (string(__FUNCTION__)));
+        return status;
     }
 
 } // namespace Plugin

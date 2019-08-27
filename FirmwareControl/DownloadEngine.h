@@ -63,10 +63,6 @@ namespace PluginHost {
     private:
         virtual void Transfered(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
         {
-            // Do your file magic stuff here, validate the hash and if it validates oke, move the file to the destination
-            // location. Depending on these actions, modify the result and notify the parent.
-            // For now we move on :-)
-            // TODO: Implement above sequence
             uint32_t status = result;
             if (status == Core::ERROR_NONE) {
                 if (_hash.empty() != true) {

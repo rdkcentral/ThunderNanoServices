@@ -203,6 +203,9 @@ namespace Plugin {
 
     private:
         void Upgrade();
+        void Install();
+        uint32_t Download();
+
         void RegisterAll();
         void UnregisterAll();
         uint32_t endpoint_upgrade(const JsonData::FirmwareControl::UpgradeParamsData& params);
@@ -215,6 +218,13 @@ namespace Plugin {
             _adminLock.Lock();
             _upgradeStatus = UpgradeStatus::NONE;
             _adminLock.Unlock();
+        }
+        inline uint32_t DownloadStatus() const
+        {
+            _adminLock.Lock();
+            uint32_t status = _downloadStatus;
+            _adminLock.Unlock();
+            return status;
         }
 
         inline UpgradeStatus Status() const
