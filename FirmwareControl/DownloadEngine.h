@@ -46,11 +46,9 @@ namespace PluginHost {
 
                     if (_storage.Create() == true) {
 
-                        result = Core::ERROR_NONE;
-
                         _hash = hash;
 
-                        BaseClass::Download(url, _storage);
+                        result = BaseClass::Download(url, _storage);
                     }
                 }
 

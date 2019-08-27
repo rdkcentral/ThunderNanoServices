@@ -85,7 +85,7 @@ namespace Plugin {
         PluginHost::DownloadEngine downloadEngine(&notifier, destination);
 
         uint32_t status = downloadEngine.Start(_source, destination, _hash);
-        if (status == Core::ERROR_NONE) {
+        if ((status == Core::ERROR_NONE) || status == Core::ERROR_INPROGRESS)) {
 
             Status(UpgradeStatus::DOWNLOAD_STARTED, status, 0);
             status = _downloadSignal.Lock(_waitTime);

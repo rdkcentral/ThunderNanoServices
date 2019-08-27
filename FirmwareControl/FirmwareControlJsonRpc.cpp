@@ -54,7 +54,7 @@ namespace Plugin {
                     _adminLock.Unlock();
 
                     string locator = _source;
-                    if (params.Location.IsSet() != true) {
+                    if (params.Location.IsSet() == true) {
                         locator = params.Location.Value();
                     }
                     Type type = IMAGE_TYPE_CDL;
