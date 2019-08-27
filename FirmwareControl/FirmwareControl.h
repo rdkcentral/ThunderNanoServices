@@ -151,6 +151,7 @@ namespace Plugin {
 
         BEGIN_INTERFACE_MAP(FirmwareControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)
+            INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
     public:
         //   IPlugin methods
