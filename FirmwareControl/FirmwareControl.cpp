@@ -67,12 +67,11 @@ namespace Plugin {
         mfrNotifier.cb = Callback;
 
         // Initiate image install
-        Status(UpgradeStatus::INSTALL_STARTED, ErrorType::ERROR_NONE, 0);
         mfrError_t mfrStatus = mfrWriteImage(Name, _destination.c_str(), static_cast<mfrImageType_t>(_type), mfrNotifier);
         if (mfrERR_NONE != mfrStatus) {
             Status(UpgradeStatus::INSTALL_ABORTED, ConvertMfrStatusToCore(mfrStatus), 0);
         } else {
-            Status(UpgradeStatus::UPGRADE_COMPLETED, Core::ERROR_NONE, 100);
+            Status(UpgradeStatus::INSTALL_STARTED, ErrorType::ERROR_NONE, 0);
         }
     }
 
