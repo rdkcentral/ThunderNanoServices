@@ -107,7 +107,7 @@ namespace Plugin {
             _service->Unregister(&_notification);
             _service = nullptr;
         } else {
-            _opencdmi->Configure(_service);
+            _opencdmi->Initialize(_service);
 
             _memory = WPEFramework::OCDM::MemoryObserver(_service->RemoteConnection(_connectionId));
 
@@ -125,6 +125,8 @@ namespace Plugin {
 
         _service->Unregister(&_notification);
         _memory->Release();
+
+        _opencdmi->Deinitialize(service);
 
         if (_opencdmi->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 
