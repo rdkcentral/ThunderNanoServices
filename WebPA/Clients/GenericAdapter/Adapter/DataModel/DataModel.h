@@ -9,32 +9,32 @@ namespace WPEFramework {
 
 typedef enum
 {
-    DB_SUCCESS = 0,
-    DB_FAILURE,
-    DB_ERR_WILDCARD_NOT_SUPPORTED,
-    DB_ERR_INVALID_PARAMETER,
-    DB_ERR_TIMEOUT,
-    DB_ERR_NOT_EXIST
+    DM_SUCCESS = 0,
+    DM_FAILURE,
+    DM_ERR_WILDCARD_NOT_SUPPORTED,
+    DM_ERR_INVALID_PARAMETER,
+    DM_ERR_TIMEOUT,
+    DM_ERR_NOT_EXIST
 }
-DBStatus;
+DMStatus;
 
-class WalDB {
+class DataModel {
 private:
     static constexpr const uint32_t  MaxNumParameters = 2048;
     static constexpr const TCHAR* InstanceNumberIndicator = "{i}.";
 
 public:
-    WalDB() = delete;
-    WalDB(const WalDB&) = delete;
-    WalDB& operator= (const WalDB&) = delete;
+    DataModel() = delete;
+    DataModel(const DataModel&) = delete;
+    DataModel& operator= (const DataModel&) = delete;
 public:
-    WalDB(Handler* handler);
-    ~WalDB();
+    DataModel(Handler* handler);
+    ~DataModel();
 
-    DBStatus LoadDB(const std::string& filename);
-    DBStatus Parameters(const std::string& paramName, std::map<uint32_t, std::pair<std::string, std::string>>& paramList) const;
+    DMStatus LoadDM(const std::string& filename);
+    DMStatus Parameters(const std::string& paramName, std::map<uint32_t, std::pair<std::string, std::string>>& paramList) const;
     bool IsValidParameter(const std::string& paramName, std::string& dataType) const;
-    int DBHandle() { return _dbHandle; }
+    int DMHandle() { return _dmHandle; }
 
 private:
     TiXmlNode* Parameters(TiXmlNode* pParent, const std::string& paramName, std::string& currentParam, std::map<uint32_t, std::pair<std::string, std::string>>& paramList) const;
@@ -47,7 +47,7 @@ private:
     int16_t ParameterInstanceCount(const std::string& paramName) const;
 
 private:
-    int _dbHandle;
+    int _dmHandle;
     Handler* _handler;
 };
 }

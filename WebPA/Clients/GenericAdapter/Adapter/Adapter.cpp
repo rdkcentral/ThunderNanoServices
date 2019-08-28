@@ -47,16 +47,16 @@ private:
 Adapter::Adapter(Handler* handler)
     : _callback(nullptr)
     , _adapterCallback(nullptr)
-    , _walDB(nullptr)
+    , _dataModel(nullptr)
     , _parameter(nullptr)
     , _attribute(nullptr)
     , _notifier(nullptr)
     , _adminLock()
 {
-    _walDB = new WalDB(handler);
-    ASSERT(_walDB != nullptr);
+    _dataModel = new DataModel(handler);
+    ASSERT(_dataModel != nullptr);
 
-    _parameter = new Parameter(handler, _walDB);
+    _parameter = new Parameter(handler, _dataModel);
     ASSERT(_parameter != nullptr);
 
     _notifier = new Notifier(_parameter);
@@ -87,24 +87,24 @@ Adapter::~Adapter()
         delete _adapterCallback;
         _adapterCallback = nullptr;
     }
-    if (nullptr != _walDB) {
-       delete _walDB;
-       _walDB = nullptr;
+    if (nullptr != _dataModel) {
+       delete _dataModel;
+       _dataModel = nullptr;
     }
 }
 
 bool Adapter::LoadDataModel(const std::string& dataFile)
 {
-    DBStatus dbRet = DB_FAILURE;
+    DMStatus dmRet = DM_FAILURE;
     bool status = false;
     // Load Document model
     if (!dataFile.empty()) {
-        dbRet = _walDB->LoadDB(dataFile);
+        dmRet = _dataModel->LoadDM(dataFile);
 
-        if (dbRet != DB_SUCCESS) {
+        if (dmRet != DM_SUCCESS) {
             TRACE(Trace::Information, (_T("Error loading webpa database")));
         } else {
-            TRACE(Trace::Information, (_T("DB Handle is Valid")));
+            TRACE(Trace::Information, (_T("DM Handle is Valid")));
             status = true;
         }
     }

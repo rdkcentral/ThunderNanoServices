@@ -3,8 +3,8 @@
 namespace WPEFramework {
 namespace WebPA {
 
-Parameter::Parameter(Handler* handler, WalDB* walDB)
-    : _walDB(walDB)
+Parameter::Parameter(Handler* handler, DataModel* dataModel)
+    : _dataModel(dataModel)
     , _handler(handler)
     , _adminLock()
 {
@@ -44,17 +44,17 @@ const WebPAStatus Parameter::Values(const std::string& parameterName, std::vecto
 {
     WebPAStatus status = WEBPA_FAILURE; // Overall get status
 
-    int32_t dbHandle = _walDB->DBHandle();
+    int32_t dmHandle = _dataModel->DMHandle();
 
-    if (dbHandle) {
+    if (dmHandle) {
         if (Utils::IsWildCardParam(parameterName)) { // It is a wildcard Param
             /* Translate wildcard to list of parameters */
-            std::map<uint32_t, std::pair<std::string, std::string>> dbParamters;
-            DBStatus dbRet = _walDB->Parameters(parameterName, dbParamters);
-            if (dbRet == DB_SUCCESS && dbParamters.size() > 0) {
-                for (auto&  dbParamter:  dbParamters) {
-                    Variant value(Utils::ConvertToParamType(dbParamter.second.second));
-                    Data param(dbParamter.second.first, value);
+            std::map<uint32_t, std::pair<std::string, std::string>> dmParamters;
+            DMStatus dmRet = _dataModel->Parameters(parameterName, dmParamters);
+            if (dmRet == DM_SUCCESS && dmParamters.size() > 0) {
+                for (auto&  dmParamter:  dmParamters) {
+                    Variant value(Utils::ConvertToParamType(dmParamter.second.second));
+                    Data param(dmParamter.second.first, value);
 
                     _adminLock.Lock();
                     WebPAStatus ret = Utils::ConvertFaultCodeToWPAStatus((static_cast<const Handler&>(*_handler)).Parameter(param));
@@ -70,13 +70,13 @@ const WebPAStatus Parameter::Values(const std::string& parameterName, std::vecto
                 TRACE(Trace::Error, (_T( " Wild card Param list is empty")));
                 status = WEBPA_FAILURE;
             }
-            dbParamters.clear();
+            dmParamters.clear();
 
         } else { // Not a wildcard Parameter Lets fill it
             TRACE(Trace::Information, (_T( "Get Request for a Non-WildCard Parameter")));
             std::string dataType;
 
-            if (_walDB->IsValidParameter (parameterName, dataType)) {
+            if (_dataModel->IsValidParameter (parameterName, dataType)) {
                 TRACE(Trace::Information, (_T( "Valid Parameter..! ")));
                 Variant value(Utils::ConvertToParamType(dataType));
                 Data param(parameterName, value);
@@ -106,12 +106,12 @@ WebPAStatus Parameter::Values(const Data& parameter)
 {
     WebPAStatus ret = WEBPA_FAILURE;
 
-    int32_t dbHandle = _walDB->DBHandle();
+    int32_t dmHandle = _dataModel->DMHandle();
 
-    if (dbHandle) {
+    if (dmHandle) {
 
         std::string dataType;
-        if (_walDB->IsValidParameter(parameter.Name(), dataType)) {
+        if (_dataModel->IsValidParameter(parameter.Name(), dataType)) {
             if (Utils::ConvertToParamType(dataType) == parameter.Value().Type()) {
 
                 _adminLock.Lock();

@@ -1,42 +1,42 @@
 
-#include "WalDB.h"
+#include "DataModel.h"
 
 namespace WPEFramework {
 
-WalDB::WalDB(Handler* handler)
-    : _dbHandle(0)
+DataModel::DataModel(Handler* handler)
+    : _dmHandle(0)
     , _handler(handler)
 {
 }
 
-WalDB::~WalDB()
+DataModel::~DataModel()
 {
-    if (_dbHandle) {
-        TiXmlDocument* doc = reinterpret_cast<TiXmlDocument*>(_dbHandle);
+    if (_dmHandle) {
+        TiXmlDocument* doc = reinterpret_cast<TiXmlDocument*>(_dmHandle);
         delete (doc);
     }
 }
 
-DBStatus WalDB::LoadDB(const std::string& filename)
+DMStatus DataModel::LoadDM(const std::string& filename)
 {
     TiXmlDocument* doc = new TiXmlDocument(filename.c_str());
-    DBStatus status = DB_FAILURE;
+    DMStatus status = DM_FAILURE;
 
     if (nullptr != doc) {
         bool loadOK = doc->LoadFile();
         if (loadOK) {
-            _dbHandle = reinterpret_cast<int>(doc);
-            status = DB_SUCCESS;
+            _dmHandle = reinterpret_cast<int>(doc);
+            status = DM_SUCCESS;
         } else {
-            _dbHandle = 0;
+            _dmHandle = 0;
         }
     } else {
-        _dbHandle = 0;
+        _dmHandle = 0;
     }
     return status;
 }
 
-int16_t WalDB::ParameterInstanceCount(const std::string& paramName) const
+int16_t DataModel::ParameterInstanceCount(const std::string& paramName) const
 {
     int16_t instanceCount = 0;
 
@@ -67,7 +67,7 @@ int16_t WalDB::ParameterInstanceCount(const std::string& paramName) const
 }
 
 
-void WalDB::ReplaceWithInstanceNumber(string& paramName, uint16_t instanceNumber) const
+void DataModel::ReplaceWithInstanceNumber(string& paramName, uint16_t instanceNumber) const
 {
     if (paramName.empty() != true) {
         std::size_t position = paramName.find(InstanceNumberIndicator);
@@ -78,7 +78,7 @@ void WalDB::ReplaceWithInstanceNumber(string& paramName, uint16_t instanceNumber
     }
 }
 
-bool WalDB::CheckMatchingParameter(const char* attrValue, const char* paramName, uint32_t& ret) const
+bool DataModel::CheckMatchingParameter(const char* attrValue, const char* paramName, uint32_t& ret) const
 {
     bool status = false;
 
@@ -114,7 +114,7 @@ bool WalDB::CheckMatchingParameter(const char* attrValue, const char* paramName,
     return status;
 }
 
-TiXmlNode* WalDB::Parameters(TiXmlNode* parent, const std::string& paramName, std::string& currentParam, std::map<uint32_t, std::pair<std::string, std::string>>& paramList) const
+TiXmlNode* DataModel::Parameters(TiXmlNode* parent, const std::string& paramName, std::string& currentParam, std::map<uint32_t, std::pair<std::string, std::string>>& paramList) const
 {
     // If parent is Null Return
     if (!parent) {
@@ -245,25 +245,25 @@ TiXmlNode* WalDB::Parameters(TiXmlNode* parent, const std::string& paramName, st
     return child;
 }
 
-DBStatus WalDB::Parameters(const std::string& paramName, std::map<uint32_t, std::pair<std::string, std::string>>& paramList) const
+DMStatus DataModel::Parameters(const std::string& paramName, std::map<uint32_t, std::pair<std::string, std::string>>& paramList) const
 {
     std::string currentParam;
     std::string parameterName = paramName;
 
-    ASSERT(_dbHandle != 0);
-    DBStatus status = DB_SUCCESS;
+    ASSERT(_dmHandle != 0);
+    DMStatus status = DM_SUCCESS;
     if (Utils::IsWildCardParam(parameterName)) {
-        Parameters(reinterpret_cast<TiXmlDocument*>(_dbHandle), parameterName, currentParam, paramList);
+        Parameters(reinterpret_cast<TiXmlDocument*>(_dmHandle), parameterName, currentParam, paramList);
         if (paramList.size() == 0) {
-            status = DB_ERR_INVALID_PARAMETER;
+            status = DM_ERR_INVALID_PARAMETER;
         }
     } else {
-        status = DB_ERR_WILDCARD_NOT_SUPPORTED;
+        status = DM_ERR_WILDCARD_NOT_SUPPORTED;
     }
     return status;
 }
 
-void WalDB::CheckforParameterMatch(TiXmlNode* parent, const std::string& paramName, bool& match, std::string& dataType) const
+void DataModel::CheckforParameterMatch(TiXmlNode* parent, const std::string& paramName, bool& match, std::string& dataType) const
 {
     if (!parent)
         return;
@@ -324,7 +324,7 @@ void WalDB::CheckforParameterMatch(TiXmlNode* parent, const std::string& paramNa
     isMatched = 0;
 }
 
-uint8_t WalDB::FindInstanceOccurance(const std::string& paramName, std::map<uint8_t, std::pair<std::size_t, std::size_t>>& positions) const
+uint8_t DataModel::FindInstanceOccurance(const std::string& paramName, std::map<uint8_t, std::pair<std::size_t, std::size_t>>& positions) const
 {
     uint8_t count = 0;
     std::string name = paramName;
@@ -347,7 +347,7 @@ uint8_t WalDB::FindInstanceOccurance(const std::string& paramName, std::map<uint
     return count;
 }
 
-bool WalDB::ValidateParameterInstance(const std::string& paramName, std::string& dataType) const
+bool DataModel::ValidateParameterInstance(const std::string& paramName, std::string& dataType) const
 {
     bool valid = false;
 
@@ -374,7 +374,7 @@ bool WalDB::ValidateParameterInstance(const std::string& paramName, std::string&
                     name.replace(position->second.first + newPosition, ((position->second.second + 1) - position->second.first), InstanceNumberIndicator);
                 }
             }
-            CheckforParameterMatch(reinterpret_cast<TiXmlDocument*>(_dbHandle), name, valid, dataType);
+            CheckforParameterMatch(reinterpret_cast<TiXmlDocument*>(_dmHandle), name, valid, dataType);
             if (valid == true) {
                 break;
             }
@@ -383,18 +383,18 @@ bool WalDB::ValidateParameterInstance(const std::string& paramName, std::string&
     return valid;
 }
 
-bool WalDB::IsValidParameter(const std::string& paramName, std::string& dataType) const
+bool DataModel::IsValidParameter(const std::string& paramName, std::string& dataType) const
 {
     bool valid = false;
-    ASSERT(_dbHandle != 0);
-    CheckforParameterMatch(reinterpret_cast<TiXmlDocument*>(_dbHandle), paramName, valid, dataType);
+    ASSERT(_dmHandle != 0);
+    CheckforParameterMatch(reinterpret_cast<TiXmlDocument*>(_dmHandle), paramName, valid, dataType);
     if (valid != true) {
         valid = ValidateParameterInstance(paramName, dataType);
     }
     return valid;
 }
 
-bool WalDB::IsParamEndsWithInstance(const std::string& paramName) const
+bool DataModel::IsParamEndsWithInstance(const std::string& paramName) const
 {
     bool isInstance = false;
 

@@ -2,7 +2,7 @@
 
 #include "Handler.h"
 #include "Utils.h"
-#include "WalDB.h"
+#include "DataModel.h"
 
 namespace WPEFramework {
 
@@ -23,7 +23,7 @@ public:
     Parameter& operator= (const Parameter&) = delete;
 
 public:
-    Parameter(Handler* handler, WalDB* walDB);
+    Parameter(Handler* handler, DataModel* dataModel);
     virtual ~Parameter();
 
     const void Values(const std::vector<std::string>& parameterNames, std::map<std::vector<Data>, WebPAStatus>& parametersList) const;
@@ -34,7 +34,7 @@ private:
     WebPAStatus Values(const Data& parameter);
 
 private:
-    WalDB* _walDB;
+    DataModel* _dataModel;
     Handler* _handler;
 
     mutable Core::CriticalSection _adminLock;
