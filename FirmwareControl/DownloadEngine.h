@@ -40,6 +40,8 @@ namespace PluginHost {
 
                 _adminLock.Lock();
 
+                CleanupStorage();
+
                 if (_storage.IsOpen() == false) {
 
                     result = Core::ERROR_OPENING_FAILED;
@@ -58,6 +60,12 @@ namespace PluginHost {
             return (result);
         }
 
+        inline void CleanupStorage()
+        {
+            if (_storage.Exists()) {
+                _storage.Destroy();
+            }
+        }
     private:
         virtual void Transfered(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
         {

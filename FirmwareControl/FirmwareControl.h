@@ -3,7 +3,15 @@
 #include "Module.h"
 #include "DownloadEngine.h"
 #include <interfaces/json/JsonData_FirmwareControl.h>
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 #include <mfrTypes.h>
+#ifdef __cplusplus
+}
+#endif
 
 namespace WPEFramework {
 namespace Plugin {
@@ -192,6 +200,7 @@ namespace Plugin {
                 event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
                                       static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), percentage);
                 ResetStatus();
+                RemoveDownloadedFile();
             } else if (_interval) { // Send intermediate staus/progress of upgrade
                 event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
                                       static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), percentage);
@@ -213,6 +222,12 @@ namespace Plugin {
         void event_upgradeprogress(const JsonData::FirmwareControl::StatusType& status,
                                    const JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType& error, const uint16_t& percentage);
 
+        inline void RemoveDownloadedFile() {
+            Core::File _storage(_destination);
+            if (_storage.Exists()) {
+                _storage.Destroy();
+            }
+        }
         inline void ResetStatus()
         {
             _adminLock.Lock();
