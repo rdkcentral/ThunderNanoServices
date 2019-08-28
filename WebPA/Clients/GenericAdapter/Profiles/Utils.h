@@ -1,8 +1,19 @@
-#include "ProfileUtils.h"
+#pragma once
+
+#include "WebPADataTypes.h"
+
+#define MAX_PARAM_LENGTH (2 * 1024)
 
 namespace WPEFramework {
-namespace Utils {
-    bool IsDigit(const std::string& str)
+class Utils {
+public:
+    Utils(const Utils&) = delete;
+    Utils& operator= (const Utils&) = delete;
+
+    Utils() {}
+    ~Utils() {}
+
+    static bool IsDigit(const std::string& str)
     {
         bool isDigit = true;
         for (uint8_t i = 0; i < str.length(); i++) {
@@ -12,7 +23,7 @@ namespace Utils {
         }
         return isDigit;
     }
-    bool MatchComponent(const std::string& paramName, const std::string& key, std::string& name, uint32_t& instance)
+    static bool MatchComponent(const std::string& paramName, const std::string& key, std::string& name, uint32_t& instance)
     {
         bool ret = false;
         instance = 0;
@@ -37,5 +48,8 @@ namespace Utils {
 
         return ret;
     }
-} // Utils
+}; // Utils
 } // WPEFramework
+
+
+

@@ -8,7 +8,6 @@ file(GLOB IFACE_CONTROL_PLUGIN_INCLUDES *.h)
 
 add_library(${TARGET}
     Module.cpp
-    ../ProfileUtils.cpp
     DeviceControl.cpp
     DeviceInfo.cpp
 )

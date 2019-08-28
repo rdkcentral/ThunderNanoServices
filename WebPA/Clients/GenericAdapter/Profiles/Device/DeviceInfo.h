@@ -4,7 +4,7 @@
 #include <list>
 #include <proc/readproc.h>
 
-#include "ProfileUtils.h"
+#include "Utils.h"
 #include "WebPADataTypes.h"
 
 namespace WPEFramework {
