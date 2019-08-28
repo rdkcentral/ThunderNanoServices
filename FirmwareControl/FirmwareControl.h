@@ -33,8 +33,8 @@ namespace Plugin {
             INVALID_PARAMETERS,
             INVALID_STATES,
             OPERATION_NOT_PERMITTED,
-            UNAVAILABLE,
             INCORRECT_HASH,
+            UNAVAILABLE,
             UNKNOWN
         };
     private:
@@ -192,7 +192,7 @@ namespace Plugin {
                 event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
                                       static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), percentage);
                 ResetStatus();
-            } else if (_interval == true) { // Send intermediate staus/progress of upgrade
+            } else if (_interval) { // Send intermediate staus/progress of upgrade
                 event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
                                       static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), percentage);
             }
@@ -249,6 +249,9 @@ namespace Plugin {
         {
             ErrorType errorType = ErrorType::UNKNOWN;
             switch (error) {
+            case Core::ERROR_NONE:
+                errorType = ErrorType::ERROR_NONE;
+                break;
             case Core::ERROR_UNAVAILABLE:
                 errorType = ErrorType::UNAVAILABLE;
                 break;
