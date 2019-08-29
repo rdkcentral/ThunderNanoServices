@@ -143,6 +143,7 @@ namespace Plugin {
             , _waitTime(WaitTime)
             , _downloadStatus(Core::ERROR_NONE)
             , _upgradeStatus(UpgradeStatus::NONE)
+            , _installStatus()
             , _upgrader(this)
             , _signal(false, true)
         {
@@ -196,9 +197,14 @@ namespace Plugin {
         {
             UpgradeStatus upgradeStatus = ConvertMfrWriteStatusToUpgradeStatus(mfrStatus.progress);
             if ((upgradeStatus == UPGRADE_COMPLETED) || (upgradeStatus == INSTALL_ABORTED)) {
+                _adminLock.Lock();
+                _installStatus = mfrStatus;
+                _adminLock.Unlock();
+
                 _signal.SetEvent(); // To exit from the installation wait time
+            } else {
+                NotifyProgress(upgradeStatus, ConvertMfrWriteErrorToUpgradeType(mfrStatus.error), mfrStatus.percentage);
             }
-            NotifyProgress(upgradeStatus, ConvertMfrWriteErrorToUpgradeType(mfrStatus.error), mfrStatus.percentage);
         }
 
         inline void NotifyProgress(const UpgradeStatus& upgradeStatus, const ErrorType& errorType, const uint16_t& percentage)
@@ -384,6 +390,7 @@ namespace Plugin {
         int32_t _waitTime;
         uint32_t _downloadStatus;
         UpgradeStatus _upgradeStatus;
+        mfrUpgradeStatus_t _installStatus;
 
         Upgrader _upgrader;
         Core::Event _signal;
