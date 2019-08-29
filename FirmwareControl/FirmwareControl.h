@@ -43,6 +43,7 @@ namespace Plugin {
             OPERATION_NOT_PERMITTED,
             INCORRECT_HASH,
             UNAVAILABLE,
+            TIMEDOUT,
             UNKNOWN
         };
     private:
@@ -50,25 +51,28 @@ namespace Plugin {
         static uint32_t constexpr WaitTime = 60 * 60 * 1000;
 
     private:
-        class Location : public Core::JSON::Container {
+        class Config : public Core::JSON::Container {
         public:
-            Location(const Location&);
-            Location& operator=(const Location&);
+            Config(const Config&);
+            Config& operator=(const Config&);
 
-            Location()
-            : Core::JSON::Container()
-            , Source()
-            , Download()
+            Config()
+                : Core::JSON::Container()
+                , Source()
+                , Download()
+                , WaitTime()
             {
                 Add(_T("source"), &Source);
                 Add(_T("download"), &Download);
+                Add(_T("waittime"), &WaitTime);
             }
 
-            ~Location() {}
+            ~Config() {}
 
         public:
             Core::JSON::String Source;
             Core::JSON::String Download;
+            Core::JSON::DecUInt32 WaitTime;
         };
 
         class Notifier : public INotifier {
@@ -130,16 +134,17 @@ namespace Plugin {
         FirmwareControl& operator=(const FirmwareControl&) = delete;
 
         FirmwareControl()
-            : _waitTime(WaitTime)
-            , _source("http://test.org/image")
+            : _source("http://test.org/image")
             , _destination("/tmp")
             , _adminLock()
             , _type(IMAGE_TYPE_CDL)
             , _hash()
             , _interval(0)
+            , _waitTime(WaitTime)
+            , _downloadStatus(Core::ERROR_NONE)
             , _upgradeStatus(UpgradeStatus::NONE)
             , _upgrader(this)
-            , _downloadSignal(false, true)
+            , _signal(false, true)
         {
             RegisterAll();
         }
@@ -151,7 +156,7 @@ namespace Plugin {
             _adminLock.Lock();
             if (_upgradeStatus != UpgradeStatus::NONE) {
                 _upgradeStatus = UPGRADE_CANCELLED;
-                _downloadSignal.SetEvent();
+                _signal.SetEvent();
                 _upgrader.Stop();
             }
             _adminLock.Unlock();
@@ -174,7 +179,7 @@ namespace Plugin {
             _downloadStatus = status;
             _adminLock.Unlock();
 
-            _downloadSignal.SetEvent();
+            _signal.SetEvent();
         }
 
         static void Callback(mfrUpgradeStatus_t mfrStatus, void *cbData)
@@ -183,13 +188,17 @@ namespace Plugin {
             ASSERT(control != nullptr);
 
             if (control != nullptr) {
-               control->NotifyProgress(mfrStatus);
+               control->NotifyInstallProgress(mfrStatus);
             }
         }
 
-        inline void NotifyProgress(mfrUpgradeStatus_t mfrStatus)
+        inline void NotifyInstallProgress(mfrUpgradeStatus_t mfrStatus)
         {
-            NotifyProgress(ConvertMfrWriteStatusToUpgradeStatus(mfrStatus.progress), ConvertMfrWriteErrorToUpgradeType(mfrStatus.error), mfrStatus.percentage);
+            UpgradeStatus upgradeStatus = ConvertMfrWriteStatusToUpgradeStatus(mfrStatus.progress);
+            if ((upgradeStatus == UPGRADE_COMPLETED) || (upgradeStatus == INSTALL_ABORTED)) {
+                _signal.SetEvent(); // To exit from the installation wait time
+            }
+            NotifyProgress(upgradeStatus, ConvertMfrWriteErrorToUpgradeType(mfrStatus.error), mfrStatus.percentage);
         }
 
         inline void NotifyProgress(const UpgradeStatus& upgradeStatus, const ErrorType& errorType, const uint16_t& percentage)
@@ -222,7 +231,15 @@ namespace Plugin {
         void event_upgradeprogress(const JsonData::FirmwareControl::StatusType& status,
                                    const JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType& error, const uint16_t& percentage);
 
-        inline void RemoveDownloadedFile() {
+        inline uint32_t WaitForCompletion(uint32_t waitTime)
+        {
+            uint32_t status = _signal.Lock(waitTime);
+            _signal.ResetEvent(); //Clear signalled event
+            return status;
+        }
+
+        inline void RemoveDownloadedFile()
+        {
             Core::File _storage(_destination);
             if (_storage.Exists()) {
                 _storage.Destroy();
@@ -234,6 +251,7 @@ namespace Plugin {
             _upgradeStatus = UpgradeStatus::NONE;
             _adminLock.Unlock();
         }
+
         inline uint32_t DownloadStatus() const
         {
             _adminLock.Lock();
@@ -273,7 +291,11 @@ namespace Plugin {
             case Core::ERROR_INCORRECT_HASH:
                 errorType = ErrorType::INCORRECT_HASH;
                 break;
+            case Core::ERROR_TIMEDOUT:
+                errorType = ErrorType::TIMEDOUT;
+                break;
             default: //Expand later on need basis.
+
                 break;
             }
             return errorType;
@@ -351,8 +373,6 @@ namespace Plugin {
         }
 
     private:
-        uint32_t _waitTime;
-        uint32_t _downloadStatus;
         string _source;
         string _destination;
         mutable Core::CriticalSection _adminLock;
@@ -361,11 +381,12 @@ namespace Plugin {
         string _hash;
         uint16_t _interval;
 
+        uint32_t _waitTime;
+        uint32_t _downloadStatus;
         UpgradeStatus _upgradeStatus;
 
         Upgrader _upgrader;
-
-        Core::Event _downloadSignal;
+        Core::Event _signal;
     };
 
 } // namespace Plugin

@@ -39,12 +39,17 @@ namespace Plugin {
     //  - ERROR_INCORRECT_HASH: Incorrect hash given
     uint32_t FirmwareControl::endpoint_upgrade(const UpgradeParamsData& params)
     {
+        TRACE(Trace::Information, (string(__FUNCTION__)));
+
         uint32_t result = Core::ERROR_NONE;
         const string& name = params.Name.Value();
 
         _adminLock.Lock();
         UpgradeStatus upgradeStatus = _upgradeStatus;
         _adminLock.Unlock();
+
+        TRACE(Trace::Information, (_T("status = [%s] \n"), Core::EnumerateType<JsonData::FirmwareControl::StatusType>(upgradeStatus).Data()));
+
         if (upgradeStatus == UpgradeStatus::NONE) {
             if (result == Core::ERROR_NONE) {
                 if (name.empty() != true) {
@@ -57,14 +62,19 @@ namespace Plugin {
                     if (params.Location.IsSet() == true) {
                         locator = params.Location.Value();
                     }
+                    TRACE(Trace::Information, (_T("Image = [%s/%s]\n"), locator.c_str(), name.c_str()));
+
                     Type type = IMAGE_TYPE_CDL;
                     if (params.Type.IsSet() == true) {
                         type = static_cast<Type>(params.Type.Value()); 
                     }
+                    TRACE(Trace::Information, (_T("Image Type = [%d]\n"), type));
+
                     uint16_t progressInterval = 0; 
                     if (params.Progressinterval.IsSet() == true) {
                         progressInterval = params.Progressinterval.Value();
                     }
+                    TRACE(Trace::Information, (_T("Progress Interval = [%d]\n"), progressInterval));
                     string hash;
                     if (params.Hmac.IsSet() == true) {
                         if (params.Hmac.Value().size() == (Crypto::HASH_SHA256 * 2)) {
@@ -72,8 +82,10 @@ namespace Plugin {
                         } else {
                             result = Core::ERROR_INCORRECT_HASH;
                         }
+                        TRACE(Trace::Information, (_T("Hash = [%s]\n"), hash.c_str()));
                     }
                     if (result == Core::ERROR_NONE) {
+                        TRACE(Trace::Information, (_T("Scheduling the upgrade \n")));
                         result = Schedule(name, locator, type, progressInterval, hash);
                     }
       
@@ -85,9 +97,10 @@ namespace Plugin {
             result = Core::ERROR_INPROGRESS;
         }
 
-        if (result != Core::ERROR_NONE) {
+        if ((result != Core::ERROR_NONE) && (result != Core::ERROR_INPROGRESS)) {
             ResetStatus();
         }
+        TRACE(Trace::Information, (_T("Status of upgrade request = %d\n"), result));
         return result;
     }
 
@@ -99,6 +112,8 @@ namespace Plugin {
         _adminLock.Lock();
         response = static_cast<JsonData::FirmwareControl::StatusType>(_upgradeStatus);
         _adminLock.Unlock();
+        TRACE(Trace::Information, (_T("status = [%s] \n"), Core::EnumerateType<JsonData::FirmwareControl::StatusType>(response).Data()));
+
         return Core::ERROR_NONE;
     }
 
@@ -110,6 +125,10 @@ namespace Plugin {
         params.Error = error;
         params.Percentage = percentage;
 
+        TRACE(Trace::Information, (_T("status = [%s] error = [%s] percentage = [%d]\n"),
+              Core::EnumerateType<JsonData::FirmwareControl::StatusType>(status).Data(),
+              Core::EnumerateType<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(error).Data(),
+              percentage));
         Notify(_T("upgradeprogress"), params);
     }
 

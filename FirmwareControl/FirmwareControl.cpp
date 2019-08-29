@@ -8,15 +8,18 @@ namespace Plugin {
     /* virtual */ const string FirmwareControl::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
-        Location location;
-        location.FromString(service->ConfigLine());
-        if (location.Source.IsSet() == true) {
-            _source = location.Source.Value();
+        Config config;
+        config.FromString(service->ConfigLine());
+        if (config.Source.IsSet() == true) {
+            _source = config.Source.Value();
             TRACE_L1("Source location : [%s]\n", _source.c_str());
         }
-        if (location.Download.IsSet() == true) {
-            _destination = location.Download.Value();
+        if (config.Download.IsSet() == true) {
+            _destination = config.Download.Value() + "/" + Name;
             TRACE_L1("Destination location : [%s]\n", _destination.c_str());
+        }
+        if (config.WaitTime.IsSet() == true) {
+            _waitTime = config.WaitTime.Value();
         }
         return (string());
     }
@@ -38,8 +41,6 @@ namespace Plugin {
         if (path.empty() != true) {
             _source = path + "/" + name;
         }
-        _downloadSignal.ResetEvent();
-
         _adminLock.Lock();
         _type = type;
         _interval = interval;
@@ -60,6 +61,7 @@ namespace Plugin {
     }
 
     void FirmwareControl::Install() {
+        TRACE(Trace::Information, (string(__FUNCTION__)));
         //Setup callback handler;
         mfrUpgradeStatusNotify_t mfrNotifier;
         mfrNotifier.cbData = reinterpret_cast<void*>(this);
@@ -72,22 +74,26 @@ namespace Plugin {
             Status(UpgradeStatus::INSTALL_ABORTED, ConvertMfrStatusToCore(mfrStatus), 0);
         } else {
             Status(UpgradeStatus::INSTALL_STARTED, ErrorType::ERROR_NONE, 0);
+            uint32_t status = WaitForCompletion(_waitTime); // To avoid hang situation
+            if (status != Core::ERROR_NONE) {
+                Status(UpgradeStatus::INSTALL_ABORTED, Core::ERROR_TIMEDOUT, 0);
+            }
         }
+        TRACE(Trace::Information, (string(__FUNCTION__)));
     }
 
     uint32_t FirmwareControl::Download() {
 
         TRACE(Trace::Information, (string(__FUNCTION__)));
         Notifier notifier(this);
-        string destination = _destination + "/" + Name;
 
-        PluginHost::DownloadEngine downloadEngine(&notifier, destination);
+        PluginHost::DownloadEngine downloadEngine(&notifier, _destination);
 
-        uint32_t status = downloadEngine.Start(_source, destination, _hash);
-        if ((status == Core::ERROR_NONE) || status == Core::ERROR_INPROGRESS)) {
+        uint32_t status = downloadEngine.Start(_source, _destination, _hash);
+        if ((status == Core::ERROR_NONE) || (status == Core::ERROR_INPROGRESS)) {
 
             Status(UpgradeStatus::DOWNLOAD_STARTED, status, 0);
-            status = _downloadSignal.Lock(_waitTime);
+            status = WaitForCompletion(_waitTime);
             if ((status == Core::ERROR_NONE) && (DownloadStatus() == Core::ERROR_NONE)) {
                  Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 0);
             } else {
