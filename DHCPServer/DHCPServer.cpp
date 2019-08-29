@@ -38,9 +38,17 @@ namespace Plugin {
         Core::NodeId dns(config.DNS.Value().c_str());
         Core::JSON::ArrayType<Config::Server>::Iterator index(config.Servers.Elements());
 
+        _persistentPath = service->PersistentPath();
+
+        Core::Directory directory(_persistentPath.c_str());
+        if (directory.CreatePath() == false) {
+            TRACE_L1("Could not create DHCPServer persistent path");
+            _persistentPath = "";
+        }
+
         while (index.Next() == true) {
             if (index.Current().Interface.IsSet() == true) {
-                _servers.emplace(std::piecewise_construct,
+                auto server = _servers.emplace(std::piecewise_construct,
                     std::make_tuple(index.Current().Interface.Value()),
                     std::make_tuple(
                         config.Name.Value(),
@@ -48,7 +56,12 @@ namespace Plugin {
                         index.Current().PoolStart.Value(),
                         index.Current().PoolSize.Value(),
                         index.Current().Router.Value(),
-                        dns));
+                        dns,
+                        std::bind(&DHCPServer::OnNewIPRequest, this, std::placeholders::_1, std::placeholders::_2)));
+
+                if (server.second == true) {
+                    LoadLeases(server.first->first, server.first->second);
+                }
             }
         }
 
@@ -152,6 +165,62 @@ namespace Plugin {
         }
 
         return result;
+    }
+
+    void DHCPServer::SaveLeases(const string& interface, const DHCPServerImplementation& dhcpServer) const
+    {
+
+        if (_persistentPath.empty() == false) {
+            Core::JSON::ArrayType<Data::Server::Lease> leasesList;
+
+            // Saving to file might take a while, and lifetime of DHCPServerImplementation::Iterator
+            // object must be deterministic and short (<10ms), so we scope it 
+            {
+                DHCPServerImplementation::Iterator leases = dhcpServer.Leases();
+                while(leases.Next() && (leases.IsValid() == true)) {
+                    leasesList.Add().Set(leases.Current());
+                }        
+            }
+
+            Core::File leasesFile(_persistentPath + interface + ".json");
+
+            if (leasesFile.Create() == true) {
+                leasesList.ToFile(leasesFile);
+                leasesFile.Close();
+            } else {
+                TRACE_L1("Could not save leases in pemranent storage area.\n");
+            }
+        }
+    }
+
+    void DHCPServer::LoadLeases(const string& interface, DHCPServerImplementation& dhcpServer) 
+    {
+
+        if (_persistentPath.empty() == false) {
+            Core::File leasesFile(_persistentPath + interface + ".json");
+
+            if (leasesFile.Open(true) == true) {
+                Core::JSON::ArrayType<Data::Server::Lease> leases;
+
+                leases.FromFile(leasesFile);
+                leasesFile.Close();
+
+                auto iterator = leases.Elements();
+                while ((iterator.Next() == true) && (iterator.IsValid() == true)) {
+                    dhcpServer.AddLease(iterator.Current().Get());
+                }
+            } 
+        }
+    }
+
+    void DHCPServer::OnNewIPRequest(const string& interface, const DHCPServerImplementation::Lease* lease) 
+    {
+        TRACE(Trace::Information, ("DHCP server granted address %s on interface %s", lease->Address().HostAddress().c_str(), interface.c_str()));
+
+        auto dhcpServer = _servers.find(interface);
+        if (dhcpServer != _servers.end()) {
+            SaveLeases(interface, dhcpServer->second);
+        }
     }
 
 } // namespace Plugin
