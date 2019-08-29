@@ -175,7 +175,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | upgrade status (must be one of the following: *none*, *upgradestarted*, *downloadstarted*, *downloadaborted*, *downloadedcompleted*, *installnotstarted*, *installaborted*, *installstarted*, *upgradecompleted*, *upgradecancelled*) |
+| (property) | string | upgrade status (must be one of the following: *none*, *upgradestarted*, *downloadstarted*, *downloadaborted*, *downloadcompleted*, *installnotstarted*, *installaborted*, *installstarted*, *upgradecompleted*, *upgradecancelled*) |
 
 ### Example
 
@@ -220,7 +220,7 @@ Notifies progress of upgrade.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.status | string | upgrade status (must be one of the following: *none*, *upgradestarted*, *downloadstarted*, *downloadaborted*, *downloadedcompleted*, *installnotstarted*, *installaborted*, *installstarted*, *upgradecompleted*, *upgradecancelled*) |
+| params.status | string | upgrade status (must be one of the following: *none*, *upgradestarted*, *downloadstarted*, *downloadaborted*, *downloadcompleted*, *installnotstarted*, *installaborted*, *installstarted*, *upgradecompleted*, *upgradecancelled*) |
 | params.error | string | reason of error (must be one of the following: *none*, *generic*, *invalidparameters*, *invalidstate*, *operationotsupported*, *incorrecthash*, *unavailable*, *timedout*, *unkown*) |
 | params.percentage | number |  |
 
