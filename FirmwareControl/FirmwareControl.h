@@ -48,7 +48,7 @@ namespace Plugin {
         };
     private:
         static constexpr const TCHAR* Name = "imageTemp";
-        static uint32_t constexpr WaitTime = 60 * 60 * 1000;
+        static int32_t constexpr WaitTime = Core::infinite;
 
     private:
         class Config : public Core::JSON::Container {
@@ -72,7 +72,7 @@ namespace Plugin {
         public:
             Core::JSON::String Source;
             Core::JSON::String Download;
-            Core::JSON::DecUInt32 WaitTime;
+            Core::JSON::DecSInt32 WaitTime;
         };
 
         class Notifier : public INotifier {
@@ -231,7 +231,7 @@ namespace Plugin {
         void event_upgradeprogress(const JsonData::FirmwareControl::StatusType& status,
                                    const JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType& error, const uint16_t& percentage);
 
-        inline uint32_t WaitForCompletion(uint32_t waitTime)
+        inline uint32_t WaitForCompletion(int32_t waitTime)
         {
             uint32_t status = _signal.Lock(waitTime);
             _signal.ResetEvent(); //Clear signalled event
@@ -381,7 +381,7 @@ namespace Plugin {
         string _hash;
         uint16_t _interval;
 
-        uint32_t _waitTime;
+        int32_t _waitTime;
         uint32_t _downloadStatus;
         UpgradeStatus _upgradeStatus;
 
