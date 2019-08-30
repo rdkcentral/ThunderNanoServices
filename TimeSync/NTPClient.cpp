@@ -1,4 +1,5 @@
 #include "NTPClient.h"
+#include <stdio.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -44,7 +45,7 @@ namespace Plugin {
     void NTPClient::Initialize(SourceIterator& sources, const uint16_t retries, const uint16_t delay)
     {
         _retryAttempts = retries;
-        _WaitForNetwork = delay;
+        _WaitForNetwork = (delay * 1000); /* in ms */
         _servers.clear();
 
         while (sources.Next() == true) {
@@ -311,13 +312,12 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        state oldState = _state;
-
         switch (_state) {
         case SENDREQUEST: {
             // This case means that nothing has started yet, let reset the list of servers and start at the beginning...
             _serverIndex.Reset(0);
             _state = INPROGRESS;
+            _currentAttempt = _retryAttempts;
         }
         case INPROGRESS: {
             // If we end up here in this state, it means that the package was send but no response was received,
@@ -326,7 +326,7 @@ namespace Plugin {
             if (FireRequest() == true) {
                 result = WaitForResponse;
             } else {
-                if ((oldState == SENDREQUEST) && (_retryAttempts-- != 0)) {
+                if (_currentAttempt-- != 0) {
 
                     // Looks like there is no network connectivity, Just sleep and retry later
                     result = _WaitForNetwork;
