@@ -297,23 +297,17 @@ namespace Plugin {
                             _callback->OnKeyMessage(f_pbKeyMessage, f_cbKeyMessage, url);
                         }
                     }
-                    // Event fired when MediaKeySession has found a usable key.
-                    virtual void OnKeyReady() override
-                    {
-                        TRACE(Trace::Information, ("OnKeyReady()"));
-                        if (_callback != nullptr) {
-                            _callback->OnKeyReady();
-                        }
-                    }
+
                     // Event fired when MediaKeySession encounters an error.
-                    virtual void OnKeyError(int16_t f_nError, CDMi::CDMi_RESULT f_crSysError, const char* errorMessage) override
+                    virtual void OnError(int16_t f_nError, CDMi::CDMi_RESULT f_crSysError, const char* errorMessage) override
                     {
                         TRACE(Trace::Information, ("OnKeyError(%d,%s)", f_nError, errorMessage));
                         if (_callback != nullptr) {
                             std::string message(errorMessage, strlen(errorMessage));
-                            _callback->OnKeyError(f_nError, (::OCDM::OCDM_RESULT)f_crSysError, message);
+                            _callback->OnError(f_nError, (::OCDM::OCDM_RESULT)f_crSysError, message);
                         }
                     }
+
                     //Event fired on key status update
                     virtual void OnKeyStatusUpdate(const char* keyMessage, const uint8_t buffer[], const uint8_t length) override
                     {
@@ -330,10 +324,12 @@ namespace Plugin {
                         else
                             key = ::OCDM::ISession::InternalError;
 
-                        _parent.UpdateKeyStatus(key, buffer, length);
+                        const CommonEncryptionData::KeyId* updated = _parent.UpdateKeyStatus(key, buffer, length);
 
+                        const uint8_t* bufferToNotify = updated != nullptr && buffer == nullptr ? updated->Id() : buffer;
+                        const uint8_t lengthToNotify = updated != nullptr && length == 0 ? updated->Length() : length;
                         if (_callback != nullptr) {
-                            _callback->OnKeyStatusUpdate(key);
+                            _callback->OnKeyStatusUpdate(bufferToNotify, lengthToNotify, key);
                         }
                     }
                     void Revoke(::OCDM::ISession::ICallback* callback)
@@ -344,6 +340,11 @@ namespace Plugin {
                         } else {
                             TRACE_L1("Additional request for Revoking the callback!! %p", callback);
                         }
+                    }
+
+                    void OnKeyStatusesUpdated() const override
+                    {
+                        _callback->OnKeyStatusesUpdated();
                     }
 
                 private:
@@ -440,6 +441,11 @@ namespace Plugin {
                 virtual ::OCDM::ISession::KeyStatus Status() const override
                 {
                     return (_cencData.Status());
+                }
+
+                ::OCDM::ISession::KeyStatus Status(const uint8_t keyId[], const uint8_t length) const override
+                {
+                    return (_cencData.Status(CommonEncryptionData::KeyId(static_cast<CommonEncryptionData::systemType>(0), keyId, length)));
                 }
 
                 virtual std::string BufferId() const override
@@ -543,7 +549,7 @@ namespace Plugin {
                 }
 
             private:
-                inline void UpdateKeyStatus(::OCDM::ISession::KeyStatus status, const uint8_t* buffer, const uint8_t length)
+                inline const CommonEncryptionData::KeyId* UpdateKeyStatus(::OCDM::ISession::KeyStatus status, const uint8_t* buffer, const uint8_t length)
                 {
 
                     // We assume that these UpdateKeyStatusses do not occure in a multithreaded fashion, otherwise we need to lock it.
@@ -564,6 +570,8 @@ namespace Plugin {
                     } else {
                         TRACE(Trace::Information, ("There was no key to update !!!"));
                     }
+
+                    return updated;
                 }
 
             private:
