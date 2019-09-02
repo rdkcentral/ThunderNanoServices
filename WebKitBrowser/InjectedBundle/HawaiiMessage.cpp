@@ -1,7 +1,7 @@
 #include "JavaScriptFunctionType.h"
 #include "Utils.h"
 
-unsigend int amazon_player_deinitialize();
+unsigned int amazon_player_deinitialize();
 
 namespace WPEFramework {
 namespace JavaScript {
@@ -75,9 +75,9 @@ namespace Amazon {
                 if (initializer != nullptr) {
                     // Time to initialize
                     std::string config = Configuration();
-
+                    
                     // Call the initailze on the library...
-                    unsigned int result = deinitializer(config.c_str());
+                    unsigned int result = initializer(config.c_str());
                 }
             }
         }
@@ -98,7 +98,7 @@ namespace Amazon {
 
                 // Also call the detinitailze on the library...
                 Deinitialize deinitializer = reinterpret_cast<Deinitialize>(library.LoadFunction(_T("amazon_player_deinitialize")));
-                unsigend int result;
+                unsigned int result;
 
                 if ((deinitializer != nullptr) && ( (result = deinitializer()) != 0)) {
                     TRACE(Trace::Fatal, (_T("Could not preperly unload the Hawaii interface. Error: %d"), result));
