@@ -11,7 +11,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         BluetoothControl(const BluetoothControl&) = delete;
         BluetoothControl& operator=(const BluetoothControl&) = delete;
 
-        class ControlSocket : public Bluetooth::HCISocket {
+        class AdministrativeSocket : public Bluetooth::HCISocket {
         private:
             // The bluetooth library has some unexpected behaviour. For example, the scan of NON-BLE devices
             // is a blocking call for the duration of the passed in time. Which is, I think, very intrusive
@@ -32,7 +32,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 };
 
             public:
-                Job(ControlSocket* parent)
+                Job(AdministrativeSocket* parent)
                     : _parent(*parent)
                     , _mode(0)
                 {
@@ -76,7 +76,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 }
 
             private:
-                ControlSocket& _parent;
+                AdministrativeSocket& _parent;
                 uint16_t _scanTime;
                 uint32_t _type;
                 uint8_t _flags;
@@ -84,17 +84,17 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             };
 
         public:
-            ControlSocket() = delete;
-            ControlSocket(const ControlSocket&) = delete;
-            ControlSocket& operator=(const ControlSocket&) = delete;
+            AdministrativeSocket() = delete;
+            AdministrativeSocket(const AdministrativeSocket&) = delete;
+            AdministrativeSocket& operator=(const AdministrativeSocket&) = delete;
 
-            ControlSocket(BluetoothControl& parent)
+            AdministrativeSocket(BluetoothControl& parent)
                 : Bluetooth::HCISocket()
                 , _parent(parent)
                 , _activity(Core::ProxyType<Job>::Create(this))
             {
             }
-            virtual ~ControlSocket()
+            virtual ~AdministrativeSocket()
             {
                 PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_activity));
             }
@@ -410,8 +410,10 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             Config()
                 : Core::JSON::Container()
                 , Interface(0)
+                , Name(_T("Thunder BT Control"))
             {
                 Add(_T("interface"), &Interface);
+                Add(_T("name"), &Name);
             }
             ~Config()
             {
@@ -419,6 +421,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
 
         public:
             Core::JSON::DecUInt16 Interface;
+            Core::JSON::String Name;
         };
 
     public:
@@ -589,7 +592,9 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 , _state(static_cast<state>(lowEnergy ? LOWENERGY : 0))
             {
                 uint32_t result = SocketPort::Open(Core::infinite);
-                ASSERT(result == Core::ERROR_NONE);
+                if (result != Core::ERROR_NONE) {
+                    TRACE_L1("Could not open the Bluetooth HCI RAW channel");
+                }
             }
             ~DeviceImpl()
             {
@@ -601,7 +606,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 _state.SetState(PAIRED);
                 uint8_t type((_state & LOWENERGY) != 0 ? Bluetooth::Address::LE_PUBLIC_ADDRESS : Bluetooth::Address::BREDR_ADDRESS);
 
-                return (BluetoothControl::Administrator().Pair(_remote, type, Bluetooth::HCISocket::capabilities::NO_INPUT_NO_OUTPUT));
+                return (BluetoothControl::Administrator().Pair(_remote, type, Bluetooth::ControlSocket::capabilities::NO_INPUT_NO_OUTPUT));
             }
             virtual uint32_t Unpair() override
             {
@@ -1038,7 +1043,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         virtual IBluetooth::IDevice* Device(const string&) override;
         virtual IBluetooth::IDevice::IIterator* Devices() override;
 
-        inline static Bluetooth::HCISocket& Administrator() {
+        inline static Bluetooth::ControlSocket& Administrator() {
             return(_administrator);
         }
 
@@ -1057,15 +1062,14 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         uint8_t _skipURL;
         Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
-        ControlSocket _application;
+        AdministrativeSocket _application;
         uint16_t _btInterface;
         Bluetooth::Address _btAddress;
         std::list<DeviceImpl*> _devices;
         std::list<IBluetooth::INotification*> _observers;
         std::list<GATTRemote> _gattRemotes;
         Config _config;
-
-        static Bluetooth::HCISocket _administrator;
+        static Bluetooth::ControlSocket _administrator;
     };
 } //namespace Plugin
 

@@ -8,48 +8,74 @@ namespace Plugin {
 
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::DeviceImpl::JSON>> jsonResponseFactoryDevice(1);
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::Status>> jsonResponseFactoryStatus(1);
-    /* static */ Bluetooth::HCISocket BluetoothControl::_administrator;
+    /* static */ Bluetooth::ControlSocket BluetoothControl::_administrator;
 
     /* virtual */ const string BluetoothControl::Initialize(PluginHost::IShell* service)
     {
         string result;
 
         ASSERT(_service == nullptr);
+        ASSERT(_administrator.IsOpen() == false);
 
         _service = service;
         _skipURL = _service->WebPrefix().length();
         _config.FromString(_service->ConfigLine());
         const char* driverMessage = ::construct_bluetooth_driver(_service->ConfigLine().c_str());
 
+        _administrator.DeviceId(_config.Interface.Value());
+
         // First see if we can bring up the Driver....
         if (driverMessage != nullptr) {
             result = Core::ToString(driverMessage);
-        } else if (_administrator.IsOpen() == true) {
-            SYSLOG(Logging::Startup, (_T("Bluetooth Control connection is already open.")));
-        }
+        } 
         else {
-            _administrator.LocalNode(Core::NodeId(HCI_DEV_NONE, HCI_CHANNEL_CONTROL));
+            Bluetooth::ControlSocket::LinkKeyList linkKeys;
+            Bluetooth::ControlSocket::LongTermKeyList longTermKeys;
+            // Bluetooth::ControlSocket::IdentityKeyList identityKeys;
 
-            if (Bluetooth::HCISocket::Up(_config.Interface.Value()) == false) {
-                result = "Failed to bring up the Bluetooth interface";
-            } else if (_administrator.Open(Core::infinite) != Core::ERROR_NONE) {
-                result = "Could not open the Bluetooth Administrator channel";
-            } else if (_administrator.Config(true, true, true, true, true, true) != Core::ERROR_NONE) {
-                result = "Failed to configure the Bluetooth interface";
-            } else if (_btAddress.Default(_config.Interface.Value()) == false) {
-                result = "Could not get the default Bluetooth address";
-            } else if (_application.Open(_btAddress) != Core::ERROR_NONE) {
-                result = "Could not open the Bluetooth Application channel";
-            } else if (_application.Advertising(true, 0) != Core::ERROR_NONE) {
+            if (Bluetooth::ControlSocket::Up(_administrator.DeviceId()) == false) {
+                result = "Could not activate bluetooth interface.";
+            }
+            else if (_administrator.Power(true) != Core::ERROR_NONE) {
+                result = "Failed to power up the bluetooth interface";
+            }
+            else if (_administrator.SimplePairing(true) != Core::ERROR_NONE) {
+                result = "Failed to enable simple pairing on the bluetooth interface";
+            }
+            else if (_administrator.Bondable(true) != Core::ERROR_NONE) {
+                result = "Failed to enable bonding on the bluetooth interface";
+            }
+            else if (_administrator.LowEnergy(true) != Core::ERROR_NONE) {
+                result = "Failed to enable low energy on the bluetooth interface";
+            }
+            else if (_administrator.Secure(true) != Core::ERROR_NONE) {
+                result = "Failed to enable security on the bluetooth interface";
+            }
+            else if (_administrator.Advertising(true) != Core::ERROR_NONE) {
+                result = "Failed to enable advertising on the bluetooth interface";
+            }
+            else if (_administrator.LinkKeys(linkKeys) != Core::ERROR_NONE) {
+                result = "Failed to upload link keys to the bluetooth interface";
+            }
+            else if (_administrator.LongTermKeys(longTermKeys) != Core::ERROR_NONE) {
+                result = "Failed to upload long term keys to the bluetooth interface";
+            }
+            else if (_administrator.Name(_T("Thunder"), _config.Name.Value()) != Core::ERROR_NONE) {
+                result = "Failed to upload identity keys to the bluetooth interface";
+            }
+            else if (_application.Open(_administrator.DeviceId()) != Core::ERROR_NONE) {
+                result = "Could not open the bluetooth application channel";
+            } 
+            else if (_application.Advertising(true, 0) != Core::ERROR_NONE) {
                 result = "Could not listen to advertisements on the Application channel";
             }
-        }
-        if ((driverMessage == nullptr) && (result.empty() == false)) {
-            Bluetooth::HCISocket::Down(_config.Interface.Value());
-            _administrator.Close(Core::infinite);
-            printf("Going down step driver..\n");
-            ::destruct_bluetooth_driver();
-            printf("We are down !!!!\n");
+
+            if (result.empty() == false) {
+                Bluetooth::ControlSocket::Down(_administrator.DeviceId());
+                _administrator.DeviceId(HCI_DEV_NONE);
+                _application.Close();
+                ::destruct_bluetooth_driver();
+            }
         }
         return result;
     }
@@ -62,8 +88,9 @@ namespace Plugin {
         _service = nullptr;
 
         // We bring the interface up, so we should bring it down as well..
-        Bluetooth::HCISocket::Down(_config.Interface.Value());
-        _administrator.Close(Core::infinite);
+        _application.Close();
+        Bluetooth::ControlSocket::Down(_administrator.DeviceId());
+        _administrator.DeviceId(HCI_DEV_NONE);
         ::destruct_bluetooth_driver();
     }
 
