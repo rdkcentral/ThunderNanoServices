@@ -61,9 +61,6 @@ namespace Amazon {
             , _jsContext()
             , _jsListener()
         {
-            std::string config = Configuration();
-            printf("### STR: %s\n", config.c_str());
-
             if (library.IsLoaded() == true) {
                 _registerMessageListener = reinterpret_cast<RegisterMessageListenerType>(library.LoadFunction(_T("registerMessageListener")));
                 _sendMessage = reinterpret_cast<SendMessageType >(library.LoadFunction(_T("sendMessage")));
