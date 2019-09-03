@@ -20,7 +20,7 @@ namespace Amazon {
         // Gets configuration for this handler from WPEWebKitBrowser via synchronous message.
         static std::string Configuration()
         {
-            std::string utf8MessageName(string(WebKit::Utils::ConfigMessage()) + "Hawaii");
+            std::string utf8MessageName(string(WebKit::Utils::ConfigMessage()) + "hawaii");
 
             WKStringRef jsMessageName = WKStringCreateWithUTF8CString(utf8MessageName.c_str());
             WKMutableArrayRef messageBody = WKMutableArrayCreate();
@@ -61,6 +61,9 @@ namespace Amazon {
             , _jsContext()
             , _jsListener()
         {
+            std::string config = Configuration();
+            printf("### STR: %s\n", config.c_str());
+
             if (library.IsLoaded() == true) {
                 _registerMessageListener = reinterpret_cast<RegisterMessageListenerType>(library.LoadFunction(_T("registerMessageListener")));
                 _sendMessage = reinterpret_cast<SendMessageType >(library.LoadFunction(_T("sendMessage")));
