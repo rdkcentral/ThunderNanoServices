@@ -90,14 +90,14 @@ namespace Plugin {
         void RegisterAll();
         void UnregisterAll();
         
-	uint32_t endpoint_getactivesessionscount(const Core::JSON::DecUInt32& response);
-	uint32_t endpoint_getactivesessionsinfo(const Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& response);
+	uint32_t endpoint_getactivesessionscount(Core::JSON::DecUInt32& response);
+	uint32_t endpoint_getactivesessionsinfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& response);
 	uint32_t endpoint_closeclientsession(const JsonData::SecureShellServer::CloseclientsessionParamsData& params);
 
-        SecureShellServerImplementation _implemetation;
+        SecureShellServerImplementation _implementation;
 
         uint8_t _skipURL = 0;
-        const std::string& _InputParameters;
+        std::string _InputParameters;
         PluginHost::IShell* _service;
     };
 

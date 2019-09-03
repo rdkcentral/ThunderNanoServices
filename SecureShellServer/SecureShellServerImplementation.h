@@ -35,7 +35,7 @@ namespace Plugin {
 
         uint32_t GetSessionsCount()
         {
-            uint32_t result = Core::ERROR_NONE;
+            //uint32_t result = Core::ERROR_NONE;
 
 	    uint32_t count = get_active_sessions_count();
             TRACE(Trace::Information, (_T("Get total number of active SSH client sessions managed by Dropbear service: %d"), count));

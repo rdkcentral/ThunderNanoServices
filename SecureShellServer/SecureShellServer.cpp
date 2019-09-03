@@ -118,17 +118,17 @@ namespace Plugin {
 
     uint32_t SecureShellServer::GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& sessioninfo)
     {
-        return _implemetation.GetSessionsInfo(sessioninfo);
+        return _implementation.GetSessionsInfo(sessioninfo);
     }
 
     uint32_t SecureShellServer::GetSessionsCount()
     {
-        return _implemetation.GetSessionsCount();
+        return _implementation.GetSessionsCount();
     }
 
     uint32_t SecureShellServer::CloseClientSession(const std::string& clientpid)
     {
-        return _implemetation.CloseClientSession(clientpid);
+        return _implementation.CloseClientSession(clientpid);
     }
 
 } // namespace Plugin
