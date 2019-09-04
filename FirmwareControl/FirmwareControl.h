@@ -8,7 +8,7 @@
 extern "C"
 {
 #endif
-#include <mfrTypes.h>
+#include <mfrApi.h>
 #ifdef __cplusplus
 }
 #endif

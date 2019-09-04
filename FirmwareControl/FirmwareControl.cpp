@@ -21,7 +21,12 @@ namespace Plugin {
         if (config.WaitTime.IsSet() == true) {
             _waitTime = config.WaitTime.Value();
         }
-        return (string());
+        string message;
+        uint32_t status = ConvertMfrStatusToCore(mfr_init());
+        if (status != Core::ERROR_NONE) {
+            message = _T("Error in MFR library initialization");
+        }
+        return (message);
     }
 
     /* virtual */ void FirmwareControl::Deinitialize(PluginHost::IShell* service)
