@@ -18,13 +18,10 @@
 #include <glib.h>
 
 #include "HTML5Notification.h"
-#include "InjectedBundle/NotifyWPEFramework.h"
-#include "InjectedBundle/Utils.h"
 #include "WebKitBrowser.h"
+#include "InjectedBundle/Tags.h"
 
 #include <iostream>
-
-using namespace WebKit;
 
 namespace WPEFramework {
 namespace Plugin {
@@ -219,6 +216,24 @@ namespace Plugin {
         // requestNewPage
         onAutomationSessionRequestNewPage
     };
+
+    static string WKStringToString(WKStringRef wkStringRef) {
+        size_t bufferSize = WKStringGetMaximumUTF8CStringSize(wkStringRef);
+        std::unique_ptr<char[]> buffer(new char[bufferSize]);
+        size_t stringLength = WKStringGetUTF8CString(wkStringRef, buffer.get(), bufferSize);
+        return Core::ToString(buffer.get(), stringLength - 1);
+    }
+    static std::vector<string> ConvertWKArrayToStringVector(WKArrayRef array) {
+            size_t arraySize = WKArrayGetSize(array);
+
+            std::vector<string> stringVector;
+
+            for (unsigned int index = 0; index < arraySize; ++index) {
+                stringVector.push_back(WKStringToString(static_cast<WKStringRef>(WKArrayGetItemAtIndex(array, index))));
+            }
+
+            return stringVector;
+    }
 
     /* ---------------------------------------------------------------------------------------------------
 struct CustomLoopHandler
@@ -1181,19 +1196,19 @@ static GSourceFuncs _handlerIntervention =
     /* static */ void onDidReceiveSynchronousMessageFromInjectedBundle(WKContextRef context, WKStringRef messageName,
         WKTypeRef messageBodyObj, WKTypeRef* returnData, const void* clientInfo)
     {
-        static int configLen = strlen(WebKit::Utils::ConfigMessage());
+        static int configLen = strlen(Tags::Config);
         const WebKitImplementation* browser = static_cast<const WebKitImplementation*>(clientInfo);
 
-        string name = Utils::WKStringToString(messageName);
+        string name = WKStringToString(messageName);
 
         // Depending on message name, select action.
-        if (name == JavaScript::Functions::NotifyWPEFramework::GetMessageName()) {
+        if (name == Tags::Notification) {
             // Message contains strings from custom JS handler "NotifyWebbridge".
             WKArrayRef messageLines = static_cast<WKArrayRef>(messageBodyObj);
 
-            std::vector<string> messageStrings = Utils::ConvertWKArrayToStringVector(messageLines);
+            std::vector<string> messageStrings = ConvertWKArrayToStringVector(messageLines);
             browser->OnJavaScript(messageStrings);
-        } else if (name.compare(0, configLen, WebKit::Utils::ConfigMessage()) == 0) {
+        } else if (name.compare(0, configLen, Tags::Config) == 0) {
             // Second part of this string is the key we are looking for, extract it...
             std::string utf8Json = Core::ToString(browser->GetConfig(name.substr(configLen)));
             *returnData = WKStringCreateWithUTF8CString(utf8Json.c_str());
@@ -1210,7 +1225,7 @@ static GSourceFuncs _handlerIntervention =
         WKURLRef urlRef = WKPageCopyActiveURL(page);
         WKStringRef urlStringRef = WKURLCopyString(urlRef);
 
-        string url = WebKit::Utils::WKStringToString(urlStringRef);
+        string url = WKStringToString(urlStringRef);
 
         browser->OnURLChanged(url);
 
@@ -1226,7 +1241,7 @@ static GSourceFuncs _handlerIntervention =
             WKURLRef urlRef = WKPageCopyActiveURL(page);
             WKStringRef urlStringRef = WKURLCopyString(urlRef);
 
-            string url = WebKit::Utils::WKStringToString(urlStringRef);
+            string url = WKStringToString(urlStringRef);
 
             browser->OnURLChanged(url);
 
@@ -1243,7 +1258,7 @@ static GSourceFuncs _handlerIntervention =
         WKURLRef urlRef = WKPageCopyActiveURL(page);
         WKStringRef urlStringRef = WKURLCopyString(urlRef);
 
-        string url = WebKit::Utils::WKStringToString(urlStringRef);
+        string url = WKStringToString(urlStringRef);
 
         browser->OnLoadFinished(url);
 
@@ -1268,8 +1283,8 @@ static GSourceFuncs _handlerIntervention =
         WKStringRef titleRef = WKNotificationCopyTitle(notification);
         WKStringRef bodyRef = WKNotificationCopyBody(notification);
 
-        string title = WebKit::Utils::WKStringToString(titleRef);
-        string body = WebKit::Utils::WKStringToString(bodyRef);
+        string title = WKStringToString(titleRef);
+        string body = WKStringToString(bodyRef);
 
         TRACE_GLOBAL(HTML5Notification, (_T("%s - %s"), title.c_str(), body.c_str()));
 

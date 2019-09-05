@@ -2,6 +2,7 @@
 #define __NOTIFYH
 
 #include "JavaScriptFunctionType.h"
+#include "Tags.h"
 
 namespace WPEFramework {
 namespace JavaScript {
@@ -16,7 +17,7 @@ namespace JavaScript {
 
             static inline string GetMessageName()
             {
-                return Core::ClassNameOnly(typeid(NotifyWPEFramework).name()).Data();
+                return Tags::Notification;
             }
         };
     }

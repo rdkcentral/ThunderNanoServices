@@ -13,10 +13,9 @@ namespace WebKit {
     namespace Utils {
         void AppendStringToWKArray(const string& item, WKMutableArrayRef array);
         string GetStringFromWKArray(WKArrayRef array, unsigned int index);
+        WKBundleRef GetBundle();
         string WKStringToString(WKStringRef wkStringRef);
         std::vector<string> ConvertWKArrayToStringVector(WKArrayRef array);
-        WKBundleRef GetBundle();
-        const char* ConfigMessage();
     };
 }
 }
