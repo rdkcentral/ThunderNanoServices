@@ -348,10 +348,18 @@ namespace Plugin {
 
                     if (XMLSize <= static_cast<uint32_t>(length - offset)) {
 
-                        size += XMLSize;
+                        uint16_t stringLength = (data[offset + 8] | (data[offset + 9] << 8));
+                        if (stringLength <= (XMLSize - 10)) {
 
-                        // Seems like it is an XMLBlob, without PSSH header, we have seen that on PlayReady only..
-                        ParseXMLBox(&(data[offset]), size);
+                            // Seems like it is an XMLBlob, without PSSH header, we have seen that on PlayReady only..
+                            ParseXMLBox(&(data[offset + 10]), stringLength);
+                        }
+
+                        offset += XMLSize;
+
+                    } else if ((offset == 0) && (data[0] == '<') && (data[2] == 'W') && (data[4] == 'R') && (data[6] == 'M')) {
+                        ParseXMLBox(data, size);
+                        offset = length;
                     } else {
                         TRACE_L1("Have no clue what this is!!! %d\n", __LINE__);
                     }
@@ -366,12 +374,14 @@ namespace Plugin {
             systemType system(COMMON);
             const uint8_t* psshData(&(data[KeyId::Length() + 4 /* flags */]));
             uint32_t count((psshData[0] << 24) | (psshData[1] << 16) | (psshData[2] << 8) | psshData[3]);
+            uint16_t stringLength = (data[8] | (data[9] << 8));
 
             if (::memcmp(&(data[4]), CommonEncryption, KeyId::Length()) == 0) {
                 psshData += 4;
                 TRACE_L1("Common detected [%d]\n", __LINE__);
             } else if (::memcmp(&(data[4]), PlayReady, KeyId::Length()) == 0) {
-                if (ParseXMLBox(&(psshData[4]), count) == true) {
+                if (stringLength <= (length - 10)) {
+                    ParseXMLBox(&(psshData[10]), count);
                     TRACE_L1("PlayReady XML detected [%d]\n", __LINE__);
                     count = 0;
                 } else {
@@ -423,19 +433,19 @@ namespace Plugin {
             return ((index == keyLength) ? (result - (keyLength * 2)) : result);
         }
 
-        bool ParseXMLBox(const uint8_t data[], const uint16_t length)
+        void ParseXMLBox(const uint8_t data[], const uint16_t length)
         {
-
-            uint32_t size = (data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24));
-            uint16_t stringLength = (data[8] | (data[9] << 8));
-            bool result = ((size == length) && (stringLength <= (length - 10)));
-
-            if (result == true) {
                 uint16_t begin;
-                uint16_t size = stringLength;
-                const uint8_t* slot = &data[10];
+                const uint8_t* slot = data;
+                uint16_t size = length;
 
                 // Now find the string <KID> in this text
+                // this will process  PlayReady header format v.4.0.0.0
+                // https://docs.microsoft.com/en-us/playready/specifications/playready-header-specification#36-v4000
+                //
+                // we want to find and process this utf16 string:
+                // <KID>q5HgCTj40kGeNVhTH9Gexw==</KID>
+                //
                 while ((size > 0) && ((begin = FindInXML(slot, size, "<KID>", 5)) < size)) {
                     uint16_t end = FindInXML(&(slot[begin + 10]), size - begin - 10, "</KID>", 6);
 
@@ -464,8 +474,48 @@ namespace Plugin {
                         size = 0;
                     }
                 }
-            }
-            return (result);
+
+                // this will process PlayReady header format v.4.1.0.0/v.4.2.0.0/v.4.3.0.0
+                // https://docs.microsoft.com/en-us/playready/specifications/playready-header-specification#35-v4100
+                // https://docs.microsoft.com/en-us/playready/specifications/playready-header-specification#34-v4200
+                // https://docs.microsoft.com/en-us/playready/specifications/playready-header-specification#33-v4300
+                //
+                // we want to find and process this utf16 string:
+                // <KID ALGID="AESCTR" CHECKSUM="xNvWVxoWk04=" VALUE="0IbHou/5s0yzM80yOkKEpQ=="></KID>
+                //
+                // Now find the string "<KID " in this text
+                while ((size > 0) && ((begin = FindInXML(slot, size, "<KID ", 5)) < size)) {
+                    uint16_t end = FindInXML(&(slot[begin + 10]), size - begin - 10, "</KID>", 6);
+
+                    uint16_t keyValue = FindInXML(&(slot[begin + 10]), end, "VALUE", 5);  
+                    uint16_t keyStart = FindInXML(&(slot[begin + 10 + keyValue + 10]), end - keyValue - 10, "\"", 1) + 2;
+                    uint16_t keyLength = FindInXML(&(slot[begin + 10 + keyValue + 10 + keyStart]), end - keyValue - 10 - keyStart - 2, "\"", 1) - 2;
+                    
+                    if (end < (size - begin - 10)) {
+                        uint8_t byteArray[32];
+
+                        // We got a KID, translate its
+                        if (Base64(&(slot[begin + 10 + keyValue + 10 + keyStart]), static_cast<uint8_t>(keyLength), byteArray, sizeof(byteArray)) == KeyId::Length()) {
+                            // Pass it the microsoft way :-(
+                            uint32_t a = byteArray[0];
+                            a = (a << 8) | byteArray[1];
+                            a = (a << 8) | byteArray[2];
+                            a = (a << 8) | byteArray[3];
+                            uint16_t b = byteArray[4];
+                            b = (b << 8) | byteArray[5];
+                            uint16_t c = byteArray[6];
+                            c = (c << 8) | byteArray[7];
+                            uint8_t* d = &byteArray[8];
+
+                            // Add them in both endiannesses, since we have encountered both in the wild.
+                            AddKeyId(KeyId(PLAYREADY, a, b, c, d));
+                        }
+                        size -= (begin + 10 + end + 12);
+                        slot += (begin + 10 + end + 12);
+                    } else {
+                        size = 0;
+                    }
+                }
         }
 
     private:
