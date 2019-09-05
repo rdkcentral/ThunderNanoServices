@@ -359,24 +359,28 @@ bool DataModel::ValidateParameterInstance(const std::string& paramName, std::str
 
         std::string tempName = paramName;
         std::map<uint8_t, std::pair<std::size_t, std::size_t>>::iterator position = positions.find(index);
-        tempName.replace(position->second.first, ((position->second.second + 1) - position->second.first), InstanceNumberIndicator);
-        uint16_t maxCombinations = pow(2, i - 1);
-        for (uint16_t j = 0; j < maxCombinations; ++j) {
-            std::string name = tempName;
-            int8_t newPosition = 0;
-            for (uint8_t k = 0; k < i; ++k) {
-                if ((j & (1 << k))) {
+        if (positions.end() != position) {
+            tempName.replace(position->second.first, ((position->second.second + 1) - position->second.first), InstanceNumberIndicator);
+            uint16_t maxCombinations = pow(2, i - 1);
+            for (uint16_t j = 0; j < maxCombinations; ++j) {
+                std::string name = tempName;
+                int8_t newPosition = 0;
+                for (uint8_t k = 0; k < i; ++k) {
+                    if ((j & (1 << k))) {
 
-                    index = (occurrences - 1) - k;
-                    std::map<uint8_t, std::pair<std::size_t, std::size_t>>::iterator position = positions.find(index);
+                        index = (occurrences - 1) - k;
+                        std::map<uint8_t, std::pair<std::size_t, std::size_t>>::iterator position = positions.find(index);
+                        if (positions.end() != position) {
 
-                    newPosition = strlen(InstanceNumberIndicator) - ((position->second.second + 1) - position->second.first);
-                    name.replace(position->second.first + newPosition, ((position->second.second + 1) - position->second.first), InstanceNumberIndicator);
+                            newPosition = strlen(InstanceNumberIndicator) - ((position->second.second + 1) - position->second.first);
+                            name.replace(position->second.first + newPosition, ((position->second.second + 1) - position->second.first), InstanceNumberIndicator);
+                        }
+                    }
                 }
-            }
-            CheckforParameterMatch(reinterpret_cast<TiXmlDocument*>(_dmHandle), name, valid, dataType);
-            if (valid == true) {
-                break;
+                CheckforParameterMatch(reinterpret_cast<TiXmlDocument*>(_dmHandle), name, valid, dataType);
+                if (valid == true) {
+                    break;
+                }
             }
         }
     }
