@@ -1247,8 +1247,17 @@ namespace Plugin {
         void Deinitialize(PluginHost::IShell* service) override {
             std::map<const string, SystemFactory>::iterator factory(_systemToFactory.begin());
 
+            std::list<CDMi::ISystemFactory*> deinitialized;
+
             while (factory != _systemToFactory.end()) {
-                factory->second.Factory->Deinitialize(service);
+                std::list<CDMi::ISystemFactory*>::iterator index(std::find(deinitialized.begin(), deinitialized.end(), factory->second.Factory));
+
+                if(index == deinitialized.end()){ 
+                    TRACE_L1("Deinitializing factory(%p) for key system %s", factory->second.Factory, factory->second.Factory->KeySystem());
+                    factory->second.Factory->Deinitialize(service);
+                    deinitialized.push_back(factory->second.Factory);
+                }
+                
                 factory++;
             }
         }
