@@ -655,7 +655,7 @@ namespace Plugin {
             }
 
             // Create a MediaKeySession using the supplied init data and CDM data.
-            virtual ::OCDM::OCDM_RESULT CreateSession(
+            virtual OCDM::OCDM_RESULT CreateSession(
                 const std::string keySystem,
                 const int32_t licenseType,
                 const std::string initDataType,
@@ -667,77 +667,66 @@ namespace Plugin {
                 std::string& sessionId,
                 ::OCDM::ISession*& session) override
             {
+                CDMi::IMediaKeysExt *systemExt = dynamic_cast<CDMi::IMediaKeysExt *>(_parent.KeySystem(keySystem));
+                if (systemExt != nullptr) {
+                    OCDM::ISessionExt* sessionExt = nullptr;
+                    OCDM::OCDM_RESULT result = CreateSessionExt(keySystem, initData, initDataLength, 
+                                                                callback, sessionId, sessionExt);
+                    session = sessionExt->QueryInterface<OCDM::ISession>();
+                    sessionExt->Release();
+                    return result;
+                } else {
+                    CDMi::IMediaKeys *system = _parent.KeySystem(keySystem);
 
-                CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
+                    session = nullptr;
+                    if (system != nullptr)
+                    {
+                        CDMi::IMediaKeySession *sessionInterface = nullptr;
+                        CommonEncryptionData keyIds(initData, initDataLength);
 
-                session = nullptr;
-                if (system != nullptr) {
-                    CDMi::IMediaKeySession* sessionInterface = nullptr;
-                    CommonEncryptionData keyIds(initData, initDataLength);
+                        // OKe we got a buffer machanism to transfer the raw data, now create
+                        // the session.
+                        if (system->CreateMediaKeySession(keySystem, licenseType, 
+                                           initDataType.c_str(), initData, initDataLength, 
+                                           CDMData, CDMDataLength, &sessionInterface) == 0)
+                        {
+                            if (sessionInterface != nullptr)
+                            {
+                                std::string bufferId;
 
-                    // OKe we got a buffer machanism to transfer the raw data, now create
-                    // the session.
-                    if (system->CreateMediaKeySession(keySystem, licenseType, initDataType.c_str(), initData, initDataLength, CDMData, CDMDataLength, &sessionInterface) == 0) {
+                                // See if there is a buffer available we can use..
+                                if (_administrator.AquireBuffer(bufferId) == true)
+                                {
 
-                        if (sessionInterface != nullptr) {
+                                    SessionImplementation *newEntry = 
+                                       Core::Service<SessionImplementation>::Create<SessionImplementation>(this,
+                                                    keySystem, sessionInterface,
+                                                    callback, bufferId, _defaultSize, &keyIds);
 
-                            std::string bufferId;
+                                    session = newEntry;
+                                    sessionId = newEntry->SessionId();
 
-                            // See if there is a buffer available we can use..
-                            if (_administrator.AquireBuffer(bufferId) == true) {
+                                    _adminLock.Lock();
 
-                                SessionImplementation* newEntry = Core::Service<SessionImplementation>::Create<SessionImplementation>(this, keySystem, sessionInterface, callback, bufferId, _defaultSize, &keyIds);
+                                    _sessionList.push_front(newEntry);
+                                    ReportCreate(sessionId);
 
-                                session = newEntry;
-                                sessionId = newEntry->SessionId();
+                                    _adminLock.Unlock();
+                                } else {
+                                    TRACE_L1("Could not allocate a buffer for session: %s", sessionId.c_str());
 
-                                _adminLock.Lock();
-
-                                _sessionList.push_front(newEntry);
-                                ReportCreate(sessionId);
-
-                                _adminLock.Unlock();
-                            } else {
-                                TRACE_L1("Could not allocate a buffer for session: %s", sessionId.c_str());
-
-                                // TODO: We need to drop the session somehow...
+                                    // TODO: We need to drop the session somehow...
+                                }
                             }
                         }
                     }
+
+                    if (session == nullptr) {
+                        TRACE_L1("Could not create a DRM session! [%d]", __LINE__);
+                    }
+
+                    return (session != nullptr ? ::OCDM::OCDM_RESULT::OCDM_SUCCESS : ::OCDM::OCDM_RESULT::OCDM_S_FALSE);
                 }
-
-                if (session == nullptr) {
-                    TRACE_L1("Could not create a DRM session! [%d]", __LINE__);
-                }
-
-                return (session != nullptr ? ::OCDM::OCDM_RESULT::OCDM_SUCCESS : ::OCDM::OCDM_RESULT::OCDM_S_FALSE);
-            }
-
-            // Set Server Certificate
-            virtual ::OCDM::OCDM_RESULT SetServerCertificate(
-                const std::string keySystem,
-                const uint8_t* serverCertificate,
-                const uint16_t serverCertificateLength) override
-            {
-
-                CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
-
-                if (system != nullptr) {
-                    TRACE(Trace::Information, ("Set ServerCertificate()"));
-                    system->SetServerCertificate(serverCertificate, serverCertificateLength);
-                } else {
-                    TRACE_L1("Could not set the Server Certificates for system: %s", keySystem.c_str());
-                }
-                return (::OCDM::OCDM_RESULT::OCDM_SUCCESS);
-            }
-
-            virtual time_t GetDrmSystemTime(const std::string& keySystem) const override
-            {
-                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
-                if (systemExt) {
-                    return (OCDM::OCDM_RESULT)systemExt->GetDrmSystemTime();
-                }
-                return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
             }
 
             virtual OCDM::OCDM_RESULT CreateSessionExt(
@@ -798,6 +787,33 @@ namespace Plugin {
                 }
 
                 return (session != nullptr ? ::OCDM::OCDM_RESULT::OCDM_SUCCESS : ::OCDM::OCDM_RESULT::OCDM_S_FALSE);
+            }
+
+            // Set Server Certificate
+            virtual ::OCDM::OCDM_RESULT SetServerCertificate(
+                const std::string keySystem,
+                const uint8_t* serverCertificate,
+                const uint16_t serverCertificateLength) override
+            {
+
+                CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
+
+                if (system != nullptr) {
+                    TRACE(Trace::Information, ("Set ServerCertificate()"));
+                    system->SetServerCertificate(serverCertificate, serverCertificateLength);
+                } else {
+                    TRACE_L1("Could not set the Server Certificates for system: %s", keySystem.c_str());
+                }
+                return (::OCDM::OCDM_RESULT::OCDM_SUCCESS);
+            }
+
+            virtual time_t GetDrmSystemTime(const std::string& keySystem) const override
+            {
+                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+                if (systemExt) {
+                    return (OCDM::OCDM_RESULT)systemExt->GetDrmSystemTime();
+                }
+                return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
             }
 
             std::string GetVersionExt(const std::string& keySystem) const override
