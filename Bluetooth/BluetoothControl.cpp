@@ -8,7 +8,7 @@ namespace Plugin {
 
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::DeviceImpl::JSON>> jsonResponseFactoryDevice(1);
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::Status>> jsonResponseFactoryStatus(1);
-    /* static */ Bluetooth::ControlSocket BluetoothControl::_administrator;
+    /* static */ BluetoothControl::ControlSocket BluetoothControl::_administrator;
 
     /* virtual */ const string BluetoothControl::Initialize(PluginHost::IShell* service)
     {
@@ -166,8 +166,7 @@ namespace Plugin {
 
             result->Body(response);
         } else {
-            TRACE(Trace::Information, (string(__FUNCTION__)));
-            DeviceImpl* device = Find(index.Current().Text());
+            DeviceImpl* device = Find(Bluetooth::Address(index.Current().Text().c_str()));
 
             if (device != nullptr) {
                 Core::ProxyType<Web::JSONBodyType<DeviceImpl::JSON>> response(jsonResponseFactoryDevice.Element());
@@ -193,7 +192,6 @@ namespace Plugin {
 
         if (index.IsValid() == true) {
             if (index.Next()) {
-                TRACE(Trace::Information, (string(__FUNCTION__)));
 
                 if (index.Current() == _T("Scan")) {
                     Core::URL::KeyValue options(request.Query.Value());
@@ -220,7 +218,7 @@ namespace Plugin {
                     } else if (request.HasBody() == true) {
                         destination = request.Body<const DeviceImpl::JSON>()->Address.Value();
                     }
-                    DeviceImpl* device = Find(destination);
+                    DeviceImpl* device = Find(Bluetooth::Address(destination.c_str()));
                     if (device == nullptr) {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Device not found.");
@@ -257,8 +255,6 @@ namespace Plugin {
 
         if (index.IsValid() == true) {
             if (index.Next()) {
-                TRACE(Trace::Information, (string(__FUNCTION__)));
-
                 if (index.Current() == _T("Remote")) {
                     string address;
                     if (index.Next() == true) {
@@ -266,7 +262,7 @@ namespace Plugin {
                     } else if (request.HasBody() == true) {
                         address = request.Body<const DeviceImpl::JSON>()->Address.Value();
                     }
-                    DeviceImpl* device = Find(address);
+                    DeviceImpl* device = Find(Bluetooth::Address(address.c_str()));
                     if (device == nullptr) {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Unknown device.");
@@ -290,7 +286,6 @@ namespace Plugin {
 
         if (index.IsValid() == true) {
             if (index.Next()) {
-                TRACE(Trace::Information, (string(__FUNCTION__)));
 
                 if (index.Current() == _T("Scan")) {
                     _application.Abort();
@@ -304,7 +299,7 @@ namespace Plugin {
                     } else if (request.HasBody() == true) {
                         address = request.Body<const DeviceImpl::JSON>()->Address.Value();
                     }
-                    DeviceImpl* device = Find(address);
+                    DeviceImpl* device = Find(Bluetooth::Address(address.c_str()));
                     if (device == nullptr) {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Unknown device.");
@@ -389,7 +384,6 @@ namespace Plugin {
     {
         if ((_application.IsScanning() == false) && (enable == true)) {
 
-            TRACE(Trace::Information, ("Start Bluetooth Scan"));
 
             // Clearing previously discovered devices.
             RemoveDevices([](DeviceImpl* device) -> bool { if ((device->IsPaired() == false) && (device->IsConnected() == false)) device->Clear(); return(false); });
@@ -402,8 +396,10 @@ namespace Plugin {
             uint32_t type = 0x338B9E;
 
             if (lowEnergy == true) {
+                TRACE(Trace::Information, ("Start Low-Energy Bluetooth Scan"));
                 _application.Scan(duration, limited, passive);
             } else {
+                TRACE(Trace::Information, ("Start Regular Bluetooth Scan"));
                 _application.Scan(duration, type, flags);
             }
         } else if ((_application.IsScanning() == true) && (enable == false)) {
@@ -418,7 +414,7 @@ namespace Plugin {
 
     /* virtual */ Exchange::IBluetooth::IDevice* BluetoothControl::Device(const string& address)
     {
-        IBluetooth::IDevice* result = Find(address);
+        IBluetooth::IDevice* result = Find(Bluetooth::Address(address.c_str()));
         if (result != nullptr) {
             result->AddRef();
         }
@@ -429,44 +425,6 @@ namespace Plugin {
     {
         return (Core::Service<DeviceImpl::IteratorImpl>::Create<IBluetooth::IDevice::IIterator>(_devices));
     }
-
-    /* virtual */ void BluetoothControl::Update(const hci_event_hdr& eventData)
-    {
-        const uint8_t* data = &(reinterpret_cast<const uint8_t*>(&eventData)[sizeof(hci_event_hdr&)]);
-
-        switch (eventData.evt) {
-            case EVT_CMD_STATUS: {
-                 const evt_cmd_status* cs = reinterpret_cast<const evt_cmd_status*>(data);
-                 TRACE(Trace::Information, (_T("==EVT_CMD_STATUS: %X-%03X status: %d"), (((cs->opcode >> 10) & 0xF), (cs->opcode & 0x3FF), cs->status)));
-                 break;
-            }
-            case EVT_CMD_COMPLETE: {
-                 const evt_cmd_complete* cc = reinterpret_cast<const evt_cmd_complete*>(data);
-                 TRACE(Trace::Information, (_T("==EVT_CMD_COMPLETE: %X-%03X"), (((cc->opcode >> 10) & 0xF), (cc->opcode & 0x3FF))));
-                 break;
-            }
-            case EVT_LE_META_EVENT: {
-                 const evt_le_meta_event* eventMetaData = reinterpret_cast<const evt_le_meta_event*>(data);
-
-                 if (eventMetaData->subevent == EVT_LE_CONN_COMPLETE) {
-                     TRACE(Trace::Information, (_T("==EVT_LE_CONN_COMPLETE: unexpected")));
-                 } else if (eventMetaData->subevent == EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE) {
-                     TRACE(Trace::Information, (_T("==EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE: unexpected")));
-                 } else if (eventMetaData->subevent == EVT_DISCONNECT_PHYSICAL_LINK_COMPLETE) {
-                     TRACE(Trace::Information, (_T("==EVT_DISCONNECT_PHYSICAL_LINK_COMPLETE: unexpected")));
-                 } else {
-                     ASSERT (eventMetaData->subevent != EVT_LE_ADVERTISING_REPORT);
-                     TRACE(Trace::Information, (_T("==EVT_LE_META_EVENT: unexpected subevent: %d"), eventMetaData->subevent));
-                 }
-                 break;
-            }
-            case 0:
-                break;
-            default:
-                TRACE(Trace::Information, (_T("==UNKNOWN: event %X"), eventData.evt));
-                break;
-        }
-    }    
     void BluetoothControl::Discovered(const bool lowEnergy, const Bluetooth::Address& address, const string& name)
     {
         _adminLock.Lock();
@@ -504,9 +462,19 @@ namespace Plugin {
 
         _adminLock.Unlock();
     }
-    BluetoothControl::DeviceImpl* BluetoothControl::Find(const string& address)
+    void BluetoothControl::Capabilities(const Bluetooth::Address& device, const uint8_t capability, const uint8_t authentication, const uint8_t oob_data)
     {
-        Bluetooth::Address search(address.c_str());
+        DeviceImpl* entry = Find(device);
+        
+        if (entry != nullptr) {
+            entry->Capabilities(capability, authentication, oob_data);
+        }
+        else {
+            TRACE(Trace::Information, (_T("Could not set the capabilities for device %s"), device.ToString()));
+        }
+    }
+    BluetoothControl::DeviceImpl* BluetoothControl::Find(const Bluetooth::Address& search)
+    {
         std::list<DeviceImpl*>::const_iterator index = _devices.begin();
 
         while ((index != _devices.end()) && ((*index)->operator==(search) == false)) {
