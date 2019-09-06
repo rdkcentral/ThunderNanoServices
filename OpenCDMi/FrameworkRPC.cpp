@@ -719,17 +719,6 @@ namespace Plugin {
                  return (session != nullptr ? ::OCDM::OCDM_RESULT::OCDM_SUCCESS : ::OCDM::OCDM_RESULT::OCDM_S_FALSE);
             }
 
-            virtual OCDM::OCDM_RESULT CreateSessionExt(
-                const std::string keySystem,
-                const uint8_t drmHeader[],
-                uint32_t drmHeaderLength,
-                ::OCDM::ISession::ICallback* callback,
-                std::string& sessionId,
-                OCDM::ISessionExt*& session) override
-            {
-                ASSERT(false);
-            }
-
             // Set Server Certificate
             virtual ::OCDM::OCDM_RESULT SetServerCertificate(
                 const std::string keySystem,
