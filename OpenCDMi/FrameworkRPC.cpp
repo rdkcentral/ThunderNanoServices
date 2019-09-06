@@ -365,7 +365,7 @@ namespace Plugin {
                     , _keySystem(keySystem)
                     , _sessionId(mediaKeySession->GetSessionId())
                     , _mediaKeySession(mediaKeySession)
-                    , _mediaKeySessionExt(nullptr)
+                    , _mediaKeySessionExt(dynamic_cast<CDMi::IMediaKeySessionExt*>(mediaKeySession))
                     , _sink(this, callback)
                     , _buffer(new DataExchange(mediaKeySession, bufferName, defaultSize))
                     , _cencData(*sessionData)
@@ -670,7 +670,7 @@ namespace Plugin {
                 CDMi::IMediaKeysExt *systemExt = dynamic_cast<CDMi::IMediaKeysExt *>(_parent.KeySystem(keySystem));
                 if (systemExt != nullptr) {
                     OCDM::ISessionExt* sessionExt = nullptr;
-                    OCDM::OCDM_RESULT result = CreateSessionExt(keySystem, initData, initDataLength, 
+                    OCDM::OCDM_RESULT result = CreateSessionExt2(keySystem, initData, initDataLength, 
                                                                 callback, sessionId, sessionExt);
                     session = sessionExt->QueryInterface<OCDM::ISession>();
                     sessionExt->Release();
@@ -737,22 +737,39 @@ namespace Plugin {
                 std::string& sessionId,
                 OCDM::ISessionExt*& session) override
             {
-                CDMi::IMediaKeysExt* system = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+                ASSERT(false);
+            }
+
+            virtual OCDM::OCDM_RESULT CreateSessionExt2(
+                const std::string keySystem,
+                const uint8_t drmHeader[],
+                uint32_t drmHeaderLength,
+                ::OCDM::ISession::ICallback* callback,
+                std::string& sessionId,
+                OCDM::ISessionExt*& session)
+            {
+                //CDMi::IMediaKeysExt* system = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
+                CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
 
                 if (system == nullptr) {
                     session = nullptr;
                 } else {
-                    CDMi::IMediaKeySessionExt* sessionInterface = nullptr;
+                    //CDMi::IMediaKeySessionExt* sessionInterface = nullptr;
+                    CDMi::IMediaKeySession* sessionInterface = nullptr;
 
                     // TODO
                     uint8_t initData[] = { 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 };
                     uint16_t initDataLength = sizeof(initData);
+                    int32_t licenseType = 0;
+                    string initDataType = "";
                     CommonEncryptionData keyIds(initData, initDataLength);
 
                     // OKe we got a buffer machanism to transfer the raw data, now create
                     // the session.
-                    if ((session == nullptr) && (system->CreateMediaKeySessionExt(keySystem, drmHeader, drmHeaderLength, &sessionInterface) == 0)) {
-
+                    //if ((session == nullptr) && (system->CreateMediaKeySessionExt(keySystem, drmHeader, drmHeaderLength, &sessionInterface) == 0)) {
+                    // keySystem, licenseType, initDataType.c_str(), initData, initDataLength, CDMData, CDMDataLength, &sessionInterface
+                    if ((session == nullptr) && (system->CreateMediaKeySession(keySystem, licenseType, initDataType.c_str(), initData, initDataLength, drmHeader, drmHeaderLength, &sessionInterface) == 0)) {
+                        fprintf(stderr, "dynamic_cast<CDMi::IMediaKeySessionExt>(sessionInterface): %p\n", dynamic_cast<CDMi::IMediaKeySessionExt*>(sessionInterface));
                         if (sessionInterface != nullptr) {
 
                             std::string bufferId;
@@ -807,7 +824,7 @@ namespace Plugin {
                 return (::OCDM::OCDM_RESULT::OCDM_SUCCESS);
             }
 
-            virtual time_t GetDrmSystemTime(const std::string& keySystem) const override
+            virtual uint64_t GetDrmSystemTime(const std::string& keySystem) const override
             {
                 CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
                 if (systemExt) {
