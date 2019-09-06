@@ -17,6 +17,7 @@ namespace Plugin {
             uint32_t result = Core::ERROR_NONE;
 
             TRACE(Trace::Information, (_T("Starting Dropbear Service with options as: %s"), params.c_str()));
+            fprintf(stderr, "Starting Dropbear Service with options as: %s\n", params.c_str());
 	    // TODO: Check the return value and based on that change result
 	    activate_dropbear(const_cast<char*>(params.c_str())); 
 

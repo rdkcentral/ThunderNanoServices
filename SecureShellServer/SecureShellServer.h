@@ -53,6 +53,9 @@ namespace Plugin {
 
     public:
         SecureShellServer()
+	: _skipURL(0)
+	, _InputParameters()
+	, _implementation()
         {
             RegisterAll();
         }
@@ -96,9 +99,8 @@ namespace Plugin {
 
         SecureShellServerImplementation _implementation;
 
-        uint8_t _skipURL = 0;
+        uint8_t _skipURL;
         std::string _InputParameters;
-        PluginHost::IShell* _service;
     };
 
 } // namespace Plugin

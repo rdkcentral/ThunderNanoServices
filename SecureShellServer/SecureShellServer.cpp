@@ -9,28 +9,26 @@ namespace Plugin {
 
     const string SecureShellServer::Initialize(PluginHost::IShell* service)
     {
-         ASSERT(service != nullptr);
+        //ASSERT(service != nullptr);
 
-        _service = service;
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
         Config config;
-        config.FromString(_service->ConfigLine());
-        //_InputParameters = config.InputParameters.Value();
+        config.FromString(service->ConfigLine());
+        _InputParameters = config.InputParameters.Value();
 
-        //_implementation.StartService(_InputParameters);
-        _implementation.StartService(_service->ConfigLine());
+        fprintf(stderr, "Input=%s\n", _InputParameters.c_str());
+        _implementation.StartService(_InputParameters);
 
         return string();
     }
 
     void SecureShellServer::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == service);
+        //ASSERT(_service == service);
+        // Deinitialize what we initialized..
 
         _implementation.StopService();
-
-        // Deinitialize what we initialized..
-        _service = nullptr;
+	//_implementation = nullptr;
     }
 
     string SecureShellServer::Information() const
