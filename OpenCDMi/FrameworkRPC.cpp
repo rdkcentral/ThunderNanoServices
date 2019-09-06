@@ -667,66 +667,56 @@ namespace Plugin {
                 std::string& sessionId,
                 ::OCDM::ISession*& session) override
             {
-                CDMi::IMediaKeysExt *systemExt = dynamic_cast<CDMi::IMediaKeysExt *>(_parent.KeySystem(keySystem));
-                if (systemExt != nullptr) {
-                    OCDM::ISessionExt* sessionExt = nullptr;
-                    OCDM::OCDM_RESULT result = CreateSessionExt2(keySystem, initData, initDataLength, 
-                                                                callback, sessionId, sessionExt);
-                    session = sessionExt->QueryInterface<OCDM::ISession>();
-                    sessionExt->Release();
-                    return result;
-                } else {
-                    CDMi::IMediaKeys *system = _parent.KeySystem(keySystem);
+                 CDMi::IMediaKeys *system = _parent.KeySystem(keySystem);
 
-                    session = nullptr;
-                    if (system != nullptr)
-                    {
-                        CDMi::IMediaKeySession *sessionInterface = nullptr;
-                        CommonEncryptionData keyIds(initData, initDataLength);
+                 session = nullptr;
+                 if (system != nullptr)
+                 {
+                     CDMi::IMediaKeySession *sessionInterface = nullptr;
+                     CommonEncryptionData keyIds(initData, initDataLength);
 
-                        // OKe we got a buffer machanism to transfer the raw data, now create
-                        // the session.
-                        if (system->CreateMediaKeySession(keySystem, licenseType, 
-                                           initDataType.c_str(), initData, initDataLength, 
-                                           CDMData, CDMDataLength, &sessionInterface) == 0)
-                        {
-                            if (sessionInterface != nullptr)
-                            {
-                                std::string bufferId;
+                     // OKe we got a buffer machanism to transfer the raw data, now create
+                     // the session.
+                     if (system->CreateMediaKeySession(keySystem, licenseType, 
+                                        initDataType.c_str(), initData, initDataLength, 
+                                        CDMData, CDMDataLength, &sessionInterface) == 0)
+                     {
+                         if (sessionInterface != nullptr)
+                         {
+                             std::string bufferId;
 
-                                // See if there is a buffer available we can use..
-                                if (_administrator.AquireBuffer(bufferId) == true)
-                                {
+                             // See if there is a buffer available we can use..
+                             if (_administrator.AquireBuffer(bufferId) == true)
+                             {
 
-                                    SessionImplementation *newEntry = 
-                                       Core::Service<SessionImplementation>::Create<SessionImplementation>(this,
-                                                    keySystem, sessionInterface,
-                                                    callback, bufferId, _defaultSize, &keyIds);
+                                 SessionImplementation *newEntry = 
+                                    Core::Service<SessionImplementation>::Create<SessionImplementation>(this,
+                                                 keySystem, sessionInterface,
+                                                 callback, bufferId, _defaultSize, &keyIds);
 
-                                    session = newEntry;
-                                    sessionId = newEntry->SessionId();
+                                 session = newEntry;
+                                 sessionId = newEntry->SessionId();
 
-                                    _adminLock.Lock();
+                                 _adminLock.Lock();
 
-                                    _sessionList.push_front(newEntry);
-                                    ReportCreate(sessionId);
+                                 _sessionList.push_front(newEntry);
+                                 ReportCreate(sessionId);
 
-                                    _adminLock.Unlock();
-                                } else {
-                                    TRACE_L1("Could not allocate a buffer for session: %s", sessionId.c_str());
+                                 _adminLock.Unlock();
+                             } else {
+                                 TRACE_L1("Could not allocate a buffer for session: %s", sessionId.c_str());
 
-                                    // TODO: We need to drop the session somehow...
-                                }
-                            }
-                        }
-                    }
+                                 // TODO: We need to drop the session somehow...
+                             }
+                         }
+                     }
+                 }
 
-                    if (session == nullptr) {
-                        TRACE_L1("Could not create a DRM session! [%d]", __LINE__);
-                    }
+                 if (session == nullptr) {
+                     TRACE_L1("Could not create a DRM session! [%d]", __LINE__);
+                 }
 
-                    return (session != nullptr ? ::OCDM::OCDM_RESULT::OCDM_SUCCESS : ::OCDM::OCDM_RESULT::OCDM_S_FALSE);
-                }
+                 return (session != nullptr ? ::OCDM::OCDM_RESULT::OCDM_SUCCESS : ::OCDM::OCDM_RESULT::OCDM_S_FALSE);
             }
 
             virtual OCDM::OCDM_RESULT CreateSessionExt(
@@ -738,72 +728,6 @@ namespace Plugin {
                 OCDM::ISessionExt*& session) override
             {
                 ASSERT(false);
-            }
-
-            virtual OCDM::OCDM_RESULT CreateSessionExt2(
-                const std::string keySystem,
-                const uint8_t drmHeader[],
-                uint32_t drmHeaderLength,
-                ::OCDM::ISession::ICallback* callback,
-                std::string& sessionId,
-                OCDM::ISessionExt*& session)
-            {
-                //CDMi::IMediaKeysExt* system = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
-                CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
-
-                if (system == nullptr) {
-                    session = nullptr;
-                } else {
-                    //CDMi::IMediaKeySessionExt* sessionInterface = nullptr;
-                    CDMi::IMediaKeySession* sessionInterface = nullptr;
-
-                    // TODO
-                    uint8_t initData[] = { 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 };
-                    uint16_t initDataLength = sizeof(initData);
-                    int32_t licenseType = 0;
-                    string initDataType = "";
-                    CommonEncryptionData keyIds(initData, initDataLength);
-
-                    // OKe we got a buffer machanism to transfer the raw data, now create
-                    // the session.
-                    //if ((session == nullptr) && (system->CreateMediaKeySessionExt(keySystem, drmHeader, drmHeaderLength, &sessionInterface) == 0)) {
-                    // keySystem, licenseType, initDataType.c_str(), initData, initDataLength, CDMData, CDMDataLength, &sessionInterface
-                    if ((session == nullptr) && (system->CreateMediaKeySession(keySystem, licenseType, initDataType.c_str(), initData, initDataLength, drmHeader, drmHeaderLength, &sessionInterface) == 0)) {
-                        fprintf(stderr, "dynamic_cast<CDMi::IMediaKeySessionExt>(sessionInterface): %p\n", dynamic_cast<CDMi::IMediaKeySessionExt*>(sessionInterface));
-                        if (sessionInterface != nullptr) {
-
-                            std::string bufferId;
-
-                            // See if there is a buffer available we can use..
-                            if (_administrator.AquireBuffer(bufferId) == true) {
-
-                                SessionImplementation* newEntry = Core::Service<SessionImplementation>::Create<SessionImplementation>(this, keySystem, sessionInterface, callback, bufferId, _defaultSize, &keyIds);
-
-                                session = newEntry;
-
-                                sessionId = newEntry->SessionId();
-
-                                _adminLock.Lock();
-
-                                _sessionList.push_front(newEntry);
-
-                                ReportCreate(sessionId);
-
-                                _adminLock.Unlock();
-                            } else {
-                                TRACE_L1("Could not allocate a buffer for session: %s", sessionId.c_str());
-
-                                // TODO: We need to drop the session somehow...
-                            }
-                        }
-                    }
-                }
-
-                if (session == nullptr) {
-                    TRACE_L1("Could not create a DRM session! [%d]", __LINE__);
-                }
-
-                return (session != nullptr ? ::OCDM::OCDM_RESULT::OCDM_SUCCESS : ::OCDM::OCDM_RESULT::OCDM_S_FALSE);
             }
 
             // Set Server Certificate
