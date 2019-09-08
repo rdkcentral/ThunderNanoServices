@@ -8,7 +8,9 @@ namespace Plugin {
 
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::DeviceImpl::JSON>> jsonResponseFactoryDevice(1);
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::Status>> jsonResponseFactoryStatus(1);
-    /* static */ BluetoothControl::ControlSocket BluetoothControl::_administrator;
+    /* static */ BluetoothControl::ManagementSocket BluetoothControl::_administrator;
+
+    static uint8_t DefaultIdentity[16] = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
 
     /* virtual */ const string BluetoothControl::Initialize(PluginHost::IShell* service)
     {
@@ -29,12 +31,24 @@ namespace Plugin {
             result = Core::ToString(driverMessage);
         } 
         else {
-            Bluetooth::ControlSocket::LinkKeyList linkKeys;
-            Bluetooth::ControlSocket::LongTermKeyList longTermKeys;
-            // Bluetooth::ControlSocket::IdentityKeyList identityKeys;
+            Bluetooth::ManagementSocket::LinkKeyList linkKeys;
+            Bluetooth::ManagementSocket::LongTermKeyList longTermKeys;
+            Bluetooth::ManagementSocket::IdentityKeyList identityKeys;
 
-            if (Bluetooth::ControlSocket::Up(_administrator.DeviceId()) == false) {
+            if (Bluetooth::ManagementSocket::Up(_administrator.DeviceId()) == false) {
                 result = "Could not activate bluetooth interface.";
+            }
+            else if (_administrator.Unblock(Bluetooth::Address::BREDR_ADDRESS, Bluetooth::Address::AnyInterface()) != Core::ERROR_NONE) {
+                result = "Failed to unblock the AnyAddress on the bluetooth interface";
+            }
+            else if (_administrator.LinkKeys(linkKeys) != Core::ERROR_NONE) {
+                result = "Failed to upload link keys to the bluetooth interface";
+            }
+            else if (_administrator.LongTermKeys(longTermKeys) != Core::ERROR_NONE) {
+                result = "Failed to upload long term keys to the bluetooth interface";
+            }
+            else if (_administrator.IdentityKeys(identityKeys) != Core::ERROR_NONE) {
+                result = "Failed to upload identity keys to the bluetooth interface";
             }
             else if (_administrator.Power(true) != Core::ERROR_NONE) {
                 result = "Failed to power up the bluetooth interface";
@@ -54,12 +68,6 @@ namespace Plugin {
             else if (_administrator.Advertising(true) != Core::ERROR_NONE) {
                 result = "Failed to enable advertising on the bluetooth interface";
             }
-            else if (_administrator.LinkKeys(linkKeys) != Core::ERROR_NONE) {
-                result = "Failed to upload link keys to the bluetooth interface";
-            }
-            else if (_administrator.LongTermKeys(longTermKeys) != Core::ERROR_NONE) {
-                result = "Failed to upload long term keys to the bluetooth interface";
-            }
             else if (_administrator.Name(_T("Thunder"), _config.Name.Value()) != Core::ERROR_NONE) {
                 result = "Failed to upload identity keys to the bluetooth interface";
             }
@@ -71,7 +79,7 @@ namespace Plugin {
             }
 
             if (result.empty() == false) {
-                Bluetooth::ControlSocket::Down(_administrator.DeviceId());
+                Bluetooth::ManagementSocket::Down(_administrator.DeviceId());
                 _administrator.DeviceId(HCI_DEV_NONE);
                 _application.Close();
                 ::destruct_bluetooth_driver();
@@ -89,7 +97,7 @@ namespace Plugin {
 
         // We bring the interface up, so we should bring it down as well..
         _application.Close();
-        Bluetooth::ControlSocket::Down(_administrator.DeviceId());
+        Bluetooth::ManagementSocket::Down(_administrator.DeviceId());
         _administrator.DeviceId(HCI_DEV_NONE);
         ::destruct_bluetooth_driver();
     }
