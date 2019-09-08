@@ -511,9 +511,9 @@ namespace Plugin {
                     return (OCDM::OCDM_RESULT)_mediaKeySessionExt->StoreLicenseData(licenseData, licenseDataSize, secureStopId);
                 }
 
-                virtual OCDM::OCDM_RESULT InitDecryptContextByKid() override
+                virtual OCDM::OCDM_RESULT SelectKeyId(const uint8_t keyLength, const uint8_t keyId[]) override
                 {
-                    return (OCDM::OCDM_RESULT)_mediaKeySessionExt->InitDecryptContextByKid();
+                    return (OCDM::OCDM_RESULT)_mediaKeySessionExt->SelectKeyId(keyLength, keyId);
                 }
 
                 virtual OCDM::OCDM_RESULT CleanDecryptContext() override
