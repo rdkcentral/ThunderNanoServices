@@ -1342,7 +1342,7 @@ namespace WebKitBrowser {
         {
             if (pid != 0) {
                 _main = Core::ProcessInfo(pid);
-                _children = _main.Id();
+                _children = Core::ProcessInfo::Iterator(_main.Id());
                 _startTime = Core::Time::Now().Ticks() + (TYPICAL_STARTUP_TIME * 1000000);
             } else {
                 _startTime = 0;
@@ -1426,6 +1426,10 @@ namespace WebKitBrowser {
                 // In the end we check if all bits are 0, what means all mandatory processes are still running.
                 requiredProcesses = (0xFFFFFFFF >> (32 - requiredChildren));
 
+                if (_children.Count() < 2) {
+                    // Refresh the children list !!!
+                    _children = Core::ProcessInfo::Iterator(_main.Id());
+                }
                 //!< If there are less children than in the the mandatoryProcesses struct, we are done and return false.
                 if (_children.Count() >= requiredChildren) {
 
