@@ -8,6 +8,9 @@
 namespace WPEFramework {
 class Utils {
 public:
+    Utils(const Utils&) = delete;
+    Utils& operator= (const Utils&) = delete;
+
     Utils() {}
     ~Utils() {}
 

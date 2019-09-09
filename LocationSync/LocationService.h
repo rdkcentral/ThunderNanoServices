@@ -135,7 +135,6 @@ namespace Plugin {
         Core::ProxyType<IGeography> _infoCarrier;
 
         Core::ProxyType<Web::Request> _request;
-        Core::ProxyType<Web::IBody> _response;
         Core::ProxyType<Core::IDispatch> _activity;
     };
 }

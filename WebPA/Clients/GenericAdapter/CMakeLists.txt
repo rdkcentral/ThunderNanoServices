@@ -10,7 +10,7 @@ find_package(GLIB REQUIRED)
 
 add_library(${TARGET}
     Handler/Handler.cpp
-    Adapter/WalDB/WalDB.cpp
+    Adapter/DataModel/DataModel.cpp
     Adapter/Notifier.cpp
     Adapter/Parameter.cpp
     Adapter/Attribute.cpp
@@ -23,7 +23,7 @@ target_include_directories(${TARGET}
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         Adapter
-        Adapter/WalDB
+        Adapter/DataModel
         Handler
         ${GLIB_INCLUDE_DIRS}
 )

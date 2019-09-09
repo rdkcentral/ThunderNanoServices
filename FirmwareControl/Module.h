@@ -1,11 +1,12 @@
 #pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME Plugin_Bluetooth
+#define MODULE_NAME Plugin_FirmwareControl
 #endif
 
-#include <bluetooth/bluetooth.h>
+#include <core/core.h>
 #include <plugins/plugins.h>
+#include <tracing/tracing.h>
 
 #undef EXTERNAL
 #define EXTERNAL

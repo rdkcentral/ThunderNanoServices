@@ -82,12 +82,12 @@ namespace Plugin {
 
                 _client = client;
                 _client->AddRef();
+                _client->Register(this);
 
                 if (start == true) {
                     _client->Synchronize();
                 }
 
-                _client->Register(this);
             }
             void Deinitialize()
             {
@@ -221,6 +221,7 @@ namespace Plugin {
         uint32_t get_synctime(JsonData::TimeSync::SynctimeData& response) const;
         uint32_t get_time(Core::JSON::String& response) const;
         uint32_t set_time(const Core::JSON::String& param);
+        void event_timechange();
 
     private:
         uint16_t _skipURL;

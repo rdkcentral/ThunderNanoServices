@@ -3,7 +3,7 @@
 #include "Attribute.h"
 #include "Notifier.h"
 #include "Parameter.h"
-#include "WalDB.h"
+#include "DataModel.h"
 
 namespace WPEFramework {
 namespace WebPA {
@@ -78,7 +78,7 @@ private:
     Implementation::ICallback* _callback;
     NotificationCallback*  _adapterCallback;
 
-    WalDB *_walDB;
+    DataModel *_dataModel;
     Parameter* _parameter;
     Attribute* _attribute;
     Notifier* _notifier;

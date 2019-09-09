@@ -384,6 +384,7 @@ namespace Plugin {
         bool _fired;
         uint32_t _WaitForNetwork;
         uint32_t _retryAttempts;
+        uint32_t _currentAttempt;
         ServerList _servers;
         ServerIterator _serverIndex;
         Core::ProxyType<Core::IDispatchType<void>> _activity;

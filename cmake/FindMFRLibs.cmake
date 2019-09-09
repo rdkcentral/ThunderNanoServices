@@ -1,8 +1,8 @@
-# - Try to find Bluez
+# - Try to find MFRLIBS
 # Once done this will define
-#  BLUEZ_FOUND - System has bluez
-#  BLUEZ_INCLUDE_DIRS - The bluez include directories
-#  BLUEZ_LIBRARIES - The libraries needed to use bluez
+#  MFRLIBS_FOUND - System has mfrlibs
+#  MFRLIBS_INCLUDE_DIRS - The mfrlibs include directories
+#  MFRLIBS_LIBRARIES - The libraries needed to use mfrlibs
 #
 # Copyright (C) 2019 Metrological.
 #
@@ -28,37 +28,24 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 find_package(PkgConfig)
-
-pkg_check_modules(PC_BLUEZ QUIET bluez)
-
-if (PC_BLUEZ_FOUND)
-    set(BLUEZ_CFLAGS ${PC_BLUEZ_CFLAGS})
-    set(BLUEZ_FOUND ${PC_BLUEZ_FOUND})
-    set(BLUEZ_DEFINITIONS ${PC_BLUEZ_CFLAGS_OTHER})
-    set(BLUEZ_NAMES ${PC_BLUEZ_LIBRARIES})
-    foreach (_library ${BLUEZ_NAMES})
-        find_library(BLUEZ_LIBRARIES_${_library} ${_library}
-        HINTS ${PC_BLUEZ_LIBDIR} ${PC_BLUEZ_LIBRARY_DIRS}
-        )
-        set(BLUEZ_LIBRARIES ${BLUEZ_LIBRARIES} ${BLUEZ_LIBRARIES_${_library}})
-    endforeach ()
-else ()
-    set(BLUEZ_NAMES ${BLUEZ_NAMES} bluez BLUEZ)
-    find_library(BLUEZ_LIBRARIES NAMES ${BLUEZ_NAMES}
-        HINTS ${PC_BLUEZ_LIBDIR} ${PC_BLUEZ_LIBRARY_DIRS}
-    )
-endif ()
-
-find_path(BLUEZ_INCLUDE_DIR_BLUEZ NAMES bluetooth/bluetooth.h
-    HINTS ${PC_BLUEZ_INCLUDEDIR} ${PC_BLUEZ_INCLUDE_DIRS}
-)
-
-set(BLUEZ_INCLUDE_DIRS ${BLUEZ_INCLUDE_DIR_BLUEZ} ${BLUEZ_INCLUDE_DIR_BLUEZ_ARCH} CACHE FILEPATH "FIXME")
-set(BLUEZ_LIBRARIES ${BLUEZ_LIBRARIES} CACHE FILEPATH "FIXME")
+pkg_check_modules(MFRLIBS mfrlibs)
 
 include(FindPackageHandleStandardArgs)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(mfrlibs DEFAULT_MSG MFRLIBS_LIBRARIES)
 
-find_package_handle_standard_args(BLUEZ DEFAULT_MSG BLUEZ_INCLUDE_DIRS BLUEZ_LIBRARIES)
+mark_as_advanced(MFRLIBS_INCLUDE_DIRS MFRLIBS_LIBRARIES)
 
-mark_as_advanced(BLUEZ_INCLUDE_DIRS BLUEZ_LIBRARIES)
 
+find_library(MFRLIBS_LIBRARY NAMES ${MFRLIBS_LIBRARIES}
+        HINTS ${MFRLIBS_LIBDIR} ${MFRLIBS_LIBRARY_DIRS}
+        )
+
+if(MFRLIBS_LIBRARY AND NOT TARGET mfrlibs::mfrlibs)
+    add_library(mfrlibs::mfrlibs UNKNOWN IMPORTED)
+    set_target_properties(mfrlibs::mfrlibs PROPERTIES
+            IMPORTED_LOCATION "${MFRLIBS_LIBRARY}"
+            INTERFACE_LINK_LIBRARIES "${MFRLIBS_LIBRARIES}"
+            INTERFACE_COMPILE_OPTIONS "${MFRLIBS_DEFINITIONS}"
+            INTERFACE_INCLUDE_DIRECTORIES "${MFRLIBS_INCLUDE_DIRS}"
+            )
+endif()

@@ -270,7 +270,8 @@ static GSourceFuncs _handlerIntervention =
             BundleConfig(const BundleConfig&) = delete;
             BundleConfig& operator=(const BundleConfig&) = delete;
 
-            BundleConfig() : _configs()
+            BundleConfig() 
+                : _configs()
             {
             }
             virtual ~BundleConfig()
