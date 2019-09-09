@@ -1319,6 +1319,7 @@ namespace WebKitBrowser {
         _T("WPEWebProcess")
     };
 
+    static constexpr uint16_t RequiredChildren = (sizeof(mandatoryProcesses) / sizeof(mandatoryProcesses[0]));
     class MemoryObserverImpl : public Exchange::IMemory {
     private:
         MemoryObserverImpl();
@@ -1354,7 +1355,7 @@ namespace WebKitBrowser {
             uint32_t result(0);
 
             if (_startTime != 0) {
-                if (_children.Count() < 2) {
+                if (_children.Count() < RequiredChildren) {
                     _children = Core::ProcessInfo::Iterator(_main.Id());
                 }
 
@@ -1374,7 +1375,7 @@ namespace WebKitBrowser {
             uint32_t result(0);
 
             if (_startTime != 0) {
-                if (_children.Count() < 2) {
+                if (_children.Count() < RequiredChildren) {
                     _children = Core::ProcessInfo::Iterator(_main.Id());
                 }
 
@@ -1394,7 +1395,7 @@ namespace WebKitBrowser {
             uint32_t result(0);
 
             if (_startTime != 0) {
-                if (_children.Count() < 2) {
+                if (_children.Count() < RequiredChildren) {
                     _children = Core::ProcessInfo::Iterator(_main.Id());
                 }
 
@@ -1420,18 +1421,17 @@ namespace WebKitBrowser {
             uint32_t requiredProcesses = 0;
 
             if (_startTime != 0) {
-                const uint8_t requiredChildren = (sizeof(mandatoryProcesses) / sizeof(mandatoryProcesses[0]));
 
                 //!< We can monitor a max of 32 processes, every mandatory process represents a bit in the requiredProcesses.
                 // In the end we check if all bits are 0, what means all mandatory processes are still running.
-                requiredProcesses = (0xFFFFFFFF >> (32 - requiredChildren));
+                requiredProcesses = (0xFFFFFFFF >> (32 - RequiredChildren));
 
-                if (_children.Count() < 2) {
+                if (_children.Count() < RequiredChildren) {
                     // Refresh the children list !!!
                     _children = Core::ProcessInfo::Iterator(_main.Id());
                 }
                 //!< If there are less children than in the the mandatoryProcesses struct, we are done and return false.
-                if (_children.Count() >= requiredChildren) {
+                if (_children.Count() >= RequiredChildren) {
 
                     _children.Reset();
 
@@ -1441,13 +1441,13 @@ namespace WebKitBrowser {
                         uint8_t count(0);
                         string name(_children.Current().Name());
 
-                        while ((count < requiredChildren) && (name != mandatoryProcesses[count])) {
+                        while ((count < RequiredChildren) && (name != mandatoryProcesses[count])) {
                             ++count;
                         }
 
                         //<! this is a mandatory process and if its still active reset its bit in requiredProcesses.
                         //   If not we are not completely operational.
-                        if ((count < requiredChildren) && (_children.Current().IsActive() == true)) {
+                        if ((count < RequiredChildren) && (_children.Current().IsActive() == true)) {
                             requiredProcesses &= (~(1 << count));
                         }
                     }
