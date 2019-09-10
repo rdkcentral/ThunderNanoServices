@@ -767,33 +767,6 @@ namespace Plugin {
                 return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
             }
 
-            OCDM::OCDM_RESULT CreateSystemExt(const std::string& keySystem) override
-            {
-                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
-                if (systemExt) {
-                    return (OCDM::OCDM_RESULT)systemExt->CreateSystemExt();
-                }
-                return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
-            }
-
-            OCDM::OCDM_RESULT InitSystemExt(const std::string& keySystem) override
-            {
-                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
-                if (systemExt) {
-                    return (OCDM::OCDM_RESULT)systemExt->InitSystemExt();
-                }
-                return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
-            }
-
-            OCDM::OCDM_RESULT TeardownSystemExt(const std::string& keySystem) override
-            {
-                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
-                if (systemExt) {
-                    return (OCDM::OCDM_RESULT)systemExt->TeardownSystemExt();
-                }
-                return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
-            }
-
             OCDM::OCDM_RESULT DeleteKeyStore(const std::string& keySystem) override
             {
                 CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
