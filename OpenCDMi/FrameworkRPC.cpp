@@ -324,7 +324,7 @@ namespace Plugin {
                         else
                             key = ::OCDM::ISession::InternalError;
 
-                        const CommonEncryptionData::KeyId* updated = _parent.UpdateKeyStatus(key, buffer, length);
+                       const CommonEncryptionData::KeyId* updated = _parent.UpdateKeyStatus(key, buffer, length);
 
                         const uint8_t* bufferToNotify = updated != nullptr && buffer == nullptr ? updated->Id() : buffer;
                         const uint8_t lengthToNotify = updated != nullptr && length == 0 ? updated->Length() : length;
@@ -709,6 +709,12 @@ namespace Plugin {
 
                                  _sessionList.push_front(newEntry);
                                  ReportCreate(sessionId);
+                                
+                                CommonEncryptionData::Iterator index(keyIds.Keys());
+                                while (index.Next() == true) {
+                                    const CommonEncryptionData::KeyId& entry(index.Current());
+                                    callback->OnKeyStatusUpdate( entry.Id(), entry.Length(), entry.Status());
+                                }
 
                                  _adminLock.Unlock();
                              } else {
