@@ -1,6 +1,7 @@
 #include "WhiteListedOriginDomainsList.h"
 
 #include "Utils.h"
+#include "Tags.h"
 
 using std::unique_ptr;
 using std::vector;
@@ -73,7 +74,7 @@ namespace WebKit {
     // Gets white list from WPEFramework via synchronous message.
     /* static */ unique_ptr<WhiteListedOriginDomainsList> WhiteListedOriginDomainsList::RequestFromWPEFramework()
     {
-        string messageName(string(WebKit::Utils::ConfigMessage()) + "Whitelist");
+        string messageName(string(Tags::Config) + "Whitelist");
         std::string utf8MessageName = Core::ToString(messageName.c_str());
 
         WKStringRef jsMessageName = WKStringCreateWithUTF8CString(utf8MessageName.c_str());

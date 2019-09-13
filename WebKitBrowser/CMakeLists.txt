@@ -40,8 +40,7 @@ add_library(${MODULE_NAME} SHARED
     WebKitBrowser.cpp
     WebKitBrowserJsonRpc.cpp
     WebKitImplementation.cpp
-    InjectedBundle/WhiteListedOriginDomainsList.cpp
-    InjectedBundle/Utils.cpp
+    InjectedBundle/Tags.cpp
 )
 
 set_target_properties(${MODULE_NAME} PROPERTIES

@@ -13,6 +13,7 @@ add_library(${MODULE_NAME} SHARED
     NotifyWPEFramework.cpp
     Milestone.cpp
     ClassDefinition.cpp
+    Tags.cpp
 )
 
 if(PLUGIN_AMAZON_HAWAII)
