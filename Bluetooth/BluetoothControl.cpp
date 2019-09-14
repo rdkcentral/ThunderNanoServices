@@ -37,13 +37,9 @@ namespace Plugin {
 
             Bluetooth::ManagementSocket& administrator = _application.Control();
             administrator.DeviceId(_config.Interface.Value());
-        printf("Just about to load. %d\n", __LINE__);
 
             if (Bluetooth::ManagementSocket::Up(_config.Interface.Value()) == false) {
                 result = "Could not activate bluetooth interface.";
-            }
-            else if (administrator.Unblock(Bluetooth::Address::BREDR_ADDRESS, Bluetooth::Address::AnyInterface()) != Core::ERROR_NONE) {
-                result = "Failed to unblock the AnyAddress on the bluetooth interface";
             }
             else if (administrator.LinkKeys(linkKeys) != Core::ERROR_NONE) {
                 result = "Failed to upload link keys to the bluetooth interface";
@@ -69,23 +65,43 @@ namespace Plugin {
             else if (administrator.Secure(true) != Core::ERROR_NONE) {
                 result = "Failed to enable security on the bluetooth interface";
             }
-            else if (administrator.Advertising(true) != Core::ERROR_NONE) {
-                result = "Failed to enable advertising on the bluetooth interface";
-            }
             else if (administrator.Name(_T("Thunder"), _config.Name.Value()) != Core::ERROR_NONE) {
                 result = "Failed to upload identity keys to the bluetooth interface";
             }
             else if (_application.Open(*this) != Core::ERROR_NONE) {
                 result = "Could not open the bluetooth application channel";
             } 
-            else if (_application.Advertising(true, 0) != Core::ERROR_NONE) {
-                result = "Could not listen to advertisements on the Application channel";
-            }
 
             if (result.empty() == false) {
                 Bluetooth::ManagementSocket::Down(administrator.DeviceId());
                 _application.Close();
                 ::destruct_bluetooth_driver();
+            }
+            else {
+                Bluetooth::ManagementSocket::Info info(administrator.Settings());
+                Bluetooth::ManagementSocket::Info::Properties actuals(info.Actuals());
+                Bluetooth::ManagementSocket::Info::Properties supported(info.Supported());
+
+		SYSLOG(Logging::Startup, (_T("        Name:              %s"), info.ShortName().c_str()));
+		SYSLOG(Logging::Startup, (_T("        Version:           %d"), info.Version()));
+		SYSLOG(Logging::Startup, (_T("        Address:           %s"), info.Address().ToString().c_str()));
+		SYSLOG(Logging::Startup, (_T("        DeviceClass:       0x%06X"), info.DeviceClass()));
+		SYSLOG(Logging::Startup, (_T("%s Power:             %s"), supported.IsPowered() ? _T("[true] ") : _T("[false]"), actuals.IsPowered() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s Connectable:       %s"), supported.IsConnectable() ? _T("[true] ") : _T("[false]"), actuals.IsConnectable() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s FastConnectable:   %s"), supported.IsFastConnectable() ? _T("[true] ") : _T("[false]"), actuals.IsFastConnectable() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s Discovery:         %s"), supported.HasDiscovery() ? _T("[true] ") : _T("[false]"), actuals.HasDiscovery() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s Pairing:           %s"), supported.HasPairing() ? _T("[true] ") : _T("[false]"), actuals.HasPairing() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s LinkSecurity:      %s"), supported.HasLinkLevelSecurity() ? _T("[true] ") : _T("[false]"), actuals.HasLinkLevelSecurity() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s SimplePairing:     %s"), supported.HasSecureSimplePairing() ? _T("[true] ") : _T("[false]"), actuals.HasSecureSimplePairing() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s BasicEnhancedRate: %s"), supported.HasBasicEnhancedRate() ? _T("[true] ") : _T("[false]"), actuals.HasBasicEnhancedRate() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s HighSpeed:         %s"), supported.HasHighSpeed() ? _T("[true] ") : _T("[false]"), actuals.HasHighSpeed() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s LowEnergy:         %s"), supported.HasLowEnergy() ? _T("[true] ") : _T("[false]"), actuals.HasLowEnergy() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s Advertising:       %s"), supported.HasAdvertising() ? _T("[true] ") : _T("[false]"), actuals.HasAdvertising() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s SecureConnection:  %s"), supported.HasSecureConnections() ? _T("[true] ") : _T("[false]"), actuals.HasSecureConnections() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s DebugKeys:         %s"), supported.HasDebugKeys() ? _T("[true] ") : _T("[false]"), actuals.HasDebugKeys() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s Privacy:           %s"), supported.HasPrivacy() ? _T("[true] ") : _T("[false]"), actuals.HasPrivacy() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s Configuration:     %s"), supported.HasConfiguration() ? _T("[true] ") : _T("[false]"), actuals.HasConfiguration() ? _T("on") : _T("off")));
+		SYSLOG(Logging::Startup, (_T("%s StaticAddress:     %s"), supported.HasStaticAddress() ? _T("[true] ") : _T("[false]"), actuals.HasStaticAddress() ? _T("on") : _T("off")));
             }
         }
         return result;
@@ -231,10 +247,16 @@ namespace Plugin {
                     }
                     DeviceImpl* device = Find(Bluetooth::Address(destination.c_str()));
                     if (device == nullptr) {
-                        result->ErrorCode = Web::STATUS_NOT_FOUND;
-                        result->Message = _T("Device not found.");
+                        if (destination.empty()) {
+                            result->ErrorCode = _gattRemotes.front().Pair();
+                            result->Message = _T("Paring the first remote.");
+                        }
+                        else {
+                            result->ErrorCode = Web::STATUS_NOT_FOUND;
+                            result->Message = _T("Device not found.");
+                        }
                     } else if (pair == true) {
-                        if (device->Pair() == Core::ERROR_NONE) {
+                        if (device->Pair(IBluetooth::IDevice::DISPLAY_ONLY) == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Paired device.");
                         } else {
@@ -447,7 +469,7 @@ namespace Plugin {
         }
 
         if (index != _devices.end()) {
-            (*index)->Discovered();
+            (*index)->IsDiscovered();
         } else if (lowEnergy == true) {
             TRACE(Trace::Information, ("Added LowEnergy Bluetooth device: %s, name: %s", address.ToString().c_str(), name.c_str()));
             _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(_btInterface, address, name));
