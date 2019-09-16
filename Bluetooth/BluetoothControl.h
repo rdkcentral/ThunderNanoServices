@@ -4,6 +4,7 @@
 #include <interfaces/IBluetooth.h>
 
 namespace WPEFramework {
+
 namespace Plugin {
 
 class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IBluetooth {
@@ -441,6 +442,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             ManagementSocket _administrator;
         };
 
+        
         class GATTRemote : public Bluetooth::GATTSocket {
         private:
             static constexpr uint8_t LE_ATT_CID = 4;
@@ -562,6 +564,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                       64)
                 , _adminLock()
                 , _state(UNKNOWN)
+                , _profile()
                 , _inputHandler(nullptr)
                 , _metadata()
                 , _command()
@@ -645,8 +648,8 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
 
         private:
             bool Initialize() override {
-                // Security(BT_SECURITY_MEDIUM, 0);
-                Security(BT_SECURITY_LOW, 0);
+                Security(BT_SECURITY_MEDIUM, 0);
+                // Security(BT_SECURITY_LOW, 0);
                 return (true);
             }
             virtual uint16_t Deserialize(const uint8_t* dataFrame, const uint16_t availableData) override {
@@ -665,21 +668,18 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             virtual void Operational() override
             {
                 TRACE(GATTFlow, (_T("The received MTU: %d"), MTU()));
-                _command.FindByType(0x0001, 0xFFFF, GATTSocket::UUID(PRIMARY_SERVICE_UUID), HID_UUID);
-                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
-                    ASSERT (&cmd == &_command);
-                    if (cmd.Error() == Core::ERROR_NONE) {
-                        if (cmd.Result().Length() > 0) {
-                            const uint8_t* data(cmd.Result().Data());
-                            printf("Listing HID_UUID response (handles): ");
-                            for (int i = 0; i < cmd.Result().Length(); i++) {
-                                printf("%02x, ", data[i]);
+                _profile.Discover(CommunicationTimeOut * 10, *this, [&](const uint32_t result) {
+                    if (result == Core::ERROR_NONE) {
+                        Bluetooth::Profile::Iterator index = _profile.Services();
+                        while (index.Next() == true) {
+                            const TCHAR* name = index.Current().Name();
+                            if (name != nullptr) {
+                                TRACE(GATTFlow, (_T("Service discovered: %s"), name));
                             }
-                            printf("\n");
-                        } else {
-                            TRACE_L1("No HID handles?");
+                            else {
+                                TRACE(GATTFlow, (_T("Service discovered: %04X"), index.Current().Type()));
+                            }
                         }
-
                         Version();
                     }
                     else {
@@ -690,26 +690,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             }
             void Version () 
             {
-                _command.ReadByType(0x0001, 0xFFFF, GATTSocket::UUID(PNP_UUID));
-                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
-                    ASSERT (&cmd == &_command);
-                    if ( (cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Length() >= 6) ) {
-                        const uint8_t* data(cmd.Result().Data());
-                        _metadata._vendorId = (data[0] << 8) | data[1];
-                        _metadata._productId = (data[2] << 8) | data[3];
-                        _metadata._version = (data[4] << 8) | data[5];
-
-                        Name();
-                    }
-                    else {
-                        _state = UNKNOWN;
-                        TRACE(GATTFlow, (_T("The given bluetooth device does not report a proper Version!!")));
-                    }
-                });
-            }
-            void Name() 
-            {
-                _command.ReadByType(0x0001, 0xFFFF, GATTSocket::UUID(DEVICE_NAME_UUID));
+                _command.ReadByType(0x0001, 0xFFFF, Bluetooth::UUID(DEVICE_NAME_UUID));
                 Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
                     ASSERT (&cmd == &_command);
                     Command::Response& response (_command.Result());
@@ -739,7 +720,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             }
             void Descriptors() 
             {
-                _command.ReadByType(0x0001, 0xFFFF, GATTSocket::UUID(REPORT_MAP_UUID));
+                _command.ReadByType(0x0001, 0xFFFF, Bluetooth::UUID(REPORT_MAP_UUID));
                 Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
                     ASSERT (&cmd == &_command);
                     Command::Response& response (_command.Result());
@@ -751,14 +732,10 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                                 uint16_t copyLength = std::min(length, static_cast<uint16_t>(sizeof(_metadata._blob)));
                                 ::memcpy(_metadata._blob, cmd.Result().Data(), copyLength);
                             }
-                    } else {
-                        _inputHandler = PluginHost::InputHandler::Handler();
-                        if (_inputHandler != nullptr) {
-                            _state = OPERATIONAL;
-                        }
+                            EnableEvents();
+                        });
                     }
-                    EnableEvents();
-                });
+               });
             }
             void EnableEvents() 
             {
@@ -767,7 +744,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
                     ASSERT (&cmd == &_command);
                     if (cmd.Error() == Core::ERROR_NONE) {
-                         _inputHandler = PluginHost::InputHandler::KeyHandler();
+                         _inputHandler = PluginHost::InputHandler::Handler();
                          if (_inputHandler != nullptr) {
                             _state = OPERATIONAL;
                          }
@@ -781,7 +758,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             void Updated () {
                 _adminLock.Lock();
                 if (_device != nullptr) {
-                    if (((_state & PAIRING) != 0) && (_device->IsConnected() == true) && (_device->IsDiscovered() == true)) {
+                    if (((_state & PAIRING) != 0) && (_device->IsConnected() == true) && (_device->IsDiscovered() == true) && (IsOpen() == false)) {
                         // start the discovery cycle for bonding !!!
                         uint32_t result = GATTSocket::Open(0);
                         if ((result != Core::ERROR_NONE) && (result != Core::ERROR_INPROGRESS)) {
@@ -799,6 +776,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         private:
             Core::CriticalSection _adminLock;
             state _state;
+            Bluetooth::Profile _profile;
             PluginHost::VirtualInput* _inputHandler;
             Metadata _metadata;
             Command _command;
