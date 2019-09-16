@@ -751,16 +751,11 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                                 uint16_t copyLength = std::min(length, static_cast<uint16_t>(sizeof(_metadata._blob)));
                                 ::memcpy(_metadata._blob, cmd.Result().Data(), copyLength);
                             }
-                            else {
-                                //_state = UNKNOWN;
-                                TRACE(GATTFlow, (_T("The given bluetooth device does not report proper descriptors!!")));
-                            }
-                       });
-                    }
-                    else {
-                        // for now, do not stop in case of this error
-                        //_state = UNKNOWN;
-                        TRACE(GATTFlow, (_T("The given bluetooth device does not report a proper Descriptor Handles!!")));
+                    } else {
+                        _inputHandler = PluginHost::InputHandler::Handler();
+                        if (_inputHandler != nullptr) {
+                            _state = OPERATIONAL;
+                        }
                     }
                     EnableEvents();
                 });

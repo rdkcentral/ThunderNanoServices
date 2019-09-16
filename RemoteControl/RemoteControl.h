@@ -322,9 +322,7 @@ namespace Plugin {
     private:
         uint32_t _skipURL;
         std::list<string> _virtualDevices;
-        PluginHost::VirtualInput* _keyHandler;
-        PluginHost::VirtualInput* _mouseHandler;
-        PluginHost::VirtualInput* _touchHandler;
+        PluginHost::VirtualInput* _inputHandler;
         string _persistentPath;
     };
 }
