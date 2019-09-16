@@ -1,4 +1,5 @@
 #include "DHCPServer.h"
+#include <interfaces/json/JsonData_DHCPServer.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -15,6 +16,7 @@ namespace Plugin {
         : _skipURL(0)
         , _servers()
     {
+        RegisterAll();
     }
 #ifdef __WIN32__
 #pragma warning(default : 4355)
@@ -22,6 +24,7 @@ namespace Plugin {
 
     /* virtual */ DHCPServer::~DHCPServer()
     {
+        UnregisterAll();
     }
 
     /* virtual */ const string DHCPServer::Initialize(PluginHost::IShell* service)

@@ -1,6 +1,7 @@
 #ifndef PROJECT_WAYLAND_H
 #define PROJECT_WAYLAND_H
 
+#include <wayland-egl.h>
 // This define is used in mesa GL implementation to exlcude X11 headers
 #define MESA_EGL_NO_X11_HEADERS 1
 

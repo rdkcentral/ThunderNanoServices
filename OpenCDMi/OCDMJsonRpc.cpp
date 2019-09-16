@@ -31,7 +31,10 @@ namespace Plugin {
         if (keySystemsIter != nullptr) {
             string element;
             while (keySystemsIter->Next(element) == true) {
-                response.Add(Core::JSON::String(element));
+                Core::JSON::String designator;
+                designator = element;
+
+                response.Add(designator);
             }
 
             keySystemsIter->Release();

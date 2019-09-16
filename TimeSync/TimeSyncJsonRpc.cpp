@@ -101,6 +101,12 @@ namespace Plugin {
         return result;
     }
 
+    // Event: timechange - Signals a time change
+    void TimeSync::event_timechange()
+    {
+        Notify(_T("timechange"));
+    }
+
 } // namespace Plugin
 
 }

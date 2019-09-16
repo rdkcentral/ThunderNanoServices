@@ -22,9 +22,9 @@ namespace TestUtility {
             virtual void Observe(const uint32_t pid)
             {
                 if (pid == 0) {
-                    _main = Core::ProcessInfo();
                     _observable = false;
                 } else {
+                    _main = Core::ProcessInfo(pid);
                     _observable = true;
                 }
             }
@@ -76,10 +76,10 @@ namespace Plugin {
         _testUtilityImp = _service->Root<Exchange::ITestUtility>(_connection, ImplWaitTime, _T("TestUtilityImp"));
 
         if (_testUtilityImp != nullptr) {
-            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection):
+            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection);
             if (remoteConnection) {
                 _memory = WPEFramework::TestUtility::MemoryObserver(remoteConnection);
-                _memory->Observe(remoteConnection->RemoteID());
+                _memory->Observe(remoteConnection->RemoteId());
                 remoteConnection->Release();
             } else {
                 _memory = nullptr;
@@ -105,7 +105,6 @@ namespace Plugin {
         ASSERT(_memory != nullptr);
 
         _service->Unregister(&_notification);
-        _service = nullptr;
         if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
             TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
         }
@@ -119,6 +118,7 @@ namespace Plugin {
         _testUtilityImp = nullptr;
         _skipURL = 0;
         _connection = 0;
+        _service = nullptr;
     }
 
     /* virtual */ string TestUtility::Information() const

@@ -1117,9 +1117,9 @@ namespace Plugin {
     private:
         void RegisterAll();
         void UnregisterAll();
-        uint32_t endpoint_status(const JsonData::Monitor::StatusParamsInfo& params, Core::JSON::ArrayType<JsonData::Monitor::InfoInfo>& response);
-        uint32_t endpoint_resetstats(const JsonData::Monitor::StatusParamsInfo& params, JsonData::Monitor::InfoInfo& response);
         uint32_t endpoint_restartlimits(const JsonData::Monitor::RestartlimitsParamsData& params);
+        uint32_t endpoint_resetstats(const JsonData::Monitor::ResetstatsParamsData& params, JsonData::Monitor::InfoInfo& response);
+        uint32_t get_status(const string& index, Core::JSON::ArrayType<JsonData::Monitor::InfoInfo>& response) const;
         void event_action(const string& callsign, const string& action, const string& reason);
     };
 }

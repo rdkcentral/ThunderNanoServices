@@ -109,11 +109,11 @@ namespace Plugin {
 
         void RegisterAll();
         void UnregisterAll();
-        uint32_t endpoint_commands(Core::JSON::ArrayType<Core::JSON::String>& response);
-        uint32_t endpoint_description(const JsonData::TestUtility::DescriptionParamsInfo& params, JsonData::TestUtility::DescriptionResultData& response);
-        uint32_t endpoint_parameters(const JsonData::TestUtility::DescriptionParamsInfo& params, JsonData::TestUtility::ParametersResultData& response);
         uint32_t endpoint_runmemory(const JsonData::TestUtility::RunmemoryParamsData& params, JsonData::TestUtility::RunmemoryResultData& response);
         uint32_t endpoint_runcrash(const JsonData::TestUtility::RuncrashParamsData& params);
+        uint32_t get_commands(Core::JSON::ArrayType<Core::JSON::String>& response) const;
+        uint32_t get_description(const string& index, JsonData::TestUtility::DescriptionData& response) const;
+        uint32_t get_parameters(const string& index, JsonData::TestUtility::ParametersData& response) const;
 
         PluginHost::IShell* _service;
         Core::Sink<Notification> _notification;

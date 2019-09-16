@@ -13,6 +13,8 @@ namespace Plugin {
         DHCPServerImplementation(const DHCPServerImplementation&) = delete;
         DHCPServerImplementation& operator=(const DHCPServerImplementation&) = delete;
 
+        static constexpr uint32_t DefaultLeaseTime = 24; // hours
+
         // RFC 2131 section 2
         enum operations {
             OPERATION_BOOTREQUEST = 1,
@@ -154,12 +156,10 @@ namespace Plugin {
             Identifier(const Identifier& copy)
                 : _length(copy._length)
             {
-                printf("Identifier copy %d\n", __LINE__);
                 if (_length > sizeof(_id._buffer)) {
                     _id._allocation = new uint8_t[_length];
                     ::memcpy(_id._allocation, copy._id._allocation, _length);
                 } else {
-                    printf("Identifier copy %d\n", __LINE__);
                     ::memcpy(_id._buffer, copy._id._buffer, _length);
                 }
             }
@@ -236,7 +236,9 @@ namespace Plugin {
             }
             inline string Text() const
             {
-                return (Core::ToString(string(reinterpret_cast<const char*>(Id()), _length)));
+                string text;
+                Core::ToHexString(Id(), _length, text);
+                return (text);
             }
 
         private:
@@ -490,7 +492,6 @@ namespace Plugin {
             }
             inline void Base(const std::string& serverName, const uint32_t server, const CoreMessage& message, const uint32_t router, const uint32_t dns)
             {
-
                 // Server message handling RFC 2131 section 4.3
                 _replyAddress = message.giaddr.s_addr;
                 _ciaddr = message.ciaddr.s_addr;
@@ -543,7 +544,6 @@ namespace Plugin {
                         break;
                     case CLASSIFICATION_ACK:
                         if (_ciaddr == 0) {
-                            printf("Stiekem altijd 255 \n");
                             result = (((htons(BroadcastValue) & _dhcpReply.flags) != 0) ? INADDR_BROADCAST : INADDR_BROADCAST);
                         } else {
                             result = _ciaddr; // Already in network order
@@ -652,7 +652,7 @@ namespace Plugin {
             , _poolSize(poolSize)
             , _minAddress(0)
             , _maxAddress(0)
-            , _lastIssued(0)
+            , _nextFreeIp(0)
             , _server(0)
             , _router(router)
             , _dns(~0)
@@ -713,7 +713,6 @@ namespace Plugin {
         // The next three methods, Find,Find and Create need to be executed within the lock.
         inline Lease* Find(const uint32_t address)
         {
-
             LeaseList::iterator index(_leases.begin());
             while ((index != _leases.end()) && (index->Raw() != address)) {
                 index++;
@@ -737,37 +736,61 @@ namespace Plugin {
         }
         void Discover(Response& response, const ScratchPad& scratchPad)
         {
-
             _leases.Lock();
             Lease* result = Find(scratchPad.Id());
 
             // RFC 2131 section 4.3.1
             if ((result == nullptr) && (scratchPad.RequestedIP() != 0)) {
-                result = Find(scratchPad.RequestedIP());
+                // Make sure the preferred IP address is within the pool, otherwise offer a correct one anyway
+                if ((scratchPad.RequestedIP() >= _minAddress) && (scratchPad.RequestedIP() <= _maxAddress)) {
+                    result = Find(scratchPad.RequestedIP());
 
-                if (result == nullptr) {
-                    // Ip address has not been taken yet, time to "assign" it to this client.
-                    result = Create(scratchPad.Id(), scratchPad.RequestedIP());
-                } else if (result->IsExpired() == true) {
-                    result->Update(scratchPad.Id());
+                    if (result == nullptr) {
+                        // Ip address has not been taken yet, time to "assign" it to this client.
+                        result = Create(scratchPad.Id(), scratchPad.RequestedIP());
+                    } else if (result->IsExpired() == true) {
+                        result->Update(scratchPad.Id());
+                    } else {
+                        // IP address is taken
+                        result = nullptr;
+                    }
                 }
             }
 
             if (result == nullptr) {
-                uint32_t poolSize(_maxAddress - _minAddress);
+                // First look in previously unallocated IP slots
+                uint32_t ip;
+                for (ip = _nextFreeIp; ip <= _maxAddress; ip++) {
+                    if (Find(ip) == nullptr) {
+                        result = Create(scratchPad.Id(), ip);
+                        _nextFreeIp = (ip + 1);
+                        break;
+                    }
+                }
 
-                // Seems we have no record for this client, create a new one..
-                while ((--poolSize != 0) && (Find(++_lastIssued) != nullptr)) /* INTENTIONALLY LEFT EMPTY */
-                    ;
-
-                if (poolSize != 0) {
-                    result = Create(scratchPad.Id(), _lastIssued);
+                if (result == nullptr) {
+                    // Still not found a free IP slot, attempt picking up one of the expired ones
+                    for (ip = _minAddress; ip <= _maxAddress ; ip++) {
+                        Lease* lease = Find(ip);
+                        if ((lease != nullptr) && (lease->IsExpired() == true)) {
+                            result = lease;
+                            result->Update(scratchPad.Id());
+                            break;
+                        }
+                    }
                 }
             }
 
             if (result == nullptr) {
                 TRACE(Flow, (string(_T("Looks like we ran out of IP addresses!!"))));
             } else {
+                if (result->IsExpired()) {
+                    // Temporarily lock out the offered IP address until the client actually requests it
+                    Core::Time timeout = Core::Time::Now();
+                    timeout.Add(60 /* sec */ * 1000);
+                    result->Expiration(timeout.Ticks());
+                }
+
                 response.Offer(result->Raw());
                 response.SubnetMask(24);
             }
@@ -776,16 +799,27 @@ namespace Plugin {
         }
         void Request(Response& response, const ScratchPad& scratchPad)
         {
-
             _leases.Lock();
 
             // RFC 2131 section 4.3.2 Determine requested IP address
             Lease* result = Find(scratchPad.Id());
             uint32_t serverId = scratchPad.ServerIdentifier();
             uint32_t requested = scratchPad.RequestedIP();
+            bool positive = ((serverId != 0) && (result != nullptr));
 
-            response.Acknowledge((serverId != 0) && (result != nullptr), requested);
-            response.LeaseTime(24);
+            response.Acknowledge(positive, requested);
+            if (positive == true) {
+                // Set lease time
+                Core::Time leaseExp = Core::Time::Now();
+                leaseExp.Add(DefaultLeaseTime * (60 /* min */ * 60 * 1000));
+                response.LeaseTime(DefaultLeaseTime);
+                result->Expiration(leaseExp.Ticks());
+            } else {
+                if (result != nullptr) {
+                    result->Expiration(0); // Invalidate
+                }
+            }
+
             _leases.Unlock();
         }
         void Submit(const Core::ProxyType<Response> entry)
@@ -886,7 +920,7 @@ namespace Plugin {
         uint32_t _poolSize;
         uint32_t _minAddress;
         uint32_t _maxAddress;
-        uint32_t _lastIssued;
+        uint32_t _nextFreeIp;
         uint32_t _server;
         uint32_t _router;
         uint32_t _dns;

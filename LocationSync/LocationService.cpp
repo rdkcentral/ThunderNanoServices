@@ -255,7 +255,6 @@ namespace Plugin {
         , _region()
         , _city()
         , _request(Core::ProxyType<Web::Request>::Create())
-        , _response()
         , _activity(Core::ProxyType<Job>::Create(this))
     {
     }
@@ -279,7 +278,6 @@ namespace Plugin {
 
         if ((_state == IDLE) || (_state == FAILED) || (_state == LOADED)) {
 
-            ASSERT(_response.IsValid() == false);
             ASSERT(_infoCarrier.IsValid() == false);
 
             result = Core::ERROR_GENERAL;
@@ -319,7 +317,6 @@ namespace Plugin {
                     }
 
                     _infoCarrier = constructor->factory();
-                    _response = Core::proxy_cast<Web::IBody>(_infoCarrier);
 
                     PluginHost::WorkerPool::Instance().Submit(_activity);
 
@@ -335,7 +332,6 @@ namespace Plugin {
 
     void LocationService::Stop()
     {
-
         _adminLock.Lock();
 
         PluginHost::WorkerPool::Instance().Revoke(_activity);
@@ -349,6 +345,10 @@ namespace Plugin {
             _state = FAILED;
         }
 
+        if(_infoCarrier.IsValid() == true) {
+            _infoCarrier.Release();
+        }
+
         _adminLock.Unlock();
     }
 
@@ -357,16 +357,14 @@ namespace Plugin {
     {
         if (element->ErrorCode == Web::STATUS_OK) {
 
-            ASSERT(_response.IsValid() == true);
+            ASSERT(_infoCarrier.IsValid() == true);
 
-            element->Body<Web::IBody>(_response);
-            _response.Release();
+            element->Body<Web::IBody>(Core::proxy_cast<Web::IBody>(_infoCarrier));
         }
     }
 
     /* virtual */ void LocationService::Received(Core::ProxyType<Web::Response>& element)
     {
-
         if (element->HasBody() == true) {
 
             // ASSERT(element->Body<Web::JSONBodyType<IGeography> >() == _response);
@@ -412,6 +410,8 @@ namespace Plugin {
                 _callback->Dispatch();
             }
 
+            ASSERT(_infoCarrier.IsValid() == true);
+
             _infoCarrier.Release();
 
             _adminLock.Unlock();
@@ -425,7 +425,6 @@ namespace Plugin {
 
     /* virtual */ void LocationService::Send(const Core::ProxyType<Web::Request>& element)
     {
-
         // Not much to do, just so we know we are done...
         ASSERT(element == _request);
     }
@@ -433,7 +432,6 @@ namespace Plugin {
     // Signal a state change, Opened, Closed or Accepted
     /* virtual */ void LocationService::StateChange()
     {
-
         if (Link().IsOpen() == true) {
 
             // Send out a trigger to send the request
@@ -448,7 +446,6 @@ namespace Plugin {
     // We start using IPV6, preferred network...
     void LocationService::Dispatch()
     {
-
         uint32_t result = Core::infinite;
 
         if ((IsClosed() == false) || (Close(100) != Core::ERROR_NONE)) {
@@ -498,6 +495,11 @@ namespace Plugin {
                     }
                 }
             }
+
+            if (_state == FAILED) {
+                _infoCarrier.Release();
+            }
+
             _adminLock.Unlock();
         }
 
@@ -518,7 +520,6 @@ namespace Plugin {
 
     /* static */ uint32_t LocationService::IsSupported(const string& remoteNode)
     {
-
         uint32_t result(Core::ERROR_GENERAL);
         Core::URL domain(remoteNode);
 

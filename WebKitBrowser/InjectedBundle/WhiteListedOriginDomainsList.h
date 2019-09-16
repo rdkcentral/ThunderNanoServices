@@ -21,19 +21,13 @@ namespace WebKit {
         typedef std::map<string, Domains> WhiteMap;
 
     public:
-        static std::unique_ptr<WhiteListedOriginDomainsList> RequestFromWPEFramework(WKBundleRef bundle);
+        static std::unique_ptr<WhiteListedOriginDomainsList> RequestFromWPEFramework();
         ~WhiteListedOriginDomainsList()
         {
         }
 
     public:
         void AddWhiteListToWebKit(WKBundleRef bundle);
-
-        // Name of message posted between WPEFramework and WPEWebProcess.
-        static inline string GetMessageName()
-        {
-            return Core::ClassNameOnly(typeid(WhiteListedOriginDomainsList).name()).Data();
-        }
 
     private:
         WhiteListedOriginDomainsList()

@@ -19,6 +19,7 @@ set(PLUGIN_WEBKITBROWSER_LOCALSTORAGE "" CACHE STRING "HTML5 local storage path"
 set(PLUGIN_WEBKITBROWSER_COOKIESTORAGE "" CACHE STRING "Browser cookie storage path")
 set(PLUGIN_WEBKITBROWSER_WINDOWCLOSE false CACHE STRING "Allow window close")
 set(PLUGIN_WEBKITBROWSER_WEBGL true CACHE STRING "Enable WebGL")
+set(PLUGIN_WEBKITBROWSER_RESOLUTION "720p" CACHE STRING "Browser resolution")
 set(PLUGIN_WEBKITBROWSER_THREADEDPAINTING "1" CACHE STRING "Threads for the Threaded Painting")
 set(PLUGIN_YOUTUBE_USERAGENT ${PLUGIN_WEBKITBROWSER_USERAGENT} CACHE STRING "User agent string YouTube")
 set(PLUGIN_UX_AUTOSTART false CACHE STRING "Automatically start UX plugin")
@@ -39,8 +40,7 @@ add_library(${MODULE_NAME} SHARED
     WebKitBrowser.cpp
     WebKitBrowserJsonRpc.cpp
     WebKitImplementation.cpp
-    InjectedBundle/WhiteListedOriginDomainsList.cpp
-    InjectedBundle/Utils.cpp
+    InjectedBundle/Tags.cpp
 )
 
 set_target_properties(${MODULE_NAME} PROPERTIES
@@ -74,11 +74,28 @@ install(
 # also build injected bundle
 add_subdirectory(InjectedBundle)
 
+# resolution handling
+if(PLUGIN_WEBKITBROWSER_RESOLUTION EQUAL "720p")
+    set(PLUGIN_WEBKITBROWSER_HEIGHT "720")
+    set(PLUGIN_WEBKITBROWSER_WIDTH "1280")
+elseif(PLUGIN_WEBKITBROWSER_RESOLUTION EQUAL "1080p")
+    set(PLUGIN_WEBKITBROWSER_HEIGHT "1080")
+    set(PLUGIN_WEBKITBROWSER_WIDTH "1920")
+elseif(PLUGIN_WEBKITBROWSER_RESOLUTION EQUAL "2160p")
+    set(PLUGIN_WEBKITBROWSER_HEIGHT "2160")
+    set(PLUGIN_WEBKITBROWSER_WIDTH "3840")
+endif()
+
 write_config( ${PLUGIN_NAME} )
 
 # youtube configuration
 if(PLUGIN_WEBKITBROWSER_YOUTUBE)
     write_config( YouTube )
+endif()
+
+# amazon configuration
+if(PLUGIN_WEBKITBROWSER_AMAZON)
+    write_config( Amazon )
 endif()
 
 # Applications instance configuration

@@ -142,7 +142,7 @@ namespace Plugin {
 
         static void FillNetworkInfo(const WPASupplicant::Network& info, JsonData::WifiControl::NetworkInfo& net)
         {
-            net.Bssid = info.BSSID();
+            net.Bssid = std::to_string(info.BSSID());
             net.Frequency = info.Frequency();
             net.Signal = info.Signal();
             net.Ssid = info.SSID();
@@ -338,16 +338,17 @@ namespace Plugin {
         Core::ProxyType<WPASupplicant::Controller> _controller;
         void RegisterAll();
         void UnregisterAll();
-        uint32_t endpoint_status(JsonData::WifiControl::StatusResultData& response);
-        uint32_t endpoint_networks(Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& response);
-        uint32_t endpoint_config(const JsonData::WifiControl::ConfigParamsInfo& params, Core::JSON::ArrayType<JsonData::WifiControl::ConfigInfo>& response);
-        uint32_t endpoint_delete(const JsonData::WifiControl::ConfigParamsInfo& params);
-        uint32_t endpoint_setconfig(const JsonData::WifiControl::SetconfigParamsData& params);
+        uint32_t endpoint_delete(const JsonData::WifiControl::DeleteParamsInfo& params);
         uint32_t endpoint_store();
         uint32_t endpoint_scan();
-        uint32_t endpoint_connect(const JsonData::WifiControl::ConfigParamsInfo& params);
-        uint32_t endpoint_disconnect(const JsonData::WifiControl::ConfigParamsInfo& params);
-        uint32_t endpoint_debug(const JsonData::WifiControl::DebugParamsData& params);
+        uint32_t endpoint_connect(const JsonData::WifiControl::DeleteParamsInfo& params);
+        uint32_t endpoint_disconnect(const JsonData::WifiControl::DeleteParamsInfo& params);
+        uint32_t get_status(JsonData::WifiControl::StatusData& response) const;
+        uint32_t get_networks(Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& response) const;
+        uint32_t get_configs(Core::JSON::ArrayType<JsonData::WifiControl::ConfigInfo>& response) const;
+        uint32_t get_config(const string& index, JsonData::WifiControl::ConfigInfo& response) const;
+        uint32_t set_config(const string& index, const JsonData::WifiControl::ConfigInfo& param);
+        uint32_t set_debug(const Core::JSON::DecUInt32& param);
         void event_scanresults(const Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& list);
         void event_networkchange();
         void event_connectionchange(const string& ssid);

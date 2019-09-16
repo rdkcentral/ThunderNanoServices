@@ -1,13 +1,13 @@
-#ifndef PLUGIN_DHCPSERVER_H
-#define PLUGIN_DHCPSERVER_H
+#pragma once
 
 #include "DHCPServerImplementation.h"
+#include <interfaces/json/JsonData_DHCPServer.h>
 #include "Module.h"
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class DHCPServer : public PluginHost::IPlugin, public PluginHost::IWeb {
+    class DHCPServer : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     public:
         class Data : public Core::JSON::Container {
         private:
@@ -223,6 +223,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(DHCPServer)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
@@ -237,12 +238,18 @@ namespace Plugin {
         virtual void Inbound(Web::Request& request) override;
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
+        // JsonRpc
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_activate(const JsonData::DHCPServer::ActivateParamsInfo& params);
+        uint32_t endpoint_deactivate(const JsonData::DHCPServer::ActivateParamsInfo& params);
+        uint32_t get_status(const string& index, Core::JSON::ArrayType<JsonData::DHCPServer::ServerData>& response) const;
+
     private:
         uint16_t _skipURL;
         std::map<const string, DHCPServerImplementation> _servers;
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+}
 
-#endif // PLUGIN_DHCPSERVER_H

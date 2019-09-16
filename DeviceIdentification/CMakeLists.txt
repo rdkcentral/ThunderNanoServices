@@ -1,4 +1,4 @@
-set(PLUGIN_NAME DeviceIdenification)
+set(PLUGIN_NAME DeviceIdentification)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(NEXUS)

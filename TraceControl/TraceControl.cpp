@@ -204,39 +204,5 @@ namespace Plugin {
             index++;
         }
     }
-
-    uint32_t TraceControl::status(const Data::StatusParam& parameters, TraceControl::Data& response)
-    {
-        response.Console = _config.Console;
-        response.Remote = _config.Remote;
-
-        Observer::ModuleIterator index(_observer.Modules());
-
-        while (index.Next() == true) {
-            string moduleName(Core::ToString(index.Module()));
-            Observer::ModuleIterator::CategoryIterator categories(index.Categories());
-
-            if ((parameters.Module.IsSet() == false) || ((parameters.Module.IsSet() == true) && (moduleName == parameters.Module.Value()))) {
-                while (categories.Next()) {
-                    string categoryName(Core::ToString(categories.Category()));
-
-                    if ((parameters.Category.IsSet() == false) || ((parameters.Category.IsSet() == true) && (categoryName == parameters.Category.Value()))) {
-                        response.Settings.Add(Data::Trace(moduleName, categoryName, categories.State()));
-                    }
-                }
-            }
-        }
-
-        return (Core::ERROR_NONE);
-    }
-
-    uint32_t TraceControl::set(const Data::Trace& parameters)
-    {
-        _observer.Set((parameters.State.Value() == TraceControl::state::ENABLED),
-            (parameters.Module.IsSet() == true ? parameters.Module.Value() : std::string(EMPTY_STRING)),
-            (parameters.Category.IsSet() == true ? parameters.Category.Value() : std::string(EMPTY_STRING)));
-
-        return (Core::ERROR_NONE);
-    }
 }
 }

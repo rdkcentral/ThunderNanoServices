@@ -1,0 +1,15 @@
+{
+    "$schema": "plugin.schema.json",
+    "info": {
+      "title": "Compositor Plugin",
+      "callsign": "Compositor",
+      "locator": "libWPEFrameworkCompositor.so",
+      "status": "production",
+      "description": "Compositor gives you controll over what is displayed on screen.",
+      "version": "1.0"
+    },
+    "interface": {
+      "$ref": "{interfacedir}/Compositor.json#"
+    }
+  }
+  
