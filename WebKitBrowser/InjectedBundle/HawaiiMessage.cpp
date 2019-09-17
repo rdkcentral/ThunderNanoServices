@@ -1,5 +1,6 @@
 #include "JavaScriptFunctionType.h"
 #include "Utils.h"
+#include "Tags.h"
 
 unsigned int amazon_player_deinitialize();
 
@@ -20,7 +21,7 @@ namespace Amazon {
         // Gets configuration for this handler from WPEWebKitBrowser via synchronous message.
         static std::string Configuration()
         {
-            std::string utf8MessageName(string(WebKit::Utils::ConfigMessage()) + "hawaii");
+            std::string utf8MessageName(string(Tags::Config) + "hawaii");
 
             WKStringRef jsMessageName = WKStringCreateWithUTF8CString(utf8MessageName.c_str());
             WKMutableArrayRef messageBody = WKMutableArrayCreate();
