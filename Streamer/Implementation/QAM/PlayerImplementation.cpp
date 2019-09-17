@@ -27,7 +27,7 @@ namespace Implementation {
                 }
 
             private:
-                virtual void StateChange() override {
+                void StateChange() override {
                     _parent.StateChange();
                 }
 
@@ -53,7 +53,7 @@ namespace Implementation {
             {
                 _speeds.push_back(100);
             }
-            virtual ~QAM()
+            ~QAM() override
             {
             }
 
@@ -172,7 +172,7 @@ namespace Implementation {
 
                 return (result);
             }
-            int32_t Speed() const  override
+            int32_t Speed() const override
             {
                 return _speed;
             }
@@ -225,7 +225,6 @@ namespace Implementation {
 
                 return (result);
             }
-
             uint32_t DetachDecoder(const uint8_t index) override
             {
                 uint32_t result = Core::ERROR_UNAVAILABLE;
@@ -246,7 +245,6 @@ namespace Implementation {
 
                 return (result);
             }
-
             void StateChange() {
                 ASSERT(_player != nullptr);
 

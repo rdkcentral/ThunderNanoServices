@@ -28,15 +28,14 @@ namespace Plugin {
                 , _parentInterface(parentInterface)
             {
             }
-            ~ExternalAccess()
+            ~ExternalAccess() override
             {
                 Close(Core::infinite);
             }
 
         private:
-            virtual void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
+            void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
             {
-
                 void* result = nullptr;
 
                 // Currently we only support version 1 of the IRPCLink :-)
@@ -65,7 +64,7 @@ namespace Plugin {
         {
         }
 
-        virtual ~StreamerImplementation();
+         ~StreamerImplementation() override;
 
         BEGIN_INTERFACE_MAP(StreamerImplementation)
         INTERFACE_ENTRY(Exchange::IPlayer)
@@ -81,8 +80,8 @@ namespace Plugin {
         }
 
         // IPlayer Interfaces
-        virtual uint32_t Configure(PluginHost::IShell* service);
-        virtual Exchange::IStream* CreateStream(const Exchange::IStream::streamtype streamType);
+        uint32_t Configure(PluginHost::IShell* service) override;
+        Exchange::IStream* CreateStream(const Exchange::IStream::streamtype streamType) override;
 
     private:
         mutable Core::CriticalSection _adminLock;

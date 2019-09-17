@@ -28,20 +28,20 @@ namespace Player {
                     : _parent(*parent)
                 {
                 }
-                virtual ~CallbackImplementation()
+                ~CallbackImplementation() override
                 {
                 }
 
             public:
-                virtual void TimeUpdate(uint64_t position)
+                void TimeUpdate(uint64_t position) override
                 {
                     _parent.TimeUpdate(position);
                 }
-                virtual void DRM(uint32_t state)
+                void DRM(uint32_t state) override
                 {
                     _parent.DRM(state);
                 }
-                virtual void StateChange(Exchange::IStream::state newState)
+                void StateChange(Exchange::IStream::state newState) override
                 {
                     _parent.StateChange(newState);
                 }
@@ -66,17 +66,17 @@ namespace Player {
                     , _callback(nullptr)
                 {
                 }
-                virtual ~DecoderImplementation()
+                ~DecoderImplementation() override
                 {
                     _parent.Detach();
                 }
 
             public:
-                virtual void AddRef() const
+                void AddRef() const override
                 {
                     Core::InterlockedIncrement(_referenceCount);
                 }
-                virtual uint32_t Release() const
+                uint32_t Release() const override
                 {
                     if (Core::InterlockedDecrement(_referenceCount) == 0) {
                         delete this;
@@ -84,23 +84,23 @@ namespace Player {
                     }
                     return (Core::ERROR_NONE);
                 }
-                virtual uint8_t Index() const
+                uint8_t Index() const
                 {
                     return (_index);
                 }
-                virtual RPC::IValueIterator* Speeds() const
+                RPC::IValueIterator* Speeds() const override
                 {
                     ASSERT(_player != nullptr);
                     return (Core::Service<RPC::ValueIterator>::Create<RPC::IValueIterator>(_player->Speeds()));
                 }
-                virtual void Speed(const int32_t request) override
+                void Speed(const int32_t request) override
                 {
                     _parent.Lock();
                     ASSERT(_player != nullptr);
                     _player->Speed(request);
                     _parent.Unlock();
                 }
-                virtual int32_t Speed() const
+                int32_t Speed() const override
                 {
                     uint32_t result = 0;
                     _parent.Lock();
@@ -109,14 +109,14 @@ namespace Player {
                     _parent.Unlock();
                     return (result);
                 }
-                virtual void Position(const uint64_t absoluteTime)
+                void Position(const uint64_t absoluteTime) override
                 {
                     _parent.Lock();
                     ASSERT(_player != nullptr);
                     _player->Position(absoluteTime);
                     _parent.Unlock();
                 }
-                virtual uint64_t Position() const
+                uint64_t Position() const override
                 {
                     uint64_t result = 0;
                     _parent.Lock();
@@ -125,14 +125,14 @@ namespace Player {
                     _parent.Unlock();
                     return (result);
                 }
-                virtual void TimeRange(uint64_t& begin, uint64_t& end) const
+                void TimeRange(uint64_t& begin, uint64_t& end) const override
                 {
                     _parent.Lock();
                     ASSERT(_player != nullptr);
                     _player->TimeRange(begin, end);
                     _parent.Unlock();
                 }
-                virtual IGeometry* Geometry() const
+                IGeometry* Geometry() const override
                 {
                     IGeometry* result = nullptr;
                     _parent.Lock();
@@ -143,7 +143,7 @@ namespace Player {
                     _parent.Unlock();
                     return (result);
                 }
-                virtual void Geometry(const IGeometry* settings)
+                void Geometry(const IGeometry* settings) override
                 {
                     _parent.Lock();
                     ASSERT(_player != nullptr);
@@ -156,7 +156,7 @@ namespace Player {
                     _player->Order(settings->Z());
                     _parent.Unlock();
                 }
-                virtual void Callback(IControl::ICallback* callback)
+                void Callback(IControl::ICallback* callback) override
                 {
                     _parent.Lock();
                     if (_callback != nullptr) {
@@ -206,7 +206,7 @@ namespace Player {
 
                 _player->Callback(&_sink);
             }
-            virtual ~Frontend()
+            ~Frontend() override
             {
                 ASSERT(_decoder == nullptr);
                 if (_decoder != nullptr) {
@@ -216,11 +216,11 @@ namespace Player {
             }
 
         public:
-            void AddRef() const
+            void AddRef() const override
             {
                 Core::InterlockedIncrement(_refCount);
             }
-            uint32_t Release() const
+            uint32_t Release() const override
             {
                 uint32_t result = Core::ERROR_NONE;
                 if (Core::InterlockedDecrement(_refCount) == 0) {
@@ -233,7 +233,7 @@ namespace Player {
                 }
                 return (result);
             }
-            virtual uint8_t Index() const
+            uint8_t Index() const
             {
                 _adminLock.Lock();
                 ASSERT(_player != nullptr);
@@ -241,7 +241,15 @@ namespace Player {
                 _adminLock.Unlock();
                 return (result);
             }
-            virtual streamtype Type() const
+            string Metadata() const override
+            {
+                _adminLock.Lock();
+                ASSERT(_player != nullptr);
+                string result = _player->Metadata();
+                _adminLock.Unlock();
+                return (result);
+            }
+            streamtype Type() const override
             {
                 _adminLock.Lock();
                 ASSERT(_player != nullptr);
@@ -249,7 +257,7 @@ namespace Player {
                 _adminLock.Unlock();
                 return (result);
             }
-            virtual drmtype DRM() const
+            drmtype DRM() const override
             {
                 _adminLock.Lock();
                 ASSERT(_player != nullptr);
@@ -257,7 +265,7 @@ namespace Player {
                 _adminLock.Unlock();
                 return (result);
             }
-            virtual IControl* Control()
+            IControl* Control() override
             {
                 _adminLock.Lock();
                 if (_decoder == nullptr) {
@@ -282,7 +290,7 @@ namespace Player {
                 _adminLock.Unlock();
                 return (_decoder);
             }
-            virtual void Callback(IStream::ICallback* callback)
+            void Callback(IStream::ICallback* callback) override
             {
                 _adminLock.Lock();
                 if (_callback != nullptr) {
@@ -294,7 +302,7 @@ namespace Player {
                 _callback = callback;
                 _adminLock.Unlock();
             }
-            virtual state State() const
+            state State() const override
             {
                 _adminLock.Lock();
                 ASSERT(_player != nullptr);
@@ -302,19 +310,11 @@ namespace Player {
                 _adminLock.Unlock();
                 return (result);
             }
-            virtual uint32_t Load(const string& configuration)
+            uint32_t Load(const string& configuration) override
             {
                 _adminLock.Lock();
                 ASSERT(_player != nullptr);
                 uint32_t result = _player->Load(configuration);
-                _adminLock.Unlock();
-                return (result);
-            }
-            virtual string Metadata() const
-            {
-                _adminLock.Lock();
-                ASSERT(_player != nullptr);
-                string result = _player->Metadata();
                 _adminLock.Unlock();
                 return (result);
             }

@@ -23,7 +23,7 @@ namespace Plugin {
             {
                 Add(_T("connector"), &Connector);
             }
-            virtual ~Config()
+            ~Config() override
             {
             }
 

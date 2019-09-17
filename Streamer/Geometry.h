@@ -47,29 +47,29 @@ namespace Player {
                 _rectangle.Width = copy->Width();
                 _rectangle.Height = copy->Height();
             }
-            virtual ~Geometry()
+            ~Geometry() override
             {
             }
 
         public:
             //IStream::IControl::IGeometry Interfaces
-            virtual uint32_t X() const override
+            uint32_t X() const override
             {
                 return (_rectangle.X);
             }
-            virtual uint32_t Y() const override
+            uint32_t Y() const override
             {
                 return (_rectangle.Y);
             }
-            virtual uint32_t Z() const override
+            uint32_t Z() const override
             {
                 return (_z);
             }
-            virtual uint32_t Width() const override
+            uint32_t Width() const override
             {
                 return (_rectangle.Width);
             }
-            virtual uint32_t Height() const override
+            uint32_t Height() const override
             {
                 return (_rectangle.Height);
             }

@@ -50,7 +50,7 @@ namespace Implementation {
                 {
                 }
 
-                void Event(const AAMPEvent& event)
+                void Event(const AAMPEvent& event) override
                 {
                     ASSERT(_player != nullptr);
                     switch (event.type)
@@ -143,7 +143,7 @@ namespace Implementation {
                 }
 
             private:
-                virtual uint32_t Worker() override
+                uint32_t Worker() override
                 {
                     if (IsRunning() == true) {
                         std::this_thread::sleep_for(std::chrono::seconds(TimeToGetPlaybackPosition));
@@ -200,7 +200,7 @@ namespace Implementation {
                 _rectangle.Height = 720;
             }
 
-            ~Aamp()
+            ~Aamp() override
             {
                 ASSERT(_aampPlayer == nullptr);
                 ASSERT(_aampEventListener == nullptr);
