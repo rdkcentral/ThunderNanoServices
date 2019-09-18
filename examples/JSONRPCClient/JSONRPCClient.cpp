@@ -159,7 +159,8 @@ private:
 
 // Performance measurement functions/methods and definitions
 // ---------------------------------------------------------------------------------------------
-typedef std::function<uint32_t(const uint16_t size, const uint8_t buffer[])> PerformanceFunction;
+typedef std::function<uint32_t(uint16_t& size, uint8_t buffer[])> PerformanceFunction;
+
 constexpr uint32_t MeasurementLoops = 20;
 static uint8_t swapPattern[] = { 0x00, 0x55, 0xAA, 0xFF };
 
@@ -181,53 +182,60 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
     printf("Measurements [%s]:\n", info);
     uint64_t time;
     Core::StopWatch measurement;
+    uint16_t length = 0;
 
     for (uint32_t run = 0; run < MeasurementLoops; run++) {
-        subject(0, dataFrame);
+        subject(length, dataFrame);
     }
     time = measurement.Elapsed();
     printf("Data outbound:    [0], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
+    length = 16;
     for (uint32_t run = 0; run < MeasurementLoops; run++)
     {
-        subject(16, dataFrame);
+        subject(length, dataFrame);
     }
     time = measurement.Elapsed();
     printf("Data outbound:   [16], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
+    length = 128;
     for (uint32_t run = 0; run < MeasurementLoops; run++)
     {
-        subject(128, dataFrame);
+        subject(length, dataFrame);
     }
     time = measurement.Elapsed();
     printf("Data outbound:  [128], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
+    length = 256;
     for (uint32_t run = 0; run < MeasurementLoops; run++) {
-        subject(256, dataFrame);
+        subject(length, dataFrame);
     }
     time = measurement.Elapsed();
     printf("Data outbound:  [256], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
+    length = 512;
     for (uint32_t run = 0; run < MeasurementLoops; run++) {
-        subject(512, dataFrame);
+        subject(length, dataFrame);
     }
     time = measurement.Elapsed();
     printf("Data outbound:  [512], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
+    length = 1024;
     for (uint32_t run = 0; run < MeasurementLoops; run++) {
-        subject(1024, dataFrame);
+        subject(length, dataFrame);
     }
     time = measurement.Elapsed();
     printf("Data outbound: [1024], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
+    length = 2048;
     for (uint32_t run = 0; run < MeasurementLoops; run++) {
-        subject(2048, dataFrame);
+        subject(length, dataFrame);
     }
     time = measurement.Elapsed();
     printf("Data outbound: [2048], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
@@ -270,9 +278,18 @@ void MeasureCOMRPC(Core::ProxyType<RPC::CommunicatorClient>& client)
                     break;
                 }
                 case 'R': {
+                    PerformanceFunction implementation = [perf](uint16_t& length, uint8_t buffer[]) -> uint32_t {
+                        return (perf->Receive(length, buffer));
+                    };
+                    Measure(_T("COMRPC"), sizeof(swapPattern), swapPattern, implementation);
                     break;
                 }
                 case 'E': {
+                    PerformanceFunction implementation = [perf](uint16_t& length, uint8_t buffer[]) -> uint32_t {
+                        const uint16_t maxBufferSize = length;
+                        return (perf->Exchange(length, buffer, maxBufferSize));
+                    };
+                    Measure(_T("COMRPC"), sizeof(swapPattern), swapPattern, implementation);
                     break;
                 }
                 default: {
@@ -294,7 +311,7 @@ void MeasureJSONRPC(JSONRPC::Client& remoteObject)
         measure = toupper(getchar());
         switch (measure) {
         case 'S': {
-            PerformanceFunction implementation = [&remoteObject](const uint16_t length, const uint8_t buffer[]) -> uint32_t {
+            PerformanceFunction implementation = [&remoteObject](uint16_t& length, uint8_t buffer[]) -> uint32_t {
                 string stringBuffer;
                 Data::JSONDataBuffer message;
                 Core::JSON::DecUInt32 result;
@@ -308,9 +325,35 @@ void MeasureJSONRPC(JSONRPC::Client& remoteObject)
             break;
         }
         case 'R': {
+            PerformanceFunction implementation = [&remoteObject](uint16_t& length, uint8_t buffer[]) -> uint32_t {
+                string stringBuffer;
+                Data::JSONDataBuffer message;
+                Core::JSON::DecUInt16 maxSize = length;
+                remoteObject.Invoke<Core::JSON::DecUInt16, Data::JSONDataBuffer>(3000, _T("receive"), maxSize, message);
+                length = static_cast<uint16_t>(((message.Data.Value().length() * 6) + 7) / 8);
+                buffer = static_cast<uint8_t*>(ALLOCA(length));
+                Core::FromString(message.Data.Value(), buffer, length);
+                return (length);
+            };
+            Measure(_T("JSONRPC"), sizeof(swapPattern), swapPattern, implementation);
             break;
         }
         case 'E': {
+            PerformanceFunction implementation = [&remoteObject](uint16_t& length, uint8_t buffer[]) -> uint32_t {
+                string stringBuffer;
+                Data::JSONDataBuffer message;
+                Core::JSON::DecUInt32 result;
+                Core::ToString(buffer, length, false, stringBuffer);
+                message.Data = stringBuffer;
+                message.Length = length;
+                Data::JSONDataBuffer response;
+                remoteObject.Invoke<Data::JSONDataBuffer, Data::JSONDataBuffer>(3000, _T("exchange"), message, response);
+                length = static_cast<uint16_t>(((response.Data.Value().length() * 6) + 7) / 8);
+                buffer = static_cast<uint8_t*>(ALLOCA(length));
+                Core::FromString(response.Data.Value(), buffer, length);
+                return (length);
+            };
+            Measure(_T("JSONRPC"), sizeof(swapPattern), swapPattern, implementation);
             break;
         }
         default: {
