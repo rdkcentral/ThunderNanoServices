@@ -39,6 +39,10 @@ namespace Plugin {
                 {
                     _parent.StateChange(state);
                 }
+                void Event(const uint32_t eventid) override
+                {
+                    _parent.Event(eventid);
+                }
 
                 BEGIN_INTERFACE_MAP(StreamSink)
                 INTERFACE_ENTRY(Exchange::IStream::ICallback)
@@ -83,6 +87,10 @@ namespace Plugin {
             {
                 _parent.StateChange(_index, state);
             }
+            void Event(const uint32_t eventid)
+            {
+                _parent.Event(_index, eventid);
+            }
 
         private:
             Streamer& _parent;
@@ -113,6 +121,10 @@ namespace Plugin {
                 void TimeUpdate(const uint64_t position) override
                 {
                     _parent.TimeUpdate(position);
+                }
+                void Event(const uint32_t eventid) override
+                {
+                    _parent.Event(eventid);
                 }
 
                 BEGIN_INTERFACE_MAP(ControlSink)
@@ -149,6 +161,10 @@ namespace Plugin {
             void TimeUpdate(const uint64_t position)
             {
                 _parent.TimeUpdate(_index, position);
+            }
+            void Event(const uint32_t eventid)
+            {
+                _parent.ControlEvent(_index, eventid);
             }
 
          private:
@@ -337,6 +353,14 @@ namespace Plugin {
                              Core::EnumerateType<Exchange::IStream::state>(state).Data() + 
                              _T("\" }"));
             event_statechange(std::to_string(index), static_cast<JsonData::Streamer::StateType>(state));
+        }
+        void Event(const uint8_t index, const uint32_t eventid)
+        {
+            TRACE(Trace::Information, (_T("Stream [%d] custom notification: [%08x]"), index, eventid));
+        }
+        void ControlEvent(const uint8_t index, const uint32_t eventid)
+        {
+            TRACE(Trace::Information, (_T("Stream [%d] custom control notification: [%08x]"), index, eventid));
         }
         void TimeUpdate(const uint8_t index, const uint64_t position)
         {

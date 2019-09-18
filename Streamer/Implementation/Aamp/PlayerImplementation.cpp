@@ -73,13 +73,12 @@ namespace Implementation {
                             _player->StateChange(Exchange::IStream::Prepared);
                             break;
                         case eSTATE_PAUSED:
-                            _player->StateChange(Exchange::IStream::Paused);
-                            break;
                         case eSTATE_PLAYING:
-                            _player->StateChange(Exchange::IStream::Playing);
+                            _player->StateChange(Exchange::IStream::Controlled);
                             break;
                         case eSTATE_ERROR:
                             _player->StateChange(Exchange::IStream::Error);
+                            _player->SetError(-1); // undefined error
                             break;
                         default:
                             break;
@@ -91,6 +90,7 @@ namespace Implementation {
                     case AAMP_EVENT_TUNE_FAILED:
                         TRACE(Trace::Information, (_T("AAMP_EVENT_TUNE_FAILED")));
                         _player->StateChange(Exchange::IStream::Error);
+                        _player->SetError(event.data.mediaError.code);
                         /* this never seems to trigger... */
                         break;
                     case AAMP_EVENT_DRM_METADATA:
@@ -166,6 +166,7 @@ namespace Implementation {
                 , _state(Exchange::IStream::Error)
                 , _drmType(Exchange::IStream::Unknown)
                 , _streamtype(streamType)
+                , _lastError(Core::ERROR_UNAVAILABLE)
                 , _speed(-1)
                 , _begin(0)
                 , _end(~0)
@@ -228,6 +229,7 @@ namespace Implementation {
                         _aampPlayer->RegisterEvents(_aampEventListener);
                         StateChange(Exchange::IStream::Idle);
                         result = Core::ERROR_NONE;
+                        _lastError = result;
                     }
                     else {
                         delete _aampPlayer;
@@ -256,6 +258,7 @@ namespace Implementation {
                 _aampPlayer = nullptr;
 
                 _state = Exchange::IStream::Error;
+                _lastError = Core::ERROR_UNAVAILABLE;
 
                 _adminLock.Unlock();
 
@@ -314,6 +317,14 @@ namespace Implementation {
                 return curState;
             }
 
+            uint32_t LastError() const override
+            {
+                _adminLock.Lock();
+                uint32_t error = _lastError;
+                _adminLock.Unlock();
+                return error;
+            }
+
             uint8_t Index() const override
             {
                 return _index;
@@ -334,6 +345,7 @@ namespace Implementation {
                         _speed = -1;
                         _drmType = Exchange::IStream::Unknown;
                         _uri = uri;
+                        _lastError = Core::ERROR_NONE;
                         _aampPlayer->Tune(_uri.c_str());
                         _adminLock.Unlock();
                     } else {
@@ -457,7 +469,7 @@ namespace Implementation {
             void TimeUpdate()
             {
                 _adminLock.Lock();
-                if ((_callback != nullptr) && (_state == Exchange::IStream::Playing)) {
+                if ((_callback != nullptr) && (_state == Exchange::IStream::Controlled) && (_speed != 0)) {
                     _callback->TimeUpdate(_aampPlayer->GetPlaybackPosition());
                 }
                 _adminLock.Unlock();
@@ -481,6 +493,14 @@ namespace Implementation {
                 }
                 _adminLock.Unlock();
             }
+
+            void SetError(uint32_t error)
+            {
+                _adminLock.Lock();
+                _lastError = ((error << 16) | Core::ERROR_GENERAL);
+                _adminLock.Unlock();
+            }
+
 
         private:
             void Stop()
@@ -558,6 +578,8 @@ namespace Implementation {
             Exchange::IStream::state _state;
             Exchange::IStream::drmtype _drmType;
             Exchange::IStream::streamtype _streamtype;
+
+            uint32_t _lastError;
 
             std::vector<int32_t> _speeds;
             int32_t _speed;

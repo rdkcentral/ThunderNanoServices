@@ -174,7 +174,7 @@ namespace Plugin {
                 } else {
                     result = Core::ERROR_UNAVAILABLE;
                 }
-            } else if ((stream->second->State() == Exchange::IStream::Playing) || (stream->second->State() == Exchange::IStream::Prepared)) {
+            } else if ((stream->second->State() == Exchange::IStream::Controlled) || (stream->second->State() == Exchange::IStream::Prepared)) {
                 result = Core::ERROR_INPROGRESS;
             } else {
                 result = Core::ERROR_ILLEGAL_STATE;

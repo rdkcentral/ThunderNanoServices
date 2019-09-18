@@ -37,9 +37,10 @@ namespace Implementation {
 
         public:
             QAM(const Exchange::IStream::streamtype streamType, const uint8_t index)
-                : _state(Exchange::IStream::Idle)
+                : _state(Exchange::IStream::Error)
                 , _drmType(Exchange::IStream::Unknown)
                 , _streamType(streamType)
+                , _lastError(Core::ERROR_UNAVAILABLE)
                 , _speed(0)
                 , _absoluteTime(0)
                 , _begin(0)
@@ -60,12 +61,19 @@ namespace Implementation {
         public:
             uint32_t Setup() override
             {
+                uint32_t result = Core::ERROR_GENERAL;
+
+                ASSERT(_state == Exchange::IStream::Error);
+
                 _player = Broadcast::ITuner::Create(Core::NumberType<uint8_t>(_index).Text());
                 if (_player != nullptr) {
                     _player->Callback(&_sink);
+                    _state = Exchange::IStream::Idle;
+                    result = Core::ERROR_NONE;
+                    _lastError = result;
                 }
 
-                return (_player != nullptr? Core::ERROR_NONE : Core::ERROR_GENERAL);
+                return result;
             }
             uint32_t Teardown() override
             {
@@ -73,6 +81,10 @@ namespace Implementation {
                     _player->Callback(nullptr);
                     delete _player;
                 }
+
+                _state = Exchange::IStream::Error;
+                _lastError = Core::ERROR_UNAVAILABLE;
+
                 return Core::ERROR_NONE;
             }
             void Callback(ICallback* callback) override
@@ -94,6 +106,10 @@ namespace Implementation {
             Exchange::IStream::state State() const override
             {
                 return (Exchange::IStream::state)_state;
+            }
+            uint32_t LastError() const override
+            {
+                return _lastError;
             }
             uint8_t Index() const override
             {
@@ -124,6 +140,7 @@ namespace Implementation {
                     if (result != Core::ERROR_NONE) {
                         _state = Exchange::IStream::Error;
                         TRACE(Trace::Error, (_T("Error in player load :%d"), result));
+                        _lastError = result;
                         _callback->StateChange(_state);
                     } else {
                         TRACE(Trace::Information, (_T("Tuning to ProgramNumber %d"), parser.ProgramNumber()));
@@ -154,13 +171,10 @@ namespace Implementation {
                     // _player->setSpeed(request);
                     if (result == Core::ERROR_NONE) {
                         _speed = request;
-                        if (_speed != 0) {
-                            newState = Exchange::IStream::state::Playing;
-                        } else {
-                            newState = Exchange::IStream::state::Paused;
-                        }
+                        newState = Exchange::IStream::state::Controlled;
                     } else {
                         TRACE(Trace::Error, (_T("Error in pause playback:%d"), result));
+                        _lastError = result;
                         newState = Exchange::IStream::state::Error;
                     }
 
@@ -218,6 +232,7 @@ namespace Implementation {
                     result = _player->Attach(index);
                     if (result != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Error in attach decoder %d"), result));
+                        _lastError = result;
                         _state = Exchange::IStream::state::Error;
                         _callback->StateChange(_state);
                     }
@@ -238,6 +253,7 @@ namespace Implementation {
                     result = _player->Detach(index);
                     if (result != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Error in detach decoder %d"), result));
+                        _lastError = result;
                         _state = Exchange::IStream::state::Error;
                         _callback->StateChange(_state);
                     }
@@ -268,7 +284,7 @@ namespace Implementation {
                     }
                 }
                 else if (result == Broadcast::ITuner::STREAMING) {
-                    _state = Exchange::IStream::Playing;
+                    _state = Exchange::IStream::Controlled;
                 }
 
                 if ( (oldState != _state) && (_callback != nullptr)) {
@@ -280,6 +296,8 @@ namespace Implementation {
             Exchange::IStream::state _state;
             Exchange::IStream::drmtype _drmType;
             Exchange::IStream::streamtype _streamType;
+
+            uint32_t _lastError;
 
             int32_t _speed;
             std::vector<int32_t> _speeds;

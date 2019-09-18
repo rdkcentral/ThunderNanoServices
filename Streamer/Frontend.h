@@ -318,6 +318,18 @@ namespace Player {
                 _adminLock.Unlock();
                 return (result);
             }
+            uint32_t LastError() const override
+            {
+                _adminLock.Lock();
+                ASSERT(_player != nullptr);
+                uint32_t result = _player->LastError();
+                _adminLock.Unlock();
+                return (result);
+            }
+            IStream::IElement::IIterator* Elements()
+            {
+                return nullptr;
+            }
 
             BEGIN_INTERFACE_MAP(Frontend)
             INTERFACE_ENTRY(Exchange::IStream)
