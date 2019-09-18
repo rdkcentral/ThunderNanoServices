@@ -39,8 +39,8 @@ bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel)
     while ((index < argc) && (!showHelp)) {
         if (strcmp(argv[index], "-remote") == 0) {
             hostname = argv[index + 1];
-			index++;
-		} else if (strcmp(argv[index], "-h") == 0) {
+            index++;
+        } else if (strcmp(argv[index], "-h") == 0) {
             showHelp = true;
         }
         index++;
@@ -61,7 +61,7 @@ void ShowMenu()
            "\tR : Register for a-synchronous feedback\n"
            "\tU : Unregister for a-synchronous feedback\n"
            "\tS : Send message to registered clients\n"
-		   "\tP : Read Property.\n"
+           "\tP : Read Property.\n"
            "\t0 : Set property @ value 0.\n"
            "\t1 : Set property @ value 1.\n"
            "\t2 : Set property @ value 2.\n"
@@ -71,7 +71,7 @@ void ShowMenu()
            "\t5 : Set property @ value { 200, 300, 720, 100 }.\n"
            "\tO : Set properties using an opaque variant JSON parameter\n"
            "\tV : Get properties using an opaque variant JSON parameter\n"
-		   "\tB : Get and Set readonly and writeonly properties\n"
+           "\tB : Get and Set readonly and writeonly properties\n"
            "\tF : Read Property with index\n"
            "\tJ : Write Property with index\n"
            "\tE : Invoke and exchange an opaque variant JSON parameter\n"
@@ -85,6 +85,15 @@ void ShowMenu()
            "\t+ : Register for a-synchronous events on Version 1 interface\n"
            "\t- : Unregister for a-synchronous events on Version 1 interface\n"
            "\tH : Help\n"
+           "\tQ : Quit\n");
+}
+
+void ShowPerformanceMenu()
+{
+    printf("Enter\n"
+           "\tS : Test sending data\n"
+           "\tR : Test receiving data\n"
+           "\tE : Test exchanging data\n"
            "\tQ : Quit\n");
 }
 
@@ -113,9 +122,9 @@ static void async_callback(const Data::Response& response)
 
 class Callbacks {
 public:
-	void async_callback_complete(const Data::Response& response, const Core::JSONRPC::Error* result) {
+    void async_callback_complete(const Data::Response& response, const Core::JSONRPC::Error* result) {
         printf("Finally we are triggered. Pointer to: %p @ %s\n", result, Core::Time(response.Time.Value(), false).ToRFC1123().c_str());
-	}
+    }
 };
 
 class MessageHandler {
@@ -173,7 +182,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
     uint64_t time;
     Core::StopWatch measurement;
 
-	for (uint32_t run = 0; run < MeasurementLoops; run++) {
+    for (uint32_t run = 0; run < MeasurementLoops; run++) {
         subject(0, dataFrame);
     }
     time = measurement.Elapsed();
@@ -233,6 +242,82 @@ static void PrintObject(const JsonObject::Iterator& iterator)
             Core::EnumerateType<JsonValue::type>(index.Current().Content()).Data(),
             index.Current().Value().c_str());
     }
+}
+
+void MeasureCOMRPC(Core::ProxyType<RPC::CommunicatorClient>& client)
+{
+    if ((client.IsValid() == false) || (client->IsOpen() == false)) {
+        printf("Can not measure the performance of COMRPC, there is no connection.\n");
+    } else {
+        Core::StopWatch measurement;
+        Exchange::IPerformance* perf = client->Aquire<Exchange::IPerformance>(2000, _T("JSONRPCPlugin"), ~0);
+        if (perf == nullptr) {
+            printf("Instantiation failed. An performance interface was not returned. It took: %lld ticks\n", measurement.Elapsed());
+        } else {
+            printf("Instantiating and retrieving the interface took: %lld ticks\n", measurement.Elapsed());
+            int measure;
+            do {
+                ShowPerformanceMenu();
+                getchar(); // Skip white space
+                measure = toupper(getchar());
+                switch (measure) {
+                case 'S': {
+                    PerformanceFunction implementation = [perf](const uint16_t length, const uint8_t buffer[]) -> uint32_t {
+                        return (perf->Send(length, buffer));
+                    };
+
+                    Measure(_T("COMRPC"), sizeof(swapPattern), swapPattern, implementation);
+                    break;
+                }
+                case 'R': {
+                    break;
+                }
+                case 'E': {
+                    break;
+                }
+                default: {
+                    break;
+                }
+                }
+            } while (measure != 'Q');
+            perf->Release();
+        }
+    }
+}
+
+void MeasureJSONRPC(JSONRPC::Client& remoteObject)
+{
+    int measure;
+    do {
+        ShowPerformanceMenu();
+        getchar(); // Skip white space
+        measure = toupper(getchar());
+        switch (measure) {
+        case 'S': {
+            PerformanceFunction implementation = [&remoteObject](const uint16_t length, const uint8_t buffer[]) -> uint32_t {
+                string stringBuffer;
+                Data::JSONDataBuffer message;
+                Core::JSON::DecUInt32 result;
+                Core::ToString(buffer, length, false, stringBuffer);
+                message.Data = stringBuffer;
+                remoteObject.Invoke<Data::JSONDataBuffer, Core::JSON::DecUInt32>(3000, _T("send"), message, result);
+                return (result.Value());
+            };
+
+            Measure(_T("JSONRPC"), sizeof(swapPattern), swapPattern, implementation);
+            break;
+        }
+        case 'R': {
+            break;
+        }
+        case 'E': {
+            break;
+        }
+        default: {
+            break;
+        }
+        }
+    } while (measure != 'Q');
 }
 
 int main(int argc, char** argv)
@@ -368,28 +453,28 @@ int main(int argc, char** argv)
                     printf("Assigned the value of: %d to index 1\n", value.Value());
                 } else {
                     printf("Indexed property failed to set!!\n");                
-				}
+                }
                 break;
             }
             case 'B': {
-				// read readonly property
-				Core::JSON::String value;
-				uint32_t result = remoteObject.Get(1000, _T("status"), value);
-				printf("Read readonly propety from the remote object (result = %s): %s\n", Core::ErrorToString(result), value.Value().c_str());
-				// write readonly property -> should fail
-				value = (string(_T("Bogus")));
-				result = remoteObject.Set(1000, _T("status"), value);
-				printf("Write readonly propety from the remote object result: %s\n", Core::ErrorToString(result));
-				// write writeonly property 
-				value = (string(_T("<5>")));
-				result = remoteObject.Set(1000, _T("value"), value);
-				printf("Write writeonly propety from the remote object result: %s\n", Core::ErrorToString(result));
-				// read writeonly property -> should fail
-				result = remoteObject.Get(1000, _T("value"), value);
-				printf("Read writeonly propety from the remote object, result = %s\n", Core::ErrorToString(result));
-				break;
-			}
-			case 'I': {
+                // read readonly property
+                Core::JSON::String value;
+                uint32_t result = remoteObject.Get(1000, _T("status"), value);
+                printf("Read readonly propety from the remote object (result = %s): %s\n", Core::ErrorToString(result), value.Value().c_str());
+                // write readonly property -> should fail
+                value = (string(_T("Bogus")));
+                result = remoteObject.Set(1000, _T("status"), value);
+                printf("Write readonly propety from the remote object result: %s\n", Core::ErrorToString(result));
+                // write writeonly property
+                value = (string(_T("<5>")));
+                result = remoteObject.Set(1000, _T("value"), value);
+                printf("Write writeonly propety from the remote object result: %s\n", Core::ErrorToString(result));
+                // read writeonly property -> should fail
+                result = remoteObject.Get(1000, _T("value"), value);
+                printf("Read writeonly propety from the remote object, result = %s\n", Core::ErrorToString(result));
+                break;
+            }
+            case 'I': {
                 // Lets trigger some action on server side to get some feedback. The regular synchronous RPC call.
                 // The parameters:
                 // 1. [mandatory] Time to wait for the round trip to complete to the server to register.
@@ -494,7 +579,7 @@ int main(int argc, char** argv)
                 value = result.Get("height");
                 if (value.Content() == JsonValue::type::EMPTY) {
                     printf("<height> value not available\n");
-                } else if (value.Content() != JsonValue::type::NUMBER) {	
+                } else if (value.Content() != JsonValue::type::NUMBER) {
                     printf("<height> is expected to be a number but it is: %s\n", Core::EnumerateType<JsonValue::type>(value.Content()).Data());
                 } else {
                     printf("<height>: %d\n", static_cast<uint32_t>(value.Number()));
@@ -521,7 +606,7 @@ int main(int argc, char** argv)
             case 'C': {
                 if (remoteObject.Dispatch<Core::JSON::DecUInt8>(30000, "async", { 10, true }, &Handlers::async_callback) != Core::ERROR_NONE) {
                     printf("Something went wrong during the invoke\n");
-				}
+                }
                 break;
             }
             case 'G': {
@@ -539,13 +624,13 @@ int main(int argc, char** argv)
                 demoObject.ToString(serialized);
                 printf("The serialized values are: %s\n", serialized.c_str());
 
-				JsonObject newObject;
+                JsonObject newObject;
                 newObject = serialized;
                 string newString;
                 newObject.ToString(newString);
                 printf("The serialized values are [instantiated from the string, printed above]: %s\n", newString.c_str());
 
-				JsonObject otherObject = R"({"zoomSetting": "FULL", "SomethingElse": true, "Numbers": 123 })";
+                JsonObject otherObject = R"({"zoomSetting": "FULL", "SomethingElse": true, "Numbers": 123 })";
                 otherObject["member"] = 76;
                 string otherString;
                 otherObject.ToString(otherString);
@@ -553,56 +638,28 @@ int main(int argc, char** argv)
                 break;
             }
             case 'X':
-			{
-                if ((client.IsValid() == false) || (client->IsOpen() == false)) {
-                    printf("Can not measure the performance of COMRPC, there is no connection.\n");
-                } else {
-                    Core::StopWatch measurement;
-                    Exchange::IPerformance* perf = client->Aquire<Exchange::IPerformance>(2000, _T("JSONRPCPlugin"), ~0);
-                    if (perf == nullptr) {
-                        printf("Instantiation failed. An performance interface was not returned. It took: %lld ticks\n", measurement.Elapsed());
-                    } else {
-                        printf("Instantiating and retrieving the interface took: %lld ticks\n", measurement.Elapsed());
-
-						PerformanceFunction implementation = [perf](const uint16_t length, const uint8_t buffer[]) -> uint32_t {
-                            return (perf->Send(length, buffer));
-                        };
-
-                        Measure(_T("COMRPC"), sizeof(swapPattern), swapPattern, implementation);
-
-						perf->Release();
-                    }
-				}
+            {
+                MeasureCOMRPC(client);
                 break;
-			}
+            }
             case 'Y':
-			{
-                PerformanceFunction implementation = [&remoteObject](const uint16_t length, const uint8_t buffer[]) -> uint32_t {
-                    string stringBuffer;
-                    Data::JSONDataBuffer message;
-                    Core::JSON::DecUInt32 result;
-                    Core::ToString(buffer, length, false, stringBuffer);
-                    message.Data = stringBuffer;
-                    remoteObject.Invoke<Data::JSONDataBuffer, Core::JSON::DecUInt32>(3000, _T("send"), message, result);
-                    return (result.Value());
-                };
-
-                Measure(_T("JSONRPC"), sizeof(swapPattern), swapPattern, implementation);
+            {
+                MeasureJSONRPC(remoteObject);
                 break;
-			}
+            }
             case 'Z':
-			{
+            {
                 break;
-			}
+            }
             case 'L':
-			{
+            {
                 // !!!!!!!!! calling the clueless method on INTERFACE VERSION 1 !!!!!!!!!!!!!!!!!!!!!!!!!!
                 // Lets trigger some action on server side to get some feedback. The regular synchronous RPC call.
                 // The parameters:
                 // 1. [mandatory] Time to wait for the round trip to complete to the server to register.
                 // 2. [mandatory] Method name to call (See JSONRPCPlugin::JSONRPCPlugin - 14)
                 // 3. [mandatory] Parameters to be send to the other side.
-                // 4. [mandatory] Response to be received from the other side.
+                // 4. [mandatory] Response to be eeceived from the other side.
                 Core::JSON::String result;
                 result = _T("This should be an eche server on interface 1");
                 legacyObject.Invoke<Core::JSON::String, Core::JSON::String>(1000, _T("clueless"), result, result);
@@ -610,7 +667,7 @@ int main(int argc, char** argv)
                 break;
             }
             case '+':
-				// !!!!!!!!! Subscribing to events on INTERFACE VERSION 1 !!!!!!!!!!!!!!!!!!!!!!!!!!
+                // !!!!!!!!! Subscribing to events on INTERFACE VERSION 1 !!!!!!!!!!!!!!!!!!!!!!!!!!
                 // We have a handler, called Handlers::clock to handle the events coming from the Server.
                 // If we register this handler, it will also automatically be register this handler on the server side.
                 // The parameters:
@@ -640,8 +697,8 @@ int main(int argc, char** argv)
 
         } while (element != 'Q');
 
-		// We are done with the COMRPC connections, no need to create new ones.
-		client.Release();
+        // We are done with the COMRPC connections, no need to create new ones.
+        client.Release();
     }
 
     printf("Leaving app.\n");
