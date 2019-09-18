@@ -564,7 +564,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                       64)
                 , _adminLock()
                 , _state(UNKNOWN)
-                , _profile()
+                , _profile(true)
                 , _inputHandler(nullptr)
                 , _metadata()
                 , _command()
@@ -672,13 +672,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                     if (result == Core::ERROR_NONE) {
                         Bluetooth::Profile::Iterator index = _profile.Services();
                         while (index.Next() == true) {
-                            const TCHAR* name = index.Current().Name();
-                            if (name != nullptr) {
-                                TRACE(GATTFlow, (_T("Service discovered: %s"), name));
-                            }
-                            else {
-                                TRACE(GATTFlow, (_T("Service discovered: %04X"), index.Current().Type()));
-                            }
+                            TRACE(GATTFlow, (_T("Service discovered: %s"), index.Current().Name().c_str()));
                         }
                         Version();
                     }
