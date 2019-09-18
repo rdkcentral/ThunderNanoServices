@@ -280,7 +280,9 @@ namespace Plugin {
 
             return (result);
         }
-
+        inline bool IsEmpty() const {
+            return _keyIds.empty();
+        }
     private:
         uint8_t Base64(const uint8_t value[], const uint8_t sourceLength, uint8_t object[], const uint8_t length)
         {
