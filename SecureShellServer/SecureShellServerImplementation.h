@@ -49,6 +49,7 @@ namespace Plugin {
             uint32_t result = Core::ERROR_NONE;
 
 	    
+	     _adminLock.Lock();
 	    int32_t count = get_active_sessions_count();
             TRACE(Trace::Information, (_T("Get details of (%d)active SSH client sessions managed by Dropbear service"), count));
 
@@ -56,30 +57,51 @@ namespace Plugin {
 
 	    get_active_sessions_info(info, count);
 
+	    _clients.clear(); // Clear all elements before we re-populate it with new elements
+
 	    for(int32_t i=0; i<count; i++)
             {
 	            TRACE(Trace::Information, (_T("Count: %d index: %d pid: %d IP: %s Timestamp: %s"), 
 					    count, i, info[i].pid, info[i].ipaddress, info[i].timestamp));
 
-	            JsonData::SecureShellServer::SessioninfoResultData newElement;
-
-	            newElement.IpAddress = info[i].ipaddress;
-	            newElement.Pid = std::to_string(info[i].pid);
+/*	            JsonData::SecureShellServer::SessioninfoResultData newElement;
+	            
+		    newElement.IpAddress = info[i].ipaddress;
+	            newElement.RemoteId = std::to_string(i);
 		    newElement.TimeStamp = info[i].timestamp;
 
-        	    JsonData::SecureShellServer::SessioninfoResultData& element(response.Add(newElement));
+        	    JsonData::SecureShellServer::SessioninfoResultData& element(response.Add(newElement));*/
+
+		    ClientImpl newClient(info[i].ipaddress, info[i].timestamp, info[i].pid);
+
+		    _clients.push_back(newClient);
+		    response->Clients.Add().Set(newClient);
+
 	    }
 	    ::free(info);
+	    _adminLock.Unlock();
 
             return result;
         }
 
-        uint32_t CloseClientSession(const std::string& client_pid)
+        uint32_t CloseClientSession(const std::string& remote_id)
         {
             uint32_t result = Core::ERROR_NONE;
 
-            TRACE(Trace::Information, (_T("closing client session with PID: %s"), client_pid.c_str()));
-	    result = close_client_session(std::stoi(client_pid));
+            TRACE(Trace::Information, (_T("closing client session with PID: %s"), remote_id.c_str()));
+
+	    _adminLock.Lock();
+
+            for (std::list<DeviceImpl*>::iterator index = _devices.begin(), end = _devices.end(); index != end; ++index) 
+	    {
+                if(index.Current.RemoteId() == remote_id)
+		{
+	            result = close_client_session(remote_pid);
+	    	    _clients.erase(index.Current());
+                }
+            }
+
+            _adminLock.Unlock();
 
             return result;
         }

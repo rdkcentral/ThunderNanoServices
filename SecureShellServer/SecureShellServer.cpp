@@ -41,6 +41,12 @@ namespace Plugin {
     {
     }
 
+    /* virtual */ Exchange::ISecureShellServer::IClient::IIterator* SecureShellServer::Clients()
+    {
+        return (Core::Service<ClientImpl::IteratorImpl>::Create<ISecureShellServer::IClient::IIterator>(_clients));
+    }
+
+
     // GET	<- GetSessionsInfo
     // GET	<- GetSessionsCount
     // DELETE	<-CloseClientSession

@@ -51,9 +51,166 @@ namespace Plugin {
             Core::JSON::String InputParameters;
         };
 
+	class ClientImpl : public ISecureShellServer::IClient {
+        private:
+            ClientImpl() = delete;
+            ClientImpl(const ClientImpl&) = delete;
+            ClientImpl& operator=(const ClientImpl&) = delete;
+     
+            class JSON : public Core::JSON::Container {
+            private:
+                JSON& operator=(const JSON&);
+
+            public:
+                JSON()
+                    : Core::JSON::Container()
+                    , IpAddress()
+                    , TimeStamp()
+                    , RemoteId()
+                {
+                    Add(_T("ipaddress"), &IpAddress);
+                    Add(_T("timestamp"), &TimeStamp);
+                    Add(_T("remoteid"), &RemoteId);
+                }
+                JSON(const JSON& copy)
+                    : Core::JSON::Container()
+                    , IpAddress()
+                    , TimeStamp()
+                    , RemoteId()
+                {
+                    Add(_T("ipaddress"), &IpAddress);
+                    Add(_T("timestamp"), &TimeStamp);
+                    Add(_T("remoteid"), &RemoteId);
+                    IpAddress = copy.IpAddress;
+                    TimeStamp = copy.TimeStamp;
+                    RemoteId = copy.RemoteId;
+                }
+                virtual ~JSON()
+                {
+                }
+	    public:
+                JSON& Set(const ClientImpl* source)
+                {
+                    if (source != nullptr) {
+                        IpAddress = source->Address();
+                        TimeStamp = source->TimeStamp();
+                        RemoteId = source->RemoteId();
+                    } else {
+                        IpAddress.Clear();
+                        TimeStamp.Clear();
+                        RemoteId.Clear();
+                    }
+                    return (*this);
+                }
+                Core::JSON::String IpAddress;
+                Core::JSON::String TimeStamp;
+                Core::JSON::String RemoteId;
+            };
+
+            class IteratorImpl : public Exchange::ISecureShellServer::IClient::IIterator {
+            private:
+                IteratorImpl() = delete;
+                IteratorImpl(const IteratorImpl&) = delete;
+                IteratorImpl& operator=(const IteratorImpl&) = delete;
+
+
+            public:
+                IteratorImpl(const std::list<ClientImpl*>& container)
+                {
+                    std::list<ClientImpl*>::const_iterator index = container.begin();
+                    while (index != container.end()) {
+                        ISecureShellServer::IClient* element = (*index);
+                        element->AddRef();
+                        _list.push_back(element);
+                        index++;
+                    }
+                }
+                virtual ~IteratorImpl()
+                {
+                    while (_list.size() != 0) {
+                        _list.front()->Release();
+                        _list.pop_front();
+                    }
+                }
+
+            public:
+                virtual void Reset() override
+                {
+                    _index = 0;
+                }
+                virtual bool IsValid() const override
+                {
+                    return ((_index != 0) && (_index <= _list.size()));
+                }
+                virtual bool Next() override
+                {
+                    if (_index == 0) {
+                        _index = 1;
+                        _iterator = _list.begin();
+                    } else if (_index <= _list.size()) {
+                        _index++;
+                        _iterator++;
+                    }
+                    return (IsValid());
+                }
+                virtual ISecureShellServer::IClient* Current()
+                {
+                    ASSERT(IsValid() == true);
+                    ISecureShellServer::IClient* result = nullptr;
+                    result = (*_iterator);
+                    ASSERT(result != nullptr);
+                    result->AddRef();
+                    return (result);
+                }
+
+                BEGIN_INTERFACE_MAP(IteratorImpl)
+                INTERFACE_ENTRY(ISecureShellServer::IClient::IIterator)
+                END_INTERFACE_MAP
+
+            private:
+                uint32_t _index;
+                std::list<ISecureShellServer::IClient*> _list;
+                std::list<ISecureShellServer::IClient*>::iterator _iterator;
+            };
+        public:
+            ClientImpl(const string& ipaddress, const string& timestamp, const string& remoteid)
+                , _ipaddress(ipaddress)
+                , _timestamp(timestamp)
+                , _remoteid(remoteid)
+            {
+            }
+            ~ClientImpl()
+            {
+            }
+
+        public:
+            virtual string IpAddress() const override
+            {
+                return (_ipaddress);
+            }
+            virtual string TimeStamp() const override
+            {
+                return (_timestamp);
+            }
+            virtual string RemoteId() const override
+            {
+                return (_remoteid);
+            }
+            BEGIN_INTERFACE_MAP(ClientImpl)
+            INTERFACE_ENTRY(ISecureShellServer::IClient)
+            END_INTERFACE_MAP
+
+        private:
+            std::string _ipaddress;
+	    std::string _timestamp;
+	    std::string _remoteid;
+        };
+
     public:
         SecureShellServer()
 	: _skipURL(0)
+	, _adminLock()
+	, _clients()
 	, _InputParameters()
 	, _implementation()
         {
@@ -101,6 +258,8 @@ namespace Plugin {
 
         uint8_t _skipURL;
         std::string _InputParameters;
+	Core::CriticalSection _adminLock;
+	std::list<ClientImpl*> _clients;
     };
 
 } // namespace Plugin
