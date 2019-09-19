@@ -673,6 +673,11 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                         Bluetooth::Profile::Iterator index = _profile.Services();
                         while (index.Next() == true) {
                             TRACE(GATTFlow, (_T("Service discovered: %s"), index.Current().Name().c_str()));
+                            Bluetooth::Profile::Service::Iterator loop = index.Current().Characteristics();
+
+                            while (loop.Next() == true) {
+                                TRACE(GATTFlow, (_T("    Characteristic: %s"), loop.Current().Name().c_str()));
+                            }
                         }
                         Version();
                     }
