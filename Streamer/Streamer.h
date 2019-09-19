@@ -39,9 +39,9 @@ namespace Plugin {
                 {
                     _parent.StateChange(state);
                 }
-                void Event(const uint32_t eventid) override
+                void Event(const uint32_t eventId) override
                 {
-                    _parent.Event(eventid);
+                    _parent.StreamEvent(eventId);
                 }
 
                 BEGIN_INTERFACE_MAP(StreamSink)
@@ -87,9 +87,9 @@ namespace Plugin {
             {
                 _parent.StateChange(_index, state);
             }
-            void Event(const uint32_t eventid)
+            void StreamEvent(const uint32_t eventId)
             {
-                _parent.Event(_index, eventid);
+                _parent.StreamEvent(_index, eventId);
             }
 
         private:
@@ -122,9 +122,9 @@ namespace Plugin {
                 {
                     _parent.TimeUpdate(position);
                 }
-                void Event(const uint32_t eventid) override
+                void Event(const uint32_t eventId) override
                 {
-                    _parent.Event(eventid);
+                    _parent.ControlEvent(eventId);
                 }
 
                 BEGIN_INTERFACE_MAP(ControlSink)
@@ -162,9 +162,9 @@ namespace Plugin {
             {
                 _parent.TimeUpdate(_index, position);
             }
-            void Event(const uint32_t eventid)
+            void ControlEvent(const uint32_t eventId)
             {
-                _parent.ControlEvent(_index, eventid);
+                _parent.PlayerEvent(_index, eventId);
             }
 
          private:
@@ -347,28 +347,43 @@ namespace Plugin {
         {
             TRACE(Trace::Information, (_T("Stream [%d] moved state: [%s]"), index, Core::EnumerateType<Exchange::IStream::state>(state).Data()));
 
-            _service->Notify(_T("{ \"id\": ") + 
-                             Core::NumberType<uint8_t>(index).Text() + 
-                             _T(", \"stream\": \"") + 
-                             Core::EnumerateType<Exchange::IStream::state>(state).Data() + 
+            _service->Notify(_T("{ \"id\": ") +
+                             Core::NumberType<uint8_t>(index).Text() +
+                             _T(", \"stream\": \"") +
+                             Core::EnumerateType<Exchange::IStream::state>(state).Data() +
                              _T("\" }"));
             event_statechange(std::to_string(index), static_cast<JsonData::Streamer::StateType>(state));
         }
-        void Event(const uint8_t index, const uint32_t eventid)
-        {
-            TRACE(Trace::Information, (_T("Stream [%d] custom notification: [%08x]"), index, eventid));
-        }
-        void ControlEvent(const uint8_t index, const uint32_t eventid)
-        {
-            TRACE(Trace::Information, (_T("Stream [%d] custom control notification: [%08x]"), index, eventid));
-        }
         void TimeUpdate(const uint8_t index, const uint64_t position)
         {
-            _service->Notify(_T("{ \"id\": ") + 
-                             Core::NumberType<uint8_t>(index).Text() + 
-                             _T(", \"time\": ") + 
-                             Core::NumberType<uint64_t>(position).Text()+ _T(" }"));
+            _service->Notify(_T("{ \"id\": ") +
+                             Core::NumberType<uint8_t>(index).Text() +
+                            _T(", \"time\": ") +
+                            Core::NumberType<uint64_t>(position).Text() +
+                            _T(" }"));
             event_timeupdate(std::to_string(index), position);
+        }
+        void StreamEvent(const uint8_t index, const uint32_t eventId)
+        {
+            TRACE(Trace::Information, (_T("Stream [%d] custom notification: [%08x]"), index, eventId));
+
+            _service->Notify(_T("{ \"id\": ") +
+                             Core::NumberType<uint8_t>(index).Text() +
+                            _T(", \"stream_event\": \"") +
+                            Core::NumberType<uint32_t>(eventId).Text() +
+                            _T("\" }"));
+            event_stream(std::to_string(index), eventId);
+        }
+        void PlayerEvent(const uint8_t index, const uint32_t eventId)
+        {
+            TRACE(Trace::Information, (_T("Stream [%d] custom player notification: [%08x]"), index, eventId));
+
+            _service->Notify(_T("{ \"id\": ") +
+                             Core::NumberType<uint8_t>(index).Text() +
+                             _T(", \"player_event\": \"") +
+                             Core::NumberType<uint32_t>(eventId).Text() +
+                             _T("\" }"));
+            event_player(std::to_string(index), eventId);
         }
 
         // JsonRpc
@@ -391,9 +406,13 @@ namespace Plugin {
         uint32_t get_drm(const string& index, Core::JSON::EnumType<JsonData::Streamer::DrmType>& response) const;
         uint32_t get_state(const string& index, Core::JSON::EnumType<JsonData::Streamer::StateType>& response) const;
         uint32_t get_metadata(const string& index, Core::JSON::String& response) const;
+        uint32_t get_lasterror(const string& index, Core::JSON::DecUInt32& response) const;
+        uint32_t get_elements(const string& index, Core::JSON::ArrayType<JsonData::Streamer::StreamelementData>& response) const;
         void event_statechange(const string& id, const JsonData::Streamer::StateType& state);
         void event_drmchange(const string& id, const JsonData::Streamer::DrmType& drm);
         void event_timeupdate(const string& id, const uint64_t& time);
+        void event_stream(const string& id, const uint32_t& code);
+        void event_player(const string& id, const uint32_t& code);
 
     private:
         uint32_t _skipURL;

@@ -22,6 +22,8 @@ namespace Player {
             virtual void TimeUpdate(uint64_t position) = 0;
             virtual void DRM(uint32_t state) = 0;
             virtual void StateChange(Exchange::IStream::state newState) = 0;
+            virtual void StreamEvent(uint32_t eventId) = 0;
+            virtual void PlayerEvent(uint32_t eventId) = 0;
         };
 
         struct IPlayerPlatform {

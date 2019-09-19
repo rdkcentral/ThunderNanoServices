@@ -45,6 +45,14 @@ namespace Player {
                 {
                     _parent.StateChange(newState);
                 }
+                void StreamEvent(uint32_t eventId) override
+                {
+                    _parent.StreamEvent(eventId);
+                }
+                void PlayerEvent(uint32_t eventId) override
+                {
+                    _parent.PlayerEvent(eventId);
+                }
 
             private:
                 Frontend& _parent;
@@ -173,11 +181,20 @@ namespace Player {
                 INTERFACE_ENTRY(Exchange::IStream::IControl)
                 END_INTERFACE_MAP
 
-                inline void TimeUpdate(uint64_t position)
+                void TimeUpdate(uint64_t position)
                 {
                     _parent.Lock();
                     if (_callback != nullptr) {
                         _callback->TimeUpdate(position);
+                    }
+                    _parent.Unlock();
+                }
+
+                void Event(uint32_t eventId)
+                {
+                    _parent.Lock();
+                    if (_callback != nullptr) {
+                        _callback->Event(eventId);
                     }
                     _parent.Unlock();
                 }
@@ -326,8 +343,9 @@ namespace Player {
                 _adminLock.Unlock();
                 return (result);
             }
-            IStream::IElement::IIterator* Elements()
+            IStream::IElement::IIterator* Elements() override
             {
+                // TODO
                 return nullptr;
             }
 
@@ -344,6 +362,14 @@ namespace Player {
                 }
                 _adminLock.Unlock();
             }
+            void PlayerEvent(uint32_t code)
+            {
+                _adminLock.Lock();
+                if (_decoder != nullptr) {
+                    _decoder->Event(code);
+                }
+                _adminLock.Unlock();
+            }
             void DRM(uint32_t state)
             {
                 _adminLock.Lock();
@@ -357,6 +383,14 @@ namespace Player {
                 _adminLock.Lock();
                 if (_callback != nullptr) {
                     _callback->StateChange(newState);
+                }
+                _adminLock.Unlock();
+            }
+            void StreamEvent(uint32_t eventId)
+            {
+                _adminLock.Lock();
+                if (_callback != nullptr) {
+                    _callback->Event(eventId);
                 }
                 _adminLock.Unlock();
             }

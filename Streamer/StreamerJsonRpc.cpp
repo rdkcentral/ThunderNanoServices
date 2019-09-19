@@ -30,6 +30,8 @@ namespace Plugin {
         Property<Core::JSON::EnumType<DrmType>>(_T("drm"), &Streamer::get_drm, nullptr, this);
         Property<Core::JSON::EnumType<StateType>>(_T("state"), &Streamer::get_state, nullptr, this);
         Property<Core::JSON::String>(_T("metadata"), &Streamer::get_metadata, nullptr, this);
+        Property<Core::JSON::DecUInt32>(_T("lasterror"), &Streamer::get_lasterror, nullptr, this);
+        Property<Core::JSON::ArrayType<StreamelementData>>(_T("elements"), &Streamer::get_elements, nullptr, this);
     }
 
     void Streamer::UnregisterAll()
@@ -39,6 +41,8 @@ namespace Plugin {
         Unregister(_T("load"));
         Unregister(_T("destroy"));
         Unregister(_T("create"));
+        Unregister(_T("elements"));
+        Unregister(_T("lasterror"));
         Unregister(_T("metadata"));
         Unregister(_T("state"));
         Unregister(_T("drm"));
@@ -503,6 +507,36 @@ namespace Plugin {
         return result;
     }
 
+    // Property: lasterror - Most recent error code
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
+    uint32_t Streamer::get_lasterror(const string& index, Core::JSON::DecUInt32& response) const
+    {
+        uint32_t result = Core::ERROR_NONE;
+        const uint32_t& id = atoi(index.c_str());
+
+        Streams::const_iterator stream = _streams.find(id);
+        if (stream != _streams.end()) {
+            response = stream->second->LastError();
+        } else {
+            result = Core::ERROR_UNKNOWN_KEY;
+        }
+
+        return result;
+    }
+
+    // Property: elements - Stream elements
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
+    uint32_t Streamer::get_elements(const string& index, Core::JSON::ArrayType<StreamelementData>& response) const
+    {
+        // TODO
+
+        return Core::ERROR_UNAVAILABLE;
+    }
+
     // Event: statechange - Notifies of stream state change
     void Streamer::event_statechange(const string& id, const StateType& state)
     {
@@ -534,6 +568,30 @@ namespace Plugin {
         params.Time = time;
 
         Notify(_T("timeupdate"), params, [&](const string& designator) -> bool {
+            const string designator_id = designator.substr(0, designator.find('.'));
+            return (id == designator_id);
+        });
+    }
+
+    // Event: stream - Notifies of a custom stream incident
+    void Streamer::event_stream(const string& id, const uint32_t& code)
+    {
+        StreamParamsInfo params;
+        params.Code = code;
+
+        Notify(_T("stream"), params, [&](const string& designator) -> bool {
+            const string designator_id = designator.substr(0, designator.find('.'));
+            return (id == designator_id);
+        });
+    }
+
+    // Event: player - Notifies of a custom player incident
+    void Streamer::event_player(const string& id, const uint32_t& code)
+    {
+        StreamParamsInfo params;
+        params.Code = code;
+
+        Notify(_T("player"), params, [&](const string& designator) -> bool {
             const string designator_id = designator.substr(0, designator.find('.'));
             return (id == designator_id);
         });

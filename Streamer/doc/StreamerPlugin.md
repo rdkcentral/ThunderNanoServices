@@ -192,7 +192,7 @@ Destroys a stream instance.
 
 Loads a source into a stream.
 
-Also see: [s](#event.s), [t](#event.t), [a](#event.a), [t](#event.t), [e](#event.e), [c](#event.c), [h](#event.h), [a](#event.a), [n](#event.n), [g](#event.g), [e](#event.e)
+Also see: [statechange](#event.statechange)
 
 ### Parameters
 
@@ -358,6 +358,8 @@ Streamer interface properties:
 | [drm](#property.drm) <sup>RO</sup> | DRM type associated with a stream |
 | [state](#property.state) <sup>RO</sup> | Current state of a stream |
 | [metadata](#property.metadata) <sup>RO</sup> | Metadata associated with the stream |
+| [lasterror](#property.lasterror) <sup>RO</sup> | Most recent error code |
+| [elements](#property.elements) <sup>RO</sup> | Stream elements |
 
 <a name="property.speed"></a>
 ## *speed <sup>property</sup>*
@@ -368,13 +370,13 @@ Provides access to the playback speed.
 
 Speed (in percentage)
 
-Also see: [s](#event.s), [t](#event.t), [a](#event.a), [t](#event.t), [e](#event.e), [c](#event.c), [h](#event.h), [a](#event.a), [n](#event.n), [g](#event.g), [e](#event.e)
+Also see: [statechange](#event.statechange)
 
 ### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | number | Speed percentage; e.g.: 0 - pause, 100 - normal playback, -100 - rewind, -200 - reverse at twice the speed, 50 - forward at half speed, etc. Must be one of the speeds supported by the player |
+| (property) | number | Speed percentage; e.g.: 0 - pause, 100 - normal playback, -100 - rewind, -200 - reverse at twice the normal speed, 50 - forward at half speed, etc. Must be one of the speeds supported by the player |
 
 > The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.speed@0*.
 
@@ -743,7 +745,7 @@ Also see: [statechange](#event.statechange)
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *paused*, *playing*, *error*) |
+| (property) | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *controlled*, *error*) |
 
 > The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.state@0*.
 
@@ -770,7 +772,7 @@ Also see: [statechange](#event.statechange)
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "result": "playing"
+    "result": "controlled"
 }
 ```
 <a name="property.metadata"></a>
@@ -784,7 +786,7 @@ Provides access to the metadata associated with the stream.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Custom player-specific metadata |
+| (property) | string | Custom implementation-specific metadata |
 
 > The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.metadata@0*.
 
@@ -814,6 +816,95 @@ Provides access to the metadata associated with the stream.
     "result": ""
 }
 ```
+<a name="property.lasterror"></a>
+## *lasterror <sup>property</sup>*
+
+Provides access to the most recent error code.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | number | Custom implementation-specific error code value |
+
+> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.lasterror@0*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.lasterror@0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": 0
+}
+```
+<a name="property.elements"></a>
+## *elements <sup>property</sup>*
+
+Provides access to the stream elements.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | array | List of stream elements |
+| (property)[#] | object | Stream element |
+| (property)[#].type | string | Stream element type (must be one of the following: *video*, *audio*, *subtitles*, *teletext*, *data*) |
+
+> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.elements@0*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| 2 | ```ERROR_UNAVAILABLE``` | Stream elements retrieval not supported |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "Streamer.1.elements@0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": [
+        {
+            "type": "video"
+        }
+    ]
+}
+```
 <a name="head.Notifications"></a>
 # Notifications
 
@@ -828,6 +919,8 @@ Streamer interface events:
 | [statechange](#event.statechange) | Notifies of stream state change |
 | [drmchange](#event.drmchange) | Notifies of stream DRM system change |
 | [timeupdate](#event.timeupdate) | Notifies of stream position change |
+| [stream](#event.stream) | Notifies of a custom stream incident |
+| [player](#event.player) | Notifies of a custom player incident |
 
 <a name="event.statechange"></a>
 ## *statechange <sup>event</sup>*
@@ -839,7 +932,7 @@ Notifies of stream state change.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.state | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *paused*, *playing*, *error*) |
+| params.state | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *controlled*, *error*) |
 
 > The *Stream ID* shall be passed within the designator, e.g. *0.client.events.1*.
 
@@ -850,7 +943,7 @@ Notifies of stream state change.
     "jsonrpc": "2.0", 
     "method": "0.client.events.1.statechange", 
     "params": {
-        "state": "playing"
+        "state": "controlled"
     }
 }
 ```
@@ -882,7 +975,7 @@ Notifies of stream DRM system change.
 <a name="event.timeupdate"></a>
 ## *timeupdate <sup>event</sup>*
 
-Notifies of stream position change. This event is fired every second to indicate that the stream has progressed by a second, and event does not fire, if the stream is in paused state.
+Notifies of stream position change. This event is fired every second to indicate that the stream has progressed by a second. It does not fire if the stream is paused (i.e. speed of 0).
 
 ### Parameters
 
@@ -901,6 +994,56 @@ Notifies of stream position change. This event is fired every second to indicate
     "method": "0.client.events.1.timeupdate", 
     "params": {
         "time": 30
+    }
+}
+```
+<a name="event.stream"></a>
+## *stream <sup>event</sup>*
+
+Notifies of a custom stream incident.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.code | number | Implementation-specific incident code |
+
+> The *Stream ID* shall be passed within the designator, e.g. *0.client.events.1*.
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "method": "0.client.events.1.stream", 
+    "params": {
+        "code": 1
+    }
+}
+```
+<a name="event.player"></a>
+## *player <sup>event</sup>*
+
+Notifies of a custom player incident.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.code | number | Implementation-specific incident code |
+
+> The *Stream ID* shall be passed within the designator, e.g. *0.client.events.1*.
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "method": "0.client.events.1.player", 
+    "params": {
+        "code": 1
     }
 }
 ```

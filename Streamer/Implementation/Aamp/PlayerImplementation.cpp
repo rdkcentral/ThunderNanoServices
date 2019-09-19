@@ -83,6 +83,7 @@ namespace Implementation {
                         default:
                             break;
                         }
+                        _player->PlayerEvent(event.data.stateChanged.state);
                         break;
                     case AAMP_EVENT_TUNED:
                         TRACE(Trace::Information, (_T("AAMP_EVENT_TUNED")));
@@ -113,6 +114,10 @@ namespace Implementation {
                         break;
                     default:
                         break;
+                    }
+
+                    if ((event.type != AAMP_EVENT_STATE_CHANGED) && (event.type != AAMP_EVENT_PROGRESS)) {
+                        _player->StreamEvent(event.type);
                     }
                 }
 
@@ -501,6 +506,23 @@ namespace Implementation {
                 _adminLock.Unlock();
             }
 
+            void StreamEvent(uint32_t eventId)
+            {
+                _adminLock.Lock();
+                if (_callback != nullptr) {
+                    _callback->StreamEvent(eventId);
+                }
+                _adminLock.Unlock();
+            }
+
+            void PlayerEvent(uint32_t eventId)
+            {
+                _adminLock.Lock();
+                if (_callback != nullptr) {
+                    _callback->PlayerEvent(eventId);
+                }
+                _adminLock.Unlock();
+            }
 
         private:
             void Stop()

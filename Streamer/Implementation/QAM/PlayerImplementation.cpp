@@ -291,6 +291,18 @@ namespace Implementation {
                     _callback->StateChange(_state);
                 }
             }
+            void StreamEvent(uint32_t eventId)
+            {
+                if (_callback != nullptr) {
+                    _callback->StreamEvent(eventId);
+                }
+            }
+            void PlayerEvent(uint32_t eventId)
+            {
+                if (_callback != nullptr) {
+                    _callback->PlayerEvent(eventId);
+                }
+            }
 
         private:
             Exchange::IStream::state _state;
