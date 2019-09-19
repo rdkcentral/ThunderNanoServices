@@ -131,20 +131,42 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
     // -------------------------------------------------------------------------------------------------------
     /* virtual */ uint32_t JSONRPCPlugin::Send(const uint16_t sendSize, const uint8_t buffer[])
     {
-        printf("Received a send for size: %d\n", sendSize);
-        uint32_t result = 0;
+        uint32_t result = Core::ERROR_NONE;
         return (result);
     }
-
     /* virtual */ uint32_t JSONRPCPlugin::Receive(uint16_t & bufferSize, uint8_t buffer[]) const
     {
-        uint32_t result = 0;
+        static uint8_t pattern[] = { 0x00, 0x66, 0xBB, 0xEE };
+        uint32_t result = Core::ERROR_NONE;
+        uint8_t patternLength = sizeof(pattern);
+        uint16_t index = 0;
+        uint8_t patternIndex = 0;
+
+        while (index < bufferSize) {
+
+            buffer[index++] = pattern[patternIndex++];
+
+            patternIndex %= (patternLength - 1);
+        }
+
         return (result);
     }
 
     /* virtual */ uint32_t JSONRPCPlugin::Exchange(uint16_t & bufferSize, uint8_t buffer[], const uint16_t maxBufferSize)
     {
-        uint32_t result = 0;
+        uint32_t result = Core::ERROR_NONE;
+        static uint8_t pattern[] = { 0x00, 0x77, 0xCC, 0x88 };
+        uint8_t patternLength = sizeof(pattern);
+        uint16_t index = 0;
+        uint8_t patternIndex = 0;
+
+        while (index < maxBufferSize) {
+
+            buffer[index++] = pattern[patternIndex++];
+
+            patternIndex %= (patternLength - 1);
+        }
+
         return (result);
     }
 

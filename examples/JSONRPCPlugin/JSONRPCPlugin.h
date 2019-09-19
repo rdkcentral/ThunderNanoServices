@@ -89,7 +89,7 @@ namespace Plugin {
                     // Allright, respond with the interface.
                     result = _parentInterface;
 
-					printf("Pointer => %p\n", result);
+                    printf("Pointer => %p\n", result);
                 }
                 return (result);
             }
@@ -252,17 +252,17 @@ namespace Plugin {
             return (Core::ERROR_NONE);
         }
         uint32_t get_status(Core::JSON::String& data) const
-		{
-			data.SetQuoted(true);
-			data = "Readonly value retrieved";
-			return (Core::ERROR_NONE);
-		}
-		uint32_t set_value(const Core::JSON::String& data)
-		{
-			_data = data.Value();
-			return (Core::ERROR_NONE);
-		}
-		uint32_t swap(const JsonObject& parameters, JsonObject& response)
+        {
+            data.SetQuoted(true);
+            data = "Readonly value retrieved";
+            return (Core::ERROR_NONE);
+        }
+        uint32_t set_value(const Core::JSON::String& data)
+        {
+            _data = data.Value();
+            return (Core::ERROR_NONE);
+        }
+        uint32_t swap(const JsonObject& parameters, JsonObject& response)
         {
             response = JsonObject({ { "x", 111 }, { "y", 222 }, { "width", _window.Width }, { "height", _window.Height } });
 
