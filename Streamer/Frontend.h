@@ -2,6 +2,7 @@
 
 #include "Module.h"
 #include "Geometry.h"
+#include "Element.h"
 #include "PlayerPlatform.h"
 #include "Administrator.h"
 
@@ -208,6 +209,7 @@ namespace Player {
                 IControl::ICallback* _callback;
             };
 
+
         public:
             Frontend(Administrator* administration, IPlayerPlatform* player)
                 : _refCount(1)
@@ -217,6 +219,7 @@ namespace Player {
                 , _callback(nullptr)
                 , _sink(this)
                 , _player(player)
+                , _elements()
             {
                 ASSERT(_administrator != nullptr);
                 ASSERT(_player != nullptr);
@@ -226,6 +229,7 @@ namespace Player {
             ~Frontend() override
             {
                 ASSERT(_decoder == nullptr);
+                ReleaseElements();
                 if (_decoder != nullptr) {
                     TRACE_L1("Forcefull destruction of a stream. Forcefully removing decoder: %d", __LINE__);
                     delete _decoder;
@@ -345,8 +349,13 @@ namespace Player {
             }
             IStream::IElement::IIterator* Elements() override
             {
-                // TODO
-                return nullptr;
+                Exchange::IStream::IElement::IIterator* iter = nullptr;
+                _adminLock.Lock();
+                if (_elements.empty() == false) {
+                    iter = Core::Service<Implementation::ElementIterator>::Create<Exchange::IStream::IElement::IIterator>(_elements);
+                }
+                _adminLock.Unlock();
+                return iter;
             }
 
             BEGIN_INTERFACE_MAP(Frontend)
@@ -384,6 +393,9 @@ namespace Player {
                 if (_callback != nullptr) {
                     _callback->StateChange(newState);
                 }
+                if (newState == Exchange::IStream::Controlled) {
+                    PopulateElements();
+                }
                 _adminLock.Unlock();
             }
             void StreamEvent(uint32_t eventId)
@@ -412,13 +424,32 @@ namespace Player {
             {
                 return (_player);
             }
-            inline void Lock() const
+            void Lock() const
             {
                 _adminLock.Lock();
             }
-            inline void Unlock() const
+            void Unlock() const
             {
                 _adminLock.Unlock();
+            }
+
+            // Helper functions, not interlocked
+            void PopulateElements()
+            {
+                ReleaseElements();
+                auto& elements = _player->Elements();
+                for (auto& elem : elements) {
+                    _elements.push_back(Core::Service<Implementation::Element>::Create<Implementation::Element>(elem));
+                }
+            }
+            void ReleaseElements()
+            {
+                if (_elements.empty() == false) {
+                    for (auto& elem : _elements) {
+                        elem->Release();
+                    }
+                    _elements.clear();
+                }
             }
 
         private:
@@ -429,6 +460,7 @@ namespace Player {
             IStream::ICallback* _callback;
             CallbackImplementation _sink;
             IPlayerPlatform* _player;
+            std::list<Implementation::Element*> _elements;
         };
 
     } // Implementation

@@ -3,6 +3,7 @@
 #include <Module.h>
 #include <interfaces/IStream.h>
 #include "Geometry.h"
+#include "Element.h"
 
 #include <vector>
 #include <set>
@@ -60,6 +61,8 @@ namespace Player {
 
             virtual uint32_t Order() const = 0;
             virtual void Order(const uint32_t order) = 0;
+
+            virtual const std::list<ElementInfo>& Elements() const = 0;
         };
 
         struct IPlayerPlatformFactory {

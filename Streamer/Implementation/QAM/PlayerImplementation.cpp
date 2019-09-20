@@ -261,6 +261,10 @@ namespace Implementation {
 
                 return (result);
             }
+            const std::list<ElementInfo>& Elements() const override
+            {
+                return _elements;
+            }
             void StateChange() {
                 ASSERT(_player != nullptr);
 
@@ -318,6 +322,8 @@ namespace Implementation {
             uint64_t _end;
             Rectangle _rectangle;
             uint32_t _z;
+
+            std::list<ElementInfo> _elements;
 
             ICallback* _callback;
             Broadcast::ITuner* _player;

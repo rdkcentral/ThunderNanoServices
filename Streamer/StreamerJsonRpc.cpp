@@ -363,7 +363,7 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
         const uint32_t& id = atoi(index.c_str());
 
-        Streams::iterator stream = _streams.find(id);
+        Streams::const_iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
             Controls::iterator control = _controls.find(id);
             if (control != _controls.end()) {
@@ -391,12 +391,10 @@ namespace Plugin {
 
         Streams::const_iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
-
             Controls::const_iterator control = _controls.find(id);
             if (control != _controls.end()) {
                 RPC::IValueIterator* iterator = control->second->Speeds();
                 if (iterator != nullptr) {
-
                     uint32_t currentElement;
 
                     while (iterator->Next(currentElement) == true) {
@@ -530,11 +528,53 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
+    //  - ERROR_UNAVAILABLE: Elements retrieval not supported
     uint32_t Streamer::get_elements(const string& index, Core::JSON::ArrayType<StreamelementData>& response) const
     {
-        // TODO
+        uint32_t result = Core::ERROR_NONE;
+        const uint32_t& id = atoi(index.c_str());
 
-        return Core::ERROR_UNAVAILABLE;
+        Streams::iterator stream = const_cast<Streamer*>(this)->_streams.find(id);
+        if (stream != _streams.end()) {
+            Exchange::IStream::IElement::IIterator* iter = stream->second->Elements();
+            if (iter != nullptr) {
+                while (iter->Next()) {
+                    Exchange::IStream::IElement* element = iter->Current();
+                    if (element != nullptr) {
+                        StreamelementData streamElement;
+                        switch(element->Type())
+                        {
+                            case Exchange::IStream::IElement::Audio:
+                                streamElement.Type = StreamelementData::ElementType::AUDIO;
+                                break;
+                            case Exchange::IStream::IElement::Video:
+                                streamElement.Type = StreamelementData::ElementType::VIDEO;
+                                break;
+                            case Exchange::IStream::IElement::Subtitles:
+                                streamElement.Type = StreamelementData::ElementType::SUBTITLES;
+                                break;
+                            case Exchange::IStream::IElement::Teletext:
+                                streamElement.Type = StreamelementData::ElementType::TELETEXT;
+                                break;
+                            default:
+                                streamElement.Type = StreamelementData::ElementType::DATA;
+                                break;
+                        }
+                        response.Add(streamElement);
+                        element->Release();
+                    }
+                }
+
+                iter->Release();
+            }
+            else {
+                result = Core::ERROR_UNAVAILABLE;
+            }
+        } else {
+            result = Core::ERROR_UNKNOWN_KEY;
+        }
+
+        return result;
     }
 
     // Event: statechange - Notifies of stream state change

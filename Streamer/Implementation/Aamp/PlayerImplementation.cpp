@@ -74,7 +74,6 @@ namespace Implementation {
                             break;
                         case eSTATE_PAUSED:
                         case eSTATE_PLAYING:
-                            _player->StateChange(Exchange::IStream::Controlled);
                             break;
                         case eSTATE_ERROR:
                             _player->StateChange(Exchange::IStream::Error);
@@ -87,6 +86,7 @@ namespace Implementation {
                         break;
                     case AAMP_EVENT_TUNED:
                         TRACE(Trace::Information, (_T("AAMP_EVENT_TUNED")));
+                        _player->StateChange(Exchange::IStream::Controlled);
                         break;
                     case AAMP_EVENT_TUNE_FAILED:
                         TRACE(Trace::Information, (_T("AAMP_EVENT_TUNE_FAILED")));
@@ -94,23 +94,70 @@ namespace Implementation {
                         _player->SetError(event.data.mediaError.code);
                         /* this never seems to trigger... */
                         break;
-                    case AAMP_EVENT_DRM_METADATA:
-                        TRACE(Trace::Information, (_T("AAMP_EVENT_DRM_METADATA")));
+                    case AAMP_EVENT_SPEED_CHANGED:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_SPEED_CHANGED")));
+                        _player->UpdateSpeed(event.data.speedChanged.rate * 100);
                         break;
                     case AAMP_EVENT_EOS:
                         TRACE(Trace::Information, (_T("AAMP_EVENT_EOS")));
                         _player->Position(0);
                         _player->Speed(0);
                         break;
-                    case AAMP_EVENT_PROGRESS:
-                        /* TODO: Use this for progress notifications. */
+                    case AAMP_EVENT_PLAYLIST_INDEXED:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_PLAYLIST_INDEXED")));
                         break;
-                    case AAMP_EVENT_SPEED_CHANGED:
-                        TRACE(Trace::Information, (_T("AAMP_EVENT_SPEED_CHANGED")));
-                        _player->UpdateSpeed(event.data.speedChanged.rate * 100);
+                    case AAMP_EVENT_PROGRESS:
+                        break;
+                    case AAMP_EVENT_CC_HANDLE_RECEIVED:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_CC_HANDLE_RECEIVED")));
+                        break;
+                    case AAMP_EVENT_JS_EVENT:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_JS_EVENT")));
+                        break;
+                    case AAMP_EVENT_MEDIA_METADATA:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_MEDIA_METADATA")));
+                        {
+                            std::list<ElementInfo> elements;
+                            if ((event.data.metadata.width > 0) && (event.data.metadata.height > 0)) {
+                                TRACE(Trace::Information, (_T("Video track: %ix%i"), event.data.metadata.width, event.data.metadata.height));
+                                elements.emplace_back(Exchange::IStream::IElement::Video);
+                            }
+                            for (int i = 0; i < event.data.metadata.languageCount; i++) {
+                                TRACE(Trace::Information, (_T("Audio track %i: '%s'"), i, event.data.metadata.languages[i]));
+                                elements.emplace_back(Exchange::IStream::IElement::Audio);
+                            }
+                            _player->SetElements(elements);
+                        }
+                        break;
+                    case AAMP_EVENT_ENTERING_LIVE:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_ENTERING_LIVE")));
                         break;
                     case AAMP_EVENT_BITRATE_CHANGED:
                         TRACE(Trace::Information, (_T("AAMP_EVENT_BITRATE_CHANGED")));
+                        break;
+                    case AAMP_EVENT_TIMED_METADATA:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_TIMED_METADATA")));
+                        break;
+                    case AAMP_EVENT_SPEEDS_CHANGED:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_SPEEDS_CHANGED")));
+                        break;
+                    case AAMP_EVENT_BUFFERING_CHANGED:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_BUFFERING_CHANGED")));
+                        break;
+                    case AAMP_EVENT_DURATION_CHANGED:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_DURATION_CHANGED")));
+                        break;
+                    case AAMP_EVENT_AUDIO_TRACKS_CHANGED:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_AUDIO_TRACKS_CHANGED")));
+                        break;
+                    case AAMP_EVENT_TEXT_TRACKS_CHANGED:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_TEXT_TRACKS_CHANGED")));
+                        break;
+                    case AAMP_EVENT_DRM_METADATA:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_DRM_METADATA")));
+                        break;
+                    case AAMP_EVENT_REPORT_ANOMALY:
+                        TRACE(Trace::Information, (_T("AAMP_EVENT_REPORT_ANOMALY")));
                         break;
                     default:
                         break;
@@ -196,8 +243,9 @@ namespace Implementation {
                         _speeds.push_back(index.Current().Value());
                     }
                 } else {
+                    /* TODO: pick this up from AAMP */
                     int32_t speeds[] = { 100, -100, 200, -200, 400, -400, 800, -800, 1600, -1600, 3200, -3200};
-                _speeds.assign(std::begin(speeds), std::end(speeds));
+                    _speeds.assign(std::begin(speeds), std::end(speeds));
                 }
 
                 _rectangle.X = 0;
@@ -289,6 +337,8 @@ namespace Implementation {
             uint32_t DetachDecoder(const uint8_t index VARIABLE_IS_NOT_USED) override
             {
                 Terminate();
+
+                StateChange(Exchange::IStream::Prepared);
 
                 return Core::ERROR_NONE;
             }
@@ -450,11 +500,16 @@ namespace Implementation {
                 return (z);
             }
 
-            inline void Order(const uint32_t order) override
+            void Order(const uint32_t order) override
             {
                 _adminLock.Lock();
                 _z = order;
                 _adminLock.Unlock();
+            }
+
+            const std::list<ElementInfo>& Elements() const override
+            {
+                return _elements;
             }
 
             // Thread overrides
@@ -521,6 +576,13 @@ namespace Implementation {
                 if (_callback != nullptr) {
                     _callback->PlayerEvent(eventId);
                 }
+                _adminLock.Unlock();
+            }
+
+            void SetElements(const std::list<ElementInfo>& elements)
+            {
+                _adminLock.Lock();
+                _elements = elements;
                 _adminLock.Unlock();
             }
 
@@ -610,6 +672,8 @@ namespace Implementation {
             uint32_t _z;
             Rectangle _rectangle;
             uint8_t _index;
+
+            std::list<ElementInfo> _elements;
 
             ICallback* _callback;
 
