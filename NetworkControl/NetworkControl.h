@@ -5,7 +5,7 @@
 #include "Module.h"
 
 #include <interfaces/IIPNetwork.h>
-#include <interfaces/json/JsonData_NetworkControl.h>
+#include <interfaces/json/JsonData_NetworkControl.h> 
 
 namespace WPEFramework {
 namespace Plugin {
@@ -184,11 +184,13 @@ namespace Plugin {
                 , Interfaces()
                 , DNS()
                 , TimeOut(5)
+                , Retries(4)
                 , Open(true)
             {
                 Add(_T("dnsfile"), &DNSFile);
                 Add(_T("interfaces"), &Interfaces);
                 Add(_T("timeout"), &TimeOut);
+                Add(_T("retries"), &Retries);
                 Add(_T("open"), &Open);
                 Add(_T("dns"), &DNS);
             }
@@ -201,6 +203,7 @@ namespace Plugin {
             Core::JSON::ArrayType<Entry> Interfaces;
             Core::JSON::ArrayType<Core::JSON::String> DNS;
             Core::JSON::DecUInt8 TimeOut;
+            Core::JSON::DecUInt8 Retries;
             Core::JSON::Boolean Open;
         };
 
@@ -275,8 +278,7 @@ namespace Plugin {
             Core::NodeId _broadcast;
             DHCPClientImplementation::Offer _offer;
         };
-
-        class DHCPEngine : public Core::IDispatch, public DHCPClientImplementation::ICallback {
+        class DHCPEngine : public Core::IDispatch {
         private:
             DHCPEngine() = delete;
             DHCPEngine(const DHCPEngine&) = delete;
@@ -286,14 +288,24 @@ namespace Plugin {
             DHCPEngine(NetworkControl* parent, const string& interfaceName, const string& persistentStoragePath)
                 : _parent(*parent)
                 , _retries(0)
-                , _client(interfaceName, this, persistentStoragePath)
+                , _client(interfaceName, std::bind(&DHCPEngine::NewOffer, this, std::placeholders::_1), 
+                          std::bind(&DHCPEngine::RequestResult, this, std::placeholders::_1, std::placeholders::_2))
+                , leaseFile(persistentStoragePath + _client.Interface() + ".json")
             {
+
+                // Make sure that lease file exists
+                if ((persistentStoragePath.empty() == false) && (leaseFile.Exists() == false)) {
+                    leaseFile.Create();
+                }
             }
             ~DHCPEngine()
             {
             }
-
         public:
+            // Permanent IP storage
+            void SaveLeases();
+            void LoadLeases();
+
             inline DHCPClientImplementation::classifications Classification() const
             {
                 return (_client.Classification());
@@ -302,63 +314,125 @@ namespace Plugin {
             {
                 return (Discover(Core::NodeId()));
             }
+
             inline uint32_t Discover(const Core::NodeId& preferred)
             {
-
+                ResetWatchdog();
                 uint32_t result = _client.Discover(preferred);
-                Core::Time entry(Core::Time::Now().Add(_parent.ResponseTime() * 1000));
-                Core::ProxyType<Core::IDispatch> job(*this);
-
-                if (result == Core::ERROR_NONE) {
-
-                    _retries = _parent.ResponseTime() + 1;
-
-                    // Submit a job, as watchdog.
-                    PluginHost::WorkerPool::Instance().Schedule(entry, job);
-                }
 
                 return (result);
             }
-            inline void Acknowledge(const Core::NodeId& selected)
+
+            void GetIP() 
             {
-                _client.Request(selected);
-                // Don't know if there is still a timer pending, but lets kill it..
-                CleanUp();
+                return (GetIP(Core::NodeId()));
             }
 
-            inline void CleanUp()
+            void GetIP(const Core::NodeId& preferred)
             {
-                PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(*this));
+
+                auto offerIterator = _client.Offers(false);
+                if (offerIterator.Next() == true) {
+                    Request(offerIterator.Current());
+                } else {
+                    Discover(preferred);
+                }
             }
+
+            void NewOffer(DHCPClientImplementation::Offer& offer) {
+                if (_parent.NewOffer(_client.Interface(), offer) == true) {
+                    Request(offer);
+                }
+            }
+
+            void RequestResult(DHCPClientImplementation::Offer& offer, bool result) {
+                StopWatchdog();
+
+                if (result == true) {
+                    _parent.RequestAccepted(_client.Interface(), offer);
+                } else {
+                    _parent.RequestFailed(_client.Interface(), offer);
+                }
+            }
+
+            inline void Request(DHCPClientImplementation::Offer& offer) {
+
+                ResetWatchdog();
+                _client.Request(offer);
+            }
+
             inline void Completed()
             {
                 _client.Completed();
             }
-            inline DHCPClientImplementation::Iterator Offers() const
+            inline DHCPClientImplementation::Iterator Offers(bool leased)
             {
-                return (_client.Offers());
+                return (_client.Offers(leased));
             }
-            virtual void Dispatch(const string& name) override
+            inline void RemoveOffer(DHCPClientImplementation::Offer& offer, bool leased) 
             {
-                _parent.Update(name);
+                _client.RemoveOffer(offer, leased);
             }
+
+            void SetupWatchdog() 
+            {
+                const uint16_t responseMS = _parent.ResponseTime() * 1000;
+                Core::Time entry(Core::Time::Now().Add(responseMS));
+                _retries = _parent.Retries();
+
+                Core::ProxyType<Core::IDispatch> job(*this);    
+
+                // Submit a job, as watchdog.
+                PluginHost::WorkerPool::Instance().Schedule(entry, job);
+            }
+
+            inline void StopWatchdog() 
+            {
+                PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(*this));
+            }
+
+            inline void ResetWatchdog() 
+            {
+                StopWatchdog();
+                SetupWatchdog();
+            }
+
+            void CleanUp() 
+            {
+                StopWatchdog();
+                _client.Completed();
+            }
+
             virtual void Dispatch() override
             {
-
                 if (_retries > 0) {
-
-                    Core::Time entry(Core::Time::Now().Add(1000));
+                    const uint16_t responseMS = _parent.ResponseTime() * 1000;
+                    Core::Time entry(Core::Time::Now().Add(responseMS));
                     Core::ProxyType<Core::IDispatch> job(*this);
 
                     _retries--;
-
                     _client.Resend();
 
-                    // Submit a job, as watchdog.
+                    // Schedule next retry
                     PluginHost::WorkerPool::Instance().Schedule(entry, job);
                 } else {
+                    if (_client.Classification() == DHCPClientImplementation::CLASSIFICATION_DISCOVER) {
 
-                    _parent.Expired(_client.Interface());
+                        // No acceptable offer found
+                        _parent.NoOffers(_client.Interface());
+                    } else if (_client.Classification() == DHCPClientImplementation::CLASSIFICATION_REQUEST) {
+
+                        // Request left without repsonse
+                        DHCPClientImplementation::Iterator offer = _client.CurrentlyRequestedOffer();
+                        if (offer.IsValid()) {
+                            // Remove unresponsive offer from potential candidates
+                            DHCPClientImplementation::Offer copy = offer.Current(); 
+                            _client.RemoveOffer(offer.Current(), false);
+                            
+                            // Inform controller that request failed
+                            _parent.RequestFailed(_client.Interface(), copy);
+                        }
+                    }
                 }
             }
 
@@ -366,6 +440,7 @@ namespace Plugin {
             NetworkControl& _parent;
             uint8_t _retries;
             DHCPClientImplementation _client;
+            Core::File leaseFile;
         };
 
     private:
@@ -407,16 +482,18 @@ namespace Plugin {
     private:
         uint32_t Reload(const string& interfaceName, const bool dynamic);
         uint32_t SetIP(Core::AdapterIterator& adapter, const Core::IPNode& ipAddress, const Core::NodeId& gateway, const Core::NodeId& broadcast);
-        void Update(const string& interfaceName);
-        void Expired(const string& interfaceName);
+        bool NewOffer(const string& interfaceName, DHCPClientImplementation::Offer& offer);
+        void RequestAccepted(const string& interfaceName, DHCPClientImplementation::Offer& offer);
+        void RequestFailed(const string& interfaceName, DHCPClientImplementation::Offer& offer);
+        void NoOffers(const string& interfaceName);
         void RefreshDNS();
         void Activity(const string& interface);
         uint16_t DeleteSection(Core::DataElementFile& file, const string& startMarker, const string& endMarker);
-        uint8_t ResponseTime() const
+        inline uint8_t ResponseTime() const
         {
             return (_responseTime);
         }
-        uint8_t Retries() const
+        inline uint8_t Retries() const
         {
             return (_retries);
         }
