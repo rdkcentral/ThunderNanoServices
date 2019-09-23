@@ -99,6 +99,7 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
+    //  - ERROR_INPROGRESS: Stream is in use
     uint32_t Streamer::endpoint_destroy(const IdInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
@@ -112,7 +113,7 @@ namespace Plugin {
                 if (relResult == Core::ERROR_DESTRUCTION_SUCCEEDED) {
                     _controls.erase(control);
                 } else {
-                    result == Core::ERROR_INPROGRESS;
+                    result = Core::ERROR_INPROGRESS;
                 }
             }
 
