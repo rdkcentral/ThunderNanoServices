@@ -1,4 +1,3 @@
-
 // Note: This code is inherently not thread safe. If required, proper synchronisation must be added.
 
 #include <interfaces/json/JsonData_SecureShellServer.h>
@@ -6,14 +5,11 @@
 #include "Module.h"
 
 namespace WPEFramework {
-
 namespace Plugin {
 
     using namespace JsonData::SecureShellServer;
 
     // Registration
-    //
-
     void SecureShellServer::RegisterAll()
     {
 	Register<void, Core::JSON::DecUInt32>(_T("getactivesessionscount"), &SecureShellServer::endpoint_getactivesessionscount, this);
@@ -29,7 +25,6 @@ namespace Plugin {
     }
 
     // API implementation
-    //
     
     // Property: 
     // Return codes:
@@ -79,8 +74,6 @@ namespace Plugin {
         return result;
     }
 
-
 } // namespace Plugin
-
 } // namespace WPEFramework
 

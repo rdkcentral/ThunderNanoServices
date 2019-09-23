@@ -4,7 +4,8 @@
 #include <interfaces/ISecureShellServer.h>
 #include <interfaces/json/JsonData_SecureShellServer.h>
 
-#include "SecureShellServerImplementation.h"
+#include <libdropbear.h>
+
 
 namespace WPEFramework {
 namespace Plugin {
@@ -174,7 +175,7 @@ namespace Plugin {
             };
         public:
             ClientImpl(const string& ipaddress, const string& timestamp, const string& remoteid)
-                , _ipaddress(ipaddress)
+                : _ipaddress(ipaddress)
                 , _timestamp(timestamp)
                 , _remoteid(remoteid)
             {
@@ -184,15 +185,15 @@ namespace Plugin {
             }
 
         public:
-            virtual string IpAddress() const override
+            virtual string IpAddress() const
             {
                 return (_ipaddress);
             }
-            virtual string TimeStamp() const override
+            virtual string TimeStamp() const
             {
                 return (_timestamp);
             }
-            virtual string RemoteId() const override
+            virtual string RemoteId() const
             {
                 return (_remoteid);
             }
@@ -202,17 +203,16 @@ namespace Plugin {
 
         private:
             std::string _ipaddress;
-	    std::string _timestamp;
-	    std::string _remoteid;
+            std::string _timestamp;
+            std::string _remoteid;
         };
 
     public:
         SecureShellServer()
-	: _skipURL(0)
-	, _adminLock()
-	, _clients()
-	, _InputParameters()
-	, _implementation()
+        : _skipURL(0)
+        , _adminLock()
+        , _InputParameters()
+        , _clients()
         {
             RegisterAll();
         }
@@ -250,16 +250,14 @@ namespace Plugin {
         void RegisterAll();
         void UnregisterAll();
         
-	uint32_t endpoint_getactivesessionscount(Core::JSON::DecUInt32& response);
-	uint32_t endpoint_getactivesessionsinfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& response);
-	uint32_t endpoint_closeclientsession(const JsonData::SecureShellServer::CloseclientsessionParamsData& params);
-
-        SecureShellServerImplementation _implementation;
+        uint32_t endpoint_getactivesessionscount(Core::JSON::DecUInt32& response);
+        uint32_t endpoint_getactivesessionsinfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& response);
+        uint32_t endpoint_closeclientsession(const JsonData::SecureShellServer::CloseclientsessionParamsData& params);
 
         uint8_t _skipURL;
+        Core::CriticalSection _adminLock;
         std::string _InputParameters;
-	Core::CriticalSection _adminLock;
-	std::list<ClientImpl*> _clients;
+        std::list<ClientImpl*> _clients;
     };
 
 } // namespace Plugin
