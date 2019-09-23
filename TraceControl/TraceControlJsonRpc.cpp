@@ -26,7 +26,7 @@ namespace Plugin {
 
     JsonData::TraceControl::StateType TraceControl::TranslateState(TraceControl::state state)
     {
-        JsonData::TraceControl::StateType newState;
+        JsonData::TraceControl::StateType newState = JsonData::TraceControl::StateType::DISABLED;
 
         switch (state)
         {
@@ -38,8 +38,6 @@ namespace Plugin {
             break;
         case TraceControl::state::TRISTATED:
             newState = JsonData::TraceControl::StateType::TRISTATED;
-            break;
-        default:
             break;
         }
 
