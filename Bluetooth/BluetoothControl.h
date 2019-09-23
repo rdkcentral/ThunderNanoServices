@@ -611,6 +611,8 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                         result = device->Pair(IBluetooth::IDevice::DISPLAY_ONLY);
                         device->Release();
 
+                        Publish();
+
                         _adminLock.Lock();
                         _state = static_cast<state>(_state & (~PAIRING));
                     }
@@ -645,11 +647,25 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
 
                 return (result);
             }
+            void Publish() const {
+                Bluetooth::Profile::Iterator index = _profile.Services();
+                while (index.Next() == true) {
+                    TRACE(GATTFlow, (_T("[0x%04X] Service: [0x%04X]         %s"), index.Current().Handle(), index.Current().Max(), index.Current().Name().c_str()));
+                    Bluetooth::Profile::Service::Iterator loop = index.Current().Characteristics();
+                    while (loop.Next() == true) {
+                        ::SleepMs(0);
+                        TRACE(GATTFlow, (_T("[0x%04X]    Characteristic [0x%02X]: %s [%d]"), loop.Current().Handle(), loop.Current().Rights(), loop.Current().Name().c_str(), loop.Current().Error()));
+                        Bluetooth::Profile::Service::Characteristic::Iterator loop2 = loop.Current().Descriptors();
+                        while (loop2.Next() == true) {
+                            TRACE(GATTFlow, (_T("[0x%04X]       Descriptor:         %s"), loop2.Current().Handle(), loop2.Current().Name().c_str()));
+                        }
+                    }
+                }
+            }
 
         private:
             bool Initialize() override {
                 Security(BT_SECURITY_MEDIUM, 0);
-                // Security(BT_SECURITY_LOW, 0);
                 return (true);
             }
             virtual uint16_t Deserialize(const uint8_t* dataFrame, const uint16_t availableData) override {
@@ -670,20 +686,11 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 TRACE(GATTFlow, (_T("The received MTU: %d"), MTU()));
                 _profile.Discover(CommunicationTimeOut * 10, *this, [&](const uint32_t result) {
                     if (result == Core::ERROR_NONE) {
-                        Bluetooth::Profile::Iterator index = _profile.Services();
-                        while (index.Next() == true) {
-                            TRACE(GATTFlow, (_T("Service discovered: %s"), index.Current().Name().c_str()));
-                            Bluetooth::Profile::Service::Iterator loop = index.Current().Characteristics();
-
-                            while (loop.Next() == true) {
-                                TRACE(GATTFlow, (_T("    Characteristic: %s"), loop.Current().Name().c_str()));
-                            }
-                        }
-                        Version();
+                       Version();
                     }
                     else {
                         _state = UNKNOWN;
-                        TRACE(GATTFlow, (_T("The given bluetooth device is not a HID device !!")));
+                        TRACE(GATTFlow, (_T("The given bluetooth device could not be read for services!!")));
                     }
                 });
             }
