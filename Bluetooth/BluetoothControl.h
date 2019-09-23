@@ -489,63 +489,6 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 GATTRemote& _parent;
             };
 
-            class Metadata {
-            public:
-                Metadata(const Metadata&) = delete;
-                Metadata& operator=(const Metadata&) = delete;
-
-                Metadata()
-                    : _vendorId(0)
-                    , _productId(0)
-                    , _version(0)
-                    , _name()
-                    , _blob()
-                {
-                }
-                ~Metadata()
-                {
-                }
-
-            public:
-                inline uint16_t VendorId() const
-                {
-                    return (_vendorId);
-                }
-                inline uint16_t ProductId() const
-                {
-                    return (_productId);
-                }
-                inline uint16_t Version() const
-                {
-                    return (_version);
-                }
-                inline const string& Name() const
-                {
-                    return (_name);
-                }
-                inline const uint8_t* Blob() const
-                {
-                    return (_blob);
-                }
-                inline uint16_t Length() const
-                {
-                    return (sizeof(_blob));
-                }
-                inline uint16_t Country() const
-                {
-                    return (0);
-                }
-
-            private:
-                friend class GATTRemote;
-
-                uint16_t _vendorId;
-                uint16_t _productId;
-                uint16_t _version;
-                string _name;
-                uint8_t _blob[8 * 22];
-            };
-
             static Core::NodeId Designator(const uint8_t type, const string& address) {
                 return(Bluetooth::Address(address.c_str()).NodeId(static_cast<Bluetooth::Address::type>(type), LE_ATT_CID, 0));
             }
@@ -556,19 +499,16 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             GATTRemote& operator=(const GATTRemote&) = delete;
             GATTRemote(IBluetooth::IDevice* device)
                 : Bluetooth::GATTSocket(
-                      // need to set local interface explicitly, "any" ends with "no route to host"
                       Designator(device->Type(), device->LocalId()),
-                      // TODO: public/private needs to be configurable
-                      // for cid ATT, PSM 0 is the only valid value
                       Designator(device->Type(), device->RemoteId()),
                       64)
                 , _adminLock()
                 , _state(UNKNOWN)
                 , _profile(true)
                 , _inputHandler(nullptr)
-                , _metadata()
                 , _command()
                 , _device(device)
+                , _handles()
                 , _sink(this)
             {
                 _device->AddRef();
@@ -686,7 +626,27 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 TRACE(GATTFlow, (_T("The received MTU: %d"), MTU()));
                 _profile.Discover(CommunicationTimeOut * 10, *this, [&](const uint32_t result) {
                     if (result == Core::ERROR_NONE) {
-                       Version();
+                    
+                        const Bluetooth::Profile::Service* service = _profile[Bluetooth::UUID(HID_UUID)];
+
+                        if (service == nullptr) {
+                            TRACE(GATTFlow, (_T("The given bluetooth device does not support a HID service!!")));
+                        }
+                        else {
+                            Bluetooth::Profile::Service::Iterator index (service->Characteristics());
+                            while (index.Next() == true) {
+                                if (index.Current() == Bluetooth::UUID(REPORT_UUID)) {
+                                    _handles.push_back(index.Current().Handle());
+                                }
+                            }
+                            if (_handles.size() > 0) {
+                                uint16_t val = htobs(1);
+                                _command.Write(_handles.front(), sizeof(val), reinterpret_cast<const uint8_t*>(&val));
+                                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
+                                    EnableEvents(cmd);
+                                });
+                            }
+                        }
                     }
                     else {
                         _state = UNKNOWN;
@@ -694,72 +654,24 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                     }
                 });
             }
-            void Version () 
+            void EnableEvents(const GATTSocket::Command& cmd) 
             {
-                _command.ReadByType(0x0001, 0xFFFF, Bluetooth::UUID(DEVICE_NAME_UUID));
-                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
-                    ASSERT (&cmd == &_command);
-                    Command::Response& response (_command.Result());
-                    if ( (cmd.Error() == Core::ERROR_NONE) && (response.Next() == true) ) {
-                        _command.ReadBlob(response.Handle());
-                        Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                            uint16_t length = cmd.Result().Length();
-                            if ( (cmd.Error() == Core::ERROR_NONE) && (length >= 0) ) {
-                                _metadata._name = string(reinterpret_cast<const char*>(cmd.Result().Data()), length);
+                if ( (cmd.Error() != Core::ERROR_NONE) || (cmd.Result().Error() == 0) ) {
+                    TRACE(GATTFlow, (_T("Enabled reporting on [%04X], FAILED!!!"), _handles.front()));
+                }
+                else {
+                    TRACE(GATTFlow, (_T("Enabled reporting on [%04X], Succeeded"), _handles.front()));
+                }
 
-                                TRACE(GATTFlow, (_T("BT device: '%s' version %i, vendor ID %02x, product ID %02x"),
-                                    _metadata._name.c_str(), _metadata._version, _metadata._vendorId, _metadata._productId));
+                _handles.pop_front();
 
-                                Descriptors();
-                            }
-                            else {
-                                _state = UNKNOWN;
-                                TRACE(GATTFlow, (_T("The given bluetooth device does not report a proper Name!!")));
-                            }
-                       });
-                    }
-                    else {
-                        _state = UNKNOWN;
-                        TRACE(GATTFlow, (_T("The given bluetooth device does not report a proper Name Handle!!")));
-                    }
-                });
-            }
-            void Descriptors() 
-            {
-                _command.ReadByType(0x0001, 0xFFFF, Bluetooth::UUID(REPORT_MAP_UUID));
-                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
-                    ASSERT (&cmd == &_command);
-                    Command::Response& response (_command.Result());
-                    if ( (cmd.Error() == Core::ERROR_NONE) && (response.Next() == true) ) {
-                        _command.ReadBlob(response.Handle());
-                        Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                            uint16_t length = cmd.Result().Length();
-                            if ( (cmd.Error() == Core::ERROR_NONE) && (length >= 0) ) {
-                                uint16_t copyLength = std::min(length, static_cast<uint16_t>(sizeof(_metadata._blob)));
-                                ::memcpy(_metadata._blob, cmd.Result().Data(), copyLength);
-                            }
-                            EnableEvents();
-                        });
-                    }
-               });
-            }
-            void EnableEvents() 
-            {
-                short val = htobs(1);
-                _command.Write(REPORT_UUID, sizeof(val), (const uint8_t *) &val);
-                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) { 
-                    ASSERT (&cmd == &_command);
-                    if (cmd.Error() == Core::ERROR_NONE) {
-                         _inputHandler = PluginHost::InputHandler::Handler();
-                         if (_inputHandler != nullptr) {
-                            _state = OPERATIONAL;
-                         }
-                    }
-                    else {
-                        _state = UNKNOWN;
-                        TRACE(GATTFlow, (_T("The given bluetooth device could not enable Event reporting!!")));
-                    }
-                });
+                if (_handles.size() > 0) {
+                    uint16_t val = htobs(1);
+                    _command.Write(_handles.front(), sizeof(val), reinterpret_cast<const uint8_t*>(&val));
+                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
+                        EnableEvents(cmd);
+                    });
+                }
             }
             void Updated () {
                 _adminLock.Lock();
@@ -784,9 +696,9 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             state _state;
             Bluetooth::Profile _profile;
             PluginHost::VirtualInput* _inputHandler;
-            Metadata _metadata;
             Command _command;
             IBluetooth::IDevice* _device;
+            std::list<uint16_t> _handles;
             Core::Sink<Sink> _sink;
         };
 
