@@ -702,7 +702,7 @@ Also see: [drmchange](#event.drmchange)
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | DRM used (must be one of the following: *unknown*, *clearkey*, *playready*, *widevine*) |
+| (property) | string | DRM used (must be one of the following: *none*, *clearkey*, *playready*, *widevine*, *unknown*) |
 
 > The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.drm@0*.
 
@@ -917,10 +917,10 @@ Streamer interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [statechange](#event.statechange) | Notifies of stream state change |
-| [drmchange](#event.drmchange) | Notifies of stream DRM system change |
 | [timeupdate](#event.timeupdate) | Notifies of stream position change |
 | [stream](#event.stream) | Notifies of a custom stream incident |
 | [player](#event.player) | Notifies of a custom player incident |
+| [drm](#event.drm) | Notifies of a custom DRM-related incident |
 
 <a name="event.statechange"></a>
 ## *statechange <sup>event</sup>*
@@ -944,31 +944,6 @@ Notifies of stream state change.
     "method": "0.client.events.1.statechange", 
     "params": {
         "state": "controlled"
-    }
-}
-```
-<a name="event.drmchange"></a>
-## *drmchange <sup>event</sup>*
-
-Notifies of stream DRM system change.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.drm | string | DRM used (must be one of the following: *unknown*, *clearkey*, *playready*, *widevine*) |
-
-> The *Stream ID* shall be passed within the designator, e.g. *0.client.events.1*.
-
-### Example
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "method": "0.client.events.1.drmchange", 
-    "params": {
-        "drm": "clearkey"
     }
 }
 ```
@@ -1042,6 +1017,31 @@ Notifies of a custom player incident.
 {
     "jsonrpc": "2.0", 
     "method": "0.client.events.1.player", 
+    "params": {
+        "code": 1
+    }
+}
+```
+<a name="event.drm"></a>
+## *drm <sup>event</sup>*
+
+Notifies of a custom DRM-related incident.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.code | number | Implementation-specific incident code |
+
+> The *Stream ID* shall be passed within the designator, e.g. *0.client.events.1*.
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "method": "0.client.events.1.drm", 
     "params": {
         "code": 1
     }

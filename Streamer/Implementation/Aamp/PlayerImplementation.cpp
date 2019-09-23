@@ -127,6 +127,7 @@ namespace Implementation {
                                 elements.emplace_back(Exchange::IStream::IElement::Audio);
                             }
                             _player->SetElements(elements);
+                            _player->DrmEvent(event.data.metadata.hasDrm? 1 : 0);
                         }
                         break;
                     case AAMP_EVENT_ENTERING_LIVE:
@@ -155,6 +156,7 @@ namespace Implementation {
                         break;
                     case AAMP_EVENT_DRM_METADATA:
                         TRACE(Trace::Information, (_T("AAMP_EVENT_DRM_METADATA")));
+                        _player->DrmEvent((event.data.dash_drmmetadata.failure << 16) | 1);
                         break;
                     case AAMP_EVENT_REPORT_ANOMALY:
                         TRACE(Trace::Information, (_T("AAMP_EVENT_REPORT_ANOMALY")));
@@ -575,6 +577,15 @@ namespace Implementation {
                 _adminLock.Lock();
                 if (_callback != nullptr) {
                     _callback->PlayerEvent(eventId);
+                }
+                _adminLock.Unlock();
+            }
+
+            void DrmEvent(uint32_t eventId)
+            {
+                _adminLock.Lock();
+                if (_callback != nullptr) {
+                    _callback->DrmEvent(eventId);
                 }
                 _adminLock.Unlock();
             }

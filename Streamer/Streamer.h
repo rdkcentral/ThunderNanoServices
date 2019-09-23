@@ -31,10 +31,6 @@ namespace Plugin {
                 }
 
             public:
-                void DRM(const uint32_t state) override
-                {
-                    _parent.DRM(state);
-                }
                 void StateChange(const Exchange::IStream::state state) override
                 {
                     _parent.StateChange(state);
@@ -42,6 +38,10 @@ namespace Plugin {
                 void Event(const uint32_t eventId) override
                 {
                     _parent.StreamEvent(eventId);
+                }
+                void DRM(const uint32_t state) override
+                {
+                    _parent.DrmEvent(state);
                 }
 
                 BEGIN_INTERFACE_MAP(StreamSink)
@@ -77,10 +77,6 @@ namespace Plugin {
             }
 
         private:
-            void DRM(uint32_t state)
-            {
-                _parent.DRM(_index, state);
-            }
             void StateChange(Exchange::IStream::state state)
             {
                 _parent.StateChange(_index, state);
@@ -88,6 +84,10 @@ namespace Plugin {
             void StreamEvent(const uint32_t eventId)
             {
                 _parent.StreamEvent(_index, eventId);
+            }
+            void DrmEvent(uint32_t state)
+            {
+                _parent.DrmEvent(_index, state);
             }
 
         private:
@@ -331,16 +331,6 @@ namespace Plugin {
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index);
         void Deactivated(RPC::IRemoteConnection* connection);
 
-        void DRM(const uint8_t index, uint32_t state)
-        {
-            string stateText (_T("playready"));
-            _service->Notify(_T("{ \"id\": ") + 
-                             Core::NumberType<uint8_t>(index).Text() + 
-                             _T(", \"drm\": \"") + 
-                             stateText + 
-                             _T("\" }"));
-            //event_drmchange(std::to_string(index), state);//TODO: check the required functionality first
-        }
         void StateChange(const uint8_t index, Exchange::IStream::state state)
         {
             TRACE(Trace::Information, (_T("Stream [%d] moved state: [%s]"), index, Core::EnumerateType<Exchange::IStream::state>(state).Data()));
@@ -383,6 +373,11 @@ namespace Plugin {
                              _T("\" }"));
             event_player(std::to_string(index), eventId);
         }
+        void DrmEvent(const uint8_t index, uint32_t state)
+        {
+            _service->Notify(_T("{ \"id\": ") + Core::NumberType<uint8_t>(index).Text() + _T(", \"drm\": \"") + Core::NumberType<uint8_t>(state).Text() + _T("\" }"));
+            event_drm(std::to_string(index), state);
+        }
 
         // JsonRpc
         void RegisterAll();
@@ -407,10 +402,10 @@ namespace Plugin {
         uint32_t get_lasterror(const string& index, Core::JSON::DecUInt32& response) const;
         uint32_t get_elements(const string& index, Core::JSON::ArrayType<JsonData::Streamer::StreamelementData>& response) const;
         void event_statechange(const string& id, const JsonData::Streamer::StateType& state);
-        void event_drmchange(const string& id, const JsonData::Streamer::DrmType& drm);
         void event_timeupdate(const string& id, const uint64_t& time);
         void event_stream(const string& id, const uint32_t& code);
         void event_player(const string& id, const uint32_t& code);
+        void event_drm(const string& id, const uint32_t& code);
 
     private:
         uint32_t _skipURL;

@@ -596,18 +596,6 @@ namespace Plugin {
         });
     }
 
-    // Event: drmchange - Notifies of stream DRM system change
-    void Streamer::event_drmchange(const string& id, const DrmType& drm)
-    {
-        DrmchangeParamsData params;
-        params.Drm = drm;
-
-        Notify(_T("drmchange"), params, [&](const string& designator) -> bool {
-            const string designator_id = designator.substr(0, designator.find('.'));
-            return (id == designator_id);
-        });
-    }
-
     // Event: timeupdate - Notifies of stream position change
     void Streamer::event_timeupdate(const string& id, const uint64_t& time)
     {
@@ -643,6 +631,19 @@ namespace Plugin {
             return (id == designator_id);
         });
     }
+
+    // Event: drm - Notifies of a custom DRM-related incident
+    void Streamer::event_drm(const string& id, const uint32_t& code)
+    {
+        StreamParamsInfo params;
+        params.Code = code;
+
+        Notify(_T("drm"), params, [&](const string& designator) -> bool {
+            const string designator_id = designator.substr(0, designator.find('.'));
+            return (id == designator_id);
+        });
+    }
+
 } // namespace Plugin
 
 }

@@ -38,10 +38,6 @@ namespace Player {
                 {
                     _parent.TimeUpdate(position);
                 }
-                void DRM(uint32_t state) override
-                {
-                    _parent.DRM(state);
-                }
                 void StateChange(Exchange::IStream::state newState) override
                 {
                     _parent.StateChange(newState);
@@ -53,6 +49,10 @@ namespace Player {
                 void PlayerEvent(uint32_t eventId) override
                 {
                     _parent.PlayerEvent(eventId);
+                }
+                void DrmEvent(uint32_t state) override
+                {
+                    _parent.DrmEvent(state);
                 }
 
             private:
@@ -371,7 +371,18 @@ namespace Player {
             END_INTERFACE_MAP
 
         private:
-            inline void TimeUpdate(uint64_t position)
+            void StateChange(Exchange::IStream::state newState)
+            {
+                _adminLock.Lock();
+                if (_callback != nullptr) {
+                    _callback->StateChange(newState);
+                }
+                if (newState == Exchange::IStream::Controlled) {
+                    PopulateElements();
+                }
+                _adminLock.Unlock();
+            }
+            void TimeUpdate(uint64_t position)
             {
                 _adminLock.Lock();
                 if (_decoder != nullptr) {
@@ -387,30 +398,19 @@ namespace Player {
                 }
                 _adminLock.Unlock();
             }
-            void DRM(uint32_t state)
-            {
-                _adminLock.Lock();
-                if (_callback != nullptr) {
-                    _callback->DRM(state);
-                }
-                _adminLock.Unlock();
-            }
-            void StateChange(Exchange::IStream::state newState)
-            {
-                _adminLock.Lock();
-                if (_callback != nullptr) {
-                    _callback->StateChange(newState);
-                }
-                if (newState == Exchange::IStream::Controlled) {
-                    PopulateElements();
-                }
-                _adminLock.Unlock();
-            }
             void StreamEvent(uint32_t eventId)
             {
                 _adminLock.Lock();
                 if (_callback != nullptr) {
                     _callback->Event(eventId);
+                }
+                _adminLock.Unlock();
+            }
+            void DrmEvent(uint32_t state)
+            {
+                _adminLock.Lock();
+                if (_callback != nullptr) {
+                    _callback->DRM(state);
                 }
                 _adminLock.Unlock();
             }
