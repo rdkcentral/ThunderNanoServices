@@ -161,6 +161,7 @@ namespace Plugin {
                             result->ErrorCode = Web::STATUS_OK;
                             result->ContentType = Web::MIMETypes::MIME_JSON;
                             result->Body(response);
+                            geometry->Release();
                         }
                     }
                 }
@@ -252,6 +253,7 @@ namespace Plugin {
                                 }
                                 Exchange::IStream::IControl::IGeometry* geometry = Core::Service<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(X, Y, control->second->Geometry()->Z(), width, height);
                                 control->second->Geometry(geometry);
+                                geometry->Release();
                                 result->ErrorCode = Web::STATUS_OK;
                                 result->Message = _T("Window set");
                             } else if (index.Remainder() == _T("Detach")) {
@@ -289,7 +291,6 @@ namespace Plugin {
 
                             Exchange::IStream* stream = _player->CreateStream(type.Value());
                             if (stream != nullptr) {
-
                                 uint8_t position = 0;
                                 for (; position < _streams.size(); ++position) {
                                     Streams::iterator stream = _streams.find(position);
@@ -326,18 +327,28 @@ namespace Plugin {
 
         if (index.IsValid() == true) {
             if (index.Next() == true) {
+                uint32_t status = Core::ERROR_NONE;
                 uint8_t position = Core::NumberType<uint8_t>(index.Current());
                 Controls::iterator control = _controls.find(position);
                 if (control != _controls.end()) {
-                    control->second->Release();
-                    _controls.erase(control);
+                    uint32_t relResult = control->second->Release();
+                    if (relResult == Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                        _controls.erase(control);
+                    } else {
+                        status = Core::ERROR_INPROGRESS;
+                        result->ErrorCode = Web::STATUS_CONFLICT;
+                        result->Message = _T("Stream is in use");
+                    }
                 }
-                Streams::iterator stream = _streams.find(position);
-                if (stream != _streams.end()) {
-                    stream->second->Release();
-                    _streams.erase(position);
-                    result->ErrorCode = Web::STATUS_OK;
-                    result->Message = _T("Stream is released");
+                if (status == Core::ERROR_NONE) {
+                    Streams::iterator stream = _streams.find(position);
+                    if (stream != _streams.end()) {
+                        uint32_t relResult = stream->second->Release();
+                        ASSERT(relResult == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                        _streams.erase(position);
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("Stream is released");
+                    }
                 }
             }
         }

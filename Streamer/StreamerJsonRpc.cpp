@@ -108,12 +108,18 @@ namespace Plugin {
         if (stream != _streams.end()) {
             Controls::iterator control = _controls.find(id);
             if (control != _controls.end()) {
-                control->second->Release();
-                _controls.erase(control);
+                uint32_t relResult = control->second->Release();
+                if (relResult == Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                    _controls.erase(control);
+                } else {
+                    result == Core::ERROR_INPROGRESS;
+                }
             }
 
-            stream->second->Release();
-            _streams.erase(id);
+            if (result == Core::ERROR_NONE) {
+                result = stream->second->Release();
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            }
         }
         else {
             result = Core::ERROR_UNKNOWN_KEY;
@@ -172,9 +178,7 @@ namespace Plugin {
             if ((stream->second->State() == Exchange::IStream::Prepared) && (_controls.find(id) == _controls.end())) {
                 Exchange::IStream::IControl* control = stream->second->Control();
                 if (control != nullptr) {
-                    _controls.emplace(std::piecewise_construct,
-                    std::forward_as_tuple(id),
-                    std::forward_as_tuple(*this, id, control));
+                    _controls.emplace(std::piecewise_construct, std::forward_as_tuple(id), std::forward_as_tuple(*this, id, control));
                 } else {
                     result = Core::ERROR_UNAVAILABLE;
                 }
@@ -344,6 +348,7 @@ namespace Plugin {
                 response.Y = geometry->Y();
                 response.Width = geometry->Width();
                 response.Height = geometry->Height();
+                geometry->Release();
             } else {
                 result = Core::ERROR_ILLEGAL_STATE;
             }
@@ -370,6 +375,7 @@ namespace Plugin {
                 Exchange::IStream::IControl::IGeometry* geometry;
                 geometry = Core::Service<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(param.X.Value(), param.Y.Value(), control->second->Geometry()->Z(), param.Width.Value(), param.Height.Value());
                 control->second->Geometry(geometry);
+                geometry->Release();
             } else {
                 result = Core::ERROR_ILLEGAL_STATE;
             }

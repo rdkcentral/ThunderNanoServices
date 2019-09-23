@@ -61,16 +61,14 @@ namespace Plugin {
                 : _parent(parent)
                 , _index(index)
                 , _implementation(implementation)
-                , _streamSink(this) {
+                , _streamSink(this)
+            {
                 ASSERT (_implementation != nullptr);
-                _implementation->AddRef();
                 _implementation->Callback(&_streamSink);
             }
-            ~StreamProxy() {
-                _implementation->Callback(nullptr);
-                _implementation->Release();
+            ~StreamProxy()
+            {
             }
-
             Exchange::IStream* operator->() {
                 return (_implementation);
             }

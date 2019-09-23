@@ -88,6 +88,9 @@ namespace Player {
                 uint32_t Release() const override
                 {
                     if (Core::InterlockedDecrement(_referenceCount) == 0) {
+                        if (_callback != nullptr) {
+                            _callback->Release();
+                        }
                         delete this;
                         return (Core::ERROR_DESTRUCTION_SUCCEEDED);
                     }
@@ -229,7 +232,9 @@ namespace Player {
             ~Frontend() override
             {
                 ASSERT(_decoder == nullptr);
+
                 ReleaseElements();
+
                 if (_decoder != nullptr) {
                     TRACE_L1("Forcefull destruction of a stream. Forcefully removing decoder: %d", __LINE__);
                     delete _decoder;
@@ -248,6 +253,9 @@ namespace Player {
                     ASSERT(_player != nullptr);
                     ASSERT(_administrator != nullptr);
                     _player->Callback(nullptr);
+                    if (_callback) {
+                        _callback->Release();
+                    }
                     _administrator->Relinquish(_player);
                     delete this;
                     result = Core::ERROR_DESTRUCTION_SUCCEEDED;
