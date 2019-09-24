@@ -5,6 +5,8 @@
 #include <thread>
 #include <vector>
 
+#define AAMP_IDLE_LOOP_PROGRESS /* otherwise use AAMP supplied progress event */
+
 namespace WPEFramework {
 namespace Player {
 namespace Implementation {
@@ -46,7 +48,7 @@ namespace Implementation {
                     ASSERT(_player != nullptr);
                 }
 
-                ~AampEventListener()
+                ~AampEventListener() override
                 {
                 }
 
@@ -59,12 +61,12 @@ namespace Implementation {
                         TRACE(Trace::Information, (_T("AAMP_EVENT_STATE_CHANGED")));
                         switch (event.data.stateChanged.state)
                         {
-                        case eSTATE_RELEASED:
                         case eSTATE_IDLE:
-                        case eSTATE_STOPPED:
-                        case eSTATE_COMPLETE:
+                        case eSTATE_RELEASED:
                             _player->StateChange(Exchange::IStream::Idle);
                             break;
+                        case eSTATE_INITIALIZING:
+                        case eSTATE_INITIALIZED:
                         case eSTATE_PREPARING:
                             _player->StateChange(Exchange::IStream::Loading);
                             break;
@@ -72,14 +74,17 @@ namespace Implementation {
                             _player->Speed(0);
                             _player->StateChange(Exchange::IStream::Prepared);
                             break;
+                        case eSTATE_BUFFERING:
                         case eSTATE_PAUSED:
+                        case eSTATE_SEEKING:
                         case eSTATE_PLAYING:
+                        case eSTATE_STOPPING:
+                        case eSTATE_STOPPED:
+                        case eSTATE_COMPLETE:
                             break;
                         case eSTATE_ERROR:
                             _player->StateChange(Exchange::IStream::Error);
                             _player->SetError(-1); // undefined error
-                            break;
-                        default:
                             break;
                         }
                         _player->PlayerEvent(event.data.stateChanged.state);
@@ -106,8 +111,12 @@ namespace Implementation {
                     case AAMP_EVENT_PLAYLIST_INDEXED:
                         TRACE(Trace::Information, (_T("AAMP_EVENT_PLAYLIST_INDEXED")));
                         break;
+#if !defined(AAMP_IDLE_LOOP_PROGRESS)
                     case AAMP_EVENT_PROGRESS:
+                        /* this never seems to trigger... */
+                        _player->TimeUpdate(event.data.progress.positionMiliseconds);
                         break;
+#endif
                     case AAMP_EVENT_CC_HANDLE_RECEIVED:
                         TRACE(Trace::Information, (_T("AAMP_EVENT_CC_HANDLE_RECEIVED")));
                         break;
@@ -174,6 +183,7 @@ namespace Implementation {
                 Aamp* _player;
             };
 
+#if defined(AAMP_IDLE_LOOP_PROGRESS)
             class Scheduler: public Core::Thread
             {
             public:
@@ -186,7 +196,7 @@ namespace Implementation {
                 {
                 }
 
-                ~Scheduler()
+                ~Scheduler() override
                 {
                 }
 
@@ -209,6 +219,7 @@ namespace Implementation {
             private:
                 Aamp* _parent;
             };
+#endif /* AAMP_IDLE_LOOP_PROGRESS */
 
         public:
             Aamp() = delete;
@@ -216,7 +227,7 @@ namespace Implementation {
             Aamp& operator=(const Aamp&) = delete;
 
             Aamp(const Exchange::IStream::streamtype streamType, const uint8_t index)
-                : _uri("")
+                : _uri()
                 , _state(Exchange::IStream::Error)
                 , _drmType(Exchange::IStream::Unknown)
                 , _streamtype(streamType)
@@ -232,7 +243,9 @@ namespace Implementation {
                 , _aampPlayer(nullptr)
                 , _aampEventListener(nullptr)
                 , _aampGstPlayerMainLoop(nullptr)
+#if defined(AAMP_IDLE_LOOP_PROGRESS)
                 , _scheduler(this)
+#endif
                 , _adminLock()
             {
                 ASSERT(_initialized == false)
@@ -261,7 +274,9 @@ namespace Implementation {
                 ASSERT(_aampPlayer == nullptr);
                 ASSERT(_aampEventListener == nullptr);
 
+#if defined(AAMP_IDLE_LOOP_PROGRESS)
                 _scheduler.Quit();
+#endif
                 _speeds.clear();
             }
 
@@ -282,6 +297,7 @@ namespace Implementation {
                     _aampEventListener = new AampEventListener(this);
                     if (_aampEventListener != nullptr) {
                         _aampPlayer->RegisterEvents(_aampEventListener);
+                        _aampPlayer->SetReportInterval(1000 /* ms */);
                         StateChange(Exchange::IStream::Idle);
                         result = Core::ERROR_NONE;
                         _lastError = result;
@@ -329,20 +345,30 @@ namespace Implementation {
 
             uint32_t AttachDecoder(const uint8_t index VARIABLE_IS_NOT_USED) override
             {
-                InitializePlayerInstance();
+                uint32_t result = Core::ERROR_NONE;
 
-                Run();
+                if (_state == Exchange::IStream::Prepared) {
+                    InitializePlayerInstance();
+                    Run();
+                } else {
+                    result = Core::ERROR_ILLEGAL_STATE;
+                }
 
-                return Core::ERROR_NONE;
+                return result;
             }
 
             uint32_t DetachDecoder(const uint8_t index VARIABLE_IS_NOT_USED) override
             {
-                Terminate();
+                uint32_t result = Core::ERROR_NONE;
 
-                StateChange(Exchange::IStream::Prepared);
+                if (_state == Exchange::IStream::Controlled) {
+                    Terminate();
+                    StateChange(Exchange::IStream::Prepared);
+                } else {
+                    result = Core::ERROR_ILLEGAL_STATE;
+                }
 
-                return Core::ERROR_NONE;
+                return result;
             }
 
             string Metadata() const override
@@ -392,27 +418,30 @@ namespace Implementation {
                 uint32_t result = Core::ERROR_NONE;
                 TRACE(Trace::Information, (_T("URI = %s"), uri.c_str()));
 
-                if (uri.empty() == false) {
-                    TRACE(Trace::Information, (_T("uri = %s"), uri.c_str()));
-                    string uriType = UriType(uri);
-                    if ((uriType == "m3u8") || (uriType == "mpd")) {
-                        TRACE(Trace::Information, (_T("URI type is %s"), uriType.c_str()));
-
-                        _adminLock.Lock();
-                        _speed = -1;
-                        _drmType = Exchange::IStream::Unknown;
-                        _uri = uri;
-                        _lastError = Core::ERROR_NONE;
-                        _aampPlayer->Tune(_uri.c_str());
-                        _adminLock.Unlock();
+                _adminLock.Lock();
+                if (_state != Exchange::IStream::state::Controlled) {
+                    if (uri.empty() == false) {
+                        TRACE(Trace::Information, (_T("uri = %s"), uri.c_str()));
+                        string uriType = UriType(uri);
+                        if ((uriType == "m3u8") || (uriType == "mpd")) {
+                            TRACE(Trace::Information, (_T("URI type is %s"), uriType.c_str()));
+                            _speed = -1;
+                            _drmType = Exchange::IStream::Unknown;
+                            _uri = uri;
+                            _lastError = Core::ERROR_NONE;
+                            _aampPlayer->Tune(_uri.c_str());
+                        } else {
+                            result = Core::ERROR_INCORRECT_URL;
+                            TRACE(Trace::Error, (_T("URI is not dash/hls")));
+                        }
                     } else {
                         result = Core::ERROR_INCORRECT_URL;
-                        TRACE(Trace::Error, (_T("URI is not dash/hls")));
+                        TRACE(Trace::Error, (_T("URI is not provided")));
                     }
                 } else {
-                    result = Core::ERROR_INCORRECT_URL;
-                    TRACE(Trace::Error, (_T("URI is not provided")));
+                    result = Core::ERROR_ILLEGAL_STATE;
                 }
+                _adminLock.Unlock();
 
                 return result;
             }
@@ -437,12 +466,16 @@ namespace Implementation {
                     if (rate != 0) {
                         auto index =  std::find(_speeds.begin(), _speeds.end(), speed);
                         if (index != _speeds.end()) {
+#if defined(AAMP_IDLE_LOOP_PROGRESS)
                             _scheduler.Run();
+#endif
                         } else {
                             result = Core::ERROR_BAD_REQUEST;
                         }
                     } else {
+#if defined(AAMP_IDLE_LOOP_PROGRESS)
                         _scheduler.Block();
+#endif
                     }
 
                     _aampPlayer->SetRate(rate);
@@ -461,7 +494,7 @@ namespace Implementation {
             {
                 uint64_t position = 0;
                 _adminLock.Lock();
-                position = (_aampPlayer->GetPlaybackPosition() * 1000);
+                position = 1000ULL *_aampPlayer->GetPlaybackPosition();
                 _adminLock.Unlock();
                 return position;
             }
@@ -528,11 +561,14 @@ namespace Implementation {
 
             // Aamp methods
 
-            void TimeUpdate()
+            void TimeUpdate(uint64_t position = 0 /* ms */)
             {
                 _adminLock.Lock();
-                if ((_callback != nullptr) && (_state == Exchange::IStream::Controlled) && (_speed != 0)) {
-                    _callback->TimeUpdate(_aampPlayer->GetPlaybackPosition());
+                if ((_callback != nullptr) && (_state == Exchange::IStream::state::Controlled) && (_speed != 0)) {
+                    if (position == 0) {
+                        position = 1000ULL *_aampPlayer->GetPlaybackPosition();
+                    }
+                    _callback->TimeUpdate(position);
                 }
                 _adminLock.Unlock();
             }
@@ -610,8 +646,9 @@ namespace Implementation {
                 if (_initialized == true) {
                     _adminLock.Unlock();
 
+#if defined(AAMP_IDLE_LOOP_PROGRESS)
                     _scheduler.Block();
-
+#endif
                     _aampPlayer->Stop();
                     Block();
 
@@ -693,7 +730,9 @@ namespace Implementation {
             AampEventListener *_aampEventListener;
             GMainLoop *_aampGstPlayerMainLoop;
 
+#if defined(AAMP_IDLE_LOOP_PROGRESS)
             Scheduler _scheduler;
+#endif
             mutable Core::CriticalSection _adminLock;
         }; // class Aamp
 

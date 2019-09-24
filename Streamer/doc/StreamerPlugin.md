@@ -950,14 +950,14 @@ Notifies of stream state change.
 <a name="event.timeupdate"></a>
 ## *timeupdate <sup>event</sup>*
 
-Notifies of stream position change. This event is fired every second to indicate that the stream has progressed by a second. It does not fire if the stream is paused (i.e. speed of 0).
+Notifies of stream position change. This event is fired every second to indicate the current stream position. It does not fire if the stream is paused (i.e. speed is set to 0).
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.time | number | Position in seconds |
+| params.time | number | Stream position in miliseconds |
 
 > The *Stream ID* shall be passed within the designator, e.g. *0.client.events.1*.
 
@@ -968,7 +968,7 @@ Notifies of stream position change. This event is fired every second to indicate
     "jsonrpc": "2.0", 
     "method": "0.client.events.1.timeupdate", 
     "params": {
-        "time": 30
+        "time": 30000
     }
 }
 ```
