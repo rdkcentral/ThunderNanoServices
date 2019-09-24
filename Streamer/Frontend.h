@@ -421,6 +421,7 @@ namespace Player {
                 if (_decoder != nullptr) {
                     ASSERT(_player != nullptr);
                     ASSERT(_administrator != nullptr);
+                    ReleaseElements();
                     _player->DetachDecoder(_decoder->Index());
                     _administrator->Deallocate(_decoder->Index());
                     _decoder = nullptr;
