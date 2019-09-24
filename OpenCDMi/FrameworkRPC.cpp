@@ -636,12 +636,10 @@ namespace Plugin {
                                     CommonEncryptionData::Iterator index(keyIds.Keys());
                                     while (index.Next() == true) {
                                         const CommonEncryptionData::KeyId& entry(index.Current());
-                                        callback->OnKeyStatusUpdate( entry.Id(), entry.Length(), entry.Status());
+                                        callback->OnKeyStatusUpdate( entry.Id(), entry.Length(), ::OCDM::ISession::StatusPending);
                                     }
-                                    
-                                    callback->OnKeyStatusesUpdated();
                                 }
-                                 _adminLock.Unlock();
+                                _adminLock.Unlock();
                              } else {
                                  TRACE_L1("Could not allocate a buffer for session: %s", sessionId.c_str());
 
