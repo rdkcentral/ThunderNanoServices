@@ -262,6 +262,7 @@ namespace Plugin {
     void PackagerImplementation::NotifyStateChange()
     {
         _adminLock.Lock();
+        TRACE_L1("State for %s changed to %d (%d %%, %d)", _inProgress.Package->Name().c_str(), _inProgress.Install->State(), _inProgress.Install->Progress(), _inProgress.Install->ErrorCode());
         for (auto* notification : _notifications) {
             notification->StateChange(_inProgress.Package, _inProgress.Install);
         }
