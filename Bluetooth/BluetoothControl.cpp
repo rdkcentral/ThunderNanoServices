@@ -22,18 +22,20 @@ namespace Plugin {
         _skipURL = _service->WebPrefix().length();
         _config.FromString(_service->ConfigLine());
         const char* driverMessage = ::construct_bluetooth_driver(_service->ConfigLine().c_str());
+        bool slaving = (_config.External.Value() == true);
+
+        if (slaving == TRUE) {
+            SYSLOG(Logging::Startup, (_T("Bluetooth stack working in EXTERNAL mode!!!")));
+        }
 
         // First see if we can bring up the Driver....
         if (driverMessage != nullptr) {
             result = Core::ToString(driverMessage);
         } 
-        else if (_config.External.Value() == true) {
-            SYSLOG(Logging::Startup, (_T("Bluetooth stack working in EXTERNAL mode!!!")));
-        }
         else {
-            Bluetooth::ManagementSocket::LinkKeyList linkKeys;
-            Bluetooth::ManagementSocket::LongTermKeyList longTermKeys;
-            Bluetooth::ManagementSocket::IdentityKeyList identityKeys;
+            Bluetooth::LinkKeys linkKeys;
+            Bluetooth::LongTermKeys longTermKeys;
+            Bluetooth::IdentityKeys identityKeys;
 
             Bluetooth::ManagementSocket& administrator = _application.Control();
             administrator.DeviceId(_config.Interface.Value());
@@ -41,36 +43,45 @@ namespace Plugin {
             if (Bluetooth::ManagementSocket::Up(_config.Interface.Value()) == false) {
                 result = "Could not activate bluetooth interface.";
             }
-            else if (administrator.LinkKeys(linkKeys) != Core::ERROR_NONE) {
-                result = "Failed to upload link keys to the bluetooth interface";
-            }
-            else if (administrator.LongTermKeys(longTermKeys) != Core::ERROR_NONE) {
-                result = "Failed to upload long term keys to the bluetooth interface";
-            }
-            else if (administrator.IdentityKeys(identityKeys) != Core::ERROR_NONE) {
-                result = "Failed to upload identity keys to the bluetooth interface";
-            }
-            else if (administrator.Power(true) != Core::ERROR_NONE) {
-                result = "Failed to power up the bluetooth interface";
-            }
-            else if (administrator.SimplePairing(true) != Core::ERROR_NONE) {
+            else if ((slaving == false) && (administrator.SimplePairing(true) != Core::ERROR_NONE)) {
                 result = "Failed to enable simple pairing on the bluetooth interface";
             }
-            else if (administrator.Bondable(true) != Core::ERROR_NONE) {
+            else if ((slaving == false) && (administrator.SecureLink(true) != Core::ERROR_NONE)) {
+                result = "Failed to enable secure links on the bluetooth interface";
+            }
+            else if ((slaving == false) && (administrator.Bondable(true) != Core::ERROR_NONE)) {
                 result = "Failed to enable bonding on the bluetooth interface";
             }
-            else if (administrator.LowEnergy(true) != Core::ERROR_NONE) {
+            else if ((slaving == false) && (administrator.LowEnergy(true) != Core::ERROR_NONE)) {
                 result = "Failed to enable low energy on the bluetooth interface";
             }
-            else if (administrator.Secure(true) != Core::ERROR_NONE) {
-                result = "Failed to enable security on the bluetooth interface";
+            else if ((slaving == false) && (administrator.SecureConnection(true) != Core::ERROR_NONE)) {
+                result = "Failed to enable secure connections on the bluetooth interface";
             }
-            else if (administrator.Name(_T("Thunder"), _config.Name.Value()) != Core::ERROR_NONE) {
+            else if ((slaving == false) && (administrator.Name(_T("Thunder"), _config.Name.Value()) != Core::ERROR_NONE)) {
                 result = "Failed to upload identity keys to the bluetooth interface";
+            }
+            else if ((slaving == false) && (administrator.LinkKey(linkKeys) != Core::ERROR_NONE)) {
+                result = "Failed to upload link keys to the bluetooth interface";
+            }
+            else if ((slaving == false) && (administrator.LongTermKey(longTermKeys) != Core::ERROR_NONE)) {
+                result = "Failed to upload long term keys to the bluetooth interface";
+            }
+            else if ((slaving == false) && (administrator.IdentityKey(identityKeys) != Core::ERROR_NONE)) {
+                result = "Failed to upload identity keys to the bluetooth interface";
+            }
+            //else if ((slaving == false) && (administrator.Notifications(true) != Core::ERROR_NONE)) {
+            //    result = "Failed to enable the management notifications on the bluetooth interface";
+            //}
+            else if ((slaving == false) && (administrator.Power(true) != Core::ERROR_NONE)) {
+                result = "Failed to power up the bluetooth interface";
             }
             else if (_application.Open(*this) != Core::ERROR_NONE) {
                 result = "Could not open the bluetooth application channel";
             } 
+            else if ((slaving == false) && (_application.ReadStoredLinkKeys(Bluetooth::Address(administrator.DeviceId()), true, linkKeys) != Core::ERROR_NONE)) {
+                result = "Could not read the stored keys for the configured interface";
+            }
 
             if (result.empty() == false) {
                 Bluetooth::ManagementSocket::Down(administrator.DeviceId());
@@ -193,18 +204,49 @@ namespace Plugin {
 
             result->Body(response);
         } else {
-            DeviceImpl* device = Find(Bluetooth::Address(index.Current().Text().c_str()));
+            if (index.Current().Text() == _T("Properties")) {
+                Core::ProxyType<Web::JSONBodyType<Status>> response(jsonResponseFactoryStatus.Element());
+                Bluetooth::ManagementSocket& administrator = _application.Control();
+                Bluetooth::ManagementSocket::Info info(administrator.Settings());
+                Bluetooth::ManagementSocket::Info::Properties actuals(info.Actuals());
+                Bluetooth::ManagementSocket::Info::Properties supported(info.Supported());
 
-            if (device != nullptr) {
-                Core::ProxyType<Web::JSONBodyType<DeviceImpl::JSON>> response(jsonResponseFactoryDevice.Element());
-                response->Set(device);
+		response->Name = info.ShortName();
+		response->Version = info.Version();
+		response->Address = info.Address().ToString();
+		response->DeviceClass = info.DeviceClass();
+		response->AddProperty(_T("power"), supported.IsPowered(), actuals.IsPowered());
+		response->AddProperty(_T("connectable"), supported.IsConnectable(), actuals.IsConnectable());
+		response->AddProperty(_T("fast_connectable"), supported.IsFastConnectable(), actuals.IsFastConnectable());
+		response->AddProperty(_T("discovery"), supported.HasDiscovery(), actuals.HasDiscovery());
+		response->AddProperty(_T("pairing"), supported.HasPairing(), actuals.HasPairing());
+		response->AddProperty(_T("link_level_security"), supported.HasLinkLevelSecurity(), actuals.HasLinkLevelSecurity());
+		response->AddProperty(_T("secure_simple_pairing"), supported.HasSecureSimplePairing(), actuals.HasSecureSimplePairing());
+		response->AddProperty(_T("basic_enhanced_rate"), supported.HasBasicEnhancedRate(), actuals.HasBasicEnhancedRate());
+		response->AddProperty(_T("high_speed"), supported.HasHighSpeed(), actuals.HasHighSpeed());
+		response->AddProperty(_T("low_energy"), supported.HasLowEnergy(), actuals.HasLowEnergy());
+		response->AddProperty(_T("advertising"), supported.HasAdvertising(), actuals.HasAdvertising());
+		response->AddProperty(_T("secure_connection"), supported.HasSecureConnections(), actuals.HasSecureConnections());
+		response->AddProperty(_T("debug_keys"), supported.HasDebugKeys(), actuals.HasDebugKeys());
+		response->AddProperty(_T("privacy"), supported.HasPrivacy(), actuals.HasPrivacy());
+		response->AddProperty(_T("configuration"), supported.HasConfiguration(), actuals.HasConfiguration());
+		response->AddProperty(_T("static_address"), supported.HasStaticAddress(), actuals.HasStaticAddress());
+        
+            }
+            else {
+                DeviceImpl* device = Find(Bluetooth::Address(index.Current().Text().c_str()));
 
-                result->ErrorCode = Web::STATUS_OK;
-                result->Message = _T("device info.");
-                result->Body(response);
-            } else {
-                result->ErrorCode = Web::STATUS_NO_CONTENT;
-                result->Message = _T("Unable to display device. Device not found");
+                if (device != nullptr) {
+                    Core::ProxyType<Web::JSONBodyType<DeviceImpl::JSON>> response(jsonResponseFactoryDevice.Element());
+                    response->Set(device);
+
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->Message = _T("device info.");
+                    result->Body(response);
+                } else {
+                    result->ErrorCode = Web::STATUS_NO_CONTENT;
+                    result->Message = _T("Unable to display device. Device not found");
+                }
             }
         }
 
