@@ -324,7 +324,7 @@ namespace Plugin {
                         else
                             key = ::OCDM::ISession::InternalError;
 
-                        const CommonEncryptionData::KeyId* updated = _parent.UpdateKeyStatus(key, buffer, length);
+                       const CommonEncryptionData::KeyId* updated = _parent.UpdateKeyStatus(key, buffer, length);
 
                         const uint8_t* bufferToNotify = updated != nullptr && buffer == nullptr ? updated->Id() : buffer;
                         const uint8_t lengthToNotify = updated != nullptr && length == 0 ? updated->Length() : length;
@@ -366,7 +366,7 @@ namespace Plugin {
                     , _keySystem(keySystem)
                     , _sessionId(mediaKeySession->GetSessionId())
                     , _mediaKeySession(mediaKeySession)
-                    , _mediaKeySessionExt(nullptr)
+                    , _mediaKeySessionExt(dynamic_cast<CDMi::IMediaKeySessionExt*>(mediaKeySession))
                     , _sink(this, callback)
                     , _buffer(new DataExchange(mediaKeySession, bufferName, defaultSize))
                     , _cencData(*sessionData)
@@ -517,9 +517,9 @@ namespace Plugin {
                     return (OCDM::OCDM_RESULT)_mediaKeySessionExt->StoreLicenseData(licenseData, licenseDataSize, secureStopId);
                 }
 
-                virtual OCDM::OCDM_RESULT InitDecryptContextByKid() override
+                virtual OCDM::OCDM_RESULT SelectKeyId(const uint8_t keyLength, const uint8_t keyId[]) override
                 {
-                    return (OCDM::OCDM_RESULT)_mediaKeySessionExt->InitDecryptContextByKid();
+                    return (OCDM::OCDM_RESULT)_mediaKeySessionExt->SelectKeyId(keyLength, keyId);
                 }
 
                 virtual OCDM::OCDM_RESULT CleanDecryptContext() override
@@ -532,22 +532,6 @@ namespace Plugin {
                 INTERFACE_RELAY(::OCDM::ISessionExt, _mediaKeySessionExt)
                 END_INTERFACE_MAP
 
-                void ReportKeyIds(::OCDM::IAccessorOCDM::INotification* callback) const
-                {
-
-                    _adminLock.Lock();
-
-                    // Give them the full list, of KeyIds we got now wit the status..
-                    CommonEncryptionData::Iterator index(_cencData.Keys());
-
-                    while (index.Next() == true) {
-                        const CommonEncryptionData::KeyId& entry(index.Current());
-                        callback->KeyChange(_sessionId, entry.Id(), entry.Length(), entry.Status());
-                    }
-
-                    _adminLock.Unlock();
-                }
-
             private:
                 inline const CommonEncryptionData::KeyId* UpdateKeyStatus(::OCDM::ISession::KeyStatus status, const uint8_t* buffer, const uint8_t length)
                 {
@@ -559,17 +543,6 @@ namespace Plugin {
                     }
 
                     const CommonEncryptionData::KeyId* updated = _cencData.UpdateKeyStatus(status, keyId);
-
-                    if (updated != nullptr) {
-                        const uint8_t length = updated->Length();
-                        const uint8_t* id = updated->Id();
-
-                        TRACE_L1("Reporting a new status for a KeyId. New state: %d", status);
-
-                        _parent.ReportKeyChange(_sessionId, id, length, status);
-                    } else {
-                        TRACE(Trace::Information, ("There was no key to update !!!"));
-                    }
 
                     return updated;
                 }
@@ -594,7 +567,6 @@ namespace Plugin {
                 , _administrator(name)
                 , _defaultSize(defaultSize)
                 , _sessionList()
-                , _observers()
             {
                 ASSERT(parent != nullptr);
             }
@@ -612,58 +584,8 @@ namespace Plugin {
                 return (_parent.IsTypeSupported(keySystem, mimeType) ? 0 : 1);
             }
 
-            virtual ::OCDM::ISession* Session(const std::string sessionId) override
-            {
-                ::OCDM::ISession* result = nullptr;
-
-                _adminLock.Lock();
-
-                std::list<SessionImplementation*>::const_iterator index(_sessionList.begin());
-                while ((index != _sessionList.end()) && ((*index)->SessionId() != sessionId)) {
-                    index++;
-                }
-
-                if (index != _sessionList.end()) {
-                    result = *index;
-                    ASSERT(result != nullptr);
-                    result->AddRef();
-                }
-
-                _adminLock.Unlock();
-
-                return (result);
-            }
-
-            virtual ::OCDM::ISession* Session(const uint8_t data[], const uint8_t keyLength) override
-            {
-                ::OCDM::ISession* result = nullptr;
-
-                if (keyLength >= CommonEncryptionData::KeyId::Length()) {
-
-                    _adminLock.Lock();
-
-                    std::list<SessionImplementation*>::const_iterator index(_sessionList.begin());
-
-                    while ((index != _sessionList.end()) && ((*index)->HasKeyId(data) == false)) {
-                        index++;
-                    }
-
-                    if (index != _sessionList.end()) {
-
-                        //printf("Selected session out of list count: %d\n", _sessionList.size());
-                        result = *index;
-                        ASSERT(result != nullptr);
-                        result->AddRef();
-                    }
-
-                    _adminLock.Unlock();
-                }
-
-                return (result);
-            }
-
             // Create a MediaKeySession using the supplied init data and CDM data.
-            virtual ::OCDM::OCDM_RESULT CreateSession(
+            virtual OCDM::OCDM_RESULT CreateSession(
                 const std::string keySystem,
                 const int32_t licenseType,
                 const std::string initDataType,
@@ -675,50 +597,63 @@ namespace Plugin {
                 std::string& sessionId,
                 ::OCDM::ISession*& session) override
             {
+                 CDMi::IMediaKeys *system = _parent.KeySystem(keySystem);
 
-                CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
+                 session = nullptr;
+                 if (system != nullptr)
+                 {
+                     CDMi::IMediaKeySession *sessionInterface = nullptr;
+                     CommonEncryptionData keyIds(initData, initDataLength);
 
-                session = nullptr;
-                if (system != nullptr) {
-                    CDMi::IMediaKeySession* sessionInterface = nullptr;
-                    CommonEncryptionData keyIds(initData, initDataLength);
+                     // OKe we got a buffer machanism to transfer the raw data, now create
+                     // the session.
+                     if (system->CreateMediaKeySession(keySystem, licenseType, 
+                                        initDataType.c_str(), initData, initDataLength, 
+                                        CDMData, CDMDataLength, &sessionInterface) == 0)
+                     {
+                         if (sessionInterface != nullptr)
+                         {
+                             std::string bufferId;
 
-                    // OKe we got a buffer machanism to transfer the raw data, now create
-                    // the session.
-                    if (system->CreateMediaKeySession(keySystem, licenseType, initDataType.c_str(), initData, initDataLength, CDMData, CDMDataLength, &sessionInterface) == 0) {
+                             // See if there is a buffer available we can use..
+                             if (_administrator.AquireBuffer(bufferId) == true)
+                             {
 
-                        if (sessionInterface != nullptr) {
+                                 SessionImplementation *newEntry = 
+                                    Core::Service<SessionImplementation>::Create<SessionImplementation>(this,
+                                                 keySystem, sessionInterface,
+                                                 callback, bufferId, _defaultSize, &keyIds);
 
-                            std::string bufferId;
+                                 session = newEntry;
+                                 sessionId = newEntry->SessionId();
 
-                            // See if there is a buffer available we can use..
-                            if (_administrator.AquireBuffer(bufferId) == true) {
+                                 _adminLock.Lock();
 
-                                SessionImplementation* newEntry = Core::Service<SessionImplementation>::Create<SessionImplementation>(this, keySystem, sessionInterface, callback, bufferId, _defaultSize, &keyIds);
-
-                                session = newEntry;
-                                sessionId = newEntry->SessionId();
-
-                                _adminLock.Lock();
-
-                                _sessionList.push_front(newEntry);
-                                ReportCreate(sessionId);
-
+                                 _sessionList.push_front(newEntry);
+                                
+                                if(false == keyIds.IsEmpty())
+                                {
+                                    CommonEncryptionData::Iterator index(keyIds.Keys());
+                                    while (index.Next() == true) {
+                                        const CommonEncryptionData::KeyId& entry(index.Current());
+                                        callback->OnKeyStatusUpdate( entry.Id(), entry.Length(), ::OCDM::ISession::StatusPending);
+                                    }
+                                }
                                 _adminLock.Unlock();
-                            } else {
-                                TRACE_L1("Could not allocate a buffer for session: %s", sessionId.c_str());
+                             } else {
+                                 TRACE_L1("Could not allocate a buffer for session: %s", sessionId.c_str());
 
-                                // TODO: We need to drop the session somehow...
-                            }
-                        }
-                    }
-                }
+                                 // TODO: We need to drop the session somehow...
+                             }
+                         }
+                     }
+                 }
 
-                if (session == nullptr) {
-                    TRACE_L1("Could not create a DRM session! [%d]", __LINE__);
-                }
+                 if (session == nullptr) {
+                     TRACE_L1("Could not create a DRM session! [%d]", __LINE__);
+                 }
 
-                return (session != nullptr ? ::OCDM::OCDM_RESULT::OCDM_SUCCESS : ::OCDM::OCDM_RESULT::OCDM_S_FALSE);
+                 return (session != nullptr ? ::OCDM::OCDM_RESULT::OCDM_SUCCESS : ::OCDM::OCDM_RESULT::OCDM_S_FALSE);
             }
 
             // Set Server Certificate
@@ -739,73 +674,13 @@ namespace Plugin {
                 return (::OCDM::OCDM_RESULT::OCDM_SUCCESS);
             }
 
-            virtual time_t GetDrmSystemTime(const std::string& keySystem) const override
+            virtual uint64_t GetDrmSystemTime(const std::string& keySystem) const override
             {
                 CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
                 if (systemExt) {
                     return (OCDM::OCDM_RESULT)systemExt->GetDrmSystemTime();
                 }
                 return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
-            }
-
-            virtual OCDM::OCDM_RESULT CreateSessionExt(
-                const std::string keySystem,
-                const uint8_t drmHeader[],
-                uint32_t drmHeaderLength,
-                ::OCDM::ISession::ICallback* callback,
-                std::string& sessionId,
-                OCDM::ISessionExt*& session) override
-            {
-                CDMi::IMediaKeysExt* system = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
-
-                if (system == nullptr) {
-                    session = nullptr;
-                } else {
-                    CDMi::IMediaKeySessionExt* sessionInterface = nullptr;
-
-                    // TODO
-                    uint8_t initData[] = { 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17 };
-                    uint16_t initDataLength = sizeof(initData);
-                    CommonEncryptionData keyIds(initData, initDataLength);
-
-                    // OKe we got a buffer machanism to transfer the raw data, now create
-                    // the session.
-                    if ((session == nullptr) && (system->CreateMediaKeySessionExt(keySystem, drmHeader, drmHeaderLength, &sessionInterface) == 0)) {
-
-                        if (sessionInterface != nullptr) {
-
-                            std::string bufferId;
-
-                            // See if there is a buffer available we can use..
-                            if (_administrator.AquireBuffer(bufferId) == true) {
-
-                                SessionImplementation* newEntry = Core::Service<SessionImplementation>::Create<SessionImplementation>(this, keySystem, sessionInterface, callback, bufferId, _defaultSize, &keyIds);
-
-                                session = newEntry;
-
-                                sessionId = newEntry->SessionId();
-
-                                _adminLock.Lock();
-
-                                _sessionList.push_front(newEntry);
-
-                                ReportCreate(sessionId);
-
-                                _adminLock.Unlock();
-                            } else {
-                                TRACE_L1("Could not allocate a buffer for session: %s", sessionId.c_str());
-
-                                // TODO: We need to drop the session somehow...
-                            }
-                        }
-                    }
-                }
-
-                if (session == nullptr) {
-                    TRACE_L1("Could not create a DRM session! [%d]", __LINE__);
-                }
-
-                return (session != nullptr ? ::OCDM::OCDM_RESULT::OCDM_SUCCESS : ::OCDM::OCDM_RESULT::OCDM_S_FALSE);
             }
 
             std::string GetVersionExt(const std::string& keySystem) const override
@@ -894,33 +769,6 @@ namespace Plugin {
                 return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
             }
 
-            OCDM::OCDM_RESULT CreateSystemExt(const std::string& keySystem) override
-            {
-                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
-                if (systemExt) {
-                    return (OCDM::OCDM_RESULT)systemExt->CreateSystemExt();
-                }
-                return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
-            }
-
-            OCDM::OCDM_RESULT InitSystemExt(const std::string& keySystem) override
-            {
-                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
-                if (systemExt) {
-                    return (OCDM::OCDM_RESULT)systemExt->InitSystemExt();
-                }
-                return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
-            }
-
-            OCDM::OCDM_RESULT TeardownSystemExt(const std::string& keySystem) override
-            {
-                CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
-                if (systemExt) {
-                    return (OCDM::OCDM_RESULT)systemExt->TeardownSystemExt();
-                }
-                return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
-            }
-
             OCDM::OCDM_RESULT DeleteKeyStore(const std::string& keySystem) override
             {
                 CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
@@ -963,74 +811,12 @@ namespace Plugin {
                 return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
             }
 
-            virtual void Register(::OCDM::IAccessorOCDM::INotification* callback) override
-            {
-
-                _adminLock.Lock();
-
-                ASSERT(std::find(_observers.begin(), _observers.end(), callback) == _observers.end());
-
-                callback->AddRef();
-
-                _observers.push_back(callback);
-
-                std::list<SessionImplementation*>::const_iterator index(_sessionList.begin());
-                while (index != _sessionList.end()) {
-                    (*index)->ReportKeyIds(callback);
-                    index++;
-                }
-
-                _adminLock.Unlock();
-            }
-
-            virtual void Unregister(::OCDM::IAccessorOCDM::INotification* callback) override
-            {
-
-                _adminLock.Lock();
-
-                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), callback));
-
-                if (index != _observers.end()) {
-                    (*index)->Release();
-                    _observers.erase(index);
-                }
-
-                _adminLock.Unlock();
-            }
-
             BEGIN_INTERFACE_MAP(AccessorOCDM)
             INTERFACE_ENTRY(::OCDM::IAccessorOCDM)
             INTERFACE_ENTRY(::OCDM::IAccessorOCDMExt)
             END_INTERFACE_MAP
 
         private:
-            void ReportCreate(const string& sessionId)
-            {
-                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator index(_observers.begin());
-                while (index != _observers.end()) {
-                    (*index)->Create(sessionId);
-                    index++;
-                }
-            }
-            void ReportDestroy(const string& sessionId)
-            {
-                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator index(_observers.begin());
-                while (index != _observers.end()) {
-                    (*index)->Destroy(sessionId);
-                    index++;
-                }
-            }
-            void ReportKeyChange(const string& sessionId, const uint8_t keyId[], const uint8_t length, const OCDM::ISession::KeyStatus status)
-            {
-                _adminLock.Lock();
-                std::list<::OCDM::IAccessorOCDM::INotification*>::iterator index(_observers.begin());
-                while (index != _observers.end()) {
-                    (*index)->KeyChange(sessionId, keyId, length, status);
-                    index++;
-                }
-
-                _adminLock.Unlock();
-            }
             ::OCDM::ISession* FindSession(const CommonEncryptionData& keyIds, const string& keySystem) const
             {
                 ::OCDM::ISession* result = nullptr;
@@ -1092,7 +878,6 @@ namespace Plugin {
                         const string sessionId(session->SessionId());
                         // Before we remove it here, release it.
                         _sessionList.erase(index);
-                        ReportDestroy(sessionId);
                     }
                 }
 
@@ -1105,7 +890,6 @@ namespace Plugin {
             BufferAdministrator _administrator;
             uint32_t _defaultSize;
             std::list<SessionImplementation*> _sessionList;
-            std::list<::OCDM::IAccessorOCDM::INotification*> _observers;
         };
 
         class Config : public Core::JSON::Container {
@@ -1201,7 +985,7 @@ namespace Plugin {
         }
 
     public:
-        virtual uint32_t Configure(PluginHost::IShell* service)
+        uint32_t Initialize(PluginHost::IShell* service) override
         {
             uint32_t result = Core::ERROR_OPENING_FAILED;
 
@@ -1268,8 +1052,10 @@ namespace Plugin {
                     }
 
                     //now handle the configuration
-                    const string configuration(index.Current().Configuration.Value());
-                    factory->second.Factory->SystemConfig(service, configuration);
+                    if (factory != factories.end()) {
+                        const string configuration(index.Current().Configuration.Value());
+                        factory->second.Factory->Initialize(service, configuration);
+                    }
                 }
             }
 
@@ -1303,6 +1089,23 @@ namespace Plugin {
                 }
             }
             return (result);
+        }
+        void Deinitialize(PluginHost::IShell* service) override {
+            std::map<const string, SystemFactory>::iterator factory(_systemToFactory.begin());
+
+            std::list<CDMi::ISystemFactory*> deinitialized;
+
+            while (factory != _systemToFactory.end()) {
+                std::list<CDMi::ISystemFactory*>::iterator index(std::find(deinitialized.begin(), deinitialized.end(), factory->second.Factory));
+
+                if(index == deinitialized.end()){ 
+                    TRACE_L1("Deinitializing factory(%p) for key system %s", factory->second.Factory, factory->second.Factory->KeySystem());
+                    factory->second.Factory->Deinitialize(service);
+                    deinitialized.push_back(factory->second.Factory);
+                }
+                
+                factory++;
+            }
         }
         virtual uint32_t Reset()
         {

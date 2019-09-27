@@ -107,11 +107,18 @@ namespace Plugin {
             _service->Unregister(&_notification);
             _service = nullptr;
         } else {
-            _opencdmi->Configure(_service);
+            _opencdmi->Initialize(_service);
 
-            _memory = WPEFramework::OCDM::MemoryObserver(_service->RemoteConnection(_connectionId));
-
-            ASSERT(_memory != nullptr);
+            if ((_connectionId != 0) && (_service->RemoteConnection(_connectionId) == nullptr)){
+                message = _T("OCDM crashed at initialize!");
+                _opencdmi = nullptr;
+                _service->Unregister(&_notification);
+                _service = nullptr;
+            } else {
+                _memory = WPEFramework::OCDM::MemoryObserver(_service->RemoteConnection(_connectionId));
+                
+                ASSERT(_memory != nullptr);
+            }
         }
 
         return message;
@@ -125,6 +132,8 @@ namespace Plugin {
 
         _service->Unregister(&_notification);
         _memory->Release();
+
+        _opencdmi->Deinitialize(service);
 
         if (_opencdmi->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 
