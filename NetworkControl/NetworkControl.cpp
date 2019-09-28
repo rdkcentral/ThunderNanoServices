@@ -88,9 +88,8 @@ namespace Plugin
         _service = service;
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
         _responseTime = config.TimeOut.Value();
+        _retries = config.Retries.Value();
         _dnsFile = config.DNSFile.Value();
-
-        _persistentStoragePath = service->PersistentPath();
 
         // We will only "open" the DNS resolve file, so of ot does not exist yet, create an empty file.
         Core::File dnsFile(_dnsFile, true);
@@ -99,6 +98,16 @@ namespace Plugin
                 SYSLOG(Logging::Startup, (_T("Could not create DNS configuration file [%s]"), _dnsFile.c_str()));
             } else {
                 dnsFile.Close();
+            }
+        }
+
+        // Try to create persisten storage folder
+        _persistentStoragePath = _service->PersistentPath();
+        if (_persistentStoragePath.empty() == false) {
+            if (Core::Directory(_persistentStoragePath.c_str()).CreatePath() == false) {
+                _persistentStoragePath.clear();
+            } else {
+                TRACE_L1("Failed to create persistent storage path at %s\n", _persistentStoragePath);
             }
         }
 
@@ -128,7 +137,7 @@ namespace Plugin
 
                     adapter.Up(true);
 
-                    _dhcpInterfaces.emplace(std::piecewise_construct,
+                    auto dhcpInterface = _dhcpInterfaces.emplace(std::piecewise_construct,
                         std::make_tuple(interfaceName),
                         std::make_tuple(Core::ProxyType<DHCPEngine>::Create(this, interfaceName, _persistentStoragePath)));
                     _interfaces.emplace(std::piecewise_construct,
@@ -140,6 +149,7 @@ namespace Plugin
                         SYSLOG(Logging::Startup, (_T("Interface [%s] activated, no IP associated"), interfaceName.c_str()));
                     } else {
                         if (how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) {
+                            dhcpInterface.first->second->LoadLeases();
                             SYSLOG(Logging::Startup, (_T("Interface [%s] activated, DHCP request issued"), interfaceName.c_str()));
                             Reload(interfaceName, true);
                         } else {
@@ -415,6 +425,55 @@ namespace Plugin
         return (Core::ERROR_NONE);
     }
 
+    /* Saves all leased offers to file */
+    void NetworkControl::DHCPEngine::SaveLeases() 
+    {
+        if (_parent._persistentStoragePath.empty() == false) {
+            if (leaseFile.Open(false) == true) {
+                Core::JSON::ArrayType<DHCPClientImplementation::Offer::JSON> leases;
+                DHCPClientImplementation::Iterator offersIterator = _client.Offers(true);
+
+                while (offersIterator.Next() == true) {
+                    leases.Add().Set(offersIterator.Current());
+                }
+
+                if (leases.ToFile(leaseFile) == false) {
+                    TRACE_L1("Error while trying to save dhcp leases to file!");
+                } 
+
+                leaseFile.Close();
+            } else {
+                TRACE_L1("Failed to open leases file %s\n for saving", leaseFile.Name().c_str());
+            }
+        }
+    }
+    
+    /*
+        Loads list of previously saved offers and adds it to unleased list 
+        for requesting in future.
+    */
+    void NetworkControl::DHCPEngine::LoadLeases() 
+    {
+        if (_parent._persistentStoragePath.empty() == false) {
+
+            if (leaseFile.Open(true) == true) {
+
+                Core::JSON::ArrayType<DHCPClientImplementation::Offer::JSON> leases;
+                if (leases.FromFile(leaseFile) == true) {
+
+                    auto iterator = leases.Elements();
+                    while (iterator.Next()) {
+                        _client.AddOffer(iterator.Current().Get(), false);
+                    }
+                }
+
+                leaseFile.Close();
+            } else {
+                TRACE_L1("Failed to open leases file %s\n for saving", leaseFile.Name().c_str());
+            }
+        }
+    }
+
     uint32_t NetworkControl::Reload(const string& interfaceName, const bool dynamic)
     {
 
@@ -432,9 +491,10 @@ namespace Plugin
             } else {
                 std::map<const string, Core::ProxyType<DHCPEngine>>::iterator entry(_dhcpInterfaces.find(interfaceName));
 
-                if (entry != _dhcpInterfaces.end()) {
+                if (entry != _dhcpInterfaces.end()) {                    
 
-                    result = entry->second->Discover();
+                    entry->second->GetIP();
+                    result = Core::ERROR_NONE;
                 }
             }
         }
@@ -549,73 +609,107 @@ namespace Plugin
         return (result);
     }
 
-    void NetworkControl::Update(const string& interfaceName)
+    /* Returns true if offer is to be accepted, false otherwise */
+    bool NetworkControl::NewOffer(const string& interfaceName, DHCPClientImplementation::Offer& offer)
+    {
+        bool takeOffer = false;
+
+        _adminLock.Lock();
+
+        std::map<const string, Core::ProxyType<DHCPEngine>>::const_iterator entry(_dhcpInterfaces.find(interfaceName));
+
+        if (entry != _dhcpInterfaces.end()) {
+            TRACE(Trace::Information, ("Got new DHCP offer for ip %s\n",offer.Address().HostAddress().c_str()));
+
+            // Try to request first offer that comes in
+            if (entry->second->Classification() == DHCPClientImplementation::CLASSIFICATION_DISCOVER) {
+                TRACE(Trace::Information, ("Sending REQUEST for IP %s", offer.Address().HostAddress().c_str()));
+                takeOffer = true;
+            }
+        } else {
+            TRACE_L1("Got IP offer for nonexisting network interface!");
+        }
+
+        _adminLock.Unlock();
+
+        return takeOffer;
+    }
+
+    void NetworkControl::RequestAccepted(const string& interfaceName, DHCPClientImplementation::Offer& offer)
     {
         std::map<const string, Core::ProxyType<DHCPEngine>>::const_iterator entry(_dhcpInterfaces.find(interfaceName));
 
         if (entry != _dhcpInterfaces.end()) {
+            std::map<const string, StaticInfo>::iterator info(_interfaces.find(interfaceName));
 
-            if (entry->second->Classification() == DHCPClientImplementation::classifications::CLASSIFICATION_DISCOVER) {
+            Core::AdapterIterator adapter(interfaceName);
 
-                DHCPClientImplementation::Iterator index(entry->second->Offers());
+            ASSERT(info != _interfaces.end());
 
-                if (index.Next() == true) {
+            if (info != _interfaces.end()) {
 
-                    std::map<const string, StaticInfo>::iterator info(_interfaces.find(interfaceName));
+                bool update = false;
+                _adminLock.Lock();
 
-                    const DHCPClientImplementation::Offer& current = (index.Current());
-
-                    TRACE_L1("DHCP Source:    %s", current.Source().HostAddress().c_str());
-                    TRACE_L1("     Address:   %s", current.Address().HostAddress().c_str());
-                    TRACE_L1("     Broadcast: %s", current.Broadcast().HostAddress().c_str());
-                    TRACE_L1("     Gateway:   %s", current.Gateway().HostAddress().c_str());
-                    TRACE_L1("     DNS:       %d", current.DNS().Count());
-                    TRACE_L1("     Netmask:   %d", current.Netmask());
-
-                    Core::AdapterIterator adapter(interfaceName);
-
-                    ASSERT(info != _interfaces.end());
-
-                    if (info != _interfaces.end()) {
-
-                        bool update = false;
-
-                        _adminLock.Lock();
-
-                        // First add all new entries.
-                        DHCPClientImplementation::Offer::DnsIterator servers(current.DNS());
-                        while (servers.Next() == true) {
-                            update = AddDNSEntry(_dns, servers.Current()) | update;
-                        }
-
-                        // Than remove all old ones.
-                        servers = info->second.Offer().DNS();
-                        while (servers.Next() == true) {
-                            update = RemoveDNSEntry(_dns, servers.Current()) | update;
-                        }
-
-                        entry->second->Acknowledge(current.Address());
-
-                        _adminLock.Unlock();
-
-                        // Add the chosen selection to the interface.
-                        info->second.Offer(current);
-
-                        if (update == true) {
-                            RefreshDNS();
-                        }
-
-                        SetIP(adapter, Core::IPNode(current.Address(), current.Netmask()), current.Gateway(), current.Broadcast());
-                    }
+                // First add all new entries.
+                DHCPClientImplementation::Offer::DnsIterator servers(offer.DNS());
+                while (servers.Next() == true) {
+                    update = AddDNSEntry(_dns, servers.Current()) | update;
                 }
-            } else if ((entry->second->Classification() == DHCPClientImplementation::classifications::CLASSIFICATION_ACK) || (entry->second->Classification() == DHCPClientImplementation::classifications::CLASSIFICATION_NAK)) {
+
+                // Than remove all old ones.
+                servers = info->second.Offer().DNS();
+                while (servers.Next() == true) {
+                    update = RemoveDNSEntry(_dns, servers.Current()) | update;
+                }
+
+                _adminLock.Unlock();
+
+                if (update == true) {
+                    RefreshDNS();
+                }
+
+                SetIP(adapter, Core::IPNode(offer.Address(), offer.Netmask()), offer.Gateway(), offer.Broadcast());
+                
+                // Update leases file
+                entry->second->SaveLeases();
+
+                // We are done for now
                 entry->second->Completed();
+                
+                TRACE_L1("New IP Granted for %s:", interfaceName.c_str());
+                TRACE_L1("     Source:    %s", offer.Source().HostAddress().c_str());
+                TRACE_L1("     Address:   %s", offer.Address().HostAddress().c_str());
+                TRACE_L1("     Broadcast: %s", offer.Broadcast().HostAddress().c_str());
+                TRACE_L1("     Gateway:   %s", offer.Gateway().HostAddress().c_str());
+                TRACE_L1("     DNS:       %d", offer.DNS().Count());
+                TRACE_L1("     Netmask:   %d", offer.Netmask());
             }
+        } else {
+            TRACE_L1("Request accepted for nonexisting network interface!");
         }
     }
 
-    void NetworkControl::Expired(const string& interfaceName)
+    void NetworkControl::RequestFailed(const string& interfaceName, DHCPClientImplementation::Offer& offer) 
     {
+        TRACE(Trace::Information, ("DHCP Request for ip %s failed!\n", offer.Address().HostAddress().c_str()));
+
+        std::map<const string, Core::ProxyType<DHCPEngine>>::const_iterator entry(_dhcpInterfaces.find(interfaceName));
+
+        if (entry != _dhcpInterfaces.end()) {
+
+            // Lets try again!
+            entry->second->GetIP();
+        } else {
+            TRACE_L1("Request denied for nonexisting network interface!");
+        }
+
+    }
+
+    void NetworkControl::NoOffers(const string& interfaceName)
+    {
+        _adminLock.Lock();
+
         std::map<const string, Core::ProxyType<DHCPEngine>>::iterator index(_dhcpInterfaces.find(interfaceName));
 
         if (index != _dhcpInterfaces.end()) {
@@ -623,9 +717,13 @@ namespace Plugin
             string message(string("{ \"interface\": \"") + index->first + string("\", \"status\":11 }"));
             TRACE(Trace::Information, (_T("DHCP Request timed out on: %s"), index->first.c_str()));
 
-            index->second->Completed();
             _service->Notify(message);
+
+            // We can close the port now
+            index->second->Completed();
         }
+
+        _adminLock.Unlock();
     }
 
     void NetworkControl::RefreshDNS()

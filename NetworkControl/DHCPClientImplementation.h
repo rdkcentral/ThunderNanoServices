@@ -143,26 +143,243 @@ namespace Plugin {
         static constexpr uint16_t DefaultDHCPServerPort = 67;
         static constexpr uint16_t DefaultDHCPClientPort = 68;
 
-        class IPStorage : public Core::JSON::Container {
-        private:
-            IPStorage(const IPStorage&) = delete;
-            IPStorage& operator=(const IPStorage&) = delete;
-
+        class DHCPMessageOptions {
         public:
-            IPStorage() 
-                : Core::JSON::Container()
-                , ip_adress()
+            DHCPMessageOptions()
+                : messageType()
+                , gateway()
+                , broadcast()
+                , dns()
+                , netmask()
+                , leaseTime()
+                , renewalTime()
+                , rebindingTime()
             {
-                Add(_T("ip_address"), &ip_adress);
+            }
+
+            DHCPMessageOptions(const uint8_t optionsData[], const uint16_t length)
+                : messageType()
+                , gateway()
+                , broadcast()
+                , dns()
+                , netmask()
+                , leaseTime()
+                , renewalTime()
+                , rebindingTime()
+            {
+                FromRAW(optionsData, length);    
+            }
+
+            bool FromRAW(const uint8_t optionsData[], const uint16_t length) 
+            {
+              uint32_t used = 0;
+
+                /* process all DHCP options present in the packet */
+                while ((used < length) && (optionsData[used] != OPTION_END)) {
+
+                    /* skip the padding bytes */
+                    while ((used < length) && (optionsData[used] == OPTION_PAD)) {
+                        used++;
+                    }
+
+                    /* get option type */
+                    uint8_t classification = optionsData[used++];
+
+                    /* get option length */
+                    uint8_t size = optionsData[used++];
+
+                    /* get option data */
+                    switch (classification) {
+                    case OPTION_SUBNETMASK: {
+                        uint8_t teller = 0;
+                        while ((teller < 4) && (optionsData[used + teller] == 0xFF)) {
+                            teller++;
+                        }
+                        netmask = (teller * 8);
+                        if (teller < 4) {
+                            uint8_t mask = (optionsData[used + teller] ^ 0xFF);
+                            netmask += 8;
+                            while (mask != 0) {
+                                mask = mask >> 1;
+                                netmask--;
+                            }
+                        }
+                        break;
+                    }
+                    case OPTION_DHCPMESSAGETYPE:
+                        messageType = optionsData[used];
+                        break;
+
+                    case OPTION_ROUTER: {
+                        struct in_addr rInfo;
+                        rInfo.s_addr = htonl(optionsData[used] << 24 | optionsData[used + 1] << 16 | optionsData[used + 2] << 8 | optionsData[used + 3]);
+                        gateway = rInfo;
+                        break;
+                    }
+                    case OPTION_DNS: {
+                        uint16_t index = 0;
+                        while ((index + 4) <= size) {
+                            struct in_addr rInfo;
+                            rInfo.s_addr = htonl(optionsData[used + index] << 24 | optionsData[used + index + 1] << 16 | optionsData[used + index + 2] << 8 | optionsData[used + index + 3]);
+                            dns.push_back(rInfo);
+                            index += 4;
+                        }
+                        break;
+                    }
+                    case OPTION_BROADCASTADDRESS: {
+                        struct in_addr rInfo;
+                        rInfo.s_addr = htonl(optionsData[used] << 24 | optionsData[used + 1] << 16 | optionsData[used + 2] << 8 | optionsData[used + 3]);
+                        broadcast = rInfo;
+                        break;
+                    }
+                    case OPTION_IPADDRESSLEASETIME:
+                        ::memcpy(&leaseTime, &optionsData[used], sizeof(leaseTime));
+                        leaseTime = ntohl(leaseTime);
+                        break;
+                    case OPTION_RENEWALTIME:
+                        ::memcpy(&renewalTime, &optionsData[used], sizeof(renewalTime));
+                        renewalTime = ntohl(renewalTime);
+                        break;
+                    case OPTION_REBINDINGTIME:
+                        ::memcpy(&rebindingTime, &optionsData[used], sizeof(rebindingTime));
+                        rebindingTime = ntohl(rebindingTime);
+                        break;
+                    }
+
+                    /* move on to the next option. */
+                    used += size;
+                }
+
+                return true;
             }
         public:
-            Core::JSON::String ip_adress;
+            Core::OptionalType<uint8_t> messageType;
+            Core::NodeId gateway; /* the IP address that was offered to us */
+            Core::NodeId broadcast; /* the IP address that was offered to us */
+            std::list<Core::NodeId> dns; /* the IP address that was offered to us */
+            Core::OptionalType<uint8_t> netmask;
+            Core::OptionalType<uint32_t> leaseTime; /* lease time in seconds */
+            Core::OptionalType<uint32_t> renewalTime; /* renewal time in seconds */
+            Core::OptionalType<uint32_t> rebindingTime; /* rebinding time in seconds */
         };
 
         class Offer {
         public:
             typedef Core::IteratorType<const std::list<Core::NodeId>, const Core::NodeId&, std::list<Core::NodeId>::const_iterator> DnsIterator;
 
+            class JSON : public Core::JSON::Container {
+            private:
+                JSON& operator=(const JSON&) = delete;
+            public:
+                JSON() 
+                    : source()
+                    , offer()
+                    , gateway()
+                    , broadcast()
+                    , dns()
+                    , netmask()
+                    , leaseTime()
+                    , renewalTime()
+                    , rebindingTime()
+                {
+                    Add("source", &source);
+                    Add("offer", &offer);
+                    Add("gateway", &gateway);
+                    Add("broadcast", &broadcast);
+                    Add("dns", &dns);
+                    Add("netmask", &netmask);
+                    Add("leaseTime", &leaseTime);
+                    Add("renewalTime", &renewalTime);
+                    Add("rebindingTime", &rebindingTime);
+                }
+
+                JSON(Offer& object) 
+                {
+                    Add("source", &source);
+                    Add("offer", &offer);
+                    Add("gateway", &gateway);
+                    Add("broadcast", &broadcast);
+                    Add("dns", &dns);
+                    Add("netmask", &netmask);
+                    Add("leaseTime", &leaseTime);
+                    Add("renewalTime", &renewalTime);
+                    Add("rebindingTime", &rebindingTime);
+
+                    Set(object);
+                }
+
+                JSON(const JSON& copy) 
+                    : source(copy.source)
+                    , offer(copy.offer)
+                    , gateway(copy.gateway)
+                    , broadcast(copy.broadcast)
+                    , dns(copy.dns)
+                    , netmask(copy.netmask)
+                    , leaseTime(copy.leaseTime)
+                    , renewalTime(copy.renewalTime)
+                    , rebindingTime(copy.rebindingTime)
+                {
+                    Add("source", &source);
+                    Add("offer", &offer);
+                    Add("gateway", &gateway);
+                    Add("broadcast", &broadcast);
+                    Add("dns", &dns);
+                    Add("netmask", &netmask);
+                    Add("leaseTime", &leaseTime);
+                    Add("renewalTime", &renewalTime);
+                    Add("rebindingTime", &rebindingTime);
+                }
+
+                void Set(Offer& object) {
+                    source = object._source.HostAddress();
+                    offer = object._offer.HostAddress();
+                    gateway = object._gateway.HostAddress();
+                    broadcast = object._broadcast.HostAddress();
+
+                    for (auto entry : object._dns) {
+                        Core::JSON::String dnsAddress;
+                        dnsAddress = entry.HostAddress();
+                        dns.Add(dnsAddress);
+                    }
+
+                    netmask = object._netmask;
+                    leaseTime = object._leaseTime;
+                    renewalTime = object._renewalTime;
+                    rebindingTime = object._rebindingTime;
+                }
+
+                Offer Get() {
+                    Offer result;
+                    result._source = Core::NodeId(source.Value().c_str());
+                    result._offer = Core::NodeId(offer.Value().c_str());
+                    result._gateway = Core::NodeId(gateway.Value().c_str());
+                    result._broadcast = Core::NodeId(broadcast.Value().c_str());
+
+                    auto entry = dns.Elements();
+                    while (entry.Next()) {
+                        result._dns.push_back(Core::NodeId(entry.Current().Value().c_str()));
+                    }
+
+                    result._netmask = netmask.Value();
+                    result._leaseTime = leaseTime.Value();
+                    result._renewalTime = renewalTime.Value();
+                    result._rebindingTime = rebindingTime.Value();
+
+                    return result;
+                }
+            private:
+                Core::JSON::String source;
+                Core::JSON::String offer;
+                Core::JSON::String gateway;
+                Core::JSON::String broadcast;
+
+                Core::JSON::ArrayType<Core::JSON::String> dns;
+
+                Core::JSON::DecSInt8 netmask;
+                Core::JSON::DecUInt32 leaseTime;
+                Core::JSON::DecUInt32 renewalTime;
+                Core::JSON::DecUInt32 rebindingTime;
+            };
         public:
             Offer()
                 : _source()
@@ -175,8 +392,9 @@ namespace Plugin {
                 , _renewalTime(0)
                 , _rebindingTime(0)
             {
+                Crypto::Random(_id);
             }
-            Offer(const Core::NodeId& source, const CoreMessage& frame, const uint8_t options[], const uint16_t length)
+            Offer(const Core::NodeId& source, const CoreMessage& frame, DHCPMessageOptions& options)
                 : _source(source)
                 , _offer()
                 , _gateway()
@@ -187,105 +405,11 @@ namespace Plugin {
                 , _renewalTime(0)
                 , _rebindingTime(0)
             {
-
-                //_source = frame.ciaddr;
+                _source = frame.siaddr;
                 _offer = frame.yiaddr;
+                Crypto::Random(_id);
 
-                uint32_t used = 0;
-
-                /* process all DHCP options present in the packet */
-                while ((used < length) && (options[used] != OPTION_END)) {
-
-                    /* skip the padding bytes */
-                    while ((used < length) && (options[used] == 0)) {
-                        used++;
-                    }
-
-                    /* get option type */
-                    uint8_t classification = options[used++];
-
-                    /* get option length */
-                    uint8_t size = options[used++];
-
-                    /* get option data */
-                    switch (classification) {
-                    case OPTION_SUBNETMASK: {
-                        uint8_t teller = 0;
-                        while ((teller < 4) && (options[used + teller] == 0xFF)) {
-                            teller++;
-                        }
-                        _netmask = (teller * 8);
-                        if (teller < 4) {
-                            uint8_t mask = (options[used + teller] ^ 0xFF);
-                            _netmask += 8;
-                            while (mask != 0) {
-                                mask = mask >> 1;
-                                _netmask--;
-                            }
-                        }
-                        break;
-                    }
-                    case OPTION_ROUTER: {
-                        struct in_addr rInfo;
-                        rInfo.s_addr = htonl(options[used] << 24 | options[used + 1] << 16 | options[used + 2] << 8 | options[used + 3]);
-                        _gateway = rInfo;
-                        break;
-                    }
-                    case OPTION_DNS: {
-                        uint16_t index = 0;
-                        while ((index + 4) <= size) {
-                            struct in_addr rInfo;
-                            rInfo.s_addr = htonl(options[used + index] << 24 | options[used + index + 1] << 16 | options[used + index + 2] << 8 | options[used + index + 3]);
-                            _dns.push_back(rInfo);
-                            index += 4;
-                        }
-                        break;
-                    }
-                    case OPTION_BROADCASTADDRESS: {
-                        struct in_addr rInfo;
-                        rInfo.s_addr = htonl(options[used] << 24 | options[used + 1] << 16 | options[used + 2] << 8 | options[used + 3]);
-                        _broadcast = rInfo;
-                        break;
-                    }
-                    case OPTION_IPADDRESSLEASETIME:
-                        ::memcpy(&_leaseTime, &options[used], sizeof(_leaseTime));
-                        _leaseTime = ntohl(_leaseTime);
-                        break;
-                    case OPTION_RENEWALTIME:
-                        ::memcpy(&_renewalTime, &options[used], sizeof(_renewalTime));
-                        _renewalTime = ntohl(_renewalTime);
-                        break;
-                    case OPTION_REBINDINGTIME:
-                        ::memcpy(&_rebindingTime, &options[used], sizeof(_rebindingTime));
-                        _rebindingTime = ntohl(_rebindingTime);
-                        break;
-                    }
-
-                    /* move on to the next option. */
-                    used += size;
-                }
-
-                if (_offer.IsValid() == true) {
-                    if (_netmask == static_cast<uint8_t>(~0)) {
-                        _netmask = _offer.DefaultMask();
-                        TRACE_L1("Set the netmask of the offer: %d", _netmask);
-                    }
-
-                    if (_broadcast.IsValid() == false) {
-                        _broadcast = Core::IPNode(_offer, _netmask).Broadcast();
-                        TRACE_L1("Set the broadcast of the offer: %s", _broadcast.HostAddress().c_str());
-                    }
-
-                    if (_gateway.IsValid() == false) {
-                        _gateway = source;
-                        TRACE_L1("Set the gateway to the source: %s", _gateway.HostAddress().c_str());
-                    }
-
-                    if (_dns.size() == 0) {
-                        _dns.push_back(source);
-                        TRACE_L1("Set the DNS to the source: %s", _source.HostAddress().c_str());
-                    }
-                }
+                Update(options);
             }
             Offer(const Offer& copy)
                 : _source(copy._source)
@@ -297,10 +421,62 @@ namespace Plugin {
                 , _leaseTime(copy._leaseTime)
                 , _renewalTime(copy._renewalTime)
                 , _rebindingTime(copy._rebindingTime)
+                , _id(copy._id)
             {
             }
+            
             ~Offer()
             {
+            }
+
+            void Update(DHCPMessageOptions& options) {
+               if (_offer.IsValid() == true) {
+                    
+                    _gateway = options.gateway;
+                    _broadcast = options.broadcast;
+                    _dns = options.dns;
+
+                    // Get as much info from options as possible...
+                    if (options.netmask.IsSet()) 
+                        _netmask = options.netmask.Value();
+                    else 
+                        TRACE_L1("DHCP message without netmask information");
+
+                    if (options.leaseTime.IsSet()) 
+                        _leaseTime = options.leaseTime.Value();
+                    else 
+                        TRACE_L1("DHCP message came without lease time information");
+
+                    if (options.renewalTime.IsSet()) 
+                        _renewalTime = options.renewalTime.Value();
+                    else 
+                        TRACE_L1("DHCP message came without renewal time information");
+
+                    if (options.rebindingTime.IsSet()) 
+                        _rebindingTime = options.rebindingTime.Value();
+                    else 
+                        TRACE_L1("DHCP message came without rebinding time information");
+
+                    if (_netmask == static_cast<uint8_t>(~0)) {
+                        _netmask = _offer.DefaultMask();
+                        TRACE_L1("Set the netmask of the offer: %d", _netmask);
+                    }
+
+                    if (_broadcast.IsValid() == false) {
+                        _broadcast = Core::IPNode(_offer, _netmask).Broadcast();
+                        TRACE_L1("Set the broadcast of the offer: %s", _broadcast.HostAddress().c_str());
+                    }
+
+                    if (_gateway.IsValid() == false) {
+                        _gateway = _source;
+                        TRACE_L1("Set the gateway to the source: %s", _gateway.HostAddress().c_str());
+                    }
+
+                    if (_dns.size() == 0) {
+                        _dns.push_back(_source);
+                        TRACE_L1("S et the DNS to the source: %s", _source.HostAddress().c_str());
+                    }
+                }
             }
 
             Offer& operator=(const Offer& rhs)
@@ -314,11 +490,16 @@ namespace Plugin {
                 _leaseTime = rhs._leaseTime;
                 _renewalTime = rhs._renewalTime;
                 _rebindingTime = rhs._rebindingTime;
+                _id = rhs._id;
 
                 return (*this);
             }
 
         public:
+            uint32_t Id() const 
+            {
+                return _id;
+            }
             bool IsValid() const
             {
                 return (_offer.IsValid());
@@ -370,13 +551,16 @@ namespace Plugin {
             uint32_t _leaseTime; /* lease time in seconds */
             uint32_t _renewalTime; /* renewal time in seconds */
             uint32_t _rebindingTime; /* rebinding time in seconds */
+            uint32_t _id; /* unique offer identifier */
         };
 
-        typedef Core::IteratorType<const std::list<Offer>, const Offer&, std::list<Offer>::const_iterator> Iterator;
-        typedef Core::IDispatchType<const string&> ICallback;
+        typedef Core::IteratorType<std::list<Offer>, Offer&, std::list<Offer>::iterator> Iterator;
+        typedef Core::IteratorType<const std::list<Offer>, const Offer&, std::list<Offer>::const_iterator> ConstIterator;
+        typedef std::function<void(Offer&)> DiscoverCallback;
+        typedef std::function<void(Offer&, bool)> RequestCallback;
 
     public:
-        DHCPClientImplementation(const string& interfaceName, ICallback* notification, const string& persistentStoragePath);
+        DHCPClientImplementation(const string& interfaceName, DiscoverCallback discoverCallback, RequestCallback claimCallback);
         virtual ~DHCPClientImplementation();
 
     public:
@@ -401,47 +585,34 @@ namespace Plugin {
 
             _adminLock.Unlock();
         }
-        inline uint32_t Discover(const Core::NodeId& address)
+
+        /* Ask DHCP servers for offers. */
+        inline uint32_t Discover(const Core::NodeId& preferredAddres)
         {
             uint32_t result = Core::ERROR_INPROGRESS;
 
             _adminLock.Lock();
-            if (_state == IDLE) {
-                result = Core::ERROR_BAD_REQUEST;
+            if (_state == RECEIVING || _state == IDLE) {
+                result = Core::ERROR_OPENING_FAILED;
+                
+                if (SocketDatagram::IsOpen() == true
+                    || SocketDatagram::Open(Core::infinite, _interfaceName) == Core::ERROR_NONE) {
+                    _unleasedOffers.clear();
 
-                // See if the requested interface exists
-                Core::AdapterIterator adapters;
+                    SocketDatagram::Broadcast(true);
+                    
+                    Crypto::Random(_discoverXID);
+                    _state = SENDING;
+                    _modus = CLASSIFICATION_DISCOVER;
+                    _preferred = preferredAddres;
+                    _xid = _discoverXID;
+                    result = Core::ERROR_NONE;
 
-                while ((adapters.Next() == true) && (adapters.Name() != _interfaceName)) /* INTENTIONALLY LEFT EMPTY */
-                    ;
+                    TRACE_L1("Sending a Discover for %s", _interfaceName.c_str());                            
 
-                if (adapters.IsValid() == true) {
-                    result = Core::ERROR_OPENING_FAILED;
-
-                    adapters.MACAddress(_MAC, sizeof(_MAC));
-                    if (SocketDatagram::Open(Core::infinite, _interfaceName) == Core::ERROR_NONE) {
-
-                        _offers.clear();
-
-                        SocketDatagram::Broadcast(true);
-
-                        _state = SENDING;
-                        _modus = CLASSIFICATION_DISCOVER;
-                        _preferred = address.IsEmpty() ? _last : address;
-                        result = Core::ERROR_NONE;
-
-                        TRACE_L1("Sending a Discover for %s", _interfaceName.c_str());
-
-                        /* transaction id is supposed to be random */
-                        if (_modus == CLASSIFICATION_DISCOVER)
-                            Crypto::Random(_xid);
-
-                        SocketDatagram::Trigger();
-                    } else {
-                        TRACE_L1("DatagramSocket for DHCP[%s] could not be opened.", _interfaceName.c_str());
-                    }
+                    SocketDatagram::Trigger();
                 } else {
-                    TRACE_L1("Incorrect interface to start a new DHCP[%s] send", _interfaceName.c_str());
+                    TRACE_L1("DatagramSocket for DHCP[%s] could not be opened.", _interfaceName.c_str());
                 }
             } else {
                 TRACE_L1("Incorrect start to start a new DHCP[%s] send. Current State: %d", _interfaceName.c_str(), _state);
@@ -450,30 +621,43 @@ namespace Plugin {
 
             return (result);
         }
-        inline uint32_t Request(const Core::NodeId& acknowledged)
-        {
+
+        uint32_t Request(Offer& offer) {
 
             uint32_t result = Core::ERROR_INPROGRESS;
 
             _adminLock.Lock();
+            if (SocketDatagram::IsOpen() == true
+                || SocketDatagram::Open(Core::infinite, _interfaceName) == Core::ERROR_NONE) {
 
-            if (acknowledged.HostAddress() != _last.HostAddress()) {
-                SaveLastIP(acknowledged.HostAddress());
-            }
+                SocketDatagram::Broadcast(true);
 
-            if (_state == RECEIVING) {
-                TRACE_L1("Sending an ACK for %s", acknowledged.HostAddress().c_str());
-                _state = SENDING;
-                _modus = CLASSIFICATION_REQUEST;
-                _preferred = acknowledged;
-                result = Core::ERROR_NONE;
-                SocketDatagram::Trigger();
+                if (_state == RECEIVING || _state == IDLE) {
+                    TRACE(Trace::Information, ("Sending REQUEST for %s", offer.Address().HostAddress().c_str()));
+                    _state = SENDING;
+                    _modus = CLASSIFICATION_REQUEST;
+                    _preferred = offer.Address();
+                    // Use offer id as transaction id to pair request with correct response
+                    _xid = offer.Id(); 
+
+                    if (offer.Source().IsEmpty() == false) {
+                        auto addr = reinterpret_cast<const sockaddr_in*>(static_cast<const struct sockaddr*>(offer.Source()));
+                        
+                        memcpy(&_serverIdentifier, &(addr->sin_addr), 4);
+                    }
+
+                    result = Core::ERROR_NONE;
+                    SocketDatagram::Trigger();
+                }
+            } else {
+                TRACE_L1("Failed to open socket whilte trying to request ip %s\n", offer.Address().HostAddress().c_str());
             }
 
             _adminLock.Unlock();
 
             return (result);
         }
+
         inline uint32_t Decline(const Core::NodeId& acknowledged)
         {
 
@@ -484,6 +668,7 @@ namespace Plugin {
             if (_state == RECEIVING) {
                 _state = SENDING;
                 _modus = CLASSIFICATION_NAK;
+                Crypto::Random(_xid);
                 _preferred = acknowledged;
                 result = Core::ERROR_NONE;
             }
@@ -493,25 +678,88 @@ namespace Plugin {
             return (result);
         }
 
-        inline Iterator Offers() const
-        {
-            return (Iterator(_offers));
+        inline void AddOffer(const Offer& offer, bool leased) {
+            _adminLock.Lock();
+
+            if (leased == true) {
+                _leasedOffers.push_back(offer);
+            } else {
+                _unleasedOffers.push_back(offer);
+            }
+
+            _adminLock.Unlock();
         }
+
+        inline Iterator FindOffer(const uint32_t id, bool leased)
+        {
+            _adminLock.Lock(); 
+
+            Iterator result;
+
+            if (leased == true) {
+                auto foundOffer = std::find_if(_leasedOffers.begin(), _leasedOffers.end(), [id](Offer& offer) {return offer.Id() == id;});
+
+                result = Iterator(_leasedOffers, foundOffer);
+            } else {
+                auto foundOffer = std::find_if(_unleasedOffers.begin(), _unleasedOffers.end(), [id](Offer& offer) {return offer.Id() == id;});
+
+                result = Iterator(_unleasedOffers, foundOffer);
+            }
+            
+            _adminLock.Unlock();
+
+            return result;
+        }
+
+        inline Iterator Offers(bool leased)
+        {
+            if (leased == true) {
+                return Iterator(_leasedOffers);
+            } else {
+                return Iterator(_unleasedOffers);
+            }
+        }
+
+        inline Iterator LeasedOffers()
+        {
+            return (Iterator(_leasedOffers));
+        }
+
+        inline Iterator CurrentlyRequestedOffer() {
+            Iterator result(_unleasedOffers);
+
+            if (_modus == CLASSIFICATION_REQUEST) {
+                // try to match xid with offer
+                result = FindOffer(_xid, false);
+            }
+
+            return result;
+        }
+
+        inline void RemoveOffer(Offer& offer, bool leased) 
+        {
+            _adminLock.Lock();
+
+            if (leased == true) {
+                _leasedOffers.remove_if([offer] (Offer& o) {return o.Id() == offer.Id();});
+            } else {
+                _unleasedOffers.remove_if([offer] (Offer& o) {return o.Id() == offer.Id();});    
+            }
+            _adminLock.Unlock();
+        }
+
         inline void Completed()
         {
             _adminLock.Lock();
             TRACE_L1("Closing the DHCP stuff, we are done! State-Modus: [%d-%d]", _state, _modus);
             _state = IDLE;
             // Do not wait for UDP closure, this is also called on the Communication Thread !!!
-            SocketDatagram::Close(0);
+            if (SocketDatagram::IsOpen())
+                SocketDatagram::Close(0);
             _adminLock.Unlock();
         }
 
     private:
-        // Methods for retaining IP adress over reboots
-        string ReadLastIP();
-        void SaveLastIP(const string& last_ip);
-
         // Methods to extract and insert data into the socket buffers
         virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
         virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
@@ -527,6 +775,14 @@ namespace Plugin {
             }
             return (index == length);
         }
+
+        Offer& MakeLeased(Offer& offer) {
+            _leasedOffers.push_back(offer);
+            RemoveOffer(offer, false);
+
+            return _leasedOffers.back();
+        }
+
         uint16_t Message(uint8_t stream[], const uint16_t length) const
         {
 
@@ -546,6 +802,7 @@ namespace Plugin {
 
             frame.hops = 0;
 
+            /* sets a transaction identifier */
             frame.xid = htonl(_xid);
 
             /*discover_packet.secs=htons(65535);*/
@@ -568,8 +825,8 @@ namespace Plugin {
             options[1] = 1; /* DHCP message option length in bytes */
             options[2] = _modus;
 
-            /* the IP address we're requesting */
-            if (_preferred.Type() == Core::NodeId::TYPE_IPV4) {
+            /* the IP address we're preferring (DISCOVER) /  REQUESTING (REQUEST) */
+            if ((_preferred.Type() == Core::NodeId::TYPE_IPV4) && (_preferred.IsEmpty() == false)) {
                 const struct sockaddr_in* data(reinterpret_cast<const struct sockaddr_in*>(static_cast<const struct sockaddr*>(_preferred)));
 
                 options[index++] = OPTION_REQUESTEDIPADDRESS;
@@ -585,6 +842,7 @@ namespace Plugin {
             ::memcpy(&(options[index]), _MAC, frame.hlen);
             index += frame.hlen;
 
+            /* Ask for extended informations in offer */
             if (_modus == CLASSIFICATION_DISCOVER) {
                 options[index++] = OPTION_REQUESTLIST;
                 options[index++] = 4;
@@ -592,37 +850,75 @@ namespace Plugin {
                 options[index++] = OPTION_ROUTER;
                 options[index++] = OPTION_DNS;
                 options[index++] = OPTION_BROADCASTADDRESS;
-            } 
+            } else if (_modus == CLASSIFICATION_REQUEST) {
+                // required for usage in bridged networks
+                if (_serverIdentifier != 0) {
+                    options[index++] = OPTION_SERVERIDENTIFIER;
+                    options[index++] = sizeof(_serverIdentifier);
+                    ::memcpy(&(options[index]), &_serverIdentifier, sizeof(_serverIdentifier));
+                    index += sizeof(_serverIdentifier);
+                }
+            }
 
             options[index++] = OPTION_END;
 
             return (sizeof(CoreMessage) + index);
         }
 
-        /* parse a DHCPOFFER message from one or more DHCP servers */
-        uint16_t Offering(const Core::NodeId& source, const uint8_t stream[], const uint16_t length)
+        /* parse a DHCP message and take appropiate action */
+        uint16_t ProcessMessage(const Core::NodeId& source, const uint8_t stream[], const uint16_t length)
         {
 
             uint16_t result = sizeof(CoreMessage);
             const CoreMessage& frame(*reinterpret_cast<const CoreMessage*>(stream));
+            const uint32_t xid = ntohl(frame.xid);
 
-            /* check packet xid to see if its the same as the one we used in the discover packet */
-            if (ntohl(frame.xid) != _xid) {
-                TRACE_L1("Unknown XID encountered: %d", __LINE__);
-                TRACE(Flow, (string(_T("Unknown XID encountered."))));
-            } else if (::memcmp(frame.chaddr, _MAC, sizeof(_MAC)) != 0) {
-                TRACE_L1("Unknown CHADDR  encountered: %d", __LINE__);
-                TRACE(Flow, (string(_T("Unknown CHADDR encountered."))));
+            if (::memcmp(frame.chaddr, _MAC, sizeof(_MAC)) != 0) {
+                TRACE(Trace::Information, (_T("Unknown CHADDR encountered.")));
             } else if ((sizeof(_MAC) < sizeof(frame.chaddr)) && (IsZero(&(frame.chaddr[sizeof(_MAC)]), sizeof(frame.chaddr) - sizeof(_MAC)) == false)) {
-                TRACE_L1("Unknown CHADDR  (clearance) encountered: %d", __LINE__);
-                TRACE(Flow, (string(_T("Unknown CHADDR (clearance) encountered."))));
+                TRACE(Trace::Information, (_T("Unknown CHADDR (clearance) encountered.")));
             } else {
-                const uint8_t* options = reinterpret_cast<const uint8_t*>(&(stream[result]));
-                const uint16_t optionlen = length - result;
-                _offers.push_back(Offer(source, frame, options, optionlen));
+                const uint8_t* optionsRaw = reinterpret_cast<const uint8_t*>(&(stream[result]));
+                const uint16_t optionsLen = length - result;
 
-                TRACE_L1("Received an Offer from: %s", source.HostAddress().c_str());
-                _callback->Dispatch(_interfaceName);
+                DHCPMessageOptions options(optionsRaw, optionsLen);
+
+                switch (options.messageType.Value()) {
+                    case CLASSIFICATION_OFFER:
+                        {
+                            if (xid == _discoverXID) {
+                                _unleasedOffers.push_back(Offer(source, frame, options));
+                                TRACE(Trace::Information, ("Received an Offer from: %s", source.HostAddress().c_str()));
+                                _discoverCallback(_unleasedOffers.back());
+                            } else {
+                                TRACE_L1("Unknown XID encountered: %d", xid);
+                            }
+                            break;
+                        }
+                    case CLASSIFICATION_ACK: 
+                        {
+                            Iterator offer = FindOffer(xid, false);
+                                        
+                            if (offer.IsValid()) {
+                                offer.Current().Update(options); // Update if informations changed since offering
+                                Offer& leased = MakeLeased(offer.Current());
+                                _claimCallback(leased, true);
+                            }
+                            break;
+                        }
+                    case CLASSIFICATION_NAK:
+                        {
+                            Iterator offer = FindOffer(xid, false);
+
+                            if (offer.IsValid()) {
+                                Offer copy = offer.Current(); // we need a copy because of deletion
+                                RemoveOffer(offer.Current(), false);
+
+                                _claimCallback(copy, false);
+                            }
+                            break;
+                        }                   
+                }
 
                 result = length;
             }
@@ -636,12 +932,14 @@ namespace Plugin {
         state _state;
         classifications _modus;
         uint8_t _MAC[6];
+        mutable uint32_t _serverIdentifier;
         mutable uint32_t _xid;
+        mutable uint32_t _discoverXID;
         Core::NodeId _preferred;
-        Core::NodeId _last;
-        ICallback* _callback;
-        std::list<Offer> _offers;
-        string _persistentStorage;
+        DiscoverCallback _discoverCallback;
+        RequestCallback _claimCallback;
+        std::list<Offer> _unleasedOffers;
+        std::list<Offer> _leasedOffers;
     };
 }
 } // namespace WPEFramework::Plugin
