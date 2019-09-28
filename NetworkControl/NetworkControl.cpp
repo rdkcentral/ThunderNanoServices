@@ -610,7 +610,7 @@ namespace Plugin
     }
 
     /* Returns true if offer is to be accepted, false otherwise */
-    bool NetworkControl::NewOffer(const string& interfaceName, DHCPClientImplementation::Offer& offer)
+    bool NetworkControl::NewOffer(const string& interfaceName, const DHCPClientImplementation::Offer& offer)
     {
         bool takeOffer = false;
 
@@ -635,7 +635,7 @@ namespace Plugin
         return takeOffer;
     }
 
-    void NetworkControl::RequestAccepted(const string& interfaceName, DHCPClientImplementation::Offer& offer)
+    void NetworkControl::RequestAccepted(const string& interfaceName, const DHCPClientImplementation::Offer& offer)
     {
         std::map<const string, Core::ProxyType<DHCPEngine>>::const_iterator entry(_dhcpInterfaces.find(interfaceName));
 
@@ -690,7 +690,7 @@ namespace Plugin
         }
     }
 
-    void NetworkControl::RequestFailed(const string& interfaceName, DHCPClientImplementation::Offer& offer) 
+    void NetworkControl::RequestFailed(const string& interfaceName, const DHCPClientImplementation::Offer& offer) 
     {
         TRACE(Trace::Information, ("DHCP Request for ip %s failed!\n", offer.Address().HostAddress().c_str()));
 

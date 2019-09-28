@@ -31,9 +31,7 @@ namespace Plugin {
         , _unleasedOffers()
         , _leasedOffers()
     {
-        Core::AdapterIterator adapters;
-        while ((adapters.Next() == true) && (adapters.Name() != _interfaceName)) /* INTENTIONALLY LEFT EMPTY */
-                    ;
+        Core::AdapterIterator adapters(_interfaceName);
 
         if (adapters.IsValid() == true) {
             adapters.MACAddress(_MAC, sizeof(_MAC));

@@ -339,13 +339,13 @@ namespace Plugin {
                 }
             }
 
-            void NewOffer(DHCPClientImplementation::Offer& offer) {
+            void NewOffer(const DHCPClientImplementation::Offer& offer) {
                 if (_parent.NewOffer(_client.Interface(), offer) == true) {
                     Request(offer);
                 }
             }
 
-            void RequestResult(DHCPClientImplementation::Offer& offer, bool result) {
+            void RequestResult(const DHCPClientImplementation::Offer& offer, const bool result) {
                 StopWatchdog();
 
                 if (result == true) {
@@ -355,7 +355,7 @@ namespace Plugin {
                 }
             }
 
-            inline void Request(DHCPClientImplementation::Offer& offer) {
+            inline void Request(const DHCPClientImplementation::Offer& offer) {
 
                 ResetWatchdog();
                 _client.Request(offer);
@@ -365,11 +365,11 @@ namespace Plugin {
             {
                 _client.Completed();
             }
-            inline DHCPClientImplementation::Iterator Offers(bool leased)
+            inline DHCPClientImplementation::Iterator Offers(const bool leased)
             {
                 return (_client.Offers(leased));
             }
-            inline void RemoveOffer(DHCPClientImplementation::Offer& offer, bool leased) 
+            inline void RemoveOffer(const DHCPClientImplementation::Offer& offer, const bool leased) 
             {
                 _client.RemoveOffer(offer, leased);
             }
@@ -482,9 +482,9 @@ namespace Plugin {
     private:
         uint32_t Reload(const string& interfaceName, const bool dynamic);
         uint32_t SetIP(Core::AdapterIterator& adapter, const Core::IPNode& ipAddress, const Core::NodeId& gateway, const Core::NodeId& broadcast);
-        bool NewOffer(const string& interfaceName, DHCPClientImplementation::Offer& offer);
-        void RequestAccepted(const string& interfaceName, DHCPClientImplementation::Offer& offer);
-        void RequestFailed(const string& interfaceName, DHCPClientImplementation::Offer& offer);
+        bool NewOffer(const string& interfaceName, const DHCPClientImplementation::Offer& offer);
+        void RequestAccepted(const string& interfaceName, const DHCPClientImplementation::Offer& offer);
+        void RequestFailed(const string& interfaceName, const DHCPClientImplementation::Offer& offer);
         void NoOffers(const string& interfaceName);
         void RefreshDNS();
         void Activity(const string& interface);

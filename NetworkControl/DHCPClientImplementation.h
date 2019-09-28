@@ -622,7 +622,7 @@ namespace Plugin {
             return (result);
         }
 
-        uint32_t Request(Offer& offer) {
+        uint32_t Request(const Offer& offer) {
 
             uint32_t result = Core::ERROR_INPROGRESS;
 
@@ -678,7 +678,7 @@ namespace Plugin {
             return (result);
         }
 
-        inline void AddOffer(const Offer& offer, bool leased) {
+        inline void AddOffer(const Offer& offer, const bool leased) {
             _adminLock.Lock();
 
             if (leased == true) {
@@ -690,7 +690,7 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        inline Iterator FindOffer(const uint32_t id, bool leased)
+        inline Iterator FindOffer(const uint32_t id, const bool leased)
         {
             _adminLock.Lock(); 
 
@@ -711,7 +711,7 @@ namespace Plugin {
             return result;
         }
 
-        inline Iterator Offers(bool leased)
+        inline Iterator Offers(const bool leased)
         {
             if (leased == true) {
                 return Iterator(_leasedOffers);
@@ -736,7 +736,7 @@ namespace Plugin {
             return result;
         }
 
-        inline void RemoveOffer(Offer& offer, bool leased) 
+        inline void RemoveOffer(const Offer& offer, const bool leased) 
         {
             _adminLock.Lock();
 
@@ -776,7 +776,7 @@ namespace Plugin {
             return (index == length);
         }
 
-        Offer& MakeLeased(Offer& offer) {
+        Offer& MakeLeased(const Offer& offer) {
             _leasedOffers.push_back(offer);
             RemoveOffer(offer, false);
 
