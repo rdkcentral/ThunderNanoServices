@@ -311,7 +311,10 @@ namespace Plugin {
                     //Event fired on key status update
                     virtual void OnKeyStatusUpdate(const char* keyMessage, const uint8_t buffer[], const uint8_t length) override
                     {
+                        ASSERT (buffer != nullptr);
+
                         ::OCDM::ISession::KeyStatus key;
+                        CommonEncryptionData::KeyId keyId(CommonEncryptionData::COMMON, buffer, length);
 
                         TRACE(Trace::Information, ("OnKeyStatusUpdate(%s)", keyMessage));
 
@@ -324,12 +327,12 @@ namespace Plugin {
                         else
                             key = ::OCDM::ISession::InternalError;
 
-                       const CommonEncryptionData::KeyId* updated = _parent.UpdateKeyStatus(key, buffer, length);
+                        const CommonEncryptionData::KeyId* updated = _parent._cencData.UpdateKeyStatus(key, keyId);
 
-                        const uint8_t* bufferToNotify = updated != nullptr && buffer == nullptr ? updated->Id() : buffer;
-                        const uint8_t lengthToNotify = updated != nullptr && length == 0 ? updated->Length() : length;
+                        ASSERT (updated != nullptr);
+
                         if (_callback != nullptr) {
-                            _callback->OnKeyStatusUpdate(bufferToNotify, lengthToNotify, key);
+                            _callback->OnKeyStatusUpdate(updated->Id(), updated->Length(), key);
                         }
                     }
                     void Revoke(::OCDM::ISession::ICallback* callback)
@@ -429,7 +432,7 @@ namespace Plugin {
                 {
                     return ((keySystem == _keySystem) && (_cencData.IsSupported(keyIds) == true));
                 }
-                inline bool HasKeyId(const uint8_t keyId[])
+                inline bool HasKeyId(const OCDM::KeyId& keyId) const
                 {
                     return (_cencData.HasKeyId(keyId));
                 }
@@ -533,20 +536,6 @@ namespace Plugin {
                 END_INTERFACE_MAP
 
             private:
-                inline const CommonEncryptionData::KeyId* UpdateKeyStatus(::OCDM::ISession::KeyStatus status, const uint8_t* buffer, const uint8_t length)
-                {
-
-                    // We assume that these UpdateKeyStatusses do not occure in a multithreaded fashion, otherwise we need to lock it.
-                    CommonEncryptionData::KeyId keyId;
-                    if (buffer != nullptr) {
-                        keyId = CommonEncryptionData::KeyId(CommonEncryptionData::COMMON, buffer, length);
-                    }
-
-                    const CommonEncryptionData::KeyId* updated = _cencData.UpdateKeyStatus(status, keyId);
-
-                    return updated;
-                }
-
             private:
                 AccessorOCDM& _parent;
                 mutable Core::CriticalSection _adminLock;
