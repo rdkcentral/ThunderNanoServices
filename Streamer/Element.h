@@ -10,9 +10,9 @@ namespace Player {
 
     namespace Implementation {
 
-        struct ElementInfo {
-            ElementInfo(Exchange::IStream::IElement::type type) 
-                : Type(type) 
+        struct ElementaryStream {
+            ElementaryStream(Exchange::IStream::IElement::type type)
+                : Type(type)
             {
             }
 
@@ -23,18 +23,18 @@ namespace Player {
         public:
             Element() = delete;
             Element(const Element&) = delete;
-            Element& operator=(const Element&) = delete;   
+            Element& operator=(const Element&) = delete;
 
-            Element(const ElementInfo& info)
-                : _elementInfo(info)
-            {                    
+            Element(const ElementaryStream& es)
+                : _es(es)
+            {
             }
             ~Element() override
             {
             }
             Exchange::IStream::IElement::type Type() const override
             {
-                return _elementInfo.Type;
+                return _es.Type;
             }
 
             BEGIN_INTERFACE_MAP(Element)
@@ -42,14 +42,14 @@ namespace Player {
             END_INTERFACE_MAP
 
         private:
-            ElementInfo _elementInfo;
+            ElementaryStream _es;
         };
 
         class ElementIterator : public Exchange::IStream::IElement::IIterator {
         public:
             ElementIterator() = delete;
             ElementIterator(const ElementIterator&) = delete;
-            ElementIterator& operator=(const ElementIterator&) = delete;            
+            ElementIterator& operator=(const ElementIterator&) = delete;
 
             ElementIterator(const std::list<Element*>& source)
             {
@@ -67,12 +67,12 @@ namespace Player {
                 while (_list.size() != 0) {
                     _list.front()->Release();
                     _list.pop_front();
-                }                
+                }
             }
             void Reset() override
             {
                 _index = 0;
-            }                
+            }
             bool IsValid() const override
             {
                 return ((_index != 0) && (_index <= _list.size()));

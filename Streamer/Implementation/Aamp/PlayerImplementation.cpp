@@ -126,7 +126,7 @@ namespace Implementation {
                     case AAMP_EVENT_MEDIA_METADATA:
                         TRACE(Trace::Information, (_T("AAMP_EVENT_MEDIA_METADATA")));
                         {
-                            std::list<ElementInfo> elements;
+                            std::list<ElementaryStream> elements;
                             if ((event.data.metadata.width > 0) && (event.data.metadata.height > 0)) {
                                 TRACE(Trace::Information, (_T("Video track: %ix%i"), event.data.metadata.width, event.data.metadata.height));
                                 elements.emplace_back(Exchange::IStream::IElement::type::Video);
@@ -542,7 +542,7 @@ namespace Implementation {
                 _adminLock.Unlock();
             }
 
-            const std::list<ElementInfo>& Elements() const override
+            const std::list<ElementaryStream>& Elements() const override
             {
                 return _elements;
             }
@@ -626,7 +626,7 @@ namespace Implementation {
                 _adminLock.Unlock();
             }
 
-            void SetElements(const std::list<ElementInfo>& elements)
+            void SetElements(const std::list<ElementaryStream>& elements)
             {
                 _adminLock.Lock();
                 _elements = elements;
@@ -721,7 +721,7 @@ namespace Implementation {
             Rectangle _rectangle;
             uint8_t _index;
 
-            std::list<ElementInfo> _elements;
+            std::list<ElementaryStream> _elements;
 
             ICallback* _callback;
 

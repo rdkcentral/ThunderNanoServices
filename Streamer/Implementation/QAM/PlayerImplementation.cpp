@@ -261,7 +261,7 @@ namespace Implementation {
 
                 return (result);
             }
-            const std::list<ElementInfo>& Elements() const override
+            const std::list<ElementaryStream>& Elements() const override
             {
                 return _elements;
             }
@@ -323,7 +323,7 @@ namespace Implementation {
             Rectangle _rectangle;
             uint32_t _z;
 
-            std::list<ElementInfo> _elements;
+            std::list<ElementaryStream> _elements;
 
             ICallback* _callback;
             Broadcast::ITuner* _player;
