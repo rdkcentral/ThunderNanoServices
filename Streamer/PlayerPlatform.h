@@ -39,7 +39,7 @@ namespace Player {
             virtual Exchange::IStream::streamtype Type() const = 0;
             virtual Exchange::IStream::drmtype DRM() const = 0;
             virtual Exchange::IStream::state State() const = 0;
-            virtual uint32_t LastError() const = 0;
+            virtual uint32_t Error() const = 0;
             virtual uint8_t Index() const = 0;
 
             virtual uint32_t Load(const string& uri) = 0;

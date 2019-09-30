@@ -231,7 +231,7 @@ namespace Implementation {
                 , _state(Exchange::IStream::Error)
                 , _drmType(Exchange::IStream::Unknown)
                 , _streamtype(streamType)
-                , _lastError(Core::ERROR_UNAVAILABLE)
+                , _error(Core::ERROR_UNAVAILABLE)
                 , _speed(-1)
                 , _begin(0)
                 , _end(~0)
@@ -300,7 +300,7 @@ namespace Implementation {
                         _aampPlayer->SetReportInterval(1000 /* ms */);
                         StateChange(Exchange::IStream::Idle);
                         result = Core::ERROR_NONE;
-                        _lastError = result;
+                        _error = result;
                     }
                     else {
                         delete _aampPlayer;
@@ -329,7 +329,7 @@ namespace Implementation {
                 _aampPlayer = nullptr;
 
                 _state = Exchange::IStream::Error;
-                _lastError = Core::ERROR_UNAVAILABLE;
+                _error = Core::ERROR_UNAVAILABLE;
 
                 _adminLock.Unlock();
 
@@ -400,10 +400,10 @@ namespace Implementation {
                 return curState;
             }
 
-            uint32_t LastError() const override
+            uint32_t Error() const override
             {
                 _adminLock.Lock();
-                uint32_t error = _lastError;
+                uint32_t error = _error;
                 _adminLock.Unlock();
                 return error;
             }
@@ -428,7 +428,7 @@ namespace Implementation {
                             _speed = -1;
                             _drmType = Exchange::IStream::Unknown;
                             _uri = uri;
-                            _lastError = Core::ERROR_NONE;
+                            _error = Core::ERROR_NONE;
                             _aampPlayer->Tune(_uri.c_str());
                         } else {
                             result = Core::ERROR_INCORRECT_URL;
@@ -595,7 +595,7 @@ namespace Implementation {
             void SetError(uint32_t error)
             {
                 _adminLock.Lock();
-                _lastError = ((error << 16) | Core::ERROR_GENERAL);
+                _error = ((error << 16) | Core::ERROR_GENERAL);
                 _adminLock.Unlock();
             }
 
@@ -711,7 +711,7 @@ namespace Implementation {
             Exchange::IStream::drmtype _drmType;
             Exchange::IStream::streamtype _streamtype;
 
-            uint32_t _lastError;
+            uint32_t _error;
 
             std::vector<int32_t> _speeds;
             int32_t _speed;

@@ -399,7 +399,7 @@ namespace Plugin {
         uint32_t get_drm(const string& index, Core::JSON::EnumType<JsonData::Streamer::DrmType>& response) const;
         uint32_t get_state(const string& index, Core::JSON::EnumType<JsonData::Streamer::StateType>& response) const;
         uint32_t get_metadata(const string& index, Core::JSON::String& response) const;
-        uint32_t get_lasterror(const string& index, Core::JSON::DecUInt32& response) const;
+        uint32_t get_error(const string& index, Core::JSON::DecUInt32& response) const;
         uint32_t get_elements(const string& index, Core::JSON::ArrayType<JsonData::Streamer::StreamelementData>& response) const;
         void event_statechange(const string& id, const JsonData::Streamer::StateType& state);
         void event_timeupdate(const string& id, const uint64_t& time);

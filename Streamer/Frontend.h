@@ -347,11 +347,11 @@ namespace Player {
                 _adminLock.Unlock();
                 return (result);
             }
-            uint32_t LastError() const override
+            uint32_t Error() const override
             {
                 _adminLock.Lock();
                 ASSERT(_player != nullptr);
-                uint32_t result = _player->LastError();
+                uint32_t result = _player->Error();
                 _adminLock.Unlock();
                 return (result);
             }

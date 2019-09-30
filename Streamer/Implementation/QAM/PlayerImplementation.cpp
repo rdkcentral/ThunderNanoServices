@@ -40,7 +40,7 @@ namespace Implementation {
                 : _state(Exchange::IStream::Error)
                 , _drmType(Exchange::IStream::Unknown)
                 , _streamType(streamType)
-                , _lastError(Core::ERROR_UNAVAILABLE)
+                , _error(Core::ERROR_UNAVAILABLE)
                 , _speed(0)
                 , _absoluteTime(0)
                 , _begin(0)
@@ -70,7 +70,7 @@ namespace Implementation {
                     _player->Callback(&_sink);
                     _state = Exchange::IStream::Idle;
                     result = Core::ERROR_NONE;
-                    _lastError = result;
+                    _error = result;
                 }
 
                 return result;
@@ -83,7 +83,7 @@ namespace Implementation {
                 }
 
                 _state = Exchange::IStream::Error;
-                _lastError = Core::ERROR_UNAVAILABLE;
+                _rror = Core::ERROR_UNAVAILABLE;
 
                 return Core::ERROR_NONE;
             }
@@ -107,9 +107,9 @@ namespace Implementation {
             {
                 return (Exchange::IStream::state)_state;
             }
-            uint32_t LastError() const override
+            uint32_t Error() const override
             {
-                return _lastError;
+                return _error;
             }
             uint8_t Index() const override
             {
@@ -140,7 +140,7 @@ namespace Implementation {
                     if (result != Core::ERROR_NONE) {
                         _state = Exchange::IStream::Error;
                         TRACE(Trace::Error, (_T("Error in player load :%d"), result));
-                        _lastError = result;
+                        _error = result;
                         _callback->StateChange(_state);
                     } else {
                         TRACE(Trace::Information, (_T("Tuning to ProgramNumber %d"), parser.ProgramNumber()));
@@ -174,7 +174,7 @@ namespace Implementation {
                         newState = Exchange::IStream::state::Controlled;
                     } else {
                         TRACE(Trace::Error, (_T("Error in pause playback:%d"), result));
-                        _lastError = result;
+                        _error = result;
                         newState = Exchange::IStream::state::Error;
                     }
 
@@ -232,7 +232,7 @@ namespace Implementation {
                     result = _player->Attach(index);
                     if (result != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Error in attach decoder %d"), result));
-                        _lastError = result;
+                        _error = result;
                         _state = Exchange::IStream::state::Error;
                         _callback->StateChange(_state);
                     }
@@ -253,7 +253,7 @@ namespace Implementation {
                     result = _player->Detach(index);
                     if (result != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Error in detach decoder %d"), result));
-                        _lastError = result;
+                        _error = result;
                         _state = Exchange::IStream::state::Error;
                         _callback->StateChange(_state);
                     }
@@ -313,7 +313,7 @@ namespace Implementation {
             Exchange::IStream::drmtype _drmType;
             Exchange::IStream::streamtype _streamType;
 
-            uint32_t _lastError;
+            uint32_t _error;
 
             int32_t _speed;
             std::vector<int32_t> _speeds;

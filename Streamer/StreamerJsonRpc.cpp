@@ -30,7 +30,7 @@ namespace Plugin {
         Property<Core::JSON::EnumType<DrmType>>(_T("drm"), &Streamer::get_drm, nullptr, this);
         Property<Core::JSON::EnumType<StateType>>(_T("state"), &Streamer::get_state, nullptr, this);
         Property<Core::JSON::String>(_T("metadata"), &Streamer::get_metadata, nullptr, this);
-        Property<Core::JSON::DecUInt32>(_T("lasterror"), &Streamer::get_lasterror, nullptr, this);
+        Property<Core::JSON::DecUInt32>(_T("error"), &Streamer::get_error, nullptr, this);
         Property<Core::JSON::ArrayType<StreamelementData>>(_T("elements"), &Streamer::get_elements, nullptr, this);
     }
 
@@ -42,7 +42,7 @@ namespace Plugin {
         Unregister(_T("destroy"));
         Unregister(_T("create"));
         Unregister(_T("elements"));
-        Unregister(_T("lasterror"));
+        Unregister(_T("error"));
         Unregister(_T("metadata"));
         Unregister(_T("state"));
         Unregister(_T("drm"));
@@ -513,18 +513,18 @@ namespace Plugin {
         return result;
     }
 
-    // Property: lasterror - Most recent error code
+    // Property: error - Most recent error code
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
-    uint32_t Streamer::get_lasterror(const string& index, Core::JSON::DecUInt32& response) const
+    uint32_t Streamer::get_error(const string& index, Core::JSON::DecUInt32& response) const
     {
         uint32_t result = Core::ERROR_NONE;
         const uint32_t& id = atoi(index.c_str());
 
         Streams::const_iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
-            response = stream->second->LastError();
+            response = stream->second->Error();
         } else {
             result = Core::ERROR_UNKNOWN_KEY;
         }

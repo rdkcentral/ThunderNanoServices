@@ -358,7 +358,7 @@ Streamer interface properties:
 | [drm](#property.drm) <sup>RO</sup> | DRM type associated with a stream |
 | [state](#property.state) <sup>RO</sup> | Current state of a stream |
 | [metadata](#property.metadata) <sup>RO</sup> | Metadata associated with the stream |
-| [lasterror](#property.lasterror) <sup>RO</sup> | Most recent error code |
+| [error](#property.error) <sup>RO</sup> | Most recent error code |
 | [elements](#property.elements) <sup>RO</sup> | Stream elements |
 
 <a name="property.speed"></a>
@@ -816,8 +816,8 @@ Provides access to the metadata associated with the stream.
     "result": ""
 }
 ```
-<a name="property.lasterror"></a>
-## *lasterror <sup>property</sup>*
+<a name="property.error"></a>
+## *error <sup>property</sup>*
 
 Provides access to the most recent error code.
 
@@ -829,7 +829,7 @@ Provides access to the most recent error code.
 | :-------- | :-------- | :-------- |
 | (property) | number | Custom implementation-specific error code value |
 
-> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.lasterror@0*.
+> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.error@0*.
 
 ### Errors
 
@@ -845,7 +845,7 @@ Provides access to the most recent error code.
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "Streamer.1.lasterror@0"
+    "method": "Streamer.1.error@0"
 }
 ```
 #### Get Response
