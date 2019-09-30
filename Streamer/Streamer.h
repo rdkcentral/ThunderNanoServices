@@ -26,18 +26,22 @@ namespace Plugin {
                 {
                     ASSERT(parent != nullptr);
                 }
-                virtual ~StreamSink()
+                ~StreamSink() override
                 {
                 }
 
             public:
-                virtual void DRM(const uint32_t state) override
-                {
-                    _parent.DRM(state);
-                }
-                virtual void StateChange(const Exchange::IStream::state state) override
+                void StateChange(const Exchange::IStream::state state) override
                 {
                     _parent.StateChange(state);
+                }
+                void Event(const uint32_t eventId) override
+                {
+                    _parent.StreamEvent(eventId);
+                }
+                void DRM(const uint32_t state) override
+                {
+                    _parent.DrmEvent(state);
                 }
 
                 BEGIN_INTERFACE_MAP(StreamSink)
@@ -57,16 +61,14 @@ namespace Plugin {
                 : _parent(parent)
                 , _index(index)
                 , _implementation(implementation)
-                , _streamSink(this) {
+                , _streamSink(this)
+            {
                 ASSERT (_implementation != nullptr);
-                _implementation->AddRef();
                 _implementation->Callback(&_streamSink);
             }
-            ~StreamProxy() {
-                _implementation->Callback(nullptr);
-                _implementation->Release();
+            ~StreamProxy()
+            {
             }
-
             Exchange::IStream* operator->() {
                 return (_implementation);
             }
@@ -75,13 +77,17 @@ namespace Plugin {
             }
 
         private:
-            void DRM(uint32_t state)
-            {
-                _parent.DRM(_index, state);
-            }
             void StateChange(Exchange::IStream::state state)
             {
                 _parent.StateChange(_index, state);
+            }
+            void StreamEvent(const uint32_t eventId)
+            {
+                _parent.StreamEvent(_index, eventId);
+            }
+            void DrmEvent(uint32_t state)
+            {
+                _parent.DrmEvent(_index, state);
             }
 
         private:
@@ -105,14 +111,18 @@ namespace Plugin {
                 {
                     ASSERT(parent != nullptr);
                 }
-                virtual ~ControlSink()
+                ~ControlSink() override
                 {
                 }
 
             public:
-                virtual void TimeUpdate(const uint64_t position) override
+                void TimeUpdate(const uint64_t position) override
                 {
                     _parent.TimeUpdate(position);
+                }
+                void Event(const uint32_t eventId) override
+                {
+                    _parent.ControlEvent(eventId);
                 }
 
                 BEGIN_INTERFACE_MAP(ControlSink)
@@ -130,7 +140,7 @@ namespace Plugin {
             ControlProxy(Streamer& parent, const uint8_t index, Exchange::IStream::IControl* implementation)
                 : _parent(parent)
                 , _index(index)
-                , _implementation(implementation) 
+                , _implementation(implementation)
                 , _controlSink(this) {
                 ASSERT (_implementation != nullptr);
                 _implementation->Callback(&_controlSink);
@@ -149,6 +159,10 @@ namespace Plugin {
             void TimeUpdate(const uint64_t position)
             {
                 _parent.TimeUpdate(_index, position);
+            }
+            void ControlEvent(const uint32_t eventId)
+            {
+                _parent.PlayerEvent(_index, eventId);
             }
 
          private:
@@ -271,7 +285,7 @@ namespace Plugin {
 #ifdef __WIN32__
 #pragma warning(default : 4355)
 #endif
-        virtual ~Streamer()
+        ~Streamer() override
         {
             UnregisterAll();
         }
@@ -292,22 +306,22 @@ namespace Plugin {
         // If there is an error, return a string describing the issue why the initialisation failed.
         // The Service object is *NOT* reference counted, lifetime ends if the plugin is deactivated.
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
-        virtual const string Initialize(PluginHost::IShell* service);
+        const string Initialize(PluginHost::IShell* service) override;
 
         // The plugin is unloaded from WPEFramework. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After theis call, the lifetime of the Service object ends.
-        virtual void Deinitialize(PluginHost::IShell* service);
+        void Deinitialize(PluginHost::IShell* service) override;
 
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
-        virtual string Information() const;
+        string Information() const override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request);
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request);
         PluginHost::IShell* GetService() { return _service; }
 
     private:
@@ -317,34 +331,52 @@ namespace Plugin {
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index);
         void Deactivated(RPC::IRemoteConnection* connection);
 
-        void DRM(const uint8_t index, uint32_t state)
-        {
-            string stateText (_T("playready"));
-            _service->Notify(_T("{ \"id\": ") + 
-                             Core::NumberType<uint8_t>(index).Text() + 
-                             _T(", \"drm\": \"") + 
-                             stateText + 
-                             _T("\" }"));
-            //event_drmchange(std::to_string(index), state);//TODO: check the required functionality first
-        }
         void StateChange(const uint8_t index, Exchange::IStream::state state)
         {
             TRACE(Trace::Information, (_T("Stream [%d] moved state: [%s]"), index, Core::EnumerateType<Exchange::IStream::state>(state).Data()));
 
-            _service->Notify(_T("{ \"id\": ") + 
-                             Core::NumberType<uint8_t>(index).Text() + 
-                             _T(", \"stream\": \"") + 
-                             Core::EnumerateType<Exchange::IStream::state>(state).Data() + 
+            _service->Notify(_T("{ \"id\": ") +
+                             Core::NumberType<uint8_t>(index).Text() +
+                             _T(", \"stream\": \"") +
+                             Core::EnumerateType<Exchange::IStream::state>(state).Data() +
                              _T("\" }"));
             event_statechange(std::to_string(index), static_cast<JsonData::Streamer::StateType>(state));
         }
         void TimeUpdate(const uint8_t index, const uint64_t position)
         {
-            _service->Notify(_T("{ \"id\": ") + 
-                             Core::NumberType<uint8_t>(index).Text() + 
-                             _T(", \"time\": ") + 
-                             Core::NumberType<uint64_t>(position).Text()+ _T(" }"));
+            _service->Notify(_T("{ \"id\": ") +
+                             Core::NumberType<uint8_t>(index).Text() +
+                            _T(", \"time\": ") +
+                            Core::NumberType<uint64_t>(position).Text() +
+                            _T(" }"));
             event_timeupdate(std::to_string(index), position);
+        }
+        void StreamEvent(const uint8_t index, const uint32_t eventId)
+        {
+            TRACE(Trace::Information, (_T("Stream [%d] custom notification: [%08x]"), index, eventId));
+
+            _service->Notify(_T("{ \"id\": ") +
+                             Core::NumberType<uint8_t>(index).Text() +
+                            _T(", \"stream_event\": \"") +
+                            Core::NumberType<uint32_t>(eventId).Text() +
+                            _T("\" }"));
+            event_stream(std::to_string(index), eventId);
+        }
+        void PlayerEvent(const uint8_t index, const uint32_t eventId)
+        {
+            TRACE(Trace::Information, (_T("Stream [%d] custom player notification: [%08x]"), index, eventId));
+
+            _service->Notify(_T("{ \"id\": ") +
+                             Core::NumberType<uint8_t>(index).Text() +
+                             _T(", \"player_event\": \"") +
+                             Core::NumberType<uint32_t>(eventId).Text() +
+                             _T("\" }"));
+            event_player(std::to_string(index), eventId);
+        }
+        void DrmEvent(const uint8_t index, uint32_t state)
+        {
+            _service->Notify(_T("{ \"id\": ") + Core::NumberType<uint8_t>(index).Text() + _T(", \"drm\": \"") + Core::NumberType<uint8_t>(state).Text() + _T("\" }"));
+            event_drm(std::to_string(index), state);
         }
 
         // JsonRpc
@@ -367,9 +399,13 @@ namespace Plugin {
         uint32_t get_drm(const string& index, Core::JSON::EnumType<JsonData::Streamer::DrmType>& response) const;
         uint32_t get_state(const string& index, Core::JSON::EnumType<JsonData::Streamer::StateType>& response) const;
         uint32_t get_metadata(const string& index, Core::JSON::String& response) const;
+        uint32_t get_error(const string& index, Core::JSON::DecUInt32& response) const;
+        uint32_t get_elements(const string& index, Core::JSON::ArrayType<JsonData::Streamer::StreamelementData>& response) const;
         void event_statechange(const string& id, const JsonData::Streamer::StateType& state);
-        void event_drmchange(const string& id, const JsonData::Streamer::DrmType& drm);
         void event_timeupdate(const string& id, const uint64_t& time);
+        void event_stream(const string& id, const uint32_t& code);
+        void event_player(const string& id, const uint32_t& code);
+        void event_drm(const string& id, const uint32_t& code);
 
     private:
         uint32_t _skipURL;

@@ -30,6 +30,8 @@ namespace Plugin {
         Property<Core::JSON::EnumType<DrmType>>(_T("drm"), &Streamer::get_drm, nullptr, this);
         Property<Core::JSON::EnumType<StateType>>(_T("state"), &Streamer::get_state, nullptr, this);
         Property<Core::JSON::String>(_T("metadata"), &Streamer::get_metadata, nullptr, this);
+        Property<Core::JSON::DecUInt32>(_T("error"), &Streamer::get_error, nullptr, this);
+        Property<Core::JSON::ArrayType<StreamelementData>>(_T("elements"), &Streamer::get_elements, nullptr, this);
     }
 
     void Streamer::UnregisterAll()
@@ -39,6 +41,8 @@ namespace Plugin {
         Unregister(_T("load"));
         Unregister(_T("destroy"));
         Unregister(_T("create"));
+        Unregister(_T("elements"));
+        Unregister(_T("error"));
         Unregister(_T("metadata"));
         Unregister(_T("state"));
         Unregister(_T("drm"));
@@ -95,6 +99,7 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
+    //  - ERROR_INPROGRESS: Stream is in use
     uint32_t Streamer::endpoint_destroy(const IdInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
@@ -104,12 +109,18 @@ namespace Plugin {
         if (stream != _streams.end()) {
             Controls::iterator control = _controls.find(id);
             if (control != _controls.end()) {
-                control->second->Release();
-                _controls.erase(control);
+                uint32_t relResult = control->second->Release();
+                if (relResult == Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                    _controls.erase(control);
+                } else {
+                    result = Core::ERROR_INPROGRESS;
+                }
             }
 
-            stream->second->Release();
-            _streams.erase(id);
+            if (result == Core::ERROR_NONE) {
+                stream->second->Release();
+                _streams.erase(stream);
+            }
         }
         else {
             result = Core::ERROR_UNKNOWN_KEY;
@@ -133,9 +144,9 @@ namespace Plugin {
 
         Streams::iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
-            if (((stream->second->State() == Exchange::IStream::Idle)
-                    || (stream->second->State() == Exchange::IStream::Prepared)
-                    || (stream->second->State() == Exchange::IStream::Error))
+            if (((stream->second->State() == Exchange::IStream::state::Idle)
+                    || (stream->second->State() == Exchange::IStream::state::Prepared)
+                    || (stream->second->State() == Exchange::IStream::state::Error))
                     && (_controls.find(id) == _controls.end())) {
                 result = stream->second->Load(location);
                 if ((result != Core::ERROR_NONE) && (result != Core::ERROR_INCORRECT_URL)) {
@@ -165,16 +176,14 @@ namespace Plugin {
 
         Streams::iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
-            if ((stream->second->State() == Exchange::IStream::Prepared) && (_controls.find(id) == _controls.end())) {
+            if ((stream->second->State() == Exchange::IStream::state::Prepared) && (_controls.find(id) == _controls.end())) {
                 Exchange::IStream::IControl* control = stream->second->Control();
                 if (control != nullptr) {
-                    _controls.emplace(std::piecewise_construct,
-                    std::forward_as_tuple(id),
-                    std::forward_as_tuple(*this, id, control));
+                    _controls.emplace(std::piecewise_construct, std::forward_as_tuple(id), std::forward_as_tuple(*this, id, control));
                 } else {
                     result = Core::ERROR_UNAVAILABLE;
                 }
-            } else if ((stream->second->State() == Exchange::IStream::Playing) || (stream->second->State() == Exchange::IStream::Prepared)) {
+            } else if ((stream->second->State() == Exchange::IStream::state::Controlled) || (stream->second->State() == Exchange::IStream::state::Prepared)) {
                 result = Core::ERROR_INPROGRESS;
             } else {
                 result = Core::ERROR_ILLEGAL_STATE;
@@ -340,6 +349,7 @@ namespace Plugin {
                 response.Y = geometry->Y();
                 response.Width = geometry->Width();
                 response.Height = geometry->Height();
+                geometry->Release();
             } else {
                 result = Core::ERROR_ILLEGAL_STATE;
             }
@@ -359,13 +369,14 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
         const uint32_t& id = atoi(index.c_str());
 
-        Streams::iterator stream = _streams.find(id);
+        Streams::const_iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
             Controls::iterator control = _controls.find(id);
             if (control != _controls.end()) {
                 Exchange::IStream::IControl::IGeometry* geometry;
                 geometry = Core::Service<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(param.X.Value(), param.Y.Value(), control->second->Geometry()->Z(), param.Width.Value(), param.Height.Value());
                 control->second->Geometry(geometry);
+                geometry->Release();
             } else {
                 result = Core::ERROR_ILLEGAL_STATE;
             }
@@ -387,12 +398,10 @@ namespace Plugin {
 
         Streams::const_iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
-
             Controls::const_iterator control = _controls.find(id);
             if (control != _controls.end()) {
                 RPC::IValueIterator* iterator = control->second->Speeds();
                 if (iterator != nullptr) {
-
                     uint32_t currentElement;
 
                     while (iterator->Next(currentElement) == true) {
@@ -503,6 +512,78 @@ namespace Plugin {
         return result;
     }
 
+    // Property: error - Most recent error code
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
+    uint32_t Streamer::get_error(const string& index, Core::JSON::DecUInt32& response) const
+    {
+        uint32_t result = Core::ERROR_NONE;
+        const uint32_t& id = atoi(index.c_str());
+
+        Streams::const_iterator stream = _streams.find(id);
+        if (stream != _streams.end()) {
+            response = stream->second->Error();
+        } else {
+            result = Core::ERROR_UNKNOWN_KEY;
+        }
+
+        return result;
+    }
+
+    // Property: elements - Stream elements
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNKNOWN_KEY: Unknown stream ID given
+    //  - ERROR_UNAVAILABLE: Elements retrieval not supported
+    uint32_t Streamer::get_elements(const string& index, Core::JSON::ArrayType<StreamelementData>& response) const
+    {
+        uint32_t result = Core::ERROR_NONE;
+        const uint32_t& id = atoi(index.c_str());
+
+        Streams::iterator stream = const_cast<Streamer*>(this)->_streams.find(id);
+        if (stream != _streams.end()) {
+            Exchange::IStream::IElement::IIterator* iter = stream->second->Elements();
+            if (iter != nullptr) {
+                while (iter->Next()) {
+                    Exchange::IStream::IElement* element = iter->Current();
+                    if (element != nullptr) {
+                        StreamelementData streamElement;
+                        switch(element->Type())
+                        {
+                            case Exchange::IStream::IElement::type::Audio:
+                                streamElement.Type = StreamelementData::ElementType::AUDIO;
+                                break;
+                            case Exchange::IStream::IElement::type::Video:
+                                streamElement.Type = StreamelementData::ElementType::VIDEO;
+                                break;
+                            case Exchange::IStream::IElement::type::Subtitles:
+                                streamElement.Type = StreamelementData::ElementType::SUBTITLES;
+                                break;
+                            case Exchange::IStream::IElement::type::Teletext:
+                                streamElement.Type = StreamelementData::ElementType::TELETEXT;
+                                break;
+                            default:
+                                streamElement.Type = StreamelementData::ElementType::DATA;
+                                break;
+                        }
+                        response.Add(streamElement);
+                        element->Release();
+                    }
+                }
+
+                iter->Release();
+            }
+            else {
+                result = Core::ERROR_UNAVAILABLE;
+            }
+        } else {
+            result = Core::ERROR_UNKNOWN_KEY;
+        }
+
+        return result;
+    }
+
     // Event: statechange - Notifies of stream state change
     void Streamer::event_statechange(const string& id, const StateType& state)
     {
@@ -510,18 +591,6 @@ namespace Plugin {
         params.State = state;
 
         Notify(_T("statechange"), params, [&](const string& designator) -> bool {
-            const string designator_id = designator.substr(0, designator.find('.'));
-            return (id == designator_id);
-        });
-    }
-
-    // Event: drmchange - Notifies of stream DRM system change
-    void Streamer::event_drmchange(const string& id, const DrmType& drm)
-    {
-        DrmchangeParamsData params;
-        params.Drm = drm;
-
-        Notify(_T("drmchange"), params, [&](const string& designator) -> bool {
             const string designator_id = designator.substr(0, designator.find('.'));
             return (id == designator_id);
         });
@@ -538,6 +607,43 @@ namespace Plugin {
             return (id == designator_id);
         });
     }
+
+    // Event: stream - Notifies of a custom stream incident
+    void Streamer::event_stream(const string& id, const uint32_t& code)
+    {
+        StreamParamsInfo params;
+        params.Code = code;
+
+        Notify(_T("stream"), params, [&](const string& designator) -> bool {
+            const string designator_id = designator.substr(0, designator.find('.'));
+            return (id == designator_id);
+        });
+    }
+
+    // Event: player - Notifies of a custom player incident
+    void Streamer::event_player(const string& id, const uint32_t& code)
+    {
+        StreamParamsInfo params;
+        params.Code = code;
+
+        Notify(_T("player"), params, [&](const string& designator) -> bool {
+            const string designator_id = designator.substr(0, designator.find('.'));
+            return (id == designator_id);
+        });
+    }
+
+    // Event: drm - Notifies of a custom DRM-related incident
+    void Streamer::event_drm(const string& id, const uint32_t& code)
+    {
+        StreamParamsInfo params;
+        params.Code = code;
+
+        Notify(_T("drm"), params, [&](const string& designator) -> bool {
+            const string designator_id = designator.substr(0, designator.find('.'));
+            return (id == designator_id);
+        });
+    }
+
 } // namespace Plugin
 
 }

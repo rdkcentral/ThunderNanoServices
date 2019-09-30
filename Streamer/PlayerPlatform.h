@@ -3,6 +3,7 @@
 #include <Module.h>
 #include <interfaces/IStream.h>
 #include "Geometry.h"
+#include "Element.h"
 
 #include <vector>
 #include <set>
@@ -20,8 +21,10 @@ namespace Player {
             virtual ~ICallback() { }
 
             virtual void TimeUpdate(uint64_t position) = 0;
-            virtual void DRM(uint32_t state) = 0;
             virtual void StateChange(Exchange::IStream::state newState) = 0;
+            virtual void StreamEvent(uint32_t eventId) = 0;
+            virtual void PlayerEvent(uint32_t eventId) = 0;
+            virtual void DrmEvent(uint32_t state) = 0;
         };
 
         struct IPlayerPlatform {
@@ -36,6 +39,7 @@ namespace Player {
             virtual Exchange::IStream::streamtype Type() const = 0;
             virtual Exchange::IStream::drmtype DRM() const = 0;
             virtual Exchange::IStream::state State() const = 0;
+            virtual uint32_t Error() const = 0;
             virtual uint8_t Index() const = 0;
 
             virtual uint32_t Load(const string& uri) = 0;
@@ -57,6 +61,8 @@ namespace Player {
 
             virtual uint32_t Order() const = 0;
             virtual void Order(const uint32_t order) = 0;
+
+            virtual const std::list<ElementaryStream>& Elements() const = 0;
         };
 
         struct IPlayerPlatformFactory {

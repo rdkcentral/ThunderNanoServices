@@ -2,6 +2,7 @@
 
 #include "Module.h"
 #include "Geometry.h"
+#include "Element.h"
 #include "PlayerPlatform.h"
 #include "Administrator.h"
 
@@ -28,22 +29,30 @@ namespace Player {
                     : _parent(*parent)
                 {
                 }
-                virtual ~CallbackImplementation()
+                ~CallbackImplementation() override
                 {
                 }
 
             public:
-                virtual void TimeUpdate(uint64_t position)
+                void TimeUpdate(uint64_t position) override
                 {
                     _parent.TimeUpdate(position);
                 }
-                virtual void DRM(uint32_t state)
-                {
-                    _parent.DRM(state);
-                }
-                virtual void StateChange(Exchange::IStream::state newState)
+                void StateChange(Exchange::IStream::state newState) override
                 {
                     _parent.StateChange(newState);
+                }
+                void StreamEvent(uint32_t eventId) override
+                {
+                    _parent.StreamEvent(eventId);
+                }
+                void PlayerEvent(uint32_t eventId) override
+                {
+                    _parent.PlayerEvent(eventId);
+                }
+                void DrmEvent(uint32_t state) override
+                {
+                    _parent.DrmEvent(state);
                 }
 
             private:
@@ -66,41 +75,44 @@ namespace Player {
                     , _callback(nullptr)
                 {
                 }
-                virtual ~DecoderImplementation()
+                ~DecoderImplementation() override
                 {
                     _parent.Detach();
                 }
 
             public:
-                virtual void AddRef() const
+                void AddRef() const override
                 {
                     Core::InterlockedIncrement(_referenceCount);
                 }
-                virtual uint32_t Release() const
+                uint32_t Release() const override
                 {
                     if (Core::InterlockedDecrement(_referenceCount) == 0) {
+                        if (_callback != nullptr) {
+                            _callback->Release();
+                        }
                         delete this;
                         return (Core::ERROR_DESTRUCTION_SUCCEEDED);
                     }
                     return (Core::ERROR_NONE);
                 }
-                virtual uint8_t Index() const
+                uint8_t Index() const
                 {
                     return (_index);
                 }
-                virtual RPC::IValueIterator* Speeds() const
+                RPC::IValueIterator* Speeds() const override
                 {
                     ASSERT(_player != nullptr);
                     return (Core::Service<RPC::ValueIterator>::Create<RPC::IValueIterator>(_player->Speeds()));
                 }
-                virtual void Speed(const int32_t request) override
+                void Speed(const int32_t request) override
                 {
                     _parent.Lock();
                     ASSERT(_player != nullptr);
                     _player->Speed(request);
                     _parent.Unlock();
                 }
-                virtual int32_t Speed() const
+                int32_t Speed() const override
                 {
                     uint32_t result = 0;
                     _parent.Lock();
@@ -109,14 +121,14 @@ namespace Player {
                     _parent.Unlock();
                     return (result);
                 }
-                virtual void Position(const uint64_t absoluteTime)
+                void Position(const uint64_t absoluteTime) override
                 {
                     _parent.Lock();
                     ASSERT(_player != nullptr);
                     _player->Position(absoluteTime);
                     _parent.Unlock();
                 }
-                virtual uint64_t Position() const
+                uint64_t Position() const override
                 {
                     uint64_t result = 0;
                     _parent.Lock();
@@ -125,14 +137,14 @@ namespace Player {
                     _parent.Unlock();
                     return (result);
                 }
-                virtual void TimeRange(uint64_t& begin, uint64_t& end) const
+                void TimeRange(uint64_t& begin, uint64_t& end) const override
                 {
                     _parent.Lock();
                     ASSERT(_player != nullptr);
                     _player->TimeRange(begin, end);
                     _parent.Unlock();
                 }
-                virtual IGeometry* Geometry() const
+                IGeometry* Geometry() const override
                 {
                     IGeometry* result = nullptr;
                     _parent.Lock();
@@ -143,7 +155,7 @@ namespace Player {
                     _parent.Unlock();
                     return (result);
                 }
-                virtual void Geometry(const IGeometry* settings)
+                void Geometry(const IGeometry* settings) override
                 {
                     _parent.Lock();
                     ASSERT(_player != nullptr);
@@ -156,7 +168,7 @@ namespace Player {
                     _player->Order(settings->Z());
                     _parent.Unlock();
                 }
-                virtual void Callback(IControl::ICallback* callback)
+                void Callback(IControl::ICallback* callback) override
                 {
                     _parent.Lock();
                     if (_callback != nullptr) {
@@ -173,11 +185,20 @@ namespace Player {
                 INTERFACE_ENTRY(Exchange::IStream::IControl)
                 END_INTERFACE_MAP
 
-                inline void TimeUpdate(uint64_t position)
+                void TimeUpdate(uint64_t position)
                 {
                     _parent.Lock();
                     if (_callback != nullptr) {
                         _callback->TimeUpdate(position);
+                    }
+                    _parent.Unlock();
+                }
+
+                void Event(uint32_t eventId)
+                {
+                    _parent.Lock();
+                    if (_callback != nullptr) {
+                        _callback->Event(eventId);
                     }
                     _parent.Unlock();
                 }
@@ -191,6 +212,7 @@ namespace Player {
                 IControl::ICallback* _callback;
             };
 
+
         public:
             Frontend(Administrator* administration, IPlayerPlatform* player)
                 : _refCount(1)
@@ -200,15 +222,19 @@ namespace Player {
                 , _callback(nullptr)
                 , _sink(this)
                 , _player(player)
+                , _elements()
             {
                 ASSERT(_administrator != nullptr);
                 ASSERT(_player != nullptr);
 
                 _player->Callback(&_sink);
             }
-            virtual ~Frontend()
+            ~Frontend() override
             {
                 ASSERT(_decoder == nullptr);
+
+                ReleaseElements();
+
                 if (_decoder != nullptr) {
                     TRACE_L1("Forcefull destruction of a stream. Forcefully removing decoder: %d", __LINE__);
                     delete _decoder;
@@ -216,24 +242,27 @@ namespace Player {
             }
 
         public:
-            void AddRef() const
+            void AddRef() const override
             {
                 Core::InterlockedIncrement(_refCount);
             }
-            uint32_t Release() const
+            uint32_t Release() const override
             {
                 uint32_t result = Core::ERROR_NONE;
                 if (Core::InterlockedDecrement(_refCount) == 0) {
                     ASSERT(_player != nullptr);
                     ASSERT(_administrator != nullptr);
                     _player->Callback(nullptr);
+                    if (_callback) {
+                        _callback->Release();
+                    }
                     _administrator->Relinquish(_player);
                     delete this;
                     result = Core::ERROR_DESTRUCTION_SUCCEEDED;
                 }
                 return (result);
             }
-            virtual uint8_t Index() const
+            uint8_t Index() const
             {
                 _adminLock.Lock();
                 ASSERT(_player != nullptr);
@@ -241,7 +270,15 @@ namespace Player {
                 _adminLock.Unlock();
                 return (result);
             }
-            virtual streamtype Type() const
+            string Metadata() const override
+            {
+                _adminLock.Lock();
+                ASSERT(_player != nullptr);
+                string result = _player->Metadata();
+                _adminLock.Unlock();
+                return (result);
+            }
+            streamtype Type() const override
             {
                 _adminLock.Lock();
                 ASSERT(_player != nullptr);
@@ -249,7 +286,7 @@ namespace Player {
                 _adminLock.Unlock();
                 return (result);
             }
-            virtual drmtype DRM() const
+            drmtype DRM() const override
             {
                 _adminLock.Lock();
                 ASSERT(_player != nullptr);
@@ -257,7 +294,7 @@ namespace Player {
                 _adminLock.Unlock();
                 return (result);
             }
-            virtual IControl* Control()
+            IControl* Control() override
             {
                 _adminLock.Lock();
                 if (_decoder == nullptr) {
@@ -282,7 +319,7 @@ namespace Player {
                 _adminLock.Unlock();
                 return (_decoder);
             }
-            virtual void Callback(IStream::ICallback* callback)
+            void Callback(IStream::ICallback* callback) override
             {
                 _adminLock.Lock();
                 if (_callback != nullptr) {
@@ -294,7 +331,7 @@ namespace Player {
                 _callback = callback;
                 _adminLock.Unlock();
             }
-            virtual state State() const
+            state State() const override
             {
                 _adminLock.Lock();
                 ASSERT(_player != nullptr);
@@ -302,7 +339,7 @@ namespace Player {
                 _adminLock.Unlock();
                 return (result);
             }
-            virtual uint32_t Load(const string& configuration)
+            uint32_t Load(const string& configuration) override
             {
                 _adminLock.Lock();
                 ASSERT(_player != nullptr);
@@ -310,13 +347,23 @@ namespace Player {
                 _adminLock.Unlock();
                 return (result);
             }
-            virtual string Metadata() const
+            uint32_t Error() const override
             {
                 _adminLock.Lock();
                 ASSERT(_player != nullptr);
-                string result = _player->Metadata();
+                uint32_t result = _player->Error();
                 _adminLock.Unlock();
                 return (result);
+            }
+            IStream::IElement::IIterator* Elements() override
+            {
+                Exchange::IStream::IElement::IIterator* iter = nullptr;
+                _adminLock.Lock();
+                if (_elements.empty() == false) {
+                    iter = Core::Service<Implementation::ElementIterator>::Create<Exchange::IStream::IElement::IIterator>(_elements);
+                }
+                _adminLock.Unlock();
+                return iter;
             }
 
             BEGIN_INTERFACE_MAP(Frontend)
@@ -324,7 +371,18 @@ namespace Player {
             END_INTERFACE_MAP
 
         private:
-            inline void TimeUpdate(uint64_t position)
+            void StateChange(Exchange::IStream::state newState)
+            {
+                _adminLock.Lock();
+                if (_callback != nullptr) {
+                    _callback->StateChange(newState);
+                }
+                if (newState == Exchange::IStream::state::Controlled) {
+                    PopulateElements();
+                }
+                _adminLock.Unlock();
+            }
+            void TimeUpdate(uint64_t position)
             {
                 _adminLock.Lock();
                 if (_decoder != nullptr) {
@@ -332,19 +390,27 @@ namespace Player {
                 }
                 _adminLock.Unlock();
             }
-            void DRM(uint32_t state)
+            void PlayerEvent(uint32_t code)
+            {
+                _adminLock.Lock();
+                if (_decoder != nullptr) {
+                    _decoder->Event(code);
+                }
+                _adminLock.Unlock();
+            }
+            void StreamEvent(uint32_t eventId)
+            {
+                _adminLock.Lock();
+                if (_callback != nullptr) {
+                    _callback->Event(eventId);
+                }
+                _adminLock.Unlock();
+            }
+            void DrmEvent(uint32_t state)
             {
                 _adminLock.Lock();
                 if (_callback != nullptr) {
                     _callback->DRM(state);
-                }
-                _adminLock.Unlock();
-            }
-            void StateChange(Exchange::IStream::state newState)
-            {
-                _adminLock.Lock();
-                if (_callback != nullptr) {
-                    _callback->StateChange(newState);
                 }
                 _adminLock.Unlock();
             }
@@ -355,6 +421,7 @@ namespace Player {
                 if (_decoder != nullptr) {
                     ASSERT(_player != nullptr);
                     ASSERT(_administrator != nullptr);
+                    ReleaseElements();
                     _player->DetachDecoder(_decoder->Index());
                     _administrator->Deallocate(_decoder->Index());
                     _decoder = nullptr;
@@ -366,13 +433,32 @@ namespace Player {
             {
                 return (_player);
             }
-            inline void Lock() const
+            void Lock() const
             {
                 _adminLock.Lock();
             }
-            inline void Unlock() const
+            void Unlock() const
             {
                 _adminLock.Unlock();
+            }
+
+            // Helper functions, not interlocked
+            void PopulateElements()
+            {
+                ReleaseElements();
+                auto& elements = _player->Elements();
+                for (auto& elem : elements) {
+                    _elements.push_back(Core::Service<Implementation::Element>::Create<Implementation::Element>(elem));
+                }
+            }
+            void ReleaseElements()
+            {
+                if (_elements.empty() == false) {
+                    for (auto& elem : _elements) {
+                        elem->Release();
+                    }
+                    _elements.clear();
+                }
             }
 
         private:
@@ -383,6 +469,7 @@ namespace Player {
             IStream::ICallback* _callback;
             CallbackImplementation _sink;
             IPlayerPlatform* _player;
+            std::list<Implementation::Element*> _elements;
         };
 
     } // Implementation

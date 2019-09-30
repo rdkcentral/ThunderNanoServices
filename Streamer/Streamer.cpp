@@ -120,12 +120,12 @@ namespace Plugin {
             Streams::iterator stream = _streams.find(position);
             if ((stream != _streams.end()) && (index.Next() == true)) {
                 if (index.Remainder() == _T("Type")) {
-                    response->Type = stream->second->Type();
+                    response->Type = static_cast<uint32_t>(stream->second->Type());
                     result->ErrorCode = Web::STATUS_OK;
                     result->ContentType = Web::MIMETypes::MIME_JSON;
                     result->Body(response);
                 } else if (index.Remainder() == _T("DRM")) {
-                    response->DRM = stream->second->DRM();
+                    response->DRM = static_cast<uint32_t>(stream->second->DRM());
                     result->ErrorCode = Web::STATUS_OK;
                     result->ContentType = Web::MIMETypes::MIME_JSON;
                     result->Body(response);
@@ -135,7 +135,7 @@ namespace Plugin {
                     result->ContentType = Web::MIMETypes::MIME_JSON;
                     result->Body(response);
                 } else if (index.Remainder() == _T("State")) {
-                    response->State = stream->second->State();
+                    response->State = static_cast<uint32_t>(stream->second->State());
                     result->ErrorCode = Web::STATUS_OK;
                     result->ContentType = Web::MIMETypes::MIME_JSON;
                     result->Body(response);
@@ -161,6 +161,7 @@ namespace Plugin {
                             result->ErrorCode = Web::STATUS_OK;
                             result->ContentType = Web::MIMETypes::MIME_JSON;
                             result->Body(response);
+                            geometry->Release();
                         }
                     }
                 }
@@ -202,7 +203,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Stream loaded");
                     } else if (index.Remainder() == _T("Attach")) {
-                        if (stream->second->State() == Exchange::IStream::Prepared) {
+                        if (stream->second->State() == Exchange::IStream::state::Prepared) {
                             Exchange::IStream::IControl* control = stream->second->Control();
                             if (control != nullptr) {
                                 _controls.emplace(std::piecewise_construct,
@@ -211,7 +212,7 @@ namespace Plugin {
                                 result->Message = _T("Decoder Attached");
                                 result->ErrorCode = Web::STATUS_OK;
                             }
-                        } else if (stream->second->State() == Exchange::IStream::Playing) {
+                        } else if (stream->second->State() == Exchange::IStream::state::Controlled) {
                             result->Message = _T("Decoder already attached");
                             result->ErrorCode = Web::STATUS_ACCEPTED;
                         } else {
@@ -252,6 +253,7 @@ namespace Plugin {
                                 }
                                 Exchange::IStream::IControl::IGeometry* geometry = Core::Service<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(X, Y, control->second->Geometry()->Z(), width, height);
                                 control->second->Geometry(geometry);
+                                geometry->Release();
                                 result->ErrorCode = Web::STATUS_OK;
                                 result->Message = _T("Window set");
                             } else if (index.Remainder() == _T("Detach")) {
@@ -289,7 +291,6 @@ namespace Plugin {
 
                             Exchange::IStream* stream = _player->CreateStream(type.Value());
                             if (stream != nullptr) {
-
                                 uint8_t position = 0;
                                 for (; position < _streams.size(); ++position) {
                                     Streams::iterator stream = _streams.find(position);
@@ -326,18 +327,27 @@ namespace Plugin {
 
         if (index.IsValid() == true) {
             if (index.Next() == true) {
+                uint32_t status = Core::ERROR_NONE;
                 uint8_t position = Core::NumberType<uint8_t>(index.Current());
                 Controls::iterator control = _controls.find(position);
                 if (control != _controls.end()) {
-                    control->second->Release();
-                    _controls.erase(control);
+                    uint32_t relResult = control->second->Release();
+                    if (relResult == Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                        _controls.erase(control);
+                    } else {
+                        status = Core::ERROR_INPROGRESS;
+                        result->ErrorCode = Web::STATUS_CONFLICT;
+                        result->Message = _T("Stream is in use");
+                    }
                 }
-                Streams::iterator stream = _streams.find(position);
-                if (stream != _streams.end()) {
-                    stream->second->Release();
-                    _streams.erase(position);
-                    result->ErrorCode = Web::STATUS_OK;
-                    result->Message = _T("Stream is released");
+                if (status == Core::ERROR_NONE) {
+                    Streams::iterator stream = _streams.find(position);
+                    if (stream != _streams.end()) {
+                        stream->second->Release();
+                        _streams.erase(position);
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("Stream is released");
+                    }
                 }
             }
         }
