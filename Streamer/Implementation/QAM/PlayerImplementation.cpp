@@ -37,8 +37,8 @@ namespace Implementation {
 
         public:
             QAM(const Exchange::IStream::streamtype streamType, const uint8_t index)
-                : _state(Exchange::IStream::Error)
-                , _drmType(Exchange::IStream::Unknown)
+                : _state(Exchange::IStream::state::Error)
+                , _drmType(Exchange::IStream::drmtype::Unknown)
                 , _streamType(streamType)
                 , _error(Core::ERROR_UNAVAILABLE)
                 , _speed(0)
@@ -63,12 +63,12 @@ namespace Implementation {
             {
                 uint32_t result = Core::ERROR_GENERAL;
 
-                ASSERT(_state == Exchange::IStream::Error);
+                ASSERT(_state == Exchange::IStream::state::Error);
 
                 _player = Broadcast::ITuner::Create(Core::NumberType<uint8_t>(_index).Text());
                 if (_player != nullptr) {
                     _player->Callback(&_sink);
-                    _state = Exchange::IStream::Idle;
+                    _state = Exchange::IStream::state::Idle;
                     result = Core::ERROR_NONE;
                     _error = result;
                 }
@@ -82,8 +82,8 @@ namespace Implementation {
                     delete _player;
                 }
 
-                _state = Exchange::IStream::Error;
-                _rror = Core::ERROR_UNAVAILABLE;
+                _state = Exchange::IStream::state::Error;
+                _error = Core::ERROR_UNAVAILABLE;
 
                 return Core::ERROR_NONE;
             }
@@ -123,7 +123,7 @@ namespace Implementation {
 
                 result = Core::ERROR_ILLEGAL_STATE;
 
-                if (_state != Exchange::IStream::Error) {
+                if (_state != Exchange::IStream::state::Error) {
 
                     Broadcast::Designator parser(configuration);
 
@@ -138,14 +138,14 @@ namespace Implementation {
                         parser.SymbolRate(), Broadcast::FEC_INNER_UNKNOWN, parser.Spectral());
 
                     if (result != Core::ERROR_NONE) {
-                        _state = Exchange::IStream::Error;
+                        _state = Exchange::IStream::state::Error;
                         TRACE(Trace::Error, (_T("Error in player load :%d"), result));
                         _error = result;
                         _callback->StateChange(_state);
                     } else {
                         TRACE(Trace::Information, (_T("Tuning to ProgramNumber %d"), parser.ProgramNumber()));
                         _player->Prepare(parser.ProgramNumber());
-                        _state = Exchange::IStream::Prepared;
+                        _state = Exchange::IStream::state::Prepared;
                     }
                 }
 
@@ -163,7 +163,7 @@ namespace Implementation {
 
                 result = Core::ERROR_ILLEGAL_STATE;
 
-                if ( (_state > Exchange::IStream::Prepared) && (_state != Exchange::IStream::Error) ) {
+                if ( (_state > Exchange::IStream::state::Prepared) && (_state != Exchange::IStream::state::Error) ) {
                     Exchange::IStream::state newState = _state;
 
                     result = Core::ERROR_NONE; // PLAYER_RESULT status =
@@ -227,7 +227,7 @@ namespace Implementation {
 
                 result = Core::ERROR_ILLEGAL_STATE;
 
-                if (_state == Exchange::IStream::Prepared) {
+                if (_state == Exchange::IStream::state::Prepared) {
 
                     result = _player->Attach(index);
                     if (result != Core::ERROR_NONE) {
@@ -248,7 +248,7 @@ namespace Implementation {
 
                 result = Core::ERROR_ILLEGAL_STATE;
 
-                if ( (_state > Exchange::IStream::Prepared) && (_state != Exchange::IStream::Error) ) {
+                if ( (_state > Exchange::IStream::state::Prepared) && (_state != Exchange::IStream::state::Error) ) {
 
                     result = _player->Detach(index);
                     if (result != Core::ERROR_NONE) {
@@ -272,23 +272,23 @@ namespace Implementation {
                 Broadcast::ITuner::state result = _player->State();
 
                 if (result == Broadcast::ITuner::IDLE) {
-                    _state = Exchange::IStream::Idle;
+                    _state = Exchange::IStream::state::Idle;
                 }
                 else if (result == Broadcast::ITuner::LOCKED) {
-                    if (_state == Exchange::IStream::Idle) {
-                        _state = Exchange::IStream::Loading;
+                    if (_state == Exchange::IStream::state::Idle) {
+                        _state = Exchange::IStream::state::Loading;
                     }
                 }
                 else if (result == Broadcast::ITuner::PREPARED) {
-                    if (_state == Exchange::IStream::Loading) {
-                        _state = Exchange::IStream::Prepared;
+                    if (_state == Exchange::IStream::state::Loading) {
+                        _state = Exchange::IStream::state::Prepared;
                     }
-                    else if (_state > Exchange::IStream::Prepared) {
-                        _state = Exchange::IStream::Prepared;
+                    else if (_state > Exchange::IStream::state::Prepared) {
+                        _state = Exchange::IStream::state::Prepared;
                     }
                 }
                 else if (result == Broadcast::ITuner::STREAMING) {
-                    _state = Exchange::IStream::Controlled;
+                    _state = Exchange::IStream::state::Controlled;
                 }
 
                 if ( (oldState != _state) && (_callback != nullptr)) {

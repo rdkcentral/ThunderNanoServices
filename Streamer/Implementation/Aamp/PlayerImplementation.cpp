@@ -63,16 +63,16 @@ namespace Implementation {
                         {
                         case eSTATE_IDLE:
                         case eSTATE_RELEASED:
-                            _player->StateChange(Exchange::IStream::Idle);
+                            _player->StateChange(Exchange::IStream::state::Idle);
                             break;
                         case eSTATE_INITIALIZING:
                         case eSTATE_INITIALIZED:
                         case eSTATE_PREPARING:
-                            _player->StateChange(Exchange::IStream::Loading);
+                            _player->StateChange(Exchange::IStream::state::Loading);
                             break;
                         case eSTATE_PREPARED:
                             _player->Speed(0);
-                            _player->StateChange(Exchange::IStream::Prepared);
+                            _player->StateChange(Exchange::IStream::state::Prepared);
                             break;
                         case eSTATE_BUFFERING:
                         case eSTATE_PAUSED:
@@ -83,7 +83,7 @@ namespace Implementation {
                         case eSTATE_COMPLETE:
                             break;
                         case eSTATE_ERROR:
-                            _player->StateChange(Exchange::IStream::Error);
+                            _player->StateChange(Exchange::IStream::state::Error);
                             _player->SetError(-1); // undefined error
                             break;
                         }
@@ -91,11 +91,11 @@ namespace Implementation {
                         break;
                     case AAMP_EVENT_TUNED:
                         TRACE(Trace::Information, (_T("AAMP_EVENT_TUNED")));
-                        _player->StateChange(Exchange::IStream::Controlled);
+                        _player->StateChange(Exchange::IStream::state::Controlled);
                         break;
                     case AAMP_EVENT_TUNE_FAILED:
                         TRACE(Trace::Information, (_T("AAMP_EVENT_TUNE_FAILED")));
-                        _player->StateChange(Exchange::IStream::Error);
+                        _player->StateChange(Exchange::IStream::state::Error);
                         _player->SetError(event.data.mediaError.code);
                         /* this never seems to trigger... */
                         break;
@@ -129,11 +129,11 @@ namespace Implementation {
                             std::list<ElementInfo> elements;
                             if ((event.data.metadata.width > 0) && (event.data.metadata.height > 0)) {
                                 TRACE(Trace::Information, (_T("Video track: %ix%i"), event.data.metadata.width, event.data.metadata.height));
-                                elements.emplace_back(Exchange::IStream::IElement::Video);
+                                elements.emplace_back(Exchange::IStream::IElement::type::Video);
                             }
                             for (int i = 0; i < event.data.metadata.languageCount; i++) {
                                 TRACE(Trace::Information, (_T("Audio track %i: '%s'"), i, event.data.metadata.languages[i]));
-                                elements.emplace_back(Exchange::IStream::IElement::Audio);
+                                elements.emplace_back(Exchange::IStream::IElement::type::Audio);
                             }
                             _player->SetElements(elements);
                             _player->DrmEvent(event.data.metadata.hasDrm? 1 : 0);
@@ -228,8 +228,8 @@ namespace Implementation {
 
             Aamp(const Exchange::IStream::streamtype streamType, const uint8_t index)
                 : _uri()
-                , _state(Exchange::IStream::Error)
-                , _drmType(Exchange::IStream::Unknown)
+                , _state(Exchange::IStream::state::Error)
+                , _drmType(Exchange::IStream::drmtype::Unknown)
                 , _streamtype(streamType)
                 , _error(Core::ERROR_UNAVAILABLE)
                 , _speed(-1)
@@ -298,7 +298,7 @@ namespace Implementation {
                     if (_aampEventListener != nullptr) {
                         _aampPlayer->RegisterEvents(_aampEventListener);
                         _aampPlayer->SetReportInterval(1000 /* ms */);
-                        StateChange(Exchange::IStream::Idle);
+                        StateChange(Exchange::IStream::state::Idle);
                         result = Core::ERROR_NONE;
                         _error = result;
                     }
@@ -328,7 +328,7 @@ namespace Implementation {
                 delete _aampPlayer;
                 _aampPlayer = nullptr;
 
-                _state = Exchange::IStream::Error;
+                _state = Exchange::IStream::state::Error;
                 _error = Core::ERROR_UNAVAILABLE;
 
                 _adminLock.Unlock();
@@ -347,7 +347,7 @@ namespace Implementation {
             {
                 uint32_t result = Core::ERROR_NONE;
 
-                if (_state == Exchange::IStream::Prepared) {
+                if (_state == Exchange::IStream::state::Prepared) {
                     InitializePlayerInstance();
                     Run();
                 } else {
@@ -361,9 +361,9 @@ namespace Implementation {
             {
                 uint32_t result = Core::ERROR_NONE;
 
-                if (_state == Exchange::IStream::Controlled) {
+                if (_state == Exchange::IStream::state::Controlled) {
                     Terminate();
-                    StateChange(Exchange::IStream::Prepared);
+                    StateChange(Exchange::IStream::state::Prepared);
                 } else {
                     result = Core::ERROR_ILLEGAL_STATE;
                 }
@@ -384,7 +384,7 @@ namespace Implementation {
             Exchange::IStream::drmtype DRM() const override
             {
                 _adminLock.Lock();
-                if (_drmType == Exchange::IStream::Unknown) {
+                if (_drmType == Exchange::IStream::drmtype::Unknown) {
                     const_cast<Aamp*>(this)->QueryDRMSystem();
                 }
                 Exchange::IStream::drmtype drmType = _drmType;
@@ -426,7 +426,7 @@ namespace Implementation {
                         if ((uriType == "m3u8") || (uriType == "mpd")) {
                             TRACE(Trace::Information, (_T("URI type is %s"), uriType.c_str()));
                             _speed = -1;
-                            _drmType = Exchange::IStream::Unknown;
+                            _drmType = Exchange::IStream::drmtype::Unknown;
                             _uri = uri;
                             _error = Core::ERROR_NONE;
                             _aampPlayer->Tune(_uri.c_str());
@@ -686,14 +686,14 @@ namespace Implementation {
                 string drm = _aampPlayer->GetCurrentDRM();
                 if (drm.empty() != true) {
                     if (!strcmp(drm.c_str(), "WideVine")) {
-                        _drmType = Exchange::IStream::Widevine;
+                        _drmType = Exchange::IStream::drmtype::Widevine;
                     } else if (!strcmp(drm.c_str(), "PlayReady")) {
-                        _drmType = Exchange::IStream::PlayReady;
+                        _drmType = Exchange::IStream::drmtype::PlayReady;
                     } else {
-                        _drmType = Exchange::IStream::Unknown;
+                        _drmType = Exchange::IStream::drmtype::Unknown;
                     }
                 } else {
-                    _drmType = Exchange::IStream::None;
+                    _drmType = Exchange::IStream::drmtype::None;
                 }
             }
 

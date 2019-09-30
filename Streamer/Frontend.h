@@ -377,7 +377,7 @@ namespace Player {
                 if (_callback != nullptr) {
                     _callback->StateChange(newState);
                 }
-                if (newState == Exchange::IStream::Controlled) {
+                if (newState == Exchange::IStream::state::Controlled) {
                     PopulateElements();
                 }
                 _adminLock.Unlock();

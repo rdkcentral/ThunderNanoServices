@@ -145,9 +145,9 @@ namespace Plugin {
 
         Streams::iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
-            if (((stream->second->State() == Exchange::IStream::Idle)
-                    || (stream->second->State() == Exchange::IStream::Prepared)
-                    || (stream->second->State() == Exchange::IStream::Error))
+            if (((stream->second->State() == Exchange::IStream::state::Idle)
+                    || (stream->second->State() == Exchange::IStream::state::Prepared)
+                    || (stream->second->State() == Exchange::IStream::state::Error))
                     && (_controls.find(id) == _controls.end())) {
                 result = stream->second->Load(location);
                 if ((result != Core::ERROR_NONE) && (result != Core::ERROR_INCORRECT_URL)) {
@@ -177,14 +177,14 @@ namespace Plugin {
 
         Streams::iterator stream = _streams.find(id);
         if (stream != _streams.end()) {
-            if ((stream->second->State() == Exchange::IStream::Prepared) && (_controls.find(id) == _controls.end())) {
+            if ((stream->second->State() == Exchange::IStream::state::Prepared) && (_controls.find(id) == _controls.end())) {
                 Exchange::IStream::IControl* control = stream->second->Control();
                 if (control != nullptr) {
                     _controls.emplace(std::piecewise_construct, std::forward_as_tuple(id), std::forward_as_tuple(*this, id, control));
                 } else {
                     result = Core::ERROR_UNAVAILABLE;
                 }
-            } else if ((stream->second->State() == Exchange::IStream::Controlled) || (stream->second->State() == Exchange::IStream::Prepared)) {
+            } else if ((stream->second->State() == Exchange::IStream::state::Controlled) || (stream->second->State() == Exchange::IStream::state::Prepared)) {
                 result = Core::ERROR_INPROGRESS;
             } else {
                 result = Core::ERROR_ILLEGAL_STATE;
@@ -552,16 +552,16 @@ namespace Plugin {
                         StreamelementData streamElement;
                         switch(element->Type())
                         {
-                            case Exchange::IStream::IElement::Audio:
+                            case Exchange::IStream::IElement::type::Audio:
                                 streamElement.Type = StreamelementData::ElementType::AUDIO;
                                 break;
-                            case Exchange::IStream::IElement::Video:
+                            case Exchange::IStream::IElement::type::Video:
                                 streamElement.Type = StreamelementData::ElementType::VIDEO;
                                 break;
-                            case Exchange::IStream::IElement::Subtitles:
+                            case Exchange::IStream::IElement::type::Subtitles:
                                 streamElement.Type = StreamelementData::ElementType::SUBTITLES;
                                 break;
-                            case Exchange::IStream::IElement::Teletext:
+                            case Exchange::IStream::IElement::type::Teletext:
                                 streamElement.Type = StreamelementData::ElementType::TELETEXT;
                                 break;
                             default:

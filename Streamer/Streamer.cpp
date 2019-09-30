@@ -120,12 +120,12 @@ namespace Plugin {
             Streams::iterator stream = _streams.find(position);
             if ((stream != _streams.end()) && (index.Next() == true)) {
                 if (index.Remainder() == _T("Type")) {
-                    response->Type = stream->second->Type();
+                    response->Type = static_cast<uint32_t>(stream->second->Type());
                     result->ErrorCode = Web::STATUS_OK;
                     result->ContentType = Web::MIMETypes::MIME_JSON;
                     result->Body(response);
                 } else if (index.Remainder() == _T("DRM")) {
-                    response->DRM = stream->second->DRM();
+                    response->DRM = static_cast<uint32_t>(stream->second->DRM());
                     result->ErrorCode = Web::STATUS_OK;
                     result->ContentType = Web::MIMETypes::MIME_JSON;
                     result->Body(response);
@@ -135,7 +135,7 @@ namespace Plugin {
                     result->ContentType = Web::MIMETypes::MIME_JSON;
                     result->Body(response);
                 } else if (index.Remainder() == _T("State")) {
-                    response->State = stream->second->State();
+                    response->State = static_cast<uint32_t>(stream->second->State());
                     result->ErrorCode = Web::STATUS_OK;
                     result->ContentType = Web::MIMETypes::MIME_JSON;
                     result->Body(response);
@@ -203,7 +203,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Stream loaded");
                     } else if (index.Remainder() == _T("Attach")) {
-                        if (stream->second->State() == Exchange::IStream::Prepared) {
+                        if (stream->second->State() == Exchange::IStream::state::Prepared) {
                             Exchange::IStream::IControl* control = stream->second->Control();
                             if (control != nullptr) {
                                 _controls.emplace(std::piecewise_construct,
@@ -212,7 +212,7 @@ namespace Plugin {
                                 result->Message = _T("Decoder Attached");
                                 result->ErrorCode = Web::STATUS_OK;
                             }
-                        } else if (stream->second->State() == Exchange::IStream::Controlled) {
+                        } else if (stream->second->State() == Exchange::IStream::state::Controlled) {
                             result->Message = _T("Decoder already attached");
                             result->ErrorCode = Web::STATUS_ACCEPTED;
                         } else {
