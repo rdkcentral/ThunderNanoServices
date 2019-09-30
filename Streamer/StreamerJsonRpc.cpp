@@ -118,8 +118,7 @@ namespace Plugin {
             }
 
             if (result == Core::ERROR_NONE) {
-                uint32_t relResult = stream->second->Release();
-                ASSERT(relResult == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                stream->second->Release();
                 _streams.erase(stream);
             }
         }

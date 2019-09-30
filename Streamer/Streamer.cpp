@@ -343,8 +343,7 @@ namespace Plugin {
                 if (status == Core::ERROR_NONE) {
                     Streams::iterator stream = _streams.find(position);
                     if (stream != _streams.end()) {
-                        uint32_t relResult = stream->second->Release();
-                        ASSERT(relResult == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                        stream->second->Release();
                         _streams.erase(position);
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Stream is released");
