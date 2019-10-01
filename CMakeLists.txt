@@ -9,6 +9,7 @@ option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(PLUGIN_BLUETOOTHREMOTECONTROL "Include Bluetooth Remote Control plugin" OFF)
 option(PLUGIN_COMMANDER "Include Commander plugin" OFF)
 option(PLUGIN_COMPOSITOR "Include Compsitor plugin" OFF)
+option(PLUGIN_CONTAINERS "Include Containers plugin" OFF)
 option(PLUGIN_DEVICEIDENTIFICATION "Include DeviceIdentification plugin" OFF)
 option(PLUGIN_DEVICEINFO "Include DeviceInfo plugin" OFF)
 option(PLUGIN_DSRESOLUTION "Include DSResolution plugin" OFF)
@@ -72,6 +73,10 @@ endif()
 
 if(PLUGIN_COMPOSITOR)
     add_subdirectory(Compositor)
+endif()
+
+if (PLUGIN_CONTAINERS)
+    add_subdirectory(Containers)
 endif()
 
 if(PLUGIN_DEVICEIDENTIFICATION)
