@@ -14,7 +14,7 @@ namespace Plugin {
     {
 	Register<void, Core::JSON::DecUInt32>(_T("getactivesessionscount"), &SecureShellServer::endpoint_getactivesessionscount, this);
 	Register<void, Core::JSON::ArrayType<SessioninfoResultData>>(_T("getactivesessionsinfo"), &SecureShellServer::endpoint_getactivesessionsinfo, this);
-	Register<CloseclientsessionParamsData,void>(_T("closeclientsession"), &SecureShellServer::endpoint_closeclientsession, this);
+	Register<SessioninfoResultData,void>(_T("closeclientsession"), &SecureShellServer::endpoint_closeclientsession, this);
     }
 
     void SecureShellServer::UnregisterAll()
@@ -35,7 +35,12 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_NONE;
 
-        response = GetSessionsCount();
+	Exchange::ISecureShellServer::IClient::IIterator* iter = SessionsInfo();
+        response = GetSessionsCount(iter);
+
+        iter->Reset();
+	iter->Next();
+        iter->Release();
 
         return result;
     }
@@ -49,7 +54,7 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_NONE;
 
-        result = GetSessionsInfo(response);
+        result = SecureShellServer::GetSessionsInfo(response);
 
         return result;
     }
@@ -59,17 +64,19 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_INCORRECT_URL: Incorrect URL given
     // Close a SSH client session.
-    uint32_t SecureShellServer::endpoint_closeclientsession(const JsonData::SecureShellServer::CloseclientsessionParamsData& params)
+    uint32_t SecureShellServer::endpoint_closeclientsession(const JsonData::SecureShellServer::SessioninfoResultData& params)
     {
         uint32_t result = Core::ERROR_NONE;
+	ClientImpl* client =
+		Core::Service<SecureShellServer::ClientImpl>::Create<ClientImpl>(params.IpAddress.Value(), params.TimeStamp.Value(), params.Pid.Value());
 
-        if(params.ClientPid.IsSet() == true) {
-            result = CloseClientSession(params.ClientPid.Value());
+        if(params.Pid.IsSet() == true) {
+            TRACE(Trace::Information, (_T("closing client session with pid: %s"), params.Pid.Value()));
+            result = CloseClientSession(client);
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
 
-        TRACE(Trace::Information, (_T("closing client session with pid: %s"), params.ClientPid.Value()));
 
         return result;
     }

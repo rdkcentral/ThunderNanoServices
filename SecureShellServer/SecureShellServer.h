@@ -57,57 +57,8 @@ namespace Plugin {
             ClientImpl() = delete;
             ClientImpl(const ClientImpl&) = delete;
             ClientImpl& operator=(const ClientImpl&) = delete;
-     
-            class JSON : public Core::JSON::Container {
-            private:
-                JSON& operator=(const JSON&);
 
-            public:
-                JSON()
-                    : Core::JSON::Container()
-                    , IpAddress()
-                    , TimeStamp()
-                    , RemoteId()
-                {
-                    Add(_T("ipaddress"), &IpAddress);
-                    Add(_T("timestamp"), &TimeStamp);
-                    Add(_T("remoteid"), &RemoteId);
-                }
-                JSON(const JSON& copy)
-                    : Core::JSON::Container()
-                    , IpAddress()
-                    , TimeStamp()
-                    , RemoteId()
-                {
-                    Add(_T("ipaddress"), &IpAddress);
-                    Add(_T("timestamp"), &TimeStamp);
-                    Add(_T("remoteid"), &RemoteId);
-                    IpAddress = copy.IpAddress;
-                    TimeStamp = copy.TimeStamp;
-                    RemoteId = copy.RemoteId;
-                }
-                virtual ~JSON()
-                {
-                }
-	    public:
-                JSON& Set(const ClientImpl* source)
-                {
-                    if (source != nullptr) {
-                        IpAddress = source->Address();
-                        TimeStamp = source->TimeStamp();
-                        RemoteId = source->RemoteId();
-                    } else {
-                        IpAddress.Clear();
-                        TimeStamp.Clear();
-                        RemoteId.Clear();
-                    }
-                    return (*this);
-                }
-                Core::JSON::String IpAddress;
-                Core::JSON::String TimeStamp;
-                Core::JSON::String RemoteId;
-            };
-
+	public:
             class IteratorImpl : public Exchange::ISecureShellServer::IClient::IIterator {
             private:
                 IteratorImpl() = delete;
@@ -135,6 +86,10 @@ namespace Plugin {
                 }
 
             public:
+		virtual uint32_t Count()
+                {
+                   return (static_cast<uint32_t>(_list.size()));
+                }
                 virtual void Reset() override
                 {
                     _index = 0;
@@ -197,6 +152,12 @@ namespace Plugin {
             {
                 return (_remoteid);
             }
+            virtual void Close()
+            {
+                TRACE(Trace::Information, (_T("closing client session with _remoteid: %s"), _remoteid.c_str()));
+                close_client_session(std::stoi(_remoteid));
+            }
+
             BEGIN_INTERFACE_MAP(ClientImpl)
             INTERFACE_ENTRY(ISecureShellServer::IClient)
             END_INTERFACE_MAP
@@ -210,9 +171,7 @@ namespace Plugin {
     public:
         SecureShellServer()
         : _skipURL(0)
-        , _adminLock()
         , _InputParameters()
-        , _clients()
         {
             RegisterAll();
         }
@@ -238,26 +197,29 @@ namespace Plugin {
         void Inbound(Web::Request& request) override;
         Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
+        //  ISecureShellServer methods
+        virtual ISecureShellServer::IClient::IIterator* Clients() override;
+
         // SecureShellServer methods
-        uint32_t GetSessionsCount();
-        uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& response);
-        uint32_t CloseClientSession(const std::string& clientpid);
+        uint32_t GetSessionsCount(ISecureShellServer::IClient::IIterator* iter);
+        uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& sessioninfo);
+        uint32_t CloseClientSession(ISecureShellServer::IClient* client);
 
     private:
         SecureShellServer(const SecureShellServer&) = delete;
         SecureShellServer& operator=(const SecureShellServer&) = delete;
+
+        ISecureShellServer::IClient::IIterator* SessionsInfo();
 
         void RegisterAll();
         void UnregisterAll();
         
         uint32_t endpoint_getactivesessionscount(Core::JSON::DecUInt32& response);
         uint32_t endpoint_getactivesessionsinfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& response);
-        uint32_t endpoint_closeclientsession(const JsonData::SecureShellServer::CloseclientsessionParamsData& params);
+        uint32_t endpoint_closeclientsession(const JsonData::SecureShellServer::SessioninfoResultData& params);
 
         uint8_t _skipURL;
-        Core::CriticalSection _adminLock;
         std::string _InputParameters;
-        std::list<ClientImpl*> _clients;
     };
 
 } // namespace Plugin
