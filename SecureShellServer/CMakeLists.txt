@@ -28,7 +28,7 @@ target_include_directories(${MODULE_NAME}
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-	${LIBDROPBEAR_LIBRARIES} -L"$ENV{TARGET_DIR}/usr/lib" -ldropbear -lz -lutil -lpthread -lcrypt)
+	${LIBDROPBEAR_LIBRARIES} -lz -lutil -lpthread -lcrypt)
 
 install(TARGETS ${MODULE_NAME} 
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
