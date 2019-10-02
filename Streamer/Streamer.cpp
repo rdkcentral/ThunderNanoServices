@@ -26,6 +26,17 @@ namespace Plugin {
         if ((_player != nullptr) && (_service != nullptr)) {
             TRACE(Trace::Information, (_T("Successfully instantiated Streamer")));
             _player->Configure(_service);
+
+            PluginHost::ISubSystem* subSystem = service->SubSystems();
+            if (subSystem != nullptr) {
+                if (subSystem->IsActive(PluginHost::ISubSystem::STREAMING) == true) {
+                    SYSLOG(Logging::Startup, (_T("Streamer is not defined as External !!")));
+                } else {
+                    subSystem->Set(PluginHost::ISubSystem::STREAMING, nullptr);
+                }
+                subSystem->Release();
+            }
+
         } else {
             TRACE(Trace::Error, (_T("Streamer could not be initialized.")));
             message = _T("Streamer could not be initialized.");
@@ -56,6 +67,12 @@ namespace Plugin {
             }
         }
 
+        PluginHost::ISubSystem* subSystem = service->SubSystems();
+        if (subSystem != nullptr) {
+            ASSERT(subSystem->IsActive(PluginHost::ISubSystem::STREAMING) == true);
+            subSystem->Set(PluginHost::ISubSystem::NOT_STREAMING, nullptr);
+            subSystem->Release();
+        }
         _player = nullptr;
         _service = nullptr;
     }
