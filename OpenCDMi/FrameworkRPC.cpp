@@ -438,6 +438,12 @@ namespace Plugin {
                     return (_sessionId);
                 }
 
+                virtual void Metadata(std::string& metadata) const override
+                {
+                    TRACE(Trace::Information, ("Metadata()"));
+                    _mediaKeySession->Metadata(metadata);
+                }
+
                 virtual ::OCDM::ISession::KeyStatus Status() const override
                 {
                     return (_cencData.Status());
@@ -582,6 +588,21 @@ namespace Plugin {
             {
 
                 return (_parent.IsTypeSupported(keySystem, mimeType) ? 0 : 1);
+            }
+
+            virtual OCDM::OCDM_RESULT Metadata(
+                const std::string& keySystem,
+                std::string& metadata) const override
+            {
+                OCDM::OCDM_RESULT result = OCDM::OCDM_KEYSYSTEM_NOT_SUPPORTED;
+
+                CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
+                if (system != nullptr) {
+                    system->Metadata(metadata);
+                    result = OCDM::OCDM_SUCCESS;
+                }
+
+                return result;
             }
 
             // Create a MediaKeySession using the supplied init data and CDM data.
