@@ -56,6 +56,7 @@ public:
         , _mode(NEXUS_PlatformStandbyMode_eOn)
         , _coldBoot(false)
         , _eventTriggered(false)
+        , _newState(false) 
         , _timeout(0)
         , _gpioHandle(nullptr)
         , _gpioType(NEXUS_GpioType_eAonStandard)
@@ -103,6 +104,7 @@ private:
     bool _coldBoot;
     bool _eventTriggered;
     bool _isSetState;
+    bool _newState;
 
     uint32_t _timeout;
     BKNI_EventHandle _event;
@@ -156,7 +158,7 @@ uint32_t PowerImplementation::Worker()
         if (_isSetState) {
             NEXUS_PlatformStandbyMode prevMode = _mode;
             PCStatus status = SetStandbyState();
-            if (status == PCSuccess && (prevMode != NEXUS_PlatformStandbyMode_eOn)) {
+            if (status == PCSuccess && (prevMode != NEXUS_PlatformStandbyMode_eOn) && (!_newState)) {
                 BKNI_WaitForEvent(_event, BKNI_INFINITE);
                 status = SetPowerState();
                 if (status == PCSuccess) {
@@ -167,6 +169,7 @@ uint32_t PowerImplementation::Worker()
                     }
                 }
             }
+            _newState = false;
             _isSetState = false;
         }
         _lock.Unlock();
@@ -387,8 +390,10 @@ Exchange::IPower::PCStatus PowerImplementation::SetStandbyState()
         PrintWakeup();
         NxClient_GetStandbyStatus(&standbyStatus);
         if ((rc == NEXUS_TIMEOUT) || standbyStatus.status.wakeupStatus.timeout || standbyStatus.status.wakeupStatus.ir || _eventTriggered) {
-            _mode = NEXUS_PlatformStandbyMode_eOn;
-            BKNI_SetEvent(_event);
+           if (!_newState) {
+                _mode = NEXUS_PlatformStandbyMode_eOn;
+            }
+           BKNI_SetEvent(_event);
             _eventTriggered = false;
         }
     }
@@ -421,9 +426,7 @@ void PowerImplementation::SetWakeEvent()
 {
     TRACE(Trace::Information, (_T("SetWakeEvent")));
     if (_mode != NEXUS_PlatformStandbyMode_eOn) {
-        if (_mode == NEXUS_PlatformStandbyMode_eActive) {
             BKNI_SetEvent(_wakeupEvent);
-        }
     }
 }
 
@@ -446,6 +449,12 @@ Exchange::IPower::PCStatus PowerImplementation::SetState(const Exchange::IPower:
     TRACE(Trace::Information, (_T("SetState state is [%d], Timeout is : [%d]"), state, timeout));
     PCStatus status = PCSuccess;
     _timeout = timeout;
+
+    if (_mode == NEXUS_PlatformStandbyMode_eActive) {
+        _eventTriggered = true;
+        _newState = true;
+        BKNI_SetEvent(_wakeupEvent);
+    }
 
     switch (state) {
     case On:

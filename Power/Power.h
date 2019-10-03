@@ -33,10 +33,10 @@ namespace Plugin {
             }
 
         public:
-            virtual void Dispatch(const PluginHost::VirtualInput::actiontype action, const uint32_t keyCode) override
+            virtual void Dispatch(const IVirtualInput::KeyData::type type, const uint32_t code) override
             {
-                if (action == PluginHost::VirtualInput::RELEASED) {
-                    _parent.KeyEvent(keyCode);
+                if (type == IVirtualInput::KeyData::RELEASED) {
+                    _parent.KeyEvent(code);
                 }
             }
 
