@@ -180,10 +180,33 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                     }
                     case MGMT_EV_NEW_IRK: {
                          const mgmt_ev_new_irk* info = reinterpret_cast<const mgmt_ev_new_irk*>(data);
-                         TRACE(ManagementFlow, (_T("MGMT_EV_NEW_IRK store_hint [%d]"), info->store_hint));
+                         string key;
+                         Core::ToHexString(info->key.val, 16, key);
+                         TRACE(ManagementFlow, (_T("MGMT_EV_NEW_IRK")));
+                         TRACE(ManagementFlow, (_T("  store_hint=%d, rpa=%s"), info->store_hint, Bluetooth::Address(info->rpa).ToString().c_str()));
+                         TRACE(ManagementFlow, (_T("  key.addr=%s, key.val=%s"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), key.c_str()));
                          break;
                     }
-                    default: 
+                    case MGMT_EV_NEW_CSRK: {
+                         const mgmt_ev_new_csrk* info = reinterpret_cast<const mgmt_ev_new_csrk*>(data);
+                         string key;
+                         Core::ToHexString(info->key.val, 16, key);
+                         TRACE(ManagementFlow, (_T("MGMT_EV_NEW_CSRK")));
+                         TRACE(ManagementFlow, (_T("  store_hint=%d"), info->store_hint));
+                         TRACE(ManagementFlow, (_T("  key.addr=%s, key.type=%d, key.val=%s"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), info->key.type, key.c_str()));
+                         break;
+                    }
+                    case MGMT_EV_NEW_LONG_TERM_KEY: {
+                         const mgmt_ev_new_long_term_key* info = reinterpret_cast<const mgmt_ev_new_long_term_key*>(data);
+                         string key;
+                         Core::ToHexString(info->key.val, 16, key);
+                         TRACE(ManagementFlow, (_T("MGMT_EV_NEW_LONG_TERM_KEY")));
+                         TRACE(ManagementFlow, (_T("  store_hint=%d"), info->store_hint));
+                         TRACE(ManagementFlow, (_T("  key.addr=%s, key.type=%d, key.master=%d"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), info->key.type, info->key.master));
+                         TRACE(ManagementFlow, (_T("  key.enc_size=%u, key.ediv=%u, key.rand=%llu, key.val=%s"), info->key.enc_size, btohs(info->key.ediv), btohll(info->key.rand), key.c_str()));
+                         break;
+                    }
+                    default:
                          TRACE(ManagementFlow, (_T("Device=%d,  OpCode=0x%04X, Length=%d"), device, opCode, packageLen));
                          string dataText;
                          Core::ToHexString(data, packageLen, dataText);
@@ -284,18 +307,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             }
             uint32_t Pair(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const Bluetooth::ManagementSocket::capabilities caps) 
             {
-                uint32_t result = _administrator.Discovering (false, true, true);
-                if (result != Core::ERROR_NONE) {
-                    TRACE(ControlFlow, (_T("Could not suspend the Discover Service. Error: %d"), result));
-                }
-                else {
-                    result = _administrator.Pair(remote, type, caps);
-
-                    if (_administrator.Discovering(true, true, true) != Core::ERROR_NONE) {
-                        TRACE(ControlFlow, (_T("Could not resume the Discover Service. Error: %d"), result));
-                    }
-                }
-                return (result);
+                return(_administrator.Pair(remote, type, caps));
             }
             uint32_t Unpair(const Bluetooth::Address& remote) 
             {
@@ -414,7 +426,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                                  DeviceImpl* entry = _parent->Find(info->handle);
                                  if (entry != nullptr) {
                                      //entry->Connection(info->interval, info->latency, info->supervision_timeout);
-                                     entry->Encrypt();
+                                     //entry->Encrypt();
                                  }
                              }
                          } else {
@@ -589,9 +601,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             }
         private:
             bool Initialize() override {
-                //Security(BT_SECURITY_MEDIUM, 0);
-                Security(BT_SECURITY_LOW, 0);
-                return (true);
+                return (Security(BT_SECURITY_LOW));
             }
             virtual uint16_t Deserialize(const uint8_t* dataFrame, const uint16_t availableData) override {
                 uint32_t result = 0;

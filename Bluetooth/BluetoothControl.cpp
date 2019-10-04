@@ -43,6 +43,9 @@ namespace Plugin {
             if (Bluetooth::ManagementSocket::Up(_config.Interface.Value()) == false) {
                 result = "Could not activate bluetooth interface.";
             }
+            else if ((slaving == false) && (administrator.Power(false) != Core::ERROR_NONE)) {
+                result = "Failed to power up the bluetooth interface";
+            }
             else if ((slaving == false) && (administrator.SimplePairing(true) != Core::ERROR_NONE)) {
                 result = "Failed to enable simple pairing on the bluetooth interface";
             }
@@ -54,6 +57,12 @@ namespace Plugin {
             }
             else if ((slaving == false) && (administrator.LowEnergy(true) != Core::ERROR_NONE)) {
                 result = "Failed to enable low energy on the bluetooth interface";
+            }
+            else if ((slaving == false) && (administrator.Privacy(0, nullptr) != Core::ERROR_NONE)) {
+                result = "Failed to LE privacy on the bluetooth interface";
+            }
+            else if ((slaving == false) && (administrator.Discovering(false, false, false) != Core::ERROR_NONE)) {
+                result = "Failed to stop device discovery on bluetooth interface";
             }
             else if ((slaving == false) && (administrator.SecureConnection(true) != Core::ERROR_NONE)) {
                 result = "Failed to enable secure connections on the bluetooth interface";
@@ -93,26 +102,26 @@ namespace Plugin {
                 Bluetooth::ManagementSocket::Info::Properties actuals(info.Actuals());
                 Bluetooth::ManagementSocket::Info::Properties supported(info.Supported());
 
-		SYSLOG(Logging::Startup, (_T("        Name:              %s"), info.ShortName().c_str()));
-		SYSLOG(Logging::Startup, (_T("        Version:           %d"), info.Version()));
-		SYSLOG(Logging::Startup, (_T("        Address:           %s"), info.Address().ToString().c_str()));
-		SYSLOG(Logging::Startup, (_T("        DeviceClass:       0x%06X"), info.DeviceClass()));
-		SYSLOG(Logging::Startup, (_T("%s Power:             %s"), supported.IsPowered() ? _T("[true] ") : _T("[false]"), actuals.IsPowered() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s Connectable:       %s"), supported.IsConnectable() ? _T("[true] ") : _T("[false]"), actuals.IsConnectable() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s FastConnectable:   %s"), supported.IsFastConnectable() ? _T("[true] ") : _T("[false]"), actuals.IsFastConnectable() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s Discovery:         %s"), supported.HasDiscovery() ? _T("[true] ") : _T("[false]"), actuals.HasDiscovery() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s Pairing:           %s"), supported.HasPairing() ? _T("[true] ") : _T("[false]"), actuals.HasPairing() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s LinkSecurity:      %s"), supported.HasLinkLevelSecurity() ? _T("[true] ") : _T("[false]"), actuals.HasLinkLevelSecurity() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s SimplePairing:     %s"), supported.HasSecureSimplePairing() ? _T("[true] ") : _T("[false]"), actuals.HasSecureSimplePairing() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s BasicEnhancedRate: %s"), supported.HasBasicEnhancedRate() ? _T("[true] ") : _T("[false]"), actuals.HasBasicEnhancedRate() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s HighSpeed:         %s"), supported.HasHighSpeed() ? _T("[true] ") : _T("[false]"), actuals.HasHighSpeed() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s LowEnergy:         %s"), supported.HasLowEnergy() ? _T("[true] ") : _T("[false]"), actuals.HasLowEnergy() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s Advertising:       %s"), supported.HasAdvertising() ? _T("[true] ") : _T("[false]"), actuals.HasAdvertising() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s SecureConnection:  %s"), supported.HasSecureConnections() ? _T("[true] ") : _T("[false]"), actuals.HasSecureConnections() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s DebugKeys:         %s"), supported.HasDebugKeys() ? _T("[true] ") : _T("[false]"), actuals.HasDebugKeys() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s Privacy:           %s"), supported.HasPrivacy() ? _T("[true] ") : _T("[false]"), actuals.HasPrivacy() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s Configuration:     %s"), supported.HasConfiguration() ? _T("[true] ") : _T("[false]"), actuals.HasConfiguration() ? _T("on") : _T("off")));
-		SYSLOG(Logging::Startup, (_T("%s StaticAddress:     %s"), supported.HasStaticAddress() ? _T("[true] ") : _T("[false]"), actuals.HasStaticAddress() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("        Name:              %s"), info.ShortName().c_str()));
+                SYSLOG(Logging::Startup, (_T("        Version:           %d"), info.Version()));
+                SYSLOG(Logging::Startup, (_T("        Address:           %s"), info.Address().ToString().c_str()));
+                SYSLOG(Logging::Startup, (_T("        DeviceClass:       0x%06X"), info.DeviceClass()));
+                SYSLOG(Logging::Startup, (_T("%s Power:             %s"), supported.IsPowered() ? _T("[true] ") : _T("[false]"), actuals.IsPowered() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s Connectable:       %s"), supported.IsConnectable() ? _T("[true] ") : _T("[false]"), actuals.IsConnectable() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s FastConnectable:   %s"), supported.IsFastConnectable() ? _T("[true] ") : _T("[false]"), actuals.IsFastConnectable() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s Discovery:         %s"), supported.HasDiscovery() ? _T("[true] ") : _T("[false]"), actuals.HasDiscovery() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s Pairing:           %s"), supported.HasPairing() ? _T("[true] ") : _T("[false]"), actuals.HasPairing() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s LinkSecurity:      %s"), supported.HasLinkLevelSecurity() ? _T("[true] ") : _T("[false]"), actuals.HasLinkLevelSecurity() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s SimplePairing:     %s"), supported.HasSecureSimplePairing() ? _T("[true] ") : _T("[false]"), actuals.HasSecureSimplePairing() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s BasicEnhancedRate: %s"), supported.HasBasicEnhancedRate() ? _T("[true] ") : _T("[false]"), actuals.HasBasicEnhancedRate() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s HighSpeed:         %s"), supported.HasHighSpeed() ? _T("[true] ") : _T("[false]"), actuals.HasHighSpeed() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s LowEnergy:         %s"), supported.HasLowEnergy() ? _T("[true] ") : _T("[false]"), actuals.HasLowEnergy() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s Advertising:       %s"), supported.HasAdvertising() ? _T("[true] ") : _T("[false]"), actuals.HasAdvertising() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s SecureConnection:  %s"), supported.HasSecureConnections() ? _T("[true] ") : _T("[false]"), actuals.HasSecureConnections() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s DebugKeys:         %s"), supported.HasDebugKeys() ? _T("[true] ") : _T("[false]"), actuals.HasDebugKeys() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s Privacy:           %s"), supported.HasPrivacy() ? _T("[true] ") : _T("[false]"), actuals.HasPrivacy() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s Configuration:     %s"), supported.HasConfiguration() ? _T("[true] ") : _T("[false]"), actuals.HasConfiguration() ? _T("on") : _T("off")));
+                SYSLOG(Logging::Startup, (_T("%s StaticAddress:     %s"), supported.HasStaticAddress() ? _T("[true] ") : _T("[false]"), actuals.HasStaticAddress() ? _T("on") : _T("off")));
             }
         }
         return result;
@@ -211,27 +220,30 @@ namespace Plugin {
                 Bluetooth::ManagementSocket::Info::Properties actuals(info.Actuals());
                 Bluetooth::ManagementSocket::Info::Properties supported(info.Supported());
 
-		response->Name = info.ShortName();
-		response->Version = info.Version();
-		response->Address = info.Address().ToString();
-		response->DeviceClass = info.DeviceClass();
-		response->AddProperty(_T("power"), supported.IsPowered(), actuals.IsPowered());
-		response->AddProperty(_T("connectable"), supported.IsConnectable(), actuals.IsConnectable());
-		response->AddProperty(_T("fast_connectable"), supported.IsFastConnectable(), actuals.IsFastConnectable());
-		response->AddProperty(_T("discovery"), supported.HasDiscovery(), actuals.HasDiscovery());
-		response->AddProperty(_T("pairing"), supported.HasPairing(), actuals.HasPairing());
-		response->AddProperty(_T("link_level_security"), supported.HasLinkLevelSecurity(), actuals.HasLinkLevelSecurity());
-		response->AddProperty(_T("secure_simple_pairing"), supported.HasSecureSimplePairing(), actuals.HasSecureSimplePairing());
-		response->AddProperty(_T("basic_enhanced_rate"), supported.HasBasicEnhancedRate(), actuals.HasBasicEnhancedRate());
-		response->AddProperty(_T("high_speed"), supported.HasHighSpeed(), actuals.HasHighSpeed());
-		response->AddProperty(_T("low_energy"), supported.HasLowEnergy(), actuals.HasLowEnergy());
-		response->AddProperty(_T("advertising"), supported.HasAdvertising(), actuals.HasAdvertising());
-		response->AddProperty(_T("secure_connection"), supported.HasSecureConnections(), actuals.HasSecureConnections());
-		response->AddProperty(_T("debug_keys"), supported.HasDebugKeys(), actuals.HasDebugKeys());
-		response->AddProperty(_T("privacy"), supported.HasPrivacy(), actuals.HasPrivacy());
-		response->AddProperty(_T("configuration"), supported.HasConfiguration(), actuals.HasConfiguration());
-		response->AddProperty(_T("static_address"), supported.HasStaticAddress(), actuals.HasStaticAddress());
-        
+                response->Name = info.ShortName();
+                response->Version = info.Version();
+                response->Address = info.Address().ToString();
+                response->DeviceClass = info.DeviceClass();
+                response->AddProperty(_T("power"), supported.IsPowered(), actuals.IsPowered());
+                response->AddProperty(_T("connectable"), supported.IsConnectable(), actuals.IsConnectable());
+                response->AddProperty(_T("fast_connectable"), supported.IsFastConnectable(), actuals.IsFastConnectable());
+                response->AddProperty(_T("discovery"), supported.HasDiscovery(), actuals.HasDiscovery());
+                response->AddProperty(_T("pairing"), supported.HasPairing(), actuals.HasPairing());
+                response->AddProperty(_T("link_level_security"), supported.HasLinkLevelSecurity(), actuals.HasLinkLevelSecurity());
+                response->AddProperty(_T("secure_simple_pairing"), supported.HasSecureSimplePairing(), actuals.HasSecureSimplePairing());
+                response->AddProperty(_T("basic_enhanced_rate"), supported.HasBasicEnhancedRate(), actuals.HasBasicEnhancedRate());
+                response->AddProperty(_T("high_speed"), supported.HasHighSpeed(), actuals.HasHighSpeed());
+                response->AddProperty(_T("low_energy"), supported.HasLowEnergy(), actuals.HasLowEnergy());
+                response->AddProperty(_T("advertising"), supported.HasAdvertising(), actuals.HasAdvertising());
+                response->AddProperty(_T("secure_connection"), supported.HasSecureConnections(), actuals.HasSecureConnections());
+                response->AddProperty(_T("debug_keys"), supported.HasDebugKeys(), actuals.HasDebugKeys());
+                response->AddProperty(_T("privacy"), supported.HasPrivacy(), actuals.HasPrivacy());
+                response->AddProperty(_T("configuration"), supported.HasConfiguration(), actuals.HasConfiguration());
+                response->AddProperty(_T("static_address"), supported.HasStaticAddress(), actuals.HasStaticAddress());
+
+                result->ErrorCode = Web::STATUS_OK;
+                result->Message = _T("Current status.");
+                result->Body(response);
             }
             else {
                 DeviceImpl* device = Find(Bluetooth::Address(index.Current().Text().c_str()));
@@ -344,7 +356,7 @@ namespace Plugin {
                     } else {
                         _gattRemotes.emplace_back(device);
                         result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Unpaired device.");
+                        result->Message = _T("OK.");
                     }
                 }
             }
