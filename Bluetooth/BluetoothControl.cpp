@@ -44,7 +44,7 @@ namespace Plugin {
                 result = "Could not activate bluetooth interface.";
             }
             else if ((slaving == false) && (administrator.Power(false) != Core::ERROR_NONE)) {
-                result = "Failed to power up the bluetooth interface";
+                result = "Failed to power down the bluetooth interface";
             }
             else if ((slaving == false) && (administrator.SimplePairing(true) != Core::ERROR_NONE)) {
                 result = "Failed to enable simple pairing on the bluetooth interface";
@@ -59,7 +59,7 @@ namespace Plugin {
                 result = "Failed to enable low energy on the bluetooth interface";
             }
             else if ((slaving == false) && (administrator.Privacy(0, nullptr) != Core::ERROR_NONE)) {
-                result = "Failed to LE privacy on the bluetooth interface";
+                result = "Failed to disable LE privacy on the bluetooth interface";
             }
             else if ((slaving == false) && (administrator.Discovering(false, false, false) != Core::ERROR_NONE)) {
                 result = "Failed to stop device discovery on bluetooth interface";

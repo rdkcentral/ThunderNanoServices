@@ -16,3 +16,7 @@ dtoverlay=pi3-miniuart-bt
 /etc/inittab:
 ttyS0::respawn:/sbin/getty -L ttyS0 115200 vt100 # GENERIC_SERIAL
 
+
+Implementation notes
+--------------------
+- during pairing discovery needs to be disabled and, if needed, re-enabled afterwards
