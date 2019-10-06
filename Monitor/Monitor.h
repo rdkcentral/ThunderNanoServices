@@ -789,7 +789,7 @@ namespace Plugin {
                         operationalWindow = element.Restart.Operational.Window;
                         operationalLimit = element.Restart.Operational.Limit;
                     }
-                    SYSLOG(Logging::Startup, (_T("Monitoring: %s (%d,%d).\n"), callSign.c_str(), (interval / 1000000), (memory / 1000000)));
+                    SYSLOG(Logging::Startup, (_T("Monitoring: %s (%d,%d)."), callSign.c_str(), (interval / 1000000), (memory / 1000000)));
                     if ((interval != 0) || (memory != 0)) {
                         _monitor.insert(
                             std::pair<string, MonitorObject>(callSign, MonitorObject(
@@ -844,7 +844,7 @@ namespace Plugin {
                         index->second.Set(nullptr);
                     } else if ((currentState == PluginHost::IShell::DEACTIVATED) && (index->second.HasRestartAllowed() == true) && ((service->Reason() == PluginHost::IShell::MEMORY_EXCEEDED) || (service->Reason() == PluginHost::IShell::FAILURE))) {
                         if (index->second.RegisterRestart(service->Reason()) == false) {
-                            TRACE(Trace::Fatal, (_T("Giving up restarting of %s: Failed more than %d times within %d seconds.\n"), service->Callsign().c_str(), index->second.RestartLimit(service->Reason()), index->second.RestartWindow(service->Reason())));
+                            TRACE(Trace::Fatal, (_T("Giving up restarting of %s: Failed more than %d times within %d seconds."), service->Callsign().c_str(), index->second.RestartLimit(service->Reason()), index->second.RestartWindow(service->Reason())));
                             const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Restart\", \"reason\":\"" + (std::to_string(index->second.RestartLimit(service->Reason()))).c_str() + " Attempts Failed within the restart window\"}");
                             _service->Notify(message);
                             _parent.event_action(service->Callsign(), "StoppedRestaring", std::to_string(index->second.RestartLimit(service->Reason())) + " attempts failed within the restart window");
@@ -852,7 +852,7 @@ namespace Plugin {
                             const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Activate\", \"reason\": \"Automatic\" }");
                             _service->Notify(message);
                             _parent.event_action(service->Callsign(), "Activate", "Automatic");
-                            TRACE(Trace::Error, (_T("Restarting %s again because we detected it misbehaved.\n"), service->Callsign().c_str()));
+                            TRACE(Trace::Error, (_T("Restarting %s again because we detected it misbehaved."), service->Callsign().c_str()));
                             PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(service, PluginHost::IShell::ACTIVATED, PluginHost::IShell::AUTOMATIC));
                         }
                     }
