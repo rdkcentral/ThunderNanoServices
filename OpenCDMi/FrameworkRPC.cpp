@@ -441,6 +441,11 @@ namespace Plugin {
                     return (_sessionId);
                 }
 
+                virtual std::string Metadata() const override
+                {
+                    return _mediaKeySession->GetMetadata();
+                }
+
                 virtual ::OCDM::ISession::KeyStatus Status() const override
                 {
                     return (_cencData.Status());
@@ -600,7 +605,6 @@ namespace Plugin {
                 const uint16_t CDMDataLength,
                 ::OCDM::ISession::ICallback* callback,
                 std::string& sessionId,
-                std::string& metadata,
                 ::OCDM::ISession*& session) override
             {
                  CDMi::IMediaKeys *system = _parent.KeySystem(keySystem);
@@ -619,8 +623,6 @@ namespace Plugin {
                      {
                          if (sessionInterface != nullptr)
                          {
-                            metadata = sessionInterface->GetMetadata();
-
                              std::string bufferId;
 
                              // See if there is a buffer available we can use..
