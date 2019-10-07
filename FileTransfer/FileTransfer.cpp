@@ -11,7 +11,7 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
 
         _logOutput.SetDestination(config.Destination.Binding.Value(), config.Destination.Port.Value());
-        _observer.Register(config.FilePath.Value(), &_logOutput, IN_CLOSE_WRITE, config.FullFile.Value());
+        _observer.Register(config.FilePath.Value(), &_fileUpdate, config.FullFile.Value());
 
         return string();
     }

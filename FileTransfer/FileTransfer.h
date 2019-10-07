@@ -1,5 +1,6 @@
 #pragma once
 #include <sys/inotify.h>
+#include <unordered_map>
 #include <iostream>
 #include <fstream>
 #include "../FileTransfer/Module.h"
@@ -56,8 +57,8 @@ namespace Core {
                     std::list<ICallback *> _callbacks;
             };
 
-            typedef std::map<int, Observer> Observers;
-            typedef std::map<const string, int> Files;
+            typedef std::unordered_map<int, Observer> Observers;
+            typedef std::unordered_map<string, int> Files;
 
             FileSystemMonitor()
                 : _adminLock()
@@ -88,7 +89,7 @@ namespace Core {
             {
                 return (_notifyFd != -1);
             }
-            bool Register(ICallback *callback, const string &filename, const uint32_t type)
+            bool Register(ICallback *callback, const string &filename)
             {
                 ASSERT(_notifyFd != -1);
                 ASSERT(callback != nullptr);
@@ -104,7 +105,7 @@ namespace Core {
                 }
                 else
                 {
-                    int fileFd = inotify_add_watch(_notifyFd, filename.c_str(), type);
+                    int fileFd = inotify_add_watch(_notifyFd, filename.c_str(), IN_CLOSE_WRITE);
                     if (fileFd >= 0) {
                         _files.emplace(std::piecewise_construct,
                                        std::forward_as_tuple(filename),
@@ -200,14 +201,6 @@ namespace Core {
 
 namespace Plugin
 {
-        // Separation of concern:
-        // The responsibility of the next class is to handle changes on
-        // the file we want to observe correctly.This is the second layer
-        // of functionality. This class makes use of the “first” layer,
-        // the detection layer,
-        // which might, as it is generic logic, move
-        // to the Thunder core, more people might profit from it, Hence
-        // the Singleton character there.
     class FileObserver {
         private:
             class Sink : public Core::FileSystemMonitor::ICallback, public Core::IDispatch {
@@ -262,7 +255,7 @@ namespace Plugin
             }
 
         public:
-            void Register(const string &entry, ICallback *callback, const uint32_t event, bool fullFile = false)
+            void Register(const string &entry, ICallback *callback, bool fullFile = false)
             {
                 ASSERT((_callback == nullptr) && (callback != nullptr));
 
@@ -274,7 +267,7 @@ namespace Plugin
 
                 _path = entry;
                 _callback = callback;
-                Core::FileSystemMonitor::Instance().Register(&(*_job), _path, event);
+                Core::FileSystemMonitor::Instance().Register(&(*_job), _path);
             }
             void Unregister()
             {
@@ -333,7 +326,7 @@ namespace Plugin
             static constexpr uint16_t MAX_BUFFER_LENGHT = 1024;
             static constexpr uint16_t TIMEOUT_MS = 0;
 
-            class TextChannel : public Core::SocketDatagram, public FileObserver::ICallback
+            class TextChannel : public Core::SocketDatagram
             {
                 public:
                     TextChannel()
@@ -357,9 +350,24 @@ namespace Plugin
 
                         Open(TIMEOUT_MS);
                     }
+
+                    void NewLine(const string& text)
+                    {
+                        _adminLock.Lock();
+
+                        _sendQueue.emplace_back(text);
+                        bool trigger = (_sendQueue.size() == 1);
+
+                        _adminLock.Unlock();
+
+                        if (trigger == true)
+                        {
+                            Trigger();
+                        }
+                    }
                 private:
                     // Methods to extract and insert data into the socket buffers
-                    virtual uint16_t SendData(uint8_t *dataFrame, const uint16_t maxSendSize)
+                    uint16_t SendData(uint8_t *dataFrame, const uint16_t maxSendSize) override
                     {
                         uint16_t result = 0;
 
@@ -404,29 +412,16 @@ namespace Plugin
 
                         return (result);
                     }
-                    virtual uint16_t ReceiveData(uint8_t *dataFrame, const uint16_t receivedSize)
+                    uint16_t ReceiveData(uint8_t *dataFrame, const uint16_t receivedSize) override
                     {
                         // No clue what to do with the data that we receive
                         return (receivedSize);
                     }
                     // Signal a state change, Opened, Closed or Accepted
-                    virtual void StateChange()
+                    void StateChange() override
                     {
                     }
-                    void NewLine(const string &text) override
-                    {
-                        _adminLock.Lock();
 
-                        _sendQueue.emplace_back(text);
-                        bool trigger = (_sendQueue.size() == 1);
-
-                        _adminLock.Unlock();
-
-                        if (trigger == true)
-                        {
-                            Trigger();
-                        }
-                    }
                     uint16_t SendCharacters(uint8_t *dataFrame, const TCHAR stream[], const uint8_t delta, const uint16_t total)
                     {
                         ASSERT(delta == 0);
@@ -440,6 +435,34 @@ namespace Plugin
                     std::list<string> _sendQueue;
                     uint32_t _offset;
                     Core::TerminatorCarriageReturn _terminator;
+            };
+
+            class OnChangeFile: public FileObserver::ICallback
+            {
+                public:
+                    OnChangeFile(TextChannel *parent)
+                        : _adminLock()
+                        , _parent(*parent)
+                    {
+                    }
+                    ~OnChangeFile()
+                    {
+                    }
+                private:
+                    OnChangeFile(const OnChangeFile &) = delete;
+                    OnChangeFile &operator=(const OnChangeFile &) = delete;
+
+                    void NewLine(const string &text) override
+                    {
+                        _adminLock.Lock();
+
+                        _parent.NewLine(text);
+
+                        _adminLock.Unlock();
+                    }
+
+               Core::CriticalSection _adminLock;
+               TextChannel &_parent;
             };
 
             class Config : public Core::JSON::Container {
@@ -500,6 +523,7 @@ namespace Plugin
                 FileTransfer()
                     : _logOutput()
                     , _observer()
+                    , _fileUpdate(&_logOutput)
                 {
                 }
                 ~FileTransfer() override
@@ -518,6 +542,7 @@ namespace Plugin
             private:
                 TextChannel _logOutput;
                 FileObserver _observer;
+                OnChangeFile _fileUpdate;
     };
 } // namespace Plugin
 } // namespace WPEFramework
