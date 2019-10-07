@@ -16,7 +16,7 @@ namespace Plugin {
         string result;
 
         ASSERT(_service == nullptr);
-        ASSERT(_administrator.IsOpen() == false);
+        //ASSERT(_administrator.IsOpen() == false);
 
         _service = service;
         _skipURL = _service->WebPrefix().length();
@@ -61,7 +61,7 @@ namespace Plugin {
             else if ((slaving == false) && (administrator.Privacy(0, nullptr) != Core::ERROR_NONE)) {
                 result = "Failed to disable LE privacy on the bluetooth interface";
             }
-            else if ((slaving == false) && (administrator.Discovering(false, false, false) != Core::ERROR_NONE)) {
+            else if ((slaving == false) && (administrator.Discovering(false, true, true) != Core::ERROR_NONE)) {
                 result = "Failed to stop device discovery on bluetooth interface";
             }
             else if ((slaving == false) && (administrator.SecureConnection(true) != Core::ERROR_NONE)) {
@@ -301,7 +301,7 @@ namespace Plugin {
                     }
                     DeviceImpl* device = Find(Bluetooth::Address(destination.c_str()));
                     if (device == nullptr) {
-                        if (destination.empty()) {
+                        if ((destination.empty() == true) && (_gattRemotes.empty() == false)) {
                             result->ErrorCode = _gattRemotes.front().Pair();
                             result->Message = _T("Paring the first remote.");
                         }
@@ -323,6 +323,19 @@ namespace Plugin {
                     } else {
                         result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
                         result->Message = _T("Unable to connect to device.");
+                    }
+                } else if ((index.Current() == _T("Remote") && (index.Next() == true))) {
+                    if (index.Current() == _T("Connect")) {
+                        if ((_gattRemotes.empty() == false) && (_gattRemotes.front().Connect() == Core::ERROR_NONE)) {
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->Message = _T("Connected remote.");
+                        } else {
+                            result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                            result->Message = _T("Unable to connect to remote.");
+                        }
+                    } else {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = _T("Unable to process PUT Remote request.");
                     }
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -413,6 +426,19 @@ namespace Plugin {
                             result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
                             result->Message = _T("Unable to Disconnect device.");
                         }
+                    }
+                } else if ((index.Current() == _T("Remote") && (index.Next() == true))) {
+                    if (index.Current() == _T("Connect")) {
+                        if ((_gattRemotes.empty() == false) && (_gattRemotes.front().Disconnect() == Core::ERROR_NONE)) {
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->Message = _T("Disconnected remote.");
+                        } else {
+                            result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                            result->Message = _T("Unable to disconnect remote.");
+                        }
+                    } else {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = _T("Unable to process PUT Remote request.");
                     }
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
