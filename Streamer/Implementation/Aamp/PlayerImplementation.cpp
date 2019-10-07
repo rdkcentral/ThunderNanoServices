@@ -288,7 +288,7 @@ namespace Implementation {
                 gst_init(0, nullptr); // no op after first call anyway...
 
                 _adminLock.Lock();
-                ASSERT(_state == Exchange::IStream::Error);
+                ASSERT(_state == Exchange::IStream::state::Error);
                 ASSERT(_aampPlayer == nullptr);
                 ASSERT(_aampEventListener == nullptr);
 
