@@ -31,7 +31,7 @@ namespace Plugin {
         // First see if we can bring up the Driver....
         if (driverMessage != nullptr) {
             result = Core::ToString(driverMessage);
-        } 
+        }
         else {
             Bluetooth::LinkKeys linkKeys;
             Bluetooth::LongTermKeys longTermKeys;
@@ -87,7 +87,7 @@ namespace Plugin {
             }
             else if (_application.Open(*this) != Core::ERROR_NONE) {
                 result = "Could not open the bluetooth application channel";
-            } 
+            }
             else if ((slaving == false) && (_application.ReadStoredLinkKeys(Bluetooth::Address(administrator.DeviceId()), true, linkKeys) != Core::ERROR_NONE)) {
                 result = "Could not read the stored keys for the configured interface";
             }
@@ -578,7 +578,7 @@ namespace Plugin {
     void BluetoothControl::Capabilities(const Bluetooth::Address& device, const uint8_t capability, const uint8_t authentication, const uint8_t oob_data)
     {
         DeviceImpl* entry = Find(device);
-        
+
         if (entry != nullptr) {
             entry->Capabilities(capability, authentication, oob_data);
         }
@@ -607,6 +607,6 @@ namespace Plugin {
         return (index != _devices.end() ? (*index) : nullptr);
     }
 
+} // namespace Plugin
 
-}
 }
