@@ -57,6 +57,20 @@ namespace Plugin {
                         Expires = lease.Expiration();
                     }
 
+                    DHCPServerImplementation::Lease Get() const 
+                    {
+                        in_addr ip;
+                        inet_aton(IPAddress.Value().c_str(), &ip);
+                        ip.s_addr = ntohl(ip.s_addr); // Change back to host :)
+
+                        // Convert identifier to bytes
+                        uint8_t buffer[DHCPServerImplementation::Identifier::maxLength];
+                        uint16_t identifierLength = Core::FromHexString(Name.Value(), buffer, DHCPServerImplementation::Identifier::maxLength);
+                        DHCPServerImplementation::Identifier identifier(buffer, identifierLength);
+
+                        return DHCPServerImplementation::Lease(identifier, ip.s_addr, Expires.Value());
+                    }
+
                 public:
                     Core::JSON::String Name;
                     Core::JSON::String IPAddress;
@@ -245,9 +259,17 @@ namespace Plugin {
         uint32_t endpoint_deactivate(const JsonData::DHCPServer::ActivateParamsInfo& params);
         uint32_t get_status(const string& index, Core::JSON::ArrayType<JsonData::DHCPServer::ServerData>& response) const;
 
+        // Lease permanent storage
+        // -------------------------------------------------------------------------------------------------------
+        void SaveLeases(const string& interface, const DHCPServerImplementation& dhcpServer) const;
+        void LoadLeases(const string& interface, DHCPServerImplementation& dhcpServer);
+
+        // Callbacks
+        void OnNewIPRequest(const string& interface, const DHCPServerImplementation::Lease* lease);
     private:
         uint16_t _skipURL;
         std::map<const string, DHCPServerImplementation> _servers;
+        std::string _persistentPath;
     };
 
 } // namespace Plugin

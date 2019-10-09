@@ -5,6 +5,7 @@ namespace WPEFramework {
 namespace Plugin {
 
     /* static */ constexpr uint8_t DHCPServerImplementation::MagicCookie[];
+    /* static */ constexpr uint16_t DHCPServerImplementation::Identifier::maxLength;
 
     uint32_t DHCPServerImplementation::Open()
     {
