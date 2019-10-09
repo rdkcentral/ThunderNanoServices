@@ -39,6 +39,7 @@ option(PLUGIN_WEBPROXY "Include WebProxy plugin" OFF)
 option(PLUGIN_WEBSERVER "Include WebServer plugin" OFF)
 option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
+option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 
 option(WPEFRAMEWORK_CREATE_IPKG_TARGETS "Generate the CPack configuration for package generation" OFF)
 
@@ -193,6 +194,10 @@ endif()
 
 if(PLUGIN_WIFICONTROL)
     add_subdirectory(WifiControl)
+endif()
+
+if(PLUGIN_FILETRANSFER)
+    add_subdirectory(FileTransfer)
 endif()
 
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
