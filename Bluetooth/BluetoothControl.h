@@ -118,7 +118,9 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 ManagementSocket(const ManagementSocket&) = delete;
                 ManagementSocket& operator= (const ManagementSocket&) = delete;
 
-                ManagementSocket() : Bluetooth::ManagementSocket()
+                ManagementSocket(ControlSocket& parent)
+                    : Bluetooth::ManagementSocket()
+                    , _parent(parent)
                 {
                 }
                 ~ManagementSocket()
@@ -162,6 +164,9 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                         TRACE(ManagementFlow, (_T("MGMT_EV_NEW_IRK")));
                         TRACE(ManagementFlow, (_T("  store_hint=%d, rpa=%s"), info->store_hint, Bluetooth::Address(info->rpa).ToString().c_str()));
                         TRACE(ManagementFlow, (_T("  key.addr=%s, key.val=%s"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), key.c_str()));
+                        if ((info->store_hint != 0) && (info->key.addr.type != Bluetooth::Address::LE_RANDOM_ADDRESS)) {
+                            _parent.NewKey(Bluetooth::IdentityKey(info->key.addr.bdaddr, info->key.addr.type, info->key.val));
+                        }
                         break;
                     }
                     case MGMT_EV_NEW_CSRK: {
@@ -181,6 +186,14 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                         TRACE(ManagementFlow, (_T("  store_hint=%d"), info->store_hint));
                         TRACE(ManagementFlow, (_T("  key.addr=%s, key.type=%d, key.master=%d"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), info->key.type, info->key.master));
                         TRACE(ManagementFlow, (_T("  key.enc_size=%u, key.ediv=%u, key.rand=%llu, key.val=%s"), info->key.enc_size, btohs(info->key.ediv), btohll(info->key.rand), key.c_str()));
+
+                        if ((info->store_hint != 0) && (info->key.addr.type != Bluetooth::Address::LE_RANDOM_ADDRESS)) {
+                            _parent.NewKey(Bluetooth::LongTermKey(info->key.addr.bdaddr, info->key.addr.type, info->key.master, info->key.type,
+                                                                  info->key.enc_size, btohs(info->key.ediv), btohll(info->key.rand), info->key.val));
+
+                            _parent.Paired(Bluetooth::Address(info->key.addr.bdaddr));
+                        }
+
                         break;
                     }
                     default:
@@ -191,6 +204,9 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                         break;
                     }
                 }
+
+            private:
+                ControlSocket& _parent;
             };
 
             // The bluetooth library has some unexpected behaviour. For example, the scan of NON-BLE devices
@@ -271,6 +287,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 : Bluetooth::HCISocket()
                 , _parent(nullptr)
                 , _activity(Core::ProxyType<Job>::Create(this))
+                , _administrator(*this)
             {
             }
             virtual ~ControlSocket()
@@ -289,6 +306,22 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             uint32_t Unpair(const Bluetooth::Address& remote)
             {
                 return (_administrator.Unpair(remote));
+            }
+            void Paired(const Bluetooth::Address& remote)
+            {
+                if (_parent != nullptr) {
+                    DeviceImpl* entry = _parent->Find(remote);
+                    if (entry != nullptr) {
+                        if (entry->IsPaired() == false) {
+                            entry->Paired();
+                        } else {
+                            // have both LTKs
+                            if (_parent->SaveEncryptionKeys() == Core::ERROR_NONE) {
+                                entry->Bonded();
+                            }
+                        }
+                    }
+                }
             }
             void Scan(const uint16_t scanTime, const uint32_t type, const uint8_t flags)
             {
@@ -319,6 +352,12 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 _administrator.DeviceId(HCI_DEV_NONE);
                 _parent = nullptr;
                 return (result);
+            }
+            template<typename KEYTYPE> void NewKey(const KEYTYPE& key)
+            {
+                if (_parent != nullptr) {
+                    _parent->StoreKey(key);
+                }
             }
 
         private:
@@ -433,7 +472,6 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                          break;
                 }
             }
-
 
         private:
             BluetoothControl* _parent;
@@ -836,7 +874,8 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 PAIRING       = 0x0004,
                 UNPAIRING     = 0x0008,
 
-                PAIRED        = 0x2000,
+                PAIRED        = 0x1000,
+                BONDED        = 0x2000,
                 LOWENERGY     = 0x4000,
                 PUBLIC        = 0x8000
             };
@@ -854,6 +893,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                     , LowEnergy(false)
                     , Connected(false)
                     , Paired(false)
+                    , Bonded(false)
                     , Reason(0)
                 {
                     Add(_T("local"), &LocalId);
@@ -862,6 +902,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                     Add(_T("le"), &LowEnergy);
                     Add(_T("connected"), &Connected);
                     Add(_T("paired"), &Paired);
+                    Add(_T("bonded"), &Bonded);
                     Add(_T("reason"), &Reason);
                 }
                 JSON(const JSON& copy)
@@ -872,6 +913,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                     , LowEnergy(false)
                     , Connected(false)
                     , Paired(false)
+                    , Bonded(false)
                     , Reason(0)
                 {
                     Add(_T("local"), &LocalId);
@@ -880,6 +922,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                     Add(_T("le"), &LowEnergy);
                     Add(_T("connected"), &Connected);
                     Add(_T("paired"), &Paired);
+                    Add(_T("bonded"), &Bonded);
                     Add(_T("reason"), &Reason);
                     LocalId = copy.LocalId;
                     RemoteId = copy.RemoteId;
@@ -887,6 +930,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                     LowEnergy = copy.LowEnergy;
                     Connected = copy.Connected;
                     Paired = copy.Paired;
+                    Bonded = copy.Bonded;
                     Reason = copy.Reason;
                 }
                 virtual ~JSON()
@@ -903,12 +947,14 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                         LowEnergy = source->LowEnergy();
                         Connected = source->IsConnected();
                         Paired = source->IsPaired();
+                        Bonded = source->IsBonded();
                     } else {
                         LocalId.Clear();
                         RemoteId.Clear();
                         Name.Clear();
                         LowEnergy.Clear();
                         Paired.Clear();
+                        Bonded.Clear();
                         Connected.Clear();
                     }
                     return (*this);
@@ -919,6 +965,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 Core::JSON::Boolean LowEnergy;
                 Core::JSON::Boolean Connected;
                 Core::JSON::Boolean Paired;
+                Core::JSON::Boolean Bonded;
                 Core::JSON::DecUInt16 Reason;
             };
 
@@ -1042,12 +1089,12 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
 
                     result = BluetoothControl::Connector().Pair(_remote, type, static_cast<Bluetooth::ManagementSocket::capabilities>(caps));
 
-                    if (result == Core::ERROR_NONE) {
-                        _state.SetState(static_cast<state>(_state.GetState() | PAIRED));
-                    } else {
+                    if (result != Core::ERROR_NONE) {
                         printf("Failed to pair!!! Error: %d\n", result);
+                        ClearState(PAIRING);
+                        }
                     }
-                    ClearState(PAIRING);                }
+
                 return (result);
             }
             uint32_t Unpair() override
@@ -1066,6 +1113,17 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                     ClearState(UNPAIRING);
                 }
                 return (result);
+            }
+            void Paired()
+            {
+                TRACE(DeviceFlow, (_T("The device [%s] is paired"), RemoteId().c_str()));
+                ClearState(PAIRING);
+                SetState(PAIRED);
+            }
+            void Bonded()
+            {
+                TRACE(DeviceFlow, (_T("The device [%s] is bonded"), RemoteId().c_str()));
+                SetState(BONDED);
             }
             bool IsValid() const override
             {
@@ -1096,6 +1154,10 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             bool IsPaired() const override
             {
                 return ((_state & PAIRED) != 0);
+            }
+            bool IsBonded() const override
+            {
+                return ((_state & BONDED) != 0);
             }
             inline uint16_t DeviceId() const
             {
@@ -1548,6 +1610,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             , _devices()
             , _observers()
             , _gattRemotes()
+            , _longTermKeysFile()
         {
         }
         virtual ~BluetoothControl()
@@ -1601,6 +1664,16 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         inline static ControlSocket& Connector() {
             return(_application);
         }
+        void StoreKey(const Bluetooth::IdentityKey& key) {
+            _identityKeys.Add(key);
+        }
+        void StoreKey(const Bluetooth::LongTermKey& key) {
+            if (key.IsValid() == true) {
+                _longTermKeys.Add(key);
+            }
+        }
+
+        uint32_t SaveEncryptionKeys();
 
     private:
         Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
@@ -1613,6 +1686,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         DeviceImpl* Find(const Bluetooth::Address&);
         DeviceImpl* Find(const uint16_t handle);
         void Capabilities(const Bluetooth::Address& device, const uint8_t capability, const uint8_t authentication, const uint8_t oob_data);
+        void LoadEncryptionKeys();
 
     private:
         uint8_t _skipURL;
@@ -1625,6 +1699,14 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         std::list<GATTRemote> _gattRemotes;
         Config _config;
         static ControlSocket _application;
+        string _persistentStoragePath;
+        Bluetooth::LinkKeys _linkKeys;
+        Bluetooth::LongTermKeys _longTermKeys;
+        Bluetooth::IdentityKeys _identityKeys;
+        Core::File _linkKeysFile;
+        Core::File _longTermKeysFile;
+        Core::File _identityKeysFile;
+        Core::File _connectionKeysFile;
     };
 
 } //namespace Plugin

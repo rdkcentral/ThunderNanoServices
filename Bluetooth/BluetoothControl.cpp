@@ -33,12 +33,23 @@ namespace Plugin {
             result = Core::ToString(driverMessage);
         }
         else {
-            Bluetooth::LinkKeys linkKeys;
-            Bluetooth::LongTermKeys longTermKeys;
-            Bluetooth::IdentityKeys identityKeys;
-
             Bluetooth::ManagementSocket& administrator = _application.Control();
             administrator.DeviceId(_config.Interface.Value());
+
+            _persistentStoragePath = _service->PersistentPath();
+            if (_persistentStoragePath.empty() == false) {
+                if (Core::Directory(_persistentStoragePath.c_str()).CreatePath() == false) {
+                    _persistentStoragePath.clear();
+                    TRACE_L1("Failed to create persistent storage folder '%s'\n", _persistentStoragePath.c_str());
+                } else {
+                    _linkKeysFile = (_persistentStoragePath + "ShortTermKeys.json");
+                    _longTermKeysFile = (_persistentStoragePath + "LongTermKeys.json");
+                    _identityKeysFile = (_persistentStoragePath + "IdentityResolvingKeys.json");
+                    _connectionKeysFile = (_persistentStoragePath + "ConnectionResolvingKeys.json");
+
+                    LoadEncryptionKeys();
+                }
+            }
 
             if (Bluetooth::ManagementSocket::Up(_config.Interface.Value()) == false) {
                 result = "Could not activate bluetooth interface.";
@@ -70,13 +81,13 @@ namespace Plugin {
             else if ((slaving == false) && (administrator.Name(_T("Thunder"), _config.Name.Value()) != Core::ERROR_NONE)) {
                 result = "Failed to upload identity keys to the bluetooth interface";
             }
-            else if ((slaving == false) && (administrator.LinkKey(linkKeys) != Core::ERROR_NONE)) {
-                result = "Failed to upload link keys to the bluetooth interface";
+            else if ((slaving == false) && (administrator.LinkKey(_linkKeys) != Core::ERROR_NONE)) {
+              result = "Failed to upload link keys to the bluetooth interface";
             }
-            else if ((slaving == false) && (administrator.LongTermKey(longTermKeys) != Core::ERROR_NONE)) {
+            else if ((slaving == false) && (administrator.LongTermKey(_longTermKeys) != Core::ERROR_NONE)) {
                 result = "Failed to upload long term keys to the bluetooth interface";
             }
-            else if ((slaving == false) && (administrator.IdentityKey(identityKeys) != Core::ERROR_NONE)) {
+            else if ((slaving == false) && (administrator.IdentityKey(_identityKeys) != Core::ERROR_NONE)) {
                 result = "Failed to upload identity keys to the bluetooth interface";
             }
             //else if ((slaving == false) && (administrator.Notifications(true) != Core::ERROR_NONE)) {
@@ -87,9 +98,6 @@ namespace Plugin {
             }
             else if (_application.Open(*this) != Core::ERROR_NONE) {
                 result = "Could not open the bluetooth application channel";
-            }
-            else if ((slaving == false) && (_application.ReadStoredLinkKeys(Bluetooth::Address(administrator.DeviceId()), true, linkKeys) != Core::ERROR_NONE)) {
-                result = "Could not read the stored keys for the configured interface";
             }
 
             if (result.empty() == false) {
@@ -605,6 +613,104 @@ namespace Plugin {
         }
 
         return (index != _devices.end() ? (*index) : nullptr);
+    }
+
+    template<typename KEYLISTTYPE>
+    class EncryptionKeyList
+    {
+    public:
+        EncryptionKeyList() = delete;
+        EncryptionKeyList(const EncryptionKeyList& ) = delete;
+        EncryptionKeyList operator= (const EncryptionKeyList) = delete;
+
+        EncryptionKeyList(KEYLISTTYPE& list)
+            : _array()
+            , _list(list)
+        {
+            for (auto it = list.Elements().cbegin(); it != list.Elements().cend(); it++) {
+                string hexKey;
+                Core::JSON::String jsonKey;
+                Core::ToHexString((*it).Data(), (*it).Length(), hexKey);
+                jsonKey = hexKey;
+                _array.Add(jsonKey);
+            }
+        }
+
+        uint32_t Load(Core::File& file)
+        {
+            uint32_t result = Core::ERROR_NONE;
+
+            if (file.Open() == true) {
+                if (_array.FromFile(file) == false) {
+                    TRACE_L1("Failed to read file %s", file.Name().c_str());
+                    result = Core::ERROR_GENERAL;
+                } else {
+                    _list.Clear();
+                    auto index = _array.Elements();
+                    while (index.Next() == true) {
+                        uint8_t keyBin[_list.Length()];
+                        Core::FromHexString(index.Current().Value(), keyBin, _list.Length());
+                        typename KEYLISTTYPE::type key(keyBin, _list.Length());
+                        if (key.IsValid() == true) {
+                            _list.Add(key);
+                        } else {
+                            TRACE_L1("Invalid key in file %s", file.Name().c_str());
+                        }
+                    }
+                }
+
+                file.Close();
+            }
+
+            return result;
+        }
+
+        uint32_t Save(Core::File& file)
+        {
+            uint32_t result = Core::ERROR_NONE;
+
+            if (_array.Length() > 0) {
+                if (file.Create() == true) {
+                    if (_array.ToFile(file) == false) {
+                        TRACE_L1("Failed to write file %s", file.Name().c_str());
+                        result = Core::ERROR_GENERAL;
+                    }
+
+                    file.Close();
+                } else {
+                    TRACE_L1("Failed to create file %s", file.Name().c_str());
+                    result = Core::ERROR_GENERAL;
+                }
+            }
+
+            return result;
+        }
+
+    private:
+        Core::JSON::ArrayType<Core::JSON::String> _array;
+        KEYLISTTYPE& _list;
+   };
+
+
+    void BluetoothControl::LoadEncryptionKeys()
+    {
+        if (_persistentStoragePath.empty() == false) {
+            EncryptionKeyList<Bluetooth::LongTermKeys> ltks(_longTermKeys);
+            ltks.Load(_longTermKeysFile);
+            TRACE_L1("Loaded %i LTKs", _longTermKeys.Entries());
+        }
+    }
+
+    uint32_t BluetoothControl::SaveEncryptionKeys()
+    {
+        uint32_t result = Core::ERROR_NONE;
+
+        if (_persistentStoragePath.empty() == false) {
+            EncryptionKeyList<Bluetooth::LongTermKeys> ltks(_longTermKeys);
+            result = ltks.Save(_longTermKeysFile);
+        }
+
+        return result;
     }
 
 } // namespace Plugin
