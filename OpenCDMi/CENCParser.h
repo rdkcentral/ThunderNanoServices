@@ -146,32 +146,17 @@ namespace Plugin {
         {
             KeyId* entry = nullptr;
 
-            if (key.IsValid() == true) {
-                std::list<KeyId>::iterator index(std::find(_keyIds.begin(), _keyIds.end(), key));
+            ASSERT(key.IsValid() == true);
 
-                if (index == _keyIds.end()) {
-                    _keyIds.emplace_back(key);
-                    entry = &(_keyIds.back());
-                } else {
-                    entry = &(*index);
-                }
-            } else if (_keyIds.size() > 0) {
-               // Just update the first Playready key since
-               // Widevine OCDM will call keyupdate() with valid keyids.
-               std::list<KeyId>::iterator index(_keyIds.begin());
+            std::list<KeyId>::iterator index(std::find(_keyIds.begin(), _keyIds.end(), key));
 
-               while (index != _keyIds.end()) {
-                   if (index->Systems() & PLAYREADY) {
-                       entry = &(*index);
-                       break;
-                   }
-                   index++;
-               }
+            if (index == _keyIds.end()) {
+                _keyIds.emplace_back(key);
+                entry = &(_keyIds.back());
+            } else {
+                entry = &(*index);
             }
-
-            if (entry != nullptr) {
-                entry->Status(status);
-            }
+            entry->Status(status);
 
             return (entry);
         }
