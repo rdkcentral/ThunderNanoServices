@@ -855,20 +855,11 @@ namespace Plugin {
 
                     mediaKeySession->Run(nullptr);
 
-                    CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
-
-                    if (systemExt != nullptr) {
-
-                        systemExt->DestroyMediaKeySessionExt(mediaKeySession);
+                    CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
+                    if (system != nullptr) {
+                        system->DestroyMediaKeySession(mediaKeySession);
                     } else {
-
-                        CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
-                        if (system != nullptr) {
-
-                            system->DestroyMediaKeySession(mediaKeySession);
-                        } else {
-                            TRACE_L1("No system to handle session = %p\n", session);
-                        }
+                        TRACE_L1("No system to handle session = %p\n", session);
                     }
                 }
 
