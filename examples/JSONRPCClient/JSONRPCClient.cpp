@@ -168,7 +168,7 @@ static uint8_t swapPattern[] = { 0x00, 0x55, 0xAA, 0xFF };
 
 static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8_t pattern[], PerformanceFunction& subject)
 {
-    uint8_t dataFrame[4096];
+    uint8_t dataFrame[1024 * 40];
     uint16_t index = 0;
     uint8_t patternIndex = 0;
 
