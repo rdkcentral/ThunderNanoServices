@@ -20,35 +20,35 @@ namespace Plugin {
             ExternalAccess& operator=(const ExternalAccess&) = delete;
 
         public:
-            ExternalAccess(const Core::NodeId& source,
+            ExternalAccess(
+                const Core::NodeId& source,
                 Exchange::IPlayer* parentInterface,
                 const string& proxyStubPath,
                 const Core::ProxyType<RPC::InvokeServer> & engine)
                 : RPC::Communicator(source, proxyStubPath, Core::ProxyType<Core::IIPCServer>(engine))
                 , _parentInterface(parentInterface)
             {
+                engine->Announcements(Announcement());
+                Open(Core::infinite);
             }
-            ~ExternalAccess() override
+            ~ExternalAccess()
             {
                 Close(Core::infinite);
             }
 
         private:
-            void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
+            virtual void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId)
             {
                 void* result = nullptr;
 
                 // Currently we only support version 1 of the IRPCLink :-)
-                if ((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) {
-                    if (interfaceId == Exchange::IPlayer::ID) {
-
-                        // Reference count our parent
-                        _parentInterface->AddRef();
-
-                        result = _parentInterface;
-                    }
+                if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) && ((interfaceId == Exchange::IPlayer::ID) || (interfaceId == Core::IUnknown::ID))) {
+                    // Reference count our parent
+                    _parentInterface->AddRef();
+                    TRACE(Trace::Information, ("Player interface aquired => %p", this));
+                    // Allright, respond with the interface.
+                    result = _parentInterface;
                 }
-
                 return (result);
             }
 
@@ -60,6 +60,7 @@ namespace Plugin {
         StreamerImplementation()
             : _adminLock()
             , _administrator(Player::Implementation::Administrator::Instance())
+            , _engine()
             , _externalAccess(nullptr)
         {
         }
@@ -86,6 +87,7 @@ namespace Plugin {
     private:
         mutable Core::CriticalSection _adminLock;
         Player::Implementation::Administrator& _administrator;
+        Core::ProxyType<RPC::InvokeServer> _engine;
         ExternalAccess* _externalAccess;
     };
 }
