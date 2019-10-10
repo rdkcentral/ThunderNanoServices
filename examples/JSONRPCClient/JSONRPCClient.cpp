@@ -131,7 +131,8 @@ class MessageHandler {
 public:
     explicit MessageHandler(const string& recipient)
         : _recipient(recipient)
-        , _remoteObject(_T("JSONRPCPlugin.1"), (recipient + _T(".client.events")).c_str()) {
+        , _remoteObject(_T("JSONRPCPlugin.1"), (recipient + _T(".client.events")).c_str())
+        , _remoteObjectMessagePack(_T("JSONRPCPlugin.3"), (recipient + _T(".client.events")).c_str()) {
     }
 
     void message_received(const Core::JSON::String& message) {
@@ -153,7 +154,8 @@ public:
 
 private:
     string _recipient;
-    JSONRPC::Client _remoteObject;
+    JSONRPC::Client<Core::JSON::IElement> _remoteObject;
+    JSONRPC::Client<Core::JSON::IMessagePack> _remoteObjectMessagePack; //TODO make the implementation, added just for compile error checking
 };
 }
 
@@ -302,7 +304,8 @@ void MeasureCOMRPC(Core::ProxyType<RPC::CommunicatorClient>& client)
     }
 }
 
-void MeasureJSONRPC(JSONRPC::Client& remoteObject)
+template <typename INTERFACE>
+void MeasureJSONRPC(JSONRPC::Client<INTERFACE>& remoteObject)
 {
     int measure;
     do {
@@ -317,7 +320,7 @@ void MeasureJSONRPC(JSONRPC::Client& remoteObject)
                 Core::JSON::DecUInt32 result;
                 Core::ToString(buffer, length, false, stringBuffer);
                 message.Data = stringBuffer;
-                remoteObject.Invoke<Data::JSONDataBuffer, Core::JSON::DecUInt32>(3000, _T("send"), message, result);
+                remoteObject.template Invoke<Data::JSONDataBuffer, Core::JSON::DecUInt32>(3000, _T("send"), message, result);
                 return (result.Value());
             };
 
@@ -329,7 +332,7 @@ void MeasureJSONRPC(JSONRPC::Client& remoteObject)
                 string stringBuffer;
                 Data::JSONDataBuffer message;
                 Core::JSON::DecUInt16 maxSize = length;
-                remoteObject.Invoke<Core::JSON::DecUInt16, Data::JSONDataBuffer>(3000, _T("receive"), maxSize, message);
+                remoteObject.template Invoke<Core::JSON::DecUInt16, Data::JSONDataBuffer>(3000, _T("receive"), maxSize, message);
                 length = static_cast<uint16_t>(((message.Data.Value().length() * 6) + 7) / 8);
                 buffer = static_cast<uint8_t*>(ALLOCA(length));
                 Core::FromString(message.Data.Value(), buffer, length);
@@ -347,7 +350,7 @@ void MeasureJSONRPC(JSONRPC::Client& remoteObject)
                 message.Data = stringBuffer;
                 message.Length = length;
                 Data::JSONDataBuffer response;
-                remoteObject.Invoke<Data::JSONDataBuffer, Data::JSONDataBuffer>(3000, _T("exchange"), message, response);
+                remoteObject.template Invoke<Data::JSONDataBuffer, Data::JSONDataBuffer>(3000, _T("exchange"), message, response);
                 length = static_cast<uint16_t>(((response.Data.Value().length() * 6) + 7) / 8);
                 buffer = static_cast<uint8_t*>(ALLOCA(length));
                 Core::FromString(response.Data.Value(), buffer, length);
@@ -419,8 +422,8 @@ int main(int argc, char** argv)
         // 3. [optional]  should the websocket under the hood call directly the plugin
         //                or will it be rlayed through thejsonrpc dispatcher (default,
         //                use jsonrpc dispatcher)
-        JSONRPC::Client remoteObject(_T("JSONRPCPlugin.2"), _T("client.events.88"));
-        JSONRPC::Client legacyObject(_T("JSONRPCPlugin.1"), _T("client.events.33"));
+        JSONRPC::Client<Core::JSON::IElement> remoteObject(_T("JSONRPCPlugin.2"), _T("client.events.88"));
+        JSONRPC::Client<Core::JSON::IElement> legacyObject(_T("JSONRPCPlugin.1"), _T("client.events.33"));
         Handlers::MessageHandler testMessageHandlerJohn("john");
         Handlers::MessageHandler testMessageHandlerJames("james");
         
