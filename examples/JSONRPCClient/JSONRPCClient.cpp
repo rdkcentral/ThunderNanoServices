@@ -241,6 +241,15 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
     }
     time = measurement.Elapsed();
     printf("Data outbound: [2048], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+
+    measurement.Reset();
+    length = 1024 * 40;
+    for (uint32_t run = 0; run < MeasurementLoops; run++) {
+        subject(length, dataFrame);
+    }
+    time = measurement.Elapsed();
+    printf("Data outbound: [40MB], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+
 }
 
 static void PrintObject(const JsonObject::Iterator& iterator)
