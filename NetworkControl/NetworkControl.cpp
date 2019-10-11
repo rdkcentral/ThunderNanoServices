@@ -429,7 +429,7 @@ namespace Plugin
     void NetworkControl::DHCPEngine::SaveLeases() 
     {
         if (_parent._persistentStoragePath.empty() == false) {
-            if (leaseFile.Open(false) == true) {
+            if (_leaseFile.Create() == true) {
                 Core::JSON::ArrayType<DHCPClientImplementation::Offer::JSON> leases;
                 DHCPClientImplementation::Iterator offersIterator = _client.Offers(true);
 
@@ -437,13 +437,13 @@ namespace Plugin
                     leases.Add().Set(offersIterator.Current());
                 }
 
-                if (leases.ToFile(leaseFile) == false) {
-                    TRACE_L1("Error while trying to save dhcp leases to file!");
+                if (leases.ToFile(_leaseFile) == false) {
+                    TRACE(Trace::Warning, ("Error occured while trying to save dhcp leases to file!"));
                 } 
 
-                leaseFile.Close();
+                _leaseFile.Close();
             } else {
-                TRACE_L1("Failed to open leases file %s\n for saving", leaseFile.Name().c_str());
+                TRACE(Trace::Warning, ("Failed to open leases file %s\n for saving", _leaseFile.Name().c_str()));
             }
         }
     }
@@ -456,10 +456,10 @@ namespace Plugin
     {
         if (_parent._persistentStoragePath.empty() == false) {
 
-            if (leaseFile.Open(true) == true) {
+            if (_leaseFile.Open(true) == true) {
 
                 Core::JSON::ArrayType<DHCPClientImplementation::Offer::JSON> leases;
-                if (leases.FromFile(leaseFile) == true) {
+                if (leases.FromFile(_leaseFile) == true) {
 
                     auto iterator = leases.Elements();
                     while (iterator.Next()) {
@@ -467,9 +467,9 @@ namespace Plugin
                     }
                 }
 
-                leaseFile.Close();
+                _leaseFile.Close();
             } else {
-                TRACE_L1("Failed to open leases file %s\n for saving", leaseFile.Name().c_str());
+                TRACE(Trace::Warning, ("Failed to open leases file %s\n for saving", _leaseFile.Name().c_str()));
             }
         }
     }
