@@ -45,7 +45,7 @@ namespace Plugin {
                     _linkKeysFile = (_persistentStoragePath + "ShortTermKeys.json");
                     _longTermKeysFile = (_persistentStoragePath + "LongTermKeys.json");
                     _identityKeysFile = (_persistentStoragePath + "IdentityResolvingKeys.json");
-                    _connectionKeysFile = (_persistentStoragePath + "ConnectionResolvingKeys.json");
+                    _signatureKeysFile = (_persistentStoragePath + "ConnectionSignatureResolvingKeys.json");
 
                     LoadEncryptionKeys();
                 }
@@ -643,7 +643,7 @@ namespace Plugin {
             if (file.Open() == true) {
                 if (_array.FromFile(file) == false) {
                     TRACE_L1("Failed to read file %s", file.Name().c_str());
-                    result = Core::ERROR_GENERAL;
+                    result = Core::ERROR_READ_ERROR;
                 } else {
                     _list.Clear();
                     auto index = _array.Elements();
@@ -665,7 +665,7 @@ namespace Plugin {
             return result;
         }
 
-        uint32_t Save(Core::File& file)
+        uint32_t Save(Core::File& file) const
         {
             uint32_t result = Core::ERROR_NONE;
 
@@ -673,13 +673,13 @@ namespace Plugin {
                 if (file.Create() == true) {
                     if (_array.ToFile(file) == false) {
                         TRACE_L1("Failed to write file %s", file.Name().c_str());
-                        result = Core::ERROR_GENERAL;
+                        result = Core::ERROR_WRITE_ERROR;
                     }
 
                     file.Close();
                 } else {
                     TRACE_L1("Failed to create file %s", file.Name().c_str());
-                    result = Core::ERROR_GENERAL;
+                    result = Core::ERROR_OPENING_FAILED;
                 }
             }
 
@@ -689,25 +689,80 @@ namespace Plugin {
     private:
         Core::JSON::ArrayType<Core::JSON::String> _array;
         KEYLISTTYPE& _list;
-   };
-
+    };
 
     void BluetoothControl::LoadEncryptionKeys()
     {
         if (_persistentStoragePath.empty() == false) {
+
+            _adminLock.Lock();
+
+            EncryptionKeyList<Bluetooth::LinkKeys> stks(_linkKeys);
+            stks.Load(_linkKeysFile);
+
             EncryptionKeyList<Bluetooth::LongTermKeys> ltks(_longTermKeys);
             ltks.Load(_longTermKeysFile);
-            TRACE_L1("Loaded %i LTKs", _longTermKeys.Entries());
+
+            EncryptionKeyList<Bluetooth::IdentityKeys> irks(_identityKeys);
+            irks.Load(_identityKeysFile);
+
+            EncryptionKeyList<Bluetooth::SignatureKeys> csrks(_signatureKeys);
+            csrks.Load(_signatureKeysFile);
+
+            TRACE_L1("Loaded %i STKs, %i LTKs, %i IRKs, %i CSRKs",
+                        _linkKeys.Entries(), _longTermKeys.Entries(), _identityKeys.Entries(), _signatureKeys.Entries());
+
+            _adminLock.Unlock();
         }
     }
 
-    uint32_t BluetoothControl::SaveEncryptionKeys()
+    uint32_t BluetoothControl::SaveEdrEncryptionKeys()
     {
         uint32_t result = Core::ERROR_NONE;
 
         if (_persistentStoragePath.empty() == false) {
-            EncryptionKeyList<Bluetooth::LongTermKeys> ltks(_longTermKeys);
-            result = ltks.Save(_longTermKeysFile);
+
+            _adminLock.Lock();
+
+            TRACE_L1("Saving EDR keys: %i STKs", _linkKeys.Entries());
+
+            if (_linkKeys.Entries() > 0) {
+                EncryptionKeyList<Bluetooth::LinkKeys> keys(_linkKeys);
+                result = keys.Save(_linkKeysFile);
+            }
+
+            _adminLock.Unlock();
+        }
+
+        return result;
+    }
+
+    uint32_t BluetoothControl::SaveLeEncryptionKeys()
+    {
+        uint32_t result = Core::ERROR_NONE;
+
+        if (_persistentStoragePath.empty() == false) {
+
+            _adminLock.Lock();
+
+            TRACE_L1("Saving LE keys: %i LTKs, %i IRKs, %i CSRKs", _longTermKeys.Entries(), _identityKeys.Entries(), _signatureKeys.Entries());
+
+            if (_identityKeys.Entries() > 0) {
+                EncryptionKeyList<Bluetooth::IdentityKeys> keys(_identityKeys);
+                keys.Save(_identityKeysFile);
+            }
+
+            if (_signatureKeys.Entries() > 0) {
+                EncryptionKeyList<Bluetooth::SignatureKeys> keys(_signatureKeys);
+                keys.Save(_signatureKeysFile);
+            }
+
+            if (_longTermKeys.Entries() > 0) {
+                EncryptionKeyList<Bluetooth::LongTermKeys> keys(_longTermKeys);
+                result = keys.Save(_longTermKeysFile);
+            }
+
+            _adminLock.Unlock();
         }
 
         return result;

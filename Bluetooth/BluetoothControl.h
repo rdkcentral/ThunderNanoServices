@@ -163,9 +163,11 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                         Core::ToHexString(info->key.val, 16, key);
                         TRACE(ManagementFlow, (_T("MGMT_EV_NEW_IRK")));
                         TRACE(ManagementFlow, (_T("  store_hint=%d, rpa=%s"), info->store_hint, Bluetooth::Address(info->rpa).ToString().c_str()));
-                        TRACE(ManagementFlow, (_T("  key.addr=%s, key.val=%s"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), key.c_str()));
-                        if ((info->store_hint != 0) && (info->key.addr.type != Bluetooth::Address::LE_RANDOM_ADDRESS)) {
-                            _parent.NewKey(Bluetooth::IdentityKey(info->key.addr.bdaddr, info->key.addr.type, info->key.val));
+                        TRACE(ManagementFlow, (_T("  key.addr=%s, key.addr.type=%i, key.val=%s"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), info->key.addr.type, key.c_str()));
+                        if (info->store_hint != 0) {
+                            if (_parent.NewKey(Bluetooth::IdentityKey(info->key.addr.bdaddr, info->key.addr.type, info->key.val)) != Core::ERROR_NONE) {
+                                TRACE_L1("Invalid IRK received?");
+                            }
                         }
                         break;
                     }
@@ -175,7 +177,12 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                         Core::ToHexString(info->key.val, 16, key);
                         TRACE(ManagementFlow, (_T("MGMT_EV_NEW_CSRK")));
                         TRACE(ManagementFlow, (_T("  store_hint=%d"), info->store_hint));
-                        TRACE(ManagementFlow, (_T("  key.addr=%s, key.type=%d, key.val=%s"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), info->key.type, key.c_str()));
+                        TRACE(ManagementFlow, (_T("  key.addr=%s, key.addr.type=%i, key.type=%d, key.val=%s"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), info->key.addr.type, info->key.type, key.c_str()));
+                        if (info->store_hint != 0) {
+                            if (_parent.NewKey(Bluetooth::SignatureKey(info->key.addr.bdaddr, info->key.addr.type, info->key.type, info->key.val)) != Core::ERROR_NONE) {
+                                TRACE_L1("Invalid CSRK received?");
+                            }
+                        }
                         break;
                     }
                     case MGMT_EV_NEW_LONG_TERM_KEY: {
@@ -184,14 +191,17 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                         Core::ToHexString(info->key.val, 16, key);
                         TRACE(ManagementFlow, (_T("MGMT_EV_NEW_LONG_TERM_KEY")));
                         TRACE(ManagementFlow, (_T("  store_hint=%d"), info->store_hint));
-                        TRACE(ManagementFlow, (_T("  key.addr=%s, key.type=%d, key.master=%d"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), info->key.type, info->key.master));
+                        TRACE(ManagementFlow, (_T("  key.addr=%s, key.addr.type=%i, key.type=%d, key.master=%d"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), info->key.addr.type, info->key.type, info->key.master));
                         TRACE(ManagementFlow, (_T("  key.enc_size=%u, key.ediv=%u, key.rand=%llu, key.val=%s"), info->key.enc_size, btohs(info->key.ediv), btohll(info->key.rand), key.c_str()));
 
-                        if ((info->store_hint != 0) && (info->key.addr.type != Bluetooth::Address::LE_RANDOM_ADDRESS)) {
-                            _parent.NewKey(Bluetooth::LongTermKey(info->key.addr.bdaddr, info->key.addr.type, info->key.master, info->key.type,
-                                                                  info->key.enc_size, btohs(info->key.ediv), btohll(info->key.rand), info->key.val));
+                        if (info->store_hint != 0) {
+                            if (_parent.NewKey(Bluetooth::LongTermKey(info->key.addr.bdaddr, info->key.addr.type, info->key.type, info->key.master,
+                                                                  info->key.enc_size, btohs(info->key.ediv), btohll(info->key.rand), info->key.val)) == Core::ERROR_NONE) {
 
-                            _parent.Paired(Bluetooth::Address(info->key.addr.bdaddr));
+                                _parent.Paired(Bluetooth::Address(info->key.addr.bdaddr));
+                            } else {
+                                TRACE_L1("Invalid LTK received?");
+                            }
                         }
 
                         break;
@@ -316,7 +326,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                             entry->Paired();
                         } else {
                             // have both LTKs
-                            if (_parent->SaveEncryptionKeys() == Core::ERROR_NONE) {
+                            if (_parent->SaveLeEncryptionKeys() == Core::ERROR_NONE) {
                                 entry->Bonded();
                             }
                         }
@@ -353,11 +363,20 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 _parent = nullptr;
                 return (result);
             }
-            template<typename KEYTYPE> void NewKey(const KEYTYPE& key)
+            template<typename KEYTYPE> uint32_t NewKey(const KEYTYPE& key)
             {
+                uint32_t result = Core::ERROR_UNAVAILABLE;
+
                 if (_parent != nullptr) {
-                    _parent->StoreKey(key);
+                    if (key.IsValid() == true) {
+                        _parent->StoreKey(key);
+                        result = Core::ERROR_NONE;
+                    } else {
+                        result = Core::ERROR_INVALID_DESIGNATOR;
+                    }
                 }
+
+                return result;
             }
 
         private:
@@ -1664,16 +1683,30 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         inline static ControlSocket& Connector() {
             return(_application);
         }
-        void StoreKey(const Bluetooth::IdentityKey& key) {
-            _identityKeys.Add(key);
+
+        void StoreKey(const Bluetooth::LinkKey& key) {
+            _adminLock.Lock();
+            _linkKeys.Add(key);
+            _adminLock.Unlock();
         }
         void StoreKey(const Bluetooth::LongTermKey& key) {
-            if (key.IsValid() == true) {
-                _longTermKeys.Add(key);
-            }
+            _adminLock.Lock();
+            _longTermKeys.Add(key);
+            _adminLock.Unlock();
+        }
+        void StoreKey(const Bluetooth::IdentityKey& key) {
+            _adminLock.Lock();
+            _identityKeys.Add(key);
+            _adminLock.Unlock();
+        }
+        void StoreKey(const Bluetooth::SignatureKey& key) {
+            _adminLock.Lock();
+            _signatureKeys.Add(key);
+            _adminLock.Unlock();
         }
 
-        uint32_t SaveEncryptionKeys();
+        uint32_t SaveLeEncryptionKeys();
+        uint32_t SaveEdrEncryptionKeys();
 
     private:
         Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
@@ -1703,10 +1736,11 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         Bluetooth::LinkKeys _linkKeys;
         Bluetooth::LongTermKeys _longTermKeys;
         Bluetooth::IdentityKeys _identityKeys;
+        Bluetooth::SignatureKeys _signatureKeys;
         Core::File _linkKeysFile;
         Core::File _longTermKeysFile;
         Core::File _identityKeysFile;
-        Core::File _connectionKeysFile;
+        Core::File _signatureKeysFile;
     };
 
 } //namespace Plugin
