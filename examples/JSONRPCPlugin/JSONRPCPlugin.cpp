@@ -73,7 +73,7 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
 
         Core::ProxyType<RPC::InvokeServer> engine (Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance()));
         _rpcServer = new COMServer(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath(), engine);
-
+        _jsonServer = new JSONRPCServer<Core::JSON::IElement>(Core::NodeId(config.Connector.Value().c_str()), string("/jsonrpc/") + service->Callsign());
         _job->Period(5);
         PluginHost::WorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(_job));
 
@@ -86,6 +86,7 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         _job->Period(0);
         PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_job));
         delete _rpcServer;
+        delete _jsonServer;
     }
 
     /* virtual */ string JSONRPCPlugin::Information() const

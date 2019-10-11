@@ -1,7 +1,7 @@
 #define MODULE_NAME JSONRPC_Test
 
 #include <core/core.h>
-#include <jsonrpc/jsonrpc.h>
+#include <websocket/websocket.h>
 #include <interfaces/IPerformance.h>
 
 #include "../JSONRPCPlugin/Data.h"
@@ -131,8 +131,7 @@ class MessageHandler {
 public:
     explicit MessageHandler(const string& recipient)
         : _recipient(recipient)
-        , _remoteObject(_T("JSONRPCPlugin.1"), (recipient + _T(".client.events")).c_str())
-        , _remoteObjectMessagePack(_T("JSONRPCPlugin.3"), (recipient + _T(".client.events")).c_str()) {
+        , _remoteObject(_T("JSONRPCPlugin.1"), (recipient + _T(".client.events")).c_str()) {
     }
 
     void message_received(const Core::JSON::String& message) {
@@ -154,8 +153,7 @@ public:
 
 private:
     string _recipient;
-    JSONRPC::Client<Core::JSON::IElement> _remoteObject;
-    JSONRPC::Client<Core::JSON::IMessagePack> _remoteObjectMessagePack; //TODO make the implementation, added just for compile error checking
+    JSONRPC::LinkType<Core::JSON::IElement> _remoteObject;
 };
 }
 
@@ -314,7 +312,7 @@ void MeasureCOMRPC(Core::ProxyType<RPC::CommunicatorClient>& client)
 }
 
 template <typename INTERFACE>
-void MeasureJSONRPC(JSONRPC::Client<INTERFACE>& remoteObject)
+void MeasureJSONRPC(JSONRPC::LinkType<INTERFACE>& remoteObject)
 {
     int measure;
     do {
@@ -378,7 +376,7 @@ void MeasureJSONRPC(JSONRPC::Client<INTERFACE>& remoteObject)
 int main(int argc, char** argv)
 {
     // Additional scoping neede to have a proper shutdown of the STACK object:
-    // JSONRPC::Client remoteObject
+    // JSONRPC::LinkType<Core::JSON::IElement> remoteObject
     {
 
         Core::NodeId comChannel;
@@ -431,8 +429,10 @@ int main(int argc, char** argv)
         // 3. [optional]  should the websocket under the hood call directly the plugin
         //                or will it be rlayed through thejsonrpc dispatcher (default,
         //                use jsonrpc dispatcher)
-        JSONRPC::Client<Core::JSON::IElement> remoteObject(_T("JSONRPCPlugin.2"), _T("client.events.88"));
-        JSONRPC::Client<Core::JSON::IElement> legacyObject(_T("JSONRPCPlugin.1"), _T("client.events.33"));
+        JSONRPC::LinkType<Core::JSON::IElement> remoteObject(_T("JSONRPCPlugin.2"), _T("client.events.88"));
+        JSONRPC::LinkType<Core::JSON::IElement> legacyObject(_T("JSONRPCPlugin.1"), _T("client.events.33"));
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:8899"))); //Check how to link it with JSONRPC TestServer
+        JSONRPC::LinkType<Core::JSON::IMessagePack> remoteObjectMP(_T("JSONRPCPlugin.2"), _T("client.events.88"));
         Handlers::MessageHandler testMessageHandlerJohn("john");
         Handlers::MessageHandler testMessageHandlerJames("james");
         
@@ -704,6 +704,7 @@ int main(int argc, char** argv)
             }
             case 'Z':
             {
+                MeasureJSONRPC(remoteObjectMP);
                 break;
             }
             case 'L':

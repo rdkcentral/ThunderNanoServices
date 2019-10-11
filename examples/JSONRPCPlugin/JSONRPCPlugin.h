@@ -3,6 +3,7 @@
 #include "Data.h"
 #include "Module.h"
 
+#include <websocket/websocket.h>
 #include <interfaces/IPerformance.h>
 
 namespace WPEFramework {
@@ -98,6 +99,85 @@ namespace Plugin {
             Exchange::IPerformance* _parentInterface;
         };
 
+        class JSONObjectFactory : public Core::FactoryType<Core::JSON::IElement, string> {
+        private:
+            inline JSONObjectFactory()
+                : Core::FactoryType<Core::JSON::IElement, string>()
+            {
+            }
+            JSONObjectFactory(const JSONObjectFactory&);
+            JSONObjectFactory& operator=(const JSONObjectFactory&);
+
+        public:
+            static JSONObjectFactory& Instance()
+            {
+                static JSONObjectFactory _singleton;
+
+                return (_singleton);
+            }
+            virtual ~JSONObjectFactory()
+            {
+            }
+        };
+        template <typename INTERFACE>
+        class JSONRPCServer : public Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory&, INTERFACE> {
+        private:
+            typedef Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory&, INTERFACE> BaseClass;
+        public:
+            JSONRPCServer() = delete;
+            JSONRPCServer(const JSONRPCServer&) = delete;
+            JSONRPCServer& operator=(const JSONRPCServer&) = delete;
+
+        public:
+            JSONRPCServer(const WPEFramework::Core::NodeId& remoteNode, const string& callsign)
+                : BaseClass(5, JSONObjectFactory::Instance(), false, true, false, remoteNode.AnyInterface(), remoteNode, 256, 256)
+            {
+                this->Open(Core::infinite);
+            }
+            virtual ~JSONRPCServer()
+            {
+            }
+
+        public:
+            virtual void Received(Core::ProxyType<INTERFACE>& jsonObject)
+            {
+                if (jsonObject.IsValid() == false) {
+                    printf("Oops");
+                }
+                else {
+                    string jsonMessage;
+                    jsonObject->ToString(jsonMessage);
+
+                    TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
+                    TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
+
+                    // As this is the server, send back the Element we received...
+                    this->Submit(jsonObject);
+                }
+            }
+            virtual void Send(Core::ProxyType<INTERFACE>& jsonObject)
+            {
+                string jsonMessage;
+                jsonObject->ToString(jsonMessage);
+
+                TRACE(Trace::Information, (_T("Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
+                TRACE(Trace::Information, (_T(" Send: %s\n"), jsonMessage.c_str()));
+            }
+            virtual void StateChange()
+            {
+                TRACE(Trace::Information, (_T("JSONRPCServer: State change: ")));
+                if (this->IsOpen()) {
+                    TRACE(Trace::Information, (_T("Open - OK\n")));
+                }
+                else {
+                    TRACE(Trace::Information, (_T("Closed - %s\n"), (this->IsSuspended() ? _T("SUSPENDED") : _T("OK"))));
+                }
+            }
+            virtual bool IsIdle() const
+            {
+                return (true);
+            }
+        };
         // The next class is a helper class, just to trigger an a-synchronous callback every Period()
         // amount of time.
         class PeriodicSync : public Core::IDispatch {
@@ -394,6 +474,8 @@ namespace Plugin {
         string _data;
         std::vector<uint32_t> _array;
         COMServer* _rpcServer;
+        JSONRPCServer<Core::JSON::IElement>* _jsonServer;
+
     };
 
 } // namespace Plugin
