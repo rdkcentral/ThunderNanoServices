@@ -441,10 +441,9 @@ namespace Plugin {
                     return (_sessionId);
                 }
 
-                virtual void Metadata(std::string& metadata) const override
+                virtual std::string Metadata() const override
                 {
-                    TRACE(Trace::Information, ("Metadata()"));
-                    _mediaKeySession->Metadata(metadata);
+                    return _mediaKeySession->GetMetadata();
                 }
 
                 virtual ::OCDM::ISession::KeyStatus Status() const override
@@ -572,8 +571,8 @@ namespace Plugin {
 
         public:
             virtual bool IsTypeSupported(
-                const std::string keySystem,
-                const std::string mimeType) const override
+                const std::string& keySystem,
+                const std::string& mimeType) const override
             {
 
                 return (_parent.IsTypeSupported(keySystem, mimeType) ? 0 : 1);
@@ -584,10 +583,11 @@ namespace Plugin {
                 std::string& metadata) const override
             {
                 OCDM::OCDM_RESULT result = OCDM::OCDM_KEYSYSTEM_NOT_SUPPORTED;
+                metadata.clear();
 
                 CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
                 if (system != nullptr) {
-                    system->Metadata(metadata);
+                    metadata = system->GetMetadata();
                     result = OCDM::OCDM_SUCCESS;
                 }
 
@@ -596,9 +596,9 @@ namespace Plugin {
 
             // Create a MediaKeySession using the supplied init data and CDM data.
             virtual OCDM::OCDM_RESULT CreateSession(
-                const std::string keySystem,
+                const std::string& keySystem,
                 const int32_t licenseType,
-                const std::string initDataType,
+                const std::string& initDataType,
                 const uint8_t* initData,
                 const uint16_t initDataLength,
                 const uint8_t* CDMData,
@@ -668,7 +668,7 @@ namespace Plugin {
 
             // Set Server Certificate
             virtual ::OCDM::OCDM_RESULT SetServerCertificate(
-                const std::string keySystem,
+                const std::string& keySystem,
                 const uint8_t* serverCertificate,
                 const uint16_t serverCertificateLength) override
             {
