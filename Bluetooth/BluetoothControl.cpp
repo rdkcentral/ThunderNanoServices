@@ -40,7 +40,7 @@ namespace Plugin {
             if (_persistentStoragePath.empty() == false) {
                 if (Core::Directory(_persistentStoragePath.c_str()).CreatePath() == false) {
                     _persistentStoragePath.clear();
-                    TRACE_L1("Failed to create persistent storage folder '%s'\n", _persistentStoragePath.c_str());
+                    TRACE(Trace::Error, (_T("Failed to create persistent storage folder '%s'\n"), _persistentStoragePath.c_str()));
                 } else {
                     _linkKeysFile = (_persistentStoragePath + "ShortTermKeys.json");
                     _longTermKeysFile = (_persistentStoragePath + "LongTermKeys.json");
@@ -72,9 +72,9 @@ namespace Plugin {
             else if ((slaving == false) && (administrator.Privacy(0, nullptr) != Core::ERROR_NONE)) {
                 result = "Failed to disable LE privacy on the bluetooth interface";
             }
-            else if ((slaving == false) && (administrator.Discovering(false, true, true) != Core::ERROR_NONE)) {
-                result = "Failed to stop device discovery on bluetooth interface";
-            }
+//            else if ((slaving == false) && (administrator.Discovering(false, true, true) != Core::ERROR_NONE)) {
+//                result = "Failed to stop device discovery on bluetooth interface";
+//            }
             else if ((slaving == false) && (administrator.SecureConnection(true) != Core::ERROR_NONE)) {
                 result = "Failed to enable secure connections on the bluetooth interface";
             }
@@ -604,7 +604,6 @@ namespace Plugin {
 
         return (index != _devices.end() ? (*index) : nullptr);
     }
-
     BluetoothControl::DeviceImpl* BluetoothControl::Find(const uint16_t handle) {
         std::list<DeviceImpl*>::const_iterator index = _devices.begin();
 
@@ -616,8 +615,7 @@ namespace Plugin {
     }
 
     template<typename KEYLISTTYPE>
-    class EncryptionKeyList
-    {
+    class EncryptionKeyList {
     public:
         EncryptionKeyList() = delete;
         EncryptionKeyList(const EncryptionKeyList& ) = delete;
@@ -642,7 +640,7 @@ namespace Plugin {
 
             if (file.Open() == true) {
                 if (_array.FromFile(file) == false) {
-                    TRACE_L1("Failed to read file %s", file.Name().c_str());
+                    TRACE(Trace::Error, (_T("Failed to read file %s"), file.Name().c_str()));
                     result = Core::ERROR_READ_ERROR;
                 } else {
                     _list.Clear();
@@ -654,7 +652,7 @@ namespace Plugin {
                         if (key.IsValid() == true) {
                             _list.Add(key);
                         } else {
-                            TRACE_L1("Invalid key in file %s", file.Name().c_str());
+                            TRACE(Trace::Error, (_T("Invalid key in file %s"), file.Name().c_str()));
                         }
                     }
                 }
@@ -672,13 +670,13 @@ namespace Plugin {
             if (_array.Length() > 0) {
                 if (file.Create() == true) {
                     if (_array.ToFile(file) == false) {
-                        TRACE_L1("Failed to write file %s", file.Name().c_str());
+                        TRACE(Trace::Error, (_T("Failed to write file %s"), file.Name().c_str()));
                         result = Core::ERROR_WRITE_ERROR;
                     }
 
                     file.Close();
                 } else {
-                    TRACE_L1("Failed to create file %s", file.Name().c_str());
+                    TRACE(Trace::Error, (_T("Failed to create file %s"), file.Name().c_str()));
                     result = Core::ERROR_OPENING_FAILED;
                 }
             }
@@ -709,8 +707,8 @@ namespace Plugin {
             EncryptionKeyList<Bluetooth::SignatureKeys> csrks(_signatureKeys);
             csrks.Load(_signatureKeysFile);
 
-            TRACE_L1("Loaded %i STKs, %i LTKs, %i IRKs, %i CSRKs",
-                        _linkKeys.Entries(), _longTermKeys.Entries(), _identityKeys.Entries(), _signatureKeys.Entries());
+            TRACE(Trace::Information, (_T("Loaded %i STKs, %i LTKs, %i IRKs, %i CSRKs"),
+                        _linkKeys.Entries(), _longTermKeys.Entries(), _identityKeys.Entries(), _signatureKeys.Entries()));
 
             _adminLock.Unlock();
         }
@@ -724,7 +722,7 @@ namespace Plugin {
 
             _adminLock.Lock();
 
-            TRACE_L1("Saving EDR keys: %i STKs", _linkKeys.Entries());
+            TRACE(Trace::Information, (_T("Saving EDR keys: %i STKs"), _linkKeys.Entries()));
 
             if (_linkKeys.Entries() > 0) {
                 EncryptionKeyList<Bluetooth::LinkKeys> keys(_linkKeys);
@@ -745,7 +743,7 @@ namespace Plugin {
 
             _adminLock.Lock();
 
-            TRACE_L1("Saving LE keys: %i LTKs, %i IRKs, %i CSRKs", _longTermKeys.Entries(), _identityKeys.Entries(), _signatureKeys.Entries());
+            TRACE(Trace::Information, (_T("Saving LE keys: %i LTKs, %i IRKs, %i CSRKs"), _longTermKeys.Entries(), _identityKeys.Entries(), _signatureKeys.Entries()));
 
             if (_identityKeys.Entries() > 0) {
                 EncryptionKeyList<Bluetooth::IdentityKeys> keys(_identityKeys);
@@ -766,6 +764,23 @@ namespace Plugin {
         }
 
         return result;
+    }
+
+    void BluetoothControl::PurgeDeviceKeys(const Bluetooth::Address& device)
+    {
+        _adminLock.Lock();
+
+        TRACE(Trace::Information, (_T("Purging encryption keys of device [%s]"), device.ToString().c_str()));
+
+        if (_linkKeys.Purge(device) > 0) {
+            SaveEdrEncryptionKeys();
+        }
+
+        if ((_longTermKeys.Purge(device) + _signatureKeys.Purge(device) + _identityKeys.Purge(device)) > 0) {
+            SaveLeEncryptionKeys();
+        }
+
+        _adminLock.Unlock();
     }
 
 } // namespace Plugin

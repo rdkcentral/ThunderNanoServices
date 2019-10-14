@@ -131,10 +131,9 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 void Update(const mgmt_hdr& header) override
                 {
                     const uint8_t* data = &(reinterpret_cast<const uint8_t*>(&header)[sizeof(mgmt_hdr)]);
-
-                    uint16_t opCode     = htobs(header.opcode);
-                    uint16_t device     = htobs(header.index);
-                    uint16_t packageLen = htobs(header.len);
+                    uint16_t opCode = btohs(header.opcode);
+                    uint16_t device = btohs(header.index);
+                    uint16_t packageLen = btohs(header.len);
 
                     switch (opCode) {
                     case MGMT_EV_CONTROLLER_ERROR: {
@@ -166,7 +165,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                         TRACE(ManagementFlow, (_T("  key.addr=%s, key.addr.type=%i, key.val=%s"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), info->key.addr.type, key.c_str()));
                         if (info->store_hint != 0) {
                             if (_parent.NewKey(Bluetooth::IdentityKey(info->key.addr.bdaddr, info->key.addr.type, info->key.val)) != Core::ERROR_NONE) {
-                                TRACE_L1("Invalid IRK received?");
+                                TRACE(Trace::Error, (_T("Invalid IRK received?")));
                             }
                         }
                         break;
@@ -180,7 +179,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                         TRACE(ManagementFlow, (_T("  key.addr=%s, key.addr.type=%i, key.type=%d, key.val=%s"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), info->key.addr.type, info->key.type, key.c_str()));
                         if (info->store_hint != 0) {
                             if (_parent.NewKey(Bluetooth::SignatureKey(info->key.addr.bdaddr, info->key.addr.type, info->key.type, info->key.val)) != Core::ERROR_NONE) {
-                                TRACE_L1("Invalid CSRK received?");
+                                TRACE(Trace::Error, (_T("Invalid CSRK received?")));
                             }
                         }
                         break;
@@ -200,17 +199,19 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
 
                                 _parent.Paired(Bluetooth::Address(info->key.addr.bdaddr));
                             } else {
-                                TRACE_L1("Invalid LTK received?");
+                                TRACE(Trace::Error, (_T("Invalid LTK received?")));
                             }
                         }
 
                         break;
                     }
                     default:
-                        TRACE(ManagementFlow, (_T("Device=%d,  OpCode=0x%04X, Length=%d"), device, opCode, packageLen));
-                        string dataText;
-                        Core::ToHexString(data, packageLen, dataText);
-                        TRACE(ManagementFlow, (_T("Data=%s"), dataText.c_str()));
+                        TRACE(ManagementFlow, (_T("Device=%d, OpCode=0x%04X, Length=%d"), device, opCode, packageLen));
+                        if (packageLen > 0) {
+                            string dataText;
+                            Core::ToHexString(data, packageLen, dataText);
+                            TRACE(ManagementFlow, (_T("Data=%s"), dataText.c_str()));
+                        }
                         break;
                     }
                 }
@@ -313,9 +314,13 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             {
                 return(_administrator.Pair(remote, type, caps));
             }
-            uint32_t Unpair(const Bluetooth::Address& remote)
+            uint32_t Unpair(const Bluetooth::Address& remote, const Bluetooth::Address::type type)
             {
-                return (_administrator.Unpair(remote));
+                if (_parent != nullptr) {
+                    _parent->PurgeDeviceKeys(remote);
+                }
+
+                return(_administrator.Unpair(remote, type));
             }
             void Paired(const Bluetooth::Address& remote)
             {
@@ -323,11 +328,11 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                     DeviceImpl* entry = _parent->Find(remote);
                     if (entry != nullptr) {
                         if (entry->IsPaired() == false) {
-                            entry->Paired();
+                            entry->Paired(true);
                         } else {
                             // have both LTKs
                             if (_parent->SaveLeEncryptionKeys() == Core::ERROR_NONE) {
-                                entry->Bonded();
+                                entry->Bonded(true);
                             }
                         }
                     }
@@ -377,6 +382,12 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 }
 
                 return result;
+            }
+            void PurgeDeviceKeys(const Bluetooth::Address& address)
+            {
+                if (_parent != nullptr) {
+                    _parent->PurgeDeviceKeys(address);
+                }
             }
 
         private:
@@ -1103,16 +1114,12 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 uint32_t result = Core::ERROR_INPROGRESS;
 
                 if (SetState(PAIRING) == Core::ERROR_NONE) {
-                    Bluetooth::Address::type type((_state & LOWENERGY) != 0 ? Bluetooth::Address::LE_PUBLIC_ADDRESS :
-                                                                               Bluetooth::Address::BREDR_ADDRESS);
-
-                    result = BluetoothControl::Connector().Pair(_remote, type, static_cast<Bluetooth::ManagementSocket::capabilities>(caps));
-
+                    result = BluetoothControl::Connector().Pair(_remote, static_cast<Bluetooth::Address::type>(Type()), static_cast<Bluetooth::ManagementSocket::capabilities>(caps));
                     if (result != Core::ERROR_NONE) {
-                        printf("Failed to pair!!! Error: %d\n", result);
+                        TRACE(Trace::Error, (_T("Failed to pair [%d]"), result));
                         ClearState(PAIRING);
-                        }
                     }
+                }
 
                 return (result);
             }
@@ -1121,28 +1128,36 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 uint32_t result = Core::ERROR_INPROGRESS;
 
                 if (SetState(UNPAIRING) == Core::ERROR_NONE) {
-                    result = BluetoothControl::Connector().Unpair(_remote);
-
+                    result = BluetoothControl::Connector().Unpair(_remote, static_cast<Bluetooth::Address::type>(Type()));
                     if (result == Core::ERROR_NONE) {
-                        _state.SetState(static_cast<state>(_state.GetState() & (~PAIRED)));
+                        Paired(false);
+                        Bonded(false);
                     }
                     else {
-                        printf("Failed to unpair!!! Error: %d\n", result);
+                        TRACE(Trace::Error, (_T("Failed to unpair [%d]"), result));
                     }
                     ClearState(UNPAIRING);
                 }
                 return (result);
             }
-            void Paired()
+            void Paired(bool paired)
             {
-                TRACE(DeviceFlow, (_T("The device [%s] is paired"), RemoteId().c_str()));
+                TRACE(DeviceFlow, (_T("The device [%s] is %spaired"), RemoteId().c_str(), paired? "" : "un"));
                 ClearState(PAIRING);
-                SetState(PAIRED);
+                if (paired == true) {
+                    SetState(PAIRED);
+                } else {
+                    ClearState(PAIRED);
+                }
             }
-            void Bonded()
+            void Bonded(bool bonded)
             {
-                TRACE(DeviceFlow, (_T("The device [%s] is bonded"), RemoteId().c_str()));
-                SetState(BONDED);
+                TRACE(DeviceFlow, (_T("The device [%s] is %sbonded"), RemoteId().c_str(), bonded? "" : "un"));
+                if (bonded == true) {
+                    SetState(BONDED);
+                } else {
+                    ClearState(BONDED);
+                }
             }
             bool IsValid() const override
             {
@@ -1508,7 +1523,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                     }
                 }
 
-                TRACE_L1("DeviceLowEnergy Connect() status <%i>\n", result);
+                TRACE(ControlFlow, (_T("DeviceLowEnergy Connect() status <%i>"), result));
 
                 return (result);
             }
@@ -1629,7 +1644,14 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             , _devices()
             , _observers()
             , _gattRemotes()
+            , _linkKeys()
+            , _longTermKeys()
+            , _identityKeys()
+            , _signatureKeys()
+            , _linkKeysFile()
             , _longTermKeysFile()
+            , _identityKeysFile()
+            , _signatureKeysFile()
         {
         }
         virtual ~BluetoothControl()
@@ -1704,6 +1726,8 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             _signatureKeys.Add(key);
             _adminLock.Unlock();
         }
+
+        void PurgeDeviceKeys(const Bluetooth::Address& device);
 
         uint32_t SaveLeEncryptionKeys();
         uint32_t SaveEdrEncryptionKeys();
