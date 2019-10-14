@@ -17,7 +17,7 @@ public:
         : TestCommandBase(
               TestCommandBase::DescriptionBuilder(_T("Cause segmenation fault resulting in crash")),
               TestCommandBase::SignatureBuilder(Parameter())
-                  .InputParameter("crashDelay", Parameter::TypeType::NUMBER, "delay in ms before actual crash"))
+                  .InputParameter("crashDelay", JsonData::TestUtility::TypeType::NUMBER, "delay in ms before actual crash"))
         , _crashCore(CrashCore::Instance())
         , _name(_T("Crash"))
     {

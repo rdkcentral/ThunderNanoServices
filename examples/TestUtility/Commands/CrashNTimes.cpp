@@ -16,7 +16,7 @@ public:
     CrashNTimes()
         : TestCommandBase(TestCommandBase::DescriptionBuilder(_T("Cause segmenation fault N times in a row")),
               TestCommandBase::SignatureBuilder(Parameter())
-                  .InputParameter("crashCount", Parameter::TypeType::NUMBER, "how many times Crash will be executed consecutively"))
+                  .InputParameter("crashCount", JsonData::TestUtility::TypeType::NUMBER, "how many times Crash will be executed consecutively"))
         , _crashCore(CrashCore::Instance())
         , _name(_T("CrashNTimes"))
     {
