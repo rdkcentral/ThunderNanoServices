@@ -475,7 +475,7 @@ namespace Plugin {
         std::vector<uint32_t> _array;
         COMServer* _rpcServer;
         JSONRPCServer<Core::JSON::IElement>* _jsonServer;
-
+        JSONRPCServer<Core::JSON::IMessagePack>* _msgServer;
     };
 
 } // namespace Plugin
