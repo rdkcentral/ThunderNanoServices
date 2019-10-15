@@ -69,11 +69,14 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
     /* virtual */ const string JSONRPCPlugin::Initialize(PluginHost::IShell * service)
     {
         Config config;
-        config.FromString(service->ConfigLine());
+        config.FromString(service->ConfigLine());zag het
 
+	Core::NodeId source(config.Connector.Value().c_str());
+	    
         Core::ProxyType<RPC::InvokeServer> engine (Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance()));
-        _rpcServer = new COMServer(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath(), engine);
-        _jsonServer = new JSONRPCServer<Core::JSON::IElement>(Core::NodeId(config.Connector.Value().c_str()), string("/jsonrpc/") + service->Callsign());
+        _rpcServer = new COMServer(Core::NodeId(source, source.PortNumber()), this, service->ProxyStubPath(), engine);
+        _jsonServer = new JSONRPCServer<Core::JSON::IElement>(Core::NodeId(source, source.PortNumber()+1),  _T(""));
+        _msgServer = new JSONRPCServer<Core::JSON::IMessagePack>(Core::NodeId(source, source.PortNumber()+2),  _T(""));
         _job->Period(5);
         PluginHost::WorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(_job));
 
