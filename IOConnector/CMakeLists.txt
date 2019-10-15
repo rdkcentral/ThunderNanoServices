@@ -6,6 +6,7 @@ find_package(${NAMESPACE}Plugins REQUIRED)
 add_library(${MODULE_NAME} SHARED 
     Module.cpp
     IOConnector.cpp
+    IOConnectorJsonRpc.cpp
     GPIO.cpp
     Handler.cpp
 )

@@ -13,7 +13,8 @@ namespace Plugin {
     class IOConnector
         : public PluginHost::IPlugin,
           public PluginHost::IWeb,
-          public Exchange::IExternal::IFactory {
+          public Exchange::IExternal::IFactory,
+          public PluginHost::JSONRPC {
     private:
         IOConnector(const IOConnector&) = delete;
         IOConnector& operator=(const IOConnector&) = delete;
@@ -190,6 +191,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(Exchange::IExternal::IFactory)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
@@ -214,6 +216,13 @@ namespace Plugin {
         void Activity();
         void GetMethod(Web::Response& response, Core::TextSegmentIterator& index, GPIO::Pin& pin);
         void PostMethod(Web::Response& response, Core::TextSegmentIterator& index, GPIO::Pin& pin);
+
+        // JsonRpc methods
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t get_pin(const string& index, Core::JSON::DecSInt32& response) const;
+        uint32_t set_pin(const string& index, const Core::JSON::DecSInt32& param);
+        void event_pinactivity(const string& id, const int32_t& value);
 
     private:
         PluginHost::IShell* _service;

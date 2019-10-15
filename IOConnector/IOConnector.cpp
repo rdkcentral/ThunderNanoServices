@@ -15,7 +15,7 @@ ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
 
     ENUM_CONVERSION_END(Plugin::IOConnector::Config::Pin::mode)
 
-        namespace Plugin
+namespace Plugin
 {
 
     SERVICE_REGISTRATION(IOConnector, 1, 0);
@@ -63,10 +63,12 @@ ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
         , _pins()
         , _skipURL(0)
     {
+        RegisterAll();
     }
 
     /* virtual */ IOConnector::~IOConnector()
     {
+        UnregisterAll();
     }
 
     /* virtual */ const string IOConnector::Initialize(PluginHost::IShell * service)
@@ -259,7 +261,6 @@ ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
 
     void IOConnector::Activity()
     {
-
         ASSERT(_service != nullptr);
 
         // Lets find the pin and trigger if posisble...
@@ -277,7 +278,11 @@ ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
                 if (index->second != nullptr) {
                     index->second->Trigger(pin);
                 } else {
-                    _service->Notify(_T("{ \"id\": ") + Core::NumberType<uint8_t>(pin.Identifier() & 0xFFFF).Text() + _T(", \"state\": \"") + (pin.Get() ? _T("High\" }") : _T("Low\" }")));
+                    _service->Notify(_T("{ \"id\": ") + Core::NumberType<uint16_t>(pin.Identifier() & 0xFFFF).Text() + _T(", \"state\": \"") + (pin.Get() ? _T("High\" }") : _T("Low\" }")));
+
+                    int32_t value = 0;
+                    pin.Get(value);
+                    event_pinactivity(Core::NumberType<uint16_t>(pin.Identifier() & 0xFFFF).Text(), value);
                 }
             }
 

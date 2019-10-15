@@ -1,0 +1,51 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "IO Connector Plugin",
+    "callsign": "IOConnector",
+    "locator": "libWPEIOConnector.so",
+    "status": "production",
+    "description": "The IO Connector plugin provides access to GPIO pins.",
+    "version": "1.0",
+    "acronyms": {
+      "GPIO": "General-Purpose Input/Output"
+    }
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "pins": {
+        "type": "array",
+        "description": "List of GPIO pins available on the system",
+        "items": {
+          "type": "object",
+          "description": "Pin properties",
+          "properties": {
+            "id": {
+              "type": "number",
+              "description": "Pin ID",
+              "example": 189
+            },
+            "mode": {
+              "type": "string",
+              "description": "Pin mode",
+              "enum": [ "Low", "High", "Both", "Active", "Inactive", "Output"]
+            },
+            "activelow": {
+              "type": "boolean",
+              "description": "Denotes if pin is active in low state (default: *false*)",
+              "example": "false"
+            }
+          },
+          "required": [
+            "id", "mode"
+          ]
+        }
+      }
+    },
+    "required": [ "pins" ]
+  },
+  "interface": {
+    "$ref": "{interfacedir}/IOConnector.json#"
+  }
+}
