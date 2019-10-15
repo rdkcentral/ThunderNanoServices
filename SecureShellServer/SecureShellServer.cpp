@@ -14,8 +14,6 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
         _InputParameters = config.InputParameters.Value();
 
-        fprintf(stderr, "Input=%s\n", _InputParameters.c_str());
-
         TRACE(Trace::Information, (_T("Starting Dropbear Service with options as: %s"), _InputParameters.c_str()));
         // TODO: Check the return value and based on that change result
         activate_dropbear(const_cast<char*>(_InputParameters.c_str()));

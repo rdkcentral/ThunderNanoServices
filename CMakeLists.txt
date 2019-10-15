@@ -28,6 +28,7 @@ option(PLUGIN_OPENCDMI "Include OpenCDMi plugin" OFF)
 option(PLUGIN_PACKAGER "Include Packager plugin" OFF)
 option(PLUGIN_POWER "Include Power plugin" OFF)
 option(PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
+option(PLUGIN_SECURESHELLSERVER "Include SecureShellServer plugin" OFF)
 option(PLUGIN_STREAMER "Include Streamer plugin" OFF)
 option(PLUGIN_SNAPSHOT "Include Snapshot plugin" OFF)
 option(PLUGIN_SPARK "Include SparkEngine plugin" OFF)
@@ -72,10 +73,6 @@ endif()
 
 if(PLUGIN_DEVICEINFO)
     add_subdirectory(DeviceInfo)
-endif()
-
-if(PLUGIN_SECURESHELLSERVER)
-    add_subdirectory(SecureShellServer)
 endif()
 
 if(PLUGIN_DSRESOLUTION)
@@ -152,6 +149,10 @@ endif()
 
 if(PLUGIN_RTSPCLIENT)
     add_subdirectory(RtspClient)
+endif()
+
+if(PLUGIN_SECURESHELLSERVER)
+    add_subdirectory(SecureShellServer)
 endif()
 
 if(PLUGIN_SNAPSHOT)
