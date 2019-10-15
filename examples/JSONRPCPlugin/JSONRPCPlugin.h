@@ -129,8 +129,8 @@ namespace Plugin {
             JSONRPCServer& operator=(const JSONRPCServer&) = delete;
 
         public:
-            JSONRPCServer(const WPEFramework::Core::NodeId& remoteNode, const string& callsign)
-                : BaseClass(5, JSONObjectFactory::Instance(), false, true, false, remoteNode.AnyInterface(), remoteNode, 256, 256)
+            JSONRPCServer(const WPEFramework::Core::NodeId& remoteNode)
+                : BaseClass(5, JSONObjectFactory::Instance(), false, true, false, remoteNode, remoteNode.AnyInterface(), 1024, 1024)
             {
                 this->Open(Core::infinite);
             }
