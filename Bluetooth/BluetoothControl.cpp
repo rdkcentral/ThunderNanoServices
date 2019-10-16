@@ -16,7 +16,7 @@ namespace Plugin {
         string result;
 
         ASSERT(_service == nullptr);
-        //ASSERT(_administrator.IsOpen() == false);
+        ASSERT(_gattRemote == nullptr);
 
         _service = service;
         _skipURL = _service->WebPrefix().length();
@@ -132,12 +132,18 @@ namespace Plugin {
                 SYSLOG(Logging::Startup, (_T("%s StaticAddress:     %s"), supported.HasStaticAddress() ? _T("[true] ") : _T("[false]"), actuals.HasStaticAddress() ? _T("on") : _T("off")));
             }
         }
+
         return result;
     }
 
     /*virtual*/ void BluetoothControl::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
+
+        if (_gattRemote != nullptr) {
+            _gattRemote->Release();
+            _gattRemote = nullptr;
+        }
 
         // Deinitialize what we initialized..
         _service = nullptr;
@@ -146,6 +152,7 @@ namespace Plugin {
         if (_config.External.Value() != true) {
             _application.Close();
         }
+
         ::destruct_bluetooth_driver();
     }
 
@@ -309,14 +316,8 @@ namespace Plugin {
                     }
                     DeviceImpl* device = Find(Bluetooth::Address(destination.c_str()));
                     if (device == nullptr) {
-                        if ((destination.empty() == true) && (_gattRemotes.empty() == false)) {
-                            result->ErrorCode = _gattRemotes.front().Pair();
-                            result->Message = _T("Paring the first remote.");
-                        }
-                        else {
-                            result->ErrorCode = Web::STATUS_NOT_FOUND;
-                            result->Message = _T("Device not found.");
-                        }
+                        result->ErrorCode = Web::STATUS_NOT_FOUND;
+                        result->Message = _T("Device not found.");
                     } else if (pair == true) {
                         if (device->Pair(IBluetooth::IDevice::DISPLAY_ONLY) == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
@@ -334,7 +335,7 @@ namespace Plugin {
                     }
                 } else if ((index.Current() == _T("Remote") && (index.Next() == true))) {
                     if (index.Current() == _T("Connect")) {
-                        if ((_gattRemotes.empty() == false) && (_gattRemotes.front().Connect() == Core::ERROR_NONE)) {
+                        if ((_gattRemote != nullptr) && (_gattRemote->Connect() == Core::ERROR_NONE)) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Connected remote.");
                         } else {
@@ -375,9 +376,19 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Unknown device.");
                     } else {
-                        _gattRemotes.emplace_back(device);
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("OK.");
+                        if (_gattRemote == nullptr) {
+                            _gattRemote = Core::Service<GATTRemote>::Create<GATTRemote>(device);
+                            if (_gattRemote != nullptr) {
+                                _gattRemote->Callback(this);
+                                result->ErrorCode = Web::STATUS_OK;
+                                result->Message = _T("OK.");
+                            } else {
+                                result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                                result->Message = _T("Failed to assign remote");
+                            }
+                        } else {
+                            result->Message = _T("Remote already assigned");
+                        }
                     }
                 }
             }
@@ -437,7 +448,7 @@ namespace Plugin {
                     }
                 } else if ((index.Current() == _T("Remote") && (index.Next() == true))) {
                     if (index.Current() == _T("Connect")) {
-                        if ((_gattRemotes.empty() == false) && (_gattRemotes.front().Disconnect() == Core::ERROR_NONE)) {
+                        if ((_gattRemote != nullptr) && (_gattRemote->Disconnect() == Core::ERROR_NONE)) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Disconnected remote.");
                         } else {

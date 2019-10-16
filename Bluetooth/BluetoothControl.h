@@ -2,12 +2,16 @@
 
 #include "Module.h"
 #include <interfaces/IBluetooth.h>
+#include <interfaces/IKeyHandler.h>
 
 namespace WPEFramework {
 
 namespace Plugin {
 
-class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IBluetooth {
+class BluetoothControl : public PluginHost::IPlugin
+                       , public PluginHost::IWeb
+                       , public Exchange::IBluetooth
+                       , public Exchange::IKeyHandler {
     private:
         class ManagementFlow {
         public:
@@ -509,18 +513,20 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             ManagementSocket _administrator;
         };
 
-        class GATTRemote : public Bluetooth::GATTSocket {
+        class GATTRemote : public Bluetooth::GATTSocket, public Exchange::IKeyProducer {
         private:
             // UUID
             static constexpr uint16_t HID_UUID         = 0x1812;
             static constexpr uint16_t REPORT_UUID      = 0x2a4d;
 
+/*
             enum state : uint8_t {
                 UNKNOWN     = 0x00,
                 PAIRING     = 0x01,
                 UNPAIRING   = 0x02,
                 OPERATIONAL = 0x04
             };
+*/
 
             class Flow {
             public:
@@ -571,7 +577,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 }
 
             public:
-                void Updated () override
+                void Updated() override
                 {
                     _parent.Updated();
                 }
@@ -584,6 +590,63 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 GATTRemote& _parent;
             };
 
+            class Activity : public Core::IDispatch {
+            public:
+                Activity(const Activity &) = delete;
+                Activity &operator=(const Activity &) = delete;
+                Activity()
+                    : _pressed(false)
+                    , _scancode(0)
+                    , _map()
+                    , _keyHandler(nullptr)
+                    , _adminLock()
+                {
+                }
+                ~Activity() override
+                {
+                }
+
+                void KeyEvent(bool pressed, uint16_t scancode, const string& map)
+                {
+                    _adminLock.Lock();
+                    if ((scancode != 0) && (_keyHandler != nullptr)) {
+                        _pressed = pressed;
+                        _scancode = scancode;
+                        _map = map;
+                        PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
+                    }
+                    _adminLock.Unlock();
+                }
+                uint32_t KeyHandler(IKeyHandler* keyHandler)
+                {
+                    _adminLock.Lock();
+                    if (_keyHandler != nullptr) {
+                        _keyHandler->Release();
+                    }
+                    if (keyHandler != nullptr) {
+                        keyHandler->AddRef();
+                    }
+                    _keyHandler = keyHandler;
+                    _adminLock.Unlock();
+                    return (Core::ERROR_NONE);
+                }
+                void Dispatch() override
+                {
+                    _adminLock.Lock();
+                    if (_keyHandler != nullptr) {
+                        _keyHandler->KeyEvent(_pressed, _scancode, _map);
+                    }
+                    _adminLock.Unlock();
+                }
+
+            private:
+                bool _pressed;
+                uint16_t _scancode;
+                string _map;
+                IKeyHandler* _keyHandler;
+                Core::CriticalSection _adminLock;
+            };
+
             static Core::NodeId Designator(const uint8_t type, const string& address)
             {
                 return(Bluetooth::Address(address.c_str()).NodeId(static_cast<Bluetooth::Address::type>(type), GATTSocket::LE_ATT_CID, 0));
@@ -593,19 +656,21 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             GATTRemote() = delete;
             GATTRemote(const GATTRemote&) = delete;
             GATTRemote& operator=(const GATTRemote&) = delete;
+
             GATTRemote(IBluetooth::IDevice* device)
                 : Bluetooth::GATTSocket(
                       Designator(device->Type(), device->LocalId()),
                       Designator(device->Type(), device->RemoteId()),
                       64)
                 , _adminLock()
-                , _state(UNKNOWN)
+//                , _state(UNKNOWN)
                 , _profile(true)
-                , _inputHandler(nullptr)
                 , _command()
                 , _device(device)
                 , _handles()
                 , _sink(this)
+                , _currentKey(0)
+                , _activity(Core::ProxyType<Activity>::Create())
             {
                 _device->AddRef();
 
@@ -630,10 +695,44 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                 }
             }
 
+            BEGIN_INTERFACE_MAP(BluetoothRemoteControl)
+            INTERFACE_ENTRY(Exchange::IKeyProducer)
+            END_INTERFACE_MAP
+
         public:
+            // IKeyProducer methods
+            const TCHAR* Name() const override
+            {
+                return (_device->Name().c_str());
+            }
+            bool Pair() override
+            {
+                return (Connect() == Core::ERROR_NONE);
+            }
+            bool Unpair(string bondingId) override
+            {
+                return (Disconnect() == Core::ERROR_NONE);
+            }
+            uint32_t Callback(IKeyHandler* callback) override
+            {
+                return (_activity->KeyHandler(callback));
+            }
+            uint32_t Error() const override
+            {
+                return 0;
+            }
+            string MetaData() const override
+            {
+                return {};
+            }
+            void Configure(const string& settings) override
+            {
+            }
+
+/*
             uint32_t Pair()
             {
-                uint32_t result = Core::ERROR_UNAVAILABLE;
+                uint32_t result = false;
 
                 _adminLock.Lock();
 
@@ -659,7 +758,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             }
             uint32_t Unpair()
             {
-                uint32_t result = Core::ERROR_UNAVAILABLE;
+                uint32_t result = false;
 
                 _adminLock.Lock();
 
@@ -683,6 +782,8 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
 
                 return (result);
             }
+*/
+
             uint32_t Connect()
             {
                 TRACE(Flow, (_T("GATT::Connect")));
@@ -710,6 +811,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
 
                 return (result);
             }
+
         private:
             bool Initialize() override
             {
@@ -717,17 +819,31 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             }
             void Notification(const uint8_t dataFrame[], const uint16_t length) override
             {
-                string data;
-                Core::ToHexString(dataFrame, length, data);
-                TRACE(Flow, (_T("Received a notification, %d bytes: %s"), length, data.c_str()));
+                if ((dataFrame[0] == 0x34) && (length >= 4)) {
+                    uint16_t scancode = static_cast<uint16_t>(dataFrame[2]) | (dataFrame[3] << 8);
+                    bool pressed = (scancode != 0);
+
+                    if (pressed == true) {
+                        _currentKey = scancode;
+                    }
+
+                    if (_currentKey != 0) {
+                        TRACE(Flow, (_T("Received a keypress notification: %i (%s)"), _currentKey, (pressed? "pressed" : "released")));
+                        ASSERT(_activity != nullptr);
+                        _activity->KeyEvent(pressed, _currentKey, Name());
+                    }
+                } else {
+                    string data;
+                    Core::ToHexString(dataFrame, length, data);
+                    TRACE(Flow, (_T("Received an unknown notification, %d bytes: %s"), length, data.c_str()));
+                }
             }
             void Operational() override
             {
                 TRACE(Flow, (_T("The received MTU: %d"), MTU()));
 
-                _profile.Discover(CommunicationTimeOut * 10, *this, [&](const uint32_t result) {
+                _profile.Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
                     if (result == Core::ERROR_NONE) {
-
                         if (_profile[Bluetooth::UUID(HID_UUID)] == nullptr) {
                             TRACE(Flow, (_T("The given bluetooth device does not support a HID service!!")));
                         }
@@ -744,7 +860,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
                         }
                     }
                     else {
-                        _state = UNKNOWN;
+//                        _state = UNKNOWN;
                         TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
                     }
                 });
@@ -809,13 +925,14 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
 
         private:
             Core::CriticalSection _adminLock;
-            state _state;
+//            state _state;
             Bluetooth::Profile _profile;
-            PluginHost::VirtualInput* _inputHandler;
             Command _command;
             IBluetooth::IDevice* _device;
             std::list<uint16_t> _handles;
             Core::Sink<Sink> _sink;
+            uint16_t _currentKey;
+            const Core::ProxyType<Activity> _activity;
         };
 
         class Config : public Core::JSON::Container {
@@ -1643,7 +1760,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             , _btAddress()
             , _devices()
             , _observers()
-            , _gattRemotes()
+            , _gattRemote(nullptr)
             , _linkKeys()
             , _longTermKeys()
             , _identityKeys()
@@ -1652,7 +1769,9 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
             , _longTermKeysFile()
             , _identityKeysFile()
             , _signatureKeysFile()
+            , _inputHandler(PluginHost::InputHandler::Handler())
         {
+            ASSERT(_inputHandler != nullptr);
         }
         virtual ~BluetoothControl()
         {
@@ -1663,6 +1782,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(Exchange::IBluetooth)
+        INTERFACE_ENTRY(Exchange::IKeyHandler)
         END_INTERFACE_MAP
 
     public:
@@ -1702,8 +1822,19 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         virtual IBluetooth::IDevice* Device(const string&) override;
         virtual IBluetooth::IDevice::IIterator* Devices() override;
 
+        // IKeyHandler methods
+        uint32_t KeyEvent(const bool pressed, const uint32_t code, const string& mapName) override
+        {
+            return (_inputHandler->KeyEvent(pressed, code, mapName));
+        }
+        virtual Exchange::IKeyProducer* Producer(const string& name) override
+        {
+            return (_gattRemote);
+        }
+
+    public:
         inline static ControlSocket& Connector() {
-            return(_application);
+            return (_application);
         }
 
         void StoreKey(const Bluetooth::LinkKey& key) {
@@ -1753,7 +1884,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         Bluetooth::Address _btAddress;
         std::list<DeviceImpl*> _devices;
         std::list<IBluetooth::INotification*> _observers;
-        std::list<GATTRemote> _gattRemotes;
+        GATTRemote* _gattRemote;
         Config _config;
         static ControlSocket _application;
         string _persistentStoragePath;
@@ -1765,6 +1896,7 @@ class BluetoothControl : public PluginHost::IPlugin, public PluginHost::IWeb, pu
         Core::File _longTermKeysFile;
         Core::File _identityKeysFile;
         Core::File _signatureKeysFile;
+        PluginHost::VirtualInput* _inputHandler;
     };
 
 } //namespace Plugin
