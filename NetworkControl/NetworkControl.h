@@ -290,12 +290,20 @@ namespace Plugin {
                 , _retries(0)
                 , _client(interfaceName, std::bind(&DHCPEngine::NewOffer, this, std::placeholders::_1), 
                           std::bind(&DHCPEngine::RequestResult, this, std::placeholders::_1, std::placeholders::_2))
-                , leaseFile(persistentStoragePath + _client.Interface() + ".json")
+                , _leaseFilePath(persistentStoragePath + _client.Interface() + ".json")
             {
-
                 // Make sure that lease file exists
-                if ((persistentStoragePath.empty() == false) && (leaseFile.Exists() == false)) {
-                    leaseFile.Create();
+                if (persistentStoragePath.empty() == false) {
+                    Core::File leaseFile(_leaseFilePath);
+
+                    if (leaseFile.Exists() == false) {
+                        if (leaseFile.Create() == true) {
+                            leaseFile.Close();
+                        } else {
+                            TRACE(Trace::Warning, ("Failed to create persistent dhcp lease file for %s", interfaceName.c_str()))
+                        }
+                    }
+                    
                 }
             }
             ~DHCPEngine()
@@ -440,7 +448,7 @@ namespace Plugin {
             NetworkControl& _parent;
             uint8_t _retries;
             DHCPClientImplementation _client;
-            Core::File leaseFile;
+            string _leaseFilePath;
         };
 
     private:

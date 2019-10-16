@@ -429,7 +429,9 @@ namespace Plugin
     void NetworkControl::DHCPEngine::SaveLeases() 
     {
         if (_parent._persistentStoragePath.empty() == false) {
-            if (leaseFile.Open(false) == true) {
+            Core::File leaseFile(_leaseFilePath);
+
+            if (leaseFile.Create() == true) {
                 Core::JSON::ArrayType<DHCPClientImplementation::Offer::JSON> leases;
                 DHCPClientImplementation::Iterator offersIterator = _client.Offers(true);
 
@@ -438,12 +440,12 @@ namespace Plugin
                 }
 
                 if (leases.ToFile(leaseFile) == false) {
-                    TRACE_L1("Error while trying to save dhcp leases to file!");
+                    TRACE(Trace::Warning, ("Error occured while trying to save dhcp leases to file!"));
                 } 
 
                 leaseFile.Close();
             } else {
-                TRACE_L1("Failed to open leases file %s\n for saving", leaseFile.Name().c_str());
+                TRACE(Trace::Warning, ("Failed to open leases file %s\n for saving", leaseFile.Name().c_str()));
             }
         }
     }
@@ -455,6 +457,8 @@ namespace Plugin
     void NetworkControl::DHCPEngine::LoadLeases() 
     {
         if (_parent._persistentStoragePath.empty() == false) {
+
+            Core::File leaseFile(_leaseFilePath);
 
             if (leaseFile.Open(true) == true) {
 
@@ -469,7 +473,7 @@ namespace Plugin
 
                 leaseFile.Close();
             } else {
-                TRACE_L1("Failed to open leases file %s\n for saving", leaseFile.Name().c_str());
+                TRACE(Trace::Warning, ("Failed to open leases file %s\n for saving", leaseFile.Name().c_str()));
             }
         }
     }
