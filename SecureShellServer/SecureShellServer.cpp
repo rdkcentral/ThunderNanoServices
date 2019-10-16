@@ -113,12 +113,14 @@ namespace Plugin {
 
     Exchange::ISecureShellServer::IClient::IIterator* SecureShellServer::SessionsInfo()
     {
-            std::list<ClientImpl*> local_clients;
-	    Exchange::ISecureShellServer::IClient::IIterator* iter=nullptr;
+        std::list<ClientImpl*> local_clients;
+	Exchange::ISecureShellServer::IClient::IIterator* iter=nullptr;
 
-            int32_t count = get_active_sessions_count();
-            TRACE(Trace::Information, (_T("Get details of (%d)active SSH client sessions managed by Dropbear service"), count));
+        int32_t count = get_active_sessions_count();
+        TRACE(Trace::Information, (_T("Get details of (%d)active SSH client sessions managed by Dropbear service"), count));
 
+	if (count>0)
+	{
             struct client_info *info = static_cast<struct client_info*>(::malloc(sizeof(struct client_info) * count));
 
             get_active_sessions_info(info, count);
@@ -137,35 +139,39 @@ namespace Plugin {
                 iter = Core::Service<ClientImpl::IteratorImpl>::Create<ISecureShellServer::IClient::IIterator>(local_clients);
                 TRACE(Trace::Information, (_T("Currently total %d sessions are active"), iter->Count()));
 	    }
+            local_clients.clear(); // Clear all elements before we re-populate it with new elements
+	}
 
-           local_clients.clear(); // Clear all elements before we re-populate it with new elements
-
-	   return iter;
+	return iter;
      }
 
     uint32_t SecureShellServer::GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& sessioninfo)
     {
         uint32_t result = Core::ERROR_NONE;
 	Exchange::ISecureShellServer::IClient::IIterator* iter = SessionsInfo();
-	uint32_t index = 0;
 
-	iter->Reset();
-        while(iter->Next())
-        {
-             TRACE(Trace::Information, (_T("Count: %d index:%d pid: %s IP: %s Timestamp: %s"),
+	if (iter != nullptr)
+	{
+	    uint32_t index = 0;
+
+	    iter->Reset();
+            while(iter->Next())
+            {
+                TRACE(Trace::Information, (_T("Count: %d index:%d pid: %s IP: %s Timestamp: %s"),
                                          iter->Count(), index++, iter->Current()->RemoteId().c_str(), iter->Current()->IpAddress().c_str(),
 					 iter->Current()->TimeStamp().c_str()));
 
-              JsonData::SecureShellServer::SessioninfoResultData newElement;
+                JsonData::SecureShellServer::SessioninfoResultData newElement;
 
-              newElement.IpAddress = iter->Current()->IpAddress();
-              newElement.Pid = iter->Current()->RemoteId();
-              newElement.TimeStamp = iter->Current()->TimeStamp();
+                newElement.IpAddress = iter->Current()->IpAddress();
+                newElement.Pid = iter->Current()->RemoteId();
+                newElement.TimeStamp = iter->Current()->TimeStamp();
 
-              JsonData::SecureShellServer::SessioninfoResultData& element(sessioninfo.Add(newElement));
-         }
-	 iter->Release();
-         return result;
+                JsonData::SecureShellServer::SessioninfoResultData& element(sessioninfo.Add(newElement));
+            }
+	    iter->Release();
+	}
+        return result;
     }
 
     uint32_t SecureShellServer::GetSessionsCount(Exchange::ISecureShellServer::IClient::IIterator* iter)
@@ -189,7 +195,7 @@ namespace Plugin {
 
     /*virtual*/ Exchange::ISecureShellServer::IClient::IIterator* SecureShellServer::Clients()
     {
-	    return SecureShellServer::SessionsInfo();
+        return SecureShellServer::SessionsInfo();
     }
 
 } // namespace Plugin

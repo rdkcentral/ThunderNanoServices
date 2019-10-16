@@ -36,11 +36,14 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
 
 	Exchange::ISecureShellServer::IClient::IIterator* iter = SessionsInfo();
-        response = GetSessionsCount(iter);
+	if (iter != nullptr)
+	{
+            response = GetSessionsCount(iter);
 
-        iter->Reset();
-	iter->Next();
-        iter->Release();
+            iter->Reset();
+            iter->Next();
+            iter->Release();
+	}
 
         return result;
     }
