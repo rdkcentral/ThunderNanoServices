@@ -17,27 +17,22 @@ namespace Plugin {
     {
         Register<StopParamsData,void>(_T("stop"), &Containers::endpoint_stop, this);
         Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("containers"), &Containers::get_containers, nullptr, this);
-        Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("networks"), &Containers::get_networks, nullptr, this);
-        Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("ip"), &Containers::get_ip, nullptr, this);
-        Property<Core::JSON::String>(_T("memory"), &Containers::get_memory, nullptr, this);
+        Property<Core::JSON::ArrayType<NetworksData>>(_T("networks"), &Containers::get_networks, nullptr, this);
+        Property<MemoryData>(_T("memory"), &Containers::get_memory, nullptr, this);
         Property<Core::JSON::EnumType<StatusType>>(_T("status"), &Containers::get_status, nullptr, this);
-        Property<Core::JSON::String>(_T("cpu"), &Containers::get_cpu, nullptr, this);
-        Property<Core::JSON::String>(_T("log"), &Containers::get_log, nullptr, this);
-        Property<Core::JSON::String>(_T("config"), &Containers::get_config, nullptr, this);
-
+        Property<CpuData>(_T("cpu"), &Containers::get_cpu, nullptr, this);
+        Property<Core::JSON::String>(_T("logpath"), &Containers::get_logpath, nullptr, this);
+        Property<Core::JSON::String>(_T("configpath"), &Containers::get_configpath, nullptr, this);
     }
 
     void Containers::UnregisterAll()
     {
         Unregister(_T("stop"));
-        Unregister(_T("config"));
-        Unregister(_T("log"));
+        Unregister(_T("configpath"));
+        Unregister(_T("logpath"));
         Unregister(_T("cpu"));
         Unregister(_T("status"));
         Unregister(_T("memory"));
-        Unregister(_T("ip"));
-        Unregister(_T("networks"));
-        Unregister(_T("containers"));
         Unregister(_T("networks"));
         Unregister(_T("containers"));
     }
@@ -55,10 +50,10 @@ namespace Plugin {
         const string& name = params.Name.Value();
 
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto found = administrator.Find(name); 
+        auto container = administrator.Find(name); 
 
-        if (found != nullptr) {
-            found->Stop(0);
+        if (container != nullptr) {
+            container->Stop(0);
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
@@ -84,27 +79,31 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
-    // Property: networks - List of networks in the container
+    // Property: networks - Networks information
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNAVAILABLE: Container not found
-    uint32_t Containers::get_networks(const string& index, Core::JSON::ArrayType<Core::JSON::String>& response) const
+    uint32_t Containers::get_networks(const string& index, Core::JSON::ArrayType<NetworksData>& response) const
     {
         uint32_t result = Core::ERROR_NONE;
 
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto found = administrator.Find(index); 
+        auto container = administrator.Find(index); 
 
-        if (found != nullptr) {
-            std::vector<string> networks;
-            found->Networks(networks);
+        if (container != nullptr) {
+            auto networkIterator = container->NetworkInterfaces();
 
-            // Quite suboptimal (creating list from list, but should suffice for testing)
-            for (auto network : networks) {
-                Core::JSON::String networkName;
-                networkName = network;
-                response.Add(networkName);
-            }
+            while (networkIterator.Next() == true) {
+                NetworksData networkData;
+                networkData.Interface = networkIterator.Current(); 
+                const std::vector<Core::NodeId> ips = container->IPs(networkIterator.Current());                               
+
+                for (auto ip : ips) {
+                    Core::JSON::String ipJSON;
+                    ipJSON = ip.HostName();
+                    networkData.Ips.Add(ipJSON);
+                }
+            } 
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
@@ -112,39 +111,11 @@ namespace Plugin {
         return result;
     }
 
-    // Property: ip - List of all ip addresses of the container
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_UNAVAILABLE: Container not found
-    uint32_t Containers::get_ip(const string& index, Core::JSON::ArrayType<Core::JSON::String>& response) const
-    {
-        uint32_t result = Core::ERROR_NONE;
-
-        auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto found = administrator.Find(index); 
-
-        if (found != nullptr) {
-            std::vector<Core::NodeId> ips;
-            found->IPs(ips);
-
-            // Quite suboptimal (creating list from list, but should suffice for testing)
-            for (auto ip : ips) {
-                Core::JSON::String ipStr;
-                ipStr = ip.HostAddress();
-                response.Add(ipStr);
-            }
-        } else {
-            result = Core::ERROR_UNAVAILABLE;
-        }
-        
-        return result;  
-    }
-
     // Property: memory - Operating memory allocated to the container
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNAVAILABLE: Container not found
-    uint32_t Containers::get_memory(const string& index, Core::JSON::String& response) const
+    uint32_t Containers::get_memory(const string& index, MemoryData& response) const
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -152,8 +123,11 @@ namespace Plugin {
         auto found = administrator.Find(index); 
 
         if (found != nullptr) {
-            response.SetQuoted(false);
-            response = found->Memory();
+            auto memoryInfo = found->Memory();
+            
+            response.Allocated = memoryInfo.allocated;
+            response.Resident = memoryInfo.resident;
+            response.Shared = memoryInfo.shared;
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
@@ -170,10 +144,10 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
 
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto found = administrator.Find(index); 
+        auto container = administrator.Find(index); 
 
-        if (found != nullptr) {
-            switch(found->ContainerState()) {
+        if (container != nullptr) {
+            switch(container->ContainerState()) {
                 case ProcessContainers::IContainerAdministrator::IContainer::ABORTING:
                     response = StatusType::ABORTING;
                     break;
@@ -201,16 +175,24 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNAVAILABLE: Container not found
-    uint32_t Containers::get_cpu(const string& index, Core::JSON::String& response) const
+    uint32_t Containers::get_cpu(const string& index, CpuData& response) const
     {
         uint32_t result = Core::ERROR_NONE;
 
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto found = administrator.Find(index); 
+        auto container = administrator.Find(index); 
 
-        if (found != nullptr) {
-            response.SetQuoted(false);
-            response = found->Cpu();
+        if (container != nullptr) {
+            auto cpuInfo = container->Cpu();
+            
+            response.Total = cpuInfo.total;
+            
+            for (auto thread : cpuInfo.threads) {
+                Core::JSON::DecUInt64 threadTime;
+                threadTime = thread;
+
+                response.Threads.Add(threadTime);
+            }
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
@@ -218,19 +200,19 @@ namespace Plugin {
         return result;
     }
 
-        // Property: log - Containers log
+    // Property: logpath - Path to logging configuration
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNAVAILABLE: Container not found
-    uint32_t Containers::get_log(const string& index, Core::JSON::String& response) const
+    uint32_t Containers::get_logpath(const string& index, Core::JSON::String& response) const
     {
         uint32_t result = Core::ERROR_NONE;
 
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto found = administrator.Find(index); 
+        auto container = administrator.Find(index); 
 
-        if (found != nullptr) {
-            response = found->Log();
+        if (container != nullptr) {
+            response = container->LogPath();
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
@@ -238,19 +220,19 @@ namespace Plugin {
         return result;
     }
 
-    // Property: config - Container's configuration
+    // Property: configpath - Location of containers configuration
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNAVAILABLE: Container not found
-    uint32_t Containers::get_config(const string& index, Core::JSON::String& response) const
+    uint32_t Containers::get_configpath(const string& index, Core::JSON::String& response) const
     {
         uint32_t result = Core::ERROR_NONE;
 
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto found = administrator.Find(index); 
+        auto container = administrator.Find(index); 
 
-        if (found != nullptr) {
-            response = found->Configuration();
+        if (container != nullptr) {
+            response = container->ConfigPath();
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
