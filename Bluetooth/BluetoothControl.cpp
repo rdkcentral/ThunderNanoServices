@@ -319,9 +319,13 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Device not found.");
                     } else if (pair == true) {
-                        if (device->Pair(IBluetooth::IDevice::DISPLAY_ONLY) == Core::ERROR_NONE) {
+                        uint32_t res = device->Pair(IBluetooth::IDevice::DISPLAY_ONLY);
+                        if (res == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Paired device.");
+                        } else if (res == Core::ERROR_ALREADY_CONNECTED) {
+                            result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                            result->Message = _T("Already paired.");
                         } else {
                             result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
                             result->Message = _T("Unable to Pair device.");
@@ -377,7 +381,7 @@ namespace Plugin {
                         result->Message = _T("Unknown device.");
                     } else {
                         if (_gattRemote == nullptr) {
-                            _gattRemote = Core::Service<GATTRemote>::Create<GATTRemote>(device);
+                            _gattRemote = Core::Service<GATTRemote>::Create<GATTRemote>(this, device);
                             if (_gattRemote != nullptr) {
                                 _gattRemote->Callback(this);
                                 result->ErrorCode = Web::STATUS_OK;
@@ -423,9 +427,13 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Unknown device.");
                     } else if (pair == true) {
-                        if (device->Unpair() == Core::ERROR_NONE) {
+                        uint32_t res = device->Unpair();
+                        if (res == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Unpaired device.");
+                        } else if (res == Core::ERROR_ALREADY_RELEASED) {
+                            result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                            result->Message = _T("Device is not paired.");
                         } else {
                             result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
                             result->Message = _T("Unable to Unpair device.");

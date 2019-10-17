@@ -657,7 +657,7 @@ class BluetoothControl : public PluginHost::IPlugin
             GATTRemote(const GATTRemote&) = delete;
             GATTRemote& operator=(const GATTRemote&) = delete;
 
-            GATTRemote(IBluetooth::IDevice* device)
+            GATTRemote(BluetoothControl* parent, IBluetooth::IDevice* device)
                 : Bluetooth::GATTSocket(
                       Designator(device->Type(), device->LocalId()),
                       Designator(device->Type(), device->RemoteId()),
@@ -671,8 +671,12 @@ class BluetoothControl : public PluginHost::IPlugin
                 , _sink(this)
                 , _currentKey(0)
                 , _activity(Core::ProxyType<Activity>::Create())
+                , _parent(parent)
             {
+                ASSERT(_parent != nullptr);
+
                 _device->AddRef();
+                _name = _device->Name();
 
                 if (_device->Callback(&_sink) != Core::ERROR_NONE) {
                     TRACE(Trace::Fatal, (_T("The device is already in use. Only 1 callback allowed")));
@@ -703,7 +707,7 @@ class BluetoothControl : public PluginHost::IPlugin
             // IKeyProducer methods
             const TCHAR* Name() const override
             {
-                return (_device->Name().c_str());
+                return (_name.c_str());
             }
             bool Pair() override
             {
@@ -786,27 +790,29 @@ class BluetoothControl : public PluginHost::IPlugin
 
             uint32_t Connect()
             {
-                TRACE(Flow, (_T("GATT::Connect")));
                 uint32_t result = Core::ERROR_NONE;
 
                 if ((IsOpen() == false) && (IsConnecting() == false)) {
-                    TRACE(Flow, (_T("GATTSocket::Open")));
+                    TRACE(Trace::Information, (_T("Connecting GATT socket %s"), _device->RemoteId().c_str()));
                     result = GATTSocket::Open(5000);
                     if ((result != Core::ERROR_NONE) && (result != Core::ERROR_INPROGRESS)) {
                         TRACE(Flow, (_T("Opening GATT socket [%s], failed: %i"), _device->RemoteId().c_str(), result));
                     }
+                } else {
+                    TRACE(Flow, (_T("GATT socket already open")));
                 }
 
                 return result;
             }
             uint32_t Disconnect()
             {
-                TRACE(Flow, (_T("GATT::Disconnect")));
                 uint32_t result = Core::ERROR_NONE;
 
                 if (IsOpen() == true) {
-                    TRACE(Flow, (_T("GATTSocket::Close")));
+                    TRACE(Trace::Information, (_T("Disconnecting GATT socket %s"), _device->RemoteId().c_str()));
                     result = GATTSocket::Close(Core::infinite);
+                } else {
+                    TRACE(Flow, (_T("GATT socket already closed")));
                 }
 
                 return (result);
@@ -830,7 +836,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (_currentKey != 0) {
                         TRACE(Flow, (_T("Received a keypress notification: %i (%s)"), _currentKey, (pressed? "pressed" : "released")));
                         ASSERT(_activity != nullptr);
-                        _activity->KeyEvent(pressed, _currentKey, Name());
+                        _activity->KeyEvent(pressed, _currentKey, _name);
                     }
                 } else {
                     string data;
@@ -856,6 +862,8 @@ class BluetoothControl : public PluginHost::IPlugin
                                 Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
                                     EnableEvents(cmd);
                                 });
+
+                                _parent->RemoteControlConnected(*this);
                             }
                         }
                     }
@@ -911,9 +919,18 @@ class BluetoothControl : public PluginHost::IPlugin
                 _adminLock.Lock();
                 if (_device != nullptr) {
                     if (_device->IsConnected() == true) {
-                        Connect();
+                        if ((IsOpen() == false) && (IsConnecting() == false)) {
+                            Connect();
+                        } else {
+                            TRACE(Trace::Information, (_T("Connected GATT socket %s"), _device->RemoteId().c_str()));
+                        }
                     } else if (_device->IsValid() == true) {
-                        Disconnect();
+                        if (IsOpen() == true) {
+                            Disconnect();
+                        } else {
+                            TRACE(Trace::Information, (_T("Disconnected GATT socket %s"), _device->RemoteId().c_str()));
+                            _parent->RemoteControlDisconnected(*this);
+                        }
                     } else {
                         TRACE(Flow, (_T("Releasing device"), _handles.front()));
                         _device->Release();
@@ -933,6 +950,8 @@ class BluetoothControl : public PluginHost::IPlugin
             Core::Sink<Sink> _sink;
             uint16_t _currentKey;
             const Core::ProxyType<Activity> _activity;
+            BluetoothControl* _parent;
+            string _name;
         };
 
         class Config : public Core::JSON::Container {
@@ -1200,6 +1219,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 , _updateJob(Core::ProxyType<UpdateJob>::Create(this))
             {
                 ::memset(_features, 0xFF, sizeof(_features));
+
             }
             ~DeviceImpl()
             {
@@ -1232,12 +1252,15 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 if (SetState(PAIRING) == Core::ERROR_NONE) {
                     result = BluetoothControl::Connector().Pair(_remote, static_cast<Bluetooth::Address::type>(Type()), static_cast<Bluetooth::ManagementSocket::capabilities>(caps));
-                    if (result != Core::ERROR_NONE) {
+                    if (result == Core::ERROR_ALREADY_CONNECTED) {
+                        TRACE(Trace::Information, (_T("Already paired")));
+                        Paired(true);
+                        Bonded(true);
+                    } else if (result != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Failed to pair [%d]"), result));
                         ClearState(PAIRING);
                     }
                 }
-
                 return (result);
             }
             uint32_t Unpair() override
@@ -1249,11 +1272,12 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (result == Core::ERROR_NONE) {
                         Paired(false);
                         Bonded(false);
+                    } else if (result == Core::ERROR_ALREADY_RELEASED) {
+                        TRACE(Trace::Information, (_T("Not paired")));
                     }
                     else {
                         TRACE(Trace::Error, (_T("Failed to unpair [%d]"), result));
                     }
-                    ClearState(UNPAIRING);
                 }
                 return (result);
             }
@@ -1261,6 +1285,7 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 TRACE(DeviceFlow, (_T("The device [%s] is %spaired"), RemoteId().c_str(), paired? "" : "un"));
                 ClearState(PAIRING);
+                ClearState(UNPAIRING);
                 if (paired == true) {
                     SetState(PAIRED);
                 } else {
@@ -1830,6 +1855,22 @@ class BluetoothControl : public PluginHost::IPlugin
         virtual Exchange::IKeyProducer* Producer(const string& name) override
         {
             return (_gattRemote);
+        }
+        void RemoteControlConnected(GATTRemote& remote)
+        {
+            TRACE(Trace::Information, (_T("Bluetooth LE remote control unit \"%s\" connected"), remote.Name()));
+            string path(_service->DataPath() + string(remote.Name()) + "-remote.json");
+            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(remote.Name()));
+            TRACE(Trace::Information, (_T("Loading keymap file %s"), path.c_str()));
+            if (map.Load(path) != Core::ERROR_NONE) {
+                TRACE(Trace::Error, (_T("Failed to load keymap file %s; attempting pass-through"),path.c_str()));
+                map.PassThrough(true);
+            }
+        }
+        void RemoteControlDisconnected(GATTRemote& remote)
+        {
+            TRACE(Trace::Information, (_T("Bluetooth LE remote control unit \"%s\" disconnected"), remote.Name()));
+            _inputHandler->ClearTable(remote.Name());
         }
 
     public:
