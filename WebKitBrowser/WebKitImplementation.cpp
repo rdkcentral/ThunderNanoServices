@@ -228,8 +228,9 @@ namespace Plugin {
 
             std::vector<string> stringVector;
 
+            stringVector.reserve(arraySize);
             for (unsigned int index = 0; index < arraySize; ++index) {
-                stringVector.push_back(WKStringToString(static_cast<WKStringRef>(WKArrayGetItemAtIndex(array, index))));
+                stringVector.emplace_back(WKStringToString(static_cast<WKStringRef>(WKArrayGetItemAtIndex(array, index))));
             }
 
             return stringVector;

@@ -4,8 +4,8 @@ namespace WPEFramework {
 
 namespace Tags {
 
-const char* Config = "Config.";
-const char* Notification = "Notification";
+const char* const Config = "Config.";
+const char* const Notification = "Notification";
 
 } } ;
 
