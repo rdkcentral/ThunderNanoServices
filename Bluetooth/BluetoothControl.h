@@ -862,7 +862,6 @@ class BluetoothControl : public PluginHost::IPlugin
                                 Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
                                     EnableEvents(cmd);
                                 });
-
                                 _parent->RemoteControlConnected(*this);
                             }
                         }
@@ -875,22 +874,27 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             void LoadReportHandles()
             {
-                Bluetooth::Profile::Iterator index = _profile.Services();
-                while (index.Next() == true) {
-                    bool HIDService = (index.Current() == Bluetooth::UUID(HID_UUID));
-                    TRACE(Flow, (_T("[0x%04X] Service: [0x%04X]         %s"), index.Current().Handle(), index.Current().Max(), index.Current().Name().c_str()));
-                    Bluetooth::Profile::Service::Iterator loop = index.Current().Characteristics();
-                    while (loop.Next() == true) {
-                        const Bluetooth::Profile::Service::Characteristic& entry(loop.Current());
-                        TRACE(Flow, (_T("[0x%04X]    Characteristic [0x%02X]: %s [%d]"), entry.Handle(), entry.Rights(), entry.Name().c_str(), entry.Error()));
+                Bluetooth::Profile::Iterator serviceIdx = _profile.Services();
+                while (serviceIdx.Next() == true) {
+                    const Bluetooth::Profile::Service& service = serviceIdx.Current();
+                    const bool isHidService = (service.Type() == Bluetooth::Profile::Service::HumanInterfaceDevice);
+                    TRACE(Flow, (_T("[0x%04X] Service: [0x%04X]         %s"), service.Handle(), service.Max(), service.Name().c_str()));
 
-                        if ((HIDService == true) && (entry == Bluetooth::UUID(REPORT_UUID))) {
-                            _handles.push_back(entry.Handle() + 1);
-                        }
+                    Bluetooth::Profile::Service::Iterator characteristicIdx = service.Characteristics();
+                    while (characteristicIdx.Next() == true) {
+                        const Bluetooth::Profile::Service::Characteristic& characteristic(characteristicIdx.Current());
+                        const bool isHidReportCharacteristic = ((isHidService == true) && (characteristic.Type() == Bluetooth::Profile::Service::Characteristic::Report));
+                        TRACE(Flow, (_T("[0x%04X]    Characteristic [0x%02X]: %s [%d]"), characteristic.Handle(), characteristic.Rights(), characteristic.Name().c_str(), characteristic.Error()));
 
-                        Bluetooth::Profile::Service::Characteristic::Iterator loop2 = loop.Current().Descriptors();
-                        while (loop2.Next() == true) {
-                            TRACE(Flow, (_T("[0x%04X]       Descriptor:         %s"), loop2.Current().Handle(), loop2.Current().Name().c_str()));
+                        Bluetooth::Profile::Service::Characteristic::Iterator descriptorIdx = characteristic.Descriptors();
+                        while (descriptorIdx.Next() == true) {
+                            const Bluetooth::Profile::Service::Characteristic::Descriptor& descriptor(descriptorIdx.Current());
+                            const bool isHidReportCharacteristicConfig = ((isHidReportCharacteristic == true) && (descriptor.Type() == Bluetooth::Profile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration));
+                            TRACE(Flow, (_T("[0x%04X]       Descriptor:         %s"), descriptor.Handle(), descriptor.Name().c_str()));
+
+                            if (isHidReportCharacteristicConfig == true) {
+                                _handles.push_back(descriptor.Handle());
+                            }
                         }
                     }
                 }
