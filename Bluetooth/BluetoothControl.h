@@ -518,7 +518,6 @@ class BluetoothControl : public PluginHost::IPlugin
             // UUID
             static constexpr uint16_t HID_UUID         = 0x1812;
             static constexpr uint16_t REPORT_UUID      = 0x2a4d;
-
 /*
             enum state : uint8_t {
                 UNKNOWN     = 0x00,
@@ -862,6 +861,7 @@ class BluetoothControl : public PluginHost::IPlugin
                                 Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
                                     EnableEvents(cmd);
                                 });
+
                                 _parent->RemoteControlConnected(*this);
                             }
                         }
@@ -874,25 +874,32 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             void LoadReportHandles()
             {
+                const Bluetooth::UUID AUDIO_SERVICE_UUID(_T("f0e0d000-a000-b000-c000-987654321000"));
+                const Bluetooth::UUID AUDIO_COMMAND_UUID(_T("f0e0d001-a000-b000-c000-987654321000"));
+                const Bluetooth::UUID AUDIO_DATA_UUID(_T("f0e0d002-a000-b000-c000-987654321000"));
+
                 Bluetooth::Profile::Iterator serviceIdx = _profile.Services();
                 while (serviceIdx.Next() == true) {
                     const Bluetooth::Profile::Service& service = serviceIdx.Current();
                     const bool isHidService = (service.Type() == Bluetooth::Profile::Service::HumanInterfaceDevice);
+                    const bool isAudioService = (service.Type() == AUDIO_SERVICE_UUID);
                     TRACE(Flow, (_T("[0x%04X] Service: [0x%04X]         %s"), service.Handle(), service.Max(), service.Name().c_str()));
 
                     Bluetooth::Profile::Service::Iterator characteristicIdx = service.Characteristics();
                     while (characteristicIdx.Next() == true) {
                         const Bluetooth::Profile::Service::Characteristic& characteristic(characteristicIdx.Current());
                         const bool isHidReportCharacteristic = ((isHidService == true) && (characteristic.Type() == Bluetooth::Profile::Service::Characteristic::Report));
+                        const bool isAudioCharacteristic = ((isAudioService == true) && ((characteristic.Type() == AUDIO_COMMAND_UUID) || (characteristic.Type() == AUDIO_DATA_UUID)));
                         TRACE(Flow, (_T("[0x%04X]    Characteristic [0x%02X]: %s [%d]"), characteristic.Handle(), characteristic.Rights(), characteristic.Name().c_str(), characteristic.Error()));
 
                         Bluetooth::Profile::Service::Characteristic::Iterator descriptorIdx = characteristic.Descriptors();
                         while (descriptorIdx.Next() == true) {
                             const Bluetooth::Profile::Service::Characteristic::Descriptor& descriptor(descriptorIdx.Current());
                             const bool isHidReportCharacteristicConfig = ((isHidReportCharacteristic == true) && (descriptor.Type() == Bluetooth::Profile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration));
+                            const bool isAudioCharacteristicConfig = ((isAudioCharacteristic == true) && (descriptor.Type() == Bluetooth::Profile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration));
                             TRACE(Flow, (_T("[0x%04X]       Descriptor:         %s"), descriptor.Handle(), descriptor.Name().c_str()));
 
-                            if (isHidReportCharacteristicConfig == true) {
+                            if ((isHidReportCharacteristicConfig == true) || (isAudioCharacteristicConfig == true)) {
                                 _handles.push_back(descriptor.Handle());
                             }
                         }
