@@ -1,0 +1,9 @@
+{
+ "locator":"libWPEFrameworkDropbearServer.so",
+ "classname":"DropbearServer",
+ "precondition":[
+  "Platform,",
+  "Network"
+ ],
+ "autostart":true
+}
