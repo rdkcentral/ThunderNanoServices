@@ -88,8 +88,7 @@ namespace Plugin {
         params.Value = value;
 
         Notify(_T("pinactivity"), params, [&](const string& designator) -> bool {
-            const string designator_id = designator.substr(0, designator.find('.'));
-            return (id == designator_id);
+            return (id == designator);
         });
     }
 

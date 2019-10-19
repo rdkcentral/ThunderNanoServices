@@ -254,8 +254,8 @@ namespace Plugin
     {
         int32_t value(Core::NumberType<int32_t>(index.Current()));
         pin.Set(value);
-        result.ErrorCode = Web::STATUS_BAD_REQUEST;
-        result.Message = "No Pin instance number found";
+        result.ErrorCode = Web::STATUS_OK;
+        result.Message = "Pin <" + Core::NumberType<uint16_t>(pin.Identifier() & 0xFFFF).Text() + "> changed state to: " + string(value != 0 ? _T("SET") : _T("CLEARED"));
         TRACE(IOState, (&pin));
     }
 
@@ -278,11 +278,11 @@ namespace Plugin
                 if (index->second != nullptr) {
                     index->second->Trigger(pin);
                 } else {
-                    _service->Notify(_T("{ \"id\": ") + Core::NumberType<uint16_t>(pin.Identifier() & 0xFFFF).Text() + _T(", \"state\": \"") + (pin.Get() ? _T("High\" }") : _T("Low\" }")));
+                    int32_t value = (pin.Get() ? 1 : 0);
+                    string pinAsText (Core::NumberType<uint16_t>(pin.Identifier() & 0xFFFF).Text());
+                    _service->Notify(_T("{ \"id\": ") + pinAsText + _T(", \"state\": \"") + (value != 0 ? _T("Set\" }") : _T("Clear\" }")));
 
-                    int32_t value = 0;
-                    pin.Get(value);
-                    event_pinactivity(Core::NumberType<uint16_t>(pin.Identifier() & 0xFFFF).Text(), value);
+                    event_pinactivity(pinAsText, value);
                 }
             }
 
