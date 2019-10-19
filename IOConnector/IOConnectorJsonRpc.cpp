@@ -84,7 +84,7 @@ namespace Plugin {
     // Event: pinactivity - Notifies about GPIO pin activity
     void IOConnector::event_pinactivity(const string& id, const int32_t& value)
     {
-        PinactivityParamsData params;
+        ActivityParamsData params;
         params.Value = value;
 
         Notify(_T("activity"), params, [&](const string& designator) -> bool {
