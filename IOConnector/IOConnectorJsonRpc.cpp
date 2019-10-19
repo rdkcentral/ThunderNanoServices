@@ -87,7 +87,7 @@ namespace Plugin {
         PinactivityParamsData params;
         params.Value = value;
 
-        Notify(_T("pinactivity"), params, [&](const string& designator) -> bool {
+        Notify(_T("activity"), params, [&](const string& designator) -> bool {
             return (id == designator);
         });
     }
