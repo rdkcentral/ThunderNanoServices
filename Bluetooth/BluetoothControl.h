@@ -822,10 +822,10 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 return (Security(BT_SECURITY_LOW));
             }
-            void Notification(const uint8_t dataFrame[], const uint16_t length) override
+            void Notification(const uint16_t handle, const uint8_t dataFrame[], const uint16_t length) override
             {
-                if ((dataFrame[0] == 0x34) && (length >= 4)) {
-                    uint16_t scancode = static_cast<uint16_t>(dataFrame[2]) | (dataFrame[3] << 8);
+                if ((handle == 0x34) && (length >= 2)) {
+                    uint16_t scancode = ((dataFrame[1] << 8) | dataFrame[0]);
                     bool pressed = (scancode != 0);
 
                     if (pressed == true) {
@@ -833,14 +833,14 @@ class BluetoothControl : public PluginHost::IPlugin
                     }
 
                     if (_currentKey != 0) {
-                        TRACE(Flow, (_T("Received a keypress notification: %i (%s)"), _currentKey, (pressed? "pressed" : "released")));
+                        TRACE(Flow, (_T("Received a keypress notification: handle=0x%x, code=%i, state=%s"), handle, _currentKey, (pressed? "pressed" : "released")));
                         ASSERT(_activity != nullptr);
                         _activity->KeyEvent(pressed, _currentKey, _name);
                     }
                 } else {
                     string data;
                     Core::ToHexString(dataFrame, length, data);
-                    TRACE(Flow, (_T("Received an unknown notification, %d bytes: %s"), length, data.c_str()));
+                    printf(_T("Received an unknown notification: [handle=0x%x], %d bytes: %s\n"), handle, length, data.c_str());
                 }
             }
             void Operational() override
