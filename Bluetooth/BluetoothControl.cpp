@@ -337,19 +337,6 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
                         result->Message = _T("Unable to connect to device.");
                     }
-                } else if ((index.Current() == _T("Remote") && (index.Next() == true))) {
-                    if (index.Current() == _T("Connect")) {
-                        if ((_gattRemote != nullptr) && (_gattRemote->Connect() == Core::ERROR_NONE)) {
-                            result->ErrorCode = Web::STATUS_OK;
-                            result->Message = _T("Connected remote.");
-                        } else {
-                            result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
-                            result->Message = _T("Unable to connect to remote.");
-                        }
-                    } else {
-                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = _T("Unable to process PUT Remote request.");
-                    }
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
                     result->Message = _T("Unable to process PUT request.");
@@ -453,19 +440,6 @@ namespace Plugin {
                             result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
                             result->Message = _T("Unable to Disconnect device.");
                         }
-                    }
-                } else if ((index.Current() == _T("Remote") && (index.Next() == true))) {
-                    if (index.Current() == _T("Connect")) {
-                        if ((_gattRemote != nullptr) && (_gattRemote->Disconnect() == Core::ERROR_NONE)) {
-                            result->ErrorCode = Web::STATUS_OK;
-                            result->Message = _T("Disconnected remote.");
-                        } else {
-                            result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
-                            result->Message = _T("Unable to disconnect remote.");
-                        }
-                    } else {
-                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = _T("Unable to process PUT Remote request.");
                     }
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;

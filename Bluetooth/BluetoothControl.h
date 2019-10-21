@@ -517,15 +517,6 @@ class BluetoothControl : public PluginHost::IPlugin
         private:
             // UUID
             static constexpr uint16_t HID_UUID         = 0x1812;
-            static constexpr uint16_t REPORT_UUID      = 0x2a4d;
-/*
-            enum state : uint8_t {
-                UNKNOWN     = 0x00,
-                PAIRING     = 0x01,
-                UNPAIRING   = 0x02,
-                OPERATIONAL = 0x04
-            };
-*/
 
             class Flow {
             public:
@@ -662,7 +653,6 @@ class BluetoothControl : public PluginHost::IPlugin
                       Designator(device->Type(), device->RemoteId()),
                       64)
                 , _adminLock()
-//                , _state(UNKNOWN)
                 , _profile(true)
                 , _command()
                 , _device(device)
@@ -710,11 +700,11 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             bool Pair() override
             {
-                return (Connect() == Core::ERROR_NONE);
+                return (false);
             }
             bool Unpair(string bondingId) override
             {
-                return (Disconnect() == Core::ERROR_NONE);
+                return (false);
             }
             uint32_t Callback(IKeyHandler* callback) override
             {
@@ -730,91 +720,6 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             void Configure(const string& settings) override
             {
-            }
-
-/*
-            uint32_t Pair()
-            {
-                uint32_t result = false;
-
-                _adminLock.Lock();
-
-                if (_device != nullptr) {
-                    result = Core::ERROR_INPROGRESS;
-                    if ( (_state & (PAIRING|UNPAIRING)) == 0) {
-                        IBluetooth::IDevice* device = _device;
-                        device->AddRef();
-                        _state = static_cast<state>(_state | PAIRING);
-                        _adminLock.Unlock();
-
-                        result = device->Pair(IBluetooth::IDevice::DISPLAY_ONLY);
-                        device->Release();
-
-                        _adminLock.Lock();
-                        // _state = static_cast<state>(_state & (~PAIRING));
-                    }
-                }
-
-                _adminLock.Unlock();
-
-                return (result);
-            }
-            uint32_t Unpair()
-            {
-                uint32_t result = false;
-
-                _adminLock.Lock();
-
-                if (_device != nullptr) {
-                    result = Core::ERROR_INPROGRESS;
-                    if ( (_state & (PAIRING|UNPAIRING)) == 0) {
-                        IBluetooth::IDevice* device = _device;
-                        device->AddRef();
-                        _state = static_cast<state>(_state | UNPAIRING);
-                        _adminLock.Unlock();
-
-                        result = device->Unpair();
-                        device->Release();
-
-                        _adminLock.Lock();
-                        _state = static_cast<state>(_state & (~UNPAIRING));
-		            }
-                }
-
-                _adminLock.Unlock();
-
-                return (result);
-            }
-*/
-
-            uint32_t Connect()
-            {
-                uint32_t result = Core::ERROR_NONE;
-
-                if ((IsOpen() == false) && (IsConnecting() == false)) {
-                    TRACE(Trace::Information, (_T("Connecting GATT socket %s"), _device->RemoteId().c_str()));
-                    result = GATTSocket::Open(5000);
-                    if ((result != Core::ERROR_NONE) && (result != Core::ERROR_INPROGRESS)) {
-                        TRACE(Flow, (_T("Opening GATT socket [%s], failed: %i"), _device->RemoteId().c_str(), result));
-                    }
-                } else {
-                    TRACE(Flow, (_T("GATT socket already open")));
-                }
-
-                return result;
-            }
-            uint32_t Disconnect()
-            {
-                uint32_t result = Core::ERROR_NONE;
-
-                if (IsOpen() == true) {
-                    TRACE(Trace::Information, (_T("Disconnecting GATT socket %s"), _device->RemoteId().c_str()));
-                    result = GATTSocket::Close(Core::infinite);
-                } else {
-                    TRACE(Flow, (_T("GATT socket already closed")));
-                }
-
-                return (result);
             }
 
         private:
@@ -840,7 +745,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 } else {
                     string data;
                     Core::ToHexString(dataFrame, length, data);
-                    printf(_T("Received an unknown notification: [handle=0x%x], %d bytes: %s\n"), handle, length, data.c_str());
+                    printf(_T("Unhandled notification: [handle=0x%x], %d bytes: %s\n"), handle, length, data.c_str());
                 }
             }
             void Operational() override
@@ -867,7 +772,6 @@ class BluetoothControl : public PluginHost::IPlugin
                         }
                     }
                     else {
-//                        _state = UNKNOWN;
                         TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
                     }
                 });
@@ -930,17 +834,20 @@ class BluetoothControl : public PluginHost::IPlugin
                 _adminLock.Lock();
                 if (_device != nullptr) {
                     if (_device->IsConnected() == true) {
-                        if ((IsOpen() == false) && (IsConnecting() == false)) {
-                            Connect();
-                        } else {
-                            TRACE(Trace::Information, (_T("Connected GATT socket %s"), _device->RemoteId().c_str()));
+                        TRACE(Trace::Information, (_T("Connecting GATT socket %s"), _device->RemoteId().c_str()));
+                        uint32_t result = GATTSocket::Open(5000);
+                        if (result != Core::ERROR_NONE) {
+                            TRACE(Trace::Error, (_T("Failed to open GATT socket %s"), _device->RemoteId().c_str()));
                         }
                     } else if (_device->IsValid() == true) {
                         if (IsOpen() == true) {
-                            Disconnect();
-                        } else {
-                            TRACE(Trace::Information, (_T("Disconnected GATT socket %s"), _device->RemoteId().c_str()));
-                            _parent->RemoteControlDisconnected(*this);
+                            TRACE(Trace::Information, (_T("Disconnecting GATT socket %s"), _device->RemoteId().c_str()));
+                            uint32_t result = GATTSocket::Close(Core::infinite);
+                            if (result != Core::ERROR_NONE) {
+                                TRACE(Trace::Error, (_T("Failed to close GATT socket %s"), _device->RemoteId().c_str()));
+                            } else {
+                                _parent->RemoteControlDisconnected(*this);
+                            }
                         }
                     } else {
                         TRACE(Flow, (_T("Releasing device"), _handles.front()));
@@ -953,7 +860,6 @@ class BluetoothControl : public PluginHost::IPlugin
 
         private:
             Core::CriticalSection _adminLock;
-//            state _state;
             Bluetooth::Profile _profile;
             Command _command;
             IBluetooth::IDevice* _device;
@@ -1673,6 +1579,8 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (result != Core::ERROR_NONE) {
                         TRACE(ControlFlow, (_T("Failed to connect. Error [%d]"), result));
                         ClearState(CONNECTING);
+                    } else {
+                        Connection(connect.Response().handle, 0);
                     }
                 }
 
@@ -1694,6 +1602,8 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (result != Core::ERROR_NONE) {
                         TRACE(ControlFlow, (_T("Failed to disconnect. Error [%d]"), result));
                         ClearState(DISCONNECTING);
+                    } else {
+                        Disconnection(disconnect.Response().reason);
                     }
                 }
 
