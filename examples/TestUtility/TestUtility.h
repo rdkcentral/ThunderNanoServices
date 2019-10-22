@@ -114,6 +114,7 @@ namespace Plugin {
         uint32_t get_commands(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t get_description(const string& index, JsonData::TestUtility::DescriptionData& response) const;
         uint32_t get_parameters(const string& index, JsonData::TestUtility::ParametersData& response) const;
+        uint32_t set_shutdowntimeout(const Core::JSON::DecUInt32& param);
 
         PluginHost::IShell* _service;
         Core::Sink<Notification> _notification;

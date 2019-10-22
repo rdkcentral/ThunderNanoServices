@@ -14,7 +14,8 @@ add_library(${MODULE_NAME} SHARED
         Commands/Free.cpp
         Commands/Statm.cpp
         Commands/Crash.cpp
-        Commands/CrashNTimes.cpp)
+        Commands/CrashNTimes.cpp
+)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11

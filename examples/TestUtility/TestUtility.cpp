@@ -69,14 +69,15 @@ namespace Plugin {
 
         _service = service;
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
-        
+
         config.FromString(_service->ConfigLine());
-        
+
         _service->Register(&_notification);
         _testUtilityImp = _service->Root<Exchange::ITestUtility>(_connection, ImplWaitTime, _T("TestUtilityImp"));
 
         if (_testUtilityImp != nullptr) {
             RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection);
+
             if (remoteConnection) {
                 _memory = WPEFramework::TestUtility::MemoryObserver(remoteConnection);
                 _memory->Observe(remoteConnection->RemoteId());
@@ -85,6 +86,7 @@ namespace Plugin {
                 _memory = nullptr;
                 TRACE(Trace::Warning, (_T("Colud not create MemoryObserver in TestUtility")));
             }
+
         } else {
             ProcessTermination(_connection);
 
@@ -105,6 +107,7 @@ namespace Plugin {
         ASSERT(_memory != nullptr);
 
         _service->Unregister(&_notification);
+
         if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
             TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
         }
