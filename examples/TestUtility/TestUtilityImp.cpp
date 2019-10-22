@@ -13,7 +13,7 @@ namespace TestCore {
 
     public:
         TestUtilityImp()
-        : _shutdownTimeout(5000) {
+        : _shutdownTimeout(0) {
         }
 
         virtual ~TestUtilityImp() {
