@@ -104,6 +104,7 @@ namespace Plugin {
         public:
             inline JSONObjectFactory()
                 : Core::FactoryType<INTERFACE, char*>()
+                , _jsonRPCFactory(5)
             {
             }
             JSONObjectFactory(const JSONObjectFactory&);
@@ -112,7 +113,6 @@ namespace Plugin {
             virtual ~JSONObjectFactory()
             {
             }
-
        public:
             static JSONObjectFactory& Instance()
             {
@@ -123,10 +123,11 @@ namespace Plugin {
             Core::ProxyType<INTERFACE> Element(const string& identifier)
             {
                 Core::ProxyType<INTERFACE> result;
-                Core::ProxyPoolType<Web::JSONBodyType<Core::JSONRPC::Message>> jsonRPCFactory(5);
-                result = Core::ProxyType<INTERFACE>(jsonRPCFactory.Element());
+                result = Core::ProxyType<INTERFACE>(_jsonRPCFactory.Element());
                 return result;
             }
+        private:
+            Core::ProxyPoolType<Web::JSONBodyType<Core::JSONRPC::Message>> _jsonRPCFactory;
         };
 
         template <typename INTERFACE>
@@ -172,20 +173,6 @@ namespace Plugin {
                 } else {
                  ToMessage(jsonObject);
                 }
-            }
-            virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
-            {
-                uint16_t result = 0;
-
-
-                return (result);
-            }
-            virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
-            {
-                uint16_t result = receivedSize;
-
-
-                return (result);
             }
             virtual void StateChange()
             {
