@@ -651,7 +651,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 : Bluetooth::GATTSocket(
                       Designator(device->Type(), device->LocalId()),
                       Designator(device->Type(), device->RemoteId()),
-                      64)
+                      256)
                 , _adminLock()
                 , _profile(true)
                 , _command()
@@ -752,6 +752,8 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 TRACE(Flow, (_T("The received MTU: %d"), MTU()));
 
+                if (_device->IsBonded() == false) {
+
                 _profile.Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
                     if (result == Core::ERROR_NONE) {
                         if (_profile[Bluetooth::UUID(HID_UUID)] == nullptr) {
@@ -775,6 +777,10 @@ class BluetoothControl : public PluginHost::IPlugin
                         TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
                     }
                 });
+
+                } else {
+                    _parent->RemoteControlConnected(*this);
+                }
             }
             void LoadReportHandles()
             {
@@ -833,7 +839,7 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 _adminLock.Lock();
                 if (_device != nullptr) {
-                    if (_device->IsConnected() == true) {
+                    if ((_device->IsConnected() == true) && (IsOpen() == false)) {
                         TRACE(Trace::Information, (_T("Connecting GATT socket %s"), _device->RemoteId().c_str()));
                         uint32_t result = GATTSocket::Open(5000);
                         if (result != Core::ERROR_NONE) {
@@ -1118,8 +1124,9 @@ class BluetoothControl : public PluginHost::IPlugin
             };
 
         public:
-            DeviceImpl(const Bluetooth::Address::type type, const uint16_t deviceId, const Bluetooth::Address& remote, const string& name)
+            DeviceImpl(const Bluetooth::Address::type type, const uint16_t deviceId, const Bluetooth::Address& remote, const string& name, const bool bonded)
                 : _name(name)
+                , _type(type)
                 , _deviceId(deviceId)
                 , _handle(~0)
                 , _remote(remote)
@@ -1136,6 +1143,12 @@ class BluetoothControl : public PluginHost::IPlugin
                 , _updateJob(Core::ProxyType<UpdateJob>::Create(this))
             {
                 ::memset(_features, 0xFF, sizeof(_features));
+
+                if (bonded) {
+                    Paired(true);
+                    Bonded(true);
+                    Whitelist(true);
+                }
 
             }
             ~DeviceImpl()
@@ -1168,7 +1181,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 uint32_t result = Core::ERROR_INPROGRESS;
 
                 if (SetState(PAIRING) == Core::ERROR_NONE) {
-                    result = BluetoothControl::Connector().Pair(_remote, static_cast<Bluetooth::Address::type>(Type()), static_cast<Bluetooth::ManagementSocket::capabilities>(caps));
+                    result = BluetoothControl::Connector().Pair(_remote, _type, static_cast<Bluetooth::ManagementSocket::capabilities>(caps));
                     if (result == Core::ERROR_ALREADY_CONNECTED) {
                         TRACE(Trace::Information, (_T("Already paired")));
                         Paired(true);
@@ -1185,10 +1198,11 @@ class BluetoothControl : public PluginHost::IPlugin
                 uint32_t result = Core::ERROR_INPROGRESS;
 
                 if (SetState(UNPAIRING) == Core::ERROR_NONE) {
-                    result = BluetoothControl::Connector().Unpair(_remote, static_cast<Bluetooth::Address::type>(Type()));
+                    result = BluetoothControl::Connector().Unpair(_remote, _type);
                     if (result == Core::ERROR_NONE) {
                         Paired(false);
                         Bonded(false);
+                        Whitelist(false);
                     } else if (result == Core::ERROR_ALREADY_RELEASED) {
                         TRACE(Trace::Information, (_T("Not paired")));
                     }
@@ -1307,6 +1321,24 @@ class BluetoothControl : public PluginHost::IPlugin
         protected:
             friend class ControlSocket;
 
+            uint32_t Whitelist(bool add)
+            {
+                uint32_t result;
+                if (add == true) {
+                    // Whitelist the device for automatic reconnection on direct advertisement
+                    result = BluetoothControl::Connector().Control().AddDevice(_type, _remote, Bluetooth::ManagementSocket::DIRECT);
+                    if (result != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Failed to whitelist device")));
+                    }
+                } else {
+                    result = BluetoothControl::Connector().Control().RemoveDevice(_type, _remote);
+                    if (result != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Failed to unwhitelist device")));
+                    }
+                }
+                return (result);
+            }
+
             uint32_t SetState(const state value)
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
@@ -1406,6 +1438,11 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 IBluetooth::IDevice::ICallback* callback = nullptr;
 
+                if ((IsConnected() == false) && (IsBonded() == true)) {
+                    // Disconnected a bonded device, make sure it reconnects automatically
+                    Whitelist(true);
+                }
+
                 _state.Lock();
 
                 if (_callback != nullptr) {
@@ -1446,8 +1483,8 @@ class BluetoothControl : public PluginHost::IPlugin
             DeviceRegular& operator=(const DeviceRegular&) = delete;
 
         public:
-            DeviceRegular(const uint16_t deviceId, const Bluetooth::Address& address, const string& name)
-                : DeviceImpl(Bluetooth::Address::BREDR_ADDRESS, deviceId, address, name)
+            DeviceRegular(const uint16_t deviceId, const Bluetooth::Address& address, const string& name, const bool bonded = false)
+                : DeviceImpl(Bluetooth::Address::BREDR_ADDRESS, deviceId, address, name, bonded)
             {
                 Bluetooth::HCISocket::Command::RemoteName cmd;
 
@@ -1545,8 +1582,8 @@ class BluetoothControl : public PluginHost::IPlugin
             DeviceLowEnergy& operator=(const DeviceLowEnergy&) = delete;
 
         public:
-            DeviceLowEnergy(const uint16_t deviceId, const Bluetooth::Address& address, const string& name)
-                : DeviceImpl(Bluetooth::Address::LE_PUBLIC_ADDRESS, deviceId, address, name)
+            DeviceLowEnergy(const uint16_t deviceId, const Bluetooth::Address& address, const string& name, const bool bonded = false)
+                : DeviceImpl(Bluetooth::Address::LE_PUBLIC_ADDRESS, deviceId, address, name, bonded)
             {
             }
             virtual ~DeviceLowEnergy()
