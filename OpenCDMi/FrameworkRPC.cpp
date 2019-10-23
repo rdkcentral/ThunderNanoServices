@@ -677,11 +677,11 @@ namespace Plugin {
 
                 if (system != nullptr) {
                     TRACE(Trace::Information, ("Set ServerCertificate()"));
-                    system->SetServerCertificate(serverCertificate, serverCertificateLength);
+                    return (OCDM::OCDM_RESULT)system->SetServerCertificate(serverCertificate, serverCertificateLength);
                 } else {
                     TRACE_L1("Could not set the Server Certificates for system: %s", keySystem.c_str());
                 }
-                return (::OCDM::OCDM_RESULT::OCDM_SUCCESS);
+                return (::OCDM::OCDM_RESULT::OCDM_S_FALSE);
             }
 
             virtual uint64_t GetDrmSystemTime(const std::string& keySystem) const override
