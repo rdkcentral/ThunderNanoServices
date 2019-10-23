@@ -99,14 +99,19 @@ namespace Plugin {
             Exchange::IPerformance* _parentInterface;
         };
 
-        class JSONObjectFactory : public Core::FactoryType<Core::JSON::IElement, string> {
-        private:
+        template <typename INTERFACE>
+        class JSONObjectFactory : public Core::FactoryType<INTERFACE, char*> {
+        public:
             inline JSONObjectFactory()
-                : Core::FactoryType<Core::JSON::IElement, string>()
+                : Core::FactoryType<INTERFACE, char*>()
             {
             }
             JSONObjectFactory(const JSONObjectFactory&);
             JSONObjectFactory& operator=(const JSONObjectFactory&);
+
+            virtual ~JSONObjectFactory()
+            {
+            }
 
        public:
             static JSONObjectFactory& Instance()
@@ -115,8 +120,12 @@ namespace Plugin {
 
                 return (_singleton);
             }
-            virtual ~JSONObjectFactory()
+            Core::ProxyType<INTERFACE> Element(const string& identifier)
             {
+                Core::ProxyType<INTERFACE> result;
+                Core::ProxyPoolType<Web::JSONBodyType<Core::JSONRPC::Message>> jsonRPCFactory(5);
+                result = Core::ProxyType<INTERFACE>(jsonRPCFactory.Element());
+                return result;
             }
         };
 
@@ -124,17 +133,17 @@ namespace Plugin {
         class JSONRPCChannel;
 
         template <typename INTERFACE>
-        class JSONRPCServer : public Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory&, INTERFACE> {
+        class JSONRPCServer : public Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory<INTERFACE>&, INTERFACE> {
         public:
             JSONRPCServer() = delete;
             JSONRPCServer(const JSONRPCServer& copy) = delete;
             JSONRPCServer& operator=(const JSONRPCServer&) = delete;
         private:
-            typedef Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory&, INTERFACE> BaseClass;
+            typedef Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory<INTERFACE>&, INTERFACE> BaseClass;
 
         public:
             JSONRPCServer(const SOCKET& connector, const Core::NodeId& remoteNode, Core::SocketServerType<JSONRPCServer>* parent)
-                : BaseClass(5, JSONObjectFactory::Instance(), false, true, false, connector, remoteNode.AnyInterface(), 1024, 1024)
+                : BaseClass(5, JSONObjectFactory<INTERFACE>::Instance(), false, true, false, connector, remoteNode.AnyInterface(), 1024, 1024)
                 , _id(0)
                 , _parent(static_cast<JSONRPCChannel<INTERFACE>&>(*parent))
             {
@@ -158,7 +167,25 @@ namespace Plugin {
             }
             virtual void Send(Core::ProxyType<INTERFACE>& jsonObject)
             {
-                ToMessage(jsonObject);
+                if (jsonObject.IsValid() == false) {
+                    printf("Oops");
+                } else {
+                 ToMessage(jsonObject);
+                }
+            }
+            virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
+            {
+                uint16_t result = 0;
+
+
+                return (result);
+            }
+            virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
+            {
+                uint16_t result = receivedSize;
+
+
+                return (result);
             }
             virtual void StateChange()
             {
