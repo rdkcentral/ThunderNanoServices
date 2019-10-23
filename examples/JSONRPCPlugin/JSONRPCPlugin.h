@@ -145,11 +145,7 @@ namespace Plugin {
                     printf("Oops");
                 }
                 else {
-                    string jsonMessage;
-                    jsonObject->ToString(jsonMessage);
-
-                    TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
-                    TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
+                    ToMessage(jsonObject);
 
                     // As this is the server, send back the Element we received...
                     this->Submit(jsonObject);
@@ -157,11 +153,7 @@ namespace Plugin {
             }
             virtual void Send(Core::ProxyType<INTERFACE>& jsonObject)
             {
-                string jsonMessage;
-                jsonObject->ToString(jsonMessage);
-
-                TRACE(Trace::Information, (_T("Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
-                TRACE(Trace::Information, (_T(" Send: %s\n"), jsonMessage.c_str()));
+                ToMessage(jsonObject);
             }
             virtual void StateChange()
             {
@@ -176,6 +168,24 @@ namespace Plugin {
             virtual bool IsIdle() const
             {
                 return (true);
+            }
+        private:
+            void ToMessage(Core::ProxyType<Core::JSON::IElement>& jsonObject)
+            {
+                string jsonMessage;
+                jsonObject->ToString(jsonMessage);
+
+                TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
+                TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
+            }
+            void ToMessage(Core::ProxyType<Core::JSON::IMessagePack>& jsonObject)
+            {
+                std::vector<uint8_t> jsonMessage;
+                jsonObject->ToBuffer(jsonMessage);
+
+                string message(jsonMessage.begin(), jsonMessage.end());
+                TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(message.size())));
+                TRACE(Trace::Information, (_T("Received: %s\n"), message.c_str()));
             }
         };
         // The next class is a helper class, just to trigger an a-synchronous callback every Period()

@@ -35,9 +35,9 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         Property<Data::Geometry>(_T("geometry"), &JSONRPCPlugin::get_geometry, &JSONRPCPlugin::set_geometry, this);
         Property<Core::JSON::String>(_T("data"), &JSONRPCPlugin::get_data, &JSONRPCPlugin::set_data, this);
 
-		//Readonly and writeonly properties
-		Property<Core::JSON::String>(_T("status"), &JSONRPCPlugin::get_status, nullptr, this);
-		Property<Core::JSON::String>(_T("value"), nullptr, &JSONRPCPlugin::set_value, this);
+        // Readonly and writeonly properties
+        Property<Core::JSON::String>(_T("status"), &JSONRPCPlugin::get_status, nullptr, this);
+        Property<Core::JSON::String>(_T("value"), nullptr, &JSONRPCPlugin::set_value, this);
 
         // Opaque method examples
         Register<JsonObject, JsonObject>("swap", &JSONRPCPlugin::swap, this);
@@ -49,16 +49,16 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         Register<Core::JSON::DecUInt16, Data::JSONDataBuffer>(_T("receive"), &JSONRPCPlugin::receive, this);
         Register<Data::JSONDataBuffer, Data::JSONDataBuffer>(_T("exchange"), &JSONRPCPlugin::exchange, this);
 
-		// Add property wich is indexed..
+        // Add property wich is indexed..
         Property<Core::JSON::DecUInt32>(_T("array"), &JSONRPCPlugin::get_array_value, &JSONRPCPlugin::set_array_value, this);
         Property<Core::JSON::DecUInt32>(_T("lookup"), &JSONRPCPlugin::get_array_value, nullptr, this);
         Property<Core::JSON::DecUInt32>(_T("store"), nullptr, &JSONRPCPlugin::set_array_value, this);
 
         // Methods for a "legaccy" version of the interfaces, the last parameter makes sure that all handlers are copied from the 
-		// base interface to this "legacy" one...
+        // base interface to this "legacy" one...
         Core::JSONRPC::Handler& legacyVersion = JSONRPC::CreateHandler({ 1 }, *this); 
 
-		// The only method that is really differnt in version "1" needs to be registered. That is done by the next line.
+        // The only method that is really differnt in version "1" needs to be registered. That is done by the next line.
         legacyVersion.Register<Core::JSON::String, Core::JSON::String>(_T("clueless"), &JSONRPCPlugin::clueless2, this);
     }
 
@@ -69,14 +69,14 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
     /* virtual */ const string JSONRPCPlugin::Initialize(PluginHost::IShell * service)
     {
         Config config;
-        config.FromString(service->ConfigLine());zag het
+        config.FromString(service->ConfigLine());
 
 	Core::NodeId source(config.Connector.Value().c_str());
 	    
         Core::ProxyType<RPC::InvokeServer> engine (Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance()));
         _rpcServer = new COMServer(Core::NodeId(source, source.PortNumber()), this, service->ProxyStubPath(), engine);
-        _jsonServer = new JSONRPCServer<Core::JSON::IElement>(Core::NodeId(source, source.PortNumber()+1));
-        _msgServer = new JSONRPCServer<Core::JSON::IMessagePack>(Core::NodeId(source, source.PortNumber()+2));
+        _jsonServer = new JSONRPCServer<Core::JSON::IElement>(Core::NodeId(source, source.PortNumber() + 1));
+        _msgServer = new JSONRPCServer<Core::JSON::IMessagePack>(Core::NodeId(source, source.PortNumber() + 2));
         _job->Period(5);
         PluginHost::WorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(_job));
 
