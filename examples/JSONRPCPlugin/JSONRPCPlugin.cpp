@@ -75,8 +75,8 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
 	    
         Core::ProxyType<RPC::InvokeServer> engine (Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance()));
         _rpcServer = new COMServer(Core::NodeId(source, source.PortNumber()), this, service->ProxyStubPath(), engine);
-        _jsonServer = new JSONRPCServer<Core::JSON::IElement>(Core::NodeId(source, source.PortNumber() + 1));
-        _msgServer = new JSONRPCServer<Core::JSON::IMessagePack>(Core::NodeId(source, source.PortNumber() + 2));
+        _jsonServer = new JSONRPCChannel<Core::JSON::IElement>(Core::NodeId(source, source.PortNumber() + 1));
+        _msgServer = new JSONRPCChannel<Core::JSON::IMessagePack>(Core::NodeId(source, source.PortNumber() + 2));
         _job->Period(5);
         PluginHost::WorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(_job));
 

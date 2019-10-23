@@ -55,7 +55,7 @@ namespace Plugin {
         // process can than measure the overhead of the call towards the Exchange::IRPCLink methods.
         // The processing time of these methods will also be acounted for internally and "send" back as well
         class COMServer : public RPC::Communicator {
-        private:
+        public:
             COMServer() = delete;
             COMServer(const COMServer&) = delete;
             COMServer& operator=(const COMServer&) = delete;
@@ -108,7 +108,7 @@ namespace Plugin {
             JSONObjectFactory(const JSONObjectFactory&);
             JSONObjectFactory& operator=(const JSONObjectFactory&);
 
-        public:
+       public:
             static JSONObjectFactory& Instance()
             {
                 static JSONObjectFactory _singleton;
@@ -119,20 +119,25 @@ namespace Plugin {
             {
             }
         };
+
+        template <typename INTERFACE>
+        class JSONRPCChannel;
+
         template <typename INTERFACE>
         class JSONRPCServer : public Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory&, INTERFACE> {
-        private:
-            typedef Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory&, INTERFACE> BaseClass;
         public:
             JSONRPCServer() = delete;
-            JSONRPCServer(const JSONRPCServer&) = delete;
+            JSONRPCServer(const JSONRPCServer& copy) = delete;
             JSONRPCServer& operator=(const JSONRPCServer&) = delete;
+        private:
+            typedef Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory&, INTERFACE> BaseClass;
 
         public:
-            JSONRPCServer(const WPEFramework::Core::NodeId& remoteNode)
+            JSONRPCServer(const SOCKET& connector, const Core::NodeId& remoteNode, Core::SocketServerType<JSONRPCServer>* parent)
                 : BaseClass(5, JSONObjectFactory::Instance(), false, true, false, remoteNode, remoteNode.AnyInterface(), 1024, 1024)
+                , _id(0)
+                , _parent(static_cast<JSONRPCChannel<INTERFACE>&>(*parent))
             {
-                this->Open(Core::infinite);
             }
             virtual ~JSONRPCServer()
             {
@@ -170,6 +175,16 @@ namespace Plugin {
                 return (true);
             }
         private:
+            friend class Core::SocketServerType<JSONRPCServer<INTERFACE>>;
+
+            inline uint32_t Id() const
+            {
+                return (_id);
+            }
+            inline void Id(const uint32_t id)
+            {
+                _id = id;
+            }
             void ToMessage(Core::ProxyType<Core::JSON::IElement>& jsonObject)
             {
                 string jsonMessage;
@@ -187,7 +202,29 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(message.size())));
                 TRACE(Trace::Information, (_T("Received: %s\n"), message.c_str()));
             }
+        private:
+            uint32_t _id;
+            JSONRPCChannel<INTERFACE>& _parent;
         };
+
+        template <typename INTERFACE>
+        class JSONRPCChannel : public Core::SocketServerType<JSONRPCServer<INTERFACE>> {
+        public:
+            JSONRPCChannel() = delete;
+            JSONRPCChannel(const JSONRPCChannel& copy) = delete;
+            JSONRPCChannel& operator=(const JSONRPCChannel&) = delete;
+        public:
+            JSONRPCChannel(const WPEFramework::Core::NodeId& remoteNode)
+                : Core::SocketServerType<JSONRPCServer<INTERFACE>>(remoteNode)
+            {
+                Core::SocketServerType<JSONRPCServer<INTERFACE>>::Open(Core::infinite);
+            }
+            ~JSONRPCChannel()
+            {
+                Core::SocketServerType<JSONRPCServer<INTERFACE>>::Close(1000);
+            }
+        };
+
         // The next class is a helper class, just to trigger an a-synchronous callback every Period()
         // amount of time.
         class PeriodicSync : public Core::IDispatch {
@@ -484,8 +521,8 @@ namespace Plugin {
         string _data;
         std::vector<uint32_t> _array;
         COMServer* _rpcServer;
-        JSONRPCServer<Core::JSON::IElement>* _jsonServer;
-        JSONRPCServer<Core::JSON::IMessagePack>* _msgServer;
+        JSONRPCChannel<Core::JSON::IElement>* _jsonServer;
+        JSONRPCChannel<Core::JSON::IMessagePack>* _msgServer;
     };
 
 } // namespace Plugin
