@@ -120,11 +120,11 @@ namespace Plugin {
 
                 return (_singleton);
             }
+
             Core::ProxyType<INTERFACE> Element(const string& identifier)
             {
-                Core::ProxyType<INTERFACE> result;
-                result = Core::ProxyType<INTERFACE>(_jsonRPCFactory.Element());
-                return result;
+                Core::ProxyType<Web::JSONBodyType<Core::JSONRPC::Message>> message = _jsonRPCFactory.Element();
+                return Core::ProxyType<INTERFACE>(message);
             }
         private:
             Core::ProxyPoolType<Web::JSONBodyType<Core::JSONRPC::Message>> _jsonRPCFactory;
@@ -144,7 +144,7 @@ namespace Plugin {
 
         public:
             JSONRPCServer(const SOCKET& connector, const Core::NodeId& remoteNode, Core::SocketServerType<JSONRPCServer>* parent)
-                : BaseClass(5, JSONObjectFactory<INTERFACE>::Instance(), false, true, false, connector, remoteNode.AnyInterface(), 1024, 1024)
+                : BaseClass(5, JSONObjectFactory<INTERFACE>::Instance(), false, true, false, connector, remoteNode.AnyInterface(), 8096, 8096)
                 , _id(0)
                 , _parent(static_cast<JSONRPCChannel<INTERFACE>&>(*parent))
             {
@@ -163,6 +163,7 @@ namespace Plugin {
                     ToMessage(jsonObject);
 
                     // As this is the server, send back the Element we received...
+                    FromMessage(jsonObject);
                     this->Submit(jsonObject);
                 }
             }
@@ -171,7 +172,7 @@ namespace Plugin {
                 if (jsonObject.IsValid() == false) {
                     printf("Oops");
                 } else {
-                 ToMessage(jsonObject);
+                    ToMessage(jsonObject);
                 }
             }
             virtual void StateChange()
@@ -215,6 +216,13 @@ namespace Plugin {
                 string message(jsonMessage.begin(), jsonMessage.end());
                 TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(message.size())));
                 TRACE(Trace::Information, (_T("Received: %s\n"), message.c_str()));
+            }
+            void FromMessage(Core::ProxyType<Core::JSON::IElement>& jsonObject)
+            {
+                jsonObject->FromString("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":0}"); //TODO, make it properly
+            }
+            void FromMessage(Core::ProxyType<Core::JSON::IMessagePack>& jsonObject)
+            {
             }
         private:
             uint32_t _id;
