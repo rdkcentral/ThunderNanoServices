@@ -343,8 +343,17 @@ namespace Plugin {
                         string name(index.Next() == true? index.Current().Text().c_str() : "Unknown");
                         _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(_btInterface, address, name, true));
                         _gattRemote = Core::Service<GATTRemote>::Create<GATTRemote>(this, _devices.back());
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Created device.");
+                        if (_gattRemote != nullptr) {
+                            _gattRemote->Callback(this);
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->Message = _T("Created device.");
+                        } else {
+                            result->ErrorCode = Web::STATUS_OK;
+                            result->Message = _T("Failed to create device.");
+                        }
+                    } else {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = _T("Unable to process PUT request.");
                     }
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
