@@ -681,9 +681,13 @@ class BluetoothControl : public PluginHost::IPlugin
                 else if (_device->IsConnected() == true) {
                     TRACE(Trace::Fatal, (_T("The device is already connected. First disconnect the device")));
                 }
+
+                _parent->RemoteControlCreated(*this);
             }
             virtual ~GATTRemote()
             {
+                _parent->RemoteControlDestroyed(*this);
+
                 if (GATTSocket::IsOpen() == true) {
                     GATTSocket::Close(Core::infinite);
                 }
@@ -761,6 +765,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 TRACE(Flow, (_T("The received MTU: %d"), MTU()));
 
                 if (_device->IsBonded() == false) {
+                    // No need to do servuce discovery if device is bonded, the notifications are already enabled
                     _profile.Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
                         if (result == Core::ERROR_NONE) {
                             if (_profile[Bluetooth::UUID(HID_UUID)] == nullptr) {
@@ -775,8 +780,6 @@ class BluetoothControl : public PluginHost::IPlugin
                                     Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
                                         EnableEvents(cmd);
                                     });
-
-                                    _parent->RemoteControlConnected(*this);
                                 }
                             }
                         }
@@ -784,8 +787,6 @@ class BluetoothControl : public PluginHost::IPlugin
                             TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
                         }
                     });
-                } else {
-                    _parent->RemoteControlConnected(*this);
                 }
             }
             void LoadReportHandles()
@@ -857,8 +858,6 @@ class BluetoothControl : public PluginHost::IPlugin
                             uint32_t result = GATTSocket::Close(Core::infinite);
                             if (result != Core::ERROR_NONE) {
                                 TRACE(Trace::Error, (_T("Failed to close GATT socket %s"), _device->RemoteId().c_str()));
-                            } else {
-                                _parent->RemoteControlDisconnected(*this);
                             }
                         }
                     } else {
@@ -1210,7 +1209,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (result == Core::ERROR_NONE) {
                         Paired(false);
                         Bonded(false);
-                        Whitelist(false);
+                        Whitelisted(false); // only change state, whitelist will be removed by Unpair
                     } else if (result == Core::ERROR_ALREADY_RELEASED) {
                         TRACE(Trace::Information, (_T("Not paired")));
                     }
@@ -1845,9 +1844,9 @@ class BluetoothControl : public PluginHost::IPlugin
         {
             return (_gattRemote);
         }
-        void RemoteControlConnected(GATTRemote& remote)
+        void RemoteControlCreated(GATTRemote& remote)
         {
-            TRACE(Trace::Information, (_T("Bluetooth LE remote control unit \"%s\" connected"), remote.Name()));
+            TRACE(Trace::Information, (_T("Bluetooth LE remote control unit \"%s\" created"), remote.Name()));
             string path(_service->DataPath() + string(remote.Name()) + "-remote.json");
             PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(remote.Name()));
             TRACE(Trace::Information, (_T("Loading keymap file %s"), path.c_str()));
@@ -1856,9 +1855,9 @@ class BluetoothControl : public PluginHost::IPlugin
                 map.PassThrough(true);
             }
         }
-        void RemoteControlDisconnected(GATTRemote& remote)
+        void RemoteControlDestroyed(GATTRemote& remote)
         {
-            TRACE(Trace::Information, (_T("Bluetooth LE remote control unit \"%s\" disconnected"), remote.Name()));
+            TRACE(Trace::Information, (_T("Bluetooth LE remote control unit \"%s\" destroyed"), remote.Name()));
             _inputHandler->ClearTable(remote.Name());
         }
 
