@@ -219,7 +219,10 @@ namespace Plugin {
             }
             void FromMessage(Core::ProxyType<Core::JSON::IElement>& jsonObject)
             {
+                Core::ProxyType<Web::JSONBodyType<Core::JSONRPC::Message>> message = Core::ProxyType<Web::JSONBodyType<Core::JSONRPC::Message>>(jsonObject);
+                uint32_t id = message->Id.Value();
                 jsonObject->FromString("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":0}"); //TODO, make it properly
+                message->Id = id;
             }
             void FromMessage(Core::ProxyType<Core::JSON::IMessagePack>& jsonObject)
             {
