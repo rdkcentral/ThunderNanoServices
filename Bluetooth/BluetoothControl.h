@@ -622,11 +622,19 @@ class BluetoothControl : public PluginHost::IPlugin
                 }
                 void Dispatch() override
                 {
+                    IKeyHandler* keyhandler = nullptr;
+
                     _adminLock.Lock();
                     if (_keyHandler != nullptr) {
-                        _keyHandler->KeyEvent(_pressed, _scancode, _map);
+                        keyhandler = _keyHandler;
+                        keyhandler->AddRef();
                     }
                     _adminLock.Unlock();
+
+                    if (keyhandler != nullptr) {
+                        keyhandler->KeyEvent(_pressed, _scancode, _map);
+                        keyhandler->Release();
+                    }
                 }
 
             private:
@@ -738,7 +746,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     }
 
                     if (_currentKey != 0) {
-                        TRACE(Flow, (_T("Received a keypress notification: handle=0x%x, code=%i, state=%s"), handle, _currentKey, (pressed? "pressed" : "released")));
+                        TRACE(Flow, (_T("Received a keypress notification: handle=0x%x, code=%i, state=%s, map='%s'"), handle, _currentKey, (pressed? "pressed" : "released"), _name.c_str()));
                         ASSERT(_activity != nullptr);
                         _activity->KeyEvent(pressed, _currentKey, _name);
                     }
@@ -753,31 +761,29 @@ class BluetoothControl : public PluginHost::IPlugin
                 TRACE(Flow, (_T("The received MTU: %d"), MTU()));
 
                 if (_device->IsBonded() == false) {
+                    _profile.Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
+                        if (result == Core::ERROR_NONE) {
+                            if (_profile[Bluetooth::UUID(HID_UUID)] == nullptr) {
+                                TRACE(Flow, (_T("The given bluetooth device does not support a HID service!!")));
+                            }
+                            else {
+                                LoadReportHandles();
 
-                _profile.Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
-                    if (result == Core::ERROR_NONE) {
-                        if (_profile[Bluetooth::UUID(HID_UUID)] == nullptr) {
-                            TRACE(Flow, (_T("The given bluetooth device does not support a HID service!!")));
-                        }
-                        else {
-                            LoadReportHandles();
+                                if (_handles.size() > 0) {
+                                    uint16_t val = htobs(1);
+                                    _command.Write(_handles.front(), sizeof(val), reinterpret_cast<const uint8_t*>(&val));
+                                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
+                                        EnableEvents(cmd);
+                                    });
 
-                            if (_handles.size() > 0) {
-                                uint16_t val = htobs(1);
-                                _command.Write(_handles.front(), sizeof(val), reinterpret_cast<const uint8_t*>(&val));
-                                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                                    EnableEvents(cmd);
-                                });
-
-                                _parent->RemoteControlConnected(*this);
+                                    _parent->RemoteControlConnected(*this);
+                                }
                             }
                         }
-                    }
-                    else {
-                        TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
-                    }
-                });
-
+                        else {
+                            TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
+                        }
+                    });
                 } else {
                     _parent->RemoteControlConnected(*this);
                 }
@@ -952,7 +958,7 @@ class BluetoothControl : public PluginHost::IPlugin
             DeviceImpl(const DeviceImpl&) = delete;
             DeviceImpl& operator=(const DeviceImpl&) = delete;
 
-            static constexpr uint16_t ACTION_MASK = 0x0FFF;
+            static constexpr uint16_t ACTION_MASK = 0x00FF;
 
         public:
             static constexpr uint32_t MAX_ACTION_TIMEOUT = 2000; /* 2S to setup a connection ? */
@@ -963,10 +969,12 @@ class BluetoothControl : public PluginHost::IPlugin
                 PAIRING       = 0x0004,
                 UNPAIRING     = 0x0008,
 
-                PAIRED        = 0x1000,
-                BONDED        = 0x2000,
-                LOWENERGY     = 0x4000,
-                PUBLIC        = 0x8000
+                PAIRED        = 0x0100,
+                BONDED        = 0x0200,
+                WHITELISTED   = 0x0400,
+
+                LOWENERGY     = 0x1000,
+                PUBLIC        = 0x2000
             };
 
             class JSON : public Core::JSON::Container {
@@ -1212,25 +1220,64 @@ class BluetoothControl : public PluginHost::IPlugin
                 }
                 return (result);
             }
+            uint32_t Whitelist(bool add)
+            {
+                uint32_t result = Core::ERROR_GENERAL;
+                if (add == true) {
+                    // Whitelist the device for automatic reconnection on direct advertisement
+                    result = BluetoothControl::Connector().Control().AddDevice(_type, _remote, Bluetooth::ManagementSocket::DIRECT);
+                    if (result != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Failed to whitelist device [%s]"), RemoteId().c_str()));
+                    } else {
+                        Whitelisted(true);
+                    }
+                } else {
+                    result = BluetoothControl::Connector().Control().RemoveDevice(_type, _remote);
+                    if (result != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Failed to remove device [%s] from whitelist"), RemoteId().c_str()));
+                    } else {
+                        Whitelisted(false);
+                    }
+                }
+                return (result);
+            }
             void Paired(bool paired)
             {
-                TRACE(DeviceFlow, (_T("The device [%s] is %spaired"), RemoteId().c_str(), paired? "" : "un"));
+                _state.Lock();
                 ClearState(PAIRING);
                 ClearState(UNPAIRING);
-                if (paired == true) {
-                    SetState(PAIRED);
-                } else {
-                    ClearState(PAIRED);
+                if ((paired == true) && (IsPaired() == false)) {
+                    _state.SetState(static_cast<state>(_state.GetState() | PAIRED));
+                    TRACE(DeviceFlow, (_T("The device [%s] is paired"), RemoteId().c_str()));
+                } else if ((paired == false) && (IsPaired() == true)) {
+                    _state.SetState(static_cast<state>(_state.GetState() & (~PAIRED)));
+                    TRACE(DeviceFlow, (_T("The device [%s] is no longer paired"), RemoteId().c_str()));
                 }
+                _state.Unlock();
             }
             void Bonded(bool bonded)
             {
-                TRACE(DeviceFlow, (_T("The device [%s] is %sbonded"), RemoteId().c_str(), bonded? "" : "un"));
-                if (bonded == true) {
-                    SetState(BONDED);
-                } else {
-                    ClearState(BONDED);
+                _state.Lock();
+                if ((bonded == true) && (IsBonded() == false)) {
+                    _state.SetState(static_cast<state>(_state.GetState() | BONDED));
+                    TRACE(DeviceFlow, (_T("The device [%s] is bonded"), RemoteId().c_str()));
+                } else if ((bonded == false) && (IsBonded() == true)) {
+                    _state.SetState(static_cast<state>(_state.GetState() & (~BONDED)));
+                    TRACE(DeviceFlow, (_T("The device [%s] is no longer bonded"), RemoteId().c_str()));
                 }
+                _state.Unlock();
+            }
+            void Whitelisted(bool whitelisted)
+            {
+                _state.Lock();
+                if ((whitelisted == true) && (IsWhitelisted() == false)) {
+                    _state.SetState(static_cast<state>(_state.GetState() | WHITELISTED));
+                    TRACE(DeviceFlow, (_T("The device [%s] is whitelisted"), RemoteId().c_str()));
+                } else if ((whitelisted == false) && (IsWhitelisted() == true)) {
+                    _state.SetState(static_cast<state>(_state.GetState() & (~WHITELISTED)));
+                    TRACE(DeviceFlow, (_T("The device [%s] is no longer whitelisted"), RemoteId().c_str()));
+                }
+                _state.Unlock();
             }
             bool IsValid() const override
             {
@@ -1265,6 +1312,9 @@ class BluetoothControl : public PluginHost::IPlugin
             bool IsBonded() const override
             {
                 return ((_state & BONDED) != 0);
+            }
+            bool IsWhitelisted() const {
+                return ((_state & WHITELISTED) != 0);
             }
             inline uint16_t DeviceId() const
             {
@@ -1320,24 +1370,6 @@ class BluetoothControl : public PluginHost::IPlugin
             }
         protected:
             friend class ControlSocket;
-
-            uint32_t Whitelist(bool add)
-            {
-                uint32_t result;
-                if (add == true) {
-                    // Whitelist the device for automatic reconnection on direct advertisement
-                    result = BluetoothControl::Connector().Control().AddDevice(_type, _remote, Bluetooth::ManagementSocket::DIRECT);
-                    if (result != Core::ERROR_NONE) {
-                        TRACE(Trace::Error, (_T("Failed to whitelist device")));
-                    }
-                } else {
-                    result = BluetoothControl::Connector().Control().RemoveDevice(_type, _remote);
-                    if (result != Core::ERROR_NONE) {
-                        TRACE(Trace::Error, (_T("Failed to unwhitelist device")));
-                    }
-                }
-                return (result);
-            }
 
             uint32_t SetState(const state value)
             {
@@ -1438,8 +1470,7 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 IBluetooth::IDevice::ICallback* callback = nullptr;
 
-                if ((IsConnected() == false) && (IsBonded() == true)) {
-                    // Disconnected a bonded device, make sure it reconnects automatically
+                if ((IsConnected() == false) && (IsBonded() == true) && (IsWhitelisted() == false)) {
                     Whitelist(true);
                 }
 
