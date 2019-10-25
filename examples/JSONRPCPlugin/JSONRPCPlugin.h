@@ -116,7 +116,7 @@ namespace Plugin {
        public:
             static JSONObjectFactory& Instance()
             {
-                static JSONObjectFactory _singleton;
+                static JSONObjectFactory<INTERFACE> _singleton;
 
                 return (_singleton);
             }
@@ -160,10 +160,8 @@ namespace Plugin {
                     printf("Oops");
                 }
                 else {
-                    ToMessage(jsonObject);
-
+                    ProcessMessage(jsonObject);
                     // As this is the server, send back the Element we received...
-                    FromMessage(jsonObject);
                     this->Submit(jsonObject);
                 }
             }
@@ -217,14 +215,53 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(message.size())));
                 TRACE(Trace::Information, (_T("Received: %s\n"), message.c_str()));
             }
-            void FromMessage(Core::ProxyType<Core::JSON::IElement>& jsonObject)
+            void ProcessMessage(Core::ProxyType<Core::JSON::IElement>& jsonObject)
             {
-                Core::ProxyType<Web::JSONBodyType<Core::JSONRPC::Message>> message = Core::ProxyType<Web::JSONBodyType<Core::JSONRPC::Message>>(jsonObject);
-                uint32_t id = message->Id.Value();
-                jsonObject->FromString("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":0}"); //TODO, make it properly
-                message->Id = id;
+                Core::ProxyType<Core::JSONRPC::Message> message = Core::ProxyType<Core::JSONRPC::Message>(jsonObject);
+                ASSERT(message->Designator.IsSet() == true);
+
+                string designator = message->Designator.Value();
+                std::size_t found = designator.find_last_of(".");
+                string method(designator, found + 1, string::npos);
+
+                if (method == "send") {
+                    if (message->Parameters.IsSet() == true) {
+                        Data::JSONDataBuffer data;
+                        data.FromString(message->Parameters.Value());
+                        Core::JSON::DecUInt32 result = 0;
+                        _parent.Interface().send(data, result);
+                        message->Result = Core::NumberType<uint32_t>(result.Value()).Text();
+                    }
+                } else if (method == "receive") {
+                    string result;
+                    if (message->Parameters.IsSet() == true) {
+                        Data::JSONDataBuffer response;
+                        Core::JSON::DecUInt16 length;
+                        length.FromString(message->Parameters.Value());
+                        _parent.Interface().receive(length, response);
+                        response.ToString(result);
+                     }
+                     message->Result = result;
+                } else if (method == "exchange") {
+                    string result;
+                    if (message->Parameters.IsSet() == true) {
+                        Data::JSONDataBuffer data;
+                        data.FromString(message->Parameters.Value());
+
+                        Data::JSONDataBuffer response;
+                        _parent.Interface().exchange(data, response);
+                        response.ToString(result);
+                    }
+                    message->Result = result;
+                } else {
+                    TRACE_L1("Unknown method");
+                }
+
+                message->Parameters.Clear();
+                message->Designator.Clear();
+                message->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
             }
-            void FromMessage(Core::ProxyType<Core::JSON::IMessagePack>& jsonObject)
+            void ProcessMessage(Core::ProxyType<Core::JSON::IMessagePack>& jsonObject)
             {
             }
         private:
@@ -239,8 +276,9 @@ namespace Plugin {
             JSONRPCChannel(const JSONRPCChannel& copy) = delete;
             JSONRPCChannel& operator=(const JSONRPCChannel&) = delete;
         public:
-            JSONRPCChannel(const WPEFramework::Core::NodeId& remoteNode)
+            JSONRPCChannel(const WPEFramework::Core::NodeId& remoteNode, JSONRPCPlugin& parent)
                 : Core::SocketServerType<JSONRPCServer<INTERFACE>>(remoteNode)
+                , _parent(parent)
             {
                 Core::SocketServerType<JSONRPCServer<INTERFACE>>::Open(Core::infinite);
             }
@@ -248,6 +286,11 @@ namespace Plugin {
             {
                 Core::SocketServerType<JSONRPCServer<INTERFACE>>::Close(1000);
             }
+            JSONRPCPlugin& Interface() {
+                return _parent;
+            }
+        private:
+            JSONRPCPlugin& _parent;
         };
 
         // The next class is a helper class, just to trigger an a-synchronous callback every Period()
