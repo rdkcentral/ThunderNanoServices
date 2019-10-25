@@ -144,7 +144,7 @@ namespace Plugin {
 
         public:
             JSONRPCServer(const SOCKET& connector, const Core::NodeId& remoteNode, Core::SocketServerType<JSONRPCServer>* parent)
-                : BaseClass(5, JSONObjectFactory<INTERFACE>::Instance(), false, true, false, connector, remoteNode.AnyInterface(), 8096, 8096)
+                : BaseClass(5, JSONObjectFactory<INTERFACE>::Instance(), false, false, false, connector, remoteNode.AnyInterface(), 8096, 8096)
                 , _id(0)
                 , _parent(static_cast<JSONRPCChannel<INTERFACE>&>(*parent))
             {
