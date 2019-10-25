@@ -160,7 +160,8 @@ namespace Plugin {
                     printf("Oops");
                 }
                 else {
-                    ProcessMessage(jsonObject);
+                    Core::ProxyType<Core::JSONRPC::Message> message = Core::ProxyType<Core::JSONRPC::Message>(jsonObject);
+                    ProcessMessage(message);
                     // As this is the server, send back the Element we received...
                     this->Submit(jsonObject);
                 }
@@ -198,26 +199,42 @@ namespace Plugin {
             {
                 _id = id;
             }
-            void ToMessage(Core::ProxyType<Core::JSON::IElement>& jsonObject)
+            void ToMessage(const Core::ProxyType<Core::JSON::IElement>& jsonObject)
             {
                 string jsonMessage;
                 jsonObject->ToString(jsonMessage);
 
                 TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
                 TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
-            }
-            void ToMessage(Core::ProxyType<Core::JSON::IMessagePack>& jsonObject)
-            {
-                std::vector<uint8_t> jsonMessage;
-                jsonObject->ToBuffer(jsonMessage);
 
-                string message(jsonMessage.begin(), jsonMessage.end());
-                TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(message.size())));
-                TRACE(Trace::Information, (_T("Received: %s\n"), message.c_str()));
             }
-            void ProcessMessage(Core::ProxyType<Core::JSON::IElement>& jsonObject)
+            void ToMessage(const Core::ProxyType<Core::JSON::IMessagePack>& jsonObject)
             {
-                Core::ProxyType<Core::JSONRPC::Message> message = Core::ProxyType<Core::JSONRPC::Message>(jsonObject);
+                std::vector<uint8_t> message;
+                jsonObject->ToBuffer(message);
+                string jsonMessage(message.begin(), message.end());
+
+                TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
+                TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
+            }
+            void ToMessage(const Core::JSON::IElement* jsonObject, string& jsonMessage)
+            {
+                jsonObject->ToString(jsonMessage);
+
+                TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
+                TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
+            }
+            void ToMessage(const Core::JSON::IMessagePack* jsonObject, string& jsonMessage)
+            {
+                std::vector<uint8_t> message;
+                jsonObject->ToBuffer(message);
+                jsonMessage = string(message.begin(), message.end());
+
+                TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
+                TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
+            }
+            void ProcessMessage(Core::ProxyType<Core::JSONRPC::Message>& message)
+            {
                 ASSERT(message->Designator.IsSet() == true);
 
                 string designator = message->Designator.Value();
@@ -227,7 +244,7 @@ namespace Plugin {
                 if (method == "send") {
                     if (message->Parameters.IsSet() == true) {
                         Data::JSONDataBuffer data;
-                        data.FromString(message->Parameters.Value());
+                        FromMessage((INTERFACE*)&data, message);
                         Core::JSON::DecUInt32 result = 0;
                         _parent.Interface().send(data, result);
                         message->Result = Core::NumberType<uint32_t>(result.Value()).Text();
@@ -237,7 +254,7 @@ namespace Plugin {
                     if (message->Parameters.IsSet() == true) {
                         Data::JSONDataBuffer response;
                         Core::JSON::DecUInt16 length;
-                        length.FromString(message->Parameters.Value());
+                        FromMessage((INTERFACE*)&length, message);
                         _parent.Interface().receive(length, response);
                         response.ToString(result);
                      }
@@ -246,11 +263,11 @@ namespace Plugin {
                     string result;
                     if (message->Parameters.IsSet() == true) {
                         Data::JSONDataBuffer data;
-                        data.FromString(message->Parameters.Value());
+                        FromMessage((INTERFACE*)&data, message);
 
                         Data::JSONDataBuffer response;
                         _parent.Interface().exchange(data, response);
-                        response.ToString(result);
+                        ToMessage((INTERFACE*)&response, result);
                     }
                     message->Result = result;
                 } else {
@@ -261,7 +278,11 @@ namespace Plugin {
                 message->Designator.Clear();
                 message->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
             }
-            void ProcessMessage(Core::ProxyType<Core::JSON::IMessagePack>& jsonObject)
+            void FromMessage(Core::JSON::IElement* jsonObject, const Core::ProxyType<Core::JSONRPC::Message>& message)
+            {
+                jsonObject->FromString(message->Parameters.Value());
+            }
+            void FromMessage(Core::JSON::IMessagePack* jsonObject, const Core::ProxyType<Core::JSONRPC::Message>& message)
             {
             }
         private:
