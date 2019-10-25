@@ -321,7 +321,7 @@ void MeasureJSONRPC(JSONRPC::LinkType<INTERFACE>& remoteObject)
         measure = toupper(getchar());
         switch (measure) {
         case 'S': {
-            PerformanceFunction implementation = [&remoteObject](uint16_t& length, uint8_t buffer[]) -> uint32_t {
+            PerformanceFunction implementation = [&remoteObject](uint16_t length, uint8_t buffer[]) -> uint32_t {
                 string stringBuffer;
                 Data::JSONDataBuffer message;
                 Core::JSON::DecUInt32 result;
@@ -335,7 +335,7 @@ void MeasureJSONRPC(JSONRPC::LinkType<INTERFACE>& remoteObject)
             break;
         }
         case 'R': {
-            PerformanceFunction implementation = [&remoteObject](uint16_t& length, uint8_t buffer[]) -> uint32_t {
+            PerformanceFunction implementation = [&remoteObject](uint16_t length, uint8_t buffer[]) -> uint32_t {
                 string stringBuffer;
                 Data::JSONDataBuffer message;
                 Core::JSON::DecUInt16 maxSize = length;
@@ -349,7 +349,7 @@ void MeasureJSONRPC(JSONRPC::LinkType<INTERFACE>& remoteObject)
             break;
         }
         case 'E': {
-            PerformanceFunction implementation = [&remoteObject](uint16_t& length, uint8_t buffer[]) -> uint32_t {
+            PerformanceFunction implementation = [&remoteObject](uint16_t length, uint8_t buffer[]) -> uint32_t {
                 string stringBuffer;
                 Data::JSONDataBuffer message;
                 Core::JSON::DecUInt32 result;
