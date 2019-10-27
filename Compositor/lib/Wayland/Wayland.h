@@ -10,7 +10,7 @@
 #include <compositorclient/Implementation.h>
 #include <interfaces/IComposition.h>
 
-#include <virtualinput/VirtualKeyboard.h>
+#include <virtualinput/virtualinput.h>
 
 #ifdef ENABLE_NXSERVER
 #include "NexusServer/NexusServer.h"
