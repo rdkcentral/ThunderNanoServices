@@ -36,21 +36,6 @@ namespace Plugin {
             Bluetooth::ManagementSocket& administrator = _application.Control();
             administrator.DeviceId(_config.Interface.Value());
 
-            _persistentStoragePath = _service->PersistentPath();
-            if (_persistentStoragePath.empty() == false) {
-                if (Core::Directory(_persistentStoragePath.c_str()).CreatePath() == false) {
-                    _persistentStoragePath.clear();
-                    TRACE(Trace::Error, (_T("Failed to create persistent storage folder '%s'\n"), _persistentStoragePath.c_str()));
-                } else {
-                    _linkKeysFile = (_persistentStoragePath + "ShortTermKeys.json");
-                    _longTermKeysFile = (_persistentStoragePath + "LongTermKeys.json");
-                    _identityKeysFile = (_persistentStoragePath + "IdentityResolvingKeys.json");
-                    _signatureKeysFile = (_persistentStoragePath + "ConnectionSignatureResolvingKeys.json");
-
-                    LoadEncryptionKeys();
-                }
-            }
-
             if (Bluetooth::ManagementSocket::Up(_config.Interface.Value()) == false) {
                 result = "Could not activate bluetooth interface.";
             }
@@ -78,22 +63,13 @@ namespace Plugin {
             else if ((slaving == false) && (administrator.Name(_T("Thunder"), _config.Name.Value()) != Core::ERROR_NONE)) {
                 result = "Failed to upload identity keys to the bluetooth interface";
             }
-            else if ((slaving == false) && (administrator.LinkKey(_linkKeys) != Core::ERROR_NONE)) {
-              result = "Failed to upload link keys to the bluetooth interface";
-            }
-            else if ((slaving == false) && (administrator.LongTermKey(_longTermKeys) != Core::ERROR_NONE)) {
-                result = "Failed to upload long term keys to the bluetooth interface";
-            }
-            else if ((slaving == false) && (administrator.IdentityKey(_identityKeys) != Core::ERROR_NONE)) {
-                result = "Failed to upload identity keys to the bluetooth interface";
-            }
             //else if ((slaving == false) && (administrator.Notifications(true) != Core::ERROR_NONE)) {
             //    result = "Failed to enable the management notifications on the bluetooth interface";
             //}
             else if ((slaving == false) && (administrator.Power(true) != Core::ERROR_NONE)) {
                 result = "Failed to power up the bluetooth interface";
             }
-            //else if ((slaving == false) && (administrator.Discovering(true, true, true) != Core::ERROR_NONE)) {
+            //else if ((slaving == false) && (administrator.Discovering(false, true, true) != Core::ERROR_NONE)) {
             //    result = "Failed to change device discovery on bluetooth interface";
             //}
             else if (_application.Open(*this) != Core::ERROR_NONE) {
@@ -106,6 +82,48 @@ namespace Plugin {
                 ::destruct_bluetooth_driver();
             }
             else {
+                _persistentStoragePath = _service->PersistentPath() + "BondedDevices/";
+
+                if (_persistentStoragePath.empty() == false) {
+                    if (Core::Directory(_persistentStoragePath.c_str()).CreatePath() == false) {
+                        _persistentStoragePath.clear();
+                        TRACE(Trace::Error, (_T("Failed to create persistent storage folder '%s'\n"), _persistentStoragePath.c_str()));
+                    }
+                }
+
+                if (slaving == false) {
+                    Bluetooth::LinkKeys lks;
+                    Bluetooth::LongTermKeys ltks;
+                    Bluetooth::IdentityKeys irks;
+
+                    if (_persistentStoragePath.empty() == false) {
+                        Core::Directory dir(_persistentStoragePath.c_str());
+                        while (dir.Next() == true) {
+                            if (dir.Name().find(".device.json") != string::npos) {
+                                Bluetooth::Address address(dir.Name().substr(0, dir.Name().find_first_of('.')).c_str());
+                                if (LoadDevice(address, lks, ltks, irks) != Core::ERROR_NONE) {
+                                    TRACE(Trace::Error, (_T("Failed to load device %s"), dir.Name().c_str()));
+                                } else {
+                                    TRACE(Trace::Information, (_T("Loaded device %s"), dir.Name().c_str()));
+                                }
+                            }
+                        }
+                    }
+
+                    TRACE(Trace::Information, (_T("Loaded %i previously bonded device(s): %i LKs, %i LTKs, %i IRKs"),
+                                                    _devices.size(), lks.Entries(), ltks.Entries(), irks.Entries()));
+
+                    if (administrator.LinkKey(lks) != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Failed to upload link keys to the bluetooth interface")));
+                    }
+                    if (administrator.LongTermKey(ltks) != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Failed to upload long term keys to the bluetooth interface")));
+                    }
+                    if (administrator.IdentityKey(irks) != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Failed to upload identity keys to the bluetooth interface")));
+                    }
+                }
+
                 Bluetooth::ManagementSocket::Info info(administrator.Settings());
                 Bluetooth::ManagementSocket::Info::Properties actuals(info.Actuals());
                 Bluetooth::ManagementSocket::Info::Properties supported(info.Supported());
@@ -336,24 +354,6 @@ namespace Plugin {
                     } else {
                         result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
                         result->Message = _T("Unable to connect to device.");
-                    }
-                } else if (index.Current() == _T("Create")) {
-                    if (index.Next() == true) {
-                        Bluetooth::Address address(index.Current().Text().c_str());
-                        string name(index.Next() == true? index.Current().Text().c_str() : "Unknown");
-                        _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(_btInterface, address, name, true));
-                        _gattRemote = Core::Service<GATTRemote>::Create<GATTRemote>(this, _devices.back());
-                        if (_gattRemote != nullptr) {
-                            _gattRemote->Callback(this);
-                            result->ErrorCode = Web::STATUS_OK;
-                            result->Message = _T("Created device.");
-                        } else {
-                            result->ErrorCode = Web::STATUS_OK;
-                            result->Message = _T("Failed to create device.");
-                        }
-                    } else {
-                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = _T("Unable to process PUT request.");
                     }
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -625,173 +625,116 @@ namespace Plugin {
         return (index != _devices.end() ? (*index) : nullptr);
     }
 
-    template<typename KEYLISTTYPE>
-    class EncryptionKeyList {
-    public:
-        EncryptionKeyList() = delete;
-        EncryptionKeyList(const EncryptionKeyList& ) = delete;
-        EncryptionKeyList operator= (const EncryptionKeyList) = delete;
+    uint32_t BluetoothControl::LoadDevice(const Bluetooth::Address& address,
+                                          Bluetooth::LinkKeys& linkKeysList, Bluetooth::LongTermKeys& longTermKeysList, Bluetooth::IdentityKeys& identityKeysList)
+    {
+        uint32_t result = Core::ERROR_OPENING_FAILED;
 
-        EncryptionKeyList(KEYLISTTYPE& list)
-            : _array()
-            , _list(list)
-        {
-            for (auto it = list.Elements().cbegin(); it != list.Elements().cend(); it++) {
-                string hexKey;
-                Core::JSON::String jsonKey;
-                Core::ToHexString((*it).Data(), (*it).Length(), hexKey);
-                jsonKey = hexKey;
-                _array.Add(jsonKey);
-            }
-        }
-
-        uint32_t Load(Core::File& file)
-        {
-            uint32_t result = Core::ERROR_NONE;
+        if (address.IsValid() == true) {
+            Core::File file(AddressToPath(address));
 
             if (file.Open() == true) {
-                if (_array.FromFile(file) == false) {
-                    TRACE(Trace::Error, (_T("Failed to read file %s"), file.Name().c_str()));
-                    result = Core::ERROR_READ_ERROR;
-                } else {
-                    _list.Clear();
-                    auto index = _array.Elements();
-                    while (index.Next() == true) {
-                        uint8_t keyBin[_list.Length()];
-                        Core::FromHexString(index.Current().Value(), keyBin, _list.Length());
-                        typename KEYLISTTYPE::type key(keyBin, _list.Length());
-                        if (key.IsValid() == true) {
-                            _list.Add(key);
+                result = Core::ERROR_READ_ERROR;
+                DeviceData data;
+
+                if (data.FromFile(file) == true) {
+                    DeviceImpl* device = nullptr;
+                    result = Core::ERROR_INVALID_DESIGNATOR;
+
+                    if ((data.Type.IsSet() == true) && (data.Name.IsSet() == true)) {
+                        if (data.Type.Value() == Bluetooth::Address::BREDR_ADDRESS) {
+                            // Classic Bluetooth device
+                            if (data.LinkKeys.IsSet() == true) {
+                                Bluetooth::LinkKeys linkKeys;
+                                data.Deserialize(data.LinkKeys, linkKeys);
+
+                                if ((linkKeys.Entries() > 0) && (linkKeys.IsValid() == true)) {
+                                    device = Core::Service<DeviceRegular>::Create<DeviceImpl>(_btInterface, address, data.Name.Value(), linkKeys);
+                                    if (device != nullptr) {
+                                        linkKeysList.Add(linkKeys);
+                                    }
+                                }
+                            }
                         } else {
-                            TRACE(Trace::Error, (_T("Invalid key in file %s"), file.Name().c_str()));
+                            // Bluetooth Low Energy device
+                            if (data.LongTermKeys.IsSet() == true) {
+                                Bluetooth::LongTermKeys longTermKeys;
+                                data.Deserialize(data.LongTermKeys, longTermKeys);
+
+                                if ((longTermKeys.Entries() >= 2) && (longTermKeys.IsValid() == true)) {
+                                    device = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(_btInterface, address, data.Name.Value(), longTermKeys);
+                                    if (device != nullptr) {
+                                        longTermKeysList.Add(longTermKeys);
+
+                                        if (data.SignatureKeys.IsSet() == true) {
+                                            auto index = data.SignatureKeys.Elements();
+                                            while (index.Next() == true) {
+                                                Bluetooth::SignatureKey signatureKey(index.Current().Value());
+                                                device->SecurityKey(signatureKey);
+                                            }
+                                        }
+
+                                        if (data.IdentityKey.IsSet() == true) {
+                                            Bluetooth::IdentityKey identityKey(data.IdentityKey.Value());
+                                            device->SecurityKey(Bluetooth::IdentityKey(data.IdentityKey.Value()));
+                                            identityKeysList.Add(identityKey);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (device != nullptr) {
+                            _devices.push_back(device);
+                            result = Core::ERROR_NONE;
                         }
                     }
                 }
 
                 file.Close();
             }
-
-            return result;
         }
 
-        uint32_t Save(Core::File& file) const
-        {
-            uint32_t result = Core::ERROR_NONE;
-
-            if (_array.Length() > 0) {
-                if (file.Create() == true) {
-                    if (_array.ToFile(file) == false) {
-                        TRACE(Trace::Error, (_T("Failed to write file %s"), file.Name().c_str()));
-                        result = Core::ERROR_WRITE_ERROR;
-                    }
-
-                    file.Close();
-                } else {
-                    TRACE(Trace::Error, (_T("Failed to create file %s"), file.Name().c_str()));
-                    result = Core::ERROR_OPENING_FAILED;
-                }
-            }
-
-            return result;
-        }
-
-    private:
-        Core::JSON::ArrayType<Core::JSON::String> _array;
-        KEYLISTTYPE& _list;
-    };
-
-    void BluetoothControl::LoadEncryptionKeys()
-    {
-        if (_persistentStoragePath.empty() == false) {
-
-            _adminLock.Lock();
-
-            EncryptionKeyList<Bluetooth::LinkKeys> stks(_linkKeys);
-            stks.Load(_linkKeysFile);
-
-            EncryptionKeyList<Bluetooth::LongTermKeys> ltks(_longTermKeys);
-            ltks.Load(_longTermKeysFile);
-
-            EncryptionKeyList<Bluetooth::IdentityKeys> irks(_identityKeys);
-            irks.Load(_identityKeysFile);
-
-            EncryptionKeyList<Bluetooth::SignatureKeys> csrks(_signatureKeys);
-            csrks.Load(_signatureKeysFile);
-
-            TRACE(Trace::Information, (_T("Loaded %i STKs, %i LTKs, %i IRKs, %i CSRKs"),
-                        _linkKeys.Entries(), _longTermKeys.Entries(), _identityKeys.Entries(), _signatureKeys.Entries()));
-
-            _adminLock.Unlock();
-        }
+        return (result);
     }
 
-    uint32_t BluetoothControl::SaveEdrEncryptionKeys()
+    uint32_t BluetoothControl::SaveDevice(const Bluetooth::Address address, const DeviceData& data) const
     {
-        uint32_t result = Core::ERROR_NONE;
+        uint32_t result = Core::ERROR_OPENING_FAILED;
 
-        if (_persistentStoragePath.empty() == false) {
+        if (address.IsValid() == true) {
+            Core::File file(AddressToPath(address));
 
-            _adminLock.Lock();
-
-            TRACE(Trace::Information, (_T("Saving EDR keys: %i STKs"), _linkKeys.Entries()));
-
-            if (_linkKeys.Entries() > 0) {
-                EncryptionKeyList<Bluetooth::LinkKeys> keys(_linkKeys);
-                result = keys.Save(_linkKeysFile);
+            if (file.Create() == true) {
+                result = (data.ToFile(file) == true? Core::ERROR_NONE : Core::ERROR_WRITE_ERROR);
+                file.Close();
             }
-
-            _adminLock.Unlock();
         }
 
-        return result;
+        return (result);
     }
 
-    uint32_t BluetoothControl::SaveLeEncryptionKeys()
+    uint32_t BluetoothControl::SaveDevice(const Bluetooth::Address& address, const Bluetooth::Address::type type, const string& name, const Bluetooth::LinkKeys& linkKeys) const
     {
-        uint32_t result = Core::ERROR_NONE;
-
-        if (_persistentStoragePath.empty() == false) {
-
-            _adminLock.Lock();
-
-            TRACE(Trace::Information, (_T("Saving LE keys: %i LTKs, %i IRKs, %i CSRKs"), _longTermKeys.Entries(), _identityKeys.Entries(), _signatureKeys.Entries()));
-
-            if (_identityKeys.Entries() > 0) {
-                EncryptionKeyList<Bluetooth::IdentityKeys> keys(_identityKeys);
-                keys.Save(_identityKeysFile);
-            }
-
-            if (_signatureKeys.Entries() > 0) {
-                EncryptionKeyList<Bluetooth::SignatureKeys> keys(_signatureKeys);
-                keys.Save(_signatureKeysFile);
-            }
-
-            if (_longTermKeys.Entries() > 0) {
-                EncryptionKeyList<Bluetooth::LongTermKeys> keys(_longTermKeys);
-                result = keys.Save(_longTermKeysFile);
-            }
-
-            _adminLock.Unlock();
-        }
-
-        return result;
+        ASSERT(type == Bluetooth::Address::BREDR_ADDRESS);
+        return (SaveDevice(address, DeviceData(type, name, linkKeys)));
     }
 
-    void BluetoothControl::PurgeDeviceKeys(const Bluetooth::Address& device)
+    uint32_t BluetoothControl::SaveDevice(const Bluetooth::Address& address, const Bluetooth::Address::type type, const string& name,
+                                          const Bluetooth::LongTermKeys& longTermKeys, const Bluetooth::SignatureKeys& signatureKeys, const Bluetooth::IdentityKey& identityKey) const
     {
-        _adminLock.Lock();
+        ASSERT(type == Bluetooth::Address::LE_PUBLIC_ADDRESS);
+        return (SaveDevice(address, DeviceData(type, name, longTermKeys, signatureKeys, identityKey)));
+    }
 
-        TRACE(Trace::Information, (_T("Purging encryption keys of device [%s]"), device.ToString().c_str()));
-
-        if (_linkKeys.Purge(device) > 0) {
-            SaveEdrEncryptionKeys();
+    uint32_t BluetoothControl::ForgetDevice(const Bluetooth::Address& address) const
+    {
+        uint32_t result = Core::ERROR_INVALID_DESIGNATOR;
+        if (address.IsValid() == true) {
+            Core::File file(AddressToPath(address));
+            result = (file.Destroy() == true? Core::ERROR_NONE : Core::ERROR_WRITE_ERROR);
         }
-
-        if ((_longTermKeys.Purge(device) + _signatureKeys.Purge(device) + _identityKeys.Purge(device)) > 0) {
-            SaveLeEncryptionKeys();
-        }
-
-        _adminLock.Unlock();
+        return (result);
     }
 
 } // namespace Plugin
