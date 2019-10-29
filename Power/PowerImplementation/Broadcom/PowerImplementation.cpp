@@ -61,6 +61,7 @@ public:
         , _gpioHandle(nullptr)
         , _gpioType(NEXUS_GpioType_eAonStandard)
         , _gpioPin(0)
+        , _wait(false, false)
     {
         TRACE(Trace::Information, (_T("BcmPowerManager()")));
         Init();
@@ -115,6 +116,7 @@ private:
     uint32_t _gpioPin;
 
     Core::CriticalSection _lock;
+    Core::Event _wait;
 };
 
 // The essence of making the IPower interface available. This instantiates
@@ -154,6 +156,7 @@ using namespace WPEFramework;
 uint32_t PowerImplementation::Worker()
 {
     while (IsRunning() == true) {
+        _wait.Lock();
         _lock.Lock();
         if (_isSetState) {
             NEXUS_PlatformStandbyMode prevMode = _mode;
@@ -484,6 +487,7 @@ Exchange::IPower::PCStatus PowerImplementation::SetState(const Exchange::IPower:
     if (status == PCSuccess) {
         _lock.Lock();
         _isSetState = true;
+        _wait.SetEvent();
         _lock.Unlock();
     } else {
         TRACE(Trace::Error, (_T("SetPowerState given state is not supported!!!")));
