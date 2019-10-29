@@ -2,7 +2,6 @@
 
 #include "Module.h"
 #include <interfaces/IBluetooth.h>
-#include <interfaces/IKeyHandler.h>
 
 namespace WPEFramework {
 
@@ -10,8 +9,7 @@ namespace Plugin {
 
 class BluetoothControl : public PluginHost::IPlugin
                        , public PluginHost::IWeb
-                       , public Exchange::IBluetooth
-                       , public Exchange::IKeyHandler {
+                       , public Exchange::IBluetooth {
     private:
         class ManagementFlow {
         public:
@@ -484,375 +482,6 @@ class BluetoothControl : public PluginHost::IPlugin
             BluetoothControl* _parent;
             Core::ProxyType<Job> _activity;
             ManagementSocket _administrator;
-        };
-
-        class GATTRemote : public Bluetooth::GATTSocket, public Exchange::IKeyProducer {
-        private:
-            // UUID
-            static constexpr uint16_t HID_UUID         = 0x1812;
-
-            class Flow {
-            public:
-                Flow() = delete;
-                Flow(const Flow&) = delete;
-                Flow& operator=(const Flow&) = delete;
-                Flow(const TCHAR formatter[], ...)
-                {
-                    va_list ap;
-                    va_start(ap, formatter);
-                    Trace::Format(_text, formatter, ap);
-                    va_end(ap);
-                }
-                explicit Flow(const string& text)
-                    : _text(Core::ToString(text))
-                {
-                }
-                ~Flow()
-                {
-                }
-
-            public:
-                inline const char* Data() const
-                {
-                    return (_text.c_str());
-                }
-                inline uint16_t Length() const
-                {
-                    return (static_cast<uint16_t>(_text.length()));
-                }
-
-            private:
-                std::string _text;
-            };
-
-            class Sink : public Exchange::IBluetooth::IDevice::ICallback {
-            public:
-                Sink() = delete;
-                Sink(const Sink&) = delete;
-                Sink& operator=(const Sink&) = delete;
-
-                Sink(GATTRemote* parent) : _parent(*parent)
-                {
-                    ASSERT(parent != nullptr);
-                }
-                virtual ~Sink()
-                {
-                }
-
-            public:
-                void Updated() override
-                {
-                    _parent.Updated();
-                }
-
-                BEGIN_INTERFACE_MAP(Sink)
-                    INTERFACE_ENTRY(IBluetooth::IDevice::ICallback)
-                END_INTERFACE_MAP
-
-            private:
-                GATTRemote& _parent;
-            };
-
-            class Activity : public Core::IDispatch {
-            public:
-                Activity(const Activity &) = delete;
-                Activity &operator=(const Activity &) = delete;
-                Activity()
-                    : _pressed(false)
-                    , _scancode(0)
-                    , _map()
-                    , _keyHandler(nullptr)
-                    , _adminLock()
-                {
-                }
-                ~Activity() override
-                {
-                }
-
-                void KeyEvent(bool pressed, uint16_t scancode, const string& map)
-                {
-                    _adminLock.Lock();
-                    if ((scancode != 0) && (_keyHandler != nullptr)) {
-                        _pressed = pressed;
-                        _scancode = scancode;
-                        _map = map;
-                        PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                    }
-                    _adminLock.Unlock();
-                }
-                uint32_t KeyHandler(IKeyHandler* keyHandler)
-                {
-                    _adminLock.Lock();
-                    if (_keyHandler != nullptr) {
-                        _keyHandler->Release();
-                    }
-                    if (keyHandler != nullptr) {
-                        keyHandler->AddRef();
-                    }
-                    _keyHandler = keyHandler;
-                    _adminLock.Unlock();
-                    return (Core::ERROR_NONE);
-                }
-                void Dispatch() override
-                {
-                    IKeyHandler* keyhandler = nullptr;
-
-                    _adminLock.Lock();
-                    if (_keyHandler != nullptr) {
-                        keyhandler = _keyHandler;
-                        keyhandler->AddRef();
-                    }
-                    _adminLock.Unlock();
-
-                    if (keyhandler != nullptr) {
-                        keyhandler->KeyEvent(_pressed, _scancode, _map);
-                        keyhandler->Release();
-                    }
-                }
-
-            private:
-                bool _pressed;
-                uint16_t _scancode;
-                string _map;
-                IKeyHandler* _keyHandler;
-                Core::CriticalSection _adminLock;
-            };
-
-            static Core::NodeId Designator(const uint8_t type, const string& address)
-            {
-                return(Bluetooth::Address(address.c_str()).NodeId(static_cast<Bluetooth::Address::type>(type), GATTSocket::LE_ATT_CID, 0));
-            }
-
-        public:
-            GATTRemote() = delete;
-            GATTRemote(const GATTRemote&) = delete;
-            GATTRemote& operator=(const GATTRemote&) = delete;
-
-            GATTRemote(BluetoothControl* parent, IBluetooth::IDevice* device)
-                : Bluetooth::GATTSocket(
-                      Designator(device->Type(), device->LocalId()),
-                      Designator(device->Type(), device->RemoteId()),
-                      256)
-                , _adminLock()
-                , _profile(true)
-                , _command()
-                , _device(device)
-                , _handles()
-                , _sink(this)
-                , _currentKey(0)
-                , _activity(Core::ProxyType<Activity>::Create())
-                , _parent(parent)
-            {
-                ASSERT(_parent != nullptr);
-
-                _device->AddRef();
-                _name = _device->Name();
-
-                if (_device->Callback(&_sink) != Core::ERROR_NONE) {
-                    TRACE(Trace::Fatal, (_T("The device is already in use. Only 1 callback allowed")));
-                }
-                else if (_device->IsConnected() == true) {
-                    TRACE(Trace::Fatal, (_T("The device is already connected. First disconnect the device")));
-                }
-
-                _parent->RemoteControlCreated(*this);
-            }
-            virtual ~GATTRemote()
-            {
-                _parent->RemoteControlDestroyed(*this);
-
-                if (GATTSocket::IsOpen() == true) {
-                    GATTSocket::Close(Core::infinite);
-                }
-                if (_device != nullptr) {
-                    if (_device->Callback(nullptr) != Core::ERROR_NONE) {
-                        TRACE(Trace::Fatal, (_T("Could not remove the callback from the device. Scarry !!!")));
-                    }
-                    _device->Release();
-                    _device = nullptr;
-                }
-            }
-
-            BEGIN_INTERFACE_MAP(BluetoothRemoteControl)
-            INTERFACE_ENTRY(Exchange::IKeyProducer)
-            END_INTERFACE_MAP
-
-        public:
-            // IKeyProducer methods
-            const TCHAR* Name() const override
-            {
-                return (_name.c_str());
-            }
-            bool Pair() override
-            {
-                return (false);
-            }
-            bool Unpair(string bondingId) override
-            {
-                return (false);
-            }
-            uint32_t Callback(IKeyHandler* callback) override
-            {
-                return (_activity->KeyHandler(callback));
-            }
-            uint32_t Error() const override
-            {
-                return 0;
-            }
-            string MetaData() const override
-            {
-                return {};
-            }
-            void Configure(const string& settings) override
-            {
-            }
-
-        private:
-            bool Initialize() override
-            {
-                return (Security(BT_SECURITY_LOW));
-            }
-            void Notification(const uint16_t handle, const uint8_t dataFrame[], const uint16_t length) override
-            {
-                if ((handle == 0x34) && (length >= 2)) {
-                    uint16_t scancode = ((dataFrame[1] << 8) | dataFrame[0]);
-                    bool pressed = (scancode != 0);
-
-                    if (pressed == true) {
-                        _currentKey = scancode;
-                    }
-
-                    if (_currentKey != 0) {
-                        TRACE(Flow, (_T("Received a keypress notification: handle=0x%x, code=%i, state=%s, map='%s'"), handle, _currentKey, (pressed? "pressed" : "released"), _name.c_str()));
-                        ASSERT(_activity != nullptr);
-                        _activity->KeyEvent(pressed, _currentKey, _name);
-                    }
-                } else {
-                    string data;
-                    Core::ToHexString(dataFrame, length, data);
-                    printf(_T("Unhandled notification: [handle=0x%x], %d bytes: %s\n"), handle, length, data.c_str());
-                }
-            }
-            void Operational() override
-            {
-                TRACE(Flow, (_T("The received MTU: %d"), MTU()));
-
-                if (_device->IsBonded() == false) {
-                    // No need to do servuce discovery if device is bonded, the notifications are already enabled
-                    _profile.Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
-                        if (result == Core::ERROR_NONE) {
-                            if (_profile[Bluetooth::UUID(HID_UUID)] == nullptr) {
-                                TRACE(Flow, (_T("The given bluetooth device does not support a HID service!!")));
-                            }
-                            else {
-                                LoadReportHandles();
-
-                                if (_handles.size() > 0) {
-                                    uint16_t val = htobs(1);
-                                    _command.Write(_handles.front(), sizeof(val), reinterpret_cast<const uint8_t*>(&val));
-                                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                                        EnableEvents(cmd);
-                                    });
-                                }
-                            }
-                        }
-                        else {
-                            TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
-                        }
-                    });
-                }
-            }
-            void LoadReportHandles()
-            {
-                const Bluetooth::UUID AUDIO_SERVICE_UUID(_T("f0e0d000-a000-b000-c000-987654321000"));
-                const Bluetooth::UUID AUDIO_COMMAND_UUID(_T("f0e0d001-a000-b000-c000-987654321000"));
-                const Bluetooth::UUID AUDIO_DATA_UUID(_T("f0e0d002-a000-b000-c000-987654321000"));
-
-                Bluetooth::Profile::Iterator serviceIdx = _profile.Services();
-                while (serviceIdx.Next() == true) {
-                    const Bluetooth::Profile::Service& service = serviceIdx.Current();
-                    const bool isHidService = (service.Type() == Bluetooth::Profile::Service::HumanInterfaceDevice);
-                    const bool isAudioService = (service.Type() == AUDIO_SERVICE_UUID);
-                    TRACE(Flow, (_T("[0x%04X] Service: [0x%04X]         %s"), service.Handle(), service.Max(), service.Name().c_str()));
-
-                    Bluetooth::Profile::Service::Iterator characteristicIdx = service.Characteristics();
-                    while (characteristicIdx.Next() == true) {
-                        const Bluetooth::Profile::Service::Characteristic& characteristic(characteristicIdx.Current());
-                        const bool isHidReportCharacteristic = ((isHidService == true) && (characteristic.Type() == Bluetooth::Profile::Service::Characteristic::Report));
-                        const bool isAudioCharacteristic = ((isAudioService == true) && ((characteristic.Type() == AUDIO_COMMAND_UUID) || (characteristic.Type() == AUDIO_DATA_UUID)));
-                        TRACE(Flow, (_T("[0x%04X]    Characteristic [0x%02X]: %s [%d]"), characteristic.Handle(), characteristic.Rights(), characteristic.Name().c_str(), characteristic.Error()));
-
-                        Bluetooth::Profile::Service::Characteristic::Iterator descriptorIdx = characteristic.Descriptors();
-                        while (descriptorIdx.Next() == true) {
-                            const Bluetooth::Profile::Service::Characteristic::Descriptor& descriptor(descriptorIdx.Current());
-                            const bool isHidReportCharacteristicConfig = ((isHidReportCharacteristic == true) && (descriptor.Type() == Bluetooth::Profile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration));
-                            const bool isAudioCharacteristicConfig = ((isAudioCharacteristic == true) && (descriptor.Type() == Bluetooth::Profile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration));
-                            TRACE(Flow, (_T("[0x%04X]       Descriptor:         %s"), descriptor.Handle(), descriptor.Name().c_str()));
-
-                            if ((isHidReportCharacteristicConfig == true) || (isAudioCharacteristicConfig == true)) {
-                                _handles.push_back(descriptor.Handle());
-                            }
-                        }
-                    }
-                }
-            }
-            void EnableEvents(const GATTSocket::Command& cmd)
-            {
-                if ( (cmd.Error() != Core::ERROR_NONE) || (cmd.Result().Error() != 0) ) {
-                    TRACE(Flow, (_T("Enabled reporting on [%04X], Failed: [%d]!!!"), _handles.front(), cmd.Result().Error()));
-                }
-                else {
-                    TRACE(Flow, (_T("Enabled reporting on [%04X], Succeeded"), _handles.front()));
-                }
-
-                _handles.pop_front();
-
-                if (_handles.size() > 0) {
-                    uint16_t val = htobs(1);
-                    _command.Write(_handles.front(), sizeof(val), reinterpret_cast<const uint8_t*>(&val));
-                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                        EnableEvents(cmd);
-                    });
-                }
-            }
-            void Updated()
-            {
-                _adminLock.Lock();
-                if (_device != nullptr) {
-                    if ((_device->IsConnected() == true) && (IsOpen() == false)) {
-                        TRACE(Trace::Information, (_T("Connecting GATT socket %s"), _device->RemoteId().c_str()));
-                        uint32_t result = GATTSocket::Open(5000);
-                        if (result != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, (_T("Failed to open GATT socket %s"), _device->RemoteId().c_str()));
-                        }
-                    } else if (_device->IsValid() == true) {
-                        if (IsOpen() == true) {
-                            TRACE(Trace::Information, (_T("Disconnecting GATT socket %s"), _device->RemoteId().c_str()));
-                            uint32_t result = GATTSocket::Close(Core::infinite);
-                            if (result != Core::ERROR_NONE) {
-                                TRACE(Trace::Error, (_T("Failed to close GATT socket %s"), _device->RemoteId().c_str()));
-                            }
-                        }
-                    } else {
-                        TRACE(Flow, (_T("Releasing device"), _handles.front()));
-                        _device->Release();
-                        _device = nullptr;
-                    }
-                }
-                _adminLock.Unlock();
-            }
-
-        private:
-            Core::CriticalSection _adminLock;
-            Bluetooth::Profile _profile;
-            Command _command;
-            IBluetooth::IDevice* _device;
-            std::list<uint16_t> _handles;
-            Core::Sink<Sink> _sink;
-            uint16_t _currentKey;
-            const Core::ProxyType<Activity> _activity;
-            BluetoothControl* _parent;
-            string _name;
         };
 
         class Config : public Core::JSON::Container {
@@ -1758,6 +1387,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 uint32_t result = Core::ERROR_GENERAL;
                 if (irk.IsValid() == true) {
                     _irk = irk;
+                    result = Core::ERROR_NONE;
                 }
                 return (result);
             }
@@ -1871,10 +1501,7 @@ class BluetoothControl : public PluginHost::IPlugin
             , _btAddress()
             , _devices()
             , _observers()
-            , _gattRemote(nullptr)
-            , _inputHandler(PluginHost::InputHandler::Handler())
         {
-            ASSERT(_inputHandler != nullptr);
         }
         virtual ~BluetoothControl()
         {
@@ -1885,7 +1512,6 @@ class BluetoothControl : public PluginHost::IPlugin
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(Exchange::IBluetooth)
-        INTERFACE_ENTRY(Exchange::IKeyHandler)
         END_INTERFACE_MAP
 
     public:
@@ -1924,32 +1550,6 @@ class BluetoothControl : public PluginHost::IPlugin
         virtual bool Scan(const bool enable) override;
         virtual IBluetooth::IDevice* Device(const string&) override;
         virtual IBluetooth::IDevice::IIterator* Devices() override;
-
-        // IKeyHandler methods
-        uint32_t KeyEvent(const bool pressed, const uint32_t code, const string& mapName) override
-        {
-            return (_inputHandler->KeyEvent(pressed, code, mapName));
-        }
-        virtual Exchange::IKeyProducer* Producer(const string& name) override
-        {
-            return (_gattRemote);
-        }
-        void RemoteControlCreated(GATTRemote& remote)
-        {
-            TRACE(Trace::Information, (_T("Bluetooth LE remote control unit \"%s\" created"), remote.Name()));
-            string path(_service->DataPath() + string(remote.Name()) + "-remote.json");
-            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(remote.Name()));
-            TRACE(Trace::Information, (_T("Loading keymap file %s"), path.c_str()));
-            if (map.Load(path) != Core::ERROR_NONE) {
-                TRACE(Trace::Error, (_T("Failed to load keymap file %s; attempting pass-through"),path.c_str()));
-                map.PassThrough(true);
-            }
-        }
-        void RemoteControlDestroyed(GATTRemote& remote)
-        {
-            TRACE(Trace::Information, (_T("Bluetooth LE remote control unit \"%s\" destroyed"), remote.Name()));
-            _inputHandler->ClearTable(remote.Name());
-        }
 
     public:
         inline static ControlSocket& Connector() {
@@ -2052,6 +1652,7 @@ class BluetoothControl : public PluginHost::IPlugin
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> PostMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request);
+
         void RemoveDevices(std::function<bool(DeviceImpl*)> filter);
         void Discovered(const bool lowEnergy, const Bluetooth::Address& address, const string& name);
         void Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame);
@@ -2059,8 +1660,9 @@ class BluetoothControl : public PluginHost::IPlugin
         DeviceImpl* Find(const Bluetooth::Address&);
         void Capabilities(const Bluetooth::Address& device, const uint8_t capability, const uint8_t authentication, const uint8_t oob_data);
 
-        uint32_t SaveDevice(const Bluetooth::Address address, const DeviceData& data) const;
-        string AddressToPath(const Bluetooth::Address address) const {
+        uint32_t SaveDevice(const Bluetooth::Address& address, const DeviceData& data) const;
+        string AddressToPath(const Bluetooth::Address& address) const
+        {
             return (_persistentStoragePath + address.ToString() + _T(".device.json"));
         }
 
@@ -2072,11 +1674,9 @@ class BluetoothControl : public PluginHost::IPlugin
         Bluetooth::Address _btAddress;
         std::list<DeviceImpl*> _devices;
         std::list<IBluetooth::INotification*> _observers;
-        GATTRemote* _gattRemote;
         Config _config;
         static ControlSocket _application;
         string _persistentStoragePath;
-        PluginHost::VirtualInput* _inputHandler;
     };
 
 } //namespace Plugin

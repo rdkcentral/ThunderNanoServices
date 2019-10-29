@@ -16,7 +16,6 @@ namespace Plugin {
         string result;
 
         ASSERT(_service == nullptr);
-        ASSERT(_gattRemote == nullptr);
 
         _service = service;
         _skipURL = _service->WebPrefix().length();
@@ -148,6 +147,14 @@ namespace Plugin {
                 SYSLOG(Logging::Startup, (_T("%s Privacy:           %s"), supported.HasPrivacy() ? _T("[true] ") : _T("[false]"), actuals.HasPrivacy() ? _T("on") : _T("off")));
                 SYSLOG(Logging::Startup, (_T("%s Configuration:     %s"), supported.HasConfiguration() ? _T("[true] ") : _T("[false]"), actuals.HasConfiguration() ? _T("on") : _T("off")));
                 SYSLOG(Logging::Startup, (_T("%s StaticAddress:     %s"), supported.HasStaticAddress() ? _T("[true] ") : _T("[false]"), actuals.HasStaticAddress() ? _T("on") : _T("off")));
+
+                // Bluetooth is ready!
+                PluginHost::ISubSystem* subSystems(_service->SubSystems());
+                ASSERT(subSystems != nullptr);
+                if (subSystems != nullptr) {
+                    subSystems->Set(PluginHost::ISubSystem::BLUETOOTH, nullptr);
+                    subSystems->Release();
+                }
             }
         }
 
@@ -158,9 +165,11 @@ namespace Plugin {
     {
         ASSERT(_service == service);
 
-        if (_gattRemote != nullptr) {
-            _gattRemote->Release();
-            _gattRemote = nullptr;
+        PluginHost::ISubSystem* subSystems(_service->SubSystems());
+        ASSERT(subSystems != nullptr);
+        if (subSystems != nullptr) {
+            subSystems->Set(PluginHost::ISubSystem::NOT_BLUETOOTH, nullptr);
+            subSystems->Release();
         }
 
         // Deinitialize what we initialized..
@@ -371,39 +380,7 @@ namespace Plugin {
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported POST request.");
 
-        if (index.IsValid() == true) {
-            if (index.Next()) {
-                if (index.Current() == _T("Remote")) {
-                    string address;
-                    if (index.Next() == true) {
-                        address = index.Current().Text();
-                    } else if (request.HasBody() == true) {
-                        address = request.Body<const DeviceImpl::JSON>()->RemoteId.Value();
-                    }
-                    DeviceImpl* device = Find(Bluetooth::Address(address.c_str()));
-                    if (device == nullptr) {
-                        result->ErrorCode = Web::STATUS_NOT_FOUND;
-                        result->Message = _T("Unknown device.");
-                    } else {
-                        if (_gattRemote == nullptr) {
-                            _gattRemote = Core::Service<GATTRemote>::Create<GATTRemote>(this, device);
-                            if (_gattRemote != nullptr) {
-                                _gattRemote->Callback(this);
-                                result->ErrorCode = Web::STATUS_OK;
-                                result->Message = _T("OK.");
-                            } else {
-                                result->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
-                                result->Message = _T("Failed to assign remote");
-                            }
-                        } else {
-                            result->Message = _T("Remote already assigned");
-                        }
-                    }
-                }
-            }
-        }
-
-        return result;
+        return (result);
     }
 
     Core::ProxyType<Web::Response> BluetoothControl::DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request)
@@ -414,7 +391,6 @@ namespace Plugin {
 
         if (index.IsValid() == true) {
             if (index.Next()) {
-
                 if (index.Current() == _T("Scan")) {
                     _application.Abort();
                     result->ErrorCode = Web::STATUS_OK;
@@ -515,8 +491,6 @@ namespace Plugin {
     /* virtual */ bool BluetoothControl::Scan(const bool enable)
     {
         if ((_application.IsScanning() == false) && (enable == true)) {
-
-
             // Clearing previously discovered devices.
             RemoveDevices([](DeviceImpl* device) -> bool { if ((device->IsPaired() == false) && (device->IsConnected() == false)) device->Clear(); return(false); });
 
@@ -698,7 +672,7 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t BluetoothControl::SaveDevice(const Bluetooth::Address address, const DeviceData& data) const
+    uint32_t BluetoothControl::SaveDevice(const Bluetooth::Address& address, const DeviceData& data) const
     {
         uint32_t result = Core::ERROR_OPENING_FAILED;
 

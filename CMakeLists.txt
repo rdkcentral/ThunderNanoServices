@@ -7,6 +7,7 @@ find_package(WPEFramework)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
+option(PLUGIN_BTREMOTECONTROL "Include Bluetooth Remote Control plugin" OFF)
 option(PLUGIN_COMMANDER "Include Commander plugin" OFF)
 option(PLUGIN_COMPOSITOR "Include Compsitor plugin" OFF)
 option(PLUGIN_DEVICEIDENTIFICATION "Include DeviceIdentification plugin" OFF)
@@ -56,6 +57,10 @@ endif()
 
 if(PLUGIN_BLUETOOTH)
     add_subdirectory(Bluetooth)
+endif()
+
+if(PLUGIN_BTREMOTECONTROL)
+    add_subdirectory(BTRemoteControl)
 endif()
 
 if(PLUGIN_COMMANDER)
