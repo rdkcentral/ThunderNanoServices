@@ -1,6 +1,8 @@
 set(PLUGIN_NAME RemoteControl)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
+set(PLUGIN_REMOTECONTROL_RELEASE_TIMEOUT 30000 CACHE STRING "Remote control release timeout")
+
 option(PLUGIN_REMOTECONTROL_RFCE "Enable RF4CE functionality." ON)
 
 set(PLUGIN_REMOTECONTROL_RFCE_REMOTE_ID "GPSTB" CACHE STRING "User string, used for greenpeak")
