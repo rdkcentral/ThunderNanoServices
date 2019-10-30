@@ -4,6 +4,7 @@
 
 #include <interfaces/IBluetooth.h>
 #include <interfaces/IKeyHandler.h>
+#include <interfaces/json/JsonData_BluetoothRemoteControl.h>
 
 namespace WPEFramework {
 
@@ -11,6 +12,7 @@ namespace Plugin {
 
     class BluetoothRemoteControl : public PluginHost::IPlugin
                                  , public PluginHost::IWeb
+                                 , public PluginHost::JSONRPC
                                  , public Exchange::IKeyHandler {
 
         class GATTRemote : public Bluetooth::GATTSocket
@@ -171,6 +173,13 @@ namespace Plugin {
                 , _currentKey(0)
                 , _activity(Core::ProxyType<Activity>::Create())
                 , _parent(parent)
+                , _name()
+                , _model()
+                , _serial()
+                , _firmware()
+                , _software()
+                , _manufacturer()
+                , _audioHandler(_parent, 0x23, 0x27)
             {
                 ASSERT(_parent != nullptr);
                 ASSERT(_device != nullptr);
@@ -272,15 +281,32 @@ namespace Plugin {
 
             uint8_t BatteryLevel()
             {
-                printf("battery state %i\n", _batteryLevel);
-                if (_batteryLevel == static_cast<uint8_t>(~0)) {
-                    printf("unknown battery state\n");
-                    if (IsOpen() == false && _device->IsBonded() && _device->Connect() == Core::ERROR_NONE) {
-                    printf("redoing discovery\n");
-                       Discovery();
-                    }
-                }
                 return (_batteryLevel);
+            }
+
+            string Model() const
+            {
+                return (_model);
+            }
+
+            string Serial() const
+            {
+                return (_serial);
+            }
+
+            string Firmware() const
+            {
+                return (_firmware);
+            }
+
+            string Software() const
+            {
+                return (_software);
+            }
+
+            string Manufacturer() const
+            {
+                return (_manufacturer);
             }
 
         private:
@@ -304,50 +330,13 @@ namespace Plugin {
                         ASSERT(_activity != nullptr);
                         _activity->KeyEvent(pressed, _currentKey, _name);
                     }
-                } else {
+                } else if (_audioHandler.Notification(handle, dataFrame, length) == false) {
                     string data;
                     Core::ToHexString(dataFrame, length, data);
                     printf(_T("Unhandled notification: [handle=0x%x], %d bytes: %s\n"), handle, length, data.c_str());
                 }
             }
 
-            void Discovery()
-            {
-                _profile.Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
-                    if (result == Core::ERROR_NONE) {
-                        if (_profile[Bluetooth::UUID(HID_UUID)] == nullptr) {
-                            TRACE(Flow, (_T("The given bluetooth device does not support a HID service!!")));
-                        }
-                        else {
-                            LoadReportHandles();
-
-                            // Find battery level handle
-                            const Bluetooth::Profile::Service* batteryService = _profile[Bluetooth::Profile::Service::BatteryService];
-                            if (batteryService != nullptr) {
-                                const Bluetooth::Profile::Service::Characteristic* characteristic = (*batteryService)[Bluetooth::Profile::Service::Characteristic::BatteryLevel];
-                                const Bluetooth::Profile::Service::Characteristic::Descriptor* descriptor = (*characteristic)[Bluetooth::Profile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration];
-                                if (characteristic->Length() == 2) {
-                                    _batteryLevel = static_cast<const uint8_t>(btohs(*reinterpret_cast<const uint16_t*>(characteristic->Value())));
-                                    printf("battery level = %i\n",_batteryLevel);
-                                }
-                                _batteryLevelHandle = descriptor->Handle();
-                                _handles.push_back(_batteryLevelHandle);
-                            }
-
-                            if (_handles.size() > 0) {
-                                uint16_t val = htobs(1);
-                                _command.Write(_handles.front(), sizeof(val), reinterpret_cast<const uint8_t*>(&val));
-                                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                                    EnableEvents(cmd);
-                                });
-                            }
-                        }
-                    }
-                    else {
-                        TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
-                    }
-                });
-            }
 
             void Operational() override
             {
@@ -355,7 +344,27 @@ namespace Plugin {
 
                 if (_device->IsBonded() == false) {
                     // No need to do service discovery if device is bonded, the notifications are already enabled
-                    Discovery();
+                    _profile.Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
+                        if (result == Core::ERROR_NONE) {
+                            if (_profile[Bluetooth::UUID(HID_UUID)] == nullptr) {
+                                TRACE(Flow, (_T("The given bluetooth device does not support a HID service!!")));
+                            }
+                            else {
+                                LoadReportHandles();
+
+                                if (_handles.size() > 0) {
+                                    uint16_t val = htobs(1);
+                                    _command.Write(_handles.front(), sizeof(val), reinterpret_cast<const uint8_t*>(&val));
+                                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
+                                        EnableEvents(cmd);
+                                    });
+                                }
+                            }
+                        }
+                        else {
+                            TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
+                        }
+                    });
                 }
             }
 
@@ -438,6 +447,99 @@ namespace Plugin {
             }
 
         private:
+
+            class AudioHandler {
+            public:
+                AudioHandler(BluetoothRemoteControl* parent, uint16_t commandHandle, uint16_t dataHandle)
+                    : _parent(parent)
+                    , _commandHandle(commandHandle)
+                    , _dataHandle(dataHandle)
+                    , _seq(0)
+                    , _stepIdx(0)
+                    , _pred(0)
+                    , _intSeq(0)
+                    , _skip(true)
+                    , _eot(true)
+                {
+                    ASSERT(parent != nullptr)
+                }
+                ~AudioHandler()
+                {
+                }
+
+                bool Notification(const uint16_t handle, const uint8_t dataFrame[], const uint16_t length)
+                {
+                    bool handled = false;
+
+                    if ((handle == _dataHandle) && (length == 5)) {
+                        struct AudioHeader {
+                            uint8_t seq;
+                            uint8_t step;
+                            uint16_t pred;
+                            uint8_t compression;
+                        };
+                        const AudioHeader* hdr = reinterpret_cast<const AudioHeader*>(dataFrame);
+                        handled = true;
+                        _skip = false;
+                        _seq = hdr->seq;
+                        _stepIdx = hdr->step;
+                        _pred = btohs(hdr->pred);
+                        _compression = hdr->compression;
+                        if ((_seq == 0) || (_eot == true)) {
+                            _eot = false;
+                            string profile = (_compression? "admpcm-hq" : "pcm");
+                            _parent->event_audiotransmission(profile);
+                        } else if (_seq != (_intSeq + 1)) {
+                            printf(_T("audio: sequence mismatch %i != %i, lost %i frames\n"), _seq, (_intSeq + 1), (_seq - (_intSeq + 1)));
+                        }
+                       _intSeq = _seq;
+                       _skip = false;
+                    } else if ((handle == _dataHandle) && (length == 1)) {
+                        handled = true;
+                        uint8_t seq = dataFrame[0];
+                        if (seq != _intSeq) {
+                            printf(_T("audio: missing footer!\n"));
+                        }
+                    } else if ((handle == _dataHandle) && (length != 5) && (length != 1)) {
+                        handled = true;
+                        if (_skip == false) {
+                            uint8_t buf[length + 3];
+                            buf[0] = _stepIdx;
+                            buf[1] = _pred & 0xF;
+                            buf[2] = _pred << 8;
+                            // Prepending the buffer with the prediction values from the header notification
+                            ::memcpy(buf, dataFrame + 3, length);
+                            string frame;
+                            Core::ToString(buf, length + 3, true, frame);
+                            _parent->event_audioframe(_seq, frame);
+                            _skip = false;
+                        } else {
+                            printf(_T("audio: missing header, skipping frame!\n"));
+                        }
+                    } else if ((handle == _commandHandle) && (length >= 1)) {
+                        handled = true;
+                        if (dataFrame[0] == 0) {
+                            _eot = true;
+                            _parent->event_audiotransmission();
+                        }
+                    }
+
+                    return (handled);
+                }
+
+            private:
+                BluetoothRemoteControl* _parent;
+                uint16_t _commandHandle;
+                uint16_t _dataHandle;
+                uint8_t _seq;
+                uint8_t _stepIdx;
+                uint8_t _pred;
+                uint8_t _compression;
+                uint8_t _intSeq;
+                bool _skip;
+                bool _eot;
+            };
+
             Core::CriticalSection _adminLock;
             Bluetooth::Profile _profile;
             Command _command;
@@ -450,7 +552,13 @@ namespace Plugin {
             const Core::ProxyType<Activity> _activity;
             BluetoothRemoteControl* _parent;
             string _name;
+            string _model;
+            string _serial;
+            string _firmware;
+            string _software;
+            string _manufacturer;
 
+            AudioHandler _audioHandler;
             Bluetooth::UUID AUDIO_SERVICE_UUID;
             Bluetooth::UUID AUDIO_COMMAND_UUID;
             Bluetooth::UUID AUDIO_DATA_UUID;
@@ -469,16 +577,19 @@ namespace Plugin {
             , _settingsPath()
         {
             ASSERT(_inputHandler != nullptr);
+            RegisterAll();
         }
 
         ~BluetoothRemoteControl() override
         {
+            UnregisterAll();
         }
 
     public:
         BEGIN_INTERFACE_MAP(BluetoothRemoteControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IWeb)
+            INTERFACE_ENTRY(PluginHost::IDispatcher)
             INTERFACE_ENTRY(Exchange::IKeyHandler)
         END_INTERFACE_MAP
 
@@ -594,8 +705,11 @@ namespace Plugin {
         // Bluetooth Remote Control implementation
         uint32_t Assign(const string& address);
         uint32_t Revoke();
-        uint32_t Properties();
+        uint32_t Properties() const;
         uint8_t BatteryLevel() const;
+        string Name() const;
+        string Address() const;
+
         uint32_t LoadKeymap(GATTRemote& remote, const string& name);
         uint32_t LoadSettings(Settings& settings) const;
         uint32_t SaveSettings(const Settings& settings) const;
@@ -607,6 +721,20 @@ namespace Plugin {
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> PostMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request);
+
+    private:
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_assign(const JsonData::BluetoothRemoteControl::AssignParamsData& params);
+        uint32_t endpoint_revoke();
+        uint32_t get_name(Core::JSON::String& response) const;
+        uint32_t get_address(Core::JSON::String& response) const;
+        uint32_t get_info(JsonData::BluetoothRemoteControl::InfoData& response) const;
+        uint32_t get_batterylevel(Core::JSON::DecUInt8& response) const;
+        uint32_t get_audioprofiles(Core::JSON::ArrayType<Core::JSON::String>& response) const;
+        uint32_t get_audioprofile(const string& index, JsonData::BluetoothRemoteControl::AudioprofileData& response) const;
+        void event_audiotransmission(const string& profile = "");
+        void event_audioframe(const uint32_t& seq, const string& data);
 
     private:
         uint8_t _skipURL;

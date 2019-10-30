@@ -245,7 +245,7 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t BluetoothRemoteControl::Properties()
+    uint32_t BluetoothRemoteControl::Properties() const
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
 
@@ -272,7 +272,7 @@ namespace Plugin {
         return (level);
     }
 
-    uint32_t BluetoothRemoteControl::LoadKeymap(GATTRemote& remote, const string& name)
+        uint32_t BluetoothRemoteControl::LoadKeymap(GATTRemote& remote, const string& name)
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
 
