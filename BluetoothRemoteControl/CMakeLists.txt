@@ -1,11 +1,11 @@
-set(PLUGIN_NAME BTRemoteControl)
+set(PLUGIN_NAME BluetoothRemoteControl)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
-    BTRemoteControl.cpp
+    BluetoothRemoteControl.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES

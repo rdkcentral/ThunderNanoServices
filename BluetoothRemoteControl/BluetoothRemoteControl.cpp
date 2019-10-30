@@ -1,12 +1,12 @@
-#include "BTRemoteControl.h"
+#include "BluetoothRemoteControl.h"
 
 namespace WPEFramework {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(BTRemoteControl, 1, 0);
+    SERVICE_REGISTRATION(BluetoothRemoteControl, 1, 0);
 
-    const string BTRemoteControl::Initialize(PluginHost::IShell* service)
+    const string BluetoothRemoteControl::Initialize(PluginHost::IShell* service)
     {
         string result;
 
@@ -40,7 +40,7 @@ namespace Plugin {
         return result;
     }
 
-    void BTRemoteControl::Deinitialize(PluginHost::IShell* service)
+    void BluetoothRemoteControl::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
 
@@ -53,20 +53,20 @@ namespace Plugin {
         _service = nullptr;
     }
 
-    string BTRemoteControl::Information() const
+    string BluetoothRemoteControl::Information() const
     {
         return { };
     }
 
-    void BTRemoteControl::Inbound(WPEFramework::Web::Request& request)
+    void BluetoothRemoteControl::Inbound(WPEFramework::Web::Request& request)
     {
         // Not needed
     }
 
-    Core::ProxyType<Web::Response> BTRemoteControl::Process(const WPEFramework::Web::Request& request)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::Process(const WPEFramework::Web::Request& request)
     {
         ASSERT(_skipURL <= request.Path.length());
-        TRACE(Trace::Information, (_T("Received BTRemoteControl request")));
+        TRACE(Trace::Information, (_T("Received BluetoothRemoteControl request")));
 
         Core::ProxyType<Web::Response> response;
         Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, (request.Path.length() - _skipURL)), false, '/');
@@ -87,7 +87,7 @@ namespace Plugin {
         return (response);
     }
 
-    Core::ProxyType<Web::Response> BTRemoteControl::GetMethod(Core::TextSegmentIterator& index)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::GetMethod(Core::TextSegmentIterator& index)
     {
         Core::ProxyType<Web::Response> response(PluginHost::Factories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -104,13 +104,12 @@ namespace Plugin {
                     response->Message = _T("Failed to retrieve remote control properties");
                 }
             }  else if (index.Current() == "BatteryLevel") {
-                uint16_t level = ~0;
-                uint32_t result = BatteryLevel(level);
-                if (result == Core::ERROR_NONE) {
+                uint8_t batteryLevel = BatteryLevel();
+                if (batteryLevel != static_cast<uint8_t>(~0)) {
                     response->ErrorCode = Web::STATUS_OK;
                     response->Message = _T("OK");
                 } else {
-                    response->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                    response->ErrorCode = Web::STATUS_NOT_FOUND;
                     response->Message = _T("Failed to retrieve remote control battery level");
                 }
             }
@@ -119,7 +118,7 @@ namespace Plugin {
         return (response);
     }
 
-    Core::ProxyType<Web::Response> BTRemoteControl::PutMethod(Core::TextSegmentIterator& index, const Web::Request& request)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::PutMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
         Core::ProxyType<Web::Response> response(PluginHost::Factories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -130,7 +129,7 @@ namespace Plugin {
         return (response);
     }
 
-    Core::ProxyType<Web::Response> BTRemoteControl::PostMethod(Core::TextSegmentIterator& index, const Web::Request& request)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::PostMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
         Core::ProxyType<Web::Response> response(PluginHost::Factories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -161,7 +160,7 @@ namespace Plugin {
         return (response);
     }
 
-    Core::ProxyType<Web::Response> BTRemoteControl::DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
         Core::ProxyType<Web::Response> response(PluginHost::Factories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -186,7 +185,7 @@ namespace Plugin {
         return (response);
     }
 
-    uint32_t BTRemoteControl::Assign(const string& address)
+    uint32_t BluetoothRemoteControl::Assign(const string& address)
     {
         uint32_t result = Core::ERROR_ALREADY_CONNECTED;
 
@@ -204,7 +203,7 @@ namespace Plugin {
                     if (_gattRemote != nullptr) {
                         if ((_config.Audio.IsSet() == true) && (_config.Audio.ServiceUUID.IsSet() == true) \
                                 && (_config.Audio.CommandUUID.IsSet() == true) && (_config.Audio.DataUUID.IsSet() == true)) {
-                            if (_gattRemote->SetAudioUuids(_config.Audio.ServiceUUID.Value(), _config.Audio.CommandUUID.Value(), _config.Audio.DataUUID.Value()) == false) {
+                            if (_gattRemote->SetAudioUuids(_config.Audio.ServiceUUID.Value(), _config.Audio.CommandUUID.Value(), _config.Audio.DataUUID.Value()) != Core::ERROR_NONE) {
                                 TRACE(Trace::Error, (_T("Failed to set audio UUIDs")));
                             }
                         }
@@ -231,7 +230,7 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t BTRemoteControl::Revoke()
+    uint32_t BluetoothRemoteControl::Revoke()
     {
         uint32_t result = Core::ERROR_ALREADY_RELEASED;
 
@@ -246,9 +245,9 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t BTRemoteControl::Properties()
+    uint32_t BluetoothRemoteControl::Properties()
     {
-        uint32_t result = Core::ERROR_ALREADY_RELEASED;
+        uint32_t result = Core::ERROR_UNAVAILABLE;
 
         if (_gattRemote != nullptr) {
             // todo
@@ -260,21 +259,20 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t BTRemoteControl::BatteryLevel(uint16_t& level)
+    uint8_t BluetoothRemoteControl::BatteryLevel() const
     {
-        uint32_t result = Core::ERROR_ALREADY_RELEASED;
+        uint8_t level = ~0;
 
         if (_gattRemote != nullptr) {
-            // todo
-            result = Core::ERROR_NONE;
+            level = _gattRemote->BatteryLevel();
         } else {
             TRACE(Trace::Error, (_T("A remote has not been assigned")));
         }
 
-        return (result);
+        return (level);
     }
 
-    uint32_t BTRemoteControl::LoadKeymap(GATTRemote& remote, const string& name)
+    uint32_t BluetoothRemoteControl::LoadKeymap(GATTRemote& remote, const string& name)
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
 
@@ -292,7 +290,7 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t BTRemoteControl::LoadSettings(Settings& settings) const
+    uint32_t BluetoothRemoteControl::LoadSettings(Settings& settings) const
     {
         uint32_t result = Core::ERROR_OPENING_FAILED;
 
@@ -308,7 +306,7 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t BTRemoteControl::SaveSettings(const Settings& settings) const
+    uint32_t BluetoothRemoteControl::SaveSettings(const Settings& settings) const
     {
         uint32_t result = Core::ERROR_OPENING_FAILED;
 
@@ -324,7 +322,7 @@ namespace Plugin {
         return (result);
     }
 
-    void BTRemoteControl::RemoteCreated(GATTRemote& remote)
+    void BluetoothRemoteControl::RemoteCreated(GATTRemote& remote)
     {
         TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] created"), remote.Name()));
 
@@ -339,7 +337,7 @@ namespace Plugin {
         }
     }
 
-    void BTRemoteControl::RemoteDestroyed(GATTRemote& remote)
+    void BluetoothRemoteControl::RemoteDestroyed(GATTRemote& remote)
     {
         TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] destroyed"), remote.Name()));
 

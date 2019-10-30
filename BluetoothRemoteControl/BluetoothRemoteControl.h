@@ -9,9 +9,9 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    class BTRemoteControl : public PluginHost::IPlugin
-                          , public PluginHost::IWeb
-                          , public Exchange::IKeyHandler {
+    class BluetoothRemoteControl : public PluginHost::IPlugin
+                                 , public PluginHost::IWeb
+                                 , public Exchange::IKeyHandler {
 
         class GATTRemote : public Bluetooth::GATTSocket
                          , public Exchange::IKeyProducer {
@@ -158,19 +158,22 @@ namespace Plugin {
             GATTRemote(const GATTRemote&) = delete;
             GATTRemote& operator=(const GATTRemote&) = delete;
 
-            GATTRemote(BTRemoteControl* parent, Exchange::IBluetooth::IDevice* device, uint16_t mtu = 255)
+            GATTRemote(BluetoothRemoteControl* parent, Exchange::IBluetooth::IDevice* device, uint16_t mtu = 255)
                 : Bluetooth::GATTSocket(Designator(device->Type(), device->LocalId()), Designator(device->Type(), device->RemoteId()), mtu)
                 , _adminLock()
                 , _profile(true)
                 , _command()
                 , _device(device)
                 , _handles()
+                , _batteryLevel(~0)
+                , _batteryLevelHandle(0)
                 , _sink(this)
                 , _currentKey(0)
                 , _activity(Core::ProxyType<Activity>::Create())
                 , _parent(parent)
             {
                 ASSERT(_parent != nullptr);
+                ASSERT(_device != nullptr);
 
                 _device->AddRef();
                 _name = _device->Name();
@@ -249,9 +252,9 @@ namespace Plugin {
                 return (_device != nullptr? _device->RemoteId() :  _T("<unassigned>"));
             }
 
-            bool SetAudioUuids(const string& service, const string& command, const string& data)
+            uint32_t SetAudioUuids(const string& service, const string& command, const string& data)
             {
-                bool result = false;
+                uint32_t result = Core::ERROR_GENERAL;
 
                 Bluetooth::UUID serviceUuid(service);
                 Bluetooth::UUID commandUuid(command);
@@ -261,10 +264,23 @@ namespace Plugin {
                     AUDIO_SERVICE_UUID = serviceUuid;
                     AUDIO_COMMAND_UUID = commandUuid;
                     AUDIO_DATA_UUID = dataUuid;
-                    result = true;
+                    result = Core::ERROR_NONE;
                 }
 
                 return (result);
+            }
+
+            uint8_t BatteryLevel()
+            {
+                printf("battery state %i\n", _batteryLevel);
+                if (_batteryLevel == static_cast<uint8_t>(~0)) {
+                    printf("unknown battery state\n");
+                    if (IsOpen() == false && _device->IsBonded() && _device->Connect() == Core::ERROR_NONE) {
+                    printf("redoing discovery\n");
+                       Discovery();
+                    }
+                }
+                return (_batteryLevel);
             }
 
         private:
@@ -295,33 +311,51 @@ namespace Plugin {
                 }
             }
 
+            void Discovery()
+            {
+                _profile.Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
+                    if (result == Core::ERROR_NONE) {
+                        if (_profile[Bluetooth::UUID(HID_UUID)] == nullptr) {
+                            TRACE(Flow, (_T("The given bluetooth device does not support a HID service!!")));
+                        }
+                        else {
+                            LoadReportHandles();
+
+                            // Find battery level handle
+                            const Bluetooth::Profile::Service* batteryService = _profile[Bluetooth::Profile::Service::BatteryService];
+                            if (batteryService != nullptr) {
+                                const Bluetooth::Profile::Service::Characteristic* characteristic = (*batteryService)[Bluetooth::Profile::Service::Characteristic::BatteryLevel];
+                                const Bluetooth::Profile::Service::Characteristic::Descriptor* descriptor = (*characteristic)[Bluetooth::Profile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration];
+                                if (characteristic->Length() == 2) {
+                                    _batteryLevel = static_cast<const uint8_t>(btohs(*reinterpret_cast<const uint16_t*>(characteristic->Value())));
+                                    printf("battery level = %i\n",_batteryLevel);
+                                }
+                                _batteryLevelHandle = descriptor->Handle();
+                                _handles.push_back(_batteryLevelHandle);
+                            }
+
+                            if (_handles.size() > 0) {
+                                uint16_t val = htobs(1);
+                                _command.Write(_handles.front(), sizeof(val), reinterpret_cast<const uint8_t*>(&val));
+                                Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
+                                    EnableEvents(cmd);
+                                });
+                            }
+                        }
+                    }
+                    else {
+                        TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
+                    }
+                });
+            }
+
             void Operational() override
             {
                 TRACE(Flow, (_T("The received MTU: %d"), MTU()));
 
                 if (_device->IsBonded() == false) {
                     // No need to do service discovery if device is bonded, the notifications are already enabled
-                    _profile.Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
-                        if (result == Core::ERROR_NONE) {
-                            if (_profile[Bluetooth::UUID(HID_UUID)] == nullptr) {
-                                TRACE(Flow, (_T("The given bluetooth device does not support a HID service!!")));
-                            }
-                            else {
-                                LoadReportHandles();
-
-                                if (_handles.size() > 0) {
-                                    uint16_t val = htobs(1);
-                                    _command.Write(_handles.front(), sizeof(val), reinterpret_cast<const uint8_t*>(&val));
-                                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                                        EnableEvents(cmd);
-                                    });
-                                }
-                            }
-                        }
-                        else {
-                            TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
-                        }
-                    });
+                    Discovery();
                 }
             }
 
@@ -409,10 +443,12 @@ namespace Plugin {
             Command _command;
             Exchange::IBluetooth::IDevice* _device;
             std::list<uint16_t> _handles;
+            uint8_t _batteryLevel;
+            uint16_t _batteryLevelHandle;
             Core::Sink<Sink> _sink;
             uint16_t _currentKey;
             const Core::ProxyType<Activity> _activity;
-            BTRemoteControl* _parent;
+            BluetoothRemoteControl* _parent;
             string _name;
 
             Bluetooth::UUID AUDIO_SERVICE_UUID;
@@ -421,9 +457,9 @@ namespace Plugin {
         };
 
     public:
-        BTRemoteControl(const BTRemoteControl&) = delete;
-        BTRemoteControl& operator=(const BTRemoteControl&) = delete;
-        BTRemoteControl()
+        BluetoothRemoteControl(const BluetoothRemoteControl&) = delete;
+        BluetoothRemoteControl& operator=(const BluetoothRemoteControl&) = delete;
+        BluetoothRemoteControl()
             : _skipURL(0)
             , _adminLock()
             , _service(nullptr)
@@ -435,12 +471,12 @@ namespace Plugin {
             ASSERT(_inputHandler != nullptr);
         }
 
-        ~BTRemoteControl() override
+        ~BluetoothRemoteControl() override
         {
         }
 
     public:
-        BEGIN_INTERFACE_MAP(BTRemoteControl)
+        BEGIN_INTERFACE_MAP(BluetoothRemoteControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IWeb)
             INTERFACE_ENTRY(Exchange::IKeyHandler)
@@ -559,13 +595,14 @@ namespace Plugin {
         uint32_t Assign(const string& address);
         uint32_t Revoke();
         uint32_t Properties();
-        uint32_t BatteryLevel(uint16_t& level);
+        uint8_t BatteryLevel() const;
         uint32_t LoadKeymap(GATTRemote& remote, const string& name);
         uint32_t LoadSettings(Settings& settings) const;
         uint32_t SaveSettings(const Settings& settings) const;
         void RemoteCreated(GATTRemote& remote);
         void RemoteDestroyed(GATTRemote& remote);
 
+    private:
         Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> PostMethod(Core::TextSegmentIterator& index, const Web::Request& request);
@@ -580,7 +617,7 @@ namespace Plugin {
         PluginHost::VirtualInput* _inputHandler;
         string _settingsPath;
 
-    }; // class BTRemoteControl
+    }; // class BluetoothRemoteControl
 
 } //namespace Plugin
 
