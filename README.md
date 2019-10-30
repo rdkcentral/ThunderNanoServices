@@ -1,5 +1,6 @@
 # ThunderNanoServices
-* Bluetooth
+* BluetoothControl
+* [BluetoothRemoteControl](BluetoothRemoteControl/doc/BluetoothRemoteControl.md)
 * Commander
 * [Compositor](Compositor/doc/CompositorPlugin.md)
 * DeviceIdentification
