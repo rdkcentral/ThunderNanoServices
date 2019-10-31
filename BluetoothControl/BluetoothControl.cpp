@@ -544,10 +544,10 @@ namespace Plugin {
         if (index == _devices.end()) {
             if (lowEnergy == true) {
                 TRACE(Trace::Information, ("Added LowEnergy Bluetooth device: %s, name: %s", address.ToString().c_str(), name.c_str()));
-                _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(_btInterface, address, name));
+                _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address, name));
             } else {
                 TRACE(Trace::Information, ("Added Regular Bluetooth device: %s, name: %s", address.ToString().c_str(), name.c_str()));
-                _devices.push_back(Core::Service<DeviceRegular>::Create<DeviceImpl>(_btInterface, address, name));
+                _devices.push_back(Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address, name));
             }
         }
 
@@ -579,7 +579,7 @@ namespace Plugin {
             TRACE(Trace::Information, (_T("Could not set the capabilities for device %s"), device.ToString()));
         }
     }
-    BluetoothControl::DeviceImpl* BluetoothControl::Find(const Bluetooth::Address& search)
+    BluetoothControl::DeviceImpl* BluetoothControl::Find(const Bluetooth::Address& search) const
     {
         std::list<DeviceImpl*>::const_iterator index = _devices.begin();
 
@@ -589,7 +589,7 @@ namespace Plugin {
 
         return (index != _devices.end() ? (*index) : nullptr);
     }
-    BluetoothControl::DeviceImpl* BluetoothControl::Find(const uint16_t handle) {
+    BluetoothControl::DeviceImpl* BluetoothControl::Find(const uint16_t handle) const {
         std::list<DeviceImpl*>::const_iterator index = _devices.begin();
 
         while ((index != _devices.end()) && ((*index)->ConnectionId() != handle)) {
@@ -623,7 +623,7 @@ namespace Plugin {
                                 data.Deserialize(data.LinkKeys, linkKeys);
 
                                 if ((linkKeys.Entries() > 0) && (linkKeys.IsValid() == true)) {
-                                    device = Core::Service<DeviceRegular>::Create<DeviceImpl>(_btInterface, address, data.Name.Value(), linkKeys);
+                                    device = Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address, data.Name.Value(), linkKeys);
                                     if (device != nullptr) {
                                         linkKeysList.Add(linkKeys);
                                     }
@@ -636,7 +636,7 @@ namespace Plugin {
                                 data.Deserialize(data.LongTermKeys, longTermKeys);
 
                                 if ((longTermKeys.Entries() >= 2) && (longTermKeys.IsValid() == true)) {
-                                    device = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(_btInterface, address, data.Name.Value(), longTermKeys);
+                                    device = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address, data.Name.Value(), longTermKeys);
                                     if (device != nullptr) {
                                         longTermKeysList.Add(longTermKeys);
 

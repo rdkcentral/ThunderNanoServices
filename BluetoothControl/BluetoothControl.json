@@ -1,0 +1,10 @@
+{
+ "locator":"libWPEFrameworkBluetoothControl.so",
+ "classname":"BluetoothControl",
+ "autostart":true,
+ "configuration":{
+  "interface":0,
+  "port":"/dev/ttyAMA0",
+  "baudrate":921600
+ }
+}
