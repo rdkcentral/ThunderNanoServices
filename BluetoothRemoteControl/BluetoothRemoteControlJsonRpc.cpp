@@ -47,12 +47,8 @@ namespace Plugin {
     //  - ERROR_GENERAL: Failed to assign the device
     uint32_t BluetoothRemoteControl::endpoint_assign(const AssignParamsData& params)
     {
-        uint32_t result = Core::ERROR_NONE;
-        const string& device = params.Device.Value();
-
-        result = Assign(device);
-
-        return result;
+        const string& address = params.Address.Value();
+        return (Assign(address));
     }
 
     // Method: revoke - Revokes the current remote control assignment
@@ -61,11 +57,7 @@ namespace Plugin {
     //  - ERROR_ILLEGAL_STATE: Remote not assigned
     uint32_t BluetoothRemoteControl::endpoint_revoke()
     {
-        uint32_t result = Core::ERROR_NONE;
-
-        result = Revoke();
-
-        return result;
+        return (Revoke());
     }
 
     // Property: name - Unit name
@@ -93,7 +85,7 @@ namespace Plugin {
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
         if (_gattRemote != nullptr) {
-            response = _gattRemote->RemoteId();
+            response = _gattRemote->Address();
             result = Core::ERROR_NONE;
         }
 
@@ -110,20 +102,20 @@ namespace Plugin {
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
         if (_gattRemote != nullptr) {
-            if (_gattRemote->Model().length() > 0) {
-                response.Model = _gattRemote->Model();
+            if (_gattRemote->ModelNumber().empty() == false) {
+                response.Model = _gattRemote->ModelNumber();
             }
-            if (_gattRemote->Serial().length() > 0) {
-                response.Serial = _gattRemote->Serial();
+            if (_gattRemote->SerialNumber().empty() == false) {
+                response.Serial = _gattRemote->SerialNumber();
             }
-            if (_gattRemote->Firmware().length() > 0) {
-                response.Firmware = _gattRemote->Firmware();
+            if (_gattRemote->FirmwareRevision().empty() == false) {
+                response.Firmware = _gattRemote->FirmwareRevision();
             }
-            if (_gattRemote->Software().length() > 0) {
-                response.Software = _gattRemote->Software();
+            if (_gattRemote->SoftwareRevision().empty() == false) {
+                response.Software = _gattRemote->SoftwareRevision();
             }
-            if (_gattRemote->Manufacturer().length() > 0) {
-                response.Manufacturer= _gattRemote->Manufacturer();
+            if (_gattRemote->ManufacturerName().empty() == false) {
+                response.Manufacturer = _gattRemote->ManufacturerName();
             }
 
             result = Core::ERROR_NONE;
@@ -176,7 +168,7 @@ namespace Plugin {
         if (_gattRemote != nullptr) {
         }
 
-        return result;
+        return (result);
     }
 
     // Event: audiotransmission - Notifies about new audio data transmission

@@ -99,7 +99,7 @@ Assigns a bluetooth device as a remote control unit.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.device | string | Bluetooth address |
+| params.address | string | Bluetooth address |
 
 ### Result
 
@@ -125,7 +125,7 @@ Assigns a bluetooth device as a remote control unit.
     "id": 1234567890, 
     "method": "BluetoothRemoteControl.1.assign", 
     "params": {
-        "device": "81:6F:B0:91:9B:FE"
+        "address": "81:6F:B0:91:9B:FE"
     }
 }
 ```

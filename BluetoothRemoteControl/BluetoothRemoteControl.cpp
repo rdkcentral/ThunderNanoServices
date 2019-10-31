@@ -31,6 +31,8 @@ namespace Plugin {
                     if ((settings.Name.IsSet() == true) && (settings.Address.IsSet() == true)) {
                         if (Assign(settings.Address.Value()) != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Failed to read settings")));
+                        } else if (_gattRemote != nullptr) {
+                             _gattRemote->Configure(settings.Handles.Value());
                         }
                     }
                 }
@@ -235,6 +237,7 @@ namespace Plugin {
         uint32_t result = Core::ERROR_ALREADY_RELEASED;
 
         if (_gattRemote != nullptr) {
+            RemoteUnbonded(*_gattRemote);
             _gattRemote->Release();
             _gattRemote = nullptr;
             result = Core::ERROR_NONE;
@@ -331,10 +334,6 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("No keymap available for remote [%s]"), remote.Name()));
             }
         }
-
-        if (SaveSettings(Settings(remote.Name(), remote.Address())) != Core::ERROR_NONE) {
-            TRACE(Trace::Error, (_T("Failed to save settings")));
-        }
     }
 
     void BluetoothRemoteControl::RemoteDestroyed(GATTRemote& remote)
@@ -344,6 +343,27 @@ namespace Plugin {
         _inputHandler->ClearTable(remote.Name());
         if (_config.DefaultKeymap.IsSet() == true) {
             _inputHandler->ClearTable(_config.DefaultKeymap.Value());
+        }
+    }
+
+    void BluetoothRemoteControl::RemoteBonded(GATTRemote& remote)
+    {
+        string settings;
+        remote.Configuration(settings);
+        if (SaveSettings(Settings(remote.Name(), remote.Address(), settings)) != Core::ERROR_NONE) {
+            TRACE(Trace::Error, (_T("Failed to save settings")));
+        } else {
+            TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] stored persistently"), remote.Name()));
+        }
+    }
+
+    void BluetoothRemoteControl::RemoteUnbonded(GATTRemote& remote)
+    {
+        if (_settingsPath.empty() == false) {
+            Core::File file(_settingsPath);
+            if (file.Destroy() == true) {
+                TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] removed from persistent storage"), remote.Name()));
+            }
         }
     }
 
