@@ -132,7 +132,7 @@ namespace Plugin {
             ::OCDM::IAccessorOCDM* _parentInterface;
         };
 
-        class AccessorOCDM : public ::OCDM::IAccessorOCDM, public ::OCDM::IAccessorOCDMExt {
+        class AccessorOCDM : public ::OCDM::IAccessorOCDM {
         private:
             AccessorOCDM() = delete;
             AccessorOCDM(const AccessorOCDM&) = delete;
@@ -878,7 +878,6 @@ namespace Plugin {
 
             BEGIN_INTERFACE_MAP(AccessorOCDM)
             INTERFACE_ENTRY(::OCDM::IAccessorOCDM)
-            INTERFACE_ENTRY(::OCDM::IAccessorOCDMExt)
             END_INTERFACE_MAP
 
         private:
