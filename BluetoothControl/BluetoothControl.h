@@ -1618,19 +1618,24 @@ class BluetoothControl : public PluginHost::IPlugin
                 Init();
                 Type = type;
                 Name = name;
-                auto index = longTermKeys.Elements();
-                while(index.Next() == true) {
+
+                auto ltkIndex = longTermKeys.Elements();
+                while(ltkIndex.Next() == true) {
                     Core::JSON::String key;
-                    key = index.Current().ToString();
+                    key = ltkIndex.Current().ToString();
                     LongTermKeys.Add(key);
                 }
-                auto index2 = signatureKeys.Elements();
-                while(index2.Next() == true) {
+
+                auto csrkIndex = signatureKeys.Elements();
+                while(csrkIndex.Next() == true) {
                     Core::JSON::String key;
-                    key = index2.Current().ToString();
+                    key = csrkIndex.Current().ToString();
                     SignatureKeys.Add(key);
                 }
-                IdentityKey = identityKey.ToString();
+
+                if (identityKey.IsValid() == true) {
+                    IdentityKey = identityKey.ToString();
+                }
             }
             ~DeviceData()
             {
