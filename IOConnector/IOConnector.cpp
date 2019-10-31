@@ -140,13 +140,13 @@ namespace Plugin
         return (_pins.size() > 0 ? string() : _T("Could not instantiate the requested Pin"));
     }
 
-    /* virtual */ void IOConnector::Register(IFactory::INotification * /* sink */)
+    /* virtual */ void IOConnector::Register(IFactory::IProduced* /* sink */)
     {
         /* TODO */
         ASSERT(false);
     }
 
-    /* virtual */ void IOConnector::Unregister(IFactory::INotification * /* sink */)
+    /* virtual */ void IOConnector::Unregister(IFactory::IProduced* /* sink */)
     {
         /* TODO */
         ASSERT(false);

@@ -203,8 +203,8 @@ namespace Plugin {
 
         //   IExternal::IFactory methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Register(IFactory::INotification* sink) override;
-        virtual void Unregister(IFactory::INotification* sink) override;
+        virtual void Register(IFactory::IProduced* sink) override;
+        virtual void Unregister(IFactory::IProduced* sink) override;
         virtual Exchange::IExternal* Resource(const uint32_t id) override;
 
         //  IWeb methods

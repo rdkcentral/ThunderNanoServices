@@ -3,7 +3,7 @@
 
 #include "Module.h"
 
-#include <interfaces/IExternal.h>
+#include <interfaces/IExternalBase.h>
 
 namespace WPEFramework {
 
