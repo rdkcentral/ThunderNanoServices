@@ -111,6 +111,7 @@ namespace Broadcom {
         {
             if ((_joined == false) && (NxClient_Join(&_joinSettings) == NEXUS_SUCCESS)) {
                 _joined = true;
+                NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
             }
             return (_joined);
         }

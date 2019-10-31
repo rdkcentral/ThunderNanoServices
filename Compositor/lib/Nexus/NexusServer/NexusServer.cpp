@@ -102,6 +102,12 @@ namespace Broadcom {
             HDCP22 = NxClient_HdcpVersion_eHdcp22 /* Always authenticate using HDCP 2.2 mode, Content Stream Type 1 */
         };
 
+        enum loudnessmode {
+            LM_NONE = NEXUS_AudioLoudnessEquivalenceMode_eNone, /* Default, no loudness equivalence. */
+            LM_ATSC_A85 = NEXUS_AudioLoudnessEquivalenceMode_eAtscA85, /* ATSC A/85. */
+            LM_EBU_R128 = NEXUS_AudioLoudnessEquivalenceMode_eEbuR128 /* EBU-R128. */
+        };
+
         class MemoryInfo : public Core::JSON::Container {
         private:
             MemoryInfo(const MemoryInfo&) = delete;
@@ -155,6 +161,7 @@ namespace Broadcom {
             , HDCPVersion(AUTO)
             , HDCP1xBinFile()
             , HDCP2xBinFile()
+            , LoudnessMode(LM_NONE)
         {
             Add(_T("irmode"), &IRMode);
             Add(_T("authentication"), &Authentication);
@@ -171,6 +178,7 @@ namespace Broadcom {
             Add(_T("hdcpversion"), &HDCPVersion);
             Add(_T("hdcp1xbinfile"), &HDCP1xBinFile);
             Add(_T("hdcp2xbinfile"), &HDCP2xBinFile);
+            Add(_T("loudnessmode"), &LoudnessMode);
         }
         ~Config()
         {
@@ -192,6 +200,7 @@ namespace Broadcom {
         Core::JSON::EnumType<hdcpversion> HDCPVersion;
         Core::JSON::String HDCP1xBinFile;
         Core::JSON::String HDCP2xBinFile;
+        Core::JSON::EnumType<loudnessmode> LoudnessMode;
     };
 
     /* -------------------------------------------------------------------------------------------------------------
@@ -440,7 +449,7 @@ namespace Broadcom {
             struct nxserver_cmdline_settings cmdline_settings;
             memset(&cmdline_settings, 0, sizeof(cmdline_settings));
             cmdline_settings.frontend = true;
-            cmdline_settings.loudnessMode = NEXUS_AudioLoudnessEquivalenceMode_eNone;
+            cmdline_settings.loudnessMode = static_cast<NEXUS_AudioLoudnessEquivalenceMode>(config.LoudnessMode.Value());
             _serverSettings.session[0].dolbyMs = nxserverlib_dolby_ms_type_none;
 
             if (config.FrameBufferWidth.IsSet() && config.FrameBufferHeight.IsSet()) {
@@ -618,6 +627,14 @@ ENUM_CONVERSION_BEGIN(Broadcom::Config::hdcpversion)
     { Broadcom::Config::HDCP22, _TXT("Hdcp22") },
 
     ENUM_CONVERSION_END(Broadcom::Config::hdcpversion);
+
+ENUM_CONVERSION_BEGIN(Broadcom::Config::loudnessmode)
+
+    { Broadcom::Config::LM_NONE,     _TXT("None")},
+    { Broadcom::Config::LM_ATSC_A85, _TXT("ATSC_A85")},
+    { Broadcom::Config::LM_EBU_R128, _TXT("EBU_R128")},
+
+    ENUM_CONVERSION_END(Broadcom::Config::loudnessmode);
 
 ENUM_CONVERSION_BEGIN(NEXUS_IrInputMode)
 
