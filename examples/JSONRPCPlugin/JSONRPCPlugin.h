@@ -284,6 +284,9 @@ namespace Plugin {
             }
             void FromMessage(Core::JSON::IMessagePack* jsonObject, const Core::ProxyType<Core::JSONRPC::Message>& message)
             {
+                string value = message->Parameters.Value();
+                std::vector<uint8_t> parameter(value.begin(), value.end());
+                jsonObject->FromBuffer(parameter);
             }
         private:
             uint32_t _id;
