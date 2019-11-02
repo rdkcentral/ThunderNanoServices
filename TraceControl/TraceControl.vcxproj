@@ -173,6 +173,7 @@
   <ItemGroup>
     <ClCompile Include="Module.cpp" />
     <ClCompile Include="TraceControl.cpp" />
+    <ClCompile Include="TraceControlJsonRpc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Module.h" />
