@@ -175,7 +175,7 @@ namespace Plugin {
     void BluetoothRemoteControl::event_audiotransmission(const string& profile)
     {
         AudiotransmissionParamsData params;
-        if (profile.length() > 0) {
+        if (profile.length().empty() == false) {
             params.Profile = profile;
         }
 
@@ -192,6 +192,14 @@ namespace Plugin {
         Notify(_T("audioframe"), params);
     }
 
+    // Event: batterylevelchange - Notifies about battery level changes
+    void BluetoothRemoteControl::event_batterylevelchange(const uint8_t& level)
+    {
+        BatterylevelchangeParamsData params;
+        params.Level = level;
+
+        Notify(_T("batterylevelchange"), params);
+    }
 } // namespace Plugin
 
 }

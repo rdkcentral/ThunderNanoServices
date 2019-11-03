@@ -291,7 +291,7 @@ namespace Plugin {
 
             uint32_t Error() const override
             {
-                return 0;
+                return (Core::ERROR_NONE);
             }
 
             string MetaData() const override
@@ -328,13 +328,12 @@ namespace Plugin {
                 handles.AudioCommand = _audioCommandHandle;
                 handles.AudioData = _audioDataHandle;
                 handles.ToString(settings);
-                printf("settings %s\n", settings.c_str());
             }
 
         public:
             string Address() const
             {
-                return (_device != nullptr? _device->RemoteId() :  _T("<unassigned>"));
+                return (_device != nullptr? _device->Address() :  _T("<unassigned>"));
             }
 
             uint32_t SetAudioUuids(const string& service, const string& command, const string& data)
@@ -677,6 +676,7 @@ namespace Plugin {
             {
                 TRACE(Trace::Information, (_T("Remote control battery level is %i%%"), level));
                 _batteryLevel = level;
+                _parent->event_batterylevelchange(level);
             }
 
         private:
@@ -980,6 +980,7 @@ namespace Plugin {
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request);
 
     private:
+        // JSON-RPC
         void RegisterAll();
         void UnregisterAll();
         uint32_t endpoint_assign(const JsonData::BluetoothRemoteControl::AssignParamsData& params);
@@ -992,6 +993,7 @@ namespace Plugin {
         uint32_t get_audioprofile(const string& index, JsonData::BluetoothRemoteControl::AudioprofileData& response) const;
         void event_audiotransmission(const string& profile = "");
         void event_audioframe(const uint32_t& seq, const string& data);
+        void event_batterylevelchange(const uint8_t& level);
 
     private:
         uint8_t _skipURL;

@@ -99,7 +99,7 @@ Assigns a bluetooth device as a remote control unit.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.address | string | Bluetooth address |
+| params.address | string | Bluetooth address of the device |
 
 ### Result
 
@@ -189,7 +189,7 @@ BluetoothRemoteControl interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [name](#property.name) <sup>RO</sup> | Unit name |
-| [address](#property.address) <sup>RO</sup> | Bluetooth address |
+| [address](#property.address) <sup>RO</sup> | Bluetooth address of the unit |
 | [info](#property.info) <sup>RO</sup> | Unit auxiliary information |
 | [batterylevel](#property.batterylevel) <sup>RO</sup> | Battery level |
 | [audioprofiles](#property.audioprofiles) <sup>RO</sup> | Supported audio profiles |
@@ -237,7 +237,7 @@ Provides access to the unit name.
 <a name="property.address"></a>
 ## *address <sup>property</sup>*
 
-Provides access to the bluetooth address.
+Provides access to the bluetooth address of the unit.
 
 > This property is **read-only**.
 
@@ -245,7 +245,7 @@ Provides access to the bluetooth address.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Bluetooth address |
+| (property) | string | Bluetooth address of the device |
 
 ### Errors
 
@@ -285,11 +285,11 @@ Provides access to the unit auxiliary information.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | (property) | object | Unit auxiliary information |
-| (property)?.model | string | <sup>*(optional)*</sup> RCU model name or number |
-| (property)?.serial | string | <sup>*(optional)*</sup> RCU serial number |
-| (property)?.firmware | string | <sup>*(optional)*</sup> RCU firmware revision |
-| (property)?.software | string | <sup>*(optional)*</sup> RCU software revision |
-| (property)?.manufacturer | string | <sup>*(optional)*</sup> RCU manufacturer name |
+| (property)?.model | string | <sup>*(optional)*</sup> Unit model name or number |
+| (property)?.serial | string | <sup>*(optional)*</sup> Unit serial number |
+| (property)?.firmware | string | <sup>*(optional)*</sup> Unit firmware revision |
+| (property)?.software | string | <sup>*(optional)*</sup> Unit software revision |
+| (property)?.manufacturer | string | <sup>*(optional)*</sup> Unit manufacturer name |
 
 ### Errors
 
@@ -473,13 +473,14 @@ BluetoothRemoteControl interface events:
 
 | Event | Description |
 | :-------- | :-------- |
-| [audiotransmission](#event.audiotransmission) | Notifies about new audio data transmission |
+| [audiotransmission](#event.audiotransmission) | Notifies about audio data transmission |
 | [audioframe](#event.audioframe) | Notifies about new audio data available |
+| [batterylevelchange](#event.batterylevelchange) | Notifies about battery level changes |
 
 <a name="event.audiotransmission"></a>
 ## *audiotransmission <sup>event</sup>*
 
-Notifies about new audio data transmission.
+Notifies about audio data transmission.
 
 ### Description
 
@@ -518,7 +519,7 @@ Register to this event to be notified about audio data
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params?.seq | number | <sup>*(optional)*</sup> Sequence number of the audio frame within current audio transmission |
-| params.data | string | Base64 representation of the binary audio data |
+| params.data | string | Base64 representation of the binary data of the audio frame; format of the data is specified by the audio profile denoted by the most recent *audiotransmission* notification |
 
 ### Example
 
@@ -529,6 +530,33 @@ Register to this event to be notified about audio data
     "params": {
         "seq": 1, 
         "data": "yKMHiYh6qJiDspB6S7ihlKOAbivApYEQDCgY0aECCQhpkAqZogP1ECk9GbHGEAkwG8Ax8wArgaAtEMjGQIoYCKKgGCuzBSA/iuWkKEwamLKzOKoCeR2hwQQZKqgBKKqELoGQwQ=="
+    }
+}
+```
+<a name="event.batterylevelchange"></a>
+## *batterylevelchange <sup>event</sup>*
+
+Notifies about battery level changes.
+
+### Description
+
+Register to this event to be notified about battery level drops
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.level | number | Battery level (in percentage) |
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "method": "client.events.1.batterylevelchange", 
+    "params": {
+        "level": 50
     }
 }
 ```
