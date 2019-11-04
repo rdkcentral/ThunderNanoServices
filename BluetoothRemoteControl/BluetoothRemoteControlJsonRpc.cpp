@@ -175,7 +175,7 @@ namespace Plugin {
     void BluetoothRemoteControl::event_audiotransmission(const string& profile)
     {
         AudiotransmissionParamsData params;
-        if (profile.length().empty() == false) {
+        if (profile.empty() == false) {
             params.Profile = profile;
         }
 

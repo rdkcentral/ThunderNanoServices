@@ -33,6 +33,7 @@ namespace Plugin {
         }
         else {
             Bluetooth::ManagementSocket& administrator = _application.Control();
+            Bluetooth::ManagementSocket::Devices(_adapters);
             administrator.DeviceId(_config.Interface.Value());
 
             if (Bluetooth::ManagementSocket::Up(_config.Interface.Value()) == false) {

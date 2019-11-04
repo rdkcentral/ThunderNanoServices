@@ -333,7 +333,7 @@ namespace Plugin {
         public:
             string Address() const
             {
-                return (_device != nullptr? _device->Address() :  _T("<unassigned>"));
+                return (_device != nullptr? _device->RemoteId() :  _T("<unassigned>"));
             }
 
             uint32_t SetAudioUuids(const string& service, const string& command, const string& data)

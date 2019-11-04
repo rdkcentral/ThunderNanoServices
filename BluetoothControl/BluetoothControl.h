@@ -1524,6 +1524,7 @@ class BluetoothControl : public PluginHost::IPlugin
             : _skipURL(0)
             , _adminLock()
             , _service(nullptr)
+            , _adapters()
             , _btInterface(0)
             , _btAddress()
             , _devices()
@@ -1697,6 +1698,7 @@ class BluetoothControl : public PluginHost::IPlugin
         }
 
     private:
+        // JSON-RPC
         void RegisterAll();
         void UnregisterAll();
         uint32_t endpoint_scan(const JsonData::BluetoothControl::ScanParamsData& params);
@@ -1704,6 +1706,8 @@ class BluetoothControl : public PluginHost::IPlugin
         uint32_t endpoint_disconnect(const JsonData::BluetoothControl::ConnectParamsInfo& params);
         uint32_t endpoint_pair(const JsonData::BluetoothControl::ConnectParamsInfo& params);
         uint32_t endpoint_unpair(const JsonData::BluetoothControl::ConnectParamsInfo& params);
+        uint32_t get_adapters(Core::JSON::ArrayType<Core::JSON::DecUInt16>& response) const;
+        uint32_t get_adapter(const string& index, JsonData::BluetoothControl::AdapterData& response) const;
         uint32_t get_devices(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t get_device(const string& index, JsonData::BluetoothControl::DeviceData& response) const;
         void event_scancomplete();
@@ -1720,6 +1724,7 @@ class BluetoothControl : public PluginHost::IPlugin
         uint8_t _skipURL;
         Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
+        std::list<uint16_t> _adapters;
         uint16_t _btInterface;
         Bluetooth::Address _btAddress;
         std::list<DeviceImpl*> _devices;

@@ -20,6 +20,8 @@ namespace Plugin {
         JSONRPC::Register<ConnectParamsInfo,void>(_T("disconnect"), &BluetoothControl::endpoint_disconnect, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("pair"), &BluetoothControl::endpoint_pair, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("unpair"), &BluetoothControl::endpoint_unpair, this);
+        JSONRPC::Property<Core::JSON::ArrayType<Core::JSON::DecUInt16>>(_T("adapters"), &BluetoothControl::get_adapters, nullptr, this);
+        JSONRPC::Property<AdapterData>(_T("adapter"), &BluetoothControl::get_adapter, nullptr, this);
         JSONRPC::Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("devices"), &BluetoothControl::get_devices, nullptr, this);
         JSONRPC::Property<JsonData::BluetoothControl::DeviceData>(_T("device"), &BluetoothControl::get_device, nullptr, this);
     }
@@ -33,6 +35,8 @@ namespace Plugin {
         JSONRPC::Unregister(_T("scan"));
         JSONRPC::Unregister(_T("device"));
         JSONRPC::Unregister(_T("devices"));
+        JSONRPC::Unregister(_T("adapter"));
+        JSONRPC::Unregister(_T("adapters"));
     }
 
     // API implementation
@@ -42,21 +46,29 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_GENERAL: Failed to scan
+    //  - ERROR_INPROGRES: Scan already in progress
     uint32_t BluetoothControl::endpoint_scan(const ScanParamsData& params)
     {
         uint32_t result = Core::ERROR_NONE;
-        const DevicetypeType& type = params.Type.Value();
-        const uint32_t& timeout = params.Timeout.Value();
 
-        if (type == DevicetypeType::LOWENERGY) {
-            _application.Scan((timeout == 0? 10 : timeout), false, false);
+        if (_application.IsScanning() == false) {
+            const DevicetypeType& type = params.Type.Value();
+            const uint32_t& timeout = params.Timeout.Value();
+
+            if (type == DevicetypeType::LOWENERGY) {
+                _application.Scan((timeout == 0? 10 : timeout), false, false);
+            } else if (type == DevicetypeType::LOWENERGY) {
+                uint32_t type = 0x338B9E;
+                uint8_t flags = 0;
+                _application.Scan((timeout == 0? 10 : timeout), type, flags);
+            } else {
+                result = Core::ERROR_BAD_REQUEST;
+            }
         } else {
-            uint32_t type = 0x338B9E;
-            uint8_t flags = 0;
-            _application.Scan((timeout == 0? 10 : timeout), type, flags);
+            result = Core::ERROR_INPROGRESS;
         }
 
-        return result;
+        return (result);
     }
 
     // Method: connect - Connects to a Bluetooth device
@@ -93,7 +105,7 @@ namespace Plugin {
             result = device->Disconnect(2);
         }
 
-        return result;
+        return (result);
     }
 
     // Method: pair - Pairs a Bluetooth device
@@ -133,7 +145,46 @@ namespace Plugin {
         return (result);
     }
 
-    // Property: devices - Known device list
+    // Property: adapters - List of local Bluetooth adapters
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t BluetoothControl::get_adapters(Core::JSON::ArrayType<Core::JSON::DecUInt16>& response) const
+    {
+        for (const uint16_t& adapter : _adapters) {
+            Core::JSON::DecUInt16 adapter_id = adapter;
+            response.Add(adapter_id);
+        }
+
+        return (Core::ERROR_NONE);
+    }
+
+    // Property: adapter - Local Bluetooth adapter information
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t BluetoothControl::get_adapter(const string& index, AdapterData& response) const
+    {
+        uint32_t result = Core::ERROR_UNKNOWN_KEY;
+
+        if (atoi(index.c_str()) == _btInterface) {
+            Bluetooth::ManagementSocket::Info info(_application.Control().Settings());
+            response.Interface = ("hci" + Core::ToString(_btInterface));
+            response.Address = info.Address().ToString();
+            response.Version = info.Version();
+            response.Manufacturer = info.Manufacturer();
+            if (info.Name().empty() == false) {
+                response.Name = info.Name();
+            }
+            if (info.ShortName().empty() == false) {
+                response.Shortname = info.ShortName();
+            }
+
+            result = Core::ERROR_NONE;
+        }
+
+        return (result);
+    }
+
+    // Property: devices - List of known remote Bluetooth devices
     // Return codes:
     //  - ERROR_NONE: Success
     uint32_t BluetoothControl::get_devices(Core::JSON::ArrayType<Core::JSON::String>& response) const
@@ -144,10 +195,10 @@ namespace Plugin {
             response.Add(address);
         }
 
-        return Core::ERROR_NONE;
+        return (Core::ERROR_NONE);
     }
 
-    // Property: device - Device information
+    // Property: device - Remote Bluetooth device information
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown device
@@ -174,7 +225,7 @@ namespace Plugin {
     }
 
     // Event: devicestatechange - Notifies about device state change
-    void BluetoothControl::event_devicestatechange(const string& address, const DevicestatechangeParamsData::DevicestateType& state, 
+    void BluetoothControl::event_devicestatechange(const string& address, const DevicestatechangeParamsData::DevicestateType& state,
                                                    const DevicestatechangeParamsData::DisconnectreasonType& disconnectreason)
     {
         DevicestatechangeParamsData params;

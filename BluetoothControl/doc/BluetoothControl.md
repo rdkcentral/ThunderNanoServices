@@ -169,7 +169,7 @@ Also see: [devicestatechange](#event.devicestatechange)
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
-| 8 | ```ERROR_ALREADY_CONNECTED``` | Device already connected |
+| 9 | ```ERROR_ALREADY_CONNECTED``` | Device already connected |
 | 1 | ```ERROR_GENERAL``` | Failed to connect the device |
 
 ### Example
@@ -270,7 +270,7 @@ Also see: [devicestatechange](#event.devicestatechange)
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
-| 8 | ```ERROR_ALREADY_CONNECTED``` | Device already paired |
+| 9 | ```ERROR_ALREADY_CONNECTED``` | Device already paired |
 | 1 | ```ERROR_GENERAL``` | Failed to pair the device |
 
 ### Example
@@ -355,13 +355,15 @@ BluetoothControl interface properties:
 
 | Property | Description |
 | :-------- | :-------- |
-| [devices](#property.devices) <sup>RO</sup> | Known device list |
-| [device](#property.device) <sup>RO</sup> | Device information |
+| [adapters](#property.adapters) <sup>RO</sup> | List of local Bluetooth adapters |
+| [adapter](#property.adapter) <sup>RO</sup> | Local Bluetooth adapter information |
+| [devices](#property.devices) <sup>RO</sup> | List of known remote Bluetooth devices |
+| [device](#property.device) <sup>RO</sup> | Remote Bluetooth device information |
 
-<a name="property.devices"></a>
-## *devices <sup>property</sup>*
+<a name="property.adapters"></a>
+## *adapters <sup>property</sup>*
 
-Provides access to the known device list.
+Provides access to the list of local Bluetooth adapters.
 
 > This property is **read-only**.
 
@@ -369,7 +371,97 @@ Provides access to the known device list.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | Known device list |
+| (property) | array | List of local Bluetooth adapters |
+| (property)[#] | number | Adapter ID |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "BluetoothControl.1.adapters"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": [
+        0
+    ]
+}
+```
+<a name="property.adapter"></a>
+## *adapter <sup>property</sup>*
+
+Provides access to the local Bluetooth adapter information.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Local Bluetooth adapter information |
+| (property).interface | string | Ndapter interface name |
+| (property).address | string | Bluetooth address |
+| (property).version | number | Device version |
+| (property)?.manufacturer | number | <sup>*(optional)*</sup> Device manfuacturer Company Identifer |
+| (property)?.name | string | <sup>*(optional)*</sup> Device name |
+| (property)?.shortname | string | <sup>*(optional)*</sup> Device short name |
+
+> The *adapter id* shall be passed as the index to the property, e.g. *BluetoothControl.1.adapter@0*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "BluetoothControl.1.adapter@0"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": {
+        "interface": "hci0", 
+        "address": "81:6F:B0:91:9B:FE", 
+        "version": 8, 
+        "manufacturer": 0, 
+        "name": "Thunder", 
+        "shortname": "Thunder"
+    }
+}
+```
+<a name="property.devices"></a>
+## *devices <sup>property</sup>*
+
+Provides access to the list of known remote Bluetooth devices.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | array | List of known remote Bluetooth devices |
 | (property)[#] | string | Bluetooth address |
 
 ### Example
@@ -397,7 +489,7 @@ Provides access to the known device list.
 <a name="property.device"></a>
 ## *device <sup>property</sup>*
 
-Provides access to the device information.
+Provides access to the remote Bluetooth device information.
 
 > This property is **read-only**.
 
@@ -405,7 +497,7 @@ Provides access to the device information.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Device information |
+| (property) | object | Remote Bluetooth device information |
 | (property).name | string | Name of the device |
 | (property).type | string | Bluetooth device type (must be one of the following: *Classic*, *LowEnergy*) |
 | (property).connected | boolean | Denotes if the device is currently connected to host |
