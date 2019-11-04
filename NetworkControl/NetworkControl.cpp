@@ -107,7 +107,7 @@ namespace Plugin
             if (Core::Directory(_persistentStoragePath.c_str()).CreatePath() == false) {
                 _persistentStoragePath.clear();
             } else {
-                TRACE_L1("Failed to create persistent storage path at %s\n", _persistentStoragePath);
+                TRACE_L1("Failed to create persistent storage path at %s\n", _persistentStoragePath.c_str());
             }
         }
 
