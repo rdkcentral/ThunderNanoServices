@@ -228,8 +228,7 @@ namespace Plugin {
             {
                 std::vector<uint8_t> message;
                 jsonObject->ToBuffer(message);
-                string strMessage;
-                Core::ToString(message.data(), message.size(), false, strMessage);
+                string strMessage(message.begin(), message.end());
                 jsonMessage = strMessage;
 
                 TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
@@ -286,15 +285,9 @@ namespace Plugin {
             }
             void FromMessage(Core::JSON::IMessagePack* jsonObject, const Core::ProxyType<Core::JSONRPC::Message>& message)
             {
-                uint16_t length = message->Parameters.Value().size();
-                uint8_t* values = static_cast<uint8_t*> (malloc(sizeof(uint8_t) * length));
-                ASSERT(values != nullptr);
+                string value = message->Parameters.Value();
+                std::vector<uint8_t> parameter(value.begin(), value.end());
 
-                Core::FromString(message->Parameters.Value(), values, length);
-
-                std::vector<uint8_t> parameter(values, values + length);
-
-                free(values);
                 jsonObject->FromBuffer(parameter);
             }
         private:
@@ -564,26 +557,36 @@ namespace Plugin {
         }
         uint32_t receive(const Core::JSON::DecUInt16& maxSize, Data::JSONDataBuffer& data)
         {
+            uint32_t status = Core::ERROR_NONE;
             string convertedBuffer;
+
             uint16_t length = maxSize.Value();
             uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
-            data.Duration = Receive(length, buffer);
+            status = Receive(length, buffer);
+
             Core::ToString(buffer, length, false, convertedBuffer);
             data.Data = convertedBuffer;
+            data.Length = convertedBuffer.length();
+            data.Duration = convertedBuffer.length() + 1; //Dummy
 
-            return (Core::ERROR_NONE);
+            return status;
         }
         uint32_t exchange(const Data::JSONDataBuffer& data, Data::JSONDataBuffer& result)
         {
+            uint32_t status = Core::ERROR_NONE;
             string convertedBuffer;
+
             uint16_t length = static_cast<uint16_t>(((data.Data.Value().length() * 6) + 7) / 8);
             uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
             Core::FromString(data.Data.Value(), buffer, length);
-            result.Duration = Exchange(length, buffer, data.Length.Value());
+            status = Exchange(length, buffer, data.Length.Value());
+
             Core::ToString(buffer, length, false, convertedBuffer);
             result.Data = convertedBuffer;
+            result.Length = convertedBuffer.length();
+            result.Duration = convertedBuffer.length() + 1; //Dummy
 
-            return (Core::ERROR_NONE);
+            return status;
         }
 
     public:
