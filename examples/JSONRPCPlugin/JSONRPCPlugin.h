@@ -228,7 +228,9 @@ namespace Plugin {
             {
                 std::vector<uint8_t> message;
                 jsonObject->ToBuffer(message);
-                jsonMessage = string(message.begin(), message.end());
+                string strMessage;
+                Core::ToString(message.data(), message.size(), false, strMessage);
+                jsonMessage = strMessage;
 
                 TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
                 TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
