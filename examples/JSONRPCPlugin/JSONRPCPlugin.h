@@ -199,7 +199,7 @@ namespace Plugin {
             {
                 _id = id;
             }
-            void ToMessage(const Core::ProxyType<Core::JSON::IElement>& jsonObject)
+            void ToMessage(const Core::ProxyType<Core::JSON::IElement>& jsonObject) const
             {
                 string jsonMessage;
                 jsonObject->ToString(jsonMessage);
@@ -208,7 +208,7 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
 
             }
-            void ToMessage(const Core::ProxyType<Core::JSON::IMessagePack>& jsonObject)
+            void ToMessage(const Core::ProxyType<Core::JSON::IMessagePack>& jsonObject) const
             {
                 std::vector<uint8_t> message;
                 jsonObject->ToBuffer(message);
@@ -217,14 +217,14 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
                 TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
             }
-            void ToMessage(const Core::JSON::IElement* jsonObject, string& jsonMessage)
+            void ToMessage(const Core::JSON::IElement* jsonObject, string& jsonMessage) const
             {
                 jsonObject->ToString(jsonMessage);
 
                 TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
                 TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
             }
-            void ToMessage(const Core::JSON::IMessagePack* jsonObject, string& jsonMessage)
+            void ToMessage(const Core::JSON::IMessagePack* jsonObject, string& jsonMessage) const
             {
                 std::vector<uint8_t> message;
                 jsonObject->ToBuffer(message);
@@ -284,8 +284,15 @@ namespace Plugin {
             }
             void FromMessage(Core::JSON::IMessagePack* jsonObject, const Core::ProxyType<Core::JSONRPC::Message>& message)
             {
-                string value = message->Parameters.Value();
-                std::vector<uint8_t> parameter(value.begin(), value.end());
+                uint16_t length = message->Parameters.Value().size();
+                uint8_t* values = static_cast<uint8_t*> (malloc(sizeof(uint8_t) * length));
+                ASSERT(values != nullptr);
+
+                Core::FromString(message->Parameters.Value(), values, length);
+
+                std::vector<uint8_t> parameter(values, values + length);
+
+                free(values);
                 jsonObject->FromBuffer(parameter);
             }
         private:
