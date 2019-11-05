@@ -246,7 +246,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound: [40MB], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound: [40KB], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
 
 }
 
@@ -327,6 +327,9 @@ void MeasureJSONRPC(JSONRPC::LinkType<INTERFACE>& remoteObject)
                 Core::JSON::DecUInt32 result;
                 Core::ToString(buffer, length, false, stringBuffer);
                 message.Data = stringBuffer;
+                message.Length = stringBuffer.size();
+                message.Duration = stringBuffer.size() + 1;
+
                 remoteObject.template Invoke<Data::JSONDataBuffer, Core::JSON::DecUInt32>(3000, _T("send"), message, result);
                 return (result.Value());
             };
@@ -358,7 +361,7 @@ void MeasureJSONRPC(JSONRPC::LinkType<INTERFACE>& remoteObject)
                 message.Length = length;
                 Data::JSONDataBuffer response;
                 remoteObject.template Invoke<Data::JSONDataBuffer, Data::JSONDataBuffer>(3000, _T("exchange"), message, response);
-                length = static_cast<uint16_t>(((response.Data.Value().length() * 6) + 7) / 8);
+                length = static_cast<uint16_t>(response.Data.Value().length());
                 buffer = static_cast<uint8_t*>(ALLOCA(length));
                 Core::FromString(response.Data.Value(), buffer, length);
                 return (length);
@@ -429,9 +432,10 @@ int main(int argc, char** argv)
         // 3. [optional]  should the websocket under the hood call directly the plugin
         //                or will it be rlayed through thejsonrpc dispatcher (default,
         //                use jsonrpc dispatcher)
-        JSONRPC::LinkType<Core::JSON::IElement> remoteObject(_T("JSONRPCPlugin.2"), _T("client.events.88"));
         JSONRPC::LinkType<Core::JSON::IElement> legacyObject(_T("JSONRPCPlugin.1"), _T("client.events.33"));
-        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:8899"))); //Check how to link it with JSONRPC TestServer
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:8900")));
+        JSONRPC::LinkType<Core::JSON::IElement> remoteObject(_T("JSONRPCPlugin.2"), _T("client.events.88"));
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:8901")));
         JSONRPC::LinkType<Core::JSON::IMessagePack> remoteObjectMP(_T("JSONRPCPlugin.2"), _T("client.events.88"));
         Handlers::MessageHandler testMessageHandlerJohn("john");
         Handlers::MessageHandler testMessageHandlerJames("james");

@@ -576,7 +576,7 @@ namespace Plugin {
             uint32_t status = Core::ERROR_NONE;
             string convertedBuffer;
 
-            uint16_t length = static_cast<uint16_t>(((data.Data.Value().length() * 6) + 7) / 8);
+            uint16_t length = static_cast<uint16_t>(data.Data.Value().length());
             uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
             Core::FromString(data.Data.Value(), buffer, length);
             status = Exchange(length, buffer, data.Length.Value());
