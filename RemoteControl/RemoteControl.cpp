@@ -337,6 +337,21 @@ namespace Plugin {
         return (result);
     }
 
+    /* virtual */ void RemoteControl::ProducerEvent(const string& producerName, const Exchange::ProducerEvents event)
+    {
+        _eventLock.Lock();
+
+        std::list<Exchange::IRemoteControl::INotification*>::iterator index(_notificationClients.begin());
+
+        TRACE(Trace::Information, (_T("Got an event from %s producer"), producerName));
+        while (index != _notificationClients.end()) {
+            TRACE(Trace::Information, (_T("Sending an event to client")));
+            (*index)->Event(producerName, event);
+            index++;
+        }
+
+        _eventLock.Unlock();
+    }
     /* virtual */ uint32_t RemoteControl::AxisEvent(const int16_t x, const int16_t y)
     {
         return (_inputHandler->AxisEvent(x, y));
@@ -791,6 +806,39 @@ namespace Plugin {
             }
         }
         return (result);
+    }
+
+    void RemoteControl::RegisterEvents(IRemoteControl::INotification* sink)
+    {
+        _eventLock.Lock();
+
+        //Make sure a sink is not registered multiple times.
+        if (std::find(_notificationClients.begin(), _notificationClients.end(), sink) != _notificationClients.end())
+            return;
+
+        TRACE(Trace::Information , (_T("Registered a client with RemoteControl")));
+        _notificationClients.push_back(sink);
+        sink->AddRef();
+
+        _eventLock.Unlock();
+    }
+
+    void RemoteControl::UnregisterEvents(IRemoteControl::INotification* sink)
+    {
+        _eventLock.Lock();
+
+        std::list<Exchange::IRemoteControl::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));
+
+        // Make sure you do not unregister something you did not register !!!
+        if (index == _notificationClients.end())
+            return;
+
+        if (index != _notificationClients.end()) {
+            (*index)->Release();
+            _notificationClients.erase(index);
+        }
+
+        _eventLock.Unlock();
     }
 }
 }
