@@ -333,6 +333,11 @@ namespace Plugin {
             TRACE_GLOBAL(Trace::Information, (_T("RF4CE Report: %s"), text.c_str()));
         }
 
+        static void SendEvent(Exchange::ProducerEvents event)
+        {
+            _singleton->_SendEvent(event);
+        }
+
     private:
         inline void _Dispatch(const bool pressed, const uint16_t code, const uint16_t modifiers)
         {
@@ -343,6 +348,11 @@ namespace Plugin {
             }
 
             _adminLock.Unlock();
+        }
+        inline void _SendEvent(Exchange::ProducerEvents event) {
+            if (_callback != nullptr) {
+                _callback->ProducerEvent(Name(), event);
+            }
         }
         inline void _Initialized(const uint16_t major,
             const uint16_t minor,
@@ -1000,6 +1010,7 @@ static void target_DoR4ceReset(void)
 static void target_ActivatePairing()
 {
     Plugin::GreenPeak::Report(string("Entering the PairingMode."));
+    WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::ePairingStarted);
 #if 1
     gpApplication_ZRCBindSetup(false, true);
 #else
@@ -1043,11 +1054,20 @@ void gpRf4ce_cbDpiDisableConfirm(gpRf4ce_Result_t result)
 void gpApplication_IndicateBindSuccessToMiddleware(UInt8 bindingRef, UInt8 profileId)
 {
     GP_LOG_SYSTEM_PRINTF("Bind Success. BindId: 0x%x, ProfileId: 0x%x", 0, bindingRef, profileId);
+    WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::ePairingSuccess);
 }
 
 void gpApplication_IndicateBindFailureToMiddleware(gpRf4ce_Result_t result)
 {
     GP_LOG_SYSTEM_PRINTF("Bind Failure. Status 0x%x", 0, result);
+    if (result == gpRf4ce_ResultDiscoveryTimeout)
+    {
+        WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::ePairingTimedout);
+    }
+    else
+    {
+        WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::ePairingFailed);
+    }
 }
 
 extern GP_RF4CE_DISPATCHER_CONST gpRf4ceDispatcher_DataCallbacks_t

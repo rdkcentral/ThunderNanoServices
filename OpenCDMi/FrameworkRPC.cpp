@@ -132,7 +132,7 @@ namespace Plugin {
             ::OCDM::IAccessorOCDM* _parentInterface;
         };
 
-        class AccessorOCDM : public ::OCDM::IAccessorOCDM, public ::OCDM::IAccessorOCDMExt {
+        class AccessorOCDM : public ::OCDM::IAccessorOCDM {
         private:
             AccessorOCDM() = delete;
             AccessorOCDM(const AccessorOCDM&) = delete;
@@ -728,14 +728,15 @@ namespace Plugin {
             {
 
                 CDMi::IMediaKeys* system = _parent.KeySystem(keySystem);
+                ::OCDM::OCDM_RESULT result = ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
 
                 if (system != nullptr) {
                     TRACE(Trace::Information, ("Set ServerCertificate()"));
-                    system->SetServerCertificate(serverCertificate, serverCertificateLength);
+                    result = static_cast<::OCDM::OCDM_RESULT>(system->SetServerCertificate(serverCertificate, serverCertificateLength));
                 } else {
                     TRACE_L1("Could not set the Server Certificates for system: %s", keySystem.c_str());
                 }
-                return (::OCDM::OCDM_RESULT::OCDM_SUCCESS);
+                return result;
             }
 
             virtual uint64_t GetDrmSystemTime(const std::string& keySystem) const override
@@ -877,7 +878,6 @@ namespace Plugin {
 
             BEGIN_INTERFACE_MAP(AccessorOCDM)
             INTERFACE_ENTRY(::OCDM::IAccessorOCDM)
-            INTERFACE_ENTRY(::OCDM::IAccessorOCDMExt)
             END_INTERFACE_MAP
 
         private:

@@ -33,16 +33,20 @@ namespace Plugin {
 
         config.FromString(service->ConfigLine());
 
-        _externalAccess = new ExternalAccess(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath(), Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance()));
-        result = _externalAccess->Open(RPC::CommunicationTimeOut);
-        if (result != Core::ERROR_NONE) {
-            TRACE(Trace::Information, (_T("Could not open StreamerImplementation server.")));
-            delete _externalAccess;
-            _externalAccess = nullptr;
-            result = Core::ERROR_OPENING_FAILED;
-        } else {
-            result = _administrator.Initialize(service->ConfigLine());
+        _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance());
+        _externalAccess = new ExternalAccess(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath(), _engine);
+
+        result = Core::ERROR_OPENING_FAILED;
+        if (_externalAccess != nullptr) {
+            if (_externalAccess->IsListening() == false) {
+                delete _externalAccess;
+                _externalAccess = nullptr;
+                _engine.Release();
+            } else {
+                result = _administrator.Initialize(service->ConfigLine());
+            }
         }
+
         return (result);
     }
 
@@ -54,7 +58,7 @@ namespace Plugin {
 
             TRACE(Trace::Information, (_T("StreamerImplementation::Destructor() : delete instance")));
             delete _externalAccess;
-            _externalAccess = nullptr;
+            _engine.Release();
         }
     }
 

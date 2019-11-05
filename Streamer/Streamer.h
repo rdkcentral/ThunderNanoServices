@@ -12,6 +12,39 @@ namespace Plugin {
         Streamer(const Streamer&) = delete;
         Streamer& operator=(const Streamer&) = delete;
 
+        class Notification : public RPC::IRemoteConnection::INotification {
+        private:
+            Notification() = delete;
+            Notification(const Notification&) = delete;
+            Notification& operator=(const Notification&) = delete;
+
+        public:
+            explicit Notification(Streamer* parent)
+                : _parent(*parent)
+            {
+                ASSERT(parent != nullptr);
+            }
+            virtual ~Notification()
+            {
+            }
+
+        public:
+            virtual void Activated(RPC::IRemoteConnection* connection)
+            {
+            }
+            virtual void Deactivated(RPC::IRemoteConnection* connection)
+            {
+                _parent.Deactivated(connection);
+            }
+
+            BEGIN_INTERFACE_MAP(Notification)
+                INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+            END_INTERFACE_MAP
+
+        private:
+            Streamer& _parent;
+        };
+
         class StreamProxy {
         private:
             class StreamSink : public Exchange::IStream::ICallback {
@@ -277,6 +310,7 @@ namespace Plugin {
             , _connectionId(0)
             , _service(nullptr)
             , _player(nullptr)
+            , _notification(this)
             , _streams()
             , _controls()
         {
@@ -413,6 +447,7 @@ namespace Plugin {
         PluginHost::IShell* _service;
 
         Exchange::IPlayer* _player;
+        Core::Sink<Notification> _notification;
 
         // Stream and StreamControl holding areas for the RESTFull API.
         Streams _streams;

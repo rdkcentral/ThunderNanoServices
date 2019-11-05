@@ -21,6 +21,11 @@ namespace Plugin {
         _skipURL = _service->WebPrefix().length();
 
         config.FromString(_service->ConfigLine());
+
+        // Register the Process::Notification stuff. The Remote process might die before we get a
+        // change to "register" the sink for these events !!! So do it ahead of instantiation.
+        _service->Register(&_notification);
+
         _player = _service->Root<Exchange::IPlayer>(_connectionId, 2000, _T("StreamerImplementation"));
 
         if ((_player != nullptr) && (_service != nullptr)) {
@@ -40,6 +45,7 @@ namespace Plugin {
         } else {
             TRACE(Trace::Error, (_T("Streamer could not be initialized.")));
             message = _T("Streamer could not be initialized.");
+            _service->Unregister(&_notification);
         }
 
         return message;
@@ -49,6 +55,8 @@ namespace Plugin {
     {
         ASSERT(_service == service);
         ASSERT(_player != nullptr);
+
+        service->Unregister(&_notification);
 
         if (_player->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 

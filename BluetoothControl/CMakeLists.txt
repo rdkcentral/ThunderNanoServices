@@ -6,9 +6,11 @@ set(PLUGIN_BLUETOOTH_OOP false CACHE STRING true)
 
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
     BluetoothControl.cpp
+    BluetoothControlJsonRpc.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
@@ -18,6 +20,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ${NAMESPACE}Bluetooth::${NAMESPACE}Bluetooth)
         
 

@@ -1,0 +1,14 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Bluetooth Control Plugin",
+    "callsign": "BluetoothControl",
+    "locator": "libWPEFrameworkBluetoothControl.so",
+    "status": "alpha",
+    "description": "The Bluetooth Controll plugin allows enables Bluetooth administration functionality.",
+    "version": "1.0"
+  },
+  "interface": {
+    "$ref": "{interfacedir}/BluetoothControl.json#"
+  }
+}

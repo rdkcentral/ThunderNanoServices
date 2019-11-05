@@ -52,7 +52,7 @@ namespace Westeros {
                     TRACE(Trace::Information, (_T("Constructing virtual keyboard")));
 
                     const char* listenerName = "Westeros";
-                    _virtualKeyboardHandle = Construct(listenerName, connectorName, VirtualKeyboardCallback);
+                    _virtualKeyboardHandle = virtualinput_open(listenerName, connectorName, VirtualKeyboardCallback, NULL, NULL);
                     if (_virtualKeyboardHandle == nullptr) {
                         TRACE(Trace::Information, (_T("Failed to construct virtual keyboard")));
                     }
@@ -70,7 +70,7 @@ namespace Westeros {
             }
 
             if (_virtualKeyboardHandle != nullptr) {
-                Destruct(_virtualKeyboardHandle);
+                virtualinput_close(_virtualKeyboardHandle);
             }
             _instance = nullptr;
         }
@@ -98,9 +98,9 @@ namespace Westeros {
         }
 
     private:
-        static void VirtualKeyboardCallback(actiontype type, unsigned int code)
+        static void VirtualKeyboardCallback(keyactiontype type, unsigned int code)
         {
-            TRACE_GLOBAL(Trace::Information, (_T("VirtualKeyboardCallback keycode 0x%04x is %s."), code, type == PRESSED ? "pressed" : type == RELEASED ? "released" : type == REPEAT ? "repeated" : type == COMPLETED ? "completed" : "unknown"));
+            TRACE_GLOBAL(Trace::Information, (_T("VirtualKeyboardCallback keycode 0x%04x is %s."), code, type == KEY_PRESSED ? "pressed" : type == KEY_RELEASED ? "released" : type == KEY_REPEAT ? "repeated" : type == KEY_COMPLETED ? "completed" : "unknown"));
 
             // TODO: no key repeat handled by westeros.
 
@@ -112,7 +112,7 @@ namespace Westeros {
             case KEY_LEFTSHIFT:
             case KEY_RIGHTSHIFT:
                 TRACE_GLOBAL(Trace::Information, (_T("[ SHIFT ] was detected, current keyModifiers 0x%02x"), keyModifiers));
-                if (type == PRESSED)
+                if (type == KEY_PRESSED)
                     keyModifiers |= WstKeyboard_shift;
                 else
                     keyModifiers &= ~WstKeyboard_shift;
@@ -121,7 +121,7 @@ namespace Westeros {
             case KEY_LEFTCTRL:
             case KEY_RIGHTCTRL:
                 TRACE_GLOBAL(Trace::Information, (_T("[ CTRL ] was detected, current keyModifiers 0x%02x"), keyModifiers));
-                if (type == PRESSED)
+                if (type == KEY_PRESSED)
                     keyModifiers |= WstKeyboard_ctrl;
                 else
                     keyModifiers &= ~WstKeyboard_ctrl;
@@ -130,17 +130,17 @@ namespace Westeros {
             case KEY_LEFTALT:
             case KEY_RIGHTALT:
                 TRACE_GLOBAL(Trace::Information, (_T("[ ALT ] was detected, current keyModifiers 0x%02x"), keyModifiers));
-                if (type == PRESSED)
+                if (type == KEY_PRESSED)
                     keyModifiers |= WstKeyboard_alt;
                 else
                     keyModifiers &= ~WstKeyboard_alt;
                 break;
             default: {
                 switch (type) {
-                case RELEASED:
+                case KEY_RELEASED:
                     keyState = WstKeyboard_keyState_released;
                     break;
-                case PRESSED:
+                case KEY_PRESSED:
                     keyState = WstKeyboard_keyState_depressed;
                     break;
                 default:
