@@ -101,12 +101,11 @@ namespace Plugin
             }
         }
 
-        // Try to create persisten storage folder
+        // Try to create persistent storage folder
         _persistentStoragePath = _service->PersistentPath();
         if (_persistentStoragePath.empty() == false) {
             if (Core::Directory(_persistentStoragePath.c_str()).CreatePath() == false) {
                 _persistentStoragePath.clear();
-            } else {
                 TRACE_L1("Failed to create persistent storage path at %s\n", _persistentStoragePath.c_str());
             }
         }
