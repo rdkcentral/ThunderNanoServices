@@ -4,13 +4,15 @@
 #include "RemoteAdministrator.h"
 #include <interfaces/json/JsonData_RemoteControl.h>
 #include <interfaces/IKeyHandler.h>
+#include <interfaces/IRemoteControl.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
     class RemoteControl : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC,
                           public Exchange::IKeyHandler,  public Exchange::IWheelHandler,
-                          public Exchange::IPointerHandler,  public Exchange::ITouchHandler {
+                          public Exchange::IPointerHandler,  public Exchange::ITouchHandler,
+                          public Exchange::IRemoteControl {
     private:
         RemoteControl(const RemoteControl&);
         RemoteControl& operator=(const RemoteControl&);
@@ -156,6 +158,7 @@ namespace Plugin {
         INTERFACE_ENTRY(Exchange::IPointerHandler)
         INTERFACE_ENTRY(Exchange::ITouchHandler)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
+        INTERFACE_ENTRY(Exchange::IRemoteControl)
         END_INTERFACE_MAP
 
     public:
@@ -212,6 +215,8 @@ namespace Plugin {
         // to announce this key event to the linux system. Repeat event is triggered by the watchdog implementation
         // in this plugin. No need to signal this.
         uint32_t KeyEvent(const bool pressed, const uint32_t code, const string& mapName) override;
+        // Anounce events from keyproducers to registered clients.
+        virtual void ProducerEvent(const string& producerName, const Exchange::ProducerEvents event) override;
 
         uint32_t AxisEvent(const int16_t x, const int16_t y) override;
         uint32_t PointerButtonEvent(const bool pressed, const uint8_t button) override;
@@ -292,6 +297,13 @@ namespace Plugin {
             return (result);
         }
 
+        //      IRemoteControl Methods
+        // -------------------------------------------------------------------------------------------------------
+        // Register for events from RemoteControl plugin originating from key producers.
+        virtual void RegisterEvents(IRemoteControl::INotification* sink) override;
+        // Unregister for events from RemoteControl originating from key producers.
+        virtual void UnregisterEvents(IRemoteControl::INotification* sink) override;
+
     private:
         Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index, const Web::Request& request) const;
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
@@ -324,6 +336,8 @@ namespace Plugin {
         std::list<string> _virtualDevices;
         PluginHost::VirtualInput* _inputHandler;
         string _persistentPath;
+        Core::CriticalSection _eventLock;
+        std::list<Exchange::IRemoteControl::INotification*> _notificationClients;
     };
 }
 }
