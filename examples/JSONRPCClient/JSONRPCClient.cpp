@@ -330,7 +330,7 @@ void MeasureJSONRPC(JSONRPC::LinkType<INTERFACE>& remoteObject)
                 message.Length = stringBuffer.size();
                 message.Duration = stringBuffer.size() + 1;
 
-                remoteObject.template Invoke<Data::JSONDataBuffer, Core::JSON::DecUInt32>(3000, _T("send"), message, result);
+                remoteObject.template Invoke<Data::JSONDataBuffer, Core::JSON::DecUInt32>(10000, _T("send"), message, result);
                 return (result.Value());
             };
 
@@ -342,7 +342,7 @@ void MeasureJSONRPC(JSONRPC::LinkType<INTERFACE>& remoteObject)
                 string stringBuffer;
                 Data::JSONDataBuffer message;
                 Core::JSON::DecUInt16 maxSize = length;
-                remoteObject.template Invoke<Core::JSON::DecUInt16, Data::JSONDataBuffer>(3000, _T("receive"), maxSize, message);
+                remoteObject.template Invoke<Core::JSON::DecUInt16, Data::JSONDataBuffer>(10000, _T("receive"), maxSize, message);
                 length = static_cast<uint16_t>(((message.Data.Value().length() * 6) + 7) / 8);
                 buffer = static_cast<uint8_t*>(ALLOCA(length));
                 Core::FromString(message.Data.Value(), buffer, length);
@@ -360,7 +360,7 @@ void MeasureJSONRPC(JSONRPC::LinkType<INTERFACE>& remoteObject)
                 message.Data = stringBuffer;
                 message.Length = length;
                 Data::JSONDataBuffer response;
-                remoteObject.template Invoke<Data::JSONDataBuffer, Data::JSONDataBuffer>(3000, _T("exchange"), message, response);
+                remoteObject.template Invoke<Data::JSONDataBuffer, Data::JSONDataBuffer>(10000, _T("exchange"), message, response);
                 length = static_cast<uint16_t>(response.Data.Value().length());
                 buffer = static_cast<uint8_t*>(ALLOCA(length));
                 Core::FromString(response.Data.Value(), buffer, length);
