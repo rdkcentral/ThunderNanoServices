@@ -19,6 +19,7 @@ namespace Plugin {
         Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("commands"), &TestUtility::get_commands, nullptr, this);
         Property<DescriptionData>(_T("description"), &TestUtility::get_description, nullptr, this);
         Property<ParametersData>(_T("parameters"), &TestUtility::get_parameters, nullptr, this);
+        Property<Core::JSON::DecUInt32>(_T("shutdowntimeout"), nullptr, &TestUtility::set_shutdowntimeout, this);
     }
 
     void TestUtility::UnregisterAll()
@@ -28,6 +29,7 @@ namespace Plugin {
         Unregister(_T("parameters"));
         Unregister(_T("description"));
         Unregister(_T("commands"));
+        Unregister(_T("shutdowntimeout"));
     }
 
     // API implementation
@@ -160,6 +162,20 @@ namespace Plugin {
             } else {
                 result = Core::ERROR_UNAVAILABLE;
             }
+        }
+
+        return result;
+    }
+
+    // Property: shutdowntimeout - Timeout to be waited before deactivating the plugin
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t TestUtility::set_shutdowntimeout(const Core::JSON::DecUInt32& param)
+    {
+        uint32_t result = Core::ERROR_NONE;
+
+        if (param.IsSet()) {
+            result = _testUtilityImp->ShutdownTimeout(param.Value());
         }
 
         return result;

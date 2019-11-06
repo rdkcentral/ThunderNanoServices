@@ -12,12 +12,20 @@ namespace TestCore {
         TestUtilityImp& operator=(const TestUtilityImp&) = delete;
 
     public:
-        TestUtilityImp() {
+        TestUtilityImp()
+        : _shutdownTimeout(0) {
         }
 
         virtual ~TestUtilityImp() {
+            ::SleepMs(_shutdownTimeout);
             TestCore::TestCommandController::Instance().Release();
         };
+
+        uint32_t ShutdownTimeout(const uint32_t timeout) override
+        {
+            _shutdownTimeout = timeout;
+            return Core::ERROR_NONE;
+        }
 
         //  ITestUtility methods
         // -------------------------------------------------------------------------------------------------------
@@ -36,6 +44,7 @@ namespace TestCore {
         END_INTERFACE_MAP
 
     private:
+        uint32_t _shutdownTimeout;
     };
 
     SERVICE_REGISTRATION(TestUtilityImp, 1, 0);
