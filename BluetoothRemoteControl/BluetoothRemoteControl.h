@@ -1015,7 +1015,7 @@ namespace Plugin {
                 bool handled = false;
 
                 if ((event == DATA_EVENT) && (length == 5)) {
-                    const AudioHeader* hdr = reinterpret_cast<const AudioHeader*>(dataFrame);
+                    const Header* hdr = reinterpret_cast<const Header*>(dataFrame);
                     handled = true;
                     _skip = false;
                     _seq = hdr->seq;
@@ -1036,13 +1036,14 @@ namespace Plugin {
                 } else if ((event == DATA_EVENT) && (length != 5) && (length != 1)) {
                     handled = true;
                     if (_skip == false) {
-                        uint8_t buf[length + 3];
-                        buf[0] = _stepIdx;
-                        buf[1] = (_pred & 0xF);
-                        buf[2] = (_pred << 8);
-                        // Prepending the buffer with the prediction values from the header notification
-                        ::memcpy(buf + 3, dataFrame, length);
-                        AudioFrame(_seq, buf, length + 3);
+                        uint8_t *buf = reinterpret_cast<uint8_t*>(ALLOCA(length + sizeof(Preamble)));
+                        Preamble *preamble = reinterpret_cast<Preamble*>(buf);
+                        preamble->step = _stepIdx;
+                        preamble->pred = _pred;
+                        preamble->pad = 0;
+                        // Prepending the buffer with the preamble built from the header notification
+                        ::memcpy(buf + sizeof(Preamble), dataFrame, length);
+                        AudioFrame(_seq, buf, length + sizeof(Preamble));
                         _skip = false;
                     }
                 } else if ((event == COMMAND_EVENT) && (length >= 1)) {
@@ -1071,11 +1072,18 @@ namespace Plugin {
             }
 
         private:
-            struct AudioHeader {
+            struct __attribute__((packed)) Header {
                 uint8_t seq;
                 uint8_t step;
                 uint16_t pred;
                 uint8_t compression;
+            };
+
+            struct __attribute__((packed)) Preamble {
+                // Conforms to MS IMA ADPCM preamble
+                uint16_t pred; // little-endian
+                uint8_t step;
+                uint8_t pad;
             };
 
         private:
