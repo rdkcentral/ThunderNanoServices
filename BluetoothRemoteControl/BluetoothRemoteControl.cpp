@@ -32,12 +32,14 @@ namespace Plugin {
                         if (Assign(settings.Address.Value()) != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Failed to read settings")));
                         } else if (_gattRemote != nullptr) {
-                             _gattRemote->Configure(settings.Handles.Value());
+                             _gattRemote->Configure(settings.Gatt.Value());
                         }
                     }
                 }
             }
         }
+
+        _hidHandler->Callback(this);
 
         return result;
     }
@@ -46,11 +48,8 @@ namespace Plugin {
     {
         ASSERT(_service == service);
 
-        if (_gattRemote != nullptr) {
-            _gattRemote->Release();
-            _gattRemote = nullptr;
-        }
-
+        delete _gattRemote;
+        _gattRemote = nullptr;
         _service->Release();
         _service = nullptr;
     }
@@ -94,28 +93,6 @@ namespace Plugin {
         Core::ProxyType<Web::Response> response(PluginHost::Factories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
         response->Message = _T("Unsupported GET request.");
-
-        if (index.IsValid() == true) {
-            if (index.Current() == "Properties") {
-                uint32_t result = Properties();
-                if (result == Core::ERROR_NONE) {
-                    response->ErrorCode = Web::STATUS_OK;
-                    response->Message = _T("OK");
-                } else {
-                    response->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
-                    response->Message = _T("Failed to retrieve remote control properties");
-                }
-            }  else if (index.Current() == "BatteryLevel") {
-                uint8_t batteryLevel = BatteryLevel();
-                if (batteryLevel != static_cast<uint8_t>(~0)) {
-                    response->ErrorCode = Web::STATUS_OK;
-                    response->Message = _T("OK");
-                } else {
-                    response->ErrorCode = Web::STATUS_NOT_FOUND;
-                    response->Message = _T("Failed to retrieve remote control battery level");
-                }
-            }
-        }
 
         return (response);
     }
@@ -198,18 +175,11 @@ namespace Plugin {
                 Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address);
                 if (device != nullptr) {
                     if ((_config.MTU.IsSet() == true) && (_config.MTU.Value() != 0)) {
-                        _gattRemote = Core::Service<GATTRemote>::Create<GATTRemote>(this, device, _config.MTU.Value());
+                        _gattRemote = new GATTRemote(this, device, _config.MTU.Value());
                     } else {
-                        _gattRemote = Core::Service<GATTRemote>::Create<GATTRemote>(this, device);
+                        _gattRemote = new GATTRemote(this, device);
                     }
                     if (_gattRemote != nullptr) {
-                        if ((_config.Audio.IsSet() == true) && (_config.Audio.ServiceUUID.IsSet() == true) \
-                                && (_config.Audio.CommandUUID.IsSet() == true) && (_config.Audio.DataUUID.IsSet() == true)) {
-                            if (_gattRemote->SetAudioUuids(_config.Audio.ServiceUUID.Value(), _config.Audio.CommandUUID.Value(), _config.Audio.DataUUID.Value()) != Core::ERROR_NONE) {
-                                TRACE(Trace::Error, (_T("Failed to set audio UUIDs")));
-                            }
-                        }
-                        _gattRemote->Callback(this);
                         result = Core::ERROR_NONE;
                     } else {
                         TRACE(Trace::Error, (_T("Failed to create BLE GATT remote control")));
@@ -238,22 +208,8 @@ namespace Plugin {
 
         if (_gattRemote != nullptr) {
             RemoteUnbonded(*_gattRemote);
-            _gattRemote->Release();
+            delete _gattRemote;
             _gattRemote = nullptr;
-            result = Core::ERROR_NONE;
-        } else {
-            TRACE(Trace::Error, (_T("A remote has not been assigned")));
-        }
-
-        return (result);
-    }
-
-    uint32_t BluetoothRemoteControl::Properties() const
-    {
-        uint32_t result = Core::ERROR_UNAVAILABLE;
-
-        if (_gattRemote != nullptr) {
-            // todo
             result = Core::ERROR_NONE;
         } else {
             TRACE(Trace::Error, (_T("A remote has not been assigned")));
@@ -267,7 +223,7 @@ namespace Plugin {
         uint8_t level = ~0;
 
         if (_gattRemote != nullptr) {
-            level = _gattRemote->BatteryLevel();
+            level = _batteryLevelHandler.Level();
         } else {
             TRACE(Trace::Error, (_T("A remote has not been assigned")));
         }
@@ -281,7 +237,7 @@ namespace Plugin {
 
         string path(_service->DataPath() + name + "-remote.json");
         if (Core::File(path).Exists() == true) {
-            TRACE(Trace::Information, (_T("Loading keymap file [%s] for remote [%s]"), path.c_str(), remote.Name()));
+            TRACE(Trace::Information, (_T("Loading keymap file [%s] for remote [%s]"), path.c_str(), remote.Name().c_str()));
             PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(remote.Name()));
 
             result = map.Load(path);
@@ -327,18 +283,41 @@ namespace Plugin {
 
     void BluetoothRemoteControl::RemoteCreated(GATTRemote& remote)
     {
-        TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] created"), remote.Name()));
+        TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] created"), remote.Name().c_str()));
 
         if (LoadKeymap(remote, remote.Name()) != Core::ERROR_NONE) {
             if ((_config.DefaultKeymap.IsSet() == false) || (LoadKeymap(remote, _config.DefaultKeymap.Value()) != Core::ERROR_NONE)) {
-                TRACE(Trace::Information, (_T("No keymap available for remote [%s]"), remote.Name()));
+                TRACE(Trace::Information, (_T("No keymap available for remote [%s]"), remote.Name().c_str()));
+            }
+        }
+        if (_hidHandler->Initialize(&remote) != Core::ERROR_NONE) {
+            TRACE(Trace::Error, (_T("Failed to initialize HID handler")));
+        }
+        if (_batteryLevelHandler.Initialize(&remote) != Core::ERROR_NONE) {
+            TRACE(Trace::Error, (_T("Failed to initialize battery level handler")));
+        }
+        if (_config.Audio.IsSet() == true) {
+            if (_audioHandler.Initialize(&remote, _config.Audio.Value()) != Core::ERROR_NONE) {
+                TRACE(Trace::Error, (_T("Failed to initialize audio handler")));
             }
         }
     }
 
     void BluetoothRemoteControl::RemoteDestroyed(GATTRemote& remote)
     {
-        TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] destroyed"), remote.Name()));
+        TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] destroyed"), remote.Name().c_str()));
+
+        if (_config.Audio.IsSet() == true) {
+            if (_audioHandler.Deinitialize() != Core::ERROR_NONE) {
+                TRACE(Trace::Error, (_T("Failed to deinitialize audio handler")));
+            }
+        }
+        if (_batteryLevelHandler.Deinitialize() != Core::ERROR_NONE) {
+            TRACE(Trace::Error, (_T("Failed to deinitialize battery level handler")));
+        }
+        if (_hidHandler->Deinitialize() != Core::ERROR_NONE) {
+            TRACE(Trace::Error, (_T("Failed to initialize HID handler")));
+        }
 
         _inputHandler->ClearTable(remote.Name());
         if (_config.DefaultKeymap.IsSet() == true) {
@@ -353,7 +332,7 @@ namespace Plugin {
         if (SaveSettings(Settings(remote.Name(), remote.Address(), settings)) != Core::ERROR_NONE) {
             TRACE(Trace::Error, (_T("Failed to save settings")));
         } else {
-            TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] stored persistently"), remote.Name()));
+            TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] stored persistently"), remote.Name().c_str()));
         }
     }
 
@@ -362,7 +341,7 @@ namespace Plugin {
         if (_settingsPath.empty() == false) {
             Core::File file(_settingsPath);
             if (file.Destroy() == true) {
-                TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] removed from persistent storage"), remote.Name()));
+                TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] removed from persistent storage"), remote.Name().c_str()));
             }
         }
     }
