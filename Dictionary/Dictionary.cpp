@@ -94,7 +94,7 @@ namespace Plugin {
 
         if (dictionaryFile.Open(true) == true) {
             NameSpace dictionary;
-            dictionary.FromFile(dictionaryFile);
+            dictionary.IElement::FromFile(dictionaryFile);
             CreateInternalDictionary(EMPTY_STRING, dictionary);
         }
 
@@ -112,7 +112,7 @@ namespace Plugin {
         if (dictionaryFile.Open(true) == true) {
             NameSpace dictionary;
             CreateExternalDictionary(EMPTY_STRING, dictionary);
-            dictionary.ToFile(dictionaryFile);
+            dictionary.IElement::ToFile(dictionaryFile);
         }
     }
 

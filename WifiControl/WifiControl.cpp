@@ -77,7 +77,7 @@ namespace Plugin
 
                     if (configFile.Open(true) == true) {
                         ConfigList configs;
-                        configs.FromFile(configFile);
+                        configs.IElement::FromFile(configFile);
 
                         // iterator over the list and write back
                         auto index(configs.Configs.Elements());
@@ -273,7 +273,7 @@ namespace Plugin
                         WifiControl::ConfigList configs;
                         WPASupplicant::Config::Iterator list(_controller->Configs());
                         configs.Set(list);
-                        configs.ToFile(configFile);
+                        configs.IElement::ToFile(configFile);
                     }
 
                 } else if ((index.Current().Text() == _T("Debug")) && (index.Next() == true)) {

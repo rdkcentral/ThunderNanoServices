@@ -169,7 +169,7 @@ uint32_t Notifier::Parameters(std::vector<std::string>& notifyParameters)
         if (configFile.Open(true) == true) {
 
             NotifierList notifierList;
-            notifierList.FromFile(configFile);
+            notifierList.IElement::FromFile(configFile);
 
             auto index(notifierList.Notifiers.Elements());
             while (index.Next()) {

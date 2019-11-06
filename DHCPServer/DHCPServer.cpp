@@ -185,7 +185,7 @@ namespace Plugin {
             Core::File leasesFile(_persistentPath + interface + ".json");
 
             if (leasesFile.Create() == true) {
-                leasesList.ToFile(leasesFile);
+                leasesList.IElement::ToFile(leasesFile);
                 leasesFile.Close();
             } else {
                 TRACE_L1("Could not save leases in pemranent storage area.\n");
@@ -202,7 +202,7 @@ namespace Plugin {
             if (leasesFile.Open(true) == true) {
                 Core::JSON::ArrayType<Data::Server::Lease> leases;
 
-                leases.FromFile(leasesFile);
+                leases.IElement::FromFile(leasesFile);
                 leasesFile.Close();
 
                 auto iterator = leases.Elements();

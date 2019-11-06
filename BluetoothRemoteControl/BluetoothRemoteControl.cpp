@@ -301,7 +301,7 @@ namespace Plugin {
             Core::File file(_settingsPath);
 
             if (file.Open() == true) {
-                result = (settings.FromFile(file) == true? Core::ERROR_NONE : Core::ERROR_READ_ERROR);
+                result = (settings.IElement::FromFile(file) == true? Core::ERROR_NONE : Core::ERROR_READ_ERROR);
                 file.Close();
             }
         }
@@ -317,7 +317,7 @@ namespace Plugin {
             Core::File file(_settingsPath);
 
             if (file.Create() == true) {
-                result = (settings.ToFile(file) == true? Core::ERROR_NONE : Core::ERROR_WRITE_ERROR);
+                result = (settings.IElement::ToFile(file) == true? Core::ERROR_NONE : Core::ERROR_WRITE_ERROR);
                 file.Close();
             }
         }
