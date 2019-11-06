@@ -166,7 +166,7 @@ static uint8_t swapPattern[] = { 0x00, 0x55, 0xAA, 0xFF };
 
 static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8_t pattern[], PerformanceFunction& subject)
 {
-    uint8_t dataFrame[1024 * 40];
+    uint8_t dataFrame[1024 * 32];
     uint16_t index = 0;
     uint8_t patternIndex = 0;
 
@@ -241,12 +241,12 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
     printf("Data outbound: [2048], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
-    length = 1024 * 40;
+    length = 1024 * 32;
     for (uint32_t run = 0; run < MeasurementLoops; run++) {
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound: [40KB], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound: [32KB], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
 
 }
 
@@ -758,6 +758,7 @@ int main(int argc, char** argv)
         } while (element != 'Q');
 
         // We are done with the COMRPC connections, no need to create new ones.
+        client->Close(Core::infinite);
         client.Release();
     }
 
