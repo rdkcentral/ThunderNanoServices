@@ -47,7 +47,15 @@ namespace Plugin {
             }
             bool Pair() override
             {
-                return _parent->Pair();
+                SendEvent(WPEFramework::Exchange::ProducerEvents::ePairingStarted);
+                bool result = _parent->Pair();
+                if (result) {
+                    SendEvent(WPEFramework::Exchange::ProducerEvents::ePairingSuccess);
+                }
+                else {
+                    SendEvent(WPEFramework::Exchange::ProducerEvents::ePairingFailed);
+                }
+                return result;
             }
             bool Unpair(string bindingId) override
             {
@@ -79,12 +87,16 @@ namespace Plugin {
                 }
                 return false;
             }
-
             BEGIN_INTERFACE_MAP(KeyDevice)
             INTERFACE_ENTRY(Exchange::IKeyProducer)
             END_INTERFACE_MAP
 
         private:
+            inline void SendEvent(Exchange::ProducerEvents event) {
+                if (_callback != nullptr) {
+                    _callback->ProducerEvent(Name(), event);
+                }
+            }
             LinuxDevice* _parent;
             Exchange::IKeyHandler* _callback;
         };
