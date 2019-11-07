@@ -34,15 +34,15 @@ namespace Plugin {
     uint32_t SecurityAgent::endpoint_createtoken(const CreatetokenParamsData& params, CreatetokenResultInfo& response)
     {
         uint32_t result = Core::ERROR_NONE;
-        const string& payload = params.Payload.Value();
 
-        string token;
+        string token, payload;
+        params.ToString(payload);
 
-        if (CreateToken(payload.length(), reinterpret_cast<const uint8_t*>(payload.c_str()), token) != Core::ERROR_NONE) {
+        if (CreateToken(payload.length(), reinterpret_cast<const uint8_t*>(payload.c_str()), token) == Core::ERROR_NONE) {
+            response.Token = token;
+        } else {
             result = Core::ERROR_GENERAL;
         }
-
-        response.Token = token;
 
         return result;
     }

@@ -14,6 +14,7 @@ SecurityAgent plugin for Thunder framework.
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
+- [Access Control List](#head.AccessControlList)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -74,6 +75,7 @@ The table below lists configuration options of the plugin.
 | classname | string | Class name: *SecurityAgent* |
 | locator | string | Library name: *libWPEFrameworkSecurityAgent.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| acl | string | Defines the filename of Access Control List |
 
 <a name="head.Methods"></a>
 # Methods
@@ -94,21 +96,23 @@ Creates Token.
 
 ### Description
 
-Create a signed Json Web token from provided payload.
+Create a signed JsonWeb token from provided payload.
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.payload | string | Payload that will be signed |
+| params?.url | string | <sup>*(optional)*</sup> Url of application origin |
+| params?.user | string | <sup>*(optional)*</sup> Username |
+| params?.hash | string | <sup>*(optional)*</sup> Random hash |
 
 ### Result
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | result | object |  |
-| result.token | string | Created token |
+| result.token | string | Signed JsonWeb token |
 
 ### Errors
 
@@ -126,7 +130,9 @@ Create a signed Json Web token from provided payload.
     "id": 1234567890, 
     "method": "SecurityAgent.1.createtoken", 
     "params": {
-        "payload": ""
+        "url": "https://test.comcast.com", 
+        "user": "Test", 
+        "hash": "1CLYex47SY"
     }
 }
 ```
@@ -168,7 +174,6 @@ Checks whether the token is valid and properly signed.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Missing token |
 
 ### Example
 
@@ -194,4 +199,72 @@ Checks whether the token is valid and properly signed.
         "valid": false
     }
 }
+
 ```
+<a name="head.AccessControlList"></a>
+# Access Control List
+
+The access control list of the security agent is divided into two sections:
+
+- Origin to group mapping
+- Group to access mapping
+
+The access control list should be located either in \<DataPath\>/\<acl\> or \<PersistentPath\>/\<acl\>, where \<acl\> is defined in plugin config.
+
+## Origin to group mapping
+
+The origin to group mapping maps a specific origin(URL) of an application to a group of applications. The structure of mapping looks as follows:
+
+```json
+{
+    "groups": [
+        {
+        "url": "*://localhost",
+        "role": "local"
+        },
+        {
+        "url": "*://*.example.com",
+        "role": "example"
+        },
+        [...]
+  ]
+}
+```
+
+## Group to access mapping
+
+Group of applications has a list of APIs that are either allowed or denied to be accessed by this group. For example, "example" group might look as follows:
+
+```json
+"example": {
+      "url": {
+        "allow": [
+          "*"
+        ],
+        "block": [
+          "*://localhost",
+          "*://localhost:*",
+          "*://127.0.0.1",
+          "*://127.0.0.1:*",
+          "*://[::1]",
+          "*://[::1]:*",
+          "*://[0:0:0:0:0:0:0:1]",
+          "*://[0:0:0:0:0:0:0:1]:*",
+          "file://*"
+        ]
+      },
+      "serviceManager": {
+        "allow": [
+          "get_*"
+        ]
+      },
+      "rtRemote": {
+        "block": [
+          "*"
+        ]
+      },
+      [...]
+    }
+```
+
+For a complete example of acl file please see [the following example](https://github.com/WebPlatformForEmbedded/ThunderNanoServices/blob/master/SecurityAgent/example_acl.json)
