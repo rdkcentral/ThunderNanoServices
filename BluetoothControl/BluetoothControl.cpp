@@ -48,6 +48,9 @@ namespace Plugin {
             else if ((slaving == false) && (administrator.SecureLink(true) != Core::ERROR_NONE)) {
                 result = "Failed to enable secure links on the bluetooth interface";
             }
+            else if ((slaving == false) && (administrator.Connectable(true) != Core::ERROR_NONE)) {
+                result = "Failed to enable Connectable on the bluetooth interface";
+            }
             else if ((slaving == false) && (administrator.Bondable(true) != Core::ERROR_NONE)) {
                 result = "Failed to enable bonding on the bluetooth interface";
             }
