@@ -1154,9 +1154,13 @@ namespace Plugin {
             return (_inputHandler->KeyEvent(pressed, code, mapName));
         }
 
-        virtual Exchange::IKeyProducer* Producer(const string& name) override
+        Exchange::IKeyProducer* Producer(const string& name) override
         {
             return (&(*_hidHandler));
+        }
+
+        void ProducerEvent(const string& /*producerName*/, const Exchange::ProducerEvents /*event*/) override
+        {
         }
 
     private:
