@@ -24,6 +24,7 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
  target_link_libraries(${MODULE_NAME}
     PRIVATE
+        CompileSettings::CompileSettings
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 

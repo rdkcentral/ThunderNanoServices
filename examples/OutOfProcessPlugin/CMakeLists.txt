@@ -26,7 +26,10 @@ endif()
 # add the library
 add_library(${PROJECT_NAME} SHARED ${PLUGIN_SOURCES})
 include_directories(${PLUGINS_INCLUDEDIR})
-target_link_libraries(${PROJECT_NAME} ${PLUGIN_LIBS})
+target_link_libraries(${PROJECT_NAME}
+    ${PLUGIN_LIBS}
+    PRIVATE
+        CompileSettings::CompileSettings)
 
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${INSTALL_PREFIX}/plugins)
 
