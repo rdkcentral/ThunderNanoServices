@@ -133,10 +133,10 @@ private:
 				SetState(info.State.Value());
 			}
 		}
-		void monitor_response(const CurrentState& info, const Core::JSONRPC::Error* result)
+		void monitor_response(const Core::JSON::ArrayType<CurrentState>& info, const Core::JSONRPC::Error* result)
 		{
-			if (result == nullptr) {
-				SetState(info.State.Value());
+			if ((result == nullptr) && (info.Length() == 1)) {
+				SetState(info[0].State.Value());
 			}
 		}
 		void monitor_on(const Core::JSON::String& parameters, const Core::JSONRPC::Error* result)
@@ -310,9 +310,11 @@ public:
 private:
 	void Activated()
 	{
+		printf("Monitor Plugin Activated\n");
 	}
 	void Deactivated()
 	{
+		printf("Monitor Plugin Deactivated\n");
 	}
 
 private:
