@@ -22,25 +22,50 @@ private:
 			{
 				Add(_T("callsign"), &Callsign);
 				Add(_T("state"), &State);
-				Add(_T("reason"), &Reason);
 			}
 
 			Statechange(const Statechange& copy) 
-				: Callsign(copy.Callsign)
+				: Core::JSON::Container()
+				, Callsign(copy.Callsign)
 				, State(copy.State)
-				, Reason(copy.Reason)
 			{
 				Add(_T("callsign"), &Callsign);
 				Add(_T("state"), &State);
-				Add(_T("reason"), &Reason);
 			}
 			Statechange& operator=(const Statechange&) = delete;
 
 		public:
 			Core::JSON::String Callsign; // Callsign of the plugin that changed state
 			Core::JSON::EnumType<PluginHost::IShell::state> State; // State of the plugin
-			Core::JSON::EnumType<PluginHost::IShell::reason> Reason; // Cause of the state change
 		}; // class StatechangeParamsData
+		class CurrentState : public Core::JSON::Container {
+		public:
+			CurrentState()
+				: Core::JSON::Container()
+				, State(PluginHost::IShell::state::DEACTIVATED)
+			{
+				Add(_T("state"), &State);
+			}
+
+			CurrentState(const CurrentState& copy)
+				: Core::JSON::Container()
+				, State(copy.State)
+			{
+				Add(_T("state"), &State);
+			}
+			CurrentState& operator=(const CurrentState&) = delete;
+
+		public:
+			Core::JSON::EnumType<PluginHost::IShell::state> State; // State of the plugin
+		}; // class State
+
+	public:
+		enum state {
+			UNKNOWN,
+			DEACTIVATED,
+			LOADING,
+			ACTIVATED
+		};
 
 	public:
 		Connection() = delete;
@@ -52,6 +77,7 @@ private:
 			: Client(callsign, string(), localCallsign)
 			, _monitor(string(), false)
 			, _parent(parent)
+			, _state(UNKNOWN)
 		{
 			_monitor.Assign<Statechange>(_T("statechange"), &Connection::state_change, this);
 			Announce();
@@ -77,24 +103,48 @@ private:
 		}
 
 	private:
-		void state_change(const Statechange& info)
+		void SetState(const PluginHost::IShell::state value)
 		{
-			printf("seems like %s is %d\n", info.Callsign.Value().c_str(), info.State.Value());
-
-			if (info.Callsign.Value() == Client::Callsign()) {
-				printf(" Our plugin changes state... take appropriate action\n");
-				if (info.Reason.Value() == PluginHost::IShell::state::ACTIVATED) {
+			if (value == PluginHost::IShell::state::ACTIVATED) {
+				if ((_state != ACTIVATED) && (_state != LOADING)) {
+					_state = state::LOADING;
 					auto index(Client::Events());
 					while (index.Next() == true) {
 						_events.push_back(index.Event());
 					}
 					next_event(Core::JSON::String(), nullptr);
 				}
+				else if (_state == LOADING) {
+					_state = state::ACTIVATED;
+					_parent.Activated();
+
+				}
+			}
+			else if (value == PluginHost::IShell::state::DEACTIVATED) {
+				if (_state != DEACTIVATED) {
+					_state = DEACTIVATED;
+					_parent.Deactivated();
+				}
+			}
+		}
+		void state_change(const Statechange& info)
+		{
+			if (info.Callsign.Value() == Client::Callsign()) {
+				SetState(info.State.Value());
+			}
+		}
+		void monitor_response(const CurrentState& info, const Core::JSONRPC::Error* result)
+		{
+			if (result == nullptr) {
+				SetState(info.State.Value());
 			}
 		}
 		void monitor_on(const Core::JSON::String& parameters, const Core::JSONRPC::Error* result)
 		{
-			printf("seems we are monitoring...\n");
+			if (result == nullptr) {
+				string method = string("status@") + Client::Callsign();
+				_monitor.Dispatch<void>(3000, method, &Connection::monitor_response, this);
+			}
 		}
 		void next_event(const Core::JSON::String& parameters, const Core::JSONRPC::Error* result)
 		{
@@ -102,10 +152,10 @@ private:
 			if (_events.empty() == false) {
 				const string parameters("{ \"event\": \"" + _events.front() + "\", \"id\": \"" + Client::Namespace() + "\"}");
 				_events.pop_front();
-				if (Client::Dispatch<string>(30000, "register", parameters, &Connection::next_event, this) != Core::ERROR_NONE)
-				{
-					next_event(Core::JSON::String(), nullptr);
-				}
+				Client::Dispatch<string>(3000, "register", parameters, &Connection::next_event, this);
+			}
+			else {
+				SetState(PluginHost::IShell::state::ACTIVATED);
 			}
 		}
 
@@ -114,15 +164,14 @@ private:
 			// Time to open up the monitor
 			const string parameters("{ \"event\": \"statechange\", \"id\": \"" + _monitor.Namespace() + "\"}");
 
-			if (_monitor.Dispatch<string>(30000, "register", parameters, &Connection::monitor_on, this) != Core::ERROR_NONE) {
-				printf("Ooopsie Daisy could not register for monitor events\n");
-			}
+			_monitor.Dispatch<string>(30000, "register", parameters, &Connection::monitor_on, this);
 		}
 
 	private:
 		LinkType<INTERFACE> _monitor;
 		SmartClientType<INTERFACE>& _parent;
 		std::list<string> _events;
+		state _state;
 	};
 
 public:
@@ -259,12 +308,11 @@ public:
 	}
 
 private:
-	void PluginChanges()
+	void Activated()
 	{
-		auto index(_connection.Events());
-
-		while (index.Next() == true) {
-		}
+	}
+	void Deactivated()
+	{
 	}
 
 private:
@@ -692,7 +740,7 @@ int main(int argc, char** argv)
         // this is not nessecary.
         printf("Preparing JSONRPC!!!\n");
 
-		Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("192.168.220.21:80")));
+		Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("192.168.1.113:80")));
 		JSONRPC::SmartClientType<Core::JSON::IElement> stickyObject(_T("Monitor.1"), _T("client.monitor.2"));
 
 		// Create a remoteObject.  This is the way we can communicate with the Server.
