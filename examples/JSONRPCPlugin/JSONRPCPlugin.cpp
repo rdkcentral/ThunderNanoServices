@@ -35,9 +35,9 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         Property<Data::Geometry>(_T("geometry"), &JSONRPCPlugin::get_geometry, &JSONRPCPlugin::set_geometry, this);
         Property<Core::JSON::String>(_T("data"), &JSONRPCPlugin::get_data, &JSONRPCPlugin::set_data, this);
 
-		//Readonly and writeonly properties
-		Property<Core::JSON::String>(_T("status"), &JSONRPCPlugin::get_status, nullptr, this);
-		Property<Core::JSON::String>(_T("value"), nullptr, &JSONRPCPlugin::set_value, this);
+        // Readonly and writeonly properties
+        Property<Core::JSON::String>(_T("status"), &JSONRPCPlugin::get_status, nullptr, this);
+        Property<Core::JSON::String>(_T("value"), nullptr, &JSONRPCPlugin::set_value, this);
 
         // Opaque method examples
         Register<JsonObject, JsonObject>("swap", &JSONRPCPlugin::swap, this);
@@ -49,16 +49,16 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         Register<Core::JSON::DecUInt16, Data::JSONDataBuffer>(_T("receive"), &JSONRPCPlugin::receive, this);
         Register<Data::JSONDataBuffer, Data::JSONDataBuffer>(_T("exchange"), &JSONRPCPlugin::exchange, this);
 
-		// Add property wich is indexed..
+        // Add property wich is indexed..
         Property<Core::JSON::DecUInt32>(_T("array"), &JSONRPCPlugin::get_array_value, &JSONRPCPlugin::set_array_value, this);
         Property<Core::JSON::DecUInt32>(_T("lookup"), &JSONRPCPlugin::get_array_value, nullptr, this);
         Property<Core::JSON::DecUInt32>(_T("store"), nullptr, &JSONRPCPlugin::set_array_value, this);
 
         // Methods for a "legaccy" version of the interfaces, the last parameter makes sure that all handlers are copied from the 
-		// base interface to this "legacy" one...
+        // base interface to this "legacy" one...
         Core::JSONRPC::Handler& legacyVersion = JSONRPC::CreateHandler({ 1 }, *this); 
 
-		// The only method that is really differnt in version "1" needs to be registered. That is done by the next line.
+        // The only method that is really differnt in version "1" needs to be registered. That is done by the next line.
         legacyVersion.Register<Core::JSON::String, Core::JSON::String>(_T("clueless"), &JSONRPCPlugin::clueless2, this);
     }
 
@@ -71,9 +71,12 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         Config config;
         config.FromString(service->ConfigLine());
 
+	Core::NodeId source(config.Connector.Value().c_str());
+	    
         Core::ProxyType<RPC::InvokeServer> engine (Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance()));
-        _rpcServer = new COMServer(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath(), engine);
-
+        _rpcServer = new COMServer(Core::NodeId(source, source.PortNumber()), this, service->ProxyStubPath(), engine);
+        _jsonServer = new JSONRPCChannel<Core::JSON::IElement>(Core::NodeId(source, source.PortNumber() + 1), *this);
+        _msgServer = new JSONRPCChannel<Core::JSON::IMessagePack>(Core::NodeId(source, source.PortNumber() + 2), *this);
         _job->Period(5);
         PluginHost::WorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(_job));
 
@@ -86,6 +89,8 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
         _job->Period(0);
         PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_job));
         delete _rpcServer;
+        delete _jsonServer;
+	delete _msgServer;
     }
 
     /* virtual */ string JSONRPCPlugin::Information() const
@@ -131,20 +136,42 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
     // -------------------------------------------------------------------------------------------------------
     /* virtual */ uint32_t JSONRPCPlugin::Send(const uint16_t sendSize, const uint8_t buffer[])
     {
-        printf("Received a send for size: %d\n", sendSize);
-        uint32_t result = 0;
+        uint32_t result = sendSize;
         return (result);
     }
-
     /* virtual */ uint32_t JSONRPCPlugin::Receive(uint16_t & bufferSize, uint8_t buffer[]) const
     {
-        uint32_t result = 0;
+        static uint8_t pattern[] = { 0x00, 0x66, 0xBB, 0xEE };
+        uint32_t result = Core::ERROR_NONE;
+        uint8_t patternLength = sizeof(pattern);
+        uint16_t index = 0;
+        uint8_t patternIndex = 0;
+
+        while (index < bufferSize) {
+
+            buffer[index++] = pattern[patternIndex++];
+
+            patternIndex %= (patternLength - 1);
+        }
+
         return (result);
     }
 
     /* virtual */ uint32_t JSONRPCPlugin::Exchange(uint16_t & bufferSize, uint8_t buffer[], const uint16_t maxBufferSize)
     {
-        uint32_t result = 0;
+        uint32_t result = Core::ERROR_NONE;
+        static uint8_t pattern[] = { 0x00, 0x77, 0xCC, 0x88 };
+        uint8_t patternLength = sizeof(pattern);
+        uint16_t index = 0;
+        uint8_t patternIndex = 0;
+
+        while (index < maxBufferSize) {
+
+            buffer[index++] = pattern[patternIndex++];
+
+            patternIndex %= (patternLength - 1);
+        }
+
         return (result);
     }
 

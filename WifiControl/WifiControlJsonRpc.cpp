@@ -89,7 +89,7 @@ namespace Plugin {
             WifiControl::ConfigList configs;
             WPASupplicant::Config::Iterator list(_controller->Configs());
             configs.Set(list);
-            if (configs.ToFile(configFile) == true)
+            if (configs.IElement::ToFile(configFile) == true)
                 result = Core::ERROR_NONE;
         }
 

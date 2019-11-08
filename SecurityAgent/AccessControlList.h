@@ -247,7 +247,7 @@ namespace Plugin {
         uint32_t Load(Core::File& source)
         {
             JSONACL controlList;
-            controlList.FromFile(source);
+            controlList.IElement::FromFile(source);
             _unusedRoles.clear();
 
             JSONACL::Roles::Iterator rolesIndex = controlList.ACL.Elements();

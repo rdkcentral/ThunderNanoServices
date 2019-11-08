@@ -615,7 +615,7 @@ namespace Plugin {
                 result = Core::ERROR_READ_ERROR;
                 DeviceData data;
 
-                if (data.FromFile(file) == true) {
+                if (data.IElement::FromFile(file) == true) {
                     DeviceImpl* device = nullptr;
                     result = Core::ERROR_INVALID_DESIGNATOR;
 
@@ -684,7 +684,7 @@ namespace Plugin {
             Core::File file(AddressToPath(address));
 
             if (file.Create() == true) {
-                result = (data.ToFile(file) == true? Core::ERROR_NONE : Core::ERROR_WRITE_ERROR);
+                result = (data.IElement::ToFile(file) == true? Core::ERROR_NONE : Core::ERROR_WRITE_ERROR);
                 file.Close();
             }
         }
