@@ -86,6 +86,7 @@ namespace Plugin
         while (index.Next() == true) {
 
             GPIO::Pin* pin = Core::Service<GPIO::Pin>::Create<GPIO::Pin>(index.Current().Id.Value(), index.Current().ActiveLow.Value());
+            uint8_t mode = 0;
 
             if (pin != nullptr) {
                 switch (index.Current().Mode.Value()) {
@@ -93,18 +94,21 @@ namespace Plugin
                     pin->Mode(GPIO::Pin::INPUT);
                     pin->Trigger(GPIO::Pin::FALLING);
                     pin->Subscribe(&_sink);
+                    mode = 1;
                     break;
                 }
                 case Config::Pin::HIGH: {
                     pin->Mode(GPIO::Pin::INPUT);
                     pin->Trigger(GPIO::Pin::RISING);
                     pin->Subscribe(&_sink);
+                    mode = 1;
                     break;
                 }
                 case Config::Pin::BOTH: {
                     pin->Mode(GPIO::Pin::INPUT);
                     pin->Trigger(GPIO::Pin::BOTH);
                     pin->Subscribe(&_sink);
+                    mode = 2;
                     break;
                 }
                 case Config::Pin::ACTIVE: {
@@ -125,14 +129,54 @@ namespace Plugin
                     break;
                 }
 
-                IHandler* method = nullptr;
+                if (index.Current().Handlers.IsSet() != false) {
+                    std::list< std::pair<uint32_t, uint32_t> > intervals;
 
-                if (index.Current().Handler.IsSet() != false) {
-                    Config::Pin::Handle& handler(index.Current().Handler);
-                    method = HandlerAdministrator::Instance().Handler(handler.Handler.Value(), _service, handler.Config.Value());
+                    Core::JSON::ArrayType<Config::Pin::Handler>::Iterator handler(index.Current().Handlers.Elements());
+
+                    if (mode == 0) {
+                        SYSLOG(Logging::Startup, (_T("Pin [%d] defined as output but handlers associated with it!"), pin->Identifier() & 0xFFFF));
+                    }
+                    else if (mode == 1) {
+                        SYSLOG(Logging::Startup, (_T("Handlers requires input pins where BOTH states are reported. Error on pin [%d]."), pin->Identifier() & 0xFFFF));
+                    }
+
+                    while (handler.Next() == true) {
+                          
+                        Config::Pin::Handler& info(handler.Current());
+
+                        uint32_t start = info.Start.Value();
+                        uint32_t end   = info.End.Value();
+
+                        if (start > end) {
+                            SYSLOG(Logging::Startup, (_T("Handler [%s] on pin [%d] has an incorrect interval [%d-%d]."), info.Name.Value().c_str(), pin->Identifier() & 0xFFFF, start, end));
+                        }
+                        else {
+                            std::list< std::pair<uint32_t, uint32_t> >::iterator loop(intervals.begin());
+                            start *= 1000;
+                            end   *= 1000;
+                            // Check for overlapping intervals. If they exist report a warning...
+                            while ((loop != intervals.end()) && (((start < loop->first) || (start >= loop->second)) && ((end <= loop->first) || (end > loop->second)))) {
+                                loop++;
+                            }
+
+                            if (loop != intervals.end()) {
+                                SYSLOG(Logging::Startup, (_T("Interval conflict on pin [%d], at handler [%s]."), pin->Identifier() & 0xFFFF, info.Name.Value().c_str()));
+                            }
+                            else {
+                                IHandler* method = HandlerAdministrator::Instance().Handler(info.Name.Value(), _service, info.Config.Value());
+                                if (method != nullptr) {
+                                    SYSLOG(Logging::Startup, (_T("Could not instantiate handler [%s] on pin [%d]."), info.Name.Value().c_str(), pin->Identifier() & 0xFFFF));
+                                }
+                                else {
+                                    method->Interval(start, end);
+                                    intervals.push_back(std::pair<uint32_t,uint32_t>(start,end));
+                                    _pins.push_back(PinHandler(pin, method));
+                                }
+                            }
+                        }
+                    }
                 }
-
-                _pins.push_back(PinHandler(pin, method));
             }
         }
 

@@ -1,6 +1,7 @@
 #include <interfaces/IKeyHandler.h>
 
 #include "Handler.h"
+#include "TimedInput.h"
 
 namespace WPEFramework {
 
@@ -48,22 +49,37 @@ namespace Plugin {
         }
 
     public:
-        virtual void Trigger(GPIO::Pin& pin) override
+        void Interval(const uint32_t start, const uint32_t end) override {
+            _state.Clear();
+            _state.Add(start);
+            _state.Add(end);
+            _marker = start;
+        }
+        void Trigger(GPIO::Pin& pin) override
         {
 
             ASSERT(_service != nullptr);
 
-            Exchange::IKeyHandler* handler(_service->QueryInterfaceByCallsign<Exchange::IKeyHandler>(_callsign));
+       }
+       void Trigger(GPIO::Pin& pin) override
+        {
+            uint32_t marker;
 
-            if (handler != nullptr) {
-                Exchange::IKeyProducer* producer(handler->Producer(_producer));
+            ASSERT(_service != nullptr);
 
-                if (producer != nullptr) {
-                    producer->Pair();
-                    producer->Release();
+            if ( (_state.Analyse(pin.Set(), marker) == true) && (_marker == marker) ) {
+                Exchange::IKeyHandler* handler(_service->QueryInterfaceByCallsign<Exchange::IKeyHandler>(_callsign));
+
+                if (handler != nullptr) {
+                    Exchange::IKeyProducer* producer(handler->Producer(_producer));
+
+                    if (producer != nullptr) {
+                        producer->Pair();
+                        producer->Release();
+                    }
+
+                    handler->Release();
                 }
-
-                handler->Release();
             }
         }
 
@@ -71,6 +87,8 @@ namespace Plugin {
         PluginHost::IShell* _service;
         string _callsign;
         string _producer;
+        TimedInput _state;
+        uint32_t _marker;
     };
 
     static HandlerAdministrator::Entry<RemotePairing> handler;
