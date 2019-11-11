@@ -4,6 +4,8 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(PLUGIN_RTSPCLIENT_AUTOSTART true CACHE STRING true)
 set(PLUGIN_RTSPCLIENT_OOP true CACHE STRING true)
 
+find_package(CompileSettingsDebug CONFIG REQUIRED)
+
 add_library(${MODULE_NAME} SHARED 
         Module.cpp
         RtspClient.cpp
@@ -20,7 +22,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
-        CompileSettings::CompileSettings
+        CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
 install(TARGETS ${MODULE_NAME} 

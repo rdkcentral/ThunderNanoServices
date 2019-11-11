@@ -5,6 +5,7 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
  find_package(${NAMESPACE}Plugins REQUIRED)
  find_package(${NAMESPACE}Definitions REQUIRED)
+ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
  add_library(${MODULE_NAME} SHARED
         Module.cpp
@@ -24,7 +25,7 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
  target_link_libraries(${MODULE_NAME}
     PRIVATE
-        CompileSettings::CompileSettings
+        CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 

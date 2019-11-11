@@ -7,6 +7,7 @@ set(PLUGIN_BLUETOOTH_OOP false CACHE STRING true)
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
     BluetoothControl.cpp
@@ -19,7 +20,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
-        CompileSettings::CompileSettings
+        CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ${NAMESPACE}Bluetooth::${NAMESPACE}Bluetooth)

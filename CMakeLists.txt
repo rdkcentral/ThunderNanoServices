@@ -47,7 +47,7 @@ option(WPEFRAMEWORK_CREATE_IPKG_TARGETS "Generate the CPack configuration for pa
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
 
-include(CompileSettings)
+#include(CompileSettings)
 
 # for writing pc and config files
 include(CmakeHelperFunctions)

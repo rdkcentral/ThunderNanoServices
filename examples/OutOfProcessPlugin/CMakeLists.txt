@@ -3,6 +3,7 @@ project(OutOfProcessTest)
 cmake_minimum_required(VERSION 2.8)
 
 find_package(PkgConfig)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 pkg_check_modules(PLUGINS plugins)
 
 get_filename_component(INSTALL_PREFIX ${PLUGINS_INCLUDEDIR} NAME)
@@ -29,7 +30,7 @@ include_directories(${PLUGINS_INCLUDEDIR})
 target_link_libraries(${PROJECT_NAME}
     ${PLUGIN_LIBS}
     PRIVATE
-        CompileSettings::CompileSettings)
+        CompileSettingsDebug)
 
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${INSTALL_PREFIX}/plugins)
 

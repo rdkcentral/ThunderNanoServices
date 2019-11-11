@@ -1,4 +1,5 @@
 find_package(jsonrpc REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_executable(JSONRPCClient JSONRPCClient.cpp)
 
@@ -9,7 +10,7 @@ set_target_properties(JSONRPCClient PROPERTIES
 
 target_link_libraries(JSONRPCClient 
         PRIVATE
-        CompileSettings::CompileSettings
+        CompileSettingsDebug
         jsonrpc::jsonrpc
     )
 
