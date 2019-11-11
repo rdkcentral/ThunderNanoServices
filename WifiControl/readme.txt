@@ -1,3 +1,5 @@
+NOT RECOMMENDED WAY OF WORKING. LEACVE THE STARTING OF WPA_SUPPLICANT UP TO THE PLUGIN !!!!
+
 === attach to running instance of wpa_supplicant ===
 
 If you want to start WifiControl on a system where wpa_supplicant is already running:
