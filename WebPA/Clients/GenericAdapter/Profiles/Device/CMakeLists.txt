@@ -22,7 +22,7 @@ target_include_directories(${TARGET}
 
 target_link_libraries(${TARGET}
     PRIVATE
-        CompileSettingsDebug
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         jsonrpc::jsonrpc

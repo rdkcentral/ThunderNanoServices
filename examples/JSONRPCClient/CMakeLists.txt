@@ -10,7 +10,7 @@ set_target_properties(JSONRPCClient PROPERTIES
 
 target_link_libraries(JSONRPCClient 
         PRIVATE
-        CompileSettingsDebug
+        CompileSettingsDebug::CompileSettingsDebug
         jsonrpc::jsonrpc
     )
 

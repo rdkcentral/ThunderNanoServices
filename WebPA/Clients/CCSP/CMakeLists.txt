@@ -12,7 +12,7 @@ add_library(${TARGET} CCSP.cpp)
 
 target_link_libraries(${TARGET}
     PRIVATE
-        CompileSettingsDebug
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         parodus2ccsp::parodus2ccsp

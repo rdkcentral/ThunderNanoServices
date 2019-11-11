@@ -19,7 +19,7 @@ target_include_directories(${MODULE_NAME} PRIVATE ${PLUGIN_INCLUDE_DIRS})
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
-        CompileSettingsDebug
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ParodusService::ParodusService

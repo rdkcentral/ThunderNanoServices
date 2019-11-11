@@ -25,7 +25,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
-        CompileSettingsDebug
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         # TODO: write a proper find module for dsgclient to supply all link and compile options.

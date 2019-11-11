@@ -30,7 +30,7 @@ include_directories(${PLUGINS_INCLUDEDIR})
 target_link_libraries(${PROJECT_NAME}
     ${PLUGIN_LIBS}
     PRIVATE
-        CompileSettingsDebug)
+        CompileSettingsDebug::CompileSettingsDebug)
 
 install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${INSTALL_PREFIX}/plugins)
 

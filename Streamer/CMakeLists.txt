@@ -40,7 +40,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 # "whole-archive" to force linking of the static player libs
 target_link_libraries(${MODULE_NAME}
     PRIVATE
-        CompileSettingsDebug
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         -Wl,--whole-archive ${PLAYER_LIBS} -Wl,--no-whole-archive)
