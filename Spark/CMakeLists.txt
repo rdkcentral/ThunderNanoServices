@@ -3,6 +3,7 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(Spark REQUIRED)
 find_package(Freetype2 REQUIRED)
 
@@ -57,6 +58,7 @@ target_include_directories(${MODULE_NAME}
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE 
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         Spark::Spark)

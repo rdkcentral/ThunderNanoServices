@@ -2,6 +2,7 @@ set(PLUGIN_NAME DIALServer)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 option(PLUGIN_DIALSERVER_ENABLE_YOUTUBE "Enable YouTube support for DIAL server" OFF)
 option(PLUGIN_DIALSERVER_ENABLE_NETFLIX "Enable Netflix support for DIAL server" OFF)
@@ -26,6 +27,7 @@ endif()
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
 install(TARGETS ${MODULE_NAME}

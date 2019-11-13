@@ -3,6 +3,7 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Tracing REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(PNG REQUIRED)
 find_package(BCM_HOST QUIET)
 find_package(NEXUS QUIET)
@@ -14,6 +15,7 @@ add_library(${MODULE_NAME} SHARED
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE 
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Tracing::${NAMESPACE}Tracing
         PNG::PNG)

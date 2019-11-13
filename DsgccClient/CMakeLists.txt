@@ -3,6 +3,7 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
         Module.cpp
@@ -24,6 +25,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         # TODO: write a proper find module for dsgclient to supply all link and compile options.

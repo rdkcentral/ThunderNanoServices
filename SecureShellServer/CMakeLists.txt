@@ -4,6 +4,7 @@ set(PLUGIN_NAME SecureShellServer)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(LibDropbear REQUIRED)
 
 if ( NOT LIBDROPBEAR_FOUND )
@@ -27,6 +28,7 @@ target_include_directories(${MODULE_NAME}
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
 	${LIBDROPBEAR_LIBRARIES} -lz -lutil -lpthread -lcrypt)
 

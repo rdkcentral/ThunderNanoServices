@@ -4,6 +4,7 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 option(PROVIDE_NEXUS_OTP_ID "Let DeviceInfo provide the Nexus OPT ID as device identifier" OFF)
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     DeviceInfo.cpp
@@ -28,6 +29,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
 install(TARGETS ${MODULE_NAME} 

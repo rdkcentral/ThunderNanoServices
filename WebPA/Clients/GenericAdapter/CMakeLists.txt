@@ -2,6 +2,7 @@ set(TARGET GenericAdapter)
 message("Setup ${TARGET} v${VERSION}...")
 
 find_package(WPEFramework)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(WDMP-C REQUIRED)
 find_package(TinyXML REQUIRED)
 find_package(LibParodus REQUIRED)
@@ -30,6 +31,7 @@ target_include_directories(${TARGET}
 
 target_link_libraries(${TARGET}
     PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         wdmp_c::wdmp_c

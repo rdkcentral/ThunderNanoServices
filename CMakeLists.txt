@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.3)
-
 find_package(WPEFramework)
 
 # All packages that did not deliver a CMake Find script (and some deprecated scripts that need to be removed)
@@ -47,6 +46,8 @@ option(WPEFRAMEWORK_CREATE_IPKG_TARGETS "Generate the CPack configuration for pa
 
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
+
+#include(CompileSettings)
 
 # for writing pc and config files
 include(CmakeHelperFunctions)
