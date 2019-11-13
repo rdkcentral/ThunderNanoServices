@@ -581,7 +581,7 @@ namespace Plugin {
                                 string type = device->Type();
                                 std::size_t found = deviceName.find(device->Type());
                                 if (found != std::string::npos) {
-                                    device->ProducerEvent(Exchange::ProducerEvents::ePairingSuccess);
+                                    device->ProducerEvent(Exchange::ProducerEvents::PairingSuccess);
                                     _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, device)));
                                 }
                             }
@@ -655,7 +655,7 @@ namespace Plugin {
                             if (HandleInput(index->second.first) == false) {
                                 // fd closed?
                                 close(index->second.first);
-                                index->second.second->ProducerEvent(Exchange::ProducerEvents::eUnpairingSuccess);
+                                index->second.second->ProducerEvent(Exchange::ProducerEvents::UnpairingSuccess);
                                 index = _devices.erase(index);
                             } else {
                                 ++index;
