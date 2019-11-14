@@ -725,12 +725,12 @@ int main(int argc, char** argv)
             ));
         engine->Announcements(client->Announcement());
 
-        // ASSERT(client.IsValid() == true);
+        ASSERT(client.IsValid() == true);
 
         // Open up the COMRPC Client connection.
-        // if (client->Open(2000) != Core::ERROR_NONE) {
-        //    printf("Failed to open up a COMRPC link with the server. Is the server running ?\n");
-        // }
+        if (client->Open(2000) != Core::ERROR_NONE) {
+            printf("Failed to open up a COMRPC link with the server. Is the server running ?\n");
+        }
 
         // The JSONRPC Client library is expecting the THUNDER_ACCESS environment variable to be set and pointing
         // to the JSONRPC Server, this can be a domain socket (use at least 1 slash in it, or a TCP address.
@@ -742,8 +742,8 @@ int main(int argc, char** argv)
         // this is not nessecary.
         printf("Preparing JSONRPC!!!\n");
 
-		Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("192.168.1.113:80")));
-		JSONRPC::SmartClientType<Core::JSON::IElement> stickyObject(_T("Monitor.1"), _T("client.monitor.2"));
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("192.168.1.113:80")));
+        JSONRPC::SmartClientType<Core::JSON::IElement> stickyObject(_T("Monitor.1"), _T("client.monitor.2"));
 
 		// Create a remoteObject.  This is the way we can communicate with the Server.
         // The parameters:
@@ -752,9 +752,11 @@ int main(int argc, char** argv)
         // 3. [optional]  should the websocket under the hood call directly the plugin
         //                or will it be rlayed through thejsonrpc dispatcher (default,
         //                use jsonrpc dispatcher)
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:80")));
         JSONRPC::LinkType<Core::JSON::IElement> legacyObject(_T("JSONRPCPlugin.1"), _T("client.events.33"));
-        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:8900")));
         JSONRPC::LinkType<Core::JSON::IElement> remoteObject(_T("JSONRPCPlugin.2"), _T("client.events.88"));
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:8900")));
+        JSONRPC::LinkType<Core::JSON::IElement> remoteObjectElement(_T("JSONRPCPlugin.2"), _T("client.events.88"));
         Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:8901")));
         JSONRPC::LinkType<Core::JSON::IMessagePack> remoteObjectMP(_T("JSONRPCPlugin.2"), _T("client.events.88"));
         Handlers::MessageHandler testMessageHandlerJohn("john");
@@ -776,7 +778,7 @@ int main(int argc, char** argv)
                 // 2. [mandatory] Property to read (See JSONRPCPlugin::JSONRPCPlugin)
                 // 3. [mandatory] Parameter that holds the information to "SET" on the other side.
                 Core::JSON::String value;
-                value = (string(_T("< ")) + static_cast<char>(element) + string(_T(" >")));
+                value = (string(_T("<")) + static_cast<char>(element) + string(_T(">")));
                 remoteObject.Set(1000, _T("data"), value);
                 break;
             }
@@ -1024,7 +1026,7 @@ int main(int argc, char** argv)
             }
             case 'Y':
             {
-                MeasureJSONRPC(remoteObject);
+                MeasureJSONRPC(remoteObjectElement);
                 break;
             }
             case 'Z':
