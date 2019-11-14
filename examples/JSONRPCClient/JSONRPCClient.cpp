@@ -725,12 +725,12 @@ int main(int argc, char** argv)
             ));
         engine->Announcements(client->Announcement());
 
-        // ASSERT(client.IsValid() == true);
+        ASSERT(client.IsValid() == true);
 
         // Open up the COMRPC Client connection.
-        // if (client->Open(2000) != Core::ERROR_NONE) {
-        //    printf("Failed to open up a COMRPC link with the server. Is the server running ?\n");
-        // }
+        if (client->Open(2000) != Core::ERROR_NONE) {
+            printf("Failed to open up a COMRPC link with the server. Is the server running ?\n");
+        }
 
         // The JSONRPC Client library is expecting the THUNDER_ACCESS environment variable to be set and pointing
         // to the JSONRPC Server, this can be a domain socket (use at least 1 slash in it, or a TCP address.
