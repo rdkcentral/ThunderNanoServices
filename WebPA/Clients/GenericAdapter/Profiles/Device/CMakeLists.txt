@@ -3,6 +3,7 @@ set(TARGET Device)
 find_package(WPEFramework REQUIRED)
 find_package(jsonrpc REQUIRED)
 find_package(Procps REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 file(GLOB IFACE_CONTROL_PLUGIN_INCLUDES *.h)
 
@@ -21,6 +22,7 @@ target_include_directories(${TARGET}
 
 target_link_libraries(${TARGET}
     PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         jsonrpc::jsonrpc

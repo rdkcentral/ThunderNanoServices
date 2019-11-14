@@ -3,6 +3,7 @@
 #include "Data.h"
 #include "Module.h"
 
+#include <websocket/websocket.h>
 #include <interfaces/IPerformance.h>
 
 namespace WPEFramework {
@@ -54,7 +55,7 @@ namespace Plugin {
         // process can than measure the overhead of the call towards the Exchange::IRPCLink methods.
         // The processing time of these methods will also be acounted for internally and "send" back as well
         class COMServer : public RPC::Communicator {
-        private:
+        public:
             COMServer() = delete;
             COMServer(const COMServer&) = delete;
             COMServer& operator=(const COMServer&) = delete;
@@ -89,13 +90,233 @@ namespace Plugin {
                     // Allright, respond with the interface.
                     result = _parentInterface;
 
-					printf("Pointer => %p\n", result);
+                    printf("Pointer => %p\n", result);
                 }
                 return (result);
             }
 
         private:
             Exchange::IPerformance* _parentInterface;
+        };
+
+        template <typename INTERFACE>
+        class JSONObjectFactory : public Core::FactoryType<INTERFACE, char*> {
+        public:
+            inline JSONObjectFactory()
+                : Core::FactoryType<INTERFACE, char*>()
+                , _jsonRPCFactory(5)
+            {
+            }
+            JSONObjectFactory(const JSONObjectFactory&);
+            JSONObjectFactory& operator=(const JSONObjectFactory&);
+
+            virtual ~JSONObjectFactory()
+            {
+            }
+       public:
+            static JSONObjectFactory& Instance()
+            {
+                static JSONObjectFactory<INTERFACE> _singleton;
+
+                return (_singleton);
+            }
+
+            Core::ProxyType<INTERFACE> Element(const string& identifier)
+            {
+                Core::ProxyType<Web::JSONBodyType<Core::JSONRPC::Message>> message = _jsonRPCFactory.Element();
+                return Core::ProxyType<INTERFACE>(message);
+            }
+        private:
+            Core::ProxyPoolType<Web::JSONBodyType<Core::JSONRPC::Message>> _jsonRPCFactory;
+        };
+
+        template <typename INTERFACE>
+        class JSONRPCChannel;
+
+        template <typename INTERFACE>
+        class JSONRPCServer : public Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory<INTERFACE>&, INTERFACE> {
+        public:
+            JSONRPCServer() = delete;
+            JSONRPCServer(const JSONRPCServer& copy) = delete;
+            JSONRPCServer& operator=(const JSONRPCServer&) = delete;
+        private:
+            typedef Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory<INTERFACE>&, INTERFACE> BaseClass;
+
+        public:
+            JSONRPCServer(const SOCKET& connector, const Core::NodeId& remoteNode, Core::SocketServerType<JSONRPCServer>* parent)
+                : BaseClass(5, JSONObjectFactory<INTERFACE>::Instance(), false, false, false, connector, remoteNode.AnyInterface(), 8096, 8096)
+                , _id(0)
+                , _parent(static_cast<JSONRPCChannel<INTERFACE>&>(*parent))
+            {
+            }
+            virtual ~JSONRPCServer()
+            {
+            }
+
+        public:
+            virtual void Received(Core::ProxyType<INTERFACE>& jsonObject)
+            {
+                if (jsonObject.IsValid() == false) {
+                    printf("Oops");
+                }
+                else {
+                    Core::ProxyType<Core::JSONRPC::Message> message = Core::ProxyType<Core::JSONRPC::Message>(jsonObject);
+                    ProcessMessage(message);
+                    // As this is the server, send back the Element we received...
+                    this->Submit(jsonObject);
+                }
+            }
+            virtual void Send(Core::ProxyType<INTERFACE>& jsonObject)
+            {
+                if (jsonObject.IsValid() == false) {
+                    printf("Oops");
+                } else {
+                    ToMessage(jsonObject);
+                }
+            }
+            virtual void StateChange()
+            {
+                TRACE(Trace::Information, (_T("JSONRPCServer: State change: ")));
+                if (this->IsOpen()) {
+                    TRACE(Trace::Information, (_T("Open - OK\n")));
+                }
+                else {
+                    TRACE(Trace::Information, (_T("Closed - %s\n"), (this->IsSuspended() ? _T("SUSPENDED") : _T("OK"))));
+                }
+            }
+            virtual bool IsIdle() const
+            {
+                return (true);
+            }
+        private:
+            friend class Core::SocketServerType<JSONRPCServer<INTERFACE>>;
+
+            inline uint32_t Id() const
+            {
+                return (_id);
+            }
+            inline void Id(const uint32_t id)
+            {
+                _id = id;
+            }
+            void ToMessage(const Core::ProxyType<Core::JSON::IElement>& jsonObject) const
+            {
+                string jsonMessage;
+                jsonObject->ToString(jsonMessage);
+
+                TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
+                TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
+
+            }
+            void ToMessage(const Core::ProxyType<Core::JSON::IMessagePack>& jsonObject) const
+            {
+                std::vector<uint8_t> message;
+                jsonObject->ToBuffer(message);
+                string jsonMessage(message.begin(), message.end());
+
+                TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
+                TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
+            }
+            void ToMessage(const Core::JSON::IElement* jsonObject, string& jsonMessage) const
+            {
+                jsonObject->ToString(jsonMessage);
+
+                TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
+                TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
+            }
+            void ToMessage(const Core::JSON::IMessagePack* jsonObject, string& jsonMessage) const
+            {
+                std::vector<uint8_t> message;
+                jsonObject->ToBuffer(message);
+                string strMessage(message.begin(), message.end());
+                jsonMessage = strMessage;
+
+                TRACE(Trace::Information, (_T("   Bytes: %d\n"), static_cast<uint32_t>(jsonMessage.size())));
+                TRACE(Trace::Information, (_T("Received: %s\n"), jsonMessage.c_str()));
+            }
+            void ProcessMessage(Core::ProxyType<Core::JSONRPC::Message>& message)
+            {
+                ASSERT(message->Designator.IsSet() == true);
+
+                string designator = message->Designator.Value();
+                std::size_t found = designator.find_last_of(".");
+                string method(designator, found + 1, string::npos);
+
+                if (method == "send") {
+                    if (message->Parameters.IsSet() == true) {
+                        Data::JSONDataBuffer data;
+                        FromMessage((INTERFACE*)&data, message);
+                        Core::JSON::DecUInt32 result = 0;
+                        _parent.Interface().send(data, result);
+                        message->Result = Core::NumberType<uint32_t>(result.Value()).Text();
+                    }
+                } else if (method == "receive") {
+                    string result;
+                    if (message->Parameters.IsSet() == true) {
+                        Data::JSONDataBuffer response;
+                        Core::JSON::DecUInt16 length;
+                        FromMessage((INTERFACE*)&length, message);
+                        _parent.Interface().receive(length, response);
+                        response.ToString(result);
+                     }
+                     message->Result = result;
+                } else if (method == "exchange") {
+                    string result;
+                    if (message->Parameters.IsSet() == true) {
+                        Data::JSONDataBuffer data;
+                        FromMessage((INTERFACE*)&data, message);
+
+                        Data::JSONDataBuffer response;
+                        _parent.Interface().exchange(data, response);
+                        ToMessage((INTERFACE*)&response, result);
+                    }
+                    message->Result = result;
+                } else {
+                    TRACE_L1("Unknown method");
+                }
+
+                message->Parameters.Clear();
+                message->Designator.Clear();
+                message->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
+            }
+            void FromMessage(Core::JSON::IElement* jsonObject, const Core::ProxyType<Core::JSONRPC::Message>& message)
+            {
+                jsonObject->FromString(message->Parameters.Value());
+            }
+            void FromMessage(Core::JSON::IMessagePack* jsonObject, const Core::ProxyType<Core::JSONRPC::Message>& message)
+            {
+                string value = message->Parameters.Value();
+                std::vector<uint8_t> parameter(value.begin(), value.end());
+
+                jsonObject->FromBuffer(parameter);
+            }
+        private:
+            uint32_t _id;
+            JSONRPCChannel<INTERFACE>& _parent;
+        };
+
+        template <typename INTERFACE>
+        class JSONRPCChannel : public Core::SocketServerType<JSONRPCServer<INTERFACE>> {
+        public:
+            JSONRPCChannel() = delete;
+            JSONRPCChannel(const JSONRPCChannel& copy) = delete;
+            JSONRPCChannel& operator=(const JSONRPCChannel&) = delete;
+        public:
+            JSONRPCChannel(const WPEFramework::Core::NodeId& remoteNode, JSONRPCPlugin& parent)
+                : Core::SocketServerType<JSONRPCServer<INTERFACE>>(remoteNode)
+                , _parent(parent)
+            {
+                Core::SocketServerType<JSONRPCServer<INTERFACE>>::Open(Core::infinite);
+            }
+            ~JSONRPCChannel()
+            {
+                Core::SocketServerType<JSONRPCServer<INTERFACE>>::Close(1000);
+            }
+            JSONRPCPlugin& Interface() {
+                return _parent;
+            }
+        private:
+            JSONRPCPlugin& _parent;
         };
 
         // The next class is a helper class, just to trigger an a-synchronous callback every Period()
@@ -252,17 +473,17 @@ namespace Plugin {
             return (Core::ERROR_NONE);
         }
         uint32_t get_status(Core::JSON::String& data) const
-		{
-			data.SetQuoted(true);
-			data = "Readonly value retrieved";
-			return (Core::ERROR_NONE);
-		}
-		uint32_t set_value(const Core::JSON::String& data)
-		{
-			_data = data.Value();
-			return (Core::ERROR_NONE);
-		}
-		uint32_t swap(const JsonObject& parameters, JsonObject& response)
+        {
+            data.SetQuoted(true);
+            data = "Readonly value retrieved";
+            return (Core::ERROR_NONE);
+        }
+        uint32_t set_value(const Core::JSON::String& data)
+        {
+            _data = data.Value();
+            return (Core::ERROR_NONE);
+        }
+        uint32_t swap(const JsonObject& parameters, JsonObject& response)
         {
             response = JsonObject({ { "x", 111 }, { "y", 222 }, { "width", _window.Width }, { "height", _window.Height } });
 
@@ -336,26 +557,36 @@ namespace Plugin {
         }
         uint32_t receive(const Core::JSON::DecUInt16& maxSize, Data::JSONDataBuffer& data)
         {
+            uint32_t status = Core::ERROR_NONE;
             string convertedBuffer;
+
             uint16_t length = maxSize.Value();
             uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
-            data.Duration = Receive(length, buffer);
+            status = Receive(length, buffer);
+
             Core::ToString(buffer, length, false, convertedBuffer);
             data.Data = convertedBuffer;
+            data.Length = convertedBuffer.length();
+            data.Duration = convertedBuffer.length() + 1; //Dummy
 
-            return (Core::ERROR_NONE);
+            return status;
         }
         uint32_t exchange(const Data::JSONDataBuffer& data, Data::JSONDataBuffer& result)
         {
+            uint32_t status = Core::ERROR_NONE;
             string convertedBuffer;
-            uint16_t length = static_cast<uint16_t>(((data.Data.Value().length() * 6) + 7) / 8);
+
+            uint16_t length = static_cast<uint16_t>(data.Data.Value().length());
             uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
             Core::FromString(data.Data.Value(), buffer, length);
-            result.Duration = Exchange(length, buffer, data.Length.Value());
+            status = Exchange(length, buffer, data.Length.Value());
+
             Core::ToString(buffer, length, false, convertedBuffer);
             result.Data = convertedBuffer;
+            result.Length = convertedBuffer.length();
+            result.Duration = convertedBuffer.length() + 1; //Dummy
 
-            return (Core::ERROR_NONE);
+            return status;
         }
 
     public:
@@ -394,6 +625,8 @@ namespace Plugin {
         string _data;
         std::vector<uint32_t> _array;
         COMServer* _rpcServer;
+        JSONRPCChannel<Core::JSON::IElement>* _jsonServer;
+        JSONRPCChannel<Core::JSON::IMessagePack>* _msgServer;
     };
 
 } // namespace Plugin
