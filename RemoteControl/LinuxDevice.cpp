@@ -10,6 +10,14 @@ namespace Plugin {
     static char Locator[] = _T("/dev/input");
 
     class LinuxDevice : Core::Thread {
+    public:
+        enum type {
+            NONE,
+            KEYBOARD,
+            MOUSE,
+            TOUCH,
+            JOYSTICK
+        };
     private:
         static constexpr const TCHAR* InputDeviceSysFilePath = _T("/sys/class/input/");
         static constexpr const TCHAR* DeviceNamePath = _T("/device/name");
@@ -20,7 +28,7 @@ namespace Plugin {
 
         struct IDevInputDevice {
             virtual ~IDevInputDevice() { }
-            virtual string Type() const { return string("Ignore"); }
+            virtual type Type() const { return (type::NONE); }
             virtual bool Setup() { return true; }
             virtual bool Teardown() { return true; }
             virtual bool HandleInput(uint16_t code, uint16_t type, int32_t value) = 0;
@@ -73,9 +81,9 @@ namespace Plugin {
             {
                 return (Name());
             }
-            string Type() const override
+            type Type() const override
             {
-                return string("KEYBOARD");
+                return type::KEYBOARD;
             }
             bool HandleInput(uint16_t code, uint16_t type, int32_t value) override
             {
@@ -318,10 +326,6 @@ namespace Plugin {
             string MetaData() const override
             {
                 return (Name());
-            }
-            string Type() const override
-            {
-                return string("TOUCH");
             }
             bool HandleInput(uint16_t code, uint16_t type, int32_t value) override
             {
@@ -577,14 +581,17 @@ namespace Plugin {
                             ReadDeviceName(entry.Name(), deviceName);
                             std::transform(deviceName.begin(), deviceName.end(), deviceName.begin(), std::ptr_fun<int, int>(std::toupper));
 
+                            IDevInputDevice* inputDevice = nullptr;
                             for (auto& device : _inputDevices) {
-                                string type = device->Type();
-                                std::size_t found = deviceName.find(device->Type());
+                                std::size_t found = deviceName.find(Core::EnumerateType<LinuxDevice::type>(device->Type()).Data());
                                 if (found != std::string::npos) {
                                     device->ProducerEvent(Exchange::ProducerEvents::PairingSuccess);
-                                    _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, device)));
+                                    inputDevice = device;
+                                    break;
                                 }
                             }
+
+                            _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, inputDevice)));
                         }
                     }
                 }
@@ -655,7 +662,9 @@ namespace Plugin {
                             if (HandleInput(index->second.first) == false) {
                                 // fd closed?
                                 close(index->second.first);
-                                index->second.second->ProducerEvent(Exchange::ProducerEvents::UnpairingSuccess);
+                                if (index->second.second != nullptr) {
+                                    index->second.second->ProducerEvent(Exchange::ProducerEvents::UnpairingSuccess);
+                                }
                                 index = _devices.erase(index);
                             } else {
                                 ++index;
@@ -728,4 +737,12 @@ namespace Plugin {
 
     /* static */ LinuxDevice* LinuxDevice::_singleton = new LinuxDevice();
 }
+
+ENUM_CONVERSION_BEGIN(Plugin::LinuxDevice::type)
+    { Plugin::LinuxDevice::type::NONE, _TXT("NONE") },
+    { Plugin::LinuxDevice::type::KEYBOARD, _TXT("KEYBOARD") },
+    { Plugin::LinuxDevice::type::KEYBOARD, _TXT("MOUSE") },
+    { Plugin::LinuxDevice::type::KEYBOARD, _TXT("JOYSTICK") },
+    { Plugin::LinuxDevice::type::KEYBOARD, _TXT("TOUCH") },
+    ENUM_CONVERSION_END(Plugin::LinuxDevice::type);
 }
