@@ -1043,7 +1043,7 @@ static void target_ActivatePairing()
 static void target_ActivateUnpairing()
 {
     Plugin::GreenPeak::Report(string("Unpairing."));
-    WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::eUnpairingStarted);
+    WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::UnpairingStarted);
     gpApplication_ZRCUnbind(_bindingId);
 }
 
