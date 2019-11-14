@@ -761,6 +761,8 @@ static void gpApplication_UnBindConfirm(gpRf4ce_Result_t result)
 {
     if (result == gpRf4ce_ResultSuccess) {
         WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::UnpairingSuccess);
+    } else if (result == gpRf4ce_ResultDiscoveryTimeout) {
+        WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::UnpairingTimedout);
     } else {
         WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::UnpairingFailed);
     }
