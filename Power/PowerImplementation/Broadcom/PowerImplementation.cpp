@@ -95,7 +95,7 @@ private:
     void SetWakeEvent();
     void PrintWakeup();
     static void gpioInterrupt(void* context, int param);
-    void Resumed();
+    void NotifyStateChange(Exchange::IPower::PCState pState);
 
 private:
     Core::CriticalSection _adminLock;
@@ -407,6 +407,7 @@ Exchange::IPower::PCStatus PowerImplementation::SetPowerState()
 {
     TRACE(Trace::Information, (_T("SetPowerState")));
     NxClient_StandbySettings standbySettings;
+    PCState pState;
 
     NxClient_GetDefaultStandbySettings(&standbySettings);
     standbySettings.settings.mode = _mode;
@@ -418,10 +419,26 @@ Exchange::IPower::PCStatus PowerImplementation::SetPowerState()
     if (rc)
         return PCFailure;
 
-    if (_mode == NEXUS_PlatformStandbyMode_eOn) {
-        TRACE(Trace::Information, (_T("Resumed")));
-        Resumed();
+    TRACE(Trace::Information, (_T("NotifyStateChange")));
+    switch (_mode) {
+        case NEXUS_PlatformStandbyMode_eOn:
+            pState = On;
+            break;
+        case NEXUS_PlatformStandbyMode_eActive:
+            pState = ActiveStandby;
+            break;
+        case NEXUS_PlatformStandbyMode_ePassive:
+            pState = PassiveStandby;
+            break;
+        case NEXUS_PlatformStandbyMode_eDeepSleep:
+            pState = SuspendToRAM;
+            break;
+        case NEXUS_PlatformStandbyMode_eDeepSleep:
+            pState = PowerOff;
+            break;
     }
+    NotifyStateChange(pState);
+
     return PCSuccess;
 }
 
@@ -433,14 +450,14 @@ void PowerImplementation::SetWakeEvent()
     }
 }
 
-void PowerImplementation::Resumed()
+void PowerImplementation::NotifyStateChange(Exchange::IPower::PCState pState)
 {
     _adminLock.Lock();
 
     std::list<Exchange::IPower::INotification*>::iterator index(_notificationClients.begin());
 
     while (index != _notificationClients.end()) {
-        (*index)->StateChange(Exchange::IPower::On);
+        (*index)->StateChange(pState);
         index++;
     }
 
