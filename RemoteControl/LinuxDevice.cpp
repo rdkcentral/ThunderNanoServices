@@ -61,11 +61,29 @@ namespace Plugin {
             }
             bool Pair() override
             {
-                return _parent->Pair();
+                ProducerEvent(WPEFramework::Exchange::ProducerEvents::PairingStarted);
+                bool result = _parent->Pair();
+                if (result) {
+                    ProducerEvent(
+                            WPEFramework::Exchange::ProducerEvents::PairingSuccess);
+                } else {
+                    ProducerEvent(
+                            WPEFramework::Exchange::ProducerEvents::PairingFailed);
+                }
+                return result;
             }
             bool Unpair(string bindingId) override
             {
-                return _parent->Unpair(bindingId);
+                ProducerEvent(WPEFramework::Exchange::ProducerEvents::UnpairingStarted);
+                bool result = _parent->Unpair(bindingId);
+                if (result) {
+                    ProducerEvent(
+                            WPEFramework::Exchange::ProducerEvents::UnpairingSuccess);
+                } else {
+                    ProducerEvent(
+                            WPEFramework::Exchange::ProducerEvents::UnpairingFailed);
+                }
+                return result;
             }
             uint32_t Callback(Exchange::IKeyHandler* callback) override
             {
@@ -585,7 +603,6 @@ namespace Plugin {
                             for (auto& device : _inputDevices) {
                                 std::size_t found = deviceName.find(Core::EnumerateType<LinuxDevice::type>(device->Type()).Data());
                                 if (found != std::string::npos) {
-                                    device->ProducerEvent(Exchange::ProducerEvents::PairingSuccess);
                                     inputDevice = device;
                                     break;
                                 }
@@ -662,9 +679,6 @@ namespace Plugin {
                             if (HandleInput(index->second.first) == false) {
                                 // fd closed?
                                 close(index->second.first);
-                                if (index->second.second != nullptr) {
-                                    index->second.second->ProducerEvent(Exchange::ProducerEvents::UnpairingSuccess);
-                                }
                                 index = _devices.erase(index);
                             } else {
                                 ++index;
