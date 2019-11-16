@@ -51,19 +51,19 @@ namespace Player {
             Core::BitArrayFlexType<16> _slots;
         };
 
-        template<class PLAYER>
+        template<class PLAYER, const Exchange::IStream::streamtype STREAMTYPE>
         class PlayerPlatformRegistrationType {
         public:
             PlayerPlatformRegistrationType() = delete;
-            PlayerPlatformRegistrationType(const PlayerPlatformRegistrationType<PLAYER>&) = delete;
-            PlayerPlatformRegistrationType& operator=(const PlayerPlatformRegistrationType<PLAYER>&) = delete;
+            PlayerPlatformRegistrationType(const PlayerPlatformRegistrationType<PLAYER,STREAMTYPE>&) = delete;
+            PlayerPlatformRegistrationType& operator=(const PlayerPlatformRegistrationType<PLAYER,STREAMTYPE>&) = delete;
 
-            PlayerPlatformRegistrationType(Exchange::IStream::streamtype streamType,
+            PlayerPlatformRegistrationType(
                     InitializerType initializer = nullptr, DeinitializerType deinitializer = nullptr)
             {
                 string name(Core::ClassNameOnly(typeid(PLAYER).name()).Text());
 
-                IPlayerPlatformFactory* factory = new PlayerPlatformFactoryType<PLAYER>(streamType, initializer, deinitializer);
+                IPlayerPlatformFactory* factory = new PlayerPlatformFactoryType<PLAYER, STREAMTYPE>(initializer, deinitializer);
                 ASSERT(factory != nullptr);
 
                 if (factory) {

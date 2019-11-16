@@ -80,16 +80,15 @@ namespace Player {
             virtual const string& Configuration() const = 0;
         };
 
-        template<class PLAYER>
+        template<class PLAYER, Exchange::IStream::streamtype STREAMTYPE>
         class PlayerPlatformFactoryType : public IPlayerPlatformFactory {
         public:
             PlayerPlatformFactoryType(const PlayerPlatformFactoryType&) = delete;
             PlayerPlatformFactoryType& operator=(const PlayerPlatformFactoryType&) = delete;
 
-            PlayerPlatformFactoryType(Exchange::IStream::streamtype streamType, InitializerType initializer = nullptr, DeinitializerType deinitializer = nullptr)
+            PlayerPlatformFactoryType(InitializerType initializer = nullptr, DeinitializerType deinitializer = nullptr)
                 : _slots()
                 , _name(Core::ClassNameOnly(typeid(PLAYER).name()).Text())
-                , _streamType(streamType)
                 , _Initialize(initializer)
                 , _Deinitialize(deinitializer)
                 , _configuration()
@@ -171,7 +170,7 @@ namespace Player {
 
                 uint8_t index = _slots.Find();
                 if (index < _slots.Size()) {
-                    player =  new PLAYER(_streamType, index);
+                    player =  new PLAYER(Type(), index);
 
                     if ((player != nullptr) && (player->Setup() != Core::ERROR_NONE)) {
                         TRACE(Trace::Error, (_T("Player '%s' setup failed!"),  Name().c_str()));
@@ -227,7 +226,7 @@ namespace Player {
 
             Exchange::IStream::streamtype Type() const override
             {
-                return (_streamType);
+                return (Type(TemplateIntToType<STREAMTYPE == Exchange::IStream::streamtype::Undefined>()));
             }
 
             uint8_t Frontends() const override
@@ -241,9 +240,19 @@ namespace Player {
             }
 
         private:
+            Exchange::IStream::streamtype Type(const TemplateIntToType<true>& /* For compile time diffrentiation */) const 
+            {
+                // Lets load the StreamType from the Player..
+                return (PLAYER::Supported());
+            }
+            Exchange::IStream::streamtype Type(const TemplateIntToType<false>& /* For compile time diffrentiation */) const 
+            {
+                return (STREAMTYPE);
+            }
+
+        private:
             Core::BitArrayFlexType<16> _slots;
             string _name;
-            Exchange::IStream::streamtype _streamType;
             InitializerType _Initialize;
             DeinitializerType _Deinitialize;
             string _configuration;

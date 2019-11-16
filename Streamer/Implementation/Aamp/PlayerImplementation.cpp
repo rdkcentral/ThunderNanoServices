@@ -736,7 +736,7 @@ namespace Implementation {
             mutable Core::CriticalSection _adminLock;
         }; // class Aamp
 
-        static PlayerPlatformRegistrationType<Aamp> Register(Exchange::IStream::streamtype::Unicast,
+        static PlayerPlatformRegistrationType<Aamp, Exchange::IStream::streamtype::Unicast> Register(
             /*  Initialize */ [](const string& configuration) -> uint32_t {
                 config.FromString(configuration);
                 if (config.WesterosSink.Value() == true) {

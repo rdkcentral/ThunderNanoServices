@@ -309,12 +309,14 @@ namespace Plugin {
                 if (index.Current() == _T("Create")) {
 
                     if (index.Next() == true) {
-                        uint8_t streamtype = Core::NumberType<uint8_t>(index.Current());
-                        Core::EnumerateType<Exchange::IStream::streamtype> type(streamtype);
-                        if (type.IsSet()) {
+                        Core::EnumerateType<Exchange::IStream::streamtype> enumType(index.Current());
+                        if (enumType.IsSet() == false) {
+                            enumType = static_cast<Exchange::IStream::streamtype> (Core::NumberType<uint8_t>(index.Current()).Value());
+                        }
+                        if (enumType.IsSet()) {
                             Core::ProxyType<Web::JSONBodyType<Data>> response(jsonBodyDataFactory.Element());
 
-                            Exchange::IStream* stream = _player->CreateStream(type.Value());
+                            Exchange::IStream* stream = _player->CreateStream(enumType.Value());
                             if (stream != nullptr) {
                                 uint8_t position = 0;
                                 for (; position < _streams.size(); ++position) {

@@ -9,6 +9,8 @@ namespace Implementation {
 
     namespace {
 
+        static Exchange::IStream::streamtype _supported;
+
         class QAM : public IPlayerPlatform {
         private:
             QAM() = delete;
@@ -59,6 +61,9 @@ namespace Implementation {
             }
 
         public:
+            static Exchange::IStream::streamtype Supported() {
+                return (_supported);
+            }
             uint32_t Setup() override
             {
                 uint32_t result = Core::ERROR_GENERAL;
@@ -97,15 +102,15 @@ namespace Implementation {
             }
             Exchange::IStream::streamtype Type() const override
             {
-                return (Exchange::IStream::streamtype)_streamType;
+                return _streamType;
             }
             Exchange::IStream::drmtype DRM() const override
             {
-                return (Exchange::IStream::drmtype)_drmType;
+                return _drmType;
             }
             Exchange::IStream::state State() const override
             {
-                return (Exchange::IStream::state)_state;
+                return _state;
             }
             uint32_t Error() const override
             {
@@ -331,9 +336,14 @@ namespace Implementation {
             uint8_t _index;
         };
 
-        static PlayerPlatformRegistrationType<QAM> Register(Exchange::IStream::streamtype::Cable,
+        static PlayerPlatformRegistrationType<QAM, Exchange::IStream::streamtype::Undefined> Register(
             /*  Initialize */ [](const string& configuration) -> uint32_t {
                 Broadcast::ITuner::Initialize(configuration);
+                _supported = static_cast<Exchange::IStream::streamtype>(
+                    (Broadcast::ITuner::IsSupported(Broadcast::ITuner::Cable)       ? static_cast<int>(Exchange::IStream::streamtype::Cable)       : 0) |
+                    (Broadcast::ITuner::IsSupported(Broadcast::ITuner::Terrestrial) ? static_cast<int>(Exchange::IStream::streamtype::Terrestrial) : 0) |
+                    (Broadcast::ITuner::IsSupported(Broadcast::ITuner::Satellite)   ? static_cast<int>(Exchange::IStream::streamtype::Satellite)   : 0) 
+                );
                 return (Core::ERROR_NONE);
             },
             /*  Deinitialize */ []() {
