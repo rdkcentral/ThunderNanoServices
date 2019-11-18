@@ -15,6 +15,7 @@ find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(EGL REQUIRED)
+find_package(PNG REQUIRED)
 
 if (PLUGIN_COMPOSITOR_NXSERVER)
     target_link_libraries(${TARGET} 
@@ -41,6 +42,7 @@ target_link_libraries(${TARGET}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         WaylandServer::WaylandServer
         WaylandEGL::WaylandEGL
+        PNG::PNG
         compositorclient)
 
 target_include_directories(${TARGET}
