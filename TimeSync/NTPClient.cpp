@@ -260,12 +260,24 @@ namespace Plugin {
 
         // Make sure socket is closed otherwise an assert will fire.
         if (!IsClosed()) {
-            TRACE_L1("TimeSync: %s", "Lingering socket, closing");
+            TRACE(Trace::Information, (_T("Lingering socket, closing")));
             Close(1000);
         }
 
-        if (true == IsClosed()) {
-            while ((activated == false) && (_serverIndex.Next() == true)) {
+        if (true == IsClosed() && (_serverIndex.Count() > 0)) {
+
+            uint32_t lastonetried = _serverIndex.Index();
+
+            do {
+
+                // next server
+                if( _serverIndex.Index() >= _serverIndex.Count() ) {
+                    _serverIndex.Reset(0);
+                }
+                _serverIndex.Next();
+                ASSERT(_serverIndex.IsValid());
+
+                TRACE(Trace::Information, (_T("Trying NTP Server: [%s]"), (*_serverIndex).c_str()));
 
                 // Set the socket to send to the remote
                 Core::NodeId remote((*_serverIndex).c_str(), Core::NodeId::TYPE_IPV4);
@@ -284,8 +296,17 @@ namespace Plugin {
                         _fired = false;
                         Trigger();
                     }
+                    else {
+                        TRACE(Trace::Warning, (_T("Could not open connection to NTP Server [%s]"), (*_serverIndex).c_str()));
+                    }
+                }
+                else {
+                    TRACE(Trace::Warning, (_T("Could not resolve NTP Server [%s]"), (*_serverIndex).c_str()));
                 }
             }
+            while ((activated == false) && ( ((lastonetried != 0) && (lastonetried != _serverIndex.Index())) ||
+                                             ((lastonetried == 0) && (_serverIndex.Index() != _serverIndex.Count())) 
+                                           ) );
         }
 
         return (activated);
@@ -294,7 +315,11 @@ namespace Plugin {
     void NTPClient::Update()
     {
 
-        _adminLock.Lock();
+        // runs always in the context of the adminlock
+
+        if(_state == FAILED){
+            TRACE(Trace::Error, (_T("Could not determine a valid time")));
+        }
 
         std::list<Exchange::ITimeSync::INotification*>::iterator index(_clients.begin());
 
@@ -303,7 +328,6 @@ namespace Plugin {
             index++;
         }
 
-        _adminLock.Unlock();
     }
 
     void NTPClient::Dispatch()
@@ -322,9 +346,10 @@ namespace Plugin {
         case INPROGRESS: {
             // If we end up here in this state, it means that the package was send but no response was received,
             // or a response was received but is was not properly formatted...
-            // Lets move to the next server in the list, see if that one responds correctly
+            // Lets move to the next server in the list, see if that one responds correctly, if we tried all servers let's
+            // start at the first one again, this time it might work
             if (FireRequest() == true) {
-                result = WaitForResponse;
+              result = WaitForResponse;
             } else {
                 if (_currentAttempt-- != 0) {
 
@@ -349,7 +374,7 @@ namespace Plugin {
         }
         default:
             // New state, probably needs some action???
-            ASSERT(false);
+       ASSERT(false);
         }
 
         _adminLock.Unlock();
@@ -360,7 +385,7 @@ namespace Plugin {
             timestamp.Add(result);
             PluginHost::WorkerPool::Instance().Schedule(timestamp, _activity);
         }
-    }
+   }
 
 } // namespace Plugin
 } // namespace WPEFramework
