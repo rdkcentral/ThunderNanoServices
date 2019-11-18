@@ -1,7 +1,7 @@
 #define MODULE_NAME JSONRPC_Test
 
-#include <websocket/websocket.h>
 #include <core/core.h>
+#include <websocket/websocket.h>
 #include <interfaces/IPerformance.h>
 
 #include "../JSONRPCPlugin/Data.h"
