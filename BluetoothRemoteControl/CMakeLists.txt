@@ -23,4 +23,9 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
+install(
+	FILES bluetooth-remote.json
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/${PLUGIN_NAME}
+	COMPONENT ${MODULE_NAME})
+
 write_config(${PLUGIN_NAME})

@@ -16,6 +16,8 @@ namespace Plugin {
                                  , public Exchange::IKeyHandler {
 
         struct IGattNotificationHandler {
+            virtual ~IGattNotificationHandler() { }
+
             virtual bool Notification(const uint32_t cookie, const uint8_t buffer[], const uint16_t length) = 0;
         };
 
@@ -848,7 +850,7 @@ namespace Plugin {
             {
                 ASSERT(_parent != nullptr);
             }
-            ~BatteryLevelHandler()
+            ~BatteryLevelHandler() override
             {
             }
 
@@ -963,7 +965,7 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
-            ~AudioHandler()
+            ~AudioHandler() override
             {
             }
 
