@@ -9,318 +9,35 @@
 namespace WPEFramework {
 
 namespace JSONRPC {
-
 template <typename INTERFACE>
-class SmartClientType {
-private:
-	class Connection : public Client {
-	private:
-		class Statechange : public Core::JSON::Container {
-		public:
-			Statechange()
-				: Core::JSON::Container()
-			{
-				Add(_T("callsign"), &Callsign);
-				Add(_T("state"), &State);
-			}
-
-			Statechange(const Statechange& copy) 
-				: Core::JSON::Container()
-				, Callsign(copy.Callsign)
-				, State(copy.State)
-			{
-				Add(_T("callsign"), &Callsign);
-				Add(_T("state"), &State);
-			}
-			Statechange& operator=(const Statechange&) = delete;
-
-		public:
-			Core::JSON::String Callsign; // Callsign of the plugin that changed state
-			Core::JSON::EnumType<PluginHost::IShell::state> State; // State of the plugin
-		}; // class StatechangeParamsData
-		class CurrentState : public Core::JSON::Container {
-		public:
-			CurrentState()
-				: Core::JSON::Container()
-				, State(PluginHost::IShell::state::DEACTIVATED)
-			{
-				Add(_T("state"), &State);
-			}
-
-			CurrentState(const CurrentState& copy)
-				: Core::JSON::Container()
-				, State(copy.State)
-			{
-				Add(_T("state"), &State);
-			}
-			CurrentState& operator=(const CurrentState&) = delete;
-
-		public:
-			Core::JSON::EnumType<PluginHost::IShell::state> State; // State of the plugin
-		}; // class State
-
-	public:
-		enum state {
-			UNKNOWN,
-			DEACTIVATED,
-			LOADING,
-			ACTIVATED
-		};
-
-	public:
-		Connection() = delete;
-		Connection(const Connection&) = delete;
-		Connection& operator=(const Connection&) = delete;
-
-		// TODO: Constructos of the Client with version are bogus. Clean i tup
-		Connection(SmartClientType<INTERFACE>& parent, const string& callsign, const TCHAR* localCallsign)
-			: Client(callsign, string(), localCallsign)
-			, _monitor(string(), false)
-			, _parent(parent)
-			, _state(UNKNOWN)
-		{
-			_monitor.Assign<Statechange>(_T("statechange"), &Connection::state_change, this);
-			Announce();
-		}
-		~Connection() override
-		{
-			_monitor.Revoke(_T("statechange"));
-		}
-
-	public:
-		template <typename INBOUND, typename METHOD>
-		uint32_t Subscribe(const uint32_t waitTime, const string& eventName, const METHOD& method)
-		{
-			Client::Subscribe<INBOUND, METHOD>(eventName, method);
-			return Client::Subscribe(waitTime, eventName);
-		}
-		template <typename INBOUND, typename METHOD, typename REALOBJECT>
-		uint32_t Subscribe(const uint32_t waitTime, const string& eventName, const METHOD& method, REALOBJECT* objectPtr)
-		{
-			Client::Subscribe<INBOUND, METHOD, REALOBJECT>(eventName, method, objectPtr);
-
-			return Client::Subscribe(waitTime, eventName);
-		}
-
-	private:
-		void SetState(const PluginHost::IShell::state value)
-		{
-			if (value == PluginHost::IShell::state::ACTIVATED) {
-				if ((_state != ACTIVATED) && (_state != LOADING)) {
-					_state = state::LOADING;
-					auto index(Client::Events());
-					while (index.Next() == true) {
-						_events.push_back(index.Event());
-					}
-					next_event(Core::JSON::String(), nullptr);
-				}
-				else if (_state == LOADING) {
-					_state = state::ACTIVATED;
-					_parent.Activated();
-
-				}
-			}
-			else if (value == PluginHost::IShell::state::DEACTIVATED) {
-				if (_state != DEACTIVATED) {
-					_state = DEACTIVATED;
-					_parent.Deactivated();
-				}
-			}
-		}
-		void state_change(const Statechange& info)
-		{
-			if (info.Callsign.Value() == Client::Callsign()) {
-				SetState(info.State.Value());
-			}
-		}
-		void monitor_response(const Core::JSON::ArrayType<CurrentState>& info, const Core::JSONRPC::Error* result)
-		{
-			if ((result == nullptr) && (info.Length() == 1)) {
-				SetState(info[0].State.Value());
-			}
-		}
-		void monitor_on(const Core::JSON::String& parameters, const Core::JSONRPC::Error* result)
-		{
-			if (result == nullptr) {
-				string method = string("status@") + Client::Callsign();
-				_monitor.Dispatch<void>(3000, method, &Connection::monitor_response, this);
-			}
-		}
-		void next_event(const Core::JSON::String& parameters, const Core::JSONRPC::Error* result)
-		{
-			// See if there are events pending for registration...
-			if (_events.empty() == false) {
-				const string parameters("{ \"event\": \"" + _events.front() + "\", \"id\": \"" + Client::Namespace() + "\"}");
-				_events.pop_front();
-				Client::Dispatch<string>(3000, "register", parameters, &Connection::next_event, this);
-			}
-			else {
-				SetState(PluginHost::IShell::state::ACTIVATED);
-			}
-		}
-
-		void Opened() override
-		{
-			// Time to open up the monitor
-			const string parameters("{ \"event\": \"statechange\", \"id\": \"" + _monitor.Namespace() + "\"}");
-
-			_monitor.Dispatch<string>(30000, "register", parameters, &Connection::monitor_on, this);
-		}
-
-	private:
-		LinkType<INTERFACE> _monitor;
-		SmartClientType<INTERFACE>& _parent;
-		std::list<string> _events;
-		state _state;
-	};
+class MySmartLinkType : public JSONRPC::SmartLinkType<INTERFACE> {
+public:
+    MySmartLinkType(const string& remoteCallsign, const TCHAR* localCallsign)
+        : JSONRPC::SmartLinkType<INTERFACE>(remoteCallsign, localCallsign)
+        , _callsign(remoteCallsign)
+    {
+    }
+    ~MySmartLinkType()
+    {
+    }
 
 public:
-	SmartClientType(const string& remoteCallsign, const TCHAR* localCallsign)
-		: _connection(*this, remoteCallsign, localCallsign)
-	{
-	}
-	~SmartClientType()
-	{
-	}
-
-public:
-	template <typename INBOUND, typename METHOD>
-	uint32_t Subscribe(const uint32_t waitTime, const string& eventName, const METHOD& method)
-	{
-		return _connection.Subscribe<INBOUND, METHOD>(waitTime, eventName, method);
-	}
-	template <typename INBOUND, typename METHOD, typename REALOBJECT>
-	uint32_t Subscribe(const uint32_t waitTime, const string& eventName, const METHOD& method, REALOBJECT* objectPtr)
-	{
-		return _connection.Subscribe<INBOUND, METHOD, REALOBJECT>(waitTime, eventName, method, objectPtr);
-	}
-	void Unsubscribe(const uint32_t waitTime, const string& eventName)
-	{
-		return _connection.Unsubscribe(waitTime, eventName);
-	}
-
-	// -------------------------------------------------------------------------------------------
-	// Synchronous invoke methods
-	// -------------------------------------------------------------------------------------------
-	template <typename PARAMETERS, typename RESPONSE>
-	inline typename std::enable_if<(!std::is_same<PARAMETERS, void>::value && !std::is_same<RESPONSE, void>::value), uint32_t>::type
-		Invoke(const uint32_t waitTime, const string& method, const PARAMETERS& parameters, RESPONSE& inbound)
-	{
-		return _connection.Invoke<PARAMETERS, RESPONSE>(waitTime, method, parameters, inbound);
-	}
-
-	template <typename PARAMETERS, typename RESPONSE>
-	inline typename std::enable_if<(std::is_same<PARAMETERS, void>::value && std::is_same<RESPONSE, void>::value), uint32_t>::type
-		Invoke(const uint32_t waitTime, const string& method)
-	{
-		return _connection.Invoke<void, void>(waitTime, method);
-	}
-
-	template <typename PARAMETERS, typename RESPONSE>
-	inline typename std::enable_if<(!std::is_same<PARAMETERS, void>::value && std::is_same<RESPONSE, void>::value), uint32_t>::type
-		Invoke(const uint32_t waitTime, const string& method, const PARAMETERS& parameters)
-	{
-		return _connection.Invoke<PARAMETERS, void>(waitTime, method, parameters);
-	}
-
-	template <typename PARAMETERS, typename RESPONSE>
-	inline typename std::enable_if<(std::is_same<PARAMETERS, void>::value && !std::is_same<RESPONSE, void>::value), uint32_t>::type
-		Invoke(const uint32_t waitTime, const string& method, RESPONSE& inbound)
-	{
-		return _connection.Invoke<void, RESPONSE>(waitTime, method, inbound);
-	}
-
-	// -------------------------------------------------------------------------------------------
-	// A-Synchronous invoke methods
-	// -------------------------------------------------------------------------------------------
-	template <typename PARAMETERS, typename HANDLER>
-	inline uint32_t Dispatch(const uint32_t waitTime, const string& method, const HANDLER& callback)
-	{
-		return (_connection.Dispatch<PARAMETERS, HANDLER>(waitTime, method, callback));
-	}
-
-	template <typename PARAMETERS, typename HANDLER, typename REALOBJECT = typename Core::TypeTraits::func_traits<HANDLER>::classtype>
-	inline uint32_t Dispatch(const uint32_t waitTime, const string& method, const HANDLER& callback, REALOBJECT* objectPtr)
-	{
-		return (_connection.Dispatch<PARAMETERS, HANDLER, REALOBJECT>(waitTime, method, callback, objectPtr));
-	}
-	// -------------------------------------------------------------------------------------------
-	// SET Properties
-	// -------------------------------------------------------------------------------------------
-	template <typename PARAMETERS, typename... TYPES>
-	inline uint32_t Set(const uint32_t waitTime, const string& method, const TYPES&&... args)
-	{
-		PARAMETERS sendObject(args...);
-		return (_connection.Set<PARAMETERS>(waitTime, method, sendObject));
-	}
-	template <typename PARAMETERS>
-	inline uint32_t Set(const uint32_t waitTime, const string& method, const string& index, const PARAMETERS& sendObject)
-	{
-		return (_connection.Set<PARAMETERS>(waitTime, method, index, sendObject));
-	}
-	template <typename PARAMETERS, typename NUMBER>
-	inline uint32_t Set(const uint32_t waitTime, const string& method, const NUMBER index, const PARAMETERS& sendObject)
-	{
-		return (_connection.Set<PARAMETERS, NUMBER>(waitTime, method, index, sendObject));
-	}
-	template <typename PARAMETERS>
-	inline uint32_t Set(const uint32_t waitTime, const string& method, const PARAMETERS& sendObject)
-	{
-		return (_connection.Set<PARAMETERS>(waitTime, method, sendObject));
-	}
-	// -------------------------------------------------------------------------------------------
-	// GET Properties
-	// -------------------------------------------------------------------------------------------
-	template <typename PARAMETERS>
-	inline uint32_t Get(const uint32_t waitTime, const string& method, const string& index, PARAMETERS& sendObject)
-	{
-		return (_connection.Get<PARAMETERS>(waitTime, method, index, sendObject));
-	}
-	template <typename PARAMETERS, typename NUMBER>
-	inline uint32_t Get(const uint32_t waitTime, const string& method, const NUMBER& index, PARAMETERS& sendObject)
-	{
-		return (_connection.Get<PARAMETERS, NUMBER>(waitTime, method, index, sendObject));
-	}
-	template <typename PARAMETERS>
-	inline uint32_t Get(const uint32_t waitTime, const string& method, PARAMETERS& sendObject)
-	{
-		return (_connection.Get<PARAMETERS>(waitTime, method, sendObject));
-	}
-	inline uint32_t Invoke(const uint32_t waitTime, const string& method, const string& parameters, Core::ProxyType<Core::JSONRPC::Message>& response)
-	{
-		return (_connection.Invoke(waitTime, method, parameters, response));
-	}
-
-	// Opaque JSON structure methods.
-	// Anything goes!
-	// ===================================================================================
-	uint32_t Invoke(const char method[], const Core::JSON::VariantContainer& parameters, Core::JSON::VariantContainer& response, const uint32_t waitTime = Client::DefaultWaitTime)
-	{
-		return (_connection.Invoke(waitTime, method, parameters, response));
-	}
-	uint32_t SetProperty(const char method[], const Core::JSON::VariantContainer& object, const uint32_t waitTime = Client::DefaultWaitTime)
-	{
-		return (_connection.Set(waitTime, method, object));
-	}
-	uint32_t GetProperty(const char method[], Core::JSON::VariantContainer& object, const uint32_t waitTime = Client::DefaultWaitTime)
-	{
-		return (_connection.Get<Core::JSON::VariantContainer>(waitTime, method, object));
-	}
+    bool IsActivated() {
+        return JSONRPC::SmartLinkType<INTERFACE>::IsActivated();
+    }
 
 private:
-	void Activated()
-	{
-		printf("Monitor Plugin Activated\n");
-	}
-	void Deactivated()
-	{
-		printf("Monitor Plugin Deactivated\n");
-	}
+    void StateChange() override{
+        if (JSONRPC::SmartLinkType<INTERFACE>::IsActivated() == true) {
+            printf("%s plugin is activated\n", _callsign.c_str());
+        } else {
+            printf("%s plugin is deactivated\n", _callsign.c_str());
+        }
+    }
 
 private:
-	Connection _connection;
+    string _callsign;
 };
-
 } } //Namespace WPEFramework::JSONRPC
 
 using namespace WPEFramework;
@@ -377,7 +94,7 @@ void ShowMenu()
            "\tT : Invoke a synchronous method with aggregated parameters\n"
            "\tR : Register for a-synchronous feedback\n"
            "\tU : Unregister for a-synchronous feedback\n"
-		   "\tM : Monitor Plugin State Changes [on/off].\n"
+           "\tM : Monitor Plugin State Changes [on/off].\n"
            "\tS : Send message to registered clients\n"
            "\tP : Read Property.\n"
            "\t0 : Set property @ value 0.\n"
@@ -547,7 +264,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
     for (uint32_t run = 0; run < MeasurementLoops; run++) {
         subject(length, dataFrame);
     }
-	time = measurement.Elapsed();;
+    time = measurement.Elapsed();;
     printf("Data outbound: [1024], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
@@ -735,17 +452,17 @@ int main(int argc, char** argv)
         // The JSONRPC Client library is expecting the THUNDER_ACCESS environment variable to be set and pointing
         // to the JSONRPC Server, this can be a domain socket (use at least 1 slash in it, or a TCP address.
         // Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:80")));
-		// Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("172.20.9.231:80")));
+        // Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("172.20.9.231:80")));
         // This is not mandatory, just an easy way to use the VisualStudio environment to Start 2 projects at once, 1 project
         // being the JSONRPC Server running the plugins and the other one this client. However, give the sevrver a bit of time
         // to bring up Plugin JSONRPCPlugin, before we hook up to it. If one starts this App, after the Server is up and running
         // this is not nessecary.
         printf("Preparing JSONRPC!!!\n");
 
-        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("192.168.1.113:80")));
-        JSONRPC::SmartClientType<Core::JSON::IElement> stickyObject(_T("Monitor.1"), _T("client.monitor.2"));
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:80")));
+        JSONRPC::MySmartLinkType<Core::JSON::IElement> stickyObject(_T("Monitor.1"), _T("client.monitor.2"));
 
-		// Create a remoteObject.  This is the way we can communicate with the Server.
+        // Create a remoteObject.  This is the way we can communicate with the Server.
         // The parameters:
         // 1. [mandatory] This is the designator of the module we will connect to.
         // 2. [optional]  This is the designator used for the code we have on my side.
@@ -1033,6 +750,15 @@ int main(int argc, char** argv)
             {
                 MeasureJSONRPC(remoteObjectMP);
                 break;
+            }
+            case 'M':
+            {
+                 if (stickyObject.IsActivated() == true) {
+                     printf("Monitor plugin is activated\n");
+                 } else {
+                     printf("Monitor plugin is deactivated\n");
+                 }
+                 break;
             }
             case 'L':
             {
