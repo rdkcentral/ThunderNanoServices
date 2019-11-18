@@ -9,7 +9,32 @@
 namespace WPEFramework {
 
 namespace JSONRPC {
+template <typename INTERFACE>
+class MySmartLinkType : public JSONRPC::SmartLinkType<INTERFACE> {
+public:
+    MySmartLinkType(const string& remoteCallsign, const TCHAR* localCallsign)
+        : JSONRPC::SmartLinkType<INTERFACE>(remoteCallsign, localCallsign)
+        , _callsign(remoteCallsign)
+    {
+    }
+    ~MySmartLinkType()
+    {
+    }
+
+private:
+    void StateChange() override{
+        if (JSONRPC::SmartLinkType<INTERFACE>::IsActivated() == true) {
+            printf("%s plugin is activated\n", _callsign.c_str());
+        } else {
+            printf("%s plugin is deactivated\n", _callsign.c_str());
+        }
+    }
+
+private:
+    string _callsign;
+};
 } } //Namespace WPEFramework::JSONRPC
+
 using namespace WPEFramework;
 
 namespace WPEFramework {
@@ -64,7 +89,7 @@ void ShowMenu()
            "\tT : Invoke a synchronous method with aggregated parameters\n"
            "\tR : Register for a-synchronous feedback\n"
            "\tU : Unregister for a-synchronous feedback\n"
-		   "\tM : Monitor Plugin State Changes [on/off].\n"
+           "\tM : Monitor Plugin State Changes [on/off].\n"
            "\tS : Send message to registered clients\n"
            "\tP : Read Property.\n"
            "\t0 : Set property @ value 0.\n"
@@ -234,7 +259,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
     for (uint32_t run = 0; run < MeasurementLoops; run++) {
         subject(length, dataFrame);
     }
-	time = measurement.Elapsed();;
+    time = measurement.Elapsed();;
     printf("Data outbound: [1024], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
@@ -422,17 +447,17 @@ int main(int argc, char** argv)
         // The JSONRPC Client library is expecting the THUNDER_ACCESS environment variable to be set and pointing
         // to the JSONRPC Server, this can be a domain socket (use at least 1 slash in it, or a TCP address.
         // Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:80")));
-		// Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("172.20.9.231:80")));
+        // Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("172.20.9.231:80")));
         // This is not mandatory, just an easy way to use the VisualStudio environment to Start 2 projects at once, 1 project
         // being the JSONRPC Server running the plugins and the other one this client. However, give the sevrver a bit of time
         // to bring up Plugin JSONRPCPlugin, before we hook up to it. If one starts this App, after the Server is up and running
         // this is not nessecary.
         printf("Preparing JSONRPC!!!\n");
 
-        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("192.168.1.113:80")));
-        JSONRPC::SmartLinkType<Core::JSON::IElement> stickyObject(_T("Monitor.1"), _T("client.monitor.2"));
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:80")));
+        JSONRPC::MySmartLinkType<Core::JSON::IElement> stickyObject(_T("Monitor.1"), _T("client.monitor.2"));
 
-		// Create a remoteObject.  This is the way we can communicate with the Server.
+        // Create a remoteObject.  This is the way we can communicate with the Server.
         // The parameters:
         // 1. [mandatory] This is the designator of the module we will connect to.
         // 2. [optional]  This is the designator used for the code we have on my side.
