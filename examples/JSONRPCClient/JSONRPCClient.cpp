@@ -21,6 +21,11 @@ public:
     {
     }
 
+public:
+    bool IsActivated() {
+        return JSONRPC::SmartLinkType<INTERFACE>::IsActivated();
+    }
+
 private:
     void StateChange() override{
         if (JSONRPC::SmartLinkType<INTERFACE>::IsActivated() == true) {
@@ -745,6 +750,15 @@ int main(int argc, char** argv)
             {
                 MeasureJSONRPC(remoteObjectMP);
                 break;
+            }
+            case 'M':
+            {
+                 if (stickyObject.IsActivated() == true) {
+                     printf("Monitor plugin is activated\n");
+                 } else {
+                     printf("Monitor plugin is deactivated\n");
+                 }
+                 break;
             }
             case 'L':
             {
