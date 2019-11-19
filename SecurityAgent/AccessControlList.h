@@ -247,7 +247,11 @@ namespace Plugin {
         uint32_t Load(Core::File& source)
         {
             JSONACL controlList;
-            controlList.IElement::FromFile(source);
+            Core::OptionalType<Core::JSON::Error> error;
+            controlList.IElement::FromFile(source, error);
+            if (error.IsSet() == true) {
+                SYSLOG(Logging::ParsingError, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
+            }
             _unusedRoles.clear();
 
             JSONACL::Roles::Iterator rolesIndex = controlList.ACL.Elements();

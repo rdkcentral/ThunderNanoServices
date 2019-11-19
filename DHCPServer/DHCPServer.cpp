@@ -202,7 +202,11 @@ namespace Plugin {
             if (leasesFile.Open(true) == true) {
                 Core::JSON::ArrayType<Data::Server::Lease> leases;
 
-                leases.IElement::FromFile(leasesFile);
+                Core::OptionalType<Core::JSON::Error> error;
+                leases.IElement::FromFile(leasesFile, error);
+                if (error.IsSet() == true) {
+                    SYSLOG(Logging::ParsingError, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
+                }
                 leasesFile.Close();
 
                 auto iterator = leases.Elements();

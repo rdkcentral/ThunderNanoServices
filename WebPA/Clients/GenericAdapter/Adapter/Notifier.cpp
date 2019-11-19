@@ -169,7 +169,11 @@ uint32_t Notifier::Parameters(std::vector<std::string>& notifyParameters)
         if (configFile.Open(true) == true) {
 
             NotifierList notifierList;
-            notifierList.IElement::FromFile(configFile);
+            Core::OptionalType<Core::JSON::Error> error;
+            notifierList.IElement::FromFile(configFile, error);
+            if (error.IsSet() == true) {
+                SYSLOG(Logging::ParsingError, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
+            }
 
             auto index(notifierList.Notifiers.Elements());
             while (index.Next()) {
