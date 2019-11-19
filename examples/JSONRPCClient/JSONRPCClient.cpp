@@ -22,7 +22,7 @@ public:
 
 private:
     void StateChange() override{
-        if (JSONRPC::SmartLinkType<INTERFACE>::IsActivated() == true) {
+        if (this->IsActivated() == true) {
             printf("Plugin is activated\n");
         } else {
             printf("Plugin is deactivated\n");
