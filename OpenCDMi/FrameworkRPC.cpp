@@ -591,7 +591,7 @@ namespace Plugin {
 
                 BEGIN_INTERFACE_MAP(Session)
                 INTERFACE_ENTRY(::OCDM::ISession)
-                //INTERFACE_RELAY(::OCDM::ISessionExt, _mediaKeySessionExt)
+                INTERFACE_RELAY(::OCDM::ISessionExt, _mediaKeySessionExt)
                 END_INTERFACE_MAP
 
             private:
