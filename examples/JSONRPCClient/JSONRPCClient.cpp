@@ -14,29 +14,20 @@ class MySmartLinkType : public JSONRPC::SmartLinkType<INTERFACE> {
 public:
     MySmartLinkType(const string& remoteCallsign, const TCHAR* localCallsign)
         : JSONRPC::SmartLinkType<INTERFACE>(remoteCallsign, localCallsign)
-        , _callsign(remoteCallsign)
     {
     }
     ~MySmartLinkType()
     {
     }
 
-public:
-    bool IsActivated() {
-        return JSONRPC::SmartLinkType<INTERFACE>::IsActivated();
-    }
-
 private:
     void StateChange() override{
-        if (JSONRPC::SmartLinkType<INTERFACE>::IsActivated() == true) {
-            printf("%s plugin is activated\n", _callsign.c_str());
+        if (this->IsActivated() == true) {
+            printf("Plugin is activated\n");
         } else {
-            printf("%s plugin is deactivated\n", _callsign.c_str());
+            printf("Plugin is deactivated\n");
         }
     }
-
-private:
-    string _callsign;
 };
 } } //Namespace WPEFramework::JSONRPC
 
