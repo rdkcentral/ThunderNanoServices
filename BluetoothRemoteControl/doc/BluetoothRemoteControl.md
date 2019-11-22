@@ -99,7 +99,7 @@ Assigns a bluetooth device as a remote control unit.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.address | string | Bluetooth address of the device |
+| params.address | string | Bluetooth address |
 
 ### Result
 
@@ -245,7 +245,7 @@ Provides access to the bluetooth address of the unit.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Bluetooth address of the device |
+| (property) | string | Bluetooth address |
 
 ### Errors
 
@@ -419,12 +419,11 @@ Provides access to the audio profile details.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | (property) | object | Audio profile details |
-| (property).codec | string | Name of the audio codec (*pcm* for uncompressed audio) |
+| (property).name | string | Name of the audio profile |
+| (property).codec | string | Name of the audio codec (*pcm* for uncompressed audio) (must be one of the following: *PCM*, *ADPCM*) |
 | (property).channels | number | Number of audio channels (1: mono, 2: stereo, etc.) |
 | (property).rate | number | Sample rate (in Hz) |
 | (property).resolution | number | Sample resolution (in bits per sample) |
-| (property)?.be | boolean | <sup>*(optional)*</sup> Denotes if samples byte order is big-endian (default: *false*) |
-| (property)?.unsigned | boolean | <sup>*(optional)*</sup> Denotes if samples values are unsigned (default: *false*) |
 
 > The *audio profile* shall be passed as the index to the property, e.g. *BluetoothRemoteControl.1.audioprofile@adpcm-hq*.
 
@@ -453,12 +452,11 @@ Provides access to the audio profile details.
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": {
-        "codec": "ima-adpcm", 
+        "name": "adpcm-hq", 
+        "codec": "ADPCM", 
         "channels": 1, 
         "rate": 16000, 
-        "resolution": 16, 
-        "be": true, 
-        "unsigned": true
+        "resolution": 16
     }
 }
 ```

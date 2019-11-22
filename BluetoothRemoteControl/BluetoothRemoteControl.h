@@ -917,13 +917,46 @@ namespace Plugin {
         }; // class BatteryLevelHandler
 
         class AudioHandler : public IGattNotificationHandler {
-        private:
+        public:
             enum : uint32_t {
                 COMMAND_EVENT,
                 DATA_EVENT
             };
 
             class Config : public Core::JSON::Container {
+            public:
+                struct AudioprofileData : public JsonData::BluetoothRemoteControl::AudioprofileData
+                {
+                    AudioprofileData()
+                        : JsonData::BluetoothRemoteControl::AudioprofileData()
+                    {
+                    }
+
+                    ~AudioprofileData() = default;
+
+                    AudioprofileData(const AudioprofileData& other)
+                        : JsonData::BluetoothRemoteControl::AudioprofileData()
+                    {
+                        Name = other.Name;
+                        Codec = other.Codec;
+                        Channels = other.Channels;
+                        Rate = other.Rate;
+                        Resolution = other.Resolution;
+                    }
+
+                    AudioprofileData& operator=(const AudioprofileData& rhs)
+                    {
+                        Name = rhs.Name;
+                        Codec = rhs.Codec;
+                        Channels = rhs.Channels;
+                        Rate = rhs.Rate;
+                        Resolution = rhs.Resolution;
+
+                        return (*this);
+                    }
+
+                };
+
             public:
                 Config(const Config&) = delete;
                 Config& operator=(const Config&) = delete;
@@ -932,10 +965,12 @@ namespace Plugin {
                     , ServiceUUID()
                     , CommandUUID()
                     , DataUUID()
+                    , Profiles()
                 {
                     Add(_T("serviceuuid"), &ServiceUUID);
                     Add(_T("commanduuid"), &CommandUUID);
                     Add(_T("datauuid"), &DataUUID);
+                    Add(_T("profiles"), &Profiles);
                 }
                 ~Config()
                 {
@@ -945,6 +980,7 @@ namespace Plugin {
                 Core::JSON::String ServiceUUID;
                 Core::JSON::String CommandUUID;
                 Core::JSON::String DataUUID;
+                Core::JSON::ArrayType<AudioprofileData> Profiles;
             };
 
         public:
@@ -953,6 +989,7 @@ namespace Plugin {
             AudioHandler(BluetoothRemoteControl* parent)
                 : _adminLock()
                 , _parent(parent)
+                , _config()
                 , _remote(nullptr)
                 , _commandHandle(0)
                 , _dataHandle(0)
@@ -979,11 +1016,10 @@ namespace Plugin {
                 if ((remote != nullptr) && (_remote == nullptr)) {
                     _remote = remote;
 
-                    Config config;
-                    if (config.FromString(configuration) == true) {
-                        AUDIO_SERVICE_UUID = Bluetooth::UUID(config.ServiceUUID.Value());
-                        AUDIO_COMMAND_UUID = Bluetooth::UUID(config.CommandUUID.Value());
-                        AUDIO_DATA_UUID = Bluetooth::UUID(config.DataUUID.Value());
+                    if (_config.FromString(configuration) == true) {
+                        AUDIO_SERVICE_UUID = Bluetooth::UUID(_config.ServiceUUID.Value());
+                        AUDIO_COMMAND_UUID = Bluetooth::UUID(_config.CommandUUID.Value());
+                        AUDIO_DATA_UUID = Bluetooth::UUID(_config.DataUUID.Value());
 
                         if ((AUDIO_SERVICE_UUID.IsValid() == true) && (AUDIO_COMMAND_UUID.IsValid() == true) && (AUDIO_DATA_UUID.IsValid() == true)) {
                             _remote->AddHandler(AUDIO_SERVICE_UUID, AUDIO_COMMAND_UUID, this, COMMAND_EVENT);
@@ -1073,6 +1109,11 @@ namespace Plugin {
                 _parent->event_audioframe(seq, frame);
             }
 
+            const Config& Configuration() const
+            {
+                return _config;
+            }
+
         private:
             struct __attribute__((packed)) Header {
                 uint8_t seq;
@@ -1091,6 +1132,7 @@ namespace Plugin {
         private:
             mutable Core::CriticalSection _adminLock;
             BluetoothRemoteControl* _parent;
+            Config _config;
             GATTRemote* _remote;
             uint16_t _commandHandle;
             uint16_t _dataHandle;
