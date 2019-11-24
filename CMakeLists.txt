@@ -22,6 +22,7 @@ option(PLUGIN_FRONTPANEL "Include FrontPanel plugin" OFF)
 option(PLUGIN_LOCATIONSYNC "Include LocationSync plugin" OFF)
 option(PLUGIN_MESSENGER "Include Messenger plugin" OFF)
 option(PLUGIN_MONITOR "Include Monitor plugin" OFF)
+option(PLUGIN_PROCESSMONITOR "Include Process Monitor plugin" OFF)
 option(PLUGIN_NETWORKCONTROL "Include NetworkControlplugin" OFF)
 option(PLUGIN_OPENCDMI "Include OpenCDMi plugin" OFF)
 option(PLUGIN_PACKAGER "Include Packager plugin" OFF)
@@ -130,6 +131,10 @@ endif()
 
 if(PLUGIN_MONITOR)
     add_subdirectory(Monitor)
+endif()
+
+if(PLUGIN_PROCESSMONITOR)
+    add_subdirectory(ProcessMonitor)
 endif()
 
 if(PLUGIN_NETWORKCONTROL)
