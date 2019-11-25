@@ -1,19 +1,23 @@
-find_package(jsonrpc REQUIRED)
+set(PLUGIN_NAME FileTransferClient)
 
-add_executable(FileTransferClient FileTransferClient.cpp)
+find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 
-set_target_properties(FileTransferClient PROPERTIES
+add_executable(${PLUGIN_NAME} FileTransferClient.cpp)
+
+set_target_properties(${PLUGIN_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         )     
 
-target_link_libraries(FileTransferClient 
-        PRIVATE
-        jsonrpc::jsonrpc
-    )
+target_link_libraries(${PLUGIN_NAME}
+    PRIVATE 
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-target_include_directories(FileTransferClient 
+target_include_directories(${PLUGIN_NAME} 
     PRIVATE
-)
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-install(TARGETS FileTransferClient DESTINATION bin)
+install(TARGETS ${PLUGIN_NAME} DESTINATION bin)

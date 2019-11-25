@@ -3,10 +3,8 @@
 #endif
 
 #include <core/core.h>
-#include <sys/inotify.h>
 #include <iostream>
 #include <fstream>
-#include <list>
 
 #undef EXTERNAL
 
@@ -17,17 +15,15 @@ namespace WPEFramework {
     class TextConnector : public Core::SocketDatagram {
 
         class FileUpdate : public Core::Thread {
-            private:
+            public:
                 FileUpdate() = delete;
                 FileUpdate(const FileUpdate&) = delete;
                 FileUpdate& operator=(const FileUpdate&) = delete;
 
-            public:
                 FileUpdate(TextConnector& parent, const std::string& path)
                     : Core::Thread(Core::Thread::DefaultStackSize(), _T("FileUpdate"))
                     , _parent(parent)
-                    , _path(path)
-                    , _newLineQueue()
+                    , _storeFile(path, std::ios_base::app)
                 {
                     Run();
                 }
@@ -41,54 +37,42 @@ namespace WPEFramework {
                     _parent.Unlock();
                     Core::Thread::Block();
                     Wait(Core::Thread::INITIALIZED | Core::Thread::BLOCKED | Core::Thread::STOPPED, Core::infinite);
-
-                    _newLineQueue.clear();
                 }
 
             private:
                 virtual uint32_t Worker()
                 {
-                    if (_parent.WaitForNewLine(Core::infinite) == true) {
-                        std::string line;
-                        uint16_t lineNo;
+                    std::string line;
+                    bool lineAvaliability;
 
-                        do {
-                            _parent.GetLine(line, lineNo);
-                            _newLineQueue.emplace_back(line);
-                        } while (lineNo > 0);
-
+                    do {
+                        lineAvaliability = _parent.GetLine(line, Core::infinite);
                         // Store to the file
-                        std::ofstream storeFile(_path, std::ios_base::app);
-                        while(_newLineQueue.size() > 0) {
-                            storeFile << _newLineQueue.front();
-                            _newLineQueue.pop_front();
-                        }
-                        _newLineQueue.clear();
-                    }
+                        _storeFile << line;
+                    } while (lineAvaliability == true);
+
                     return (Core::infinite);
                 }
 
             private:
                 TextConnector& _parent;
-                std::string _path;
-                std::list<std::string> _newLineQueue;
+                std::ofstream _storeFile;
         };
 
         private:        
             static constexpr uint16_t MAX_BUFFER_LENGHT = 50*1024;
 
+        public:
             TextConnector() = delete;
             TextConnector(const TextConnector& copy) = delete;
             TextConnector& operator=(const TextConnector&) = delete;
 
-        public:
             TextConnector(const uint16_t port, const std::string& path)
                 : Core::SocketDatagram(false, Core::NodeId("0.0.0.0", port), Core::NodeId(), 0, MAX_BUFFER_LENGHT)
                 , _newLineSignal(false, true)
                 , _adminLock()
                 , _receivedQueue()
-                , _update(*this, path)
-                
+                , _update(*this, path)                 
             {
                 Open(0);
             }
@@ -101,16 +85,15 @@ namespace WPEFramework {
                 Close(Core::infinite);
             }
 
-        public: 
             uint16_t ReceiveData(uint8_t *dataFrame, const uint16_t receivedSize) override
-            {
-                _adminLock.Lock();
-
+            {              
                 std::string text(reinterpret_cast<const char*>(dataFrame), static_cast<size_t>(receivedSize));
-                _receivedQueue.emplace_back(text);                            
+                
+                _adminLock.Lock();
+                _receivedQueue.emplace_back(text);   
+                _adminLock.Unlock();                         
+                
                 _newLineSignal.SetEvent(); 
-
-                _adminLock.Unlock();
                 
                 return receivedSize;
             }
@@ -118,38 +101,49 @@ namespace WPEFramework {
             uint16_t SendData(uint8_t *dataFrame, const uint16_t maxSendSize) override
             {
                 // Do not do anything here
-                return maxSendSize;
+                return 0;
             }
 
             void StateChange() override
             {
-                // Do not do anything here
+                if (IsOpen()) {
+                    printf ("Observing file\n"); 
+                } else {
+                    printf("No longer observing file\n");
+                }                
             }
 
-            bool WaitForNewLine(const uint32_t time)
+            bool WaitForNewLine(const uint32_t waitTime)
             {
-                uint32_t status = _newLineSignal.Lock(time);
+                uint32_t status = _newLineSignal.Lock(waitTime);
                 _newLineSignal.ResetEvent();
 
                 return (status == 0);
             }
-
+        public: 
             void Unlock()
             {
                 _newLineSignal.Unlock();
             }
 
-            void GetLine(std::string& text, uint16_t& size)
+            bool GetLine(std::string& text, const uint32_t waitTime)
             {
-                _adminLock.Lock();
+                static uint32_t size = 0;
+                bool status = false;
 
-                if (_receivedQueue.size() > 0) {
+                if (size == 0) {
+                    status = WaitForNewLine(waitTime);
+                }
+                
+                _adminLock.Lock();
+                if (((status == true) && (_receivedQueue.size() > 0)) || ((status == false) && (_receivedQueue.size() > 0))) {
                     text = _receivedQueue.front();
                     _receivedQueue.pop_front();
-                    size = static_cast<size_t>(_receivedQueue.size());
                 }
-
+                size = static_cast<size_t>(_receivedQueue.size());
                 _adminLock.Unlock();
+
+                return (size > 0);
             }
 
         private:
@@ -160,11 +154,10 @@ namespace WPEFramework {
     };
 
     class Config : public Core::JSON::Container {
-        private:
+        public:
             Config(const Config &) = delete;
             Config &operator=(const Config &) = delete;
 
-        public:
             class NetworkNode : public Core::JSON::Container
             {
                 public:
