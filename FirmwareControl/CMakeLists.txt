@@ -12,6 +12,12 @@ add_library(${MODULE_NAME} SHARED
     Module.cpp
 )
 
+if(PLUGIN_FIRMWARECONTROL_PLATFORM_BCM OR PLUGIN_FIRMWARECONTROL_PLATFORM_RPI)
+    target_compile_definitions(${MODULE_NAME}
+        PRIVATE
+            FIRMWARECONTROL_PLATFORM_INIT=ON)
+endif()
+
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)

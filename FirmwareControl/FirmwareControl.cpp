@@ -21,11 +21,15 @@ namespace Plugin {
         if (config.WaitTime.IsSet() == true) {
             _waitTime = config.WaitTime.Value();
         }
+
         string message;
+#if defined(FIRMWARECONTROL_PLATFORM_INIT)
         uint32_t status = ConvertMfrStatusToCore(mfr_init());
         if (status != Core::ERROR_NONE) {
             message = _T("Error in MFR library initialization");
         }
+#endif
+
         return (message);
     }
 
