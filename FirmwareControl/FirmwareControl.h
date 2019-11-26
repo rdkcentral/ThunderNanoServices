@@ -246,7 +246,7 @@ namespace Plugin {
 
         inline void RemoveDownloadedFile()
         {
-            Core::File _storage(_destination);
+            Core::File _storage(_destination + Name);
             if (_storage.Exists()) {
                 _storage.Destroy();
             }
