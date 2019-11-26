@@ -109,6 +109,9 @@ namespace Plugin {
                     _parent.SyncedTime(timeTicks);
                     _parent.EnsureSubsystemIsActive();
                 }
+                else {
+                    SYSLOG(Trace::Error, (_T("TimeSync was unable to set a correct system time!")));
+                 }
             }
 
             BEGIN_INTERFACE_MAP(Notification)
