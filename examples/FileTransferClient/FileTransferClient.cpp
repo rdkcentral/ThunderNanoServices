@@ -59,7 +59,9 @@ namespace WPEFramework {
                 std::ofstream _storeFile;
         };
 
-        private:        
+        private:
+            typedef std::shared_ptr<uint16_t> EventMessagePtr;
+            typedef Core::QueueType<EventMessagePtr> EventsQueue;        
             static constexpr uint16_t MAX_BUFFER_LENGHT = 50*1024;
 
         public:
@@ -69,7 +71,7 @@ namespace WPEFramework {
 
             TextConnector(const uint16_t port, const std::string& path)
                 : Core::SocketDatagram(false, Core::NodeId("0.0.0.0", port), Core::NodeId(), 0, MAX_BUFFER_LENGHT)
-                , _newLineSignal(false, true)
+                , _newLineQueue(256)
                 , _adminLock()
                 , _receivedQueue()
                 , _update(*this, path)                 
@@ -93,7 +95,8 @@ namespace WPEFramework {
                 _receivedQueue.emplace_back(text);   
                 _adminLock.Unlock();                         
                 
-                _newLineSignal.SetEvent(); 
+                EventMessagePtr event = std::make_shared<uint16_t>(1);
+                _newLineQueue.Post(event);
                 
                 return receivedSize;
             }
@@ -112,42 +115,33 @@ namespace WPEFramework {
                     printf("No longer observing file\n");
                 }                
             }
-
-            bool WaitForNewLine(const uint32_t waitTime)
-            {
-                uint32_t status = _newLineSignal.Lock(waitTime);
-                _newLineSignal.ResetEvent();
-
-                return (status == 0);
-            }
+          
         public: 
             void Unlock()
             {
-                _newLineSignal.Unlock();
+                _newLineQueue.Disable();
+                _newLineQueue.Flush();
             }
 
             bool GetLine(std::string& text, const uint32_t waitTime)
             {
-                static uint32_t size = 0;
                 bool status = false;
 
-                if (size == 0) {
-                    status = WaitForNewLine(waitTime);
-                }
-                
+                EventMessagePtr event;
+                status = _newLineQueue.Extract(event, waitTime);
+             
                 _adminLock.Lock();
-                if (((status == true) && (_receivedQueue.size() > 0)) || ((status == false) && (_receivedQueue.size() > 0))) {
+                if ((status == true) && (_receivedQueue.size() > 0)) {
                     text = _receivedQueue.front();
                     _receivedQueue.pop_front();
                 }
-                size = static_cast<size_t>(_receivedQueue.size());
                 _adminLock.Unlock();
 
-                return (size > 0);
+                return (_newLineQueue.Length() > 0);
             }
 
         private:
-            Core::Event _newLineSignal;
+            EventsQueue _newLineQueue;
             Core::CriticalSection _adminLock;
             std::list<std::string> _receivedQueue;
             FileUpdate _update;
