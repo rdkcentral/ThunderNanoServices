@@ -55,7 +55,7 @@ namespace Plugin {
         _interval = interval;
         _hash = hash;
 
-        _upgrader.Schedule();
+        _upgrader->Schedule();
         _adminLock.Unlock();
 
         return Core::ERROR_NONE;
