@@ -194,7 +194,7 @@ private:
                 uint8_t value = -1;
                 TRACE(Trace::Information, (_T("Scheduled Job: changing Power mode to %s[%d]."),
                             newMode->label, state));
-                Notify(state);
+                Notify(state, Exchange::IPower::Before);
                 _currentState = state;
 
                 switch (state) {
@@ -213,11 +213,13 @@ private:
                             ::write(_triggerFile, "0", 1);
                             /* Reset the State to 'On' once device wakes-up. */
                             SetState(Exchange::IPower::PCState::On, 0);
+                            Notify(state, Exchange::IPower::After);
                         }
                         break;
                     case Exchange::IPower::PCState::Hibernate: break;
                     case Exchange::IPower::PCState::PowerOff:
                         system("poweroff");
+                        Notify(state, Exchange::IPower::After);
                         break;
                     default:
                         TRACE(Trace::Error, (_T("Should not reach here at any case...!!!")));
@@ -225,9 +227,9 @@ private:
             }
         }
     }
-    void Notify (const Exchange::IPower::PCState mode) {
+    void Notify (const Exchange::IPower::PCState mode, const Exchange::IPower::PCPhase phase) {
        if (_callback != nullptr) {
-           _callback(_userData, mode);
+           _callback(_userData, mode, phase);
        }
     }
 
