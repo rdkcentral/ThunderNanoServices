@@ -3,7 +3,11 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+
+set(PLUGIN_BLUETOOTHREMOTECONTROL_SUPPORT_ADPCM_HQ true CACHE BOOL "Support adpcm-hq audio profile")
+set(PLUGIN_BLUETOOTHREMOTECONTROL_SUPPORT_PCM true CACHE BOOL "Support pcm audio profile")
 
 add_library(${MODULE_NAME} SHARED
     BluetoothRemoteControl.cpp
@@ -18,6 +22,7 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ${NAMESPACE}Bluetooth::${NAMESPACE}Bluetooth)
 
 install(TARGETS ${MODULE_NAME}

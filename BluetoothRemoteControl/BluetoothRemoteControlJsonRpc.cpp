@@ -151,6 +151,20 @@ namespace Plugin {
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
         if (_gattRemote != nullptr) {
+            result = Core::ERROR_NONE;
+
+            auto keyIndex(_audioHandler.Configuration().Profiles.Elements());
+            while(keyIndex.Next() == true) {
+                if(keyIndex.Current().Name.IsSet()) {
+                    Core::JSON::String newElement;
+                    newElement = keyIndex.Current().Name;
+                    response.Add(newElement);
+                }
+            }
+
+            if(response.Length() == 0) {
+                result = Core::ERROR_UNAVAILABLE;
+            }
         }
 
         return result;
@@ -164,8 +178,30 @@ namespace Plugin {
     uint32_t BluetoothRemoteControl::get_audioprofile(const string& index, AudioprofileData& response) const
     {
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
+        if(_gattRemote != nullptr) {
+            result = Core::ERROR_UNKNOWN_KEY;
 
-        if (_gattRemote != nullptr) {
+            auto keyIndex(_audioHandler.Configuration().Profiles.Elements());
+            while(keyIndex.Next() == true) {
+                if(keyIndex.Current().Name.Value() == index){
+                   result = Core::ERROR_NONE;
+                   if(keyIndex.Current().Name.IsSet()){
+                        response.Name = keyIndex.Current().Name.Value();
+                   }
+                   if(keyIndex.Current().Codec.IsSet()){
+                        response.Codec = keyIndex.Current().Codec.Value();
+                   }
+                   if(keyIndex.Current().Channels.IsSet()){
+                        response.Channels = keyIndex.Current().Channels.Value();
+                   }
+                   if(keyIndex.Current().Rate.IsSet()){
+                        response.Rate = keyIndex.Current().Rate.Value();
+                   }
+                   if(keyIndex.Current().Resolution.IsSet()){
+                        response.Resolution = keyIndex.Current().Resolution.Value();
+                   }
+                }
+            }
         }
 
         return (result);
