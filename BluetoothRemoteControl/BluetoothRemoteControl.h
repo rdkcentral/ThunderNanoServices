@@ -917,12 +917,13 @@ namespace Plugin {
         }; // class BatteryLevelHandler
 
         class AudioHandler : public IGattNotificationHandler {
-        public:
+        private:
             enum : uint32_t {
                 COMMAND_EVENT,
                 DATA_EVENT
             };
 
+        public:
             class Config : public Core::JSON::Container {
             public:
                 struct AudioprofileData : public JsonData::BluetoothRemoteControl::AudioprofileData

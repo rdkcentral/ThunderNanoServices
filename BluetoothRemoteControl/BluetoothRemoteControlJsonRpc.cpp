@@ -183,7 +183,7 @@ namespace Plugin {
 
             auto keyIndex(_audioHandler.Configuration().Profiles.Elements());
             while(keyIndex.Next() == true) {
-                if(keyIndex.Current().Name.Value() == index){
+                if(keyIndex.Current().Name.Value() == index) {
                    result = Core::ERROR_NONE;
                    if(keyIndex.Current().Name.IsSet()){
                         response.Name = keyIndex.Current().Name.Value();
@@ -200,6 +200,7 @@ namespace Plugin {
                    if(keyIndex.Current().Resolution.IsSet()){
                         response.Resolution = keyIndex.Current().Resolution.Value();
                    }
+                   break;
                 }
             }
         }
