@@ -407,7 +407,7 @@ Exchange::IPower::PCStatus PowerImplementation::SetPowerState()
 {
     TRACE(Trace::Information, (_T("SetPowerState")));
     NxClient_StandbySettings standbySettings;
-    PCState pState;
+    PCState pState = On;
 
     NxClient_GetDefaultStandbySettings(&standbySettings);
     standbySettings.settings.mode = _mode;
@@ -432,9 +432,6 @@ Exchange::IPower::PCStatus PowerImplementation::SetPowerState()
             break;
         case NEXUS_PlatformStandbyMode_eDeepSleep:
             pState = SuspendToRAM;
-            break;
-        case NEXUS_PlatformStandbyMode_eDeepSleep:
-            pState = PowerOff;
             break;
     }
     NotifyStateChange(pState);

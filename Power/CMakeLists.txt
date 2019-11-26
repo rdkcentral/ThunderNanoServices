@@ -29,7 +29,7 @@ target_include_directories( ${MODULE_NAME}
         PUBLIC
           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
-if (LIBNXSERVER_FOUND)
+if (NXCLIENT_FOUND)
     message("Building the Nexus....")
     target_sources(${MODULE_NAME} PRIVATE PowerImplementation/Broadcom/PowerImplementation.cpp)
     target_link_libraries(${MODULE_NAME} 
@@ -49,8 +49,10 @@ target_link_libraries(${MODULE_NAME}
 
 if (BCM_PM_FOUND)
     set(POWER_LIBS -Wl,--whole-archive ${BCM_PM_LIBRARIES} -Wl,--no-whole-archive)
-    list(APPEND PLUGIN_LIBS ${POWER_LIBS})
 
+    target_link_libraries(${MODULE_NAME}
+        PRIVATE
+        ${POWER_LIBS})
 
 endif ()
 
