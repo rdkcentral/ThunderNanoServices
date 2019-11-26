@@ -188,6 +188,7 @@ namespace Plugin {
             , _powerKey(0)
             , _controlClients(true)
             , _powerOffMode(Exchange::IPower::PCState::SuspendToRAM)
+            , _currentState(Exchange::IPower::PCState::On)
         {
             RegisterAll();
         }
@@ -241,7 +242,7 @@ namespace Plugin {
         uint32_t SetState(const PCState, const uint32_t) override;
         void PowerKey() override;
 
-        void PowerChange(const Exchange::IPower::PCState state);
+        void PowerChange(const Exchange::IPower::PCState state, const Exchange::IPower::PCPhase phase);
 
     private:
         void KeyEvent(const uint32_t keyCode);
@@ -266,6 +267,7 @@ namespace Plugin {
         uint32_t _powerKey;
         bool _controlClients;
         Exchange::IPower::PCState _powerOffMode;
+        Exchange::IPower::PCState _currentState;
     };
 } //namespace Plugin
 } //namespace WPEFramework

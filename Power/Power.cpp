@@ -30,8 +30,9 @@ namespace Plugin {
 
     extern "C" {
 
-    static void PowerStateChange(void* userData, enum WPEFramework::Exchange::IPower::PCState newState) {
-        reinterpret_cast<Power*>(userData)->PowerChange(newState);
+    static void PowerStateChange(void* userData, enum WPEFramework::Exchange::IPower::PCState newState, \
+                                 Exchange::IPower::PCPhase phase) {
+        reinterpret_cast<Power*>(userData)->PowerChange(newState, phase);
     }
 
     }
@@ -197,17 +198,6 @@ namespace Plugin {
             result = Core::ERROR_DUPLICATE_KEY;
             TRACE(Trace::Information, (_T("No need to change power states, we are already at this stage!")));
         } else if (is_power_state_supported(state)) {
-            _adminLock.Unlock();
-
-            std::list<Exchange::IPower::INotification*>::iterator index(_notificationClients.begin());
-
-            while (index != _notificationClients.end()) {
-                (*index)->StateChange(state);
-                index++;
-            }
-
-            _adminLock.Unlock();
- 
             if (state != Exchange::IPower::PCState::On) {
                 ControlClients(state);
             }
@@ -216,31 +206,40 @@ namespace Plugin {
             power_set_persisted_state(state);
 
             if ( (result = power_set_state(state, waitTime)) != Core::ERROR_NONE) {
-                TRACE(Trace::Information, (_T("Could not change the power state, error: %d"), result));
+                TRACE(Trace::Error, (_T("Could not change the power state, error: %d"), result));
             }
         }
 
         return (result);
     }
-    void Power::PowerChange(const Exchange::IPower::PCState state) {
+    void Power::PowerChange(const Exchange::IPower::PCState state, const Exchange::IPower::PCPhase phase) {
 
-        if (state == Exchange::IPower::PCState::On) {
+        if ((state == Exchange::IPower::PCState::On) && (Exchange::IPower::After == phase)) {
             ControlClients(state);
         }
 
         _adminLock.Lock();
 
         std::list<Exchange::IPower::INotification*>::iterator index(_notificationClients.begin());
+        Exchange::IPower::PowerState newState;
+
+        newState.origin = _currentState;
+        newState.destination = state;
+        newState.phase = phase;
 
         while (index != _notificationClients.end()) {
-            (*index)->StateChange(state);
+            (*index)->StateChange(newState);
             index++;
         }
 
         _adminLock.Unlock();
 
-        /* May be resuming from another power state; lets update persisted state. */
-        power_set_persisted_state(state);
+        if (Exchange::IPower::After == phase) {
+            /* May be resuming from another power state; lets update persisted state. */
+            power_set_persisted_state(state);
+
+            _currentState = state;
+        }
     }
     void Power::PowerKey() /* override */ {
         if (power_get_state() == Exchange::IPower::PCState::On) {
