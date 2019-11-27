@@ -2,8 +2,12 @@
 
 #include "Module.h"
 
+#include "Administrator.h"
+#include "WAVRecorder.h"
+
 #include <interfaces/IBluetooth.h>
 #include <interfaces/IKeyHandler.h>
+#include <interfaces/IVoiceHandler.h>
 #include <interfaces/json/JsonData_BluetoothRemoteControl.h>
 
 namespace WPEFramework {
@@ -15,13 +19,9 @@ namespace Plugin {
                                  , public PluginHost::JSONRPC
                                  , public Exchange::IKeyHandler {
 
-        struct IGattNotificationHandler {
-            virtual ~IGattNotificationHandler() { }
-
-            virtual bool Notification(const uint32_t cookie, const uint8_t buffer[], const uint16_t length) = 0;
-        };
-
-        class GATTRemote : public Bluetooth::GATTSocket {
+        class GATTRemote : public Bluetooth::GATTSocket 
+                         , public Exchange::IKeyProducer
+                         , public Exchange::IVoiceProducer {
         private:
             static constexpr uint16_t HID_UUID         = 0x1812;
 
@@ -69,7 +69,7 @@ namespace Plugin {
                     ASSERT(parent != nullptr);
                 }
                 ~Sink() override
-                {
+                {    
                 }
 
             public:
@@ -86,93 +86,256 @@ namespace Plugin {
                 GATTRemote& _parent;
             };
 
+            class Decoupling : public Core::IDispatch {
+            public:
+                Decoupling(const Decoupling&) = delete;
+                Decoupling& operator=(const Decoupling&) = delete;
+                Decoupling(GATTRemote& parent)
+                    : _parent(parent)
+                    , _next(0)
+                    , _length(0xFF)
+                    , _buffer(reinterpret_cast<uint8_t*>(_length))
+                {
+                    ASSERT(_parent != nullptr);
+                }
+                ~Decoupling() override
+                {
+                }
+
+            public:
+                void Submit(const uint16_t handle, const uint8_t length, const uint8_t buffer[])
+                {
+                    ASSERT (length > 0);
+
+                    _adminLock.Lock();
+
+                    if ((_next + length + 3) > _length) {
+                        // Oops we need to extend our buffer
+                        _length = (((_next + length + 0xFF) >> 8) << 8);
+                        uint8_t newBuffer = reinterpret_cast<uint8_t*>(::malloc(_length));
+                        ::memcpy(newBuffer, _buffer, _next);
+                        ::free(_buffer);
+                        _buffer = newBuffer;
+                    }
+
+                    _buffer[_next++] = length;
+                    _buffer[_next++] = (handle >> 8) & 0xFF;
+                    _buffer[_next++] = (handle & 0xFF);
+                    ::memcpy(&(_buffer[_next]), buffer, length);
+                    _next += length;
+
+                    _adminLock.Unlock();
+                }
+                void Dispatch() override
+                {
+                    uint16_t offset = 0;
+
+                    _adminLock.Lock();
+
+                    while (offset < _next) {
+
+                        uint8_t length = _buffer[offset++];
+                        uint16_t handle = (_buffer[offset++] << 8) | (_buffer[offset++]);
+                        _parent.Message(handle, length, &(_buffer[offset]));
+
+                        offset += length;
+
+                        ASSERT (offset <= _next);
+                    }
+
+                    ASSERT (offset == _next);
+
+                    _next = 0;
+
+                    _adminLock.Unlock();
+                }
+
+            private:
+                GATTRemote& _parent;
+                uint16_t _next;
+                uint16_t _length;
+                uint8_t* _buffer;
+            };
+
+            class Profile : public Bluetooth::Profile {
+            private:
+                class Config : public Core::JSON::Container {
+                public:
+                    Config(const Config&) = delete;
+                    Config& operator=(const Config&) = delete;
+                    Config()
+                        : Core::JSON::Container()
+                        , ServiceUUID()
+                        , CommandUUID()
+                        , DataUUID()
+                    {    
+                        Add(_T("serviceuuid"), &ServiceUUID);
+                        Add(_T("commanduuid"), &CommandUUID);
+                        Add(_T("datauuid"), &DataUUID);
+                    }
+                    ~Config()
+                    {
+                    }
+
+                public:
+                    Core::JSON::String ServiceUUID;
+                    Core::JSON::String CommandUUID;
+                    Core::JSON::String DataUUID;
+                };
+
+            public:
+                Profile() = delete;
+                Profile(const Profile&) = delete;
+                Profile& operator= (const Profile&) = delete;
+
+                Profile(const string& configuration) 
+                    : Bluetooth::Profile() {
+                    Config config; 
+                    config.FromString(configuration);
+                    VoiceService = BluetoothUUID(config.ServiceUUID.Value());
+                    VoiceCommandChar = BluetoothUUID(config.CommandUUID.Value());
+                    VoiceDataChar = BluetoothUUID(config.DataUUID.Value());
+                }
+                ~Profile() {
+                }
+
+            public:
+                uint16_t FindHandle(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid) const
+                {
+                    const Bluetooth::Profile::Service* service = (*_profile)[serviceUuid];
+                    if (service != nullptr) {
+                        const Bluetooth::Profile::Service::Characteristic* characteristic = (*service)[charUuid];
+                        if (characteristic != nullptr) {
+                            handle = characteristic->Handle();
+                        }
+                    }
+                    return (handle);
+                }
+
+            public:
+                Bluetooth::UUID VoiceService;
+                Bluetooth::UUID VoiceCommandChar;
+                Bluetooth::UUID VoiceDataChar;
+            };
+            class AudioProfile : Exchange::IVoiceProducer::IProfile {
+            public:
+                AudioProfile(const AudioProfile&) = delete;
+                AudioProfile& operator= (const AudioProfile&) = delete;
+                AudioProfile(const Exchange::IVoiceProducer::IProfile::codec codec, const uint8_t channels, const uint32_t sampleRate, const uint8_t resolution) 
+                    : _code(codec)
+                    , _channels(channels)
+                    , _sampleRate(sampleRate)
+                    , _resolution(resolution) {
+                }
+                virtual ~AudioProfile() {
+                }
+
+            public:
+                Exchange::IVoiceProducer::IProfile::codec Codec() const override {
+                    return (_codec);
+                }
+                uint8_t Channels() const override {
+                    return (_channels);
+                }
+                uint32_t SampleRate() const override {
+                    return (_sampleRate);
+                }
+                uint8_t Resolution() const override {
+                    return (_resolution);
+                }
+
+                BEGIN_INTERFACE_MAP(AudioProfile)
+                    INTERFACE_ENTRY(Exchange::IVoiceProducer::IProfile)
+                END_INTERFACE_MAP
+
+            private:
+                codec _codec;
+                uint8_t _channels;
+                uint32_t _sampleRate;
+                uint8_t _resolution;
+            };
+
+
             static Core::NodeId Designator(const uint8_t type, const string& address)
             {
                 return (Bluetooth::Address(address.c_str()).NodeId(static_cast<Bluetooth::Address::type>(type), GATTSocket::LE_ATT_CID, 0));
             }
 
         public:
+            class Data : public Core::JSON::Container {
+            public:
+                Data(const Data&) = delete;
+                Data& operator=(const Data&) = delete;
+                Data()
+                    : Core::JSON::Container()
+                    , Name()
+                    , ModelNumber()
+                    , SerialNumber()
+                    , FirmwareRevision()
+                    , SoftwareRevision()
+                    , ManufacturerName()
+                    , KeysDataHandle(0)
+                    , BatteryLevelHandle(0)
+                    , VoiceCommandHandle(0)
+                    , VoiceDataHandle(0)
+                {
+                    Add(_T("name"), &Name);
+                    Add(_T("model"), &ModelNumber);
+                    Add(_T("serial"), &SerialNumber);
+                    Add(_T("firmware"), &FirmwareRevision);
+                    Add(_T("software"), &SoftwareRevision);
+                    Add(_T("manufacturer"), &ManufacturerName);
+                    Add(_T("key"), &KeysDataHandle);
+                    Add(_T("battery"), &BatteryLevelHandle);
+                    Add(_T("command"), &VoiceCommandHandle);
+                    Add(_T("voice"), &VoiceDataHandle);
+                }
+                ~Data()
+                {
+                }
+
+            public:
+               Core::JSON::String Name;
+               Core::JSON::String ModelNumber;
+               Core::JSON::String SerialNumber;
+               Core::JSON::String FirmwareRevision;
+               Core::JSON::String SoftwareRevision;
+               Core::JSON::String ManufacturerName;
+
+               Core::JSON::DecUInt16 KeysDataHandle;
+               Core::JSON::DecUInt16 BatteryLevelHandle;
+               Core::JSON::DecUInt16 VoiceCommandHandle;
+               Core::JSON::DecUInt16 VoiceDataHandle;
+            };
+
+        public:
             GATTRemote() = delete;
             GATTRemote(const GATTRemote&) = delete;
             GATTRemote& operator=(const GATTRemote&) = delete;
-
-            class Config : public Core::JSON::Container {
-            public:
-                class Entry : public Core::JSON::Container {
-                public:
-                    Entry& operator=(const Entry&) = delete;
-                    Entry()
-                        : Core::JSON::Container()
-                        , ServiceUuid()
-                        , CharacteristicUuid()
-                        , Handle(0)
-                    {
-                        Init();
-                    }
-                    Entry(const Entry& copy)
-                        : Core::JSON::Container()
-                        , ServiceUuid()
-                        , CharacteristicUuid()
-                        , Handle(0)
-                    {
-                        ServiceUuid = copy.ServiceUuid;
-                        CharacteristicUuid = copy.CharacteristicUuid;
-                        Handle = copy.Handle;
-                        Init();
-                    }
-                    ~Entry()
-                    {
-                    }
-
-                private:
-                    void Init()
-                    {
-                        Add(_T("service"), &ServiceUuid);
-                        Add(_T("characteristic"), &CharacteristicUuid);
-                        Add(_T("handle"), &Handle);
-                    }
-
-                public:
-                    Core::JSON::String ServiceUuid;
-                    Core::JSON::String CharacteristicUuid;
-                    Core::JSON::DecUInt16 Handle;
-                };
-
-                Config(const Config&) = delete;
-                Config& operator=(const Config&) = delete;
-                Config()
-                    : Core::JSON::Container()
-                    , Handles()
-                {
-                    Add(_T("handles"), &Handles);
-                }
-                ~Config()
-                {
-                }
-
-            public:
-                Core::JSON::ArrayType<Entry> Handles;
-            };
-
-            GATTRemote(BluetoothRemoteControl* parent, Exchange::IBluetooth::IDevice* device, uint16_t mtu = 255)
-                : Bluetooth::GATTSocket(Designator(device->Type(), device->LocalId()), Designator(device->Type(), device->RemoteId()), mtu)
+ 
+            GATTRemote(BluetoothRemoteControl* parent, Exchange::IBluetooth::IDevice* device, const string& configuration)
+                : Bluetooth::GATTSocket(Designator(device->Type(), device->LocalId()), Designator(device->Type(), device->RemoteId()), 255)
+                , _parent(parent)
                 , _adminLock()
-                , _profile(true)
+                , _profile(new Profile(configration))
                 , _command()
                 , _device(device)
+                , _decoupling(this)
                 , _sink(this)
-                , _parent(parent)
                 , _name()
                 , _modelNumber()
                 , _serialNumber()
                 , _firmwareRevision()
                 , _softwareRevision()
                 , _manufacturerName()
-                , _deviceInfoRead(false)
-                , _reportHandles()
-                , _handles()
-                , _subscribers()
-                , _handlers()
+                , _batteryLevel(0)
+                , _keysDataHandle(0)
+                , _batteryLevelHandle(0)
+                , _voiceDataHandle(0)
+                , _voiceCommandHandle(0)
+                , _inputHandler(nullptr)
+                , _voiceHandler(nullptr)
+ 
             {
                 ASSERT(_parent != nullptr);
                 ASSERT(_device != nullptr);
@@ -209,549 +372,15 @@ namespace Plugin {
             }
 
         public:
-            void Configure(const string& settings)
-            {
-                Config config;
-                if (config.FromString(settings) == true) {
-                    _adminLock.Lock();
-                    _handles.clear();
-                    _handlers.clear();
-
-                    // Reload characteristic handles
-                    Core::JSON::ArrayType<Config::Entry>::Iterator index(config.Handles.Elements());
-                    while (index.Next() == true) {
-                        _handles.emplace_back(index.Current().ServiceUuid.Value(), index.Current().CharacteristicUuid.Value(), index.Current().Handle.Value());
-                    }
-
-                    // Recreate handlers
-                    for (auto entry : _subscribers) {
-                        auto it = std::find_if(_handles.begin(), _handles.end(), [&](const std::tuple<Bluetooth::UUID, Bluetooth::UUID, uint16_t> val) {
-                            return ((std::get<0>(entry) == std::get<0>(val)) && (std::get<1>(entry) == std::get<1>(val)));
-                        });
-                        if (it != _handles.end()) {
-                            _handlers.emplace(std::get<2>(*it), std::make_pair(std::get<2>(entry), std::get<3>(entry)));
-                        }
-                    }
-                    _adminLock.Unlock();
-                }
+            uint32_t PrefferedProfile(const string& profile) override {
+            }
+            uint32_t Callback(Exchange::IVoiceHandler* callback) override {
             }
 
-            void Configuration(string& settings) const
-            {
-                Config config;
-                for (auto& entry : _handles) {
-                    Config::Entry e;
-                    e.ServiceUuid = std::get<0>(entry).ToString();
-                    e.CharacteristicUuid = std::get<1>(entry).ToString();
-                    e.Handle = std::get<2>(entry);
-                    config.Handles.Add(e);
-                }
-                config.ToString(settings);
-            }
-
-        public:
-            uint32_t AddHandler(const Bluetooth::UUID& service, const Bluetooth::UUID& characteristic, IGattNotificationHandler* handler, const uint32_t cookie = 0)
-            {
-                uint32_t result = Core::ERROR_ILLEGAL_STATE;
-                _adminLock.Lock();
-                if (std::find_if(_subscribers.begin(), _subscribers.end(),
-                                        [&](const std::tuple<Bluetooth::UUID, Bluetooth::UUID, IGattNotificationHandler*, uint32_t>& val) -> bool {
-                                            return ((service == std::get<0>(val)) && (characteristic == std::get<1>(val)));
-                                        }
-                                ) == _subscribers.end()) {
-                    _subscribers.emplace_back(service, characteristic, handler, cookie);
-                    result = Core::ERROR_NONE;
-                }
-                _adminLock.Unlock();
-                return (result);
-            }
-
-            uint32_t RemoveHandler(const Bluetooth::UUID& service, const Bluetooth::UUID& characteristic, IGattNotificationHandler* handler)
-            {
-                uint32_t result = Core::ERROR_ILLEGAL_STATE;
-                _adminLock.Lock();
-                auto it = std::find_if(_subscribers.begin(), _subscribers.end(),
-                                        [&](const std::tuple<Bluetooth::UUID, Bluetooth::UUID, IGattNotificationHandler*, uint32_t>& val) -> bool {
-                                            return ((service == std::get<0>(val)) && (characteristic == std::get<1>(val)));
-                                        });
-                if (it != _subscribers.end()) {
-                    _subscribers.erase(it);
-                    result = Core::ERROR_NONE;
-                }
-                _adminLock.Unlock();
-                return (result);
-            }
-
-            string Name() const
-            {
-                return (_device != nullptr? _device->Name() :  _T("<unassigned>"));
-            }
-
-            string Address() const
-            {
-                return (_device != nullptr? _device->RemoteId() : _T("<unassigned>"));
-            }
-
-            string ModelNumber() const
-            {
-                return (_modelNumber);
-            }
-
-            string SerialNumber() const
-            {
-                return (_serialNumber);
-            }
-
-            string FirmwareRevision() const
-            {
-                return (_firmwareRevision);
-            }
-
-            string SoftwareRevision() const
-            {
-                return (_softwareRevision);
-            }
-
-            string ManufacturerName() const
-            {
-                return (_manufacturerName);
-            }
-
-            uint8_t BatteryLevel() const
-            {
-                return (_batteryLevel);
-            }
-
-        private:
-            bool Initialize() override
-            {
-                return (Security(BT_SECURITY_LOW));
-            }
-
-            void Notification(const uint16_t handle, const uint8_t dataFrame[], const uint16_t length) override
-            {
-                bool handled = false;
-
-                _adminLock.Lock();
-                auto handlerIt = _handlers.find(handle);
-                if (handlerIt != _handlers.end()) {
-                    ASSERT((*handlerIt).second.first != nullptr);
-                    if ((*handlerIt).second.first->Notification((*handlerIt).second.second, dataFrame, length) == true) {
-                        handled = true;
-                    }
-                }
-                _adminLock.Unlock();
-
-                if (handled == false) {
-                    string data;
-                    Core::ToHexString(dataFrame, length, data);
-                    TRACE(Trace::Information, (_T("Unhandled notification: [handle=0x%x], %d bytes: %s\n"), handle, length, data.c_str()));
-                }
-            }
-
-            void Operational() override
-            {
-                TRACE(Flow, (_T("The received MTU: %d"), MTU()));
-
-                if ((_device->IsBonded() == false) || (_handles.empty() == true)) {
-                    // No need to do service discovery if device is bonded, the notifications are already enabled
-                    _profile.Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
-                        if (result == Core::ERROR_NONE) {
-                            if (_profile[Bluetooth::UUID(HID_UUID)] == nullptr) {
-                                TRACE(Flow, (_T("The given bluetooth device does not support a HID service!!")));
-                            }
-                            else {
-                                DumpProfile();
-
-                                using Service = Bluetooth::Profile::Service;
-                                const std::pair<uint16_t, uint16_t> uuidsList[] = {
-                                    { Service::DeviceInformation, Service::Characteristic::ModelNumberString },
-                                    { Service::DeviceInformation, Service::Characteristic::SerialNumberString },
-                                    { Service::DeviceInformation, Service::Characteristic::FirmwareRevisionString },
-                                    { Service::DeviceInformation, Service::Characteristic::SoftwareRevisionString },
-                                    { Service::DeviceInformation, Service::Characteristic::ManufacturerNameString },
-                                    { Service::BatteryService, Service::Characteristic::BatteryLevel }
-                                };
-
-                                _adminLock.Lock();
-
-                                _reportHandles.clear();
-                                _handles.clear();
-                                _handlers.clear();
-
-                                for (auto uuids : uuidsList) {
-                                    Bluetooth::UUID serviceUuid = Bluetooth::UUID(uuids.first);
-                                    Bluetooth::UUID characteristicUuid = Bluetooth::UUID(uuids.second);
-                                    const Bluetooth::Profile::Service* service = _profile[serviceUuid];
-                                    if (service != nullptr) {
-                                        Bluetooth::Profile::Service::Iterator characteristicIdx = service->Characteristics();
-                                        while (characteristicIdx.Next() == true) {
-                                            const Bluetooth::Profile::Service::Characteristic& characteristic(characteristicIdx.Current());
-                                            if (characteristic == characteristicUuid) {
-                                                _handles.emplace_back(serviceUuid, characteristicUuid, characteristic.Handle());
-                                                TRACE(Flow, (_T("Characteristic '%s' available at handle %04x"), characteristic.Name().c_str(), characteristic.Handle()));
-                                            }
-                                        }
-                                    }
-                                }
-
-                                for (auto entry : _subscribers) {
-                                    const Bluetooth::Profile::Service* service = _profile[std::get<0>(entry)];
-                                    if (service != nullptr) {
-                                        Bluetooth::Profile::Service::Iterator characteristicIdx = service->Characteristics();
-                                        while (characteristicIdx.Next() == true) {
-                                            const Bluetooth::Profile::Service::Characteristic& characteristic(characteristicIdx.Current());
-                                            if (characteristic == std::get<1>(entry)) {
-                                                TRACE(Flow, (_T("Subscriber requested characteristic '%s' available at handle %04X"), characteristic.Name().c_str(), characteristic.Handle()));
-                                                using Descriptor = Bluetooth::Profile::Service::Characteristic::Descriptor;
-                                                const Bluetooth::Profile::Service::Characteristic::Descriptor* desc = characteristic[Descriptor::ClientCharacteristicConfiguration];
-                                                if (desc != nullptr) {
-                                                    _handlers.emplace(characteristic.Handle(), std::make_pair(std::get<2>(entry), std::get<3>(entry)));
-                                                    _reportHandles.push_back(desc->Handle());
-                                                    if (std::find(_handles.begin(), _handles.end(), std::make_tuple(std::get<0>(entry), std::get<1>(entry), characteristic.Handle())) == _handles.end()) {
-                                                        _handles.emplace_back(std::get<0>(entry), std::get<1>(entry), characteristic.Handle());
-                                                    }
-                                                } else {
-                                                    TRACE(Flow, (_T("Characteristic '%s' does not include a CCCD"), characteristic.Name().c_str()));
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                _adminLock.Unlock();
-
-                                if (_reportHandles.size() > 0) {
-                                    uint16_t val = htobs(1);
-                                    _command.Write(_reportHandles.front(), sizeof(val), reinterpret_cast<const uint8_t*>(&val));
-                                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                                        EnableEvents(cmd);
-                                    });
-                                }
-
-                                _parent->RemoteBonded(*this);
-                            }
-                        }
-                        else {
-                            TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
-                        }
-                    });
-                } else {
-                    if (_deviceInfoRead == false) {
-                        _deviceInfoRead = true;
-                        ReadModelNumber();
-                    } else {
-                        ReadBatteryLevel();
-                    }
-                }
-            }
-
-            void DumpProfile() const
-            {
-                Bluetooth::Profile::Iterator serviceIdx = _profile.Services();
-                while (serviceIdx.Next() == true) {
-                    const Bluetooth::Profile::Service& service = serviceIdx.Current();
-                    TRACE(Flow, (_T("[0x%04X] Service: [0x%04X]         %s"), service.Handle(), service.Max(), service.Name().c_str()));
-
-                    Bluetooth::Profile::Service::Iterator characteristicIdx = service.Characteristics();
-                    while (characteristicIdx.Next() == true) {
-                        const Bluetooth::Profile::Service::Characteristic& characteristic(characteristicIdx.Current());
-                        TRACE(Flow, (_T("[0x%04X]    Characteristic [0x%02X]: %s [%d]"), characteristic.Handle(), characteristic.Rights(), characteristic.Name().c_str(), characteristic.Error()));
-
-                        Bluetooth::Profile::Service::Characteristic::Iterator descriptorIdx = characteristic.Descriptors();
-                        while (descriptorIdx.Next() == true) {
-                            const Bluetooth::Profile::Service::Characteristic::Descriptor& descriptor(descriptorIdx.Current());
-                            TRACE(Flow, (_T("[0x%04X]       Descriptor:         %s"), descriptor.Handle(), descriptor.Name().c_str()));
-                        }
-                    }
-                }
-            }
-
-            void EnableEvents(const GATTSocket::Command& cmd)
-            {
-                if ((cmd.Error() != Core::ERROR_NONE) || (cmd.Result().Error() != 0) ) {
-                    TRACE(Flow, (_T("Failed to enable reporting on handle 0x%04X [%d]"), _reportHandles.front(), cmd.Result().Error()));
-                }
-                else {
-                    TRACE(Flow, (_T("Enabled reporting on handle 0x%04X"), _reportHandles.front()));
-                }
-
-                _reportHandles.pop_front();
-
-                if (_reportHandles.size() > 0) {
-                    uint16_t val = htobs(1);
-                    _command.Write(_reportHandles.front(), sizeof(val), reinterpret_cast<const uint8_t*>(&val));
-                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                        EnableEvents(cmd);
-                    });
-                } else {
-                    ReadModelNumber();
-                }
-            }
-
-
-            uint16_t FindHandle(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid) const
-            {
-                uint16_t handle = 0;
-                auto it = std::find_if(_handles.begin(), _handles.end(), [&](const std::tuple<Bluetooth::UUID, Bluetooth::UUID, uint16_t>& val) {
-                    return ((serviceUuid == std::get<0>(val)) && (charUuid == std::get<1>(val)));
-                });
-                if (it != _handles.end()) {
-                    handle = std::get<2>(*it);
-                }
-                return (handle);
-            };
-
-            void ReadModelNumber()
-            {
-                uint16_t modelNumberHandle = FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::ModelNumberString);
-                if (modelNumberHandle != 0) {
-                    _command.Read(modelNumberHandle);
-                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                        if ((cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) && (cmd.Result().Length() >= 1)) {
-                            _modelNumber = string(reinterpret_cast<const char*>(cmd.Result().Data()), cmd.Result().Length());
-                            TRACE(Trace::Information, (_T("ModelNumber: %s"), _modelNumber.c_str()));
-                        } else {
-                            TRACE(Flow, (_T("Failed to read model name")));
-                        }
-
-                        ReadSerialNumber();
-                    });
-                } else {
-                    TRACE(Flow, (_T("ModelNumberString characteristic not available")));
-                    ReadSerialNumber();
-                }
-            }
-
-            void ReadSerialNumber()
-            {
-                uint16_t serialNumberHandle = FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::SerialNumberString);
-                if (serialNumberHandle != 0) {
-                    _command.Read(serialNumberHandle);
-                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                        if ((cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) && (cmd.Result().Length() >= 1)) {
-                            Core::ToHexString(cmd.Result().Data(), cmd.Result().Length(), _serialNumber);
-                            TRACE(Flow, (_T("SerialNumber: %s"), _serialNumber.c_str()));
-                        } else {
-                            TRACE(Flow, (_T("Failed to read serial number")));
-                        }
-
-                        ReadFirmwareRevision();
-                    });
-                } else {
-                    TRACE(Flow, (_T("SerialNumberString characteristic not available")));
-                    ReadFirmwareRevision();
-                }
-            }
-
-            void ReadFirmwareRevision()
-            {
-                uint16_t firmwareRevisionHandle = FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::FirmwareRevisionString);
-                if (firmwareRevisionHandle != 0) {
-                    _command.Read(firmwareRevisionHandle);
-                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                        if ((cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) && (cmd.Result().Length() >= 1)) {
-                            _firmwareRevision = string(reinterpret_cast<const char*>(cmd.Result().Data()), cmd.Result().Length());
-                            TRACE(Trace::Information, (_T("FirmwareRevision: %s"), _firmwareRevision.c_str()));
-                        } else {
-                            TRACE(Flow, (_T("Failed to read firmware revision")));
-                        }
-
-                        ReadSoftwareRevision();
-                    });
-                } else {
-                    TRACE(Flow, (_T("FirmwareRevisionString characteristic not available")));
-                    ReadSoftwareRevision();
-                }
-            }
-
-            void ReadSoftwareRevision()
-            {
-                uint16_t softwareRevisionHandle = FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::SoftwareRevisionString);
-                if (softwareRevisionHandle != 0) {
-                    _command.Read(softwareRevisionHandle);
-                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                        if ((cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) && (cmd.Result().Length() >= 1)) {
-                            _softwareRevision = string(reinterpret_cast<const char*>(cmd.Result().Data()), cmd.Result().Length());
-                            TRACE(Flow, (_T("SoftwareRevision: %s"), _softwareRevision.c_str()));
-                        } else {
-                            TRACE(Flow, (_T("Failed to read software revision")));
-                        }
-
-                        ReadManufacturerName();
-                    });
-                } else {
-                    TRACE(Flow, (_T("SoftwareRevisionString characteristic not available")));
-                    ReadManufacturerName();
-                }
-            }
-
-            void ReadManufacturerName()
-            {
-                uint16_t manufacturerNameHandle = FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::ManufacturerNameString);
-                if (manufacturerNameHandle != 0) {
-                    _command.Read(manufacturerNameHandle);
-                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                        if ((cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) && (cmd.Result().Length() >= 1)) {
-                            _manufacturerName = string(reinterpret_cast<const char*>(cmd.Result().Data()), cmd.Result().Length());
-                            TRACE(Flow, (_T("ManufacturerName: %s"), _manufacturerName.c_str()));
-                        } else {
-                            TRACE(Flow, (_T("Failed to read manufacturer name")));
-                        }
-
-                        ReadBatteryLevel();
-                    });
-                } else {
-                    TRACE(Flow, (_T("ManufacturerNameString characteristic not available")));
-                    ReadBatteryLevel();
-                }
-            }
-
-            void ReadBatteryLevel()
-            {
-                uint16_t batteryLevelHandle = FindHandle(Bluetooth::Profile::Service::BatteryService, Bluetooth::Profile::Service::Characteristic::BatteryLevel);
-                if (batteryLevelHandle != 0) {
-                    _command.Read(batteryLevelHandle);
-                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
-                        if ((cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) && (cmd.Result().Length() >= 1)) {
-                            _batteryLevel = cmd.Result().Data()[0];
-                            TRACE(Flow, (_T("Battery level is %i%%"), _batteryLevel));
-                            _parent->event_batterylevelchange(_batteryLevel);
-                        } else {
-                            TRACE(Flow, (_T("Failed to retrieve battery level")));
-                        }
-                    });
-                } else {
-                    TRACE(Flow, (_T("BatteryLevel characteristic not available")));
-                }
-            }
-
-            void Updated()
-            {
-                _adminLock.Lock();
-                if (_device != nullptr) {
-                    if ((_device->IsConnected() == true) && (IsOpen() == false)) {
-                        TRACE(Trace::Information, (_T("Connecting GATT socket [%s]"), _device->RemoteId().c_str()));
-                        uint32_t result = GATTSocket::Open(5000);
-                        if (result != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, (_T("Failed to open GATT socket [%s]"), _device->RemoteId().c_str()));
-                        }
-                    } else if (_device->IsValid() == true) {
-                        if (IsOpen() == true) {
-                            TRACE(Trace::Information, (_T("Disconnecting GATT socket [%s]"), _device->RemoteId().c_str()));
-                            uint32_t result = GATTSocket::Close(Core::infinite);
-                            if (result != Core::ERROR_NONE) {
-                                TRACE(Trace::Error, (_T("Failed to close GATT socket [%s]"), _device->RemoteId().c_str()));
-                            }
-                        }
-                    } else {
-                        TRACE(Flow, (_T("Releasing device")));
-                        _device->Release();
-                        _device = nullptr;
-                    }
-                }
-                _adminLock.Unlock();
-            }
-
-        private:
-            Core::CriticalSection _adminLock;
-            Bluetooth::Profile _profile;
-            Command _command;
-            Exchange::IBluetooth::IDevice* _device;
-            Core::Sink<Sink> _sink;
-            BluetoothRemoteControl* _parent;
-            string _name;
-            string _modelNumber;
-            string _serialNumber;
-            string _firmwareRevision;
-            string _softwareRevision;
-            string _manufacturerName;
-            uint8_t _batteryLevel;
-            bool _deviceInfoRead;
-            std::list<uint16_t> _reportHandles;
-            std::list<std::tuple<Bluetooth::UUID, Bluetooth::UUID, uint16_t>> _handles;
-            std::list<std::tuple<Bluetooth::UUID, Bluetooth::UUID, IGattNotificationHandler*, uint32_t>> _subscribers;
-            std::map<uint16_t, std::pair<IGattNotificationHandler*, uint32_t>> _handlers;
-        }; // class GATTRemote
-
-        class HidHandler : public Core::IDispatch
-                         , public Exchange::IKeyProducer
-                         , public IGattNotificationHandler {
-        public:
-            HidHandler(const HidHandler &) = delete;
-            HidHandler &operator=(const HidHandler &) = delete;
-            HidHandler(BluetoothRemoteControl* parent)
-                : _parent(parent)
-                , _remote(nullptr)
-                , _pressed(false)
-                , _scancode(0)
-                , _currentKey(0)
-                , _map()
-                , _keyHandler(nullptr)
-                , _adminLock()
-            {
-                ASSERT(_parent != nullptr);
-            }
-            ~HidHandler() override
-            {
-            }
-
-        public:
-            uint32_t Initialize(GATTRemote* remote)
-            {
-                uint32_t result = Core::ERROR_GENERAL;
-                _adminLock.Lock();
-                ASSERT(remote != nullptr);
-                ASSERT(_remote == nullptr);
-                if ((remote != nullptr) && (_remote == nullptr)) {
-                    _remote = remote;
-                    _remote->AddHandler(Bluetooth::Profile::Service::HumanInterfaceDevice, Bluetooth::Profile::Service::Characteristic::Report, this);
-                    _map = _remote->Name();
-                    result = Core::ERROR_NONE;
-                }
-                _adminLock.Unlock();
-                return (result);
-            }
-
-            uint32_t Deinitialize()
-            {
-                uint32_t result = Core::ERROR_GENERAL;
-                _adminLock.Lock();
-                ASSERT(_remote != nullptr);
-                if (_remote != nullptr) {
-                    _remote->AddHandler(Bluetooth::Profile::Service::HumanInterfaceDevice, Bluetooth::Profile::Service::Characteristic::Report, this);
-                    _remote = nullptr;
-                    result = Core::ERROR_NONE;
-                }
-                _adminLock.Unlock();
-                return (result);
-            }
-
-            bool Notification(const uint32_t cookie, const uint8_t buffer[], const uint16_t length) override
-            {
-                if (length >= 2) {
-                    uint16_t scancode = ((buffer[1] << 8) | buffer[0]);
-                    bool pressed = (scancode != 0);
-
-                    if (pressed == true) {
-                        _currentKey = scancode;
-                    }
-
-                    if (_currentKey != 0) {
-                        KeyEvent(pressed, _currentKey);
-                    }
-
-                    return (true);
-                }
-
-                return (false);
-            }
-
-        public:
             // IKeyProducer methods
             const TCHAR* Name() const override
             {
-                return _map.c_str();
+                return _name.c_str();
             }
 
             bool Pair() override
@@ -793,488 +422,382 @@ namespace Plugin {
             {
             }
 
-            void Dispatch() override
+            string Address() const
             {
-                Exchange::IKeyHandler* keyhandler = nullptr;
-
-                _adminLock.Lock();
-                if (_keyHandler != nullptr) {
-                    keyhandler = _keyHandler;
-                    keyhandler->AddRef();
-                }
-                _adminLock.Unlock();
-
-                if (keyhandler != nullptr) {
-                    keyhandler->KeyEvent(_pressed, _scancode, _map);
-                    keyhandler->Release();
-                }
+                return (_device != nullptr? _device->RemoteId() : _T("<unassigned>"));
             }
 
-            BEGIN_INTERFACE_MAP(HidHandler)
-                INTERFACE_ENTRY(Exchange::IKeyProducer)
-            END_INTERFACE_MAP
+            string ModelNumber() const
+            {
+                return (_modelNumber);
+            }
+
+            string SerialNumber() const
+            {
+                return (_serialNumber);
+            }
+
+            string FirmwareRevision() const
+            {
+                return (_firmwareRevision);
+            }
+
+            string SoftwareRevision() const
+            {
+                return (_softwareRevision);
+            }
+
+            string ManufacturerName() const
+            {
+                return (_manufacturerName);
+            }
+
+            uint8_t BatteryLevel() const
+            {
+                return (_batteryLevel);
+            }
 
         private:
-            void KeyEvent(bool pressed, uint16_t scancode)
+            void Notification(const uint16_t handle, const uint8_t dataFrame[], const uint16_t length) override
             {
-                TRACE(Trace::Information, (_T("Received a keypress notification: code=%i, state=%s, keymap='%s'"), _currentKey, (pressed? _T("pressed") : _T("released")), _map.c_str()));
+                // Decouple the notfications from the communciator thread, they will pop-up and need to be handled
+                // by the Message method!
+                _decoupling.Submit(handle, static_cast<uint8_t>(length), dataFrame);
+                WorkerPool::Instance::Submit(Core::ProxyType<IDispatch>(_decoupling));
+            }
+
+            void Message(const uint16_t handle, const uint8_t length, const uint8_t buffer[])
+            {
                 _adminLock.Lock();
-                if ((scancode != 0) && (_keyHandler != nullptr)) {
-                    _pressed = pressed;
-                    _scancode = scancode;
-                    PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
+
+                if (handle == _voiceDataHandle) {
+                }
+                else if ( (handle == _keyDataHandle) && (length >= 2) ) {
+                    uint16_t scancode = ((buffer[1] << 8) | buffer[0]);
+                    bool pressed = (scancode != 0);
+
+                    if (pressed == true) {
+                        _currentKey = scancode;
+                    }
+
+                    if (_keyhandler != nullptr) {
+                        _keyhandler->KeyEvent(pressed, _scancode, _name);
+                    }
+
+                    TRACE(Trace::Information, (_T("Received a keypress notification: code=%i, state=%s, keymap='%s'"), _currentKey, (pressed? _T("pressed") : _T("released")), _name.c_str()));
+                }
+                else if (handle == _voiceCommandHandle) {
+                }
+                else if ( (handle == _batteryLevelHandle) && (length >= 1) ) {
+                    _batteryLevel = dataFrame[0];
+                    event_batterylevelchange(_batteryLevel);
+                    TRACE(Flow, (_T("Battery level is %i%%"), _batteryLevel));
                 }
                 _adminLock.Unlock();
             }
 
-        private:
-            BluetoothRemoteControl* _parent;
-            GATTRemote* _remote;
-            bool _pressed;
-            uint16_t _scancode;
-            uint16_t _currentKey;
-            string _map;
-            Exchange::IKeyHandler* _keyHandler;
-            mutable Core::CriticalSection _adminLock;
-        }; // class HidHandler
-
-        class BatteryLevelHandler : public IGattNotificationHandler {
-        public:
-            BatteryLevelHandler(const BatteryLevelHandler &) = delete;
-            BatteryLevelHandler &operator=(const BatteryLevelHandler &) = delete;
-            BatteryLevelHandler(BluetoothRemoteControl* parent)
-                : _adminLock()
-                , _parent(parent)
-                , _remote(nullptr)
-                , _level(~0)
+            bool Initialize() override
             {
-                ASSERT(_parent != nullptr);
-            }
-            ~BatteryLevelHandler() override
-            {
+                return (Security(BT_SECURITY_LOW));
             }
 
-        public:
-            uint32_t Initialize(GATTRemote* remote)
+            void Operational() override
             {
-                uint32_t result = Core::ERROR_GENERAL;
-                _adminLock.Lock();
-                ASSERT(remote != nullptr);
-                ASSERT(_remote == nullptr);
-                if ((remote != nullptr) && (_remote == nullptr)) {
-                    _remote = remote;
-                    _remote->AddHandler(Bluetooth::Profile::Service::BatteryService, Bluetooth::Profile::Service::Characteristic::BatteryLevel, this);
-                    result = Core::ERROR_NONE;
+                TRACE(Flow, (_T("The received MTU: %d"), MTU()));
+
+                if (_profile == nullptr) {
+                    // No need to do service discovery if device knows the Handles to use. If so, DeviceDiscovery has 
+                    // already been done and the only thing we need to do is get the startingvalues :-)
+                    ReadBatteryLevel();
                 }
-                _adminLock.Unlock();
-                return (result);
-            }
+                else {
+                    _profile->Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
+                        if (result == Core::ERROR_NONE) {
 
-            uint32_t Deinitialize()
-            {
-                uint32_t result = Core::ERROR_GENERAL;
-                _adminLock.Lock();
-                ASSERT(_remote != nullptr);
-                if (_remote != nullptr) {
-                    _remote->RemoveHandler(Bluetooth::Profile::Service::BatteryService, Bluetooth::Profile::Service::Characteristic::BatteryLevel, this);
-                    _remote = nullptr;
-                    result = Core::ERROR_NONE;
+                            DumpProfile();
+
+                            if (_profile[Bluetooth::UUID(HID_UUID)] == nullptr) {
+                                TRACE(Flow, (_T("The given bluetooth device does not support a HID service!!")));
+                            }
+                            else {
+                                ReadModelNumber();
+                            }
+                        }
+                        else {
+                            TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
+                        }
+                    });
                 }
-                _adminLock.Unlock();
-                return (result);
             }
 
-            void Level(const uint8_t level)
+            void ReadModelNumber()
             {
-                TRACE(Trace::Information, (_T("Remote control battery level is %i%%"), level));
-                _level = level;
-                _parent->event_batterylevelchange(level);
-            }
+                ASSERT (_profile != nullptr);
 
-            uint8_t Level() const
-            {
-                if (_level == static_cast<uint8_t>(~0)) {
-                    return (_remote->BatteryLevel());
+                uint16_t modelNumberHandle = _profile->FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::ModelNumberString);
+                if (modelNumberHandle != 0) {
+                    _command.Read(modelNumberHandle);
+                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
+                        if ((cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) && (cmd.Result().Length() >= 1)) {
+                            _modelNumber = string(reinterpret_cast<const char*>(cmd.Result().Data()), cmd.Result().Length());
+                            TRACE(Trace::Information, (_T("ModelNumber: %s"), _modelNumber.c_str()));
+                        } else {
+                            TRACE(Flow, (_T("Failed to read model name")));
+                        }
+
+                        ReadSerialNumber();
+                    });
                 } else {
-                    return (_level);
+                    TRACE(Flow, (_T("ModelNumberString characteristic not available")));
+                    ReadSerialNumber();
                 }
             }
 
-            bool Notification(const uint32_t cookie, const uint8_t buffer[], const uint16_t length) override
+            void ReadSerialNumber()
             {
-                if (length >= 1) {
-                    Level(buffer[0]);
-                    return (true);
+                ASSERT (_profile != nullptr);
+
+                uint16_t serialNumberHandle = _profile->FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::SerialNumberString);
+                if (serialNumberHandle != 0) {
+                    _command.Read(serialNumberHandle);
+                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
+                        if ((cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) && (cmd.Result().Length() >= 1)) {
+                            Core::ToHexString(cmd.Result().Data(), cmd.Result().Length(), _serialNumber);
+                            TRACE(Flow, (_T("SerialNumber: %s"), _serialNumber.c_str()));
+                        } else {
+                            TRACE(Flow, (_T("Failed to read serial number")));
+                        }
+
+                        ReadFirmwareRevision();
+                    });
+                } else {
+                    TRACE(Flow, (_T("SerialNumberString characteristic not available")));
+                    ReadFirmwareRevision();
                 }
-                return (false);
             }
 
-        private:
-            mutable Core::CriticalSection _adminLock;
-            BluetoothRemoteControl* _parent;
-            GATTRemote* _remote;
-            uint8_t _level;
-        }; // class BatteryLevelHandler
-
-        class AudioHandler : public IGattNotificationHandler {
-        private:
-            enum : uint32_t {
-                COMMAND_EVENT,
-                DATA_EVENT
-            };
-
-        public:
-            class Config : public Core::JSON::Container {
-            public:
-                struct AudioprofileData : public JsonData::BluetoothRemoteControl::AudioprofileData
-                {
-                    AudioprofileData()
-                        : JsonData::BluetoothRemoteControl::AudioprofileData()
-                    {
-                    }
-
-                    ~AudioprofileData() = default;
-
-                    AudioprofileData(const AudioprofileData& other)
-                        : JsonData::BluetoothRemoteControl::AudioprofileData()
-                    {
-                        Name = other.Name;
-                        Codec = other.Codec;
-                        Channels = other.Channels;
-                        Rate = other.Rate;
-                        Resolution = other.Resolution;
-                    }
-
-                    AudioprofileData& operator=(const AudioprofileData& rhs)
-                    {
-                        Name = rhs.Name;
-                        Codec = rhs.Codec;
-                        Channels = rhs.Channels;
-                        Rate = rhs.Rate;
-                        Resolution = rhs.Resolution;
-
-                        return (*this);
-                    }
-
-                };
-
-            public:
-                Config(const Config&) = delete;
-                Config& operator=(const Config&) = delete;
-                Config()
-                    : Core::JSON::Container()
-                    , ServiceUUID()
-                    , CommandUUID()
-                    , DataUUID()
-                    , Profiles()
-                {
-                    Add(_T("serviceuuid"), &ServiceUUID);
-                    Add(_T("commanduuid"), &CommandUUID);
-                    Add(_T("datauuid"), &DataUUID);
-                    Add(_T("profiles"), &Profiles);
-                }
-                ~Config()
-                {
-                }
-
-            public:
-                Core::JSON::String ServiceUUID;
-                Core::JSON::String CommandUUID;
-                Core::JSON::String DataUUID;
-                Core::JSON::ArrayType<AudioprofileData> Profiles;
-            };
-
-        public:
-            AudioHandler(const AudioHandler &) = delete;
-            AudioHandler &operator=(const AudioHandler &) = delete;
-            AudioHandler(BluetoothRemoteControl* parent)
-                : _adminLock()
-                , _parent(parent)
-                , _config()
-                , _remote(nullptr)
-                , _commandHandle(0)
-                , _dataHandle(0)
-                , _seq(0)
-                , _stepIdx(0)
-                , _pred(0)
-                , _intSeq(0)
-                , _skip(true)
-                , _eot(true)
+            void ReadFirmwareRevision()
             {
-                ASSERT(parent != nullptr);
-            }
-            ~AudioHandler() override
-            {
+                ASSERT (_profile != nullptr);
+
+                uint16_t firmwareRevisionHandle = _profile->FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::FirmwareRevisionString);
+                if (firmwareRevisionHandle != 0) {
+                    _command.Read(firmwareRevisionHandle);
+                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
+                        if ((cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) && (cmd.Result().Length() >= 1)) {
+                            _firmwareRevision = string(reinterpret_cast<const char*>(cmd.Result().Data()), cmd.Result().Length());
+                            TRACE(Trace::Information, (_T("FirmwareRevision: %s"), _firmwareRevision.c_str()));
+                        } else {
+                            TRACE(Flow, (_T("Failed to read firmware revision")));
+                        }
+
+                        ReadSoftwareRevision();
+                    });
+                } else {
+                    TRACE(Flow, (_T("FirmwareRevisionString characteristic not available")));
+                    ReadSoftwareRevision();
+                }
             }
 
-        public:
-            uint32_t Initialize(GATTRemote* remote, const string& configuration)
+            void ReadSoftwareRevision()
             {
-                uint32_t result = Core::ERROR_GENERAL;
+                ASSERT (_profile != nullptr);
+
+                uint16_t softwareRevisionHandle = _profile->FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::SoftwareRevisionString);
+                if (softwareRevisionHandle != 0) {
+                    _command.Read(softwareRevisionHandle);
+                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
+                        if ((cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) && (cmd.Result().Length() >= 1)) {
+                            _softwareRevision = string(reinterpret_cast<const char*>(cmd.Result().Data()), cmd.Result().Length());
+                            TRACE(Flow, (_T("SoftwareRevision: %s"), _softwareRevision.c_str()));
+                        } else {
+                            TRACE(Flow, (_T("Failed to read software revision")));
+                        }
+
+                        ReadManufacturerName();
+                    });
+                } else {
+                    TRACE(Flow, (_T("SoftwareRevisionString characteristic not available")));
+                    ReadManufacturerName();
+                }
+            }
+
+            void ReadManufacturerName()
+            {
+                ASSERT (_profile != nullptr);
+
+                uint16_t manufacturerNameHandle = _profile->FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::ManufacturerNameString);
+                if (manufacturerNameHandle != 0) {
+                    _command.Read(manufacturerNameHandle);
+                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
+                        if ((cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) && (cmd.Result().Length() >= 1)) {
+                            _manufacturerName = string(reinterpret_cast<const char*>(cmd.Result().Data()), cmd.Result().Length());
+                            TRACE(Flow, (_T("ManufacturerName: %s"), _manufacturerName.c_str()));
+                        } else {
+                            TRACE(Flow, (_T("Failed to read manufacturer name")));
+                        }
+                        EnableEvents();
+                    });
+                } else {
+                    TRACE(Flow, (_T("ManufacturerNameString characteristic not available")));
+                    EnableEvents();
+                }
+            }
+
+            void EnableEvents() {
+
+                uint16_t val = htobs(1);
+
+                ASSERT (_profile != nullptr);
+
+                // Set all interesting handles...
+                if (_keysDataHandle == static_cast<uint16_t>(~0)) {
+                    _keysDataHandle = _profile->FindHandle(Bluetooth::Profile::Service::BatteryService, Bluetooth::Profile::Service::Characteristic::BatteryLevel);
+                    EnableEvents(_T("Key handling"), _keyDataHandle);
+                }
+                else if (_batteryLevelHandle == static_cast<uint16_t>(~0)) {
+                    _batteryLevelHandle = _profile->FindHandle(Bluetooth::Profile::Service::BatteryService, Bluetooth::Profile::Service::Characteristic::BatteryLevel);
+                    EnableEvents(_T("Battery handling"), _batteryLevelHandle);
+                }
+                else if (_voiceCommandHandle == static_cast<uint16_t>(~0)) {
+                    _voiceCommandHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceCommandChar);
+                    EnableEvents(_T("Voice Command handling"), _voiceCommandHandle);
+                }
+                else if (_voiceDataHandle == static_cast<uint16_t>(~0)) {
+                    _voiceDataHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceDataChar);
+                    EnableEvents(_T("Voice Data handling"), _voiceDataHandle);
+                }
+                else {
+                    // We are done with the profile, all is read, all is set, we hope :-) Time
+                    // to register what we did.
+                    ReadBatteryLevel();
+                }
+            }
+
+            void EnableEvents(const TCHAR* message, const uint16_t handle)
+            {
+                if (_handle == 0) {
+                    TRACE(Flow, (_T("There is no notification for X [%d]"), _reportHandles.front(), cmd.Result().Error()));
+                    EnableEvents();
+                }
+                else {
+                    _command.Write(handle, sizeof(val), reinterpret_cast<const uint8_t*>(&val));
+                    Execute(CommunicationTimeOut, _command, [&](handle) {
+                        if ((_command.Error() != Core::ERROR_NONE) || (_command.Result().Error() != 0) ) {
+                            TRACE(Flow, (_T("Failed to enable reporting on handle 0x%04X [%d]"), _reportHandles.front(), cmd.Result().Error()));
+                        }
+                        else {
+                            TRACE(Flow, (_T("Enabled reporting on handle 0x%04X"), _reportHandles.front()));
+                        }
+                        EnableEvents();
+                   });
+                }
+            }
+
+            void ReadBatteryLevel()
+            {
+                if (_batteryLevelHandle != 0) {
+                    _command.Read(batteryLevelHandle);
+                    Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
+                        if ((cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) && (cmd.Result().Length() >= 1)) {
+                            _batteryLevel = cmd.Result().Data()[0];
+                            event_batterylevelchange(_batteryLevel);
+                            TRACE(Flow, (_T("Battery level is %i%%"), _batteryLevel));
+                        } else {
+                            TRACE(Flow, (_T("Failed to retrieve battery level")));
+                        }
+                    });
+                } else {
+                    TRACE(Flow, (_T("BatteryLevel characteristic not available")));
+                }
+            }
+
+            void Updated()
+            {
                 _adminLock.Lock();
-                ASSERT(remote != nullptr);
-                ASSERT(_remote == nullptr);
-                if ((remote != nullptr) && (_remote == nullptr)) {
-                    _remote = remote;
+                if (_device != nullptr) {
+                    if ((_device->IsConnected() == true) && (IsOpen() == false)) {
+                        TRACE(Trace::Information, (_T("Connecting GATT socket [%s]"), _device->RemoteId().c_str()));
+                        uint32_t result = GATTSocket::Open(5000);
+                        if (result != Core::ERROR_NONE) {
+                            TRACE(Trace::Error, (_T("Failed to open GATT socket [%s]"), _device->RemoteId().c_str()));
+                        }
+                    } else if (_device->IsValid() == true) {
+                        if (IsOpen() == true) {
+                            TRACE(Trace::Information, (_T("Disconnecting GATT socket [%s]"), _device->RemoteId().c_str()));
+                            uint32_t result = GATTSocket::Close(Core::infinite);
+                            if (result != Core::ERROR_NONE) {
+                                TRACE(Trace::Error, (_T("Failed to close GATT socket [%s]"), _device->RemoteId().c_str()));
+                            }
+                        }
+                    } else {
+                        TRACE(Flow, (_T("Releasing device")));
+                        _device->Release();
+                        _device = nullptr;
+                    }
+                }
+                _adminLock.Unlock();
+            }
 
-                    if (_config.FromString(configuration) == true) {
-                        AUDIO_SERVICE_UUID = Bluetooth::UUID(_config.ServiceUUID.Value());
-                        AUDIO_COMMAND_UUID = Bluetooth::UUID(_config.CommandUUID.Value());
-                        AUDIO_DATA_UUID = Bluetooth::UUID(_config.DataUUID.Value());
+            void DumpProfile() const
+            {
+                Bluetooth::Profile::Iterator serviceIdx = _profile.Services();
+                while (serviceIdx.Next() == true) {
+                    const Bluetooth::Profile::Service& service = serviceIdx.Current();
+                    TRACE(Flow, (_T("[0x%04X] Service: [0x%04X]         %s"), service.Handle(), service.Max(), service.Name().c_str()));
 
-                        if ((AUDIO_SERVICE_UUID.IsValid() == true) && (AUDIO_COMMAND_UUID.IsValid() == true) && (AUDIO_DATA_UUID.IsValid() == true)) {
-                            _remote->AddHandler(AUDIO_SERVICE_UUID, AUDIO_COMMAND_UUID, this, COMMAND_EVENT);
-                            _remote->AddHandler(AUDIO_SERVICE_UUID, AUDIO_DATA_UUID, this, DATA_EVENT);
+                    Bluetooth::Profile::Service::Iterator characteristicIdx = service.Characteristics();
+                    while (characteristicIdx.Next() == true) {
+                        const Bluetooth::Profile::Service::Characteristic& characteristic(characteristicIdx.Current());
+                        TRACE(Flow, (_T("[0x%04X]    Characteristic [0x%02X]: %s [%d]"), characteristic.Handle(), characteristic.Rights(), characteristic.Name().c_str(), characteristic.Error()));
+
+                        Bluetooth::Profile::Service::Characteristic::Iterator descriptorIdx = characteristic.Descriptors();
+                        while (descriptorIdx.Next() == true) {
+                            const Bluetooth::Profile::Service::Characteristic::Descriptor& descriptor(descriptorIdx.Current());
+                            TRACE(Flow, (_T("[0x%04X]       Descriptor:         %s"), descriptor.Handle(), descriptor.Name().c_str()));
                         }
                     }
-
-                    result = Core::ERROR_NONE;
                 }
-                _adminLock.Unlock();
-                return (result);
-            }
-
-            bool Deinitialize()
-            {
-                uint32_t result = Core::ERROR_GENERAL;
-                _adminLock.Lock();
-                ASSERT(_remote != nullptr);
-                if (_remote != nullptr) {
-                    _remote->RemoveHandler(AUDIO_SERVICE_UUID, AUDIO_DATA_UUID, this);
-                    _remote->RemoveHandler(AUDIO_SERVICE_UUID, AUDIO_COMMAND_UUID, this);
-                    _remote = nullptr;
-                    result = Core::ERROR_NONE;
-                }
-                _adminLock.Unlock();
-                return (result);
-            }
-
-            bool Notification(const uint32_t event, const uint8_t dataFrame[], const uint16_t length) override
-            {
-                bool handled = false;
-
-                if ((event == DATA_EVENT) && (length == 5)) {
-                    const Header* hdr = reinterpret_cast<const Header*>(dataFrame);
-                    handled = true;
-                    _skip = false;
-                    _seq = hdr->seq;
-                    _stepIdx = hdr->step;
-                    _pred = btohs(hdr->pred);
-                    _compression = hdr->compression;
-                    if ((_seq == 0) || (_eot == true)) {
-                        _eot = false;
-                        string profile = (_compression? "adpcm-hq" : "pcm");
-                        // Audio transmission start event is delayed until the first header arrives
-                        AudioTransmission(profile);
-                    }
-                    _intSeq = _seq;
-                    _skip = false;
-                } else if ((event == DATA_EVENT) && (length == 1)) {
-                    handled = true;
-                    // uint8_t seq = dataFrame[0];
-                } else if ((event == DATA_EVENT) && (length != 5) && (length != 1)) {
-                    handled = true;
-                    if (_skip == false) {
-                        uint8_t *buf = reinterpret_cast<uint8_t*>(ALLOCA(length + sizeof(Preamble)));
-                        Preamble *preamble = reinterpret_cast<Preamble*>(buf);
-                        preamble->step = _stepIdx;
-                        preamble->pred = _pred;
-                        preamble->pad = 0;
-                        // Prepending the buffer with the preamble built from the header notification
-                        ::memcpy(buf + sizeof(Preamble), dataFrame, length);
-                        AudioFrame(_seq, buf, length + sizeof(Preamble));
-                        _skip = false;
-                    }
-                } else if ((event == COMMAND_EVENT) && (length >= 1)) {
-                    handled = true;
-                    if (dataFrame[0] == 0) {
-                        _eot = true;
-                        AudioTransmission();
-                    }
-                }
-
-                return (handled);
-            }
-
-            void AudioTransmission(const string& profile = "") const
-            {
-                TRACE(Trace::Information, (_T("Audio transmission: %s"), profile.empty() == false? profile.c_str() : "end"));
-                _parent->event_audiotransmission(profile);
-            }
-
-            void AudioFrame(const uint16_t seq, const uint8_t buffer[], const uint16_t length) const
-            {
-                // send original compressed data
-                string frame;
-                Core::ToString(buffer, length, true, frame);
-                _parent->event_audioframe(seq, frame);
-            }
-
-            const Config& Configuration() const
-            {
-                return _config;
             }
 
         private:
-            struct __attribute__((packed)) Header {
-                uint8_t seq;
-                uint8_t step;
-                uint16_t pred;
-                uint8_t compression;
-            };
+            BleutoothRemoteControl* _parent;
+            Core::CriticalSection _adminLock;
+            Profile* _profile;
+            GATTSocket::Command _command;
+            Bluetooth::IDevice* _device;
+            core::ProxyStore<Decoupling> _decoupling;
+            Core::Sink<Sink> _sink;
+ 
+            // The next section of information is coming from the config that
+            // was stored for this remote or it is read from the profile if
+            // this is the first reistration
+            string _name;
+            string _modelNumber;
+            string _serialNumber;
+            string _firmwareRevision;
+            string _softwareRevision;
+            string _manufacturerName;
 
-            struct __attribute__((packed)) Preamble {
-                // Conforms to MS IMA ADPCM preamble
-                uint16_t pred; // little-endian
-                uint8_t step;
-                uint8_t pad;
-            };
+            // If we are already registered, no need to read the profile as all
+            // is coming from the RemoteControl persistent storage file.
+            // The only thing that changes, and what should be read on each
+            // new creation is the bttery level as that will change over time :-)
+            uint8_t _batteryLevel;
 
-        private:
-            mutable Core::CriticalSection _adminLock;
-            BluetoothRemoteControl* _parent;
-            Config _config;
-            GATTRemote* _remote;
-            uint16_t _commandHandle;
-            uint16_t _dataHandle;
-            uint8_t _seq;
-            uint8_t _stepIdx;
-            uint8_t _pred;
-            uint8_t _compression;
-            uint8_t _intSeq;
-            bool _skip;
-            bool _eot;
+            // During the intial cretaion/subscribe of this RemoteControl, the
+            // handles that report keys, battery level and Voice (if applicable)
+            // are registsered. Remember these to trigger the right hadler if
+            // new data comes in.
+            uint16_t _keysDataHandle;
+            uint16_t _batteryLevelHandle;
+            uint16_t _voiceDataHandle;
+            uint16_t _voiceCommandHandle;
 
-            Bluetooth::UUID AUDIO_SERVICE_UUID;
-            Bluetooth::UUID AUDIO_COMMAND_UUID;
-            Bluetooth::UUID AUDIO_DATA_UUID;
-        }; //class AudioHandler
-
-    public:
-        BluetoothRemoteControl(const BluetoothRemoteControl&) = delete;
-        BluetoothRemoteControl& operator=(const BluetoothRemoteControl&) = delete;
-        BluetoothRemoteControl()
-            : _skipURL(0)
-            , _adminLock()
-            , _service(nullptr)
-            , _config()
-            , _gattRemote(nullptr)
-            , _inputHandler(PluginHost::InputHandler::Handler())
-            , _settingsPath()
-            , _hidHandler(Core::ProxyType<HidHandler>::Create(this))
-            , _batteryLevelHandler(this)
-            , _audioHandler(this)
-
-        {
-            ASSERT(_inputHandler != nullptr);
-            RegisterAll();
-        }
-
-        ~BluetoothRemoteControl() override
-        {
-            UnregisterAll();
-        }
-
-    public:
-        BEGIN_INTERFACE_MAP(BluetoothRemoteControl)
-            INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(PluginHost::IWeb)
-            INTERFACE_ENTRY(PluginHost::IDispatcher)
-            INTERFACE_ENTRY(Exchange::IKeyHandler)
-        END_INTERFACE_MAP
-
-    public:
-        //  IPlugin methods
-        const string Initialize(PluginHost::IShell* service) override;
-        void Deinitialize(PluginHost::IShell* service) override;
-        string Information() const override;
-
-        //  IWeb methods
-        void Inbound(Web::Request& request) override;
-        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
-
-        // IKeyHandler methods
-        uint32_t KeyEvent(const bool pressed, const uint32_t code, const string& mapName) override
-        {
-            return (_inputHandler->KeyEvent(pressed, code, mapName));
-        }
-
-        Exchange::IKeyProducer* Producer(const string& name) override
-        {
-            return (&(*_hidHandler));
-        }
-
-        void ProducerEvent(const string& /*producerName*/, const Exchange::ProducerEvents /*event*/) override
-        {
-        }
-
-    private:
-        class Config : public Core::JSON::Container {
-        public:
-            Config(const Config&) = delete;
-            Config& operator=(const Config&) = delete;
-            Config()
-                : Core::JSON::Container()
-                , BtCtlCallsign("BluetoothControl")
-                , DefaultKeymap("bluetooth")
-                , MTU(0)
-            {
-                Add(_T("btctl"), &BtCtlCallsign);
-                Add(_T("defaultkeymap"), &DefaultKeymap);
-                Add(_T("mtu"), &MTU);
-                Add(_T("audio"), &Audio);
-            }
-            ~Config()
-            {
-            }
-
-        public:
-            Core::JSON::String BtCtlCallsign;
-            Core::JSON::String DefaultKeymap;
-            Core::JSON::DecUInt16 MTU;
-            Core::JSON::String Audio;
-        };
-
-        class Settings : public Core::JSON::Container {
-        public:
-            Settings(const Settings&) = delete;
-            Settings& operator=(const Settings&) = delete;
-            Settings()
-                : Core::JSON::Container()
-                , Name()
-                , Address()
-                , Gatt()
-            {
-                Init();
-            }
-            Settings(const string& name, const string& address, const string& gatt)
-                : Core::JSON::Container()
-                , Name()
-                , Address()
-                , Gatt()
-            {
-                Init();
-                Name = name;
-                Address = address;
-                Gatt = gatt;
-            }
-            ~Settings()
-            {
-            }
-
-        private:
-            void Init()
-            {
-                Gatt.SetQuoted(false);
-                Add(_T("name"), &Name);
-                Add(_T("address"), &Address);
-                Add(_T("gatt"), &Gatt);
-            }
-
-        public:
-            Core::JSON::String Name;
-            Core::JSON::String Address;
-            Core::JSON::String Gatt;
+            // If we need to forward keys, this is the handler to where we should 
+            // forward them.
+            PluginHost::VirtualInput* _inputHandler;
+            Exchange::IVoiceHandler* _voiceHandler;
         };
 
     private:
@@ -1322,11 +845,7 @@ namespace Plugin {
         PluginHost::IShell* _service;
         Config _config;
         GATTRemote* _gattRemote;
-        PluginHost::VirtualInput* _inputHandler;
         string _settingsPath;
-        const Core::ProxyType<HidHandler> _hidHandler;
-        BatteryLevelHandler _batteryLevelHandler;
-        AudioHandler _audioHandler;
     }; // class BluetoothRemoteControl
 
 } //namespace Plugin

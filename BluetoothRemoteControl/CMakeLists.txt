@@ -12,6 +12,8 @@ set(PLUGIN_BLUETOOTHREMOTECONTROL_SUPPORT_PCM true CACHE BOOL "Support pcm audio
 add_library(${MODULE_NAME} SHARED
     BluetoothRemoteControl.cpp
     BluetoothRemoteControlJsonRpc.cpp
+    Administartor.cpp
+    T4HDecoders.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
