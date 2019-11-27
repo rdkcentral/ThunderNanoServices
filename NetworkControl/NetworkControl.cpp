@@ -462,12 +462,17 @@ namespace Plugin
             if (leaseFile.Open(true) == true) {
 
                 Core::JSON::ArrayType<DHCPClientImplementation::Offer::JSON> leases;
-                if (leases.IElement::FromFile(leaseFile) == true) {
+                Core::OptionalType<Core::JSON::Error> error;
+                if (leases.IElement::FromFile(leaseFile, error) == true) {
 
                     auto iterator = leases.Elements();
                     while (iterator.Next()) {
                         _client.AddOffer(iterator.Current().Get(), false);
                     }
+                }
+
+                if (error.IsSet() == true) {
+                    SYSLOG(Logging::ParsingError, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
                 }
 
                 leaseFile.Close();

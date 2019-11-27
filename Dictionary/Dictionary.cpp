@@ -94,7 +94,11 @@ namespace Plugin {
 
         if (dictionaryFile.Open(true) == true) {
             NameSpace dictionary;
-            dictionary.IElement::FromFile(dictionaryFile);
+            Core::OptionalType<Core::JSON::Error> error;
+            dictionary.IElement::FromFile(dictionaryFile, error);
+            if (error.IsSet() == true) {
+                SYSLOG(Logging::ParsingError, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
+            }
             CreateInternalDictionary(EMPTY_STRING, dictionary);
         }
 
