@@ -1,6 +1,4 @@
-#pragma once
-
-#Include "Administrator.h"
+#include "Administrator.h"
 
 namespace WPEFramework {
 
@@ -25,7 +23,7 @@ private:
     };
 
 public:
-    static constexpr Exchange::IVoiceProducer::codec DecoderType = Exchange::IVoiceProducer::codec::ADPCM;
+    static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::ADPCM;
 
 public:
     ADPCM() = delete;
@@ -44,16 +42,17 @@ public:
     uint32_t Dropped() const override {
         return (_dropped);
     }
-    void Reset(const string& /* config */) override {
+    void Reset() override {
         _frames = ~0;
         _dropped = 0;
     }
-    uint16_t Decode (const uint16_t lengthIn, const uint8_t dataIn, const uint16_t lengthOut, uint8_t dataOut) override {
+    uint16_t Decode (const uint16_t lengthIn, const uint8_t dataIn[], const uint16_t lengthOut, uint8_t dataOut[]) override
+    {
 
         uint16_t result = 0;
 
 	if (lengthIn == 5) {
-            const Header* hdr = reinterpret_cast<const Header*>(dataFrame);
+            const Header* hdr = reinterpret_cast<const Header*>(dataIn);
             _seq = hdr->seq;
             _stepIdx = hdr->step;
             _pred = btohs(hdr->pred);
@@ -61,11 +60,11 @@ public:
 
             if (_frames != static_cast<uint32_t>(~0)) {
                 // Is it a next frame, see if we dropped frames..
-                if (_seq > nextFrame) {
-                    _dropped += _seq - nextFrame;
+                if (_seq > _nextFrame) {
+                    _dropped += _seq - _nextFrame;
                 } 
-                else if (_seq < nextFrame) {
-                    _dropped += _seq + (WindowSize - nextFrame);
+                else if (_seq < _nextFrame) {
+                    _dropped += _seq + (WindowSize - _nextFrame);
                 }
                 _frames++;
             }
@@ -77,7 +76,7 @@ public:
         else if (lengthIn == 1) {
             // footer nothing to do
         }
-        else if (frames != static_cast<uint32>(~0)) {
+        else if (_frames != static_cast<uint32_t>(~0)) {
             ASSERT (lengthOut >= sizeof(Preamble));
 
             Preamble *preamble = reinterpret_cast<Preamble*>(dataOut);
@@ -88,8 +87,8 @@ public:
             result = std::min(static_cast<uint16_t>(lengthOut - sizeof(Preamble)), lengthIn);
 
             // Add the incoming buffer with the preamble built from the header notification
-            ::memcpy(&(dataOut[sizeof(Preamble)]), dataFrame, result);
-            
+            ::memcpy(&(dataOut[sizeof(Preamble)]), dataIn, result);
+
             result = sizeof(Preamble) + lengthIn;
         }
 
@@ -105,14 +104,14 @@ public:
         uint32_t _dropped;
 };
 
-static Factory<ADPCM> _adpcmFactory;
+static DecoderFactory<ADPCM> _adpcmFactory;
 
 class EXTERNAL PCM : public IDecoder {
 private:
     const uint8_t  WindowSize = 32;
 
 public:
-    static constexpr Exchange::IVoiceProducer::codec DecoderType = Exchange::IVoiceProducer::codec::ADPCM;
+    static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::ADPCM;
 
 public:
     PCM() = delete;
@@ -137,24 +136,24 @@ public:
         _frames = ~0;
         _dropped = 0;
     }
-    uint16_t Decode (const uint16_t lengthIn, const uint8_t dataIn, const uint16_t lengthOut, uint8_t dataOut) override {
+    uint16_t Decode (const uint16_t lengthIn, const uint8_t dataIn[], const uint16_t lengthOut, uint8_t dataOut[]) override {
 
         uint16_t result = 0;
 
 	if (lengthIn == 5) {
-            unsigned char seqNum = (unsigned char)data[0];
+            unsigned char seqNum = (unsigned char)dataIn[0];
 
             // Always use received PV and SI 
             _PV_dec = static_cast<int16_t>((dataIn[3] << 8) | dataIn[2]);
             _SI_dec = dataIn[1];
-		
-            // Is this the first frame we encounter ?	
+
+            // Is this the first frame we encounter ?
             if (_frames != static_cast<uint32_t>(~0)) {
                 // Is it a next frame, see if we dropped frames..
                 if (dataIn[0] > _nextFrame) {
                     _dropped += dataIn[0] - _nextFrame;
                 } 
-                else if (_seq < nextFrame) {
+                else if (seqNum < _nextFrame) {
                     _dropped += dataIn[0] + (WindowSize - _nextFrame);
                 }
                 _frames++;
@@ -167,15 +166,16 @@ public:
         else if (lengthIn == 1) {
             // This is a footer, so what :-)
         }
-        else if (_frames != static_cast<uint32>(~0)) {
+        else if (_frames != static_cast<uint32_t>(~0)) {
             result = DecodeStream(lengthIn, dataIn, lengthOut, dataOut);
         }
+        return (result);
     }
 
 private:
     int16_t DecodeNibble (const uint8_t nibble) {
 
-        static const uint8_t IndexLUT[] = {
+        static const int8_t IndexLUT[] = {
             -1, -1, -1, -1, 2, 4, 6, 8,
             -1, -1, -1, -1, 2, 4, 6, 8
         };
@@ -234,12 +234,13 @@ private:
         }
         return (_PV_dec);
     }
-    uint16_t DecodeStream(const uint16_t lengthIn, const uint8_t dataIn, const uint16_t lengthOut, uint8_t* dataOut)
+    uint16_t DecodeStream(const uint16_t lengthIn, const uint8_t dataIn[], const uint16_t lengthOut, uint8_t dataOut[])
     {
-        uint16_t maxStorage = (dataOut / 4);
+        // TODO: check lengthOut
+        uint16_t maxStorage = (lengthOut / 4);
         int16_t* output = reinterpret_cast<int16_t*>(dataOut);
 
-        for (uint16_t index = 0; i < lengthIn; index++)
+        for (uint16_t index = 0; index < lengthIn; index++)
         {
             uint8_t byte = dataIn[index];
 
@@ -269,6 +270,6 @@ private:
     uint32_t _dropped;
 };
 
-static Factory<PCM> _pcmFactory;
+static DecoderFactory<PCM> _pcmFactory;
 
 } } // namespace WPEFramework::Decoders

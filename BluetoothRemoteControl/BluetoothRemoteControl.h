@@ -761,12 +761,12 @@ namespace Plugin {
             }
 
         private:
-            BleutoothRemoteControl* _parent;
+            BluetoothRemoteControl* _parent;
             Core::CriticalSection _adminLock;
             Profile* _profile;
             GATTSocket::Command _command;
-            Bluetooth::IDevice* _device;
-            core::ProxyStore<Decoupling> _decoupling;
+            Exchange::IBluetooth::IDevice* _device;
+            Core::ProxyStore<Decoupling> _decoupling;
             Core::Sink<Sink> _sink;
  
             // The next section of information is coming from the config that

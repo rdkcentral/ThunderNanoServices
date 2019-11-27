@@ -12,7 +12,7 @@ set(PLUGIN_BLUETOOTHREMOTECONTROL_SUPPORT_PCM true CACHE BOOL "Support pcm audio
 add_library(${MODULE_NAME} SHARED
     BluetoothRemoteControl.cpp
     BluetoothRemoteControlJsonRpc.cpp
-    Administartor.cpp
+    Administrator.cpp
     T4HDecoders.cpp
     Module.cpp)
 
@@ -34,5 +34,7 @@ install(
 	FILES bluetooth-remote.json
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/${PLUGIN_NAME}
 	COMPONENT ${MODULE_NAME})
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 
 write_config(${PLUGIN_NAME})

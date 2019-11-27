@@ -34,35 +34,35 @@ public:
         _file = Core::File(fileName, false);
 
         if (_file.Create() == true) {
-            _file.Write(_T("RIFF"), 4);
-            _file.Write(_T("    "), 4);
-            _file.Write(_T("WAVE"), 4);
-            _file.Write(_T("fmt "), 4);
-            _file.Store<uin32_t>(_bytesPerSample * 8);         /* SubChunk1Size is 16 */
-            _file.Store<uin16_t>(_type);   
-            _file.Store<uin16_t>(_channels);   
-            _file.Store<uin32_t>(_samplerate);   
-            _file.Store<uin32_t>(_sampleRate * _channels * _bytesPerSample);   
-            _file.Store<uin16_t>(_channels * _bytesPerSample);   
-            _file.Store<uin16_t>(_bytesPerSample * 8);   
-            _file.Write(_T("data"), 4);
-            _file.Write(_T("    "), 4);
+            _file.Write(reinterpret_cast<const uint8_t*>(_T("RIFF")), 4);
+            _file.Write(reinterpret_cast<const uint8_t*>(_T("    ")), 4);
+            _file.Write(reinterpret_cast<const uint8_t*>(_T("WAVE")), 4);
+            _file.Write(reinterpret_cast<const uint8_t*>(_T("fmt ")), 4);
+            Store<uint32_t>(_bytesPerSample * 8);         /* SubChunk1Size is 16 */
+            Store<uint16_t>(_type);   
+            Store<uint16_t>(_channels);   
+            Store<uint32_t>(_sampleRate);   
+            Store<uint32_t>(_sampleRate * _channels * _bytesPerSample);   
+            Store<uint16_t>(_channels * _bytesPerSample);   
+            Store<uint16_t>(_bytesPerSample * 8);   
+            _file.Write(reinterpret_cast<const uint8_t*>(_T("data")), 4);
+            _file.Write(reinterpret_cast<const uint8_t*>(_T("    ")), 4);
             result = Core::ERROR_NONE;
         }
         return (result);
     }
     void Close() {
-        if (_file.IsValid() == true) {
+        if (_file.IsOpen() == true) {
             _file.Position(false, 4);
-            _file.Store<uint32>(_file.Size() - 8);
+            Store<uint32_t>(_file.Size() - 8);
             _file.Position(false, 40);
-            _file.Store<uint32>((_file.Size() - 44) / _bytesPerSample);
+            Store<uint32_t>((_file.Size() - 44) / _bytesPerSample);
             _file.Close();
         }
     }
-    void Write (const uint16_t samples, const int16_t samples[]) {
+    void Write (const uint16_t samplesLength, const int16_t samples[]) {
 
-        for (uint16_t index = 0 ; index < samples; index++) {
+        for (uint16_t index = 0 ; index < samplesLength; index++) {
             Store<int16_t>(samples[index]);
         }
     }
