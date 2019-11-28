@@ -15,8 +15,7 @@ namespace WPEFramework {
     class TextConnector : public Core::SocketDatagram {
 
         private:
-            typedef std::shared_ptr<string> EventMessagePtr;
-            typedef Core::QueueType<EventMessagePtr> EventsQueue;  
+            typedef Core::QueueType<string> EventsQueue;  
 
         class FileUpdate : public Core::Thread {
             public:
@@ -33,31 +32,16 @@ namespace WPEFramework {
                 }
                 virtual ~FileUpdate()
                 {
-                    Stop();
-                }
-
-                void Stop()
-                {
+                    Thread::Stop();
                     _lineQueue.Disable();
-                    _lineQueue.Flush();
-                    Core::Thread::Block();
-                    Wait(Core::Thread::INITIALIZED | Core::Thread::BLOCKED | Core::Thread::STOPPED, Core::infinite);
+                    Wait(Core::Thread::STOPPED, Core::infinite);
                 }
 
             private:
                 virtual uint32_t Worker()
                 {
-                    do {
-                        EventMessagePtr event;
-                        bool status = _lineQueue.Extract(event, Core::infinite);
-
-                        // Store to the file
-                        if (status == true) {
-                            string line = *event;
-                            _storeFile << line;
-                        }
-                    } while (_lineQueue.Length() > 0);
-
+                    string line;
+                        while (_lineQueue.Extract(line, Core::infinite) == true) { _storeFile << line; }
                     return (Core::infinite);
                 }
 
@@ -84,16 +68,12 @@ namespace WPEFramework {
 
             virtual ~TextConnector()
             {
-                _update.Stop();
                 Close(Core::infinite);
             }
 
             uint16_t ReceiveData(uint8_t *dataFrame, const uint16_t receivedSize) override
-            {              
-                std::string text(reinterpret_cast<const char*>(dataFrame), static_cast<size_t>(receivedSize));
-                       
-                EventMessagePtr event = std::make_shared<string>(text);
-                _newLineQueue.Post(event);
+            {                            
+                _newLineQueue.Post(string(reinterpret_cast<const char*>(dataFrame), static_cast<size_t>(receivedSize)));
                 
                 return receivedSize;
             }
