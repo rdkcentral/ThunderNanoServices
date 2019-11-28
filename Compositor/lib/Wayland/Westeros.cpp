@@ -17,8 +17,9 @@ namespace Westeros {
     public:
         Compositor(const string& renderModule, const string& display, const uint32_t width, const uint32_t height)
             : _compositor(nullptr)
-            , _virtualKeyboardHandle(nullptr)
+            , _virtualInputHandle(nullptr)
             , _cursor(nullptr)
+            , _xPos(0), _yPos(0)
         {
             TRACE(Trace::Information, (_T("Starting Compositor renderModule=%s display=%s"), renderModule.c_str(), display.c_str()));
 
@@ -49,14 +50,14 @@ namespace Westeros {
                     TRACE(Trace::Information, (_T("Error Starting Compositor")));
                 };
 
-                ASSERT(_virtualKeyboardHandle == nullptr);
+                ASSERT(_virtualInputHandle == nullptr);
 
-                if (_virtualKeyboardHandle == nullptr) {
+                const char* listenerName = "Westeros";
+                if (_virtualInputHandle == nullptr) {
                     TRACE(Trace::Information, (_T("Constructing virtual keyboard")));
 
-                    const char* listenerName = "Westeros";
-                    _virtualKeyboardHandle = virtualinput_open(listenerName, connectorName, VirtualKeyboardCallback, NULL, NULL);
-                    if (_virtualKeyboardHandle == nullptr) {
+                    _virtualInputHandle = virtualinput_open(listenerName, connectorName, VirtualKeyboardCallback, VirtualMouseCallback, NULL /*callback for touch*/);
+                    if (_virtualInputHandle == nullptr) {
                         TRACE(Trace::Information, (_T("Failed to construct virtual keyboard")));
                     }
                 }
@@ -73,8 +74,8 @@ namespace Westeros {
             }
             if (_cursor) free(_cursor);
 
-            if (_virtualKeyboardHandle != nullptr) {
-                virtualinput_close(_virtualKeyboardHandle);
+            if (_virtualInputHandle != nullptr) {
+                virtualinput_close(_virtualInputHandle);
             }
             _instance = nullptr;
         }
@@ -88,6 +89,36 @@ namespace Westeros {
                 TRACE(Trace::Information, (_T("Insert key into Westeros code=0x%04x, state=0x%04x, modifiers=0x%04x"), keyCode, keyState, keyModifiers));
 
                 WstCompositorKeyEvent(_compositor, keyCode, keyState, keyModifiers);
+            }
+        }
+
+        void MouseClickEvent(const int keyCode, const unsigned int keyState)
+        {
+            ASSERT(_compositor != nullptr);
+
+            if (_compositor != nullptr && _cursor != nullptr) {
+                TRACE(Trace::Information, (_T("Westeros mouse code=0x%04x, state=0x%04x"), keyCode, keyState));
+                WstCompositorPointerButtonEvent(_compositor, keyCode, keyState);
+            }
+        }
+
+        void MouseMoveEvent(const int horizontal, const int vertical)
+        {
+            ASSERT(_compositor != nullptr);
+
+            unsigned int width = 0, height = 0;
+            if (_compositor != nullptr && _cursor != nullptr) {
+                _xPos = _xPos + horizontal;
+                _yPos = _yPos + vertical;
+
+                WstCompositorGetOutputSize(_compositor, &width, &height);
+
+                if (_xPos < 0) _xPos = 0;
+                if (_xPos > (int)width) _xPos = width;
+                if (_yPos < 0) _yPos = 0;
+                if (_yPos > (int)height) _yPos = height;
+
+                WstCompositorPointerMoveEvent(_compositor, _xPos, _yPos);
             }
         }
 
@@ -157,6 +188,48 @@ namespace Westeros {
                 }
                 break;
             }
+            }
+        }
+
+        static void VirtualMouseCallback(mouseactiontype type, unsigned short button, short horizontal, short vertical)
+        {
+            unsigned int keyCode  = button;
+            unsigned int keyState = WstKeyboard_keyState_none;
+
+            TRACE_GLOBAL(Trace::Information, (_T("mouse event type %d, btn code %d\n"), type, button));
+
+#define KEY_EVENT_CODE(btn, code) \
+            switch (btn) { \
+            case 0:  code = BTN_LEFT;   break; \
+            case 1:  code = BTN_RIGHT;  break; \
+            case 2:  code = BTN_MIDDLE; break; \
+            default: code = button;     break; \
+            } \
+
+            switch (type) {
+            case MOUSE_PRESSED:
+                keyState = WstKeyboard_keyState_depressed;
+                KEY_EVENT_CODE(button, keyCode);
+                _instance->MouseClickEvent(keyCode, keyState);
+                    break;
+            case MOUSE_RELEASED:
+                keyState = WstKeyboard_keyState_released;
+                KEY_EVENT_CODE(button, keyCode);
+                _instance->MouseClickEvent(keyCode, keyState);
+                    break;
+            case MOUSE_SCROLL:
+                /* TODO - to handle mouse  scroll events */
+                if (vertical == 1) { /* Scroll up */
+                }
+                else if (vertical == -1) { /* Scroll down */
+                }
+                    break;
+            case MOUSE_MOTION:
+                _instance->MouseMoveEvent(horizontal, vertical);
+                    break;
+            default:
+                keyState= WstKeyboard_keyState_none;
+                    break;
             }
         }
 
@@ -258,20 +331,25 @@ namespace Westeros {
             {
                 const char *detail= WstCompositorGetLastErrorDetail(_compositor);
                 TRACE(Trace::Error, (_T("Unable to set default cursor: error: (%s)\n"), detail));
+                if(_cursor) free(_cursor);
+                _cursor = nullptr;
                 return false;
             }
             else
             {
+                /* enabling pointer to use */
+                WstCompositorPointerEnter(_compositor);
                 TRACE(Trace::Information, (_T("mouse pointer cursor enabled")));
-                /*TODO - create a thread to handle mouse input handler*/
             }
             return true;
         }
 
     private:
         WstCompositor* _compositor;
-        void* _virtualKeyboardHandle;
+        void* _virtualInputHandle;
         unsigned char* _cursor;
+        int _xPos;
+        int _yPos;
         static Westeros::Compositor* _instance;
     };
 
