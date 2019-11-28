@@ -1,6 +1,7 @@
 #define MODULE_NAME JSONRPC_Test
 
 #include <core/core.h>
+#include <tracing/tracing.h>
 #include <websocket/websocket.h>
 #include <interfaces/IPerformance.h>
 
