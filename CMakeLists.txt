@@ -42,6 +42,7 @@ option(PLUGIN_WEBSERVER "Include WebServer plugin" OFF)
 option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
+option(EXAMPLES "Include Examples" OFF)
 
 option(WPEFRAMEWORK_CREATE_IPKG_TARGETS "Generate the CPack configuration for package generation" OFF)
 
@@ -221,6 +222,10 @@ if(PLUGIN_FILETRANSFER)
     add_subdirectory(FileTransfer)
 endif()
 
+if(EXAMPLES)
+    add_subdirectory(examples)
+endif()
+
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEB_COMPONENT_INSTALL ON)
@@ -242,4 +247,4 @@ if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     include(CPack)
 endif()
 
-add_subdirectory(examples)
+
