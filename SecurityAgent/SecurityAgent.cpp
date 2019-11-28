@@ -40,6 +40,8 @@ namespace Plugin {
 
     SecurityAgent::SecurityAgent()
     {
+        RegisterAll();
+
         for (uint8_t index = 0; index < sizeof(_secretKey); index++) {
             Crypto::Random(_secretKey[index]);
         }
@@ -47,6 +49,7 @@ namespace Plugin {
 
     /* virtual */ SecurityAgent::~SecurityAgent()
     {
+        UnregisterAll();
     }
 
     /* virtual */ const string SecurityAgent::Initialize(PluginHost::IShell* service)
@@ -175,6 +178,7 @@ namespace Plugin {
                             result->Body(token);
                             result->ContentType = Web::MIMETypes::MIME_TEXT;
                             result->ErrorCode = Core::ERROR_NONE;
+                            result->Message = "Ok";
                         }
                     }
                 }
