@@ -14,15 +14,19 @@ namespace WPEFramework {
 
     class TextConnector : public Core::SocketDatagram {
 
+        private:
+            typedef std::shared_ptr<string> EventMessagePtr;
+            typedef Core::QueueType<EventMessagePtr> EventsQueue;  
+
         class FileUpdate : public Core::Thread {
             public:
                 FileUpdate() = delete;
                 FileUpdate(const FileUpdate&) = delete;
                 FileUpdate& operator=(const FileUpdate&) = delete;
 
-                FileUpdate(TextConnector& parent, const std::string& path)
+                FileUpdate(EventsQueue& queue, const std::string& path)
                     : Core::Thread(Core::Thread::DefaultStackSize(), _T("FileUpdate"))
-                    , _parent(parent)
+                    , _lineQueue(queue)
                     , _storeFile(path, std::ios_base::app)
                 {
                     Run();
@@ -34,7 +38,8 @@ namespace WPEFramework {
 
                 void Stop()
                 {
-                    _parent.Unlock();
+                    _lineQueue.Disable();
+                    _lineQueue.Flush();
                     Core::Thread::Block();
                     Wait(Core::Thread::INITIALIZED | Core::Thread::BLOCKED | Core::Thread::STOPPED, Core::infinite);
                 }
@@ -42,26 +47,26 @@ namespace WPEFramework {
             private:
                 virtual uint32_t Worker()
                 {
-                    std::string line;
-                    bool lineAvaliability;
-
                     do {
-                        lineAvaliability = _parent.GetLine(line, Core::infinite);
+                        EventMessagePtr event;
+                        bool status = _lineQueue.Extract(event, Core::infinite);
+
                         // Store to the file
-                        _storeFile << line;
-                    } while (lineAvaliability == true);
+                        if (status == true) {
+                            string line = *event;
+                            _storeFile << line;
+                        }
+                    } while (_lineQueue.Length() > 0);
 
                     return (Core::infinite);
                 }
 
             private:
-                TextConnector& _parent;
+                EventsQueue& _lineQueue;
                 std::ofstream _storeFile;
         };
 
-        private:
-            typedef std::shared_ptr<uint16_t> EventMessagePtr;
-            typedef Core::QueueType<EventMessagePtr> EventsQueue;        
+        private:     
             static constexpr uint16_t MAX_BUFFER_LENGHT = 50*1024;
 
         public:
@@ -72,9 +77,7 @@ namespace WPEFramework {
             TextConnector(const uint16_t port, const std::string& path)
                 : Core::SocketDatagram(false, Core::NodeId("0.0.0.0", port), Core::NodeId(), 0, MAX_BUFFER_LENGHT)
                 , _newLineQueue(256)
-                , _adminLock()
-                , _receivedQueue()
-                , _update(*this, path)                 
+                , _update(_newLineQueue, path)                 
             {
                 Open(0);
             }
@@ -82,20 +85,14 @@ namespace WPEFramework {
             virtual ~TextConnector()
             {
                 _update.Stop();
-
-                _receivedQueue.clear();
                 Close(Core::infinite);
             }
 
             uint16_t ReceiveData(uint8_t *dataFrame, const uint16_t receivedSize) override
             {              
                 std::string text(reinterpret_cast<const char*>(dataFrame), static_cast<size_t>(receivedSize));
-                
-                _adminLock.Lock();
-                _receivedQueue.emplace_back(text);   
-                _adminLock.Unlock();                         
-                
-                EventMessagePtr event = std::make_shared<uint16_t>(1);
+                       
+                EventMessagePtr event = std::make_shared<string>(text);
                 _newLineQueue.Post(event);
                 
                 return receivedSize;
@@ -115,35 +112,9 @@ namespace WPEFramework {
                     printf("No longer observing file\n");
                 }                
             }
-          
-        public: 
-            void Unlock()
-            {
-                _newLineQueue.Disable();
-                _newLineQueue.Flush();
-            }
-
-            bool GetLine(std::string& text, const uint32_t waitTime)
-            {
-                bool status = false;
-
-                EventMessagePtr event;
-                status = _newLineQueue.Extract(event, waitTime);
-             
-                _adminLock.Lock();
-                if ((status == true) && (_receivedQueue.size() > 0)) {
-                    text = _receivedQueue.front();
-                    _receivedQueue.pop_front();
-                }
-                _adminLock.Unlock();
-
-                return (_newLineQueue.Length() > 0);
-            }
 
         private:
             EventsQueue _newLineQueue;
-            Core::CriticalSection _adminLock;
-            std::list<std::string> _receivedQueue;
             FileUpdate _update;
     };
 
