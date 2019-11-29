@@ -28,6 +28,7 @@ option(PLUGIN_PACKAGER "Include Packager plugin" OFF)
 option(PLUGIN_POWER "Include Power plugin" OFF)
 option(PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
 option(PLUGIN_SECURESHELLSERVER "Include SecureShellServer plugin" OFF)
+option(PLUGIN_SECURITYAGENT "Include SecurityAgent plugin" OFF)
 option(PLUGIN_STREAMER "Include Streamer plugin" OFF)
 option(PLUGIN_SNAPSHOT "Include Snapshot plugin" OFF)
 option(PLUGIN_SPARK "Include SparkEngine plugin" OFF)
@@ -41,6 +42,7 @@ option(PLUGIN_WEBSERVER "Include WebServer plugin" OFF)
 option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
+option(EXAMPLES "Include Examples" OFF)
 
 option(WPEFRAMEWORK_CREATE_IPKG_TARGETS "Generate the CPack configuration for package generation" OFF)
 
@@ -160,6 +162,10 @@ if(PLUGIN_SECURESHELLSERVER)
     add_subdirectory(SecureShellServer)
 endif()
 
+if (PLUGIN_SECURITYAGENT)
+    add_subdirectory(SecurityAgent)
+endif()
+
 if(PLUGIN_SNAPSHOT)
     add_subdirectory(Snapshot)
 endif()
@@ -216,6 +222,10 @@ if(PLUGIN_FILETRANSFER)
     add_subdirectory(FileTransfer)
 endif()
 
+if(EXAMPLES)
+    add_subdirectory(examples)
+endif()
+
 if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     set(CPACK_GENERATOR "DEB")
     set(CPACK_DEB_COMPONENT_INSTALL ON)
@@ -237,4 +247,4 @@ if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
     include(CPack)
 endif()
 
-add_subdirectory(examples)
+
