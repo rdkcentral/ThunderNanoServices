@@ -170,10 +170,9 @@ namespace Plugin {
 
             while (index.Next() == true) {
 
-                const TCHAR* producer((*index)->Name());
-                string loadName(producer);
+                string loadName((*index)->Name());
 
-                TRACE_L1(_T("Searching map file for: %s"), producer);
+                TRACE_L1(_T("Searching map file for: %s"), loadName.c_str());
 
                 configList.Reset();
 
@@ -198,7 +197,7 @@ namespace Plugin {
                     TRACE_L1(_T("Opening map file: %s"), specific.c_str());
 
                     // Get our selves a table..
-                    PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(producer));
+                    PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(loadName.c_str()));
                     map.Load(specific);
                     if (configList.IsValid() == true) {
                         map.PassThrough(configList.Current().PassOn.Value());
@@ -265,9 +264,7 @@ namespace Plugin {
         // Clear all injected device key maps
         while (index.Next() == true) {
 
-            const TCHAR* producer((*index)->Name());
-
-            _inputHandler->ClearTable(producer);
+            _inputHandler->ClearTable((*index)->Name().c_str());
         }
 
         // Clear default key map

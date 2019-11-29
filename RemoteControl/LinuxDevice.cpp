@@ -51,7 +51,7 @@ namespace Plugin {
             {
                 Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
-            const TCHAR* Name() const override
+            string Name() const override
             {
                 return (_T("DevInput"));
             }
@@ -146,7 +146,7 @@ namespace Plugin {
             {
                 //Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
-            const TCHAR* Name() const override
+            string Name() const override
             {
                 return (_T("DevWheelInput"));
             }
@@ -205,7 +205,7 @@ namespace Plugin {
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
             }
 
-            const TCHAR* Name() const override
+            string Name() const override
             {
                 return (_T("DevPointerInput"));
             }
@@ -278,7 +278,7 @@ namespace Plugin {
                 _abs_latch.fill(AbsInfo());
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
             }
-            const TCHAR* Name() const override
+            string Name() const override
             {
                 return (_T("DevTouchInput"));
             }

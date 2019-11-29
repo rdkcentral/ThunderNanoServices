@@ -44,7 +44,7 @@ public:
     }
     void Reset() override {
         _frames = ~0;
-        _dropped = 0;
+        _dropped = ~0;
     }
     uint16_t Decode (const uint16_t lengthIn, const uint8_t dataIn[], const uint16_t lengthOut, uint8_t dataOut[]) override
     {
@@ -58,7 +58,7 @@ public:
             _pred = btohs(hdr->pred);
             _compression = hdr->compression;
 
-            if (_frames != static_cast<uint32_t>(~0)) {
+            if (_dropped != static_cast<uint32_t>(~0)) {
                 // Is it a next frame, see if we dropped frames..
                 if (_seq > _nextFrame) {
                     _dropped += _seq - _nextFrame;
@@ -83,6 +83,10 @@ public:
             preamble->step = _stepIdx;
             preamble->pred = _pred;
             preamble->pad = 0;
+
+            if (_dropped == static_cast<uint32_t>(~0)) {
+                _dropped = 0;
+            }
 
             result = std::min(static_cast<uint16_t>(lengthOut - sizeof(Preamble)), lengthIn);
 
@@ -134,7 +138,7 @@ public:
         _PV_dec = 0;
         _SI_dec = 0;
         _frames = ~0;
-        _dropped = 0;
+        _dropped = ~0;
     }
     uint16_t Decode (const uint16_t lengthIn, const uint8_t dataIn[], const uint16_t lengthOut, uint8_t dataOut[]) override {
 
@@ -148,7 +152,7 @@ public:
             _SI_dec = dataIn[1];
 
             // Is this the first frame we encounter ?
-            if (_frames != static_cast<uint32_t>(~0)) {
+            if (_dropped != static_cast<uint32_t>(~0)) {
                 // Is it a next frame, see if we dropped frames..
                 if (dataIn[0] > _nextFrame) {
                     _dropped += dataIn[0] - _nextFrame;
@@ -167,6 +171,11 @@ public:
             // This is a footer, so what :-)
         }
         else if (_frames != static_cast<uint32_t>(~0)) {
+
+            if (_dropped == static_cast<uint32_t>(~0)) {
+                _dropped = 0;
+            }
+
             result = DecodeStream(lengthIn, dataIn, lengthOut, dataOut);
         }
         return (result);

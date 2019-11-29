@@ -72,9 +72,9 @@ private:
     void Store(const TYPE value) {
         TYPE store = value;
         for (uint8_t index = 0; index < sizeof(TYPE); index++) {
-            uint8_t byte = (value & 0xFF);
+            uint8_t byte = (store & 0xFF);
             _file.Write(&byte, 1);
-            value = (value >> 8);
+            store = (store >> 8);
         }
     }
 
