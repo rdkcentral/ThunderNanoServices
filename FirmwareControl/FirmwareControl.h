@@ -8,7 +8,11 @@
 extern "C"
 {
 #endif
+#if defined(FIRMWARECONTROL_PLATFORM_RPI)
+#include <mfrTypes.h>
+#else
 #include <mfrApi.h>
+#endif
 #ifdef __cplusplus
 }
 #endif
@@ -144,7 +148,7 @@ namespace Plugin {
             , _downloadStatus(Core::ERROR_NONE)
             , _upgradeStatus(UpgradeStatus::NONE)
             , _installStatus()
-            , _upgrader(this)
+            , _upgrader(Core::ProxyType<Upgrader>::Create(this))
             , _signal(false, true)
         {
             RegisterAll();
@@ -158,7 +162,7 @@ namespace Plugin {
             if (_upgradeStatus != UpgradeStatus::NONE) {
                 _upgradeStatus = UPGRADE_CANCELLED;
                 _signal.SetEvent();
-                _upgrader.Stop();
+                _upgrader->Stop();
             }
             _adminLock.Unlock();
         }
@@ -246,7 +250,7 @@ namespace Plugin {
 
         inline void RemoveDownloadedFile()
         {
-            Core::File _storage(_destination);
+            Core::File _storage(_destination + Name);
             if (_storage.Exists()) {
                 _storage.Destroy();
             }
@@ -392,7 +396,7 @@ namespace Plugin {
         UpgradeStatus _upgradeStatus;
         mfrUpgradeStatus_t _installStatus;
 
-        Upgrader _upgrader;
+        Core::ProxyType<Upgrader> _upgrader;
         Core::Event _signal;
     };
 

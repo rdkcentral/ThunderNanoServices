@@ -15,17 +15,21 @@ namespace Plugin {
             TRACE_L1("Source location : [%s]\n", _source.c_str());
         }
         if (config.Download.IsSet() == true) {
-            _destination = config.Download.Value() + "/" + Name;
+            _destination = config.Download.Value() + "/";
             TRACE_L1("Destination location : [%s]\n", _destination.c_str());
         }
         if (config.WaitTime.IsSet() == true) {
             _waitTime = config.WaitTime.Value();
         }
+
         string message;
+#if defined(FIRMWARECONTROL_PLATFORM_INIT)
         uint32_t status = ConvertMfrStatusToCore(mfr_init());
         if (status != Core::ERROR_NONE) {
             message = _T("Error in MFR library initialization");
         }
+#endif
+
         return (message);
     }
 
@@ -51,7 +55,7 @@ namespace Plugin {
         _interval = interval;
         _hash = hash;
 
-        _upgrader.Schedule();
+        _upgrader->Schedule();
         _adminLock.Unlock();
 
         return Core::ERROR_NONE;
@@ -99,7 +103,7 @@ namespace Plugin {
         TRACE(Trace::Information, (string(__FUNCTION__)));
         Notifier notifier(this);
 
-        PluginHost::DownloadEngine downloadEngine(&notifier, _destination);
+        PluginHost::DownloadEngine downloadEngine(&notifier, _destination + Name);
 
         uint32_t status = downloadEngine.Start(_source, _destination, _hash);
         if ((status == Core::ERROR_NONE) || (status == Core::ERROR_INPROGRESS)) {
