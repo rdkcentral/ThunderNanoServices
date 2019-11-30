@@ -12,6 +12,12 @@ add_library(${MODULE_NAME} SHARED
     Module.cpp
 )
 
+if(PLUGIN_FIRMWARECONTROL_PLATFORM_RPI)
+    target_compile_definitions(${MODULE_NAME}
+        PRIVATE
+            FIRMWARECONTROL_PLATFORM_RPI=ON)
+endif()
+
 if(PLUGIN_FIRMWARECONTROL_PLATFORM_BCM OR PLUGIN_FIRMWARECONTROL_PLATFORM_RPI)
     target_compile_definitions(${MODULE_NAME}
         PRIVATE
