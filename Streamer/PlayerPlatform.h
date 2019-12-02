@@ -96,7 +96,6 @@ namespace Player {
                 , _adminLock()
             {
                 ASSERT(Name().empty() == false);
-                ASSERT(streamType != Exchange::IStream::streamtype::Undefined);
             }
 
             ~PlayerPlatformFactoryType()

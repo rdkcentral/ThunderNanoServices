@@ -128,7 +128,7 @@ namespace Plugin {
                     , _length(0xFF)
                     , _buffer(reinterpret_cast<uint8_t*>(_length))
                 {
-                    ASSERT(_parent != nullptr);
+                    ASSERT(parent != nullptr);
                 }
                 ~Decoupling() override
                 {
