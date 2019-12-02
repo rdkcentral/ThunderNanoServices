@@ -78,10 +78,6 @@ namespace Plugin {
             delete _gattRemote;
             _gattRemote = nullptr;
         }
-        if (_keyHandler != nullptr) {
-            _keyHandler->Release();
-            _keyHandler = nullptr;
-        }
         if (_voiceHandler != nullptr) {
             _voiceHandler->Release();
             _voiceHandler = nullptr;
@@ -281,16 +277,55 @@ namespace Plugin {
 
     void BluetoothRemoteControl::VoiceData(Exchange::IVoiceProducer::IProfile* profile)
     {
-        _adminLock.Lock();
-        if (_voiceHandler != nullptr) {
+        if (profile != nullptr) {
+
+            string codecText(_T("<<unknown>>"));
+            Core::EnumerateType<Exchange::IVoiceProducer::IProfile::codec> codec(profile->Codec());
+
+            if (codec.Data() != nullptr) {
+                codecText = string(codec.Data());
+            }
+
+            _adminLock.Lock();
+
+            if (_voiceHandler != nullptr) {
+                _voiceHandler->Start(profile);
+            }
+            else {
+                event_audiotransmission(codecText);
+            }
+
+            _adminLock.Unlock();
+
+            TRACE(Trace::Information, (_T("Audio transmission: %s"), codecText.c_str()));
         }
-        _adminLock.Unlock();
+        else {
+
+            _adminLock.Lock();
+
+            if (_voiceHandler != nullptr) {
+                _voiceHandler->Stop();
+            }
+            else {
+                event_audiotransmission(string());
+            }
+
+            _adminLock.Unlock();
+
+            TRACE(Trace::Information, (_T("Audio transmission: end")));
+        }
     }
 
-    void BluetoothRemoteControl::VoiceData(const uint16_t length, const uint8_t dataBuffer[])
+    void BluetoothRemoteControl::VoiceData(const uint32_t seq, const uint16_t length, const uint8_t dataBuffer[])
     {
         _adminLock.Lock();
         if (_voiceHandler != nullptr) {
+            _voiceHandler->Data(seq, dataBuffer, length);
+        }
+        else {
+            string frame;
+            Core::ToString(dataBuffer, length, true, frame);
+            event_audioframe(seq, frame);
         }
         _adminLock.Unlock();
     }
@@ -298,7 +333,10 @@ namespace Plugin {
     void BluetoothRemoteControl::KeyEvent(const bool pressed, const uint16_t keyCode)
     {
         _adminLock.Lock();
-        if (_keyHandler != nullptr) {
+        if (_inputHandler != nullptr) {
+            _inputHandler->KeyEvent(pressed, keyCode, _name);
+        }
+        else {
         }
         _adminLock.Unlock();
     }
@@ -306,6 +344,7 @@ namespace Plugin {
     void BluetoothRemoteControl::BatteryLevel(const uint8_t level)
     {
         _batteryLevel = level;
+        event_batterylevelchange(level);
     }
 
 } // namespace Plugin

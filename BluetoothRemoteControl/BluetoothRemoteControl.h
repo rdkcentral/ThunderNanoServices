@@ -17,7 +17,6 @@ namespace Plugin {
     class BluetoothRemoteControl : public PluginHost::IPlugin
                                  , public PluginHost::IWeb
                                  , public PluginHost::JSONRPC
-                                 , public Exchange::IKeyProducer
                                  , public Exchange::IVoiceProducer {
     private:
         class Config : public Core::JSON::Container {
@@ -538,7 +537,7 @@ namespace Plugin {
                             _startFrame = false;
                             _parent->VoiceData(_audioProfile);
                         }
-                        _parent->VoiceData(sendLength, decoded);
+                        _parent->VoiceData(_decoder->Frames(), sendLength, decoded);
                     }
                 }
                 else if ( (handle == _keysDataHandle) && (length >= 2) ) {
@@ -903,10 +902,10 @@ namespace Plugin {
             , _adminLock()
             , _service()
             , _gattRemote(nullptr)
+            , _name(_T("NOT_AVAIALABLE"))
             , _controller()
             , _configLine()
             , _batteryLevel(~0)
-            , _keyHandler(nullptr)
             , _voiceHandler(nullptr)
             , _inputHandler(nullptr) 
         {
@@ -922,15 +921,7 @@ namespace Plugin {
             return (_batteryLevel);
         }
         string Name() const override {
-            return (_gattRemote != nullptr ? _gattRemote->Name() : _T("NOT_AVAIALABLE"));
-        }
-        bool Pair() override
-        {
-            return (false);
-        }
-        bool Unpair(string bondingId) override
-        {
-            return (false);
+            return (_name);
         }
         uint32_t Error() const override
         {
@@ -971,20 +962,6 @@ namespace Plugin {
 
             _adminLock.Unlock();
         }
-        uint32_t Callback(Exchange::IKeyHandler* keyHandler) override
-        {
-            _adminLock.Lock();
-            if (_keyHandler != nullptr) {
-                _keyHandler->Release();
-            }
-            if (keyHandler != nullptr) {
-                keyHandler->AddRef();
-            }
-            _keyHandler = keyHandler;
-            _adminLock.Unlock();
-
-            return (Core::ERROR_NONE);
-        }
         uint32_t Callback(Exchange::IVoiceHandler* callback) override 
         {
             _adminLock.Lock();
@@ -1015,7 +992,6 @@ namespace Plugin {
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IWeb)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
-            INTERFACE_ENTRY(Exchange::IKeyProducer)
             INTERFACE_ENTRY(Exchange::IVoiceProducer)
         END_INTERFACE_MAP
 
@@ -1025,7 +1001,7 @@ namespace Plugin {
         uint32_t Revoke();
         void Operational(const GATTRemote::Data& settings);
         void VoiceData(Exchange::IVoiceProducer::IProfile* profile);
-        void VoiceData(const uint16_t length, const uint8_t dataBuffer[]);
+        void VoiceData(const uint32_t seq, const uint16_t length, const uint8_t dataBuffer[]);
         void KeyEvent(const bool pressed, const uint16_t keyCode);
         void BatteryLevel(const uint8_t level);
         
@@ -1054,10 +1030,10 @@ namespace Plugin {
         mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         GATTRemote* _gattRemote;
+        string _name;
         string _controller;
         string _configLine;
         uint8_t _batteryLevel;
-        Exchange::IKeyHandler* _keyHandler;
         Exchange::IVoiceHandler* _voiceHandler;
         PluginHost::VirtualInput* _inputHandler;
 
