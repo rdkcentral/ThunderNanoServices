@@ -2,12 +2,77 @@
 
 namespace WPEFramework {
 
+ENUM_CONVERSION_BEGIN(Plugin::BluetoothRemoteControl::recorder)
+
+    { Plugin::BluetoothRemoteControl::recorder::OFF,               _TXT("off")               },
+    { Plugin::BluetoothRemoteControl::recorder::SINGLE,            _TXT("single")            },
+    { Plugin::BluetoothRemoteControl::recorder::SEQUENCED,         _TXT("sequenced")         },
+    { Plugin::BluetoothRemoteControl::recorder::SINGLE_PERSIST,    _TXT("single_persist")    },
+    { Plugin::BluetoothRemoteControl::recorder::SEQUENCED_PERSIST, _TXT("sequenced_persist") },
+
+ENUM_CONVERSION_END(Plugin::BluetoothRemoteControl::recorder)
+
 namespace Plugin {
 
     SERVICE_REGISTRATION(BluetoothRemoteControl, 1, 0);
 
+    template<typename FROM, typename TO>
+    class LUT {
+    public:
+        struct Entry {
+            FROM from;
+            TO to;
+        };
+
+    public:
+        LUT() = delete;
+        LUT(const LUT<FROM,TO>&) = delete;
+        LUT<FROM,TO>& operator= (const LUT<FROM,TO>&) = delete;
+
+        template<size_t N>
+        LUT(const Entry (&input)[N]) : _lut (input), _length(N) { }
+
+    public:
+        bool Lookup(const FROM& from, TO& value) const {
+            uint8_t index = 0;
+            while ( (index < _length) && (_lut[index].from != from) ) {
+                index++;
+            }
+            if (index < _length) {
+                value = _lut[index].to;
+                return (true);
+            }
+            return (false);
+        }
+        bool Lookup(const TO& from, FROM& value) const {
+            uint8_t index = 0;
+            while ( (index < _length) && (_lut[index].to != from) ) {
+                index++;
+            }
+            if (index < _length) {
+                value = _lut[index].from;
+                return (true);
+            }
+            return (false);
+        }
+
+
+    private:
+        const Entry* const _lut;
+        uint16_t _length;
+    };
+
+    static const LUT<Exchange::IVoiceProducer::IProfile::codec, WAV::Recorder::codec> CodecTable({
+
+        { .from = Exchange::IVoiceProducer::IProfile::codec::PCM,   .to = WAV::Recorder::codec::PCM   },
+        { .from = Exchange::IVoiceProducer::IProfile::codec::ADPCM, .to = WAV::Recorder::codec::ADPCM }
+
+    });
+
     const string BluetoothRemoteControl::Initialize(PluginHost::IShell* service)
     {
+        string sequence;
+
         ASSERT(_service == nullptr);
         ASSERT(_gattRemote == nullptr);
 
@@ -22,6 +87,22 @@ namespace Plugin {
         ASSERT (_service->PersistentPath().empty() == false);
 
         _controller = config.Controller.Value();
+        _record     = config.Recorder.Value();
+
+        if ((_record & 0x0F) == 0) {
+            sequence = ("voice.wav");
+        }
+        else {
+            sequence = ("voice_%02d_%02d_%02d.wav");
+        }
+
+        if ((_record & 0xF0) == 0x20) {
+            _recordFile = _service->PersistentPath() + sequence;
+        }
+        else {
+            _recordFile = _service->VolatilePath() + sequence;
+
+        }
 
         Core::Directory storageDir (_service->PersistentPath().c_str(), _T("*.json"));
 
@@ -73,6 +154,10 @@ namespace Plugin {
     void BluetoothRemoteControl::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
+
+        if (_recorder.IsOpen() == true) {
+            _recorder.Close();
+        }
         
         if (_gattRemote != nullptr) {
             delete _gattRemote;
@@ -297,6 +382,21 @@ namespace Plugin {
 
             _adminLock.Unlock();
 
+            if (_recorder.IsOpen() == true) {
+                _recorder.Close();
+            }
+
+            if (_record != recorder::OFF) {
+                WAV::Recorder::codec wavCodec;
+                TCHAR fileName[256];
+                Core::Time now (Core::Time::Now());
+                ::snprintf(fileName, sizeof(fileName), _recordFile.c_str(), now.Hours(), now.Minutes(), now.Seconds());
+
+                if (CodecTable.Lookup(profile->Codec(), wavCodec) == true) {
+                    _recorder.Open(string(fileName), wavCodec, profile->Channels(), profile->SampleRate(), profile->Resolution());
+                }
+            }
+
             TRACE(Trace::Information, (_T("Audio transmission: %s"), codecText.c_str()));
         }
         else {
@@ -312,6 +412,10 @@ namespace Plugin {
 
             _adminLock.Unlock();
 
+            if (_recorder.IsOpen() == true) {
+                _recorder.Close();
+            }
+
             TRACE(Trace::Information, (_T("Audio transmission: end")));
         }
     }
@@ -319,6 +423,7 @@ namespace Plugin {
     void BluetoothRemoteControl::VoiceData(const uint32_t seq, const uint16_t length, const uint8_t dataBuffer[])
     {
         _adminLock.Lock();
+
         if (_voiceHandler != nullptr) {
             _voiceHandler->Data(seq, dataBuffer, length);
         }
@@ -327,7 +432,12 @@ namespace Plugin {
             Core::ToString(dataBuffer, length, true, frame);
             event_audioframe(seq, frame);
         }
+
         _adminLock.Unlock();
+
+        if (_recorder.IsOpen() == true) {
+            _recorder.Write(length, dataBuffer);
+        }
     }
 
     void BluetoothRemoteControl::KeyEvent(const bool pressed, const uint16_t keyCode)

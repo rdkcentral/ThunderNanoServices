@@ -18,7 +18,16 @@ namespace Plugin {
                                  , public PluginHost::IWeb
                                  , public PluginHost::JSONRPC
                                  , public Exchange::IVoiceProducer {
-    private:
+    public:
+        enum recorder {
+            OFF               = 0x00,
+            SINGLE            = 0x10,
+            SEQUENCED         = 0x11,
+            SINGLE_PERSIST    = 0x20,
+            SEQUENCED_PERSIST = 0x21
+        };
+
+   private:
         class Config : public Core::JSON::Container {
         public:
             Config(const Config&) = delete;
@@ -27,9 +36,11 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , Controller(_T("BluetoothControl"))
                 , KeyIngest(true)
+                , Recorder(OFF)
             {    
                 Add(_T("controller"), &Controller);
                 Add(_T("keyingest"), &KeyIngest);
+                Add(_T("recorder"), &Recorder);
             }
             ~Config()
             {
@@ -38,6 +49,7 @@ namespace Plugin {
         public:
             Core::JSON::String Controller;
             Core::JSON::Boolean KeyIngest;
+            Core::JSON::EnumType<recorder> Recorder;
         };
 
         class GATTRemote : public Bluetooth::GATTSocket {
@@ -905,9 +917,12 @@ namespace Plugin {
             , _name(_T("NOT_AVAIALABLE"))
             , _controller()
             , _configLine()
+            , _recordFile()
             , _batteryLevel(~0)
             , _voiceHandler(nullptr)
             , _inputHandler(nullptr) 
+            , _record(recorder::OFF)
+            , _recorder()
         {
             RegisterAll();
         }
@@ -1033,9 +1048,12 @@ namespace Plugin {
         string _name;
         string _controller;
         string _configLine;
+        string _recordFile;
         uint8_t _batteryLevel;
         Exchange::IVoiceHandler* _voiceHandler;
         PluginHost::VirtualInput* _inputHandler;
+        recorder _record;
+        WAV::Recorder _recorder;
 
     }; // class BluetoothRemoteControl
 
