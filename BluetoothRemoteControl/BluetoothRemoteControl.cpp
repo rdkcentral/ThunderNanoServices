@@ -104,19 +104,18 @@ namespace Plugin {
 
         }
 
-        Core::Directory storageDir (_service->PersistentPath().c_str(), _T("*.json"));
-
-        if (storageDir.IsDirectory() == false) {
-            if (storageDir.CreatePath() == false) {
-                TRACE(Trace::Error, (_T("Failed to create persistent storage folder [%s]"), storageDir.Name().c_str()));
+        if (Core::File(_service->PersistentPath(), true).IsDirectory() == false) {
+            if (Core::Directory(_service->PersistentPath().c_str()).CreatePath() == false) {
+                TRACE(Trace::Error, (_T("Failed to create persistent storage folder [%s]"), _service->PersistentPath().c_str()));
             } 
         }
         else {
             Exchange::IBluetooth* bluetoothCtl(_service->QueryInterfaceByCallsign<Exchange::IBluetooth>(_controller));
 
             if (bluetoothCtl != nullptr) {
+                Core::Directory storageDir (_service->PersistentPath().c_str(), _T("*.json"));
  
-                while ( (_gattRemote == nullptr) && (storageDir.Next() == false) ) {
+                while ( (_gattRemote == nullptr) && (storageDir.Next() == true) ) {
                     string filename = Core::File::FileName(storageDir.Name());
 
                     // See if this is a Bluetooth MAC Address, if so, lets load it..
@@ -126,7 +125,7 @@ namespace Plugin {
                         Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename);
                         Core::File fileData(storageDir.Current().c_str(), true);
 
-                        if ( (device != nullptr) && (fileData.Open(true) == true) ){
+                        if (device != nullptr) {
                             if (fileData.Open(true) == true) {
                                 GATTRemote::Data data; 
                                 data.IElement::FromFile(fileData);
