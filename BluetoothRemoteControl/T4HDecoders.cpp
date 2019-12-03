@@ -115,7 +115,7 @@ private:
     const uint8_t  WindowSize = 32;
 
 public:
-    static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::ADPCM;
+    static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::PCM;
 
 public:
     PCM() = delete;

@@ -35,10 +35,12 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , Controller(_T("BluetoothControl"))
+                , KeyMap()
                 , KeyIngest(true)
                 , Recorder(OFF)
             {    
                 Add(_T("controller"), &Controller);
+                Add(_T("keymap"), &KeyMap);
                 Add(_T("keyingest"), &KeyIngest);
                 Add(_T("recorder"), &Recorder);
             }
@@ -48,6 +50,7 @@ namespace Plugin {
 
         public:
             Core::JSON::String Controller;
+            Core::JSON::String KeyMap;
             Core::JSON::Boolean KeyIngest;
             Core::JSON::EnumType<recorder> Recorder;
         };
@@ -126,12 +129,13 @@ namespace Plugin {
                     , _adminLock()
                     , _next(0)
                     , _length(0xFF)
-                    , _buffer(reinterpret_cast<uint8_t*>(_length))
+                    , _buffer(reinterpret_cast<uint8_t*>(::malloc(_length)))
                 {
                     ASSERT(parent != nullptr);
                 }
                 ~Decoupling() override
                 {
+                    ::free(_buffer);
                 }
 
             public:
@@ -143,7 +147,7 @@ namespace Plugin {
 
                     if ((_next + length + 3) > _length) {
                         // Oops we need to extend our buffer
-                        _length = (((_next + length + 0xFF) >> 8) << 8);
+                        _length = (((_next + length + 3 + 0xFF) >> 8) << 8);
                         uint8_t* newBuffer = reinterpret_cast<uint8_t*>(::malloc(_length));
                         ::memcpy(newBuffer, _buffer, _next);
                         ::free(_buffer);
@@ -304,16 +308,33 @@ namespace Plugin {
             public:
                 uint16_t FindHandle(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid) const
                 {
+                    const Bluetooth::Profile::Service::Characteristic* characteristic = FindCharacteristic(serviceUuid, charUuid);
+                    return (characteristic == nullptr ? 0 : characteristic->Handle());
+                }
+                uint16_t FindHandle(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid, const Bluetooth::UUID& descUuid) const
+                {
                     uint16_t handle = 0;
-                    const Bluetooth::Profile::Service* service = (*this)[serviceUuid];
-                    if (service != nullptr) {
-                        const Bluetooth::Profile::Service::Characteristic* characteristic = (*service)[charUuid];
-                        if (characteristic != nullptr) {
-                            handle = characteristic->Handle();
+                    const Bluetooth::Profile::Service::Characteristic* characteristic = FindCharacteristic(serviceUuid, charUuid);
+                    if (characteristic != nullptr) {
+                        const Bluetooth::Profile::Service::Characteristic::Descriptor* descriptor= (*characteristic)[descUuid];
+                        if (descriptor != nullptr) {
+                            handle = descriptor->Handle();
                         }
                     }
                     return (handle);
                 }
+
+            private:
+                const Bluetooth::Profile::Service::Characteristic* FindCharacteristic(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid) const
+                {
+                    const Bluetooth::Profile::Service::Characteristic* result = nullptr;
+                    const Bluetooth::Profile::Service* service = (*this)[serviceUuid];
+                    if (service != nullptr) {
+                        result = (*service)[charUuid];
+                    }
+                    return (result);
+                }
+
 
             public:
                 Bluetooth::UUID VoiceService;
@@ -401,10 +422,10 @@ namespace Plugin {
                 , _firmwareRevision()
                 , _softwareRevision()
                 , _softwareRevisionHandle(0)
-                , _keysDataHandle(0)
-                , _batteryLevelHandle(0)
-                , _voiceDataHandle(0)
-                , _voiceCommandHandle(0)
+                , _keysDataHandle(~0)
+                , _batteryLevelHandle(~0)
+                , _voiceDataHandle(~0)
+                , _voiceCommandHandle(~0)
                 , _audioProfile(nullptr)
                 , _decoder(nullptr)
             {
@@ -416,8 +437,9 @@ namespace Plugin {
                 if (_device->IsConnected() == true) {
                     TRACE(Trace::Fatal, (_T("The device is already connected. First disconnect the device")));
                 }
-
-                _profile = new Profile(config);
+                else {
+                    _profile = new Profile(config);
+                }
             }
 
             GATTRemote(BluetoothRemoteControl* parent, Exchange::IBluetooth::IDevice* device, const string& configuration, const Data& data)
@@ -474,6 +496,9 @@ namespace Plugin {
                 }
 
                 _audioProfile->Release();
+
+                PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_decoupling));
+                _decoupling.CompositRelease();
             }
 
         public:
@@ -521,11 +546,16 @@ namespace Plugin {
 
                 _decoder = Decoders::IDecoder::Instance(config.Codec.Value(), config.Configuration.Value());
 
-                _audioProfile = Core::Service<AudioProfile>::Create<AudioProfile>(
-                    config.Codec.Value(),
-                    config.SampleRate.Value(),
-                    config.Channels.Value(),
-                    config.Resolution.Value());
+                if (_decoder == nullptr) {
+                    _decoder = nullptr;
+                }
+                else {
+                    _audioProfile = Core::Service<AudioProfile>::Create<AudioProfile>(
+                        config.Codec.Value(),
+                        config.SampleRate.Value(),
+                        config.Channels.Value(),
+                        config.Resolution.Value());
+                }
             }
 
         private:
@@ -578,6 +608,8 @@ namespace Plugin {
                 else if ( (handle == _batteryLevelHandle) && (length >= 1) ) {
                     _parent->BatteryLevel(buffer[0]);
                 }
+
+                _adminLock.Unlock();
             }
             void Constructor(const Config& config) 
             {
@@ -585,6 +617,7 @@ namespace Plugin {
                 ASSERT(_device != nullptr);
 
                 _device->AddRef();
+                _decoupling.AddRef();
                 _name = _device->Name();
                 _address = _device->RemoteId();
 
@@ -593,11 +626,16 @@ namespace Plugin {
                 }
 
                 _decoder = Decoders::IDecoder::Instance(config.AudioProfile.Codec.Value(), config.AudioProfile.Configuration.Value());
-                _audioProfile = Core::Service<AudioProfile>::Create<AudioProfile>(
-                    config.AudioProfile.Codec.Value(),
-                    config.AudioProfile.SampleRate.Value(),
-                    config.AudioProfile.Channels.Value(),
-                    config.AudioProfile.Resolution.Value());
+
+                if (_decoder != nullptr) { 
+                    _audioProfile = Core::Service<AudioProfile>::Create<AudioProfile>(
+                        config.AudioProfile.Codec.Value(),
+                        config.AudioProfile.SampleRate.Value(),
+                        config.AudioProfile.Channels.Value(),
+                        config.AudioProfile.Resolution.Value());
+                }
+
+                TRACE(Flow, (_T("The HoG device is ready for operation")));
             }
             bool Initialize() override
             {
@@ -605,14 +643,16 @@ namespace Plugin {
             }
             void Operational() override
             {
-                TRACE(Flow, (_T("The received MTU: %d"), MTU()));
-
                 if (_profile == nullptr) {
+                    TRACE(Flow, (_T("The received MTU: %d, no need for discovery, we know it all"), MTU()));
+
                     // No need to do service discovery if device knows the Handles to use. If so, DeviceDiscovery has 
                     // already been done and the only thing we need to do is get the startingvalues :-)
                     ReadSoftwareRevision();
                 }
                 else {
+                    TRACE(Flow, (_T("The received MTU: %d, we have no clue yet, start discovery"), MTU()));
+
                     _profile->Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
                         if (result == Core::ERROR_NONE) {
 
@@ -622,6 +662,7 @@ namespace Plugin {
                                 TRACE(Flow, (_T("The given bluetooth device does not support a HID service!!")));
                             }
                             else {
+                                TRACE(Flow, (_T("Reading the remaining information")));
                                 ReadModelNumber();
                             }
                         }
@@ -716,24 +757,29 @@ namespace Plugin {
             }
             void EnableEvents() {
 
+                uint16_t notificationHandle;
                 ASSERT (_profile != nullptr);
 
                 // Set all interesting handles...
                 if (_keysDataHandle == static_cast<uint16_t>(~0)) {
-                    _keysDataHandle = _profile->FindHandle(Bluetooth::Profile::Service::BatteryService, Bluetooth::Profile::Service::Characteristic::BatteryLevel);
-                    EnableEvents(_T("Key handling"), _keysDataHandle);
+                    notificationHandle = _profile->FindHandle(Bluetooth::Profile::Service::HumanInterfaceDevice, Bluetooth::Profile::Service::Characteristic::Report, Bluetooth::Profile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration);
+                    _keysDataHandle = _profile->FindHandle(Bluetooth::Profile::Service::HumanInterfaceDevice, Bluetooth::Profile::Service::Characteristic::Report);
+                    EnableEvents(_T("Key handling"), notificationHandle);
                 }
                 else if (_batteryLevelHandle == static_cast<uint16_t>(~0)) {
+                    notificationHandle = _profile->FindHandle(Bluetooth::Profile::Service::BatteryService, Bluetooth::Profile::Service::Characteristic::BatteryLevel, Bluetooth::Profile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration);
                     _batteryLevelHandle = _profile->FindHandle(Bluetooth::Profile::Service::BatteryService, Bluetooth::Profile::Service::Characteristic::BatteryLevel);
-                    EnableEvents(_T("Battery handling"), _batteryLevelHandle);
+                    EnableEvents(_T("Battery handling"), notificationHandle);
                 }
                 else if (_voiceCommandHandle == static_cast<uint16_t>(~0)) {
+                    notificationHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceCommandChar, Bluetooth::Profile::Service::Characteristic::Characteristic::Descriptor::ClientCharacteristicConfiguration);
                     _voiceCommandHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceCommandChar);
-                    EnableEvents(_T("Voice Command handling"), _voiceCommandHandle);
+                    EnableEvents(_T("Voice Command handling"), notificationHandle);
                 }
                 else if (_voiceDataHandle == static_cast<uint16_t>(~0)) {
+                    notificationHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceDataChar, Bluetooth::Profile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration);
                     _voiceDataHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceDataChar);
-                    EnableEvents(_T("Voice Data handling"), _voiceDataHandle);
+                    EnableEvents(_T("Voice Data handling"), notificationHandle);
                 }
                 else {
                     _softwareRevisionHandle = _profile->FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::SoftwareRevisionString);
@@ -809,9 +855,10 @@ namespace Plugin {
                 info.SoftwareRevisionHandle = _softwareRevisionHandle;
                 info.KeysDataHandle = _keysDataHandle;
                 info.BatteryLevelHandle = _batteryLevelHandle;
-                info.VoiceCommandHandle = _voiceDataHandle;
-                info.VoiceDataHandle = _voiceCommandHandle;
+                info.VoiceCommandHandle = _voiceCommandHandle;
+                info.VoiceDataHandle = _voiceDataHandle;
  
+                TRACE(Flow, (_T("All required information gathered. Report it to the parent")));
                 _parent->Operational(info);
             }
             void Updated()
@@ -916,6 +963,7 @@ namespace Plugin {
             , _gattRemote(nullptr)
             , _name(_T("NOT_AVAIALABLE"))
             , _controller()
+            , _keyMap()
             , _configLine()
             , _recordFile()
             , _batteryLevel(~0)
@@ -1047,6 +1095,7 @@ namespace Plugin {
         GATTRemote* _gattRemote;
         string _name;
         string _controller;
+        string _keyMap;
         string _configLine;
         string _recordFile;
         uint8_t _batteryLevel;

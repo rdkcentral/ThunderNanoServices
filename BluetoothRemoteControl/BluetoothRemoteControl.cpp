@@ -30,15 +30,19 @@ namespace Plugin {
         LUT<FROM,TO>& operator= (const LUT<FROM,TO>&) = delete;
 
         template<size_t N>
-        LUT(const Entry (&input)[N]) : _lut (input), _length(N) { }
+        LUT(const Entry (&input)[N]) : _lut() { 
+            for (uint8_t index = 0; index < N; index++) {
+                _lut.emplace_back(input[index]);
+            }
+        }
 
     public:
         bool Lookup(const FROM& from, TO& value) const {
             uint8_t index = 0;
-            while ( (index < _length) && (_lut[index].from != from) ) {
+            while ( (index < _lut.size()) && (_lut[index].from != from) ) {
                 index++;
             }
-            if (index < _length) {
+            if (index < _lut.size()) {
                 value = _lut[index].to;
                 return (true);
             }
@@ -46,10 +50,10 @@ namespace Plugin {
         }
         bool Lookup(const TO& from, FROM& value) const {
             uint8_t index = 0;
-            while ( (index < _length) && (_lut[index].to != from) ) {
+            while ( (index < _lut.size()) && (_lut[index].to != from) ) {
                 index++;
             }
-            if (index < _length) {
+            if (index < _lut.size()) {
                 value = _lut[index].from;
                 return (true);
             }
@@ -58,8 +62,7 @@ namespace Plugin {
 
 
     private:
-        const Entry* const _lut;
-        uint16_t _length;
+        std::vector<Entry> _lut;
     };
 
     static const LUT<Exchange::IVoiceProducer::IProfile::codec, WAV::Recorder::codec> CodecTable({
@@ -101,7 +104,6 @@ namespace Plugin {
         }
         else {
             _recordFile = _service->VolatilePath() + sequence;
-
         }
 
         if (Core::File(_service->PersistentPath(), true).IsDirectory() == false) {
@@ -337,6 +339,8 @@ namespace Plugin {
     {
         ASSERT (_gattRemote != nullptr);
 
+        _name = _gattRemote->Name();
+
         // Store the settings, if not already done..
         Core::File settingsFile(_service->PersistentPath() + _gattRemote->Address() + _T(".json"));
         if ( (settingsFile.Exists() == false) && (settingsFile.Create() == true) ) {
@@ -346,10 +350,10 @@ namespace Plugin {
 
         if (_inputHandler != nullptr) {
             // Load the keyMap for this remote
-            string keyMapFile(_service->DataPath() + _gattRemote->Name() + _T(".json"));
+            string keyMapFile(_service->DataPath() + (_keyMap.empty() ? _name : _keyMap) + _T(".json"));
             if (Core::File(keyMapFile).Exists() == true) {
-                TRACE(Trace::Information, (_T("Loading keymap file [%s] for remote [%s]"), keyMapFile.c_str(), _gattRemote->Name().c_str()));
-                PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(_gattRemote->Name()));
+                TRACE(Trace::Information, (_T("Loading keymap file [%s] for remote [%s]"), keyMapFile.c_str(), _name.c_str()));
+                PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(_name));
 
                 uint32_t result = map.Load(keyMapFile);
                 if (result != Core::ERROR_NONE) {
@@ -386,13 +390,19 @@ namespace Plugin {
             }
 
             if (_record != recorder::OFF) {
+               
                 WAV::Recorder::codec wavCodec;
                 TCHAR fileName[256];
                 Core::Time now (Core::Time::Now());
                 ::snprintf(fileName, sizeof(fileName), _recordFile.c_str(), now.Hours(), now.Minutes(), now.Seconds());
 
+
                 if (CodecTable.Lookup(profile->Codec(), wavCodec) == true) {
                     _recorder.Open(string(fileName), wavCodec, profile->Channels(), profile->SampleRate(), profile->Resolution());
+
+                    if (_recorder.IsOpen() == true) {
+                        TRACE(Trace::Information, (_T("Recorder started on: %s"), fileName));
+                    }
                 }
             }
 
@@ -414,6 +424,7 @@ namespace Plugin {
             if (_recorder.IsOpen() == true) {
                 _recorder.Close();
             }
+
 
             TRACE(Trace::Information, (_T("Audio transmission: end")));
         }
@@ -452,6 +463,7 @@ namespace Plugin {
 
     void BluetoothRemoteControl::BatteryLevel(const uint8_t level)
     {
+        printf ("Battery level!!!!! %d\n", level);
         _batteryLevel = level;
         event_batterylevelchange(level);
     }
