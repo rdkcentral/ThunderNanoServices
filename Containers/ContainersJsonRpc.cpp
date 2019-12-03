@@ -19,7 +19,6 @@ namespace Plugin {
         Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("containers"), &Containers::get_containers, nullptr, this);
         Property<Core::JSON::ArrayType<NetworksData>>(_T("networks"), &Containers::get_networks, nullptr, this);
         Property<MemoryData>(_T("memory"), &Containers::get_memory, nullptr, this);
-        Property<Core::JSON::EnumType<StatusType>>(_T("status"), &Containers::get_status, nullptr, this);
         Property<CpuData>(_T("cpu"), &Containers::get_cpu, nullptr, this);
         Property<Core::JSON::String>(_T("logpath"), &Containers::get_logpath, nullptr, this);
         Property<Core::JSON::String>(_T("configpath"), &Containers::get_configpath, nullptr, this);
@@ -31,7 +30,6 @@ namespace Plugin {
         Unregister(_T("configpath"));
         Unregister(_T("logpath"));
         Unregister(_T("cpu"));
-        Unregister(_T("status"));
         Unregister(_T("memory"));
         Unregister(_T("networks"));
         Unregister(_T("containers"));
@@ -133,42 +131,6 @@ namespace Plugin {
         }
         
         return result;
-    }
-
-    // Property: status - Operational status of the container
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_UNAVAILABLE: Container not found
-    uint32_t Containers::get_status(const string& index, Core::JSON::EnumType<StatusType>& response) const
-    {
-        uint32_t result = Core::ERROR_NONE;
-
-        auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto container = administrator.Find(index); 
-
-        if (container != nullptr) {
-            switch(container->ContainerState()) {
-                case ProcessContainers::IContainerAdministrator::IContainer::ABORTING:
-                    response = StatusType::ABORTING;
-                    break;
-                case ProcessContainers::IContainerAdministrator::IContainer::RUNNING:
-                    response = StatusType::RUNNING;
-                    break;
-                case ProcessContainers::IContainerAdministrator::IContainer::STARTING:
-                    response = StatusType::STARTING;
-                    break;
-                case ProcessContainers::IContainerAdministrator::IContainer::STOPPED:
-                    response = StatusType::STOPPED;
-                    break;
-                case ProcessContainers::IContainerAdministrator::IContainer::STOPPING:
-                    response = StatusType::STOPPING;
-                    break;                
-            }
-        } else {
-            result = Core::ERROR_UNAVAILABLE;
-        }
-        
-        return result;    
     }
 
     // Property: cpu - CPU time allocated to running the container

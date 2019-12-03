@@ -45,7 +45,6 @@ namespace Plugin {
         uint32_t get_containers(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t get_networks(const string& index, Core::JSON::ArrayType<JsonData::Containers::NetworksData>& response) const;
         uint32_t get_memory(const string& index, JsonData::Containers::MemoryData& response) const;
-        uint32_t get_status(const string& index, Core::JSON::EnumType<JsonData::Containers::StatusType>& response) const;
         uint32_t get_cpu(const string& index, JsonData::Containers::CpuData& response) const;
         uint32_t get_logpath(const string& index, Core::JSON::String& response) const;
         uint32_t get_configpath(const string& index, Core::JSON::String& response) const;
