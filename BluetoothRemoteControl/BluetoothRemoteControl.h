@@ -808,8 +808,6 @@ namespace Plugin {
             }
             void ReadSoftwareRevision()
             {
-                ASSERT (_profile != nullptr);
-
                 if (_softwareRevisionHandle != 0) {
                     _command.Read(_softwareRevisionHandle);
                     Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
