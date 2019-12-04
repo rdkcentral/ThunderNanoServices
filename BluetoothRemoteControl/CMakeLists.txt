@@ -31,9 +31,9 @@ install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 install(
-	FILES bluetooth-remote.json
+	DIRECTORY keymaps/
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/${PLUGIN_NAME}
-	COMPONENT ${MODULE_NAME})
+	FILES_MATCHING PATTERN "*.json")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 
