@@ -453,8 +453,13 @@ namespace Plugin {
     void BluetoothRemoteControl::KeyEvent(const bool pressed, const uint16_t keyCode)
     {
         _adminLock.Lock();
-        if (_inputHandler != nullptr) {
-            _inputHandler->KeyEvent(pressed, keyCode, _name);
+        if (_inputHandler != nullptr) {            
+            uint32_t result = _inputHandler->KeyEvent(pressed, keyCode, _name);
+            if (result == Core::ERROR_NONE) {
+                TRACE(Trace::Information, ("key send: %d (%s)", keyCode, pressed ? "pressed": "released"));
+            } else {
+                TRACE(Trace::Information, ("Unknown key send: %d (%s)", keyCode, pressed ? "pressed": "released"))
+            }
         }
         else {
         }
