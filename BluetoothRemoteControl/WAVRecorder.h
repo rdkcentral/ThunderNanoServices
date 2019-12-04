@@ -31,6 +31,8 @@ public:
     uint32_t Open(const string& fileName, const codec type, const uint8_t channels, const uint32_t sampleRate, const uint8_t bitsPerSample) {
         uint32_t result = Core::ERROR_UNAVAILABLE;
 
+        printf ("Opened file for: codec: %d, channels: %d, sampleRate: %d, bitsPerSample: %d\n", type, channels, sampleRate, bitsPerSample);
+
         _file = Core::File(fileName, false);
 
         if (_file.Create() == true) {
@@ -42,13 +44,14 @@ public:
             Store<uint16_t>(type);   
             Store<uint16_t>(channels);   
             Store<uint32_t>(sampleRate);   
-            Store<uint32_t>(sampleRate * channels * bitsPerSample);   
-            Store<uint16_t>(channels * bitsPerSample);   
+            Store<uint32_t>(sampleRate * ( bitsPerSample / 8));   
+            Store<uint16_t>(bitsPerSample / 8);   
             Store<uint16_t>(bitsPerSample);   
             _file.Write(reinterpret_cast<const uint8_t*>(_T("data")), 4);
             _file.Write(reinterpret_cast<const uint8_t*>(_T("    ")), 4);
             _bitsPerSample = bitsPerSample;
             ASSERT (_bitsPerSample >= 1);
+            _fileSize = 0;
             result = Core::ERROR_NONE;
         }
         return (result);
@@ -56,15 +59,16 @@ public:
     void Close() {
         if (_file.IsOpen() == true) {
             _file.Position(false, 4);
-            Store<uint32_t>(_file.Size() - 8);
+            Store<uint32_t>(_fileSize + 36);
             _file.Position(false, 40);
-            Store<uint32_t>((_file.Size() - 44) / ((_bitsPerSample + 7) / 8) );
+            Store<uint32_t>(_fileSize);
             _file.Close();
         }
     }
     void Write (const uint16_t length, const uint8_t data[]) {
 
         _file.Write(data, length);
+        _fileSize += length;
     }
 
 private:
@@ -81,6 +85,7 @@ private:
 private:
     Core::File _file;
     uint8_t _bitsPerSample;
+    uint32_t _fileSize;
 };
  
 } } // namespace WPEFramework::WAV

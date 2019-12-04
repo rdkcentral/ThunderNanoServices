@@ -242,7 +242,7 @@ namespace Plugin {
                     Profile() 
                         : Core::JSON::Container()
                         , Codec(Exchange::IVoiceProducer::IProfile::codec::PCM)
-                        , SampleRate(8000)
+                        , SampleRate(16000)
                         , Channels(1)
                         , Resolution(16)
                     {    
@@ -552,8 +552,8 @@ namespace Plugin {
                 else {
                     _audioProfile = Core::Service<AudioProfile>::Create<AudioProfile>(
                         config.Codec.Value(),
-                        config.SampleRate.Value(),
                         config.Channels.Value(),
+                        config.SampleRate.Value(),
                         config.Resolution.Value());
                 }
             }
@@ -630,8 +630,8 @@ namespace Plugin {
                 if (_decoder != nullptr) { 
                     _audioProfile = Core::Service<AudioProfile>::Create<AudioProfile>(
                         config.AudioProfile.Codec.Value(),
-                        config.AudioProfile.SampleRate.Value(),
                         config.AudioProfile.Channels.Value(),
+                        config.AudioProfile.SampleRate.Value(),
                         config.AudioProfile.Resolution.Value());
                 }
 
