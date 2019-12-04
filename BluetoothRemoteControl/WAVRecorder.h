@@ -18,8 +18,7 @@ public:
     Recorder& operator= (const Recorder&) = delete;
 
     Recorder() 
-        : _file() 
-        , _bitsPerSample(16) {
+        : _file() {
     }
     ~Recorder() {
     }
@@ -36,11 +35,14 @@ public:
         _file = Core::File(fileName, false);
 
         if (_file.Create() == true) {
+
+            ASSERT (bitsPerSample >= 1);
+
             _file.Write(reinterpret_cast<const uint8_t*>(_T("RIFF")), 4);
             _file.Write(reinterpret_cast<const uint8_t*>(_T("    ")), 4);
             _file.Write(reinterpret_cast<const uint8_t*>(_T("WAVE")), 4);
             _file.Write(reinterpret_cast<const uint8_t*>(_T("fmt ")), 4);
-            Store<uint32_t>(bitsPerSample);         /* SubChunk1Size is 16 */
+            Store<uint32_t>(16);         /* SubChunk1Size is 16 */
             Store<uint16_t>(type);   
             Store<uint16_t>(channels);   
             Store<uint32_t>(sampleRate);   
@@ -49,8 +51,6 @@ public:
             Store<uint16_t>(bitsPerSample);   
             _file.Write(reinterpret_cast<const uint8_t*>(_T("data")), 4);
             _file.Write(reinterpret_cast<const uint8_t*>(_T("    ")), 4);
-            _bitsPerSample = bitsPerSample;
-            ASSERT (_bitsPerSample >= 1);
             _fileSize = 0;
             result = Core::ERROR_NONE;
         }
@@ -84,7 +84,6 @@ private:
 
 private:
     Core::File _file;
-    uint8_t _bitsPerSample;
     uint32_t _fileSize;
 };
  
