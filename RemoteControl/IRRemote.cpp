@@ -57,7 +57,7 @@ namespace Plugin {
         void Initialize();
         void Deinitialize();
 
-        virtual const TCHAR* Name() const
+        virtual string Name() const
         {
             return (_resourceName.c_str());
         }
