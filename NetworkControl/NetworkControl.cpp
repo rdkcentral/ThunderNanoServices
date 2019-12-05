@@ -427,7 +427,7 @@ namespace Plugin
     /* Saves all leased offers to file */
     void NetworkControl::DHCPEngine::SaveLeases() 
     {
-        if (_parent._persistentStoragePath.empty() == false) {
+        if (_leaseFilePath.empty() == false) {
             Core::File leaseFile(_leaseFilePath);
 
             if (leaseFile.Create() == true) {
@@ -455,7 +455,7 @@ namespace Plugin
     */
     void NetworkControl::DHCPEngine::LoadLeases() 
     {
-        if (_parent._persistentStoragePath.empty() == false) {
+        if (_leaseFilePath.empty() == false) {
 
             Core::File leaseFile(_leaseFilePath);
 

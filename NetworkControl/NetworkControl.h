@@ -300,6 +300,7 @@ namespace Plugin {
                         if (leaseFile.Create() == true) {
                             leaseFile.Close();
                         } else {
+                            _leaseFilePath = "";
                             TRACE(Trace::Warning, ("Failed to create persistent dhcp lease file for %s", interfaceName.c_str()))
                         }
                     }
