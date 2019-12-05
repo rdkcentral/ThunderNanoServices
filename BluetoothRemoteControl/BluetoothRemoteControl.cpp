@@ -2,13 +2,79 @@
 
 namespace WPEFramework {
 
+ENUM_CONVERSION_BEGIN(Plugin::BluetoothRemoteControl::recorder)
+
+    { Plugin::BluetoothRemoteControl::recorder::OFF,               _TXT("off")               },
+    { Plugin::BluetoothRemoteControl::recorder::SINGLE,            _TXT("single")            },
+    { Plugin::BluetoothRemoteControl::recorder::SEQUENCED,         _TXT("sequenced")         },
+    { Plugin::BluetoothRemoteControl::recorder::SINGLE_PERSIST,    _TXT("single_persist")    },
+    { Plugin::BluetoothRemoteControl::recorder::SEQUENCED_PERSIST, _TXT("sequenced_persist") },
+
+ENUM_CONVERSION_END(Plugin::BluetoothRemoteControl::recorder)
+
 namespace Plugin {
 
     SERVICE_REGISTRATION(BluetoothRemoteControl, 1, 0);
 
+    template<typename FROM, typename TO>
+    class LUT {
+    public:
+        struct Entry {
+            FROM from;
+            TO to;
+        };
+
+    public:
+        LUT() = delete;
+        LUT(const LUT<FROM,TO>&) = delete;
+        LUT<FROM,TO>& operator= (const LUT<FROM,TO>&) = delete;
+
+        template<size_t N>
+        LUT(const Entry (&input)[N]) : _lut() { 
+            for (uint8_t index = 0; index < N; index++) {
+                _lut.emplace_back(input[index]);
+            }
+        }
+
+    public:
+        bool Lookup(const FROM& from, TO& value) const {
+            uint8_t index = 0;
+            while ( (index < _lut.size()) && (_lut[index].from != from) ) {
+                index++;
+            }
+            if (index < _lut.size()) {
+                value = _lut[index].to;
+                return (true);
+            }
+            return (false);
+        }
+        bool Lookup(const TO& from, FROM& value) const {
+            uint8_t index = 0;
+            while ( (index < _lut.size()) && (_lut[index].to != from) ) {
+                index++;
+            }
+            if (index < _lut.size()) {
+                value = _lut[index].from;
+                return (true);
+            }
+            return (false);
+        }
+
+
+    private:
+        std::vector<Entry> _lut;
+    };
+
+    static const LUT<Exchange::IVoiceProducer::IProfile::codec, WAV::Recorder::codec> CodecTable({
+
+        { .from = Exchange::IVoiceProducer::IProfile::codec::PCM,   .to = WAV::Recorder::codec::PCM   },
+        { .from = Exchange::IVoiceProducer::IProfile::codec::ADPCM, .to = WAV::Recorder::codec::ADPCM }
+
+    });
+
     const string BluetoothRemoteControl::Initialize(PluginHost::IShell* service)
     {
-        string result;
+        string sequence;
 
         ASSERT(_service == nullptr);
         ASSERT(_gattRemote == nullptr);
@@ -16,40 +82,92 @@ namespace Plugin {
         _service = service;
         _service->AddRef();
         _skipURL = _service->WebPrefix().length();
+        _configLine = _service->ConfigLine();
 
-        _config.FromString(_service->ConfigLine());
+        Config config;
+        config.FromString(_configLine);
 
-        string persistentStoragePath = _service->PersistentPath();
-        if (persistentStoragePath.empty() == false) {
-            if (Core::Directory(persistentStoragePath.c_str()).CreatePath() == false) {
-                TRACE(Trace::Error, (_T("Failed to create persistent storage folder [%s]"), persistentStoragePath.c_str()));
-            } else {
-                _settingsPath = persistentStoragePath + "Settings.json";
+        ASSERT (_service->PersistentPath().empty() == false);
 
-                Settings settings;
-                if (LoadSettings(settings) == Core::ERROR_NONE) {
-                    if ((settings.Name.IsSet() == true) && (settings.Address.IsSet() == true)) {
-                        if (Assign(settings.Address.Value()) != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, (_T("Failed to read settings")));
-                        } else if (_gattRemote != nullptr) {
-                             _gattRemote->Configure(settings.Gatt.Value());
+        _controller = config.Controller.Value();
+        _record     = config.Recorder.Value();
+
+        if ((_record & 0x0F) == 0) {
+            sequence = ("voice.wav");
+        }
+        else {
+            sequence = ("voice_%02d_%02d_%02d.wav");
+        }
+
+        if ((_record & 0xF0) == 0x20) {
+            _recordFile = _service->PersistentPath() + sequence;
+        }
+        else {
+            _recordFile = _service->VolatilePath() + sequence;
+        }
+
+        if (Core::File(_service->PersistentPath(), true).IsDirectory() == false) {
+            if (Core::Directory(_service->PersistentPath().c_str()).CreatePath() == false) {
+                TRACE(Trace::Error, (_T("Failed to create persistent storage folder [%s]"), _service->PersistentPath().c_str()));
+            } 
+        }
+        else {
+            Exchange::IBluetooth* bluetoothCtl(_service->QueryInterfaceByCallsign<Exchange::IBluetooth>(_controller));
+
+            if (bluetoothCtl != nullptr) {
+                Core::Directory storageDir (_service->PersistentPath().c_str(), _T("*.json"));
+ 
+                while ( (_gattRemote == nullptr) && (storageDir.Next() == true) ) {
+                    string filename = Core::File::FileName(storageDir.Name());
+
+                    // See if this is a Bluetooth MAC Address, if so, lets load it..
+                    Bluetooth::Address address (filename.c_str());
+
+                    if (address.IsValid() == true)  {
+                        Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename);
+                        Core::File fileData(storageDir.Current().c_str(), true);
+
+                        if (device != nullptr) {
+                            if (fileData.Open(true) == true) {
+                                GATTRemote::Data data; 
+                                data.IElement::FromFile(fileData);
+
+                                // Seems we have a "real" device, load it..
+                                _gattRemote = new GATTRemote(this, device, _configLine, data);
+                            }
+                            device->Release();
                         }
                     }
                 }
+
+                bluetoothCtl->Release();
             }
         }
 
-        _hidHandler->Callback(this);
+        if (config.KeyIngest.Value() == true) {
+            _inputHandler = PluginHost::InputHandler::Handler();
+            ASSERT(_inputHandler != nullptr);
+        }
 
-        return result;
+        return (string());
     }
 
     void BluetoothRemoteControl::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
 
-        delete _gattRemote;
-        _gattRemote = nullptr;
+        if (_recorder.IsOpen() == true) {
+            _recorder.Close();
+        }
+        
+        if (_gattRemote != nullptr) {
+            delete _gattRemote;
+            _gattRemote = nullptr;
+        }
+        if (_voiceHandler != nullptr) {
+            _voiceHandler->Release();
+            _voiceHandler = nullptr;
+        }
         _service->Release();
         _service = nullptr;
     }
@@ -170,15 +288,11 @@ namespace Plugin {
 
         if (_gattRemote == nullptr) {
             ASSERT(_service != nullptr);
-            Exchange::IBluetooth* bluetoothCtl(_service->QueryInterfaceByCallsign<Exchange::IBluetooth>(_config.BtCtlCallsign.Value()));
+            Exchange::IBluetooth* bluetoothCtl(_service->QueryInterfaceByCallsign<Exchange::IBluetooth>(_controller));
             if (bluetoothCtl != nullptr) {
                 Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address);
                 if (device != nullptr) {
-                    if ((_config.MTU.IsSet() == true) && (_config.MTU.Value() != 0)) {
-                        _gattRemote = new GATTRemote(this, device, _config.MTU.Value());
-                    } else {
-                        _gattRemote = new GATTRemote(this, device);
-                    }
+                    _gattRemote = new GATTRemote(this, device, _configLine);
                     if (_gattRemote != nullptr) {
                         result = Core::ERROR_NONE;
                     } else {
@@ -207,7 +321,10 @@ namespace Plugin {
         uint32_t result = Core::ERROR_ALREADY_RELEASED;
 
         if (_gattRemote != nullptr) {
-            RemoteUnbonded(*_gattRemote);
+            Core::File file(_service->PersistentPath() + _gattRemote->Address() + _T(".json"));
+            if (file.Destroy() == true) {
+                TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] removed from persistent storage"), _gattRemote->Address().c_str()));
+            }
             delete _gattRemote;
             _gattRemote = nullptr;
             result = Core::ERROR_NONE;
@@ -218,132 +335,142 @@ namespace Plugin {
         return (result);
     }
 
-    uint8_t BluetoothRemoteControl::BatteryLevel() const
+    void BluetoothRemoteControl::Operational(const GATTRemote::Data& settings)
     {
-        uint8_t level = ~0;
+        ASSERT (_gattRemote != nullptr);
 
-        if (_gattRemote != nullptr) {
-            level = _batteryLevelHandler.Level();
-        } else {
-            TRACE(Trace::Error, (_T("A remote has not been assigned")));
+        _name = _gattRemote->Name();
+
+        // Store the settings, if not already done..
+        Core::File settingsFile(_service->PersistentPath() + _gattRemote->Address() + _T(".json"));
+        if ( (settingsFile.Exists() == false) && (settingsFile.Create() == true) ) {
+            settings.IElement::ToFile(settingsFile);
+            settingsFile.Close();
         }
 
-        return (level);
-    }
+        if (_inputHandler != nullptr) {
+            // Load the keyMap for this remote
+            string keyMapFile(_service->DataPath() + (_keyMap.empty() ? _name : _keyMap) + _T(".json"));
+            if (Core::File(keyMapFile).Exists() == true) {
+                TRACE(Trace::Information, (_T("Loading keymap file [%s] for remote [%s]"), keyMapFile.c_str(), _name.c_str()));
+                PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(_name));
 
-        uint32_t BluetoothRemoteControl::LoadKeymap(GATTRemote& remote, const string& name)
-    {
-        uint32_t result = Core::ERROR_UNAVAILABLE;
-
-        string path(_service->DataPath() + name + "-remote.json");
-        if (Core::File(path).Exists() == true) {
-            TRACE(Trace::Information, (_T("Loading keymap file [%s] for remote [%s]"), path.c_str(), remote.Name().c_str()));
-            PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(remote.Name()));
-
-            result = map.Load(path);
-            if (result != Core::ERROR_NONE) {
-                TRACE(Trace::Error, (_T("Failed to load keymap file [%s]"), path.c_str()));
-            }
-        }
-
-        return (result);
-    }
-
-    uint32_t BluetoothRemoteControl::LoadSettings(Settings& settings) const
-    {
-        uint32_t result = Core::ERROR_OPENING_FAILED;
-
-        if (_settingsPath.empty() == false) {
-            Core::File file(_settingsPath);
-
-            if (file.Open() == true) {
-                result = (settings.IElement::FromFile(file) == true? Core::ERROR_NONE : Core::ERROR_READ_ERROR);
-                file.Close();
-            }
-        }
-
-        return (result);
-    }
-
-    uint32_t BluetoothRemoteControl::SaveSettings(const Settings& settings) const
-    {
-        uint32_t result = Core::ERROR_OPENING_FAILED;
-
-        if (_settingsPath.empty() == false) {
-            Core::File file(_settingsPath);
-
-            if (file.Create() == true) {
-                result = (settings.IElement::ToFile(file) == true? Core::ERROR_NONE : Core::ERROR_WRITE_ERROR);
-                file.Close();
-            }
-        }
-
-        return (result);
-    }
-
-    void BluetoothRemoteControl::RemoteCreated(GATTRemote& remote)
-    {
-        TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] created"), remote.Name().c_str()));
-
-        if (LoadKeymap(remote, remote.Name()) != Core::ERROR_NONE) {
-            if ((_config.DefaultKeymap.IsSet() == false) || (LoadKeymap(remote, _config.DefaultKeymap.Value()) != Core::ERROR_NONE)) {
-                TRACE(Trace::Information, (_T("No keymap available for remote [%s]"), remote.Name().c_str()));
-            }
-        }
-        if (_hidHandler->Initialize(&remote) != Core::ERROR_NONE) {
-            TRACE(Trace::Error, (_T("Failed to initialize HID handler")));
-        }
-        if (_batteryLevelHandler.Initialize(&remote) != Core::ERROR_NONE) {
-            TRACE(Trace::Error, (_T("Failed to initialize battery level handler")));
-        }
-        if (_config.Audio.IsSet() == true) {
-            if (_audioHandler.Initialize(&remote, _config.Audio.Value()) != Core::ERROR_NONE) {
-                TRACE(Trace::Error, (_T("Failed to initialize audio handler")));
+                uint32_t result = map.Load(keyMapFile);
+                if (result != Core::ERROR_NONE) {
+                    TRACE(Trace::Error, (_T("Failed to load keymap file [%s]"), keyMapFile.c_str()));
+                }
             }
         }
     }
 
-    void BluetoothRemoteControl::RemoteDestroyed(GATTRemote& remote)
+    void BluetoothRemoteControl::VoiceData(Exchange::IVoiceProducer::IProfile* profile)
     {
-        TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] destroyed"), remote.Name().c_str()));
+        if (profile != nullptr) {
 
-        if (_config.Audio.IsSet() == true) {
-            if (_audioHandler.Deinitialize() != Core::ERROR_NONE) {
-                TRACE(Trace::Error, (_T("Failed to deinitialize audio handler")));
+            string codecText(_T("<<unknown>>"));
+            Core::EnumerateType<Exchange::IVoiceProducer::IProfile::codec> codec(profile->Codec());
+
+            if (codec.Data() != nullptr) {
+                codecText = string(codec.Data());
             }
-        }
-        if (_batteryLevelHandler.Deinitialize() != Core::ERROR_NONE) {
-            TRACE(Trace::Error, (_T("Failed to deinitialize battery level handler")));
-        }
-        if (_hidHandler->Deinitialize() != Core::ERROR_NONE) {
-            TRACE(Trace::Error, (_T("Failed to initialize HID handler")));
-        }
 
-        _inputHandler->ClearTable(remote.Name());
-        if (_config.DefaultKeymap.IsSet() == true) {
-            _inputHandler->ClearTable(_config.DefaultKeymap.Value());
+            _adminLock.Lock();
+
+            if (_voiceHandler != nullptr) {
+                _voiceHandler->Start(profile);
+            }
+            else {
+                event_audiotransmission(codecText);
+            }
+
+            _adminLock.Unlock();
+
+            if (_recorder.IsOpen() == true) {
+                _recorder.Close();
+            }
+
+            if (_record != recorder::OFF) {
+               
+                WAV::Recorder::codec wavCodec;
+                TCHAR fileName[256];
+                Core::Time now (Core::Time::Now());
+                ::snprintf(fileName, sizeof(fileName), _recordFile.c_str(), now.Hours(), now.Minutes(), now.Seconds());
+
+
+                if (CodecTable.Lookup(profile->Codec(), wavCodec) == true) {
+                    _recorder.Open(string(fileName), wavCodec, profile->Channels(), profile->SampleRate(), profile->Resolution());
+
+                    if (_recorder.IsOpen() == true) {
+                        TRACE(Trace::Information, (_T("Recorder started on: %s"), fileName));
+                    }
+                }
+            }
+
+            TRACE(Trace::Information, (_T("Audio transmission: %s"), codecText.c_str()));
+        }
+        else {
+
+            _adminLock.Lock();
+
+            if (_voiceHandler != nullptr) {
+                _voiceHandler->Stop();
+            }
+            else {
+                event_audiotransmission(string());
+            }
+
+            _adminLock.Unlock();
+
+            if (_recorder.IsOpen() == true) {
+                _recorder.Close();
+            }
+
+
+            TRACE(Trace::Information, (_T("Audio transmission: end")));
         }
     }
 
-    void BluetoothRemoteControl::RemoteBonded(GATTRemote& remote)
+    void BluetoothRemoteControl::VoiceData(const uint32_t seq, const uint16_t length, const uint8_t dataBuffer[])
     {
-        string settings;
-        remote.Configuration(settings);
-        if (SaveSettings(Settings(remote.Name(), remote.Address(), settings)) != Core::ERROR_NONE) {
-            TRACE(Trace::Error, (_T("Failed to save settings")));
-        } else {
-            TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] stored persistently"), remote.Name().c_str()));
+        _adminLock.Lock();
+
+        if (_voiceHandler != nullptr) {
+            _voiceHandler->Data(seq, dataBuffer, length);
+        }
+        else {
+            string frame;
+            Core::ToString(dataBuffer, length, true, frame);
+            event_audioframe(seq, frame);
+        }
+
+        _adminLock.Unlock();
+
+        if (_recorder.IsOpen() == true) {
+            _recorder.Write(length, dataBuffer);
         }
     }
 
-    void BluetoothRemoteControl::RemoteUnbonded(GATTRemote& remote)
+    void BluetoothRemoteControl::KeyEvent(const bool pressed, const uint16_t keyCode)
     {
-        if (_settingsPath.empty() == false) {
-            Core::File file(_settingsPath);
-            if (file.Destroy() == true) {
-                TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] removed from persistent storage"), remote.Name().c_str()));
+        _adminLock.Lock();
+        if (_inputHandler != nullptr) {            
+            uint32_t result = _inputHandler->KeyEvent(pressed, keyCode, _name);
+            if (result == Core::ERROR_NONE) {
+                TRACE(Trace::Information, ("key send: %d (%s)", keyCode, pressed ? "pressed": "released"));
+            } else {
+                TRACE(Trace::Information, ("Unknown key send: %d (%s)", keyCode, pressed ? "pressed": "released"))
             }
         }
+        else {
+        }
+        _adminLock.Unlock();
+    }
+
+    void BluetoothRemoteControl::BatteryLevel(const uint8_t level)
+    {
+        printf ("Battery level!!!!! %d\n", level);
+        _batteryLevel = level;
+        event_batterylevelchange(level);
     }
 
 } // namespace Plugin
