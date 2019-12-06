@@ -100,7 +100,8 @@ Starts a new container.
 | params | object |  |
 | params?.name | string | <sup>*(optional)*</sup> Name of container |
 | params?.command | string | <sup>*(optional)*</sup> Command that will be started in the container |
-| params?.parameters | string | <sup>*(optional)*</sup> Parameters supplied to the command |
+| params?.parameters | array | <sup>*(optional)*</sup> List of parameters supplied to command |
+| params?.parameters[#] | string | <sup>*(optional)*</sup>  |
 
 ### Result
 
@@ -127,7 +128,9 @@ Starts a new container.
     "params": {
         "name": "ContainerName", 
         "command": "lsof", 
-        "parameters": "-i"
+        "parameters": [
+            "-i"
+        ]
     }
 }
 ```
@@ -199,10 +202,7 @@ Containers interface properties:
 | [containers](#property.containers) <sup>RO</sup> | List of active containers |
 | [networks](#property.networks) <sup>RO</sup> | List of network interfaces of the container |
 | [memory](#property.memory) <sup>RO</sup> | Memory taken by container |
-| [status](#property.status) <sup>RO</sup> | Operational status of the container |
 | [cpu](#property.cpu) <sup>RO</sup> | CPU time |
-| [logpath](#property.logpath) <sup>RO</sup> | Containers log path |
-| [configpath](#property.configpath) <sup>RO</sup> | Path to container's configuration |
 
 <a name="property.containers"></a>
 ## *containers <sup>property</sup>*
@@ -340,47 +340,6 @@ Provides access to the memory taken by container.
     }
 }
 ```
-<a name="property.status"></a>
-## *status <sup>property</sup>*
-
-Provides access to the operational status of the container.
-
-> This property is **read-only**.
-
-### Value
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | string | Status of the container (must be one of the following: *stopped*, *starting*, *running*, *aborting*, *stopping*) |
-
-> The *name* shall be passed as the index to the property, e.g. *Containers.1.status@ContainerName*.
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Container not found |
-
-### Example
-
-#### Get Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Containers.1.status@ContainerName"
-}
-```
-#### Get Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": "stopped"
-}
-```
 <a name="property.cpu"></a>
 ## *cpu <sup>property</sup>*
 
@@ -428,87 +387,5 @@ Provides access to the CPU time.
             2871287421
         ]
     }
-}
-```
-<a name="property.logpath"></a>
-## *logpath <sup>property</sup>*
-
-Provides access to the containers log path.
-
-> This property is **read-only**.
-
-### Value
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | string | Path to file containing logs from the container |
-
-> The *name* shall be passed as the index to the property, e.g. *Containers.1.logpath@ContainerName*.
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Container not found |
-
-### Example
-
-#### Get Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Containers.1.logpath@ContainerName"
-}
-```
-#### Get Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": ""
-}
-```
-<a name="property.configpath"></a>
-## *configpath <sup>property</sup>*
-
-Provides access to the path to container's configuration.
-
-> This property is **read-only**.
-
-### Value
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | string | Path to file containing the configuration of the container |
-
-> The *name* shall be passed as the index to the property, e.g. *Containers.1.configpath@ContainerName*.
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Container not found |
-
-### Example
-
-#### Get Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Containers.1.configpath@ContainerName"
-}
-```
-#### Get Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": ""
 }
 ```

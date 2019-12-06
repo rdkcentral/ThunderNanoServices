@@ -100,14 +100,16 @@ namespace Plugin {
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
         _service->Register(&_notification);
 
-        _opencdmi = _service->Root<Exchange::IContentDecryption>(_connectionId, Core::infinite, _T("OCDMImplementation"));
-
+        printf("########PRE ROOT!\n");
+        _opencdmi = _service->Root<Exchange::IContentDecryption>(_connectionId, 5000, _T("OCDMImplementation"));
+        printf("########POST ROOT!\n");
         if (_opencdmi == nullptr) {
             message = _T("OCDM could not be instantiated.");
             _service->Unregister(&_notification);
             _service = nullptr;
         } else {
             _opencdmi->Initialize(_service);
+            printf("# INITIALIZE DONE\n");
 
             if ((_connectionId != 0) && (_service->RemoteConnection(_connectionId) == nullptr)){
                 message = _T("OCDM crashed at initialize!");
@@ -116,10 +118,13 @@ namespace Plugin {
                 _service = nullptr;
             } else {
                 _memory = WPEFramework::OCDM::MemoryObserver(_service->RemoteConnection(_connectionId));
-                
+                printf("########MEMORY OBSERVER!\n");
+
                 ASSERT(_memory != nullptr);
             }
         }
+
+        printf("######## ALL DONE!\n");
 
         return message;
     }
