@@ -196,7 +196,8 @@ public:
                 exitTime = itr->second.ExitTime();
                 if (exitTime) {
                     if (exitTime < currTime) {
-                        if (kill(itr->second.ProcessId(), SIGKILL) == 0) {
+                        if (ProcessExists(itr->second.ProcessId())) {
+                            kill(itr->second.ProcessId(), SIGKILL);
                             syslog(LOG_NOTICE, "ProcessMonitor killed %s\n",
                                     itr->first.c_str());
                         }
@@ -219,6 +220,27 @@ public:
             if (scheduleTime) {
                 PluginHost::WorkerPool::Instance().Schedule(scheduleTime, _job);
             }
+        }
+        bool ProcessExists(uint32_t pid)
+        {
+            std::ostringstream cmd;
+            cmd << "cat /proc/" << pid
+                    << "/stat 2> /dev/null | awk '{ print $3 }'";
+
+            std::string result;
+            std::array<char, 128> buffer;
+            std::unique_ptr<FILE, decltype(&pclose)> pipe(
+                    popen(string(cmd.str()).c_str(), "r"), pclose);
+            if (!pipe) {
+                throw std::runtime_error("popen() failed!");
+            }
+            while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+                result += buffer.data();
+            }
+            if ((result.size() == 0) || (result.compare(string("Z\n")) == 0)) {
+                return false;
+            }
+            return true;
         }
         void Activated(RPC::IRemoteConnection *connection) override
         {
