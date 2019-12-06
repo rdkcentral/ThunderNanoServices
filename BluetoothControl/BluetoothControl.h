@@ -491,11 +491,9 @@ class BluetoothControl : public PluginHost::IPlugin
                 : Core::JSON::Container()
                 , Interface(0)
                 , Name(_T("Thunder BT Control"))
-                , External(false)
             {
                 Add(_T("interface"), &Interface);
                 Add(_T("name"), &Name);
-                Add(_T("external"), &External);
             }
             ~Config()
             {
@@ -504,7 +502,6 @@ class BluetoothControl : public PluginHost::IPlugin
         public:
             Core::JSON::DecUInt16 Interface;
             Core::JSON::String Name;
-            Core::JSON::Boolean External;
         };
 
     public:
@@ -594,7 +591,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
             public:
                 template<typename KEYLISTTYPE>
-                void Get(const Core::JSON::ArrayType<Core::JSON::String>& keys, const Bluetooth::Address& remote ,const Bluetooth::Address::type type, KEYLISTTYPE& list) const
+                void Get(const Core::JSON::ArrayType<Core::JSON::String>& keys, const Bluetooth::Address& remote, const Bluetooth::Address::type type, KEYLISTTYPE& list) const
                 {
                     auto index = keys.Elements();
                     while (index.Next() == true) {
@@ -877,7 +874,7 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             bool IsConnected() const override
             {
-                return ( (_handle != static_cast<uint16_t>(~0)) && (_features[0] != 0xFF) && (_features[1] != 0xFF) && (_features[2] != 0xFF) && (_features[3] != 0xFF) );
+                return (_handle != static_cast<uint16_t>(~0));
             }
             inline uint16_t DeviceId() const
             {
@@ -1229,7 +1226,6 @@ class BluetoothControl : public PluginHost::IPlugin
                 // _cmds.name.Response().bdaddr;
                 const char* longName = reinterpret_cast<const char*>(data.Response().name);
                 uint8_t index = 0;
-                printf("UPDATED => ");
                 while (index < HCI_MAX_NAME_LENGTH) {
                     printf("%c", ::isprint(longName[index]) ? longName[index] : '.');
                     index++;
@@ -1546,13 +1542,14 @@ class BluetoothControl : public PluginHost::IPlugin
                 ForgetDevice(device);
             }
         }
+        DeviceImpl* Find(const uint16_t handle) const;
+        DeviceImpl* Find(const Bluetooth::Address&) const;
         void RemoveDevices(std::function<bool(DeviceImpl*)> filter);
         void Discovered(const bool lowEnergy, const Bluetooth::Address& address, const string& name);
         void Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame);
-        DeviceImpl* Find(const uint16_t handle) const;
-        DeviceImpl* Find(const Bluetooth::Address&) const;
         void Capabilities(const Bluetooth::Address& device, const uint8_t capability, const uint8_t authentication, const uint8_t oob_data);
 
+        uint32_t LoadDevices(const string& devicePath, Bluetooth::ManagementSocket& administrator);
         uint32_t LoadDevice(const string&, Bluetooth::LinkKeys&, Bluetooth::LongTermKeys&, Bluetooth::IdentityKeys&);
         uint32_t ForgetDevice(const DeviceImpl* device);
         uint32_t SaveDevice(const DeviceImpl* device) const;
