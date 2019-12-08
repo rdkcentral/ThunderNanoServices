@@ -863,11 +863,13 @@ namespace Plugin {
             {
                 _adminLock.Lock();
                 if (_device != nullptr) {
-                    if ((_device->IsConnected() == true) && (IsOpen() == false)) {
-                        TRACE(Trace::Information, (_T("Connecting GATT socket [%s]"), _device->RemoteId().c_str()));
-                        uint32_t result = GATTSocket::Open(5000);
-                        if (result != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, (_T("Failed to open GATT socket [%s]"), _device->RemoteId().c_str()));
+                    if (_device->IsConnected() == true) {
+                        if (IsOpen() == false) {
+                            TRACE(Trace::Information, (_T("Connecting GATT socket [%s]"), _device->RemoteId().c_str()));
+                            uint32_t result = GATTSocket::Open(5000);
+                            if (result != Core::ERROR_NONE) {
+                                TRACE(Trace::Error, (_T("Failed to open GATT socket [%s]"), _device->RemoteId().c_str()));
+                            }
                         }
                     } else if (_device->IsValid() == true) {
                         if (IsOpen() == true) {
