@@ -8,6 +8,7 @@ option(PLUGIN_REMOTECONTROL_RFCE "Enable RF4CE functionality." ON)
 set(PLUGIN_REMOTECONTROL_RFCE_REMOTE_ID "GPSTB" CACHE STRING "User string, used for greenpeak")
 set(PLUGIN_REMOTECONTROL_RFCE_MODULE "/lib/modules/misc/gpK5.ko" CACHE STRING "path to kernel module")
 set(PLUGIN_REMOTECONTROL_RFCE_NODE_ID 249 CACHE STRING "Node ID for the device to be created")
+set(PLUGIN_REMOTECONTROL_RFCE_NVM_LUT "DEFAULT" CACHE STRING "The NVM LUT to be used (see GreenPeakNvmLut.h)")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
@@ -54,7 +55,8 @@ if(PLUGIN_REMOTECONTROL_RFCE)
         add_definitions(${RF4CE_DEFINITIONS})
         target_compile_definitions(${MODULE_NAME} 
             PRIVATE 
-                GP_SCHED_EXTERNAL_MAIN)
+                GP_SCHED_EXTERNAL_MAIN
+                GP_NVM_LUT_${PLUGIN_REMOTECONTROL_RFCE_NVM_LUT})
         include_directories(${RF4CE_INCLUDE_DIRS})
         target_sources(${MODULE_NAME} 
             PRIVATE 
