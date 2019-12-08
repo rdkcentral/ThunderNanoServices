@@ -1111,8 +1111,8 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 config->Get(config->LinkKeys, address, Bluetooth::Address::BREDR_ADDRESS, _linkKeys);
                 RemoteName();
-                if (device->IsBonded() == true) {
-                    uint32_t result = Connector().Control().AddDevice(config.Type.Value(), address, Bluetooth::ManagementSocket::DIRECT);
+                if (IsBonded() == true) {
+                    uint32_t result = parent->Connector().Control().AddDevice(Bluetooth::Address::BREDR_ADDRESS, address, Bluetooth::ManagementSocket::DIRECT);
                     if (result != Core::ERROR_NONE) {
                         TRACE(DeviceFlow, (_T("Could not add device, error <%i>"), result));
                     }
@@ -1264,8 +1264,8 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 config->Get(config->LongTermKeys, address, Bluetooth::Address::LE_PUBLIC_ADDRESS, _ltks);
                 _irk = Bluetooth::IdentityKey(address, Bluetooth::Address::LE_PUBLIC_ADDRESS, config->IdentityKey.Value());
-                if (device->IsBonded() == true) {
-                    uint32_t result = Connector().Control().AddDevice(config.Type.Value(), address, Bluetooth::ManagementSocket::ALWAYS);
+                if (IsBonded() == true) {
+                    uint32_t result = parent->Connector().Control().AddDevice(Bluetooth::Address::LE_PUBLIC_ADDRESS, address, Bluetooth::ManagementSocket::ALWAYS);
                     if (result != Core::ERROR_NONE) {
                         TRACE(DeviceFlow, (_T("Could not add device, error <%i>"), result));
                     }
