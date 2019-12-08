@@ -636,13 +636,6 @@ namespace Plugin {
 
                             _devices.push_back(device);
 
-                            if (device->IsBonded() == true) {
-                                uint32_t result = Connector().Control().AddDevice(config.Type.Value(), address, Bluetooth::ManagementSocket::DIRECT);
-                                if (result != Core::ERROR_NONE) {
-                                    TRACE(ControlFlow, (_T("Could not add device, error <%i>"), result));
-                                }
-                            }
-
                             result = Core::ERROR_NONE;
                         }
                     }
