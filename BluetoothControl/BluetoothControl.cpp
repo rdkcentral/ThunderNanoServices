@@ -27,13 +27,20 @@ namespace Plugin {
             result = Core::ToString(driverMessage);
         }
         else {
+            Data controllerData;
             Bluetooth::ManagementSocket& administrator = _application.Control();
             Bluetooth::ManagementSocket::Devices(_adapters);
             administrator.DeviceId(_config.Interface.Value());
 
-            _persistentStoragePath = _service->PersistentPath() + "BondedDevices/";
+            _persistentStoragePath = _service->PersistentPath() + "Devices/";
+            LoadController(_service->PersistentPath(), controllerData);
 
-            if (Bluetooth::ManagementSocket::Up(_config.Interface.Value()) == false) {
+            if ((_config.PersistMAC.Value() == true) && 
+                (controllerData.MAC.Value().empty() == false) &&
+                (administrator.PublicAddress(Bluetooth::Address(controllerData.MAC.Value().c_str())) != Core::ERROR_NONE)) {
+                result = "Could not setthe persistent MAC address for the bluetooth interface.";
+            }
+            else if (Bluetooth::ManagementSocket::Up(_config.Interface.Value()) == false) {
                 result = "Could not activate bluetooth interface.";
             }
             else if (administrator.Power(false) != Core::ERROR_NONE) {
@@ -83,6 +90,11 @@ namespace Plugin {
                 Bluetooth::ManagementSocket::Info::Properties actuals(info.Actuals());
                 Bluetooth::ManagementSocket::Info::Properties supported(info.Supported());
 
+                if (controllerData.MAC.Value().empty() == true) {
+                    controllerData.MAC = info.Address().ToString();
+                    SaveController(_service->PersistentPath(), controllerData);
+                }
+                    
                 SYSLOG(Logging::Startup, (_T("        Name:              %s"), info.ShortName().c_str()));
                 SYSLOG(Logging::Startup, (_T("        Version:           %d"), info.Version()));
                 SYSLOG(Logging::Startup, (_T("        Address:           %s"), info.Address().ToString().c_str()));
@@ -592,6 +604,24 @@ namespace Plugin {
         return (result);
     }
  
+    void BluetoothControl::LoadController(const string& pathName, Data& data) const
+    {
+        Core::File file(pathName + _T("Controller.json"), true);
+        if (file.Open(true) == true) {
+            data.IElement::FromFile(file);
+            file.Close();
+        }
+    }
+
+    void BluetoothControl::SaveController(const string& pathName, const Data& data) 
+    {
+        Core::File file(pathName + _T("Controller.json"), true);
+        if (file.Open(false) == true) {
+            data.IElement::ToFile(file);
+            file.Close();
+        }
+    }
+
     uint32_t BluetoothControl::LoadDevice(const string& fileName,
                                           Bluetooth::LinkKeys& linkKeysList, 
                                           Bluetooth::LongTermKeys& longTermKeysList, 

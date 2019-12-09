@@ -482,18 +482,18 @@ class BluetoothControl : public PluginHost::IPlugin
         };
 
         class Config : public Core::JSON::Container {
-        private:
-            Config(const Config&);
-            Config& operator=(const Config&);
-
         public:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
             Config()
                 : Core::JSON::Container()
                 , Interface(0)
                 , Name(_T("Thunder BT Control"))
+                , PersistMAC(true)
             {
                 Add(_T("interface"), &Interface);
                 Add(_T("name"), &Name);
+                Add(_T("persistmac"), &PersistMAC);
             }
             ~Config()
             {
@@ -502,6 +502,25 @@ class BluetoothControl : public PluginHost::IPlugin
         public:
             Core::JSON::DecUInt16 Interface;
             Core::JSON::String Name;
+            Core::JSON::Boolean PersistMAC;
+        };
+
+        class Data : public Core::JSON::Container {
+        public:
+            Data(const Data&) = delete;
+            Data& operator=(const Data&) = delete;
+            Data()
+                : Core::JSON::Container()
+                , MAC()
+            {
+                Add(_T("mac"), &MAC);
+            }
+            ~Data()
+            {
+            }
+
+        public:
+            Core::JSON::String MAC;
         };
 
     public:
@@ -1560,6 +1579,8 @@ class BluetoothControl : public PluginHost::IPlugin
         void Discovered(const bool lowEnergy, const Bluetooth::Address& address, const string& name);
         void Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame);
         void Capabilities(const Bluetooth::Address& device, const uint8_t capability, const uint8_t authentication, const uint8_t oob_data);
+        void LoadController(const string& pathName, Data& data) const;
+        void SaveController(const string& pathName, const Data& data);
 
         uint32_t LoadDevices(const string& devicePath, Bluetooth::ManagementSocket& administrator);
         uint32_t LoadDevice(const string&, Bluetooth::LinkKeys&, Bluetooth::LongTermKeys&, Bluetooth::IdentityKeys&);
