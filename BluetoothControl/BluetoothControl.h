@@ -489,7 +489,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 : Core::JSON::Container()
                 , Interface(0)
                 , Name(_T("Thunder BT Control"))
-                , PersistMAC(true)
+                , PersistMAC(false)
             {
                 Add(_T("interface"), &Interface);
                 Add(_T("name"), &Name);

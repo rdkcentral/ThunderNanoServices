@@ -38,7 +38,7 @@ namespace Plugin {
             if ((_config.PersistMAC.Value() == true) && 
                 (controllerData.MAC.Value().empty() == false) &&
                 (administrator.PublicAddress(Bluetooth::Address(controllerData.MAC.Value().c_str())) != Core::ERROR_NONE)) {
-                result = "Could not setthe persistent MAC address for the bluetooth interface.";
+                result = "Could not set the persistent MAC address for the bluetooth interface.";
             }
             else if (Bluetooth::ManagementSocket::Up(_config.Interface.Value()) == false) {
                 result = "Could not activate bluetooth interface.";
@@ -616,7 +616,7 @@ namespace Plugin {
     void BluetoothControl::SaveController(const string& pathName, const Data& data) 
     {
         Core::File file(pathName + _T("Controller.json"), true);
-        if (file.Open(false) == true) {
+        if (file.Create() == true) {
             data.IElement::ToFile(file);
             file.Close();
         }
