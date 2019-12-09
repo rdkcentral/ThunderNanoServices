@@ -837,6 +837,7 @@ namespace Plugin
             } else {
                 message += _T("Update\" }");
                 TRACE(Trace::Information, (_T("Updated interface: %s"), interfaceName.c_str()));
+                event_connectionchange(interfaceName.c_str(), string(), JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::UPDATE);
             }
 
             if ((adapter.IsRunning() == true) && (adapter.IsUp() == true)) {
