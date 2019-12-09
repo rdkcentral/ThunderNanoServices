@@ -425,12 +425,12 @@ NetworkControl interface events:
 
 | Event | Description |
 | :-------- | :-------- |
-| [connectionchange](#event.connectionchange) | Notifies about connection status (update, connected or connectionfailed) |
+| [connectionchange](#event.connectionchange) | Notifies about connection status (created, updated, removed, connected and connectionfailed) |
 
 <a name="event.connectionchange"></a>
 ## *connectionchange <sup>event</sup>*
 
-Notifies about connection status (update, connected or connectionfailed).
+Notifies about connection status (created, updated, removed, connected and connectionfailed).
 
 ### Parameters
 
@@ -439,7 +439,7 @@ Notifies about connection status (update, connected or connectionfailed).
 | params | object |  |
 | params.name | string | Name of network interface |
 | params.address | string | IP Address of network interface, if it is connected |
-| params.status | string | Status of the interface, update, connected or not (must be one of the following: *update*, *connected*, *connectionfailed*) |
+| params.status | string | Status of the interface, update, connected or not (must be one of the following: *created*, *updated*, *removed*, *connected*, *connectionfailed*) |
 
 ### Example
 
