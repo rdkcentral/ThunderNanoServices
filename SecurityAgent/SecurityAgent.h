@@ -1,8 +1,9 @@
 #pragma once
 
+#include "Module.h"
 #include <interfaces/json/JsonData_SecurityAgent.h>
 #include "AccessControlList.h"
-#include "Module.h"
+
 
 namespace WPEFramework {
 namespace Plugin {

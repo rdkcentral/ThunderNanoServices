@@ -232,7 +232,7 @@ namespace Plugin
     NetworkControl::Process(const Web::Request& request)
     {
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
-        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
+        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint16_t>(request.Path.length()) - _skipURL), false, '/');
 
         // By default, we assume everything works..
         result->ErrorCode = Web::STATUS_BAD_REQUEST;

@@ -36,7 +36,7 @@ namespace Plugin {
         if (adapters.IsValid() == true) {
             adapters.MACAddress(_MAC, sizeof(_MAC));
         } else {
-            TRACE_L1("Could not read mac address of %s\n", _interfaceName);
+            TRACE_L1("Could not read mac address of %s\n", _interfaceName.c_str());
         }
   
     }

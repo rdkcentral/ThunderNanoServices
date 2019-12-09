@@ -38,7 +38,7 @@ namespace Plugin {
         string token, payload;
         params.ToString(payload);
 
-        if (CreateToken(payload.length(), reinterpret_cast<const uint8_t*>(payload.c_str()), token) == Core::ERROR_NONE) {
+        if (CreateToken(static_cast<uint16_t>(payload.length()), reinterpret_cast<const uint8_t*>(payload.c_str()), token) == Core::ERROR_NONE) {
             response.Token = token;
         } else {
             result = Core::ERROR_GENERAL;

@@ -1,6 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{a9bc4992-c83e-4408-9e2c-14977803015f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{7c4821de-9a6c-4e4f-bc52-ab05b429b714}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="Module.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -10,14 +18,9 @@
     <ClCompile Include="TimeSync.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{94a1ab73-8bed-4657-9cf9-11db45d84a4a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{6c1d3e1f-5a5a-4335-abe7-a0b562782841}</UniqueIdentifier>
-    </Filter>
+    <ClCompile Include="TimeSyncJsonRpc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Module.h">

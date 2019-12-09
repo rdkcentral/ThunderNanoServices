@@ -98,6 +98,9 @@ namespace Plugin {
             AdapterObserver& operator=(const AdapterObserver&) = delete;
 
         public:
+#ifdef __WIN32__
+#pragma warning(disable : 4355)
+#endif
             AdapterObserver(NetworkControl* parent)
                 : _parent(*parent)
                 , _adminLock()
@@ -106,6 +109,9 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
+#ifdef __WIN32__
+#pragma warning(default : 4355)
+#endif
             virtual ~AdapterObserver()
             {
             }
@@ -285,6 +291,9 @@ namespace Plugin {
             DHCPEngine& operator=(const DHCPEngine&) = delete;
 
         public:
+#ifdef __WIN32__
+#pragma warning(disable : 4355)
+#endif
             DHCPEngine(NetworkControl* parent, const string& interfaceName, const string& persistentStoragePath)
                 : _parent(*parent)
                 , _retries(0)
@@ -306,6 +315,9 @@ namespace Plugin {
                     
                 }
             }
+#ifdef __WIN32__
+#pragma warning(default : 4355)
+#endif
             ~DHCPEngine()
             {
             }

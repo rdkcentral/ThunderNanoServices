@@ -1,39 +1,39 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{92d88920-285e-4529-b275-222c74efff01}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{16243b0e-9ee0-4c7a-8788-b94a8c5eb5c1}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="Module.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SecurityContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SecurityAgent.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SecurityContext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SecurityAgentJsonRpc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Module.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SecurityContext.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="AccessControlList.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SecurityAgent.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Module.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SecurityContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="data.json" />
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{adb0bb23-15f9-4afc-9bb6-8151e151a51d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{797ebe4c-6681-462b-af2e-5cf01b327409}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

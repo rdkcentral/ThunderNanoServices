@@ -7,6 +7,7 @@
 
 #include <cryptalgo/cryptalgo.h>
 #include <plugins/plugins.h>
+#include <interfaces/definitions.h>
 
 #undef EXTERNAL
 #define EXTERNAL
