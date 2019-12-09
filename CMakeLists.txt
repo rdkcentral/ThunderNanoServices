@@ -11,6 +11,7 @@ option(PLUGIN_COMMANDER "Include Commander plugin" OFF)
 option(PLUGIN_COMPOSITOR "Include Compsitor plugin" OFF)
 option(PLUGIN_DEVICEIDENTIFICATION "Include DeviceIdentification plugin" OFF)
 option(PLUGIN_DEVICEINFO "Include DeviceInfo plugin" OFF)
+option(PLUGIN_DISPLAYINFO "Include DisplayInfo plugin" OFF)
 option(PLUGIN_DSRESOLUTION "Include DSResolution plugin" OFF)
 option(PLUGIN_DHCPSERVER "Include DHCPServer plugin" OFF)
 option(PLUGIN_DIALSERVER " Include DIALServer plugin" OFF)
@@ -80,6 +81,10 @@ endif()
 
 if(PLUGIN_DEVICEINFO)
     add_subdirectory(DeviceInfo)
+endif()
+
+if(PLUGIN_DISPLAYINFO)
+    add_subdirectory(DisplayInfo)
 endif()
 
 if(PLUGIN_DSRESOLUTION)

@@ -1,12 +1,12 @@
-set(PLUGIN_NAME DeviceInfo)
+set(PLUGIN_NAME DisplayInfo)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
-    DeviceInfo.cpp
-    DeviceInfoJsonRpc.cpp
+    DisplayInfo.cpp
+    DisplayInfoJsonRpc.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
