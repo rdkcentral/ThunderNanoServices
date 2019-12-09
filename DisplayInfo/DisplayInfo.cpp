@@ -6,39 +6,22 @@ namespace Plugin {
     SERVICE_REGISTRATION(DisplayInfo, 1, 0);
 
     static Core::ProxyPoolType<Web::Response> responseFactory(4);
-    static Core::ProxyPoolType<Web::JSONBodyType<DisplayInfo::Data>> jsonResponseFactory(4);
+    static Core::ProxyPoolType<Web::JSONBodyType<JsonData::DisplayInfo::DisplayinfoData>> jsonResponseFactory(4);
 
     /* virtual */ const string DisplayInfo::Initialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == nullptr);
         ASSERT(service != nullptr);
-
-        ASSERT(_subSystem == nullptr);
 
         Config config;
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
-        _subSystem = service->SubSystems();
-        _service = service;
-        _systemId = Core::SystemInfo::Instance().Id(Core::SystemInfo::Instance().RawDeviceId(), ~0);
-
-        ASSERT(_subSystem != nullptr);
 
         // On success return empty, to indicate there is no error text.
-
-        return (_subSystem != nullptr) ? EMPTY_STRING : _T("Could not retrieve System Information.");
+        return (EMPTY_STRING);
     }
 
     /* virtual */ void DisplayInfo::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == service);
-
-        if (_subSystem != nullptr) {
-            _subSystem->Release();
-            _subSystem = nullptr;
-        }
-
-        _service = nullptr;
     }
 
     /* virtual */ string DisplayInfo::Information() const
@@ -64,26 +47,14 @@ namespace Plugin {
         // <GET> - currently, only the GET command is supported, returning system info
         if (request.Verb == Web::Request::HTTP_GET) {
 
-            Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
+            Core::ProxyType<Web::JSONBodyType<JsonData::DisplayInfo::DisplayinfoData>> response(jsonResponseFactory.Element());
 
             Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length()) - _skipURL), false, '/');
 
             // Always skip the first one, it is an empty part because we start with a '/' if there are more parameters.
             index.Next();
 
-            if (index.Next() == false) {
-                AddressInfo(response->Addresses);
-                SysInfo(response->SystemInfo);
-                SocketPortInfo(response->Sockets);
-            } else if (index.Current() == "Adresses") {
-                AddressInfo(response->Addresses);
-            } else if (index.Current() == "System") {
-                SysInfo(response->SystemInfo);
-            } else if (index.Current() == "Sockets") {
-                SocketPortInfo(response->Sockets);
-            }
-            // TODO RB: I guess we should do something here to return other info (e.g. time) as well.
-
+            Info(*response);
             result->ContentType = Web::MIMETypes::MIME_JSON;
             result->Body(Core::proxy_cast<Web::IBody>(response));
         } else {
@@ -94,77 +65,12 @@ namespace Plugin {
         return result;
     }
 
-    void DisplayInfo::SysInfo(JsonData::DisplayInfo::SysteminfoData& systemInfo) const
+    void DisplayInfo::Info(JsonData::DisplayInfo::DisplayinfoData& displayInfo) const
     {
         Core::SystemInfo& singleton(Core::SystemInfo::Instance());
 
-        if (_deviceId.empty() == true) {
-            _deviceId = GetDeviceId();
-        }
-        if (_deviceId.empty() == false) {
-            systemInfo.Deviceid = _deviceId;
-        }
-
-        systemInfo.Time = Core::Time::Now().ToRFC1123(true);
-        systemInfo.Version = _service->Version() + _T("#") + _subSystem->BuildTreeHash();
-        systemInfo.Uptime = singleton.GetUpTime();
-        systemInfo.Freeram = singleton.GetFreeRam();
-        systemInfo.Totalram = singleton.GetTotalRam();
-        systemInfo.Devicename = singleton.GetHostName();
-        systemInfo.Cpuload = Core::NumberType<uint32_t>(static_cast<uint32_t>(singleton.GetCpuLoad())).Text();
-        systemInfo.Totalgpuram = singleton.GetTotalGpuRam();
-        systemInfo.Freegpuram = singleton.GetFreeGpuRam();
-        systemInfo.Serialnumber = _systemId;
-    }
-
-    void DisplayInfo::AddressInfo(Core::JSON::ArrayType<JsonData::DisplayInfo::AddressesData>& addressInfo) const
-    {
-        // Get the point of entry on WPEFramework..
-        Core::AdapterIterator interfaces;
-
-        while (interfaces.Next() == true) {
-
-            JsonData::DisplayInfo::AddressesData newElement;
-            newElement.Name = interfaces.Name();
-            newElement.Mac = interfaces.MACAddress(':');
-            JsonData::DisplayInfo::AddressesData& element(addressInfo.Add(newElement));
-
-            // get an interface with a public IP address, then we will have a proper MAC address..
-            Core::IPV4AddressIterator selectedNode(interfaces.Index());
-
-            while (selectedNode.Next() == true) {
-                Core::JSON::String nodeName;
-                nodeName = selectedNode.Address().HostAddress();
-
-                element.Ip.Add(nodeName);
-            }
-        }
-    }
-
-    void DisplayInfo::SocketPortInfo(JsonData::DisplayInfo::SocketinfoData& socketPortInfo) const
-    {
-        socketPortInfo.Runs = Core::ResourceMonitor::Instance().Runs();
-    }
-
-    string DisplayInfo::GetDeviceId() const
-    {
-        string result;
-
-        const PluginHost::ISubSystem::IIdentifier* info(_subSystem->Get<PluginHost::ISubSystem::IIdentifier>());
-
-        if (info != nullptr) {
-            uint8_t myBuffer[64];
-
-            myBuffer[0] = info->Identifier(sizeof(myBuffer) - 1, &(myBuffer[1]));
-
-            info->Release();
-
-            if (myBuffer[0] != 0) {
-                result = Core::SystemInfo::Instance().Id(myBuffer, ~0);
-            }
-        }
-
-        return (result);
+        displayInfo.Totalgpuram = singleton.GetTotalGpuRam();
+        displayInfo.Freegpuram = singleton.GetFreeGpuRam();
     }
 
 } // namespace Plugin
