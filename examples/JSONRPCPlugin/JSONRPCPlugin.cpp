@@ -9,11 +9,10 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
     { Data::Response::IDLE, _TXT("Idle") },
     { Data::Response::FAILURE, _TXT("Failure") },
 
-    ENUM_CONVERSION_END(Data::Response::state)
+ENUM_CONVERSION_END(Data::Response::state)
 
-        namespace Plugin
+namespace Plugin
 {
-
     SERVICE_REGISTRATION(JSONRPCPlugin, 1, 0);
 
     JSONRPCPlugin::JSONRPCPlugin()

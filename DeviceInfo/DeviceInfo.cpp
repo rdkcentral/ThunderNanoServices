@@ -112,8 +112,6 @@ namespace Plugin {
         systemInfo.Totalram = singleton.GetTotalRam();
         systemInfo.Devicename = singleton.GetHostName();
         systemInfo.Cpuload = Core::NumberType<uint32_t>(static_cast<uint32_t>(singleton.GetCpuLoad())).Text();
-        systemInfo.Totalgpuram = singleton.GetTotalGpuRam();
-        systemInfo.Freegpuram = singleton.GetFreeGpuRam();
         systemInfo.Serialnumber = _systemId;
     }
 

@@ -566,8 +566,8 @@ namespace Plugin {
 
             Core::ToString(buffer, length, false, convertedBuffer);
             data.Data = convertedBuffer;
-            data.Length = convertedBuffer.length();
-            data.Duration = convertedBuffer.length() + 1; //Dummy
+            data.Length = static_cast<uint16_t>(convertedBuffer.length());
+            data.Duration = static_cast<uint16_t>(convertedBuffer.length()) + 1; //Dummy
 
             return status;
         }
@@ -583,8 +583,8 @@ namespace Plugin {
 
             Core::ToString(buffer, length, false, convertedBuffer);
             result.Data = convertedBuffer;
-            result.Length = convertedBuffer.length();
-            result.Duration = convertedBuffer.length() + 1; //Dummy
+            result.Length = static_cast<uint16_t>(convertedBuffer.length());
+            result.Duration = static_cast<uint16_t>(convertedBuffer.length()) + 1; //Dummy
 
             return status;
         }

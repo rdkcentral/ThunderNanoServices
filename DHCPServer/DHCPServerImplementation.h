@@ -337,7 +337,7 @@ namespace Plugin {
             ScratchPad(const uint8_t dataFrame[], const uint32_t length)
                 : _id()
                 , _optionData(&(dataFrame[sizeof(CoreMessage)]))
-                , _optionSize(length - sizeof(CoreMessage))
+                , _optionSize(static_cast<uint16_t>(length - sizeof(CoreMessage)))
             {
 
                 const CoreMessage* const message = reinterpret_cast<const CoreMessage*>(dataFrame);

@@ -66,7 +66,7 @@ namespace Plugin {
                         // Convert identifier to bytes
                         uint8_t buffer[DHCPServerImplementation::Identifier::maxLength];
                         uint16_t identifierLength = Core::FromHexString(Name.Value(), buffer, DHCPServerImplementation::Identifier::maxLength);
-                        DHCPServerImplementation::Identifier identifier(buffer, identifierLength);
+                        DHCPServerImplementation::Identifier identifier(buffer, static_cast<uint8_t>(identifierLength));
 
                         return DHCPServerImplementation::Lease(identifier, ip.s_addr, Expires.Value());
                     }
