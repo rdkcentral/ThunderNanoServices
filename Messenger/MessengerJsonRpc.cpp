@@ -38,8 +38,8 @@ namespace Plugin {
         Unregister(_T("send"));
         Unregister(_T("leave"));
         Unregister(_T("join"));
-        UnregisterEventStatusListener(_T("userupdate");
-        UnregisterEventStatusListener(_T("roomupdate");
+        UnregisterEventStatusListener(_T("userupdate"));
+        UnregisterEventStatusListener(_T("roomupdate"));
     }
 
     // API implementation

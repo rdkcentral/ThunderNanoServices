@@ -159,7 +159,7 @@ namespace Plugin {
         Core::Time::Now().ToString(timenow);
 
         string roomIdBase = roomName + userName + timenow;
-        Crypto::SHA1 digest(reinterpret_cast<const uint8_t *>(roomIdBase.c_str()), roomIdBase.length());
+        Crypto::SHA1 digest(reinterpret_cast<const uint8_t *>(roomIdBase.c_str()), static_cast<uint16_t>(roomIdBase.length()));
 
         string roomId;
         Core::ToHexString(digest.Result(), (digest.Length / 2), roomId); // let's take only half of the hash
