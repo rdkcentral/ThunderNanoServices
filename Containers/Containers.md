@@ -353,8 +353,8 @@ Provides access to the CPU time.
 | :-------- | :-------- | :-------- |
 | (property) | object | CPU time spent on running the container, in nanoseconds |
 | (property)?.total | number | <sup>*(optional)*</sup> CPU-time spent on container, in nanoseconds |
-| (property)?.threads | array | <sup>*(optional)*</sup> Time spent on each cpu-thread, in nanoseconds |
-| (property)?.threads[#] | number | <sup>*(optional)*</sup>  |
+| (property)?.cores | array | <sup>*(optional)*</sup> Time spent on each cpu core, in nanoseconds |
+| (property)?.cores[#] | number | <sup>*(optional)*</sup>  |
 
 > The *name* shall be passed as the index to the property, e.g. *Containers.1.cpu@ContainerName*.
 
@@ -383,7 +383,7 @@ Provides access to the CPU time.
     "id": 1234567890, 
     "result": {
         "total": 2871287421, 
-        "threads": [
+        "cores": [
             2871287421
         ]
     }

@@ -88,6 +88,7 @@ namespace Plugin {
 
         if (container != nullptr) {
             container->Stop(0);
+            container->Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
@@ -134,13 +135,15 @@ namespace Plugin {
             while (networkIterator.Next() == true) {
                 NetworksData networkData;
                 networkData.Interface = networkIterator.Current(); 
-                const std::vector<Core::NodeId> ips = container->IPs(networkIterator.Current());                               
+                const std::vector<string> ips = container->IPs(networkIterator.Current());   
 
                 for (auto ip : ips) {
                     Core::JSON::String ipJSON;
-                    ipJSON = ip.HostName();
+                    ipJSON = ip;
                     networkData.Ips.Add(ipJSON);
                 }
+
+                response.Add(networkData);
             } 
         } else {
             result = Core::ERROR_UNAVAILABLE;
@@ -193,11 +196,11 @@ namespace Plugin {
             
             response.Total = cpuInfo.total;
             
-            for (auto thread : cpuInfo.threads) {
-                Core::JSON::DecUInt64 threadTime;
-                threadTime = thread;
+            for (auto core : cpuInfo.cores) {
+                Core::JSON::DecUInt64 coreTime;
+                coreTime = core;
 
-                response.Threads.Add(threadTime);
+                response.Cores.Add(coreTime);
             }
         } else {
             result = Core::ERROR_UNAVAILABLE;
