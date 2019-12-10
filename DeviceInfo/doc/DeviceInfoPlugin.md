@@ -106,8 +106,6 @@ Provides access to the system general information.
 | (property).freeram | number | Free system RAM memory (in bytes) |
 | (property).devicename | string | Host name |
 | (property).cpuload | string | Current CPU load (percentage) |
-| (property)?.totalgpuram | number | <sup>*(optional)*</sup> Total GPU DRAM memory (in bytes) |
-| (property).freegpuram | number | Free GPU DRAM memory (in bytes) |
 | (property).serialnumber | string | Device serial number |
 | (property).deviceid | string | Device ID |
 | (property).time | string | Current system date and time |
@@ -136,8 +134,6 @@ Provides access to the system general information.
         "freeram": 563015680, 
         "devicename": "buildroot", 
         "cpuload": "2", 
-        "totalgpuram": 381681664, 
-        "freegpuram": 358612992, 
         "serialnumber": "WPEuCfrLF45", 
         "deviceid": "WPEuCfrLF45", 
         "time": "Mon, 11 Mar 2019 14:38:18"
