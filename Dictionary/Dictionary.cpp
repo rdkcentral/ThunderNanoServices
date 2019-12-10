@@ -139,7 +139,7 @@ namespace Plugin {
         ASSERT(_skipURL <= request.Path.length());
         // <GET> ../[namespace/]{Key}
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
-        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
+        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length()) - _skipURL), false, '/');
         // <PUT> ../[namespace/]{Key}?Type=[persistent|volatile|closure]
         // If there is an entry, the first one will always be a '/', skip this one..
         index.Next();
