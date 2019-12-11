@@ -120,22 +120,50 @@ namespace Plugin {
                 GATTRemote& _parent;
             };
 
-            class Decoupling : public Core::IDispatch {
+            class Decoupling : public Core::Thread {
+            private:
+                class Slot {
+                public:
+                    Slot() = delete;
+                    Slot& operator= (const Slot&) = delete;
+                    Slot(const uint16_t handle, const uint8_t length, const uint8_t data[]) 
+                        : _handle(handle)
+                        , _data(reinterpret_cast<const char*>(data), length) {
+                    }
+                    Slot(const Slot& copy) 
+                        : _handle(copy._handle)
+                        , _data(copy._data) {
+                    }
+                    ~Slot() {
+                    }
+                public:
+                    uint16_t Handle() const {
+                        return (_handle);
+                    }
+                    uint8_t Length() const {
+                        return (static_cast<uint8_t>(_data.length()));
+                    }
+                    const uint8_t* Data() const {
+                        return (reinterpret_cast<const uint8_t*>(_data.c_str()));
+                    }
+
+                private:
+                    uint16_t _handle;
+                    std::string _data;
+                };
+
             public:
                 Decoupling(const Decoupling&) = delete;
                 Decoupling& operator=(const Decoupling&) = delete;
                 Decoupling(GATTRemote* parent)
                     : _parent(*parent)
                     , _adminLock()
-                    , _next(0)
-                    , _length(0xFF)
-                    , _buffer(reinterpret_cast<uint8_t*>(::malloc(_length)))
+                    , _queue()
                 {
                     ASSERT(parent != nullptr);
                 }
                 ~Decoupling() override
                 {
-                    ::free(_buffer);
                 }
 
             public:
@@ -144,55 +172,31 @@ namespace Plugin {
                     ASSERT (length > 0);
 
                     _adminLock.Lock();
-
-                    if ((_next + length + 3) > _length) {
-                        // Oops we need to extend our buffer
-                        _length = (((_next + length + 3 + 0xFF) >> 8) << 8);
-                        uint8_t* newBuffer = reinterpret_cast<uint8_t*>(::malloc(_length));
-                        ::memcpy(newBuffer, _buffer, _next);
-                        ::free(_buffer);
-                        _buffer = newBuffer;
-                    }
-
-                    _buffer[_next++] = length;
-                    _buffer[_next++] = (handle >> 8) & 0xFF;
-                    _buffer[_next++] = (handle & 0xFF);
-                    ::memcpy(&(_buffer[_next]), buffer, length);
-                    _next += length;
-
+                    _queue.emplace_back(Slot(handle, length, buffer));
                     _adminLock.Unlock();
+
+                    Run();
                 }
-                void Dispatch() override
+                uint32_t Worker() override
                 {
-                    uint16_t offset = 0;
+                    Block();
 
-                    _adminLock.Lock();
+                    while (_queue.size() > 0) {
 
-                    while (offset < _next) {
-
-                        uint8_t length = _buffer[offset++];
-                        uint16_t handle = (_buffer[offset] << 8) | (_buffer[offset+1]);
-                        offset += 2;
-                        _parent.Message(handle, length, &(_buffer[offset]));
-
-                        offset += length;
-
-                        ASSERT (offset <= _next);
+                        _adminLock.Lock();
+                        Slot entry (_queue.front());
+                        _queue.pop_front();
+                        _adminLock.Unlock();
+                        _parent.Message(entry.Handle(), entry.Length(), entry.Data());
                     }
 
-                    ASSERT (offset == _next);
-
-                    _next = 0;
-
-                    _adminLock.Unlock();
+                    return (Core::infinite);
                 }
 
             private:
                 GATTRemote& _parent;
                 Core::CriticalSection _adminLock;
-                uint16_t _next;
-                uint16_t _length;
-                uint8_t* _buffer;
+                std::list<Slot> _queue;
             };
 
             class AudioProfile : public Exchange::IVoiceProducer::IProfile {
@@ -242,7 +246,7 @@ namespace Plugin {
                     Profile() 
                         : Core::JSON::Container()
                         , Codec(Exchange::IVoiceProducer::IProfile::codec::PCM)
-                        , SampleRate(16000)
+                        , SampleRate(8000)
                         , Channels(1)
                         , Resolution(16)
                     {    
@@ -496,9 +500,6 @@ namespace Plugin {
                 }
 
                 _audioProfile->Release();
-
-                PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_decoupling));
-                _decoupling.CompositRelease();
             }
 
         public:
@@ -564,7 +565,6 @@ namespace Plugin {
                 // Decouple the notfications from the communciator thread, they will pop-up and need to be handled
                 // by the Message method!
                 _decoupling.Submit(handle, static_cast<uint8_t>(length), dataFrame);
-                PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(_decoupling));
             }
             void Message(const uint16_t handle, const uint8_t length, const uint8_t buffer[])
             {
@@ -617,7 +617,7 @@ namespace Plugin {
                 ASSERT(_device != nullptr);
 
                 _device->AddRef();
-                _decoupling.AddRef();
+                // _decoupling.AddRef();
                 _name = _device->Name();
                 _address = _device->RemoteId();
 
@@ -914,7 +914,7 @@ namespace Plugin {
             Profile* _profile;
             GATTSocket::Command _command;
             Exchange::IBluetooth::IDevice* _device;
-            Core::ProxyObject<Decoupling> _decoupling;
+            Decoupling _decoupling;
             Core::Sink<Sink> _sink;
 
             // This is the Name, as depicted by the Bluetooth device (generic IF) 
