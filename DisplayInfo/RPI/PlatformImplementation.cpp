@@ -3,20 +3,19 @@
 #include <bcm_host.h>
 
 namespace WPEFramework {
-namespace Plugin {
-namespace RPI {
+namespace Device {
+namespace Implementation {
 
-class DevicePlatform : public IDevicePlatform{
-private:
-    DevicePlatform() {
+class RPIPlatform : public Plugin::IDevicePlatform {
+public:
+    RPIPlatform() {
         bcm_host_init();
         UpdateTotalGpuRam(_totalGpuRam);
     }
 
-public:
-    DevicePlatform(const DevicePlatform&) = delete;
-    DevicePlatform& operator= (const DevicePlatform&) = delete;
-    virtual ~DevicePlatform()
+    RPIPlatform(const RPIPlatform&) = delete;
+    RPIPlatform& operator= (const RPIPlatform&) = delete;
+    virtual ~RPIPlatform()
     {
         bcm_host_deinit();
     }
@@ -101,11 +100,11 @@ private:
     mutable WPEFramework::Core::CriticalSection _mutualExclusion;
 };
 }
-/* static */ Core::ProxyType<IDevicePlatform> IDevicePlatform::Instance()
-{
-    static Core::ProxyType<DevicePlatform> devicePlatform(Core::ProxyType<RPI::DevicePlatform>::Create());
-    return static_cast<Core::ProxyType<IDevicePlatform>>(devicePlatform);
 }
 
+/* static */ Core::ProxyType<Plugin::IDevicePlatform> Plugin::IDevicePlatform::Instance()
+{
+    static Core::ProxyType<Device::Implementation::RPIPlatform> rpiPlatform(Core::ProxyType<Device::Implementation::RPIPlatform>::Create());
+    return static_cast<Core::ProxyType<Plugin::IDevicePlatform>>(rpiPlatform);
 }
 }

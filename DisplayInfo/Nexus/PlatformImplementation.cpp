@@ -4,22 +4,23 @@
 #include <nxclient.h>
 
 namespace WPEFramework {
-namespace Plugin {
-namespace Nexus {
+namespace Device {
+namespace Implementation {
 
-class DevicePlatform : public IDevicePlatform {
+class NexusPlatform : public Plugin::IDevicePlatform {
 public:
-    DevicePlatform()
+    NexusPlatform()
     : _totalGpuRam(0) {
+
         NEXUS_Error rc = NxClient_Join(NULL);
         ASSERT(!rc);
         NEXUS_Platform_GetConfiguration(&_platformConfig);
         UpdateTotalGpuRam(_totalGpuRam);
     }
 
-    DevicePlatform(const DevicePlatform&) = delete;
-    DevicePlatform& operator= (const DevicePlatform&) = delete;
-    virtual ~DevicePlatform()
+    NexusPlatform(const NexusPlatform&) = delete;
+    NexusPlatform& operator= (const NexusPlatform&) = delete;
+    virtual ~NexusPlatform()
     {
         NxClient_Uninit();
     }
@@ -65,10 +66,9 @@ public:
 private:
     void UpdateTotalGpuRam(uint64_t& totalRam) const
     {
-
         NEXUS_MemoryStatus status;
-
         NEXUS_Error rc = NEXUS_UNKNOWN;
+
 #if NEXUS_MEMC0_GRAPHICS_HEAP
         if (_platformConfig.heap[NEXUS_MEMC0_GRAPHICS_HEAP]) {
             rc = NEXUS_Heap_GetStatus(_platformConfig.heap[NEXUS_MEMC0_GRAPHICS_HEAP], &status);
@@ -100,11 +100,11 @@ private:
     NEXUS_PlatformConfiguration _platformConfig;
 };
 }
-
-/* static */ Core::ProxyType<IDevicePlatform> IDevicePlatform::Instance()
-{
-    static Core::ProxyType<DevicePlatform> devicePlatform(Core::ProxyType<Nexus::DevicePlatform>::Create());
-    return static_cast<Core::ProxyType<IDevicePlatform>>(devicePlatform);
 }
+
+/* static */ Core::ProxyType<Plugin::IDevicePlatform> Plugin::IDevicePlatform::Instance()
+{
+    static Core::ProxyType<Device::Implementation::NexusPlatform> nexusPlatform(Core::ProxyType<Device::Implementation::NexusPlatform>::Create());
+    return static_cast<Core::ProxyType<Plugin::IDevicePlatform>>(nexusPlatform);
 }
 }

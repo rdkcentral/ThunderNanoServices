@@ -24,7 +24,7 @@ target_link_libraries(${MODULE_NAME}
 if (NXCLIENT_FOUND AND NEXUS_FOUND)
     target_sources(${MODULE_NAME}
         PRIVATE
-            Nexus/DevicePlatform.cpp)
+            Nexus/PlatformImplementation.cpp)
     target_link_libraries(${MODULE_NAME}
         PRIVATE
             NEXUS::NEXUS
@@ -32,7 +32,7 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
 elseif (BCM_HOST_FOUND)
     target_sources(${MODULE_NAME}
         PRIVATE
-            RPI/DevicePlatform.cpp)
+            RPI/PlatformImplementation.cpp)
     target_link_libraries(${MODULE_NAME}
         PRIVATE
             BCM_HOST::BCM_HOST)

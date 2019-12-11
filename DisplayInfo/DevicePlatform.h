@@ -9,8 +9,8 @@ struct IDevicePlatform {
 
     virtual ~IDevicePlatform() {}
 
-    virtual uint64_t TotalGpuRam() const;
-    virtual uint64_t FreeGpuRam() const;
+    virtual uint64_t TotalGpuRam() const = 0;
+    virtual uint64_t FreeGpuRam() const = 0;
     static Core::ProxyType<IDevicePlatform> Instance();
 };
 
