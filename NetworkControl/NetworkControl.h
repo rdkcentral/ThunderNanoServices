@@ -356,16 +356,16 @@ namespace Plugin {
             void RequestResult(const DHCPClientImplementation::Offer& offer, const bool result) {
                 StopWatchdog();
 
-                JsonData::NetworkControl::ConnectionstatusParamsData::StatusType status;
+                JsonData::NetworkControl::ConnectionchangeParamsData::StatusType status;
                 if (result == true) {
                     _parent.RequestAccepted(_client.Interface(), offer);
-                    status = JsonData::NetworkControl::ConnectionstatusParamsData::StatusType::CONNECTED;
+                    status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::CONNECTED;
                 } else {
                     _parent.RequestFailed(_client.Interface(), offer);
-                    status = JsonData::NetworkControl::ConnectionstatusParamsData::StatusType::CONNECTIONFAILED;
+                    status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::CONNECTIONFAILED;
                 }
 
-                _parent.event_connectionstatus(_client.Interface().c_str(), offer.Address().HostAddress().c_str(), status);
+                _parent.event_connectionchange(_client.Interface().c_str(), offer.Address().HostAddress().c_str(), status);
             }
 
             inline void Request(const DHCPClientImplementation::Offer& offer) {
@@ -520,7 +520,7 @@ namespace Plugin {
         uint32_t get_network(const string& index, Core::JSON::ArrayType<JsonData::NetworkControl::NetworkData>& response) const;
         uint32_t get_up(const string& index, Core::JSON::Boolean& response) const;
         uint32_t set_up(const string& index, const Core::JSON::Boolean& param);
-        void event_connectionstatus(const string& name, const string& address, const JsonData::NetworkControl::ConnectionstatusParamsData::StatusType& status);
+        void event_connectionchange(const string& name, const string& address, const JsonData::NetworkControl::ConnectionchangeParamsData::StatusType& status);
 
     private:
         Core::CriticalSection _adminLock;

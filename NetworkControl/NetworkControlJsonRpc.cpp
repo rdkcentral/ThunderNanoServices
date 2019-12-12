@@ -222,15 +222,15 @@ namespace Plugin {
         return result;
     }
 
-    // Event: connectionstatus - Notifies about connection status (connected or connectionfailed)
-    void NetworkControl::event_connectionstatus(const string& name, const string& address, const ConnectionstatusParamsData::StatusType& status)
+    // Event: connectionchange - Notifies about connection status (update, connected or connectionfailed)
+    void NetworkControl::event_connectionchange(const string& name, const string& address, const ConnectionchangeParamsData::StatusType& status)
     {
-        ConnectionstatusParamsData params;
+        ConnectionchangeParamsData params;
         params.Name = name;
         params.Address = address;
         params.Status = status;
 
-        Notify(_T("connectionstatus"), params);
+        Notify(_T("connectionchange"), params);
     }
 } // namespace Plugin
 

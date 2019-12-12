@@ -822,6 +822,7 @@ namespace Plugin
     {
         string message;
         Core::AdapterIterator adapter(interfaceName);
+        JsonData::NetworkControl::ConnectionchangeParamsData::StatusType status;
 
         if (adapter.IsValid() == true) {
             // Send a message with the state of the adapter.
@@ -841,8 +842,10 @@ namespace Plugin
                 message += _T("Create\" }");
 
                 TRACE(Trace::Information, (_T("Added interface: %s"), interfaceName.c_str()));
+                status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::CREATED;
             } else {
                 message += _T("Update\" }");
+                status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::UPDATED;
                 TRACE(Trace::Information, (_T("Updated interface: %s"), interfaceName.c_str()));
             }
 
@@ -877,11 +880,13 @@ namespace Plugin
             _adminLock.Unlock();
 
             TRACE(Trace::Information, (_T("Removed interface: %s"), interfaceName.c_str()));
+            status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::REMOVED;
 
             message = string(_T("{ \"interface\": \"")) + interfaceName + string(_T("\", \"running\": \"false\", \"up\": \"false\", \"event\": \"Delete\" }"));
         }
 
         _service->Notify(message);
+        event_connectionchange(interfaceName.c_str(), string(), status);
     }
 
 } // namespace Plugin
