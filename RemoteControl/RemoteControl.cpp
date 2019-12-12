@@ -170,7 +170,8 @@ namespace Plugin {
 
             while (index.Next() == true) {
 
-                string loadName((*index)->Name());
+                string producer((*index)->Name());
+                string loadName(producer);
 
                 TRACE_L1(_T("Searching map file for: %s"), loadName.c_str());
 
@@ -197,7 +198,7 @@ namespace Plugin {
                     TRACE_L1(_T("Opening map file: %s"), specific.c_str());
 
                     // Get our selves a table..
-                    PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(loadName.c_str()));
+                    PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(producer.c_str()));
                     map.Load(specific);
                     if (configList.IsValid() == true) {
                         map.PassThrough(configList.Current().PassOn.Value());

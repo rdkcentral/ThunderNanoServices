@@ -209,7 +209,7 @@ namespace Plugin {
         {
             return (_readySignal.Lock(time) == 0);
         }
-        virtual const TCHAR* Name() const override
+        string Name() const override
         {
             return (_resourceName.c_str());
         }
