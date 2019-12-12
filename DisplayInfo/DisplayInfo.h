@@ -1,6 +1,6 @@
 #pragma once
 
-#include "DevicePlatform.h"
+#include "GraphicsProperties.h"
 #include <interfaces/json/JsonData_DisplayInfo.h>
 
 namespace WPEFramework {
@@ -50,7 +50,7 @@ namespace Plugin {
 
     private:
         uint8_t _skipURL;
-        Core::ProxyType<IDevicePlatform> _device;
+        Core::ProxyType<IGraphicsProperties> _device;
     };
 
 } // namespace Plugin

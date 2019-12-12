@@ -17,7 +17,7 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
-        _device = IDevicePlatform::Instance();
+        _device = IGraphicsProperties::Instance();
 
         // On success return empty, to indicate there is no error text.
         return (EMPTY_STRING);

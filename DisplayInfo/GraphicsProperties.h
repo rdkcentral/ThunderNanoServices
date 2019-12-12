@@ -5,13 +5,13 @@
 namespace WPEFramework {
 namespace Plugin {
 
-struct IDevicePlatform {
+struct IGraphicsProperties {
 
-    virtual ~IDevicePlatform() {}
+    virtual ~IGraphicsProperties() {}
 
     virtual uint64_t TotalGpuRam() const = 0;
     virtual uint64_t FreeGpuRam() const = 0;
-    static Core::ProxyType<IDevicePlatform> Instance();
+    static Core::ProxyType<IGraphicsProperties> Instance();
 };
 
 }

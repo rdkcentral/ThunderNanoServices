@@ -1,4 +1,4 @@
-#include "../DevicePlatform.h"
+#include "../GraphicsProperties.h"
 
 #include <bcm_host.h>
 
@@ -6,7 +6,7 @@ namespace WPEFramework {
 namespace Device {
 namespace Implementation {
 
-class RPIPlatform : public Plugin::IDevicePlatform {
+class RPIPlatform : public Plugin::IGraphicsProperties {
 public:
     RPIPlatform() {
         bcm_host_init();
@@ -102,9 +102,9 @@ private:
 }
 }
 
-/* static */ Core::ProxyType<Plugin::IDevicePlatform> Plugin::IDevicePlatform::Instance()
+/* static */ Core::ProxyType<Plugin::IGraphicsProperties> Plugin::IGraphicsProperties::Instance()
 {
     static Core::ProxyType<Device::Implementation::RPIPlatform> rpiPlatform(Core::ProxyType<Device::Implementation::RPIPlatform>::Create());
-    return static_cast<Core::ProxyType<Plugin::IDevicePlatform>>(rpiPlatform);
+    return static_cast<Core::ProxyType<Plugin::IGraphicsProperties>>(rpiPlatform);
 }
 }

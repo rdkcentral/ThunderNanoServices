@@ -1,4 +1,4 @@
-#include "../DevicePlatform.h"
+#include "../GraphicsProperties.h"
 #include <nexus_config.h>
 #include <nexus_platform.h>
 #include <nxclient.h>
@@ -7,7 +7,7 @@ namespace WPEFramework {
 namespace Device {
 namespace Implementation {
 
-class NexusPlatform : public Plugin::IDevicePlatform {
+class NexusPlatform : public Plugin::IGraphicsProperties {
 public:
     NexusPlatform()
     : _totalGpuRam(0) {
@@ -102,9 +102,9 @@ private:
 }
 }
 
-/* static */ Core::ProxyType<Plugin::IDevicePlatform> Plugin::IDevicePlatform::Instance()
+/* static */ Core::ProxyType<Plugin::IGraphicsProperties> Plugin::IGraphicsProperties::Instance()
 {
     static Core::ProxyType<Device::Implementation::NexusPlatform> nexusPlatform(Core::ProxyType<Device::Implementation::NexusPlatform>::Create());
-    return static_cast<Core::ProxyType<Plugin::IDevicePlatform>>(nexusPlatform);
+    return static_cast<Core::ProxyType<Plugin::IGraphicsProperties>>(nexusPlatform);
 }
 }
