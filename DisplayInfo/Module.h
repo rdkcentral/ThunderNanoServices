@@ -1,5 +1,4 @@
-#ifndef OPENPLUGIN_DISPLAYINFO_MODULE_H
-#define OPENPLUGIN_DISPLAYINFO_MODULE_H
+#pragma once
 
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_DisplayInfo
@@ -9,5 +8,3 @@
 
 #undef EXTERNAL
 #define EXTERNAL
-
-#endif // OPENPLUGIN_DISPLAYINFO_MODULE_H

@@ -11,10 +11,13 @@ namespace Plugin {
     /* virtual */ const string DisplayInfo::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
+        ASSERT(_device.IsValid() == false);
 
         Config config;
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
+
+        _device = IGraphicsProperties::Instance();
 
         // On success return empty, to indicate there is no error text.
         return (EMPTY_STRING);
@@ -22,6 +25,10 @@ namespace Plugin {
 
     /* virtual */ void DisplayInfo::Deinitialize(PluginHost::IShell* service)
     {
+        ASSERT(_device.IsValid() == true);
+        if (_device.IsValid()) {
+            _device.Release();
+        }
     }
 
     /* virtual */ string DisplayInfo::Information() const
@@ -67,10 +74,8 @@ namespace Plugin {
 
     void DisplayInfo::Info(JsonData::DisplayInfo::DisplayinfoData& displayInfo) const
     {
-        Core::SystemInfo& singleton(Core::SystemInfo::Instance());
-
-        displayInfo.Totalgpuram = singleton.GetTotalGpuRam();
-        displayInfo.Freegpuram = singleton.GetFreeGpuRam();
+        displayInfo.Totalgpuram = _device->TotalGpuRam();
+        displayInfo.Freegpuram = _device->FreeGpuRam();
     }
 
 } // namespace Plugin
