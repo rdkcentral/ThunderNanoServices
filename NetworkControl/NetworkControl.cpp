@@ -148,7 +148,10 @@ namespace Plugin
                         SYSLOG(Logging::Startup, (_T("Interface [%s] activated, no IP associated"), interfaceName.c_str()));
                     } else {
                         if (how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) {
-                            dhcpInterface.first->second->LoadLeases();
+                            if (dhcpInterface.first->second->LoadLeases() == true) {
+                                SYSLOG(Logging::Startup, (_T("Leased list for interface [%s] loaded!"), interfaceName.c_str()));
+                            }
+
                             SYSLOG(Logging::Startup, (_T("Interface [%s] activated, DHCP request issued"), interfaceName.c_str()));
                             Reload(interfaceName, true);
                         } else {
@@ -427,7 +430,7 @@ namespace Plugin
     /* Saves all leased offers to file */
     void NetworkControl::DHCPEngine::SaveLeases() 
     {
-        if (_parent._persistentStoragePath.empty() == false) {
+        if (_leaseFilePath.empty() == false) {
             Core::File leaseFile(_leaseFilePath);
 
             if (leaseFile.Create() == true) {
@@ -453,9 +456,11 @@ namespace Plugin
         Loads list of previously saved offers and adds it to unleased list 
         for requesting in future.
     */
-    void NetworkControl::DHCPEngine::LoadLeases() 
+    bool NetworkControl::DHCPEngine::LoadLeases() 
     {
-        if (_parent._persistentStoragePath.empty() == false) {
+        bool result = false;
+
+        if (_leaseFilePath.empty() == false) {
 
             Core::File leaseFile(_leaseFilePath);
 
@@ -473,13 +478,15 @@ namespace Plugin
 
                 if (error.IsSet() == true) {
                     SYSLOG(Logging::ParsingError, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
+                } else {
+                    result = true;
                 }
 
                 leaseFile.Close();
-            } else {
-                TRACE(Trace::Warning, ("Failed to open leases file %s\n for saving", leaseFile.Name().c_str()));
             }
         }
+
+        return result;
     }
 
     uint32_t NetworkControl::Reload(const string& interfaceName, const bool dynamic)

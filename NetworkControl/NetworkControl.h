@@ -299,21 +299,9 @@ namespace Plugin {
                 , _retries(0)
                 , _client(interfaceName, std::bind(&DHCPEngine::NewOffer, this, std::placeholders::_1), 
                           std::bind(&DHCPEngine::RequestResult, this, std::placeholders::_1, std::placeholders::_2))
-                , _leaseFilePath(persistentStoragePath + _client.Interface() + ".json")
+                , _leaseFilePath((persistentStoragePath.empty()) ? "" :  (persistentStoragePath + _client.Interface() + ".json"))
             {
-                // Make sure that lease file exists
-                if (persistentStoragePath.empty() == false) {
-                    Core::File leaseFile(_leaseFilePath);
 
-                    if (leaseFile.Exists() == false) {
-                        if (leaseFile.Create() == true) {
-                            leaseFile.Close();
-                        } else {
-                            TRACE(Trace::Warning, ("Failed to create persistent dhcp lease file for %s", interfaceName.c_str()))
-                        }
-                    }
-                    
-                }
             }
 #ifdef __WIN32__
 #pragma warning(default : 4355)
@@ -324,7 +312,7 @@ namespace Plugin {
         public:
             // Permanent IP storage
             void SaveLeases();
-            void LoadLeases();
+            bool LoadLeases();
 
             inline DHCPClientImplementation::classifications Classification() const
             {
