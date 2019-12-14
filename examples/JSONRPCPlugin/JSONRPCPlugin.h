@@ -6,6 +6,21 @@
 #include <websocket/websocket.h>
 #include <interfaces/IPerformance.h>
 
+// The next header file is the source of the interface. 
+// From this source file, the ProxyStub (Marshalling code for the COMRPC) s created.
+// This code is loaded and handled by the Thunder framework. No need to do anything
+// within the plugin to make it available. 
+#include <interfaces/IMath.h>
+
+// From the source, included above (IMath.h) a precompiler will create a method that 
+// can connect a JSONRPC class to the interface implementation. This is typically done 
+// in the constructor of the plugin!
+// The method to connects the JSORPC implementation to the Interface implementation is 
+// generated and it is named as:
+// <interface name>::Register(PluginHost::JSONRPC& handler, <interface name>* implementation);
+// <interface name>::Unregister(PluginHost::JSONRPC& handler);
+#include <interfaces/JMath.h>
+
 namespace WPEFramework {
 
 namespace Plugin {
@@ -22,7 +37,7 @@ namespace Plugin {
     // As the registration/unregistration of notifications is realized by the class PluginHost::JSONRPC,
     // this class exposes a public method called, Notify(), using this methods, all subscribed clients
     // will receive a JSONRPC message as a notification, in case this method is called.
-    class JSONRPCPlugin : public PluginHost::IPlugin, public PluginHost::JSONRPC, public Exchange::IPerformance {
+    class JSONRPCPlugin : public PluginHost::IPlugin, public PluginHost::JSONRPC, public Exchange::IPerformance, public Exchange::IMath {
     private:
         // We do not allow this plugin to be copied !!
         JSONRPCPlugin(const JSONRPCPlugin&) = delete;
@@ -83,12 +98,9 @@ namespace Plugin {
                 void* result = nullptr;
 
                 // Currently we only support version 1 of the IRPCLink :-)
-                if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) && ((interfaceId == Exchange::IPerformance::ID) || (interfaceId == Core::IUnknown::ID))) {
+                if ((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) {
                     // Reference count our parent
-                    _parentInterface->AddRef();
-
-                    // Allright, respond with the interface.
-                    result = _parentInterface;
+                    result = _parentInterface->QueryInterface(interfaceId);
 
                     printf("Pointer => %p\n", result);
                 }
@@ -618,6 +630,11 @@ namespace Plugin {
         virtual uint32_t Send(const uint16_t sendSize, const uint8_t buffer[]) override;
         virtual uint32_t Receive(uint16_t& bufferSize, uint8_t buffer[]) const override;
         virtual uint32_t Exchange(uint16_t& bufferSize, uint8_t buffer[], const uint16_t maxBufferSize) override;
+
+        //   Exchange::IMath methods
+        // -------------------------------------------------------------------------------------------------------
+        virtual uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const;
+        virtual uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const;
 
     private:
         Core::ProxyType<PeriodicSync> _job;

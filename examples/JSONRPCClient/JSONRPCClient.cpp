@@ -4,6 +4,7 @@
 #include <tracing/tracing.h>
 #include <websocket/websocket.h>
 #include <interfaces/IPerformance.h>
+#include <interfaces/IMath.h>
 
 #include "../JSONRPCPlugin/Data.h"
 
@@ -423,7 +424,7 @@ int main(int argc, char** argv)
         // to compare JSONRPC v.s. COMRPC
 
         // Make sure we have an engine to handle the incoming requests over the COMRPC channel.
-        // They are time multiplexed so 1 engine to rule them all. The nex line instantiates the
+        // They are time multiplexed so 1 engine to rule them all. The next line instantiates the
         // framework to connect to a COMRPC server running at the <connector> address. once the
         // connection is established, interfaces can be requested.
         Core::ProxyType<RPC::InvokeServerType<4, 1>> engine(Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create(Core::Thread::DefaultStackSize()));
@@ -727,6 +728,10 @@ int main(int argc, char** argv)
                 otherObject.ToString(otherString);
                 printf("The serialized values are [otherObject]: %s\n", otherString.c_str());
                 break;
+            }
+            case '@':
+            {
+                Exchange::IMath* math = client->Aquire<Exchange::IMath>(2000, _T("JSONRPCPlugin"), ~0);
             }
             case 'X':
             {

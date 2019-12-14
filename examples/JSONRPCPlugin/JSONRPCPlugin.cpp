@@ -23,6 +23,8 @@ namespace Plugin
         , _array(255)
         , _rpcServer(nullptr)
     {
+        Exchange::JMath::Register(*this, this);
+
         // PluginHost::JSONRPC method to register a JSONRPC method invocation for the method "time".
         Register<void, Core::JSON::String>(_T("time"), &JSONRPCPlugin::time, this);
         Register<void, void>(_T("clueless"), &JSONRPCPlugin::clueless, this);
@@ -63,6 +65,7 @@ namespace Plugin
 
     /* virtual */ JSONRPCPlugin::~JSONRPCPlugin()
     {
+        Exchange::JMath::Unregister(*this);
     }
 
     /* virtual */ const string JSONRPCPlugin::Initialize(PluginHost::IShell * service)
@@ -173,6 +176,23 @@ namespace Plugin
 
         return (result);
     }
+
+
+    //   Exchange::IMath methods
+    // -------------------------------------------------------------------------------------------------------
+    /* virtual */ uint32_t JSONRPCPlugin::Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const
+    {
+        sum = A + B;
+        return (Core::ERROR_NONE);
+    }
+
+    /* virtual */ uint32_t JSONRPCPlugin::Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const
+    {
+        sum = A - B;
+        return (Core::ERROR_NONE);
+    }
+
+
 
 } // namespace Plugin
 
