@@ -114,7 +114,7 @@ namespace Plugin {
         Core::ProxyType<Web::Response> response(PluginHost::Factories::Instance().Response());
 
         // Decode request path.
-        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
+        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint16_t>(request.Path.length()) - _skipURL), false, '/');
 
         // Get first plugin verb.
         index.Next();
