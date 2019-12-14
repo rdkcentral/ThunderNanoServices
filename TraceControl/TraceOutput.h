@@ -2,7 +2,7 @@
 
 #include "Module.h"
 
-#ifndef __WIN32__
+#ifndef __WINDOWS__
 #include <syslog.h>
 #endif
 
@@ -29,7 +29,7 @@ namespace Plugin {
             // Time to printf...
             string time(Core::Time::Now().ToRFC1123(true));
 
-#ifndef __WIN32__
+#ifndef __WINDOWS__
             if (_syslogging == true) {
                 syslog(LOG_NOTICE, "[%s]:[%s:%d] %s: %s\n", time.c_str(), Core::FileNameOnly(fileName), lineNumber, information->Category(), information->Data());
             } else

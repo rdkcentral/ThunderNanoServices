@@ -153,7 +153,7 @@ namespace Plugin {
         };
 
     public:
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
         Power()
@@ -167,7 +167,7 @@ namespace Plugin {
         {
             RegisterAll();
         }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
         virtual ~Power()

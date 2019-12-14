@@ -82,7 +82,7 @@ namespace Plugin {
 
     /* virtual */ const string OCDM::Initialize(PluginHost::IShell* service)
     {
-		#ifdef __WIN32__
+		#ifdef __WINDOWS__
         ForceLinkingOfOpenCDM();
 		#endif
 

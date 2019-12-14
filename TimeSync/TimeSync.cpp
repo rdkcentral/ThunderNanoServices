@@ -12,7 +12,7 @@ namespace Plugin {
 
     static const uint16_t NTPPort = 123;
 
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
     TimeSync::TimeSync()
@@ -25,7 +25,7 @@ namespace Plugin {
     {
         RegisterAll();
     }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
 

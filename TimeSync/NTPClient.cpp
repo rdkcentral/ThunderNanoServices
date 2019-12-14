@@ -6,7 +6,7 @@ namespace Plugin {
 
     constexpr uint32_t WaitForResponse = 2000;
 
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
     NTPClient::NTPClient()
@@ -31,7 +31,7 @@ namespace Plugin {
         _packet.RootDispersion(0x00010000); // Insignificant, 1 second
         _packet.ReferenceID(0x00000000);
     }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
 

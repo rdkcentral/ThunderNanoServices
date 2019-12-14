@@ -302,7 +302,7 @@ namespace Plugin {
         };
 
     public:
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
         Streamer()
@@ -316,7 +316,7 @@ namespace Plugin {
         {
             RegisterAll();
         }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
         ~Streamer() override

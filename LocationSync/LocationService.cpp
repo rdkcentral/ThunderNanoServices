@@ -238,7 +238,7 @@ namespace Plugin {
         return (index < (sizeof(g_domainFactory) / sizeof(DomainConstructor)) ? &(g_domainFactory[index]) : nullptr);
     }
 
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
     LocationService::LocationService(Core::IDispatchType<void>* callback)
@@ -258,7 +258,7 @@ namespace Plugin {
         , _activity(Core::ProxyType<Job>::Create(this))
     {
     }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
 

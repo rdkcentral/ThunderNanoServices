@@ -155,7 +155,7 @@ namespace Plugin {
             };
 
         public:
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
             PluginObserver(const string& configuration)
@@ -166,7 +166,7 @@ namespace Plugin {
 
                 _config.FromString(configuration);
             }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
             ~PluginObserver()

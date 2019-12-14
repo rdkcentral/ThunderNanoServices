@@ -49,7 +49,7 @@ public:
     WebPA(const WebPA&) = delete;
     WebPA& operator=(const WebPA&) = delete;
 
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
     WebPA()
@@ -61,7 +61,7 @@ public:
     {
 
     }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
     virtual ~WebPA()

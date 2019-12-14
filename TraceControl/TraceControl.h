@@ -899,7 +899,7 @@ namespace Plugin {
         };
 
     public:
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
         TraceControl()
@@ -911,7 +911,7 @@ namespace Plugin {
         {
             RegisterAll();
         }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
         virtual ~TraceControl()

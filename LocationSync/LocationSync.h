@@ -50,7 +50,7 @@ namespace Plugin {
             Notification& operator=(const Notification&) = delete;
 
         public:
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
             explicit Notification(LocationSync* parent)
@@ -62,7 +62,7 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
             ~Notification()

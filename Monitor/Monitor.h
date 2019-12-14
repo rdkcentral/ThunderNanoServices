@@ -717,7 +717,7 @@ namespace Plugin {
             };
 
         public:
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
             MonitorObjects(Monitor* parent)
@@ -728,7 +728,7 @@ namespace Plugin {
                 , _parent(*parent)
             {
             }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
             virtual ~MonitorObjects()
@@ -1053,7 +1053,7 @@ namespace Plugin {
         };
 
     public:
-        #ifdef __WIN32__
+        #ifdef __WINDOWS__
         #pragma warning(disable : 4355)
         #endif
         Monitor()
@@ -1062,7 +1062,7 @@ namespace Plugin {
         {
             RegisterAll();
         }
-        #ifdef __WIN32__
+        #ifdef __WINDOWS__
         #pragma warning(default : 4355)
         #endif
         virtual ~Monitor()

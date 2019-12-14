@@ -410,7 +410,7 @@ namespace Plugin {
                 };
 
             public:
-                #ifdef __WIN32__
+                #ifdef __WINDOWS__
                 #pragma warning(disable : 4355)
                 #endif
                 SessionImplementation(
@@ -469,7 +469,7 @@ namespace Plugin {
                     _mediaKeySession->Run(&_sink);
                     TRACE_L1("Constructed the Session Server side: %p", this);
                 }
-                #ifdef __WIN32__
+                #ifdef __WINDOWS__
                 #pragma warning(default : 4355)
                 #endif
 

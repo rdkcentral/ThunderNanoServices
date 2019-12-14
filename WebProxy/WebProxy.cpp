@@ -155,7 +155,7 @@ namespace Plugin {
         ConnectorWrapper<STREAMTYPE>& operator=(const ConnectorWrapper<STREAMTYPE>&) = delete;
 
     public:
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
         inline ConnectorWrapper(PluginHost::Channel& channel, const uint32_t bufferSize)
@@ -181,7 +181,7 @@ namespace Plugin {
             , _streamType(*this, bufferSize, deviceName, baudrate, parityE, dataBits, stopBits, flowControl)
         {
         }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
         virtual ~ConnectorWrapper()
