@@ -1053,12 +1053,18 @@ namespace Plugin {
         };
 
     public:
+        #ifdef __WIN32__
+        #pragma warning(disable : 4355)
+        #endif
         Monitor()
             : _skipURL(0)
             , _monitor(Core::Service<MonitorObjects>::Create<MonitorObjects>(this))
         {
             RegisterAll();
         }
+        #ifdef __WIN32__
+        #pragma warning(default : 4355)
+        #endif
         virtual ~Monitor()
         {
             UnregisterAll();

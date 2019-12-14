@@ -121,6 +121,9 @@ namespace Plugin {
         };
 
     public:
+        #ifdef __WINDOWS__
+        #pragma warning(disable : 4355)
+        #endif
         OCDM()
             : _service(nullptr)
             , _opencdmi(nullptr)
@@ -129,7 +132,9 @@ namespace Plugin {
         {
             RegisterAll();
         }
-
+        #ifdef __WINDOWS__
+        #pragma warning(default : 4355)
+        #endif
         virtual ~OCDM()
         {
             UnregisterAll();

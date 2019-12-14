@@ -15,6 +15,9 @@ namespace Plugin
 {
     SERVICE_REGISTRATION(JSONRPCPlugin, 1, 0);
 
+    #ifdef __WINDOWS__
+    #pragma warning(disable : 4355)
+    #endif
     JSONRPCPlugin::JSONRPCPlugin()
         : PluginHost::JSONRPC({ 2, 3, 4 }) // version 2, 3 and 4 of the interface, use this as the default :-)
         , _job(Core::ProxyType<PeriodicSync>::Create(this))
@@ -23,8 +26,6 @@ namespace Plugin
         , _array(255)
         , _rpcServer(nullptr)
     {
-        Exchange::JMath::Register(*this, this);
-
         // PluginHost::JSONRPC method to register a JSONRPC method invocation for the method "time".
         Register<void, Core::JSON::String>(_T("time"), &JSONRPCPlugin::time, this);
         Register<void, void>(_T("clueless"), &JSONRPCPlugin::clueless, this);
@@ -62,10 +63,12 @@ namespace Plugin
         // The only method that is really differnt in version "1" needs to be registered. That is done by the next line.
         legacyVersion.Register<Core::JSON::String, Core::JSON::String>(_T("clueless"), &JSONRPCPlugin::clueless2, this);
     }
+    #ifdef __WINDOWS__
+    #pragma warning(default : 4355)
+    #endif
 
     /* virtual */ JSONRPCPlugin::~JSONRPCPlugin()
     {
-        Exchange::JMath::Unregister(*this);
     }
 
     /* virtual */ const string JSONRPCPlugin::Initialize(PluginHost::IShell * service)
@@ -176,23 +179,6 @@ namespace Plugin
 
         return (result);
     }
-
-
-    //   Exchange::IMath methods
-    // -------------------------------------------------------------------------------------------------------
-    /* virtual */ uint32_t JSONRPCPlugin::Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const
-    {
-        sum = A + B;
-        return (Core::ERROR_NONE);
-    }
-
-    /* virtual */ uint32_t JSONRPCPlugin::Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const
-    {
-        sum = A - B;
-        return (Core::ERROR_NONE);
-    }
-
-
 
 } // namespace Plugin
 
