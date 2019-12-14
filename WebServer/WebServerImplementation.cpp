@@ -847,10 +847,8 @@ namespace WebServer {
 
     Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
+        ASSERT(connection != nullptr);
         Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
-        if (connection != nullptr) {
-            connection->Release();
-        }
         return (result);
     }
 }

@@ -58,6 +58,8 @@ namespace Plugin {
 
                     ASSERT(_memory != nullptr);
                     _memory->Observe(connection->RemoteId());
+
+                    connection->Release();
                 }
 
                 stateControl->Configure(_service);
