@@ -231,7 +231,9 @@ namespace WPASupplicant {
                     // Let see what we need to do with this BSSID, add or remove :-)
                     if ((event == CTRL_EVENT_BSS_ADDED) && (_detailRequest.Set(bssid) == true)) {
                         // send out a request for detail.
+                        _adminLock.Unlock();
                         Submit(&_detailRequest);
+                        _adminLock.Lock();
                     } else if (event == CTRL_EVENT_BSS_REMOVED) {
 
                         NetworkInfoContainer::iterator network(_networks.find(bssid));
