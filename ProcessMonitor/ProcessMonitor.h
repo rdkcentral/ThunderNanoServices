@@ -47,11 +47,11 @@ public:
         {
         public:
             Job() = delete;
-            Job(const Job &copy) = delete;
-            Job& operator=(const Job &RHS) = delete;
+            Job(const Job& copy) = delete;
+            Job& operator=(const Job& RHS) = delete;
 
         public:
-            Job(Notification *parent)
+            Job(Notification* parent)
                 : _parent(*parent)
             {
                 ASSERT(parent != nullptr);
@@ -65,7 +65,7 @@ public:
             }
 
         private:
-            Notification &_parent;
+            Notification& _parent;
         };
 
         class ProcessObject
@@ -82,7 +82,7 @@ public:
             {
                 ASSERT(_processId != 0);
             }
-            virtual ~ProcessObject()
+            ~ProcessObject()
             {
             }
             uint32_t ProcessId()
@@ -104,7 +104,7 @@ public:
         };
 
     public:
-        Notification(ProcessMonitor *parent)
+        Notification(ProcessMonitor* parent)
             : _adminLock()
             , _job(Core::ProxyType<Job>::Create(this))
             , _service(nullptr)
@@ -118,7 +118,7 @@ public:
         }
 
     public:
-        inline void Open(PluginHost::IShell *service, const uint32_t exittimeout)
+        inline void Open(PluginHost::IShell* service, const uint32_t exittimeout)
         {
             ASSERT((service != nullptr) && (_service == nullptr));
 
@@ -130,6 +130,8 @@ public:
                     static_cast<RPC::IRemoteConnection::INotification*>(this));
 
             _exittimeout = exittimeout * 1000 * 1000; // microseconds
+
+            PluginHost::WorkerPool::Instance().Submit(_job);
         }
         inline void Close()
         {
@@ -137,11 +139,7 @@ public:
 
             PluginHost::WorkerPool::Instance().Revoke(_job);
 
-            _adminLock.Lock();
-
             _processMap.clear();
-
-            _adminLock.Unlock();
 
             _service->Unregister(static_cast<IPlugin::INotification*>(this));
             _service->Unregister(
@@ -150,28 +148,27 @@ public:
             _service->Release();
             _service = nullptr;
         }
-        void StateChange(PluginHost::IShell *service) override
+        void StateChange(PluginHost::IShell* service) override
         {
             PluginHost::IShell::state currentState(service->State());
-            if (currentState == PluginHost::IShell::ACTIVATED) {
-            }
-            else if (currentState == PluginHost::IShell::DEACTIVATION) {
+            if (currentState == PluginHost::IShell::DEACTIVATION) {
+
+                uint64_t exitTime = 0;
 
                 _adminLock.Lock();
 
                 std::unordered_map<string, ProcessObject>::iterator itr(
                         _processMap.find(service->Callsign()));
                 if (itr != _processMap.end()) {
-                    const uint64_t exitTime = Core::Time::Now().Ticks()
-                            + _exittimeout;
+                    exitTime = Core::Time::Now().Ticks() + _exittimeout;
                     itr->second.SetExitTime(exitTime);
                 }
 
                 _adminLock.Unlock();
 
-                PluginHost::WorkerPool::Instance().Submit(_job);
-            }
-            else if (currentState == PluginHost::IShell::DEACTIVATED) {
+                if (exitTime != 0) {
+                    ScheduleJob();
+                }
             }
         }
         void AddProcess(const string callsign, const uint32_t processId)
@@ -184,8 +181,6 @@ public:
         }
         void EvalueProcess()
         {
-            uint64_t exitTime;
-            uint64_t scheduleTime = 0;
             uint64_t currTime(Core::Time::Now().Ticks());
 
             _adminLock.Lock();
@@ -193,65 +188,56 @@ public:
             auto itr = _processMap.begin();
             while (itr != _processMap.end()) {
 
-                exitTime = itr->second.ExitTime();
-                if (exitTime) {
-                    if (exitTime < currTime) {
-                        if (ProcessExists(itr->second.ProcessId())) {
-                            kill(itr->second.ProcessId(), SIGKILL);
-                            syslog(LOG_NOTICE, "ProcessMonitor killed %s\n",
-                                    itr->first.c_str());
-                        }
-                        itr = _processMap.erase(itr);
-                        continue;
-                    } else {
-                        if (scheduleTime) {
-                            if (scheduleTime > exitTime)
-                                scheduleTime = exitTime;
-                        } else {
-                            scheduleTime = exitTime;
-                        }
+                uint64_t exitTime = itr->second.ExitTime();
+                if ((exitTime != 0) && (exitTime <= currTime)) {
+                    Core::Process proc(itr->second.ProcessId());
+                    if (proc.IsActive()) {
+                        proc.Kill(true);
+                        SYSLOG(Logging::Notification,
+                                (_T("ProcessMonitor killed: [%s]!"),
+                                        itr->first.c_str()));
                     }
+                    itr = _processMap.erase(itr);
                 }
-                itr++;
+                else {
+                    itr++;
+                }
             }
 
             _adminLock.Unlock();
 
-            if (scheduleTime) {
+            ScheduleJob();
+        }
+        void ScheduleJob()
+        {
+            uint64_t scheduleTime = 0;
+
+            _adminLock.Lock();
+
+            for (auto itr : _processMap) {
+                uint64_t exitTime = itr.second.ExitTime();
+                if (exitTime != 0) {
+                    if ((scheduleTime == 0) || (scheduleTime > exitTime)) {
+                        scheduleTime = exitTime;
+                    }
+                }
+            }
+
+            _adminLock.Unlock();
+
+            if (scheduleTime != 0) {
                 PluginHost::WorkerPool::Instance().Schedule(scheduleTime, _job);
             }
         }
-        bool ProcessExists(uint32_t pid)
+        void Activated(RPC::IRemoteConnection* connection) override
         {
-            std::ostringstream cmd;
-            cmd << "cat /proc/" << pid
-                    << "/stat 2> /dev/null | awk '{ print $3 }'";
-
-            std::string result;
-            std::array<char, 128> buffer;
-            std::unique_ptr<FILE, decltype(&pclose)> pipe(
-                    popen(string(cmd.str()).c_str(), "r"), pclose);
-            if (!pipe) {
-                throw std::runtime_error("popen() failed!");
-            }
-            while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-                result += buffer.data();
-            }
-            if ((result.size() == 0) || (result.compare(string("Z\n")) == 0)) {
-                return false;
-            }
-            return true;
-        }
-        void Activated(RPC::IRemoteConnection *connection) override
-        {
-            RPC::IProcess *proc =
-                    reinterpret_cast<RPC::IProcess*>(connection->QueryInterface(
-                            RPC::IProcess::ID));
-            if (proc) {
+            RPC::IRemoteConnection::IProcess* proc =
+                    connection->QueryInterface<RPC::IRemoteConnection::IProcess>();
+            if (proc != nullptr) {
                 AddProcess(proc->Callsign(), connection->RemoteId());
             }
         }
-        void Deactivated(RPC::IRemoteConnection *connection) override
+        void Deactivated(RPC::IRemoteConnection* connection) override
         {
         }
 
@@ -285,8 +271,8 @@ public:
 
 public:
     //  IPlugin methods
-    const string Initialize(PluginHost::IShell *service) override;
-    void Deinitialize(PluginHost::IShell *service) override;
+    const string Initialize(PluginHost::IShell* service) override;
+    void Deinitialize(PluginHost::IShell* service) override;
     string Information() const override;
 
 private:

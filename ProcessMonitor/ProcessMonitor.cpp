@@ -5,7 +5,7 @@ namespace Plugin {
 
 SERVICE_REGISTRATION(ProcessMonitor, 1, 0);
 
-const string ProcessMonitor::Initialize(PluginHost::IShell *service)
+const string ProcessMonitor::Initialize(PluginHost::IShell* service)
 {
     Config config;
     config.FromString(service->ConfigLine());
@@ -15,7 +15,7 @@ const string ProcessMonitor::Initialize(PluginHost::IShell *service)
     return (_T(""));
 }
 
-void ProcessMonitor::Deinitialize(PluginHost::IShell *service)
+void ProcessMonitor::Deinitialize(PluginHost::IShell* service)
 {
     _notification.Close();
 }
