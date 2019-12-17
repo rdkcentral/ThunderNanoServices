@@ -117,12 +117,15 @@ namespace Plugin {
         ASSERT(_spark != nullptr);
 
         PluginHost::IStateControl* stateControl(_spark->QueryInterface<PluginHost::IStateControl>());
-        ASSERT(stateControl != nullptr);
+        
+        // If this is running out-of-process, it might have crashed and thus return a nullptr
+        if (stateControl != nullptr) {
 
-        PluginHost::IStateControl::state currentState = stateControl->State();
-        response = (currentState == PluginHost::IStateControl::SUSPENDED? StateType::SUSPENDED : StateType::RESUMED);
+            PluginHost::IStateControl::state currentState = stateControl->State();
+            response = (currentState == PluginHost::IStateControl::SUSPENDED? StateType::SUSPENDED : StateType::RESUMED);
 
-        stateControl->Release();
+            stateControl->Release();
+        }
 
         return Core::ERROR_NONE;
     }
@@ -138,12 +141,15 @@ namespace Plugin {
 
         if (param.IsSet()) {
             PluginHost::IStateControl* stateControl(_spark->QueryInterface<PluginHost::IStateControl>());
-            ASSERT(stateControl != nullptr);
+            
+            // If this is running out-of-process, it might have crashed and thus return a nullptr
+            if (stateControl != nullptr) {
 
-            stateControl->Request(param == StateType::SUSPENDED? PluginHost::IStateControl::SUSPEND : PluginHost::IStateControl::RESUME);
+                stateControl->Request(param == StateType::SUSPENDED? PluginHost::IStateControl::SUSPEND : PluginHost::IStateControl::RESUME);
 
-            stateControl->Release();
-
+                stateControl->Release();
+            }
+            
             result = Core::ERROR_NONE;
         }
 
