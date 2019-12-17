@@ -24,14 +24,11 @@ namespace DIALHandlers {
     public:
         virtual void Started(const string& data)
         {
-            printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
             Exchange::IBrowser* browser = QueryInterface<Exchange::IBrowser>();
             if (browser != nullptr) {
-                printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
                 browser->SetURL(data);
                 browser->Release();
-            } else
-                printf("%s:%s:%d\n", __FILE__, __func__, __LINE__);
+            }
         }
         virtual void Stopped(const string& data)
         {

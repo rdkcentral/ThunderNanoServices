@@ -87,6 +87,8 @@ namespace Plugin {
                         }
                         break;
                     }
+
+                    pluginShell->Release();
                 }
 
                 return (result);

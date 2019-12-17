@@ -88,9 +88,6 @@ namespace Plugin {
         if (stateControl != nullptr) {
             stateControl->Unregister(&_notification);
             stateControl->Release();
-        } else {
-            // On behalf of the crashed process, we will release the notification sink.
-            _notification.Release();
         }
 
         if (_spark->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {

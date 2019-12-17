@@ -63,21 +63,23 @@ int main(int argc, char* argv[])
     }
 
     Exchange::IComposition* composition = resourceCenter->QueryInterface<Exchange::IComposition>();
-    if (!composition) {
+    if (composition == nullptr) {
         TRACE_L1("Failed to get composition interface [%d]", __LINE__);
-        return 1;
     }
+    else {
+        MyCompositionListener* listener = Core::Service<MyCompositionListener>::Create<MyCompositionListener>();
+        composition->Register(listener);
 
-    MyCompositionListener* listener = Core::Service<MyCompositionListener>::Create<MyCompositionListener>();
-    composition->Register(listener);
+        // TODO: this sets default values, should we also allow for string/path passed along on command line?
+        uint32_t confResult = resourceCenter->Configure("{}");
+        TRACE_L1("Configured resource center [%d]", confResult);
 
-    // TODO: this sets default values, should we also allow for string/path passed along on command line?
-    uint32_t confResult = resourceCenter->Configure("{}");
-    TRACE_L1("Configured resource center [%d]", confResult);
+        TRACE_L1("platformserver: dropping into while-true [%d]", __LINE__);
+        while (true)
+            ;
 
-    TRACE_L1("platformserver: dropping into while-true [%d]", __LINE__);
-    while (true)
-        ;
+        composition->Release();
+    }
 
     Core::Singleton::Dispose();
 
