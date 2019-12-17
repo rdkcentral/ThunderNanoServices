@@ -57,7 +57,6 @@ namespace Plugin {
                     _memory = WPEFramework::WebKitBrowser::MemoryObserver(connection);
 
                     ASSERT(_memory != nullptr);
-                    _memory->Observe(connection->RemoteId());
 
                     connection->Release();
                 }
@@ -94,8 +93,6 @@ namespace Plugin {
         if (stateControl != nullptr) {
             stateControl->Unregister(&_notification);
             stateControl->Release();
-        } else {
-            _notification.Release();
         }
 
         // Stop processing of the browser:

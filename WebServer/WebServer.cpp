@@ -43,8 +43,6 @@ namespace Plugin {
                 _server->Release();
                 _server = nullptr;
 
-                stateControl->Release();
-
             } else {
                 stateControl->Configure(_service);
                 stateControl->Release();

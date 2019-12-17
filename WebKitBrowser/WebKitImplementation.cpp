@@ -1347,7 +1347,7 @@ namespace WebKitBrowser {
         MemoryObserverImpl(const RPC::IRemoteConnection* connection)
             : _main(connection == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
             , _children(_main.Id())
-            , _startTime(0)
+            , _startTime(connection == nullptr ? 0 : Core::Time::Now().Add(TYPICAL_STARTUP_TIME * 1000).Ticks())
         { // IsOperation true till calculated time (microseconds)
         }
         ~MemoryObserverImpl()
@@ -1355,15 +1355,8 @@ namespace WebKitBrowser {
         }
 
     public:
-        virtual void Observe(const uint32_t pid)
+        virtual void Observe(const uint32_t)
         {
-            if (pid != 0) {
-                _main = Core::ProcessInfo(pid);
-                _children = Core::ProcessInfo::Iterator(_main.Id());
-                _startTime = Core::Time::Now().Ticks() + (TYPICAL_STARTUP_TIME * 1000000);
-            } else {
-                _startTime = 0;
-            }
         }
 
         virtual uint64_t Resident() const

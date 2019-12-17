@@ -128,6 +128,8 @@ namespace Plugin {
             stateControl->Release();
         }
 
+        stateControl->Release();
+
         return Core::ERROR_NONE;
     }
 
