@@ -123,6 +123,8 @@ namespace Plugin {
         PluginHost::IStateControl::state currentState = stateControl->State();
         response = (currentState == PluginHost::IStateControl::SUSPENDED? StateType::SUSPENDED : StateType::RESUMED);
 
+        stateControl->Release();
+
         return Core::ERROR_NONE;
     }
 
