@@ -2,7 +2,7 @@
 #include <sstream>
 #include <vector>
 
-#include <plugins/Logging.h>
+#include <tracing/Logging.h>
 
 #include "RtspParser.h"
 
@@ -145,7 +145,7 @@ namespace Plugin {
         return request;
     }
 
-    int RtspParser::ProcessSetupResponse(const std::string& response)
+    void RtspParser::ProcessSetupResponse(const std::string& response)
     {
         NAMED_ARRAY setupMap; // entire response
         NAMED_ARRAY params; // single line
@@ -234,25 +234,24 @@ namespace Plugin {
         }
     }
 
-    int RtspParser::ProcessPlayResponse(const std::string& response)
+    void RtspParser::ProcessPlayResponse(const std::string& response)
     {
         NAMED_ARRAY playMap;
         Parse(response, playMap, RtspLineTerminator, ": ");
         UpdateNPT(playMap);
     }
 
-    int RtspParser::ProcessGetParamResponse(const std::string& response)
+    void RtspParser::ProcessGetParamResponse(const std::string& response)
     {
         NAMED_ARRAY playMap;
         Parse(response, playMap, RtspLineTerminator, ": ");
         UpdateNPT(playMap);
     }
 
-    int RtspParser::ProcessTeardownResponse(const std::string& response)
+    void RtspParser::ProcessTeardownResponse(const std::string& response)
     {
         NAMED_ARRAY playMap;
         Parse(response, playMap, RtspLineTerminator, ": ");
-        //
     }
 
     void RtspParser::Parse(const std::string& str, NAMED_ARRAY& contents, const string& sep1, const string& sep2)
@@ -303,7 +302,7 @@ namespace Plugin {
         // RTSP/1.0 400 Bad Request
         // ANNOUNCE rtsp://x.x.x.x:8060 RTSP/1.0
         // -------------------------------------------------------------------------
-        int pos = str.find(RtspLineTerminator);
+        size_t pos = str.find(RtspLineTerminator);
         if (pos != std::string::npos) {
             string header = str.substr(0, pos);
             std::vector<string> tokens;
@@ -342,7 +341,6 @@ namespace Plugin {
         int code = 0;
         string reason;
         NAMED_ARRAY announceMap;
-        RtspMessage::Type msgType;
         Parse(response, announceMap, RtspLineTerminator, ": ");
         if (announceMap.size()) {
             int respSeq = atoi(announceMap["CSeq"].c_str());
@@ -390,7 +388,7 @@ namespace Plugin {
     void RtspParser::HexDump(const char* label, const std::string& msg, uint16_t charsPerLine)
     {
         std::stringstream ssHex, ss;
-        for (int32_t i = 0; i < msg.length(); i++) {
+        for (uint32_t i = 0; i < msg.length(); i++) {
             int byte = (uint8_t)msg.at(i);
             ssHex << std::setfill('0') << std::setw(2) << std::hex << byte << " ";
             ss << char((byte < 32) ? '.' : byte);

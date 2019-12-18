@@ -106,11 +106,13 @@ namespace Plugin {
         static constexpr uint16_t ResponseWaitTime = 3000;
         static constexpr uint16_t NptUpdateInterwal = 1000;
 
+        RtspSession::AnnouncementHandler& _announcementHandler;
+
         Core::NodeId _remote;
         Core::NodeId _local;
         RtspSession::Socket* _srmSocket;
         RtspSession::Socket* _controlSocket;
-        RtspSession::AnnouncementHandler& _announcementHandler;
+
         RtspParser _parser;
         RtspSessionInfo _sessionInfo;
         Core::CriticalSection _adminLock;

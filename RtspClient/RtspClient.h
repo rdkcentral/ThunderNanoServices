@@ -75,8 +75,8 @@ namespace Plugin {
         public:
             Data()
                 : Core::JSON::Container()
-                , Str()
                 , AssetId()
+                , Str()
             {
                 Add(_T("AssetId"), &AssetId);
                 Add(_T("Scale"), &Scale);
