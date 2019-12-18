@@ -7,6 +7,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(PLUGIN_BLUETOOTHREMOTECONTROL "Include Bluetooth Remote Control plugin" OFF)
+option(PLUGIN_COBALT "Include Cobalt plugin" OFF)
 option(PLUGIN_COMMANDER "Include Commander plugin" OFF)
 option(PLUGIN_COMPOSITOR "Include Compsitor plugin" OFF)
 option(PLUGIN_DEVICEIDENTIFICATION "Include DeviceIdentification plugin" OFF)
@@ -64,6 +65,10 @@ endif()
 
 if(PLUGIN_BLUETOOTHREMOTECONTROL)
     add_subdirectory(BluetoothRemoteControl)
+endif()
+
+if(PLUGIN_COBALT)
+    add_subdirectory(Cobalt)
 endif()
 
 if(PLUGIN_COMMANDER)
