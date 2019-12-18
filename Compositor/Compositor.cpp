@@ -14,7 +14,7 @@ namespace Plugin {
         , _notification(this)
         , _composition(nullptr)
         , _service(nullptr)
-        , _pid()
+        , _connectionId()
     {
         RegisterAll();
     }
@@ -46,7 +46,7 @@ namespace Plugin {
             TRACE(Trace::Information, (_T("XDG_RUNTIME_DIR is set to %s "), runTimeDir));
         }
 
-        _composition = service->Root<Exchange::IComposition>(_pid, 2000, _T("CompositorImplementation"));
+        _composition = service->Root<Exchange::IComposition>(_connectionId, 2000, _T("CompositorImplementation"));
 
         if (_composition == nullptr) {
             message = "Instantiating the compositor failed. Could not load: CompositorImplementation";

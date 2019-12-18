@@ -16,7 +16,7 @@ namespace Plugin {
         ASSERT(_service == nullptr);
         ASSERT(_implementation == nullptr);
 
-        _pid = 0;
+        _connectionId = 0;
         _service = service;
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
         config.FromString(_service->ConfigLine());
@@ -25,7 +25,7 @@ namespace Plugin {
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
         _service->Register(&_notification);
 
-        _implementation = _service->Root<Exchange::IRtspClient>(_pid, 2000, _T("RtspClientImplementation"));
+        _implementation = _service->Root<Exchange::IRtspClient>(_connectionId, 2000, _T("RtspClientImplementation"));
 
         if (_implementation == nullptr) {
             message = _T("RtspClient could not be instantiated.");
@@ -48,18 +48,18 @@ namespace Plugin {
 
         if (_implementation->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 
-            ASSERT(_pid != 0);
+            ASSERT(_connectionId != 0);
 
-            TRACE_L1("RtspClient Plugin is not properly destructed. %d", _pid);
+            TRACE_L1("RtspClient Plugin is not properly destructed. %d", _connectionId);
 
-            RPC::IRemoteProcess* process(_service->RemoteProcess(_pid));
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // The process can disappear in the meantime...
-            if (process != nullptr) {
+            if (connection != nullptr) {
 
                 // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                process->Terminate();
-                process->Release();
+                connection->Terminate();
+                connection->Release();
             }
         }
 
@@ -122,9 +122,9 @@ namespace Plugin {
         return result;
     }
 
-    void RtspClient::Deactivated(RPC::IRemoteProcess* process)
+    void RtspClient::Deactivated(RPC::IRemoteConnection* connection)
     {
-        if (process->Id() == _pid) {
+        if (connection->Id() == _connectionId) {
 
             ASSERT(_service != nullptr);
 
