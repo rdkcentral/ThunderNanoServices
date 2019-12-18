@@ -49,6 +49,7 @@ namespace Plugin {
 
                 if (result != nullptr) {
                     _parent.NewClientOffered(result);
+                    result->Release();
                 }
             }
 
@@ -116,14 +117,20 @@ namespace Plugin {
                 : currentRectangle()
                 , clientInterface(client)
             {
+                clientInterface->AddRef();
                 currentRectangle.x = 0;
                 currentRectangle.y = 0;
                 currentRectangle.width = Exchange::IComposition::WidthFromResolution(resolution);
                 currentRectangle.height = Exchange::IComposition::HeightFromResolution(resolution);
             }
+            ~ClientData() {
+                if (clientInterface != nullptr) {
+                    clientInterface->Release();
+                }
+            }
 
-            Exchange::IComposition::Rectangle currentRectangle = Exchange::IComposition::Rectangle();
-            Exchange::IComposition::IClient* clientInterface = nullptr;
+            Exchange::IComposition::Rectangle currentRectangle;
+            Exchange::IComposition::IClient* clientInterface;
         };
 
     public:
@@ -286,29 +293,30 @@ namespace Plugin {
                 const string name(client->Name());
                 if (name.empty() == true) {
                     ASSERT(false);
-                    TRACE(Trace::Information,
-                        (_T("Registration of a nameless client.")));
+                    TRACE(Trace::Information, (_T("Registration of a nameless client.")));
                 } else {
                     _adminLock.Lock();
 
-                    const ClientData* clientdata = FindClientData(name);
-                    if (clientdata != nullptr) {
-                        //    ASSERT (false);
-                        TRACE(Trace::Information,
-                            (_T("Client already registered %s."), name.c_str()));
+                    ClientDataContainer::iterator element (_clients.find(name));
+
+                    if (element != _clients.end()) {
                         // as the old one may be dangling becayse of a crash let's remove that one, this is the most logical thing to do
-                        ClientRevoked(clientdata->clientInterface);
+                        ClientRevoked(element->second.clientInterface);
+
+                        TRACE(Trace::Information, (_T("Replace client %s."), name.c_str()));
+                    }
+                    else {
+                        TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
+
                     }
 
-                    client->AddRef();
-                    _clients[name] = ClientData(client, Resolution());
-                    TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
+                    _clients.emplace(std::piecewise_construct,
+                                         std::forward_as_tuple(name),
+                                         std::forward_as_tuple(client, Resolution()));
 
                     for (auto&& index : _observers) {
                         index->Attached(name, client);
                     }
-
-                    client->AddRef(); // for call to RecalculateZOrder
 
                     _adminLock.Unlock();
 
@@ -324,25 +332,18 @@ namespace Plugin {
 
             _adminLock.Lock();
             auto it = _clients.begin();
-            while (it != _clients.end()) {
-                if (it->second.clientInterface == client) {
-                    TRACE(Trace::Information, (_T("Removed client %s."), it->first.c_str()));
-                    for (auto index : _observers) {
-                        // note as we have the name here, we could more efficiently pass the name to the
-                        // caller as it is not allowed to get it from the pointer passes, but we are going
-                        // to restructure the interface anyway
-                        index->Detached(it->first.c_str());
-                    }
+            while ( (it != _clients.end()) && (it->second.clientInterface != client) ) { ++it; }
 
-                    uint32_t result = it->second.clientInterface->Release();
-
-                    DEBUG_VARIABLE(result);
-                    TRACE_L1("Releasing Compositor Client result: %s", result == Core::ERROR_DESTRUCTION_SUCCEEDED ? "succeeded" : "failed");
-
-                    _clients.erase(it);
-                    break;
+            if (it != _clients.end()) {
+                TRACE(Trace::Information, (_T("Remove client %s."), it->first.c_str()));
+                for (auto index : _observers) {
+                    // note as we have the name here, we could more efficiently pass the name to the
+                    // caller as it is not allowed to get it from the pointer passes, but we are going
+                    // to restructure the interface anyway
+                    index->Detached(it->first.c_str());
                 }
-                ++it;
+
+                _clients.erase(it);
             }
             _adminLock.Unlock();
 
@@ -354,7 +355,6 @@ namespace Plugin {
         {
             ASSERT(client != nullptr);
             client->ChangedZOrder(_clients.size());
-            client->Release();
         }
 
         void PlatformReady()
