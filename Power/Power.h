@@ -159,7 +159,6 @@ namespace Plugin {
         Power()
             : _adminLock()
             , _skipURL(0)
-            , _pid(0)
             , _service(nullptr)
             , _clients()
             , _power(nullptr)
@@ -226,7 +225,6 @@ namespace Plugin {
     private:
         Core::CriticalSection _adminLock;
         uint32_t _skipURL;
-        uint32_t _pid;
         PluginHost::IShell* _service;
         Clients _clients;
         Exchange::IPower* _power;

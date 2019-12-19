@@ -21,7 +21,7 @@ namespace Plugin {
         _service = service;
         _service->AddRef();
 
-        _roomAdmin = service->Root<Exchange::IRoomAdministrator>(_pid, 2000, _T("RoomMaintainer"));
+        _roomAdmin = service->Root<Exchange::IRoomAdministrator>(_connectionId, 2000, _T("RoomMaintainer"));
         ASSERT(_roomAdmin != nullptr);
 
         _roomAdmin->Register(this);

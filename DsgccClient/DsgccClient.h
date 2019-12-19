@@ -44,7 +44,7 @@ namespace Plugin {
             DsgccClient& _parent;
         }; // Sink
 
-        class Notification : public RPC::IRemoteProcess::INotification {
+        class Notification : public RPC::IRemoteConnection::INotification {
 
         private:
             Notification() = delete;
@@ -62,16 +62,16 @@ namespace Plugin {
             }
 
         public:
-            virtual void Activated(RPC::IRemoteProcess*)
+            virtual void Activated(RPC::IRemoteConnection*)
             {
             }
-            virtual void Deactivated(RPC::IRemoteProcess* process)
+            virtual void Deactivated(RPC::IRemoteConnection* connection)
             {
-                _parent.Deactivated(process);
+                _parent.Deactivated(connection);
             }
 
             BEGIN_INTERFACE_MAP(Notification)
-            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -171,12 +171,12 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
 
     private:
-        void Deactivated(RPC::IRemoteProcess* process);
+        void Deactivated(RPC::IRemoteConnection* connection);
         void StateChange(Exchange::IDsgccClient::state state);
 
     private:
         uint8_t _skipURL;
-        uint32_t _pid;
+        uint32_t _connectionId;
         PluginHost::IShell* _service;
         Exchange::IDsgccClient* _implementation;
         Core::Sink<Notification> _notification;

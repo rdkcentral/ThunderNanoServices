@@ -4,6 +4,8 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(PLUGIN_RTSPCLIENT_AUTOSTART true CACHE STRING true)
 set(PLUGIN_RTSPCLIENT_OOP true CACHE STRING true)
 
+find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 

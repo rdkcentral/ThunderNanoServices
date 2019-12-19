@@ -19,7 +19,7 @@ namespace Plugin {
         Messenger& operator=(const Messenger&) = delete;
 
         Messenger()
-            : _pid(0)
+            : _connectionId(0)
             , _service(nullptr)
             , _roomAdmin(nullptr)
             , _roomIds()
@@ -162,7 +162,7 @@ namespace Plugin {
         void event_userupdate(const string& id, const string& user, const JsonData::Messenger::UserupdateParamsData::ActionType& action);
         void event_message(const string& id, const string& user, const string& message);
 
-        uint32_t _pid;
+        uint32_t _connectionId;
         PluginHost::IShell* _service;
         Exchange::IRoomAdministrator* _roomAdmin;
         std::map<string, Exchange::IRoomAdministrator::IRoom*> _roomIds;

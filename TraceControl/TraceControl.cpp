@@ -26,10 +26,8 @@ namespace Plugin {
 
         if (connection == nullptr) {
             pathName += '0';
-        } else if (connection->Parent() == 0) {
-            pathName += Core::NumberType<uint32_t>(connection->Id()).Text();
         } else {
-            pathName += Core::NumberType<uint32_t>(connection->Parent()).Text() + '.' + Core::NumberType<uint32_t>(connection->RemoteId()).Text();
+            pathName += Core::NumberType<uint32_t>(connection->Id()).Text();
         }
 
         return (pathName);

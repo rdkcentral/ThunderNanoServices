@@ -204,7 +204,7 @@ namespace Plugin {
         Core::Sink<Notification> _notification;
         Exchange::IComposition* _composition;
         PluginHost::IShell* _service;
-        uint32_t _pid;
+        uint32_t _connectionId;
         std::map<string, Exchange::IComposition::IClient*> _clients;
     };
 }

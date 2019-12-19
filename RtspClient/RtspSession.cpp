@@ -8,16 +8,16 @@ namespace Plugin {
 
     RtspSession::RtspSession(RtspSession::AnnouncementHandler& handler)
         : _announcementHandler(handler)
+        , _srmSocket(nullptr)
+        , _controlSocket(nullptr)
         , _parser(_sessionInfo)
         , _requestQueue(64)
         , _responseQueue(64)
+        , _heartbeatTimer(Core::Thread::DefaultStackSize(), _T("RtspHeartbeatTimer"))
         , _isSessionActive(false)
         , _nextSRMHeartbeatMS(0)
         , _nextPumpHeartbeatMS(0)
         , _playDelay(2000)
-        , _srmSocket(nullptr)
-        , _controlSocket(nullptr)
-        , _heartbeatTimer(Core::Thread::DefaultStackSize(), _T("RtspHeartbeatTimer"))
     {
     }
 
@@ -67,13 +67,16 @@ namespace Plugin {
             _controlSocket = nullptr;
         }
         _adminLock.Unlock();
+
+        return ERR_OK; // Handle return value
     }
 
     RtspReturnCode RtspSession::Send(const RtspMessagePtr& request)
     {
         _requestQueue.Post(request);
         GetSocket(request->bSRM).Trigger();
-        ;
+
+        return ERR_OK; // Handle return value
     }
 
     uint64_t RtspSession::Timed(const uint64_t scheduledTime)
@@ -88,6 +91,8 @@ namespace Plugin {
             NextTick.Add(NptUpdateInterwal);
             _heartbeatTimer.Schedule(NextTick.Ticks(), HeartbeatTimer(*this));
         }
+
+        return ERR_OK; // Handle return value
     }
 
     RtspReturnCode RtspSession::Open(const string assetId, uint32_t position, const string& reqCpeId, const string& remoteIp)

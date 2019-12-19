@@ -21,10 +21,10 @@ namespace Plugin {
         RtspMessagePtr BuildTeardownRequest(int reason);
         RtspMessagePtr BuildResponse(int seq, bool bSRM);
 
-        int ProcessSetupResponse(const std::string& response);
-        int ProcessPlayResponse(const std::string& response);
-        int ProcessGetParamResponse(const std::string& response);
-        int ProcessTeardownResponse(const std::string& response);
+        void ProcessSetupResponse(const std::string& response);
+        void ProcessPlayResponse(const std::string& response);
+        void ProcessGetParamResponse(const std::string& response);
+        void ProcessTeardownResponse(const std::string& response);
 
         void Parse(const std::string& str, NAMED_ARRAY& contents, const string& sep1, const string& sep2);
         RtspMessagePtr ParseResponse(const std::string str);
