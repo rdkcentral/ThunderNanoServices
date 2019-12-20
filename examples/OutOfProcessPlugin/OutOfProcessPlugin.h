@@ -206,6 +206,7 @@ namespace Plugin {
         void URLChanged(const string& URL);
         void Hidden(const bool hidden);
         void StateChange(const PluginHost::IStateControl::state value);
+        void ConnectionTermination(uint32_t connection);
         void Deactivated(RPC::IRemoteConnection* connection);
 
     private:

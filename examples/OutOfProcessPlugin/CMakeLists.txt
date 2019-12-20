@@ -1,51 +1,29 @@
-project(OutOfProcessTest)
+set(PLUGIN_NAME OutOfProcessPlugin)
+set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-cmake_minimum_required(VERSION 2.8)
+ message("Setting up ${PLUGIN_NAME}")
 
-find_package(PkgConfig)
-find_package(CompileSettingsDebug CONFIG REQUIRED)
-pkg_check_modules(PLUGINS plugins)
+ find_package(${NAMESPACE}Plugins REQUIRED)
+ find_package(${NAMESPACE}Definitions REQUIRED)
+ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-get_filename_component(INSTALL_PREFIX ${PLUGINS_INCLUDEDIR} NAME)
+ add_library(${MODULE_NAME} SHARED
+        Module.cpp
+        OutOfProcessPlugin.cpp
+        OutOfProcessImplementation.cpp
+)
 
-list(APPEND CMAKE_MODULE_PATH "$ENV{STAGING_DIR}${CMAKE_INSTALL_PREFIX}/include/${INSTALL_PREFIX}/cmake/")
-include(config)
+ set_target_properties(${MODULE_NAME} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-
-set(PLUGIN_LIBS ${PLUGINS_LIBRARIES} ${PROVISION_LIBRARIES})    
-
-set(PLUGIN_SOURCES 
-    OutOfProcessTest.cpp
-    OutOfProcessImplementation.cpp
-    Module.cpp)
-
-if (BUILD_REFERENCE)
-    add_definitions (-DBUILD_REFERENCE=${BUILD_REFERENCE})
-endif()
-
-# add the library
-add_library(${PROJECT_NAME} SHARED ${PLUGIN_SOURCES})
-include_directories(${PLUGINS_INCLUDEDIR})
-target_link_libraries(${PROJECT_NAME}
-    ${PLUGIN_LIBS}
+ target_link_libraries(${MODULE_NAME}
     PRIVATE
-        CompileSettingsDebug::CompileSettingsDebug)
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${INSTALL_PREFIX}/plugins)
+ install(TARGETS ${MODULE_NAME}
+    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
-#---------------------------------------------------------------------------------------------------------------
-# JSON CONFIG SECTION
-#---------------------------------------------------------------------------------------------------------------
-map() 
-    kv(locator "lib${PROJECT_NAME}.so")
-    kv(classname "${PROJECT_NAME}")
-    key(configuration)
-    map()
-        kv(test true)
-    end()
-end()
-ans(PLUGIN_CONFIG)
-
-json_write("${CMAKE_CURRENT_LIST_DIR}/${PROJECT_NAME}.json" ${PLUGIN_CONFIG})
-install(FILES "${PROJECT_NAME}.json" DESTINATION ${CMAKE_INSTALL_PREFIX}/../etc/${INSTALL_PREFIX}/plugins/)
+ write_config(${PLUGIN_NAME})

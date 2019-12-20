@@ -3,7 +3,7 @@
 namespace WPEFramework {
 namespace Cobalt {
 
-extern Exchange::IMemory* MemoryObserver(const uint32_t pid);
+extern Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection);
 }
 
 namespace Plugin {
@@ -45,8 +45,10 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
             _cobalt = nullptr;
         } else {
 
-            _memory = WPEFramework::Cobalt::MemoryObserver(_connectionId);
+            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
+            _memory = WPEFramework::Cobalt::MemoryObserver(remoteConnection);
             ASSERT(_memory != nullptr);
+            remoteConnection->Release();
 
             _cobalt->Register(&_notification);
             stateControl->Register(&_notification);
@@ -59,6 +61,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         message = _T("Cobalt could not be instantiated.");
         _service->Unregister(&_notification);
         _service = nullptr;
+        ConnectionTermination(_connectionId);
     }
 
     return message;
@@ -93,14 +96,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         ASSERT(_connectionId != 0);
         TRACE_L1("Cobalt Plugin is not properly destructed. %d", _connectionId);
 
-        RPC::IRemoteConnection *connection(
-                _service->RemoteConnection(_connectionId));
-
-        // The process can disappear in the meantime...
-        if (connection != nullptr) {
-            connection->Terminate();
-            connection->Release();
-        }
+        ConnectionTermination(_connectionId);
     }
 
     // Deinitialize what we initialized..
