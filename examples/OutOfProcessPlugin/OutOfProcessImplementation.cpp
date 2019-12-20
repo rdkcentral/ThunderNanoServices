@@ -373,8 +373,8 @@ namespace OutOfProcessPlugin {
         MemoryObserverImpl& operator=(const MemoryObserverImpl&);
 
     public:
-        MemoryObserverImpl(const uint32_t id)
-            : _main(id == 0 ? Core::ProcessInfo().Id() : id)
+        MemoryObserverImpl(const RPC::IRemoteConnection* connection)
+            : _main(connection == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
         {
         }
         ~MemoryObserverImpl()
@@ -414,9 +414,11 @@ namespace OutOfProcessPlugin {
         Core::ProcessInfo _main;
     };
 
-    Exchange::IMemory* MemoryObserver(const uint32_t PID)
+    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
-        return (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(PID));
+        ASSERT(connection != nullptr);
+        Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
+        return (result);
     }
 }
-} // namespace WPEFramework::OutOfProcessTest
+} // namespace WPEFramework::OutOfProcessPlugin

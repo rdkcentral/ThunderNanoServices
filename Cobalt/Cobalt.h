@@ -134,6 +134,15 @@ private:
     void Hidden(const bool hidden);
     void Closure();
 
+    inline void ConnectionTermination(uint32_t connectionId)
+    {
+        RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
+        if (connection != nullptr) {
+            connection->Terminate();
+            connection->Release();
+        }
+    }
+
     // JsonRpc
     void RegisterAll();
     void UnregisterAll();

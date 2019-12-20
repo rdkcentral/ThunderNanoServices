@@ -395,8 +395,8 @@ private:
     MemoryObserverImpl& operator=(const MemoryObserverImpl&);
 
     public:
-    MemoryObserverImpl(const uint32_t id) :
-            _main(id == 0 ? Core::ProcessInfo().Id() : id), _observable(false) {
+    MemoryObserverImpl(const RPC::IRemoteConnection* connection) :
+        _main(connection == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId()) {
     }
     ~MemoryObserverImpl() {
     }
@@ -434,9 +434,10 @@ private:
     bool _observable;
     };
 
-    Exchange::IMemory* MemoryObserver(const uint32_t PID) {
-    return (Core::Service < MemoryObserverImpl > ::Create < Exchange::IMemory
-            > (PID));
+    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection) {
+        ASSERT(connection != nullptr);
+        Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
+        return (result);
     }
 }
 } // namespace

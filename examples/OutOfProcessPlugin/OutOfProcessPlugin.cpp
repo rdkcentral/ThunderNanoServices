@@ -5,7 +5,7 @@ namespace WPEFramework {
 namespace OutOfProcessPlugin {
 
     // An implementation file needs to implement this method to return an operational browser, wherever that would be :-)
-    extern Exchange::IMemory* MemoryObserver(const uint32_t pid);
+    extern Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection);
 }
 
 namespace Plugin {
@@ -36,7 +36,7 @@ namespace Plugin {
 
         config.FromString(_service->ConfigLine());
 
-        _browser = service->Root<Exchange::IComposition>(_connectionId, 2000, _T("OutOfProcessImplementation"));
+        _browser = service->Root<Exchange::IBrowser>(_connectionId, 2000, _T("OutOfProcessImplementation"));
 
         if (_browser == nullptr) {
             _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
@@ -55,11 +55,10 @@ namespace Plugin {
             stateControl->Register(_notification);
             stateControl->Release();
 
-            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection);
+            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
 
             _memory = WPEFramework::OutOfProcessPlugin::MemoryObserver(remoteConnection);
             ASSERT(_memory != nullptr);
-            _memory->Observe(remoteConnection->RemoteId());
             remoteConnection->Release();
         }
 
@@ -229,9 +228,9 @@ namespace Plugin {
         _service->Notify(message);
     }
 
-    inline void OutOfProcessPlugin::ConnectionTermination(uint32_t _connection)
+    void OutOfProcessPlugin::ConnectionTermination(uint32_t connectionId)
     {
-        RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
+        RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
         if (connection != nullptr) {
             connection->Terminate();
             connection->Release();

@@ -3,7 +3,7 @@
 namespace WPEFramework {
 namespace Cobalt {
 
-extern Exchange::IMemory* MemoryObserver(const uint32_t pid);
+extern Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection);
 }
 
 namespace Plugin {
@@ -48,7 +48,6 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
             RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
             _memory = WPEFramework::Cobalt::MemoryObserver(remoteConnection);
             ASSERT(_memory != nullptr);
-            _memory->Observe(remoteConnection->RemoteId());
             remoteConnection->Release();
 
             _cobalt->Register(&_notification);
@@ -215,15 +214,6 @@ void Cobalt::StateChange(const PluginHost::IStateControl::state state) {
     default:
         ASSERT(false);
         break;
-    }
-}
-
-inline void OutOfProcessPlugin::ConnectionTermination(uint32_t _connection)
-{
-    RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
-    if (connection != nullptr) {
-        connection->Terminate();
-        connection->Release();
     }
 }
 
