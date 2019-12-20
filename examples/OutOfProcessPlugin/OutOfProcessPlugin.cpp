@@ -36,15 +36,13 @@ namespace Plugin {
 
         config.FromString(_service->ConfigLine());
 
-        if (config.OutOfProcess.Value() == true) {
-            _browser = _service->Instantiate<Exchange::IBrowser>(5000, _T("OutOfProcessImplementation"), static_cast<uint32_t>(~0), _connectionId, service->Locator());
-        } else {
-            _browser = Core::ServiceAdministrator::Instance().Instantiate<Exchange::IBrowser>(Core::Library(), _T("OutOfProcessImplementation"), static_cast<uint32_t>(~0));
-        }
+        _browser = service->Root<Exchange::IComposition>(_connectionId, 2000, _T("OutOfProcessImplementation"));
 
         if (_browser == nullptr) {
             _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
             _service = nullptr;
+
+            ConnectionTermination(_connectionId);
             message = _T("OutOfProcessPlugin could not be instantiated.");
         } else {
             _browser->Register(_notification);
@@ -57,8 +55,12 @@ namespace Plugin {
             stateControl->Register(_notification);
             stateControl->Release();
 
-            _memory = WPEFramework::OutOfProcessPlugin::MemoryObserver(_connectionId);
+            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection);
+
+            _memory = WPEFramework::OutOfProcessPlugin::MemoryObserver(remoteConnection);
             ASSERT(_memory != nullptr);
+            _memory->Observe(remoteConnection->RemoteId());
+            remoteConnection->Release();
         }
 
         return message;
@@ -89,13 +91,7 @@ namespace Plugin {
             ASSERT(_connectionId != 0);
             TRACE_L1("OutOfProcess Plugin is not properly destructed. PID: %d", _connectionId);
 
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-
-            // The process can disappear in the meantime...
-            if (connection != nullptr) {
-                connection->Terminate();
-                connection->Release();
-            }
+            ConnectionTermination(_connectionId);
         }
 
         _memory = nullptr;
@@ -231,6 +227,15 @@ namespace Plugin {
         string message = "{ \"state\": \"test\" }";
 
         _service->Notify(message);
+    }
+
+    inline void OutOfProcessPlugin::ConnectionTermination(uint32_t _connection)
+    {
+        RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
+        if (connection != nullptr) {
+            connection->Terminate();
+            connection->Release();
+        }
     }
 
     void OutOfProcessPlugin::Deactivated(RPC::IRemoteConnection* connection)
