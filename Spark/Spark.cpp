@@ -47,10 +47,16 @@ namespace Plugin {
                 _spark = nullptr;
             } else {
 
-                _memory = WPEFramework::Spark::MemoryObserver(_connectionId);
+                const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
+                ASSERT(connection != nullptr);
 
-                ASSERT(_memory != nullptr);
+                if (connection != nullptr) {
+                    _memory = WPEFramework::Spark::MemoryObserver(connection->RemoteId());
+                    ASSERT(_memory != nullptr);
+                    _memory->Observe(connection->RemoteId());
 
+                    connection->Release();
+                }
                 _spark->Register(&_notification);
                 stateControl->Register(&_notification);
                 stateControl->Configure(_service);
