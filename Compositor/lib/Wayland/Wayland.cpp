@@ -243,7 +243,6 @@ namespace Plugin {
                 // Exit Wayland loop
                 _controller->Signal();
                 _controller->Release();
-                delete _controller;
             }
 
 #ifdef ENABLE_NXSERVER
