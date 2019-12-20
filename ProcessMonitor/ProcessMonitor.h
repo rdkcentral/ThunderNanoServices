@@ -72,7 +72,8 @@ public:
         {
         public:
             ProcessObject() = delete;
-            ProcessObject& operator=(const ProcessObject&) = delete;
+            ProcessObject(const ProcessObject &copy) = default;
+            ProcessObject& operator=(const ProcessObject&) = default;
 
         public:
             ProcessObject(
@@ -130,8 +131,6 @@ public:
                     static_cast<RPC::IRemoteConnection::INotification*>(this));
 
             _exittimeout = exittimeout * 1000 * 1000; // microseconds
-
-            PluginHost::WorkerPool::Instance().Submit(_job);
         }
         inline void Close()
         {
@@ -223,11 +222,12 @@ public:
                 }
             }
 
-            _adminLock.Unlock();
-
             if (scheduleTime != 0) {
+                PluginHost::WorkerPool::Instance().Revoke(_job);
                 PluginHost::WorkerPool::Instance().Schedule(scheduleTime, _job);
             }
+
+            _adminLock.Unlock();
         }
         void Activated(RPC::IRemoteConnection* connection) override
         {
