@@ -107,9 +107,11 @@ public:
     public:
         Notification(ProcessMonitor* parent)
             : _adminLock()
+            , _processMap()
             , _job(Core::ProxyType<Job>::Create(this))
             , _service(nullptr)
             , _parent(*parent)
+            ,_exittimeout(10000000)
         {
             ASSERT(parent != nullptr);
         }
@@ -122,6 +124,8 @@ public:
         inline void Open(PluginHost::IShell* service, const uint32_t exittimeout)
         {
             ASSERT((service != nullptr) && (_service == nullptr));
+            
+            _exittimeout = exittimeout * 1000 * 1000; // microseconds
 
             _service = service;
             _service->AddRef();
@@ -129,8 +133,6 @@ public:
             _service->Register(static_cast<IPlugin::INotification*>(this));
             _service->Register(
                     static_cast<RPC::IRemoteConnection::INotification*>(this));
-
-            _exittimeout = exittimeout * 1000 * 1000; // microseconds
         }
         inline void Close()
         {
