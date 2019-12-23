@@ -136,16 +136,16 @@ public:
         {
             ASSERT(_service != nullptr);
 
-            PluginHost::WorkerPool::Instance().Revoke(_job);
-
-            _processMap.clear();
-
             _service->Unregister(static_cast<IPlugin::INotification*>(this));
             _service->Unregister(
                     static_cast<RPC::IRemoteConnection::INotification*>(this));
 
             _service->Release();
             _service = nullptr;
+
+            PluginHost::WorkerPool::Instance().Revoke(_job);
+
+            _processMap.clear();
         }
         void StateChange(PluginHost::IShell* service) override
         {
@@ -163,11 +163,11 @@ public:
                     itr->second.SetExitTime(exitTime);
                 }
 
-                _adminLock.Unlock();
-
                 if (exitTime != 0) {
                     ScheduleJob();
                 }
+
+                _adminLock.Unlock();
             }
         }
         void AddProcess(const string callsign, const uint32_t processId)
@@ -203,15 +203,13 @@ public:
                 }
             }
 
-            _adminLock.Unlock();
-
             ScheduleJob();
+
+            _adminLock.Unlock();
         }
         void ScheduleJob()
         {
             uint64_t scheduleTime = 0;
-
-            _adminLock.Lock();
 
             for (auto itr : _processMap) {
                 uint64_t exitTime = itr.second.ExitTime();
@@ -226,8 +224,6 @@ public:
                 PluginHost::WorkerPool::Instance().Revoke(_job);
                 PluginHost::WorkerPool::Instance().Schedule(scheduleTime, _job);
             }
-
-            _adminLock.Unlock();
         }
         void Activated(RPC::IRemoteConnection* connection) override
         {
@@ -235,6 +231,7 @@ public:
                     connection->QueryInterface<RPC::IRemoteConnection::IProcess>();
             if (proc != nullptr) {
                 AddProcess(proc->Callsign(), connection->RemoteId());
+                proc->Release();
             }
         }
         void Deactivated(RPC::IRemoteConnection* connection) override
