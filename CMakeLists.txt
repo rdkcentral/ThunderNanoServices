@@ -28,6 +28,7 @@ option(PLUGIN_OPENCDMI "Include OpenCDMi plugin" OFF)
 option(PLUGIN_PACKAGER "Include Packager plugin" OFF)
 option(PLUGIN_POWER "Include Power plugin" OFF)
 option(PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
+option(PLUGIN_RESOURCEMONITOR "Include ResourceMonitor plugin" OFF)
 option(PLUGIN_SECURESHELLSERVER "Include SecureShellServer plugin" OFF)
 option(PLUGIN_STREAMER "Include Streamer plugin" OFF)
 option(PLUGIN_SNAPSHOT "Include Snapshot plugin" OFF)
@@ -149,6 +150,10 @@ endif()
 
 if(PLUGIN_REMOTECONTROL)
     add_subdirectory(RemoteControl)
+endif()
+
+if(PLUGIN_RESOURCEMONITOR)
+    add_subdirectory(ResourceMonitor)
 endif()
 
 if(PLUGIN_RTSPCLIENT)
