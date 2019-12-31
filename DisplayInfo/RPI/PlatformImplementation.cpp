@@ -1,12 +1,14 @@
 #include "../DeviceProperties.h"
 
 #include <bcm_host.h>
+#include <fstream>
 
 namespace WPEFramework {
 namespace Device {
 namespace Implementation {
 
 class RPIPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, public Plugin::IConnectionProperties {
+    static constexpr const TCHAR* CPUInfoFile= _T("/proc/cpuinfo");
 public:
     RPIPlatform()
         : _width(0)
@@ -17,6 +19,7 @@ public:
         bcm_host_init();
         graphics_get_display_size(DISPMANX_ID_MAIN_LCD, &_width, &_height);
 
+        _chipset = ChipsetInfo();
         UpdateTotalGpuRam(_totalGpuRam);
     }
 
@@ -31,7 +34,7 @@ public:
     // Device Propertirs interface
     const std::string Chipset() const override
     {
-        return string();
+        return _chipset;
     }
     const std::string FirmwareVersion() const override
     {
@@ -129,6 +132,25 @@ public:
     }
 
 private:
+    string ChipsetInfo()
+    {
+        string line;
+        string chipset;
+        std::ifstream file(CPUInfoFile);
+        if (file.is_open()) {
+            while (getline(file, line)) {
+                if (line.find("Hardware") != std::string::npos) {
+                    std::size_t position = line.find(':');
+                    if (position != std::string::npos) {
+                        chipset.assign(line.substr(position + 1, string::npos));
+                    }
+                }
+            }
+            file.close();
+        }
+
+        return chipset;
+    }
     inline void UpdateTotalGpuRam(uint64_t& totalRam)
     {
         Command("get_mem reloc_total ", totalRam);
@@ -192,6 +214,7 @@ private:
     }
 
 private:
+    string _chipset;
     uint32_t _width;
     uint32_t _height;
     mutable uint32_t _refCount;
