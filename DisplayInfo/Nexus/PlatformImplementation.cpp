@@ -7,7 +7,7 @@ namespace WPEFramework {
 namespace Device {
 namespace Implementation {
 
-class NexusPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, Plugin::IConnectionProperties, public Core::IReferenceCounted {
+class NexusPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, public Plugin::IConnectionProperties, public Core::IReferenceCounted {
 public:
     NexusPlatform()
     : _refCount(0)
@@ -34,7 +34,7 @@ public:
     }
     uint32_t Release() const override
     {
-        Core::InterlockedDecrement(_refcount);
+        Core::InterlockedDecrement(_refCount);
         return (Core::ERROR_NONE);
     }
 

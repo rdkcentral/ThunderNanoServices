@@ -6,7 +6,7 @@ namespace WPEFramework {
 namespace Device {
 namespace Implementation {
 
-class RPIPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, Plugin::IConnectionProperties, public Core::IReferenceCounted {
+class RPIPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, public Plugin::IConnectionProperties, public Core::IReferenceCounted {
 public:
     RPIPlatform()
         : _refCount(0)
@@ -29,7 +29,7 @@ public:
     }
     uint32_t Release() const override
     {
-        Core::InterlockedDecrement(_refcount);
+        Core::InterlockedDecrement(_refCount);
         return (Core::ERROR_NONE);
     }
 

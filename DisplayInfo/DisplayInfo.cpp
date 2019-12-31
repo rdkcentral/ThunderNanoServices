@@ -74,9 +74,21 @@ namespace Plugin {
 
     void DisplayInfo::Info(JsonData::DisplayInfo::DisplayinfoData& displayInfo) const
     {
+        displayInfo.Firmwareversion = _device->FirmwareVersion();
+        displayInfo.Chipset = _device->Chipset();
+
         Core::ProxyType<IGraphicsProperties> graphics(_device->GraphicsInstance());
         displayInfo.Totalgpuram = graphics->TotalGpuRam();
         displayInfo.Freegpuram = graphics->FreeGpuRam();
+
+        Core::ProxyType<IConnectionProperties> connection(_device->ConnectionInstance());
+        displayInfo.Audiopassthrough = connection->IsAudioPassThrough();
+        displayInfo.Connected = connection->Connected();
+        displayInfo.Width = connection->Width();
+        displayInfo.Height = connection->Height();
+        displayInfo.Hdcpmajor = connection->HDCPMajor();
+        displayInfo.Hdcpminor = connection->HDCPMinor();
+        displayInfo.Hdrtype = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdrtypeType>(connection->Type());
     }
 
 } // namespace Plugin
