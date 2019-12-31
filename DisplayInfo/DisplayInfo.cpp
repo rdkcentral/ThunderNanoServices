@@ -17,7 +17,7 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
-        _device = IGraphicsProperties::Instance();
+        _device = IDeviceProperties::Instance();
 
         // On success return empty, to indicate there is no error text.
         return (EMPTY_STRING);
@@ -74,8 +74,9 @@ namespace Plugin {
 
     void DisplayInfo::Info(JsonData::DisplayInfo::DisplayinfoData& displayInfo) const
     {
-        displayInfo.Totalgpuram = _device->TotalGpuRam();
-        displayInfo.Freegpuram = _device->FreeGpuRam();
+        Core::ProxyType<IGraphicsProperties> graphics(_device->GraphicsInstance());
+        displayInfo.Totalgpuram = graphics->TotalGpuRam();
+        displayInfo.Freegpuram = graphics->FreeGpuRam();
     }
 
 } // namespace Plugin
