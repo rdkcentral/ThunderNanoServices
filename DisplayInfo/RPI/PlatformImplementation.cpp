@@ -6,7 +6,7 @@ namespace WPEFramework {
 namespace Device {
 namespace Implementation {
 
-class RPIPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, public Plugin::IConnectionProperties, public Core::IReferenceCounted {
+class RPIPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, public Plugin::IConnectionProperties {
 public:
     RPIPlatform()
         : _width(0)
@@ -28,16 +28,6 @@ public:
     }
 
 public:
-    void AddRef() const override
-    {
-        Core::InterlockedIncrement(_refCount);
-    }
-    uint32_t Release() const override
-    {
-        Core::InterlockedDecrement(_refCount);
-        return (Core::ERROR_NONE);
-    }
-
     // Device Propertirs interface
     const std::string Chipset() const override
     {
@@ -49,11 +39,11 @@ public:
     }
     Core::ProxyType<IGraphicsProperties>  GraphicsInstance() override
     {
-        return static_cast<Core::ProxyType<Plugin::IGraphicsProperties>>(*this);
+        return static_cast<Core::ProxyType<Plugin::IGraphicsProperties>>(_rpiPlatform);
     }
     Core::ProxyType<IConnectionProperties>  ConnectionInstance() override
     {
-        return static_cast<Core::ProxyType<Plugin::IConnectionProperties>>(*this);
+        return static_cast<Core::ProxyType<Plugin::IConnectionProperties>>(_rpiPlatform);
     }
 
     // Graphics Properties interface
@@ -132,6 +122,12 @@ public:
         return HDR_OFF;
     }
 
+    static Core::ProxyType<Device::Implementation::RPIPlatform> Instance()
+    {
+        _rpiPlatform = Core::ProxyType<Device::Implementation::RPIPlatform>::Create();
+        return _rpiPlatform;
+    }
+
 private:
     inline void UpdateTotalGpuRam(uint64_t& totalRam)
     {
@@ -203,13 +199,16 @@ private:
     std::list<IConnectionProperties::INotification*> _observers;
 
     mutable WPEFramework::Core::CriticalSection _adminLock;
+    static Core::ProxyType<Device::Implementation::RPIPlatform> _rpiPlatform;
 };
 }
 }
 
+Core::ProxyType<Device::Implementation::RPIPlatform> Device::Implementation::RPIPlatform::_rpiPlatform;
+
 /* static */ Core::ProxyType<Plugin::IDeviceProperties> Plugin::IDeviceProperties::Instance()
 {
-    static Device::Implementation::RPIPlatform rpiPlatform;
-    return static_cast<Core::ProxyType<Plugin::IDeviceProperties>>(rpiPlatform);
+    static Core::ProxyType<Plugin::IDeviceProperties> rpiPlatform(Device::Implementation::RPIPlatform::Instance());
+    return rpiPlatform;
 }
 }
