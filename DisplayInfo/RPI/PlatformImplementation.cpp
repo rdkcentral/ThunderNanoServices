@@ -9,9 +9,14 @@ namespace Implementation {
 class RPIPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, public Plugin::IConnectionProperties, public Core::IReferenceCounted {
 public:
     RPIPlatform()
-        : _refCount(0)
+        : _width(0)
+        , _height(0)
+        , _refCount(0)
         , _adminLock() {
+
         bcm_host_init();
+        graphics_get_display_size(DISPMANX_ID_MAIN_LCD, &_width, &_height);
+
         UpdateTotalGpuRam(_totalGpuRam);
     }
 
@@ -107,29 +112,24 @@ public:
     }
     uint32_t Width() const override
     {
-        uint32_t width = 0;
-        return width;
+        return _width;
     }
     uint32_t Height() const override
     {
-        uint32_t height = 0;
-        return height;
+        return _height;
     }
+    // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
     uint8_t HDCPMajor() const override
     {
-        uint8_t major = 0;
-
-        return major;
+        return 0;
     }
     uint8_t HDCPMinor() const override
     {
-        uint8_t minor = 0;
-        return minor;
+        return 0;
     }
     HDRType Type() const override
     {
-        HDRType type = HDR_OFF;
-        return type;
+        return HDR_OFF;
     }
 
 private:
@@ -196,6 +196,8 @@ private:
     }
 
 private:
+    uint32_t _width;
+    uint32_t _height;
     mutable uint32_t _refCount;
     uint64_t _totalGpuRam;
     std::list<IConnectionProperties::INotification*> _observers;
