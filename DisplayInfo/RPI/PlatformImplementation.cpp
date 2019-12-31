@@ -19,7 +19,9 @@ public:
         bcm_host_init();
         graphics_get_display_size(DISPMANX_ID_MAIN_LCD, &_width, &_height);
 
-        _chipset = ChipsetInfo();
+        UpdateChipset(_chipset);
+        UpdateFirmwareVersion(_firmwareVersion);
+
         UpdateTotalGpuRam(_totalGpuRam);
     }
 
@@ -38,7 +40,7 @@ public:
     }
     const std::string FirmwareVersion() const override
     {
-        return string();
+        return _firmwareVersion;
     }
     Core::ProxyType<IGraphicsProperties>  GraphicsInstance() override
     {
@@ -132,10 +134,23 @@ public:
     }
 
 private:
-    string ChipsetInfo()
+    inline void UpdateFirmwareVersion(string& firmwareVersion)
+    {
+        Command("version", firmwareVersion);
+        if (firmwareVersion.length() > 0) {
+
+            std::string::size_type i = 0;
+            while (i < firmwareVersion.length()) {
+                i = firmwareVersion.find_first_of("\n\r", i);
+                if (i != std::string::npos) {
+                    firmwareVersion.replace(i, 1, ", ");
+                }
+            }
+        }
+    }
+    inline void UpdateChipset(string& chipset)
     {
         string line;
-        string chipset;
         std::ifstream file(CPUInfoFile);
         if (file.is_open()) {
             while (getline(file, line)) {
@@ -148,8 +163,6 @@ private:
             }
             file.close();
         }
-
-        return chipset;
     }
     inline void UpdateTotalGpuRam(uint64_t& totalRam)
     {
@@ -215,6 +228,8 @@ private:
 
 private:
     string _chipset;
+    string _firmwareVersion;
+
     uint32_t _width;
     uint32_t _height;
     mutable uint32_t _refCount;
