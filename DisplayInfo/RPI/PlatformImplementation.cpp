@@ -7,7 +7,7 @@ namespace WPEFramework {
 namespace Device {
 namespace Implementation {
 
-class RPIPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, public Plugin::IConnectionProperties {
+class RPIPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, public Plugin::IConnectionProperties, public Core::Thread {
     static constexpr const TCHAR* CPUInfoFile= _T("/proc/cpuinfo");
 public:
     RPIPlatform()
@@ -110,7 +110,10 @@ public:
     }
     void Connected(bool connected)
     {
+        _adminLock.Lock();
         _connected = connected;
+        _adminLock.Unlock();
+        Run();
     }
     uint32_t Width() const override
     {
@@ -258,18 +261,12 @@ private:
 
         if (platform != nullptr) {
             switch (reason) {
-            case VC_HDMI_UNPLUGGED: {
-                platform->Connected(false);
-                break;
-            }
+            case VC_HDMI_UNPLUGGED:
             case VC_SDTV_UNPLUGGED: {
                 platform->Connected(false);
                 break;
             }
-            case VC_HDMI_ATTACHED: {
-                platform->Connected(true);
-                break;
-            }
+            case VC_HDMI_ATTACHED:
             case VC_SDTV_ATTACHED: {
                 platform->Connected(true);
                 break;
@@ -280,6 +277,28 @@ private:
             }
             }
         }
+    }
+    void Updated() const
+    {
+        _adminLock.Lock();
+
+        std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
+
+        if (index != _observers.end()) {
+            (*index)->Updated();
+        }
+
+        _adminLock.Unlock();
+    }
+
+    uint32_t Worker() override
+    {
+        if (IsRunning() == true) {
+            Updated();
+
+            Block();
+         }
+         return (Core::infinite);
     }
 
 private:
