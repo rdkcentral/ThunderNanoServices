@@ -13,16 +13,19 @@ public:
     RPIPlatform()
         : _width(0)
         , _height(0)
+        , _connected(false)
         , _refCount(0)
         , _adminLock() {
 
         bcm_host_init();
-        graphics_get_display_size(DISPMANX_ID_MAIN_LCD, &_width, &_height);
 
         UpdateChipset(_chipset);
         UpdateFirmwareVersion(_firmwareVersion);
 
         UpdateTotalGpuRam(_totalGpuRam);
+
+        UpdateDisplayInfo(_connected, _width, _height);
+        RegisterDisplayCallback();
     }
 
     RPIPlatform(const RPIPlatform&) = delete;
@@ -103,7 +106,11 @@ public:
     }
     bool Connected() const override
     {
-        return false;
+        return _connected;
+    }
+    void Connected(bool connected)
+    {
+        _connected = connected;
     }
     uint32_t Width() const override
     {
@@ -134,7 +141,7 @@ public:
     }
 
 private:
-    inline void UpdateFirmwareVersion(string& firmwareVersion)
+    inline void UpdateFirmwareVersion(string& firmwareVersion) const
     {
         Command("version", firmwareVersion);
         if (firmwareVersion.length() > 0) {
@@ -148,7 +155,7 @@ private:
             }
         }
     }
-    inline void UpdateChipset(string& chipset)
+    inline void UpdateChipset(string& chipset) const
     {
         string line;
         std::ifstream file(CPUInfoFile);
@@ -164,7 +171,7 @@ private:
             file.close();
         }
     }
-    inline void UpdateTotalGpuRam(uint64_t& totalRam)
+    inline void UpdateTotalGpuRam(uint64_t& totalRam) const
     {
         Command("get_mem reloc_total ", totalRam);
     }
@@ -226,12 +233,63 @@ private:
         }
     }
 
+    inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height) const
+    {
+        TV_DISPLAY_STATE_T tvState;
+        if (vc_tv_get_display_state(&tvState) == 0) {
+
+            if (tvState.display.hdmi.width && tvState.display.hdmi.height) {
+                width = tvState.display.hdmi.width;
+                height = tvState.display.hdmi.height;
+            }
+            if ((tvState.state & VC_HDMI_ATTACHED) || (tvState.state & VC_SDTV_ATTACHED)) {
+                connected = true;
+            }
+        }
+    }
+    inline void RegisterDisplayCallback()
+    {
+        vc_tv_register_callback(&DisplayCallback, reinterpret_cast<void*>(this));
+    }
+    static void DisplayCallback(void *cbData, uint32_t reason, uint32_t, uint32_t)
+    {
+        RPIPlatform* platform = static_cast<RPIPlatform*>(cbData);
+        ASSERT(platform != nullptr);
+
+        if (platform != nullptr) {
+            switch (reason) {
+            case VC_HDMI_UNPLUGGED: {
+                platform->Connected(false);
+                break;
+            }
+            case VC_SDTV_UNPLUGGED: {
+                platform->Connected(false);
+                break;
+            }
+            case VC_HDMI_ATTACHED: {
+                platform->Connected(true);
+                break;
+            }
+            case VC_SDTV_ATTACHED: {
+                platform->Connected(true);
+                break;
+            }
+            default: {
+                // Ignore all other reasons
+                break;
+            }
+            }
+        }
+    }
+
 private:
     string _chipset;
     string _firmwareVersion;
 
     uint32_t _width;
     uint32_t _height;
+    bool _connected;
+
     mutable uint32_t _refCount;
     uint64_t _totalGpuRam;
     std::list<IConnectionProperties::INotification*> _observers;
