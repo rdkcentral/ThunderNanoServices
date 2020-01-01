@@ -17,8 +17,8 @@ public:
        , _minor(0)
        , _type(HDR_OFF)
        , _refCount(0)
-       , _adminLock()
-       , _totalGpuRam(0) {
+       , _totalGpuRam(0)
+       , _adminLock() {
 
         NEXUS_Error rc = NxClient_Join(NULL);
         ASSERT(!rc);
@@ -28,13 +28,16 @@ public:
         UpdateFirmwareVersion(_firmwareVersion);
 
         UpdateTotalGpuRam(_totalGpuRam);
-        UpdateDisplayInfo(_connected, _width, _height)
+        UpdateDisplayInfo(_connected, _width, _height, _major, _minor, _type);
+
+        RegisterCallback();
     }
 
     NexusPlatform(const NexusPlatform&) = delete;
     NexusPlatform& operator= (const NexusPlatform&) = delete;
     virtual ~NexusPlatform()
     {
+        NxClient_StopCallbackThread();
         NxClient_Uninit();
     }
 
@@ -161,11 +164,25 @@ public:
     {
         return _minor;
     }
+    void HDCPVersion(uint8_t major, uint8_t minor)
+    {
+        _adminLock.Lock();
+        _major = major;
+        _minor = minor;
+        _adminLock.Unlock();
+        Run();
+    }
     HDRType Type() const override
     {
         return _type;
     }
-
+    void Type(HDRType type)
+    {
+        _adminLock.Lock();
+        _type = type;
+        _adminLock.Unlock();
+        Run();
+    }
     static Core::ProxyType<Device::Implementation::NexusPlatform> Instance()
     {
         _nexusPlatform = Core::ProxyType<Device::Implementation::NexusPlatform>::Create();
@@ -175,9 +192,23 @@ public:
 private:
     inline void UpdateFirmwareVersion(string& firmwareVersion) const
     {
+        char version[256];
+        sprintf(version, "Nexus Release %d.%d", (NEXUS_P_GET_VERSION(NEXUS_PLATFORM) / NEXUS_PLATFORM_VERSION_UNITS), (NEXUS_P_GET_VERSION(NEXUS_PLATFORM) % NEXUS_PLATFORM_VERSION_UNITS));
+        firmwareVersion = version;
     }
     inline void UpdateChipset(string& chipset) const
     {
+        NEXUS_PlatformStatus status;
+        NEXUS_Error rc = NEXUS_UNKNOWN;
+
+        rc = NEXUS_Platform_GetStatus(&status);
+        if (rc == NEXUS_SUCCESS) {
+            char chipId[10];
+            sprintf(chipId, "%x", status.chipId);
+            char revision[10];
+            sprintf(revision, "%c%c", (((status.chipRevision >> 4) & 0xF) + 'A' - 1), (((status.chipRevision) & 0xF) + '0'));
+            chipset = "BCM" + string(chipId) + " " + string(revision);
+        }
     }
     inline void UpdateTotalGpuRam(uint64_t& totalRam) const
     {
@@ -210,9 +241,117 @@ private:
 #endif
     }
 
-    inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height) const
+    inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height, uint8_t& major, uint8_t& minor, bool type) const
     {
+        NEXUS_Error rc = NEXUS_SUCCESS;
+        NxClient_DisplayStatus status;
+
+        rc = NxClient_GetDisplayStatus(&status);
+        if (rc == NEXUS_SUCCESS) {
+            if (status.hdmi.status.connected == true) {
+                connected = true;
+                // Read HDR status
+                switch (status.hdmi.dynamicRangeMode) {
+                case NEXUS_VideoDynamicRangeMode_eHdr10: {
+                    type = HDR_10;
+                    break;
+                }
+                case NEXUS_VideoDynamicRangeMode_eHdr10Plus: {
+                    type = HDR_10PLUS;
+                    break;
+                }
+                default:
+                    break;
+                }
+
+                // Check HDCP version
+                if (status.hdmi.hdcp.hdcp2_2Features == true) {
+                    major = 2;
+                    minor = 2;
+                } else if (status.hdmi.hdcp.hdcp1_1Features == true) {
+                    major = 1;
+                    minor = 1;
+                }
+            }
+        }
+        // Read display width and height
+        NEXUS_DisplayCapabilities capabilities;
+        NEXUS_GetDisplayCapabilities(&capabilities);
+        width = capabilities.display[0].graphics.width;
+        height = capabilities.display[0].graphics.height;
     }
+    void RegisterCallback()
+    {
+        NxClient_CallbackThreadSettings settings;
+        NxClient_GetDefaultCallbackThreadSettings(&settings);
+
+        settings.hdmiOutputHotplug.callback = Callback;
+        settings.hdmiOutputHotplug.context = reinterpret_cast<void*>(this);
+        settings.hdmiOutputHotplug.param = 0;
+
+        settings.hdmiOutputHdcpChanged.callback = Callback;
+        settings.hdmiOutputHdcpChanged.param = 2;
+        settings.hdmiOutputHdcpChanged.context = reinterpret_cast<void*>(this);
+
+        settings.displaySettingsChanged.callback = Callback;
+        settings.displaySettingsChanged.param = 1;
+        settings.displaySettingsChanged.context = reinterpret_cast<void*>(this);
+
+        if (NxClient_StartCallbackThread(&settings) != NEXUS_SUCCESS) {
+            TRACE_L1(_T("Error in starting nexus callback thread"));
+        }
+    }
+    static void Callback(void *cbData, int param)
+    {
+        NEXUS_Error rc = NEXUS_SUCCESS;
+        NexusPlatform* platform = static_cast<NexusPlatform*>(cbData);
+
+        switch (param) {
+        case 0: {
+            NxClient_DisplayStatus status;
+            rc = NxClient_GetDisplayStatus(&status);
+            if (rc == NEXUS_SUCCESS) {
+                if (status.hdmi.status.connected == true) {
+                    platform->Connected(true);
+                } else {
+                    platform->Connected(false);
+                }
+            }
+            break;
+        }
+        case 1: {
+            NxClient_DisplayStatus status;
+            rc = NxClient_GetDisplayStatus(&status);
+            if (rc == NEXUS_SUCCESS) {
+               if (status.hdmi.hdcp.hdcp2_2Features == true) {
+                    platform->HDCPVersion(2, 2);
+                } else if (status.hdmi.hdcp.hdcp1_1Features == true) {
+                    platform->HDCPVersion(1, 1);
+                }
+            }
+            break;
+        }
+        case 2: {
+            NxClient_DisplaySettings settings;
+            NxClient_GetDisplaySettings(&settings);
+            switch (settings.hdmiPreferences.dynamicRangeMode) {
+            case NEXUS_VideoDynamicRangeMode_eHdr10: {
+                platform->Type(HDR_10);
+                break;
+            }
+            case NEXUS_VideoDynamicRangeMode_eHdr10Plus: {
+                platform->Type(HDR_10PLUS);
+                break;
+            }
+            default:
+                break;
+            }
+        }
+        default:
+            break;
+        }
+    }
+
     void Updated() const
     {
         _adminLock.Lock();
@@ -241,8 +380,8 @@ private:
     uint32_t _height;
     bool _connected;
 
-    uint8_t major;
-    uint8_t minor;
+    uint8_t _major;
+    uint8_t _minor;
     HDRType _type;
 
     mutable uint32_t _refCount;
@@ -256,6 +395,8 @@ private:
 };
 }
 }
+
+Core::ProxyType<Device::Implementation::NexusPlatform> Device::Implementation::NexusPlatform::_nexusPlatform;
 
 /* static */ Core::ProxyType<Plugin::IDeviceProperties> Plugin::IDeviceProperties::Instance()
 {

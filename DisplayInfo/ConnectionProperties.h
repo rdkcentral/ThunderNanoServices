@@ -10,6 +10,7 @@ struct IConnectionProperties {
     enum HDRType {
         HDR_OFF,
         HDR_10,
+        HDR_10PLUS,
         HDR_DOLBYVISION,
         HDR_TECHNICOLOR
     };
