@@ -7,17 +7,28 @@ namespace WPEFramework {
 namespace Device {
 namespace Implementation {
 
-class NexusPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, public Plugin::IConnectionProperties, public Core::IReferenceCounted {
+class NexusPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, public Plugin::IConnectionProperties, public Core::Thread {
 public:
     NexusPlatform()
-    : _refCount(0)
-    , _adminLock()
-    , _totalGpuRam(0) {
+       : _width(0)
+       , _height(0)
+       , _connected(false)
+       , _major(0)
+       , _minor(0)
+       , _type(HDR_OFF)
+       , _refCount(0)
+       , _adminLock()
+       , _totalGpuRam(0) {
 
         NEXUS_Error rc = NxClient_Join(NULL);
         ASSERT(!rc);
         NEXUS_Platform_GetConfiguration(&_platformConfig);
+
+        UpdateChipset(_chipset);
+        UpdateFirmwareVersion(_firmwareVersion);
+
         UpdateTotalGpuRam(_totalGpuRam);
+        UpdateDisplayInfo(_connected, _width, _height)
     }
 
     NexusPlatform(const NexusPlatform&) = delete;
@@ -28,32 +39,23 @@ public:
     }
 
 public:
-    void AddRef() const override
-    {
-        Core::InterlockedIncrement(_refCount);
-    }
-    uint32_t Release() const override
-    {
-        Core::InterlockedDecrement(_refCount);
-        return (Core::ERROR_NONE);
-    }
 
     // Device Propertirs interface
     const std::string Chipset() const override
     {
-        return string();
+        return _chipset;
     }
     const std::string FirmwareVersion() const override
     {
-        return string();
+        return _firmwareVersion;
     }
     Core::ProxyType<IGraphicsProperties>  GraphicsInstance() override
     {
-        return static_cast<Core::ProxyType<Plugin::IGraphicsProperties>>(*this);
+        return static_cast<Core::ProxyType<Plugin::IGraphicsProperties>>(_nexusPlatform);
     }
     Core::ProxyType<IConnectionProperties>  ConnectionInstance() override
     {
-        return static_cast<Core::ProxyType<Plugin::IConnectionProperties>>(*this);
+        return static_cast<Core::ProxyType<Plugin::IConnectionProperties>>(_nexusPlatform);
     }
 
     // Graphics Properties interface
@@ -134,36 +136,50 @@ public:
     }
     bool Connected() const override
     {
-        return false;
+        return _connected;
+    }
+    void Connected(bool connected)
+    {
+        _adminLock.Lock();
+        _connected = connected;
+        _adminLock.Unlock();
+        Run();
     }
     uint32_t Width() const override
     {
-        uint32_t width = 0;
-        return width;
+        return _width;
     }
     uint32_t Height() const override
     {
-        uint32_t height = 0;
-        return height;
+        return _height;
     }
     uint8_t HDCPMajor() const override
     {
-        uint8_t major = 0;
-        return major;
+        return _major;
     }
     uint8_t HDCPMinor() const override
     {
-        uint8_t minor = 0;
-        return minor;
+        return _minor;
     }
     HDRType Type() const override
     {
-        HDRType type = HDR_OFF;
-        return type;
+        return _type;
+    }
+
+    static Core::ProxyType<Device::Implementation::NexusPlatform> Instance()
+    {
+        _nexusPlatform = Core::ProxyType<Device::Implementation::NexusPlatform>::Create();
+        return _nexusPlatform;
     }
 
 private:
-    void UpdateTotalGpuRam(uint64_t& totalRam) const
+    inline void UpdateFirmwareVersion(string& firmwareVersion) const
+    {
+    }
+    inline void UpdateChipset(string& chipset) const
+    {
+    }
+    inline void UpdateTotalGpuRam(uint64_t& totalRam) const
     {
         NEXUS_MemoryStatus status;
         NEXUS_Error rc = NEXUS_UNKNOWN;
@@ -194,19 +210,56 @@ private:
 #endif
     }
 
+    inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height) const
+    {
+    }
+    void Updated() const
+    {
+        _adminLock.Lock();
+        std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
+
+        if (index != _observers.end()) {
+            (*index)->Updated();
+        }
+
+        _adminLock.Unlock();
+    }
+
+    uint32_t Worker() override
+    {
+        if (IsRunning() == true) {
+            Updated();
+            Block();
+        }
+        return (Core::infinite);
+    }
 private:
+    string _chipset;
+    string _firmwareVersion;
+
+    uint32_t _width;
+    uint32_t _height;
+    bool _connected;
+
+    uint8_t major;
+    uint8_t minor;
+    HDRType _type;
+
     mutable uint32_t _refCount;
     uint64_t _totalGpuRam;
+    std::list<IConnectionProperties::INotification*> _observers;
+
     NEXUS_PlatformConfiguration _platformConfig;
 
     mutable WPEFramework::Core::CriticalSection _adminLock;
+    static Core::ProxyType<Device::Implementation::NexusPlatform> _nexusPlatform;
 };
 }
 }
 
 /* static */ Core::ProxyType<Plugin::IDeviceProperties> Plugin::IDeviceProperties::Instance()
 {
-    static Device::Implementation::RPIPlatform nexusPlatform;
-    return static_cast<Core::ProxyType<Plugin::IDeviceProperties>>(nexusPlatform);
+    static Core::ProxyType<Plugin::IDeviceProperties> nexusPlatform(Device::Implementation::NexusPlatform::Instance());
+    return nexusPlatform;
 }
 }
