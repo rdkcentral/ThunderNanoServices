@@ -164,14 +164,6 @@ public:
     {
         return _minor;
     }
-    void HDCPVersion(uint8_t major, uint8_t minor)
-    {
-        _adminLock.Lock();
-        _major = major;
-        _minor = minor;
-        _adminLock.Unlock();
-        Run();
-    }
     HDRType Type() const override
     {
         return _type;
@@ -289,10 +281,6 @@ private:
         settings.hdmiOutputHotplug.context = reinterpret_cast<void*>(this);
         settings.hdmiOutputHotplug.param = 0;
 
-        settings.hdmiOutputHdcpChanged.callback = Callback;
-        settings.hdmiOutputHdcpChanged.param = 2;
-        settings.hdmiOutputHdcpChanged.context = reinterpret_cast<void*>(this);
-
         settings.displaySettingsChanged.callback = Callback;
         settings.displaySettingsChanged.param = 1;
         settings.displaySettingsChanged.context = reinterpret_cast<void*>(this);
@@ -323,28 +311,19 @@ private:
             NxClient_DisplayStatus status;
             rc = NxClient_GetDisplayStatus(&status);
             if (rc == NEXUS_SUCCESS) {
-               if (status.hdmi.hdcp.hdcp2_2Features == true) {
-                    platform->HDCPVersion(2, 2);
-                } else if (status.hdmi.hdcp.hdcp1_1Features == true) {
-                    platform->HDCPVersion(1, 1);
+                // Read HDR status
+                switch (status.hdmi.dynamicRangeMode) {
+                case NEXUS_VideoDynamicRangeMode_eHdr10: {
+                    platform->Type(HDR_10);
+                    break;
                 }
-            }
-            break;
-        }
-        case 2: {
-            NxClient_DisplaySettings settings;
-            NxClient_GetDisplaySettings(&settings);
-            switch (settings.hdmiPreferences.dynamicRangeMode) {
-            case NEXUS_VideoDynamicRangeMode_eHdr10: {
-                platform->Type(HDR_10);
-                break;
-            }
-            case NEXUS_VideoDynamicRangeMode_eHdr10Plus: {
-                platform->Type(HDR_10PLUS);
-                break;
-            }
-            default:
-                break;
+                case NEXUS_VideoDynamicRangeMode_eHdr10Plus: {
+                    platform->Type(HDR_10PLUS);
+                    break;
+                }
+                default:
+                    break;
+                }
             }
         }
         default:
