@@ -1,15 +1,16 @@
-#include "../DeviceProperties.h"
+#include "../Module.h"
+#include <interfaces/IDisplayInfo.h>
+
 #include <nexus_config.h>
 #include <nexus_platform.h>
 #include <nxclient.h>
 
 namespace WPEFramework {
-namespace Device {
-namespace Implementation {
+namespace Plugin {
 
-class NexusPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, public Plugin::IConnectionProperties, public Core::Thread {
+class DisplayInfoImplementation : public Exchange::IDeviceProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties, public Core::Thread {
 public:
-    NexusPlatform()
+    DisplayInfoImplementation()
        : _width(0)
        , _height(0)
        , _connected(false)
@@ -35,9 +36,9 @@ public:
         RegisterCallback();
     }
 
-    NexusPlatform(const NexusPlatform&) = delete;
-    NexusPlatform& operator= (const NexusPlatform&) = delete;
-    virtual ~NexusPlatform()
+    DisplayInfoImplementation(const DisplayInfoImplementation&) = delete;
+    DisplayInfoImplementation& operator= (const DisplayInfoImplementation&) = delete;
+    virtual ~DisplayInfoImplementation()
     {
         NxClient_StopCallbackThread();
         NxClient_Uninit();
@@ -55,27 +56,6 @@ public:
     const std::string FirmwareVersion() const override
     {
         return _firmwareVersion;
-    }
-    IGraphicsProperties*  GraphicsInstance() override
-    {
-        return static_cast<Plugin::IGraphicsProperties*>(_nexusPlatform);
-    }
-    IConnectionProperties*  ConnectionInstance() override
-    {
-        return static_cast<Plugin::IConnectionProperties*>(_nexusPlatform);
-    }
-    virtual void AddRef() const
-    {
-        Core::InterlockedIncrement(_refCount);
-    }
-    virtual uint32_t Release() const
-    {
-        if (Core::InterlockedDecrement(_refCount) == 0) {
-            delete this;
-
-            return (Core::ERROR_CONNECTION_CLOSED);
-        }
-        return (Core::ERROR_NONE);
     }
 
     // Graphics Properties interface
@@ -192,10 +172,12 @@ public:
         _adminLock.Unlock();
         Run();
     }
-    static Device::Implementation::NexusPlatform* Instance()
-    {
-        return _nexusPlatform;
-    }
+
+    BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
+        INTERFACE_ENTRY(Exchange::IDeviceProperties)
+        INTERFACE_ENTRY(Exchange::IGraphicsProperties)
+        INTERFACE_ENTRY(Exchange::IConnectionProperties)
+    END_INTERFACE_MAP
 
 private:
     inline void UpdateFirmwareVersion(string& firmwareVersion) const
@@ -309,8 +291,8 @@ private:
         settings.hdmiOutputHotplug.param = 0;
 
         settings.displaySettingsChanged.callback = Callback;
-        settings.displaySettingsChanged.param = 1;
         settings.displaySettingsChanged.context = reinterpret_cast<void*>(this);
+        settings.displaySettingsChanged.param = 1;
 
         if (NxClient_StartCallbackThread(&settings) != NEXUS_SUCCESS) {
             TRACE_L1(_T("Error in starting nexus callback thread"));
@@ -319,7 +301,7 @@ private:
     static void Callback(void *cbData, int param)
     {
         NEXUS_Error rc = NEXUS_SUCCESS;
-        NexusPlatform* platform = static_cast<NexusPlatform*>(cbData);
+        DisplayInfoImplementation* platform = static_cast<DisplayInfoImplementation*>(cbData);
 
         switch (param) {
         case 0: {
@@ -402,15 +384,8 @@ private:
     NEXUS_PlatformConfiguration _platformConfig;
 
     mutable WPEFramework::Core::CriticalSection _adminLock;
-    static Device::Implementation::NexusPlatform* _nexusPlatform;
 };
-}
-}
 
-Device::Implementation::NexusPlatform* Device::Implementation::NexusPlatform::_nexusPlatform = new Device::Implementation::NexusPlatform();
-
-/* static */ Plugin::IDeviceProperties* Plugin::IDeviceProperties::Instance()
-{
-    return static_cast<Plugin::IDeviceProperties*>(Device::Implementation::NexusPlatform::Instance());
+    SERVICE_REGISTRATION(DisplayInfoImplementation, 1, 0);
 }
 }

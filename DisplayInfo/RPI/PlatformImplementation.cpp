@@ -1,4 +1,5 @@
-#include "../DeviceProperties.h"
+#include "../Module.h"
+#include <interfaces/IDisplayInfo.h>
 
 #include <bcm_host.h>
 #include <fstream>
@@ -7,10 +8,10 @@ namespace WPEFramework {
 namespace Device {
 namespace Implementation {
 
-class RPIPlatform : public Plugin::IDeviceProperties, public Plugin::IGraphicsProperties, public Plugin::IConnectionProperties, public Core::Thread {
+class DisplayInfoImplementation : public Exchange::IDeviceProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties, public Core::Thread {
     static constexpr const TCHAR* CPUInfoFile= _T("/proc/cpuinfo");
 public:
-    RPIPlatform()
+    DisplayInfoImplementation()
         : _width(0)
         , _height(0)
         , _connected(false)
@@ -29,9 +30,9 @@ public:
         RegisterDisplayCallback();
     }
 
-    RPIPlatform(const RPIPlatform&) = delete;
-    RPIPlatform& operator= (const RPIPlatform&) = delete;
-    virtual ~RPIPlatform()
+    DisplayInfoImplementation(const DisplayInfoImplementation&) = delete;
+    DisplayInfoImplementation& operator= (const DisplayInfoImplementation&) = delete;
+    virtual ~DisplayInfoImplementation()
     {
         bcm_host_deinit();
     }
@@ -45,14 +46,6 @@ public:
     const std::string FirmwareVersion() const override
     {
         return _firmwareVersion;
-    }
-    IGraphicsProperties*  GraphicsInstance() override
-    {
-        return static_cast<Plugin::IGraphicsProperties*>(_rpiPlatform);
-    }
-    IConnectionProperties*  ConnectionInstance() override
-    {
-        return static_cast<Plugin::IConnectionProperties*>(_rpiPlatform);
     }
 
     // Graphics Properties interface
@@ -137,10 +130,16 @@ public:
     {
         return HDR_OFF;
     }
-    static Device::Implementation::RPIPlatform* Instance()
+    static Device::Implementation::DisplayInfoImplementation* Instance()
     {
         return _rpiPlatform;
     }
+
+    BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
+        INTERFACE_ENTRY(Exchange::IDeviceProperties)
+        INTERFACE_ENTRY(Exchange::IGraphicsProperties)
+        INTERFACE_ENTRY(Exchange::IConnectionProperties)
+    END_INTERFACE_MAP
 
 private:
     inline void UpdateFirmwareVersion(string& firmwareVersion) const
@@ -255,7 +254,7 @@ private:
     }
     static void DisplayCallback(void *cbData, uint32_t reason, uint32_t, uint32_t)
     {
-        RPIPlatform* platform = static_cast<RPIPlatform*>(cbData);
+        DisplayInfoImplementation* platform = static_cast<DisplayInfoImplementation*>(cbData);
         ASSERT(platform != nullptr);
 
         if (platform != nullptr) {
@@ -313,15 +312,9 @@ private:
     std::list<IConnectionProperties::INotification*> _observers;
 
     mutable WPEFramework::Core::CriticalSection _adminLock;
-    static Device::Implementation::RPIPlatform* _rpiPlatform;
+    static Device::Implementation::DisplayInfoImplementation* _rpiPlatform;
 };
-}
-}
 
-Device::Implementation::RPIPlatform* Device::Implementation::RPIPlatform::_rpiPlatform = new Device::Implementation::RPIPlatform();
-
-/* static */ Plugin::IDeviceProperties* Plugin::IDeviceProperties::Instance()
-{
-    return static_cast<Plugin::IDeviceProperties*>(Device::Implementation::RPIPlatform::Instance());
+    SERVICE_REGISTRATION(DisplayInfoImplementation, 1, 0);
 }
 }

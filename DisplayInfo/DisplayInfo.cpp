@@ -13,22 +13,46 @@ namespace Plugin {
         ASSERT(service != nullptr);
         ASSERT(_device == nullptr);
 
+        string message;
         Config config;
+
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
-        _device = IDeviceProperties::Instance();
-        _device->AddRef();
+        _connectionId = 0;
+        _device = service->Root<Exchange::IDeviceProperties>(_connectionId, 2000, _T("DisplayInfoImplementation"));
 
-        // On success return empty, to indicate there is no error text.
-        return (EMPTY_STRING);
+        if (_device != nullptr) {
+            _connectionProperties = _device->QueryInterface<Exchange::IConnectionProperties>();
+            if (_connectionProperties == nullptr) {
+                _device->Release();
+                _device = nullptr;
+            } else {
+                _notification.Initialize(_connectionProperties);
+            }
+        }
+
+        if (_device == nullptr) {
+            message = _T("DisplayInfo could not be instantiated.");
+        }
+
+        return message;
     }
 
     /* virtual */ void DisplayInfo::Deinitialize(PluginHost::IShell* service)
     {
+        ASSERT(_connectionProperties != nullptr);
+
+        _notification.Deinitialize();
+        if (_connectionProperties != nullptr) {
+            _connectionProperties->Release();
+            _connectionProperties = nullptr;
+        }
+
         ASSERT(_device != nullptr);
         if (_device != nullptr) {
             _device->Release();
+            _device = nullptr;
         }
     }
 
@@ -78,11 +102,12 @@ namespace Plugin {
         displayInfo.Firmwareversion = _device->FirmwareVersion();
         displayInfo.Chipset = _device->Chipset();
 
-        IGraphicsProperties* graphics(_device->GraphicsInstance());
+        Exchange::IGraphicsProperties* graphics(_device->QueryInterface<Exchange::IGraphicsProperties>());
         displayInfo.Totalgpuram = graphics->TotalGpuRam();
         displayInfo.Freegpuram = graphics->FreeGpuRam();
+        graphics->Release();
 
-        IConnectionProperties* connection(_device->ConnectionInstance());
+        Exchange::IConnectionProperties* connection(_device->QueryInterface<Exchange::IConnectionProperties>());
         displayInfo.Audiopassthrough = connection->IsAudioPassthrough();
         displayInfo.Connected = connection->Connected();
         displayInfo.Width = connection->Width();
@@ -90,6 +115,7 @@ namespace Plugin {
         displayInfo.Hdcpmajor = connection->HDCPMajor();
         displayInfo.Hdcpminor = connection->HDCPMinor();
         displayInfo.Hdrtype = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdrtypeType>(connection->Type());
+        connection->Release();
     }
 
 } // namespace Plugin
