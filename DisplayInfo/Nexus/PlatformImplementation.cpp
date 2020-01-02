@@ -361,6 +361,7 @@ private:
     void Updated() const
     {
         _adminLock.Lock();
+
         std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
 
         if (index != _observers.end()) {
@@ -374,10 +375,12 @@ private:
     {
         if (IsRunning() == true) {
             Updated();
+
             Block();
         }
         return (Core::infinite);
     }
+
 private:
     string _chipset;
     string _firmwareVersion;
