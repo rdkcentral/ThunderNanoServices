@@ -16,8 +16,9 @@ public:
        , _major(0)
        , _minor(0)
        , _type(HDR_OFF)
-       , _refCount(0)
        , _totalGpuRam(0)
+       , _audioPassthrough(false)
+       , _refCount(0)
        , _adminLock() {
 
         NEXUS_Error rc = NxClient_Join(NULL);
@@ -30,6 +31,7 @@ public:
         UpdateTotalGpuRam(_totalGpuRam);
         UpdateDisplayInfo(_connected, _width, _height, _major, _minor, _type);
 
+        UpdateAudioPassthrough(_audioPassthrough);
         RegisterCallback();
     }
 
@@ -39,6 +41,8 @@ public:
     {
         NxClient_StopCallbackThread();
         NxClient_Uninit();
+        Stop();
+        Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
     }
 
 public:
@@ -52,13 +56,26 @@ public:
     {
         return _firmwareVersion;
     }
-    Core::ProxyType<IGraphicsProperties>  GraphicsInstance() override
+    IGraphicsProperties*  GraphicsInstance() override
     {
-        return static_cast<Core::ProxyType<Plugin::IGraphicsProperties>>(_nexusPlatform);
+        return static_cast<Plugin::IGraphicsProperties*>(_nexusPlatform);
     }
-    Core::ProxyType<IConnectionProperties>  ConnectionInstance() override
+    IConnectionProperties*  ConnectionInstance() override
     {
-        return static_cast<Core::ProxyType<Plugin::IConnectionProperties>>(_nexusPlatform);
+        return static_cast<Plugin::IConnectionProperties*>(_nexusPlatform);
+    }
+    virtual void AddRef() const
+    {
+        Core::InterlockedIncrement(_refCount);
+    }
+    virtual uint32_t Release() const
+    {
+        if (Core::InterlockedDecrement(_refCount) == 0) {
+            delete this;
+
+            return (Core::ERROR_CONNECTION_CLOSED);
+        }
+        return (Core::ERROR_NONE);
     }
 
     // Graphics Properties interface
@@ -133,7 +150,7 @@ public:
         return (Core::ERROR_NONE);
     }
 
-    bool IsAudioPassThrough () const override
+    bool IsAudioPassthrough () const override
     {
         return false;
     }
@@ -175,9 +192,8 @@ public:
         _adminLock.Unlock();
         Run();
     }
-    static Core::ProxyType<Device::Implementation::NexusPlatform> Instance()
+    static Device::Implementation::NexusPlatform* Instance()
     {
-        _nexusPlatform = Core::ProxyType<Device::Implementation::NexusPlatform>::Create();
         return _nexusPlatform;
     }
 
@@ -233,6 +249,17 @@ private:
 #endif
     }
 
+    inline void UpdateAudioPassthrough(bool& audioPassthrough)
+    {
+        NxClient_AudioStatus status;
+        NEXUS_Error rc = NEXUS_UNKNOWN;
+        rc = NxClient_GetAudioStatus(&status);
+        if (rc == NEXUS_SUCCESS) {
+            if (status.hdmi.outputMode == NxClient_AudioOutputMode_ePassthrough) {
+                audioPassthrough = true;
+            }
+        }
+    }
     inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height, uint8_t& major, uint8_t& minor, bool type) const
     {
         NEXUS_Error rc = NEXUS_SUCCESS;
@@ -363,23 +390,24 @@ private:
     uint8_t _minor;
     HDRType _type;
 
-    mutable uint32_t _refCount;
     uint64_t _totalGpuRam;
+    bool _audioPassthrough;
+
+    mutable uint32_t _refCount;
     std::list<IConnectionProperties::INotification*> _observers;
 
     NEXUS_PlatformConfiguration _platformConfig;
 
     mutable WPEFramework::Core::CriticalSection _adminLock;
-    static Core::ProxyType<Device::Implementation::NexusPlatform> _nexusPlatform;
+    static Device::Implementation::NexusPlatform* _nexusPlatform;
 };
 }
 }
 
-Core::ProxyType<Device::Implementation::NexusPlatform> Device::Implementation::NexusPlatform::_nexusPlatform;
+Device::Implementation::NexusPlatform* Device::Implementation::NexusPlatform::_nexusPlatform = new Device::Implementation::NexusPlatform();
 
-/* static */ Core::ProxyType<Plugin::IDeviceProperties> Plugin::IDeviceProperties::Instance()
+/* static */ Plugin::IDeviceProperties* Plugin::IDeviceProperties::Instance()
 {
-    static Core::ProxyType<Plugin::IDeviceProperties> nexusPlatform(Device::Implementation::NexusPlatform::Instance());
-    return nexusPlatform;
+    return static_cast<Plugin::IDeviceProperties*>(Device::Implementation::NexusPlatform::Instance());
 }
 }

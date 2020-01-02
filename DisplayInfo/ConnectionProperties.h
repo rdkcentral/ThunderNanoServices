@@ -7,6 +7,7 @@ namespace Plugin {
 
 struct IConnectionProperties {
 
+    virtual ~IConnectionProperties() { }
     enum HDRType {
         HDR_OFF,
         HDR_10,
@@ -22,7 +23,7 @@ struct IConnectionProperties {
     virtual uint32_t Register(INotification*) = 0;
     virtual uint32_t Unregister(INotification*) = 0;
 
-    virtual bool IsAudioPassThrough () const = 0;
+    virtual bool IsAudioPassthrough () const = 0;
     virtual bool Connected() const = 0;
     virtual uint32_t Width() const = 0;
     virtual uint32_t Height() const = 0;

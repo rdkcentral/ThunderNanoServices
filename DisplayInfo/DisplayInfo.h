@@ -50,7 +50,7 @@ namespace Plugin {
 
     private:
         uint8_t _skipURL;
-        Core::ProxyType<IDeviceProperties> _device;
+        IDeviceProperties* _device;
     };
 
 } // namespace Plugin

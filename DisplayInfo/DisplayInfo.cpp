@@ -11,13 +11,14 @@ namespace Plugin {
     /* virtual */ const string DisplayInfo::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
-        ASSERT(_device.IsValid() == false);
+        ASSERT(_device == nullptr);
 
         Config config;
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
         _device = IDeviceProperties::Instance();
+        _device->AddRef();
 
         // On success return empty, to indicate there is no error text.
         return (EMPTY_STRING);
@@ -25,9 +26,9 @@ namespace Plugin {
 
     /* virtual */ void DisplayInfo::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_device.IsValid() == true);
-        if (_device.IsValid()) {
-            _device.Release();
+        ASSERT(_device != nullptr);
+        if (_device != nullptr) {
+            _device->Release();
         }
     }
 
@@ -77,12 +78,12 @@ namespace Plugin {
         displayInfo.Firmwareversion = _device->FirmwareVersion();
         displayInfo.Chipset = _device->Chipset();
 
-        Core::ProxyType<IGraphicsProperties> graphics(_device->GraphicsInstance());
+        IGraphicsProperties* graphics(_device->GraphicsInstance());
         displayInfo.Totalgpuram = graphics->TotalGpuRam();
         displayInfo.Freegpuram = graphics->FreeGpuRam();
 
-        Core::ProxyType<IConnectionProperties> connection(_device->ConnectionInstance());
-        displayInfo.Audiopassthrough = connection->IsAudioPassThrough();
+        IConnectionProperties* connection(_device->ConnectionInstance());
+        displayInfo.Audiopassthrough = connection->IsAudioPassthrough();
         displayInfo.Connected = connection->Connected();
         displayInfo.Width = connection->Width();
         displayInfo.Height = connection->Height();

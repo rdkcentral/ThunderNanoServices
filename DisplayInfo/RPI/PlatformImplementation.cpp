@@ -100,7 +100,7 @@ public:
         return (Core::ERROR_NONE);
     }
 
-    bool IsAudioPassThrough () const override
+    bool IsAudioPassthrough () const override
     {
         return false;
     }
