@@ -93,6 +93,7 @@ namespace Plugin {
 
         void Updated()
         {
+            event_updated();
         }
 
     private:
@@ -100,6 +101,7 @@ namespace Plugin {
         void RegisterAll();
         void UnregisterAll();
         uint32_t get_displayinfo(JsonData::DisplayInfo::DisplayinfoData&) const;
+        void event_updated();
 
         void Info(JsonData::DisplayInfo::DisplayinfoData&) const;
 

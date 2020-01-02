@@ -19,9 +19,7 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
-        _connectionId = 0;
         _device = service->Root<Exchange::IDeviceProperties>(_connectionId, 2000, _T("DisplayInfoImplementation"));
-
         if (_device != nullptr) {
             _connectionProperties = _device->QueryInterface<Exchange::IConnectionProperties>();
             if (_connectionProperties == nullptr) {
@@ -54,6 +52,8 @@ namespace Plugin {
             _device->Release();
             _device = nullptr;
         }
+
+        _connectionId = 0;
     }
 
     /* virtual */ string DisplayInfo::Information() const
