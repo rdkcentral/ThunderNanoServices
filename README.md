@@ -1,6 +1,7 @@
 # ThunderNanoServices
-* [BluetoothControl](BluetoothControl/doc/BluetoothControl.md)
-* [BluetoothRemoteControl](BluetoothRemoteControl/doc/BluetoothRemoteControl.md)
+* [BluetoothControl](BluetoothControl/doc/BluetoothControlPlugin.md)
+* [BluetoothRemoteControl](BluetoothRemoteControl/doc/BluetoothRemoteControlPlugin.md)
+* [Cobalt](Cobalt/doc/CobaltPlugin.md)
 * Commander
 * [Compositor](Compositor/doc/CompositorPlugin.md)
 * DeviceIdentification
@@ -8,8 +9,10 @@
 * [DHCPServer](DHCPServer/doc/DHCPServerPlugin.md)
 * [DIALServer](DIALServer/doc/DIALServerPlugin.md)
 * Dictionary
+* [DisplayInfo](DisplayInfo/doc/DisplayInfoPlugin.md)
 * DsgccClient
 * DSResolution
+* FileTransfer
 * FirmwareControl
 * FrontPanel
 * [IOConnector](IOConnector/doc/IOConnectorPlugin.md)
@@ -19,17 +22,17 @@
 * [NetworkControl](NetworkControl/doc/NetworkControlPlugin.md)
 * [OpenCDMi](OpenCDMi/doc/OpenCDMiPlugin.md)
 * [Packager](Packager/doc/PackagerPlugin.md)
-* Power
+* [Power](Power/doc/PowerPlugin.md)
+* ProcessMonitor
 * [RemoteControl](RemoteControl/doc/RemoteControlPlugin.md)
 * RtspClient
-* SecurityAgent
+* SecureShellServer
+* [SecurityAgent](SecurityAgent/doc/SecurityAgentPlugin.md)
 * Snapshot
 * [Spark](Spark/doc/SparkPlugin.md)
 * [Streamer](Streamer/doc/StreamerPlugin.md)
 * [SystemCommands](SystemCommands/doc/SystemCommandsPlugin.md)
 * SystemdConnector
-* [TestController](examples/TestController/doc/TestControllerPlugin.md)
-* [TestUtility](examples/TestUtility/doc/TestUtilityPlugin.md)
 * [TimeSync](TimeSync/doc/TimeSyncPlugin.md)
 * [TraceControl](TraceControl/doc/TraceControlPlugin.md)
 * [WebKitBrowser](WebKitBrowser/doc/WebKitBrowserPlugin.md)
@@ -37,3 +40,7 @@
 * WebServer
 * WebShell
 * [WifiControl](WifiControl/doc/WifiControlPlugin.md)
+
+### Examples
+* [TestController](examples/TestController/doc/TestControllerPlugin.md)
+* [TestUtility](examples/TestUtility/doc/TestUtilityPlugin.md)

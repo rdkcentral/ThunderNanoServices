@@ -1,12 +1,12 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Spark_Plugin"></a>
-# Spark Plugin
+<a name="head.Cobalt_Plugin"></a>
+# Cobalt Plugin
 
 **Version: 1.0**
 
 **Status: :black_circle::white_circle::white_circle:**
 
-Spark plugin for Thunder framework.
+Cobalt plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -22,7 +22,7 @@ Spark plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Spark plugin. It includes detailed specification of its configuration, properties provided and notifications sent.
+This document describes purpose and functionality of the Cobalt plugin. It includes detailed specification of its configuration, properties provided and notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -60,7 +60,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-The Spark plugin provides web browsing functionality based on the Spark engine.
+The Cobalt plugin provides web browsing functionality based on the Cobalt engine.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -71,9 +71,9 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *Spark*) |
-| classname | string | Class name: *Spark* |
-| locator | string | Library name: *libWPEFrameworkSpark.so* |
+| callsign | string | Plugin instance name (default: *Cobalt*) |
+| classname | string | Class name: *Cobalt* |
+| locator | string | Library name: *libWPEFrameworkCobalt.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration?.url | string | <sup>*(optional)*</sup> The URL that is loaded upon starting the browser |
@@ -81,7 +81,7 @@ The table below lists configuration options of the plugin.
 <a name="head.Properties"></a>
 # Properties
 
-The following properties are provided by the Spark plugin:
+The following properties are provided by the Cobalt plugin:
 
 
 Browser interface properties:
@@ -125,7 +125,7 @@ Also see: [urlchange](#event.urlchange)
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "Spark.1.url"
+    "method": "Cobalt.1.url"
 }
 ```
 #### Get Response
@@ -143,7 +143,7 @@ Also see: [urlchange](#event.urlchange)
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "Spark.1.url", 
+    "method": "Cobalt.1.url", 
     "params": "https://www.google.com"
 }
 ```
@@ -177,7 +177,7 @@ Also see: [visibilitychange](#event.visibilitychange)
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "Spark.1.visibility"
+    "method": "Cobalt.1.visibility"
 }
 ```
 #### Get Response
@@ -195,7 +195,7 @@ Also see: [visibilitychange](#event.visibilitychange)
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "Spark.1.visibility", 
+    "method": "Cobalt.1.visibility", 
     "params": "visible"
 }
 ```
@@ -229,7 +229,7 @@ Provides access to the current number of frames per second the browser is render
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "Spark.1.fps"
+    "method": "Cobalt.1.fps"
 }
 ```
 #### Get Response
@@ -262,7 +262,7 @@ Also see: [statechange](#event.statechange)
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "Spark.1.state"
+    "method": "Cobalt.1.state"
 }
 ```
 #### Get Response
@@ -280,7 +280,7 @@ Also see: [statechange](#event.statechange)
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "Spark.1.state", 
+    "method": "Cobalt.1.state", 
     "params": "resumed"
 }
 ```
@@ -298,7 +298,7 @@ Also see: [statechange](#event.statechange)
 
 Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
-The following events are provided by the Spark plugin:
+The following events are provided by the Cobalt plugin:
 
 
 Browser interface events:

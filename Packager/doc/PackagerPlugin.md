@@ -90,7 +90,7 @@ Packager interface methods:
 <a name="method.install"></a>
 ## *install <sup>method</sup>*
 
-Installs a package given by a name, an URL or a file path
+Installs a package given by a name, an URL or a file path.
 
 ### Parameters
 
@@ -141,7 +141,7 @@ Installs a package given by a name, an URL or a file path
 <a name="method.synchronize"></a>
 ## *synchronize <sup>method</sup>*
 
-Synchronizes repository manifest with a repository
+Synchronizes repository manifest with a repository.
 
 ### Parameters
 

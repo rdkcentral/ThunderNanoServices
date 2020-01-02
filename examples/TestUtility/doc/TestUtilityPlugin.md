@@ -55,7 +55,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.WPEF">[WPEF](https://github.com/WebPlatformForEmbedded/WPEFramework/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | WPEFramework API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
 
 <a name="head.Description"></a>
 # Description
@@ -91,7 +91,7 @@ TestUtility interface methods:
 <a name="method.runmemory"></a>
 ## *runmemory <sup>method</sup>*
 
-Runs a memory test command
+Runs a memory test command.
 
 ### Parameters
 
@@ -148,7 +148,7 @@ Runs a memory test command
 <a name="method.runcrash"></a>
 ## *runcrash <sup>method</sup>*
 
-Runs a crash test command
+Runs a crash test command.
 
 ### Parameters
 
@@ -261,7 +261,7 @@ Provides access to the description of a test command.
 | (property) | object | Description of a test command |
 | (property).description | string | Test command description |
 
-> The *Command* shall be passed as the index to the property, e.g. *TestUtility.1.description@Malloc*.
+> The *command* shall be passed as the index to the property, e.g. *TestUtility.1.description@Malloc*.
 
 ### Errors
 
@@ -314,7 +314,7 @@ Provides access to the parameters of a test command.
 | (property).output.type | string | Test command output parameter type (must be one of the following: *Number*, *String*, *Boolean*, *Object*, *Symbol*) |
 | (property).output.comment | string | Test command output parameter description |
 
-> The *Command* shall be passed as the index to the property, e.g. *TestUtility.1.parameters@Malloc*.
+> The *command* shall be passed as the index to the property, e.g. *TestUtility.1.parameters@Malloc*.
 
 ### Errors
 

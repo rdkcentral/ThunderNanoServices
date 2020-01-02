@@ -1,6 +1,6 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Power_API"></a>
-# Power API
+<a name="head.Power_Plugin"></a>
+# Power Plugin
 
 **Version: 1.0**
 
@@ -11,7 +11,6 @@ Power plugin for Thunder framework.
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
-- [Description](#head.Description)
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
@@ -57,13 +56,6 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
-# Description
-
-Power JSON-RPC interface
-
-The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
-
 <a name="head.Configuration"></a>
 # Configuration
 
@@ -71,7 +63,9 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
+| callsign | string | Plugin instance name (default: *Power*) |
 | classname | string | Class name: *Power* |
+| locator | string | Library name: *libWPEFrameworkPower.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
 
 <a name="head.Methods"></a>

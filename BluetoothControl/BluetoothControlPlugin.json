@@ -5,7 +5,7 @@
     "callsign": "BluetoothControl",
     "locator": "libWPEFrameworkBluetoothControl.so",
     "status": "alpha",
-    "description": "The Bluetooth Controll plugin allows enables Bluetooth administration functionality.",
+    "description": "The Bluetooth Control plugin allows Bluetooth device administration.",
     "version": "1.0"
   },
   "interface": {

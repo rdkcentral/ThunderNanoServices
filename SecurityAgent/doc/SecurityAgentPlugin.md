@@ -1,12 +1,12 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Location_Sync_Plugin"></a>
-# Location Sync Plugin
+<a name="head.Security_Agent_Plugin"></a>
+# Security Agent Plugin
 
 **Version: 1.0**
 
 **Status: :black_circle::black_circle::black_circle:**
 
-LocationSync plugin for Thunder framework.
+SecurityAgent plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -14,8 +14,6 @@ LocationSync plugin for Thunder framework.
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
-- [Properties](#head.Properties)
-- [Notifications](#head.Notifications)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -23,7 +21,7 @@ LocationSync plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the LocationSync plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the SecurityAgent plugin. It includes detailed specification of its configuration and methods provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -61,7 +59,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-The LocationSync plugin provides geo-location functionality.
+Security Agent of thunder is responsible to allow or block access to the Thunder API.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -72,45 +70,53 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *LocationSync*) |
-| classname | string | Class name: *LocationSync* |
-| locator | string | Library name: *libWPELocationSync.so* |
+| callsign | string | Plugin instance name (default: *SecurityAgent*) |
+| classname | string | Class name: *SecurityAgent* |
+| locator | string | Library name: *libWPEFrameworkSecurityAgent.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
 
 <a name="head.Methods"></a>
 # Methods
 
-The following methods are provided by the LocationSync plugin:
+The following methods are provided by the SecurityAgent plugin:
 
-LocationSync interface methods:
+SecurityAgent interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [sync](#method.sync) | Synchronizes the location |
+| [createtoken](#method.createtoken) | Creates Token |
+| [validate](#method.validate) | Validates Token |
 
-<a name="method.sync"></a>
-## *sync <sup>method</sup>*
+<a name="method.createtoken"></a>
+## *createtoken <sup>method</sup>*
 
-Synchronizes the location.
+Creates Token.
+
+### Description
+
+Create a signed JsonWeb token from provided payload.
 
 ### Parameters
 
-This method takes no parameters.
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params?.url | string | <sup>*(optional)*</sup> Url of application origin |
+| params?.user | string | <sup>*(optional)*</sup> Username |
+| params?.hash | string | <sup>*(optional)*</sup> Random hash |
 
 ### Result
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | null | Always null |
+| result | object |  |
+| result.token | string | Signed JsonWeb token |
 
 ### Errors
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 1 | ```ERROR_GENERAL``` | Failed to synchdonize the location |
-| 2 | ```ERROR_UNAVAILABLE``` | Unavailable locator |
-| 15 | ```ERROR_INCORRECT_URL``` | Incorrect URL |
-| 12 | ```ERROR_INPROGRESS``` | Probing in progress |
+| 1 | ```ERROR_GENERAL``` | Token creation failed |
 
 ### Example
 
@@ -120,7 +126,12 @@ This method takes no parameters.
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "LocationSync.1.sync"
+    "method": "SecurityAgent.1.createtoken", 
+    "params": {
+        "url": "https://test.comcast.com", 
+        "user": "Test", 
+        "hash": "1CLYex47SY"
+    }
 }
 ```
 #### Response
@@ -129,91 +140,61 @@ This method takes no parameters.
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "result": null
+    "result": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICAgImpzb25ycGMiOiAiMi4wIiwgCiAgICAiaWQiOiAxMjM0NTY3ODkwLCAKICAgICJtZXRob2QiOiAiQ29udHJvbGxlci4xLmFjdGl2YXRlIiwgCiAgICAicGFyYW1zIjogewogICAgICAgICJjYWxsc2lnbiI6ICJTZWN1cml0eUFnZW50IgogICAgfQp9.lL40nTwRyBvMwiglZhl5_rB8ycY1uhAJRFx9pGATMRQ"
+    }
 }
 ```
-<a name="head.Properties"></a>
-# Properties
+<a name="method.validate"></a>
+## *validate <sup>method</sup>*
 
-The following properties are provided by the LocationSync plugin:
+Validates Token.
 
-LocationSync interface properties:
+### Description
 
-| Property | Description |
-| :-------- | :-------- |
-| [location](#property.location) <sup>RO</sup> | Location information |
+Checks whether the token is valid and properly signed.
 
-<a name="property.location"></a>
-## *location <sup>property</sup>*
-
-Provides access to the location information.
-
-> This property is **read-only**.
-
-### Value
+### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Location information |
-| (property).city | string | City name |
-| (property).country | string | Country name |
-| (property).region | string | Region name |
-| (property).timezone | string | Time zone information |
-| (property).publicip | string | Public IP |
+| params | object |  |
+| params.token | string | Token that will be validated |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | object |  |
+| result.valid | boolean | Tells whether token is signature is correct |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
 
 ### Example
 
-#### Get Request
+#### Request
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "method": "LocationSync.1.location"
+    "method": "SecurityAgent.1.validate", 
+    "params": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICAgImpzb25ycGMiOiAiMi4wIiwgCiAgICAiaWQiOiAxMjM0NTY3ODkwLCAKICAgICJtZXRob2QiOiAiQ29udHJvbGxlci4xLmFjdGl2YXRlIiwgCiAgICAicGFyYW1zIjogewogICAgICAgICJjYWxsc2lnbiI6ICJTZWN1cml0eUFnZW50IgogICAgfQp9.lL40nTwRyBvMwiglZhl5_rB8ycY1uhAJRFx9pGATMRQ"
+    }
 }
 ```
-#### Get Response
+#### Response
 
 ```json
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": {
-        "city": "Wroclaw", 
-        "country": "Poland", 
-        "region": "Wroclaw", 
-        "timezone": "CET-1CEST,M3.5.0,M10.5.0/3", 
-        "publicip": "78.11.117.118"
+        "valid": false
     }
-}
-```
-<a name="head.Notifications"></a>
-# Notifications
-
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
-
-The following events are provided by the LocationSync plugin:
-
-LocationSync interface events:
-
-| Event | Description |
-| :-------- | :-------- |
-| [locationchange](#event.locationchange) | Signals a location change |
-
-<a name="event.locationchange"></a>
-## *locationchange <sup>event</sup>*
-
-Signals a location change.
-
-### Parameters
-
-This event carries no parameters.
-
-### Example
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.locationchange"
 }
 ```
