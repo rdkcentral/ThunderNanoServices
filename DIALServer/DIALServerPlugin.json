@@ -1,0 +1,128 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "DIAL Server Plugin",
+    "callsign": "DIALServer",
+    "locator": "libWPEFrameworkDIALServer.so",
+    "status": "beta",
+    "description": "The DIAL Server plugin implements the server side of the DIAL protocol, allowing second-screen devices discovering and launching applications on a first-screen device, utilizing SSDP protocol and RESTful API. For more invormation about the DIAL protocol please refer to [[DIAL](#ref.DIAL)].",
+    "version": "1.0",
+    "class": "DIALServer",
+    "acronyms": {
+      "DIAL": "Discovery and Launch",
+      "REST": "Representational State Transfer",
+      "SSDP": "Simple Service Discovery Protocol"
+    },
+    "references": {
+      "[DIAL](http://http://www.dial-multiscreen.org)": "DIAL protocol specification"
+    },
+    "terms": {
+      "Controller": "An internal plugin that allows activating and deactivating of services/plugins configured for use in the framework."
+    }
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "description": "Server configuration",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "User-friendly name of the device"
+          },
+          "model": {
+            "type": "string",
+            "description": "Name of the device model"
+          },
+          "description": {
+            "type": "string",
+            "description": "Short description of the device"
+          },
+          "modelnumber": {
+            "type": "string",
+            "description": "Device model number"
+          },
+          "modelurl": {
+            "type": "string",
+            "description": "URL to device model website"
+          },
+          "manufacturer": {
+            "type": "string",
+            "description": "Name of the device manufacturer"
+          },
+          "manufacturerurl": {
+            "type": "string",
+            "description": "URL to manufacturer website"
+          },
+          "serialnumber": {
+            "type": "string",
+            "description": "Device serial number"
+          },
+          "upc": {
+            "type": "string",
+            "description": "Device UPC barcode number (Universal Product Code)"
+          },
+          "interface": {
+            "type": "string",
+            "description": "Server interface IP and port (default: SSDP multicast address and port)"
+          },
+          "webserver": {
+            "type": "string",
+            "description": "Callsign of a service implementing the web server functionality (default: *WebServer*)"
+          },
+          "switchboard": {
+            "type": "string",
+            "description": "Callsign of a service implementing the switchboard functionality (default: *SwitchBoard*). If defined and the service is available then start/stop requests will be relayed to the *SwitchBoard* rather than handled by the *Controller* directly. This is used only in non-passive mode."
+          },
+          "apps": {
+            "type": "array",
+            "description": "List of supported applications",
+            "items": {
+              "type": "object",
+              "description": "(an application definition)",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Name of the application"
+                },
+                "handler": {
+                  "type": "string",
+                  "description": "Name of the application handler. If not defined then *name* will be used instead."
+                },
+                "callsign": {
+                  "type": "string",
+                  "description": "Callsign of the service implementing the application. If defined and the service is available then the *Controller* will be used to unconditionally start/stop the application by activating/deactivating its service directly (active mode), or by the *SwitchBoard* if selected and available (switchboard mode). If not defined then these operations will be handed over to JavaScript, by sending a notification and using *handler* (or *name*) property to identify the application (passive mode)."
+                },
+                "url": {
+                  "type": "string",
+                  "description": "A URL related to the application"
+                },
+                "allowstop": {
+                  "type": "boolean",
+                  "description": "Denotes if the application can be stopped *(true)* or not *(false, default)*"
+                }
+              },
+              "required": [
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "name",
+          "model",
+          "manufacturer",
+          "description",
+          "apps"
+        ]
+      }
+    },
+    "required": [
+      "configuration"
+    ]
+  },
+  "interface": {
+    "$ref": "{interfacedir}/DIALServer.json#"
+  }
+}

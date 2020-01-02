@@ -1,0 +1,46 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Time Sync Plugin",
+    "callsign": "TimeSync",
+    "locator": "libWPEFrameworkTimeSync.so",
+    "status": "production",
+    "description": "The Time Sync plugin provides time synchronization functionality from various time sources (e.g. NTP).",
+    "version": "1.0"
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "deferred": {
+        "type": "boolean",
+        "description": "Determines if automatic time sync shall be initially disabled"
+      },
+      "periodicity": {
+        "type": "number",
+        "description": "Periodicity of time synchronization (in hours), 0 for one-off synchronization"
+      },
+      "retries": {
+        "type": "number",
+        "description": "Number of synchronization attempts if the source cannot be reached (may be 0)"
+      },
+      "interval": {
+        "type": "number",
+        "description": "Time to wait (in milliseconds) before retrying a synchronization attempt after a failure"
+      },
+      "sources": {
+        "type": "array",
+        "description": "Time sources",
+        "items": {
+          "type": "string",
+          "description": "(a time source entry)"
+        }
+      }
+    },
+    "required": [
+      "sources"
+    ]
+  },
+  "interface": {
+    "$ref": "{interfacedir}/TimeSync.json#"
+  }
+}
