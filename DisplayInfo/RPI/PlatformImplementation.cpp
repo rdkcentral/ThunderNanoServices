@@ -5,8 +5,7 @@
 #include <fstream>
 
 namespace WPEFramework {
-namespace Device {
-namespace Implementation {
+namespace Plugin {
 
 class DisplayInfoImplementation : public Exchange::IDeviceProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties, public Core::Thread {
     static constexpr const TCHAR* CPUInfoFile= _T("/proc/cpuinfo");
@@ -129,10 +128,6 @@ public:
     HDRType Type() const override
     {
         return HDR_OFF;
-    }
-    static Device::Implementation::DisplayInfoImplementation* Instance()
-    {
-        return _rpiPlatform;
     }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
@@ -312,7 +307,6 @@ private:
     std::list<IConnectionProperties::INotification*> _observers;
 
     mutable WPEFramework::Core::CriticalSection _adminLock;
-    static Device::Implementation::DisplayInfoImplementation* _rpiPlatform;
 };
 
     SERVICE_REGISTRATION(DisplayInfoImplementation, 1, 0);
