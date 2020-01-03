@@ -103,13 +103,6 @@ public:
     {
         return _connected;
     }
-    void Connected(bool connected)
-    {
-        _adminLock.Lock();
-        _connected = connected;
-        _adminLock.Unlock();
-        Run();
-    }
     uint32_t Width() const override
     {
         return _width;
@@ -256,6 +249,8 @@ private:
             }
             if ((tvState.state & VC_HDMI_ATTACHED) || (tvState.state & VC_SDTV_ATTACHED)) {
                 connected = true;
+            } else {
+                connected = false;
             }
         }
     }
@@ -271,13 +266,10 @@ private:
         if (platform != nullptr) {
             switch (reason) {
             case VC_HDMI_UNPLUGGED:
-            case VC_SDTV_UNPLUGGED: {
-                platform->Connected(false);
-                break;
-            }
+            case VC_SDTV_UNPLUGGED:
             case VC_HDMI_ATTACHED:
             case VC_SDTV_ATTACHED: {
-                platform->Connected(true);
+                platform->Run();
                 break;
             }
             default: {
@@ -303,6 +295,11 @@ private:
     uint32_t Worker() override
     {
         if (IsRunning() == true) {
+            _adminLock.Lock();
+            UpdateAudioPassthrough(_audioPassthrough);
+            UpdateDisplayInfo(_connected, _width, _height);
+            _adminLock.Unlock();
+
             Updated();
 
             Block();
