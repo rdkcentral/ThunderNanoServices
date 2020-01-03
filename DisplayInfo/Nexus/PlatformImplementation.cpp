@@ -30,8 +30,8 @@ public:
         UpdateFirmwareVersion(_firmwareVersion);
 
         UpdateTotalGpuRam(_totalGpuRam);
-        UpdateDisplayInfo(_connected, _width, _height, _major, _minor, _type);
 
+        UpdateDisplayInfo(_connected, _width, _height, _major, _minor, _type);
         UpdateAudioPassthrough(_audioPassthrough);
         RegisterCallback();
     }
@@ -132,18 +132,11 @@ public:
 
     bool IsAudioPassthrough () const override
     {
-        return false;
+        return _audioPassthrough;
     }
     bool Connected() const override
     {
         return _connected;
-    }
-    void Connected(bool connected)
-    {
-        _adminLock.Lock();
-        _connected = connected;
-        _adminLock.Unlock();
-        Run();
     }
     uint32_t Width() const override
     {
@@ -164,13 +157,6 @@ public:
     HDRType Type() const override
     {
         return _type;
-    }
-    void Type(HDRType type)
-    {
-        _adminLock.Lock();
-        _type = type;
-        _adminLock.Unlock();
-        Run();
     }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
@@ -237,7 +223,7 @@ private:
         NEXUS_Error rc = NEXUS_UNKNOWN;
         rc = NxClient_GetAudioStatus(&status);
         if (rc == NEXUS_SUCCESS) {
-            if ((status.hdmi.outputMode != NxClient_AudioOutputMode_eNone && (status.hdmi.outputMode < NxClient_AudioOutputMode_eMax)) {
+            if ((status.hdmi.outputMode != NxClient_AudioOutputMode_eNone) && (status.hdmi.outputMode < NxClient_AudioOutputMode_eMax)) {
                 audioPassthrough = true;
             }
         }
@@ -249,32 +235,32 @@ private:
 
         rc = NxClient_GetDisplayStatus(&status);
         if (rc == NEXUS_SUCCESS) {
-            if (status.hdmi.status.connected == true) {
-                connected = true;
-                // Read HDR status
-                switch (status.hdmi.dynamicRangeMode) {
-                case NEXUS_VideoDynamicRangeMode_eHdr10: {
-                    type = HDR_10;
-                    break;
-                }
-                case NEXUS_VideoDynamicRangeMode_eHdr10Plus: {
-                    type = HDR_10PLUS;
-                    break;
-                }
-                default:
-                    break;
-                }
+            connected = status.hdmi.status.connected;
 
-                // Check HDCP version
-                if (status.hdmi.hdcp.hdcp2_2Features == true) {
-                    major = 2;
-                    minor = 2;
-                } else if (status.hdmi.hdcp.hdcp1_1Features == true) {
-                    major = 1;
-                    minor = 1;
-                }
+            // Read HDR status
+            switch (status.hdmi.dynamicRangeMode) {
+            case NEXUS_VideoDynamicRangeMode_eHdr10: {
+                type = HDR_10;
+                break;
+            }
+            case NEXUS_VideoDynamicRangeMode_eHdr10Plus: {
+                type = HDR_10PLUS;
+                break;
+            }
+            default:
+                break;
+            }
+
+            // Check HDCP version
+            if (status.hdmi.hdcp.hdcp2_2Features == true) {
+                major = 2;
+                minor = 2;
+            } else if (status.hdmi.hdcp.hdcp1_1Features == true) {
+                major = 1;
+                minor = 1;
             }
         }
+
         // Read display width and height
         NEXUS_DisplayCapabilities capabilities;
         NEXUS_GetDisplayCapabilities(&capabilities);
@@ -304,36 +290,10 @@ private:
         DisplayInfoImplementation* platform = static_cast<DisplayInfoImplementation*>(cbData);
 
         switch (param) {
-        case 0: {
-            NxClient_DisplayStatus status;
-            rc = NxClient_GetDisplayStatus(&status);
-            if (rc == NEXUS_SUCCESS) {
-                if (status.hdmi.status.connected == true) {
-                    platform->Connected(true);
-                } else {
-                    platform->Connected(false);
-                }
-            }
-            break;
-        }
+        case 0:
         case 1: {
-            NxClient_DisplayStatus status;
-            rc = NxClient_GetDisplayStatus(&status);
-            if (rc == NEXUS_SUCCESS) {
-                // Read HDR status
-                switch (status.hdmi.dynamicRangeMode) {
-                case NEXUS_VideoDynamicRangeMode_eHdr10: {
-                    platform->Type(HDR_10);
-                    break;
-                }
-                case NEXUS_VideoDynamicRangeMode_eHdr10Plus: {
-                    platform->Type(HDR_10PLUS);
-                    break;
-                }
-                default:
-                    break;
-                }
-            }
+            platform->Run();
+            break;
         }
         default:
             break;
@@ -356,6 +316,10 @@ private:
     uint32_t Worker() override
     {
         if (IsRunning() == true) {
+            _adminLock.Lock();
+            UpdateDisplayInfo(_connected, _width, _height, _major, _minor, _type);
+            _adminLock.Unlock();
+
             Updated();
 
             Block();
