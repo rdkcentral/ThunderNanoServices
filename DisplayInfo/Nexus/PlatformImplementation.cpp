@@ -237,7 +237,7 @@ private:
         NEXUS_Error rc = NEXUS_UNKNOWN;
         rc = NxClient_GetAudioStatus(&status);
         if (rc == NEXUS_SUCCESS) {
-            if (status.hdmi.outputMode == NxClient_AudioOutputMode_ePassthrough) {
+            if ((status.hdmi.outputMode != NxClient_AudioOutputMode_eNone && (status.hdmi.outputMode < NxClient_AudioOutputMode_eMax)) {
                 audioPassthrough = true;
             }
         }

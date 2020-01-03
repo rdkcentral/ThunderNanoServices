@@ -15,6 +15,7 @@ public:
         , _height(0)
         , _connected(false)
         , _totalGpuRam(0)
+        , _audioPassthrough(false)
         , _refCount(0)
         , _adminLock() {
 
@@ -25,6 +26,7 @@ public:
 
         UpdateTotalGpuRam(_totalGpuRam);
 
+        UpdateAudioPassthrough(_audioPassthrough);
         UpdateDisplayInfo(_connected, _width, _height);
         RegisterDisplayCallback();
     }
@@ -95,7 +97,7 @@ public:
 
     bool IsAudioPassthrough () const override
     {
-        return false;
+        return _audioPassthrough;
     }
     bool Connected() const override
     {
@@ -229,6 +231,20 @@ private:
         }
     }
 
+    inline void UpdateAudioPassthrough(bool& audioPassthrough)
+    {
+        int num_channels = 0;
+        for (int format = EDID_AudioFormat_ePCM; format < EDID_AudioFormat_eMaxCount; format++) {
+            for (int channel = 1; channel <= 8; channel++) {
+                if (vc_tv_hdmi_audio_supported(format, channel, EDID_AudioSampleRate_e44KHz, EDID_AudioSampleSize_16bit ) == 0) {
+                    num_channels++;
+                }
+            }
+        }
+        if (num_channels > 0) {
+            audioPassthrough = true;
+        }
+    }
     inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height) const
     {
         TV_DISPLAY_STATE_T tvState;
@@ -302,6 +318,7 @@ private:
     uint32_t _height;
     bool _connected;
     uint64_t _totalGpuRam;
+    bool _audioPassthrough;
 
     mutable uint32_t _refCount;
     std::list<IConnectionProperties::INotification*> _observers;
