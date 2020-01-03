@@ -26,8 +26,7 @@ public:
 
         UpdateTotalGpuRam(_totalGpuRam);
 
-        UpdateAudioPassthrough(_audioPassthrough);
-        UpdateDisplayInfo(_connected, _width, _height);
+        UpdateDisplayInfo(_connected, _width, _height, _audioPassthrough);
         RegisterDisplayCallback();
     }
 
@@ -224,21 +223,7 @@ private:
         }
     }
 
-    inline void UpdateAudioPassthrough(bool& audioPassthrough)
-    {
-        int num_channels = 0;
-        for (int format = EDID_AudioFormat_ePCM; format < EDID_AudioFormat_eMaxCount; format++) {
-            for (int channel = 1; channel <= 8; channel++) {
-                if (vc_tv_hdmi_audio_supported(format, channel, EDID_AudioSampleRate_e44KHz, EDID_AudioSampleSize_16bit ) == 0) {
-                    num_channels++;
-                }
-            }
-        }
-        if (num_channels > 0) {
-            audioPassthrough = true;
-        }
-    }
-    inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height) const
+    inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height, bool& audioPassthrough) const
     {
         TV_DISPLAY_STATE_T tvState;
         if (vc_tv_get_display_state(&tvState) == 0) {
@@ -251,6 +236,11 @@ private:
                 connected = true;
             } else {
                 connected = false;
+            }
+            if (tvState.state & VC_HDMI_HDMI) {
+                audioPassthrough = true;
+            } else {
+                audioPassthrough = false;
             }
         }
     }
@@ -296,8 +286,7 @@ private:
     {
         if (IsRunning() == true) {
             _adminLock.Lock();
-            UpdateAudioPassthrough(_audioPassthrough);
-            UpdateDisplayInfo(_connected, _width, _height);
+            UpdateDisplayInfo(_connected, _width, _height, _audioPassthrough);
             _adminLock.Unlock();
 
             Updated();
