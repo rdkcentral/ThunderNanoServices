@@ -77,8 +77,6 @@ public:
     {
         NxClient_StopCallbackThread();
         NxClient_Uninit();
-        Stop();
-        Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
     }
 
 public:
@@ -320,7 +318,6 @@ private:
     }
     static void Callback(void *cbData, int param)
     {
-        NEXUS_Error rc = NEXUS_SUCCESS;
         DisplayInfoImplementation* platform = static_cast<DisplayInfoImplementation*>(cbData);
 
         switch (param) {
