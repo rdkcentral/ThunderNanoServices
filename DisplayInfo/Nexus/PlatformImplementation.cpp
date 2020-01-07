@@ -8,7 +8,40 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : public Exchange::IDeviceProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties, public Core::Thread {
+class DisplayInfoImplementation : public Exchange::IDeviceProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
+private:
+    class Job : public Core::IDispatch {
+    public:
+        Job() = delete;
+        Job(const Job&) = delete;
+        Job& operator=(const Job&) = delete;
+
+    public:
+        Job(DisplayInfoImplementation* parent)
+            : _parent(*parent)
+        {
+        }
+        virtual ~Job()
+        {
+            PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(*this));
+        }
+
+    public:
+        void Submit()
+        {
+            PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
+        }
+
+    private:
+        virtual void Dispatch()
+        {
+            _parent.Run();
+        }
+
+    private:
+        DisplayInfoImplementation& _parent;
+    };
+
 public:
     DisplayInfoImplementation()
        : _width(0)
@@ -20,7 +53,8 @@ public:
        , _totalGpuRam(0)
        , _audioPassthrough(false)
        , _refCount(0)
-       , _adminLock() {
+       , _adminLock()
+       , _activity(Core::ProxyType<Job>::Create(this)) {
 
         NEXUS_Error rc = NxClient_Join(NULL);
         ASSERT(!rc);
@@ -33,6 +67,7 @@ public:
 
         UpdateDisplayInfo(_connected, _width, _height, _major, _minor, _type);
         UpdateAudioPassthrough(_audioPassthrough);
+
         RegisterCallback();
     }
 
@@ -47,13 +82,12 @@ public:
     }
 
 public:
-
     // Device Propertirs interface
-    const std::string Chipset() const override
+    const string Chipset() const override
     {
         return _chipset;
     }
-    const std::string FirmwareVersion() const override
+    const string FirmwareVersion() const override
     {
         return _firmwareVersion;
     }
@@ -292,14 +326,17 @@ private:
         switch (param) {
         case 0:
         case 1: {
-            platform->Run();
+            platform->Submit();
             break;
         }
         default:
             break;
         }
     }
-
+    void Submit()
+    {
+        _activity->Submit();
+    }
     void Updated() const
     {
         _adminLock.Lock();
@@ -312,19 +349,13 @@ private:
 
         _adminLock.Unlock();
     }
-
-    uint32_t Worker() override
+    void Run()
     {
-        if (IsRunning() == true) {
-            _adminLock.Lock();
-            UpdateDisplayInfo(_connected, _width, _height, _major, _minor, _type);
-            _adminLock.Unlock();
+        _adminLock.Lock();
+        UpdateDisplayInfo(_connected, _width, _height, _major, _minor, _type);
+        _adminLock.Unlock();
 
-            Updated();
-
-            Block();
-        }
-        return (Core::infinite);
+        Updated();
     }
 
 private:
@@ -348,6 +379,8 @@ private:
     NEXUS_PlatformConfiguration _platformConfig;
 
     mutable WPEFramework::Core::CriticalSection _adminLock;
+
+    Core::ProxyType<Job> _activity;
 };
 
     SERVICE_REGISTRATION(DisplayInfoImplementation, 1, 0);

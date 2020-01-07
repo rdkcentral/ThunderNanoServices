@@ -7,8 +7,42 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : public Exchange::IDeviceProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties, public Core::Thread {
+class DisplayInfoImplementation : public Exchange::IDeviceProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
     static constexpr const TCHAR* CPUInfoFile= _T("/proc/cpuinfo");
+
+private:
+    class Job : public Core::IDispatch {
+    public:
+        Job() = delete;
+        Job(const Job&) = delete;
+        Job& operator=(const Job&) = delete;
+
+    public:
+        Job(DisplayInfoImplementation* parent)
+            : _parent(*parent)
+        {
+        }
+        virtual ~Job()
+        {
+            PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(*this));
+        }
+
+    public:
+        void Submit()
+        {
+            PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
+        }
+
+    private:
+        virtual void Dispatch()
+        {
+            _parent.Run();
+        }
+
+    private:
+        DisplayInfoImplementation& _parent;
+    };
+
 public:
     DisplayInfoImplementation()
         : _width(0)
@@ -17,7 +51,8 @@ public:
         , _totalGpuRam(0)
         , _audioPassthrough(false)
         , _refCount(0)
-        , _adminLock() {
+        , _adminLock()
+        , _activity(Core::ProxyType<Job>::Create(this)) {
 
         bcm_host_init();
 
@@ -39,11 +74,11 @@ public:
 
 public:
     // Device Propertirs interface
-    const std::string Chipset() const override
+    const string Chipset() const override
     {
         return _chipset;
     }
-    const std::string FirmwareVersion() const override
+    const string FirmwareVersion() const override
     {
         return _firmwareVersion;
     }
@@ -136,7 +171,7 @@ private:
         Command("version", firmwareVersion);
         if (firmwareVersion.length() > 0) {
 
-            std::string::size_type i = 0;
+            string::size_type i = 0;
             while (i < firmwareVersion.length()) {
                 i = firmwareVersion.find_first_of("\n\r", i);
                 if (i != std::string::npos) {
@@ -165,7 +200,7 @@ private:
     {
         Command("get_mem reloc_total ", totalRam);
     }
-    void Command(const char request[], std::string& value) const
+    void Command(const char request[], string& value) const
     {
         char buffer[512];
 
@@ -193,12 +228,12 @@ private:
         }
 
         // Create string from buffer.
-        value = std::string (equal);
+        value = string(equal);
     }
     template<typename VALUE>
     void Command(const char request[], VALUE& result) const
     {
-        std::string response;
+        string response;
 
         Command(request, response);
 
@@ -232,7 +267,7 @@ private:
                 width = tvState.display.hdmi.width;
                 height = tvState.display.hdmi.height;
             }
-            if ((tvState.state & VC_HDMI_ATTACHED) || (tvState.state & VC_SDTV_ATTACHED)) {
+            if ((tvState.state & VC_HDMI_ATTACHED) || ((tvState.state & VC_SDTV_ATTACHED) && ((tvState.state & VC_SDTV_NTSC) || (tvState.state & VC_SDTV_PAL))))  {
                 connected = true;
             } else {
                 connected = false;
@@ -259,7 +294,7 @@ private:
             case VC_SDTV_UNPLUGGED:
             case VC_HDMI_ATTACHED:
             case VC_SDTV_ATTACHED: {
-                platform->Run();
+                platform->Submit();
                 break;
             }
             default: {
@@ -268,6 +303,10 @@ private:
             }
             }
         }
+    }
+    void Submit()
+    {
+        _activity->Submit();
     }
     void Updated() const
     {
@@ -281,19 +320,13 @@ private:
 
         _adminLock.Unlock();
     }
-
-    uint32_t Worker() override
+    void Run()
     {
-        if (IsRunning() == true) {
-            _adminLock.Lock();
-            UpdateDisplayInfo(_connected, _width, _height, _audioPassthrough);
-            _adminLock.Unlock();
+        _adminLock.Lock();
+        UpdateDisplayInfo(_connected, _width, _height, _audioPassthrough);
+        _adminLock.Unlock();
 
-            Updated();
-
-            Block();
-        }
-        return (Core::infinite);
+        Updated();
     }
 
 private:
@@ -310,6 +343,8 @@ private:
     std::list<IConnectionProperties::INotification*> _observers;
 
     mutable WPEFramework::Core::CriticalSection _adminLock;
+
+    Core::ProxyType<Job> _activity;
 };
 
     SERVICE_REGISTRATION(DisplayInfoImplementation, 1, 0);
