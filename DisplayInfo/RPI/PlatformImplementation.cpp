@@ -240,7 +240,7 @@ private:
         }
 
         // Create string from buffer.
-        ToString(equal, value);
+        Core::ToString(equal, value);
     }
     template<typename VALUE>
     void Command(const char request[], VALUE& result) const
