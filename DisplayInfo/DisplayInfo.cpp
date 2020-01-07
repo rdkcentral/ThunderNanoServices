@@ -21,12 +21,24 @@ namespace Plugin {
 
         _device = service->Root<Exchange::IDeviceProperties>(_connectionId, 2000, _T("DisplayInfoImplementation"));
         if (_device != nullptr) {
-            _connectionProperties = _device->QueryInterface<Exchange::IConnectionProperties>();
-            if (_connectionProperties == nullptr) {
+
+            _graphicsProperties = _device->QueryInterface<Exchange::IGraphicsProperties>();
+            if (_graphicsProperties == nullptr) {
+
                 _device->Release();
                 _device = nullptr;
             } else {
-                _notification.Initialize(_connectionProperties);
+                _connectionProperties = _device->QueryInterface<Exchange::IConnectionProperties>();
+                if (_connectionProperties == nullptr) {
+
+                    _graphicsProperties->Release();
+                    _graphicsProperties = nullptr;
+
+                    _device->Release();
+                    _device = nullptr;
+                } else {
+                    _notification.Initialize(_connectionProperties);
+                }
             }
         }
 
@@ -45,6 +57,12 @@ namespace Plugin {
         if (_connectionProperties != nullptr) {
             _connectionProperties->Release();
             _connectionProperties = nullptr;
+        }
+
+        ASSERT(_graphicsProperties != nullptr);
+        if (_graphicsProperties != nullptr) {
+            _graphicsProperties->Release();
+            _graphicsProperties = nullptr;
         }
 
         ASSERT(_device != nullptr);
@@ -102,20 +120,16 @@ namespace Plugin {
         displayInfo.Firmwareversion = _device->FirmwareVersion();
         displayInfo.Chipset = _device->Chipset();
 
-        Exchange::IGraphicsProperties* graphics(_device->QueryInterface<Exchange::IGraphicsProperties>());
-        displayInfo.Totalgpuram = graphics->TotalGpuRam();
-        displayInfo.Freegpuram = graphics->FreeGpuRam();
-        graphics->Release();
+        displayInfo.Totalgpuram = _graphicsProperties->TotalGpuRam();
+        displayInfo.Freegpuram = _graphicsProperties->FreeGpuRam();
 
-        Exchange::IConnectionProperties* connection(_device->QueryInterface<Exchange::IConnectionProperties>());
-        displayInfo.Audiopassthrough = connection->IsAudioPassthrough();
-        displayInfo.Connected = connection->Connected();
-        displayInfo.Width = connection->Width();
-        displayInfo.Height = connection->Height();
-        displayInfo.Hdcpmajor = connection->HDCPMajor();
-        displayInfo.Hdcpminor = connection->HDCPMinor();
-        displayInfo.Hdrtype = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdrtypeType>(connection->Type());
-        connection->Release();
+        displayInfo.Audiopassthrough = _connectionProperties->IsAudioPassthrough();
+        displayInfo.Connected = _connectionProperties->Connected();
+        displayInfo.Width = _connectionProperties->Width();
+        displayInfo.Height = _connectionProperties->Height();
+        displayInfo.Hdcpmajor = _connectionProperties->HDCPMajor();
+        displayInfo.Hdcpminor = _connectionProperties->HDCPMinor();
+        displayInfo.Hdrtype = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdrtypeType>(_connectionProperties->Type());
     }
 
 } // namespace Plugin

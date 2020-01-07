@@ -19,7 +19,9 @@ private:
 
     public:
         Job(DisplayInfoImplementation* parent)
-            : _parent(*parent)
+            : _pendingJob(false)
+            , _parent(*parent)
+            , _adminLock()
         {
         }
         virtual ~Job()
@@ -30,17 +32,27 @@ private:
     public:
         void Submit()
         {
-            PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
+            _adminLock.Lock();
+            if (_pendingJob != true) {
+                PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
+                _pendingJob = true;
+            }
+            _adminLock.Unlock();
         }
 
     private:
         virtual void Dispatch()
         {
             _parent.Run();
+            _adminLock.Lock();
+            _pendingJob = false;
+            _adminLock.Unlock();
         }
 
     private:
+        bool _pendingJob;
         DisplayInfoImplementation& _parent;
+        WPEFramework::Core::CriticalSection _adminLock;
     };
 
 public:
@@ -228,7 +240,7 @@ private:
         }
 
         // Create string from buffer.
-        value = string(equal);
+        ToString(equal, value);
     }
     template<typename VALUE>
     void Command(const char request[], VALUE& result) const
