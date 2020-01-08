@@ -64,7 +64,6 @@ public:
        , _type(HDR_OFF)
        , _totalGpuRam(0)
        , _audioPassthrough(false)
-       , _refCount(0)
        , _adminLock()
        , _activity(Core::ProxyType<Job>::Create(this)) {
 
@@ -378,7 +377,6 @@ private:
     uint64_t _totalGpuRam;
     bool _audioPassthrough;
 
-    mutable uint32_t _refCount;
     std::list<IConnectionProperties::INotification*> _observers;
 
     NEXUS_PlatformConfiguration _platformConfig;
