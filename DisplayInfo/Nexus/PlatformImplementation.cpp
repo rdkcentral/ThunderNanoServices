@@ -345,7 +345,7 @@ private:
     void UpdateDisplayInfo()
     {
         _adminLock.Lock();
-        UpdateDisplayInfo(_connected, _width, _height, _audioPassthrough);
+        UpdateDisplayInfo(_connected, _width, _height, _major, _minor, _type);
         _adminLock.Unlock();
 
         _activity->Submit();
