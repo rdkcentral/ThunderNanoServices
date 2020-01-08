@@ -306,7 +306,7 @@ private:
             case VC_SDTV_UNPLUGGED:
             case VC_HDMI_ATTACHED:
             case VC_SDTV_ATTACHED: {
-                platform->Submit();
+                platform->UpdateDisplayInfo();
                 break;
             }
             default: {
@@ -316,11 +316,15 @@ private:
             }
         }
     }
-    void Submit()
+    void UpdateDisplayInfo()
     {
+        _adminLock.Lock();
+        UpdateDisplayInfo(_connected, _width, _height, _audioPassthrough);
+        _adminLock.Unlock();
+
         _activity->Submit();
     }
-    void Updated() const
+    void Run() const
     {
         _adminLock.Lock();
 
@@ -331,14 +335,6 @@ private:
         }
 
         _adminLock.Unlock();
-    }
-    void Run()
-    {
-        _adminLock.Lock();
-        UpdateDisplayInfo(_connected, _width, _height, _audioPassthrough);
-        _adminLock.Unlock();
-
-        Updated();
     }
 
 private:

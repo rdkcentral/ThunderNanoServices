@@ -335,18 +335,22 @@ private:
         switch (param) {
         case 0:
         case 1: {
-            platform->Submit();
+            platform->UpdateDisplayInfo();
             break;
         }
         default:
             break;
         }
     }
-    void Submit()
+    void UpdateDisplayInfo()
     {
+        _adminLock.Lock();
+        UpdateDisplayInfo(_connected, _width, _height, _audioPassthrough);
+        _adminLock.Unlock();
+
         _activity->Submit();
     }
-    void Updated() const
+    void Run() const
     {
         _adminLock.Lock();
 
@@ -357,14 +361,6 @@ private:
         }
 
         _adminLock.Unlock();
-    }
-    void Run()
-    {
-        _adminLock.Lock();
-        UpdateDisplayInfo(_connected, _width, _height, _major, _minor, _type);
-        _adminLock.Unlock();
-
-        Updated();
     }
 
 private:
