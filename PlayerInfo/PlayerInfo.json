@@ -1,8 +1,0 @@
-{
- "locator":"libWPEFrameworkPlayerInfo.so",
- "classname":"PlayerInfo",
- "precondition":[
-  "Platform"
- ],
- "autostart":true
-}

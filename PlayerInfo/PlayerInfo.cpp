@@ -107,6 +107,7 @@ namespace Plugin {
         while(_videoCodecs->Next()) {
             playerInfo.Video.Add(static_cast<JsonData::PlayerInfo::CodecsData::VideocodecsType>(_videoCodecs->Codec()));
         }
+        //FIXME: the conversion to string for this containers are creating empty value
     }
 
 } // namespace Plugin
