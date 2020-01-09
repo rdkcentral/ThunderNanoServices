@@ -22,12 +22,10 @@ namespace Plugin {
     /* static */ string TraceControl::Observer::Source::SourceName(const string& prefix, RPC::IRemoteConnection* connection)
     {
         string pathName;
-        pathName = Core::Directory::Normalize(prefix) + Trace::CyclicBufferName + '.';
+        pathName = Core::Directory::Normalize(prefix) + Trace::CyclicBufferName;
 
-        if (connection == nullptr) {
-            pathName += '0';
-        } else {
-            pathName += Core::NumberType<uint32_t>(connection->Id()).Text();
+        if (connection != nullptr) {
+            pathName += '.' + Core::NumberType<uint32_t>(connection->Id()).Text();
         }
 
         return (pathName);
