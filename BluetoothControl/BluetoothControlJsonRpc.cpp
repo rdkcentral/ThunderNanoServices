@@ -57,7 +57,7 @@ namespace Plugin {
 
             if (type == DevicetypeType::LOWENERGY) {
                 _application.Scan((timeout == 0? 10 : timeout), false, false);
-            } else if (type == DevicetypeType::LOWENERGY) {
+            } else if (type == DevicetypeType::CLASSIC) {
                 uint32_t type = 0x338B9E;
                 uint8_t flags = 0;
                 _application.Scan((timeout == 0? 10 : timeout), type, flags);
