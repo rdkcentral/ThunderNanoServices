@@ -20,10 +20,29 @@ namespace Plugin {
 
         _player = service->Root<Exchange::IPlayerProperties>(_connectionId, 2000, _T("PlayerInfoImplementation"));
 
+        if (_player != nullptr) {
+
+            _audioCodecs = _player->AudioCodec();
+            if (_audioCodecs != nullptr) {
+
+                _videoCodecs = _player->VideoCodec();
+                if (_videoCodecs == nullptr) {
+
+                    _audioCodecs->Release();
+                    _audioCodecs = nullptr;
+
+                    _player->Release();
+                    _player = nullptr;
+                }
+            } else {
+                _player->Release();
+                _player = nullptr;
+            }
+        }
+
         if (_player == nullptr) {
             message = _T("PlayerInfo could not be instantiated.");
         }
-
         return message;
     }
 
@@ -79,6 +98,15 @@ namespace Plugin {
 
     void PlayerInfo::Info(JsonData::PlayerInfo::CodecsData& playerInfo) const
     {
+        _audioCodecs->Reset();
+        while(_audioCodecs->Next()) {
+            playerInfo.Audio.Add(static_cast<JsonData::PlayerInfo::CodecsData::AudiocodecsType>(_audioCodecs->Codec()));
+        }
+
+        _videoCodecs->Reset();
+        while(_videoCodecs->Next()) {
+            playerInfo.Video.Add(static_cast<JsonData::PlayerInfo::CodecsData::VideocodecsType>(_videoCodecs->Codec()));
+        }
     }
 
 } // namespace Plugin

@@ -27,7 +27,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     uint32_t PlayerInfo::get_playerinfo(CodecsData& response) const
     {
-        // response = ...
+        Info(response);
 
         return Core::ERROR_NONE;
     }

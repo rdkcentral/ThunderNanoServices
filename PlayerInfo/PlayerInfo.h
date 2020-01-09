@@ -16,6 +16,8 @@ namespace Plugin {
             : _skipURL(0)
             , _connectionId(0)
             , _player(nullptr)
+            , _audioCodecs(nullptr)
+            , _videoCodecs(nullptr)
         {
             RegisterAll();
         }
@@ -55,6 +57,9 @@ namespace Plugin {
         uint8_t _skipURL;
         uint32_t _connectionId;
         Exchange::IPlayerProperties* _player;
+
+        Exchange::IPlayerProperties::IAudioIterator* _audioCodecs;
+        Exchange::IPlayerProperties::IVideoIterator* _videoCodecs;
     };
 
 } // namespace Plugin
