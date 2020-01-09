@@ -1,4 +1,4 @@
-#include "Module.h"
+#include "../Module.h"
 #include <interfaces/IPlayerInfo.h>
 
 namespace WPEFramework {
@@ -14,33 +14,50 @@ private:
         AudioIteratorImplementation& operator= (const AudioIteratorImplementation&) = delete;
 
         AudioIteratorImplementation(const std::list<AudioCodec>& codecs)
+            : _index(0)
+            , _codecs(codecs)
         {
         }
         virtual ~AudioIteratorImplementation()
         {
+            _codecs.clear();
         }
 
     public:
         bool IsValid() const override
         {
-            return false;
+            return ((_index != 0) && (_index <= _codecs.size()));
         }
         bool Next() override
         {
-            return false;
+            if (_index == 0) {
+                _index = 1;
+            } else if (_index <= _codecs.size()) {
+                _index++;
+            }
+            return (IsValid());
         }
         void Reset() override
         {
+            _index = 0;
         }
         AudioCodec Codec() const
         {
-            AudioCodec codec;
-            return codec;
+            ASSERT(IsValid() == true);
+            std::list<AudioCodec>::const_iterator codec = std::next(_codecs.begin(), _index);
+
+            ASSERT(*codec != AudioCodec::UNDEFINED);
+
+            return *codec;
         }
 
         BEGIN_INTERFACE_MAP(AudioIteratorIImplementation)
         INTERFACE_ENTRY(Exchange::IPlayerProperties::IAudioIterator)
         END_INTERFACE_MAP
+
+    private:
+        uint16_t _index;
+        std::list<AudioCodec> _codecs;
     };
 
     class VideoIteratorImplementation : public Exchange::IPlayerProperties::IVideoIterator {
@@ -50,34 +67,50 @@ private:
         VideoIteratorImplementation& operator= (const VideoIteratorImplementation&) = delete;
 
         VideoIteratorImplementation(const std::list<VideoCodec>& codecs)
+            : _index(0)
+            , _codecs(codecs)
         {
         }
         virtual ~VideoIteratorImplementation()
         {
+            _codecs.clear();
         }
 
     public:
         bool IsValid() const override
         {
-            return false;
+            return ((_index != 0) && (_index <= _codecs.size()));
         }
         bool Next() override
         {
-            return false;
+            if (_index == 0) {
+                _index = 1;
+            } else if (_index <= _codecs.size()) {
+                _index++;
+            }
+            return (IsValid());
         }
         void Reset() override
         {
+            _index = 0;
         }
         VideoCodec Codec() const
         {
-            VideoCodec codec;
-            return codec;
+            ASSERT(IsValid() == true);
+            std::list<VideoCodec>::const_iterator codec = std::next(_codecs.begin(), _index);
+
+            ASSERT(*codec != VideoCodec::UNDEFINED);
+
+            return *codec;
         }
 
         BEGIN_INTERFACE_MAP(VideoIteratorIImplementation)
         INTERFACE_ENTRY(Exchange::IPlayerProperties::IVideoIterator)
         END_INTERFACE_MAP
 
+    private:
+        uint16_t _index;
+        std::list<VideoCodec> _codecs;
     };
 
 public:
