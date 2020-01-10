@@ -1,4 +1,5 @@
 #include "../Module.h"
+#include "../Job.h"
 #include <interfaces/IDisplayInfo.h>
 
 #include <nexus_config.h>
@@ -9,79 +10,6 @@ namespace WPEFramework {
 namespace Plugin {
 
 class DisplayInfoImplementation : public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
-private:
-    class Mutex {
-    public:
-        Mutex(const Mutex&) = delete;
-        Mutex& operator=(const Mutex&) = delete;
-
-        Mutex()
-            : _lock(false)
-        {
-        }
-        virtual ~Mutex()
-        {
-        }
-    public:
-        void Lock()
-        {
-            while (_lock.exchange(true, std::memory_order_relaxed));
-            std::atomic_thread_fence(std::memory_order_acquire);
-        }
-
-        void Unlock()
-        {
-            std::atomic_thread_fence(std::memory_order_release);
-            _lock.store(false, std::memory_order_relaxed);
-        }
-
-    private:
-        std::atomic<bool> _lock;
-    };
-    class Job : public Core::IDispatch {
-    public:
-        Job() = delete;
-        Job(const Job&) = delete;
-        Job& operator=(const Job&) = delete;
-
-    public:
-        Job(DisplayInfoImplementation* parent)
-            : _pendingJob(false)
-            , _parent(*parent)
-            , _adminLock()
-        {
-        }
-        virtual ~Job()
-        {
-            PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(*this));
-        }
-
-    public:
-        void Submit()
-        {
-            _adminLock.Lock();
-            if (_pendingJob != true) {
-                PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                _pendingJob = true;
-            }
-            _adminLock.Unlock();
-        }
-
-    private:
-        virtual void Dispatch()
-        {
-            _parent.Run();
-            _adminLock.Lock();
-            _pendingJob = false;
-            _adminLock.Unlock();
-        }
-
-    private:
-        bool _pendingJob;
-        DisplayInfoImplementation& _parent;
-        WPEFramework::Core::CriticalSection _adminLock;
-    };
-
 public:
     DisplayInfoImplementation()
        : _width(0)
@@ -93,7 +21,7 @@ public:
        , _totalGpuRam(0)
        , _audioPassthrough(false)
        , _adminLock()
-       , _activity(Core::ProxyType<Job>::Create(this)) {
+       , _activity(Core::ProxyType<Core::WorkerJob<DisplayInfoImplementation>>::Create(this)) {
 
         NEXUS_Error rc = NxClient_Join(NULL);
         ASSERT(!rc);
@@ -215,6 +143,18 @@ public:
     HDRType Type() const override
     {
         return _type;
+    }
+    void Run() const
+    {
+        _adminLock.Lock();
+
+        std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
+
+        if (index != _observers.end()) {
+            (*index)->Updated();
+        }
+
+        _adminLock.Unlock();
     }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
@@ -343,18 +283,6 @@ private:
 
         _activity->Submit();
     }
-    void Run() const
-    {
-        _adminLock.Lock();
-
-        std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
-
-        if (index != _observers.end()) {
-            (*index)->Updated();
-        }
-
-        _adminLock.Unlock();
-    }
 
 private:
     uint32_t _width;
@@ -372,9 +300,9 @@ private:
 
     NEXUS_PlatformConfiguration _platformConfig;
 
-    mutable Mutex _adminLock;
+    mutable Core::CriticalSection _adminLock;
 
-    Core::ProxyType<Job> _activity;
+    Core::ProxyType<Core::WorkerJob<DisplayInfoImplementation>> _activity;
 };
 
     SERVICE_REGISTRATION(DisplayInfoImplementation, 1, 0);
