@@ -98,16 +98,17 @@ namespace Plugin {
 
     void PlayerInfo::Info(JsonData::PlayerInfo::CodecsData& playerInfo) const
     {
+        Core::JSON::EnumType<JsonData::PlayerInfo::CodecsData::AudiocodecsType> audioCodec;
         _audioCodecs->Reset();
         while(_audioCodecs->Next()) {
-            playerInfo.Audio.Add(static_cast<JsonData::PlayerInfo::CodecsData::AudiocodecsType>(_audioCodecs->Codec()));
+            playerInfo.Audio.Add(audioCodec = static_cast<JsonData::PlayerInfo::CodecsData::AudiocodecsType>(_audioCodecs->Codec()));
         }
 
+        Core::JSON::EnumType<JsonData::PlayerInfo::CodecsData::VideocodecsType> videoCodec;
         _videoCodecs->Reset();
         while(_videoCodecs->Next()) {
-            playerInfo.Video.Add(static_cast<JsonData::PlayerInfo::CodecsData::VideocodecsType>(_videoCodecs->Codec()));
+            playerInfo.Video.Add(videoCodec = static_cast<JsonData::PlayerInfo::CodecsData::VideocodecsType>(_videoCodecs->Codec()));
         }
-        //FIXME: the conversion to string for this containers are creating empty value
     }
 
 } // namespace Plugin
