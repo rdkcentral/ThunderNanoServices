@@ -218,7 +218,6 @@ public:
     }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
-        INTERFACE_ENTRY(Exchange::IDeviceProperties)
         INTERFACE_ENTRY(Exchange::IGraphicsProperties)
         INTERFACE_ENTRY(Exchange::IConnectionProperties)
     END_INTERFACE_MAP
