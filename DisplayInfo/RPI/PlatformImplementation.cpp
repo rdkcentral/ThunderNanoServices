@@ -7,10 +7,38 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : public Exchange::IDeviceProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
-    static constexpr const TCHAR* CPUInfoFile= _T("/proc/cpuinfo");
+class DisplayInfoImplementation : public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
 
 private:
+    class Mutex {
+    public:
+        Mutex(const Mutex&) = delete;
+        Mutex& operator=(const Mutex&) = delete;
+
+        Mutex()
+            : _lock(false)
+        {
+        }
+        virtual ~Mutex()
+        {
+        }
+    public:
+        void Lock()
+        {
+            while (_lock.exchange(true, std::memory_order_relaxed));
+            std::atomic_thread_fence(std::memory_order_acquire);
+        }
+
+        void Unlock()
+        {
+            std::atomic_thread_fence(std::memory_order_release);
+            _lock.store(false, std::memory_order_relaxed);
+        }
+
+    private:
+        std::atomic<bool> _lock;
+    };
+
     class Job : public Core::IDispatch {
     public:
         Job() = delete;
@@ -67,9 +95,6 @@ public:
 
         bcm_host_init();
 
-        UpdateChipset(_chipset);
-        UpdateFirmwareVersion(_firmwareVersion);
-
         UpdateTotalGpuRam(_totalGpuRam);
 
         UpdateDisplayInfo(_connected, _width, _height, _audioPassthrough);
@@ -84,16 +109,6 @@ public:
     }
 
 public:
-    // Device Propertirs interface
-    const string Chipset() const override
-    {
-        return _chipset;
-    }
-    const string FirmwareVersion() const override
-    {
-        return _firmwareVersion;
-    }
-
     // Graphics Properties interface
     uint64_t TotalGpuRam() const override
     {
@@ -171,42 +186,11 @@ public:
     }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
-        INTERFACE_ENTRY(Exchange::IDeviceProperties)
         INTERFACE_ENTRY(Exchange::IGraphicsProperties)
         INTERFACE_ENTRY(Exchange::IConnectionProperties)
     END_INTERFACE_MAP
 
 private:
-    inline void UpdateFirmwareVersion(string& firmwareVersion) const
-    {
-        Command("version", firmwareVersion);
-        if (firmwareVersion.length() > 0) {
-
-            string::size_type i = 0;
-            while (i < firmwareVersion.length()) {
-                i = firmwareVersion.find_first_of("\n\r", i);
-                if (i != std::string::npos) {
-                    firmwareVersion.replace(i, 1, ", ");
-                }
-            }
-        }
-    }
-    inline void UpdateChipset(string& chipset) const
-    {
-        string line;
-        std::ifstream file(CPUInfoFile);
-        if (file.is_open()) {
-            while (getline(file, line)) {
-                if (line.find("Hardware") != std::string::npos) {
-                    std::size_t position = line.find(':');
-                    if (position != std::string::npos) {
-                        chipset.assign(line.substr(position + 1, string::npos));
-                    }
-                }
-            }
-            file.close();
-        }
-    }
     inline void UpdateTotalGpuRam(uint64_t& totalRam) const
     {
         Command("get_mem reloc_total ", totalRam);
@@ -337,9 +321,6 @@ private:
     }
 
 private:
-    string _chipset;
-    string _firmwareVersion;
-
     uint32_t _width;
     uint32_t _height;
     bool _connected;
@@ -348,7 +329,7 @@ private:
 
     std::list<IConnectionProperties::INotification*> _observers;
 
-    mutable WPEFramework::Core::CriticalSection _adminLock;
+    mutable Mutex _adminLock;
 
     Core::ProxyType<Job> _activity;
 };

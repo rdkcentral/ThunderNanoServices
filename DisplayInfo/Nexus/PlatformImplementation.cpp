@@ -8,8 +8,36 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : public Exchange::IDeviceProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
+class DisplayInfoImplementation : public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
 private:
+    class Mutex {
+    public:
+        Mutex(const Mutex&) = delete;
+        Mutex& operator=(const Mutex&) = delete;
+
+        Mutex()
+            : _lock(false)
+        {
+        }
+        virtual ~Mutex()
+        {
+        }
+    public:
+        void Lock()
+        {
+            while (_lock.exchange(true, std::memory_order_relaxed));
+            std::atomic_thread_fence(std::memory_order_acquire);
+        }
+
+        void Unlock()
+        {
+            std::atomic_thread_fence(std::memory_order_release);
+            _lock.store(false, std::memory_order_relaxed);
+        }
+
+    private:
+        std::atomic<bool> _lock;
+    };
     class Job : public Core::IDispatch {
     public:
         Job() = delete;
@@ -71,9 +99,6 @@ public:
         ASSERT(!rc);
         NEXUS_Platform_GetConfiguration(&_platformConfig);
 
-        UpdateChipset(_chipset);
-        UpdateFirmwareVersion(_firmwareVersion);
-
         UpdateTotalGpuRam(_totalGpuRam);
 
         UpdateDisplayInfo(_connected, _width, _height, _major, _minor, _type);
@@ -91,16 +116,6 @@ public:
     }
 
 public:
-    // Device Propertirs interface
-    const string Chipset() const override
-    {
-        return _chipset;
-    }
-    const string FirmwareVersion() const override
-    {
-        return _firmwareVersion;
-    }
-
     // Graphics Properties interface
     uint64_t TotalGpuRam() const override
     {
@@ -209,26 +224,6 @@ public:
     END_INTERFACE_MAP
 
 private:
-    inline void UpdateFirmwareVersion(string& firmwareVersion) const
-    {
-        char version[256];
-        sprintf(version, "Nexus Release %d.%d", (NEXUS_P_GET_VERSION(NEXUS_PLATFORM) / NEXUS_PLATFORM_VERSION_UNITS), (NEXUS_P_GET_VERSION(NEXUS_PLATFORM) % NEXUS_PLATFORM_VERSION_UNITS));
-        firmwareVersion = version;
-    }
-    inline void UpdateChipset(string& chipset) const
-    {
-        NEXUS_PlatformStatus status;
-        NEXUS_Error rc = NEXUS_UNKNOWN;
-
-        rc = NEXUS_Platform_GetStatus(&status);
-        if (rc == NEXUS_SUCCESS) {
-            char chipId[10];
-            sprintf(chipId, "%x", status.chipId);
-            char revision[10];
-            sprintf(revision, "%c%c", (((status.chipRevision >> 4) & 0xF) + 'A' - 1), (((status.chipRevision) & 0xF) + '0'));
-            chipset = "BCM" + string(chipId) + " " + string(revision);
-        }
-    }
     inline void UpdateTotalGpuRam(uint64_t& totalRam) const
     {
         NEXUS_MemoryStatus status;
@@ -363,9 +358,6 @@ private:
     }
 
 private:
-    string _chipset;
-    string _firmwareVersion;
-
     uint32_t _width;
     uint32_t _height;
     bool _connected;
@@ -381,7 +373,7 @@ private:
 
     NEXUS_PlatformConfiguration _platformConfig;
 
-    mutable WPEFramework::Core::CriticalSection _adminLock;
+    mutable Mutex _adminLock;
 
     Core::ProxyType<Job> _activity;
 };

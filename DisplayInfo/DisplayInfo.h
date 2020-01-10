@@ -61,7 +61,6 @@ namespace Plugin {
         DisplayInfo()
             : _skipURL(0)
             , _connectionId(0)
-            , _device(nullptr)
             , _graphicsProperties(nullptr)
             , _connectionProperties(nullptr)
             , _notification(this)
@@ -109,7 +108,6 @@ namespace Plugin {
     private:
         uint8_t _skipURL;
         uint32_t _connectionId;
-        Exchange::IDeviceProperties* _device;
         Exchange::IGraphicsProperties* _graphicsProperties;
         Exchange::IConnectionProperties* _connectionProperties;
         Core::Sink<Notification> _notification;

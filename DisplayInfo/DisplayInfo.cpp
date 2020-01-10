@@ -11,7 +11,7 @@ namespace Plugin {
     /* virtual */ const string DisplayInfo::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
-        ASSERT(_device == nullptr);
+        ASSERT(_connectionProperties == nullptr);
 
         string message;
         Config config;
@@ -19,30 +19,20 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
-        _device = service->Root<Exchange::IDeviceProperties>(_connectionId, 2000, _T("DisplayInfoImplementation"));
-        if (_device != nullptr) {
+        _connectionProperties = service->Root<Exchange::IConnectionProperties>(_connectionId, 2000, _T("DisplayInfoImplementation"));
+        if (_connectionProperties != nullptr) {
 
-            _graphicsProperties = _device->QueryInterface<Exchange::IGraphicsProperties>();
+            _graphicsProperties = _connectionProperties->QueryInterface<Exchange::IGraphicsProperties>();
             if (_graphicsProperties == nullptr) {
 
-                _device->Release();
-                _device = nullptr;
+                _connectionProperties->Release();
+                _connectionProperties = nullptr;
             } else {
-                _connectionProperties = _device->QueryInterface<Exchange::IConnectionProperties>();
-                if (_connectionProperties == nullptr) {
-
-                    _graphicsProperties->Release();
-                    _graphicsProperties = nullptr;
-
-                    _device->Release();
-                    _device = nullptr;
-                } else {
-                    _notification.Initialize(_connectionProperties);
-                }
+                _notification.Initialize(_connectionProperties);
             }
         }
 
-        if (_device == nullptr) {
+        if (_connectionProperties == nullptr) {
             message = _T("DisplayInfo could not be instantiated.");
         }
 
@@ -54,10 +44,6 @@ namespace Plugin {
         ASSERT(_connectionProperties != nullptr);
 
         _notification.Deinitialize();
-        if (_connectionProperties != nullptr) {
-            _connectionProperties->Release();
-            _connectionProperties = nullptr;
-        }
 
         ASSERT(_graphicsProperties != nullptr);
         if (_graphicsProperties != nullptr) {
@@ -65,10 +51,10 @@ namespace Plugin {
             _graphicsProperties = nullptr;
         }
 
-        ASSERT(_device != nullptr);
-        if (_device != nullptr) {
-            _device->Release();
-            _device = nullptr;
+        ASSERT(_connectionProperties != nullptr);
+        if (_connectionProperties != nullptr) {
+            _connectionProperties->Release();
+            _connectionProperties = nullptr;
         }
 
         _connectionId = 0;
@@ -117,9 +103,6 @@ namespace Plugin {
 
     void DisplayInfo::Info(JsonData::DisplayInfo::DisplayinfoData& displayInfo) const
     {
-        displayInfo.Firmwareversion = _device->FirmwareVersion();
-        displayInfo.Chipset = _device->Chipset();
-
         displayInfo.Totalgpuram = _graphicsProperties->TotalGpuRam();
         displayInfo.Freegpuram = _graphicsProperties->FreeGpuRam();
 
