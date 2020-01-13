@@ -20,7 +20,7 @@ public:
        , _totalGpuRam(0)
        , _audioPassthrough(false)
        , _adminLock()
-       , _activity(Core::ProxyType<Core::WorkerPool::Dispatcher<DisplayInfoImplementation>>::Create(this)) {
+       , _activity(Core::ProxyType<Core::WorkerPool::DispatcherType<DisplayInfoImplementation>>::Create(this)) {
 
         NEXUS_Error rc = NxClient_Join(NULL);
         ASSERT(!rc);
@@ -143,7 +143,7 @@ public:
     {
         return _type;
     }
-    void Run() const
+    void Dispatch() const
     {
         _adminLock.Lock();
 
@@ -301,7 +301,7 @@ private:
 
     mutable Core::CriticalSection _adminLock;
 
-    Core::ProxyType<Core::WorkerPool::Dispatcher<DisplayInfoImplementation>> _activity;
+    Core::ProxyType<Core::WorkerPool::DispatcherType<DisplayInfoImplementation>> _activity;
 };
 
     SERVICE_REGISTRATION(DisplayInfoImplementation, 1, 0);
