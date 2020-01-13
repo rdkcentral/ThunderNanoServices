@@ -1,5 +1,4 @@
 #include "../Module.h"
-#include "../Job.h"
 #include <interfaces/IDisplayInfo.h>
 
 #include <bcm_host.h>
@@ -18,7 +17,7 @@ public:
         , _totalGpuRam(0)
         , _audioPassthrough(false)
         , _adminLock()
-        , _activity(Core::ProxyType<Core::WorkerJob<DisplayInfoImplementation>>::Create(this)) {
+        , _activity(Core::ProxyType<Core::WorkerPool::Dispatcher<DisplayInfoImplementation>>::Create(this)) {
 
         bcm_host_init();
 
@@ -258,7 +257,7 @@ private:
 
     mutable Core::CriticalSection _adminLock;
 
-    Core::ProxyType<Core::WorkerJob<DisplayInfoImplementation>> _activity;
+    Core::ProxyType<Core::WorkerPool::Dispatcher<DisplayInfoImplementation>> _activity;
 };
 
     SERVICE_REGISTRATION(DisplayInfoImplementation, 1, 0);

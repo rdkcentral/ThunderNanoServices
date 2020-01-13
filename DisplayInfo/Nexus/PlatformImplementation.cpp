@@ -1,5 +1,4 @@
 #include "../Module.h"
-#include "../Job.h"
 #include <interfaces/IDisplayInfo.h>
 
 #include <nexus_config.h>
@@ -21,7 +20,7 @@ public:
        , _totalGpuRam(0)
        , _audioPassthrough(false)
        , _adminLock()
-       , _activity(Core::ProxyType<Core::WorkerJob<DisplayInfoImplementation>>::Create(this)) {
+       , _activity(Core::ProxyType<Core::WorkerPool::Dispatcher<DisplayInfoImplementation>>::Create(this)) {
 
         NEXUS_Error rc = NxClient_Join(NULL);
         ASSERT(!rc);
@@ -302,7 +301,7 @@ private:
 
     mutable Core::CriticalSection _adminLock;
 
-    Core::ProxyType<Core::WorkerJob<DisplayInfoImplementation>> _activity;
+    Core::ProxyType<Core::WorkerPool::Dispatcher<DisplayInfoImplementation>> _activity;
 };
 
     SERVICE_REGISTRATION(DisplayInfoImplementation, 1, 0);
