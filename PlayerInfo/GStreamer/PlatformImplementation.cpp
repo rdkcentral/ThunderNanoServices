@@ -7,6 +7,72 @@ namespace WPEFramework {
 namespace Plugin {
 
 class PlayerInfoImplementation : public Exchange::IPlayerProperties {
+private:
+
+    class GstUtils {
+    private:
+        struct FeatureListDeleter {
+            void operator()(GList* p) { gst_plugin_feature_list_free(p); }
+        };
+
+        struct CapsDeleter {
+            void operator()(GstCaps* p) { gst_caps_unref(p); }
+        };
+        typedef std::unique_ptr<GList, FeatureListDeleter> FeatureList;
+        typedef std::unique_ptr<GstCaps, CapsDeleter> MediaTypes;
+
+   public:
+        GstUtils() = delete;
+        GstUtils(const GstUtils&) = delete;
+        GstUtils& operator= (const GstUtils&) = delete;
+
+        template <typename C, typename CodecIteratorList>
+        static bool GstRegistryCheckElementsForMediaTypes(C caps, CodecIteratorList& codecIteratorList) {
+
+            auto type = std::is_same<C, VideoCaps>::value ? GST_ELEMENT_FACTORY_TYPE_MEDIA_VIDEO : GST_ELEMENT_FACTORY_TYPE_MEDIA_AUDIO;
+
+            FeatureList decoderFactories{gst_element_factory_list_get_elements(GST_ELEMENT_FACTORY_TYPE_DECODER | type, GST_RANK_MARGINAL)};
+            FeatureList parserFactories{gst_element_factory_list_get_elements(GST_ELEMENT_FACTORY_TYPE_PARSER | type, GST_RANK_MARGINAL)};
+
+            FeatureList elements;
+            for (auto index: caps) {
+
+                MediaTypes mediaType{gst_caps_from_string(index.first.c_str())};
+                if (elements = std::move(GstUtils::GstRegistryGetElementForMediaType(decoderFactories.get(), std::move(mediaType)))) {
+                    codecIteratorList.push_back(index.second);
+
+                } else if (elements = std::move(GstUtils::GstRegistryGetElementForMediaType(parserFactories.get(), std::move(mediaType)))) {
+
+                    for (GList* iterator = elements.get(); iterator; iterator = iterator->next) {
+
+                        GstElementFactory* gstElementFactory = static_cast<GstElementFactory*>(iterator->data);
+                        const GList* padTemplates = gst_element_factory_get_static_pad_templates(gstElementFactory);
+
+                        for (const GList* padTemplatesIterator = padTemplates; padTemplatesIterator; padTemplatesIterator = padTemplatesIterator->next) {
+                            GstStaticPadTemplate* padTemplate = static_cast<GstStaticPadTemplate*>(padTemplatesIterator->data);
+
+                            if (padTemplate->direction == GST_PAD_SRC) {
+                                MediaTypes mediaTypes{gst_static_pad_template_get_caps(padTemplate)};
+                                if (GstUtils::GstRegistryGetElementForMediaType(decoderFactories.get(), std::move(mediaTypes))) {
+                                    codecIteratorList.push_back(index.second);
+                                }
+                            }
+                        }
+                    }
+                 }
+             }
+
+             return (codecIteratorList.size() != 0);
+         }
+
+    private:
+        static inline FeatureList GstRegistryGetElementForMediaType(GList* elementsFactories, MediaTypes&& mediaTypes) {
+            FeatureList candidates{gst_element_factory_list_filter(elementsFactories, mediaTypes.get(), GST_PAD_SINK, false)};
+
+            return std::move(candidates);
+        }
+
+    };
 
 private:
     class AudioIteratorImplementation : public Exchange::IPlayerProperties::IAudioIterator {
@@ -148,16 +214,6 @@ public:
 
 private:
 
-    inline bool GstRegistryHasElementForMediaType(GList* elementFactories, const string& capsString)
-    {
-        GstCaps* caps = gst_caps_from_string(capsString.c_str());
-        GList* candidates = gst_element_factory_list_filter(elementFactories, caps, GST_PAD_SINK, false);
-        bool result = candidates;
-
-        gst_plugin_feature_list_free(candidates);
-        gst_caps_unref(caps);
-        return result;
-    }
 
     void UpdateAudioCodecInfo()
     {
@@ -174,14 +230,10 @@ private:
             {"audio/x-vorbis", Exchange::IPlayerProperties::IAudioIterator::AudioCodec::AUDIO_VORBIS_OGG},
             {"audio/x-wav", Exchange::IPlayerProperties::IAudioIterator::AudioCodec::AUDIO_WAV},
         };
-
-        GList* audioDecoderFactories = gst_element_factory_list_get_elements(GST_ELEMENT_FACTORY_TYPE_PARSER | GST_ELEMENT_FACTORY_TYPE_MEDIA_AUDIO, GST_RANK_MARGINAL);
-        for (auto index: audioCaps) {
-
-            if (GstRegistryHasElementForMediaType(audioDecoderFactories, index.first) == true) {
-                _audioCodecs.push_back(index.second);
-            }
+        if (GstUtils::GstRegistryCheckElementsForMediaTypes(audioCaps, _audioCodecs) != true) {
+            TRACE_L1(_T("There is no Audio Codec support available"));
         }
+
     }
     void UpdateVideoCodecInfo()
     {
@@ -194,13 +246,8 @@ private:
             {"video/x-vp9", Exchange::IPlayerProperties::IVideoIterator::VideoCodec::VIDEO_VP9},
             {"video/x-vp10", Exchange::IPlayerProperties::IVideoIterator::VideoCodec::VIDEO_VP10}
         };
-
-        GList* videoDecoderFactories = gst_element_factory_list_get_elements(GST_ELEMENT_FACTORY_TYPE_PARSER | GST_ELEMENT_FACTORY_TYPE_MEDIA_VIDEO, GST_RANK_MARGINAL);
-        for (auto index: videoCaps) {
-
-            if (GstRegistryHasElementForMediaType(videoDecoderFactories, index.first) == true) {
-                _videoCodecs.push_back(index.second);
-            }
+        if (GstUtils::GstRegistryCheckElementsForMediaTypes(videoCaps, _videoCodecs) != true) {
+            TRACE_L1(_T("There is no Video Codec support available"));
         }
     }
 
