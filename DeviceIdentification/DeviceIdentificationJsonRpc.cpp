@@ -28,7 +28,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     uint32_t DeviceIdentification::get_deviceidentification(DeviceidentificationData& response) const
     {
-        // response = ...
+        Info(response);
 
         return Core::ERROR_NONE;
     }

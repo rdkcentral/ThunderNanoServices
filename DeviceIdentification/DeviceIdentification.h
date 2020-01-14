@@ -18,10 +18,12 @@ namespace Plugin {
             , _identifier(nullptr)
             , _connectionId(0)
         {
+            RegisterAll();
         }
 
         virtual ~DeviceIdentification()
         {
+            UnregisterAll();
         }
 
         BEGIN_INTERFACE_MAP(DeviceIdentification)

@@ -9,6 +9,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     DeviceIdentification.cpp
+    DeviceIdentificationJsonRpc.cpp
     Module.cpp)
 
 if(NEXUS_FOUND)

@@ -5,6 +5,13 @@
 #include <nexus_platform.h>
 #include <nxclient.h>
 
+#if NEXUS_SECURITY_API_VERSION == 2
+#include <nexus_otp_key.h>
+#else
+#include <nexus_otpmsp.h>
+#include <nexus_read_otp_id.h>
+#endif
+
 namespace WPEFramework {
 namespace Plugin {
 
@@ -26,6 +33,7 @@ public:
 
             UpdateChipset(_chipset);
             UpdateFirmwareVersion(_firmwareVersion);
+            UpdateIdentifier();
         } else {
             _status = DeviceStatus::ErrorInit;
         }
@@ -90,7 +98,7 @@ private:
             chipset = "BCM" + string(chipId) + " " + string(revision);
         }
     }
-    inline void UpdateIdentifer() const
+    inline void UpdateIdentifier()
     {
         if (_length == 0) {
 #if NEXUS_SECURITY_API_VERSION == 2
@@ -120,9 +128,8 @@ private:
     uint8_t _length;
     DeviceStatus _status;
     unsigned char* _identity;
-#if NEXUS_SECURITY_API_VERSION == 2
-#else
-#endif
+
+    NEXUS_PlatformConfiguration _platformConfig;
 };
 
     SERVICE_REGISTRATION(DeviceImplementation, 1, 0);

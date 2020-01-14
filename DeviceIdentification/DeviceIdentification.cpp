@@ -17,8 +17,6 @@ namespace Plugin {
         if (_device != nullptr) {
 
             _identifier = _device->QueryInterface<PluginHost::ISubSystem::IIdentifier>();
-            Exchange::IDeviceProperties* device = _device->QueryInterface<Exchange::IDeviceProperties>();
-
             if (_identifier == nullptr) {
 
                 _device->Release();
@@ -92,7 +90,7 @@ namespace Plugin {
         deviceInfo.Chipset = _device->Chipset();
 
         if (_deviceId.empty() != true) {
-            deviceInfo.Identifier = deviceId;
+            deviceInfo.Deviceid = _deviceId;
         }
     }
 
