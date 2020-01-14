@@ -39,6 +39,7 @@ option(PLUGIN_SPARK "Include SparkEngine plugin" OFF)
 option(PLUGIN_SYSTEMCOMMANDS "Include SystemCommands plugin" OFF)
 option(PLUGIN_TIMESYNC "Include TimeSync plugin" OFF)
 option(PLUGIN_TRACECONTROL "Include TraceControl plugin" OFF)
+option(PLUGIN_VOLUMECONTROL "Include VolumeControl plugin" OFF)
 option(PLUGIN_WEBKITBROWSER "Include WebKitBrowser plugin" OFF)
 option(PLUGIN_WEBPA "Include WebPA plugin" OFF)
 option(PLUGIN_WEBPROXY "Include WebProxy plugin" OFF)
@@ -207,6 +208,10 @@ endif()
 
 if(PLUGIN_TRACECONTROL)
     add_subdirectory(TraceControl)
+endif()
+
+if(PLUGIN_VOLUMECONTROL)
+    add_subdirectory(VolumeControl)
 endif()
 
 if(PLUGIN_WEBKITBROWSER)
