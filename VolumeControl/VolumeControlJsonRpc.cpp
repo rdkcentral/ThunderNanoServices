@@ -14,8 +14,8 @@
         uint32_t set_volume(const Core::JSON::DecUInt8& param);
         uint32_t get_muted(Core::JSON::Boolean& response) const;
         uint32_t set_muted(const Core::JSON::Boolean& param);
-        void event_volumechange(const uint8_t& volume);
-        void event_mutedchange(const bool& muted);
+        void event_volume(const uint8_t& volume);
+        void event_muted(const bool& muted);
 */
 
 namespace WPEFramework {
@@ -80,22 +80,22 @@ namespace Plugin {
         return _implementation->Muted(param.Value());
     }
 
-    // Event: volumechange - Signals change of the volume
-    void VolumeControl::event_volumechange(const uint8_t& volume)
+    // Event: volume - Signals change of the volume
+    void VolumeControl::event_volume(const uint8_t& volume)
     {
-        VolumechangeParamsData params;
+        VolumeParamsData params;
         params.Volume = volume;
 
-        Notify(_T("volumechange"), params);
+        Notify(_T("volume"), params);
     }
 
-    // Event: mutedchange - Signals change of the muted property
-    void VolumeControl::event_mutedchange(const bool& muted)
+    // Event: muted - Signals change of the muted property
+    void VolumeControl::event_muted(const bool& muted)
     {
-        MutedchangeParamsData params;
+        MutedParamsData params;
         params.Muted = muted;
 
-        Notify(_T("mutedchange"), params);
+        Notify(_T("muted"), params);
     }
 
 } // namespace Plugin

@@ -64,7 +64,7 @@ namespace Plugin {
     {
         _adminLock.Lock();
         for (auto* notification : _notifications) {
-            notification->Volume();
+            notification->Volume(_platform->Volume());
         }
         _adminLock.Unlock();
     }
@@ -73,7 +73,7 @@ namespace Plugin {
     {
         _adminLock.Lock();
         for (auto* notification : _notifications) {
-            notification->Muted();
+            notification->Muted(_platform->Muted());
         }
         _adminLock.Unlock();
     }

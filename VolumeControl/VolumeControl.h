@@ -88,14 +88,14 @@ namespace Plugin {
             VolumeNotification(const VolumeNotification&) = delete;
             VolumeNotification& operator=(const VolumeNotification&) = delete;
 
-            void Volume() override
+            void Volume(const uint8_t volume) override
             {
-                _parent.VolumeChanged();
+                _parent.VolumeChanged(volume);
             }
 
-            void Muted() override
+            void Muted(const bool muted) override
             {
-                _parent.MutedChanged();
+                _parent.MutedChanged(muted);
             }
 
             BEGIN_INTERFACE_MAP(VolumeNotification)
@@ -107,18 +107,14 @@ namespace Plugin {
         };
 
         void Deactivated(RPC::IRemoteConnection* connection);
-        void VolumeChanged()
+        void VolumeChanged(const uint8_t volume)
         {
-            uint8_t vol = 100;
-            _implementation->Volume(vol);
-            event_volumechange(vol);
+            event_volume(volume);
         }
 
-        void MutedChanged()
+        void MutedChanged(const bool muted)
         {
-            bool muted = false;
-            _implementation->Muted(muted);
-            event_mutedchange(muted);
+            event_muted(muted);
         }
 
         void RegisterAll();
@@ -127,8 +123,8 @@ namespace Plugin {
         uint32_t set_volume(const Core::JSON::DecUInt8& param);
         uint32_t get_muted(Core::JSON::Boolean& response) const;
         uint32_t set_muted(const Core::JSON::Boolean& param);
-        void event_volumechange(const uint8_t& volume);
-        void event_mutedchange(const bool& muted);
+        void event_volume(const uint8_t& volume);
+        void event_muted(const bool& muted);
 
         Exchange::IVolumeControl* _implementation;
         uint32_t _connectionId;

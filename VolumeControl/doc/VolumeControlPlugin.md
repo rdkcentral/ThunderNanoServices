@@ -93,7 +93,7 @@ VolumeControl interface properties:
 
 Provides access to the volume in percents.
 
-Also see: [volumechange](#event.volumechange)
+Also see: [volume](#event.volume)
 
 ### Value
 
@@ -145,7 +145,7 @@ Also see: [volumechange](#event.volumechange)
 
 Provides access to the drives whether audop should be muted.
 
-Also see: [mutedchange](#event.mutedchange)
+Also see: [muted](#event.muted)
 
 ### Value
 
@@ -203,11 +203,11 @@ VolumeControl interface events:
 
 | Event | Description |
 | :-------- | :-------- |
-| [volumechange](#event.volumechange) | Signals change of the volume |
-| [mutedchange](#event.mutedchange) | Signals change of the muted property |
+| [volume](#event.volume) | Signals change of the volume |
+| [muted](#event.muted) | Signals change of the muted property |
 
-<a name="event.volumechange"></a>
-## *volumechange <sup>event</sup>*
+<a name="event.volume"></a>
+## *volume <sup>event</sup>*
 
 Signals change of the volume.
 
@@ -223,14 +223,14 @@ Signals change of the volume.
 ```json
 {
     "jsonrpc": "2.0", 
-    "method": "client.events.1.volumechange", 
+    "method": "client.events.1.volume", 
     "params": {
         "volume": 100
     }
 }
 ```
-<a name="event.mutedchange"></a>
-## *mutedchange <sup>event</sup>*
+<a name="event.muted"></a>
+## *muted <sup>event</sup>*
 
 Signals change of the muted property.
 
@@ -246,7 +246,7 @@ Signals change of the muted property.
 ```json
 {
     "jsonrpc": "2.0", 
-    "method": "client.events.1.mutedchange", 
+    "method": "client.events.1.muted", 
     "params": {
         "muted": true
     }
