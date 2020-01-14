@@ -1,9 +1,10 @@
 #pragma once
 
 #include "Module.h"
-#include <interfaces/json/JsonData_SecurityAgent.h>
 #include "AccessControlList.h"
+#include "IPCSecurityToken.h"
 
+#include <interfaces/json/JsonData_SecurityAgent.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -40,29 +41,21 @@ namespace Plugin {
             };
 
         public:
-            TokenDispatcher(const Core::NodeId& endPoint)
+            TokenDispatcher(const Core::NodeId& endPoint, PluginHost::IAuthenticate* officer)
                 : _channel(endPoint, 1024)
             {
                 Core::SystemInfo::SetEnvironment(_T("SECURITYAGENT_PATH"), endPoint.QualifiedName().c_str());
 
-                _channel.CreateFactory<IPC::Provisioning::DrmIdData>(1);
-                _channel.Register(IPC::Provisioning::DrmIdData::Id(), Core::ProxyType<Core::IIPCServer>(Core::ProxyType<HandleDrmId>::Create(this)));
+                _channel.CreateFactory<IPC::SecurityAgent::TokenData>(1);
+                _channel.Register(IPC::SecurityAgent::TokenData::Id(), Core::ProxyType<Core::IIPCServer>(Core::ProxyType<Tokenize>::Create(officer)));
+
+                _channel.Open(0);
             }
             ~TokenDispatcher()
             {
                 _channel.Close(Core::infinite);
-                _channel.Unregister(IPC::Provisioning::DeviceIdData::Id());
-                _channel.DestroyFactory<IPC::Provisioning::DeviceIdData>();
-            }
-
-        public:
-            inline uint32_t Open(const uint32_t waitTime)
-            {
-                return (_channel.Open(waitTime));
-            }
-            inline uint32_t Close(const uint32_t waitTime)
-            {
-                return (_channel.Close(waitTime));
+                _channel.Unregister(IPC::SecurityAgent::TokenData::Id());
+                _channel.DestroyFactory<IPC::SecurityAgent::TokenData>();
             }
 
         private:
@@ -78,9 +71,10 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , ACL(_T("acl.json"))
-
+                , Connector()
             {
                 Add(_T("acl"), &ACL);
+                Add(_T("connector"), &Connector);
             }
             ~Config()
             {
@@ -88,6 +82,7 @@ namespace Plugin {
 
         public:
             Core::JSON::String ACL;
+            Core::JSON::String Connector;
         };
 
     public:
@@ -146,6 +141,7 @@ namespace Plugin {
         uint8_t _secretKey[Crypto::SHA256::Length];
         AccessControlList _acl;
         uint8_t _skipURL;
+        TokenDispatcher* _dispatcher;
     };
 
 } // namespace Plugin
