@@ -130,14 +130,13 @@ namespace Plugin {
         auto container = administrator.Find(index); 
 
         if (container != nullptr) {
-            auto networkIterator = container->NetworkInterfaces();
+            auto networks = container->NetworkInterfaces();
 
-            while (networkIterator.Next() == true) {
+            for (auto network : networks) {
                 NetworksData networkData;
-                networkData.Interface = networkIterator.Current(); 
-                const std::vector<string> ips = container->IPs(networkIterator.Current());   
+                networkData.Interface = network.name;
 
-                for (auto ip : ips) {
+                for (auto ip : network.IPs) {
                     Core::JSON::String ipJSON;
                     ipJSON = ip;
                     networkData.Ips.Add(ipJSON);
