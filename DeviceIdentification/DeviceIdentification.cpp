@@ -30,7 +30,7 @@ namespace Plugin {
         }
 
         if (_device == nullptr) {
-            message = _T("DisplayIdentifier plugin could not be instantiated.");
+            message = _T("DeviceIdentification plugin could not be instantiated.");
         }
 
         return message;

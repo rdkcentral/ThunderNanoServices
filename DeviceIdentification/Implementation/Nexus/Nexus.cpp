@@ -102,12 +102,10 @@ private:
     {
         if (_length == 0) {
 #if NEXUS_SECURITY_API_VERSION == 2
-            NEXUS_OtpKeyInfo _id;
             if (NEXUS_SUCCESS == NEXUS_OtpKey_GetInfo(0 /*key A*/, &_id)) {
                 _length = NEXUS_OTP_KEY_ID_LENGTH;
                 _identity = _id.id;
 #else
-            NEXUS_OtpIdOutput _id;
             if (NEXUS_SUCCESS == NEXUS_Security_ReadOtpId(NEXUS_OtpIdType_eA, &_id)) {
                 _length = static_cast<unsigned char>(_id.size);
                 _identity = _id.otpId;
@@ -129,6 +127,11 @@ private:
     DeviceStatus _status;
     unsigned char* _identity;
 
+#if NEXUS_SECURITY_API_VERSION == 2
+    NEXUS_OtpKeyInfo _id;
+#else
+    NEXUS_OtpIdOutput _id;
+#endif
     NEXUS_PlatformConfiguration _platformConfig;
 };
 
