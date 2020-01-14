@@ -107,7 +107,6 @@ Provides access to the system general information.
 | (property).devicename | string | Host name |
 | (property).cpuload | string | Current CPU load (percentage) |
 | (property).serialnumber | string | Device serial number |
-| (property).deviceid | string | Device ID |
 | (property).time | string | Current system date and time |
 
 ### Example
@@ -135,7 +134,6 @@ Provides access to the system general information.
         "devicename": "buildroot", 
         "cpuload": "2", 
         "serialnumber": "WPEuCfrLF45", 
-        "deviceid": "WPEuCfrLF45", 
         "time": "Mon, 11 Mar 2019 14:38:18"
     }
 }

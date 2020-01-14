@@ -98,13 +98,6 @@ namespace Plugin {
     {
         Core::SystemInfo& singleton(Core::SystemInfo::Instance());
 
-        if (_deviceId.empty() == true) {
-            _deviceId = GetDeviceId();
-        }
-        if (_deviceId.empty() == false) {
-            systemInfo.Deviceid = _deviceId;
-        }
-
         systemInfo.Time = Core::Time::Now().ToRFC1123(true);
         systemInfo.Version = _service->Version() + _T("#") + _subSystem->BuildTreeHash();
         systemInfo.Uptime = singleton.GetUpTime();
@@ -142,27 +135,6 @@ namespace Plugin {
     void DeviceInfo::SocketPortInfo(JsonData::DeviceInfo::SocketinfoData& socketPortInfo) const
     {
         socketPortInfo.Runs = Core::ResourceMonitor::Instance().Runs();
-    }
-
-    string DeviceInfo::GetDeviceId() const
-    {
-        string result;
-
-        const PluginHost::ISubSystem::IIdentifier* info(_subSystem->Get<PluginHost::ISubSystem::IIdentifier>());
-
-        if (info != nullptr) {
-            uint8_t myBuffer[64];
-
-            myBuffer[0] = info->Identifier(sizeof(myBuffer) - 1, &(myBuffer[1]));
-
-            info->Release();
-
-            if (myBuffer[0] != 0) {
-                result = Core::SystemInfo::Instance().Id(myBuffer, ~0);
-            }
-        }
-
-        return (result);
     }
 
 } // namespace Plugin
