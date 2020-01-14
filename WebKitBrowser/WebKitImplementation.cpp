@@ -896,6 +896,14 @@ static GSourceFuncs _handlerIntervention =
             return (value);
         }
 
+        string GetToken() const
+        {
+            string value = _URL;
+           
+            return (value);
+        }
+
+ 
         void OnRequestAutomationSession(WKContextRef context, WKStringRef sessionID)
         {
             _automationSession = WKWebAutomationSessionCreate(sessionID);
@@ -1209,6 +1217,10 @@ static GSourceFuncs _handlerIntervention =
 
             std::vector<string> messageStrings = ConvertWKArrayToStringVector(messageLines);
             browser->OnJavaScript(messageStrings);
+        } else if (name == Tags::Token) {
+            // Here I would like to get a Base64 string and send it to the callee!!
+            std::string utf8Token = Core::ToString(browser->GetToken());
+            *returnData = WKStringCreateWithUTF8CString(utf8Token.c_str());
         } else if (name.compare(0, configLen, Tags::Config) == 0) {
             // Second part of this string is the key we are looking for, extract it...
             std::string utf8Json = Core::ToString(browser->GetConfig(name.substr(configLen)));

@@ -4,6 +4,7 @@ set(MODULE_NAME WPE${PLUGIN_NAME})
 find_package(${NAMESPACE}Plugins REQUIRED)
 
 option(PLUGIN_AMAZON_HAWAII "Enable the Amazon Player interface (Hawaii) in javascript." OFF)
+option(PLUGIN_SECURITY_AGENT "Enable the Security Agent Features interface in javascript." OFF)
 
 add_library(${MODULE_NAME} SHARED 
     main.cpp
@@ -18,6 +19,11 @@ add_library(${MODULE_NAME} SHARED
 
 if(PLUGIN_AMAZON_HAWAII)
     target_sources(${MODULE_NAME} PRIVATE HawaiiMessage.cpp)
+    target_compile_definitions(${MODULE_NAME} PRIVATE SECURITY_AGENT_INTERFACE)
+endif()
+
+if(PLUGIN_SECURITY_AGENT)
+    target_sources(${MODULE_NAME} PRIVATE Security.cpp)
 endif()
 
 set_target_properties(${MODULE_NAME} PROPERTIES
