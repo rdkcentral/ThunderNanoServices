@@ -13,6 +13,62 @@ namespace Plugin {
                             public PluginHost::JSONRPC,
                             public PluginHost::IWeb {
     private:
+        class TokenDispatcher {
+        private:
+            TokenDispatcher(const TokenDispatcher&) = delete;
+            TokenDispatcher& operator=(const TokenDispatcher&) = delete;
+
+        private:
+            class Tokenize : public Core::IIPCServer {
+            private:
+                Tokenize(const Tokenize&) = delete;
+                Tokenize& operator=(const Tokenize&) = delete;
+
+            public:
+                Tokenize(PluginHost::IAuthenticate* parent) : _parent(parent)
+                {
+                }
+                virtual ~Tokenize()
+                {
+                }
+
+            public:
+                virtual void Procedure(Core::IPCChannel& source, Core::ProxyType<Core::IIPC>& data);
+
+            private:
+                PluginHost::IAuthenticate* _parent;
+            };
+
+        public:
+            TokenDispatcher(const Core::NodeId& endPoint)
+                : _channel(endPoint, 1024)
+            {
+                Core::SystemInfo::SetEnvironment(_T("SECURITYAGENT_PATH"), endPoint.QualifiedName().c_str());
+
+                _channel.CreateFactory<IPC::Provisioning::DrmIdData>(1);
+                _channel.Register(IPC::Provisioning::DrmIdData::Id(), Core::ProxyType<Core::IIPCServer>(Core::ProxyType<HandleDrmId>::Create(this)));
+            }
+            ~TokenDispatcher()
+            {
+                _channel.Close(Core::infinite);
+                _channel.Unregister(IPC::Provisioning::DeviceIdData::Id());
+                _channel.DestroyFactory<IPC::Provisioning::DeviceIdData>();
+            }
+
+        public:
+            inline uint32_t Open(const uint32_t waitTime)
+            {
+                return (_channel.Open(waitTime));
+            }
+            inline uint32_t Close(const uint32_t waitTime)
+            {
+                return (_channel.Close(waitTime));
+            }
+
+        private:
+            Core::IPCChannelClientType<Core::Void, true, true> _channel;
+        };
+
         class Config : public Core::JSON::Container {
         private:
             Config(const Config&) = delete;
