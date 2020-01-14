@@ -1,4 +1,4 @@
-#include "../Connector.h"
+#include "../IPCSecurityToken.h"
 
 using namespace WPEFramework;
 
@@ -28,7 +28,7 @@ Core::ProxyType<IPC::SecurityAgent::TokenData> _tokenId(Core::ProxyType<IPC::Sec
  * Post-condition; return value 0 should not occur
  *
  */
-int GetToken(unsigned short maxLength, unsigned short inLength, unsigned char buffer)
+int GetToken(unsigned short maxLength, unsigned short inLength, unsigned char buffer[])
 {
     int result = -1;
 
@@ -36,7 +36,7 @@ int GetToken(unsigned short maxLength, unsigned short inLength, unsigned char bu
 
         // Prepare the data we have to send....
         _tokenId->Clear();
-        _tokenId->Parameter().SetBuffer(inLength, buffer);
+        _tokenId->Parameters().Set(inLength, buffer);
 
         Core::ProxyType<Core::IIPC> message(Core::proxy_cast<Core::IIPC>(_tokenId));
         uint32_t error = _channel.Invoke(message, IPC::CommunicationTimeOut);
@@ -44,10 +44,10 @@ int GetToken(unsigned short maxLength, unsigned short inLength, unsigned char bu
         result = -error;
 
         if (error == Core::ERROR_NONE) {
-            result = _tokeId->Response().Length();
+            result = _tokenId->Response().Length();
 
             if (result <= maxLength) {
-                ::memcpy(buffer, _deviceId->Response().Value(), result);
+                ::memcpy(buffer, _tokenId->Response().Value(), result);
                 printf("%s:%d [%s] Received token.\n", __FILE__, __LINE__, __func__);
             } else {
                 printf("%s:%d [%s] Received token is too long [%d].\n", __FILE__, __LINE__, __func__, result);
@@ -63,3 +63,4 @@ int GetToken(unsigned short maxLength, unsigned short inLength, unsigned char bu
     return (result);
 }
 
+}
