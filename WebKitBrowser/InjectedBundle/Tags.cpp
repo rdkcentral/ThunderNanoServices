@@ -6,7 +6,7 @@ namespace Tags {
 
 const char* const Config = "Config.";
 const char* const Notification = "Notification";
-const char* const Token = "Token";
+const char* const URL = "URL";
 
 } } ;
 
