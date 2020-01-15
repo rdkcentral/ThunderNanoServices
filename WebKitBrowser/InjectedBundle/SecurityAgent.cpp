@@ -1,6 +1,7 @@
 #include "JavaScriptFunctionType.h"
 #include "Utils.h"
 #include "Tags.h"
+#include <securityagent/SecurityToken.h>
 
 namespace WPEFramework {
 namespace JavaScript {
@@ -23,16 +24,30 @@ namespace JavaScript {
                     result = JSValueMakeNull(context);
                 }
                 else {
+                    uint8_t buffer[16 * 1024];
+
                     WKTypeRef returnData; 
-                    WKStringRef messageName = WKStringCreateWithUTF8CString(string(Tags::Token));
+                    WKStringRef messageName = WKStringCreateWithUTF8CString(Tags::URL);
 
                     // WKMutableArrayRef messageBody = WKMutableArrayCreate();
                     WKBundlePostSynchronousMessage(WebKit::Utils::GetBundle(), messageName, nullptr /* messageBody */, &returnData);
+                    std::string url (WebKit::Utils::WKStringToString(static_cast<WKStringRef>(returnData)));
+                    std::string tokenAsString;
+                    if (url.length() < sizeof(buffer)) {
+                        ::memcpy (buffer, url.c_str(), url.length());
 
-                    result = JSValueMakeString(context, static_cast<WKStringRef>(returnData));
+                        int length = GetToken(static_cast<uint16_t>(sizeof(buffer)), url.length(), buffer);
 
+                        if (length > 0) {
+                           Core::ToString(buffer, static_cast<uint16_t>(length), false, tokenAsString);
+                        }
+                    }
+
+                    JSStringRef returnMessage = JSStringCreateWithUTF8CString(tokenAsString.c_str());
+                    result = JSValueMakeString(context, returnMessage);
+
+                    JSStringRelease(returnMessage);
                     WKRelease(returnData); 
-                    WKRelease(messageBody);
                     WKRelease(messageName);
                 }
 
@@ -40,9 +55,8 @@ namespace JavaScript {
             }
         };
 
+        static JavaScriptFunctionType<Security> _instance(_T("token"));
     }
-
-    static JavaScriptFunctionType<Security> _instance(_T("token"));
 }
 }
 

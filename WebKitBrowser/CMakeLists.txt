@@ -55,7 +55,8 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ${WPE_BACKEND_LIBRARIES}
         ${GLIB_LIBRARIES}
-        ${WPE_WEBKIT_LIBRARIES})
+        ${WPE_WEBKIT_LIBRARIES}
+        ${SECURITY_TOKEN_LIBRARY})
 
 target_include_directories(${MODULE_NAME}
     PRIVATE
