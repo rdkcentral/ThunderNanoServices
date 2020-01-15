@@ -89,7 +89,7 @@ private:
         }
         virtual ~CobaltWindow()
         {
-            kill(getpid(), SIGHUP);
+            kill(getpid(), SIGQUIT);
             Block();
             Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
         }
