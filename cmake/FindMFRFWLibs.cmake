@@ -1,8 +1,8 @@
-# - Try to find MFRLIBS
+# - Try to find MFRFWLIBS
 # Once done this will define
-#  MFRLIBS_FOUND - System has mfrlibs
-#  MFRLIBS_INCLUDE_DIRS - The mfrlibs include directories
-#  MFRLIBS_LIBRARIES - The libraries needed to use mfrlibs
+#  MFRFWLIBS_FOUND - System has mfrfwlibs
+#  MFRFWLIBS_INCLUDE_DIRS - The mfrfwlibs include directories
+#  MFRFWLIBS_LIBRARIES - The libraries needed to use mfrfwlibs
 #
 # Copyright (C) 2019 Metrological.
 #
@@ -28,24 +28,24 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 find_package(PkgConfig)
-pkg_check_modules(MFRLIBS mfrlibs)
+pkg_check_modules(MFRFWLIBS fwupgrade)
 
 include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(mfrlibs DEFAULT_MSG MFRLIBS_LIBRARIES)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(mfrfwlibs DEFAULT_MSG MFRFWLIBS_LIBRARIES)
 
-mark_as_advanced(MFRLIBS_INCLUDE_DIRS MFRLIBS_LIBRARIES)
+mark_as_advanced(MFRFWLIBS_INCLUDE_DIRS MFRFWLIBS_LIBRARIES)
 
 
-find_library(MFRLIBS_LIBRARY NAMES ${MFRLIBS_LIBRARIES}
-        HINTS ${MFRLIBS_LIBDIR} ${MFRLIBS_LIBRARY_DIRS}
+find_library(MFRFWLIBS_LIBRARY NAMES ${MFRFWLIBS_LIBRARIES}
+        HINTS ${MFRFWLIBS_LIBDIR} ${MFRFWLIBS_LIBRARY_DIRS}
         )
 
-if(MFRLIBS_LIBRARY AND NOT TARGET mfrlibs::mfrlibs)
-    add_library(mfrlibs::mfrlibs UNKNOWN IMPORTED)
-    set_target_properties(mfrlibs::mfrlibs PROPERTIES
-            IMPORTED_LOCATION "${MFRLIBS_LIBRARY}"
-            INTERFACE_LINK_LIBRARIES "${MFRLIBS_LIBRARIES}"
-            INTERFACE_COMPILE_OPTIONS "${MFRLIBS_DEFINITIONS}"
-            INTERFACE_INCLUDE_DIRECTORIES "${MFRLIBS_INCLUDE_DIRS}"
+if(MFRFWLIBS_LIBRARY AND NOT TARGET mfrfwlibs::mfrfwlibs)
+    add_library(mfrfwlibs::mfrfwlibs UNKNOWN IMPORTED)
+    set_target_properties(mfrfwlibs::mfrfwlibs PROPERTIES
+            IMPORTED_LOCATION "${MFRFWLIBS_LIBRARY}"
+            INTERFACE_LINK_LIBRARIES "${MFRFWLIBS_LIBRARIES}"
+            INTERFACE_COMPILE_OPTIONS "${MFRFWLIBS_DEFINITIONS}"
+            INTERFACE_INCLUDE_DIRECTORIES "${MFRFWLIBS_INCLUDE_DIRS}"
             )
 endif()
