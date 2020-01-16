@@ -28,6 +28,7 @@ option(PLUGIN_PROCESSMONITOR "Include Process Monitor plugin" OFF)
 option(PLUGIN_NETWORKCONTROL "Include NetworkControlplugin" OFF)
 option(PLUGIN_OPENCDMI "Include OpenCDMi plugin" OFF)
 option(PLUGIN_PACKAGER "Include Packager plugin" OFF)
+option(PLUGIN_PLAYERINFO "Include PlayerInfo plugin" OFF)
 option(PLUGIN_POWER "Include Power plugin" OFF)
 option(PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
 option(PLUGIN_RTSPCLIENT "Include RtspClient plugin" OFF)
@@ -164,6 +165,10 @@ endif()
 
 if(PLUGIN_PACKAGER)
     add_subdirectory(Packager)
+endif()
+
+if(PLUGIN_PLAYERINFO)
+    add_subdirectory(PlayerInfo)
 endif()
 
 if(PLUGIN_REMOTECONTROL)
