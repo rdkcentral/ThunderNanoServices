@@ -3,6 +3,7 @@
 #include <core/core.h>
 #include <tracing/tracing.h>
 #include <websocket/websocket.h>
+#include <securityagent/securityagent.h>
 #include <interfaces/IPerformance.h>
 #include <interfaces/IMath.h>
 
@@ -112,6 +113,7 @@ void ShowMenu()
            "\tL : Legacy invoke on version 1 clueless...\n"
            "\t+ : Register for a-synchronous events on Version 1 interface\n"
            "\t- : Unregister for a-synchronous events on Version 1 interface\n"
+           "\tA : Get a JSONWebToken for the set URL\n"
            "\tH : Help\n"
            "\tQ : Quit\n");
 }
@@ -795,6 +797,24 @@ int main(int argc, char** argv)
                 legacyObject.Unsubscribe(1000, _T("clock"));
                 printf("Unregistered and removed all notification handlers\n");
                 break;
+
+            case 'A': {
+
+                uint8_t payload[] = "http://the.curreny.loaded.url.com/path#bookmark";
+                uint8_t buffer[8 * 1024];
+
+                ::memcpy(buffer, payload, sizeof(payload));
+                // Just for the test, we will issue the retrieval of a Token here. The Token can be used 
+                // to secure the payload we pass in and as a validation that the origination of the information
+                // is from an embeede world (JavaScipt does not allow for passing the payload)
+                if (::GetToken(sizeof(buffer), sizeof(payload), buffer) > 0) {
+                    // the payload is retuned in a Base64 coded string
+                    printf("Loaded the JSON token: %s", buffer);
+                }
+                else {
+                    printf("Could not load token !!!\n");
+                }
+            }
 
             case '?':
             case 'H':
