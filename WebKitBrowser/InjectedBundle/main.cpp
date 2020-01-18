@@ -1,6 +1,9 @@
 #include "Module.h"
 
 #include <WPE/WebKit.h>
+#include <WPE/WebKit/WKBundleFrame.h>
+#include <WPE/WebKit/WKBundlePage.h>
+#include <WPE/WebKit/WKURL.h>
 
 #include <cstdio>
 #include <memory>
@@ -16,6 +19,7 @@ using JavaScript::ClassDefinition;
 using WebKit::WhiteListedOriginDomainsList;
 
 WKBundleRef g_Bundle;
+std::string g_currentURL;
 
 namespace WPEFramework {
 namespace WebKit {
@@ -23,6 +27,9 @@ namespace Utils {
 
 WKBundleRef GetBundle() {
     return (g_Bundle);
+}
+std::string GetURL() {
+    return (g_currentURL);
 }
 
 } } }
@@ -166,7 +173,16 @@ static WKBundlePageLoaderClientV6 s_pageLoaderClient = {
     nullptr, // didFailProvisionalLoadWithErrorForFrame
     nullptr, // didCommitLoadForFrame
     nullptr, // didFinishDocumentLoadForFrame
-    nullptr, // didFinishLoadForFrame
+    // didFinishLoadForFrame
+    [](WKBundlePageRef pageRef, WKBundleFrameRef frame, WKTypeRef*, const void*) {
+
+        WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(pageRef);
+        WKURLRef mainFrameURL = WKBundleFrameCopyURL(mainFrame);
+        WKStringRef urlString = WKURLCopyString(mainFrameURL);
+        g_currentURL = WebKit::Utils::WKStringToString(urlString);
+        WKRelease(urlString);
+        WKRelease(mainFrameURL);
+    },
     nullptr, // didFailLoadWithErrorForFrame
     nullptr, // didSameDocumentNavigationForFrame
     nullptr, // didReceiveTitleForFrame

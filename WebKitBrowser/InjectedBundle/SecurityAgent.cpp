@@ -6,13 +6,13 @@
 namespace WPEFramework {
 namespace JavaScript {
     namespace Functions {
-        class Security {
+        class token {
         public:
-            Security(const Security&) = delete;
-            Security& operator= (const Security&) = delete;
-            Security() {
+            token(const token&) = delete;
+            token& operator= (const token&) = delete;
+            token() {
             }
-            ~Security() {
+            ~token() {
             }
 
             JSValueRef HandleMessage(JSContextRef context, JSObjectRef,
@@ -24,22 +24,17 @@ namespace JavaScript {
                     result = JSValueMakeNull(context);
                 }
                 else {
-                    uint8_t buffer[16 * 1024];
+                    uint8_t buffer[2 * 1024];
 
-                    WKTypeRef returnData; 
-                    WKStringRef messageName = WKStringCreateWithUTF8CString(Tags::URL);
+                    std::string url = WebKit::Utils::GetURL();
 
-                    // WKMutableArrayRef messageBody = WKMutableArrayCreate();
-                    WKBundlePostSynchronousMessage(WebKit::Utils::GetBundle(), messageName, nullptr /* messageBody */, &returnData);
-                    std::string url (WebKit::Utils::WKStringToString(static_cast<WKStringRef>(returnData)));
                     std::string tokenAsString;
                     if (url.length() < sizeof(buffer)) {
                         ::memcpy (buffer, url.c_str(), url.length());
 
                         int length = GetToken(static_cast<uint16_t>(sizeof(buffer)), url.length(), buffer);
-
                         if (length > 0) {
-                           Core::ToString(buffer, static_cast<uint16_t>(length), false, tokenAsString);
+                           tokenAsString = std::string(reinterpret_cast<const char*>(buffer), length);
                         }
                     }
 
@@ -47,17 +42,14 @@ namespace JavaScript {
                     result = JSValueMakeString(context, returnMessage);
 
                     JSStringRelease(returnMessage);
-                    WKRelease(returnData); 
-                    WKRelease(messageName);
                 }
 
                 return (result);
             }
         };
 
-        static JavaScriptFunctionType<Security> _instance(_T("token"));
+        static JavaScriptFunctionType<token> _instance(_T("thunder"));
     }
 }
 }
-
 
