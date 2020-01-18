@@ -47,7 +47,7 @@ private:
                         PluginHost::IStateControl::SUSPEND) {
         }
         virtual ~NotificationSink() {
-            Block();
+            Stop();
             Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
         }
 
@@ -89,8 +89,8 @@ private:
         }
         virtual ~CobaltWindow()
         {
-            kill(getpid(), SIGQUIT);
             Block();
+            Signal(SIGQUIT);
             Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
         }
 
@@ -143,7 +143,17 @@ private:
         string Url() const { return _url; }
 
     private:
-        virtual uint32_t Worker()
+        bool Initialize() override
+        {
+            sigset_t mask;
+            sigemptyset(&mask);
+            sigaddset(&mask, SIGHUP);
+            sigaddset(&mask, SIGUSR1);
+            sigaddset(&mask, SIGCONT);
+            pthread_sigmask(SIG_UNBLOCK, &mask, nullptr);
+            return (true);
+        }
+        uint32_t Worker() override
         {
             const char* argv[] = {"Cobalt", _url.c_str()};
             while (IsRunning() == true) {
@@ -331,7 +341,10 @@ public:
         }
     }
 
-    BEGIN_INTERFACE_MAP (CobaltImplementation)INTERFACE_ENTRY (Exchange::IBrowser)INTERFACE_ENTRY (PluginHost::IStateControl)END_INTERFACE_MAP
+    BEGIN_INTERFACE_MAP (CobaltImplementation)
+        INTERFACE_ENTRY (Exchange::IBrowser)
+        INTERFACE_ENTRY (PluginHost::IStateControl)
+    END_INTERFACE_MAP
 
 private:
     inline bool RequestForStateChange(
@@ -373,6 +386,8 @@ private:
 
         _adminLock.Unlock();
     }
+
+private:
     CobaltWindow _window;
     mutable Core::CriticalSection _adminLock;
     PluginHost::IStateControl::state _state;
