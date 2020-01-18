@@ -180,6 +180,14 @@ namespace Plugin
         return (result);
     }
 
+    uint32_t JSONRPCPlugin::Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const /* override */ {
+        sum = A + B;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t JSONRPCPlugin::Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const /* override */ {
+        sum = A - B;
+        return (Core::ERROR_NONE);
+    }
 } // namespace Plugin
 
 } // namespace WPEFramework

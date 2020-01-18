@@ -90,7 +90,7 @@ private:
         virtual ~CobaltWindow()
         {
             Block();
-            Signal(SIGHUP);
+            Signal(SIGQUIT);
             Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
         }
 
@@ -147,7 +147,7 @@ private:
         {
             sigset_t mask;
             sigemptyset(&mask);
-            sigaddset(&mask, SIGHUP);
+            sigaddset(&mask, SIGQUIT);
             sigaddset(&mask, SIGUSR1);
             sigaddset(&mask, SIGCONT);
             pthread_sigmask(SIG_UNBLOCK, &mask, nullptr);

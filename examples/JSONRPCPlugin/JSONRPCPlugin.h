@@ -627,14 +627,14 @@ namespace Plugin {
 
         //   Exchange::IPerformance methods
         // -------------------------------------------------------------------------------------------------------
-        virtual uint32_t Send(const uint16_t sendSize, const uint8_t buffer[]) override;
-        virtual uint32_t Receive(uint16_t& bufferSize, uint8_t buffer[]) const override;
-        virtual uint32_t Exchange(uint16_t& bufferSize, uint8_t buffer[], const uint16_t maxBufferSize) override;
+        uint32_t Send(const uint16_t sendSize, const uint8_t buffer[]) override;
+        uint32_t Receive(uint16_t& bufferSize, uint8_t buffer[]) const override;
+        uint32_t Exchange(uint16_t& bufferSize, uint8_t buffer[], const uint16_t maxBufferSize) override;
 
         //   Exchange::IMath methods
         // -------------------------------------------------------------------------------------------------------
-        virtual uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const;
-        virtual uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const;
+        uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const override;
+        uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const override;
 
     private:
         Core::ProxyType<PeriodicSync> _job;
