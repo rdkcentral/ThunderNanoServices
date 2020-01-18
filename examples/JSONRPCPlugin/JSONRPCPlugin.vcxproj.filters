@@ -20,12 +20,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="JSONRPCExamplePlugin.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="CMakeLists.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="Header Files">
       <UniqueIdentifier>{9f1fa2e3-24c1-4449-8832-ff82ce5f038a}</UniqueIdentifier>
     </Filter>
