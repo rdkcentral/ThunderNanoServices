@@ -38,6 +38,23 @@ namespace Plugin {
         const string _callsign;
     };
 
+    void SecurityAgent::TokenDispatcher::Tokenize::Procedure(Core::IPCChannel& source, Core::ProxyType<Core::IIPC>& data) {
+        Core::ProxyType<IPC::SecurityAgent::TokenData> message = Core::proxy_cast<IPC::SecurityAgent::TokenData>(data);
+
+        ASSERT (message.IsValid() == true);
+
+        if (message.IsValid() == true) {
+            string token;
+            if (_parent->CreateToken(message->Parameters().Length(), message->Parameters().Value(), token) == Core::ERROR_NONE) {
+                message->Response().Set(static_cast<uint16_t>(token.length()), reinterpret_cast<const uint8_t*>(token.c_str()));
+                source.ReportResponse(data);
+            }
+            else {
+                TRACE(Trace::Fatal, ("Could not create a security token."));
+            }
+        }
+    }
+
     SecurityAgent::SecurityAgent() : _dispatcher(nullptr)
     {
         RegisterAll();

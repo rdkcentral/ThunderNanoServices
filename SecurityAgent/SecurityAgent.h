@@ -34,7 +34,7 @@ namespace Plugin {
                 }
 
             public:
-                virtual void Procedure(Core::IPCChannel& source, Core::ProxyType<Core::IIPC>& data);
+                void Procedure(Core::IPCChannel& source, Core::ProxyType<Core::IIPC>& data) override;
 
             private:
                 PluginHost::IAuthenticate* _parent;
