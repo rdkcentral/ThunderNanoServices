@@ -41,11 +41,14 @@ namespace Plugin {
         SecurityContext(const AccessControlList* acl, const uint16_t length, const uint8_t payload[]);
         virtual ~SecurityContext();
 
+        //! Allow a websocket upgrade to be checked if it is allowed to be opened.
+        bool Allowed(const string& path) const override;
+
         //! Allow a request to be checked before it is offered for processing.
-        virtual bool Allowed(const Web::Request& request) const;
+        bool Allowed(const Web::Request& request) const override;
 
         //! Allow a JSONRPC message to be checked before it is offered for processing.
-        virtual bool Allowed(const Core::JSONRPC::Message& message) const;
+        bool Allowed(const Core::JSONRPC::Message& message) const override;
 
     private:
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.

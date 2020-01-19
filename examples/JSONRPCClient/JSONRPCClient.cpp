@@ -420,7 +420,7 @@ int main(int argc, char** argv)
         ParseOptions(argc, argv, comChannel);
 
         // If others are started at the same time (from Visual Studio :-) give the server a bit more time to start.
-        SleepMs(2000);
+        SleepMs(4000);
 
         // Lets also open up channels over the COMRPC protocol to do performance measurements
         // to compare JSONRPC v.s. COMRPC
@@ -454,7 +454,12 @@ int main(int argc, char** argv)
         // this is not nessecary.
         printf("Preparing JSONRPC!!!\n");
 
-        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:80")));
+        #ifdef __WINDOWS__
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:8080")));
+        #else
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:80")));
+        #endif
+
         JSONRPC::MySmartLinkType<Core::JSON::IElement> stickyObject(_T("Monitor.1"), _T("client.monitor.2"));
 
         // Create a remoteObject.  This is the way we can communicate with the Server.
@@ -464,12 +469,9 @@ int main(int argc, char** argv)
         // 3. [optional]  should the websocket under the hood call directly the plugin
         //                or will it be rlayed through thejsonrpc dispatcher (default,
         //                use jsonrpc dispatcher)
-        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:80")));
         JSONRPC::LinkType<Core::JSON::IElement> legacyObject(_T("JSONRPCPlugin.1"), _T("client.events.33"));
         JSONRPC::LinkType<Core::JSON::IElement> remoteObject(_T("JSONRPCPlugin.2"), _T("client.events.88"));
-        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:8900")));
         JSONRPC::LinkType<Core::JSON::IElement> remoteObjectElement(_T("JSONRPCPlugin.2"), _T("client.events.88"));
-        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("0.0.0.0:8901")));
         JSONRPC::LinkType<Core::JSON::IMessagePack> remoteObjectMP(_T("JSONRPCPlugin.2"), _T("client.events.88"));
         Handlers::MessageHandler testMessageHandlerJohn("john");
         Handlers::MessageHandler testMessageHandlerJames("james");
@@ -800,6 +802,7 @@ int main(int argc, char** argv)
 
             case 'A': {
 
+                int length;
                 uint8_t payload[] = "http://the.curreny.loaded.url.com/path#bookmark";
                 uint8_t buffer[8 * 1024];
 
@@ -807,15 +810,16 @@ int main(int argc, char** argv)
                 // Just for the test, we will issue the retrieval of a Token here. The Token can be used 
                 // to secure the payload we pass in and as a validation that the origination of the information
                 // is from an embeede world (JavaScipt does not allow for passing the payload)
-                if (::GetToken(sizeof(buffer), sizeof(payload), buffer) > 0) {
+                if ((length = ::GetToken(sizeof(buffer), sizeof(payload), buffer)) > 0) {
+                    buffer[length] = '\0';
                     // the payload is retuned in a Base64 coded string
-                    printf("Loaded the JSON token: %s", buffer);
+                    printf("Loaded the JSON token: %s\n", buffer);
                 }
                 else {
-                    printf("Could not load token !!!\n");
+                    printf("Could not load token, error: %d !!!\n", length);
                 }
+                break;
             }
-
             case '?':
             case 'H':
                 ShowMenu();

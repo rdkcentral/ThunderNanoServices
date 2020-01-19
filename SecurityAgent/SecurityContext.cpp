@@ -47,8 +47,14 @@ namespace Plugin {
     {
     }
 
+    //! Allow a websocket upgrade to be checked if it is allowed to be opened.
+    bool SecurityContext::Allowed(const string& path) const /* override */
+    {
+        return (true);
+    }
+
     //! Allow a request to be checked before it is offered for processing.
-    /* virtual */ bool SecurityContext::Allowed(const Web::Request& request) const
+    bool SecurityContext::Allowed(const Web::Request& request) const /* override */ 
     {
         bool allowed = (_accessControlList != nullptr);
 
@@ -60,7 +66,7 @@ namespace Plugin {
     }
 
     //! Allow a JSONRPC message to be checked before it is offered for processing.
-    /* virtual */ bool SecurityContext::Allowed(const Core::JSONRPC::Message& message) const
+    bool SecurityContext::Allowed(const Core::JSONRPC::Message& message) const /* override */ 
     {
         return ((_accessControlList != nullptr) && (_accessControlList->Allowed(message.Callsign())));
     }
