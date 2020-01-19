@@ -1,9 +1,10 @@
 #pragma once
 
 #include "Module.h"
-#include <interfaces/json/JsonData_SecurityAgent.h>
 #include "AccessControlList.h"
+#include <securityagent/IPCSecurityToken.h>
 
+#include <interfaces/json/JsonData_SecurityAgent.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -13,6 +14,54 @@ namespace Plugin {
                             public PluginHost::JSONRPC,
                             public PluginHost::IWeb {
     private:
+        class TokenDispatcher {
+        private:
+            TokenDispatcher(const TokenDispatcher&) = delete;
+            TokenDispatcher& operator=(const TokenDispatcher&) = delete;
+
+        private:
+            class Tokenize : public Core::IIPCServer {
+            private:
+                Tokenize(const Tokenize&) = delete;
+                Tokenize& operator=(const Tokenize&) = delete;
+
+            public:
+                Tokenize(PluginHost::IAuthenticate* parent) : _parent(parent)
+                {
+                }
+                virtual ~Tokenize()
+                {
+                }
+
+            public:
+                void Procedure(Core::IPCChannel& source, Core::ProxyType<Core::IIPC>& data) override;
+
+            private:
+                PluginHost::IAuthenticate* _parent;
+            };
+
+        public:
+            TokenDispatcher(const Core::NodeId& endPoint, PluginHost::IAuthenticate* officer)
+                : _channel(endPoint, 1024)
+            {
+                Core::SystemInfo::SetEnvironment(_T("SECURITYAGENT_PATH"), endPoint.QualifiedName().c_str());
+
+                _channel.CreateFactory<IPC::SecurityAgent::TokenData>(1);
+                _channel.Register(IPC::SecurityAgent::TokenData::Id(), Core::ProxyType<Core::IIPCServer>(Core::ProxyType<Tokenize>::Create(officer)));
+
+                _channel.Open(0);
+            }
+            ~TokenDispatcher()
+            {
+                _channel.Close(Core::infinite);
+                _channel.Unregister(IPC::SecurityAgent::TokenData::Id());
+                _channel.DestroyFactory<IPC::SecurityAgent::TokenData>();
+            }
+
+        private:
+            Core::IPCChannelClientType<Core::Void, true, true> _channel;
+        };
+
         class Config : public Core::JSON::Container {
         private:
             Config(const Config&) = delete;
@@ -22,9 +71,10 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , ACL(_T("acl.json"))
-
+                , Connector()
             {
                 Add(_T("acl"), &ACL);
+                Add(_T("connector"), &Connector);
             }
             ~Config()
             {
@@ -32,6 +82,7 @@ namespace Plugin {
 
         public:
             Core::JSON::String ACL;
+            Core::JSON::String Connector;
         };
 
     public:
@@ -90,6 +141,7 @@ namespace Plugin {
         uint8_t _secretKey[Crypto::SHA256::Length];
         AccessControlList _acl;
         uint8_t _skipURL;
+        TokenDispatcher* _dispatcher;
     };
 
 } // namespace Plugin

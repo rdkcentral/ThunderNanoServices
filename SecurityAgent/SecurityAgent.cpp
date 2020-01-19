@@ -38,7 +38,24 @@ namespace Plugin {
         const string _callsign;
     };
 
-    SecurityAgent::SecurityAgent()
+    void SecurityAgent::TokenDispatcher::Tokenize::Procedure(Core::IPCChannel& source, Core::ProxyType<Core::IIPC>& data) {
+        Core::ProxyType<IPC::SecurityAgent::TokenData> message = Core::proxy_cast<IPC::SecurityAgent::TokenData>(data);
+
+        ASSERT (message.IsValid() == true);
+
+        if (message.IsValid() == true) {
+            string token;
+            if (_parent->CreateToken(message->Parameters().Length(), message->Parameters().Value(), token) == Core::ERROR_NONE) {
+                message->Response().Set(static_cast<uint16_t>(token.length()), reinterpret_cast<const uint8_t*>(token.c_str()));
+                source.ReportResponse(data);
+            }
+            else {
+                TRACE(Trace::Fatal, ("Could not create a security token."));
+            }
+        }
+    }
+
+    SecurityAgent::SecurityAgent() : _dispatcher(nullptr)
     {
         RegisterAll();
 
@@ -89,10 +106,18 @@ namespace Plugin {
                 SYSLOG(Logging::Startup, (_T("Security is not defined as External !!")));
             } 
 
-			subSystem->Set(PluginHost::ISubSystem::SECURITY, &information);
-
+            subSystem->Set(PluginHost::ISubSystem::SECURITY, &information);
             subSystem->Release();
         }
+
+        ASSERT(_dispatcher == nullptr);
+
+        string connector = config.Connector.Value();
+
+        if (connector.empty() == true) {
+            connector = service->VolatilePath() + _T("token");
+        }
+        _dispatcher = new TokenDispatcher(Core::NodeId(connector.c_str()), this);
 
         // On success return empty, to indicate there is no error text.
         return _T("");
@@ -103,6 +128,9 @@ namespace Plugin {
         PluginHost::ISubSystem* subSystem = service->SubSystems();
 
         ASSERT(subSystem != nullptr);
+
+        delete _dispatcher;
+        _dispatcher = nullptr;
 
         if (subSystem != nullptr) {
             subSystem->Set(PluginHost::ISubSystem::NOT_SECURITY, nullptr);

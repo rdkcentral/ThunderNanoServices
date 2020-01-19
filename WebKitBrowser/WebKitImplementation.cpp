@@ -1209,6 +1209,8 @@ static GSourceFuncs _handlerIntervention =
 
             std::vector<string> messageStrings = ConvertWKArrayToStringVector(messageLines);
             browser->OnJavaScript(messageStrings);
+        } else if (name == Tags::URL) {
+            *returnData = WKStringCreateWithUTF8CString(browser->GetURL().c_str());
         } else if (name.compare(0, configLen, Tags::Config) == 0) {
             // Second part of this string is the key we are looking for, extract it...
             std::string utf8Json = Core::ToString(browser->GetConfig(name.substr(configLen)));
