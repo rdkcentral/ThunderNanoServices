@@ -23,7 +23,7 @@ namespace Plugin {
     // API implementation
     //
 
-    // Property: systeminfo - System general information
+    // Property: displayinfo - Display general information
     // Return codes:
     //  - ERROR_NONE: Success
     uint32_t DisplayInfo::get_displayinfo(DisplayinfoData& response) const
@@ -32,6 +32,11 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
+    // Event: updated - Notifies about a change/update in the connection
+   void DisplayInfo::event_updated()
+   {
+        Notify(_T("updated"));
+   }
 } // namespace Plugin
 
 }

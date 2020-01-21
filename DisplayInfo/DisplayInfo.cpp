@@ -11,24 +11,53 @@ namespace Plugin {
     /* virtual */ const string DisplayInfo::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
-        ASSERT(_device.IsValid() == false);
+        ASSERT(_connectionProperties == nullptr);
 
+        string message;
         Config config;
+
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
-        _device = IGraphicsProperties::Instance();
+        _connectionProperties = service->Root<Exchange::IConnectionProperties>(_connectionId, 2000, _T("DisplayInfoImplementation"));
+        if (_connectionProperties != nullptr) {
 
-        // On success return empty, to indicate there is no error text.
-        return (EMPTY_STRING);
+            _graphicsProperties = _connectionProperties->QueryInterface<Exchange::IGraphicsProperties>();
+            if (_graphicsProperties == nullptr) {
+
+                _connectionProperties->Release();
+                _connectionProperties = nullptr;
+            } else {
+                _notification.Initialize(_connectionProperties);
+            }
+        }
+
+        if (_connectionProperties == nullptr) {
+            message = _T("DisplayInfo could not be instantiated.");
+        }
+
+        return message;
     }
 
     /* virtual */ void DisplayInfo::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_device.IsValid() == true);
-        if (_device.IsValid()) {
-            _device.Release();
+        ASSERT(_connectionProperties != nullptr);
+
+        _notification.Deinitialize();
+
+        ASSERT(_graphicsProperties != nullptr);
+        if (_graphicsProperties != nullptr) {
+            _graphicsProperties->Release();
+            _graphicsProperties = nullptr;
         }
+
+        ASSERT(_connectionProperties != nullptr);
+        if (_connectionProperties != nullptr) {
+            _connectionProperties->Release();
+            _connectionProperties = nullptr;
+        }
+
+        _connectionId = 0;
     }
 
     /* virtual */ string DisplayInfo::Information() const
@@ -74,8 +103,16 @@ namespace Plugin {
 
     void DisplayInfo::Info(JsonData::DisplayInfo::DisplayinfoData& displayInfo) const
     {
-        displayInfo.Totalgpuram = _device->TotalGpuRam();
-        displayInfo.Freegpuram = _device->FreeGpuRam();
+        displayInfo.Totalgpuram = _graphicsProperties->TotalGpuRam();
+        displayInfo.Freegpuram = _graphicsProperties->FreeGpuRam();
+
+        displayInfo.Audiopassthrough = _connectionProperties->IsAudioPassthrough();
+        displayInfo.Connected = _connectionProperties->Connected();
+        displayInfo.Width = _connectionProperties->Width();
+        displayInfo.Height = _connectionProperties->Height();
+        displayInfo.Hdcpmajor = _connectionProperties->HDCPMajor();
+        displayInfo.Hdcpminor = _connectionProperties->HDCPMinor();
+        displayInfo.Hdrtype = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdrtypeType>(_connectionProperties->Type());
     }
 
 } // namespace Plugin
