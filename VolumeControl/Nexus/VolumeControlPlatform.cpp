@@ -74,41 +74,44 @@ public:
       NxClient_AudioSettings audioSettings;
       NxClient_GetAudioSettings(&audioSettings);
       ASSERT(audioSettings.leftVolume == audioSettings.rightVolume);
-      auto result =  audioSettings.volumeType == NEXUS_AudioVolumeType_eDecibel ?
+      return audioSettings.volumeType == NEXUS_AudioVolumeType_eDecibel ?
           VolumeControlPlatformNexus::FromNexusDb(audioSettings.leftVolume) :
           VolumeControlPlatformNexus::FromNexusLinear(audioSettings.leftVolume);
-      return result;
   }
 
 private:
-  static int32_t ToNexus(int8_t vol, int32_t min, int32_t max)
+  static int32_t ToNexusLinear(uint8_t vol)
   {
-    return (vol * (max - min) / (kMaxVolume - kMinVolume)) + min;
+      return std::round(static_cast<double>((vol * (NEXUS_AUDIO_VOLUME_LINEAR_NORMAL - NEXUS_AUDIO_VOLUME_LINEAR_MIN)) /
+          (kMaxVolume - kMinVolume)) + NEXUS_AUDIO_VOLUME_LINEAR_MIN);
   }
 
-  static int32_t ToNexusLinear(int8_t vol)
+  static uint8_t FromNexusLinear(int32_t vol)
   {
-      return ToNexus(vol, NEXUS_AUDIO_VOLUME_LINEAR_MIN, NEXUS_AUDIO_VOLUME_LINEAR_NORMAL);
+      return  std::round(static_cast<double>((vol - NEXUS_AUDIO_VOLUME_LINEAR_MIN) * (kMaxVolume - kMinVolume)) /
+          (NEXUS_AUDIO_VOLUME_LINEAR_NORMAL - NEXUS_AUDIO_VOLUME_LINEAR_MIN));
   }
 
-  static int32_t ToNexusDb(int8_t vol)
+  static int32_t ToNexusDb(uint8_t vol)
   {
-      return ToNexus(vol, NEXUS_AUDIO_VOLUME_DB_MIN, NEXUS_AUDIO_VOLUME_DB_NORMAL);
+      int32_t result = 0;
+      auto gain = 2000.0 * log10(static_cast<double>(vol) / (kMaxVolume - kMinVolume));
+      if (isinf(gain)) {
+          result = NEXUS_AUDIO_VOLUME_DB_MIN;
+      } else if (gain == 0) {
+          result = NEXUS_AUDIO_VOLUME_DB_NORMAL;
+      } else {
+          result = NEXUS_AUDIO_VOLUME_DB_NORMAL + std::floor(gain);
+      }
+
+      return std::max(NEXUS_AUDIO_VOLUME_DB_MIN, result);
   }
 
-  static int8_t FromNexus(int32_t vol, int32_t min, int32_t max)
+  static uint8_t FromNexusDb(int32_t vol)
   {
-      return (vol - min) * (kMaxVolume - kMinVolume) / (max - min);
-  }
-
-  static int8_t FromNexusLinear(int32_t vol)
-  {
-      return FromNexus(vol, NEXUS_AUDIO_VOLUME_LINEAR_MIN, NEXUS_AUDIO_VOLUME_LINEAR_NORMAL);
-  }
-
-  static int8_t FromNexusDb(int32_t vol)
-  {
-    return FromNexus(vol, NEXUS_AUDIO_VOLUME_DB_MIN, NEXUS_AUDIO_VOLUME_DB_NORMAL);
+      auto gain = NEXUS_AUDIO_VOLUME_DB_NORMAL - vol;
+      auto factor = std::pow(10, (static_cast<double>(gain) / 2000.0));
+      return std::round((kMaxVolume - kMinVolume) / factor);
   }
 };
 
