@@ -194,7 +194,7 @@ int main(int argc, char** argv)
 
         Core::File configFile("FileTransferClient.json", false);
         if (configFile.Exists() && configFile.Open(true)) {
-            config.FromFile(configFile);
+            config.IElement::FromFile(configFile);
             printf(_T("Get configuration from config file\n"));
         } else {
             printf(_T("Wrong parameter, use option -h to check required input arguments\n"));

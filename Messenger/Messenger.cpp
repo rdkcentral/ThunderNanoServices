@@ -68,11 +68,9 @@ namespace Plugin {
             if (room != nullptr) {
 
                 _adminLock.Lock();
-                bool emplaced = _roomIds.emplace(roomId, room).second;
+                result = _roomIds.emplace(roomId, room).second;
                 _adminLock.Unlock();
                 ASSERT(emplaced);
-
-                result = true;
             }
 
             sink->Release(); // Make room the only owner of the notification object.
