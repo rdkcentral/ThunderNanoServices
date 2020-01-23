@@ -70,7 +70,7 @@ namespace Plugin {
                 _adminLock.Lock();
                 result = _roomIds.emplace(roomId, room).second;
                 _adminLock.Unlock();
-                ASSERT(emplaced);
+                ASSERT(result);
             }
 
             sink->Release(); // Make room the only owner of the notification object.
