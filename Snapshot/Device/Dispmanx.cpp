@@ -43,9 +43,6 @@ namespace Plugin {
         INTERFACE_ENTRY(Exchange::ICapture)
         END_INTERFACE_MAP
 
-        void Initialize();
-        void Deinitialize();
-
         virtual const TCHAR* Name() const
         {
             return (_T("Dispmanx"));
