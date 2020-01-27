@@ -117,15 +117,23 @@ namespace Plugin {
         };
 
         struct IApplication {
+            using AdditionalDataType = std::unordered_map<string, string>;
             virtual ~IApplication() {}
 
             // Methods that the DIALServer requires.
             virtual bool IsRunning() const = 0;
             virtual bool HasAllowStop() const = 0;
-            virtual void Start(const string& data) = 0;
+            virtual bool SupportsStart() const = 0;
+            virtual bool SupportsStop() const = 0;
+            virtual uint32_t Start(const string& data) = 0;
             virtual void Stop(const string& data) = 0;
+            virtual bool SupportsHideAndShow() const = 0;
+            virtual bool IsHidden() const = 0;
+            virtual uint32_t Show(const string& data) = 0;
+            virtual void Hide() = 0;
             virtual string URL() const = 0;
-            virtual string AdditionalData() const = 0;
+            virtual const AdditionalDataType* AdditionalData() const = 0;
+            virtual void AdditionalData(AdditionalDataType&& data) = 0;
             virtual void Running(const bool isRunning) = 0;
             virtual void SwitchBoard(Exchange::ISwitchBoard* switchBoard) = 0;
         };
@@ -134,6 +142,38 @@ namespace Plugin {
             virtual ~IApplicationFactory() {}
 
             virtual IApplication* Create(PluginHost::IShell* shell, const Config::App& config, DIALServer* parent) = 0;
+        };
+
+        // FIXME: For now this is a stub only but at some point it'll have to call
+        // something which supports low power mode.
+        struct System : public Plugin::DIALServer::IApplication {
+            ~System() override {}
+            bool IsRunning() const { return true; }
+            bool HasAllowStop() const { return true; }
+            bool SupportsStart() const override { return false; }
+            bool SupportsStop() const override { return false; }
+            uint32_t Start(const string& data) override {
+                ASSERT(!"Not supported and not even supposed to");
+                return Core::ERROR_GENERAL;
+            }
+            void Stop(const string& data) { ASSERT(!"Not supported and not even supposed to"); }
+            bool SupportsHideAndShow() const { return true; }
+            bool IsHidden() const { return true; }
+            uint32_t Show(const string& data) override { return Core::ERROR_GENERAL; }
+            void Hide() override {}
+            string URL() const override { return {}; }
+            const AdditionalDataType* AdditionalData() const override { return nullptr; }
+            void AdditionalData(AdditionalDataType&& data) override {}
+            void Running(const bool isRunning) override {}
+            void SwitchBoard(Exchange::ISwitchBoard* switchBoard) override {}
+        };
+
+        struct SystemApplicationFactory  : public IApplicationFactory{
+            virtual ~SystemApplicationFactory() {}
+
+            IApplication* Create(PluginHost::IShell* shell, const Config::App& config, DIALServer* parent) override {
+                return new System;
+            }
         };
 
         class Default : public Plugin::DIALServer::IApplication {
@@ -189,12 +229,19 @@ namespace Plugin {
             {
                 return (_passiveMode == true ? _isRunning : (_switchBoard != nullptr ? _switchBoard->IsActive(_callsign) : (_service->State() == PluginHost::IShell::ACTIVATED)));
             }
+            bool IsHidden() const override { return false; }
+            bool SupportsHideAndShow() const override { return false; }
+            bool SupportsStart() const override { return true; }
+            bool SupportsStop() const override { return true; }
+            uint32_t Show(const string& data) override { return Core::ERROR_GENERAL; }
+            void Hide() override {}
             virtual bool HasAllowStop() const
             {
                 return (_hasAllowStop);
             }
-            virtual void Start(const string& data)
+            virtual uint32_t Start(const string& data)
             {
+                uint32_t result = Core::ERROR_NONE;
                 if (_passiveMode == true) {
                     const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"start\", \"data\":\"" + data + "\" }"));
                     _service->Notify(message);
@@ -202,16 +249,18 @@ namespace Plugin {
                 } else {
                     if (_switchBoard != nullptr) {
                         printf("%s:%s:%d -Switchboard Mode\n", __FILE__, __func__, __LINE__);
-                        _switchBoard->Activate(_callsign);
+                        result = _switchBoard->Activate(_callsign);
                     } else {
                         printf("%s:%s:%d -Active Mode\n", __FILE__, __func__, __LINE__);
-                        _service->Activate(PluginHost::IShell::REQUESTED);
+                        result = _service->Activate(PluginHost::IShell::REQUESTED);
                     }
 
                     if (IsRunning() == true) {
                         Started(data);
                     }
                 }
+
+                return result;
             }
             virtual void Stop(const string& data)
             {
@@ -239,9 +288,13 @@ namespace Plugin {
             {
                 return ("");
             }
-            virtual string AdditionalData() const
+            void AdditionalData(AdditionalDataType&& data) override
             {
-                return ("");
+                _additionalData = std::move(data);
+            }
+            virtual const AdditionalDataType* AdditionalData() const
+            {
+                return &_additionalData;
             }
             virtual void Running(const bool isRunning)
             {
@@ -281,13 +334,99 @@ namespace Plugin {
             bool _passiveMode;
             bool _isRunning;
             DIALServer* _parent;
+            AdditionalDataType _additionalData;
         };
 
     private:
         DIALServer(const DIALServer&) = delete;
         DIALServer& operator=(const DIALServer&) = delete;
 
+        struct Version {
+            Version(uint16_t major, uint16_t minor, uint16_t patch)
+                : Major(major), Minor(minor), Patch(patch) {}
+            Version() : Version(0, 0, 0) {}
+
+            bool IsValid() const { return Major != 0 || Minor != 0 || Patch != 0; }
+
+            bool IsDefault() const { return Major == kDefaultMajor && Minor == kDefaultMinor && Patch == kDefaultPatch; }
+
+            bool operator<(const Version& other) const {
+              if (other.Major > Major)
+                  return true;
+
+              if (other.Major == Major) {
+                  if (other.Minor > Minor)
+                      return true;
+
+                  if (other.Minor == Minor) {
+                      return other.Patch > Patch;
+                  }
+              }
+
+              return false;
+            }
+
+            bool operator==(const Version& other) const {
+                return other.Major == Major && other.Minor == Minor && other.Patch == Patch;
+            }
+
+            bool operator<=(const Version& other) const {
+                return *this < other || *this == other;
+            }
+
+            void SetDefault() {
+              Major = kDefaultMajor;
+              Minor = kDefaultMinor;
+              Patch = kDefaultPatch;
+            }
+
+            void Clear() { Major = Minor = Patch = 0; }
+
+            uint16_t Major;
+            uint16_t Minor;
+            uint16_t Patch;
+
+            static constexpr uint8_t kDefaultMajor = 1;
+            static constexpr uint8_t kDefaultMinor = 7;
+            static constexpr uint8_t kDefaultPatch = 2;
+        };
+
         static const uint32_t MaxDialQuerySize = 4096;
+
+        static void ParseVersion(const string& version, Version* parsed)
+        {
+            ASSERT(parsed);
+            if (version.empty() == true) {
+                parsed->SetDefault();
+            } else {
+                parsed->Clear();
+                auto dotPos = version.find('.');
+                if (dotPos == string::npos) {
+                    parsed->Major = atoi(version.c_str());
+                } else {
+                    string majorString = { version.c_str(), dotPos };
+                    parsed->Major = atoi(majorString.c_str());
+                    auto prevDotPos = dotPos + 1;
+                    dotPos = version.find('.', prevDotPos);
+                     if (dotPos != string::npos) {
+                        string minorString = { version.c_str() + prevDotPos, dotPos - prevDotPos };
+                        parsed->Minor = atoi(minorString.c_str());
+                        prevDotPos = dotPos + 1;
+                        dotPos = version.find('.', prevDotPos);
+                        if (dotPos == string::npos) {
+                          dotPos = version.size();
+                        }
+                        if (dotPos > prevDotPos) {
+                           string patchString = { version.c_str() + prevDotPos, dotPos - prevDotPos };
+                           parsed->Patch = atoi(patchString.c_str());
+                        }
+                     } else {
+                        string minorString = { version.c_str() + prevDotPos, version.length() - prevDotPos };
+                        parsed->Minor = atoi(minorString.c_str());
+                     }
+                }
+            }
+        }
 
         template <typename HANDLER>
         class ApplicationFactoryType : public IApplicationFactory {
@@ -321,10 +460,13 @@ namespace Plugin {
             Protocol(const Web::Request* request)
             {
                 _text = Core::ToString(string("IN: ") + Web::Request::ToString(request->Verb) + ' ' + request->Path);
+                if (request->Query.IsSet() == true) {
+                    _text += "?" + request->Query.Value();
+                }
             }
             Protocol(const Web::Response* response)
             {
-                _text = Core::ToString(string("OUT: ") + response->Location.Value());
+                _text = Core::ToString(string("OUT: ") + response->Location.Value()) + " STATUS: " + std::to_string(response->ErrorCode) + " Message: " + response->Message;
             }
             Protocol(const string& response)
             {
@@ -483,13 +625,28 @@ namespace Plugin {
             {
                 return (_application->IsRunning());
             }
+            inline bool IsHidden() const
+            {
+                return (_application->IsHidden());
+            }
+            inline bool SupportsHideAndShow() const
+            {
+                return _application->SupportsHideAndShow();
+            }
+
+            inline uint32_t Show(const string& data)
+            {
+                return _application->Show(data);
+            }
+            inline void Hide() { _application->Hide(); }
+
             inline void Running(const bool isRunning)
             {
                 _application->Running(isRunning);
             }
-            inline void Start(const string& data)
+            inline uint32_t Start(const string& data)
             {
-                _application->Start(data);
+                return _application->Start(data);
             }
             inline void Stop(const string& data)
             {
@@ -499,7 +656,15 @@ namespace Plugin {
             {
                 return (_application->HasAllowStop());
             }
-            inline const string AdditionalData() const
+            inline bool SupportsStart() const
+            {
+                return (_application->SupportsStart());
+            }
+            inline bool SupportsStop() const
+            {
+                return (_application->SupportsStop());
+            }
+            inline const IApplication::AdditionalDataType* AdditionalData() const
             {
                 return (_application->AdditionalData());
             }
@@ -529,7 +694,7 @@ namespace Plugin {
                 AppInformation::_applicationFactory.erase(index);
             }
 
-            void GetData(string& data) const;
+            void GetData(string& data, const Version& version = {}) const;
             void SetData(const string& data);
 
         private:

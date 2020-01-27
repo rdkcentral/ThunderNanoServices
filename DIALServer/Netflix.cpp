@@ -20,16 +20,6 @@ namespace DIALHandlers {
         {
         }
 
-    public:
-        // Methods that the DIALServer requires.
-        virtual string URL() const
-        {
-            return ("");
-        }
-        virtual string AdditionalData() const
-        {
-            return ("");
-        }
     };
 
     static Plugin::DIALServer::ApplicationRegistrationType<Netflix> _netflixHandler;
