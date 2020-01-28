@@ -125,6 +125,11 @@ private:
               _url = config.Url.Value();
             }
 
+            string dialStartURL;
+            if (Core::SystemInfo::GetEnvironment("DIAL_START_URL", dialStartURL)) {
+                _url = dialStartURL;
+            }
+
             Run();
             return result;
         }
@@ -155,7 +160,8 @@ private:
         }
         uint32_t Worker() override
         {
-            const char* argv[] = {"Cobalt", _url.c_str()};
+            const std::string cmdURL = "--url=" + _url;
+            const char* argv[] = {"Cobalt", cmdURL.c_str()};
             while (IsRunning() == true) {
                 StarboardMain(2, const_cast<char**>(argv));
             }
