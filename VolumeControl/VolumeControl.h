@@ -2,7 +2,7 @@
 
 #include "Module.h"
 #include <interfaces/IVolumeControl.h>
-#include <interfaces/json/JsonData_VolumeControl.h>
+#include <interfaces/JVolumeControl.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -19,12 +19,10 @@ namespace Plugin {
             , _connectionNotification(this)
             , _volumeNotification(this)
         {
-            RegisterAll();
         }
 
         ~VolumeControl() override
         {
-            UnregisterAll();
         }
 
         BEGIN_INTERFACE_MAP(VolumeControl)
@@ -90,12 +88,12 @@ namespace Plugin {
 
             void Volume(const uint8_t volume) override
             {
-                _parent.VolumeChanged(volume);
+                Exchange::JVolumeControl::Event::Volume(_parent, volume);
             }
 
             void Muted(const bool muted) override
             {
-                _parent.MutedChanged(muted);
+                Exchange::JVolumeControl::Event::Muted(_parent, muted);
             }
 
             BEGIN_INTERFACE_MAP(VolumeNotification)
@@ -107,24 +105,6 @@ namespace Plugin {
         };
 
         void Deactivated(RPC::IRemoteConnection* connection);
-        void VolumeChanged(const uint8_t volume)
-        {
-            event_volume(volume);
-        }
-
-        void MutedChanged(const bool muted)
-        {
-            event_muted(muted);
-        }
-
-        void RegisterAll();
-        void UnregisterAll();
-        uint32_t get_volume(Core::JSON::DecUInt8& response) const;
-        uint32_t set_volume(const Core::JSON::DecUInt8& param);
-        uint32_t get_muted(Core::JSON::Boolean& response) const;
-        uint32_t set_muted(const Core::JSON::Boolean& param);
-        void event_volume(const uint8_t& volume);
-        void event_muted(const bool& muted);
 
         Exchange::IVolumeControl* _implementation;
         uint32_t _connectionId;
