@@ -11,14 +11,13 @@ find_package(NXCLIENT QUIET)
 add_library(${MODULE_NAME} SHARED
     VolumeControl.cpp
     VolumeControlImplementation.cpp
-    VolumeControlJsonRpc.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
-target_link_libraries(${MODULE_NAME} 
+target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
@@ -47,7 +46,7 @@ else ()
 endif ()
 
 
-install(TARGETS ${MODULE_NAME} 
+install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})
