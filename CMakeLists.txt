@@ -111,10 +111,6 @@ if(PLUGIN_DICTIONARY)
     add_subdirectory(Dictionary)
 endif()
 
-if(PLUGIN_DSGCCCLIENT)
-    add_subdirectory(DsgccClient)
-endif()
-
 if(PLUGIN_DSRESOLUTION)
     add_subdirectory(DSResolution)
 endif()

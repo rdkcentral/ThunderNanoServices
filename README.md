@@ -10,7 +10,6 @@
 * [DIALServer](DIALServer/doc/DIALServerPlugin.md)
 * Dictionary
 * [DisplayInfo](DisplayInfo/doc/DisplayInfoPlugin.md)
-* DsgccClient
 * DSResolution
 * FileTransfer
 * FirmwareControl
