@@ -4,7 +4,7 @@
 #include "Module.h"
 #include <interfaces/IContentDecryption.h>
 #include <interfaces/IMemory.h>
-#include <interfaces/json/JsonData_OpenCDMi.h>
+#include <interfaces/json/JsonData_OCDM.h>
 
 namespace WPEFramework {
 namespace Plugin {

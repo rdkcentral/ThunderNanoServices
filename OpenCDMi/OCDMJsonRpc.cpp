@@ -1,7 +1,7 @@
 
 #include "Module.h"
 #include "OCDM.h"
-#include <interfaces/json/JsonData_OpenCDMi.h>
+#include <interfaces/json/JsonData_OCDM.h>
 
 namespace WPEFramework {
 
