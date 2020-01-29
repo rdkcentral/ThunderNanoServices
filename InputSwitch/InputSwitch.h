@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Module.h"
-#include <interfaces/json/JsonData_InputSwitch.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -12,58 +11,51 @@ namespace Plugin {
         public:
             Data()
                 : Core::JSON::Container()
-                , Addresses()
-                , SystemInfo()
+                , Callsign()
+                , Enabled()
             {
-                Add(_T("addresses"), &Addresses);
-                Add(_T("systeminfo"), &SystemInfo);
-                Add(_T("sockets"), &Sockets);
+                Add(_T("callsign"), &Callsign);
+                Add(_T("enabled"), &Enabled);
             }
-
+            Data(const Data& copy)
+                : Core::JSON::Container()
+                , Callsign(copy.Callsign)
+                , Enabled(copy.Enabled)
+            {
+                Add(_T("callsign"), &Callsign);
+                Add(_T("enabled"), &Enabled);
+            }
             virtual ~Data()
             {
             }
 
+            Data& operator= (const Data& rhs)
+            {
+                Callsign = rhs.Callsign;
+                Enabled = rhs.Enabled;
+
+                return (*this);
+            }
+
         public:
-            Core::JSON::ArrayType<JsonData::InputSwitch::AddressesData> Addresses;
-            JsonData::InputSwitch::SysteminfoData SystemInfo;
-            JsonData::InputSwitch::SocketinfoData Sockets;
+            Core::JSON::String Callsign;
+            Core::JSON::Boolean Enabled;
         };
 
-    private:
+    public:
         InputSwitch(const InputSwitch&) = delete;
         InputSwitch& operator=(const InputSwitch&) = delete;
 
-        uint32_t addresses(const Core::JSON::String& parameters, Core::JSON::ArrayType<JsonData::InputSwitch::AddressesData>& response)
-        {
-            AddressInfo(response);
-            return (Core::ERROR_NONE);
-        }
-        uint32_t system(const Core::JSON::String& parameters, JsonData::InputSwitch::SysteminfoData& response)
-        {
-            SysInfo(response);
-            return (Core::ERROR_NONE);
-        }
-        uint32_t sockets(const Core::JSON::String& parameters, JsonData::InputSwitch::SocketinfoData& response)
-        {
-            SocketPortInfo(response);
-            return (Core::ERROR_NONE);
-        }
-
-    public:
         InputSwitch()
             : _skipURL(0)
-            , _service(nullptr)
-            , _subSystem(nullptr)
-            , _systemId()
-            , _deviceId()
+            , _handler()
         {
-            RegisterAll();
+            // RegisterAll();
         }
 
         virtual ~InputSwitch()
         {
-            UnregisterAll();
+            // UnregisterAll();
         }
 
         BEGIN_INTERFACE_MAP(InputSwitch)
@@ -85,24 +77,15 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
+        bool FindChannel(const string& name);
+
         // JsonRpc
         void RegisterAll();
         void UnregisterAll();
-        uint32_t get_systeminfo(JsonData::InputSwitch::SysteminfoData& response) const;
-        uint32_t get_addresses(Core::JSON::ArrayType<JsonData::InputSwitch::AddressesData>& response) const;
-        uint32_t get_socketinfo(JsonData::InputSwitch::SocketinfoData& response) const;
-
-        void SysInfo(JsonData::InputSwitch::SysteminfoData& systemInfo) const;
-        void AddressInfo(Core::JSON::ArrayType<JsonData::InputSwitch::AddressesData>& addressInfo) const;
-        void SocketPortInfo(JsonData::InputSwitch::SocketinfoData& socketPortInfo) const;
-        string GetDeviceId() const;
 
     private:
         uint8_t _skipURL;
-        PluginHost::IShell* _service;
-        PluginHost::ISubSystem* _subSystem;
-        string _systemId;
-        mutable string _deviceId;
+        PluginHost::IPCUserInput::Iterator _handler;
     };
 
 } // namespace Plugin

@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{6C8E75AE-796C-4598-9CFF-4F462F968955}</ProjectGuid>
+    <ProjectGuid>{BA2829C1-66EF-4C21-852D-ECA482898DCF}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>DeviceInfo</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
@@ -171,12 +171,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="DeviceInfo.cpp" />
-    <ClCompile Include="DeviceInfoJsonRpc.cpp" />
+    <ClCompile Include="InputSwitch.cpp" />
     <ClCompile Include="Module.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DeviceInfo.h" />
+    <ClInclude Include="InputSwitch.h" />
     <ClInclude Include="Module.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
