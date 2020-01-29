@@ -21,14 +21,12 @@ namespace Plugin {
                     : Core::JSON::Container()
                     , Name()
                     , Callsign()
-                    , AllowStop(false)
                     , Handler()
                     , URL()
                     , Config()
                 {
                     Add(_T("name"), &Name);
                     Add(_T("callsign"), &Callsign);
-                    Add(_T("allowstop"), &AllowStop);
                     Add(_T("handler"), &Handler);
                     Add(_T("url"), &URL);
                     Add(_T("config"), &Config);
@@ -37,14 +35,12 @@ namespace Plugin {
                     : Core::JSON::Container()
                     , Name(copy.Name)
                     , Callsign(copy.Callsign)
-                    , AllowStop(copy.AllowStop)
                     , Handler(copy.Handler)
                     , URL(copy.URL)
                     , Config(copy.Config)
                 {
                     Add(_T("name"), &Name);
                     Add(_T("callsign"), &Callsign);
-                    Add(_T("allowstop"), &AllowStop);
                     Add(_T("handler"), &Handler);
                     Add(_T("url"), &URL);
                     Add(_T("config"), &Config);
@@ -56,7 +52,6 @@ namespace Plugin {
             public:
                 Core::JSON::String Name;
                 Core::JSON::String Callsign;
-                Core::JSON::Boolean AllowStop;
                 Core::JSON::String Handler;
                 Core::JSON::String URL;
                 Core::JSON::String Config;
@@ -122,9 +117,7 @@ namespace Plugin {
 
             // Methods that the DIALServer requires.
             virtual bool IsRunning() const = 0;
-            virtual bool HasAllowStop() const = 0;
-            virtual bool HasStart() const = 0;
-            virtual bool HasStop() const = 0;
+            virtual bool HasStartAndStop() const = 0;
             virtual uint32_t Start(const string& data) = 0;
             virtual void Stop(const string& data) = 0;
             virtual bool HasHideAndShow() const = 0;
@@ -149,9 +142,7 @@ namespace Plugin {
         struct System : public Plugin::DIALServer::IApplication {
             ~System() override {}
             bool IsRunning() const { return true; }
-            bool HasAllowStop() const { return true; }
-            bool HasStart() const override { return false; }
-            bool HasStop() const override { return false; }
+            bool HasStartAndStop() const override { return false; }
             uint32_t Start(const string& data) override {
                 ASSERT(!"Not supported and not even supposed to");
                 return Core::ERROR_GENERAL;
@@ -187,7 +178,6 @@ namespace Plugin {
                 : _switchBoard(nullptr)
                 , _service(service)
                 , _callsign(config.Callsign.IsSet() == true ? config.Callsign.Value() : config.Name.Value())
-                , _hasAllowStop(config.AllowStop.Value())
                 , _passiveMode(config.Callsign.IsSet() == false)
                 , _isRunning(false)
                 , _parent(parent)
@@ -231,14 +221,9 @@ namespace Plugin {
             }
             bool IsHidden() const override { return false; }
             bool HasHideAndShow() const override { return false; }
-            bool HasStart() const override { return true; }
-            bool HasStop() const override { return true; }
+            bool HasStartAndStop() const override { return true; }
             uint32_t Show(const string& data) override { return Core::ERROR_GENERAL; }
             void Hide() override {}
-            virtual bool HasAllowStop() const
-            {
-                return (_hasAllowStop);
-            }
             virtual uint32_t Start(const string& data)
             {
                 uint32_t result = Core::ERROR_NONE;
@@ -330,7 +315,6 @@ namespace Plugin {
             Exchange::ISwitchBoard* _switchBoard;
             PluginHost::IShell* _service;
             string _callsign;
-            bool _hasAllowStop;
             bool _passiveMode;
             bool _isRunning;
             DIALServer* _parent;
@@ -665,17 +649,9 @@ namespace Plugin {
             {
                 _application->Stop(data);
             }
-            inline bool HasAllowStop() const
+            inline bool HasStartAndStop() const
             {
-                return (_application->HasAllowStop());
-            }
-            inline bool HasStart() const
-            {
-                return (_application->HasStart());
-            }
-            inline bool HasStop() const
-            {
-                return (_application->HasStop());
+                return (_application->HasStartAndStop());
             }
             inline IApplication::AdditionalDataType AdditionalData() const
             {
