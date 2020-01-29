@@ -39,6 +39,7 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
 
+        string message;
 #if defined(FIRMWARECONTROL_PLATFORM_RPI)
         uint32_t status = ConvertMfrStatusToCore(mfr_term());
 #else
