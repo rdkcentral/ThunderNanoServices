@@ -195,7 +195,7 @@ namespace Plugin {
         bool hidden = HasHideAndShow() == true && IsHidden() == true;
         bool isAtLeast2_1 = Version{2, 1, 0} <= version;
         // allowSop is mandatory to be true starting from 2.1
-        string allowStop = isAtLeast2_1 == true || HasAllowStop() == true ? "true" : "false";
+        string allowStop = isAtLeast2_1 == true || HasStartAndStop() == true ? "true" : "false";
         string dialVersion;
         if (isAtLeast2_1 == true) {
           dialVersion = " dialVer=\"2.1\" ";
@@ -397,7 +397,7 @@ namespace Plugin {
             ASSERT(_service != NULL);
 
             if (app.IsRunning() == false) {
-                if (app.HasStart() == false) {
+                if (app.HasStartAndStop() == false) {
                     response->ErrorCode = Web::STATUS_FORBIDDEN;
                     response->Message = _T("Forbidden");
                 } else {
@@ -456,7 +456,7 @@ namespace Plugin {
             response->ErrorCode = Web::STATUS_NOT_FOUND;
             response->Message = _T("Requested app is not running.");
         } else {
-            if (app.HasStop() == false) {
+            if (app.HasStartAndStop() == false) {
                 response->ErrorCode = Web::STATUS_FORBIDDEN;
                 response->Message = _T("Forbidden");
             } else {
