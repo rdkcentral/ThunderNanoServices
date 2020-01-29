@@ -19,6 +19,7 @@ namespace Plugin {
             result = _T("Couldn't create volume control instance");
         } else {
           _implementation->Register(&_volumeNotification);
+          Exchange::JVolumeControl::Register(*this, _implementation);
         }
 
         return (result);
@@ -27,6 +28,8 @@ namespace Plugin {
     void VolumeControl::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
+
+        Exchange::JVolumeControl::Unregister(*this);
 
         _service->Unregister(&_connectionNotification);
         _implementation->Unregister(&_volumeNotification);

@@ -10,11 +10,11 @@
 * [DIALServer](DIALServer/doc/DIALServerPlugin.md)
 * Dictionary
 * [DisplayInfo](DisplayInfo/doc/DisplayInfoPlugin.md)
-* DsgccClient
 * DSResolution
 * FileTransfer
 * FirmwareControl
 * FrontPanel
+* InputSwitch
 * [IOConnector](IOConnector/doc/IOConnectorPlugin.md)
 * [LocationSync](LocationSync/doc/LocationSyncPlugin.md)
 * [Messenger](Messenger/doc/MessengerPlugin.md)
@@ -22,6 +22,7 @@
 * [NetworkControl](NetworkControl/doc/NetworkControlPlugin.md)
 * [OpenCDMi](OpenCDMi/doc/OpenCDMiPlugin.md)
 * [Packager](Packager/doc/PackagerPlugin.md)
+* PlayerInfo
 * [Power](Power/doc/PowerPlugin.md)
 * ProcessMonitor
 * [RemoteControl](RemoteControl/doc/RemoteControlPlugin.md)
@@ -35,7 +36,9 @@
 * SystemdConnector
 * [TimeSync](TimeSync/doc/TimeSyncPlugin.md)
 * [TraceControl](TraceControl/doc/TraceControlPlugin.md)
+* [VolumeControl](VolumeControl/doc/VolumeControlPlugin.md)
 * [WebKitBrowser](WebKitBrowser/doc/WebKitBrowserPlugin.md)
+* WebPA
 * WebProxy
 * WebServer
 * WebShell

@@ -99,8 +99,6 @@ Provides access to the display general information.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | (property) | object | Display general information |
-| (property).firmwareversion | string | Version of the device firmware |
-| (property).chipset | string | Chipset used for this device |
 | (property).totalgpuram | number | Total GPU DRAM memory (in bytes) |
 | (property).freegpuram | number | Free GPU DRAM memory (in bytes) |
 | (property).audiopassthrough | boolean | Audio Pass through is support for this device |
@@ -129,8 +127,6 @@ Provides access to the display general information.
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "result": {
-        "firmwareversion": "1.0.0", 
-        "chipset": "BCM2711", 
         "totalgpuram": 381681664, 
         "freegpuram": 358612992, 
         "audiopassthrough": false, 

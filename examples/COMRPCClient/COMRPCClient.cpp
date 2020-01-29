@@ -7,52 +7,52 @@
 // Thunder is build up, out of modules. There are no circular dependencies. The dependencies are listed 
 // here from top to bottom, so all modules depend on core atc...
 // At the time of this writing, Thunder has the following modules:
-// core:          Platform abstarction layer, this layer exposes a uniform set of C++ interfaces which 
-//                should be used in the respective higher layers. This layer is repsonsible for making 
+// core:          Platform abstraction layer, this layer exposes a uniform set of C++ interfaces which 
+//                should be used in the respective higher layers. This layer is responsible for making 
 //                sure that Thunder can run on Windows, Linux and OS-X.
 //                This core library contains a JSON parser.
 // cryptalgo:     Layer containing C++ interfaces towards cryptographic operations, like SHA/HMAC, random
 //                AES encryption/decryption
 // tracing:       This module is the runtime tracing system used throughout the modules. This tracing can 
-//                be turned on/off @ runtime and allows for creating custom trace classes. Trace classsed 
+//                be turned on/off @ runtime and allows for creating custom trace classes. Trace classses
 //                can be enabled @module (plugin) level or @tracecategory level. This tracing is picked up
 //                by the TraceControl plugin that will place the traces in the right sequence again (even 
 //                over process boundaries)
-// com:           This is the implementation of the a Microsoft COM-like framework whcih allows for process
-//                transaparent development. It can run over domain socket (only on linux) and over TCP 
+// com:           This is the implementation of the Microsoft COM-like framework which allows for process
+//                transparent development. It can run over domain socket (only on linux) and over TCP 
 //                sockets. The ProxysStub code required is derived/generated using tools from the regular 
 //                C headerfiles.
 // websocket:     This module exposes a C++ WebSocket class and has the C++ classes for HTPP communication.
-//                This module also implemens a C++ representation for URL parsin.
+//                This module also implements a C++ representation for URL parsing.
 // protocols:     This is the combination of com + websocket module!
-// plugins:       This module contains all functionality reuired to build a plugin. It Contains helper 
+// plugins:       This module contains all the functionality required to build a plugin. It contains helper 
 //                classes and the base interfaces (IPlugin, IShell, ISubsystem) for plugin development and 
 //                a helper class to do "easy" development of JSONRPC interfaces.
-// WPEProcess:    The is an application (no need to include it anywhere) to hos COMRPC objects out-of-process
-//                This is the application that is instantiated as a seperate process in case a plugin is run
+// WPEProcess:    The is an application (no need to include it anywhere) to host COMRPC objects out-of-process.
+//                This is the application that is instantiated as a seperate process in case that a plugin is run
 //                out-of-process.
-// WPEFramework:  This is the Thunder application and Controlelr Plugin. This is the Application that needs
+// WPEFramework:  This is the Thunder application and Controller Plugin. This is the Application that needs
 //                to be started.
 //
-// To include any of the modules in your project, each module, offers a module header file. the module header 
+// To include any of the modules in your project, each module, offers a module header file. The module header 
 // file is consistently constructed by <module location name>/<module name>.h. Since the Module location name 
-// is equal to the module name, the includion of a module than did WPEFramework/<Module Name>/<Module Name>.h
+// is equal to the module name, the inclusion of a module is done with WPEFramework/<Module Name>/<Module Name>.h
 // 
 // Logging versus Tracing (internal/module)
-// Thunder makes a distinction between the Loggin concept and the Tracing concept. 
-// The audience for Logging is expected to be Testers and operator. The audience for tracing is ecxp[ected to 
-// be the developper. Trace, by default, are not enabled. Logging, is by default, enabled. 
-// Then since the tracing module is not the "lowest layer(it requires core) some kind of tracing is required 
+// Thunder makes a distinction between the Logging concept and the Tracing concept. 
+// The audience for Logging is expected to be Testers and Operators. The audience for tracing is expected to 
+// be the developper. Tracing, by default, is not enabled. Logging is enabled by default. 
+// Since the tracing module is not the "lowest layer (it requires core), some kind of tracing is required 
 // for the core module. The core module uses (Trace.h/TRACE_LX pre-processor statement) for its trace 
-// definitions. These traces are enabled compile time (only in DEBUG builds) and only have levels (1..5). 
+// definitions. These traces are enabled at compile time (only in DEBUG builds) and only have the levels (1..5). 
 // These Traces can thus not be turned on/off @ runtime and thus might, if enabled, generate large log files. 
-// The Tracing module add another type of traces (TRACE() pre-processor statement). These traces are "advanced" 
-// traces. they are enabled in the code in DEBUG/RELEASE builds, not in PRODUCTION builds. These Traces are off 
-// by default (unless configured diffrently in the Thunder config file). These traces can be turned on/off during
-// runtime, use the Thunder UI, pane Tracing, to enable categories. Once enabled, depending on the configuration 
+// The Tracing module adds another type of traces (TRACE() pre-processor statement). These traces are "advanced" 
+// traces. They are enabled in the code in DEBUG/RELEASE builds, not in PRODUCTION builds. These Traces are off 
+// by default (unless configured differently in the Thunder config file). These traces can be turned on/off at
+// runtime, by the Thunder UI, pane Tracing, to enable categories. Once enabled, depending on the configuration 
 // of the TraceControl plugin, these traces are send to the console, syslog or to a network port. The TraceControl
-// plugin will also reconstruct the traces out of different process without mixing up parts of the trace.
-// Loggin is on by default, in all build flavors and report serious issues that are related to exceptional 
+// plugin will also reconstruct the traces out of a different process without mixing up parts of the trace.
+// Logging is on by default, in all build flavors and report serious issues that are related to exceptional 
 // situations observed in the software that can be correctd by a tester/operator.
 //
 

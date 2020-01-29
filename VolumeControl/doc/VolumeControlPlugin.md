@@ -85,73 +85,25 @@ VolumeControl interface properties:
 
 | Property | Description |
 | :-------- | :-------- |
-| [volume](#property.volume) | Volume in percents |
-| [muted](#property.muted) | Drives whether audop should be muted |
+| [Muted](#property.Muted) | Audio mute state |
+| [Volume](#property.Volume) | Audio volume level |
 
-<a name="property.volume"></a>
-## *volume <sup>property</sup>*
-
-Provides access to the volume in percents.
-
-Also see: [volume](#event.volume)
-
-### Value
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | number | Volume in percents |
-
-### Example
-
-#### Get Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "VolumeControl.1.volume"
-}
-```
-#### Get Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": 50
-}
-```
-#### Set Request
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "VolumeControl.1.volume", 
-    "params": 50
-}
-```
-#### Set Response
-
-```json
-{
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "result": "null"
-}
-```
 <a name="property.muted"></a>
 ## *muted <sup>property</sup>*
 
-Provides access to the drives whether audop should be muted.
-
-Also see: [muted](#event.muted)
+Provides access to the audio mute state.
 
 ### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | boolean | Drives whether audop should be muted |
+| (property) | boolean | Mute state (true: muted, false: un-muted) |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+|  | ```ERROR_GENERAL``` | Failed to set/retrieve muting state |
 
 ### Example
 
@@ -170,7 +122,7 @@ Also see: [muted](#event.muted)
 {
     "jsonrpc": "2.0", 
     "id": 1234567890, 
-    "result": true
+    "result": false
 }
 ```
 #### Set Request
@@ -180,7 +132,63 @@ Also see: [muted](#event.muted)
     "jsonrpc": "2.0", 
     "id": 1234567890, 
     "method": "VolumeControl.1.muted", 
-    "params": true
+    "params": false
+}
+```
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": "null"
+}
+```
+<a name="property.volume"></a>
+## *volume <sup>property</sup>*
+
+Provides access to the audio volume level.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | integer | Volume level in percent |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+|  | ```ERROR_GENERAL``` | Failed to set/retrieve audio volume |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "VolumeControl.1.volume"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "result": 100
+}
+```
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0", 
+    "id": 1234567890, 
+    "method": "VolumeControl.1.volume", 
+    "params": 100
 }
 ```
 #### Set Response
@@ -203,20 +211,18 @@ VolumeControl interface events:
 
 | Event | Description |
 | :-------- | :-------- |
-| [volume](#event.volume) | Signals change of the volume |
-| [muted](#event.muted) | Signals change of the muted property |
+| [Volume](#event.Volume) |  |
+| [Muted](#event.Muted) |  |
 
 <a name="event.volume"></a>
 ## *volume <sup>event</sup>*
-
-Signals change of the volume.
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.volume | number | Current volume value |
+| params.volume | integer | New bolume level in percent |
 
 ### Example
 
@@ -232,14 +238,12 @@ Signals change of the volume.
 <a name="event.muted"></a>
 ## *muted <sup>event</sup>*
 
-Signals change of the muted property.
-
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.muted | boolean | Muted state |
+| params.muted | boolean | New mute state (true: muted, false: un-muted) |
 
 ### Example
 
@@ -248,7 +252,7 @@ Signals change of the muted property.
     "jsonrpc": "2.0", 
     "method": "client.events.1.muted", 
     "params": {
-        "muted": true
+        "muted": false
     }
 }
 ```
