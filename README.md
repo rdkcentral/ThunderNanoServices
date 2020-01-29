@@ -34,6 +34,7 @@
 * SystemdConnector
 * [TimeSync](TimeSync/doc/TimeSyncPlugin.md)
 * [TraceControl](TraceControl/doc/TraceControlPlugin.md)
+* [VolumeControl](VolumeControl/doc/VolumeControlPlugin.md) 
 * [WebKitBrowser](WebKitBrowser/doc/WebKitBrowserPlugin.md)
 * WebProxy
 * WebServer
