@@ -213,9 +213,9 @@ namespace Plugin {
             // <link> element is DEPRECATED starting from 2.1
             + (running == true && isAtLeast2_1 == false ? _T("<link rel=\"run\" href=\"" + _DefaultControlExtension + "\"/>") : _T(""))
             + _T("<additionalData>");
-        const auto* additionalData = AdditionalData();
-        if (additionalData != nullptr) {
-            for (const auto& adata : *additionalData) {
+        auto additionalData = AdditionalData();
+        if (additionalData.empty() == false) {
+            for (const auto& adata : additionalData) {
                 // FIXME: escape/validate keys and values
                 data += "<" + adata.first + ">"+ adata.second + "</" + adata.first + ">";
             }
