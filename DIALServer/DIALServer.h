@@ -123,11 +123,11 @@ namespace Plugin {
             // Methods that the DIALServer requires.
             virtual bool IsRunning() const = 0;
             virtual bool HasAllowStop() const = 0;
-            virtual bool SupportsStart() const = 0;
-            virtual bool SupportsStop() const = 0;
+            virtual bool HasStart() const = 0;
+            virtual bool HasStop() const = 0;
             virtual uint32_t Start(const string& data) = 0;
             virtual void Stop(const string& data) = 0;
-            virtual bool SupportsHideAndShow() const = 0;
+            virtual bool HasHideAndShow() const = 0;
             virtual bool IsHidden() const = 0;
             virtual uint32_t Show(const string& data) = 0;
             virtual void Hide() = 0;
@@ -150,14 +150,14 @@ namespace Plugin {
             ~System() override {}
             bool IsRunning() const { return true; }
             bool HasAllowStop() const { return true; }
-            bool SupportsStart() const override { return false; }
-            bool SupportsStop() const override { return false; }
+            bool HasStart() const override { return false; }
+            bool HasStop() const override { return false; }
             uint32_t Start(const string& data) override {
                 ASSERT(!"Not supported and not even supposed to");
                 return Core::ERROR_GENERAL;
             }
             void Stop(const string& data) { ASSERT(!"Not supported and not even supposed to"); }
-            bool SupportsHideAndShow() const { return true; }
+            bool HasHideAndShow() const { return true; }
             bool IsHidden() const { return true; }
             uint32_t Show(const string& data) override { return Core::ERROR_GENERAL; }
             void Hide() override {}
@@ -230,9 +230,9 @@ namespace Plugin {
                 return (_passiveMode == true ? _isRunning : (_switchBoard != nullptr ? _switchBoard->IsActive(_callsign) : (_service->State() == PluginHost::IShell::ACTIVATED)));
             }
             bool IsHidden() const override { return false; }
-            bool SupportsHideAndShow() const override { return false; }
-            bool SupportsStart() const override { return true; }
-            bool SupportsStop() const override { return true; }
+            bool HasHideAndShow() const override { return false; }
+            bool HasStart() const override { return true; }
+            bool HasStop() const override { return true; }
             uint32_t Show(const string& data) override { return Core::ERROR_GENERAL; }
             void Hide() override {}
             virtual bool HasAllowStop() const
@@ -642,9 +642,9 @@ namespace Plugin {
             {
                 return (_application->IsHidden());
             }
-            inline bool SupportsHideAndShow() const
+            inline bool HasHideAndShow() const
             {
-                return _application->SupportsHideAndShow();
+                return _application->HasHideAndShow();
             }
 
             inline uint32_t Show(const string& data)
@@ -669,13 +669,13 @@ namespace Plugin {
             {
                 return (_application->HasAllowStop());
             }
-            inline bool SupportsStart() const
+            inline bool HasStart() const
             {
-                return (_application->SupportsStart());
+                return (_application->HasStart());
             }
-            inline bool SupportsStop() const
+            inline bool HasStop() const
             {
-                return (_application->SupportsStop());
+                return (_application->HasStop());
             }
             inline IApplication::AdditionalDataType AdditionalData() const
             {

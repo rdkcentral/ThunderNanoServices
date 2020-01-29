@@ -192,7 +192,7 @@ namespace Plugin {
     void DIALServer::AppInformation::GetData(string& data, const Version& version) const
     {
         bool running = IsRunning();
-        bool hidden = SupportsHideAndShow() == true && IsHidden() == true;
+        bool hidden = HasHideAndShow() == true && IsHidden() == true;
         bool isAtLeast2_1 = Version{2, 1, 0} <= version;
         // allowSop is mandatory to be true starting from 2.1
         string allowStop = isAtLeast2_1 == true || HasAllowStop() == true ? "true" : "false";
@@ -397,7 +397,7 @@ namespace Plugin {
             ASSERT(_service != NULL);
 
             if (app.IsRunning() == false) {
-                if (app.SupportsStart() == false) {
+                if (app.HasStart() == false) {
                     response->ErrorCode = Web::STATUS_FORBIDDEN;
                     response->Message = _T("Forbidden");
                 } else {
@@ -412,7 +412,7 @@ namespace Plugin {
                     }
                 }
             } else {
-                if (app.SupportsHideAndShow() == true && app.IsHidden() == true) {
+                if (app.HasHideAndShow() == true && app.IsHidden() == true) {
                     uint32_t result = app.Show(parameters);
                     // system app has special error codes. Handle them here.
                     if (app.Name() == _SystemApp) {
@@ -456,7 +456,7 @@ namespace Plugin {
             response->ErrorCode = Web::STATUS_NOT_FOUND;
             response->Message = _T("Requested app is not running.");
         } else {
-            if (app.SupportsStop() == false) {
+            if (app.HasStop() == false) {
                 response->ErrorCode = Web::STATUS_FORBIDDEN;
                 response->Message = _T("Forbidden");
             } else {
@@ -569,7 +569,7 @@ namespace Plugin {
                         StopApplication(request, result, selectedApp->second);
                     } else if (request.Verb == Web::Request::HTTP_POST) {
                       if (index.Next() == true && index.Current() == kHideCommand) {
-                          if (selectedApp->second.SupportsHideAndShow() == true) {
+                          if (selectedApp->second.HasHideAndShow() == true) {
                               result->ErrorCode = Web::STATUS_OK;
                               result->Message = _T("OK");
                               selectedApp->second.Hide();

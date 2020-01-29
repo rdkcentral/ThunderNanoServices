@@ -43,7 +43,7 @@ namespace DIALHandlers {
             }
         }
 
-        bool SupportsHideAndShow() const override {
+        bool HasHideAndShow() const override {
             return _browser != nullptr;
         }
 
