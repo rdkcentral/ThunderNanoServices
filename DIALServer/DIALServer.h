@@ -132,7 +132,7 @@ namespace Plugin {
             virtual uint32_t Show(const string& data) = 0;
             virtual void Hide() = 0;
             virtual string URL() const = 0;
-            virtual const AdditionalDataType* AdditionalData() const = 0;
+            virtual AdditionalDataType AdditionalData() const = 0;
             virtual void AdditionalData(AdditionalDataType&& data) = 0;
             virtual void Running(const bool isRunning) = 0;
             virtual void SwitchBoard(Exchange::ISwitchBoard* switchBoard) = 0;
@@ -162,7 +162,7 @@ namespace Plugin {
             uint32_t Show(const string& data) override { return Core::ERROR_GENERAL; }
             void Hide() override {}
             string URL() const override { return {}; }
-            const AdditionalDataType* AdditionalData() const override { return nullptr; }
+            AdditionalDataType AdditionalData() const override { return { }; }
             void AdditionalData(AdditionalDataType&& data) override {}
             void Running(const bool isRunning) override {}
             void SwitchBoard(Exchange::ISwitchBoard* switchBoard) override {}
@@ -292,9 +292,9 @@ namespace Plugin {
             {
                 _additionalData = std::move(data);
             }
-            virtual const AdditionalDataType* AdditionalData() const
+            virtual AdditionalDataType AdditionalData() const
             {
-                return &_additionalData;
+                return _additionalData;
             }
             virtual void Running(const bool isRunning)
             {
@@ -342,7 +342,7 @@ namespace Plugin {
         DIALServer& operator=(const DIALServer&) = delete;
 
         struct Version {
-            Version(uint16_t major, uint16_t minor, uint16_t patch)
+            Version(uint8_t major, uint8_t minor, uint8_t patch)
                 : Major(major), Minor(minor), Patch(patch) {}
             Version() : Version(0, 0, 0) {}
 
@@ -351,27 +351,40 @@ namespace Plugin {
             bool IsDefault() const { return Major == kDefaultMajor && Minor == kDefaultMinor && Patch == kDefaultPatch; }
 
             bool operator<(const Version& other) const {
+              bool result = false;
               if (other.Major > Major)
-                  return true;
+                  result = true;
 
-              if (other.Major == Major) {
+              if (result == false && other.Major == Major) {
                   if (other.Minor > Minor)
-                      return true;
+                      result = true;
 
-                  if (other.Minor == Minor) {
-                      return other.Patch > Patch;
+                  if (result == false && other.Minor == Minor) {
+                      result = other.Patch > Patch;
                   }
               }
 
-              return false;
+              return result;
             }
 
             bool operator==(const Version& other) const {
                 return other.Major == Major && other.Minor == Minor && other.Patch == Patch;
             }
 
+            bool operator!=(const Version& other) const {
+                return !(*this == other);
+            }
+
             bool operator<=(const Version& other) const {
                 return *this < other || *this == other;
+            }
+
+            bool operator>(const Version& other) const {
+                return !(*this <= other);
+            }
+
+            bool operator>=(const Version& other) const {
+                return *this > other || *this == other;
             }
 
             void SetDefault() {
@@ -382,9 +395,9 @@ namespace Plugin {
 
             void Clear() { Major = Minor = Patch = 0; }
 
-            uint16_t Major;
-            uint16_t Minor;
-            uint16_t Patch;
+            uint8_t Major;
+            uint8_t Minor;
+            uint8_t Patch;
 
             static constexpr uint8_t kDefaultMajor = 1;
             static constexpr uint8_t kDefaultMinor = 7;
@@ -664,7 +677,7 @@ namespace Plugin {
             {
                 return (_application->SupportsStop());
             }
-            inline const IApplication::AdditionalDataType* AdditionalData() const
+            inline IApplication::AdditionalDataType AdditionalData() const
             {
                 return (_application->AdditionalData());
             }
