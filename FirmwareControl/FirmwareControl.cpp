@@ -23,7 +23,7 @@ namespace Plugin {
         }
 
         string message;
-#if defiined(FIRMWARECONTROL_PLATFORM_RPI)
+#if defined(FIRMWARECONTROL_PLATFORM_RPI)
         uint32_t status = ConvertMfrStatusToCore(mfr_init());
 #else
         uint32_t status = ConvertMfrStatusToCore(mfrFWUpgradeInit());
@@ -39,7 +39,7 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
 
-#if defiined(FIRMWARECONTROL_PLATFORM_RPI)
+#if defined(FIRMWARECONTROL_PLATFORM_RPI)
         uint32_t status = ConvertMfrStatusToCore(mfr_term());
 #else
         uint32_t status = ConvertMfrStatusToCore(mfrFWUpgradeTerm());
