@@ -23,11 +23,7 @@ namespace Plugin {
         }
 
         string message;
-#if defined(FIRMWARECONTROL_PLATFORM_RPI)
-        uint32_t status = ConvertMfrStatusToCore(mfr_init());
-#else
         uint32_t status = ConvertMfrStatusToCore(mfrFWUpgradeInit());
-#endif
         if (status != Core::ERROR_NONE) {
             message = _T("Error in MFR library initialization");
         }
@@ -40,11 +36,7 @@ namespace Plugin {
         ASSERT(service != nullptr);
 
         string message;
-#if defined(FIRMWARECONTROL_PLATFORM_RPI)
-        uint32_t status = ConvertMfrStatusToCore(mfr_term());
-#else
         uint32_t status = ConvertMfrStatusToCore(mfrFWUpgradeTerm());
-#endif
         if (status != Core::ERROR_NONE) {
             message = _T("Error in MFR library deinitialization");
         }

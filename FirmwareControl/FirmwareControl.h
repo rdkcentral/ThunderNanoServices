@@ -8,11 +8,7 @@
 extern "C"
 {
 #endif
-#if defined(FIRMWARECONTROL_PLATFORM_RPI)
-#include <mfrTypes.h>
-#else
 #include <mfrApi.h>
-#endif
 #ifdef __cplusplus
 }
 #endif
