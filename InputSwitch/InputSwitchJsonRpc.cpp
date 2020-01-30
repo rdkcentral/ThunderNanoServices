@@ -1,57 +1,106 @@
 
-#include "DeviceInfo.h"
+#include "Module.h"
+#include "InputSwitch.h"
+#include <interfaces/json/JsonData_InputSwitch.h>
+
+/*
+    // Copy the code below to InputSwitch class definition
+    // Note: The InputSwitch class must inherit from PluginHost::JSONRPC
+
+    private:
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_channel(const JsonData::InputSwitch::ChannelParamsInfo& params);
+        uint32_t endpoint_status(const JsonData::InputSwitch::StatusParamsData& params, Core::JSON::ArrayType<JsonData::InputSwitch::ChannelParamsInfo>& response);
+*/
 
 namespace WPEFramework {
 
 namespace Plugin {
 
-    using namespace JsonData::DeviceInfo;
+    using namespace JsonData::InputSwitch;
 
     // Registration
     //
 
-    void DeviceInfo::RegisterAll()
+    void InputSwitch::RegisterAll()
     {
-        Property<SysteminfoData>(_T("systeminfo"), &DeviceInfo::get_systeminfo, nullptr, this);
-        Property<Core::JSON::ArrayType<AddressesData>>(_T("addresses"), &DeviceInfo::get_addresses, nullptr, this);
-        Property<SocketinfoData>(_T("socketinfo"), &DeviceInfo::get_socketinfo, nullptr, this);
+        Register<ChannelParamsInfo,void>(_T("channel"), &InputSwitch::endpoint_channel, this);
+        Register<StatusParamsData,Core::JSON::ArrayType<ChannelParamsInfo>>(_T("status"), &InputSwitch::endpoint_status, this);
     }
 
-    void DeviceInfo::UnregisterAll()
+    void InputSwitch::UnregisterAll()
     {
-        Unregister(_T("socketinfo"));
-        Unregister(_T("addresses"));
-        Unregister(_T("systeminfo"));
+        Unregister(_T("status"));
+        Unregister(_T("channel"));
     }
 
     // API implementation
     //
 
-    // Property: systeminfo - System general information
+    // Method: channel - Enable or Disable the throughput throough the given channel
     // Return codes:
     //  - ERROR_NONE: Success
-    uint32_t DeviceInfo::get_systeminfo(SysteminfoData& response) const
+    //  - ERROR_UNKNOWN_KEY: Failed to scan
+    uint32_t InputSwitch::endpoint_channel(const ChannelParamsInfo& params)
     {
-        SysInfo(response);
-        return Core::ERROR_NONE;
+        uint32_t result = Core::ERROR_NONE;
+        const bool enabled = params.Enabled.Value();
+
+        if (params.Name.IsSet() == true) {
+            if (FindChannel(params.Name.Value()) == false) {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
+            else {
+                _handler.Enable(enabled);
+
+                _handler.Reset();
+            }
+        }
+        else {
+            // Set all channels to the requested status..
+            _handler.Reset();
+            while (_handler.Next() == true) {
+                _handler.Enable(enabled);
+            }
+        }
+
+        return result;
     }
 
-    // Property: addresses - Network interface addresses
+    // Method: status - Check the status of the requested channel
     // Return codes:
     //  - ERROR_NONE: Success
-    uint32_t DeviceInfo::get_addresses(Core::JSON::ArrayType<AddressesData>& response) const
+    //  - ERROR_UNKNOWN_KEY: Could not find the designated channel
+    uint32_t InputSwitch::endpoint_status(const StatusParamsData& params, Core::JSON::ArrayType<ChannelParamsInfo>& response)
     {
-        AddressInfo(response);
-        return Core::ERROR_NONE;
-    }
+        uint32_t result = Core::ERROR_NONE;
 
-    // Property: socketinfo - Socket information
-    // Return codes:
-    //  - ERROR_NONE: Success
-    uint32_t DeviceInfo::get_socketinfo(SocketinfoData& response) const
-    {
-        SocketPortInfo(response);
-        return Core::ERROR_NONE;
+        if (params.Name.IsSet() == true) {
+            if (FindChannel(params.Name.Value()) == false) {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
+            else {
+                ChannelParamsInfo& element(response.Add());
+
+                element.Name = _handler.Name();
+                element.Enabled = _handler.Enabled();
+
+                _handler.Reset();
+            }
+        }
+        else {
+            // Insert all channels with there status..
+            _handler.Reset();
+            while (_handler.Next() == true) {
+                ChannelParamsInfo& element(response.Add());
+
+                element.Name = _handler.Name();
+                element.Enabled = _handler.Enabled();
+            }
+        }
+
+        return result;
     }
 
 } // namespace Plugin

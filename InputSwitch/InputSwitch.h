@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Module.h"
+#include <interfaces/json/JsonData_InputSwitch.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -50,12 +51,12 @@ namespace Plugin {
             : _skipURL(0)
             , _handler()
         {
-            // RegisterAll();
+            RegisterAll();
         }
 
         virtual ~InputSwitch()
         {
-            // UnregisterAll();
+            UnregisterAll();
         }
 
         BEGIN_INTERFACE_MAP(InputSwitch)
@@ -82,6 +83,8 @@ namespace Plugin {
         // JsonRpc
         void RegisterAll();
         void UnregisterAll();
+        uint32_t endpoint_channel(const JsonData::InputSwitch::ChannelParamsInfo& params);
+        uint32_t endpoint_status(const JsonData::InputSwitch::StatusParamsData& params, Core::JSON::ArrayType<JsonData::InputSwitch::ChannelParamsInfo>& response);
 
     private:
         uint8_t _skipURL;
