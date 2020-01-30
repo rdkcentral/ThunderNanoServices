@@ -14,7 +14,7 @@
 * FileTransfer
 * FirmwareControl
 * FrontPanel
-* InputSwitch
+* [InputSwitch](InputSwitch/doc/InputSwitchPlugin.md)
 * [IOConnector](IOConnector/doc/IOConnectorPlugin.md)
 * [LocationSync](LocationSync/doc/LocationSyncPlugin.md)
 * [Messenger](Messenger/doc/MessengerPlugin.md)
