@@ -16,7 +16,7 @@ namespace Plugin {
         , _syncedTimestamp()
         , _state(INITIAL)
         , _fired(true)
-        , _WaitForNetwork(5000) // Wait for 5 Seconds for a new attempt
+        , _WaitForNetwork(2000) // Wait for 2 Seconds for a new attempt
         , _retryAttempts(5)
         , _activity(Core::ProxyType<Activity>::Create(this))
         , _clients()

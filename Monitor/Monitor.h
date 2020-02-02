@@ -448,31 +448,7 @@ namespace Plugin {
             MonitorObjects& operator=(const MonitorObjects&) = delete;
 
         public:
-            class Job : public Core::IDispatchType<void> {
-            private:
-                Job() = delete;
-                Job(const Job& copy) = delete;
-                Job& operator=(const Job& RHS) = delete;
-
-            public:
-                Job(MonitorObjects* parent)
-                    : _parent(*parent)
-                {
-                    ASSERT(parent != nullptr);
-                }
-                virtual ~Job()
-                {
-                }
-
-            public:
-                virtual void Dispatch() override
-                {
-                    _parent.Probe();
-                }
-
-            private:
-                MonitorObjects& _parent;
-            };
+            using Job = Core::ThreadPool::JobType<MonitorObjects>;
 
             class MonitorObject {
             public:
@@ -729,7 +705,7 @@ namespace Plugin {
             MonitorObjects(Monitor* parent)
                 : _adminLock()
                 , _monitor()
-                , _job(Core::ProxyType<Job>::Create(this))
+                , _job(Job::Create(*this))
                 , _service(nullptr)
                 , _parent(*parent)
             {
@@ -1004,9 +980,11 @@ namespace Plugin {
             END_INTERFACE_MAP
 
         private:
-            // Probe can be run in an unlocked state as the destruction of the observer list
-            // is always done if the thread that calls the Probe is blocked (paused)
-            void Probe()
+            friend Core::ThreadPool::JobType<MonitorObjects>;
+
+            // Dispatch can be run in an unlocked state as the destruction of the observer list
+            // is always done if the thread that calls the Dispatch is blocked (paused)
+            void Dispatch()
             {
                 uint64_t scheduledTime(Core::Time::Now().Ticks());
                 uint64_t nextSlot(static_cast<uint64_t>(~0));

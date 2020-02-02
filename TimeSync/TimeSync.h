@@ -155,7 +155,7 @@ namespace Plugin {
             Core::JSON::DecUInt16 Periodicity;
         };
 
-        class PeriodicSync : public Core::IDispatchType<void> {
+        class PeriodicSync : public Core::IDispatch {
         private:
             PeriodicSync() = delete;
             PeriodicSync(const PeriodicSync&) = delete;
@@ -230,7 +230,7 @@ namespace Plugin {
         uint16_t _skipURL;
         uint32_t _periodicity;
         Exchange::ITimeSync* _client;
-        Core::ProxyType<Core::IDispatchType<void>> _activity;
+        Core::ProxyType<Core::IDispatch> _activity;
         Core::Sink<Notification> _sink;
         PluginHost::IShell* _service;
     };

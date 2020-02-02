@@ -223,10 +223,6 @@ class BluetoothControl : public PluginHost::IPlugin
             // This decoupling is done on this internal Worker thread.
             class Job : public Core::IDispatch {
             private:
-                Job() = delete;
-                Job(const Job&) = delete;
-                Job& operator=(const Job&) = delete;
-
                 enum scanMode {
                     LOW_ENERGY = 0x01,
                     REGULAR = 0x02,
@@ -235,12 +231,16 @@ class BluetoothControl : public PluginHost::IPlugin
                 };
 
             public:
+                Job() = delete;
+                Job(const Job&) = delete;
+                Job& operator=(const Job&) = delete;
+
                 Job(ControlSocket* parent)
                     : _parent(*parent)
                     , _mode(0)
                 {
                 }
-                virtual ~Job()
+                ~Job() override
                 {
                 }
 
@@ -265,7 +265,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 }
 
             private:
-                virtual void Dispatch()
+                void Dispatch() override
                 {
                     if ((_mode & REGULAR) != 0) {
                         TRACE(ControlFlow, (_T("Start regular scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
@@ -526,52 +526,6 @@ class BluetoothControl : public PluginHost::IPlugin
     public:
         class EXTERNAL DeviceImpl : public IBluetooth::IDevice {
         private:
-            class UpdateJob : public Core::IDispatch {
-            private:
-                UpdateJob() = delete;
-                UpdateJob(const UpdateJob&) = delete;
-                UpdateJob& operator=(const UpdateJob&) = delete;
-
-            public:
-                UpdateJob(DeviceImpl* parent)
-                    : _parent(*parent)
-                    , _scheduled(0)
-                {
-                }
-                virtual ~UpdateJob()
-                {
-                }
-
-            public:
-                void Schedule()
-                {
-                    if (_scheduled == 0) {
-                        _scheduled = 1;
-                        PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                    }
-                }
-                void Revoke()
-                {
-                    _scheduled = 0;
-                    PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(*this));
-                }
-
-            public:
-                void Dispatch() override
-                {
-                    _scheduled = 0;
-                    _parent.Updated();
-                }
-
-            private:
-                DeviceImpl& _parent;
-                uint8_t _scheduled;
-            };
-
-            DeviceImpl() = delete;
-            DeviceImpl(const DeviceImpl&) = delete;
-            DeviceImpl& operator=(const DeviceImpl&) = delete;
-
             static constexpr uint16_t ACTION_MASK = 0x00FF;
 
         public:
@@ -782,6 +736,10 @@ class BluetoothControl : public PluginHost::IPlugin
             };
 
         public:
+            DeviceImpl() = delete;
+            DeviceImpl(const DeviceImpl&) = delete;
+            DeviceImpl& operator=(const DeviceImpl&) = delete;
+
             DeviceImpl(BluetoothControl* parent, const Bluetooth::Address::type type, const uint16_t deviceId, const Bluetooth::Address& remote, const string& name)
                 : _name(name)
                 , _type(type)
@@ -798,14 +756,13 @@ class BluetoothControl : public PluginHost::IPlugin
                 , _latency(0)
                 , _timeout(0)
                 , _callback(nullptr)
-                , _updateJob(Core::ProxyType<UpdateJob>::Create(this))
+                , _updateJob(*this)
                 , _parent(parent)
             {
                 ::memset(_features, 0xFF, sizeof(_features));
             }
             ~DeviceImpl()
             {
-                _updateJob->Revoke();
             }
 
         public:
@@ -953,7 +910,7 @@ class BluetoothControl : public PluginHost::IPlugin
             void BondedChange() 
             {
                 _parent->BondedChange(this);
-                _updateJob->Schedule();
+                _updateJob.Submit();
             }
             uint32_t SetState(const state value)
             {
@@ -1033,7 +990,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 }
                 _parent->event_devicestatechange(Address().ToString(), JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::DISCONNECTED, disconnReason);
 
-                _updateJob->Schedule();
+                _updateJob.Submit();
             }
             void Name(const string& name)
             {
@@ -1062,7 +1019,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 _state.Unlock();
 
-                _updateJob->Schedule();
+                _updateJob.Submit();
             }
 
         private:
@@ -1073,7 +1030,9 @@ class BluetoothControl : public PluginHost::IPlugin
             virtual uint32_t SecurityKey(const Bluetooth::IdentityKey& key) = 0;
             virtual void PurgeSecurityKeys() = 0;
 
-            void Updated()
+            friend Core::WorkerPool::JobType<DeviceImpl&>;
+
+            void Dispatch ()
             {
                 IBluetooth::IDevice::ICallback* callback = nullptr;
 
@@ -1107,7 +1066,7 @@ class BluetoothControl : public PluginHost::IPlugin
             uint16_t _latency;
             uint16_t _timeout;
             IBluetooth::IDevice::ICallback* _callback;
-            Core::ProxyType<UpdateJob> _updateJob;
+            Core::WorkerPool::JobType<DeviceImpl&> _updateJob;
             BluetoothControl* _parent;
         };
 

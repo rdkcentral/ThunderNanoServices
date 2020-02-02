@@ -17,7 +17,7 @@ public:
         , _totalGpuRam(0)
         , _audioPassthrough(false)
         , _adminLock()
-        , _activity(Core::ProxyType<Core::WorkerPool::DispatcherType<DisplayInfoImplementation>>::Create(this)) {
+        , _activity(*this) {
 
         bcm_host_init();
 
@@ -243,7 +243,7 @@ private:
         UpdateDisplayInfo(_connected, _width, _height, _audioPassthrough);
         _adminLock.Unlock();
 
-        _activity->Submit();
+        _activity.Submit();
     }
 
 private:
@@ -257,7 +257,7 @@ private:
 
     mutable Core::CriticalSection _adminLock;
 
-    Core::ProxyType<Core::WorkerPool::DispatcherType<DisplayInfoImplementation>> _activity;
+    Core::WorkerPool::JobType< DisplayInfoImplementation& > _activity;
 };
 
     SERVICE_REGISTRATION(DisplayInfoImplementation, 1, 0);

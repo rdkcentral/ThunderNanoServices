@@ -255,7 +255,7 @@ namespace Plugin {
         , _region()
         , _city()
         , _request(Core::ProxyType<Web::Request>::Create())
-        , _activity(Core::ProxyType<Job>::Create(this))
+        , _activity(Job::Create(*this))
     {
     }
 #ifdef __WINDOWS__

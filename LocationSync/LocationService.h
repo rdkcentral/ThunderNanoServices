@@ -24,31 +24,7 @@ namespace Plugin {
             FAILED
         };
 
-        class Job : public Core::IDispatchType<void> {
-        private:
-            Job() = delete;
-            Job(const Job&) = delete;
-            Job& operator=(const Job&) = delete;
-
-        public:
-            Job(LocationService* parent)
-                : _parent(*parent)
-            {
-                ASSERT(parent != nullptr);
-            }
-            ~Job()
-            {
-            }
-
-        public:
-            virtual void Dispatch() override
-            {
-                _parent.Dispatch();
-            }
-
-        private:
-            LocationService& _parent;
-        };
+        using Job = Core::ThreadPool::JobType<LocationService>;
 
     private:
         LocationService() = delete;
@@ -117,6 +93,7 @@ namespace Plugin {
         // Signal a state change, Opened, Closed or Accepted
         virtual void StateChange() override;
 
+        friend Core::ThreadPool::JobType<LocationService>;
         void Dispatch();
 
     private:
