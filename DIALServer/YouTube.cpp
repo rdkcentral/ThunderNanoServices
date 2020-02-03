@@ -13,6 +13,9 @@ namespace DIALHandlers {
         YouTube& operator=(const YouTube&) = delete;
 
     public:
+#ifdef __WINDOWS__
+#pragma warning(disable : 4355)
+#endif
         YouTube(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config, Plugin::DIALServer* parent)
             : Default(service, config, parent)
             , _browser(nullptr)
@@ -20,6 +23,9 @@ namespace DIALHandlers {
             , _notification(this)
         {
         }
+#ifdef __WINDOWS__
+#pragma warning(default : 4355)
+#endif
         virtual ~YouTube()
         {
             Stopped({});
