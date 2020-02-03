@@ -254,8 +254,9 @@ namespace Plugin {
         , _country()
         , _region()
         , _city()
+        , _activity(*this)
+        , _infoCarrier()
         , _request(Core::ProxyType<Web::Request>::Create())
-        , _activity(Job::Create(*this))
     {
     }
 #ifdef __WINDOWS__
@@ -318,7 +319,7 @@ namespace Plugin {
 
                     _infoCarrier = constructor->factory();
 
-                    PluginHost::WorkerPool::Instance().Submit(_activity);
+                    _activity.Submit();
 
                     result = Core::ERROR_NONE;
                 }
@@ -334,7 +335,7 @@ namespace Plugin {
     {
         _adminLock.Lock();
 
-        PluginHost::WorkerPool::Instance().Revoke(_activity);
+        _activity.Revoke();
 
         if ((_state != IDLE) && (_state != FAILED) && (_state != LOADED)) {
 
@@ -420,7 +421,7 @@ namespace Plugin {
         }
 
         // Finish the cycle..
-        PluginHost::WorkerPool::Instance().Submit(_activity);
+        _activity.Submit();
     }
 
     /* virtual */ void LocationService::Send(const Core::ProxyType<Web::Request>& element)
@@ -438,7 +439,8 @@ namespace Plugin {
             Submit(_request);
         } else if (Link().HasError() == true) {
             Close(0);
-            PluginHost::WorkerPool::Instance().Submit(_activity);
+
+            _activity.Submit();
         }
     }
 
@@ -512,9 +514,7 @@ namespace Plugin {
 
         // See if we need rescheduling
         if (result != Core::infinite) {
-            Core::Time timestamp(Core::Time::Now());
-            timestamp.Add(result);
-            PluginHost::WorkerPool::Instance().Schedule(timestamp, _activity);
+            _activity.Schedule(Core::Time::Now().Add(result));
         }
     }
 

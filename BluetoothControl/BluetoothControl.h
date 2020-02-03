@@ -1030,7 +1030,7 @@ class BluetoothControl : public PluginHost::IPlugin
             virtual uint32_t SecurityKey(const Bluetooth::IdentityKey& key) = 0;
             virtual void PurgeSecurityKeys() = 0;
 
-            friend Core::WorkerPool::JobType<DeviceImpl&>;
+            friend Core::ThreadPool::JobType<DeviceImpl&>;
 
             void Dispatch ()
             {

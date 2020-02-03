@@ -93,7 +93,7 @@ namespace Plugin {
         // Signal a state change, Opened, Closed or Accepted
         virtual void StateChange() override;
 
-        friend Core::ThreadPool::JobType<LocationService>;
+        friend Core::ThreadPool::JobType<LocationService&>;
         void Dispatch();
 
     private:
@@ -109,10 +109,9 @@ namespace Plugin {
         string _country;
         string _region;
         string _city;
+        Core::WorkerPool::JobType<LocationService&> _activity;
         Core::ProxyType<IGeography> _infoCarrier;
-
         Core::ProxyType<Web::Request> _request;
-        Core::ProxyType<Core::IDispatch> _activity;
     };
 }
 } // namespace WPEFramework:Plugin

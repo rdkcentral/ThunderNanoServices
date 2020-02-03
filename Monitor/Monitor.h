@@ -705,7 +705,7 @@ namespace Plugin {
             MonitorObjects(Monitor* parent)
                 : _adminLock()
                 , _monitor()
-                , _job(Job::Create(*this))
+                , _job(*this)
                 , _service(nullptr)
                 , _parent(*parent)
             {
@@ -789,13 +789,13 @@ namespace Plugin {
 
                 _adminLock.Unlock();
 
-                PluginHost::WorkerPool::Instance().Submit(_job);
+                _job.Submit();
             }
             inline void Close()
             {
                 ASSERT(_service != nullptr);
 
-                PluginHost::WorkerPool::Instance().Revoke(_job);
+                _job.Revoke();
 
                 _adminLock.Lock();
                 _monitor.clear();
@@ -821,11 +821,13 @@ namespace Plugin {
                             std::count_if(_monitor.begin(), _monitor.end(), [](const std::pair<string, MonitorObject>& v) {
                                 return v.second.IsActive();
                             }) == 1) {
+
                             // A monitor which previously was stopped restarting is being activated.
                             // Moreover it's the only only which now becomes active. This means probing
                             // has to be activated as well since it was stopped at point the last observee
                             // turned inactive
-                            PluginHost::WorkerPool::Instance().Submit(_job);
+                            _job.Submit();
+
                             TRACE(Trace::Information, (_T("Starting to probe as active observee appeared.")));
                         }
 
@@ -980,7 +982,7 @@ namespace Plugin {
             END_INTERFACE_MAP
 
         private:
-            friend Core::ThreadPool::JobType<MonitorObjects>;
+            friend Core::ThreadPool::JobType<MonitorObjects&>;
 
             // Dispatch can be run in an unlocked state as the destruction of the observer list
             // is always done if the thread that calls the Dispatch is blocked (paused)
@@ -1030,14 +1032,14 @@ namespace Plugin {
                     index++;
                 }
 
-                if (nextSlot != static_cast<uint64_t>(~0)) {
+                if (nextSlot != static_cast<uint64_t>(~0)) {    
                     if (nextSlot < Core::Time::Now().Ticks()) {
-                        PluginHost::WorkerPool::Instance().Submit(_job);
+                        _job.Submit();
                     } else {
                         nextSlot += 1000 /* Add 1 ms */;
-                        PluginHost::WorkerPool::Instance().Schedule(nextSlot, _job);
+                        _job.Schedule(nextSlot);
                     }
-                } else {
+               } else {
                   TRACE(Trace::Information, (_T("Stopping to probe due to lack of active observees.")));
                 }
             }
@@ -1054,7 +1056,7 @@ namespace Plugin {
 
             Core::CriticalSection _adminLock;
             std::map<string, MonitorObject> _monitor;
-            Core::ProxyType<Core::IDispatchType<void>> _job;
+            Core::WorkerPool::JobType<MonitorObjects&> _job;
             PluginHost::IShell* _service;
             Monitor& _parent;
         };
