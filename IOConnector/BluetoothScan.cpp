@@ -68,9 +68,6 @@ namespace Plugin {
             ASSERT(_service != nullptr);
 
             if (_state.Analyse(pin.Set(), marker) == true) {
-                if (marker == _marker2) {
-                }
-
                 if ((marker == _marker1) || (marker == _marker2)) {
                     Exchange::IBluetoothControl* handler(_service->QueryInterfaceByCallsign<Exchange::IBluetoothControl>(_callsign));
 
