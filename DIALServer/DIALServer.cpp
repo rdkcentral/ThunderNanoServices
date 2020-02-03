@@ -377,7 +377,7 @@ namespace Plugin {
         string parameters;
         string additioanlDataUrl =  "http://localhost/" + app.Name() + "/" + _DefaultDataExtension;
         TCHAR* encodedDataUrl = static_cast<TCHAR*>(ALLOCA(additioanlDataUrl.length() * 3 * sizeof(TCHAR)));
-        Core::URL::Encode(additioanlDataUrl.c_str(), additioanlDataUrl.length(), encodedDataUrl, additioanlDataUrl.length() * 3 * sizeof(TCHAR));
+        Core::URL::Encode(additioanlDataUrl.c_str(), static_cast<uint16_t>(additioanlDataUrl.length()), encodedDataUrl, static_cast<uint16_t>(additioanlDataUrl.length() * 3 * sizeof(TCHAR)));
         if (request.HasBody() == true) {
             parameters = *request.Body<const Web::TextBody>();
             parameters = app.AppURL() + "?" + parameters;
@@ -519,7 +519,7 @@ namespace Plugin {
                     Core::URL::KeyValue options(request.Query.Value());
                     if (options.Exists(kVersionSupportedByClientQueryKey.c_str(), true) == true) {
                         const string versionStr (options[kVersionSupportedByClientQueryKey.c_str()].Text());
-                        Core::URL::Decode(versionStr.c_str(), versionStr.length(), clientVersion.data(), clientVersion.size());
+                        Core::URL::Decode(versionStr.c_str(), static_cast<uint16_t>(versionStr.length()), clientVersion.data(), static_cast<uint16_t>(clientVersion.size()));
 
                         DIALServer::ParseVersion(versionStr, &version);
                     }

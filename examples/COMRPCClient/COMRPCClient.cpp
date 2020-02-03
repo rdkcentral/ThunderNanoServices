@@ -84,9 +84,8 @@ int main(int argc, char* argv[])
     // throttle.
     // The 1 paramater indicates the number of threads that this engine will create to
     // handle the work. So it holds a threadpool of 1 thread.
-    Thunder::Core::ProxyType< Thunder::RPC::InvokeServerType<4, 1> > engine(
-        Thunder::Core::ProxyType<Thunder::RPC::InvokeServerType<4, 1>>::Create(
-            Thunder::Core::Thread::DefaultStackSize()));
+    Thunder::Core::ProxyType< Thunder::RPC::InvokeServerType<1, 0, 4> > engine(
+        Thunder::Core::ProxyType<Thunder::RPC::InvokeServerType<1, 0, 4>>::Create());
 
     Thunder::Core::ProxyType<Thunder::RPC::CommunicatorClient> client(
         Thunder::Core::ProxyType<Thunder::RPC::CommunicatorClient>::Create(
