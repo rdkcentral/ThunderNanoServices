@@ -27,7 +27,7 @@ namespace GPIO {
             _markers.clear();
         }
         void Add(const uint32_t marker) {
-            std::list<uint32_t>::iterator index;
+            std::list<uint32_t>::iterator index(_markers.begin());
             while ( (index != _markers.end()) && (marker > *index)) {
                 index++;
             }
@@ -41,7 +41,7 @@ namespace GPIO {
             }
         }
         void Remove(const uint32_t marker) {
-            std::list<uint32_t>::iterator index;
+            std::list<uint32_t>::iterator index(_markers.begin());
             while ( (index != _markers.end()) && (marker != *index)) {
                 index++;
             }
