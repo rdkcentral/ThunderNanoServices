@@ -11,6 +11,7 @@ namespace Plugin {
     struct IHandler {
         virtual ~IHandler() {}
         virtual void Trigger(GPIO::Pin& pin) = 0;
+        virtual void Interval(const uint32_t start, const uint32_t end) = 0;
     };
 
     class HandlerAdministrator {

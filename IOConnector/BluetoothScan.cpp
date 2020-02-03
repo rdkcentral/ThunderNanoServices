@@ -1,4 +1,4 @@
-#include <interfaces/IKeyHandler.h>
+#include <interfaces/IPower.h>
 
 #include "Handler.h"
 #include "TimedInput.h"
@@ -7,11 +7,11 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    class RemotePairing : public IHandler {
+    class BluetoothScan : public IHandler {
     private:
-        RemotePairing();
-        RemotePairing(const RemotePairing&);
-        RemotePairing& operator=(const RemotePairing&);
+        BluetoothScan();
+        BluetoothScan(const PowerDown&);
+        BluetoothScan& operator=(const PowerDown&);
 
         class Config : public Core::JSON::Container {
         private:
@@ -21,10 +21,10 @@ namespace Plugin {
         public:
             Config()
                 : Callsign()
-                , Producer()
+                , State()
             {
                 Add(_T("callsign"), &Callsign);
-                Add(_T("producer"), &Producer);
+                Add(_T("longpress"), &LongPress);
             }
             virtual ~Config()
             {
@@ -32,53 +32,50 @@ namespace Plugin {
 
         public:
             Core::JSON::String Callsign;
-            Core::JSON::String Producer;
+            Core::JSON::DecUInt8 LongPress;
         };
 
     public:
-        RemotePairing(PluginHost::IShell* service, const string& configuration)
+        BluetoothScan(PluginHost::IShell* service, const string& configuration)
             : _service(service)
+            , _state()
+            , _marker1(0)
         {
             Config config;
             config.FromString(configuration);
-            _producer = config.Producer.Value();
             _callsign = config.Callsign.Value();
+            _marker2 = config.LongPress.Value() * 1000;
         }
-        virtual ~RemotePairing()
+        virtual ~BluetoothScan()
         {
         }
 
     public:
         void Interval(const uint32_t start, const uint32_t end) override {
+            _marker2 = start + (_marker2 - _ marker1);
+            _marker1 = start;
             _state.Clear();
-            _state.Add(start);
+            _state.Add(_marker1);
+            if (_marker2 < end) {
+                _state.Add(_marker2);
+            }
             _state.Add(end);
-            _marker = start;
         }
         void Trigger(GPIO::Pin& pin) override
-        {
-
-            ASSERT(_service != nullptr);
-
-       }
-       void Trigger(GPIO::Pin& pin) override
         {
             uint32_t marker;
 
             ASSERT(_service != nullptr);
 
-            if ( (_state.Analyse(pin.Set(), marker) == true) && (_marker == marker) ) {
-                Exchange::IKeyHandler* handler(_service->QueryInterfaceByCallsign<Exchange::IKeyHandler>(_callsign));
+            if (_state.Analyse(pin.Set(), marker) == true) {
+                if ((marker == _marker1) || (marker == _marker2)) {
+                    Exchange::IBluetoothControl* handler(_service->QueryInterfaceByCallsign<Exchange::IBluetoothControl>(_callsign));
 
-                if (handler != nullptr) {
-                    Exchange::IKeyProducer* producer(handler->Producer(_producer));
+                    if (handler != nullptr) {
 
-                    if (producer != nullptr) {
-                        producer->Pair();
-                        producer->Release();
+                        handler->Scan();
+                        handler->Release();
                     }
-
-                    handler->Release();
                 }
             }
         }
@@ -86,12 +83,12 @@ namespace Plugin {
     private:
         PluginHost::IShell* _service;
         string _callsign;
-        string _producer;
         TimedInput _state;
-        uint32_t _marker;
+        uint32_t _marker1;
+        uint32_t _marker2;
     };
 
-    static HandlerAdministrator::Entry<RemotePairing> handler;
+    static HandlerAdministrator::Entry<BluetoothScan> handler;
 
 } // namespace Plugin
 } // namespace WPEFramework

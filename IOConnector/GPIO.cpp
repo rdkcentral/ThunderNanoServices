@@ -46,6 +46,7 @@ ENUM_CONVERSION_BEGIN(GPIO::Pin::trigger_mode)
         , _activeLow(activeLow ? 1 : 0)
         , _lastValue(false)
         , _descriptor(-1)
+        , _timedPin(this)
     {
         if (_pin != 0xFF) {
             struct stat properties;
@@ -73,8 +74,9 @@ ENUM_CONVERSION_BEGIN(GPIO::Pin::trigger_mode)
 
             _descriptor = open(buffer, O_RDWR);
         }
-
-        _lastValue = Get();
+        // The derived class shoud set, the initial value of the modifiers...
+        _timedPin.AddRef();
+        _timedPin.AddReference();
     }
 
     /* virtual */ Pin::~Pin()
@@ -101,6 +103,9 @@ ENUM_CONVERSION_BEGIN(GPIO::Pin::trigger_mode)
                 close(fd);
             }
         }
+
+        _timedPin.DropReference();
+        _timedPin.CompositRelease();
     }
 
     void Pin::Flush()
@@ -257,9 +262,28 @@ ENUM_CONVERSION_BEGIN(GPIO::Pin::trigger_mode)
         }
     }
 
+    // IInput pin functionality. Get triggered by an IOPin if a marker has been reached
+    // ---------------------------------------------------------------------------------
+    void Pin::Register(IInputPin::INotification* sink) /* override */ {
+        _timedPin.Register(sink);
+    }
+
+    void Pin::Unregister(IInputPin::INotification* sink) /* override */ {
+        _timedPin.Register(sink);
+    }
+
+    uint32_t Pin::AddMarker(const IInputPin::INotification* sink, const uint32_t marker) /* override */ {
+        return(_timedPin.Add(sink, marker));
+    }
+
+    uint32_t Pin::RemoveMarker(const IInputPin::INotification* sink, const uint32_t marker) /* override */ {
+        return(_timedPin.Remove(sink, marker));
+    }
+
     /* virtual */ void Pin::Trigger()
     {
         if (HasChanged() == true) {
+            _timedPin.Update(Get());
             BaseClass::Updated();
         }
     }
