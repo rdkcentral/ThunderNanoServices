@@ -457,6 +457,8 @@ namespace Plugin {
                     _mediaKeySession->Run(&_sink);
                     TRACE(Trace::Information, ("Server::Session::Session(%s,%s,%s) => %p", _keySystem.c_str(), _sessionId.c_str(), bufferName.c_str(), this));
                     TRACE_L1("Constructed the Session Server side: %p", this);
+
+                    _callback = callback;
                 }
 
                 SessionImplementation(
@@ -619,6 +621,18 @@ namespace Plugin {
                 INTERFACE_RELAY(::OCDM::ISessionExt, _mediaKeySessionExt)
                 END_INTERFACE_MAP
 
+                bool IsRemoteAlive() {
+                    ProxyStub::UnknownProxyType<OCDM::ISession::ICallback> *proxy = dynamic_cast<ProxyStub::UnknownProxyType<OCDM::ISession::ICallback> *>(_callback);
+                    if (proxy) {
+                        auto *iface = proxy->QueryInterface<OCDM::ISession::ICallback>();
+                        if (iface) {
+                            iface->Release();
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
             private:
             private:
                 AccessorOCDM& _parent;
@@ -631,6 +645,7 @@ namespace Plugin {
                 Core::Sink<Sink> _sink;
                 DataExchange* _buffer;
                 CommonEncryptionData _cencData;
+                ::OCDM::ISession::ICallback* _callback;
             };
 
         public:
@@ -693,6 +708,25 @@ namespace Plugin {
                  {
                      CDMi::IMediaKeySession *sessionInterface = nullptr;
                      CommonEncryptionData keyIds(initData, initDataLength);
+
+                     // Hack: delete sessions for crashed process
+                     _adminLock.Lock();
+                     size_t sz = _sessionList.size();
+                     _adminLock.Unlock();
+                     if (sz > 8) {
+                        std::list<SessionImplementation*> sessionsToDelete;
+                        _adminLock.Lock();
+                        for(auto &it : _sessionList) {
+                            if (!it->IsRemoteAlive()) {
+                                sessionsToDelete.push_back(it);
+                            }
+                        }
+                        _adminLock.Unlock();
+                        for(auto &it : sessionsToDelete) {
+                            delete it;
+                        }
+                     }
+                     // End of hack
 
                      // OKe we got a buffer machanism to transfer the raw data, now create
                      // the session.
