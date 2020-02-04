@@ -32,6 +32,11 @@ namespace DIALHandlers {
         }
 
     public:
+        uint32_t Start(const string& params) override {
+            Core::SystemInfo::SetEnvironment(_T("DIAL_START_URL"), params.c_str());
+            return Default::Start(params);
+        }
+
         virtual void Started(const string& data)
         {
             _browser = Plugin::DIALServer::Default::QueryInterface<Exchange::IBrowser>();
