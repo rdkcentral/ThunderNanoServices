@@ -26,10 +26,16 @@ set_target_properties(${TARGET} PROPERTIES
 
 if(NEXUS_SERVER_EXTERNAL)
     find_package(NXCLIENT REQUIRED)
+    find_package(NXSERVER REQUIRED)
+
     target_link_libraries(${TARGET}
         PRIVATE
             ${NAMESPACE}nexusserver::${NAMESPACE}nexusserver
             NXCLIENT::NXCLIENT
+        )
+    target_include_directories(${TARGET}
+        PRIVATE
+            ${LIBNXSERVER_INCLUDE_DIR}
         )
 else()
     find_package(NXCLIENT_LOCAL REQUIRED)

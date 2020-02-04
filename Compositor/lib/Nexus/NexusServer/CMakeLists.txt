@@ -22,6 +22,8 @@ add_library(${TARGET} STATIC
 
 if (NEXUS_SERVER_EXTERNAL)
     find_package(NXCLIENT REQUIRED)
+    find_package(NXSERVER REQUIRED)
+
     target_link_libraries(${TARGET}
         PRIVATE
             ${NAMESPACE}Core::${NAMESPACE}Core
@@ -30,6 +32,9 @@ if (NEXUS_SERVER_EXTERNAL)
     target_compile_definitions(${TARGET} 
         PRIVATE 
             NEXUS_SERVER_EXTERNAL)
+    target_include_directories(${TARGET}
+        PRIVATE
+            ${LIBNXSERVER_INCLUDE_DIR})
 else()
     find_package(NXSERVER REQUIRED)
     find_package(NEXUS REQUIRED)
