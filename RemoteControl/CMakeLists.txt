@@ -2,6 +2,7 @@ set(PLUGIN_NAME RemoteControl)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 set(PLUGIN_REMOTECONTROL_RELEASE_TIMEOUT 30000 CACHE STRING "Remote control release timeout")
+set(PLUGIN_REMOTECONTROL_PASSON false CACHE STRING "Enable keys pass-through on default producer")
 
 option(PLUGIN_REMOTECONTROL_RFCE "Enable RF4CE functionality." ON)
 
