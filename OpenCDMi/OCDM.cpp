@@ -107,7 +107,6 @@ namespace Plugin {
 
             ASSERT(_connectionId != 0);
             const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
-            ASSERT(connection != nullptr);
 
             if (connection != nullptr) {
 
