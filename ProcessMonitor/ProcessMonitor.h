@@ -229,8 +229,8 @@ public:
         }
         void Activated(RPC::IRemoteConnection* connection) override
         {
-            RPC::IRemoteConnection::IProcess* proc =
-                    connection->QueryInterface<RPC::IRemoteConnection::IProcess>();
+            RPC::IMonitorableProcess* proc =
+                    connection->QueryInterface<RPC::IMonitorableProcess>();
             if (proc != nullptr) {
                 AddProcess(proc->Callsign(), connection->RemoteId());
                 proc->Release();
