@@ -196,6 +196,7 @@ namespace Plugin {
             , _worker()
             , _error(static_cast<uint32_t>(~0))
             , _loadedModule()
+            , _pairing(false)
         {
             Remotes::RemoteAdministrator::Instance().Announce(*this);
         }
@@ -223,10 +224,16 @@ namespace Plugin {
 
             _adminLock.Lock();
 
-            if (_info.Major.IsSet() == true) {
-                gpSched_ScheduleEvent(0, target_ActivatePairing);
-                activated = true;
+            if (!_pairing) {
+                if (_info.Major.IsSet() == true) {
+                    gpSched_ScheduleEvent(0, target_ActivatePairing);
+                    _pairing = true;
+                }
             }
+            else {
+                TRACE(Trace::Error, (_T("The device is already in pairing mode")));
+            }
+            activated = _pairing;
 
             _adminLock.Unlock();
 
@@ -350,9 +357,26 @@ namespace Plugin {
             _adminLock.Unlock();
         }
         inline void _SendEvent(Exchange::ProducerEvents event) {
+
+            // Set the _pairing variable to false, If pairing stopped
+            _SetPairingState(event);
+
             if (_callback != nullptr) {
                 _callback->ProducerEvent(Name(), event);
             }
+        }
+        inline void _SetPairingState(const Exchange::ProducerEvents& event) {
+            _adminLock.Lock();
+            switch (event) {
+                case Exchange::ProducerEvents::PairingFailed:
+                case Exchange::ProducerEvents::PairingSuccess:
+                case Exchange::ProducerEvents::PairingTimedout:
+                    _pairing = false;
+                    break;
+                default:
+                    break;
+            }
+            _adminLock.Unlock();
         }
         inline void _Initialized(const uint16_t major,
             const uint16_t minor,
@@ -367,6 +391,8 @@ namespace Plugin {
             _info.Change = change;
 
             _error = 0;
+            _pairing = false;
+
             _readySignal.Unlock();
         }
 
@@ -381,6 +407,7 @@ namespace Plugin {
         char _userString[20];
         static const string _resourceName;
         static GreenPeak* _singleton;
+        bool _pairing;
     };
 
     /* static */ const string GreenPeak::_resourceName("RF4CE");
