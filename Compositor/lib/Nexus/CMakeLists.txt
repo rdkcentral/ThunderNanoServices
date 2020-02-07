@@ -2,7 +2,6 @@ set(TARGET ${PLATFORM_COMPOSITOR})
 
 message("Setting up ${TARGET} for Nexus platfrom")
 
-add_subdirectory (NexusServer)
 
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
@@ -26,18 +25,16 @@ set_target_properties(${TARGET} PROPERTIES
 
 if(NEXUS_SERVER_EXTERNAL)
     find_package(NXCLIENT REQUIRED)
-    find_package(NXSERVER REQUIRED)
-
     target_link_libraries(${TARGET}
         PRIVATE
-            ${NAMESPACE}nexusserver::${NAMESPACE}nexusserver
             NXCLIENT::NXCLIENT
         )
-    target_include_directories(${TARGET}
+    target_compile_definitions(${TARGET}
         PRIVATE
-            ${LIBNXSERVER_INCLUDE_DIR}
-        )
+            NEXUS_SERVER_EXTERNAL)
 else()
+    add_subdirectory (NexusServer)
+
     find_package(NXCLIENT_LOCAL REQUIRED)
     target_compile_definitions(${TARGET}
         PRIVATE
