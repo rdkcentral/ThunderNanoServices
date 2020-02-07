@@ -301,7 +301,7 @@ private:
 
     mutable Core::CriticalSection _adminLock;
 
-    Core::WorkerPool::Job<DisplayInfoImplementation&> _activity;
+    Core::WorkerPool::JobType<DisplayInfoImplementation&> _activity;
 };
 
     SERVICE_REGISTRATION(DisplayInfoImplementation, 1, 0);
