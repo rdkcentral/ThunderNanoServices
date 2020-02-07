@@ -1,3 +1,11 @@
+/*
+ * Copyright 2002-2010 Guillaume Cottenceau.
+ *
+ * This software may be freely redistributed under the terms
+ * of the X11 license.
+ *
+ */
+
 #include "Wayland.h"
 #include <westeros-compositor.h>
 
