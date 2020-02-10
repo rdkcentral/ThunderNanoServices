@@ -89,10 +89,12 @@ namespace Plugin {
                 , RemoteId(_T("Samsung&UPC"))
                 , Module()
                 , NodeId()
+                , AutoPairing(false)
             {
                 Add(_T("remoteid"), &RemoteId);
                 Add(_T("module"), &Module);
                 Add(_T("nodeid"), &NodeId);
+                Add(_T("autopairing"), &AutoPairing);
             }
             ~Config()
             {
@@ -101,6 +103,7 @@ namespace Plugin {
             Core::JSON::String RemoteId;
             Core::JSON::String Module;
             Core::JSON::DecUInt8 NodeId;
+            Core::JSON::Boolean AutoPairing;
         };
         class Activity : public Core::Thread {
         private:
@@ -196,6 +199,7 @@ namespace Plugin {
             , _worker()
             , _error(static_cast<uint32_t>(~0))
             , _loadedModule()
+            , _pairing(false)
         {
             Remotes::RemoteAdministrator::Instance().Announce(*this);
         }
@@ -223,10 +227,16 @@ namespace Plugin {
 
             _adminLock.Lock();
 
-            if (_info.Major.IsSet() == true) {
-                gpSched_ScheduleEvent(0, target_ActivatePairing);
-                activated = true;
+            if (!_pairing) {
+                if (_info.Major.IsSet() == true) {
+                    gpSched_ScheduleEvent(0, target_ActivatePairing);
+                    _pairing = true;
+                }
             }
+            else {
+                TRACE(Trace::Error, (_T("The device is already in pairing mode")));
+            }
+            activated = _pairing;
 
             _adminLock.Unlock();
 
@@ -303,6 +313,7 @@ namespace Plugin {
             }
 
             ::strncpy(_userString, config.RemoteId.Value().c_str(), sizeof(_userString));
+            _autopairing = config.AutoPairing.Value();
             _worker.Run();
         }
 
@@ -350,8 +361,49 @@ namespace Plugin {
             _adminLock.Unlock();
         }
         inline void _SendEvent(Exchange::ProducerEvents event) {
+
+            // Set the _pairing variable to false, If pairing stopped
+            _SetPairingState(event);
+
+            _CheckAndStartAutoPairing(event);
+
             if (_callback != nullptr) {
                 _callback->ProducerEvent(Name(), event);
+            }
+        }
+        inline void _SetPairingState(const Exchange::ProducerEvents& event) {
+            _adminLock.Lock();
+            switch (event) {
+                case Exchange::ProducerEvents::PairingFailed:
+                case Exchange::ProducerEvents::PairingSuccess:
+                case Exchange::ProducerEvents::PairingTimedout:
+                    _pairing = false;
+                    break;
+                default:
+                    break;
+            }
+            _adminLock.Unlock();
+        }
+        inline void _CheckAndStartAutoPairing() {
+            if (!_autopairing)
+            {
+                TRACE(Trace::Information, (_T("AutoPairing feature disabled")));
+                return;
+            }
+
+            // Start Pairing mode, If we dont have any paired devices
+            uint32_t pairedRCUCount = 0;
+            if (0 == (pairedRCUCount = gpRf4ce_GetNrOfPairingEntries())) {
+                TRACE(Trace::Information, (_T("Started Auto-Pairing mode")));
+                Pair();
+            }
+
+            TRACE(Trace::Information, (_T("No of Paired RCU : %d"), pairedRCUCount));
+        }
+        inline void _CheckAndStartAutoPairing(const Exchange::ProducerEvents& event) {
+            if ((event == Exchange::ProducerEvents::PairingFailed) ||
+                (event == Exchange::ProducerEvents::PairingTimedout)) {
+                _CheckAndStartAutoPairing();
             }
         }
         inline void _Initialized(const uint16_t major,
@@ -367,6 +419,10 @@ namespace Plugin {
             _info.Change = change;
 
             _error = 0;
+            _pairing = false;
+
+            _CheckAndStartAutoPairing();
+
             _readySignal.Unlock();
         }
 
@@ -381,6 +437,8 @@ namespace Plugin {
         char _userString[20];
         static const string _resourceName;
         static GreenPeak* _singleton;
+        bool _pairing;
+        bool _autopairing;
     };
 
     /* static */ const string GreenPeak::_resourceName("RF4CE");
