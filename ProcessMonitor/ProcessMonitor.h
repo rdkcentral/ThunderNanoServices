@@ -43,7 +43,7 @@ public:
         Notification(const Notification&) = delete;
         Notification& operator=(const Notification&) = delete;
 
-        using Job = Core::ThreadPool::JobType<LocationService>;
+        using Job = Core::WorkerPool::JobType<Notification&>;
 
         class ProcessObject
         {
@@ -85,7 +85,7 @@ public:
         Notification(ProcessMonitor* parent)
             : _adminLock()
             , _processMap()
-            , _job(Job::Create(*this))
+            , _job(*this)
             , _service(nullptr)
             , _parent(*parent)
             ,_exittimeout(10000000)
@@ -122,7 +122,7 @@ public:
             _service->Release();
             _service = nullptr;
 
-            PluginHost::WorkerPool::Instance().Revoke(_job);
+            _job.Revoke();
 
             _processMap.clear();
         }
@@ -200,14 +200,14 @@ public:
             }
 
             if (scheduleTime != 0) {
-                PluginHost::WorkerPool::Instance().Revoke(_job);
-                PluginHost::WorkerPool::Instance().Schedule(scheduleTime, _job);
+                _job.Revoke();
+                _job.Schedule(scheduleTime);
             }
         }
         void Activated(RPC::IRemoteConnection* connection) override
         {
-            RPC::IRemoteConnection::IProcess* proc =
-                    connection->QueryInterface<RPC::IRemoteConnection::IProcess>();
+            RPC::IMonitorableProcess* proc =
+                    connection->QueryInterface<RPC::IMonitorableProcess>();
             if (proc != nullptr) {
                 AddProcess(proc->Callsign(), connection->RemoteId());
                 proc->Release();
@@ -225,7 +225,7 @@ public:
     private:
         Core::CriticalSection _adminLock;
         std::unordered_map<string, ProcessObject> _processMap;
-        Core::ProxyType<Core::IDispatch> _job;
+        Job  _job;
         PluginHost::IShell* _service;
         ProcessMonitor& _parent;
         uint32_t _exittimeout;
