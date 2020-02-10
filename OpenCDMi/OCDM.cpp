@@ -105,22 +105,21 @@ namespace Plugin {
         } else {
             _opencdmi->Initialize(_service);
 
-            if ((_connectionId != 0) && (_service->RemoteConnection(_connectionId) == nullptr)){
+            ASSERT(_connectionId != 0);
+            const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
+
+            if (connection != nullptr) {
+
+                _memory = WPEFramework::OCDM::MemoryObserver(connection);
+                ASSERT(_memory != nullptr);
+
+                connection->Release();
+            }
+            else {
                 message = _T("OCDM crashed at initialize!");
                 _opencdmi = nullptr;
                 _service->Unregister(&_notification);
                 _service = nullptr;
-            } else {
-                RPC::IRemoteConnection* connection = _service->RemoteConnection(_connectionId);
-
-                ASSERT(connection != nullptr);
-
-                if(connection != nullptr) {
-                    _memory = WPEFramework::OCDM::MemoryObserver(connection);
-                    connection->Release();
-                }
-                
-                ASSERT(_memory != nullptr);
             }
         }
 
