@@ -654,6 +654,8 @@ namespace Plugin
     {
         std::map<const string, Core::ProxyType<DHCPEngine>>::const_iterator entry(_dhcpInterfaces.find(interfaceName));
 
+        TRACE(Trace::Information, ("DHCP Request for interface %s accepted, %s offered IP!\n", interfaceName.c_str(), offer.Address().HostAddress().c_str()));
+
         if (entry != _dhcpInterfaces.end()) {
             std::map<const string, StaticInfo>::iterator info(_interfaces.find(interfaceName));
 
