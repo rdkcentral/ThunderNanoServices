@@ -204,17 +204,25 @@ private:
             }
         }
     }
-    inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height, uint8_t& major, uint8_t& minor, bool type) const
+    inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height, uint8_t& major, uint8_t& minor, HDRType type) const
     {
         NEXUS_Error rc = NEXUS_SUCCESS;
         NxClient_DisplayStatus status;
 
-        rc = NxClient_GetDisplayStatus(&status);
-        if (rc == NEXUS_SUCCESS) {
-            connected = status.hdmi.status.connected;
+        NEXUS_HdmiOutputHandle hdmiOutput;
+        hdmiOutput = NEXUS_HdmiOutput_Open(NEXUS_ALIAS_ID + 0, NULL);
+        if (hdmiOutput) {
+            NEXUS_HdmiOutputStatus status;
+            rc = NEXUS_HdmiOutput_GetStatus(hdmiOutput, &status);
+            if (rc == NEXUS_SUCCESS) {
+                connected = status.connected;
+            }
 
+            NxClient_DisplaySettings displaySettings;
+            NxClient_GetDisplaySettings(&displaySettings);
+#if 0 // to be findout solution for < 19.x
             // Read HDR status
-            switch (status.hdmi.dynamicRangeMode) {
+            switch (displaySettings.hdmiPreferences.dynamicRangeMode) {
             case NEXUS_VideoDynamicRangeMode_eHdr10: {
                 type = HDR_10;
                 break;
@@ -226,14 +234,20 @@ private:
             default:
                 break;
             }
+#endif
 
             // Check HDCP version
-            if (status.hdmi.hdcp.hdcp2_2Features == true) {
-                major = 2;
-                minor = 2;
-            } else if (status.hdmi.hdcp.hdcp1_1Features == true) {
-                major = 1;
-                minor = 1;
+            NEXUS_HdmiOutputHdcpStatus hdcpStatus;
+            rc = NEXUS_HdmiOutput_GetHdcpStatus(hdmiOutput, &hdcpStatus);
+
+            if (rc  == NEXUS_SUCCESS) {
+                if (hdcpStatus.selectedHdcpVersion == NEXUS_HdcpVersion_e2x) {
+                    major = 2;
+                    minor = 2;
+                } else {
+                    major = 1;
+                    minor = 1;
+                }
             }
         }
 
