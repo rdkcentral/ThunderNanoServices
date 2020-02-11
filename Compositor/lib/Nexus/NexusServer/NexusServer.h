@@ -99,7 +99,7 @@ namespace Broadcom {
         };
 
     public:
-        Platform(const string& callSign, IStateChange* stateChanges, IClient* clientChanges, const string& configuration);
+        Platform(IStateChange* stateChanges, IClient* clientChanges, const string& configuration, const NEXUS_VideoFormat& format);
         virtual ~Platform();
 
     public:
@@ -107,16 +107,6 @@ namespace Broadcom {
         {
             return _state;
         }
-        inline bool Join()
-        {
-            if ((_joined == false) && (NxClient_Join(&_joinSettings) == NEXUS_SUCCESS)) {
-                _joined = true;
-                NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
-            }
-            return (_joined);
-        }
-        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format);
-        Exchange::IComposition::ScreenResolution Resolution() const;
 
     private:
         void Add(nxclient_t client, const NxClient_JoinSettings* joinSettings);
@@ -133,7 +123,6 @@ namespace Broadcom {
         nxserver_settings _serverSettings;
         NEXUS_PlatformSettings _platformSettings;
         NEXUS_PlatformCapabilities _platformCapabilities;
-        NxClient_JoinSettings _joinSettings;
         server_state _state;
         IClient* _clientHandler;
         IStateChange* _stateHandler;
