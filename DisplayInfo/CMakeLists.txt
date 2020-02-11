@@ -31,6 +31,13 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
         PRIVATE
             NEXUS::NEXUS
             NXCLIENT::NXCLIENT)
+
+if (PLUGIN_DISPLAYINFO_BCM_19_X)
+    target_compile_definitions(${MODULE_NAME}
+        PRIVATE
+            DISPLAYINFO_BCM_19_X=ON)
+endif ()
+
 elseif (BCM_HOST_FOUND)
     target_sources(${MODULE_NAME}
         PRIVATE

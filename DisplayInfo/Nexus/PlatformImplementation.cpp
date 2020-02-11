@@ -207,7 +207,6 @@ private:
     inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height, uint8_t& major, uint8_t& minor, HDRType type) const
     {
         NEXUS_Error rc = NEXUS_SUCCESS;
-        NxClient_DisplayStatus status;
 
         NEXUS_HdmiOutputHandle hdmiOutput;
         hdmiOutput = NEXUS_HdmiOutput_Open(NEXUS_ALIAS_ID + 0, NULL);
@@ -220,7 +219,7 @@ private:
 
             NxClient_DisplaySettings displaySettings;
             NxClient_GetDisplaySettings(&displaySettings);
-#if 0 // to be findout solution for < 19.x
+#ifdef DISPLAYINFO_BCM_19_X
             // Read HDR status
             switch (displaySettings.hdmiPreferences.dynamicRangeMode) {
             case NEXUS_VideoDynamicRangeMode_eHdr10: {
@@ -231,10 +230,17 @@ private:
                 type = HDR_10PLUS;
                 break;
             }
-            default:
+#else
+            switch  (displaySettings.hdmiPreferences.drmInfoFrame.eotf) {
+            case NEXUS_VideoEotf_eHdr10: {
+                type = HDR_10;
                 break;
             }
 #endif
+            default:
+                break;
+            }
+
 
             // Check HDCP version
             NEXUS_HdmiOutputHdcpStatus hdcpStatus;
