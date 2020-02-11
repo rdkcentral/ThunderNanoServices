@@ -1,10 +1,3 @@
-/*
- * Copyright 2002-2010 Guillaume Cottenceau.
- *
- * This software may be freely redistributed under the terms
- * of the X11 license.
- *
- */
 
 #include "Wayland.h"
 #include <westeros-compositor.h>
@@ -327,6 +320,11 @@ namespace Westeros {
             if(_cursor) free(_cursor);
 
             unsigned char width = 0, height = 0;
+/*
+ * Copyright 2002-2010 Guillaume Cottenceau.
+ * Licensed under the X11 license.
+ */
+
             _cursor = ReadPNGFile(cursorFile.c_str(), width, height);
             if(!_cursor)
             {
