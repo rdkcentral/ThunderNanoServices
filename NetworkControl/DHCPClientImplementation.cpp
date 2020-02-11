@@ -29,7 +29,7 @@ namespace Plugin {
         , _discoverCallback(discoverCallback)
         , _claimCallback(claimCallback)
         , _unleasedOffers()
-        , _leasedOffers()
+        , _leasedOffer()
     {
         Core::AdapterIterator adapters(_interfaceName);
 
