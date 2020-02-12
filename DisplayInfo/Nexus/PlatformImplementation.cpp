@@ -212,7 +212,7 @@ private:
         rc = NxClient_GetDisplayStatus(&status);
         if (rc == NEXUS_SUCCESS) {
             connected = status.hdmi.status.connected;
-/*
+
             // Read HDR status
             switch (status.hdmi.dynamicRangeMode) {
             case NEXUS_VideoDynamicRangeMode_eHdr10: {
@@ -226,9 +226,6 @@ private:
             default:
                 break;
             }
-*/
-
-            type = true; //??????? (code above needs to be checked; parameter is a bool while usage is enumeration, dynamicRangeMode is only available in 19.x and upwards it seems and using NxClient_DisplayStatus.hdmi is deprecated (see refsw comments))
 
             // Check HDCP version
             if (status.hdmi.hdcp.hdcp2_2Features == true) {
