@@ -78,6 +78,10 @@ namespace Player {
                 ~DecoderImplementation() override
                 {
                     _parent.Detach();
+                    if (_callback != nullptr) {
+                        _callback->Release();
+                        _callback = nullptr;
+                    }
                 }
 
             public:
@@ -88,9 +92,6 @@ namespace Player {
                 uint32_t Release() const override
                 {
                     if (Core::InterlockedDecrement(_referenceCount) == 0) {
-                        if (_callback != nullptr) {
-                            _callback->Release();
-                        }
                         delete this;
                         return (Core::ERROR_DESTRUCTION_SUCCEEDED);
                     }
