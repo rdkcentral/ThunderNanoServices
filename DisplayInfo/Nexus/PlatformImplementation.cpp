@@ -219,7 +219,7 @@ private:
 
             NxClient_DisplaySettings displaySettings;
             NxClient_GetDisplaySettings(&displaySettings);
-#ifdef DISPLAYINFO_BCM_19_X
+#if defined(DISPLAYINFO_BCM_VERSION_MAJOR) && (DISPLAYINFO_BCM_VERSION_MAJOR > 18)
             // Read HDR status
             switch (displaySettings.hdmiPreferences.dynamicRangeMode) {
             case NEXUS_VideoDynamicRangeMode_eHdr10: {
@@ -247,13 +247,20 @@ private:
             rc = NEXUS_HdmiOutput_GetHdcpStatus(hdmiOutput, &hdcpStatus);
 
             if (rc  == NEXUS_SUCCESS) {
+#if defined(DISPLAYINFO_BCM_VERSION_MAJOR) && (DISPLAYINFO_BCM_VERSION_MAJOR >= 18)
                 if (hdcpStatus.selectedHdcpVersion == NEXUS_HdcpVersion_e2x) {
+#else
+                if (hdcpStatus.hdcp2_2Features == true) {
+#endif
                     major = 2;
                     minor = 2;
                 } else {
                     major = 1;
                     minor = 1;
                 }
+            } else {
+                major = 0;
+                minor = 0;
             }
         }
 
