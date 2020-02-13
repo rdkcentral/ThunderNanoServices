@@ -339,7 +339,7 @@ namespace Plugin {
             void GetIP(const Core::NodeId& preferred)
             {
 
-                auto offerIterator = _client.Offers(false);
+                auto offerIterator = _client.UnleasedOffers();
                 if (offerIterator.Next() == true) {
                     Request(offerIterator.Current());
                 } else {
@@ -378,13 +378,13 @@ namespace Plugin {
             {
                 _client.Completed();
             }
-            inline DHCPClientImplementation::Iterator Offers(const bool leased)
+            inline DHCPClientImplementation::Iterator UnleasedOffers()
             {
-                return (_client.Offers(leased));
+                return (_client.UnleasedOffers());
             }
-            inline void RemoveOffer(const DHCPClientImplementation::Offer& offer, const bool leased) 
+            inline void RemoveUnleasedOffer(const DHCPClientImplementation::Offer& offer) 
             {
-                _client.RemoveOffer(offer, leased);
+                _client.RemoveUnleasedOffer(offer);
             }
 
             void SetupWatchdog() 
@@ -440,7 +440,7 @@ namespace Plugin {
                         if (offer.IsValid()) {
                             // Remove unresponsive offer from potential candidates
                             DHCPClientImplementation::Offer copy = offer.Current(); 
-                            _client.RemoveOffer(offer.Current(), false);
+                            _client.RemoveUnleasedOffer(offer.Current());
                             
                             // Inform controller that request failed
                             _parent.RequestFailed(_client.Interface(), copy);
@@ -494,7 +494,7 @@ namespace Plugin {
 
     private:
         uint32_t Reload(const string& interfaceName, const bool dynamic);
-        uint32_t SetIP(Core::AdapterIterator& adapter, const Core::IPNode& ipAddress, const Core::NodeId& gateway, const Core::NodeId& broadcast);
+        uint32_t SetIP(Core::AdapterIterator& adapter, const Core::IPNode& ipAddress, const Core::NodeId& gateway, const Core::NodeId& broadcast, bool clearOld = false);
         bool NewOffer(const string& interfaceName, const DHCPClientImplementation::Offer& offer);
         void RequestAccepted(const string& interfaceName, const DHCPClientImplementation::Offer& offer);
         void RequestFailed(const string& interfaceName, const DHCPClientImplementation::Offer& offer);
@@ -510,6 +510,8 @@ namespace Plugin {
         {
             return (_retries);
         }
+        void ClearAssignedIPV4IPs(Core::AdapterIterator& adapter);
+        void ClearAssignedIPV6IPs(Core::AdapterIterator& adapter);
 
         void RegisterAll();
         void UnregisterAll();
