@@ -130,20 +130,22 @@ namespace Plugin {
         auto container = administrator.Find(index); 
 
         if (container != nullptr) {
-            auto networks = container->NetworkInterfaces();
+            ProcessContainers::NetworkInterfaceIterator* iterator = container->NetworkInterfaces();
 
-            for (auto network : networks) {
+            while(iterator->Next() == true) {
                 NetworksData networkData;
-                networkData.Interface = network.name;
 
-                for (auto ip : network.IPs) {
+                networkData.Interface = iterator->Name();
+                
+                for (int ip = 0; ip < iterator->NumIPs(); ip++) {
                     Core::JSON::String ipJSON;
-                    ipJSON = ip;
-                    networkData.Ips.Add(ipJSON);
-                }
+                    ipJSON = iterator->IP(ip);
 
-                response.Add(networkData);
-            } 
+                    networkData.Ips.Add(ipJSON);
+                }                
+            }
+
+            iterator->Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
