@@ -239,6 +239,10 @@ namespace Westeros {
         {
         }
 
+/*
+ * Copyright 2002-2010 Guillaume Cottenceau.
+ * Licensed under the X11 license.
+ */
         static unsigned char* ReadPNGFile(const char *filename, unsigned char &in_width, unsigned char &in_height)
         {
             FILE *fp = fopen(filename, "rb");
@@ -320,11 +324,6 @@ namespace Westeros {
             if(_cursor) free(_cursor);
 
             unsigned char width = 0, height = 0;
-/*
- * Copyright 2002-2010 Guillaume Cottenceau.
- * Licensed under the X11 license.
- */
-
             _cursor = ReadPNGFile(cursorFile.c_str(), width, height);
             if(!_cursor)
             {
