@@ -29,12 +29,12 @@ namespace Plugin {
             }
 
         public:
-            Core::JSON::DecUInt32 Sleep;
+            Core::JSON::DecUInt16 Sleep;
             Core::JSON::Boolean Crash;
             Core::JSON::DecUInt32 Destruct;
         };
 
-        class Job {
+        class Job : public Core::IDispatch {
         public:
             enum runtype {
                 SHOW,
@@ -69,7 +69,7 @@ namespace Plugin {
             }
 
         public:
-            void Dispatch()
+            void Dispatch() override
             {
 
                 switch (_type) {
@@ -107,7 +107,7 @@ namespace Plugin {
             , _setURL()
             , _fps(0)
             , _hidden(false)
-            , _executor(0, _T("TestPool"))
+            , _executor(1, 0, 4)
         {
         }
         virtual ~OutOfProcessImplementation()
@@ -233,11 +233,11 @@ namespace Plugin {
 
             switch (command) {
             case PluginHost::IStateControl::SUSPEND:
-                _executor.Submit(Job(*this, Job::SUSPENDED), 20000);
+                _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::SUSPENDED)), 20000);
                 result = Core::ERROR_NONE;
                 break;
             case PluginHost::IStateControl::RESUME:
-                _executor.Submit(Job(*this, Job::RESUMED), 20000);
+                _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::RESUMED)), 20000);
                 result = Core::ERROR_NONE;
                 break;
             }
@@ -256,12 +256,12 @@ namespace Plugin {
             if (hidden == true) {
 
                 printf("Hide called. About to sleep for 2S.\n");
-                _executor.Submit(Job(*this, Job::HIDE), 20000);
+                _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::HIDE)), 20000);
                 SleepMs(2000);
                 printf("Hide completed.\n");
             } else {
                 printf("Show called. About to sleep for 4S.\n");
-                _executor.Submit(Job(*this, Job::SHOW), 20000);
+                _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::SHOW)), 20000);
                 SleepMs(4000);
                 printf("Show completed.\n");
             }
@@ -357,7 +357,7 @@ namespace Plugin {
         Core::Time _endTime;
         std::list<PluginHost::IStateControl::INotification*> _notificationClients;
         std::list<Exchange::IBrowser::INotification*> _browserClients;
-        Core::ThreadPoolType<Job, 1> _executor;
+        Core::ThreadPool _executor;
     };
 
     SERVICE_REGISTRATION(OutOfProcessImplementation, 1, 0);

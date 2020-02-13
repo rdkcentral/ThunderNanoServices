@@ -450,11 +450,11 @@ namespace Plugin {
             uint16_t decodeLength = KeyId::Length();
 
             while(index.Next()) {
-                uint8_t keyID[KeyId::Length()];
+                uint8_t keyID[KeyId::KEY_LENGTH];
                 std::string keyID64 = index.Current().Value();
-                TRACE_L1("clearkey: keyID %s, length %d", keyID64.c_str(), keyID64.length());
+                TRACE_L1("clearkey: keyID %s, length %d", keyID64.c_str(), static_cast<int>(keyID64.length()));
                 Core::FromString(keyID64, keyID, decodeLength);
-                AddKeyId(KeyId(system, keyID, KeyId::Length()));
+                AddKeyId(KeyId(system, keyID, static_cast<uint8_t>(sizeof(keyID))));
             }
         }
 

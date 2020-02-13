@@ -429,7 +429,7 @@ int main(int argc, char** argv)
         // They are time multiplexed so 1 engine to rule them all. The next line instantiates the
         // framework to connect to a COMRPC server running at the <connector> address. once the
         // connection is established, interfaces can be requested.
-        Core::ProxyType<RPC::InvokeServerType<4, 1>> engine(Core::ProxyType<RPC::InvokeServerType<4, 1>>::Create(Core::Thread::DefaultStackSize()));
+        Core::ProxyType<RPC::InvokeServerType<1, 0, 4>> engine(Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create());
         Core::ProxyType<RPC::CommunicatorClient> client (
             Core::ProxyType<RPC::CommunicatorClient>::Create(
                 comChannel, 

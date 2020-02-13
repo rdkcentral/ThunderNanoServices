@@ -50,7 +50,7 @@ private:
 
 public:
     PluginHost()
-        : _engine(Core::ProxyType<RPC::InvokeServerType<4, 2>>::Create(Core::Thread::DefaultStackSize()))
+        : _engine(Core::ProxyType<RPC::InvokeServerType<2, 0, 4>>::Create())
         , _comClient(Core::ProxyType<RPC::CommunicatorClient>::Create(GetConnectionNode(), Core::ProxyType<Core::IIPCServer>(_engine)))
     {
         _engine->Announcements(_comClient->Announcement());
@@ -95,7 +95,7 @@ public:
     }
 
 private:
-    Core::ProxyType<RPC::InvokeServerType<4, 2> > _engine;
+    Core::ProxyType<RPC::InvokeServerType<2, 0, 4> > _engine;
     Core::ProxyType<RPC::CommunicatorClient> _comClient;
 
     // White list for CORS.

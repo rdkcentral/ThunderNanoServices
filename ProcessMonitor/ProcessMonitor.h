@@ -43,30 +43,7 @@ public:
         Notification(const Notification&) = delete;
         Notification& operator=(const Notification&) = delete;
 
-        class Job: public Core::IDispatchType<void>
-        {
-        public:
-            Job() = delete;
-            Job(const Job& copy) = delete;
-            Job& operator=(const Job& RHS) = delete;
-
-        public:
-            Job(Notification* parent)
-                : _parent(*parent)
-            {
-                ASSERT(parent != nullptr);
-            }
-            ~Job() override
-            {
-            }
-            void Dispatch() override
-            {
-                _parent.EvalueProcess();
-            }
-
-        private:
-            Notification& _parent;
-        };
+        using Job = Core::WorkerPool::JobType<Notification&>;
 
         class ProcessObject
         {
@@ -108,7 +85,7 @@ public:
         Notification(ProcessMonitor* parent)
             : _adminLock()
             , _processMap()
-            , _job(Core::ProxyType<Job>::Create(this))
+            , _job(*this)
             , _service(nullptr)
             , _parent(*parent)
             ,_exittimeout(10000000)
@@ -145,7 +122,7 @@ public:
             _service->Release();
             _service = nullptr;
 
-            PluginHost::WorkerPool::Instance().Revoke(_job);
+            _job.Revoke();
 
             _processMap.clear();
         }
@@ -180,7 +157,7 @@ public:
 
             _adminLock.Unlock();
         }
-        void EvalueProcess()
+        void Dispatch()
         {
             uint64_t currTime(Core::Time::Now().Ticks());
 
@@ -223,8 +200,8 @@ public:
             }
 
             if (scheduleTime != 0) {
-                PluginHost::WorkerPool::Instance().Revoke(_job);
-                PluginHost::WorkerPool::Instance().Schedule(scheduleTime, _job);
+                _job.Revoke();
+                _job.Schedule(scheduleTime);
             }
         }
         void Activated(RPC::IRemoteConnection* connection) override
@@ -248,7 +225,7 @@ public:
     private:
         Core::CriticalSection _adminLock;
         std::unordered_map<string, ProcessObject> _processMap;
-        Core::ProxyType<Core::IDispatchType<void>> _job;
+        Job  _job;
         PluginHost::IShell* _service;
         ProcessMonitor& _parent;
         uint32_t _exittimeout;

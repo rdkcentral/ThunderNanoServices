@@ -212,6 +212,9 @@ namespace Plugin
                         : _parent(*parent)
                     {
                     }
+                    ~Sink() override
+                    {
+                    }
 
                 public:
                     void Updated() override
