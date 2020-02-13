@@ -16,20 +16,6 @@ BDBG_MODULE(NexusServer);
 namespace WPEFramework {
 
 namespace Broadcom {
-    static const std::map<const Exchange::IComposition::ScreenResolution, const NEXUS_VideoFormat> formatLookup = {
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown, NEXUS_VideoFormat_eUnknown },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_480i, NEXUS_VideoFormat_eNtsc },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_480p, NEXUS_VideoFormat_e480p },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_720p, NEXUS_VideoFormat_e720p },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_720p50Hz, NEXUS_VideoFormat_e720p50hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p24Hz, NEXUS_VideoFormat_e1080p24hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz, NEXUS_VideoFormat_e1080i50hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p50Hz, NEXUS_VideoFormat_e1080p50hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p60Hz, NEXUS_VideoFormat_e1080p60hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p50Hz, NEXUS_VideoFormat_e3840x2160p50hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz, NEXUS_VideoFormat_e3840x2160p60hz }
-    };
-
     /* virtual */ string Platform::Client::Name() const
     {
         return (::std::string(Id()));
@@ -152,7 +138,6 @@ namespace Broadcom {
             , PAKPath()
             , DRMPath()
             , SVPType(NONE)
-            , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
             , Memory()
             , HDCPLevel(HDCP_NONE)
             , HDCPVersion(AUTO)
@@ -167,7 +152,6 @@ namespace Broadcom {
             Add(_T("pakpath"), &PAKPath);
             Add(_T("drmpath"), &DRMPath);
             Add(_T("svp"), &SVPType);
-            Add(_T("resolution"), &Resolution);
             Add(_T("memory"), &Memory);
             Add(_T("framebufferwidth"), &FrameBufferWidth);
             Add(_T("framebufferheight"), &FrameBufferHeight);
@@ -189,7 +173,6 @@ namespace Broadcom {
         Core::JSON::String PAKPath;
         Core::JSON::String DRMPath;
         Core::JSON::EnumType<svptype> SVPType;
-        Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
         MemoryInfo Memory;
         Core::JSON::DecUInt16 FrameBufferWidth;
         Core::JSON::DecUInt16 FrameBufferHeight;
