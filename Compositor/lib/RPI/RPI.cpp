@@ -188,84 +188,7 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        Exchange::IComposition::IClient* Client(const uint8_t id) override
-        {
-            Exchange::IComposition::IClient* result = nullptr;
-            _adminLock.Lock();
-            auto index(_clients.begin());
-            std::advance(index, id);
-            if (index != _clients.end()) {
-                result = (index->second.clientInterface);
-                ASSERT(result != nullptr);
-                result->AddRef();
-            }
-            _adminLock.Unlock();
-            return (result);
-        }
-
-        Exchange::IComposition::IClient* Client(const string& name) override
-        {
-            return FindClient(name);
-        }
-
-    private:
-        template <typename ClientOperation>
-        uint32_t CallOnClientByCallsign(const string& callsign, ClientOperation&& operation)
-        {
-            uint32_t error = Core::ERROR_NONE;
-            Exchange::IComposition::IClient* client = FindClient(callsign);
-            if (client != nullptr) {
-                std::forward<ClientOperation>(operation)(*client);
-                client->Release();
-            } else {
-                error = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
-            }
-            return error;
-        }
-
     public:
-        uint32_t Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle) override
-        {
-            uint32_t result = CallOnClientByCallsign(callsign, [&](Exchange::IComposition::IClient& client) { client.ChangedGeometry(rectangle); });
-            if (result == Core::ERROR_NONE) {
-                result = SetClientRectangle(callsign, rectangle);
-            }
-            return result;
-        }
-
-        Exchange::IComposition::Rectangle Geometry(const string& callsign) const override
-        {
-            return FindClientRectangle(callsign);
-        }
-
-        uint32_t ToTop(const string& callsign) override
-        {
-            // todo correct implementation
-            return CallOnClientByCallsign(callsign, [&](Exchange::IComposition::IClient& client) { client.ChangedZOrder(_clients.size()); });
-        }
-
-        uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override
-        {
-            // todo correct implementation
-            return CallOnClientByCallsign(callsignRelativeTo, [&](Exchange::IComposition::IClient& client) { client.ChangedZOrder(~0); });
-        }
-
-        RPC::IStringIterator* ClientsInZorder() const override
-        {
-            // todo correct implementation
-            using CliensCallsignArray = std::vector<string>;
-            _adminLock.Lock();
-
-            CliensCallsignArray clients;
-            clients.reserve(_clients.size());
-
-            for (auto const& client : _clients) {
-                clients.push_back(client.first); // todo for now RPC call inside lock, later on we need some map anyway
-            }
-            _adminLock.Unlock();
-            return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(clients));
-        }
-
         void Resolution(const Exchange::IComposition::ScreenResolution format) override
         {
             TRACE(Trace::Information, (_T("Could not set screenresolution to %s. Not supported for Rapberry Pi compositor"), Core::EnumerateType<Exchange::IComposition::ScreenResolution>(format).Data()));
@@ -319,8 +242,6 @@ namespace Plugin {
                     }
 
                     _adminLock.Unlock();
-
-                    RecalculateZOrder(client); //note: do outside lock
                 }
             }
         }
@@ -350,12 +271,6 @@ namespace Plugin {
             TRACE(Trace::Information, (_T("Client detached completed")));
         }
 
-        // on new client
-        void RecalculateZOrder(Exchange::IComposition::IClient* client)
-        {
-            ASSERT(client != nullptr);
-            client->ChangedZOrder(_clients.size());
-        }
 
         void PlatformReady()
         {

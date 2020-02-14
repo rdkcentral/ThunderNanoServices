@@ -61,7 +61,7 @@ namespace Plugin {
         const string& client = params.Client.Value();
         const string& relative = params.Relative.Value();
 
-        return PutBelow(relative, client);
+        return PutBefore(relative, client);
     }
 
     // Method: kill - Kills a client
@@ -181,7 +181,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     uint32_t Compositor::get_clients(Core::JSON::ArrayType<Core::JSON::String>& response) const
     {
-        Clients(response);
+        ZOrder(response);
 
         return Core::ERROR_NONE;
     }

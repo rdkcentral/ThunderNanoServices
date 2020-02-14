@@ -167,20 +167,19 @@ namespace Plugin {
         void Attached(const string& name, Exchange::IComposition::IClient* client);
         void Detached(const string& name);
 
-        template <typename ClientOperation>
-        uint32_t CallOnClientByCallsign(const string& callsign, ClientOperation&& operation) const;
-
-        void Clients(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const;
-        uint32_t Kill(const string& callsign) const;
-        uint32_t Opacity(const string& callsign, const uint32_t value) const;
+        void ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const;
         void Resolution(const Exchange::IComposition::ScreenResolution);
         Exchange::IComposition::ScreenResolution Resolution() const;
-        uint32_t Visible(const string& callsign, const bool visible) const;
+
+        uint32_t Kill(const string& callsign);
+        uint32_t Opacity(const string& callsign, const uint32_t value);
+        uint32_t Visible(const string& callsign, const bool visible);
         uint32_t Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle);
         Exchange::IComposition::Rectangle Geometry(const string& callsign) const;
         uint32_t ToTop(const string& callsign);
-        uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder);
-        void ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const;
+        uint32_t PutBefore(const string& callsignRelativeTo, const string& callsignToReorder);
+
+        Exchange::IComposition::IClient* InterfaceByCallsign(const string& callsign) const;
 
     private:
         /* JSON-RPC */
@@ -206,6 +205,7 @@ namespace Plugin {
         PluginHost::IShell* _service;
         uint32_t _connectionId;
         std::map<string, Exchange::IComposition::IClient*> _clients;
+        std::list<string> _zOrder;
     };
 }
 }

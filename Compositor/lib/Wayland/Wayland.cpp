@@ -93,6 +93,12 @@ namespace Plugin {
             {
                 return _surface.IsValid();
             }
+            void SetInput()
+            {
+                if (_server != nullptr) {
+                    _server->SetInput(_surface.Name().c_str());
+                }
+            }
             virtual string Name() const override
             {
                 return _surface.Name();
@@ -103,34 +109,39 @@ namespace Plugin {
             }
             virtual void Opacity(const uint32_t value) override
             {
-                _surface.Opacity(value);
-            }
-            virtual void Geometry(const uint32_t X, const uint32_t Y, const uint32_t width, const uint32_t height)
-            {
-                _surface.Resize(X, Y, width, height);
-            }
-            virtual void Visible(const bool visible)
-            {
-                _surface.Visibility(visible);
-            }
-            virtual void SetTop()
-            {
-                _surface.SetTop();
-            }
-            virtual void SetInput()
-            {
-                if (_server != nullptr) {
-                    _server->SetInput(_surface.Name().c_str());
+                if ((value == Exchange::IComposition::minOpacity) || (value == Exchange::IComposition::maxOpacity)) {
+                    _surface.Visibility(value == Exchange::IComposition::maxOpacity);
+                }
+                else
+                {  
+                    _surface.Opacity(value);
                 }
             }
+            virtual uint32_t Geometry(const Rectangle& rectangle) override 
+            {
+                _surface.Resize(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
 
+                return (Core::ERROR_NONE);
+            }
+            virtual Rectangle Geometry() const override 
+            {
+                Rectangle rectangle { 0, 0, 0, 0 };
+                return (rectangle);
+            }
+            virtual uint32_t ZOrder(const uint16_t index) override
+            {
+                if (index == 0) {
+                    _surface.SetTop();
+                }
+                return (Core::ERROR_NONE);
+            }
             BEGIN_INTERFACE_MAP(Entry)
             INTERFACE_ENTRY(Exchange::IComposition::IClient)
             END_INTERFACE_MAP
 
         private:
-            virtual void ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) override {}
-            virtual void ChangedZOrder(const uint8_t zorder) override {}
+            virtual void ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) {}
+            virtual void ChangedZOrder(const uint8_t zorder) {}
 
         private:
             Wayland::Display::Surface _surface;
@@ -335,80 +346,6 @@ namespace Plugin {
                 notification->Release();
             }
             g_implementationLock.Unlock();
-        }
-        /* virtual */ Exchange::IComposition::IClient* Client(const string& name)
-        {
-            Exchange::IComposition::IClient* result = nullptr;
-
-            g_implementationLock.Lock();
-
-            std::list<Entry*>::iterator index(_clients.begin());
-
-            while ((index != _clients.end()) && ((*index)->Name() != name)) {
-                index++;
-            }
-
-            if ((index != _clients.end()) && ((*index)->IsActive() == true)) {
-                result = (*index);
-                result->AddRef();
-            }
-            g_implementationLock.Unlock();
-
-            return (result);
-        }
-        /* virtual */ Exchange::IComposition::IClient* Client(const uint8_t id)
-        {
-            uint8_t modifiableId = id;
-            Exchange::IComposition::IClient* result = nullptr;
-
-            g_implementationLock.Lock();
-            std::list<Entry*>::iterator index(_clients.begin());
-            while ((index != _clients.end()) && (modifiableId != 0)) {
-                if ((*index)->IsActive() == true) {
-
-                    modifiableId--;
-                }
-                index++;
-            }
-            if (index != _clients.end()) {
-                result = (*index);
-                result->AddRef();
-            }
-            g_implementationLock.Unlock();
-
-            return (result);
-        }
-
-        /* virtual */ uint32_t Geometry(const string& callsign, const Rectangle& rectangle) override
-        {
-            return (Core::ERROR_GENERAL);
-        }
-
-        /* virtual */ Exchange::IComposition::Rectangle Geometry(const string& callsign) const override
-        {
-            Exchange::IComposition::Rectangle rectangle;
-
-            rectangle.x = 0;
-            rectangle.y = 0;
-            rectangle.width = 0;
-            rectangle.height = 0;
-
-            return (rectangle);
-        }
-
-        /* virtual */ uint32_t ToTop(const string& callsign) override
-        {
-            return (Core::ERROR_GENERAL);
-        }
-
-        /* virtual */ uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override
-        {
-            return (Core::ERROR_GENERAL);
-        }
-
-        /* virtual */ RPC::IStringIterator* ClientsInZorder() const override
-        {
-            return (nullptr);
         }
 
         /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override
