@@ -41,15 +41,29 @@ namespace Broadcom {
         TRACE(Trace::Information, (_T("Alpha client %s to %d."), Name().c_str(), value));
         nxserverlib_set_server_alpha(_client, value);
     }
-    /* virtual */ void Platform::Client::ChangedGeometry(const Exchange::IComposition::Rectangle& /* rectangle */)
+    uint32_t Platform::Client::Geometry(const Exchange::IComposition::Rectangle& rectangle) /* override */
     {
+        ASSERT(_client != nullptr);
+
+        return (Core::ERROR_UNAVAILABLE);
     }
-    /* virtual */ void Platform::Client::ChangedZOrder(const uint8_t zorder)
+    Exchange::IComposition::Rectangle Platform::Client::Geometry() const /* override */
     {
+        Exchange::IComposition::Rectangle rectangle = {0,0,0,0};
+        
+        ASSERT(_client != nullptr);
+
+        return (rectangle);
+    }
+    uint32_t Platform::Client::ZOrder(const uint16_t index) /* override */
+    {
+        uint32_t result = Core::ERROR_UNAVAILABLE;
 
         ASSERT(_client != nullptr);
 
-        if (zorder == 0) {
+        if (index == 0) {
+            result = Core::ERROR_NONE;
+
             /* the definition of "focus" is variable. this is one impl. */
             NxClient_ConnectList list;
             struct nxclient_status status;
@@ -58,7 +72,13 @@ namespace Broadcom {
             NxClient_P_Config_GetConnectList(_client, status.handle, &list);
 
             /* only refresh first connect */
+            if (list.connectId[0]) {
+                NxClient_P_RefreshConnect(_client, list.connectId[0]);
+            }
+            nxserver_p_focus_input_client(_client);
+            nxserver_p_focus_surface_client(_client);
         }
+        return (result);
     }
 
     class Config : public Core::JSON::Container {

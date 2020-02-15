@@ -135,13 +135,10 @@ namespace Plugin {
                 }
                 return (Core::ERROR_NONE);
             }
-            BEGIN_INTERFACE_MAP(Entry)
-            INTERFACE_ENTRY(Exchange::IComposition::IClient)
-            END_INTERFACE_MAP
 
-        private:
-            virtual void ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) {}
-            virtual void ChangedZOrder(const uint8_t zorder) {}
+            BEGIN_INTERFACE_MAP(Entry)
+                INTERFACE_ENTRY(Exchange::IComposition::IClient)
+            END_INTERFACE_MAP
 
         private:
             Wayland::Display::Surface _surface;

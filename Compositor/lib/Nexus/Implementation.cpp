@@ -181,7 +181,7 @@ namespace Plugin {
 
     public:
         BEGIN_INTERFACE_MAP(CompositorImplementation)
-        INTERFACE_ENTRY(Exchange::IComposition)
+            INTERFACE_ENTRY(Exchange::IComposition)
         END_INTERFACE_MAP
 
     public:
@@ -272,85 +272,6 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        /* virtual */ Exchange::IComposition::IClient* Client(const uint8_t id)
-        {
-            Exchange::IComposition::IClient* result = nullptr;
-
-            uint8_t count = id;
-
-            _adminLock.Lock();
-
-            std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
-
-            while ((count != 0) && (index != _clients.end())) {
-                count--;
-                index++;
-            }
-
-            if (index != _clients.end()) {
-                result = (*index);
-                result->AddRef();
-            }
-
-            _adminLock.Unlock();
-
-            return (result);
-        }
-
-        /* virtual */ Exchange::IComposition::IClient* Client(const string& name)
-        {
-            Exchange::IComposition::IClient* result = nullptr;
-
-            _adminLock.Lock();
-
-            std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
-
-            while ((index != _clients.end()) && ((*index)->Name() != name)) {
-                index++;
-            }
-
-            if (index != _clients.end()) {
-                result = (*index);
-                result->AddRef();
-            }
-
-            _adminLock.Unlock();
-
-            return (result);
-        }
-
-        /* virtual */ uint32_t Geometry(const string& callsign, const Rectangle& rectangle) override
-        {
-            return (Core::ERROR_GENERAL);
-        }
-
-        /* virtual */ Exchange::IComposition::Rectangle Geometry(const string& callsign) const override
-        {
-            Exchange::IComposition::Rectangle rectangle;
-
-            rectangle.x = 0;
-            rectangle.y = 0;
-            rectangle.width = 0;
-            rectangle.height = 0;
-
-            return (rectangle);
-        }
-
-        /* virtual */ uint32_t ToTop(const string& callsign) override
-        {
-            return (Core::ERROR_GENERAL);
-        }
-
-        /* virtual */ uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override
-        {
-            return (Core::ERROR_GENERAL);
-        }
-
-        /* virtual */ RPC::IStringIterator* ClientsInZorder() const override
-        {
-            return (nullptr);
-        }
-
         /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override
         {
             if (_joined == true) {
@@ -392,6 +313,7 @@ namespace Plugin {
             }
             return (result);
         }
+
         inline void StateChange()
         {
             if (_delay != nullptr) {
