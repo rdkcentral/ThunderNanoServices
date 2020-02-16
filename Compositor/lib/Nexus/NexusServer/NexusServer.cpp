@@ -44,16 +44,15 @@ namespace Broadcom {
     uint32_t Platform::Client::Geometry(const Exchange::IComposition::Rectangle& rectangle) /* override */
     {
         ASSERT(_client != nullptr);
+        _rectangle = rectangle;
 
         return (Core::ERROR_UNAVAILABLE);
     }
     Exchange::IComposition::Rectangle Platform::Client::Geometry() const /* override */
     {
-        Exchange::IComposition::Rectangle rectangle = {0,0,0,0};
-        
         ASSERT(_client != nullptr);
 
-        return (rectangle);
+        return (_rectangle);
     }
     uint32_t Platform::Client::ZOrder(const uint16_t index) /* override */
     {

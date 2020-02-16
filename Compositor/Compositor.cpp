@@ -8,7 +8,6 @@ namespace Plugin {
     static Core::ProxyPoolType<Web::Response> responseFactory(2);
     static Core::ProxyPoolType<Web::JSONBodyType<Compositor::Data>> jsonResponseFactory(2);
 
- 
     Compositor::Compositor()
         : _adminLock()
         , _skipURL()
@@ -413,7 +412,7 @@ namespace Plugin {
         Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
 
         if (client != nullptr) {
-            client->Geometry(result);
+            result = client->Geometry();
             client->Release();
         }
 
@@ -450,20 +449,24 @@ namespace Plugin {
 
     uint32_t Compositor::PutBefore(const string& callsignRelativeTo, const string& callsignToReorder)
     {
+        enum progress : uint8_t {
+            NONE = 0x00,
+            FROM_POSITION = 0x01,
+            TO_POSITION   = 0x02
+        } complete = NONE;
+        bool swapNeeded = true; 
+        uint16_t selected = 0;
         uint32_t result = Core::ERROR_UNAVAILABLE;
 
         _adminLock.Lock();
        
-        bool swapNeeded = true; 
-        uint8_t complete = 0; 
-        uint16_t selected = 0;
         std::list<string>::iterator before(_zOrder.begin());
         std::list<string>::iterator callsign(_zOrder.begin());
 
-        while ((before != _zOrder.end()) && (callsign != _zOrder.end()) && (complete != 3)) {
-            if ((complete & 0x02) == 0x00) {
+        while ((before != _zOrder.end()) && (callsign != _zOrder.end()) && ((complete & (TO_POSITION|FROM_POSITION)) != (TO_POSITION|FROM_POSITION))) {
+            if (!(complete & FROM_POSITION)) {
                 if (*before == callsignRelativeTo) {
-                    complete |= 0x02;
+                    complete = static_cast<progress>(complete | FROM_POSITION);
                     if (swapNeeded == false) {
                         continue;
                     }
@@ -474,9 +477,9 @@ namespace Plugin {
                 }
             }
             swapNeeded = true;
-            if ((complete & 0x01) == 0x00) {
+            if (!(complete & TO_POSITION)) {
                 if (*callsign == callsignToReorder) {
-                    complete |= 0x01;
+                    complete = static_cast<progress>(complete | TO_POSITION);
                     swapNeeded = false;
                 }
                 else {

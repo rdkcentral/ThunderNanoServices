@@ -61,6 +61,7 @@ namespace Plugin {
             Entry(Wayland::Display::Surface* surface, Implementation::IServer* server)
                 : _surface(*surface)
                 , _server(server)
+                , _rectangle( {0, 0, surface->Width(), surface->Height() } )
             {
                 ASSERT(surface != nullptr);
                 ASSERT(server != nullptr);
@@ -99,15 +100,15 @@ namespace Plugin {
                     _server->SetInput(_surface.Name().c_str());
                 }
             }
-            virtual string Name() const override
+            string Name() const override
             {
                 return _surface.Name();
             }
-            virtual void Kill() override
+            void Kill() override
             {
                 //TODO: to be implemented.
             }
-            virtual void Opacity(const uint32_t value) override
+            void Opacity(const uint32_t value) override
             {
                 if ((value == Exchange::IComposition::minOpacity) || (value == Exchange::IComposition::maxOpacity)) {
                     _surface.Visibility(value == Exchange::IComposition::maxOpacity);
@@ -117,23 +118,25 @@ namespace Plugin {
                     _surface.Opacity(value);
                 }
             }
-            virtual uint32_t Geometry(const Rectangle& rectangle) override 
+            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override 
             {
+                _rectangle = rectangle;
                 _surface.Resize(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
 
                 return (Core::ERROR_NONE);
             }
-            virtual Rectangle Geometry() const override 
+            Exchange::IComposition::Rectangle Geometry() const override 
             {
-                Rectangle rectangle { 0, 0, 0, 0 };
-                return (rectangle);
+                return (_rectangle);
             }
-            virtual uint32_t ZOrder(const uint16_t index) override
+            uint32_t ZOrder(const uint16_t index) override
             {
+                uint32_t result = Core::ERROR_UNAVAILABLE;
                 if (index == 0) {
                     _surface.SetTop();
+                    result = Core::ERROR_NONE;
                 }
-                return (Core::ERROR_NONE);
+                return (result);
             }
 
             BEGIN_INTERFACE_MAP(Entry)
@@ -143,6 +146,7 @@ namespace Plugin {
         private:
             Wayland::Display::Surface _surface;
             Implementation::IServer* _server;
+            Exchange::IComposition::Rectangle _rectangle;
         };
 
         class Config : public Core::JSON::Container {

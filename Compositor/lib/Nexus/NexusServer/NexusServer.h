@@ -27,6 +27,7 @@ namespace Broadcom {
             Client(nxclient_t client, const NxClient_JoinSettings* settings)
                 : _client(client)
                 , _settings(*settings)
+                , _rectangle( {0,0,0,0} )
             {
                 TRACE_L1("Created client named: %s", _settings.name);
             }
@@ -71,6 +72,7 @@ namespace Broadcom {
         private:
             nxclient_t _client;
             NxClient_JoinSettings _settings;
+            Exchange::IComposition::Rectangle _rectangle;
         };
 
         enum server_state {
