@@ -113,7 +113,7 @@ namespace Plugin {
             // http://<ip>/Service/Compositor/Clients
             if (index.Next() == false || index.Current() == "Clients") {
                 Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
-                Clients(response->Clients);
+                ZOrder(response->Clients);
                 result->Body(Core::proxy_cast<Web::IBody>(response));
             }
             // http://<ip>/Service/Compositor/ZOrder (top to bottom)
@@ -227,7 +227,7 @@ namespace Plugin {
                                 error = ToTop(clientName);
                             } else if (index.Current() == _T("PutBelow")) { /* http://<ip>/Service/Compositor/Netflix/PutBelow/Youtube */
                                 if (index.Next() == true) {
-                                    error = PutBelow(index.Current().Text(), clientName);
+                                    error = PutBefore(index.Current().Text(), clientName);
                                     if (error != Core::ERROR_NONE) {
                                         result->ErrorCode = Web::STATUS_BAD_REQUEST;
                                         result->Message = string(_T("Could not change z-order for Client "));
@@ -289,6 +289,9 @@ namespace Plugin {
             _clients[name] = client;
             client->AddRef();
 
+            // If it is a new addition, it is on top, by definition...
+            _zOrder.push_front(name);
+
             _adminLock.Unlock();
 
             TRACE(Trace::Information, (_T("Client %s attached"), name.c_str()));
@@ -299,72 +302,47 @@ namespace Plugin {
     {
         // note do not release by looking up the name, client might live in another process and the name call might fail if the connection is gone
         TRACE(Trace::Information, (_T("Client detached starting")));
-        //        Exchange::IComposition::IClient* removedclient;
 
         _adminLock.Lock();
         auto it = _clients.find(name);
         if (it != _clients.end()) {
+
+            Exchange::IComposition::IClient* removedclient = it->second;
+            
             TRACE(Trace::Information, (_T("Client %s detached"), it->first.c_str()));
             _clients.erase(it);
 
-            // TODO: Unreference the client but seems to lead to a dedlock, needs further investigation!!!
+            removedclient->Release();
         }
+
+        // Remove it from the zOrder
+        std::list<string>::iterator index (std::find(_zOrder.begin(), _zOrder.end(), name));
+
+        ASSERT (index != _zOrder.end());
+
+        if (index != _zOrder.end()) {
+            _zOrder.erase(index);
+        }
+
         _adminLock.Unlock();
 
         TRACE(Trace::Information, (_T("Client detached completed")));
     }
 
-    template <typename ClientOperation>
-    uint32_t Compositor::CallOnClientByCallsign(const string& callsign, ClientOperation&& operation) const
-    {
-        ASSERT(_composition != nullptr);
-
-        uint32_t error = Core::ERROR_NONE;
-
-        if (_composition != nullptr) {
-            Exchange::IComposition::IClient* client = nullptr;
-
-            _adminLock.Lock();
-            auto it = _clients.find(callsign);
-
-            if (it != _clients.end()) {
-                client = it->second;
-                ASSERT(client != nullptr);
-                client->AddRef();
-            } else {
-                error = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
-                TRACE(Trace::Information, (_T("Client %s not found in CallOnClientByCallsign."), callsign.c_str()));
-            }
-            _adminLock.Unlock();
-            if (client != nullptr) {
-                std::forward<ClientOperation>(operation)(*client);
-                client->Release();
-            }
-        }
-        return error;
-    }
-
-    void Compositor::Clients(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const
+    void Compositor::ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const
     {
         _adminLock.Lock();
-        for (auto const& client : _clients) {
-            TRACE(Trace::Information, (_T("Client %s added to the JSON array"), client.first.c_str()));
+
+        std::list<string>::const_iterator index (_zOrder.cbegin());
+
+        while (index != _zOrder.cend()) {
             Core::JSON::String& element(callsigns.Add());
-            element = client.first;
+            element = *index;
+            index++;
         }
+
         _adminLock.Unlock();
     }
-
-    uint32_t Compositor::Kill(const string& callsign) const
-    {
-        return CallOnClientByCallsign(callsign, [](Exchange::IComposition::IClient& client) { client.Kill(); });
-    }
-
-    uint32_t Compositor::Opacity(const string& callsign, const uint32_t value) const
-    {
-        return CallOnClientByCallsign(callsign, [&](Exchange::IComposition::IClient& client) { client.Opacity(value); });
-    }
-
     void Compositor::Resolution(const Exchange::IComposition::ScreenResolution format)
     {
         ASSERT(_composition != nullptr);
@@ -384,79 +362,173 @@ namespace Plugin {
         return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
     }
 
-    uint32_t Compositor::Visible(const string& callsign, const bool visible) const
+    uint32_t Compositor::Kill(const string& callsign)
     {
-        return Opacity(callsign, visible == true ? Exchange::IComposition::maxOpacity : Exchange::IComposition::minOpacity);
+        uint32_t result = Core::ERROR_UNAVAILABLE;
+        Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
+
+        if (client != nullptr) {
+            client->Kill();
+            client->Release();
+        }
+
+        return (result);
+    }
+
+    uint32_t Compositor::Opacity(const string& callsign, const uint32_t value)
+    {
+        uint32_t result = Core::ERROR_UNAVAILABLE;
+        Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
+
+        if (client != nullptr) {
+            client->Opacity(value);
+            client->Release();
+        }
+
+        return (result);
+    }
+
+    uint32_t Compositor::Visible(const string& callsign, const bool visible)
+    {
+        return (Opacity(callsign, visible == true ? Exchange::IComposition::maxOpacity : Exchange::IComposition::minOpacity));
     }
 
     uint32_t Compositor::Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle)
     {
-        ASSERT(_composition != nullptr);
+        uint32_t result = Core::ERROR_UNAVAILABLE;
+        Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
 
-        uint32_t error = Core::ERROR_NONE;
-
-        if (_composition != nullptr) {
-            error = _composition->Geometry(callsign, rectangle);
+        if (client != nullptr) {
+            result = client->Geometry(rectangle);
+            client->Release();
         }
 
-        return error;
+        return (result);
     }
 
     Exchange::IComposition::Rectangle Compositor::Geometry(const string& callsign) const
     {
-        Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
+        Exchange::IComposition::Rectangle result { 0,0,0,0 };
+        Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
 
-        ASSERT(_composition != nullptr);
-
-        if (_composition != nullptr) {
-            rectangle = _composition->Geometry(callsign);
+        if (client != nullptr) {
+            result = client->Geometry();
+            client->Release();
         }
-        return rectangle;
+
+        return (result);
     }
 
     uint32_t Compositor::ToTop(const string& callsign)
     {
-        ASSERT(_composition != nullptr);
+        uint32_t result = Core::ERROR_UNAVAILABLE;
 
-        uint32_t error = Core::ERROR_NONE;
+        _adminLock.Lock();
+        
+        std::list<string>::iterator index (std::find(_zOrder.begin(), _zOrder.end(), callsign));
 
-        if (_composition != nullptr) {
-            error = _composition->ToTop(callsign);
+        if (index == _zOrder.begin()) {
+            result = Core::ERROR_NONE;
         }
-        return error;
-    }
-
-    uint32_t Compositor::PutBelow(const string& callsignRelativeTo, const string& callsignToReorder)
-    {
-        ASSERT(_composition != nullptr);
-
-        //ASSERT(false); // not implemeted for now, we'll do that when it is neede
-        // now  the logic supports only putting the callsignToReorder to the bottom
-
-        //return Core::ERROR_UNAVAILABLE;
-
-        uint32_t error = Core::ERROR_NONE;
-
-        if (_composition != nullptr) {
-            error = _composition->PutBelow(callsignRelativeTo, callsignToReorder);
-        }
-        return error;
-    }
-
-    void Compositor::ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const
-    {
-        ASSERT(_composition != nullptr);
-        RPC::IStringIterator* iterator = _composition->ClientsInZorder();
-
-        if (iterator != nullptr) {
-            string currentElement;
-            while (iterator->Next(currentElement) == true) {
-                Core::JSON::String& element(callsigns.Add());
-                element = currentElement;
+        else if (index != _zOrder.end()) {
+            Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
+            if (client != nullptr) {
+                result = client->ZOrder(0);
+                if (result == Core::ERROR_NONE) {
+                    _zOrder.erase(index);
+                    _zOrder.push_front(callsign);
+                }
+                client->Release();
             }
-            iterator->Release();
         }
+            
+        _adminLock.Unlock();
+
+        return (result);
     }
+
+    uint32_t Compositor::PutBefore(const string& callsignRelativeTo, const string& callsignToReorder)
+    {
+        enum progress : uint8_t {
+            NONE = 0x00,
+            FROM_POSITION = 0x01,
+            TO_POSITION   = 0x02
+        } complete = NONE;
+        bool swapNeeded = true; 
+        uint16_t selected = 0;
+        uint32_t result = Core::ERROR_UNAVAILABLE;
+
+        _adminLock.Lock();
+       
+        std::list<string>::iterator before(_zOrder.begin());
+        std::list<string>::iterator callsign(_zOrder.begin());
+
+        while ((before != _zOrder.end()) && (callsign != _zOrder.end()) && ((complete & (TO_POSITION|FROM_POSITION)) != (TO_POSITION|FROM_POSITION))) {
+            if (!(complete & FROM_POSITION)) {
+                if (*before == callsignRelativeTo) {
+                    complete = static_cast<progress>(complete | FROM_POSITION);
+                    if (swapNeeded == false) {
+                        continue;
+                    }
+                }
+                else {
+                    selected++;
+                    before++;
+                }
+            }
+            swapNeeded = true;
+            if (!(complete & TO_POSITION)) {
+                if (*callsign == callsignToReorder) {
+                    complete = static_cast<progress>(complete | TO_POSITION);
+                    swapNeeded = false;
+                }
+                else {
+                    callsign++;
+                }
+            }
+        }
+
+        if (swapNeeded == false) {
+            result = Core::ERROR_NONE;
+        }
+        else if ((before != _zOrder.end()) && (callsign != _zOrder.end())) {
+
+            Exchange::IComposition::IClient* client(InterfaceByCallsign(callsignToReorder));
+            if (client != nullptr) {
+                result = client->ZOrder(selected);
+
+                if (result == Core::ERROR_NONE) {
+                    _zOrder.erase(callsign);
+                    _zOrder.insert(before, callsignToReorder);
+                }
+            }
+        }
+            
+        _adminLock.Unlock();
+
+        return (result);
+    }
+
+    Exchange::IComposition::IClient* Compositor::InterfaceByCallsign(const string& callsign) const
+    {
+        Exchange::IComposition::IClient* client = nullptr;
+
+        _adminLock.Lock();
+
+        auto it = _clients.find(callsign);
+
+        if (it != _clients.cend()) {
+            client = it->second;
+            ASSERT(client != nullptr);
+            client->AddRef();
+        }
+
+        _adminLock.Unlock();
+
+        return client;
+    }
+
+
 
 } // namespace Plugin
 } // namespace WPEFramework
