@@ -13,30 +13,20 @@ namespace TestUtility {
         public:
             MemoryObserverImpl(const RPC::IRemoteConnection* connection)
                 : _main(connection  == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
-                , _observable(false)
             {
 
             }
             ~MemoryObserverImpl() = default;
         public:
-            virtual void Observe(const uint32_t pid)
-            {
-                if (pid == 0) {
-                    _observable = false;
-                } else {
-                    _main = Core::ProcessInfo(pid);
-                    _observable = true;
-                }
-            }
-            virtual uint64_t Resident() const { return (_observable == false ? 0 : _main.Resident()); }
+            virtual uint64_t Resident() const { return _main.Resident(); }
 
-            virtual uint64_t Allocated() const { return (_observable == false ? 0 : _main.Allocated()); }
+            virtual uint64_t Allocated() const { return _main.Allocated(); }
 
-            virtual uint64_t Shared() const { return (_observable == false ? 0 : _main.Shared()); }
+            virtual uint64_t Shared() const { return _main.Shared(); }
 
             virtual uint8_t Processes() const { return (IsOperational() ? 1 : 0); }
 
-            virtual const bool IsOperational() const { return (_observable == false) || (_main.IsActive()); }
+            virtual const bool IsOperational() const { return _main.IsActive(); }
 
             BEGIN_INTERFACE_MAP(MemoryObserverImpl)
             INTERFACE_ENTRY(Exchange::IMemory)
@@ -44,7 +34,6 @@ namespace TestUtility {
 
         private:
             Core::ProcessInfo _main;
-            bool _observable;
         };
 
         Exchange::IMemory* memory_observer = (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection));
@@ -80,7 +69,6 @@ namespace Plugin {
 
             if (remoteConnection) {
                 _memory = WPEFramework::TestUtility::MemoryObserver(remoteConnection);
-                _memory->Observe(remoteConnection->RemoteId());
                 remoteConnection->Release();
             } else {
                 _memory = nullptr;

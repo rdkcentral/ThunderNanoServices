@@ -58,8 +58,6 @@ namespace Plugin {
 
                 ASSERT(_memory != nullptr);
 
-                _memory->Observe(true);
-
                 PluginHost::ISubSystem* subSystem = service->SubSystems();
 
                 if (subSystem != nullptr) {

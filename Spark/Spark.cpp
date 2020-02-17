@@ -53,7 +53,6 @@ namespace Plugin {
                 if (connection != nullptr) {
                     _memory = WPEFramework::Spark::MemoryObserver(connection->RemoteId());
                     ASSERT(_memory != nullptr);
-                    _memory->Observe(connection->RemoteId());
 
                     connection->Release();
                 }

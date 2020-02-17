@@ -1357,10 +1357,6 @@ namespace WebKitBrowser {
         }
 
     public:
-        virtual void Observe(const uint32_t)
-        {
-        }
-
         virtual uint64_t Resident() const
         {
             uint32_t result(0);
