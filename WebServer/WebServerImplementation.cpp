@@ -816,7 +816,6 @@ namespace WebServer {
     public:
         MemoryObserverImpl(const RPC::IRemoteConnection* connection)
             : _main(connection == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
-            , _observable(false)
         {
         }
         ~MemoryObserverImpl()
@@ -824,27 +823,17 @@ namespace WebServer {
         }
 
     public:
-        virtual void Observe(const uint32_t pid)
-        {
-            if (pid == 0) {
-                _observable = false;
-            } else {
-                _main = Core::ProcessInfo().Id();
-                _observable = true;
-            }
-        }
-
         virtual uint64_t Resident() const
         {
-            return (_observable == false ? 0 : _main.Resident());
+            return _main.Resident();
         }
         virtual uint64_t Allocated() const
         {
-            return (_observable == false ? 0 : _main.Allocated());
+            return _main.Allocated();
         }
         virtual uint64_t Shared() const
         {
-            return (_observable == false ? 0 : _main.Shared());
+            return _main.Shared();
         }
         virtual uint8_t Processes() const
         {
@@ -852,7 +841,7 @@ namespace WebServer {
         }
         virtual const bool IsOperational() const
         {
-            return (_observable == false) || (_main.IsActive());
+            return _main.IsActive();
         }
 
         BEGIN_INTERFACE_MAP(MemoryObserverImpl)
@@ -861,7 +850,6 @@ namespace WebServer {
 
     private:
         Core::ProcessInfo _main;
-        bool _observable;
     };
 
     Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)

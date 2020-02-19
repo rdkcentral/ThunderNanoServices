@@ -43,26 +43,17 @@ namespace OCDM {
             }
 
         public:
-            virtual void Observe(const uint32_t pid)
-            {
-                if (pid == 0) {
-                    _observable = false;
-                } else {
-                    _observable = false;
-                    _main = Core::ProcessInfo(pid);
-                }
-            }
             virtual uint64_t Resident() const
             {
-                return (_observable == false ? 0 : _main.Resident());
+                return _main.Resident();
             }
             virtual uint64_t Allocated() const
             {
-                return (_observable == false ? 0 : _main.Allocated());
+                return _main.Allocated();
             }
             virtual uint64_t Shared() const
             {
-                return (_observable == false ? 0 : _main.Shared());
+                return _main.Shared();
             }
             virtual uint8_t Processes() const
             {
@@ -70,7 +61,7 @@ namespace OCDM {
             }
             virtual const bool IsOperational() const
             {
-                return (_observable == false) || (_main.IsActive());
+                return _main.IsActive();
             }
 
             BEGIN_INTERFACE_MAP(MemoryObserverImpl)
@@ -79,7 +70,6 @@ namespace OCDM {
 
         private:
             Core::ProcessInfo _main;
-            bool _observable;
         };
 
         Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);

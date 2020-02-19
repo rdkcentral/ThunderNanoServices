@@ -442,36 +442,27 @@ private:
     }
 
     public:
-    virtual void Observe(const uint32_t pid) {
-        if (pid == 0) {
-            _observable = false;
-        } else {
-            _main = Core::ProcessInfo(pid);
-            _observable = true;
-        }
-    }
     virtual uint64_t Resident() const {
-        return (_observable == false ? 0 : _main.Resident());
+        return _main.Resident();
     }
     virtual uint64_t Allocated() const {
-        return (_observable == false ? 0 : _main.Allocated());
+        return _main.Allocated();
     }
     virtual uint64_t Shared() const {
-        return (_observable == false ? 0 : _main.Shared());
+        return _main.Shared();
     }
     virtual uint8_t Processes() const {
         return (IsOperational() ? 1 : 0);
     }
 
     virtual const bool IsOperational() const {
-        return (_observable == false) || (_main.IsActive());
+        return _main.IsActive();
     }
 
     BEGIN_INTERFACE_MAP (MemoryObserverImpl)INTERFACE_ENTRY (Exchange::IMemory)END_INTERFACE_MAP
 
 private:
     Core::ProcessInfo _main;
-    bool _observable;
     };
 
     Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection) {
