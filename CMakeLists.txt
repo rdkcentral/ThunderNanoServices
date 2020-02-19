@@ -36,6 +36,7 @@ option(PLUGIN_DIALSERVER " Include DIALServer plugin" OFF)
 option(PLUGIN_DICTIONARY "Include Dictionary plugin" OFF)
 option(PLUGIN_DSGCCCLIENT "Include DSGCClient plugin" OFF)
 option(PLUGIN_IOCONNECTOR "Include IOConnector plugin" OFF)
+option(PLUGIN_INPUTSWITCH "Include InputSwitch plugin" OFF)
 option(PLUGIN_FIRMWARECONTROL "Include FirmwareControl Plugin" OFF)
 option(PLUGIN_FRONTPANEL "Include FrontPanel plugin" OFF)
 option(PLUGIN_LOCATIONSYNC "Include LocationSync plugin" OFF)
@@ -142,6 +143,10 @@ endif()
 
 if(PLUGIN_IOCONNECTOR)
     add_subdirectory(IOConnector)
+endif()
+
+if(PLUGIN_INPUTSWITCH)
+    add_subdirectory(InputSwitch)
 endif()
 
 if(PLUGIN_SICONTROL)
