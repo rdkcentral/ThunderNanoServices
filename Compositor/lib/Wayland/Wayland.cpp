@@ -18,6 +18,7 @@
  */
  
 #include "Wayland.h"
+#include "NexusServer/Settings.h"
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -178,9 +179,12 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , Join(false)
                 , Display("wayland-0")
+                , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
             {
                 Add(_T("join"), &Join);
                 Add(_T("display"), &Display);
+                Add(_T("resolution"), &Resolution);
+
             }
             ~Config()
             {
@@ -189,12 +193,12 @@ namespace Plugin {
         public:
             Core::JSON::Boolean Join;
             Core::JSON::String Display;
+            Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
         };
 
         class Sink : public Wayland::Display::ICallback
 #ifdef ENABLE_NXSERVER
-            ,
-                     public Broadcom::Platform::IStateChange
+            , public Broadcom::Platform::IStateChange
 #endif
         {
         private:
@@ -318,7 +322,18 @@ namespace Plugin {
             }
 
             if (_config.Join == false) {
-                _nxserver = new Broadcom::Platform(_service->Callsign(), &_sink, nullptr, _service->ConfigLine());
+                Config info;
+                info.FromString(_service->ConfigLine());
+
+                NEXUS_VideoFormat format = NEXUS_VideoFormat_eUnknown;
+                if (info.Resolution.IsSet() == true) {
+                    const auto index(formatLookup.find(info.Resolution.Value()));
+
+                    if ((index != formatLookup.cend()) && (index->second != NEXUS_VideoFormat_eUnknown)) {
+                        format = index->second;
+                    }
+                }
+                _nxserver = new Broadcom::Platform(&_sink, nullptr, _service->ConfigLine(), format);
             } else {
                 StartImplementation();
             }
