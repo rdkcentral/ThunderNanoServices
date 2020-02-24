@@ -3,6 +3,8 @@
 #include <interfaces/IBrowser.h>
 
 #include "starboard/export.h"
+#include "third_party/starboard/wpe/shared/cobalt_api_wpe.h"
+
 extern int StarboardMain(int argc, char **argv);
 
 namespace WPEFramework {
@@ -125,11 +127,6 @@ private:
               _url = config.Url.Value();
             }
 
-            string dialStartURL;
-            if (Core::SystemInfo::GetEnvironment("DIAL_START_URL", dialStartURL)) {
-                _url = dialStartURL;
-            }
-
             Run();
             return result;
         }
@@ -194,6 +191,7 @@ public:
     }
 
     virtual void SetURL(const string &URL) override {
+        third_party::starboard::wpe::shared::SetURL(URL.c_str());
     }
 
     virtual string GetURL() const override {
