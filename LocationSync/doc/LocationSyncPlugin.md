@@ -118,8 +118,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "LocationSync.1.sync"
 }
 ```
@@ -127,8 +127,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -167,8 +167,8 @@ Provides access to the location information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "LocationSync.1.location"
 }
 ```
@@ -176,13 +176,13 @@ Provides access to the location information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "city": "Wroclaw", 
-        "country": "Poland", 
-        "region": "Wroclaw", 
-        "timezone": "CET-1CEST,M3.5.0,M10.5.0/3", 
+        "city": "Wroclaw",
+        "country": "Poland",
+        "region": "Wroclaw",
+        "timezone": "CET-1CEST,M3.5.0,M10.5.0/3",
         "publicip": "78.11.117.118"
     }
 }
@@ -213,7 +213,7 @@ This event carries no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
+    "jsonrpc": "2.0",
     "method": "client.events.1.locationchange"
 }
 ```

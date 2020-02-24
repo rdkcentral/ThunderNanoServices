@@ -120,8 +120,8 @@ Also see: [activity](#event.activity)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "IOConnector.1.pin@189"
 }
 ```
@@ -129,8 +129,8 @@ Also see: [activity](#event.activity)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": 1
 }
 ```
@@ -138,9 +138,9 @@ Also see: [activity](#event.activity)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "IOConnector.1.pin@189", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "IOConnector.1.pin@189",
     "params": 1
 }
 ```
@@ -148,8 +148,8 @@ Also see: [activity](#event.activity)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -188,8 +188,8 @@ Register to this event to be notified about pin value changes
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "189.client.events.1.activity", 
+    "jsonrpc": "2.0",
+    "method": "189.client.events.1.activity",
     "params": {
         "value": 1
     }

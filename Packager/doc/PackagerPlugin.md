@@ -119,12 +119,12 @@ Installs a package given by a name, an URL or a file path.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Packager.1.install", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Packager.1.install",
     "params": {
-        "package": "wpeframework-plugin-netflix", 
-        "version": "1.0", 
+        "package": "wpeframework-plugin-netflix",
+        "version": "1.0",
         "architecture": "arm"
     }
 }
@@ -133,8 +133,8 @@ Installs a package given by a name, an URL or a file path.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -165,8 +165,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Packager.1.synchronize"
 }
 ```
@@ -174,8 +174,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```

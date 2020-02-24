@@ -102,8 +102,8 @@ Provides access to the supported DRM systems.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "OCDM.1.drms"
 }
 ```
@@ -111,11 +111,11 @@ Provides access to the supported DRM systems.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         {
-            "name": "PlayReady", 
+            "name": "PlayReady",
             "keysystems": [
                 "com.microsoft.playready"
             ]
@@ -151,8 +151,8 @@ Provides access to the DRM key systems.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "OCDM.1.keysystems@PlayReady"
 }
 ```
@@ -160,8 +160,8 @@ Provides access to the DRM key systems.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         "com.microsoft.playready"
     ]

@@ -126,8 +126,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "TimeSync.1.synchronize"
 }
 ```
@@ -135,8 +135,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -173,8 +173,8 @@ Provides access to the most recent synchronized time.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "TimeSync.1.synctime"
 }
 ```
@@ -182,10 +182,10 @@ Provides access to the most recent synchronized time.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "time": "2019-05-07T07:20:26Z", 
+        "time": "2019-05-07T07:20:26Z",
         "source": "ntp://example.com"
     }
 }
@@ -217,8 +217,8 @@ Upon setting this property automatic time synchronization will be stopped. If no
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "TimeSync.1.time"
 }
 ```
@@ -226,8 +226,8 @@ Upon setting this property automatic time synchronization will be stopped. If no
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "2019-05-07T07:20:26Z"
 }
 ```
@@ -235,9 +235,9 @@ Upon setting this property automatic time synchronization will be stopped. If no
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "TimeSync.1.time", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "TimeSync.1.time",
     "params": "2019-05-07T07:20:26Z"
 }
 ```
@@ -245,8 +245,8 @@ Upon setting this property automatic time synchronization will be stopped. If no
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -276,7 +276,7 @@ This event carries no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
+    "jsonrpc": "2.0",
     "method": "client.events.1.timechange"
 }
 ```

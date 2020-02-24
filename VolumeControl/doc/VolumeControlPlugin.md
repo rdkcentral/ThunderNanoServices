@@ -111,8 +111,8 @@ Provides access to the audio mute state.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "VolumeControl.1.muted"
 }
 ```
@@ -120,8 +120,8 @@ Provides access to the audio mute state.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": false
 }
 ```
@@ -129,9 +129,9 @@ Provides access to the audio mute state.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "VolumeControl.1.muted", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "VolumeControl.1.muted",
     "params": false
 }
 ```
@@ -139,8 +139,8 @@ Provides access to the audio mute state.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -167,8 +167,8 @@ Provides access to the audio volume level.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "VolumeControl.1.volume"
 }
 ```
@@ -176,8 +176,8 @@ Provides access to the audio volume level.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": 100
 }
 ```
@@ -185,9 +185,9 @@ Provides access to the audio volume level.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "VolumeControl.1.volume", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "VolumeControl.1.volume",
     "params": 100
 }
 ```
@@ -195,8 +195,8 @@ Provides access to the audio volume level.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -228,8 +228,8 @@ VolumeControl interface events:
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.volume", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.volume",
     "params": {
         "volume": 100
     }
@@ -249,8 +249,8 @@ VolumeControl interface events:
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.muted", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.muted",
     "params": {
         "muted": false
     }

@@ -106,8 +106,8 @@ Provides access to the device paltform specific information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "DeviceIdentification.1.deviceidentification"
 }
 ```
@@ -115,11 +115,11 @@ Provides access to the device paltform specific information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "firmwareversion": "1.0.0", 
-        "chipset": "BCM2711", 
+        "firmwareversion": "1.0.0",
+        "chipset": "BCM2711",
         "identifier": ""
     }
 }

@@ -121,9 +121,9 @@ Assigns a bluetooth device as a remote control unit.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "BluetoothRemoteControl.1.assign", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "BluetoothRemoteControl.1.assign",
     "params": {
         "address": "81:6F:B0:91:9B:FE"
     }
@@ -133,8 +133,8 @@ Assigns a bluetooth device as a remote control unit.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -165,8 +165,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "BluetoothRemoteControl.1.revoke"
 }
 ```
@@ -174,8 +174,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -219,8 +219,8 @@ Provides access to the unit name.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "BluetoothRemoteControl.1.name"
 }
 ```
@@ -228,8 +228,8 @@ Provides access to the unit name.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "Acme Bluetooth RCU"
 }
 ```
@@ -258,8 +258,8 @@ Provides access to the bluetooth address of the unit.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "BluetoothRemoteControl.1.address"
 }
 ```
@@ -267,8 +267,8 @@ Provides access to the bluetooth address of the unit.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "81:6F:B0:91:9B:FE"
 }
 ```
@@ -303,8 +303,8 @@ Provides access to the unit auxiliary information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "BluetoothRemoteControl.1.info"
 }
 ```
@@ -312,13 +312,13 @@ Provides access to the unit auxiliary information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "model": "Acme 1500 Plus", 
-        "serial": "1234567890", 
-        "firmware": "1.0", 
-        "software": "1.0", 
+        "model": "Acme 1500 Plus",
+        "serial": "1234567890",
+        "firmware": "1.0",
+        "software": "1.0",
         "manufacturer": "Acme Inc."
     }
 }
@@ -349,8 +349,8 @@ Provides access to the battery level.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "BluetoothRemoteControl.1.batterylevel"
 }
 ```
@@ -358,8 +358,8 @@ Provides access to the battery level.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": 50
 }
 ```
@@ -393,8 +393,8 @@ Provides access to the audio profile details.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "BluetoothRemoteControl.1.audioprofile"
 }
 ```
@@ -402,12 +402,12 @@ Provides access to the audio profile details.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "codec": "ADPCM", 
-        "channels": 1, 
-        "rate": 16000, 
+        "codec": "ADPCM",
+        "channels": 1,
+        "rate": 16000,
         "resolution": 16
     }
 }
@@ -447,8 +447,8 @@ Register to this event to be notified about audio transmission status
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.audiotransmission", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.audiotransmission",
     "params": {
         "profile": "pcm"
     }
@@ -475,10 +475,10 @@ Register to this event to be notified about audio data
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.audioframe", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.audioframe",
     "params": {
-        "seq": 1, 
+        "seq": 1,
         "data": "yKMHiYh6qJiDspB6S7ihlKOAbivApYEQDCgY0aECCQhpkAqZogP1ECk9GbHGEAkwG8Ax8wArgaAtEMjGQIoYCKKgGCuzBSA/iuWkKEwamLKzOKoCeR2hwQQZKqgBKKqELoGQwQ=="
     }
 }
@@ -503,8 +503,8 @@ Register to this event to be notified about battery level drops
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.batterylevelchange", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.batterylevelchange",
     "params": {
         "level": 50
     }

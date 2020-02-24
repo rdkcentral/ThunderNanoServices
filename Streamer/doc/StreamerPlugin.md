@@ -123,9 +123,9 @@ Creates a stream instance.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.create", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Streamer.1.create",
     "params": {
         "type": "cable"
     }
@@ -135,8 +135,8 @@ Creates a stream instance.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": 0
 }
 ```
@@ -170,9 +170,9 @@ Destroys a stream instance.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.destroy", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Streamer.1.destroy",
     "params": {
         "id": 0
     }
@@ -182,8 +182,8 @@ Destroys a stream instance.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -223,11 +223,11 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.load", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Streamer.1.load",
     "params": {
-        "id": 0, 
+        "id": 0,
         "location": "http://example.com/sample.m3u8"
     }
 }
@@ -236,8 +236,8 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -274,9 +274,9 @@ Attaches a decoder to the streamer.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.attach", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Streamer.1.attach",
     "params": {
         "id": 0
     }
@@ -286,8 +286,8 @@ Attaches a decoder to the streamer.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -323,9 +323,9 @@ Detaches a decoder from the streamer.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.detach", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Streamer.1.detach",
     "params": {
         "id": 0
     }
@@ -335,8 +335,8 @@ Detaches a decoder from the streamer.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -393,8 +393,8 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Streamer.1.speed@0"
 }
 ```
@@ -402,8 +402,8 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": 100
 }
 ```
@@ -411,9 +411,9 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.speed@0", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Streamer.1.speed@0",
     "params": 100
 }
 ```
@@ -421,8 +421,8 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -452,8 +452,8 @@ Provides access to the stream position.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Streamer.1.position@0"
 }
 ```
@@ -461,8 +461,8 @@ Provides access to the stream position.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": 60000
 }
 ```
@@ -470,9 +470,9 @@ Provides access to the stream position.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.position@0", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Streamer.1.position@0",
     "params": 60000
 }
 ```
@@ -480,8 +480,8 @@ Provides access to the stream position.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -515,8 +515,8 @@ Provides access to the stream playback window.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Streamer.1.window@0"
 }
 ```
@@ -524,12 +524,12 @@ Provides access to the stream playback window.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "x": 0, 
-        "y": 0, 
-        "width": 1080, 
+        "x": 0,
+        "y": 0,
+        "width": 1080,
         "height": 720
     }
 }
@@ -538,13 +538,13 @@ Provides access to the stream playback window.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Streamer.1.window@0", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Streamer.1.window@0",
     "params": {
-        "x": 0, 
-        "y": 0, 
-        "width": 1080, 
+        "x": 0,
+        "y": 0,
+        "width": 1080,
         "height": 720
     }
 }
@@ -553,8 +553,8 @@ Provides access to the stream playback window.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -587,8 +587,8 @@ Provides access to the speeds supported by the stream player.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Streamer.1.speeds@0"
 }
 ```
@@ -596,15 +596,15 @@ Provides access to the speeds supported by the stream player.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
-        0, 
-        100, 
-        -100, 
-        200, 
-        -200, 
-        400, 
+        0,
+        100,
+        -100,
+        200,
+        -200,
+        400,
         -400
     ]
 }
@@ -629,8 +629,8 @@ Provides access to the all created stream instance IDs.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Streamer.1.streams"
 }
 ```
@@ -638,12 +638,12 @@ Provides access to the all created stream instance IDs.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
-        0, 
-        1, 
-        2, 
+        0,
+        1,
+        2,
         3
     ]
 }
@@ -675,8 +675,8 @@ Provides access to the type of a stream.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Streamer.1.type@0"
 }
 ```
@@ -684,8 +684,8 @@ Provides access to the type of a stream.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "cable"
 }
 ```
@@ -718,8 +718,8 @@ Also see: [drmchange](#event.drmchange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Streamer.1.drm@0"
 }
 ```
@@ -727,8 +727,8 @@ Also see: [drmchange](#event.drmchange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "clearkey"
 }
 ```
@@ -761,8 +761,8 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Streamer.1.state@0"
 }
 ```
@@ -770,8 +770,8 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "controlled"
 }
 ```
@@ -802,8 +802,8 @@ Provides access to the metadata associated with the stream.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Streamer.1.metadata@0"
 }
 ```
@@ -811,8 +811,8 @@ Provides access to the metadata associated with the stream.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": ""
 }
 ```
@@ -843,8 +843,8 @@ Provides access to the most recent error code.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Streamer.1.error@0"
 }
 ```
@@ -852,8 +852,8 @@ Provides access to the most recent error code.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": 0
 }
 ```
@@ -887,8 +887,8 @@ Provides access to the stream elements.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Streamer.1.elements@0"
 }
 ```
@@ -896,8 +896,8 @@ Provides access to the stream elements.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         {
             "type": "video"
@@ -940,8 +940,8 @@ Notifies of stream state change.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "0.client.events.1.statechange", 
+    "jsonrpc": "2.0",
+    "method": "0.client.events.1.statechange",
     "params": {
         "state": "controlled"
     }
@@ -965,8 +965,8 @@ Notifies of stream position change. This event is fired every second to indicate
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "0.client.events.1.timeupdate", 
+    "jsonrpc": "2.0",
+    "method": "0.client.events.1.timeupdate",
     "params": {
         "time": 30000
     }
@@ -990,8 +990,8 @@ Notifies of a custom stream incident.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "0.client.events.1.stream", 
+    "jsonrpc": "2.0",
+    "method": "0.client.events.1.stream",
     "params": {
         "code": 1
     }
@@ -1015,8 +1015,8 @@ Notifies of a custom player incident.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "0.client.events.1.player", 
+    "jsonrpc": "2.0",
+    "method": "0.client.events.1.player",
     "params": {
         "code": 1
     }
@@ -1040,8 +1040,8 @@ Notifies of a custom DRM-related incident.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "0.client.events.1.drm", 
+    "jsonrpc": "2.0",
+    "method": "0.client.events.1.drm",
     "params": {
         "code": 1
     }

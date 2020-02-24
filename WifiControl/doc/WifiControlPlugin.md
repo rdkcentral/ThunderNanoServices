@@ -116,9 +116,9 @@ Forgets the configuration of a network.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WifiControl.1.delete", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "WifiControl.1.delete",
     "params": {
         "ssid": "MyCorporateNetwork"
     }
@@ -128,8 +128,8 @@ Forgets the configuration of a network.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -160,8 +160,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "WifiControl.1.store"
 }
 ```
@@ -169,8 +169,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -204,8 +204,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "WifiControl.1.scan"
 }
 ```
@@ -213,8 +213,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -251,9 +251,9 @@ Also see: [connectionchange](#event.connectionchange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WifiControl.1.connect", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "WifiControl.1.connect",
     "params": {
         "ssid": "MyCorporateNetwork"
     }
@@ -263,8 +263,8 @@ Also see: [connectionchange](#event.connectionchange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -301,9 +301,9 @@ Also see: [connectionchange](#event.connectionchange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WifiControl.1.disconnect", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "WifiControl.1.disconnect",
     "params": {
         "ssid": "MyCorporateNetwork"
     }
@@ -313,8 +313,8 @@ Also see: [connectionchange](#event.connectionchange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -354,8 +354,8 @@ Provides access to the network status.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "WifiControl.1.status"
 }
 ```
@@ -363,10 +363,10 @@ Provides access to the network status.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "connected": "MyCorporateNetwork", 
+        "connected": "MyCorporateNetwork",
         "scanning": false
     }
 }
@@ -400,8 +400,8 @@ Provides access to the available networks.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "WifiControl.1.networks"
 }
 ```
@@ -409,21 +409,21 @@ Provides access to the available networks.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         {
-            "ssid": "MyCorporateNetwork", 
+            "ssid": "MyCorporateNetwork",
             "pairs": [
                 {
-                    "method": "WPA", 
+                    "method": "WPA",
                     "keys": [
                         "psk"
                     ]
                 }
-            ], 
-            "bssid": "94:b4:0f:77:cc:71", 
-            "frequency": 5180, 
+            ],
+            "bssid": "94:b4:0f:77:cc:71",
+            "frequency": 5180,
             "signal": -44
         }
     ]
@@ -463,8 +463,8 @@ Provides access to the all WiFi configurations.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "WifiControl.1.configs"
 }
 ```
@@ -472,17 +472,17 @@ Provides access to the all WiFi configurations.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         {
-            "ssid": "MyCorporateNetwork", 
-            "type": "WPA", 
-            "hidden": false, 
-            "accesspoint": true, 
-            "psk": "secretpresharedkey", 
-            "hash": "59e0d07fa4c7741797a4e394f38a5c321e3bed51d54ad5fcbd3f84bc7415d73d", 
-            "identity": "user", 
+            "ssid": "MyCorporateNetwork",
+            "type": "WPA",
+            "hidden": false,
+            "accesspoint": true,
+            "psk": "secretpresharedkey",
+            "hash": "59e0d07fa4c7741797a4e394f38a5c321e3bed51d54ad5fcbd3f84bc7415d73d",
+            "identity": "user",
             "password": "password"
         }
     ]
@@ -522,8 +522,8 @@ Provides access to the single WiFi conifguration.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "WifiControl.1.config@MyCorporateNetwork"
 }
 ```
@@ -531,16 +531,16 @@ Provides access to the single WiFi conifguration.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "ssid": "MyCorporateNetwork", 
-        "type": "WPA", 
-        "hidden": false, 
-        "accesspoint": true, 
-        "psk": "secretpresharedkey", 
-        "hash": "59e0d07fa4c7741797a4e394f38a5c321e3bed51d54ad5fcbd3f84bc7415d73d", 
-        "identity": "user", 
+        "ssid": "MyCorporateNetwork",
+        "type": "WPA",
+        "hidden": false,
+        "accesspoint": true,
+        "psk": "secretpresharedkey",
+        "hash": "59e0d07fa4c7741797a4e394f38a5c321e3bed51d54ad5fcbd3f84bc7415d73d",
+        "identity": "user",
         "password": "password"
     }
 }
@@ -549,17 +549,17 @@ Provides access to the single WiFi conifguration.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WifiControl.1.config@MyCorporateNetwork", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "WifiControl.1.config@MyCorporateNetwork",
     "params": {
-        "ssid": "MyCorporateNetwork", 
-        "type": "WPA", 
-        "hidden": false, 
-        "accesspoint": true, 
-        "psk": "secretpresharedkey", 
-        "hash": "59e0d07fa4c7741797a4e394f38a5c321e3bed51d54ad5fcbd3f84bc7415d73d", 
-        "identity": "user", 
+        "ssid": "MyCorporateNetwork",
+        "type": "WPA",
+        "hidden": false,
+        "accesspoint": true,
+        "psk": "secretpresharedkey",
+        "hash": "59e0d07fa4c7741797a4e394f38a5c321e3bed51d54ad5fcbd3f84bc7415d73d",
+        "identity": "user",
         "password": "password"
     }
 }
@@ -568,8 +568,8 @@ Provides access to the single WiFi conifguration.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -598,9 +598,9 @@ Provides access to the sets debug level.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "WifiControl.1.debug", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "WifiControl.1.debug",
     "params": 0
 }
 ```
@@ -608,8 +608,8 @@ Provides access to the sets debug level.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -653,21 +653,21 @@ Signals that the scan operation has finished.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.scanresults", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.scanresults",
     "params": [
         {
-            "ssid": "MyCorporateNetwork", 
+            "ssid": "MyCorporateNetwork",
             "pairs": [
                 {
-                    "method": "WPA", 
+                    "method": "WPA",
                     "keys": [
                         "psk"
                     ]
                 }
-            ], 
-            "bssid": "94:b4:0f:77:cc:71", 
-            "frequency": 5180, 
+            ],
+            "bssid": "94:b4:0f:77:cc:71",
+            "frequency": 5180,
             "signal": -44
         }
     ]
@@ -686,7 +686,7 @@ This event carries no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
+    "jsonrpc": "2.0",
     "method": "client.events.1.networkchange"
 }
 ```
@@ -705,8 +705,8 @@ Notifies about connection state change (i.e. connected/disconnected).
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.connectionchange", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.connectionchange",
     "params": "MyCorporateNetwork"
 }
 ```

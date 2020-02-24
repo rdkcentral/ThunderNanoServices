@@ -125,11 +125,11 @@ Retrieves the actual trace status information for targeted module and category, 
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "TraceControl.1.status", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "TraceControl.1.status",
     "params": {
-        "module": "Plugin_Monitor", 
+        "module": "Plugin_Monitor",
         "category": "Information"
     }
 }
@@ -138,18 +138,18 @@ Retrieves the actual trace status information for targeted module and category, 
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "console": false, 
+        "console": false,
         "remote": {
-            "port": 2200, 
+            "port": 2200,
             "binding": "0.0.0.0"
-        }, 
+        },
         "settings": [
             {
-                "module": "Plugin_Monitor", 
-                "category": "Information", 
+                "module": "Plugin_Monitor",
+                "category": "Information",
                 "state": "disabled"
             }
         ]
@@ -186,12 +186,12 @@ Disables/enables all/select category traces for particular module.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "TraceControl.1.set", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "TraceControl.1.set",
     "params": {
-        "module": "Plugin_Monitor", 
-        "category": "Information", 
+        "module": "Plugin_Monitor",
+        "category": "Information",
         "state": "disabled"
     }
 }
@@ -200,8 +200,8 @@ Disables/enables all/select category traces for particular module.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```

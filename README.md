@@ -12,7 +12,7 @@
 * [DisplayInfo](DisplayInfo/doc/DisplayInfoPlugin.md)
 * DSResolution
 * FileTransfer
-* FirmwareControl
+* [FirmwareControl](FirmwareControl/doc/FirmwareControlPlugin.md)
 * FrontPanel
 * [InputSwitch](InputSwitch/doc/InputSwitchPlugin.md)
 * [IOConnector](IOConnector/doc/IOConnectorPlugin.md)

@@ -115,8 +115,8 @@ Provides access to the display general information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "DisplayInfo.1.displayinfo"
 }
 ```
@@ -124,17 +124,17 @@ Provides access to the display general information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "totalgpuram": 381681664, 
-        "freegpuram": 358612992, 
-        "audiopassthrough": false, 
-        "connected": true, 
-        "width": 1280, 
-        "height": 720, 
-        "hdcpmajor": 2, 
-        "hdcpminor": 2, 
+        "totalgpuram": 381681664,
+        "freegpuram": 358612992,
+        "audiopassthrough": false,
+        "connected": true,
+        "width": 1280,
+        "height": 720,
+        "hdcpmajor": 2,
+        "hdcpminor": 2,
         "hdrtype": "HDROff"
     }
 }
@@ -169,7 +169,7 @@ This event carries no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
+    "jsonrpc": "2.0",
     "method": "client.events.1.updated"
 }
 ```

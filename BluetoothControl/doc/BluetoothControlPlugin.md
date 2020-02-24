@@ -126,11 +126,11 @@ Also see: [scancomplete](#event.scancomplete)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "BluetoothControl.1.scan", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "BluetoothControl.1.scan",
     "params": {
-        "type": "LowEnergy", 
+        "type": "LowEnergy",
         "timeout": 10
     }
 }
@@ -139,8 +139,8 @@ Also see: [scancomplete](#event.scancomplete)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -178,9 +178,9 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "BluetoothControl.1.connect", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "BluetoothControl.1.connect",
     "params": {
         "address": "81:6F:B0:91:9B:FE"
     }
@@ -190,8 +190,8 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -228,9 +228,9 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "BluetoothControl.1.disconnect", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "BluetoothControl.1.disconnect",
     "params": {
         "address": "81:6F:B0:91:9B:FE"
     }
@@ -240,8 +240,8 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -279,9 +279,9 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "BluetoothControl.1.pair", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "BluetoothControl.1.pair",
     "params": {
         "address": "81:6F:B0:91:9B:FE"
     }
@@ -291,8 +291,8 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -329,9 +329,9 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "BluetoothControl.1.unpair", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "BluetoothControl.1.unpair",
     "params": {
         "address": "81:6F:B0:91:9B:FE"
     }
@@ -341,8 +341,8 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -380,8 +380,8 @@ Provides access to the list of local Bluetooth adapters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "BluetoothControl.1.adapters"
 }
 ```
@@ -389,8 +389,8 @@ Provides access to the list of local Bluetooth adapters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         0
     ]
@@ -429,8 +429,8 @@ Provides access to the local Bluetooth adapter information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "BluetoothControl.1.adapter@0"
 }
 ```
@@ -438,14 +438,14 @@ Provides access to the local Bluetooth adapter information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "interface": "hci0", 
-        "address": "81:6F:B0:91:9B:FE", 
-        "version": 8, 
-        "manufacturer": 0, 
-        "name": "Thunder", 
+        "interface": "hci0",
+        "address": "81:6F:B0:91:9B:FE",
+        "version": 8,
+        "manufacturer": 0,
+        "name": "Thunder",
         "shortname": "Thunder"
     }
 }
@@ -470,8 +470,8 @@ Provides access to the list of known remote Bluetooth devices.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "BluetoothControl.1.devices"
 }
 ```
@@ -479,8 +479,8 @@ Provides access to the list of known remote Bluetooth devices.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         "81:6F:B0:91:9B:FE"
     ]
@@ -517,8 +517,8 @@ Provides access to the remote Bluetooth device information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "BluetoothControl.1.device@81:6F:B0:91:9B:FE"
 }
 ```
@@ -526,12 +526,12 @@ Provides access to the remote Bluetooth device information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "name": "Acme Bluetooth Device", 
-        "type": "LowEnergy", 
-        "connected": true, 
+        "name": "Acme Bluetooth Device",
+        "type": "LowEnergy",
+        "connected": true,
         "paired": true
     }
 }
@@ -567,7 +567,7 @@ This event carries no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
+    "jsonrpc": "2.0",
     "method": "client.events.1.scancomplete"
 }
 ```
@@ -593,11 +593,11 @@ Register to this event to be notified about device state changes
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.devicestatechange", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.devicestatechange",
     "params": {
-        "address": "81:6F:B0:91:9B:FE", 
-        "state": "Disconnected", 
+        "address": "81:6F:B0:91:9B:FE",
+        "state": "Disconnected",
         "disconnectreason": "ConnectionTimeout"
     }
 }

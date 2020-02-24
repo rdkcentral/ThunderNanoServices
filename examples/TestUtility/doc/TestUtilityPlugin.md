@@ -123,11 +123,11 @@ Runs a memory test command.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "TestUtility.1.runmemory", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "TestUtility.1.runmemory",
     "params": {
-        "command": "Malloc", 
+        "command": "Malloc",
         "size": 0
     }
 }
@@ -136,11 +136,11 @@ Runs a memory test command.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "allocated": 0, 
-        "size": 0, 
+        "allocated": 0,
+        "size": 0,
         "resident": 0
     }
 }
@@ -178,12 +178,12 @@ Runs a crash test command.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "TestUtility.1.runcrash", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "TestUtility.1.runcrash",
     "params": {
-        "command": "Crash", 
-        "delay": 1, 
+        "command": "Crash",
+        "delay": 1,
         "count": 1
     }
 }
@@ -192,8 +192,8 @@ Runs a crash test command.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -231,8 +231,8 @@ Provides access to the list of test commands.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "TestUtility.1.commands"
 }
 ```
@@ -240,8 +240,8 @@ Provides access to the list of test commands.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         "Malloc"
     ]
@@ -276,8 +276,8 @@ Provides access to the description of a test command.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "TestUtility.1.description@Malloc"
 }
 ```
@@ -285,8 +285,8 @@ Provides access to the description of a test command.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
         "description": "Allocates desired amount of memory (in KB) and holds it"
     }
@@ -329,8 +329,8 @@ Provides access to the parameters of a test command.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "TestUtility.1.parameters@Malloc"
 }
 ```
@@ -338,19 +338,19 @@ Provides access to the parameters of a test command.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
         "input": [
             {
-                "name": "memory", 
-                "type": "Number", 
+                "name": "memory",
+                "type": "Number",
                 "comment": "Memory statistics in KB"
             }
-        ], 
+        ],
         "output": {
-            "name": "memory", 
-            "type": "Number", 
+            "name": "memory",
+            "type": "Number",
             "comment": "Memory statistics in KB"
         }
     }
@@ -375,9 +375,9 @@ Provides access to the timeout to be waited before deactivating the plugin.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "TestUtility.1.shutdowntimeout", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "TestUtility.1.shutdowntimeout",
     "params": 5000
 }
 ```
@@ -385,8 +385,8 @@ Provides access to the timeout to be waited before deactivating the plugin.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```

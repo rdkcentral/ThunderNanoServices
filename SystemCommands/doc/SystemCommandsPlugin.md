@@ -121,9 +121,9 @@ With this method a USB device can be reset using USBFS_RESET ioctl command.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "SystemCommands.1.usbreset", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "SystemCommands.1.usbreset",
     "params": {
         "device": "/dev/usb/001"
     }
@@ -133,8 +133,8 @@ With this method a USB device can be reset using USBFS_RESET ioctl command.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```

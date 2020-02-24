@@ -115,8 +115,8 @@ Provides access to the system general information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "DeviceInfo.1.systeminfo"
 }
 ```
@@ -124,16 +124,16 @@ Provides access to the system general information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "version": "1.0#14452f612c3747645d54974255d11b8f3b4faa54", 
-        "uptime": 120, 
-        "totalram": 655757312, 
-        "freeram": 563015680, 
-        "devicename": "buildroot", 
-        "cpuload": "2", 
-        "serialnumber": "WPEuCfrLF45", 
+        "version": "1.0#14452f612c3747645d54974255d11b8f3b4faa54",
+        "uptime": 120,
+        "totalram": 655757312,
+        "freeram": 563015680,
+        "devicename": "buildroot",
+        "cpuload": "2",
+        "serialnumber": "WPEuCfrLF45",
         "time": "Mon, 11 Mar 2019 14:38:18"
     }
 }
@@ -162,8 +162,8 @@ Provides access to the network interface addresses.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "DeviceInfo.1.addresses"
 }
 ```
@@ -171,12 +171,12 @@ Provides access to the network interface addresses.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         {
-            "name": "lo", 
-            "mac": "00:00:00:00:00", 
+            "name": "lo",
+            "mac": "00:00:00:00:00",
             "ip": [
                 "127.0.0.1"
             ]
@@ -209,8 +209,8 @@ Provides access to the socket information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "DeviceInfo.1.socketinfo"
 }
 ```
@@ -218,14 +218,14 @@ Provides access to the socket information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "total": 0, 
-        "open": 0, 
-        "link": 0, 
-        "exception": 0, 
-        "shutdown": 0, 
+        "total": 0,
+        "open": 0,
+        "link": 0,
+        "exception": 0,
+        "shutdown": 0,
         "runs": 1
     }
 }

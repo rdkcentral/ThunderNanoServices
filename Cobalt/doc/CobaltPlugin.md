@@ -123,8 +123,8 @@ Also see: [urlchange](#event.urlchange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Cobalt.1.url"
 }
 ```
@@ -132,8 +132,8 @@ Also see: [urlchange](#event.urlchange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "https://www.google.com"
 }
 ```
@@ -141,9 +141,9 @@ Also see: [urlchange](#event.urlchange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Cobalt.1.url", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Cobalt.1.url",
     "params": "https://www.google.com"
 }
 ```
@@ -151,8 +151,8 @@ Also see: [urlchange](#event.urlchange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -175,8 +175,8 @@ Also see: [visibilitychange](#event.visibilitychange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Cobalt.1.visibility"
 }
 ```
@@ -184,8 +184,8 @@ Also see: [visibilitychange](#event.visibilitychange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "visible"
 }
 ```
@@ -193,9 +193,9 @@ Also see: [visibilitychange](#event.visibilitychange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Cobalt.1.visibility", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Cobalt.1.visibility",
     "params": "visible"
 }
 ```
@@ -203,8 +203,8 @@ Also see: [visibilitychange](#event.visibilitychange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -227,8 +227,8 @@ Provides access to the current number of frames per second the browser is render
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Cobalt.1.fps"
 }
 ```
@@ -236,8 +236,8 @@ Provides access to the current number of frames per second the browser is render
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": 30
 }
 ```
@@ -260,8 +260,8 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Cobalt.1.state"
 }
 ```
@@ -269,8 +269,8 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "resumed"
 }
 ```
@@ -278,9 +278,9 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Cobalt.1.state", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Cobalt.1.state",
     "params": "resumed"
 }
 ```
@@ -288,8 +288,8 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -331,10 +331,10 @@ Signals a URL change in the browser.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.urlchange", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.urlchange",
     "params": {
-        "url": "https://www.google.com", 
+        "url": "https://www.google.com",
         "loaded": false
     }
 }
@@ -355,8 +355,8 @@ Signals a visibility change of the browser.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.visibilitychange", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.visibilitychange",
     "params": {
         "hidden": false
     }
@@ -378,8 +378,8 @@ Signals a state change of the service.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.statechange", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.statechange",
     "params": {
         "suspended": false
     }

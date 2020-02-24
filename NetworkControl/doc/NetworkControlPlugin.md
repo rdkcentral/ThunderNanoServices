@@ -121,9 +121,9 @@ Reloads a static and non-static network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "NetworkControl.1.reload", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "NetworkControl.1.reload",
     "params": {
         "device": "eth0"
     }
@@ -133,8 +133,8 @@ Reloads a static and non-static network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -170,9 +170,9 @@ Also see: [connectionchange](#event.connectionchange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "NetworkControl.1.request", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "NetworkControl.1.request",
     "params": {
         "device": "eth0"
     }
@@ -182,8 +182,8 @@ Also see: [connectionchange](#event.connectionchange)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -217,9 +217,9 @@ Reloads a static network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "NetworkControl.1.assign", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "NetworkControl.1.assign",
     "params": {
         "device": "eth0"
     }
@@ -229,8 +229,8 @@ Reloads a static network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -264,9 +264,9 @@ Flushes a network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "NetworkControl.1.flush", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "NetworkControl.1.flush",
     "params": {
         "device": "eth0"
     }
@@ -276,8 +276,8 @@ Flushes a network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -327,8 +327,8 @@ Provides access to the current network information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "NetworkControl.1.network@eth0"
 }
 ```
@@ -336,15 +336,15 @@ Provides access to the current network information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         {
-            "interface": "eth0", 
-            "mode": "dynamic", 
-            "address": "192.168.1.158", 
-            "mask": 24, 
-            "gateway": "192.168.1.1", 
+            "interface": "eth0",
+            "mode": "dynamic",
+            "address": "192.168.1.158",
+            "mask": 24,
+            "gateway": "192.168.1.1",
             "broadcast": "192.168.1.255"
         }
     ]
@@ -381,8 +381,8 @@ Provides access to the interface up status.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "NetworkControl.1.up@eth0"
 }
 ```
@@ -390,8 +390,8 @@ Provides access to the interface up status.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": false
 }
 ```
@@ -399,9 +399,9 @@ Provides access to the interface up status.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "NetworkControl.1.up@eth0", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "NetworkControl.1.up@eth0",
     "params": false
 }
 ```
@@ -409,8 +409,8 @@ Provides access to the interface up status.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -445,11 +445,11 @@ Notifies about connection status (created, updated, removed, connected and conne
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.connectionchange", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.connectionchange",
     "params": {
-        "name": "eth0", 
-        "address": "192.168.1.10", 
+        "name": "eth0",
+        "address": "192.168.1.10",
         "status": "connected"
     }
 }

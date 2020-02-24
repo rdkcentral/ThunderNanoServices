@@ -124,12 +124,12 @@ Create a signed JsonWeb token from provided payload.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "SecurityAgent.1.createtoken", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "SecurityAgent.1.createtoken",
     "params": {
-        "url": "https://test.comcast.com", 
-        "user": "Test", 
+        "url": "https://test.comcast.com",
+        "user": "Test",
         "hash": "1CLYex47SY"
     }
 }
@@ -138,8 +138,8 @@ Create a signed JsonWeb token from provided payload.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
         "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICAgImpzb25ycGMiOiAiMi4wIiwgCiAgICAiaWQiOiAxMjM0NTY3ODkwLCAKICAgICJtZXRob2QiOiAiQ29udHJvbGxlci4xLmFjdGl2YXRlIiwgCiAgICAicGFyYW1zIjogewogICAgICAgICJjYWxsc2lnbiI6ICJTZWN1cml0eUFnZW50IgogICAgfQp9.lL40nTwRyBvMwiglZhl5_rB8ycY1uhAJRFx9pGATMRQ"
     }
@@ -179,9 +179,9 @@ Checks whether the token is valid and properly signed.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "SecurityAgent.1.validate", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "SecurityAgent.1.validate",
     "params": {
         "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICAgImpzb25ycGMiOiAiMi4wIiwgCiAgICAiaWQiOiAxMjM0NTY3ODkwLCAKICAgICJtZXRob2QiOiAiQ29udHJvbGxlci4xLmFjdGl2YXRlIiwgCiAgICAicGFyYW1zIjogewogICAgICAgICJjYWxsc2lnbiI6ICJTZWN1cml0eUFnZW50IgogICAgfQp9.lL40nTwRyBvMwiglZhl5_rB8ycY1uhAJRFx9pGATMRQ"
     }
@@ -191,8 +191,8 @@ Checks whether the token is valid and properly signed.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
         "valid": false
     }

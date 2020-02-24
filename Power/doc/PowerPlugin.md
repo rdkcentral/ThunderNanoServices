@@ -114,11 +114,11 @@ Sets power state.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Power.1.set", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Power.1.set",
     "params": {
-        "powerstate": "on", 
+        "powerstate": "on",
         "timeout": 0
     }
 }
@@ -127,8 +127,8 @@ Sets power state.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -162,8 +162,8 @@ Provides access to the power state.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Power.1.state"
 }
 ```
@@ -171,8 +171,8 @@ Provides access to the power state.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "on"
 }
 ```
