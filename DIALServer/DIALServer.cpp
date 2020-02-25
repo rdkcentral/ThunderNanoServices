@@ -292,7 +292,7 @@ namespace Plugin {
             Core::NodeId source((_config.Interface.Value().empty() == true) || (selectedNode.IsValid() == false) ? selectedNode.AnyInterface() : selectedNode);
 
             _dialURL = Core::URL(service->Accessor());
-            _dialPath = '/' + _dialURL.Path().Value().Text();
+            _dialPath = '/' + _dialURL.Path().Value();
 
             // TODO: THis used to be the MAC, but I think  it is just a unique number, otherwise, we need the MAC
             //       that goes with the selectedNode !!!!
@@ -631,7 +631,7 @@ namespace Plugin {
 
     void DIALServer::Activated(Exchange::IWebServer* pluginInterface)
     {
-        string remote(_dialURL.Host().Value().Text() + ':' + (_dialURL.Port().IsSet() ? Core::NumberType<uint16_t>(_dialURL.Port().Value()).Text() : _T("80")));
+        string remote(_dialURL.Host().Value() + ':' + (_dialURL.Port().IsSet() ? Core::NumberType<uint16_t>(_dialURL.Port().Value()).Text() : _T("80")));
 
         _adminLock.Lock();
 
@@ -650,7 +650,7 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        _dialServiceImpl->Locator(_dialURL.Text().Text());
+        _dialServiceImpl->Locator(_dialURL.Text());
         pluginInterface->RemoveProxy(_dialPath);
 
         _adminLock.Unlock();

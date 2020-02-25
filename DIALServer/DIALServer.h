@@ -490,7 +490,7 @@ namespace Plugin {
             }
             Protocol(const string& response, const Core::URL* url)
             {
-                _text = Core::ToString(string("OUT: [") + url->Text().Text() + "] " + response);
+                _text = Core::ToString(string("OUT: [") + url->Text() + "] " + response);
             }
             ~Protocol()
             {
