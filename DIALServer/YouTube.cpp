@@ -52,17 +52,21 @@ namespace DIALHandlers {
 
     public:
         uint32_t Start(const string& params) override {
-            Core::SystemInfo::SetEnvironment(_T("DIAL_START_URL"), params.c_str());
             return Default::Start(params);
         }
 
-        virtual void Started(const string& data)
+        bool Connect() override
         {
             _browser = Plugin::DIALServer::Default::QueryInterface<Exchange::IBrowser>();
             if (_browser != nullptr) {
                 _browser->Register(&_notification);
-                _browser->SetURL(data);
             }
+
+            return _browser != nullptr;
+        }
+        bool IsConnected() override
+        {
+            return _browser != nullptr;
         }
         virtual void Stopped(const string& data)
         {
@@ -77,7 +81,7 @@ namespace DIALHandlers {
             return _browser != nullptr;
         }
 
-        uint32_t Show(const string& params) override {
+        uint32_t Show() override {
             _browser->Hide(false);
             return Core::ERROR_NONE;
         }
@@ -88,6 +92,10 @@ namespace DIALHandlers {
 
         bool IsHidden() const override {
             return _hidden;
+        }
+
+        void URL(const string& url) override {
+            _browser->SetURL(url);
         }
 
     private:

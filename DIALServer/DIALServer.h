@@ -134,19 +134,51 @@ namespace Plugin {
             using AdditionalDataType = std::unordered_map<string, string>;
             virtual ~IApplication() {}
 
-            // Methods that the DIALServer requires.
             virtual bool IsRunning() const = 0;
+
+            // Returns wheter DIAL handler has ability to start & stop the service
             virtual bool HasStartAndStop() const = 0;
-            virtual uint32_t Start(const string& data) = 0;
-            virtual void Stop(const string& data) = 0;
+
+            // Returns wheter DIAL handler has ability to hide & show a service
             virtual bool HasHideAndShow() const = 0;
+
+            // Start an application with specified URL / payload
+            // Can only be called if HasStartAndStop() evaluates to true
+            virtual uint32_t Start(const string& data) = 0;
+
+            // Connect DIAL handler with the service (eg. DIAL of youtube to cobalt).
+            // Returns true if connection is successfull, false otherwise
+            virtual bool Connect() = 0;
+
+            // Returns whether DIAL handler is connected with the service
+            virtual bool IsConnected() = 0;
+
+            // Stop a running service. Additional data can be passed if in passive mode
+            // Can only be called if HasStartAndStop() evaluates to true
+            virtual void Stop(const string& data) = 0;
+
             virtual bool IsHidden() const = 0;
-            virtual uint32_t Show(const string& data) = 0;
+
+            // Make serivce visible. Can be used only if HasHideAndShow() evaluates to true
+            virtual uint32_t Show() = 0;
+
+            // Hide service. Can be used only if HasHideAndShow() evaluates to true
             virtual void Hide() = 0;
+
+            // Methods for passing a URL to DIAL handler
             virtual string URL() const = 0;
+            virtual void URL(const string& url) = 0;
+
+            // Methods used for passing additional data to DIAL handler
             virtual AdditionalDataType AdditionalData() const = 0;
             virtual void AdditionalData(AdditionalDataType&& data) = 0;
+
+            // Method used for setting the wheter managed service is running or not. 
+            // Used only in passive mode
             virtual void Running(const bool isRunning) = 0;
+
+            // Method used for passing a SwitchBoard to DIAL handler. 
+            // Used only in switchboard mode
             virtual void SwitchBoard(Exchange::ISwitchBoard* switchBoard) = 0;
         };
 
@@ -166,12 +198,15 @@ namespace Plugin {
                 ASSERT(!"Not supported and not even supposed to");
                 return Core::ERROR_GENERAL;
             }
+            bool Connect() override { return true;}
+            bool IsConnected() override {return true;}
             void Stop(const string& data) { ASSERT(!"Not supported and not even supposed to"); }
             bool HasHideAndShow() const { return true; }
             bool IsHidden() const { return true; }
-            uint32_t Show(const string& data) override { return Core::ERROR_GENERAL; }
+            uint32_t Show() override { return Core::ERROR_GENERAL; }
             void Hide() override {}
             string URL() const override { return {}; }
+            void URL(const string& url) override {};
             AdditionalDataType AdditionalData() const override { return { }; }
             void AdditionalData(AdditionalDataType&& data) override {}
             void Running(const bool isRunning) override {}
@@ -241,7 +276,7 @@ namespace Plugin {
             bool IsHidden() const override { return false; }
             bool HasHideAndShow() const override { return false; }
             bool HasStartAndStop() const override { return true; }
-            uint32_t Show(const string& data) override { return Core::ERROR_GENERAL; }
+            uint32_t Show() override { return Core::ERROR_GENERAL; }
             void Hide() override {}
             virtual uint32_t Start(const string& data)
             {
@@ -260,7 +295,12 @@ namespace Plugin {
                     }
 
                     if (IsRunning() == true) {
-                        Started(data);
+                        if (Connect() == false) {
+                            TRACE_L1("DIAL: Failed to attach to service");
+                            result = Core::ERROR_UNAVAILABLE;
+                        } else {
+                            URL(data);
+                        }
                     }
                 }
 
@@ -282,8 +322,13 @@ namespace Plugin {
                     }
                 }
             }
-            virtual void Started(const string& /* data */)
+            virtual bool IsConnected() override
             {
+                return true;
+            }
+            virtual bool Connect() override
+            {
+                return true;
             }
             virtual void Stopped(const string& /* data */)
             {
@@ -292,6 +337,10 @@ namespace Plugin {
             {
                 return ("");
             }
+            void URL(const string& url) override 
+            {
+                TRACE_L1("Setting URL not implemented in Default DIAL application");
+            };
             void AdditionalData(AdditionalDataType&& data) override
             {
                 _additionalData = std::move(data);
@@ -637,25 +686,35 @@ namespace Plugin {
             {
                 return (_url);
             }
-            inline bool IsRunning() const
-            {
-                return (_application->IsRunning());
+            
+            inline bool IsRunning() const 
+            { 
+                return _application->IsRunning(); 
             }
-            inline bool IsHidden() const
-            {
-                return (_application->IsHidden());
+            inline bool IsHidden() const 
+            { 
+                return (_application->IsHidden()); 
             }
             inline bool HasHideAndShow() const
             {
                 return _application->HasHideAndShow();
             }
-
-            inline uint32_t Show(const string& data)
+            inline uint32_t Show()
             {
-                return _application->Show(data);
+                return _application->Show();
             }
-            inline void Hide() { _application->Hide(); }
-
+            inline void Hide() 
+            { 
+                _application->Hide(); 
+            }
+            bool Connect() 
+            {
+                return _application->Connect();
+            }
+            bool IsConnected() 
+            {
+                return _application->IsConnected();
+            }
             inline void Running(const bool isRunning)
             {
                 _application->Running(isRunning);
@@ -676,14 +735,19 @@ namespace Plugin {
             {
                 return (_application->AdditionalData());
             }
-            inline const string URL() const
+            inline string URL() const
             {
                 return (_application->URL());
+            }
+            inline void URL(const string& url) 
+            {
+                _application->URL(url);
             }
             inline void SwitchBoard(Exchange::ISwitchBoard* switchBoard)
             {
                 _application->SwitchBoard(switchBoard);
             }
+
             inline static void Announce(const string& name, IApplicationFactory* factory)
             {
                 ASSERT(AppInformation::_applicationFactory.find(name) == AppInformation::_applicationFactory.end());

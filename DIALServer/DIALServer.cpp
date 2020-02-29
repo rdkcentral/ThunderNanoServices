@@ -431,8 +431,13 @@ namespace Plugin {
                     }
                 }
             } else {
-                if (app.HasHideAndShow() == true && app.IsHidden() == true) {
-                    uint32_t result = app.Show(parameters);
+                // Make sure that there is connection between DIAL handler and application
+                if (app.IsConnected() == false && app.Connect() == false) {
+                    
+                    TRACE_L1("Cannot connect DIAL handler to application %s", app.Name().c_str());
+                } else if (app.HasHideAndShow() == true && app.IsHidden() == true) {
+                    uint32_t result = app.Show();
+
                     // system app has special error codes. Handle them here.
                     if (app.Name() == _SystemApp) {
                         if (result == Core::ERROR_NONE) {
@@ -447,6 +452,8 @@ namespace Plugin {
                         }
                     } else {
                       if (result == Core::ERROR_NONE) {
+                          app.URL(parameters);
+
                           response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
                           response->ErrorCode = Web::STATUS_CREATED;
                           response->Message = _T("Created");
@@ -457,9 +464,11 @@ namespace Plugin {
                     }
                 } else {
                     if (request.HasBody() == true) {
-                        // Providing new arguments to the running app is not implemented.
-                        response->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
-                        response->Message = _T("Not Implemented");
+                        app.URL(parameters);
+
+                        response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
+                        response->ErrorCode = Web::STATUS_CREATED;
+                        response->Message = _T("Created");
                     } else {
                         response->ErrorCode = Web::STATUS_OK;
                         response->Message = _T("OK");
