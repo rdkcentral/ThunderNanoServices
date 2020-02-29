@@ -19,15 +19,15 @@ namespace Exchange {
 
             virtual ~ICallback() {}
 
-            virtual void Elapsed (const uint32_t seconds) = 0;
+            virtual void Elapsed (const uint16_t seconds) = 0;
         };
 
         virtual ~IWallClock() {}
 
         virtual uint32_t Callback(ICallback*) = 0;
 
-        virtual void Interval(const uint32_t) = 0;
-        virtual uint32_t Interval() const = 0;
+        virtual void Interval(const uint16_t) = 0;
+        virtual uint16_t Interval() const = 0;
         virtual uint64_t Now() const = 0;
     };
 
