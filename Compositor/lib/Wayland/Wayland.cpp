@@ -153,8 +153,9 @@ namespace Plugin {
                 uint32_t result = Core::ERROR_UNAVAILABLE;
                 if (index == 0) {
                     _surface.SetTop();
+                    SetInput();
                     result = Core::ERROR_NONE;
-                }
+              }
                 return (result);
             }
 
@@ -405,6 +406,8 @@ namespace Plugin {
                     std::list<Exchange::IComposition::INotification*>::iterator index(_compositionClients.begin());
 
                     while (index != _compositionClients.end()) {
+                        entry->ZOrder(0);
+                        entry->SetInput();
                         (*index)->Attached(entry->Name(), entry);
                         index++;
                     }

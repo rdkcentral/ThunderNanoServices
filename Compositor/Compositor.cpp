@@ -306,6 +306,7 @@ namespace Plugin {
             }
 
             _clients[name] = client;
+
             client->AddRef();
 
             // If it is a new addition, it is on top, by definition...
@@ -341,8 +342,18 @@ namespace Plugin {
 
         if (index != _zOrder.end()) {
             _zOrder.erase(index);
-        }
 
+            index = _zOrder.begin();
+
+            if (index != _zOrder.end()) {
+                string callsign = *index;
+                Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
+                if (client != nullptr) {
+                    client->ZOrder(0);
+                    client->Release();
+                }
+            }
+        }
         _adminLock.Unlock();
 
         TRACE(Trace::Information, (_T("Client detached completed")));
