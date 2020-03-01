@@ -1,0 +1,15 @@
+{
+    "$schema": "plugin.schema.json",
+    "info": {
+      "title": "Process Containers Plugin",
+      "callsign": "Containers",
+      "locator": "libWPEContainers.so",
+      "status": "development",
+      "description": "The Containers plugin provides informations about process containers running on system.",
+      "version": "1.0"
+    },
+    "interface": {
+      "$ref": "{interfacedir}/Containers.json#"
+    }
+  }
+  
