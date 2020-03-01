@@ -19,7 +19,7 @@ set(PLUGIN_NAME InjectedBundle)
 set(MODULE_NAME WPE${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
-find_package(securityagent)
+find_package(securityagent QUIET)
 
 option(PLUGIN_AMAZON_HAWAII "Enable the Amazon Player interface (Hawaii) in javascript." OFF)
 option(PLUGIN_SECURITY_AGENT "Enable the Security Agent Features interface in javascript." OFF)
