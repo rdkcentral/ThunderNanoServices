@@ -46,6 +46,7 @@ public:
     {
         NEXUS_Error rc = NxClient_Join(NULL);
         ASSERT(!rc);
+        NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
 
         if (rc == NEXUS_SUCCESS) {
             NEXUS_Platform_GetConfiguration(&_platformConfig);

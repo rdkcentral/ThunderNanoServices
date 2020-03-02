@@ -142,6 +142,7 @@ namespace Plugin {
 
         rc = NxClient_Join(nullptr);
         ASSERT(rc == NEXUS_SUCCESS);
+        NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
 
         NxClient_GetDefaultAllocSettings(&allocSettings);
         allocSettings.inputClient = 1;
