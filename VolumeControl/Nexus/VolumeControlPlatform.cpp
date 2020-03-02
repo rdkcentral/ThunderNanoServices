@@ -43,6 +43,7 @@ public:
       NxClient_GetDefaultJoinSettings(&joinSettings);
       snprintf(joinSettings.name, NXCLIENT_MAX_NAME, "%s", "wpevolumecontrol");
       NxClient_Join(&joinSettings);
+      NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
   }
 
   ~VolumeControlPlatformNexus() override
