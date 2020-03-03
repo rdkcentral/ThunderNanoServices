@@ -78,6 +78,9 @@ namespace Plugin {
 
                     hostname += ':' + Core::NumberType<uint16_t>(url.Port().Value()).Text();
                 }
+                else {
+                    hostname += ':' + Core::NumberType<uint16_t>(Core::URL::Port(url.Type())).Text();
+                }
 
                 _servers.push_back(hostname);
             }

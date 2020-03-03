@@ -315,6 +315,7 @@ namespace Plugin {
 
                     const string hostName(info.Host().Value());
 
+
                     _state = ACTIVE;
 
                     // it runs till zero, so subtract by definition 1 :-)
@@ -331,11 +332,15 @@ namespace Plugin {
                     if (info.Port().IsSet() == true) {
                         _remoteId += ':' + Core::NumberType<uint16_t>(info.Port().Value()).Text();
                     }
+                    else {
+                        _remoteId += ':' + Core::NumberType<uint16_t>(Core::URL::Port(info.Type())).Text();
+                    }
 
                     if (info.Query().IsSet() == true) {
                         _request->Query = info.Query().Value();
                     }
 
+                    string fullRequest; _request->ToString(fullRequest);
                     _infoCarrier = constructor->factory();
 
                     _activity.Submit();
@@ -497,6 +502,7 @@ namespace Plugin {
                     Link().LocalNode(remote.AnyInterface());
                     Link().RemoteNode(remote);
 
+                    TRACE(Trace::Information, (_T("Probing [%s:%d] on [%s]"), remote.HostAddress().c_str(), remote.PortNumber(), remote.Type() == Core::NodeId::TYPE_IPV6 ? _T("IPV6") : _T("IPv4")));
                     _state = (remote.Type() == Core::NodeId::TYPE_IPV6 ? IPV6_INPROGRESS : IPV4_INPROGRESS);
 
                     uint32_t status = Open(0);
