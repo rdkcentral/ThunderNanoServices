@@ -122,31 +122,31 @@ public:
 
         while (interfaces.Next() == true) {
             if (interfaces.IPV4Addresses().Count() > 1) { //FIXME: Count checking need to be revisited
-                _options.Set(_T("-d"), interfaces.MACAddress(':'));
-                _options.Set(_T("-i"), interfaces.Name());
+                _options.Add(_T("-d")).Add(interfaces.MACAddress(':'));
+                _options.Add(_T("-i")).Add(interfaces.Name());
                 break;
             }
         }
         if (config.PingWaitTimeOut.Value().empty() == false) {
-            _options.Set(_T("-t"), config.PingWaitTimeOut.Value());
+            _options.Add(_T("-t")).Add(config.PingWaitTimeOut.Value());
         }
         if (config.WebPAUrl.Value().empty() == false) {
-           _options.Set(_T("-u"), config.WebPAUrl.Value());
+           _options.Add(_T("-u")).Add(config.WebPAUrl.Value());
         }
         if (config.ParodusLocalUrl.Value().empty() == false) {
-            _options.Set(_T("-l"), config.ParodusLocalUrl.Value());
+            _options.Add(_T("-l")).Add(config.ParodusLocalUrl.Value());
         }
         if (config.PartnerId.Value().empty() == false) {
-            _options.Set(_T("-p"), config.PartnerId.Value());
+            _options.Add(_T("-p")).Add(config.PartnerId.Value());
         }
         if (config.WebPABackOffMax.Value().empty() == false) {
-            _options.Set(_T("-o"), config.WebPABackOffMax.Value());
+            _options.Add(_T("-o")).Add(config.WebPABackOffMax.Value());
         }
         if (config.SSLCertPath.Value().empty() == false) {
-            _options.Set(_T("-c"), config.SSLCertPath.Value());
+            _options.Add(_T("-c")).Add(config.SSLCertPath.Value());
         }
         if (config.ForceIPV4.IsSet() == true) {
-            _options.Set(_T("4"));
+            _options.Add(_T("4"));
         }
        const string locator(service->DataPath() + config.Location.Value());
        Launch();

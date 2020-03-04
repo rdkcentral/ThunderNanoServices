@@ -83,20 +83,20 @@ namespace Plugin {
 
                 Core::Process::Options options(_T("/usr/sbin/wpa_supplicant"));
                 /* interface name *mandatory */
-                options.Set(_T("-i") + _interfaceName);
+                options.Add(_T("-i")+ _interfaceName);
 
                 /* ctrl_interface parameter *mandatory */
-                options.Set(_T("-C") + _connector);
+                options.Add(_T("-C") + _connector);
 
                 /* driver name (can be multiple drivers: nl80211,wext) *optional */
-                options.Set(_T("-Dnl80211"));
+                options.Add(_T("-Dnl80211"));
 
                 /* global ctrl_interface group */
-                options.Set(_T("-G0"));
+                options.Add(_T("-G0"));
 
 #ifdef __DEBUG__
-                options.Set(_T("-dd"));
-                options.Set(_T("-f/tmp/wpasupplicant.log"));
+                options.Add(_T("-dd"));
+                options.Add(_T("-f/tmp/wpasupplicant.log"));
 #endif
 
                 TRACE_L1("Launching %s.", options.Command().c_str());
