@@ -232,7 +232,7 @@ namespace Plugin {
 
          void CollectWPEProcess(const string& argument)
          {
-            const string processName = "WPEProcess";
+            const string processName = "WPEProcess-1.0.0";
 
             list<Core::ProcessInfo> processes;
             Core::ProcessInfo::FindByName(processName, false, processes);
@@ -252,6 +252,7 @@ namespace Plugin {
                      if (*i == _parentName) {
                         columnName = _parentName + " (" + std::to_string(processInfo.Id()) + ")";
                         processIds.push_back(std::pair<uint32_t, string>(processInfo.Id(), columnName));
+                        shouldTrack = true;
                      }
                   }
                }
