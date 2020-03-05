@@ -55,7 +55,7 @@ namespace Plugin {
 
         config.FromString(_service->ConfigLine());
 
-        _browser = service->Root<Exchange::IBrowser>(_connectionId, 2000, _T("OutOfProcessImplementation"));
+        _browser = service->Root<Exchange::IBrowser>(_connectionId, Core::infinite, _T("OutOfProcessImplementation"));
 
         if (_browser == nullptr) {
             _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
