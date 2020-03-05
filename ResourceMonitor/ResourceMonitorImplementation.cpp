@@ -6,9 +6,12 @@
 #include <vector>
 
 using std::endl;
+using std::cerr; // TODO: temp
 using std::list;
 using std::stringstream;
 using std::vector;
+
+// TODO: don't create our own thread, use threadpool from WPEFramework
 
 namespace WPEFramework {
 namespace Plugin {
@@ -18,33 +21,69 @@ namespace Plugin {
    class ResourceMonitorImplementation : public Exchange::IResourceMonitor {
   private:
       class Config : public Core::JSON::Container {
+      public:
+         enum class CollectMode {
+            Single,    // Expect one process that can come and go
+            Multiple,  // Expect several processes with the same name
+            Callsign,  // Log Thunder process by callsign
+            ClassName, // Log Thunder process by class name
+            Invalid
+         };
+
      private:
          Config& operator=(const Config&) = delete;
-
+         
      public:
          Config()
              : Core::JSON::Container()
              , Path()
              , Interval()
+             , Mode()
+             , ParentName()
          {
             Add(_T("path"), &Path);
             Add(_T("interval"), &Interval);
+            Add(_T("mode"), &Mode);
+            Add(_T("parent-name"), &ParentName);
          }
          Config(const Config& copy)
              : Core::JSON::Container()
              , Path(copy.Path)
              , Interval(copy.Interval)
+             , Mode(copy.Mode)
+             , ParentName(copy.ParentName)
          {
             Add(_T("path"), &Path);
             Add(_T("interval"), &Interval);
+            Add(_T("mode"), &Mode);
+            Add(_T("parent-name"), &ParentName);
          }
          ~Config()
          {
+         }
+         
+         CollectMode GetCollectMode() const
+         {
+             if (Mode == "single") {
+                return CollectMode::Single;
+             } else if(Mode == "multiple") {
+                return CollectMode::Multiple;
+             } else if (Mode == "callsign") {
+                return CollectMode::Callsign;
+             } else if (Mode == "classname") {
+                return CollectMode::ClassName;
+             }
+
+             // TODO: no assert, should be logged
+             ASSERT(!"Not a valid collect mode!");
+             return CollectMode::Invalid;
          }
 
      public:
          Core::JSON::String Path;
          Core::JSON::DecUInt32 Interval;
+         Core::JSON::String Mode;
+         Core::JSON::String ParentName;
       };
 
       class ProcessThread : public Core::Thread {
@@ -55,6 +94,7 @@ namespace Plugin {
              , _ourMap(nullptr)
              , _bufferEntries(0)
              , _interval(0)
+             , _collectMode(Config::CollectMode::Invalid)
          {
             _binFile = fopen(config.Path.Value().c_str(), "w");
 
@@ -65,33 +105,15 @@ namespace Plugin {
                _bufferEntries++;
             }
 
+            // Because linux doesn't report the first couple of pages it uses itself,
+            //    allocate a little extra to make sure we don't miss the highest ones.
+            _bufferEntries += _bufferEntries / 10;
+
             _ourMap = new uint32_t[_bufferEntries];
             _otherMap = new uint32_t[_bufferEntries];
             _interval = config.Interval.Value();
-
-            _namesLock.Lock();
-            if (_processNames.empty()) {
-                // TODO: can check empty without locking mutex?
-                _processNames.push_back(g_parentProcessName);
-            }
-            _namesLock.Unlock();
-
-            list<Core::ProcessInfo> parentProcesses;
-            Core::ProcessInfo::FindByName(g_parentProcessName, false, parentProcesses);
-
-            if (parentProcesses.empty()) {
-               TRACE_L1("ERROR: Found no WPEFramework processes!!");
-               // TODO: is this the best way to cancel thread creation?
-               Core::Thread::Stop();
-               Core::Thread::Wait(STOPPED, Core::infinite);
-               return;
-            }
-
-            if (parentProcesses.size() > 1) {
-               TRACE_L1("Warning: found more than one WPEFramework process, only looking at first");
-            }
-
-            _parentProcess = parentProcesses.front();
+            _collectMode = config.GetCollectMode();
+            _parentName = config.ParentName.Value();
          }
 
          ~ProcessThread()
@@ -112,33 +134,49 @@ namespace Plugin {
             _namesLock.Unlock();
          }
 
-     protected:
-         virtual uint32_t Worker()
+      private:
+         // TODO: combine these "Collect*" methods
+         void CollectSingle()
          {
-            Core::ProcessTree parentTree(_parentProcess.Id());
+            list<Core::ProcessInfo> processes;
+            Core::ProcessInfo::FindByName(_parentName, false, processes);
 
-            list<Core::ProcessTree> childTrees;
+            // TODO: check if only one, warning otherwise?
 
-            Core::ProcessInfo::Iterator childIterator = _parentProcess.Children();
-            while (childIterator.Next()) {
-               childTrees.emplace_back(childIterator.Current().Id());
+            uint32_t mapBufferSize = sizeof(_ourMap[0]) * _bufferEntries;
+            memset(_ourMap, 0, mapBufferSize);
+            memset(_otherMap, 0, mapBufferSize);
+
+            vector<uint32_t> processIds;
+
+            for (const Core::ProcessInfo& processInfo : processes) {
+               string processName = processInfo.Name();
+
+               _namesLock.Lock();
+               if (find(_processNames.begin(), _processNames.end(), _parentName) == _processNames.end()) {
+                  _processNames.push_back(_parentName);
+               }
+               _namesLock.Unlock();
+
+               Core::ProcessTree processTree(processInfo.Id());
+
+               processTree.MarkOccupiedPages(_ourMap, mapBufferSize);
+
+               for (uint32_t pid : processTree.GetProcessIds()) {
+                  processIds.push_back(pid);
+               }
             }
 
-            // Find non-WPEFramework processes
+            memset(_otherMap, 0, mapBufferSize);
+
+            // Find other processes
             list<Core::ProcessInfo> otherProcesses;
             Core::ProcessInfo::Iterator otherIterator;
             while (otherIterator.Next()) {
                uint32_t otherId = otherIterator.Current().Id();
-               if (!parentTree.ContainsProcess(otherId)) {
-                  otherProcesses.push_back(otherIterator.Current());
+               if (find(processIds.begin(), processIds.end(), otherId) == processIds.end()) {
+                  otherIterator.Current().MarkOccupiedPages(_otherMap, mapBufferSize);
                }
-            }
-
-            uint32_t mapBufferSize = sizeof(_otherMap[0]) * _bufferEntries;
-            memset(_otherMap, 0, mapBufferSize);
-
-            for (const Core::ProcessInfo& otherProcess : otherProcesses) {
-               otherProcess.MarkOccupiedPages(_otherMap, mapBufferSize);
             }
 
             // We are only interested in pages NOT used by any other process.
@@ -146,43 +184,138 @@ namespace Plugin {
                _otherMap[i] = ~_otherMap[i];
             }
 
-            uint32_t totalProcessCount = 1 + childTrees.size();
-            StartLogLine(totalProcessCount);
+            StartLogLine(1);
+            LogProcess(_parentName);
+         }
 
-            _parentProcess.MarkOccupiedPages(_ourMap, mapBufferSize);
-            LogProcess(g_parentProcessName);
+         void CollectMultiple()
+         {
+            list<Core::ProcessInfo> processes;
+            Core::ProcessInfo::FindByName(_parentName, false, processes);
 
-            for (const Core::ProcessTree& childTree : childTrees) {
+            StartLogLine(processes.size());
+
+            for (const Core::ProcessInfo& processInfo : processes) {
+               uint32_t mapBufferSize = sizeof(_ourMap[0]) * _bufferEntries;
                memset(_ourMap, 0, mapBufferSize);
-               childTree.MarkOccupiedPages(_ourMap, mapBufferSize);
-               uint32_t rootId = childTree.RootId();
-               Core::ProcessInfo rootProcess(rootId);
-               std::list<string> commandLine = rootProcess.CommandLine();
+               memset(_otherMap, 0, mapBufferSize);
 
-               string printedName = "<invalid>";
-               if (!commandLine.empty()) {
-                  printedName = commandLine.front();
+               string processName = processInfo.Name() + " (" + std::to_string(processInfo.Id()) + ")";
+
+               _namesLock.Lock();
+               if (find(_processNames.begin(), _processNames.end(), processName) == _processNames.end()) {
+                  _processNames.push_back(processName);
+               }
+               _namesLock.Unlock();
+
+               Core::ProcessTree processTree(processInfo.Id());
+
+               processTree.MarkOccupiedPages(_ourMap, mapBufferSize);
+
+               list<Core::ProcessInfo> otherProcesses;
+               Core::ProcessInfo::Iterator otherIterator;
+               while (otherIterator.Next()) {
+                  uint32_t otherId = otherIterator.Current().Id();
+                  if (!processTree.ContainsProcess(otherId)) {
+                     otherIterator.Current().MarkOccupiedPages(_otherMap, mapBufferSize);
+                  }
                }
 
-               if (printedName == "WPEProcess") {
-                  // Get callsign (following "-C")
-                  std::list<string>::const_iterator i = std::find(commandLine.cbegin(), commandLine.cend(), _T("-C"));
+               // We are only interested in pages NOT used by any other process.
+               for (uint32_t i = 0; i < _bufferEntries; i++) {
+                  _otherMap[i] = ~_otherMap[i];
+               }
+
+               LogProcess(processName);
+            }
+         }
+
+         void CollectWPEProcess(const string& argument)
+         {
+            const string processName = "WPEProcess";
+
+            list<Core::ProcessInfo> processes;
+            Core::ProcessInfo::FindByName(processName, false, processes);
+
+            vector<std::pair<uint32_t, string> > processIds;
+            for (const Core::ProcessInfo& processInfo : processes) {
+               std::list<string> commandLine = processInfo.CommandLine();
+
+               bool shouldTrack = false;
+               string columnName;
+
+               // Get callsign/classname
+               std::list<string>::const_iterator i = std::find(commandLine.cbegin(), commandLine.cend(), argument);
+               if (i != commandLine.cend()) {
+                  i++;
                   if (i != commandLine.cend()) {
-                     i++;
-                     if (i != commandLine.cend()) {
-                        printedName += " (" + *i + ")";
+                     if (*i == _parentName) {
+                        columnName = _parentName + " (" + std::to_string(processInfo.Id()) + ")";
+                        processIds.push_back(std::pair<uint32_t, string>(processInfo.Id(), columnName));
                      }
                   }
                }
 
+               if (!shouldTrack) {
+                  continue;
+               }
+
                _namesLock.Lock();
-               if (std::find(_processNames.cbegin(), _processNames.cend(), printedName) == _processNames.cend()) {
-                  _processNames.push_back(printedName);
+               if (std::find(_processNames.cbegin(), _processNames.cend(), columnName) == _processNames.cend()) {
+                  _processNames.push_back(columnName);
                }
                _namesLock.Unlock();
-
-               LogProcess(printedName);
             }
+
+            StartLogLine(processIds.size());
+
+            for (std::pair<uint32_t, string> processDesc : processIds) {
+               Core::ProcessTree tree(processDesc.first);
+
+               uint32_t mapBufferSize = sizeof(_ourMap[0]) * _bufferEntries;
+               memset(_ourMap, 0, mapBufferSize);
+               memset(_otherMap, 0, mapBufferSize);
+
+               tree.MarkOccupiedPages(_ourMap, mapBufferSize);
+
+               list<Core::ProcessInfo> otherProcesses;
+               Core::ProcessInfo::Iterator otherIterator;
+               while (otherIterator.Next()) {
+                  uint32_t otherId = otherIterator.Current().Id();
+                  if (!tree.ContainsProcess(otherId)) {
+                     otherIterator.Current().MarkOccupiedPages(_otherMap, mapBufferSize);
+                  }
+               }
+
+               for (uint32_t i = 0; i < _bufferEntries; i++) {
+                  _otherMap[i] = ~_otherMap[i];
+               }
+
+               LogProcess(processDesc.second);
+            }
+         }
+
+     protected:
+         virtual uint32_t Worker()
+         {
+            switch(_collectMode) {
+               case Config::CollectMode::Single:
+                  CollectSingle();
+                  break;
+               case Config::CollectMode::Multiple: 
+                  CollectMultiple();
+                  break;
+               case Config::CollectMode::Callsign: 
+                  CollectWPEProcess("-C");
+                  break;
+               case Config::CollectMode::ClassName:
+                  CollectWPEProcess("-c");
+                  break;
+               case Config::CollectMode::Invalid:
+                  // TODO: ASSERT?
+                  break;
+            }
+
 
             Thread::Block();
             return _interval * 1000;
@@ -235,7 +368,8 @@ namespace Plugin {
          uint32_t * _ourMap;   // Buffer for pages used by our process (tree).
          uint32_t _bufferEntries; // Numer of entries in each buffer.
          uint32_t _interval; // Seconds between measurement.
-         Core::ProcessInfo _parentProcess; // Parent process of our tree ("WPEFramework").
+         Config::CollectMode _collectMode; // Collection style.
+         string _parentName; // Process/plugin name we are looking for.
       };
 
   private:
