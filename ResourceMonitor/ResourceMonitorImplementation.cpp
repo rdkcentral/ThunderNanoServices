@@ -147,7 +147,7 @@ namespace Plugin {
             memset(_ourMap, 0, mapBufferSize);
             memset(_otherMap, 0, mapBufferSize);
 
-            vector<uint32_t> processIds;
+            vector<::ThreadId> processIds;
 
             for (const Core::ProcessInfo& processInfo : processes) {
                string processName = processInfo.Name();
@@ -162,7 +162,7 @@ namespace Plugin {
 
                processTree.MarkOccupiedPages(_ourMap, mapBufferSize);
 
-               for (uint32_t pid : processTree.GetProcessIds()) {
+               for (::ThreadId pid : processTree.GetProcessIds()) {
                   processIds.push_back(pid);
                }
             }
@@ -173,7 +173,7 @@ namespace Plugin {
             list<Core::ProcessInfo> otherProcesses;
             Core::ProcessInfo::Iterator otherIterator;
             while (otherIterator.Next()) {
-               uint32_t otherId = otherIterator.Current().Id();
+               ::ThreadId otherId = otherIterator.Current().Id();
                if (find(processIds.begin(), processIds.end(), otherId) == processIds.end()) {
                   otherIterator.Current().MarkOccupiedPages(_otherMap, mapBufferSize);
                }
@@ -215,7 +215,7 @@ namespace Plugin {
                list<Core::ProcessInfo> otherProcesses;
                Core::ProcessInfo::Iterator otherIterator;
                while (otherIterator.Next()) {
-                  uint32_t otherId = otherIterator.Current().Id();
+                  ::ThreadId otherId = otherIterator.Current().Id();
                   if (!processTree.ContainsProcess(otherId)) {
                      otherIterator.Current().MarkOccupiedPages(_otherMap, mapBufferSize);
                   }
@@ -237,7 +237,7 @@ namespace Plugin {
             list<Core::ProcessInfo> processes;
             Core::ProcessInfo::FindByName(processName, false, processes);
 
-            vector<std::pair<uint32_t, string> > processIds;
+            vector<std::pair<::ThreadId, string> > processIds;
             for (const Core::ProcessInfo& processInfo : processes) {
                std::list<string> commandLine = processInfo.CommandLine();
 
@@ -251,8 +251,8 @@ namespace Plugin {
                   if (i != commandLine.cend()) {
                      if (*i == _parentName) {
                         columnName = _parentName + " (" + std::to_string(processInfo.Id()) + ")";
-                        processIds.push_back(std::pair<uint32_t, string>(processInfo.Id(), columnName));
-                        shouldTrack = true;
+                        processIds.push_back(std::pair<::ThreadId, string>(processInfo.Id(), columnName));
+                           shouldTrack = true;
                      }
                   }
                }
@@ -270,7 +270,7 @@ namespace Plugin {
 
             StartLogLine(processIds.size());
 
-            for (std::pair<uint32_t, string> processDesc : processIds) {
+            for (std::pair<::ThreadId, string> processDesc : processIds) {
                Core::ProcessTree tree(processDesc.first);
 
                uint32_t mapBufferSize = sizeof(_ourMap[0]) * _bufferEntries;
@@ -282,7 +282,7 @@ namespace Plugin {
                list<Core::ProcessInfo> otherProcesses;
                Core::ProcessInfo::Iterator otherIterator;
                while (otherIterator.Next()) {
-                  uint32_t otherId = otherIterator.Current().Id();
+                  ::ThreadId otherId = otherIterator.Current().Id();
                   if (!tree.ContainsProcess(otherId)) {
                      otherIterator.Current().MarkOccupiedPages(_otherMap, mapBufferSize);
                   }
