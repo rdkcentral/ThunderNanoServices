@@ -128,11 +128,11 @@ Also see: [userupdate](#event.userupdate)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Messenger.1.join", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Messenger.1.join",
     "params": {
-        "user": "Bob", 
+        "user": "Bob",
         "room": "Lounge"
     }
 }
@@ -141,8 +141,8 @@ Also see: [userupdate](#event.userupdate)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
         "roomid": "1e217990dd1cd4f66124"
     }
@@ -184,9 +184,9 @@ Also see: [userupdate](#event.userupdate)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Messenger.1.leave", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Messenger.1.leave",
     "params": {
         "roomid": "1e217990dd1cd4f66124"
     }
@@ -196,8 +196,8 @@ Also see: [userupdate](#event.userupdate)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -238,11 +238,11 @@ Also see: [message](#event.message)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Messenger.1.send", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Messenger.1.send",
     "params": {
-        "roomid": "1e217990dd1cd4f66124", 
+        "roomid": "1e217990dd1cd4f66124",
         "message": "Hello!"
     }
 }
@@ -251,8 +251,8 @@ Also see: [message](#event.message)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -292,10 +292,10 @@ Register to this event to be notified about room status updates. Immediately aft
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.roomupdate", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.roomupdate",
     "params": {
-        "room": "Lounge", 
+        "room": "Lounge",
         "action": "created"
     }
 }
@@ -323,10 +323,10 @@ Register to this event to be notified about room status updates. Immediately aft
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "1e217990dd1cd4f66124.client.events.1.userupdate", 
+    "jsonrpc": "2.0",
+    "method": "1e217990dd1cd4f66124.client.events.1.userupdate",
     "params": {
-        "user": "Bob", 
+        "user": "Bob",
         "action": "joined"
     }
 }
@@ -354,10 +354,10 @@ Register to this event to be notified about new messages in a room.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "1e217990dd1cd4f66124.client.events.1.message", 
+    "jsonrpc": "2.0",
+    "method": "1e217990dd1cd4f66124.client.events.1.message",
     "params": {
-        "user": "Bob", 
+        "user": "Bob",
         "message": "Hello!"
     }
 }

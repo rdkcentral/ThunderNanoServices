@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include "../../Module.h"
 #include <interfaces/IPower.h>
 
@@ -95,7 +114,7 @@ private:
     void SetWakeEvent();
     void PrintWakeup();
     static void gpioInterrupt(void* context, int param);
-    void Resumed();
+    void NotifyStateChange(Exchange::IPower::PCState pState);
 
 private:
     Core::CriticalSection _adminLock;
@@ -407,6 +426,7 @@ Exchange::IPower::PCStatus PowerImplementation::SetPowerState()
 {
     TRACE(Trace::Information, (_T("SetPowerState")));
     NxClient_StandbySettings standbySettings;
+    PCState pState = On;
 
     NxClient_GetDefaultStandbySettings(&standbySettings);
     standbySettings.settings.mode = _mode;
@@ -418,10 +438,23 @@ Exchange::IPower::PCStatus PowerImplementation::SetPowerState()
     if (rc)
         return PCFailure;
 
-    if (_mode == NEXUS_PlatformStandbyMode_eOn) {
-        TRACE(Trace::Information, (_T("Resumed")));
-        Resumed();
+    TRACE(Trace::Information, (_T("NotifyStateChange")));
+    switch (_mode) {
+        case NEXUS_PlatformStandbyMode_eOn:
+            pState = On;
+            break;
+        case NEXUS_PlatformStandbyMode_eActive:
+            pState = ActiveStandby;
+            break;
+        case NEXUS_PlatformStandbyMode_ePassive:
+            pState = PassiveStandby;
+            break;
+        case NEXUS_PlatformStandbyMode_eDeepSleep:
+            pState = SuspendToRAM;
+            break;
     }
+    NotifyStateChange(pState);
+
     return PCSuccess;
 }
 
@@ -433,14 +466,14 @@ void PowerImplementation::SetWakeEvent()
     }
 }
 
-void PowerImplementation::Resumed()
+void PowerImplementation::NotifyStateChange(Exchange::IPower::PCState pState)
 {
     _adminLock.Lock();
 
     std::list<Exchange::IPower::INotification*>::iterator index(_notificationClients.begin());
 
     while (index != _notificationClients.end()) {
-        (*index)->StateChange(Exchange::IPower::On);
+        (*index)->StateChange(pState);
         index++;
     }
 

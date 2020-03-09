@@ -98,7 +98,7 @@ IOConnector interface properties:
 
 Provides access to the GPIO pin value.
 
-Also see: [pinactivity](#event.pinactivity)
+Also see: [activity](#event.activity)
 
 ### Value
 
@@ -106,7 +106,7 @@ Also see: [pinactivity](#event.pinactivity)
 | :-------- | :-------- | :-------- |
 | (property) | number | GPIO pin value |
 
-> The *pin ID* shall be passed as the index to the property, e.g. *IOConnector.1.pin@189*.
+> The *pin id* shall be passed as the index to the property, e.g. *IOConnector.1.pin@189*.
 
 ### Errors
 
@@ -120,8 +120,8 @@ Also see: [pinactivity](#event.pinactivity)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "IOConnector.1.pin@189"
 }
 ```
@@ -129,8 +129,8 @@ Also see: [pinactivity](#event.pinactivity)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": 1
 }
 ```
@@ -138,9 +138,9 @@ Also see: [pinactivity](#event.pinactivity)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "IOConnector.1.pin@189", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "IOConnector.1.pin@189",
     "params": 1
 }
 ```
@@ -148,8 +148,8 @@ Also see: [pinactivity](#event.pinactivity)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -164,10 +164,10 @@ IOConnector interface events:
 
 | Event | Description |
 | :-------- | :-------- |
-| [pinactivity](#event.pinactivity) | Notifies about GPIO pin activity |
+| [activity](#event.activity) | Notifies about GPIO pin activity |
 
-<a name="event.pinactivity"></a>
-## *pinactivity <sup>event</sup>*
+<a name="event.activity"></a>
+## *activity <sup>event</sup>*
 
 Notifies about GPIO pin activity.
 
@@ -188,8 +188,8 @@ Register to this event to be notified about pin value changes
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "189.client.events.1.pinactivity", 
+    "jsonrpc": "2.0",
+    "method": "189.client.events.1.activity",
     "params": {
         "value": 1
     }

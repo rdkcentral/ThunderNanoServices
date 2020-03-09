@@ -15,6 +15,7 @@ TimeSync plugin for Thunder framework.
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
+- [Notifications](#head.Notifications)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -22,7 +23,7 @@ TimeSync plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the TimeSync plugin. It includes detailed specification of its configuration, methods and properties provided.
+This document describes purpose and functionality of the TimeSync plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -125,8 +126,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "TimeSync.1.synchronize"
 }
 ```
@@ -134,8 +135,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -172,8 +173,8 @@ Provides access to the most recent synchronized time.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "TimeSync.1.synctime"
 }
 ```
@@ -181,10 +182,10 @@ Provides access to the most recent synchronized time.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "time": "2019-05-07T07:20:26Z", 
+        "time": "2019-05-07T07:20:26Z",
         "source": "ntp://example.com"
     }
 }
@@ -216,8 +217,8 @@ Upon setting this property automatic time synchronization will be stopped. If no
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "TimeSync.1.time"
 }
 ```
@@ -225,8 +226,8 @@ Upon setting this property automatic time synchronization will be stopped. If no
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "2019-05-07T07:20:26Z"
 }
 ```
@@ -234,9 +235,9 @@ Upon setting this property automatic time synchronization will be stopped. If no
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "TimeSync.1.time", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "TimeSync.1.time",
     "params": "2019-05-07T07:20:26Z"
 }
 ```
@@ -244,8 +245,38 @@ Upon setting this property automatic time synchronization will be stopped. If no
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
+}
+```
+<a name="head.Notifications"></a>
+# Notifications
+
+Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+
+The following events are provided by the TimeSync plugin:
+
+TimeSync interface events:
+
+| Event | Description |
+| :-------- | :-------- |
+| [timechange](#event.timechange) | Signals a time change |
+
+<a name="event.timechange"></a>
+## *timechange <sup>event</sup>*
+
+Signals a time change.
+
+### Parameters
+
+This event carries no parameters.
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "client.events.1.timechange"
 }
 ```

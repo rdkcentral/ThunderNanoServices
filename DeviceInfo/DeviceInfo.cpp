@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "DeviceInfo.h"
 
 namespace WPEFramework {
@@ -98,13 +117,6 @@ namespace Plugin {
     {
         Core::SystemInfo& singleton(Core::SystemInfo::Instance());
 
-        if (_deviceId.empty() == true) {
-            _deviceId = GetDeviceId();
-        }
-        if (_deviceId.empty() == false) {
-            systemInfo.Deviceid = _deviceId;
-        }
-
         systemInfo.Time = Core::Time::Now().ToRFC1123(true);
         systemInfo.Version = _service->Version() + _T("#") + _subSystem->BuildTreeHash();
         systemInfo.Uptime = singleton.GetUpTime();
@@ -112,8 +124,6 @@ namespace Plugin {
         systemInfo.Totalram = singleton.GetTotalRam();
         systemInfo.Devicename = singleton.GetHostName();
         systemInfo.Cpuload = Core::NumberType<uint32_t>(static_cast<uint32_t>(singleton.GetCpuLoad())).Text();
-        systemInfo.Totalgpuram = singleton.GetTotalGpuRam();
-        systemInfo.Freegpuram = singleton.GetFreeGpuRam();
         systemInfo.Serialnumber = _systemId;
     }
 
@@ -144,27 +154,6 @@ namespace Plugin {
     void DeviceInfo::SocketPortInfo(JsonData::DeviceInfo::SocketinfoData& socketPortInfo) const
     {
         socketPortInfo.Runs = Core::ResourceMonitor::Instance().Runs();
-    }
-
-    string DeviceInfo::GetDeviceId() const
-    {
-        string result;
-
-        const PluginHost::ISubSystem::IIdentifier* info(_subSystem->Get<PluginHost::ISubSystem::IIdentifier>());
-
-        if (info != nullptr) {
-            uint8_t myBuffer[64];
-
-            myBuffer[0] = info->Identifier(sizeof(myBuffer) - 1, &(myBuffer[1]));
-
-            info->Release();
-
-            if (myBuffer[0] != 0) {
-                result = Core::SystemInfo::Instance().Id(myBuffer, ~0);
-            }
-        }
-
-        return (result);
     }
 
 } // namespace Plugin

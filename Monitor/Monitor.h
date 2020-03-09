@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #ifndef __MONITOR_H
 #define __MONITOR_H
 
@@ -448,31 +467,7 @@ namespace Plugin {
             MonitorObjects& operator=(const MonitorObjects&) = delete;
 
         public:
-            class Job : public Core::IDispatchType<void> {
-            private:
-                Job() = delete;
-                Job(const Job& copy) = delete;
-                Job& operator=(const Job& RHS) = delete;
-
-            public:
-                Job(MonitorObjects* parent)
-                    : _parent(*parent)
-                {
-                    ASSERT(parent != nullptr);
-                }
-                virtual ~Job()
-                {
-                }
-
-            public:
-                virtual void Dispatch() override
-                {
-                    _parent.Probe();
-                }
-
-            private:
-                MonitorObjects& _parent;
-            };
+            using Job = Core::ThreadPool::JobType<MonitorObjects>;
 
             class MonitorObject {
             public:
@@ -518,6 +513,7 @@ namespace Plugin {
                     , _measurement()
                     , _operationalEvaluate(actOnOperational)
                     , _source(nullptr)
+                    , _active{false}
                 {
                     ASSERT((_operationalInterval != 0) || (_memoryInterval != 0));
 
@@ -546,6 +542,7 @@ namespace Plugin {
                     , _operationalEvaluate(copy._operationalEvaluate)
                     , _source(copy._source)
                     , _interval(copy._interval)
+                    , _active{copy._active}
                 {
                     if (_source != nullptr) {
                         _source->AddRef();
@@ -695,6 +692,9 @@ namespace Plugin {
                     return (status);
                 }
 
+                bool IsActive() const { return _active; }
+                void Active(bool active) { _active = active; }
+
             private:
                 const uint32_t _operationalInterval; //!< Interval (s) to check the monitored processes
                 const uint32_t _memoryInterval; //!<  Interval (s) for a memory measurement.
@@ -714,21 +714,22 @@ namespace Plugin {
                 bool _operationalEvaluate;
                 Exchange::IMemory* _source;
                 uint32_t _interval; //!< The lowest possible interval to check both memory and processes.
+                bool _active;
             };
 
         public:
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
             MonitorObjects(Monitor* parent)
                 : _adminLock()
                 , _monitor()
-                , _job(Core::ProxyType<Job>::Create(this))
+                , _job(*this)
                 , _service(nullptr)
                 , _parent(*parent)
             {
             }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
             virtual ~MonitorObjects()
@@ -807,13 +808,13 @@ namespace Plugin {
 
                 _adminLock.Unlock();
 
-                PluginHost::WorkerPool::Instance().Submit(_job);
+                _job.Submit();
             }
             inline void Close()
             {
                 ASSERT(_service != nullptr);
 
-                PluginHost::WorkerPool::Instance().Revoke(_job);
+                _job.Revoke();
 
                 _adminLock.Lock();
                 _monitor.clear();
@@ -833,6 +834,22 @@ namespace Plugin {
                     PluginHost::IShell::state currentState(service->State());
 
                     if (currentState == PluginHost::IShell::ACTIVATED) {
+                        bool is_active = index->second.IsActive();
+                        index->second.Active(true);
+                        if (is_active == false &&
+                            std::count_if(_monitor.begin(), _monitor.end(), [](const std::pair<string, MonitorObject>& v) {
+                                return v.second.IsActive();
+                            }) == 1) {
+
+                            // A monitor which previously was stopped restarting is being activated.
+                            // Moreover it's the only only which now becomes active. This means probing
+                            // has to be activated as well since it was stopped at point the last observee
+                            // turned inactive
+                            _job.Submit();
+
+                            TRACE(Trace::Information, (_T("Starting to probe as active observee appeared.")));
+                        }
+
                         // Get the MetaData interface
                         Exchange::IMemory* memory = service->QueryInterface<Exchange::IMemory>();
 
@@ -842,18 +859,21 @@ namespace Plugin {
                         }
                     } else if (currentState == PluginHost::IShell::DEACTIVATION) {
                         index->second.Set(nullptr);
-                    } else if ((currentState == PluginHost::IShell::DEACTIVATED) && (index->second.HasRestartAllowed() == true) && ((service->Reason() == PluginHost::IShell::MEMORY_EXCEEDED) || (service->Reason() == PluginHost::IShell::FAILURE))) {
-                        if (index->second.RegisterRestart(service->Reason()) == false) {
-                            TRACE(Trace::Fatal, (_T("Giving up restarting of %s: Failed more than %d times within %d seconds."), service->Callsign().c_str(), index->second.RestartLimit(service->Reason()), index->second.RestartWindow(service->Reason())));
-                            const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Restart\", \"reason\":\"" + (std::to_string(index->second.RestartLimit(service->Reason()))).c_str() + " Attempts Failed within the restart window\"}");
-                            _service->Notify(message);
-                            _parent.event_action(service->Callsign(), "StoppedRestaring", std::to_string(index->second.RestartLimit(service->Reason())) + " attempts failed within the restart window");
-                        } else {
-                            const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Activate\", \"reason\": \"Automatic\" }");
-                            _service->Notify(message);
-                            _parent.event_action(service->Callsign(), "Activate", "Automatic");
-                            TRACE(Trace::Error, (_T("Restarting %s again because we detected it misbehaved."), service->Callsign().c_str()));
-                            PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(service, PluginHost::IShell::ACTIVATED, PluginHost::IShell::AUTOMATIC));
+                    } else if ((currentState == PluginHost::IShell::DEACTIVATED)) {
+                        index->second.Active(false);
+                        if ((index->second.HasRestartAllowed() == true) && ((service->Reason() == PluginHost::IShell::MEMORY_EXCEEDED) || (service->Reason() == PluginHost::IShell::FAILURE))) {
+                            if (index->second.RegisterRestart(service->Reason()) == false) {
+                                TRACE(Trace::Fatal, (_T("Giving up restarting of %s: Failed more than %d times within %d seconds."), service->Callsign().c_str(), index->second.RestartLimit(service->Reason()), index->second.RestartWindow(service->Reason())));
+                                const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Restart\", \"reason\":\"" + (std::to_string(index->second.RestartLimit(service->Reason()))).c_str() + " Attempts Failed within the restart window\"}");
+                                _service->Notify(message);
+                                _parent.event_action(service->Callsign(), "StoppedRestaring", std::to_string(index->second.RestartLimit(service->Reason())) + " attempts failed within the restart window");
+                            } else {
+                                const string message("{\"callsign\": \"" + service->Callsign() + "\", \"action\": \"Activate\", \"reason\": \"Automatic\" }");
+                                _service->Notify(message);
+                                _parent.event_action(service->Callsign(), "Activate", "Automatic");
+                                TRACE(Trace::Error, (_T("Restarting %s again because we detected it misbehaved."), service->Callsign().c_str()));
+                                PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(service, PluginHost::IShell::ACTIVATED, PluginHost::IShell::AUTOMATIC));
+                            }
                         }
                     }
                 }
@@ -981,9 +1001,11 @@ namespace Plugin {
             END_INTERFACE_MAP
 
         private:
-            // Probe can be run in an unlocked state as the destruction of the observer list
-            // is always done if the thread that calls the Probe is blocked (paused)
-            void Probe()
+            friend Core::ThreadPool::JobType<MonitorObjects&>;
+
+            // Dispatch can be run in an unlocked state as the destruction of the observer list
+            // is always done if the thread that calls the Dispatch is blocked (paused)
+            void Dispatch()
             {
                 uint64_t scheduledTime(Core::Time::Now().Ticks());
                 uint64_t nextSlot(static_cast<uint64_t>(~0));
@@ -993,6 +1015,10 @@ namespace Plugin {
                 // Go through the list of pending observations...
                 while (index != _monitor.end()) {
                     MonitorObject& info(index->second);
+                    if (info.IsActive() == false) {
+                        ++index;
+                        continue;
+                    }
 
                     if (info.TimeSlot() <= scheduledTime) {
                         uint32_t value(info.Evaluate());
@@ -1025,13 +1051,15 @@ namespace Plugin {
                     index++;
                 }
 
-                if (nextSlot != static_cast<uint64_t>(~0)) {
+                if (nextSlot != static_cast<uint64_t>(~0)) {    
                     if (nextSlot < Core::Time::Now().Ticks()) {
-                        PluginHost::WorkerPool::Instance().Submit(_job);
+                        _job.Submit();
                     } else {
                         nextSlot += 1000 /* Add 1 ms */;
-                        PluginHost::WorkerPool::Instance().Schedule(nextSlot, _job);
+                        _job.Schedule(nextSlot);
                     }
+               } else {
+                  TRACE(Trace::Information, (_T("Stopping to probe due to lack of active observees.")));
                 }
             }
 
@@ -1047,18 +1075,24 @@ namespace Plugin {
 
             Core::CriticalSection _adminLock;
             std::map<string, MonitorObject> _monitor;
-            Core::ProxyType<Core::IDispatchType<void>> _job;
+            Core::WorkerPool::JobType<MonitorObjects&> _job;
             PluginHost::IShell* _service;
             Monitor& _parent;
         };
 
     public:
+        #ifdef __WINDOWS__
+        #pragma warning(disable : 4355)
+        #endif
         Monitor()
             : _skipURL(0)
             , _monitor(Core::Service<MonitorObjects>::Create<MonitorObjects>(this))
         {
             RegisterAll();
         }
+        #ifdef __WINDOWS__
+        #pragma warning(default : 4355)
+        #endif
         virtual ~Monitor()
         {
             UnregisterAll();

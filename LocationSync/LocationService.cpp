@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include "LocationService.h"
 
 namespace WPEFramework {
@@ -238,7 +257,7 @@ namespace Plugin {
         return (index < (sizeof(g_domainFactory) / sizeof(DomainConstructor)) ? &(g_domainFactory[index]) : nullptr);
     }
 
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
     LocationService::LocationService(Core::IDispatchType<void>* callback)
@@ -254,11 +273,12 @@ namespace Plugin {
         , _country()
         , _region()
         , _city()
+        , _activity(*this)
+        , _infoCarrier()
         , _request(Core::ProxyType<Web::Request>::Create())
-        , _activity(Core::ProxyType<Job>::Create(this))
     {
     }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
 
@@ -293,7 +313,8 @@ namespace Plugin {
 
                 if (constructor != nullptr) {
 
-                    const string hostName(info.Host().Value().Text());
+                    const string hostName(info.Host().Value());
+
 
                     _state = ACTIVE;
 
@@ -304,21 +325,25 @@ namespace Plugin {
                     _request->Verb = Web::Request::HTTP_GET;
                     _request->Path = _T("/");
                     if (info.Path().IsSet() == true) {
-                        _request->Path += info.Path().Value().Text();
+                        _request->Path += info.Path().Value();
                     }
                     _remoteId = hostName;
 
                     if (info.Port().IsSet() == true) {
                         _remoteId += ':' + Core::NumberType<uint16_t>(info.Port().Value()).Text();
                     }
-
-                    if (info.Query().IsSet() == true) {
-                        _request->Query = info.Query().Value().Text();
+                    else {
+                        _remoteId += ':' + Core::NumberType<uint16_t>(Core::URL::Port(info.Type())).Text();
                     }
 
+                    if (info.Query().IsSet() == true) {
+                        _request->Query = info.Query().Value();
+                    }
+
+                    string fullRequest; _request->ToString(fullRequest);
                     _infoCarrier = constructor->factory();
 
-                    PluginHost::WorkerPool::Instance().Submit(_activity);
+                    _activity.Submit();
 
                     result = Core::ERROR_NONE;
                 }
@@ -334,7 +359,7 @@ namespace Plugin {
     {
         _adminLock.Lock();
 
-        PluginHost::WorkerPool::Instance().Revoke(_activity);
+        _activity.Revoke();
 
         if ((_state != IDLE) && (_state != FAILED) && (_state != LOADED)) {
 
@@ -420,7 +445,7 @@ namespace Plugin {
         }
 
         // Finish the cycle..
-        PluginHost::WorkerPool::Instance().Submit(_activity);
+        _activity.Submit();
     }
 
     /* virtual */ void LocationService::Send(const Core::ProxyType<Web::Request>& element)
@@ -438,7 +463,8 @@ namespace Plugin {
             Submit(_request);
         } else if (Link().HasError() == true) {
             Close(0);
-            PluginHost::WorkerPool::Instance().Submit(_activity);
+
+            _activity.Submit();
         }
     }
 
@@ -476,6 +502,7 @@ namespace Plugin {
                     Link().LocalNode(remote.AnyInterface());
                     Link().RemoteNode(remote);
 
+                    TRACE(Trace::Information, (_T("Probing [%s:%d] on [%s]"), remote.HostAddress().c_str(), remote.PortNumber(), remote.Type() == Core::NodeId::TYPE_IPV6 ? _T("IPV6") : _T("IPv4")));
                     _state = (remote.Type() == Core::NodeId::TYPE_IPV6 ? IPV6_INPROGRESS : IPV4_INPROGRESS);
 
                     uint32_t status = Open(0);
@@ -512,9 +539,7 @@ namespace Plugin {
 
         // See if we need rescheduling
         if (result != Core::infinite) {
-            Core::Time timestamp(Core::Time::Now());
-            timestamp.Add(result);
-            PluginHost::WorkerPool::Instance().Schedule(timestamp, _activity);
+            _activity.Schedule(Core::Time::Now().Add(result));
         }
     }
 

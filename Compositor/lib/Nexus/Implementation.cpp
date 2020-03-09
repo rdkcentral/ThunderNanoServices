@@ -1,8 +1,33 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include "Module.h"
 
+#ifndef NEXUS_SERVER_EXTERNAL
 #include "NexusServer/NexusServer.h"
+#else
+#include <nexus_config.h>
+#include <nexus_types.h>
+#include <nxclient.h>
+#endif
 
-#include <interfaces/IComposition.h>
+#include "NexusServer/Settings.h"
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -40,6 +65,43 @@ namespace Plugin {
             Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
         };
 
+        class Postpone : public Core::Thread {
+        private:
+            Postpone() = delete;
+            Postpone(const Postpone&) = delete;
+            Postpone& operator=(const Postpone&) = delete;
+
+        public:
+            Postpone(CompositorImplementation& parent, const uint16_t delay)
+                : _parent(parent)
+                , _trigger(false, true)
+                , _delay(delay * 1000)
+            {
+            }
+            virtual ~Postpone()
+            {
+                Block();
+                _trigger.SetEvent();
+            }
+
+        public:
+            uint32_t Worker()
+            {
+                if (_trigger.Lock(_delay) == Core::ERROR_TIMEDOUT) {
+                    _parent.PlatformReady();
+                }
+                Stop();
+                return (Core::infinite);
+            }
+
+        private:
+            CompositorImplementation& _parent;
+            Core::Event _trigger;
+            uint32_t _delay;
+        };
+
+
+#ifndef NEXUS_SERVER_EXTERNAL
         class Sink
             : public Broadcom::Platform::IClient,
               public Broadcom::Platform::IStateChange {
@@ -48,64 +110,17 @@ namespace Plugin {
             Sink(const Sink&) = delete;
             Sink& operator=(const Sink&) = delete;
 
-            class Postpone : public Core::Thread {
-            private:
-                Postpone() = delete;
-                Postpone(const Postpone&) = delete;
-                Postpone& operator=(const Postpone&) = delete;
-
-            public:
-                Postpone(Sink& parent, const uint16_t delay)
-                    : _parent(parent)
-                    , _trigger(false, true)
-                    , _delay(delay * 1000)
-                {
-                }
-                virtual ~Postpone()
-                {
-                    Block();
-                    _trigger.SetEvent();
-                }
-
-            public:
-                uint32_t Worker()
-                {
-                    if (_trigger.Lock(_delay) == Core::ERROR_TIMEDOUT) {
-                        _parent.PlatformReady();
-                    }
-                    Stop();
-                    return (Core::infinite);
-                }
-
-            private:
-                Sink& _parent;
-                Core::Event _trigger;
-                uint32_t _delay;
-            };
-
         public:
             explicit Sink(CompositorImplementation* parent)
                 : _parent(*parent)
-                , _delay(nullptr)
             {
                 ASSERT(parent != nullptr);
             }
             ~Sink()
             {
-                if (_delay != nullptr) {
-                    delete _delay;
-                }
             }
 
         public:
-            inline void HardwareDelay(const uint16_t time, Exchange::IComposition::ScreenResolution format)
-            {
-                ASSERT(_delay == nullptr);
-                if ((time != 0) && (_delay == nullptr)) {
-                    _delay = new Postpone(*this, time);
-                }
-                _displayFormat = format;
-            }
             //   Broadcom::Platform::ICallback methods
             // -------------------------------------------------------------------------------------------------------
             /* virtual */ void Attached(Exchange::IComposition::IClient* client)
@@ -121,11 +136,7 @@ namespace Plugin {
             /* virtual */ virtual void StateChange(Broadcom::Platform::server_state state)
             {
                 if (state == Broadcom::Platform::OPERATIONAL) {
-                    if (_delay != nullptr) {
-                        _delay->Run();
-                    } else {
-                        _parent.PlatformReady();
-                    }
+                    _parent.StateChange();
                 }
             }
 
@@ -133,32 +144,42 @@ namespace Plugin {
             inline void PlatformReady()
             {
                 _parent.PlatformReady();
-                if (_delay != nullptr)
-                    _parent.Resolution(_displayFormat);
             }
 
         private:
             CompositorImplementation& _parent;
-            Postpone* _delay;
-            Exchange::IComposition::ScreenResolution _displayFormat;
         };
-
+#endif
     public:
         CompositorImplementation()
             : _adminLock()
             , _service(nullptr)
             , _observers()
             , _clients()
+            , _joined(false)
+            , _joinSettings()
+            , _displayFormat()
+            , _delay(nullptr)
+#ifndef NEXUS_SERVER_EXTERNAL
             , _sink(this)
             , _nxserver(nullptr)
+#endif
         {
         }
 
         ~CompositorImplementation()
         {
+            if (_joined == true) {
+                NxClient_Uninit();
+            }
+            if (_delay != nullptr) {
+                delete _delay;
+            }
+#ifndef NEXUS_SERVER_EXTERNAL
             if (_nxserver != nullptr) {
                 delete _nxserver;
             }
+#endif
             if (_service != nullptr) {
                 _service->Release();
             }
@@ -166,7 +187,7 @@ namespace Plugin {
 
     public:
         BEGIN_INTERFACE_MAP(CompositorImplementation)
-        INTERFACE_ENTRY(Exchange::IComposition)
+            INTERFACE_ENTRY(Exchange::IComposition)
         END_INTERFACE_MAP
 
     public:
@@ -180,21 +201,39 @@ namespace Plugin {
             _service = service;
             _service->AddRef();
 
-            ASSERT(_nxserver == nullptr);
+            NxClient_GetDefaultJoinSettings(&(_joinSettings));
+            strcpy(_joinSettings.name, service->Callsign().c_str());
 
             Config info;
             info.FromString(configuration);
 
-            _sink.HardwareDelay(info.HardwareDelay.Value(), info.Resolution.Value());
+            HardwareDelay(info.HardwareDelay.Value(), info.Resolution.Value());
 
-            _nxserver = new Broadcom::Platform(service->Callsign(), &_sink, &_sink, configuration);
+#ifndef NEXUS_SERVER_EXTERNAL
+            ASSERT(_nxserver == nullptr);
+
+            NEXUS_VideoFormat format = NEXUS_VideoFormat_eUnknown;
+            if (info.Resolution.IsSet() == true) {
+                const auto index(formatLookup.find(info.Resolution.Value()));
+
+                if ((index != formatLookup.cend()) && (index->second != NEXUS_VideoFormat_eUnknown)) {
+                    format = index->second;
+                }
+            }
+
+            _nxserver = new Broadcom::Platform(&_sink, &_sink, configuration, format);
 
             ASSERT(_nxserver != nullptr);
 
-            if ((_nxserver != nullptr) && (_nxserver->State() == Broadcom::Platform::OPERATIONAL) && (_nxserver->Join() == false)) {
+            if ((_nxserver != nullptr) && (_nxserver->State() == Broadcom::Platform::OPERATIONAL) && (Join() == false)) {
                 TRACE(Trace::Information, (_T("Could not Join the started NXServer.")));
             }
-
+#else
+            StateChange();
+            if (Join() == false) {
+                TRACE(Trace::Information, (_T("Could not Join the started NXServer.")));
+            }
+#endif
             return Core::ERROR_NONE;
         }
 
@@ -239,101 +278,55 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        /* virtual */ Exchange::IComposition::IClient* Client(const uint8_t id)
-        {
-            Exchange::IComposition::IClient* result = nullptr;
-
-            uint8_t count = id;
-
-            _adminLock.Lock();
-
-            std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
-
-            while ((count != 0) && (index != _clients.end())) {
-                count--;
-                index++;
-            }
-
-            if (index != _clients.end()) {
-                result = (*index);
-                result->AddRef();
-            }
-
-            _adminLock.Unlock();
-
-            return (result);
-        }
-
-        /* virtual */ Exchange::IComposition::IClient* Client(const string& name)
-        {
-            Exchange::IComposition::IClient* result = nullptr;
-
-            _adminLock.Lock();
-
-            std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
-
-            while ((index != _clients.end()) && ((*index)->Name() != name)) {
-                index++;
-            }
-
-            if (index != _clients.end()) {
-                result = (*index);
-                result->AddRef();
-            }
-
-            _adminLock.Unlock();
-
-            return (result);
-        }
-
-        /* virtual */ uint32_t Geometry(const string& callsign, const Rectangle& rectangle) override
-        {
-            return (Core::ERROR_GENERAL);
-        }
-
-        /* virtual */ Exchange::IComposition::Rectangle Geometry(const string& callsign) const override
-        {
-            Exchange::IComposition::Rectangle rectangle;
-
-            rectangle.x = 0;
-            rectangle.y = 0;
-            rectangle.width = 0;
-            rectangle.height = 0;
-
-            return (rectangle);
-        }
-
-        /* virtual */ uint32_t ToTop(const string& callsign) override
-        {
-            return (Core::ERROR_GENERAL);
-        }
-
-        /* virtual */ uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override
-        {
-            return (Core::ERROR_GENERAL);
-        }
-
-        /* virtual */ RPC::IStringIterator* ClientsInZorder() const override
-        {
-            return (nullptr);
-        }
-
         /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override
         {
+            if (_joined == true) {
 
-            ASSERT(_nxserver != nullptr);
+                NxClient_DisplaySettings displaySettings;
 
-            if (_nxserver != nullptr) {
-                _nxserver->Resolution(format);
+                NxClient_GetDisplaySettings(&displaySettings);
+
+                const auto index(formatLookup.find(format));
+
+                if ((index != formatLookup.cend()) && (index->second != NEXUS_VideoFormat_eUnknown)) {
+
+                    if (index->second != displaySettings.format) {
+
+                        displaySettings.format = index->second;
+                        if (NxClient_SetDisplaySettings(&displaySettings) != 0) {
+                            TRACE(Trace::Information, (_T("Errir in setting NxClient DisplaySettings")));
+                        }
+                    }
+                }
             }
         }
 
         /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const override
         {
+            Exchange::IComposition::ScreenResolution result(Exchange::IComposition::ScreenResolution_Unknown);
 
-            ASSERT(_nxserver != nullptr);
+            if (_joined == true) {
+                NxClient_DisplaySettings displaySettings;
 
-            return (_nxserver != nullptr ? _nxserver->Resolution() : Exchange::IComposition::ScreenResolution_Unknown);
+                NxClient_GetDisplaySettings(&displaySettings);
+                NEXUS_VideoFormat format = displaySettings.format;
+                const auto index = std::find_if(formatLookup.cbegin(), formatLookup.cend(),
+                    [format](const std::pair<const Exchange::IComposition::ScreenResolution, const NEXUS_VideoFormat>& entry) { return entry.second == format; });
+
+                if (index != formatLookup.cend()) {
+                    result = index->first;
+                }
+            }
+            return (result);
+        }
+
+        inline void StateChange()
+        {
+            if (_delay != nullptr) {
+                _delay->Run();
+            } else {
+                PlatformReady();
+            }
         }
 
     private:
@@ -412,6 +405,9 @@ namespace Plugin {
         }
         void PlatformReady()
         {
+            if (_delay != nullptr)
+                Resolution(_displayFormat);
+
             PluginHost::ISubSystem* subSystems(_service->SubSystems());
 
             ASSERT(subSystems != nullptr);
@@ -424,10 +420,32 @@ namespace Plugin {
 
                 // Now the platform is ready we should Join it as well, since we
                 // will do generic (not client related) stuff as well.
-                if ((_nxserver != nullptr) && (_nxserver->Join() != true)) {
+#ifndef NEXUS_SERVER_EXTERNAL
+                if ((_nxserver != nullptr) && (Join() != true)) {
                     TRACE(Trace::Information, (_T("Could not Join the started NXServer.")));
                 }
+#else
+                if (Join() != true) {
+                    TRACE(Trace::Information, (_T("Could not Join the NXServer.")));
+                }
+#endif
             }
+        }
+        inline void HardwareDelay(const uint16_t time, Exchange::IComposition::ScreenResolution format)
+        {
+            ASSERT(_delay == nullptr);
+            if ((time != 0) && (_delay == nullptr)) {
+                _delay = new Postpone(*this, time);
+            }
+            _displayFormat = format;
+        }
+        inline bool Join()
+        {
+            if ((_joined == false) && (NxClient_Join(&_joinSettings) == NEXUS_SUCCESS)) {
+                _joined = true;
+                NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
+            }
+            return (_joined);
         }
 
     private:
@@ -435,8 +453,16 @@ namespace Plugin {
         PluginHost::IShell* _service;
         std::list<Exchange::IComposition::INotification*> _observers;
         std::list<Exchange::IComposition::IClient*> _clients;
+
+        bool _joined;
+        NxClient_JoinSettings _joinSettings;
+        Exchange::IComposition::ScreenResolution _displayFormat;
+        Postpone* _delay;
+
+#ifndef NEXUS_SERVER_EXTERNAL
         Sink _sink;
         Broadcom::Platform* _nxserver;
+#endif
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);

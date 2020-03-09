@@ -1,4 +1,26 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include "Wayland.h"
+#ifdef ENABLE_NXSERVER
+#include "NexusServer/Settings.h"
+#endif
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -61,6 +83,7 @@ namespace Plugin {
             Entry(Wayland::Display::Surface* surface, Implementation::IServer* server)
                 : _surface(*surface)
                 , _server(server)
+                , _rectangle( {0, 0, surface->Width(), surface->Height() } )
             {
                 ASSERT(surface != nullptr);
                 ASSERT(server != nullptr);
@@ -93,48 +116,60 @@ namespace Plugin {
             {
                 return _surface.IsValid();
             }
-            virtual string Name() const override
-            {
-                return _surface.Name();
-            }
-            virtual void Kill() override
-            {
-                //TODO: to be implemented.
-            }
-            virtual void Opacity(const uint32_t value) override
-            {
-                _surface.Opacity(value);
-            }
-            virtual void Geometry(const uint32_t X, const uint32_t Y, const uint32_t width, const uint32_t height)
-            {
-                _surface.Resize(X, Y, width, height);
-            }
-            virtual void Visible(const bool visible)
-            {
-                _surface.Visibility(visible);
-            }
-            virtual void SetTop()
-            {
-                _surface.SetTop();
-            }
-            virtual void SetInput()
+            void SetInput()
             {
                 if (_server != nullptr) {
                     _server->SetInput(_surface.Name().c_str());
                 }
             }
+            string Name() const override
+            {
+                return _surface.Name();
+            }
+            void Kill() override
+            {
+                //TODO: to be implemented.
+            }
+            void Opacity(const uint32_t value) override
+            {
+                if ((value == Exchange::IComposition::minOpacity) || (value == Exchange::IComposition::maxOpacity)) {
+                    _surface.Visibility(value == Exchange::IComposition::maxOpacity);
+                }
+                else
+                {  
+                    _surface.Opacity(value);
+                }
+            }
+            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override 
+            {
+                _rectangle = rectangle;
+                _surface.Resize(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+
+                return (Core::ERROR_NONE);
+            }
+            Exchange::IComposition::Rectangle Geometry() const override 
+            {
+                return (_rectangle);
+            }
+            uint32_t ZOrder(const uint16_t index) override
+            {
+                uint32_t result = Core::ERROR_UNAVAILABLE;
+                if (index == 0) {
+                    _surface.SetTop();
+                    SetInput();
+                    result = Core::ERROR_NONE;
+              }
+                return (result);
+            }
 
             BEGIN_INTERFACE_MAP(Entry)
-            INTERFACE_ENTRY(Exchange::IComposition::IClient)
+                INTERFACE_ENTRY(Exchange::IComposition::IClient)
             END_INTERFACE_MAP
-
-        private:
-            virtual void ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) override {}
-            virtual void ChangedZOrder(const uint8_t zorder) override {}
 
         private:
             Wayland::Display::Surface _surface;
             Implementation::IServer* _server;
+            Exchange::IComposition::Rectangle _rectangle;
         };
 
         class Config : public Core::JSON::Container {
@@ -147,9 +182,12 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , Join(false)
                 , Display("wayland-0")
+                , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
             {
                 Add(_T("join"), &Join);
                 Add(_T("display"), &Display);
+                Add(_T("resolution"), &Resolution);
+
             }
             ~Config()
             {
@@ -158,12 +196,12 @@ namespace Plugin {
         public:
             Core::JSON::Boolean Join;
             Core::JSON::String Display;
+            Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
         };
 
         class Sink : public Wayland::Display::ICallback
 #ifdef ENABLE_NXSERVER
-            ,
-                     public Broadcom::Platform::IStateChange
+            , public Broadcom::Platform::IStateChange
 #endif
         {
         private:
@@ -243,7 +281,6 @@ namespace Plugin {
                 // Exit Wayland loop
                 _controller->Signal();
                 _controller->Release();
-                delete _controller;
             }
 
 #ifdef ENABLE_NXSERVER
@@ -288,7 +325,18 @@ namespace Plugin {
             }
 
             if (_config.Join == false) {
-                _nxserver = new Broadcom::Platform(_service->Callsign(), &_sink, nullptr, _service->ConfigLine());
+                Config info;
+                info.FromString(_service->ConfigLine());
+
+                NEXUS_VideoFormat format = NEXUS_VideoFormat_eUnknown;
+                if (info.Resolution.IsSet() == true) {
+                    const auto index(formatLookup.find(info.Resolution.Value()));
+
+                    if ((index != formatLookup.cend()) && (index->second != NEXUS_VideoFormat_eUnknown)) {
+                        format = index->second;
+                    }
+                }
+                _nxserver = new Broadcom::Platform(&_sink, nullptr, _service->ConfigLine(), format);
             } else {
                 StartImplementation();
             }
@@ -337,80 +385,6 @@ namespace Plugin {
             }
             g_implementationLock.Unlock();
         }
-        /* virtual */ Exchange::IComposition::IClient* Client(const string& name)
-        {
-            Exchange::IComposition::IClient* result = nullptr;
-
-            g_implementationLock.Lock();
-
-            std::list<Entry*>::iterator index(_clients.begin());
-
-            while ((index != _clients.end()) && ((*index)->Name() != name)) {
-                index++;
-            }
-
-            if ((index != _clients.end()) && ((*index)->IsActive() == true)) {
-                result = (*index);
-                result->AddRef();
-            }
-            g_implementationLock.Unlock();
-
-            return (result);
-        }
-        /* virtual */ Exchange::IComposition::IClient* Client(const uint8_t id)
-        {
-            uint8_t modifiableId = id;
-            Exchange::IComposition::IClient* result = nullptr;
-
-            g_implementationLock.Lock();
-            std::list<Entry*>::iterator index(_clients.begin());
-            while ((index != _clients.end()) && (modifiableId != 0)) {
-                if ((*index)->IsActive() == true) {
-
-                    modifiableId--;
-                }
-                index++;
-            }
-            if (index != _clients.end()) {
-                result = (*index);
-                result->AddRef();
-            }
-            g_implementationLock.Unlock();
-
-            return (result);
-        }
-
-        /* virtual */ uint32_t Geometry(const string& callsign, const Rectangle& rectangle) override
-        {
-            return (Core::ERROR_GENERAL);
-        }
-
-        /* virtual */ Exchange::IComposition::Rectangle Geometry(const string& callsign) const override
-        {
-            Exchange::IComposition::Rectangle rectangle;
-
-            rectangle.x = 0;
-            rectangle.y = 0;
-            rectangle.width = 0;
-            rectangle.height = 0;
-
-            return (rectangle);
-        }
-
-        /* virtual */ uint32_t ToTop(const string& callsign) override
-        {
-            return (Core::ERROR_GENERAL);
-        }
-
-        /* virtual */ uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override
-        {
-            return (Core::ERROR_GENERAL);
-        }
-
-        /* virtual */ RPC::IStringIterator* ClientsInZorder() const override
-        {
-            return (nullptr);
-        }
 
         /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override
         {
@@ -449,6 +423,8 @@ namespace Plugin {
                     std::list<Exchange::IComposition::INotification*>::iterator index(_compositionClients.begin());
 
                     while (index != _compositionClients.end()) {
+                        entry->ZOrder(0);
+                        entry->SetInput();
                         (*index)->Attached(entry->Name(), entry);
                         index++;
                     }

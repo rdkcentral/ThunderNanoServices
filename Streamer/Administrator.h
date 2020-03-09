@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #pragma once
 
 #include "Module.h"
@@ -51,19 +70,19 @@ namespace Player {
             Core::BitArrayFlexType<16> _slots;
         };
 
-        template<class PLAYER>
+        template<class PLAYER, const Exchange::IStream::streamtype STREAMTYPE>
         class PlayerPlatformRegistrationType {
         public:
             PlayerPlatformRegistrationType() = delete;
-            PlayerPlatformRegistrationType(const PlayerPlatformRegistrationType<PLAYER>&) = delete;
-            PlayerPlatformRegistrationType& operator=(const PlayerPlatformRegistrationType<PLAYER>&) = delete;
+            PlayerPlatformRegistrationType(const PlayerPlatformRegistrationType<PLAYER,STREAMTYPE>&) = delete;
+            PlayerPlatformRegistrationType& operator=(const PlayerPlatformRegistrationType<PLAYER,STREAMTYPE>&) = delete;
 
-            PlayerPlatformRegistrationType(Exchange::IStream::streamtype streamType,
+            PlayerPlatformRegistrationType(
                     InitializerType initializer = nullptr, DeinitializerType deinitializer = nullptr)
             {
                 string name(Core::ClassNameOnly(typeid(PLAYER).name()).Text());
 
-                IPlayerPlatformFactory* factory = new PlayerPlatformFactoryType<PLAYER>(streamType, initializer, deinitializer);
+                IPlayerPlatformFactory* factory = new PlayerPlatformFactoryType<PLAYER, STREAMTYPE>(initializer, deinitializer);
                 ASSERT(factory != nullptr);
 
                 if (factory) {

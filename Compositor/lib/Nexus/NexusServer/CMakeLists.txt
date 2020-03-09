@@ -1,3 +1,20 @@
+# If not stated otherwise in this file or this component's LICENSE file the
+# following copyright and licenses apply:
+#
+# Copyright 2020 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 #[[==
   If running a nxserver and nxclient in the same process you need to link libnxclienet_local instead of
   nxclient. Only one client can run as a local client, the IPC mechanism will still be available
@@ -11,7 +28,6 @@ option(PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (Nexus only).")
 option(PLUGIN_COMPOSITOR_GRAPHICS_HEAP_SIZE "Change graphic heap of driver (Nexus only).")
 option(PLUGIN_COMPOSITOR_INSTALL_NEXUS_SERVER "Enable to install the server to staging." OFF)
 option(NEXUS_SERVER_HAS_EXTENDED_INIT "Enable to support unauthenticated nxclients." ON)
-option(NEXUS_SERVER_EXTERNAL "Enable hooking up to an eternally running NxServer instead of running one." OFF)
 
 message("Setup ${TARGET} v${VERSION}...")
 
@@ -20,34 +36,22 @@ find_package(${NAMESPACE}Core REQUIRED)
 add_library(${TARGET} STATIC
         NexusServer.cpp)
 
-if (NEXUS_SERVER_EXTERNAL)
-    find_package(NXCLIENT REQUIRED)
-    target_link_libraries(${TARGET}
-        PRIVATE
-            ${NAMESPACE}Core::${NAMESPACE}Core
-        PUBLIC
-            NXCLIENT::NXCLIENT)
-    target_compile_definitions(${TARGET} 
-        PRIVATE 
-            NEXUS_SERVER_EXTERNAL)
-else()
-    find_package(NXSERVER REQUIRED)
-    find_package(NEXUS REQUIRED)
-    find_package(NXCLIENT_LOCAL REQUIRED)
+find_package(NXSERVER REQUIRED)
+find_package(NEXUS REQUIRED)
+find_package(NXCLIENT_LOCAL REQUIRED)
 
-    target_include_directories(${TARGET}
-        PRIVATE
-            ${LIBNXSERVER_INCLUDE_DIR}
-    )
+target_include_directories(${TARGET}
+    PRIVATE
+        ${LIBNXSERVER_INCLUDE_DIR}
+)
 
-    target_link_libraries(${TARGET}
-        PRIVATE
-            ${NAMESPACE}Core::${NAMESPACE}Core
-            NEXUS::NEXUS
-            NXSERVER::NXSERVER
-        PUBLIC
-            NXCLIENT_LOCAL::NXCLIENT_LOCAL)
-endif()
+target_link_libraries(${TARGET}
+    PRIVATE
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        NEXUS::NEXUS
+        NXSERVER::NXSERVER
+    PUBLIC
+        NXCLIENT_LOCAL::NXCLIENT_LOCAL)
 
 set(PUBLIC_HEADERS NexusServer.h)
 

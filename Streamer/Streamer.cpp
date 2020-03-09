@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include "Streamer.h"
 
 namespace WPEFramework {
@@ -309,12 +328,14 @@ namespace Plugin {
                 if (index.Current() == _T("Create")) {
 
                     if (index.Next() == true) {
-                        uint8_t streamtype = Core::NumberType<uint8_t>(index.Current());
-                        Core::EnumerateType<Exchange::IStream::streamtype> type(streamtype);
-                        if (type.IsSet()) {
+                        Core::EnumerateType<Exchange::IStream::streamtype> enumType(index.Current());
+                        if (enumType.IsSet() == false) {
+                            enumType = static_cast<Exchange::IStream::streamtype> (Core::NumberType<uint8_t>(index.Current()).Value());
+                        }
+                        if (enumType.IsSet()) {
                             Core::ProxyType<Web::JSONBodyType<Data>> response(jsonBodyDataFactory.Element());
 
-                            Exchange::IStream* stream = _player->CreateStream(type.Value());
+                            Exchange::IStream* stream = _player->CreateStream(enumType.Value());
                             if (stream != nullptr) {
                                 uint8_t position = 0;
                                 for (; position < _streams.size(); ++position) {

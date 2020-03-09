@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include "Module.h"
 
 #include <interfaces/IComposition.h>
@@ -49,6 +68,7 @@ namespace Plugin {
 
                 if (result != nullptr) {
                     _parent.NewClientOffered(result);
+                    result->Release();
                 }
             }
 
@@ -116,14 +136,20 @@ namespace Plugin {
                 : currentRectangle()
                 , clientInterface(client)
             {
+                clientInterface->AddRef();
                 currentRectangle.x = 0;
                 currentRectangle.y = 0;
                 currentRectangle.width = Exchange::IComposition::WidthFromResolution(resolution);
                 currentRectangle.height = Exchange::IComposition::HeightFromResolution(resolution);
             }
+            ~ClientData() {
+                if (clientInterface != nullptr) {
+                    clientInterface->Release();
+                }
+            }
 
-            Exchange::IComposition::Rectangle currentRectangle = Exchange::IComposition::Rectangle();
-            Exchange::IComposition::IClient* clientInterface = nullptr;
+            Exchange::IComposition::Rectangle currentRectangle;
+            Exchange::IComposition::IClient* clientInterface;
         };
 
     public:
@@ -181,84 +207,7 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        Exchange::IComposition::IClient* Client(const uint8_t id) override
-        {
-            Exchange::IComposition::IClient* result = nullptr;
-            _adminLock.Lock();
-            auto index(_clients.begin());
-            std::advance(index, id);
-            if (index != _clients.end()) {
-                result = (index->second.clientInterface);
-                ASSERT(result != nullptr);
-                result->AddRef();
-            }
-            _adminLock.Unlock();
-            return (result);
-        }
-
-        Exchange::IComposition::IClient* Client(const string& name) override
-        {
-            return FindClient(name);
-        }
-
-    private:
-        template <typename ClientOperation>
-        uint32_t CallOnClientByCallsign(const string& callsign, ClientOperation&& operation)
-        {
-            uint32_t error = Core::ERROR_NONE;
-            Exchange::IComposition::IClient* client = FindClient(callsign);
-            if (client != nullptr) {
-                std::forward<ClientOperation>(operation)(*client);
-                client->Release();
-            } else {
-                error = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
-            }
-            return error;
-        }
-
     public:
-        uint32_t Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle) override
-        {
-            uint32_t result = CallOnClientByCallsign(callsign, [&](Exchange::IComposition::IClient& client) { client.ChangedGeometry(rectangle); });
-            if (result == Core::ERROR_NONE) {
-                result = SetClientRectangle(callsign, rectangle);
-            }
-            return result;
-        }
-
-        Exchange::IComposition::Rectangle Geometry(const string& callsign) const override
-        {
-            return FindClientRectangle(callsign);
-        }
-
-        uint32_t ToTop(const string& callsign) override
-        {
-            // todo correct implementation
-            return CallOnClientByCallsign(callsign, [&](Exchange::IComposition::IClient& client) { client.ChangedZOrder(_clients.size()); });
-        }
-
-        uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder) override
-        {
-            // todo correct implementation
-            return CallOnClientByCallsign(callsignRelativeTo, [&](Exchange::IComposition::IClient& client) { client.ChangedZOrder(~0); });
-        }
-
-        RPC::IStringIterator* ClientsInZorder() const override
-        {
-            // todo correct implementation
-            using CliensCallsignArray = std::vector<string>;
-            _adminLock.Lock();
-
-            CliensCallsignArray clients;
-            clients.reserve(_clients.size());
-
-            for (auto const& client : _clients) {
-                clients.push_back(client.first); // todo for now RPC call inside lock, later on we need some map anyway
-            }
-            _adminLock.Unlock();
-            return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(clients));
-        }
-
         void Resolution(const Exchange::IComposition::ScreenResolution format) override
         {
             TRACE(Trace::Information, (_T("Could not set screenresolution to %s. Not supported for Rapberry Pi compositor"), Core::EnumerateType<Exchange::IComposition::ScreenResolution>(format).Data()));
@@ -286,33 +235,32 @@ namespace Plugin {
                 const string name(client->Name());
                 if (name.empty() == true) {
                     ASSERT(false);
-                    TRACE(Trace::Information,
-                        (_T("Registration of a nameless client.")));
+                    TRACE(Trace::Information, (_T("Registration of a nameless client.")));
                 } else {
                     _adminLock.Lock();
 
-                    const ClientData* clientdata = FindClientData(name);
-                    if (clientdata != nullptr) {
-                        //    ASSERT (false);
-                        TRACE(Trace::Information,
-                            (_T("Client already registered %s."), name.c_str()));
+                    ClientDataContainer::iterator element (_clients.find(name));
+
+                    if (element != _clients.end()) {
                         // as the old one may be dangling becayse of a crash let's remove that one, this is the most logical thing to do
-                        ClientRevoked(clientdata->clientInterface);
+                        ClientRevoked(element->second.clientInterface);
+
+                        TRACE(Trace::Information, (_T("Replace client %s."), name.c_str()));
+                    }
+                    else {
+                        TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
+
                     }
 
-                    client->AddRef();
-                    _clients[name] = ClientData(client, Resolution());
-                    TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
+                    _clients.emplace(std::piecewise_construct,
+                                         std::forward_as_tuple(name),
+                                         std::forward_as_tuple(client, Resolution()));
 
                     for (auto&& index : _observers) {
                         index->Attached(name, client);
                     }
 
-                    client->AddRef(); // for call to RecalculateZOrder
-
                     _adminLock.Unlock();
-
-                    RecalculateZOrder(client); //note: do outside lock
                 }
             }
         }
@@ -324,38 +272,24 @@ namespace Plugin {
 
             _adminLock.Lock();
             auto it = _clients.begin();
-            while (it != _clients.end()) {
-                if (it->second.clientInterface == client) {
-                    TRACE(Trace::Information, (_T("Removed client %s."), it->first.c_str()));
-                    for (auto index : _observers) {
-                        // note as we have the name here, we could more efficiently pass the name to the
-                        // caller as it is not allowed to get it from the pointer passes, but we are going
-                        // to restructure the interface anyway
-                        index->Detached(it->first.c_str());
-                    }
+            while ( (it != _clients.end()) && (it->second.clientInterface != client) ) { ++it; }
 
-                    uint32_t result = it->second.clientInterface->Release();
-
-                    DEBUG_VARIABLE(result);
-                    TRACE_L1("Releasing Compositor Client result: %s", result == Core::ERROR_DESTRUCTION_SUCCEEDED ? "succeeded" : "failed");
-
-                    _clients.erase(it);
-                    break;
+            if (it != _clients.end()) {
+                TRACE(Trace::Information, (_T("Remove client %s."), it->first.c_str()));
+                for (auto index : _observers) {
+                    // note as we have the name here, we could more efficiently pass the name to the
+                    // caller as it is not allowed to get it from the pointer passes, but we are going
+                    // to restructure the interface anyway
+                    index->Detached(it->first.c_str());
                 }
-                ++it;
+
+                _clients.erase(it);
             }
             _adminLock.Unlock();
 
             TRACE(Trace::Information, (_T("Client detached completed")));
         }
 
-        // on new client
-        void RecalculateZOrder(Exchange::IComposition::IClient* client)
-        {
-            ASSERT(client != nullptr);
-            client->ChangedZOrder(_clients.size());
-            client->Release();
-        }
 
         void PlatformReady()
         {

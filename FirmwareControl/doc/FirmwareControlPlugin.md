@@ -93,7 +93,7 @@ FirmwareControl interface methods:
 
 Upgrade the device to the given firmware.
 
-Also see: [u](#event.u), [p](#event.p), [g](#event.g), [r](#event.r), [a](#event.a), [d](#event.d), [e](#event.e), [p](#event.p), [r](#event.r), [o](#event.o), [g](#event.g), [r](#event.r), [e](#event.e), [s](#event.s), [s](#event.s)
+Also see: [upgradeprogress](#event.upgradeprogress)
 
 ### Parameters
 
@@ -130,14 +130,14 @@ Also see: [u](#event.u), [p](#event.p), [g](#event.g), [r](#event.r), [a](#event
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "FirmwareControl.1.upgrade", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "FirmwareControl.1.upgrade",
     "params": {
-        "name": "firmware_v.0", 
-        "location": "http://my.site.com/images", 
-        "type": "CDL", 
-        "progressinterval": 10, 
+        "name": "firmware_v.0",
+        "location": "http://my.site.com/images",
+        "type": "CDL",
+        "progressinterval": 10,
         "hmac": "2834e6d07fa4c7778ef7a4e394f38a5c321afbed51d54ad512bd3fffbc7aa5debc"
     }
 }
@@ -146,8 +146,8 @@ Also see: [u](#event.u), [p](#event.p), [g](#event.g), [r](#event.r), [a](#event
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -183,8 +183,8 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "FirmwareControl.1.status"
 }
 ```
@@ -192,8 +192,8 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "completed"
 }
 ```
@@ -228,11 +228,11 @@ Notifies progress of upgrade.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.upgradeprogress", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.upgradeprogress",
     "params": {
-        "status": "completed", 
-        "error": "operationotsupported", 
+        "status": "completed",
+        "error": "operationotsupported",
         "percentage": 89
     }
 }

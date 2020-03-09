@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include "TestController.h"
 
 namespace WPEFramework {
@@ -13,30 +32,20 @@ namespace TestController {
 
             MemoryObserverImpl(const RPC::IRemoteConnection* connection)
                 : _main(connection  == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
-                , _observable(false)
             {
             }
             ~MemoryObserverImpl() {}
 
         public:
-            virtual void Observe(const uint32_t pid)
-            {
-                if (pid == 0) {
-                    _observable = false;
-                } else {
-                    _observable = true;
-                    _main = Core::ProcessInfo(pid);
-                }
-            }
-            virtual uint64_t Resident() const { return (_observable == false ? 0 : _main.Resident()); }
+            virtual uint64_t Resident() const { return _main.Resident(); }
 
-            virtual uint64_t Allocated() const { return (_observable == false ? 0 : _main.Allocated()); }
+            virtual uint64_t Allocated() const { return _main.Allocated(); } 
 
-            virtual uint64_t Shared() const { return (_observable == false ? 0 : _main.Shared()); }
+            virtual uint64_t Shared() const { return _main.Shared(); }
 
             virtual uint8_t Processes() const { return (IsOperational() ? 1 : 0); }
 
-            virtual const bool IsOperational() const { return (_observable == false) || (_main.IsActive()); }
+            virtual const bool IsOperational() const { return _main.IsActive(); }
 
             BEGIN_INTERFACE_MAP(MemoryObserverImpl)
             INTERFACE_ENTRY(Exchange::IMemory)
@@ -44,7 +53,6 @@ namespace TestController {
 
         private:
             Core::ProcessInfo _main;
-            bool _observable;
         };
 
         return (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection));
@@ -78,7 +86,6 @@ namespace Plugin {
                 _memory = WPEFramework::TestController::MemoryObserver(connection);
 
                 ASSERT(_memory != nullptr);
-                _memory->Observe(connection->RemoteId());
 
                 connection->Release();
                 _testControllerImp->Setup();

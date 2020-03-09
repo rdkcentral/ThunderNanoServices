@@ -1,0 +1,71 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "DHCP Server Plugin",
+    "callsign": "DHCPServer",
+    "locator": "libWPEFrameworkDHCPServer.so",
+    "status": "production",
+    "version": "1.0",
+    "acronyms": {
+      "DHCP": "Dynamic Host Configuration Protocol"
+    },
+    "references": {
+      "[DHCP](https://tools.ietf.org/html/rfc2131)": "DHCP protocol specification (RFC2131)"
+    }
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "description": "Server configuration",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the server"
+          },
+          "servers": {
+            "type": "array",
+            "description": "List of configured DHCP servers",
+            "items": {
+              "type": "object",
+              "description": "Configuration of a server",
+              "properties": {
+                "interface": {
+                  "type": "string",
+                  "description": "Name of the network interface to bind to",
+                  "example": "eth0"
+                },
+                "poolstart": {
+                  "type": "number",
+                  "description": "IP pool start number",
+                  "example": 10
+                },
+                "poolsize": {
+                  "type": "number",
+                  "description": "IP pool size (in IP numbers)",
+                  "example": 100
+                }
+              },
+              "required": [
+                "interface",
+                "poolstart",
+                "poolsize"
+              ]
+            }
+          }
+        },
+        "required": [
+          "name",
+          "servers"
+        ]
+      }
+    },
+    "required": [
+      "configuration"
+    ]
+  },
+  "interface": {
+    "$ref": "{interfacedir}/DHCPServer.json#"
+  }
+}

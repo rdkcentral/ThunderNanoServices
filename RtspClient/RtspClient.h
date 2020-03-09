@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef __RTSPCLIENT_H
 #define __RTSPCLIENT_H
 
@@ -12,7 +31,7 @@ namespace Plugin {
         RtspClient(const RtspClient&) = delete;
         RtspClient& operator=(const RtspClient&) = delete;
 
-        class Notification : public RPC::IRemoteProcess::INotification {
+        class Notification : public RPC::IRemoteConnection::INotification {
 
         private:
             Notification() = delete;
@@ -30,16 +49,16 @@ namespace Plugin {
             }
 
         public:
-            virtual void Activated(RPC::IRemoteProcess*)
+            virtual void Activated(RPC::IRemoteConnection*)
             {
             }
-            virtual void Deactivated(RPC::IRemoteProcess* process)
+            virtual void Deactivated(RPC::IRemoteConnection* connection)
             {
-                _parent.Deactivated(process);
+                _parent.Deactivated(connection);
             }
 
             BEGIN_INTERFACE_MAP(Notification)
-            INTERFACE_ENTRY(RPC::IRemoteProcess::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -56,7 +75,7 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , OutOfProcess(true)
             {
-                Add(_T("outofprocess"), &OutOfProcess);
+                Add(_T("outofconnection"), &OutOfProcess);
             }
             ~Config()
             {
@@ -75,8 +94,8 @@ namespace Plugin {
         public:
             Data()
                 : Core::JSON::Container()
-                , Str()
                 , AssetId()
+                , Str()
             {
                 Add(_T("AssetId"), &AssetId);
                 Add(_T("Scale"), &Scale);
@@ -142,11 +161,11 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
 
     private:
-        void Deactivated(RPC::IRemoteProcess* process);
+        void Deactivated(RPC::IRemoteConnection* connection);
 
     private:
         uint8_t _skipURL;
-        uint32_t _pid;
+        uint32_t _connectionId;
         PluginHost::IShell* _service;
         Exchange::IRtspClient* _implementation;
         Core::Sink<Notification> _notification;

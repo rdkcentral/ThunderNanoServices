@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "RemoteAdministrator.h"
 
 #include <interfaces/IKeyHandler.h>
@@ -10,15 +29,29 @@ namespace Plugin {
     static char Locator[] = _T("/dev/input");
 
     class LinuxDevice : Core::Thread {
+    public:
+        enum type {
+            NONE,
+            KEYBOARD,
+            MOUSE,
+            TOUCH,
+            JOYSTICK
+        };
+    private:
+        static constexpr const TCHAR* InputDeviceSysFilePath = _T("/sys/class/input/");
+        static constexpr const TCHAR* DeviceNamePath = _T("/device/name");
+
     private:
         LinuxDevice(const LinuxDevice&) = delete;
         LinuxDevice& operator=(const LinuxDevice&) = delete;
 
         struct IDevInputDevice {
             virtual ~IDevInputDevice() { }
+            virtual type Type() const { return (type::NONE); }
             virtual bool Setup() { return true; }
             virtual bool Teardown() { return true; }
             virtual bool HandleInput(uint16_t code, uint16_t type, int32_t value) = 0;
+            virtual void ProducerEvent(const Exchange::ProducerEvents event) { }
         };
 
         class KeyDevice : public Exchange::IKeyProducer, public IDevInputDevice {
@@ -37,7 +70,7 @@ namespace Plugin {
             {
                 Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
-            const TCHAR* Name() const override
+            string Name() const override
             {
                 return (_T("DevInput"));
             }
@@ -47,11 +80,29 @@ namespace Plugin {
             }
             bool Pair() override
             {
-                return _parent->Pair();
+                ProducerEvent(WPEFramework::Exchange::ProducerEvents::PairingStarted);
+                bool result = _parent->Pair();
+                if (result) {
+                    ProducerEvent(
+                            WPEFramework::Exchange::ProducerEvents::PairingSuccess);
+                } else {
+                    ProducerEvent(
+                            WPEFramework::Exchange::ProducerEvents::PairingFailed);
+                }
+                return result;
             }
             bool Unpair(string bindingId) override
             {
-                return _parent->Unpair(bindingId);
+                ProducerEvent(WPEFramework::Exchange::ProducerEvents::UnpairingStarted);
+                bool result = _parent->Unpair(bindingId);
+                if (result) {
+                    ProducerEvent(
+                            WPEFramework::Exchange::ProducerEvents::UnpairingSuccess);
+                } else {
+                    ProducerEvent(
+                            WPEFramework::Exchange::ProducerEvents::UnpairingFailed);
+                }
+                return result;
             }
             uint32_t Callback(Exchange::IKeyHandler* callback) override
             {
@@ -67,6 +118,10 @@ namespace Plugin {
             {
                 return (Name());
             }
+            type Type() const override
+            {
+                return type::KEYBOARD;
+            }
             bool HandleInput(uint16_t code, uint16_t type, int32_t value) override
             {
                 if (type == EV_KEY) {
@@ -78,6 +133,12 @@ namespace Plugin {
                     }
                 }
                 return false;
+            }
+            void ProducerEvent(const Exchange::ProducerEvents event) override
+            {
+                if (_callback) {
+                    _callback->ProducerEvent(Name(), event);
+                }
             }
 
             BEGIN_INTERFACE_MAP(KeyDevice)
@@ -104,7 +165,7 @@ namespace Plugin {
             {
                 //Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
-            const TCHAR* Name() const override
+            string Name() const override
             {
                 return (_T("DevWheelInput"));
             }
@@ -163,7 +224,7 @@ namespace Plugin {
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
             }
 
-            const TCHAR* Name() const override
+            string Name() const override
             {
                 return (_T("DevPointerInput"));
             }
@@ -236,7 +297,7 @@ namespace Plugin {
                 _abs_latch.fill(AbsInfo());
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
             }
-            const TCHAR* Name() const override
+            string Name() const override
             {
                 return (_T("DevTouchInput"));
             }
@@ -248,28 +309,28 @@ namespace Plugin {
             {
                 _have_multitouch = false;
 
-                for (int fd : _parent->Devices()) {
+                for (auto& index : _parent->Devices()) {
                     uint8_t absbits[(ABS_MAX / 8) + 1];
                     memset(absbits, 0, sizeof(absbits));
 
-                    if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(absbits)), absbits) >= 0) {
+                    if (ioctl(index.second.first, EVIOCGBIT(EV_ABS, sizeof(absbits)), absbits) >= 0) {
                         if (CheckBit(absbits, ABS_X) == true) {
                             // Note: Only multitouch protocol B supported. In case of protocol A multitouch device, will run as single-touch.
                             _have_multitouch = (CheckBit(absbits, ABS_MT_SLOT) == true) && (CheckBit(absbits, ABS_MT_POSITION_X) == true);
 
                             struct input_absinfo absinfo;
                             if (_have_multitouch == true) {
-                                if (ioctl(fd, EVIOCGABS(ABS_MT_POSITION_X), &absinfo) >= 0) {
+                                if (ioctl(index.second.first, EVIOCGABS(ABS_MT_POSITION_X), &absinfo) >= 0) {
                                     _abs_x_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
                                 }
-                                if (ioctl(fd, EVIOCGABS(ABS_MT_POSITION_Y), &absinfo) >= 0) {
+                                if (ioctl(index.second.first, EVIOCGABS(ABS_MT_POSITION_Y), &absinfo) >= 0) {
                                     _abs_y_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
                                 }
                             } else {
-                                if (ioctl(fd, EVIOCGABS(ABS_X), &absinfo) >= 0) {
+                                if (ioctl(index.second.first, EVIOCGABS(ABS_X), &absinfo) >= 0) {
                                     _abs_x_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
                                 }
-                                if (ioctl(fd, EVIOCGABS(ABS_Y), &absinfo) >= 0) {
+                                if (ioctl(index.second.first, EVIOCGABS(ABS_Y), &absinfo) >= 0) {
                                     _abs_y_multiplier = ((1 << 16) << ABS_MULTIPLIER_PRECISSION) / absinfo.maximum;
                                 }
                             }
@@ -279,6 +340,7 @@ namespace Plugin {
                         }
                     }
                 }
+
                 return (true);
             }
             bool Teardown() override
@@ -539,9 +601,6 @@ namespace Plugin {
     private:
         void Refresh()
         {
-            // Remove all current open devices.
-            Clear();
-
             // find devices in /dev/input/
             Core::Directory dir(Locator);
             while (dir.Next() == true) {
@@ -553,7 +612,23 @@ namespace Plugin {
 
                     if (entry.Open(true) == true) {
                         int fd = entry.DuplicateHandle();
-                        _devices.push_back(fd);
+                        std::map<string, std::pair<int, IDevInputDevice*>>::iterator device(_devices.find(entry.Name()));
+                        if (device == _devices.end()) {
+                            string deviceName;
+                            ReadDeviceName(entry.Name(), deviceName);
+                            std::transform(deviceName.begin(), deviceName.end(), deviceName.begin(), std::ptr_fun<int, int>(std::toupper));
+
+                            IDevInputDevice* inputDevice = nullptr;
+                            for (auto& device : _inputDevices) {
+                                std::size_t found = deviceName.find(Core::EnumerateType<LinuxDevice::type>(device->Type()).Data());
+                                if (found != std::string::npos) {
+                                    inputDevice = device;
+                                    break;
+                                }
+                            }
+
+                            _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, inputDevice)));
+                        }
                     }
                 }
             }
@@ -565,9 +640,9 @@ namespace Plugin {
         }
         void Clear()
         {
-            for (std::vector<int>::const_iterator it = _devices.begin(), end = _devices.end();
+            for (std::map<string, std::pair<int, IDevInputDevice*>>::const_iterator it = _devices.begin(), end = _devices.end();
                  it != end; ++it) {
-                close(*it);
+                close(it->second.first);
             }
             _devices.clear();
         }
@@ -588,9 +663,9 @@ namespace Plugin {
                 int result = std::max(_pipe[0], _update);
 
                 // set up all the input devices
-                for (std::vector<int>::const_iterator index = _devices.begin(), end = _devices.end(); index != end; ++index) {
-                    FD_SET(*index, &readset);
-                    result = std::max(result, *index);
+                for (std::map<string, std::pair<int, IDevInputDevice*>>::const_iterator index = _devices.begin(), end = _devices.end(); index != end; ++index) {
+                    FD_SET(index->second.first, &readset);
+                    result = std::max(result, index->second.first);
                 }
 
                 result = select(result + 1, &readset, 0, 0, nullptr);
@@ -607,7 +682,6 @@ namespace Plugin {
                             const char* nodeId = udev_device_get_devnode(dev);
                             bool reload = ((nodeId != nullptr) && (strncmp(Locator, nodeId, sizeof(Locator) - 1) == 0));
                             udev_device_unref(dev);
-
                             TRACE_L1("Changes from udev perspective. Reload (%s)", reload ? _T("true") : _T("false"));
                             if (reload == true) {
                                 Refresh();
@@ -616,14 +690,14 @@ namespace Plugin {
                     }
 
                     // find the devices to read from
-                    std::vector<int>::iterator index = _devices.begin();
+                    std::map<string, std::pair<int, IDevInputDevice*>>::iterator index = _devices.begin();
 
                     while (index != _devices.end()) {
-                        if (FD_ISSET(*index, &readset)) {
+                        if (FD_ISSET(index->second.first, &readset)) {
 
-                            if (HandleInput(*index) == false) {
+                            if (HandleInput(index->second.first) == false) {
                                 // fd closed?
-                                close(*index);
+                                close(index->second.first);
                                 index = _devices.erase(index);
                             } else {
                                 ++index;
@@ -657,11 +731,36 @@ namespace Plugin {
 
             return (result >= 0);
         }
+        bool ReadDeviceName(const string& eventLocation, string& deviceName)
+        {
+            bool status;
+            string eventName(eventLocation, sizeof(Locator));
+            if (eventName.empty() != true) {
+                string deviceFileName = InputDeviceSysFilePath + eventName + DeviceNamePath;
+                Core::File deviceFile(deviceFileName);
+                if (deviceFile.Open(true) == true) {
+                    char buffer[1024];
+                    uint16_t readBytes;
+                    string name;
 
-        std::vector<int> Devices() { return _devices; }
+                    // Read whole info
+                    while ((readBytes = deviceFile.Read(reinterpret_cast<uint8_t*>(buffer), sizeof(buffer))) != 0) {
+                        name.append(buffer, readBytes);
+                    }
+
+                    if (name.empty() != true) {
+                        deviceName = name;
+                        status = true;
+                   }
+                }
+            }
+            return status;
+        }
+
+        std::map<string, std::pair<int, IDevInputDevice*>> Devices() { return _devices; }
 
     private:
-        std::vector<int> _devices;
+        std::map<string, std::pair<int, IDevInputDevice*>> _devices;
         int _pipe[2];
         udev_monitor* _monitor;
         int _update;
@@ -671,4 +770,12 @@ namespace Plugin {
 
     /* static */ LinuxDevice* LinuxDevice::_singleton = new LinuxDevice();
 }
+
+ENUM_CONVERSION_BEGIN(Plugin::LinuxDevice::type)
+    { Plugin::LinuxDevice::type::NONE, _TXT("NONE") },
+    { Plugin::LinuxDevice::type::KEYBOARD, _TXT("KEYBOARD") },
+    { Plugin::LinuxDevice::type::KEYBOARD, _TXT("MOUSE") },
+    { Plugin::LinuxDevice::type::KEYBOARD, _TXT("JOYSTICK") },
+    { Plugin::LinuxDevice::type::KEYBOARD, _TXT("TOUCH") },
+    ENUM_CONVERSION_END(Plugin::LinuxDevice::type);
 }

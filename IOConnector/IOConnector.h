@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #ifndef IOCONNECTOR_H
 #define IOCONNECTOR_H
 
@@ -60,36 +79,48 @@ namespace Plugin {
         public:
             class Pin : public Core::JSON::Container {
             public:
-                class Handle : public Core::JSON::Container {
+                class Handler : public Core::JSON::Container {
                 public:
-                    Handle()
-                        : Handler()
+                    Handler()
+                        : Name()
                         , Config()
+                        , Start(0)
+                        , End(~0)
                     {
-                        Add(_T("name"), &Handler);
+                        Add(_T("name"), &Name);
                         Add(_T("config"), &Config);
+                        Add(_T("start"), &Start);
+                        Add(_T("end"), &End);
                     }
-                    Handle(const Handle& copy)
-                        : Handler(copy.Handler)
+                    Handler(const Handler& copy)
+                        : Name(copy.Name)
                         , Config(copy.Config)
+                        , Start(copy.Start)
+                        , End(copy.End)
                     {
-                        Add(_T("name"), &Handler);
+                        Add(_T("name"), &Name);
                         Add(_T("config"), &Config);
+                        Add(_T("start"), &Start);
+                        Add(_T("end"), &End);
                     }
-                    virtual ~Handle()
+                    ~Handler() override
                     {
                     }
 
-                    Handle& operator=(const Handle& RHS)
+                    Handler& operator=(const Handler& RHS)
                     {
-                        Handler = RHS.Handler;
+                        Name = RHS.Name;
                         Config = RHS.Config;
+                        Start = RHS.Start;
+                        End = RHS.End;
                         return (*this);
                     }
 
                 public:
-                    Core::JSON::String Handler;
+                    Core::JSON::String Name;
                     Core::JSON::String Config;
+                    Core::JSON::DecUInt8 Start;
+                    Core::JSON::DecUInt8 End;
                 };
 
                 enum mode {
@@ -106,23 +137,23 @@ namespace Plugin {
                     : Id(~0)
                     , Mode(LOW)
                     , ActiveLow(false)
-                    , Handler()
+                    , Handlers()
                 {
                     Add(_T("id"), &Id);
                     Add(_T("mode"), &Mode);
                     Add(_T("activelow"), &ActiveLow);
-                    Add(_T("handler"), &Handler);
+                    Add(_T("handlers"), &Handlers);
                 }
                 Pin(const Pin& copy)
                     : Id(copy.Id)
                     , Mode(copy.Mode)
                     , ActiveLow(copy.ActiveLow)
-                    , Handler(copy.Handler)
+                    , Handlers(copy.Handlers)
                 {
                     Add(_T("id"), &Id);
                     Add(_T("mode"), &Mode);
                     Add(_T("activelow"), &ActiveLow);
-                    Add(_T("handler"), &Handler);
+                    Add(_T("handlers"), &Handlers);
                 }
                 virtual ~Pin()
                 {
@@ -133,7 +164,7 @@ namespace Plugin {
                     Id = RHS.Id;
                     Mode = RHS.Mode;
                     ActiveLow = RHS.ActiveLow;
-                    Handler = RHS.Handler;
+                    Handlers = RHS.Handlers;
 
                     return (*this);
                 }
@@ -142,7 +173,7 @@ namespace Plugin {
                 Core::JSON::DecUInt8 Id;
                 Core::JSON::EnumType<mode> Mode;
                 Core::JSON::Boolean ActiveLow;
-                Handle Handler;
+                Core::JSON::ArrayType<Handler> Handlers;
             };
 
         public:

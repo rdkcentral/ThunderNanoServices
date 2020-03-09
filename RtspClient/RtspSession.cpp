@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <netdb.h>
 
 #include "Module.h"
@@ -8,16 +27,16 @@ namespace Plugin {
 
     RtspSession::RtspSession(RtspSession::AnnouncementHandler& handler)
         : _announcementHandler(handler)
+        , _srmSocket(nullptr)
+        , _controlSocket(nullptr)
         , _parser(_sessionInfo)
         , _requestQueue(64)
         , _responseQueue(64)
+        , _heartbeatTimer(Core::Thread::DefaultStackSize(), _T("RtspHeartbeatTimer"))
         , _isSessionActive(false)
         , _nextSRMHeartbeatMS(0)
         , _nextPumpHeartbeatMS(0)
         , _playDelay(2000)
-        , _srmSocket(nullptr)
-        , _controlSocket(nullptr)
-        , _heartbeatTimer(Core::Thread::DefaultStackSize(), _T("RtspHeartbeatTimer"))
     {
     }
 
@@ -67,13 +86,16 @@ namespace Plugin {
             _controlSocket = nullptr;
         }
         _adminLock.Unlock();
+
+        return ERR_OK; // Handle return value
     }
 
     RtspReturnCode RtspSession::Send(const RtspMessagePtr& request)
     {
         _requestQueue.Post(request);
         GetSocket(request->bSRM).Trigger();
-        ;
+
+        return ERR_OK; // Handle return value
     }
 
     uint64_t RtspSession::Timed(const uint64_t scheduledTime)
@@ -88,6 +110,8 @@ namespace Plugin {
             NextTick.Add(NptUpdateInterwal);
             _heartbeatTimer.Schedule(NextTick.Ticks(), HeartbeatTimer(*this));
         }
+
+        return ERR_OK; // Handle return value
     }
 
     RtspReturnCode RtspSession::Open(const string assetId, uint32_t position, const string& reqCpeId, const string& remoteIp)

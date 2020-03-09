@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef DHCPCLIENTIMPLEMENTATION__H
 #define DHCPCLIENTIMPLEMENTATION__H
 
@@ -678,51 +697,34 @@ namespace Plugin {
             return (result);
         }
 
-        inline void AddOffer(const Offer& offer, const bool leased) {
+        inline void AddUnleasedOffer(const Offer& offer) {
             _adminLock.Lock();
 
-            if (leased == true) {
-                _leasedOffers.push_back(offer);
-            } else {
-                _unleasedOffers.push_back(offer);
-            }
+            _unleasedOffers.push_back(offer);
 
             _adminLock.Unlock();
         }
 
-        inline Iterator FindOffer(const uint32_t id, const bool leased)
+        inline Iterator FindUnleasedOffer(const uint32_t id)
         {
             _adminLock.Lock(); 
 
-            Iterator result;
-
-            if (leased == true) {
-                auto foundOffer = std::find_if(_leasedOffers.begin(), _leasedOffers.end(), [id](Offer& offer) {return offer.Id() == id;});
-
-                result = Iterator(_leasedOffers, foundOffer);
-            } else {
-                auto foundOffer = std::find_if(_unleasedOffers.begin(), _unleasedOffers.end(), [id](Offer& offer) {return offer.Id() == id;});
-
-                result = Iterator(_unleasedOffers, foundOffer);
-            }
+            auto foundOffer = std::find_if(_unleasedOffers.begin(), _unleasedOffers.end(), [id](Offer& offer) {return offer.Id() == id;});
+            Iterator result = Iterator(_unleasedOffers, foundOffer);
             
             _adminLock.Unlock();
 
             return result;
         }
 
-        inline Iterator Offers(const bool leased)
+        inline Iterator UnleasedOffers()
         {
-            if (leased == true) {
-                return Iterator(_leasedOffers);
-            } else {
-                return Iterator(_unleasedOffers);
-            }
+            return Iterator(_unleasedOffers);
         }
 
-        inline Iterator LeasedOffers()
+        inline Offer& LeasedOffer()
         {
-            return (Iterator(_leasedOffers));
+            return _leasedOffer;
         }
 
         inline Iterator CurrentlyRequestedOffer() {
@@ -730,21 +732,27 @@ namespace Plugin {
 
             if (_modus == CLASSIFICATION_REQUEST) {
                 // try to match xid with offer
-                result = FindOffer(_xid, false);
+                result = FindUnleasedOffer(_xid);
             }
 
             return result;
         }
 
-        inline void RemoveOffer(const Offer& offer, const bool leased) 
+        inline void RemoveUnleasedOffer(const Offer& offer) 
         {
             _adminLock.Lock();
 
-            if (leased == true) {
-                _leasedOffers.remove_if([offer] (Offer& o) {return o.Id() == offer.Id();});
-            } else {
-                _unleasedOffers.remove_if([offer] (Offer& o) {return o.Id() == offer.Id();});    
-            }
+            _unleasedOffers.remove_if([offer] (Offer& o) {return o.Id() == offer.Id();}); 
+
+            _adminLock.Unlock();
+        }
+
+        inline void ClearUnleasedOffers() 
+        {
+            _adminLock.Lock();
+
+            _unleasedOffers.clear();   
+
             _adminLock.Unlock();
         }
 
@@ -777,10 +785,14 @@ namespace Plugin {
         }
 
         Offer& MakeLeased(const Offer& offer) {
-            _leasedOffers.push_back(offer);
-            RemoveOffer(offer, false);
+            _adminLock.Lock();
 
-            return _leasedOffers.back();
+            _leasedOffer = offer;
+            _unleasedOffers.remove_if([offer] (Offer& o) {return o.Id() == offer.Id();}); 
+            
+            _adminLock.Unlock();
+
+            return _leasedOffer;
         }
 
         uint16_t Message(uint8_t stream[], const uint16_t length) const
@@ -887,7 +899,7 @@ namespace Plugin {
                     case CLASSIFICATION_OFFER:
                         {
                             if (xid == _discoverXID) {
-                                _unleasedOffers.push_back(Offer(source, frame, options));
+                                AddUnleasedOffer(Offer(source, frame, options));
                                 TRACE(Trace::Information, ("Received an Offer from: %s", source.HostAddress().c_str()));
                                 _discoverCallback(_unleasedOffers.back());
                             } else {
@@ -897,10 +909,11 @@ namespace Plugin {
                         }
                     case CLASSIFICATION_ACK: 
                         {
-                            Iterator offer = FindOffer(xid, false);
+                            Iterator offer = FindUnleasedOffer(xid);
                                         
                             if (offer.IsValid()) {
                                 offer.Current().Update(options); // Update if informations changed since offering
+                                
                                 Offer& leased = MakeLeased(offer.Current());
                                 _claimCallback(leased, true);
                             }
@@ -908,11 +921,11 @@ namespace Plugin {
                         }
                     case CLASSIFICATION_NAK:
                         {
-                            Iterator offer = FindOffer(xid, false);
+                            Iterator offer = FindUnleasedOffer(xid);
 
                             if (offer.IsValid()) {
                                 Offer copy = offer.Current(); // we need a copy because of deletion
-                                RemoveOffer(offer.Current(), false);
+                                RemoveUnleasedOffer(offer.Current());
 
                                 _claimCallback(copy, false);
                             }
@@ -939,7 +952,7 @@ namespace Plugin {
         DiscoverCallback _discoverCallback;
         RequestCallback _claimCallback;
         std::list<Offer> _unleasedOffers;
-        std::list<Offer> _leasedOffers;
+        Offer _leasedOffer;
     };
 }
 } // namespace WPEFramework::Plugin

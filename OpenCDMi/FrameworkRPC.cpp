@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <regex>
 #include <string>
 #include <vector>
@@ -410,6 +429,9 @@ namespace Plugin {
                 };
 
             public:
+                #ifdef __WINDOWS__
+                #pragma warning(disable : 4355)
+                #endif
                 SessionImplementation(
                     AccessorOCDM* parent,
                     const std::string keySystem,
@@ -466,6 +488,9 @@ namespace Plugin {
                     _mediaKeySession->Run(&_sink);
                     TRACE_L1("Constructed the Session Server side: %p", this);
                 }
+                #ifdef __WINDOWS__
+                #pragma warning(default : 4355)
+                #endif
 
                 virtual ~SessionImplementation()
                 {
@@ -796,12 +821,12 @@ namespace Plugin {
             OCDM::OCDM_RESULT GetSecureStopIds(
                 const std::string& keySystem,
                 unsigned char Ids[],
-                uint8_t idSize,
+                uint16_t idsLength,
                 uint32_t& count)
             {
                 CDMi::IMediaKeysExt* systemExt = dynamic_cast<CDMi::IMediaKeysExt*>(_parent.KeySystem(keySystem));
                 if (systemExt) {
-                    return (OCDM::OCDM_RESULT)systemExt->GetSecureStopIds(Ids, idSize, count);
+                    return (OCDM::OCDM_RESULT)systemExt->GetSecureStopIds(Ids, idsLength, count);
                 }
                 return ::OCDM::OCDM_RESULT::OCDM_S_FALSE;
             }

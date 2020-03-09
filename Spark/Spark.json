@@ -7,6 +7,9 @@
  ],
  "autostart":false,
  "configuration":{
-  "url":"browser.js"
+  "url":"browser.js",
+  "root":{
+   "threads":2
+  }
  }
 }

@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "OCDM.h"
 #include <ocdm/open_cdm.h>
 #include <interfaces/IDRM.h>
@@ -24,26 +43,17 @@ namespace OCDM {
             }
 
         public:
-            virtual void Observe(const uint32_t pid)
-            {
-                if (pid == 0) {
-                    _observable = false;
-                } else {
-                    _observable = false;
-                    _main = Core::ProcessInfo(pid);
-                }
-            }
             virtual uint64_t Resident() const
             {
-                return (_observable == false ? 0 : _main.Resident());
+                return _main.Resident();
             }
             virtual uint64_t Allocated() const
             {
-                return (_observable == false ? 0 : _main.Allocated());
+                return _main.Allocated();
             }
             virtual uint64_t Shared() const
             {
-                return (_observable == false ? 0 : _main.Shared());
+                return _main.Shared();
             }
             virtual uint8_t Processes() const
             {
@@ -51,7 +61,7 @@ namespace OCDM {
             }
             virtual const bool IsOperational() const
             {
-                return (_observable == false) || (_main.IsActive());
+                return _main.IsActive();
             }
 
             BEGIN_INTERFACE_MAP(MemoryObserverImpl)
@@ -60,14 +70,9 @@ namespace OCDM {
 
         private:
             Core::ProcessInfo _main;
-            bool _observable;
         };
 
         Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
-
-        if (connection != nullptr) {
-            connection->Release();
-        }
 
         return (result);
     }
@@ -82,7 +87,7 @@ namespace Plugin {
 
     /* virtual */ const string OCDM::Initialize(PluginHost::IShell* service)
     {
-		#ifdef __WIN32__
+		#ifdef __WINDOWS__
         ForceLinkingOfOpenCDM();
 		#endif
 
@@ -109,15 +114,21 @@ namespace Plugin {
         } else {
             _opencdmi->Initialize(_service);
 
-            if ((_connectionId != 0) && (_service->RemoteConnection(_connectionId) == nullptr)){
+            ASSERT(_connectionId != 0);
+            const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
+
+            if (connection != nullptr) {
+
+                _memory = WPEFramework::OCDM::MemoryObserver(connection);
+                ASSERT(_memory != nullptr);
+
+                connection->Release();
+            }
+            else {
                 message = _T("OCDM crashed at initialize!");
                 _opencdmi = nullptr;
                 _service->Unregister(&_notification);
                 _service = nullptr;
-            } else {
-                _memory = WPEFramework::OCDM::MemoryObserver(_service->RemoteConnection(_connectionId));
-                
-                ASSERT(_memory != nullptr);
             }
         }
 

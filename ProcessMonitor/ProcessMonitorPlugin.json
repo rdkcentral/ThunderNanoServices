@@ -1,0 +1,14 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "ProcessMonitor Plugin",
+    "callsign": "ProcessMonitor",
+    "locator": "libWPEFrameworkProcessMonitor.so",
+    "status": "production",
+    "description": "This ProcessMonitor plugin monitors any deactivated plugin and kills the associate process if it exists even after predefined time.",
+    "version": "1.0"
+  },
+  "interface": {
+    "$ref": "{interfacedir}/ProcessMonitor.json#"
+  }
+}

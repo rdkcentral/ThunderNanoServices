@@ -1,7 +1,29 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #pragma once
 
-#include "AccessControlList.h"
 #include "Module.h"
+#include "AccessControlList.h"
+#include <securityagent/IPCSecurityToken.h>
+
+#include <interfaces/json/JsonData_SecurityAgent.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -11,6 +33,54 @@ namespace Plugin {
                             public PluginHost::JSONRPC,
                             public PluginHost::IWeb {
     private:
+        class TokenDispatcher {
+        private:
+            TokenDispatcher(const TokenDispatcher&) = delete;
+            TokenDispatcher& operator=(const TokenDispatcher&) = delete;
+
+        private:
+            class Tokenize : public Core::IIPCServer {
+            private:
+                Tokenize(const Tokenize&) = delete;
+                Tokenize& operator=(const Tokenize&) = delete;
+
+            public:
+                Tokenize(PluginHost::IAuthenticate* parent) : _parent(parent)
+                {
+                }
+                virtual ~Tokenize()
+                {
+                }
+
+            public:
+                void Procedure(Core::IPCChannel& source, Core::ProxyType<Core::IIPC>& data) override;
+
+            private:
+                PluginHost::IAuthenticate* _parent;
+            };
+
+        public:
+            TokenDispatcher(const Core::NodeId& endPoint, PluginHost::IAuthenticate* officer)
+                : _channel(endPoint, 1024)
+            {
+                Core::SystemInfo::SetEnvironment(_T("SECURITYAGENT_PATH"), endPoint.QualifiedName().c_str());
+
+                _channel.CreateFactory<IPC::SecurityAgent::TokenData>(1);
+                _channel.Register(IPC::SecurityAgent::TokenData::Id(), Core::ProxyType<Core::IIPCServer>(Core::ProxyType<Tokenize>::Create(officer)));
+
+                _channel.Open(0);
+            }
+            ~TokenDispatcher()
+            {
+                _channel.Close(Core::infinite);
+                _channel.Unregister(IPC::SecurityAgent::TokenData::Id());
+                _channel.DestroyFactory<IPC::SecurityAgent::TokenData>();
+            }
+
+        private:
+            Core::IPCChannelClientType<Core::Void, true, true> _channel;
+        };
+
         class Config : public Core::JSON::Container {
         private:
             Config(const Config&) = delete;
@@ -20,9 +90,10 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , ACL(_T("acl.json"))
-
+                , Connector()
             {
                 Add(_T("acl"), &ACL);
+                Add(_T("connector"), &Connector);
             }
             ~Config()
             {
@@ -30,6 +101,7 @@ namespace Plugin {
 
         public:
             Core::JSON::String ACL;
+            Core::JSON::String Connector;
         };
 
     public:
@@ -76,9 +148,19 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
 
     private:
+        //   JsonRPC methods
+        // -------------------------------------------------------------------------------------------------------
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t endpoint_createtoken(const JsonData::SecurityAgent::CreatetokenParamsData& params, JsonData::SecurityAgent::CreatetokenResultInfo& response);
+        uint32_t endpoint_validate(const JsonData::SecurityAgent::CreatetokenResultInfo& params, JsonData::SecurityAgent::ValidateResultData& response);
+
+
+    private:
         uint8_t _secretKey[Crypto::SHA256::Length];
         AccessControlList _acl;
         uint8_t _skipURL;
+        TokenDispatcher* _dispatcher;
     };
 
 } // namespace Plugin

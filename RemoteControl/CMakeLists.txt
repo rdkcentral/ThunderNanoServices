@@ -1,18 +1,39 @@
+# If not stated otherwise in this file or this component's LICENSE file the
+# following copyright and licenses apply:
+#
+# Copyright 2020 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 set(PLUGIN_NAME RemoteControl)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 set(PLUGIN_REMOTECONTROL_RELEASE_TIMEOUT 30000 CACHE STRING "Remote control release timeout")
+set(PLUGIN_REMOTECONTROL_PASSON false CACHE STRING "Enable keys pass-through on default producer")
 
 option(PLUGIN_REMOTECONTROL_RFCE "Enable RF4CE functionality." ON)
 
 set(PLUGIN_REMOTECONTROL_RFCE_REMOTE_ID "GPSTB" CACHE STRING "User string, used for greenpeak")
 set(PLUGIN_REMOTECONTROL_RFCE_MODULE "/lib/modules/misc/gpK5.ko" CACHE STRING "path to kernel module")
 set(PLUGIN_REMOTECONTROL_RFCE_NODE_ID 249 CACHE STRING "Node ID for the device to be created")
+set(PLUGIN_REMOTECONTROL_RFCE_AUTOPAIRING false CACHE BOOL "Enable AutoPairing feature for RF4CE producer")
+set(PLUGIN_REMOTECONTROL_RFCE_NVM_LUT "DEFAULT" CACHE STRING "The NVM LUT to be used (see GreenPeakNvmLut.h)")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(NEXUS QUIET)
 find_package(NXCLIENT QUIET)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     Module.cpp 
@@ -22,6 +43,7 @@ add_library(${MODULE_NAME} SHARED
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE 
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
@@ -52,7 +74,8 @@ if(PLUGIN_REMOTECONTROL_RFCE)
         add_definitions(${RF4CE_DEFINITIONS})
         target_compile_definitions(${MODULE_NAME} 
             PRIVATE 
-                GP_SCHED_EXTERNAL_MAIN)
+                GP_SCHED_EXTERNAL_MAIN
+                GP_NVM_LUT_${PLUGIN_REMOTECONTROL_RFCE_NVM_LUT})
         include_directories(${RF4CE_INCLUDE_DIRS})
         target_sources(${MODULE_NAME} 
             PRIVATE 

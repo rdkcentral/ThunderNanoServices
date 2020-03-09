@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include "TraceControl.h"
 #include "TraceOutput.h"
 
@@ -22,14 +41,10 @@ namespace Plugin {
     /* static */ string TraceControl::Observer::Source::SourceName(const string& prefix, RPC::IRemoteConnection* connection)
     {
         string pathName;
-        pathName = Core::Directory::Normalize(prefix) + Trace::CyclicBufferName + '.';
+        pathName = Core::Directory::Normalize(prefix) + Trace::CyclicBufferName;
 
-        if (connection == nullptr) {
-            pathName += '0';
-        } else if (connection->Parent() == 0) {
-            pathName += Core::NumberType<uint32_t>(connection->Id()).Text();
-        } else {
-            pathName += Core::NumberType<uint32_t>(connection->Parent()).Text() + '.' + Core::NumberType<uint32_t>(connection->RemoteId()).Text();
+        if (connection != nullptr) {
+            pathName += '.' + Core::NumberType<uint32_t>(connection->Id()).Text();
         }
 
         return (pathName);

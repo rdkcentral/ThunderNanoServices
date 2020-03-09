@@ -1,0 +1,13 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Power Plugin",
+    "callsign": "Power",
+    "locator": "libWPEFrameworkPower.so",
+    "status": "alpha",
+    "version": "1.0"
+  },
+  "interface": {
+    "$ref": "{interfacedir}/Power.json"
+  }
+}

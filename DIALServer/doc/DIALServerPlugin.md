@@ -131,10 +131,10 @@ Signals that application start was requested over DIAL *(passive mode only)*.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.start", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.start",
     "params": {
-        "application": "YouTube", 
+        "application": "YouTube",
         "parameters": "watch?v=zpp045FBbQY"
     }
 }
@@ -156,10 +156,10 @@ Signals that application stop was requested over DIAL *(passive mode only)*.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.stop", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.stop",
     "params": {
-        "application": "YouTube", 
+        "application": "YouTube",
         "parameters": ""
     }
 }

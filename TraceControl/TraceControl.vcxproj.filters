@@ -12,14 +12,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{2b6ccb25-f586-4a44-9592-dfb31982e7ef}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{06617fda-b01a-4420-9ac9-7cb45a8437a4}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="Module.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -27,7 +19,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TraceOutput.h">
-      <Filter>Header Files</Filter>
+      <Filter>Source Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{2b6ccb25-f586-4a44-9592-dfb31982e7ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{06617fda-b01a-4420-9ac9-7cb45a8437a4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

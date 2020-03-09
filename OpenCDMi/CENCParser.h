@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef __CENCPARSER_H
 #define __CENCPARSER_H
 
@@ -18,6 +37,7 @@ namespace Plugin {
         static const uint8_t PlayReady[];
         static const uint8_t WideVine[];
         static const uint8_t ClearKey[];
+        static const    char JSONKeyIds[];
 
     public:
         enum systemType {
@@ -262,6 +282,11 @@ namespace Plugin {
                     } else if ((offset == 0) && (data[0] == '<') && (data[2] == 'W') && (data[4] == 'R') && (data[6] == 'M')) {
                         ParseXMLBox(data, size);
                         offset = length;
+                    } else if (std::string(reinterpret_cast<const char*>(data), length).find(JSONKeyIds) != std::string::npos) {
+                        /* keyids initdata type */
+                        TRACE_L1("Initdata contains clearkey's key ids");
+
+                        ParseJSONInitData(reinterpret_cast<const char*>(data), length);
                     } else {
                         TRACE_L1("Have no clue what this is!!! %d\n", __LINE__);
                     }
@@ -418,6 +443,38 @@ namespace Plugin {
                         size = 0;
                     }
                 }
+        }
+
+        using JSONStringArray = Core::JSON::ArrayType<Core::JSON::String>;
+
+        void ParseJSONInitData(const char data[], uint16_t length) {
+            systemType system(CLEARKEY);
+
+            class InitData : public Core::JSON::Container {
+            public:
+                InitData() : Core::JSON::Container() , KeyIds() {
+                    Add(_T("kids"), &KeyIds);
+                }
+                virtual ~InitData() {
+                }
+
+            public:
+                JSONStringArray KeyIds;
+            } initData;
+
+            initData.FromString(std::string(data, length));
+
+            JSONStringArray::ConstIterator index(static_cast<const InitData&>(initData).KeyIds.Elements());
+
+            uint16_t decodeLength = KeyId::Length();
+
+            while(index.Next()) {
+                uint8_t keyID[KeyId::KEY_LENGTH];
+                std::string keyID64 = index.Current().Value();
+                TRACE_L1("clearkey: keyID %s, length %d", keyID64.c_str(), static_cast<int>(keyID64.length()));
+                Core::FromString(keyID64, keyID, decodeLength);
+                AddKeyId(KeyId(system, keyID, static_cast<uint8_t>(sizeof(keyID))));
+            }
         }
 
     private:

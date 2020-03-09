@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include "Module.h"
 #include <interfaces/IMemory.h>
 #include <interfaces/IWebServer.h>
@@ -481,7 +500,7 @@ namespace Plugin {
             };
 
         public:
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
             ChannelMap()
@@ -493,7 +512,7 @@ namespace Plugin {
                 , _proxyMap(*this)
             {
             }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
             ~ChannelMap()
@@ -797,7 +816,6 @@ namespace WebServer {
     public:
         MemoryObserverImpl(const RPC::IRemoteConnection* connection)
             : _main(connection == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
-            , _observable(false)
         {
         }
         ~MemoryObserverImpl()
@@ -805,27 +823,17 @@ namespace WebServer {
         }
 
     public:
-        virtual void Observe(const uint32_t pid)
-        {
-            if (pid == 0) {
-                _observable = false;
-            } else {
-                _main = Core::ProcessInfo().Id();
-                _observable = true;
-            }
-        }
-
         virtual uint64_t Resident() const
         {
-            return (_observable == false ? 0 : _main.Resident());
+            return _main.Resident();
         }
         virtual uint64_t Allocated() const
         {
-            return (_observable == false ? 0 : _main.Allocated());
+            return _main.Allocated();
         }
         virtual uint64_t Shared() const
         {
-            return (_observable == false ? 0 : _main.Shared());
+            return _main.Shared();
         }
         virtual uint8_t Processes() const
         {
@@ -833,7 +841,7 @@ namespace WebServer {
         }
         virtual const bool IsOperational() const
         {
-            return (_observable == false) || (_main.IsActive());
+            return _main.IsActive();
         }
 
         BEGIN_INTERFACE_MAP(MemoryObserverImpl)
@@ -842,15 +850,12 @@ namespace WebServer {
 
     private:
         Core::ProcessInfo _main;
-        bool _observable;
     };
 
     Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
+        ASSERT(connection != nullptr);
         Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
-        if (connection != nullptr) {
-            connection->Release();
-        }
         return (result);
     }
 }

@@ -1,0 +1,14 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Volume Control Plugin",
+    "callsign": "VolumeControl",
+    "locator": "libWPEVolumeControl.so",
+    "status": "beta",
+    "description": "The Volume Control plugin allows to manage system's audio volume",
+    "version": "1.0"
+  },
+  "interface": {
+    "$cppref": "{cppinterfacedir}/IVolumeControl.h"
+  }
+}

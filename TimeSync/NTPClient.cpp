@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "NTPClient.h"
 #include <stdio.h>
 
@@ -6,7 +25,7 @@ namespace Plugin {
 
     constexpr uint32_t WaitForResponse = 2000;
 
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
     NTPClient::NTPClient()
@@ -16,7 +35,7 @@ namespace Plugin {
         , _syncedTimestamp()
         , _state(INITIAL)
         , _fired(true)
-        , _WaitForNetwork(5000) // Wait for 5 Seconds for a new attempt
+        , _WaitForNetwork(2000) // Wait for 2 Seconds for a new attempt
         , _retryAttempts(5)
         , _activity(Core::ProxyType<Activity>::Create(this))
         , _clients()
@@ -31,7 +50,7 @@ namespace Plugin {
         _packet.RootDispersion(0x00010000); // Insignificant, 1 second
         _packet.ReferenceID(0x00000000);
     }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
 
@@ -53,11 +72,14 @@ namespace Plugin {
 
             if (url.Type() == Core::URL::SCHEME_NTP) {
 
-                string hostname(url.Host().Value().Text());
+                string hostname(url.Host().Value());
 
                 if (url.Port().IsSet() == true) {
 
                     hostname += ':' + Core::NumberType<uint16_t>(url.Port().Value()).Text();
+                }
+                else {
+                    hostname += ':' + Core::NumberType<uint16_t>(Core::URL::Port(url.Type())).Text();
                 }
 
                 _servers.push_back(hostname);
@@ -260,12 +282,24 @@ namespace Plugin {
 
         // Make sure socket is closed otherwise an assert will fire.
         if (!IsClosed()) {
-            TRACE_L1("TimeSync: %s", "Lingering socket, closing");
+            TRACE(Trace::Information, (_T("Lingering socket, closing")));
             Close(1000);
         }
 
-        if (true == IsClosed()) {
-            while ((activated == false) && (_serverIndex.Next() == true)) {
+        if (true == IsClosed() && (_serverIndex.Count() > 0)) {
+
+            uint32_t lastonetried = _serverIndex.Index();
+
+            do {
+
+                // next server
+                if( _serverIndex.Index() >= _serverIndex.Count() ) {
+                    _serverIndex.Reset(0);
+                }
+                _serverIndex.Next();
+                ASSERT(_serverIndex.IsValid());
+
+                TRACE(Trace::Information, (_T("Trying NTP Server: [%s]"), (*_serverIndex).c_str()));
 
                 // Set the socket to send to the remote
                 Core::NodeId remote((*_serverIndex).c_str(), Core::NodeId::TYPE_IPV4);
@@ -284,8 +318,17 @@ namespace Plugin {
                         _fired = false;
                         Trigger();
                     }
+                    else {
+                        TRACE(Trace::Warning, (_T("Could not open connection to NTP Server [%s]"), (*_serverIndex).c_str()));
+                    }
+                }
+                else {
+                    TRACE(Trace::Warning, (_T("Could not resolve NTP Server [%s]"), (*_serverIndex).c_str()));
                 }
             }
+            while ((activated == false) && ( ((lastonetried != 0) && (lastonetried != _serverIndex.Index())) ||
+                                             ((lastonetried == 0) && (_serverIndex.Index() != _serverIndex.Count())) 
+                                           ) );
         }
 
         return (activated);
@@ -294,7 +337,11 @@ namespace Plugin {
     void NTPClient::Update()
     {
 
-        _adminLock.Lock();
+        // runs always in the context of the adminlock
+
+        if(_state == FAILED){
+            TRACE(Trace::Error, (_T("Could not determine a valid time")));
+        }
 
         std::list<Exchange::ITimeSync::INotification*>::iterator index(_clients.begin());
 
@@ -303,7 +350,6 @@ namespace Plugin {
             index++;
         }
 
-        _adminLock.Unlock();
     }
 
     void NTPClient::Dispatch()
@@ -322,9 +368,10 @@ namespace Plugin {
         case INPROGRESS: {
             // If we end up here in this state, it means that the package was send but no response was received,
             // or a response was received but is was not properly formatted...
-            // Lets move to the next server in the list, see if that one responds correctly
+            // Lets move to the next server in the list, see if that one responds correctly, if we tried all servers let's
+            // start at the first one again, this time it might work
             if (FireRequest() == true) {
-                result = WaitForResponse;
+              result = WaitForResponse;
             } else {
                 if (_currentAttempt-- != 0) {
 
@@ -349,7 +396,7 @@ namespace Plugin {
         }
         default:
             // New state, probably needs some action???
-            ASSERT(false);
+       ASSERT(false);
         }
 
         _adminLock.Unlock();
@@ -360,7 +407,7 @@ namespace Plugin {
             timestamp.Add(result);
             PluginHost::WorkerPool::Instance().Schedule(timestamp, _activity);
         }
-    }
+   }
 
 } // namespace Plugin
 } // namespace WPEFramework

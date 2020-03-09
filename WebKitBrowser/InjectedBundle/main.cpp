@@ -1,6 +1,28 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "Module.h"
 
 #include <WPE/WebKit.h>
+#include <WPE/WebKit/WKBundleFrame.h>
+#include <WPE/WebKit/WKBundlePage.h>
+#include <WPE/WebKit/WKURL.h>
 
 #include <cstdio>
 #include <memory>
@@ -16,6 +38,7 @@ using JavaScript::ClassDefinition;
 using WebKit::WhiteListedOriginDomainsList;
 
 WKBundleRef g_Bundle;
+std::string g_currentURL;
 
 namespace WPEFramework {
 namespace WebKit {
@@ -23,6 +46,9 @@ namespace Utils {
 
 WKBundleRef GetBundle() {
     return (g_Bundle);
+}
+std::string GetURL() {
+    return (g_currentURL);
 }
 
 } } }
@@ -43,7 +69,7 @@ private:
 
 public:
     PluginHost()
-        : _engine(Core::ProxyType<RPC::InvokeServerType<4, 2>>::Create(Core::Thread::DefaultStackSize()))
+        : _engine(Core::ProxyType<RPC::InvokeServerType<2, 0, 4>>::Create())
         , _comClient(Core::ProxyType<RPC::CommunicatorClient>::Create(GetConnectionNode(), Core::ProxyType<Core::IIPCServer>(_engine)))
     {
         _engine->Announcements(_comClient->Announcement());
@@ -57,15 +83,13 @@ public:
 public:
     void Initialize(WKBundleRef bundle)
     {
-        // Due to the LXC container support all ID's get mapped. For the TraceBuffer, use the host given ID.
-        Trace::TraceUnit::Instance().Open(Core::ProcessInfo().Id());
-
-        Trace::TraceType<Trace::Information, &Core::System::MODULE_NAME>::Enable(true);
-
         // We have something to report back, do so...
         uint32_t result = _comClient->Open(RPC::CommunicationTimeOut);
         if (result != Core::ERROR_NONE) {
             TRACE(Trace::Error, (_T("Could not open connection to node %s. Error: %s"), _comClient->Source().RemoteId(), Core::NumberType<uint32_t>(result).Text()));
+        } else {
+            // Due to the LXC container support all ID's get mapped. For the TraceBuffer, use the host given ID.
+            Trace::TraceUnit::Instance().Open(_comClient->ConnectionId());
         }
 
         _whiteListedOriginDomainPairs = WhiteListedOriginDomainsList::RequestFromWPEFramework();
@@ -90,7 +114,7 @@ public:
     }
 
 private:
-    Core::ProxyType<RPC::InvokeServerType<4, 2> > _engine;
+    Core::ProxyType<RPC::InvokeServerType<2, 0, 4> > _engine;
     Core::ProxyType<RPC::CommunicatorClient> _comClient;
 
     // White list for CORS.
@@ -166,7 +190,16 @@ static WKBundlePageLoaderClientV6 s_pageLoaderClient = {
     nullptr, // didFailProvisionalLoadWithErrorForFrame
     nullptr, // didCommitLoadForFrame
     nullptr, // didFinishDocumentLoadForFrame
-    nullptr, // didFinishLoadForFrame
+    // didFinishLoadForFrame
+    [](WKBundlePageRef pageRef, WKBundleFrameRef frame, WKTypeRef*, const void*) {
+
+        WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(pageRef);
+        WKURLRef mainFrameURL = WKBundleFrameCopyURL(mainFrame);
+        WKStringRef urlString = WKURLCopyString(mainFrameURL);
+        g_currentURL = WebKit::Utils::WKStringToString(urlString);
+        WKRelease(urlString);
+        WKRelease(mainFrameURL);
+    },
     nullptr, // didFailLoadWithErrorForFrame
     nullptr, // didSameDocumentNavigationForFrame
     nullptr, // didReceiveTitleForFrame

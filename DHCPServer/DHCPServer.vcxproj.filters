@@ -10,6 +10,7 @@
     <ClCompile Include="DHCPServerImplementation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DHCPServerJsonRpc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Module.h">

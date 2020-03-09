@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include "OutOfProcessPlugin.h"
 
 namespace WPEFramework {
@@ -5,7 +24,7 @@ namespace WPEFramework {
 namespace OutOfProcessPlugin {
 
     // An implementation file needs to implement this method to return an operational browser, wherever that would be :-)
-    extern Exchange::IMemory* MemoryObserver(const uint32_t pid);
+    extern Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection);
 }
 
 namespace Plugin {
@@ -36,15 +55,13 @@ namespace Plugin {
 
         config.FromString(_service->ConfigLine());
 
-        if (config.OutOfProcess.Value() == true) {
-            _browser = _service->Instantiate<Exchange::IBrowser>(5000, _T("OutOfProcessImplementation"), static_cast<uint32_t>(~0), _connectionId, service->Locator());
-        } else {
-            _browser = Core::ServiceAdministrator::Instance().Instantiate<Exchange::IBrowser>(Core::Library(), _T("OutOfProcessImplementation"), static_cast<uint32_t>(~0));
-        }
+        _browser = service->Root<Exchange::IBrowser>(_connectionId, Core::infinite, _T("OutOfProcessImplementation"));
 
         if (_browser == nullptr) {
             _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
             _service = nullptr;
+
+            ConnectionTermination(_connectionId);
             message = _T("OutOfProcessPlugin could not be instantiated.");
         } else {
             _browser->Register(_notification);
@@ -57,8 +74,11 @@ namespace Plugin {
             stateControl->Register(_notification);
             stateControl->Release();
 
-            _memory = WPEFramework::OutOfProcessPlugin::MemoryObserver(_connectionId);
+            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
+
+            _memory = WPEFramework::OutOfProcessPlugin::MemoryObserver(remoteConnection);
             ASSERT(_memory != nullptr);
+            remoteConnection->Release();
         }
 
         return message;
@@ -89,13 +109,7 @@ namespace Plugin {
             ASSERT(_connectionId != 0);
             TRACE_L1("OutOfProcess Plugin is not properly destructed. PID: %d", _connectionId);
 
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-
-            // The process can disappear in the meantime...
-            if (connection != nullptr) {
-                connection->Terminate();
-                connection->Release();
-            }
+            ConnectionTermination(_connectionId);
         }
 
         _memory = nullptr;
@@ -231,6 +245,15 @@ namespace Plugin {
         string message = "{ \"state\": \"test\" }";
 
         _service->Notify(message);
+    }
+
+    void OutOfProcessPlugin::ConnectionTermination(uint32_t connectionId)
+    {
+        RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
+        if (connection != nullptr) {
+            connection->Terminate();
+            connection->Release();
+        }
     }
 
     void OutOfProcessPlugin::Deactivated(RPC::IRemoteConnection* connection)

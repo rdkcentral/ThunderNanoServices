@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "NetworkControl.h"
 
 namespace WPEFramework {
@@ -54,7 +73,7 @@ namespace Plugin
         return (result);
     }
 
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
     NetworkControl::NetworkControl()
@@ -70,7 +89,7 @@ namespace Plugin
     {
         RegisterAll();
     }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
 
@@ -148,7 +167,10 @@ namespace Plugin
                         SYSLOG(Logging::Startup, (_T("Interface [%s] activated, no IP associated"), interfaceName.c_str()));
                     } else {
                         if (how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) {
-                            dhcpInterface.first->second->LoadLeases();
+                            if (dhcpInterface.first->second->LoadLeases() == true) {
+                                SYSLOG(Logging::Startup, (_T("Leased list for interface [%s] loaded!"), interfaceName.c_str()));
+                            }
+
                             SYSLOG(Logging::Startup, (_T("Interface [%s] activated, DHCP request issued"), interfaceName.c_str()));
                             Reload(interfaceName, true);
                         } else {
@@ -232,7 +254,7 @@ namespace Plugin
     NetworkControl::Process(const Web::Request& request)
     {
         Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
-        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
+        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint16_t>(request.Path.length()) - _skipURL), false, '/');
 
         // By default, we assume everything works..
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -344,15 +366,8 @@ namespace Plugin
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = string(_T("Interface: ")) + interfaceName + _T(" not found.");
                     } else {
-                        Core::IPV4AddressIterator ipv4Flush(adapter.IPV4Addresses());
-                        Core::IPV6AddressIterator ipv6Flush(adapter.IPV6Addresses());
-
-                        while (ipv4Flush.Next() == true) {
-                            adapter.Delete(ipv4Flush.Address());
-                        }
-                        while (ipv6Flush.Next() == true) {
-                            adapter.Delete(ipv6Flush.Address());
-                        }
+                        ClearAssignedIPV4IPs(adapter);
+                        ClearAssignedIPV6IPs(adapter);
 
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = string(_T("OK, ")) + interfaceName + _T(" set DOWN.");
@@ -366,27 +381,36 @@ namespace Plugin
         return result;
     }
 
-    uint32_t NetworkControl::SetIP(Core::AdapterIterator & adapter, const Core::IPNode& ipAddress, const Core::NodeId& gateway, const Core::NodeId& broadcast)
+    uint32_t NetworkControl::SetIP(Core::AdapterIterator & adapter, const Core::IPNode& ipAddress, const Core::NodeId& gateway, const Core::NodeId& broadcast, bool clearOld)
     {
 
         if (adapter.IsValid() == true) {
             bool addIt = false;
 
             if (ipAddress.Type() == Core::NodeId::TYPE_IPV4) {
-                Core::IPV4AddressIterator checker(adapter.IPV4Addresses());
+                if (clearOld == true) {
+                    ClearAssignedIPV4IPs(adapter);
+                    addIt = true;
+                } else {
+                    Core::IPV4AddressIterator checker(adapter.IPV4Addresses());
+                    while ((checker.Next() == true) && (checker.Address() != ipAddress)) {   
+                        /* INTENTINALLY LEFT EMPTY */
+                    }
 
-                while ((checker.Next() == true) && (checker.Address() != ipAddress)) /* INTENTINALLY LEFT EMPTY */
-                    ;
+                    addIt = (checker.IsValid() == false);
+                }
+            } else if (ipAddress.Type() == Core::NodeId::TYPE_IPV6) {
+                if (clearOld == true) {
+                    ClearAssignedIPV6IPs(adapter);
+                    addIt = true;
+                } else {
+                    Core::IPV6AddressIterator checker(adapter.IPV6Addresses());
+                    while ((checker.Next() == true) && (checker.Address() != ipAddress)) {   
+                        /* INTENTINALLY LEFT EMPTY */
+                    }
 
-                addIt = (checker.IsValid() == false);
-            }
-            if (ipAddress.Type() == Core::NodeId::TYPE_IPV6) {
-                Core::IPV6AddressIterator checker(adapter.IPV6Addresses());
-
-                while ((checker.Next() == true) && (checker.Address() != ipAddress)) /* INTENTINALLY LEFT EMPTY */
-                    ;
-
-                addIt = (checker.IsValid() == false);
+                    addIt = (checker.IsValid() == false);
+                }
             }
 
             PluginHost::ISubSystem* subSystem = _service->SubSystems();
@@ -399,47 +423,44 @@ namespace Plugin
                 }
 
                 subSystem->Release();
-            }
+            }            
 
             if (addIt == true) {
-
                 TRACE_L1("Setting IP: %s", ipAddress.HostAddress().c_str());
                 adapter.Add(ipAddress);
-                adapter.Broadcast(broadcast);
-                if (gateway.IsValid() == true) {
-                    adapter.Gateway(Core::IPNode(Core::NodeId("0.0.0.0"), 0), gateway);
-                }
-
-                Core::AdapterIterator::Flush();
-
-                string message(string("{ \"interface\": \"") + adapter.Name() + string("\", \"status\":0, \"ip\":\"" + ipAddress.HostAddress() + "\" }"));
-                TRACE(Trace::Information, (_T("DHCP Request set on: %s"), adapter.Name().c_str()));
-
-                _service->Notify(message);
             } else {
                 TRACE_L1("No need to set IP: %s", ipAddress.HostAddress().c_str());
             }
+
+            if (gateway.IsValid() == true) {
+                adapter.Gateway(Core::IPNode(Core::NodeId("0.0.0.0"), 0), gateway);
+            }
+            
+            Core::AdapterIterator::Flush();
+
+            string message(string("{ \"interface\": \"") + adapter.Name() + string("\", \"status\":0, \"ip\":\"" + ipAddress.HostAddress() + "\" }"));
+            TRACE(Trace::Information, (_T("DHCP Request set on: %s"), adapter.Name().c_str()));
+
+            _service->Notify(message); 
         }
 
         return (Core::ERROR_NONE);
     }
 
-    /* Saves all leased offers to file */
+    /* Saves leased offer to file */
     void NetworkControl::DHCPEngine::SaveLeases() 
     {
-        if (_parent._persistentStoragePath.empty() == false) {
+        if (_leaseFilePath.empty() == false) {
             Core::File leaseFile(_leaseFilePath);
 
             if (leaseFile.Create() == true) {
-                Core::JSON::ArrayType<DHCPClientImplementation::Offer::JSON> leases;
-                DHCPClientImplementation::Iterator offersIterator = _client.Offers(true);
+                DHCPClientImplementation::Offer::JSON lease;
+                DHCPClientImplementation::Offer& offer = _client.LeasedOffer();
 
-                while (offersIterator.Next() == true) {
-                    leases.Add().Set(offersIterator.Current());
-                }
+                lease.Set(offer);
 
-                if (leases.ToFile(leaseFile) == false) {
-                    TRACE(Trace::Warning, ("Error occured while trying to save dhcp leases to file!"));
+                if (lease.IElement::ToFile(leaseFile) == false) {
+                    TRACE(Trace::Warning, ("Error occured while trying to save dhcp lease to file!"));
                 } 
 
                 leaseFile.Close();
@@ -453,28 +474,34 @@ namespace Plugin
         Loads list of previously saved offers and adds it to unleased list 
         for requesting in future.
     */
-    void NetworkControl::DHCPEngine::LoadLeases() 
+    bool NetworkControl::DHCPEngine::LoadLeases() 
     {
-        if (_parent._persistentStoragePath.empty() == false) {
+        bool result = false;
+
+        if (_leaseFilePath.empty() == false) {
 
             Core::File leaseFile(_leaseFilePath);
 
             if (leaseFile.Open(true) == true) {
 
-                Core::JSON::ArrayType<DHCPClientImplementation::Offer::JSON> leases;
-                if (leases.FromFile(leaseFile) == true) {
+                DHCPClientImplementation::Offer::JSON lease;
+                Core::OptionalType<Core::JSON::Error> error;
+                if (lease.IElement::FromFile(leaseFile, error) == true) {
 
-                    auto iterator = leases.Elements();
-                    while (iterator.Next()) {
-                        _client.AddOffer(iterator.Current().Get(), false);
-                    }
+                    _client.AddUnleasedOffer(lease.Get());
+                }
+
+                if (error.IsSet() == true) {
+                    SYSLOG(Logging::ParsingError, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
+                } else {
+                    result = true;
                 }
 
                 leaseFile.Close();
-            } else {
-                TRACE(Trace::Warning, ("Failed to open leases file %s\n for saving", leaseFile.Name().c_str()));
             }
         }
+
+        return result;
     }
 
     uint32_t NetworkControl::Reload(const string& interfaceName, const bool dynamic)
@@ -642,6 +669,8 @@ namespace Plugin
     {
         std::map<const string, Core::ProxyType<DHCPEngine>>::const_iterator entry(_dhcpInterfaces.find(interfaceName));
 
+        TRACE(Trace::Information, ("DHCP Request for interface %s accepted, %s offered IP!\n", interfaceName.c_str(), offer.Address().HostAddress().c_str()));
+
         if (entry != _dhcpInterfaces.end()) {
             std::map<const string, StaticInfo>::iterator info(_interfaces.find(interfaceName));
 
@@ -672,7 +701,7 @@ namespace Plugin
                     RefreshDNS();
                 }
 
-                SetIP(adapter, Core::IPNode(offer.Address(), offer.Netmask()), offer.Gateway(), offer.Broadcast());
+                SetIP(adapter, Core::IPNode(offer.Address(), offer.Netmask()), offer.Gateway(), offer.Broadcast(), true);
                 
                 // Update leases file
                 entry->second->SaveLeases();
@@ -810,6 +839,7 @@ namespace Plugin
     {
         string message;
         Core::AdapterIterator adapter(interfaceName);
+        JsonData::NetworkControl::ConnectionchangeParamsData::StatusType status;
 
         if (adapter.IsValid() == true) {
             // Send a message with the state of the adapter.
@@ -829,8 +859,10 @@ namespace Plugin
                 message += _T("Create\" }");
 
                 TRACE(Trace::Information, (_T("Added interface: %s"), interfaceName.c_str()));
+                status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::CREATED;
             } else {
                 message += _T("Update\" }");
+                status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::UPDATED;
                 TRACE(Trace::Information, (_T("Updated interface: %s"), interfaceName.c_str()));
             }
 
@@ -865,12 +897,33 @@ namespace Plugin
             _adminLock.Unlock();
 
             TRACE(Trace::Information, (_T("Removed interface: %s"), interfaceName.c_str()));
+            status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::REMOVED;
 
             message = string(_T("{ \"interface\": \"")) + interfaceName + string(_T("\", \"running\": \"false\", \"up\": \"false\", \"event\": \"Delete\" }"));
         }
 
         _service->Notify(message);
+        event_connectionchange(interfaceName.c_str(), string(), status);
     }
+
+    void NetworkControl::ClearAssignedIPV4IPs(Core::AdapterIterator& adapter)
+    {
+        Core::IPV4AddressIterator checker = adapter.IPV4Addresses();
+
+        while (checker.Next() == true) {
+            adapter.Delete(checker.Address());
+        }
+    }
+
+    void NetworkControl::ClearAssignedIPV6IPs(Core::AdapterIterator& adapter)
+    {
+        Core::IPV6AddressIterator checker = adapter.IPV6Addresses();
+
+        while (checker.Next() == true) {
+            adapter.Delete(checker.Address());
+        }
+    }
+
 
 } // namespace Plugin
 } // namespace WPEFramework

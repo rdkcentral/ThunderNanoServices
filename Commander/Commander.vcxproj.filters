@@ -4,9 +4,6 @@
     <ClInclude Include="Module.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WebServer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Commander.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -15,25 +12,22 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{f1a2c33a-b405-4c01-b5e0-cd83bf0cfb1f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files">
-      <UniqueIdentifier>{c16cdae6-081d-4ea8-9634-40dd914ad52c}</UniqueIdentifier>
+      <UniqueIdentifier>{ed48a750-01f9-4d2b-94e5-e3960397e2d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{46ea12fc-cda5-4a4e-9aa0-607682cd9d25}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Commander.cpp">
+    <ClCompile Include="Module.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Module.cpp">
+    <ClCompile Include="Commander.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Commands.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\WPEFramework\WPEFramework.sln" />
   </ItemGroup>
 </Project>

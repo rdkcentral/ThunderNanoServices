@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #ifndef LOCATIONSYNC_LOCATIONSERVICE_H
 #define LOCATIONSYNC_LOCATIONSERVICE_H
 
@@ -24,31 +43,7 @@ namespace Plugin {
             FAILED
         };
 
-        class Job : public Core::IDispatchType<void> {
-        private:
-            Job() = delete;
-            Job(const Job&) = delete;
-            Job& operator=(const Job&) = delete;
-
-        public:
-            Job(LocationService* parent)
-                : _parent(*parent)
-            {
-                ASSERT(parent != nullptr);
-            }
-            ~Job()
-            {
-            }
-
-        public:
-            virtual void Dispatch() override
-            {
-                _parent.Dispatch();
-            }
-
-        private:
-            LocationService& _parent;
-        };
+        using Job = Core::ThreadPool::JobType<LocationService>;
 
     private:
         LocationService() = delete;
@@ -117,6 +112,7 @@ namespace Plugin {
         // Signal a state change, Opened, Closed or Accepted
         virtual void StateChange() override;
 
+        friend Core::ThreadPool::JobType<LocationService&>;
         void Dispatch();
 
     private:
@@ -132,10 +128,9 @@ namespace Plugin {
         string _country;
         string _region;
         string _city;
+        Core::WorkerPool::JobType<LocationService&> _activity;
         Core::ProxyType<IGeography> _infoCarrier;
-
         Core::ProxyType<Web::Request> _request;
-        Core::ProxyType<Core::IDispatch> _activity;
     };
 }
 } // namespace WPEFramework:Plugin

@@ -15,6 +15,7 @@ NetworkControl plugin for Thunder framework.
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
+- [Notifications](#head.Notifications)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -22,7 +23,7 @@ NetworkControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the NetworkControl plugin. It includes detailed specification of its configuration, methods and properties provided.
+This document describes purpose and functionality of the NetworkControl plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -120,9 +121,9 @@ Reloads a static and non-static network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "NetworkControl.1.reload", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "NetworkControl.1.reload",
     "params": {
         "device": "eth0"
     }
@@ -132,8 +133,8 @@ Reloads a static and non-static network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -141,6 +142,8 @@ Reloads a static and non-static network interface adapter.
 ## *request <sup>method</sup>*
 
 Reloads a non-static network interface adapter.
+
+Also see: [connectionchange](#event.connectionchange)
 
 ### Parameters
 
@@ -167,9 +170,9 @@ Reloads a non-static network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "NetworkControl.1.request", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "NetworkControl.1.request",
     "params": {
         "device": "eth0"
     }
@@ -179,8 +182,8 @@ Reloads a non-static network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -214,9 +217,9 @@ Reloads a static network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "NetworkControl.1.assign", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "NetworkControl.1.assign",
     "params": {
         "device": "eth0"
     }
@@ -226,8 +229,8 @@ Reloads a static network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -261,9 +264,9 @@ Flushes a network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "NetworkControl.1.flush", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "NetworkControl.1.flush",
     "params": {
         "device": "eth0"
     }
@@ -273,8 +276,8 @@ Flushes a network interface adapter.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -324,8 +327,8 @@ Provides access to the current network information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "NetworkControl.1.network@eth0"
 }
 ```
@@ -333,15 +336,15 @@ Provides access to the current network information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         {
-            "interface": "eth0", 
-            "mode": "dynamic", 
-            "address": "192.168.1.158", 
-            "mask": 24, 
-            "gateway": "192.168.1.1", 
+            "interface": "eth0",
+            "mode": "dynamic",
+            "address": "192.168.1.158",
+            "mask": 24,
+            "gateway": "192.168.1.1",
             "broadcast": "192.168.1.255"
         }
     ]
@@ -378,8 +381,8 @@ Provides access to the interface up status.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "NetworkControl.1.up@eth0"
 }
 ```
@@ -387,8 +390,8 @@ Provides access to the interface up status.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": false
 }
 ```
@@ -396,9 +399,9 @@ Provides access to the interface up status.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "NetworkControl.1.up@eth0", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "NetworkControl.1.up@eth0",
     "params": false
 }
 ```
@@ -406,8 +409,48 @@ Provides access to the interface up status.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
+}
+```
+<a name="head.Notifications"></a>
+# Notifications
+
+Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+
+The following events are provided by the NetworkControl plugin:
+
+NetworkControl interface events:
+
+| Event | Description |
+| :-------- | :-------- |
+| [connectionchange](#event.connectionchange) | Notifies about connection status (created, updated, removed, connected and connectionfailed) |
+
+<a name="event.connectionchange"></a>
+## *connectionchange <sup>event</sup>*
+
+Notifies about connection status (created, updated, removed, connected and connectionfailed).
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.name | string | Name of network interface |
+| params.address | string | IP Address of network interface, if it is connected |
+| params.status | string | Status of the interface, update, connected or not (must be one of the following: *created*, *updated*, *removed*, *connected*, *connectionfailed*) |
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "client.events.1.connectionchange",
+    "params": {
+        "name": "eth0",
+        "address": "192.168.1.10",
+        "status": "connected"
+    }
 }
 ```

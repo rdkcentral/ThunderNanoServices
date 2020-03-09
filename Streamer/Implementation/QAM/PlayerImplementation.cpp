@@ -1,4 +1,22 @@
-
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include "Administrator.h"
 #include "Designator.h"
 #include <vector>
@@ -8,6 +26,8 @@ namespace Player {
 namespace Implementation {
 
     namespace {
+
+        static Exchange::IStream::streamtype _supported;
 
         class QAM : public IPlayerPlatform {
         private:
@@ -59,6 +79,9 @@ namespace Implementation {
             }
 
         public:
+            static Exchange::IStream::streamtype Supported() {
+                return (_supported);
+            }
             uint32_t Setup() override
             {
                 uint32_t result = Core::ERROR_GENERAL;
@@ -97,15 +120,15 @@ namespace Implementation {
             }
             Exchange::IStream::streamtype Type() const override
             {
-                return (Exchange::IStream::streamtype)_streamType;
+                return _streamType;
             }
             Exchange::IStream::drmtype DRM() const override
             {
-                return (Exchange::IStream::drmtype)_drmType;
+                return _drmType;
             }
             Exchange::IStream::state State() const override
             {
-                return (Exchange::IStream::state)_state;
+                return _state;
             }
             uint32_t Error() const override
             {
@@ -331,9 +354,14 @@ namespace Implementation {
             uint8_t _index;
         };
 
-        static PlayerPlatformRegistrationType<QAM> Register(Exchange::IStream::streamtype::Cable,
+        static PlayerPlatformRegistrationType<QAM, Exchange::IStream::streamtype::Undefined> Register(
             /*  Initialize */ [](const string& configuration) -> uint32_t {
                 Broadcast::ITuner::Initialize(configuration);
+                _supported = static_cast<Exchange::IStream::streamtype>(
+                    (Broadcast::ITuner::IsSupported(Broadcast::ITuner::Cable)       ? static_cast<int>(Exchange::IStream::streamtype::Cable)       : 0) |
+                    (Broadcast::ITuner::IsSupported(Broadcast::ITuner::Terrestrial) ? static_cast<int>(Exchange::IStream::streamtype::Terrestrial) : 0) |
+                    (Broadcast::ITuner::IsSupported(Broadcast::ITuner::Satellite)   ? static_cast<int>(Exchange::IStream::streamtype::Satellite)   : 0) 
+                );
                 return (Core::ERROR_NONE);
             },
             /*  Deinitialize */ []() {

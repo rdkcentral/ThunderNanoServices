@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef PLUGIN_NETWORKCONTROL_H
 #define PLUGIN_NETWORKCONTROL_H
 
@@ -98,6 +117,9 @@ namespace Plugin {
             AdapterObserver& operator=(const AdapterObserver&) = delete;
 
         public:
+#ifdef __WINDOWS__
+#pragma warning(disable : 4355)
+#endif
             AdapterObserver(NetworkControl* parent)
                 : _parent(*parent)
                 , _adminLock()
@@ -106,6 +128,9 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
+#ifdef __WINDOWS__
+#pragma warning(default : 4355)
+#endif
             virtual ~AdapterObserver()
             {
             }
@@ -285,34 +310,28 @@ namespace Plugin {
             DHCPEngine& operator=(const DHCPEngine&) = delete;
 
         public:
+#ifdef __WINDOWS__
+#pragma warning(disable : 4355)
+#endif
             DHCPEngine(NetworkControl* parent, const string& interfaceName, const string& persistentStoragePath)
                 : _parent(*parent)
                 , _retries(0)
                 , _client(interfaceName, std::bind(&DHCPEngine::NewOffer, this, std::placeholders::_1), 
                           std::bind(&DHCPEngine::RequestResult, this, std::placeholders::_1, std::placeholders::_2))
-                , _leaseFilePath(persistentStoragePath + _client.Interface() + ".json")
+                , _leaseFilePath((persistentStoragePath.empty()) ? "" :  (persistentStoragePath + _client.Interface() + ".json"))
             {
-                // Make sure that lease file exists
-                if (persistentStoragePath.empty() == false) {
-                    Core::File leaseFile(_leaseFilePath);
 
-                    if (leaseFile.Exists() == false) {
-                        if (leaseFile.Create() == true) {
-                            leaseFile.Close();
-                        } else {
-                            TRACE(Trace::Warning, ("Failed to create persistent dhcp lease file for %s", interfaceName.c_str()))
-                        }
-                    }
-                    
-                }
             }
+#ifdef __WINDOWS__
+#pragma warning(default : 4355)
+#endif
             ~DHCPEngine()
             {
             }
         public:
             // Permanent IP storage
             void SaveLeases();
-            void LoadLeases();
+            bool LoadLeases();
 
             inline DHCPClientImplementation::classifications Classification() const
             {
@@ -339,7 +358,7 @@ namespace Plugin {
             void GetIP(const Core::NodeId& preferred)
             {
 
-                auto offerIterator = _client.Offers(false);
+                auto offerIterator = _client.UnleasedOffers();
                 if (offerIterator.Next() == true) {
                     Request(offerIterator.Current());
                 } else {
@@ -356,11 +375,16 @@ namespace Plugin {
             void RequestResult(const DHCPClientImplementation::Offer& offer, const bool result) {
                 StopWatchdog();
 
+                JsonData::NetworkControl::ConnectionchangeParamsData::StatusType status;
                 if (result == true) {
                     _parent.RequestAccepted(_client.Interface(), offer);
+                    status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::CONNECTED;
                 } else {
                     _parent.RequestFailed(_client.Interface(), offer);
+                    status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::CONNECTIONFAILED;
                 }
+
+                _parent.event_connectionchange(_client.Interface().c_str(), offer.Address().HostAddress().c_str(), status);
             }
 
             inline void Request(const DHCPClientImplementation::Offer& offer) {
@@ -373,13 +397,13 @@ namespace Plugin {
             {
                 _client.Completed();
             }
-            inline DHCPClientImplementation::Iterator Offers(const bool leased)
+            inline DHCPClientImplementation::Iterator UnleasedOffers()
             {
-                return (_client.Offers(leased));
+                return (_client.UnleasedOffers());
             }
-            inline void RemoveOffer(const DHCPClientImplementation::Offer& offer, const bool leased) 
+            inline void RemoveUnleasedOffer(const DHCPClientImplementation::Offer& offer) 
             {
-                _client.RemoveOffer(offer, leased);
+                _client.RemoveUnleasedOffer(offer);
             }
 
             void SetupWatchdog() 
@@ -435,7 +459,7 @@ namespace Plugin {
                         if (offer.IsValid()) {
                             // Remove unresponsive offer from potential candidates
                             DHCPClientImplementation::Offer copy = offer.Current(); 
-                            _client.RemoveOffer(offer.Current(), false);
+                            _client.RemoveUnleasedOffer(offer.Current());
                             
                             // Inform controller that request failed
                             _parent.RequestFailed(_client.Interface(), copy);
@@ -489,7 +513,7 @@ namespace Plugin {
 
     private:
         uint32_t Reload(const string& interfaceName, const bool dynamic);
-        uint32_t SetIP(Core::AdapterIterator& adapter, const Core::IPNode& ipAddress, const Core::NodeId& gateway, const Core::NodeId& broadcast);
+        uint32_t SetIP(Core::AdapterIterator& adapter, const Core::IPNode& ipAddress, const Core::NodeId& gateway, const Core::NodeId& broadcast, bool clearOld = false);
         bool NewOffer(const string& interfaceName, const DHCPClientImplementation::Offer& offer);
         void RequestAccepted(const string& interfaceName, const DHCPClientImplementation::Offer& offer);
         void RequestFailed(const string& interfaceName, const DHCPClientImplementation::Offer& offer);
@@ -505,6 +529,8 @@ namespace Plugin {
         {
             return (_retries);
         }
+        void ClearAssignedIPV4IPs(Core::AdapterIterator& adapter);
+        void ClearAssignedIPV6IPs(Core::AdapterIterator& adapter);
 
         void RegisterAll();
         void UnregisterAll();
@@ -515,6 +541,7 @@ namespace Plugin {
         uint32_t get_network(const string& index, Core::JSON::ArrayType<JsonData::NetworkControl::NetworkData>& response) const;
         uint32_t get_up(const string& index, Core::JSON::Boolean& response) const;
         uint32_t set_up(const string& index, const Core::JSON::Boolean& param);
+        void event_connectionchange(const string& name, const string& address, const JsonData::NetworkControl::ConnectionchangeParamsData::StatusType& status);
 
     private:
         Core::CriticalSection _adminLock;

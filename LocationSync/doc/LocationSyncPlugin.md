@@ -15,6 +15,7 @@ LocationSync plugin for Thunder framework.
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
+- [Notifications](#head.Notifications)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -22,7 +23,7 @@ LocationSync plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the LocationSync plugin. It includes detailed specification of its configuration, methods and properties provided.
+This document describes purpose and functionality of the LocationSync plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -117,8 +118,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "LocationSync.1.sync"
 }
 ```
@@ -126,8 +127,8 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -166,8 +167,8 @@ Provides access to the location information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "LocationSync.1.location"
 }
 ```
@@ -175,14 +176,44 @@ Provides access to the location information.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "city": "Wroclaw", 
-        "country": "Poland", 
-        "region": "Wroclaw", 
-        "timezone": "CET-1CEST,M3.5.0,M10.5.0/3", 
+        "city": "Wroclaw",
+        "country": "Poland",
+        "region": "Wroclaw",
+        "timezone": "CET-1CEST,M3.5.0,M10.5.0/3",
         "publicip": "78.11.117.118"
     }
+}
+```
+<a name="head.Notifications"></a>
+# Notifications
+
+Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+
+The following events are provided by the LocationSync plugin:
+
+LocationSync interface events:
+
+| Event | Description |
+| :-------- | :-------- |
+| [locationchange](#event.locationchange) | Signals a location change |
+
+<a name="event.locationchange"></a>
+## *locationchange <sup>event</sup>*
+
+Signals a location change.
+
+### Parameters
+
+This event carries no parameters.
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "client.events.1.locationchange"
 }
 ```

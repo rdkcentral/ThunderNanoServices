@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #ifndef __PLUGIN_COMPOSITOR_H
 #define __PLUGIN_COMPOSITOR_H
 
@@ -167,20 +186,19 @@ namespace Plugin {
         void Attached(const string& name, Exchange::IComposition::IClient* client);
         void Detached(const string& name);
 
-        template <typename ClientOperation>
-        uint32_t CallOnClientByCallsign(const string& callsign, ClientOperation&& operation) const;
-
-        void Clients(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const;
-        uint32_t Kill(const string& callsign) const;
-        uint32_t Opacity(const string& callsign, const uint32_t value) const;
+        void ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const;
         void Resolution(const Exchange::IComposition::ScreenResolution);
         Exchange::IComposition::ScreenResolution Resolution() const;
-        uint32_t Visible(const string& callsign, const bool visible) const;
+
+        uint32_t Kill(const string& callsign);
+        uint32_t Opacity(const string& callsign, const uint32_t value);
+        uint32_t Visible(const string& callsign, const bool visible);
         uint32_t Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle);
         Exchange::IComposition::Rectangle Geometry(const string& callsign) const;
         uint32_t ToTop(const string& callsign);
-        uint32_t PutBelow(const string& callsignRelativeTo, const string& callsignToReorder);
-        void ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const;
+        uint32_t PutBefore(const string& callsignRelativeTo, const string& callsignToReorder);
+
+        Exchange::IComposition::IClient* InterfaceByCallsign(const string& callsign) const;
 
     private:
         /* JSON-RPC */
@@ -204,8 +222,9 @@ namespace Plugin {
         Core::Sink<Notification> _notification;
         Exchange::IComposition* _composition;
         PluginHost::IShell* _service;
-        uint32_t _pid;
+        uint32_t _connectionId;
         std::map<string, Exchange::IComposition::IClient*> _clients;
+        std::list<string> _zOrder;
     };
 }
 }

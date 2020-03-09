@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #pragma once
 
 #include <Module.h>
@@ -80,16 +99,15 @@ namespace Player {
             virtual const string& Configuration() const = 0;
         };
 
-        template<class PLAYER>
+        template<class PLAYER, Exchange::IStream::streamtype STREAMTYPE>
         class PlayerPlatformFactoryType : public IPlayerPlatformFactory {
         public:
             PlayerPlatformFactoryType(const PlayerPlatformFactoryType&) = delete;
             PlayerPlatformFactoryType& operator=(const PlayerPlatformFactoryType&) = delete;
 
-            PlayerPlatformFactoryType(Exchange::IStream::streamtype streamType, InitializerType initializer = nullptr, DeinitializerType deinitializer = nullptr)
+            PlayerPlatformFactoryType(InitializerType initializer = nullptr, DeinitializerType deinitializer = nullptr)
                 : _slots()
                 , _name(Core::ClassNameOnly(typeid(PLAYER).name()).Text())
-                , _streamType(streamType)
                 , _Initialize(initializer)
                 , _Deinitialize(deinitializer)
                 , _configuration()
@@ -97,7 +115,6 @@ namespace Player {
                 , _adminLock()
             {
                 ASSERT(Name().empty() == false);
-                ASSERT(streamType != Exchange::IStream::streamtype::Undefined);
             }
 
             ~PlayerPlatformFactoryType()
@@ -171,7 +188,7 @@ namespace Player {
 
                 uint8_t index = _slots.Find();
                 if (index < _slots.Size()) {
-                    player =  new PLAYER(_streamType, index);
+                    player =  new PLAYER(Type(), index);
 
                     if ((player != nullptr) && (player->Setup() != Core::ERROR_NONE)) {
                         TRACE(Trace::Error, (_T("Player '%s' setup failed!"),  Name().c_str()));
@@ -227,7 +244,7 @@ namespace Player {
 
             Exchange::IStream::streamtype Type() const override
             {
-                return (_streamType);
+                return (Type(TemplateIntToType<STREAMTYPE == Exchange::IStream::streamtype::Undefined>()));
             }
 
             uint8_t Frontends() const override
@@ -241,9 +258,19 @@ namespace Player {
             }
 
         private:
+            Exchange::IStream::streamtype Type(const TemplateIntToType<true>& /* For compile time diffrentiation */) const 
+            {
+                // Lets load the StreamType from the Player..
+                return (PLAYER::Supported());
+            }
+            Exchange::IStream::streamtype Type(const TemplateIntToType<false>& /* For compile time diffrentiation */) const 
+            {
+                return (STREAMTYPE);
+            }
+
+        private:
             Core::BitArrayFlexType<16> _slots;
             string _name;
-            Exchange::IStream::streamtype _streamType;
             InitializerType _Initialize;
             DeinitializerType _Deinitialize;
             string _configuration;

@@ -1,12 +1,28 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include "NexusServer.h"
 
 #include <nexus_config.h>
 #include <nexus_platform.h>
 #include <nexus_types.h>
 #include <nxclient.h>
-#ifndef NEXUS_SERVER_EXTERNAL
-#include <nxserverlib.h>
-#endif
 #include <nexus_display_vbi.h>
 #if NEXUS_HAS_VIDEO_DECODER
 #include <nexus_video_decoder.h>
@@ -19,20 +35,6 @@ BDBG_MODULE(NexusServer);
 namespace WPEFramework {
 
 namespace Broadcom {
-    static const std::map<const Exchange::IComposition::ScreenResolution, const NEXUS_VideoFormat> formatLookup = {
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown, NEXUS_VideoFormat_eUnknown },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_480i, NEXUS_VideoFormat_eNtsc },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_480p, NEXUS_VideoFormat_e480p },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_720p, NEXUS_VideoFormat_e720p },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_720p50Hz, NEXUS_VideoFormat_e720p50hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p24Hz, NEXUS_VideoFormat_e1080p24hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz, NEXUS_VideoFormat_e1080i50hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p50Hz, NEXUS_VideoFormat_e1080p50hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p60Hz, NEXUS_VideoFormat_e1080p60hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p50Hz, NEXUS_VideoFormat_e3840x2160p50hz },
-        { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz, NEXUS_VideoFormat_e3840x2160p60hz }
-    };
-
     /* virtual */ string Platform::Client::Name() const
     {
         return (::std::string(Id()));
@@ -58,15 +60,28 @@ namespace Broadcom {
         TRACE(Trace::Information, (_T("Alpha client %s to %d."), Name().c_str(), value));
         nxserverlib_set_server_alpha(_client, value);
     }
-    /* virtual */ void Platform::Client::ChangedGeometry(const Exchange::IComposition::Rectangle& /* rectangle */)
+    uint32_t Platform::Client::Geometry(const Exchange::IComposition::Rectangle& rectangle) /* override */
     {
+        ASSERT(_client != nullptr);
+        _rectangle = rectangle;
+
+        return (Core::ERROR_UNAVAILABLE);
     }
-    /* virtual */ void Platform::Client::ChangedZOrder(const uint8_t zorder)
+    Exchange::IComposition::Rectangle Platform::Client::Geometry() const /* override */
     {
+        ASSERT(_client != nullptr);
+
+        return (_rectangle);
+    }
+    uint32_t Platform::Client::ZOrder(const uint16_t index) /* override */
+    {
+        uint32_t result = Core::ERROR_UNAVAILABLE;
 
         ASSERT(_client != nullptr);
 
-        if (zorder == 0) {
+        if (index == 0) {
+            result = Core::ERROR_NONE;
+
             /* the definition of "focus" is variable. this is one impl. */
             NxClient_ConnectList list;
             struct nxclient_status status;
@@ -75,7 +90,13 @@ namespace Broadcom {
             NxClient_P_Config_GetConnectList(_client, status.handle, &list);
 
             /* only refresh first connect */
+            if (list.connectId[0]) {
+                NxClient_P_RefreshConnect(_client, list.connectId[0]);
+            }
+            nxserver_p_focus_input_client(_client);
+            nxserver_p_focus_surface_client(_client);
         }
+        return (result);
     }
 
     class Config : public Core::JSON::Container {
@@ -155,7 +176,6 @@ namespace Broadcom {
             , PAKPath()
             , DRMPath()
             , SVPType(NONE)
-            , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
             , Memory()
             , HDCPLevel(HDCP_NONE)
             , HDCPVersion(AUTO)
@@ -170,7 +190,6 @@ namespace Broadcom {
             Add(_T("pakpath"), &PAKPath);
             Add(_T("drmpath"), &DRMPath);
             Add(_T("svp"), &SVPType);
-            Add(_T("resolution"), &Resolution);
             Add(_T("memory"), &Memory);
             Add(_T("framebufferwidth"), &FrameBufferWidth);
             Add(_T("framebufferheight"), &FrameBufferHeight);
@@ -192,7 +211,6 @@ namespace Broadcom {
         Core::JSON::String PAKPath;
         Core::JSON::String DRMPath;
         Core::JSON::EnumType<svptype> SVPType;
-        Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
         MemoryInfo Memory;
         Core::JSON::DecUInt16 FrameBufferWidth;
         Core::JSON::DecUInt16 FrameBufferHeight;
@@ -208,7 +226,6 @@ namespace Broadcom {
      * ------------------------------------------------------------------------------------------------------------- */
     /* static */ Platform* Platform::_implementation = nullptr;
 
-#ifndef NEXUS_SERVER_EXTERNAL
     static int find_unused_heap(const NEXUS_PlatformSettings& platformSettings)
     {
         for (int i = NEXUS_MAX_HEAPS - 1; i < NEXUS_MAX_HEAPS; i--) {
@@ -217,7 +234,6 @@ namespace Broadcom {
         }
         return -1;
     }
-#endif
 
     /* static */ void Platform::CloseDown()
     {
@@ -255,29 +271,22 @@ namespace Broadcom {
     Platform::~Platform()
     {
         _state = DEINITIALIZING;
-        if (_joined == true) {
-            NxClient_Uninit();
-        }
-#ifndef NEXUS_SERVER_EXTERNAL
         nxserver_ipc_uninit();
         nxserverlib_uninit(_instance);
         NEXUS_Platform_Uninit();
         BKNI_DestroyMutex(_lock);
-#endif
         _implementation = nullptr;
     }
 
-    Platform::Platform(const string& callsign, IStateChange* stateChanges, IClient* clientChanges, const std::string& configuration)
+    Platform::Platform(IStateChange* stateChanges, IClient* clientChanges, const std::string& configuration, const NEXUS_VideoFormat& format)
         : _lock()
         , _instance()
         , _serverSettings()
         , _platformSettings()
         , _platformCapabilities()
-        , _joinSettings()
         , _state(UNITIALIZED)
         , _clientHandler(clientChanges)
         , _stateHandler(stateChanges)
-        , _joined(false)
     {
         ASSERT(_implementation == nullptr);
         ASSERT(_instance == nullptr);
@@ -294,8 +303,6 @@ namespace Broadcom {
                 TRACE(Trace::Information, (("Could not register @exit handler. Error: %d."), errno));
                 exit(EXIT_FAILURE);
             }
-
-#ifndef NEXUS_SERVER_EXTERNAL
 
             TRACE_L1("Start Nexus server...%d\n", __LINE__);
 
@@ -321,9 +328,6 @@ namespace Broadcom {
                 ::setenv("B_REFSW_BOXMODE", stringNumber, 1);
                 TRACE_L1("Set BoxMode to %d\n", config.BoxMode.Value());
             }
-
-            NxClient_GetDefaultJoinSettings(&(_joinSettings));
-            strcpy(_joinSettings.name, callsign.c_str());
 
             nxserver_get_default_settings(&(_serverSettings));
             NEXUS_Platform_GetDefaultSettings(&(_platformSettings));
@@ -406,12 +410,8 @@ namespace Broadcom {
                 }
             }
 
-            if (config.Resolution.IsSet() == true) {
-                const auto index(formatLookup.find(config.Resolution.Value()));
-
-                if ((index != formatLookup.cend()) && (index->second != NEXUS_VideoFormat_eUnknown)) {
-                    _serverSettings.display.format = index->second;
-                }
+            if (format != NEXUS_VideoFormat_eUnknown) {
+                _serverSettings.display.format = format;
             }
 
             if (config.SVPType.IsSet() == true) {
@@ -512,60 +512,10 @@ namespace Broadcom {
                 TRACE_L1("nxserver_modify_platform_settings failed [%d]\n", rc);
             }
 
-#endif // NEXUS_SERVER_EXTERNAL
-
             StateChange(rc == NEXUS_SUCCESS ? OPERATIONAL : FAILURE);
         }
 
         ASSERT(_state != FAILURE);
-    }
-
-    uint32_t Platform::Resolution(const Exchange::IComposition::ScreenResolution format)
-    {
-        uint32_t result = Core::ERROR_ILLEGAL_STATE;
-
-        if (_joined == true) {
-
-            result = Core::ERROR_UNKNOWN_KEY;
-
-            NxClient_DisplaySettings displaySettings;
-
-            NxClient_GetDisplaySettings(&displaySettings);
-
-            const auto index(formatLookup.find(format));
-
-            if ((index != formatLookup.cend()) && (index->second != NEXUS_VideoFormat_eUnknown)) {
-
-                result = Core::ERROR_NONE;
-
-                if (index->second != displaySettings.format) {
-
-                    displaySettings.format = index->second;
-                    if (NxClient_SetDisplaySettings(&displaySettings) != 0) {
-                        result = Core::ERROR_GENERAL;
-                    }
-                }
-            }
-        }
-        return (result);
-    }
-    Exchange::IComposition::ScreenResolution Platform::Resolution() const
-    {
-        Exchange::IComposition::ScreenResolution result(Exchange::IComposition::ScreenResolution_Unknown);
-
-        if (_joined == true) {
-            NxClient_DisplaySettings displaySettings;
-
-            NxClient_GetDisplaySettings(&displaySettings);
-            NEXUS_VideoFormat format = displaySettings.format;
-            const auto index = std::find_if(formatLookup.cbegin(), formatLookup.cend(),
-                [format](const std::pair<const Exchange::IComposition::ScreenResolution, const NEXUS_VideoFormat>& entry) { return entry.second == format; });
-
-            if (index != formatLookup.cend()) {
-                result = index->first;
-            }
-        }
-        return (result);
     }
 
     // -------------------------------------------------------------------------------------------------------

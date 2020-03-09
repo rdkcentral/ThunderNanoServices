@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #pragma once
 
 #include "Module.h"
@@ -144,7 +163,7 @@ namespace Plugin {
             , _downloadStatus(Core::ERROR_NONE)
             , _upgradeStatus(UpgradeStatus::NONE)
             , _installStatus()
-            , _upgrader(this)
+            , _upgrader(Core::ProxyType<Upgrader>::Create(this))
             , _signal(false, true)
         {
             RegisterAll();
@@ -158,7 +177,7 @@ namespace Plugin {
             if (_upgradeStatus != UpgradeStatus::NONE) {
                 _upgradeStatus = UPGRADE_CANCELLED;
                 _signal.SetEvent();
-                _upgrader.Stop();
+                _upgrader->Stop();
             }
             _adminLock.Unlock();
         }
@@ -246,7 +265,7 @@ namespace Plugin {
 
         inline void RemoveDownloadedFile()
         {
-            Core::File _storage(_destination);
+            Core::File _storage(_destination + Name);
             if (_storage.Exists()) {
                 _storage.Destroy();
             }
@@ -392,7 +411,7 @@ namespace Plugin {
         UpgradeStatus _upgradeStatus;
         mfrUpgradeStatus_t _installStatus;
 
-        Upgrader _upgrader;
+        Core::ProxyType<Upgrader> _upgrader;
         Core::Event _signal;
     };
 

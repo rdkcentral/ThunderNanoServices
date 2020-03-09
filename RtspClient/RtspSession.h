@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef RTSPSESSION_H
 #define RTSPSESSION_H
 
@@ -106,11 +125,13 @@ namespace Plugin {
         static constexpr uint16_t ResponseWaitTime = 3000;
         static constexpr uint16_t NptUpdateInterwal = 1000;
 
+        RtspSession::AnnouncementHandler& _announcementHandler;
+
         Core::NodeId _remote;
         Core::NodeId _local;
         RtspSession::Socket* _srmSocket;
         RtspSession::Socket* _controlSocket;
-        RtspSession::AnnouncementHandler& _announcementHandler;
+
         RtspParser _parser;
         RtspSessionInfo _sessionInfo;
         Core::CriticalSection _adminLock;

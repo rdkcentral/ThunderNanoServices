@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include <memory>
 
 #include "Module.h"
@@ -29,12 +48,12 @@ namespace Plugin {
             }
 
         public:
-            Core::JSON::DecUInt32 Sleep;
+            Core::JSON::DecUInt16 Sleep;
             Core::JSON::Boolean Crash;
             Core::JSON::DecUInt32 Destruct;
         };
 
-        class Job {
+        class Job : public Core::IDispatch {
         public:
             enum runtype {
                 SHOW,
@@ -69,7 +88,7 @@ namespace Plugin {
             }
 
         public:
-            void Dispatch()
+            void Dispatch() override
             {
 
                 switch (_type) {
@@ -107,7 +126,7 @@ namespace Plugin {
             , _setURL()
             , _fps(0)
             , _hidden(false)
-            , _executor(0, _T("TestPool"))
+            , _executor(1, 0, 4)
         {
         }
         virtual ~OutOfProcessImplementation()
@@ -233,11 +252,11 @@ namespace Plugin {
 
             switch (command) {
             case PluginHost::IStateControl::SUSPEND:
-                _executor.Submit(Job(*this, Job::SUSPENDED), 20000);
+                _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::SUSPENDED)), 20000);
                 result = Core::ERROR_NONE;
                 break;
             case PluginHost::IStateControl::RESUME:
-                _executor.Submit(Job(*this, Job::RESUMED), 20000);
+                _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::RESUMED)), 20000);
                 result = Core::ERROR_NONE;
                 break;
             }
@@ -256,12 +275,12 @@ namespace Plugin {
             if (hidden == true) {
 
                 printf("Hide called. About to sleep for 2S.\n");
-                _executor.Submit(Job(*this, Job::HIDE), 20000);
+                _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::HIDE)), 20000);
                 SleepMs(2000);
                 printf("Hide completed.\n");
             } else {
                 printf("Show called. About to sleep for 4S.\n");
-                _executor.Submit(Job(*this, Job::SHOW), 20000);
+                _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::SHOW)), 20000);
                 SleepMs(4000);
                 printf("Show completed.\n");
             }
@@ -314,6 +333,7 @@ namespace Plugin {
         {
             if (Core::Time::Now() >= _endTime) {
                 if (_config.Crash.Value() == true) {
+                    SleepMs(_config.Sleep.Value() * 1000);
                     TRACE_L1("Going to CRASH as requested %d.", 0);
                     abort();
                 }
@@ -357,7 +377,7 @@ namespace Plugin {
         Core::Time _endTime;
         std::list<PluginHost::IStateControl::INotification*> _notificationClients;
         std::list<Exchange::IBrowser::INotification*> _browserClients;
-        Core::ThreadPoolType<Job, 1> _executor;
+        Core::ThreadPool _executor;
     };
 
     SERVICE_REGISTRATION(OutOfProcessImplementation, 1, 0);
@@ -373,8 +393,8 @@ namespace OutOfProcessPlugin {
         MemoryObserverImpl& operator=(const MemoryObserverImpl&);
 
     public:
-        MemoryObserverImpl(const uint32_t id)
-            : _main(id == 0 ? Core::ProcessInfo().Id() : id)
+        MemoryObserverImpl(const RPC::IRemoteConnection* connection)
+            : _main(connection == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
         {
         }
         ~MemoryObserverImpl()
@@ -382,24 +402,21 @@ namespace OutOfProcessPlugin {
         }
 
     public:
-        virtual void Observe(const uint32_t /* pid */)
-        {
-        }
         virtual uint64_t Resident() const
         {
-            return (_main.Resident());
+            return _main.Resident();
         }
         virtual uint64_t Allocated() const
         {
-            return (_main.Allocated());
+            return _main.Allocated();
         }
         virtual uint64_t Shared() const
         {
-            return (_main.Shared());
+            return _main.Shared();
         }
         virtual uint8_t Processes() const
         {
-            return (1);
+            return (IsOperational() ? 1 : 0);
         }
         virtual const bool IsOperational() const
         {
@@ -414,9 +431,11 @@ namespace OutOfProcessPlugin {
         Core::ProcessInfo _main;
     };
 
-    Exchange::IMemory* MemoryObserver(const uint32_t PID)
+    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
-        return (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(PID));
+        ASSERT(connection != nullptr);
+        Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
+        return (result);
     }
 }
-} // namespace WPEFramework::OutOfProcessTest
+} // namespace WPEFramework::OutOfProcessPlugin

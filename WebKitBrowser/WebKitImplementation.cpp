@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <memory>
 
 #include "Module.h"
@@ -1209,6 +1228,8 @@ static GSourceFuncs _handlerIntervention =
 
             std::vector<string> messageStrings = ConvertWKArrayToStringVector(messageLines);
             browser->OnJavaScript(messageStrings);
+        } else if (name == Tags::URL) {
+            *returnData = WKStringCreateWithUTF8CString(browser->GetURL().c_str());
         } else if (name.compare(0, configLen, Tags::Config) == 0) {
             // Second part of this string is the key we are looking for, extract it...
             std::string utf8Json = Core::ToString(browser->GetConfig(name.substr(configLen)));
@@ -1347,7 +1368,7 @@ namespace WebKitBrowser {
         MemoryObserverImpl(const RPC::IRemoteConnection* connection)
             : _main(connection == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
             , _children(_main.Id())
-            , _startTime(0)
+            , _startTime(connection == nullptr ? 0 : Core::Time::Now().Add(TYPICAL_STARTUP_TIME * 1000).Ticks())
         { // IsOperation true till calculated time (microseconds)
         }
         ~MemoryObserverImpl()
@@ -1355,17 +1376,6 @@ namespace WebKitBrowser {
         }
 
     public:
-        virtual void Observe(const uint32_t pid)
-        {
-            if (pid != 0) {
-                _main = Core::ProcessInfo(pid);
-                _children = Core::ProcessInfo::Iterator(_main.Id());
-                _startTime = Core::Time::Now().Ticks() + (TYPICAL_STARTUP_TIME * 1000000);
-            } else {
-                _startTime = 0;
-            }
-        }
-
         virtual uint64_t Resident() const
         {
             uint32_t result(0);
@@ -1492,10 +1502,8 @@ namespace WebKitBrowser {
 
     Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
+        ASSERT(connection != nullptr);
         Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
-        if (connection != nullptr) {
-            connection->Release();
-        }
         return (result);
     }
 }

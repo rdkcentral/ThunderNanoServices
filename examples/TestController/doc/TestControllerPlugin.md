@@ -123,12 +123,12 @@ Runs a single test or multiple tests.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "TestController.1.run", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "TestController.1.run",
     "params": {
-        "category": "JSONRPC", 
-        "test": "JSONRPCTest", 
+        "category": "JSONRPC",
+        "test": "JSONRPCTest",
         "args": "{ }"
     }
 }
@@ -137,11 +137,11 @@ Runs a single test or multiple tests.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         {
-            "test": "JSONRPCTest", 
+            "test": "JSONRPCTest",
             "status": "Success"
         }
     ]
@@ -180,8 +180,8 @@ Provides access to the list of test categories.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "TestController.1.categories"
 }
 ```
@@ -189,8 +189,8 @@ Provides access to the list of test categories.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         "JSONRPC"
     ]
@@ -225,8 +225,8 @@ Provides access to the list of tests for a category.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "TestController.1.tests@JSONRPC"
 }
 ```
@@ -234,8 +234,8 @@ Provides access to the list of tests for a category.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         "JSONRPCTest"
     ]
@@ -270,8 +270,8 @@ Provides access to the description of a test.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "TestController.1.description@JSONRPC"
 }
 ```
@@ -279,8 +279,8 @@ Provides access to the description of a test.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
         "description": "Tests JSONRPC functionality"
     }

@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #pragma once
 
 #include "Module.h"
@@ -182,12 +201,6 @@ class BluetoothControl : public PluginHost::IPlugin
                         TRACE(ManagementFlow, (_T("MGMT_EV_NEW_CSRK")));
                         TRACE(ManagementFlow, (_T("  store_hint=%d"), info->store_hint));
                         TRACE(ManagementFlow, (_T("  key.addr=%s, key.addr.type=%i, key.type=%d, key.val=%s"), Bluetooth::Address(info->key.addr.bdaddr).ToString().c_str(), info->key.addr.type, info->key.type, key.c_str()));
-                        if (info->store_hint != 0) {
-                            if (_parent.SecurityKey(Bluetooth::Address(info->key.addr.bdaddr),
-                                                    Bluetooth::SignatureKey(info->key.addr.bdaddr, info->key.addr.type, info->key.type, info->key.val)) != Core::ERROR_NONE) {
-                                TRACE(Trace::Error, (_T("Failed to store CSRK")));
-                            }
-                        }
                         break;
                     }
                     case MGMT_EV_NEW_LONG_TERM_KEY: {
@@ -229,10 +242,6 @@ class BluetoothControl : public PluginHost::IPlugin
             // This decoupling is done on this internal Worker thread.
             class Job : public Core::IDispatch {
             private:
-                Job() = delete;
-                Job(const Job&) = delete;
-                Job& operator=(const Job&) = delete;
-
                 enum scanMode {
                     LOW_ENERGY = 0x01,
                     REGULAR = 0x02,
@@ -241,12 +250,16 @@ class BluetoothControl : public PluginHost::IPlugin
                 };
 
             public:
+                Job() = delete;
+                Job(const Job&) = delete;
+                Job& operator=(const Job&) = delete;
+
                 Job(ControlSocket* parent)
                     : _parent(*parent)
                     , _mode(0)
                 {
                 }
-                virtual ~Job()
+                ~Job() override
                 {
                 }
 
@@ -271,7 +284,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 }
 
             private:
-                virtual void Dispatch()
+                void Dispatch() override
                 {
                     if ((_mode & REGULAR) != 0) {
                         TRACE(ControlFlow, (_T("Start regular scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
@@ -488,20 +501,18 @@ class BluetoothControl : public PluginHost::IPlugin
         };
 
         class Config : public Core::JSON::Container {
-        private:
-            Config(const Config&);
-            Config& operator=(const Config&);
-
         public:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
             Config()
                 : Core::JSON::Container()
                 , Interface(0)
                 , Name(_T("Thunder BT Control"))
-                , External(false)
+                , PersistMAC(false)
             {
                 Add(_T("interface"), &Interface);
                 Add(_T("name"), &Name);
-                Add(_T("external"), &External);
+                Add(_T("persistmac"), &PersistMAC);
             }
             ~Config()
             {
@@ -510,58 +521,30 @@ class BluetoothControl : public PluginHost::IPlugin
         public:
             Core::JSON::DecUInt16 Interface;
             Core::JSON::String Name;
-            Core::JSON::Boolean External;
+            Core::JSON::Boolean PersistMAC;
+        };
+
+        class Data : public Core::JSON::Container {
+        public:
+            Data(const Data&) = delete;
+            Data& operator=(const Data&) = delete;
+            Data()
+                : Core::JSON::Container()
+                , MAC()
+            {
+                Add(_T("mac"), &MAC);
+            }
+            ~Data()
+            {
+            }
+
+        public:
+            Core::JSON::String MAC;
         };
 
     public:
         class EXTERNAL DeviceImpl : public IBluetooth::IDevice {
         private:
-            class UpdateJob : public Core::IDispatch {
-            private:
-                UpdateJob() = delete;
-                UpdateJob(const UpdateJob&) = delete;
-                UpdateJob& operator=(const UpdateJob&) = delete;
-
-            public:
-                UpdateJob(DeviceImpl* parent)
-                    : _parent(*parent)
-                    , _scheduled(0)
-                {
-                }
-                virtual ~UpdateJob()
-                {
-                }
-
-            public:
-                void Schedule()
-                {
-                    if (_scheduled == 0) {
-                        _scheduled = 1;
-                        PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                    }
-                }
-                void Revoke()
-                {
-                    _scheduled = 0;
-                    PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(*this));
-                }
-
-            public:
-                void Dispatch() override
-                {
-                    _scheduled = 0;
-                    _parent.Updated();
-                }
-
-            private:
-                DeviceImpl& _parent;
-                uint8_t _scheduled;
-            };
-
-            DeviceImpl() = delete;
-            DeviceImpl(const DeviceImpl&) = delete;
-            DeviceImpl& operator=(const DeviceImpl&) = delete;
-
             static constexpr uint16_t ACTION_MASK = 0x00FF;
 
         public:
@@ -573,27 +556,71 @@ class BluetoothControl : public PluginHost::IPlugin
                 PAIRING       = 0x0004,
                 UNPAIRING     = 0x0008,
 
-                PAIRED        = 0x0100,
-                BONDED        = 0x0200,
-                TRUSTED       = 0x0400,
-
                 LOWENERGY     = 0x1000,
                 PUBLIC        = 0x2000
             };
-
-            class JSON : public Core::JSON::Container {
-            private:
-                JSON& operator=(const JSON&);
+            class Config : public Core::JSON::Container {
+            public:
+                Config(const Config&) = delete;
+                Config& operator=(const Config&) = delete;
+                Config()
+                    : Core::JSON::Container()
+                    , Type()
+                    , Name()
+                    , LinkKeys()
+                    , LongTermKeys()
+                    , IdentityKey()
+                {
+                    Add(_T("type"), &Type);
+                    Add(_T("name"), &Name);
+                    Add(_T("linkkeys"), &LinkKeys);
+                    Add(_T("longtermkeys"), &LongTermKeys);
+                    Add(_T("identitykey"), &IdentityKey);
+                }
+                ~Config()
+                {
+                }
 
             public:
-                JSON()
+                template<typename KEYLISTTYPE>
+                void Get(const Core::JSON::ArrayType<Core::JSON::String>& keys, const Bluetooth::Address& remote, const Bluetooth::Address::type type, KEYLISTTYPE& list) const
+                {
+                    auto index = keys.Elements();
+                    while (index.Next() == true) {
+                        typename KEYLISTTYPE::type key(remote, type, index.Current().Value());
+                        if (key.IsValid() == true) {
+                            list.Add(key);
+                        }
+                    }
+                }
+                template<typename KEYLISTTYPE>
+                void Set(Core::JSON::ArrayType<Core::JSON::String>& keys, const KEYLISTTYPE& list) const
+                {
+                    auto index = list.Elements();
+                    while(index.Next() == true) {
+                        Core::JSON::String key;
+                        key = index.Current().ToString();
+                        keys.Add(key);
+                    }
+                }
+
+            public:
+                Core::JSON::EnumType<Bluetooth::Address::type> Type;
+                Core::JSON::String Name;
+                Core::JSON::ArrayType<Core::JSON::String> LinkKeys;
+                Core::JSON::ArrayType<Core::JSON::String> LongTermKeys;
+                Core::JSON::String IdentityKey;
+            };
+            class Data : public Core::JSON::Container {
+            public:
+                Data& operator=(const Data&) = delete;
+                Data()
                     : Core::JSON::Container()
                     , LocalId()
                     , RemoteId()
                     , Name()
                     , LowEnergy(false)
                     , Connected(false)
-                    , Paired(false)
                     , Bonded(false)
                     , Reason(0)
                 {
@@ -602,18 +629,16 @@ class BluetoothControl : public PluginHost::IPlugin
                     Add(_T("name"), &Name);
                     Add(_T("le"), &LowEnergy);
                     Add(_T("connected"), &Connected);
-                    Add(_T("paired"), &Paired);
                     Add(_T("bonded"), &Bonded);
                     Add(_T("reason"), &Reason);
                 }
-                JSON(const JSON& copy)
+                Data(const Data& copy)
                     : Core::JSON::Container()
                     , LocalId()
                     , RemoteId()
                     , Name()
                     , LowEnergy(false)
                     , Connected(false)
-                    , Paired(false)
                     , Bonded(false)
                     , Reason(0)
                 {
@@ -622,7 +647,6 @@ class BluetoothControl : public PluginHost::IPlugin
                     Add(_T("name"), &Name);
                     Add(_T("le"), &LowEnergy);
                     Add(_T("connected"), &Connected);
-                    Add(_T("paired"), &Paired);
                     Add(_T("bonded"), &Bonded);
                     Add(_T("reason"), &Reason);
                     LocalId = copy.LocalId;
@@ -630,16 +654,15 @@ class BluetoothControl : public PluginHost::IPlugin
                     Name = copy.Name;
                     LowEnergy = copy.LowEnergy;
                     Connected = copy.Connected;
-                    Paired = copy.Paired;
                     Bonded = copy.Bonded;
                     Reason = copy.Reason;
                 }
-                virtual ~JSON()
+                virtual ~Data()
                 {
                 }
 
             public:
-                JSON& Set(const DeviceImpl* source)
+                Data& Set(const DeviceImpl* source)
                 {
                     if (source != nullptr) {
                         LocalId = source->LocalId();
@@ -647,14 +670,12 @@ class BluetoothControl : public PluginHost::IPlugin
                         Name = source->Name();
                         LowEnergy = source->LowEnergy();
                         Connected = source->IsConnected();
-                        Paired = source->IsPaired();
                         Bonded = source->IsBonded();
                     } else {
                         LocalId.Clear();
                         RemoteId.Clear();
                         Name.Clear();
                         LowEnergy.Clear();
-                        Paired.Clear();
                         Bonded.Clear();
                         Connected.Clear();
                     }
@@ -665,11 +686,9 @@ class BluetoothControl : public PluginHost::IPlugin
                 Core::JSON::String Name;
                 Core::JSON::Boolean LowEnergy;
                 Core::JSON::Boolean Connected;
-                Core::JSON::Boolean Paired;
                 Core::JSON::Boolean Bonded;
                 Core::JSON::DecUInt16 Reason;
             };
-
             class IteratorImpl : public IBluetooth::IDevice::IIterator {
             private:
                 IteratorImpl() = delete;
@@ -736,7 +755,11 @@ class BluetoothControl : public PluginHost::IPlugin
             };
 
         public:
-            DeviceImpl(BluetoothControl* parent, const Bluetooth::Address::type type, const uint16_t deviceId, const Bluetooth::Address& remote, const string& name, const bool bonded)
+            DeviceImpl() = delete;
+            DeviceImpl(const DeviceImpl&) = delete;
+            DeviceImpl& operator=(const DeviceImpl&) = delete;
+
+            DeviceImpl(BluetoothControl* parent, const Bluetooth::Address::type type, const uint16_t deviceId, const Bluetooth::Address& remote, const string& name)
                 : _name(name)
                 , _type(type)
                 , _deviceId(deviceId)
@@ -752,26 +775,21 @@ class BluetoothControl : public PluginHost::IPlugin
                 , _latency(0)
                 , _timeout(0)
                 , _callback(nullptr)
-                , _updateJob(Core::ProxyType<UpdateJob>::Create(this))
+                , _updateJob(*this)
                 , _parent(parent)
             {
                 ::memset(_features, 0xFF, sizeof(_features));
-
-                if (bonded) {
-                    Paired(true);
-                    Bonded(true);
-
-                    Trust(true);
-                }
-
             }
             ~DeviceImpl()
             {
-                _updateJob->Revoke();
             }
 
         public:
-
+            // SecurityKeys getters
+            virtual void SecurityKey(Bluetooth::LinkKeys& key) const = 0;
+            virtual void SecurityKey(Bluetooth::LongTermKeys& key) const = 0;
+            virtual const Bluetooth::IdentityKey& IdentityKey() const = 0;
+ 
             uint32_t Callback(IBluetooth::IDevice::ICallback* callback) override
             {
                 uint32_t result = Core::ERROR_UNAVAILABLE;
@@ -797,14 +815,10 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 if (SetState(PAIRING) == Core::ERROR_NONE) {
                     result = BluetoothControl::Connector().Pair(_remote, _type, static_cast<Bluetooth::ManagementSocket::capabilities>(caps));
-                    if (result == Core::ERROR_ALREADY_CONNECTED) {
-                        TRACE(Trace::Information, (_T("Already paired")));
-                        Paired(true);
-                        Bonded(true);
-                    } else if (result != Core::ERROR_NONE) {
+                    if ( (result != Core::ERROR_ALREADY_CONNECTED) && (result != Core::ERROR_NONE) ) {
                         TRACE(Trace::Error, (_T("Failed to pair [%d]"), result));
-                        ClearState(PAIRING);
                     }
+                    ClearState(PAIRING);
                 }
                 return (result);
             }
@@ -816,78 +830,12 @@ class BluetoothControl : public PluginHost::IPlugin
                     PurgeSecurityKeys();
 
                     result = BluetoothControl::Connector().Unpair(_remote, _type);
-                    if (result == Core::ERROR_NONE) {
-                        Trusted(false); // only change state, whitelist will be removed by Unpair()
-                        Paired(false);
-                    } else if (result == Core::ERROR_ALREADY_RELEASED) {
-                        TRACE(Trace::Information, (_T("Not paired")));
-                    }
-                    else {
+                    if (result != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Failed to unpair [%d]"), result));
                     }
+                    ClearState(UNPAIRING);
                 }
                 return (result);
-            }
-            uint32_t Trust(bool add)
-            {
-                uint32_t result = Core::ERROR_GENERAL;
-                if (add == true) {
-                    // Whitelist the device for automatic reconnection on direct advertisement
-                    result = BluetoothControl::Connector().Control().AddDevice(_type, _remote, Bluetooth::ManagementSocket::DIRECT);
-                    if (result != Core::ERROR_NONE) {
-                        TRACE(Trace::Error, (_T("Failed to add device to trusted list [%s]"), RemoteId().c_str()));
-                    } else {
-                        Trusted(true);
-                    }
-                } else {
-                    result = BluetoothControl::Connector().Control().RemoveDevice(_type, _remote);
-                    if (result != Core::ERROR_NONE) {
-                        TRACE(Trace::Error, (_T("Failed to remove device [%s] from trusted list"), RemoteId().c_str()));
-                    } else {
-                        Trusted(false);
-                    }
-                }
-                return (result);
-            }
-            void Paired(bool paired)
-            {
-                _state.Lock();
-                ClearState(PAIRING);
-                ClearState(UNPAIRING);
-                if ((paired == true) && (IsPaired() == false)) {
-                    _state.SetState(static_cast<state>(_state.GetState() | PAIRED));
-                    TRACE(DeviceFlow, (_T("The device [%s] is paired"), RemoteId().c_str()));
-                } else if ((paired == false) && (IsPaired() == true)) {
-                    _state.SetState(static_cast<state>(_state.GetState() & (~PAIRED)));
-                    TRACE(DeviceFlow, (_T("The device [%s] is no longer paired"), RemoteId().c_str()));
-                }
-                _state.Unlock();
-            }
-            void Bonded(bool bonded)
-            {
-                _state.Lock();
-                if ((bonded == true) && (IsBonded() == false)) {
-                    _state.SetState(static_cast<state>(_state.GetState() | BONDED));
-                    TRACE(DeviceFlow, (_T("The device [%s] is bonded"), RemoteId().c_str()));
-                     _parent->event_devicestatechange(Address().ToString(), JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::PAIRED);
-                } else if ((bonded == false) && (IsBonded() == true)) {
-                    _state.SetState(static_cast<state>(_state.GetState() & (~BONDED)));
-                    TRACE(DeviceFlow, (_T("The device [%s] is no longer bonded"), RemoteId().c_str()));
-                     _parent->event_devicestatechange(Address().ToString(), JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::UNPAIRED);
-                }
-                _state.Unlock();
-            }
-            void Trusted(bool trusted)
-            {
-                _state.Lock();
-                if ((trusted == true) && (IsTrusted() == false)) {
-                    _state.SetState(static_cast<state>(_state.GetState() | TRUSTED));
-                    TRACE(DeviceFlow, (_T("The device [%s] is trusted"), RemoteId().c_str()));
-                } else if ((trusted == false) && (IsTrusted() == true)) {
-                    _state.SetState(static_cast<state>(_state.GetState() & (~TRUSTED)));
-                    TRACE(DeviceFlow, (_T("The device [%s] is no longer trusted"), RemoteId().c_str()));
-                }
-                _state.Unlock();
             }
             bool IsValid() const override
             {
@@ -921,18 +869,7 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             bool IsConnected() const override
             {
-                return ( (_handle != static_cast<uint16_t>(~0)) && (_features[0] != 0xFF) && (_features[1] != 0xFF) && (_features[2] != 0xFF) && (_features[3] != 0xFF) );
-            }
-            bool IsPaired() const override
-            {
-                return ((_state & PAIRED) != 0);
-            }
-            bool IsBonded() const override
-            {
-                return ((_state & BONDED) != 0);
-            }
-            bool IsTrusted() const {
-                return ((_state & TRUSTED) != 0);
+                return (_handle != static_cast<uint16_t>(~0));
             }
             inline uint16_t DeviceId() const
             {
@@ -945,7 +882,7 @@ class BluetoothControl : public PluginHost::IPlugin
             inline void Clear()
             {
                 _state.Lock();
-                if ((IsConnected() == false) && (IsPaired() == false) && ((_state & ACTION_MASK) == 0)) {
+                if ((IsConnected() == false) && ((_state & ACTION_MASK) == 0)) {
                     _state.SetState(static_cast<state>(0));
                 }
                 _state.Unlock();
@@ -975,7 +912,6 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 return(_remote);
             }
-
             void Capabilities(const uint8_t capability, const uint8_t authentication, const uint8_t oob_data)
             {
                 _capabilities = capability;
@@ -987,33 +923,14 @@ class BluetoothControl : public PluginHost::IPlugin
                 return (_handle);
             }
 
-            virtual uint32_t SecurityKey(const Bluetooth::LinkKey& key)
-            {
-                TRACE(DeviceFlow, (_T("Key/device type mismatch")));
-                return (Core::ERROR_GENERAL);
-            }
-            virtual uint32_t SecurityKey(const Bluetooth::LongTermKey& key)
-            {
-                TRACE(DeviceFlow, (_T("Key/device type mismatch")));
-                return (Core::ERROR_GENERAL);
-            }
-            virtual uint32_t SecurityKey(const Bluetooth::SignatureKey& key)
-            {
-                TRACE(DeviceFlow, (_T("Key/device type mismatch")));
-                return (Core::ERROR_GENERAL);
-            }
-            virtual uint32_t SecurityKey(const Bluetooth::IdentityKey& key)
-            {
-                TRACE(DeviceFlow, (_T("Key/device type mismatch")));
-                return (Core::ERROR_GENERAL);
-            }
-            virtual void PurgeSecurityKeys()
-            {
-            }
-
         protected:
             friend class ControlSocket;
 
+            void BondedChange() 
+            {
+                _parent->BondedChange(this);
+                _updateJob.Submit();
+            }
             uint32_t SetState(const state value)
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
@@ -1066,11 +983,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 }
 
                 _state.Unlock();
-
-                //_updateJob->Schedule();
             }
-
-
             void Disconnection(const uint8_t reason)
             {
                 _state.Lock();
@@ -1096,7 +1009,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 }
                 _parent->event_devicestatechange(Address().ToString(), JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::DISCONNECTED, disconnReason);
 
-                _updateJob->Schedule();
+                _updateJob.Submit();
             }
             void Name(const string& name)
             {
@@ -1125,17 +1038,22 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 _state.Unlock();
 
-                _updateJob->Schedule();
+                _updateJob.Submit();
             }
 
         private:
-            void Updated()
+            // Depending on the device type, different keys are exchanged. Leave it up to 
+            // the specific implementation to implement the needed keys!
+            virtual uint32_t SecurityKey(const Bluetooth::LinkKey& key) = 0;
+            virtual uint32_t SecurityKey(const Bluetooth::LongTermKey& key) = 0;
+            virtual uint32_t SecurityKey(const Bluetooth::IdentityKey& key) = 0;
+            virtual void PurgeSecurityKeys() = 0;
+
+            friend Core::ThreadPool::JobType<DeviceImpl&>;
+
+            void Dispatch ()
             {
                 IBluetooth::IDevice::ICallback* callback = nullptr;
-
-                if ((IsConnected() == false) && (IsBonded() == true) && (IsTrusted() == false)) {
-                    Trust(true);
-                }
 
                 _state.Lock();
 
@@ -1167,7 +1085,7 @@ class BluetoothControl : public PluginHost::IPlugin
             uint16_t _latency;
             uint16_t _timeout;
             IBluetooth::IDevice::ICallback* _callback;
-            Core::ProxyType<UpdateJob> _updateJob;
+            Core::WorkerPool::JobType<DeviceImpl&> _updateJob;
             BluetoothControl* _parent;
         };
 
@@ -1179,22 +1097,32 @@ class BluetoothControl : public PluginHost::IPlugin
 
         public:
             DeviceRegular(BluetoothControl* parent, const uint16_t deviceId, const Bluetooth::Address& address, const string& name)
-                : DeviceImpl(parent, Bluetooth::Address::BREDR_ADDRESS, deviceId, address, name, false)
+                : DeviceImpl(parent, Bluetooth::Address::BREDR_ADDRESS, deviceId, address, name)
                 , _linkKeys()
             {
                 RemoteName();
             }
-            DeviceRegular(BluetoothControl* parent, const uint16_t deviceId, const Bluetooth::Address& address, const string& name, Bluetooth::LinkKeys& linkKeys)
-                : DeviceImpl(parent, Bluetooth::Address::BREDR_ADDRESS, deviceId, address, name, (linkKeys.Entries() > 0))
-                , _linkKeys(linkKeys)
+            DeviceRegular(BluetoothControl* parent, const uint16_t deviceId, const Bluetooth::Address& address, const string& name, const DeviceImpl::Config* config)
+                : DeviceImpl(parent, Bluetooth::Address::BREDR_ADDRESS, deviceId, address, name)
+                , _linkKeys()
             {
+                config->Get(config->LinkKeys, address, Bluetooth::Address::BREDR_ADDRESS, _linkKeys);
                 RemoteName();
+                if (IsBonded() == true) {
+                    uint32_t result = parent->Connector().Control().AddDevice(Bluetooth::Address::BREDR_ADDRESS, address, Bluetooth::ManagementSocket::DIRECT);
+                    if (result != Core::ERROR_NONE) {
+                        TRACE(DeviceFlow, (_T("Could not add device, error <%i>"), result));
+                    }
+                }
             }
             virtual ~DeviceRegular()
             {
             }
 
         public:
+            void SecurityKey(Bluetooth::LinkKeys& key) const override { key.Add(_linkKeys); }
+            void SecurityKey(Bluetooth::LongTermKeys& /* key */) const override {}
+            const Bluetooth::IdentityKey& IdentityKey() const override { static Bluetooth::IdentityKey emptyKey; return (emptyKey); }
             void RemoteName()
             {
                 Bluetooth::HCISocket::Command::RemoteName cmd;
@@ -1210,7 +1138,10 @@ class BluetoothControl : public PluginHost::IPlugin
                     }
                 });
             }
-            virtual uint32_t Connect() override
+            bool IsBonded() const override {
+                return (_linkKeys.Entries() > 0);
+            }
+            uint32_t Connect() override
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
 
@@ -1238,7 +1169,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 return (result);
             }
-            virtual uint32_t Disconnect(const uint16_t reason) override
+            uint32_t Disconnect(const uint16_t reason) override
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
 
@@ -1253,41 +1184,51 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (result != Core::ERROR_NONE) {
                         TRACE(ControlFlow, (_T("Failed to disconnect. Error [%d]"), result));
                     }
+
+                    ClearState(DISCONNECTING);
                 }
 
                 return (result);
             }
+
+        private:
             uint32_t SecurityKey(const Bluetooth::LinkKey& lk) override
             {
                 uint32_t result = Core::ERROR_GENERAL;
                 if (lk.IsValid() == true) {
                     result = Core::ERROR_NONE;
+                    bool isBonded = IsBonded();
                     _linkKeys.Add(lk);
-                    Paired(true);
-                    if (BluetoothControl::Connector().Application()->SaveDevice(Address(), AddressType(), Name(), _linkKeys) == Core::ERROR_NONE) {
-                        Bonded(true);
-                    } else {
-                        TRACE(Trace::Error, (_T("Failed to bond device [%s]"), RemoteId().c_str()));
+                    if (IsBonded() ^ isBonded) {
+                        BondedChange();
                     }
                 }
                 return (result);
             }
+            uint32_t SecurityKey(const Bluetooth::LongTermKey& /* key */) override 
+            {
+                TRACE(DeviceFlow, (_T("Key/device type mismatch")));
+                return (Core::ERROR_GENERAL);
+            }
+            uint32_t SecurityKey(const Bluetooth::IdentityKey& /* key */) override
+            {
+                TRACE(DeviceFlow, (_T("Key/device type mismatch")));
+                return (Core::ERROR_GENERAL);
+            }
             void PurgeSecurityKeys() override
             {
+                bool isBonded = IsBonded();
                 _linkKeys.Clear();
-                if (BluetoothControl::Connector().Application()->ForgetDevice(Address()) == Core::ERROR_NONE) {
-                    Bonded(false);
+                if (IsBonded() ^ isBonded) {
+                    BondedChange();
                 }
             }
-
-        private:
             void Update(Bluetooth::HCISocket::Command::RemoteName& data)
             {
                 // Metadata is flowing in, handle it..
                 // _cmds.name.Response().bdaddr;
                 const char* longName = reinterpret_cast<const char*>(data.Response().name);
                 uint8_t index = 0;
-                printf("UPDATED => ");
                 while (index < HCI_MAX_NAME_LENGTH) {
                     printf("%c", ::isprint(longName[index]) ? longName[index] : '.');
                     index++;
@@ -1313,14 +1254,24 @@ class BluetoothControl : public PluginHost::IPlugin
             DeviceLowEnergy& operator=(const DeviceLowEnergy&) = delete;
 
         public:
-            DeviceLowEnergy(BluetoothControl* parent, const uint16_t deviceId, const Bluetooth::Address& address, const string& name, const Bluetooth::LongTermKeys& longTermKeys)
-                : DeviceImpl(parent, Bluetooth::Address::LE_PUBLIC_ADDRESS, deviceId, address, name, (longTermKeys.Entries() > 0))
-                , _ltks(longTermKeys), _csrks(), _irk()
+            DeviceLowEnergy(BluetoothControl* parent, const uint16_t deviceId, const Bluetooth::Address& address, const string& name, const DeviceImpl::Config* config)
+                : DeviceImpl(parent, Bluetooth::Address::LE_PUBLIC_ADDRESS, deviceId, address, name)
+                , _ltks()
+                , _irk()
             {
+                config->Get(config->LongTermKeys, address, Bluetooth::Address::LE_PUBLIC_ADDRESS, _ltks);
+                _irk = Bluetooth::IdentityKey(address, Bluetooth::Address::LE_PUBLIC_ADDRESS, config->IdentityKey.Value());
+                if (IsBonded() == true) {
+                    uint32_t result = parent->Connector().Control().AddDevice(Bluetooth::Address::LE_PUBLIC_ADDRESS, address, Bluetooth::ManagementSocket::ALWAYS);
+                    if (result != Core::ERROR_NONE) {
+                        TRACE(DeviceFlow, (_T("Could not add device, error <%i>"), result));
+                    }
+                }
             }
             DeviceLowEnergy(BluetoothControl* parent, const uint16_t deviceId, const Bluetooth::Address& address, const string& name)
-                : DeviceImpl(parent, Bluetooth::Address::LE_PUBLIC_ADDRESS, deviceId, address, name, false)
-                , _ltks(), _csrks(), _irk()
+                : DeviceImpl(parent, Bluetooth::Address::LE_PUBLIC_ADDRESS, deviceId, address, name)
+                , _ltks()
+                , _irk()
             {
             }
             virtual ~DeviceLowEnergy()
@@ -1328,6 +1279,12 @@ class BluetoothControl : public PluginHost::IPlugin
             }
 
         public:
+            void SecurityKey(Bluetooth::LinkKeys& /* key */ ) const override {}
+            void SecurityKey(Bluetooth::LongTermKeys& key) const override { key.Add(_ltks); }
+            const Bluetooth::IdentityKey& IdentityKey() const override { return (_irk); }
+            bool IsBonded() const override {
+                return ( (_ltks.Entries() >= 2) && (_irk.IsValid()) );
+            }
             virtual uint32_t Connect() override
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
@@ -1383,29 +1340,23 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 return (result);
             }
+
+        private:
+            uint32_t SecurityKey(const Bluetooth::LinkKey& /* lk */) override
+            {
+                TRACE(DeviceFlow, (_T("Key/device type mismatch")));
+                return (Core::ERROR_GENERAL);
+            }
             uint32_t SecurityKey(const Bluetooth::LongTermKey& ltk) override
             {
                 uint32_t result = Core::ERROR_GENERAL;
                 if (ltk.IsValid() == true) {
                     result = Core::ERROR_NONE;
+                    bool isBonded = IsBonded();
                     _ltks.Add(ltk);
-                    if (_ltks.Entries() >= 2 /* have master and slave keys? */) {
-                        Paired(true);
-                        if (BluetoothControl::Connector().Application()->SaveDevice(Address(), AddressType(), Name(), _ltks, _csrks, _irk) == Core::ERROR_NONE) {
-                            Bonded(true);
-                        } else {
-                            TRACE(Trace::Error, (_T("Failed to bond device [%s]"), RemoteId().c_str()));
-                        }
+                    if (IsBonded() ^ isBonded) {
+                        BondedChange();
                     }
-                }
-                return (result);
-            }
-            uint32_t SecurityKey(const Bluetooth::SignatureKey& csrk) override
-            {
-                uint32_t result = Core::ERROR_GENERAL;
-                if (csrk.IsValid() == true) {
-                    _csrks.Add(csrk);
-                    result = Core::ERROR_NONE;
                 }
                 return (result);
             }
@@ -1413,17 +1364,22 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 uint32_t result = Core::ERROR_GENERAL;
                 if (irk.IsValid() == true) {
-                    _irk = irk;
                     result = Core::ERROR_NONE;
+                    bool isBonded = IsBonded();
+                    _irk = irk;
+                    if (IsBonded() ^ isBonded) {
+                        BondedChange();
+                    }
                 }
                 return (result);
             }
             void PurgeSecurityKeys() override
             {
+                bool isBonded = IsBonded();
                 _ltks.Clear();
-                _csrks.Clear();
-                if (BluetoothControl::Connector().Application()->ForgetDevice(Address()) == Core::ERROR_NONE) {
-                    Bonded(false);
+                _irk = Bluetooth::IdentityKey();
+                if (IsBonded() ^ isBonded) {
+                    BondedChange();
                 }
             }
 
@@ -1435,7 +1391,6 @@ class BluetoothControl : public PluginHost::IPlugin
 
         private:
             Bluetooth::LongTermKeys _ltks;
-            Bluetooth::SignatureKeys _csrks;
             Bluetooth::IdentityKey _irk;
         };
 
@@ -1509,7 +1464,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
         public:
             Core::JSON::Boolean Scanning;
-            Core::JSON::ArrayType<DeviceImpl::JSON> Devices;
+            Core::JSON::ArrayType<DeviceImpl::Data> Devices;
             Core::JSON::String Name;
             Core::JSON::DecUInt32 Version;
             Core::JSON::String Address;
@@ -1587,115 +1542,28 @@ class BluetoothControl : public PluginHost::IPlugin
             return (_application);
         }
 
-        class DeviceData : public Core::JSON::Container {
-        public:
-            DeviceData(const DeviceData&);
-            DeviceData& operator=(const DeviceData&);
-            DeviceData()
-                : Core::JSON::Container()
-                , Type(), Name(), LinkKeys(), LongTermKeys(), SignatureKeys(), IdentityKey()
-            {
-                Init();
-            }
-            DeviceData(const Bluetooth::Address::type type, const string& name, const Bluetooth::LinkKeys& linkKeys)
-                : Core::JSON::Container()
-                , Type(), Name(), LinkKeys(), LongTermKeys(), SignatureKeys(), IdentityKey()
-            {
-                Init();
-                Type = type;
-                Name = name;
-                auto index = linkKeys.Elements();
-                while (index.Next() == true) {
-                    Core::JSON::String key;
-                    key = index.Current().ToString();
-                    LinkKeys.Add(key);
-                }
-            }
-            DeviceData(const Bluetooth::Address::type type, const string& name,
-                    const Bluetooth::LongTermKeys& longTermKeys, const Bluetooth::SignatureKeys& signatureKeys, const Bluetooth::IdentityKey& identityKey)
-                : Core::JSON::Container()
-                , Type(), Name(), LinkKeys(), LongTermKeys(), SignatureKeys(), IdentityKey()
-            {
-                Init();
-                Type = type;
-                Name = name;
-
-                auto ltkIndex = longTermKeys.Elements();
-                while(ltkIndex.Next() == true) {
-                    Core::JSON::String key;
-                    key = ltkIndex.Current().ToString();
-                    LongTermKeys.Add(key);
-                }
-
-                auto csrkIndex = signatureKeys.Elements();
-                while(csrkIndex.Next() == true) {
-                    Core::JSON::String key;
-                    key = csrkIndex.Current().ToString();
-                    SignatureKeys.Add(key);
-                }
-
-                if (identityKey.IsValid() == true) {
-                    IdentityKey = identityKey.ToString();
-                }
-            }
-            ~DeviceData()
-            {
-            }
-
-        public:
-            template<typename KEYLISTTYPE>
-            uint32_t Deserialize(const Core::JSON::ArrayType<Core::JSON::String>& keys, KEYLISTTYPE& list) const
-            {
-                uint32_t count = 0;
-                auto index = keys.Elements();
-                while (index.Next() == true) {
-                    typename KEYLISTTYPE::type key(index.Current().Value());
-                    if (key.IsValid() == true) {
-                        list.Add(key);
-                        count++;
-                    }
-                }
-                return (count);
-            }
-
-        public:
-            Core::JSON::EnumType<Bluetooth::Address::type> Type;
-            Core::JSON::String Name;
-            Core::JSON::ArrayType<Core::JSON::String> LinkKeys;
-            Core::JSON::ArrayType<Core::JSON::String> LongTermKeys;
-            Core::JSON::ArrayType<Core::JSON::String> SignatureKeys;
-            Core::JSON::String IdentityKey;
-
-        private:
-            void Init() {
-                Add(_T("type"), &Type);
-                Add(_T("name"), &Name);
-                Add(_T("linkkeys"), &LinkKeys);
-                Add(_T("longtermkeys"), &LongTermKeys);
-                Add(_T("signaturekeys"), &SignatureKeys);
-                Add(_T("identitykey"), &IdentityKey);
-            }
-        };
-
-        uint32_t LoadDevice(const Bluetooth::Address& address, Bluetooth::LinkKeys& linkKeys, Bluetooth::LongTermKeys& longTermKeys, Bluetooth::IdentityKeys& identityKeys);
-        uint32_t SaveDevice(const Bluetooth::Address& address, const Bluetooth::Address::type type, const string& name, const Bluetooth::LinkKeys& linkKeys) const;
-        uint32_t SaveDevice(const Bluetooth::Address& address, const Bluetooth::Address::type type, const string& name,
-                            const Bluetooth::LongTermKeys& longTermKeys, const Bluetooth::SignatureKeys& signatureKeys, const Bluetooth::IdentityKey& identityKey) const;
-        uint32_t ForgetDevice(const Bluetooth::Address& address) const;
-
     private:
+        void BondedChange(const DeviceImpl* device) {
+            if (device->IsBonded() == true) {
+                SaveDevice(device);
+            }
+            else {
+                ForgetDevice(device);
+            }
+        }
+        DeviceImpl* Find(const uint16_t handle) const;
+        DeviceImpl* Find(const Bluetooth::Address&) const;
         void RemoveDevices(std::function<bool(DeviceImpl*)> filter);
         void Discovered(const bool lowEnergy, const Bluetooth::Address& address, const string& name);
         void Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame);
-        DeviceImpl* Find(const uint16_t handle) const;
-        DeviceImpl* Find(const Bluetooth::Address&) const;
         void Capabilities(const Bluetooth::Address& device, const uint8_t capability, const uint8_t authentication, const uint8_t oob_data);
+        void LoadController(const string& pathName, Data& data) const;
+        void SaveController(const string& pathName, const Data& data);
 
-        uint32_t SaveDevice(const Bluetooth::Address& address, const DeviceData& data) const;
-        string AddressToPath(const Bluetooth::Address& address) const
-        {
-            return (_persistentStoragePath + address.ToString() + _T(".device.json"));
-        }
+        uint32_t LoadDevices(const string& devicePath, Bluetooth::ManagementSocket& administrator);
+        uint32_t LoadDevice(const string&, Bluetooth::LinkKeys&, Bluetooth::LongTermKeys&, Bluetooth::IdentityKeys&);
+        uint32_t ForgetDevice(const DeviceImpl* device);
+        uint32_t SaveDevice(const DeviceImpl* device) const;
 
     private:
         // JSON-RPC

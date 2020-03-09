@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #include <iostream>
 #include <signal.h>
 #include <stdio.h>
@@ -63,21 +82,23 @@ int main(int argc, char* argv[])
     }
 
     Exchange::IComposition* composition = resourceCenter->QueryInterface<Exchange::IComposition>();
-    if (!composition) {
+    if (composition == nullptr) {
         TRACE_L1("Failed to get composition interface [%d]", __LINE__);
-        return 1;
     }
+    else {
+        MyCompositionListener* listener = Core::Service<MyCompositionListener>::Create<MyCompositionListener>();
+        composition->Register(listener);
 
-    MyCompositionListener* listener = Core::Service<MyCompositionListener>::Create<MyCompositionListener>();
-    composition->Register(listener);
+        // TODO: this sets default values, should we also allow for string/path passed along on command line?
+        uint32_t confResult = resourceCenter->Configure("{}");
+        TRACE_L1("Configured resource center [%d]", confResult);
 
-    // TODO: this sets default values, should we also allow for string/path passed along on command line?
-    uint32_t confResult = resourceCenter->Configure("{}");
-    TRACE_L1("Configured resource center [%d]", confResult);
+        TRACE_L1("platformserver: dropping into while-true [%d]", __LINE__);
+        while (true)
+            ;
 
-    TRACE_L1("platformserver: dropping into while-true [%d]", __LINE__);
-    while (true)
-        ;
+        composition->Release();
+    }
 
     Core::Singleton::Dispose();
 

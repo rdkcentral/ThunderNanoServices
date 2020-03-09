@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #ifndef PLATFORMIMPLEMENTATION_H
 #define PLATFORMIMPLEMENTATION_H
 
@@ -27,6 +46,7 @@ namespace Broadcom {
             Client(nxclient_t client, const NxClient_JoinSettings* settings)
                 : _client(client)
                 , _settings(*settings)
+                , _rectangle( {0,0,0,0} )
             {
                 TRACE_L1("Created client named: %s", _settings.name);
             }
@@ -56,22 +76,22 @@ namespace Broadcom {
                 return (_settings.name);
             }
 
-            virtual string Name() const override;
-            virtual void Kill() override;
-            virtual void Opacity(const uint32_t value) override;
+            string Name() const override;
+            void Kill() override;
+            void Opacity(const uint32_t value) override;
+            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override;
+            Exchange::IComposition::Rectangle Geometry() const override;
+            uint32_t ZOrder(const uint16_t index) override;
+
 
             BEGIN_INTERFACE_MAP(Entry)
-            INTERFACE_ENTRY(Exchange::IComposition::IClient)
+                INTERFACE_ENTRY(Exchange::IComposition::IClient)
             END_INTERFACE_MAP
-
-        private:
-            // note: following methods are for callback, do not call on the interface to influence the Client, see Compostion interface to do this
-            virtual void ChangedGeometry(const Exchange::IComposition::Rectangle& rectangle) override;
-            virtual void ChangedZOrder(const uint8_t zorder) override;
 
         private:
             nxclient_t _client;
             NxClient_JoinSettings _settings;
+            Exchange::IComposition::Rectangle _rectangle;
         };
 
         enum server_state {
@@ -99,7 +119,7 @@ namespace Broadcom {
         };
 
     public:
-        Platform(const string& callSign, IStateChange* stateChanges, IClient* clientChanges, const string& configuration);
+        Platform(IStateChange* stateChanges, IClient* clientChanges, const string& configuration, const NEXUS_VideoFormat& format);
         virtual ~Platform();
 
     public:
@@ -107,16 +127,6 @@ namespace Broadcom {
         {
             return _state;
         }
-        inline bool Join()
-        {
-            if ((_joined == false) && (NxClient_Join(&_joinSettings) == NEXUS_SUCCESS)) {
-                _joined = true;
-                NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
-            }
-            return (_joined);
-        }
-        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format);
-        Exchange::IComposition::ScreenResolution Resolution() const;
 
     private:
         void Add(nxclient_t client, const NxClient_JoinSettings* joinSettings);
@@ -133,7 +143,6 @@ namespace Broadcom {
         nxserver_settings _serverSettings;
         NEXUS_PlatformSettings _platformSettings;
         NEXUS_PlatformCapabilities _platformCapabilities;
-        NxClient_JoinSettings _joinSettings;
         server_state _state;
         IClient* _clientHandler;
         IStateChange* _stateHandler;

@@ -119,17 +119,17 @@ Sets new restart limits for a service.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Monitor.1.restartlimits", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Monitor.1.restartlimits",
     "params": {
-        "callsign": "WebServer", 
+        "callsign": "WebServer",
         "operational": {
-            "limit": 3, 
+            "limit": 3,
             "window": 60
-        }, 
+        },
         "memory": {
-            "limit": 3, 
+            "limit": 3,
             "window": 60
         }
     }
@@ -139,8 +139,8 @@ Sets new restart limits for a service.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -199,9 +199,9 @@ Resets memory and process statistics for a single service watched by the Monitor
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Monitor.1.resetstats", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Monitor.1.resetstats",
     "params": {
         "callsign": "WebServer"
     }
@@ -211,45 +211,45 @@ Resets memory and process statistics for a single service watched by the Monitor
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
         "measurements": {
             "resident": {
-                "min": 0, 
-                "max": 100, 
-                "average": 50, 
+                "min": 0,
+                "max": 100,
+                "average": 50,
                 "last": 100
-            }, 
+            },
             "allocated": {
-                "min": 0, 
-                "max": 100, 
-                "average": 50, 
+                "min": 0,
+                "max": 100,
+                "average": 50,
                 "last": 100
-            }, 
+            },
             "shared": {
-                "min": 0, 
-                "max": 100, 
-                "average": 50, 
+                "min": 0,
+                "max": 100,
+                "average": 50,
                 "last": 100
-            }, 
+            },
             "process": {
-                "min": 0, 
-                "max": 100, 
-                "average": 50, 
+                "min": 0,
+                "max": 100,
+                "average": 50,
                 "last": 100
-            }, 
-            "operational": true, 
+            },
+            "operational": true,
             "count": 100
-        }, 
-        "observable": "callsign", 
+        },
+        "observable": "callsign",
         "restart": {
             "memory": {
-                "limit": 3, 
+                "limit": 3,
                 "window": 60
-            }, 
+            },
             "operational": {
-                "limit": 3, 
+                "limit": 3,
                 "window": 60
             }
         }
@@ -320,8 +320,8 @@ Provides access to the service statistics.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Monitor.1.status@WebServer"
 }
 ```
@@ -329,46 +329,46 @@ Provides access to the service statistics.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         {
             "measurements": {
                 "resident": {
-                    "min": 0, 
-                    "max": 100, 
-                    "average": 50, 
+                    "min": 0,
+                    "max": 100,
+                    "average": 50,
                     "last": 100
-                }, 
+                },
                 "allocated": {
-                    "min": 0, 
-                    "max": 100, 
-                    "average": 50, 
+                    "min": 0,
+                    "max": 100,
+                    "average": 50,
                     "last": 100
-                }, 
+                },
                 "shared": {
-                    "min": 0, 
-                    "max": 100, 
-                    "average": 50, 
+                    "min": 0,
+                    "max": 100,
+                    "average": 50,
                     "last": 100
-                }, 
+                },
                 "process": {
-                    "min": 0, 
-                    "max": 100, 
-                    "average": 50, 
+                    "min": 0,
+                    "max": 100,
+                    "average": 50,
                     "last": 100
-                }, 
-                "operational": true, 
+                },
+                "operational": true,
                 "count": 100
-            }, 
-            "observable": "callsign", 
+            },
+            "observable": "callsign",
             "restart": {
                 "memory": {
-                    "limit": 3, 
+                    "limit": 3,
                     "window": 60
-                }, 
+                },
                 "operational": {
-                    "limit": 3, 
+                    "limit": 3,
                     "window": 60
                 }
             }
@@ -407,11 +407,11 @@ Signals an action taken by the Monitor.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "method": "client.events.1.action", 
+    "jsonrpc": "2.0",
+    "method": "client.events.1.action",
     "params": {
-        "callsign": "WebServer", 
-        "action": "Deactivate", 
+        "callsign": "WebServer",
+        "action": "Deactivate",
         "reason": "EXCEEDED_MEMORY"
     }
 }

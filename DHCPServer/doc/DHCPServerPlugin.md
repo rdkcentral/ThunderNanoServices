@@ -121,9 +121,9 @@ Activates a DHCP server.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "DHCPServer.1.activate", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "DHCPServer.1.activate",
     "params": {
         "interface": "eth0"
     }
@@ -133,8 +133,8 @@ Activates a DHCP server.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -170,9 +170,9 @@ Deactivates a DHCP server.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "DHCPServer.1.deactivate", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "DHCPServer.1.deactivate",
     "params": {
         "interface": "eth0"
     }
@@ -182,8 +182,8 @@ Deactivates a DHCP server.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -236,8 +236,8 @@ Provides access to the server status.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "DHCPServer.1.status@eth0"
 }
 ```
@@ -245,19 +245,19 @@ Provides access to the server status.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         {
-            "interface": "eth0", 
-            "active": true, 
-            "begin": "192.168.0.10", 
-            "end": "192.168.0.100", 
-            "router": "192.168.0.1", 
+            "interface": "eth0",
+            "active": true,
+            "begin": "192.168.0.10",
+            "end": "192.168.0.100",
+            "router": "192.168.0.1",
             "leases": [
                 {
-                    "name": "00e04c326c56", 
-                    "ip": "192.168.0.10", 
+                    "name": "00e04c326c56",
+                    "ip": "192.168.0.10",
                     "expires": "2019-05-07T07:20:26Z"
                 }
             ]

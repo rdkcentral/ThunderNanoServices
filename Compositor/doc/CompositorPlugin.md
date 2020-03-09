@@ -123,9 +123,9 @@ Use this method to get a client's surface to the top position.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Compositor.1.putontop", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Compositor.1.putontop",
     "params": {
         "client": "Netflix"
     }
@@ -135,8 +135,8 @@ Use this method to get a client's surface to the top position.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -175,11 +175,11 @@ Use this method to reorder client surfaces in the z-order list.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Compositor.1.putbelow", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Compositor.1.putbelow",
     "params": {
-        "client": "Netflix", 
+        "client": "Netflix",
         "relative": "WebKitBrowser"
     }
 }
@@ -188,8 +188,8 @@ Use this method to reorder client surfaces in the z-order list.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -227,9 +227,9 @@ Use this method to kill a client. Whenever a client is killed, the execution of 
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Compositor.1.kill", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Compositor.1.kill",
     "params": {
         "client": "Netflix"
     }
@@ -239,8 +239,8 @@ Use this method to kill a client. Whenever a client is killed, the execution of 
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -288,8 +288,8 @@ Use this property to set or retrieve the current resolution of the screen.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Compositor.1.resolution"
 }
 ```
@@ -297,8 +297,8 @@ Use this property to set or retrieve the current resolution of the screen.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "1080p24"
 }
 ```
@@ -306,9 +306,9 @@ Use this property to set or retrieve the current resolution of the screen.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Compositor.1.resolution", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Compositor.1.resolution",
     "params": "1080p24"
 }
 ```
@@ -316,8 +316,8 @@ Use this property to set or retrieve the current resolution of the screen.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -345,8 +345,8 @@ Use this property to retrieve the information of actual running clients.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Compositor.1.clients"
 }
 ```
@@ -354,8 +354,8 @@ Use this property to retrieve the information of actual running clients.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         "Netflix"
     ]
@@ -391,8 +391,8 @@ Use this property to retrieve the list of all clients in z-order. Each client ha
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Compositor.1.zorder"
 }
 ```
@@ -400,8 +400,8 @@ Use this property to retrieve the list of all clients in z-order. Each client ha
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         "Netflix"
     ]
@@ -440,8 +440,8 @@ Use this property to update or retrieve the geometry of a client's surface.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "method": "Compositor.1.geometry@Netflix"
 }
 ```
@@ -449,12 +449,12 @@ Use this property to update or retrieve the geometry of a client's surface.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": {
-        "x": 0, 
-        "y": 0, 
-        "width": 1280, 
+        "x": 0,
+        "y": 0,
+        "width": 1280,
         "height": 720
     }
 }
@@ -463,13 +463,13 @@ Use this property to update or retrieve the geometry of a client's surface.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Compositor.1.geometry@Netflix", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Compositor.1.geometry@Netflix",
     "params": {
-        "x": 0, 
-        "y": 0, 
-        "width": 1280, 
+        "x": 0,
+        "y": 0,
+        "width": 1280,
         "height": 720
     }
 }
@@ -478,8 +478,8 @@ Use this property to update or retrieve the geometry of a client's surface.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -514,9 +514,9 @@ Use this property to set the client's surface visibility.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Compositor.1.visiblity@Netflix", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Compositor.1.visiblity@Netflix",
     "params": "visible"
 }
 ```
@@ -524,8 +524,8 @@ Use this property to set the client's surface visibility.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```
@@ -560,9 +560,9 @@ Use this property to set the client's surface opacity level.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Compositor.1.opacity@Netflix", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Compositor.1.opacity@Netflix",
     "params": 127
 }
 ```
@@ -570,8 +570,8 @@ Use this property to set the client's surface opacity level.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": "null"
 }
 ```

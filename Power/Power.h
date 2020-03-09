@@ -1,3 +1,22 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 #ifndef __POWER_H
 #define __POWER_H
 
@@ -112,8 +131,12 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , OutOfProcess(true)
+                , PowerKey(0)
+                , ControlClients(true)
             {
                 Add(_T("outofprocess"), &OutOfProcess);
+                Add(_T("powerkey"), &PowerKey);
+                Add(_T("controlclients"), &ControlClients);
             }
             ~Config()
             {
@@ -121,6 +144,8 @@ namespace Plugin {
 
         public:
             Core::JSON::Boolean OutOfProcess;
+            Core::JSON::DecUInt32 PowerKey;
+            Core::JSON::Boolean ControlClients;
         };
 
         typedef std::map<const string, Entry> Clients;
@@ -153,21 +178,22 @@ namespace Plugin {
         };
 
     public:
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
         Power()
             : _adminLock()
             , _skipURL(0)
-            , _pid(0)
             , _service(nullptr)
             , _clients()
             , _power(nullptr)
             , _sink(this)
+            , _powerKey(0)
+            , _controlClients(true)
         {
             RegisterAll();
         }
-#ifdef __WIN32__
+#ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
         virtual ~Power()
@@ -226,11 +252,12 @@ namespace Plugin {
     private:
         Core::CriticalSection _adminLock;
         uint32_t _skipURL;
-        uint32_t _pid;
         PluginHost::IShell* _service;
         Clients _clients;
         Exchange::IPower* _power;
         Core::Sink<Notification> _sink;
+        uint32_t _powerKey;
+        bool _controlClients;
     };
 } //namespace Plugin
 } //namespace WPEFramework
