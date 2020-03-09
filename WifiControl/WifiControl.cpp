@@ -189,7 +189,7 @@ namespace Plugin
 
     Core::ProxyType<Web::Response> WifiControl::GetMethod(Core::TextSegmentIterator & index)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported GET request.");
 
@@ -249,7 +249,7 @@ namespace Plugin
 
     Core::ProxyType<Web::Response> WifiControl::PutMethod(Core::TextSegmentIterator & index, const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported PUT request.");
 
@@ -313,7 +313,7 @@ namespace Plugin
 
     Core::ProxyType<Web::Response> WifiControl::PostMethod(Core::TextSegmentIterator & index, const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported POST requestservice.");
 
@@ -344,7 +344,7 @@ namespace Plugin
 
     Core::ProxyType<Web::Response> WifiControl::DeleteMethod(Core::TextSegmentIterator & index)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported DELETE request.");
 

@@ -52,7 +52,7 @@ namespace Plugin {
 
         config.FromString(service->ConfigLine());
 
-        _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance());
+        _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
         _externalAccess = new ExternalAccess(Core::NodeId(config.Connector.Value().c_str()), this, service->ProxyStubPath(), _engine);
 
         result = Core::ERROR_OPENING_FAILED;

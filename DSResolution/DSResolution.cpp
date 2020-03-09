@@ -82,7 +82,7 @@ namespace Plugin {
     Core::ProxyType<Web::Response> DSResolution::GetMethod(Core::TextSegmentIterator& index)
     {
         TRACE(Trace::Information, (string(_T("GetMethod"))));
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported GET request.");
 
@@ -107,7 +107,7 @@ namespace Plugin {
     Core::ProxyType<Web::Response> DSResolution::PostMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
         TRACE(Trace::Information, (string(_T("PostMethod"))));
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported POST requestservice.");
 

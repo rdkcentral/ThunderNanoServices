@@ -147,7 +147,7 @@ namespace Plugin {
 
                 _adminLock.Lock();
 
-                PluginHost::WorkerPool::Instance().Revoke(job);
+                Core::IWorkerPool::Instance().Revoke(job);
 
                 _reporting.clear();
 
@@ -168,7 +168,7 @@ namespace Plugin {
                         Core::Time entry(Core::Time::Now().Add(100));
                         Core::ProxyType<Core::IDispatch> job(*this);
 
-                        PluginHost::WorkerPool::Instance().Schedule(entry, job);
+                        Core::IWorkerPool::Instance().Schedule(entry, job);
                     }
                 }
 
@@ -415,12 +415,12 @@ namespace Plugin {
                 Core::ProxyType<Core::IDispatch> job(*this);    
 
                 // Submit a job, as watchdog.
-                PluginHost::WorkerPool::Instance().Schedule(entry, job);
+                Core::IWorkerPool::Instance().Schedule(entry, job);
             }
 
             inline void StopWatchdog() 
             {
-                PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(*this));
+                Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(*this));
             }
 
             inline void ResetWatchdog() 
@@ -446,7 +446,7 @@ namespace Plugin {
                     _client.Resend();
 
                     // Schedule next retry
-                    PluginHost::WorkerPool::Instance().Schedule(entry, job);
+                    Core::IWorkerPool::Instance().Schedule(entry, job);
                 } else {
                     if (_client.Classification() == DHCPClientImplementation::CLASSIFICATION_DISCOVER) {
 

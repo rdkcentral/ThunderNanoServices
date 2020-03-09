@@ -114,7 +114,7 @@ namespace Plugin {
     DHCPServer::Process(const Web::Request& request)
     {
 
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         Core::TextSegmentIterator index(
             Core::TextFragment(request.Path, _skipURL, static_cast<uint16_t>(request.Path.length() - _skipURL)),
             false,

@@ -156,7 +156,7 @@ namespace Plugin {
 
         TRACE(Trace::Information, (string(_T("Received request"))));
 
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         Core::TextSegmentIterator index(
             Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
 
@@ -253,7 +253,7 @@ namespace Plugin {
 
             ASSERT(_service != nullptr);
 
-            PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
 }

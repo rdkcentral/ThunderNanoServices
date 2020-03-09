@@ -96,7 +96,7 @@ namespace Plugin {
             Core::ProxyType<Core::IDispatchType<void>> job(Core::proxy_cast<Core::IDispatchType<void>>(index->second));
 
             index->second->Abort();
-            PluginHost::WorkerPool::Instance().Revoke(job);
+            Core::IWorkerPool::Instance().Revoke(job);
 
             index++;
         }
@@ -130,7 +130,7 @@ namespace Plugin {
         ASSERT(_skipURL <= request.Path.length());
 
         // Proxy object for response type.
-        Core::ProxyType<Web::Response> response(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
 
         // Decode request path.
         Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint16_t>(request.Path.length()) - _skipURL), false, '/');
@@ -208,7 +208,7 @@ namespace Plugin {
                 if (sequencer->Abort() != Core::ERROR_NONE) {
                     response->ErrorCode = Web::STATUS_NO_CONTENT;
                     response->Message = _T("Sequencer was not in a running state");
-                } else if (PluginHost::WorkerPool::Instance().Revoke(job, 2000) == Core::ERROR_NONE) {
+                } else if (Core::IWorkerPool::Instance().Revoke(job, 2000) == Core::ERROR_NONE) {
                     response->ErrorCode = Web::STATUS_OK;
                     response->Message = _T("Sequencer available for next sequence");
                 } else {
@@ -234,7 +234,7 @@ namespace Plugin {
                     sequencer->Load(*(request.Body<Web::JSONBodyType<Core::JSON::ArrayType<Commander::Command>>>()));
                     sequencer->Execute();
 
-                    PluginHost::WorkerPool::Instance().Submit(job);
+                    Core::IWorkerPool::Instance().Submit(job);
 
                     // Attach to response.
                     response->Message = _T("Sequence List Imported");

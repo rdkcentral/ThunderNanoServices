@@ -227,7 +227,7 @@ namespace Plugin {
 
     Core::ProxyType<Web::Response> BluetoothRemoteControl::GetMethod(Core::TextSegmentIterator& index)
     {
-        Core::ProxyType<Web::Response> response(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
         response->Message = _T("Unsupported GET request.");
 
@@ -236,7 +236,7 @@ namespace Plugin {
 
     Core::ProxyType<Web::Response> BluetoothRemoteControl::PutMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> response(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
         response->Message = _T("Unsupported PUT request");
 
@@ -247,7 +247,7 @@ namespace Plugin {
 
     Core::ProxyType<Web::Response> BluetoothRemoteControl::PostMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> response(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
         response->Message = _T("Unsupported POST request");
 
@@ -278,7 +278,7 @@ namespace Plugin {
 
     Core::ProxyType<Web::Response> BluetoothRemoteControl::DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> response(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
         response->Message = _T("Unsupported DELETE request");
 
