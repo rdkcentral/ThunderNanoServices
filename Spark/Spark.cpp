@@ -159,7 +159,7 @@ namespace Plugin {
         TRACE(Trace::Information, (string(_T("Received spark request"))));
 
         Core::ProxyType<Web::Response> result(
-            PluginHost::Factories::Instance().Response());
+            PluginHost::IFactories::Instance().Response());
 
         Core::TextSegmentIterator index(
             Core::TextFragment(request.Path, _skipURL,
@@ -258,7 +258,7 @@ namespace Plugin {
             break;
         case PluginHost::IStateControl::EXITED:
             // Exited by Spark app
-            PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(
                 _service, PluginHost::IShell::DEACTIVATED,
                 PluginHost::IShell::REQUESTED));
             break;
@@ -275,7 +275,7 @@ namespace Plugin {
 
             ASSERT(_service != nullptr);
 
-            PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(
                 _service, PluginHost::IShell::DEACTIVATED,
                 PluginHost::IShell::FAILURE));
         }

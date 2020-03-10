@@ -271,7 +271,7 @@ class BluetoothControl : public PluginHost::IPlugin
                         _scanTime = scanTime;
                         _type = type;
                         _flags = flags;
-                        PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
+                        Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
                     }
                 }
                 void Load(const uint16_t scanTime, const bool limited, const bool passive)
@@ -279,7 +279,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (_mode == 0) {
                         _mode = LOW_ENERGY | (passive ? PASSIVE : 0) | (limited ? LIMITED : 0);
                         _scanTime = scanTime;
-                        PluginHost::WorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
+                        Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
                     }
                 }
 
@@ -362,7 +362,7 @@ class BluetoothControl : public PluginHost::IPlugin
             uint32_t Close()
             {
                 uint32_t result = Bluetooth::HCISocket::Close(Core::infinite);
-                PluginHost::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_activity));
+                Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_activity));
                 Bluetooth::ManagementSocket::Down(_administrator.DeviceId());
                 _administrator.DeviceId(HCI_DEV_NONE);
                 _parent = nullptr;

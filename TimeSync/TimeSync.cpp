@@ -80,7 +80,7 @@ namespace Plugin {
 
     /* virtual */ void TimeSync::Deinitialize(PluginHost::IShell* service)
     {
-        PluginHost::WorkerPool::Instance().Revoke(_activity);
+        Core::IWorkerPool::Instance().Revoke(_activity);
         _sink.Deinitialize();
 
         ASSERT(_service != nullptr);
@@ -104,7 +104,7 @@ namespace Plugin {
     /* virtual */ Core::ProxyType<Web::Response>
     TimeSync::Process(const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         Core::TextSegmentIterator index(
             Core::TextFragment(request.Path, _skipURL, static_cast<uint16_t>(request.Path.length()) - _skipURL),
             false,
@@ -155,7 +155,7 @@ namespace Plugin {
                     if (result->ErrorCode == Web::STATUS_OK) {
                         // Stop automatic synchronisation
                         _client->Cancel();
-                        PluginHost::WorkerPool::Instance().Revoke(_activity);
+                        Core::IWorkerPool::Instance().Revoke(_activity);
 
                         if (newTime.IsValid()) {
                             Core::SystemInfo::Instance().SetTime(newTime);
@@ -185,7 +185,7 @@ namespace Plugin {
 
             // Seems we are synchronised with the time. Schedule the next timesync.
             TRACE_L1("Waking up again at %s.", newSyncTime.ToRFC1123(false).c_str());
-            PluginHost::WorkerPool::Instance().Schedule(newSyncTime, _activity);
+            Core::IWorkerPool::Instance().Schedule(newSyncTime, _activity);
 
             event_timechange();
         }

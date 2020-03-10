@@ -175,6 +175,7 @@ namespace Plugin {
 #endif
         virtual ~OutOfProcessPlugin()
         {
+            _notification->Release();
         }
 
     public:

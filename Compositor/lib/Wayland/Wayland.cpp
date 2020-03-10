@@ -18,7 +18,9 @@
  */
  
 #include "Wayland.h"
+#ifdef ENABLE_NXSERVER
 #include "NexusServer/Settings.h"
+#endif
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 

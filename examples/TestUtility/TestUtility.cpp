@@ -149,7 +149,7 @@ namespace Plugin {
     /* virtual */ Core::ProxyType<Web::Response> TestUtility::Process(const Web::Request& request)
     {
         ASSERT(_skipURL <= request.Path.length());
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
 
         if (_testUtilityImp != nullptr) {
             Core::ProxyType<Web::TextBody> body(_testUtilityMetadata.Element());
@@ -189,7 +189,7 @@ namespace Plugin {
     { 
         if (_connection == process->Id()) {
             ASSERT(_service != nullptr);
-            Core::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
 

@@ -333,6 +333,7 @@ namespace Plugin {
         {
             if (Core::Time::Now() >= _endTime) {
                 if (_config.Crash.Value() == true) {
+                    SleepMs(_config.Sleep.Value() * 1000);
                     TRACE_L1("Going to CRASH as requested %d.", 0);
                     abort();
                 }

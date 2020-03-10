@@ -872,7 +872,7 @@ namespace Plugin {
                                 _service->Notify(message);
                                 _parent.event_action(service->Callsign(), "Activate", "Automatic");
                                 TRACE(Trace::Error, (_T("Restarting %s again because we detected it misbehaved."), service->Callsign().c_str()));
-                                PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(service, PluginHost::IShell::ACTIVATED, PluginHost::IShell::AUTOMATIC));
+                                Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(service, PluginHost::IShell::ACTIVATED, PluginHost::IShell::AUTOMATIC));
                             }
                         }
                     }
@@ -1036,7 +1036,7 @@ namespace Plugin {
 
                                 _parent.event_action(plugin->Callsign(), "Deactivate", why.Data());
 
-                                PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(plugin, PluginHost::IShell::DEACTIVATED, why.Value()));
+                                Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(plugin, PluginHost::IShell::DEACTIVATED, why.Value()));
 
                                 plugin->Release();
                             }

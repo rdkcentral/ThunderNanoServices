@@ -31,9 +31,6 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(WebKitBrowser, 1, 0);
 
-    // static Core::ProxyPoolType< Web::JSONLabel < WebKitBrowser::Data > > jsonBodyDataFactory(2);
-    static Core::ProxyPoolType<Web::JSONBodyType<WebKitBrowser::Data>> jsonBodyDataFactory(2);
-
     /* virtual */ const string WebKitBrowser::Initialize(PluginHost::IShell* service)
     {
         Config config;
@@ -146,7 +143,7 @@ namespace Plugin {
     /* virtual */ void WebKitBrowser::Inbound(Web::Request& request)
     {
         if (request.Verb == Web::Request::HTTP_POST) {
-            request.Body(jsonBodyDataFactory.Element());
+            request.Body(_jsonBodyDataFactory.Element());
         }
     }
 
@@ -156,7 +153,7 @@ namespace Plugin {
 
         TRACE(Trace::Information, (string(_T("Received request"))));
 
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         Core::TextSegmentIterator index(
             Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
 
@@ -171,7 +168,7 @@ namespace Plugin {
 
             if (request.Verb == Web::Request::HTTP_GET) {
                 PluginHost::IStateControl::state currentState = stateControl->State();
-                Core::ProxyType<Web::JSONBodyType<WebKitBrowser::Data>> body(jsonBodyDataFactory.Element());
+                Core::ProxyType<Web::JSONBodyType<WebKitBrowser::Data>> body(_jsonBodyDataFactory.Element());
                 body->URL = _browser->GetURL();
                 body->FPS = _browser->GetFPS();
                 body->Suspended = (currentState == PluginHost::IStateControl::SUSPENDED);
@@ -253,7 +250,7 @@ namespace Plugin {
 
             ASSERT(_service != nullptr);
 
-            PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
 }

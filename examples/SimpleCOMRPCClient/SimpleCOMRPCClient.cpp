@@ -39,7 +39,7 @@ public:
     END_INTERFACE_MAP
 
     void Elapsed(const uint16_t seconds) override {
-        printf("The wallclock reports that %d seconds have elapsed since the last callback\n");
+        printf("The wallclock reports that %d seconds have elapsed since the last callback\n", seconds);
     }
 };
 
