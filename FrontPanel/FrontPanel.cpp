@@ -70,7 +70,7 @@ namespace Plugin {
 
     Core::ProxyType<Web::Response> FrontPanel::GetMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported GET request.");
 
@@ -148,7 +148,7 @@ namespace Plugin {
 
     Core::ProxyType<Web::Response> FrontPanel::PostMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported POST requestservice.");
 

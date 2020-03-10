@@ -56,7 +56,7 @@ namespace Plugin {
 
     /* virtual */ NTPClient::~NTPClient()
     {
-        PluginHost::WorkerPool::Instance().Revoke(_activity);
+        Core::IWorkerPool::Instance().Revoke(_activity);
 
         Close(Core::infinite);
     }
@@ -100,7 +100,7 @@ namespace Plugin {
         if ((_state == INITIAL) || (_state == SUCCESS) || ((_state == FAILED) && (_serverIndex.IsValid() == false))) {
             result = Core::ERROR_NONE;
             _state = SENDREQUEST;
-            PluginHost::WorkerPool::Instance().Submit(_activity);
+            Core::IWorkerPool::Instance().Submit(_activity);
         } else if (_state == SENDREQUEST || _state == INPROGRESS) {
             result = Core::ERROR_INPROGRESS;
         }
@@ -123,8 +123,8 @@ namespace Plugin {
 
             _state = FAILED;
 
-            PluginHost::WorkerPool::Instance().Revoke(_activity);
-            PluginHost::WorkerPool::Instance().Submit(_activity);
+            Core::IWorkerPool::Instance().Revoke(_activity);
+            Core::IWorkerPool::Instance().Submit(_activity);
         }
         _adminLock.Unlock();
     }
@@ -254,10 +254,10 @@ namespace Plugin {
             Close(0);
 
             // Lets remove the watchdog subject, we do not want to wait anymore, we got an answer.
-            PluginHost::WorkerPool::Instance().Revoke(_activity);
+            Core::IWorkerPool::Instance().Revoke(_activity);
 
             // Schedule it again to broadcast the successfull update of the time.
-            PluginHost::WorkerPool::Instance().Submit(_activity);
+            Core::IWorkerPool::Instance().Submit(_activity);
         }
 
         _adminLock.Unlock();
@@ -270,8 +270,8 @@ namespace Plugin {
     {
         if (HasError() == true) {
             Close(0);
-            PluginHost::WorkerPool::Instance().Revoke(_activity);
-            PluginHost::WorkerPool::Instance().Submit(_activity);
+            Core::IWorkerPool::Instance().Revoke(_activity);
+            Core::IWorkerPool::Instance().Submit(_activity);
         }
     }
 
@@ -405,7 +405,7 @@ namespace Plugin {
         if (result != Core::infinite) {
             Core::Time timestamp(Core::Time::Now());
             timestamp.Add(result);
-            PluginHost::WorkerPool::Instance().Schedule(timestamp, _activity);
+            Core::IWorkerPool::Instance().Schedule(timestamp, _activity);
         }
    }
 

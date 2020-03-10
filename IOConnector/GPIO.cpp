@@ -321,12 +321,12 @@ ENUM_CONVERSION_BEGIN(GPIO::Pin::trigger_mode)
 
     /* virtual */ void Pin::Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job)
     {
-        PluginHost::WorkerPool::Instance().Schedule(time, job);
+        Core::IWorkerPool::Instance().Schedule(time, job);
     }
 
     /* virtual */ void Pin::Revoke(const Core::ProxyType<Core::IDispatch>& job)
     {
-        PluginHost::WorkerPool::Instance().Revoke(job);
+        Core::IWorkerPool::Instance().Revoke(job);
     }
 }
 } // namespace WPEFramework::Linux

@@ -154,14 +154,15 @@ namespace Plugin {
             , _browser(nullptr)
             , _memory(nullptr)
             , _notification(this)
+            , _jsonBodyDataFactory(2)
         {
             RegisterAll();
         }
 
         virtual ~WebKitBrowser()
         {
-            TRACE_L1("Destructor WebKitBrowser.%d", __LINE__);
             UnregisterAll();
+            TRACE_L1("Destructor WebKitBrowser.%d", __LINE__);
         }
 
         inline static bool EnvironmentOverride(const bool configFlag)
@@ -244,6 +245,7 @@ namespace Plugin {
         Exchange::IBrowser* _browser;
         Exchange::IMemory* _memory;
         Core::Sink<Notification> _notification;
+        Core::ProxyPoolType<Web::JSONBodyType<WebKitBrowser::Data>> _jsonBodyDataFactory;
     };
 }
 }

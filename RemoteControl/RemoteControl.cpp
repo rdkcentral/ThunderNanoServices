@@ -334,7 +334,7 @@ namespace Plugin {
 
             result = DeleteMethod(index, request);
         } else {
-            result = PluginHost::Factories::Instance().Response();
+            result = PluginHost::IFactories::Instance().Response();
             result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
             result->Message = string(_T("Unknown request path specified."));
         }
@@ -469,7 +469,7 @@ namespace Plugin {
     Core::ProxyType<Web::Response> RemoteControl::GetMethod(Core::TextSegmentIterator& index, const Web::Request& request) const
     {
 
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
 
         result->ErrorCode = Web::STATUS_NOT_FOUND;
         result->Message = string(_T("Unknown request path specified."));
@@ -568,7 +568,7 @@ namespace Plugin {
     Core::ProxyType<Web::Response> RemoteControl::PutMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
 
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
 
         result->ErrorCode = Web::STATUS_NOT_FOUND;
         result->Message = string(_T("Unknown request path specified."));
@@ -735,7 +735,7 @@ namespace Plugin {
 
     Core::ProxyType<Web::Response> RemoteControl::DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
 
         result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
         result->Message = string(_T("Unknown request path specified."));
@@ -782,7 +782,7 @@ namespace Plugin {
 
     Core::ProxyType<Web::Response> RemoteControl::PostMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
 
         result->ErrorCode = Web::STATUS_NOT_FOUND;
         result->Message = string(_T("Unknown request path specified."));

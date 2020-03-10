@@ -96,7 +96,7 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
 {
     ASSERT(_skipURL <= request.Path.length());
 
-    Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+    Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
     Core::TextSegmentIterator index(
         Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
 
@@ -118,7 +118,7 @@ void WebPA::Deactivated(RPC::IRemoteConnection* connection)
     // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
     if ((_connectionId == connection->Id())) {
         ASSERT(nullptr != _service);
-        PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+        Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
     }
 }
 

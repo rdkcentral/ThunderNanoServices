@@ -45,7 +45,7 @@ namespace Exchange {
                 }
                 _parent->_adminLock.Unlock();
 
-                Core::WorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(*this));
+                Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(*this));
             }
 
         private:
@@ -62,7 +62,7 @@ namespace Exchange {
 
         virtual ~RemoteHostExampleImpl() 
         {
-            Core::WorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_timeSubject), Core::infinite);
+            Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_timeSubject), Core::infinite);
         }
 
         uint32_t Initialize(PluginHost::IShell* service) override;
@@ -90,7 +90,7 @@ namespace Exchange {
         
         _name = config.Name.Value();
 
-        Core::WorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(_timeSubject));
+        Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(_timeSubject));
 
         return Core::ERROR_NONE;
     }

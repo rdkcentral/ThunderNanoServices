@@ -127,6 +127,7 @@ namespace Plugin {
         if (stream != _streams.end()) {
             Controls::iterator control = _controls.find(id);
             if (control != _controls.end()) {
+                control->second->Callback(nullptr);
                 uint32_t relResult = control->second->Release();
                 if (relResult == Core::ERROR_DESTRUCTION_SUCCEEDED) {
                     _controls.erase(control);
@@ -136,6 +137,7 @@ namespace Plugin {
             }
 
             if (result == Core::ERROR_NONE) {
+                stream->second->Callback(nullptr);
                 stream->second->Release();
                 _streams.erase(stream);
             }
@@ -228,6 +230,7 @@ namespace Plugin {
         if (stream != _streams.end()) {
             Controls::iterator control = _controls.find(id);
             if (control != _controls.end()) {
+                control->second->Callback(nullptr);
                 if (control->second->Release() == Core::ERROR_DESTRUCTION_SUCCEEDED) {
                     _controls.erase(id);
                 } else {

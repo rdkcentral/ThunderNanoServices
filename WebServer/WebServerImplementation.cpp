@@ -172,7 +172,7 @@ namespace Plugin {
         public:
             Core::ProxyType<Web::Request> Element()
             {
-                return (PluginHost::Factories::Instance().Request());
+                return (PluginHost::IFactories::Instance().Request());
             }
         };
 
@@ -193,7 +193,7 @@ namespace Plugin {
         public:
             Core::ProxyType<Web::Response> Element()
             {
-                return (PluginHost::Factories::Instance().Response());
+                return (PluginHost::IFactories::Instance().Response());
             }
         };
 
@@ -759,8 +759,8 @@ namespace Plugin {
         // Check if the channel server will relay this message.
         if (_parent.Relay(request, Id()) == false) {
 
-            Core::ProxyType<Web::Response> response(PluginHost::Factories::Instance().Response());
-            Core::ProxyType<Web::FileBody> fileBody(PluginHost::Factories::Instance().FileBody());
+            Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
+            Core::ProxyType<Web::FileBody> fileBody(PluginHost::IFactories::Instance().FileBody());
 
             // If so, don't deal with it ourselves.
             Web::MIMETypes result;

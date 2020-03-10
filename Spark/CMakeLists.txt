@@ -87,5 +87,18 @@ install(
 
 set(PLUGIN_SPARK_AUTOSTART false CACHE STRING "Automatically start Spark plugin")
 set(PLUGIN_SPARK_STARTURL "browser.js" CACHE STRING "Initial URL for Spark plugin")
+set(PLUGIN_SPARK_RESOLUTION "720p" CACHE STRING "Browser resolution")
+
+# resolution handling
+if(PLUGIN_SPARK_RESOLUTION EQUAL "720p")
+    set(PLUGIN_SPARK_HEIGHT "720")
+    set(PLUGIN_SPARK_WIDTH "1280")
+elseif(PLUGIN_SPARK_RESOLUTION EQUAL "1080p")
+    set(PLUGIN_SPARK_HEIGHT "1080")
+    set(PLUGIN_SPARK_WIDTH "1920")
+elseif(PLUGIN_SPARK_RESOLUTION EQUAL "2160p")
+    set(PLUGIN_SPARK_HEIGHT "2160")
+    set(PLUGIN_SPARK_WIDTH "3840")
+endif()
 
 write_config(${PLUGIN_NAME})
