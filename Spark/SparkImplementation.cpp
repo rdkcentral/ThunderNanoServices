@@ -39,7 +39,7 @@ pxContext context;
 extern rtScript script;
 extern bool gDirtyRectsEnabled;
 extern rtThreadQueue* gUIThreadQueue;
-extern bool gNewSceneIsTop;
+extern bool topSparkView;
 
 namespace WPEFramework {
 namespace Plugin {
@@ -631,7 +631,7 @@ namespace Plugin {
                     Block();
                 }
                 else {
-                    gNewSceneIsTop = true; // Set new Scene as the topest
+                    topSparkView = true; // Set new Scene as the topest
 
                     pxScriptView *scriptView = new pxScriptView(_fullPath.c_str(),"javascript/node/v8");
                     _view = static_cast<pxViewRef> (scriptView);
