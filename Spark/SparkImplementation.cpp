@@ -326,6 +326,8 @@ namespace Plugin {
                 Core::SystemInfo::SetEnvironment(_T("NODE_PATH"), service->DataPath());
                 Core::SystemInfo::SetEnvironment(_T("SPARK_PATH"), service->DataPath());
                 Core::SystemInfo::SetEnvironment(_T("RT_EGL_PROVIDER"), config.EGLProvider.Value());
+                Core::SystemInfo::SetEnvironment(_T("SCREEN_WIDTH"), std::to_string(_width));
+                Core::SystemInfo::SetEnvironment(_T("SCREEN_HEIGHT"), std::to_string(_height));
 
                 if (config.ClientIdentifier.IsSet() == true) {
                     string value(service->Callsign() + ',' + config.ClientIdentifier.Value());
