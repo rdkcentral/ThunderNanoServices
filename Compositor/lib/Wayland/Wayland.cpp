@@ -118,7 +118,7 @@ namespace Plugin {
             }
             void SetInput()
             {
-                if (_server != nullptr) {
+                if ( (_server != nullptr) && (_surface.Name().empty() == false) && (_surface.Name() != "noname") ) {
                     _server->SetInput(_surface.Name().c_str());
                 }
             }
