@@ -148,7 +148,10 @@ namespace Plugin
                     break;
                 }
 
-                if (index.Current().Handlers.IsSet() != false) {
+                if (index.Current().Handlers.IsSet() == false) {
+                    _pins.push_back(PinHandler(pin, nullptr));
+                }
+                else {
                     std::list< std::pair<uint32_t, uint32_t> > intervals;
 
                     Core::JSON::ArrayType<Config::Pin::Handler>::Iterator handler(index.Current().Handlers.Elements());
@@ -184,7 +187,7 @@ namespace Plugin
                             }
                             else {
                                 IHandler* method = HandlerAdministrator::Instance().Handler(info.Name.Value(), _service, info.Config.Value());
-                                if (method != nullptr) {
+                                if (method == nullptr) {
                                     SYSLOG(Logging::Startup, (_T("Could not instantiate handler [%s] on pin [%d]."), info.Name.Value().c_str(), pin->Identifier() & 0xFFFF));
                                 }
                                 else {
