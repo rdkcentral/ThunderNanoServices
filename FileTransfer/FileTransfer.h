@@ -502,7 +502,7 @@ namespace Plugin
                                 Add(_T("port"), &Port);
                                 Add(_T("binding"), &Binding);
                             }
-                            NetworkNode(const NetworkNode &copy)
+                            NetworkNode(const NetworkNode& copy)
                                 : Core::JSON::Container(), Port(copy.Port), Binding(copy.Binding)
                             {
                                 Add(_T("port"), &Port);
