@@ -108,7 +108,7 @@ namespace WPASupplicant {
 
     bool Config::PresharedKey(const string& presharedKey)
     {
-        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP"))) && (SetKey(PROTO, _T("RSN"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, ('\"' + _ssid + '\"'))) && (SetKey(PSK, ('\"' + presharedKey + '\"'))));
+        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(PROTO, _T("WPA RSN"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, ('\"' + _ssid + '\"'))) && (SetKey(PSK, ('\"' + presharedKey + '\"'))));
     }
 
     bool Config::Enterprise(const string& identity, const string& password)
