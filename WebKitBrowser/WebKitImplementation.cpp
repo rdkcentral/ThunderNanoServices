@@ -1173,9 +1173,15 @@ static GSourceFuncs _handlerIntervention =
 
             g_main_loop_run(_loop);
 
-            //WKRelease(_page);
-            if (_automationSession)
-                WKRelease(_automationSession);
+            // Seems if we stop the mainloop but are not in a suspended state, there is a crash. 
+            // Force suspended state first.
+            if (_state == PluginHost::IStateControl::RESUMED) {
+                WKViewSetViewState(_view, 0);
+            }
+
+            // WKRelease(_page);
+            if (_automationSession) WKRelease(_automationSession);
+
             WKRelease(_view);
             WKRelease(pageConfiguration);
             WKRelease(pageGroup);
