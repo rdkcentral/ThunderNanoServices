@@ -876,6 +876,9 @@ namespace Plugin
                         Reload(interfaceName, how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC);
                     }
                 }
+            } else {
+                ClearAssignedIPV4IPs(adapter);
+                ClearAssignedIPV6IPs(adapter);
             }
 
             _adminLock.Unlock();
