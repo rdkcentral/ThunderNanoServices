@@ -45,9 +45,12 @@ namespace Plugin {
                 : _parent(*parent)
             {
                 ASSERT(parent != nullptr);
+                fprintf(stderr, "================ Constructing the Notification =================\n"); fflush(stderr);
+
             }
             ~Notification()
             {
+                fprintf(stderr, "================ Destructing the Notification =================\n"); fflush(stderr);
                 TRACE_L1("WebServer::Notification destructed. Line: %d", __LINE__);
             }
 
