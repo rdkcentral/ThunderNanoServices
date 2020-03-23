@@ -122,7 +122,7 @@ namespace PluginHost {
             if (remote.Host().IsSet() == true) {
                 uint16_t portNumber(remote.Port().IsSet() ? remote.Port().Value() : 80);
 
-                BaseClass::Link().RemoteNode(Core::NodeId(remote.Host().Value().Text().c_str(), portNumber));
+                BaseClass::Link().RemoteNode(Core::NodeId(remote.Host().Value().c_str(), portNumber));
 
                 result = true;
             }

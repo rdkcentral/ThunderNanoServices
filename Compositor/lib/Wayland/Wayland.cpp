@@ -118,7 +118,7 @@ namespace Plugin {
             }
             void SetInput()
             {
-                if (_server != nullptr) {
+                if ( (_server != nullptr) && (_surface.Name().empty() == false) && (_surface.Name() != "noname") ) {
                     _server->SetInput(_surface.Name().c_str());
                 }
             }
@@ -154,12 +154,12 @@ namespace Plugin {
             uint32_t ZOrder(const uint16_t index) override
             {
                 uint32_t result = Core::ERROR_UNAVAILABLE;
+                _surface.ZOrder(index);
                 if (index == 0) {
-                    _surface.SetTop();
                     SetInput();
-                    result = Core::ERROR_NONE;
-              }
-                return (result);
+                }
+
+                return (Core::ERROR_NONE);
             }
 
             BEGIN_INTERFACE_MAP(Entry)
