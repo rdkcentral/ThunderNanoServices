@@ -114,7 +114,7 @@ if(PLUGIN_WEBKITBROWSER_YOUTUBE)
 endif()
 
 # amazon configuration
-if(PLUGIN_WEBKITBROWSER_AMAZON)
+if(PLUGIN_AMAZON_HAWAII)
     write_config( Amazon )
 endif()
 
