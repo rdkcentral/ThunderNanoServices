@@ -228,6 +228,9 @@ namespace Plugin {
         if (device != nullptr) {
             response.Name = device->Name();
             response.Type = (device->LowEnergy()? DevicetypeType::LOWENERGY : DevicetypeType::CLASSIC);
+            if (device->Class() != 0) {
+                response.Class = device->Class();
+            }
             response.Connected = device->IsConnected();
             response.Paired = device->IsBonded();
             result = Core::ERROR_NONE;
