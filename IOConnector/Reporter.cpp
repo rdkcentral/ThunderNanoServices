@@ -26,12 +26,11 @@ namespace WPEFramework {
 namespace Plugin {
 
     class Reporter : public IHandler {
-    private:
-        Reporter();
-        Reporter(const Reporter&);
-        Reporter& operator=(const Reporter&);
-
     public:
+        Reporter() = delete;
+        Reporter(const Reporter&) = delete;
+        Reporter& operator=(const Reporter&) = delete;
+
         Reporter(PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end)
             : _service(service)
             , _message(configuration)
@@ -42,7 +41,7 @@ namespace Plugin {
             _state.Add(start);
             _state.Add(end);
         }
-        virtual ~Reporter()
+        ~Reporter() override
         {
         }
 

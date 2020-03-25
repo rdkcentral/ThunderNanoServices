@@ -35,14 +35,11 @@ namespace Plugin {
           public Exchange::IExternal::IFactory,
           public PluginHost::JSONRPC {
     private:
-        IOConnector(const IOConnector&) = delete;
-        IOConnector& operator=(const IOConnector&) = delete;
-
         class Sink : public Exchange::IExternal::INotification {
         public:
             Sink() = delete;
             Sink(const Sink&) = delete;
-            Sink& operator=(const Sink&) = delete;
+            Sink& operator= (const Sink&) = delete;
 
             Sink(IOConnector* parent)
                 : _parent(*parent)
@@ -132,10 +129,6 @@ namespace Plugin {
 
     public:
         class Config : public Core::JSON::Container {
-        private:
-            Config(const Config&) = delete;
-            Config& operator=(const Config&) = delete;
-
         public:
             class Pin : public Core::JSON::Container {
             public:
@@ -215,7 +208,7 @@ namespace Plugin {
                     Add(_T("activelow"), &ActiveLow);
                     Add(_T("handlers"), &Handlers);
                 }
-                virtual ~Pin()
+                ~Pin() override
                 {
                 }
 
@@ -237,12 +230,15 @@ namespace Plugin {
             };
 
         public:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+
             Config()
                 : Core::JSON::Container()
             {
                 Add(_T("pins"), &Pins);
             }
-            virtual ~Config()
+            ~Config() override
             {
             }
 
@@ -251,11 +247,10 @@ namespace Plugin {
         };
 
         class Data : public Core::JSON::Container {
-        private:
+        public:
             Data(const Data&) = delete;
             Data& operator=(const Data&) = delete;
 
-        public:
             Data()
                 : Core::JSON::Container()
                 , Id()
@@ -264,7 +259,7 @@ namespace Plugin {
                 Add(_T("id"), &Id);
                 Add(_T("value"), &Value);
             }
-            ~Data()
+            ~Data() override
             {
             }
 
@@ -274,6 +269,9 @@ namespace Plugin {
         };
 
     public:
+        IOConnector(const IOConnector&) = delete;
+        IOConnector& operator=(const IOConnector&) = delete;
+
         IOConnector();
         virtual ~IOConnector();
 

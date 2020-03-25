@@ -34,22 +34,18 @@ namespace GPIO {
                 public Exchange::IInputPin,
                 public Core::IResource {
     private:
-        Pin() = delete;
-        Pin(const Pin&) = delete;
-        Pin& operator=(const Pin&) = delete;
-
         typedef Exchange::ExternalBase<Exchange::IExternal::GPIO> BaseClass;
 
         class TimedPin  : public Core::IDispatch {
         private:
-            TimedPin() = delete;
-            TimedPin(const TimedPin&) = delete;
-            TimedPin& operator=(const TimedPin&) = delete;
-
             typedef std::list<Exchange::IInputPin::INotification*> ObserverList;
             typedef std::map<uint32_t, ObserverList> MarkerMap;
 
         public:
+            TimedPin() = delete;
+            TimedPin(const TimedPin&) = delete;
+            TimedPin& operator=(const TimedPin&) = delete;
+
             TimedPin(Pin* parent)
                 : _parent(*parent)
                 , _marker(~0)
@@ -60,7 +56,7 @@ namespace GPIO {
             {
                 ASSERT(parent != nullptr);
             }
-            virtual ~TimedPin()
+            ~TimedPin() override
             {
             }
 
@@ -188,7 +184,7 @@ namespace GPIO {
             }
 
         private:
-            virtual void Dispatch()
+            void Dispatch() override
             {
                 _parent.Lock();
 
@@ -249,8 +245,12 @@ namespace GPIO {
         };
 
     public:
+        Pin() = delete;
+        Pin(const Pin&) = delete;
+        Pin& operator=(const Pin&) = delete;
+
         Pin(const uint16_t id, const bool activeLow);
-        virtual ~Pin();
+        ~Pin() override;
 
     public:
         bool Get() const;
@@ -274,9 +274,9 @@ namespace GPIO {
             BaseClass::Unregister(sink);
         }
 
-        virtual void Trigger() override;
-        virtual uint32_t Get(int32_t& value) const override;
-        virtual uint32_t Set(const int32_t value) override;
+        void Trigger() override;
+        uint32_t Get(int32_t& value) const override;
+        uint32_t Set(const int32_t value) override;
 
         // IInput pin functionality. Get triggered by an IOPin if a marker has been reached
         // ---------------------------------------------------------------------------------
@@ -291,12 +291,12 @@ namespace GPIO {
         NEXT_INTERFACE_MAP(Exchange::ExternalBase<Exchange::IExternal::GPIO>)
 
     private:
-        virtual Core::IResource::handle Descriptor() const override;
-        virtual uint16_t Events() override;
-        virtual void Handle(const uint16_t events) override;
+        Core::IResource::handle Descriptor() const override;
+        uint16_t Events() override;
+        void Handle(const uint16_t events) override;
 
-        virtual void Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job) override;
-        virtual void Revoke(const Core::ProxyType<Core::IDispatch>& job) override;
+        void Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job) override;
+        void Revoke(const Core::ProxyType<Core::IDispatch>& job) override;
 
         void Flush();
 

@@ -29,16 +29,11 @@ namespace Plugin {
 
     class PowerDown : public IHandler {
     private:
-        PowerDown();
-        PowerDown(const PowerDown&);
-        PowerDown& operator=(const PowerDown&);
-
         class Config : public Core::JSON::Container {
-        private:
+        public:
             Config(const Config& copy) = delete;
             Config& operator=(const Config& RHS) = delete;
 
-        public:
             Config()
                 : Callsign()
                 , State()
@@ -49,7 +44,7 @@ namespace Plugin {
                 Add(_T("longpress"), &LongPress);
                 Add(_T("poweroff"), &PowerOff);
             }
-            virtual ~Config()
+            ~Config() override
             {
             }
 
@@ -60,6 +55,10 @@ namespace Plugin {
         };
 
     public:
+        PowerDown() = delete;
+        PowerDown(const PowerDown&) = delete;
+        PowerDown& operator=(const PowerDown&) = delete;
+
         PowerDown(PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end)
             : _service(service)
             , _state()
@@ -80,7 +79,7 @@ namespace Plugin {
             _state.Add(end);
  
         }
-        virtual ~PowerDown()
+        ~PowerDown() override
         {
         }
 

@@ -29,16 +29,11 @@ namespace Plugin {
 
     class RemotePairing : public IHandler {
     private:
-        RemotePairing();
-        RemotePairing(const RemotePairing&);
-        RemotePairing& operator=(const RemotePairing&);
-
         class Config : public Core::JSON::Container {
-        private:
+        public:
             Config(const Config& copy) = delete;
             Config& operator=(const Config& RHS) = delete;
 
-        public:
             Config()
                 : Callsign()
                 , Producer()
@@ -46,7 +41,7 @@ namespace Plugin {
                 Add(_T("callsign"), &Callsign);
                 Add(_T("producer"), &Producer);
             }
-            virtual ~Config()
+            ~Config() override
             {
             }
 
@@ -56,6 +51,10 @@ namespace Plugin {
         };
 
     public:
+        RemotePairing() = delete;
+        RemotePairing(const RemotePairing&) = delete;
+        RemotePairing& operator=(const RemotePairing&) = delete;
+
         RemotePairing(PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end)
             : _service(service)
         {
@@ -67,7 +66,7 @@ namespace Plugin {
             _state.Add(end);
             _marker = start;
         }
-        virtual ~RemotePairing()
+        ~RemotePairing() override
         {
         }
 

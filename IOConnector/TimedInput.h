@@ -32,6 +32,7 @@ namespace GPIO {
     public:
         TimedInput(const TimedInput&) = delete;
         TimedInput& operator=(const TimedInput&) = delete;
+
         TimedInput()
             : _markers()
             , _pressedTime(0)
