@@ -17,10 +17,11 @@
  * limitations under the License.
  */
  
-#include <interfaces/IKeyHandler.h>
-
+#include "Module.h"
 #include "Handler.h"
 #include "TimedInput.h"
+
+#include <interfaces/IKeyHandler.h>
 
 namespace WPEFramework {
 

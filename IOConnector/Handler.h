@@ -20,8 +20,8 @@
 #ifndef __HANDLER_H
 #define __HANDLER_H
 
-#include "GPIO.h"
 #include "Module.h"
+#include "GPIO.h"
 
 namespace WPEFramework {
 

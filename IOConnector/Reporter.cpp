@@ -16,9 +16,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
-#include <interfaces/IKeyHandler.h>
 
+#include "Module.h"
 #include "Handler.h"
 #include "TimedInput.h"
 

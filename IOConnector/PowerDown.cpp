@@ -17,10 +17,11 @@
  * limitations under the License.
  */
  
-#include <interfaces/IPower.h>
-
+#include "Module.h"
 #include "Handler.h"
 #include "TimedInput.h"
+
+#include <interfaces/IPower.h>
 
 namespace WPEFramework {
 
