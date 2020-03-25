@@ -249,7 +249,7 @@ namespace GPIO {
         };
 
     public:
-        Pin(const uint8_t id, const bool activeLow);
+        Pin(const uint16_t id, const bool activeLow);
         virtual ~Pin();
 
     public:
@@ -301,7 +301,7 @@ namespace GPIO {
         void Flush();
 
     private:
-        const uint8_t _pin;
+        const uint16_t _pin;
         uint8_t _activeLow;
         bool _lastValue;
         mutable int _descriptor;
