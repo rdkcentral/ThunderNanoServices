@@ -91,7 +91,7 @@ namespace Plugin {
 
             ASSERT(_service != nullptr);
 
-            if (_state.Analyse(pin.Set(), marker) == true) {
+            if (_state.Reached(pin.Get(), marker) == true) {
                 Exchange::IPower* handler(_service->QueryInterfaceByCallsign<Exchange::IPower>(_callsign));
 
                 if (handler != nullptr) {
@@ -125,7 +125,7 @@ namespace Plugin {
     private:
         PluginHost::IShell* _service;
         string _callsign;
-        TimedInput _state;
+        GPIO::TimedInput _state;
         uint32_t _marker1;
         uint32_t _marker2;
         Exchange::IPower::PCState _powerOff;

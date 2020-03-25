@@ -59,7 +59,7 @@ namespace GPIO
     // Class: PIN
     // ----------------------------------------------------------------------------------------------------
 
-    Pin::Pin(const uint8_t pin, const bool activeLow)
+    Pin::Pin(const uint16_t pin, const bool activeLow)
         : BaseClass(pin, IExternal::regulator, IExternal::general, IExternal::logic, 0)
         , _pin(pin)
         , _activeLow(activeLow ? 1 : 0)

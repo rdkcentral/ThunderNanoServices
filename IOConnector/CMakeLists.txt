@@ -27,11 +27,16 @@ add_library(${MODULE_NAME} SHARED
     IOConnectorJsonRpc.cpp
     GPIO.cpp
     Handler.cpp
+    Reporter.cpp
 )
 
 if(PLUGIN_IOCONNECTOR_PAIRING_PIN)
     target_sources(${MODULE_NAME} PRIVATE RemotePairing.cpp)
 endif(PLUGIN_IOCONNECTOR_PAIRING_PIN)
+
+if(PLUGIN_IOCONNECTOR_POWER_PIN)
+    target_sources(${MODULE_NAME} PRIVATE PowerDown.cpp)
+endif(PLUGIN_IOCONNECTOR_POWER_PIN)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11

@@ -76,17 +76,11 @@ namespace Plugin {
         }
         void Trigger(GPIO::Pin& pin) override
         {
-
-            ASSERT(_service != nullptr);
-
-       }
-       void Trigger(GPIO::Pin& pin) override
-        {
             uint32_t marker;
 
             ASSERT(_service != nullptr);
 
-            if ( (_state.Analyse(pin.Set(), marker) == true) && (_marker == marker) ) {
+            if ( (_state.Reached(pin.Get(), marker) == true) && (_marker == marker) ) {
                 Exchange::IKeyHandler* handler(_service->QueryInterfaceByCallsign<Exchange::IKeyHandler>(_callsign));
 
                 if (handler != nullptr) {
@@ -106,7 +100,7 @@ namespace Plugin {
         PluginHost::IShell* _service;
         string _callsign;
         string _producer;
-        TimedInput _state;
+        GPIO::TimedInput _state;
         uint32_t _marker;
     };
 

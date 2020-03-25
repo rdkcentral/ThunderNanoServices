@@ -170,7 +170,7 @@ namespace Plugin {
                 }
 
             public:
-                Core::JSON::DecUInt8 Id;
+                Core::JSON::DecUInt16 Id;
                 Core::JSON::EnumType<mode> Mode;
                 Core::JSON::Boolean ActiveLow;
                 Core::JSON::ArrayType<Handler> Handlers;
