@@ -30,14 +30,13 @@ namespace Plugin {
     struct IHandler {
         virtual ~IHandler() {}
         virtual void Trigger(GPIO::Pin& pin) = 0;
-        virtual void Interval(const uint32_t start, const uint32_t end) = 0;
     };
 
     class HandlerAdministrator {
     private:
         struct IFactory {
             virtual ~IFactory() {}
-            virtual IHandler* Factory(PluginHost::IShell* service, const string& configuration) = 0;
+            virtual IHandler* Factory(PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end) = 0;
         };
 
         HandlerAdministrator(const HandlerAdministrator&) = delete;
@@ -63,9 +62,9 @@ namespace Plugin {
             virtual ~Entry()
             {
             }
-            virtual IHandler* Factory(PluginHost::IShell* service, const string& configuration) override
+            virtual IHandler* Factory(PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end) override
             {
-                return (new HANDLER(service, configuration));
+                return (new HANDLER(service, configuration, start, end));
             }
         };
 
@@ -78,12 +77,12 @@ namespace Plugin {
         }
 
     public:
-        IHandler* Handler(const string& name, PluginHost::IShell* service, const string& configuration)
+        IHandler* Handler(const string& name, PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end)
         {
             IHandler* result = nullptr;
             std::map<const string, IFactory*>::iterator index = _factories.find(name);
             if (index != _factories.end()) {
-                result = index->second->Factory(service, configuration);
+                result = index->second->Factory(service, configuration, start, end);
             }
             return (result);
         }

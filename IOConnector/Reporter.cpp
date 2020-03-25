@@ -32,26 +32,21 @@ namespace Plugin {
         Reporter& operator=(const Reporter&);
 
     public:
-        Reporter(PluginHost::IShell* service, const string& configuration)
+        Reporter(PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end)
             : _service(service)
             , _message(configuration)
             , _state()
-            , _begin(0)
-            , _end(~0)
+            , _begin(start)
+            , _end(end)
         {
+            _state.Add(start);
+            _state.Add(end);
         }
         virtual ~Reporter()
         {
         }
 
     public:
-        void Interval(const uint32_t start, const uint32_t end) override {
-            _state.Clear();
-            _state.Add(start);
-            _state.Add(end);
-            _begin = start;
-            _end = end;
-        }
         void Trigger(GPIO::Pin& pin) override
         {
             uint32_t marker;
@@ -59,6 +54,7 @@ namespace Plugin {
             ASSERT(_service != nullptr);
 
             if ( (_state.Reached(pin.Get(), marker) == true) && (_begin == marker) ) {
+ 
                 TRACE(Trace::Information, (_T("Reached Interval [%d] - [%d] seconds."), _begin / 1000, _end / 1000));
                 _service->Notify(_message);
             }

@@ -68,29 +68,31 @@ namespace GPIO {
                 _markers.erase(index);
             }
         }
- 
-        bool Reached(bool pressed, uint32_t& marker)
+        bool Reached(bool pressed, uint32_t& marker) const
         {
             bool reached = false;
             uint64_t now = Core::Time::Now().Ticks();
+
+            marker = ~0;
+
             if (pressed == true) {
-                if (now > (_pressedTime + BounceThreshold)) {
-                    _pressedTime = now;
-                }
+                _pressedTime = now;
             }
-            // Filter out contact bounce here.
-            else if ((_pressedTime + BounceThreshold) > now) {
-                uint32_t elapsedTime = static_cast<uint32_t>(now - _pressedTime);
+            else if (_markers.size() == 0) {
+                reached = true;
+            } 
+            else if (now > (_pressedTime + BounceThreshold)) {
+                uint32_t elapsedTime = static_cast<uint32_t>( (now - _pressedTime) / Core::Time::TicksPerMillisecond );
 
                 // See which marker we have reached..
-                std::list<uint32_t>::const_iterator index;
-                while ( (index != _markers.end()) && (elapsedTime <= *index)) {
+                std::list<uint32_t>::const_iterator index (_markers.cbegin());
+                while ( (index != _markers.cend()) && (elapsedTime > *index)) {
                     marker = *index;
                     index++;
                 }
 
                 // Now we know which marker we have reached, report it.
-                reached = true;
+                reached = (index != _markers.cend());
             }
 
             return(reached);
@@ -98,7 +100,7 @@ namespace GPIO {
 
     private:
         std::list<uint32_t> _markers;
-	uint64_t _pressedTime;
+	mutable uint64_t _pressedTime;
     };
 
 } // namespace Plugin

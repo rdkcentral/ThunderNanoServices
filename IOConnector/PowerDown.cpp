@@ -60,7 +60,7 @@ namespace Plugin {
         };
 
     public:
-        PowerDown(PluginHost::IShell* service, const string& configuration)
+        PowerDown(PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end)
             : _service(service)
             , _state()
             , _marker1(0)
@@ -70,22 +70,21 @@ namespace Plugin {
             _callsign = config.Callsign.Value();
             _marker2 = config.LongPress.Value();
             _powerOff = config.PowerOff.Value();
+
+            _marker2 = start + (_marker2 - _ marker1);
+            _marker1 = start;
+            _state.Add(_marker1);
+            if (_marker2 < end) {
+                _state.Add(_marker2);
+            }
+            _state.Add(end);
+ 
         }
         virtual ~PowerDown()
         {
         }
 
     public:
-        void Interval(const uint32_t start, const uint32_t end) override {
-            _marker2 = start + (_marker2 - _ marker1);
-            _marker1 = start;
-            _state.Clear();
-            _state.Add(_marker1);
-            if (_marker2 < end) {
-                _state.Add(_marker2);
-            }
-            _state.Add(end);
-        }
         void Trigger(GPIO::Pin& pin) override
         {
             uint32_t marker;

@@ -56,25 +56,22 @@ namespace Plugin {
         };
 
     public:
-        RemotePairing(PluginHost::IShell* service, const string& configuration)
+        RemotePairing(PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end)
             : _service(service)
         {
             Config config;
             config.FromString(configuration);
             _producer = config.Producer.Value();
             _callsign = config.Callsign.Value();
+            _state.Add(start);
+            _state.Add(end);
+            _marker = start;
         }
         virtual ~RemotePairing()
         {
         }
 
     public:
-        void Interval(const uint32_t start, const uint32_t end) override {
-            _state.Clear();
-            _state.Add(start);
-            _state.Add(end);
-            _marker = start;
-        }
         void Trigger(GPIO::Pin& pin) override
         {
             uint32_t marker;

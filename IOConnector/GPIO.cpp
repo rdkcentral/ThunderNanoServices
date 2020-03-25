@@ -125,6 +125,7 @@ namespace GPIO
 
         _timedPin.DropReference();
         _timedPin.CompositRelease();
+
     }
 
     void Pin::Flush()

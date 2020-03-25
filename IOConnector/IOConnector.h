@@ -39,12 +39,11 @@ namespace Plugin {
         IOConnector& operator=(const IOConnector&) = delete;
 
         class Sink : public Exchange::IExternal::INotification {
-        private:
+        public:
             Sink() = delete;
             Sink(const Sink&) = delete;
             Sink& operator=(const Sink&) = delete;
 
-        public:
             Sink(IOConnector* parent)
                 : _parent(*parent)
             {
@@ -66,9 +65,70 @@ namespace Plugin {
         private:
             IOConnector& _parent;
         };
+        class PinHandler {
+        public:
+            PinHandler() = delete;
+            PinHandler(const PinHandler&) = delete;
+            PinHandler& operator= (const PinHandler&) = delete;
 
-        typedef std::pair<GPIO::Pin*, IHandler*> PinHandler;
-        typedef std::list<PinHandler> Pins;
+            PinHandler(GPIO::Pin* pin) 
+                : _pin(pin)
+                , _handlers() {
+
+                ASSERT (pin != nullptr);
+
+                _pin->AddRef();
+            }
+            ~PinHandler() {
+                std::list<IHandler*>::iterator index (_handlers.begin());
+
+                while (index != _handlers.end()) {
+                    delete (*index);
+                    index++;
+                }
+                _handlers.clear();
+
+                _pin->Release();;
+            }
+
+        public:
+            bool Add(PluginHost::IShell* service, const string& name, const string& config, const uint32_t begin, const uint32_t end) {
+                IHandler* method = HandlerAdministrator::Instance().Handler(name, service, config, begin, end);
+                if (method != nullptr) {
+                    _handlers.emplace_back(method);
+                }
+                return (method != nullptr);
+            }
+            void Handle() {
+                std::list<IHandler*>::iterator index (_handlers.begin());
+
+                while (index != _handlers.end()) {
+                    (*index)->Trigger(*_pin);
+                    index++;
+                }
+            }
+            GPIO::Pin* Pin() {
+                return (_pin);
+            }
+            bool Get() const {
+                return (_pin->Get());
+            }
+            void Set(const bool value) {
+                return (_pin->Set(value));
+            }
+            void Unsubscribe(Exchange::IExternal::INotification* sink) {
+                _pin->Unsubscribe(sink);
+            }
+            bool HasHandlers() const {
+                return (_handlers.size() > 0);
+            }
+
+        private:
+            GPIO::Pin* _pin;
+            std::list<IHandler*> _handlers;
+        };
+
+        typedef std::map<const uint32_t, PinHandler> Pins;
 
     public:
         class Config : public Core::JSON::Container {
