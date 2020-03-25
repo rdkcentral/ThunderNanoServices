@@ -57,9 +57,9 @@ namespace Plugin {
             if (pinId <= 0xFFFF) {
                 Pins::const_iterator entry = _pins.cbegin();
                 while (entry != _pins.cend()) {
-                    if ((entry->first->Identifier() & 0xFFFF) == pinId) {
+                    if ((entry->first & 0xFFFF) == pinId) {
                         int32_t value = 0;
-                        result = entry->first->Get(value);
+                        result = entry->second.Get();
                         response = value;
                         break;
                     } else {
@@ -86,8 +86,9 @@ namespace Plugin {
             if (pinId <= 0xFFFF) {
                 Pins::iterator entry = _pins.begin();
                 while (entry != _pins.end()) {
-                    if ((entry->first->Identifier() & 0xFFFF) == pinId) {
-                        result = entry->first->Set(param.Value());
+                    if ((entry->first & 0xFFFF) == pinId) {
+                        entry->second.Set(param.Value() != 0);
+                        result = Core::ERROR_NONE;
                         break;
                     } else {
                         ++entry;
