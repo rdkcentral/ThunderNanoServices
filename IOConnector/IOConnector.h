@@ -172,8 +172,8 @@ namespace Plugin {
                 public:
                     Core::JSON::String Name;
                     Core::JSON::String Config;
-                    Core::JSON::DecUInt8 Start;
-                    Core::JSON::DecUInt8 End;
+                    Core::JSON::DecUInt32 Start;
+                    Core::JSON::DecUInt32 End;
                 };
 
                 enum mode {
