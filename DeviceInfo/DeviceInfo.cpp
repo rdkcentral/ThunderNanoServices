@@ -24,7 +24,6 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(DeviceInfo, 1, 0);
 
-    static Core::ProxyPoolType<Web::Response> responseFactory(4);
     static Core::ProxyPoolType<Web::JSONBodyType<DeviceInfo::Data>> jsonResponseFactory(4);
 
     /* virtual */ const string DeviceInfo::Initialize(PluginHost::IShell* service)
