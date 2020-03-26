@@ -185,11 +185,6 @@ namespace Plugin {
                }
             }
 
-            // We are only interested in pages NOT used by any other process.
-            for (uint32_t i = 0; i < _bufferEntries; i++) {
-               _otherMap[i] = ~_otherMap[i];
-            }
-
             StartLogLine(1);
             LogProcess(_parentName, processes.front());
          }
@@ -225,11 +220,6 @@ namespace Plugin {
                   if (!processTree.ContainsProcess(otherId)) {
                      otherIterator.Current().MarkOccupiedPages(_otherMap, mapBufferSize);
                   }
-               }
-
-               // We are only interested in pages NOT used by any other process.
-               for (uint32_t i = 0; i < _bufferEntries; i++) {
-                  _otherMap[i] = ~_otherMap[i];
                }
 
                LogProcess(processName, processInfo);
@@ -293,10 +283,6 @@ namespace Plugin {
                   }
                }
 
-               for (uint32_t i = 0; i < _bufferEntries; i++) {
-                  _otherMap[i] = ~_otherMap[i];
-               }
-
                LogProcess(processDesc.second, processDesc.first);
             }
          }
@@ -328,17 +314,17 @@ namespace Plugin {
          }
 
     private:
-         uint32_t CountSetBits(uint32_t pageBuffer[], const uint32_t* mask)
+         uint32_t CountSetBits(uint32_t pageBuffer[], const uint32_t* inverseMask)
          {
             uint32_t count = 0;
 
-            if (mask == nullptr) {
+            if (inverseMask == nullptr) {
                for (uint32_t index = 0; index < _bufferEntries; index++) {
                   count += __builtin_popcount(pageBuffer[index]);
                }
             } else {
                for (uint32_t index = 0; index < _bufferEntries; index++) {
-                  count += __builtin_popcount(pageBuffer[index] & mask[index]);
+                  count += __builtin_popcount(pageBuffer[index] & (~inverseMask[index]));
                }
             }
 
