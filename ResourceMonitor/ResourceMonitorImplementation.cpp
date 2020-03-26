@@ -142,6 +142,7 @@ namespace Plugin {
             Core::ProcessInfo::FindByName(_parentName, false, processes);
 
             // TODO: check if only one, warning otherwise?
+            // TOOD: what if none found? will cause segfault when using .front() later on.
 
             uint32_t mapBufferSize = sizeof(_ourMap[0]) * _bufferEntries;
             memset(_ourMap, 0, mapBufferSize);
@@ -185,7 +186,7 @@ namespace Plugin {
             }
 
             StartLogLine(1);
-            LogProcess(_parentName);
+            LogProcess(_parentName, processes.front());
          }
 
          void CollectMultiple()
@@ -226,7 +227,7 @@ namespace Plugin {
                   _otherMap[i] = ~_otherMap[i];
                }
 
-               LogProcess(processName);
+               LogProcess(processName, processInfo);
             }
          }
 
@@ -292,7 +293,9 @@ namespace Plugin {
                   _otherMap[i] = ~_otherMap[i];
                }
 
-               LogProcess(processDesc.second);
+               // TODO: can we store process info beforehand?
+               Core::ProcessInfo processInfo(processDesc.first);
+               LogProcess(processDesc.second, processInfo);
             }
          }
 
@@ -340,16 +343,18 @@ namespace Plugin {
             return count;
          }
 
-         void LogProcess(const string& name)
+         void LogProcess(const string& name, const Core::ProcessInfo& info)
          {
             uint32_t vss = CountSetBits(_ourMap, nullptr);
             uint32_t uss = CountSetBits(_ourMap, _otherMap);
+            uint64_t jiffies = info.Jiffies();
 
             uint32_t nameSize = name.length();
             fwrite(&nameSize, sizeof(nameSize), 1, _binFile);
             fwrite(name.c_str(), sizeof(name[0]), name.length(), _binFile);
             fwrite(&vss, 1, sizeof(vss), _binFile);
             fwrite(&uss, 1, sizeof(uss), _binFile);
+            fwrite(&jiffies, 1, sizeof(jiffies), _binFile);
             fflush(_binFile);
          }
 
@@ -357,9 +362,11 @@ namespace Plugin {
          {
             // TODO: no simple time_t alike in Thunder?
             uint32_t timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
+            uint64_t jiffies = Core::SystemInfo::Instance().GetJiffies();
 
             fwrite(&timestamp, 1, sizeof(timestamp), _binFile);
             fwrite(&processCount, 1, sizeof(processCount), _binFile);
+            fwrite(&jiffies, 1, sizeof(jiffies), _binFile);
          }
 
          FILE *_binFile;
@@ -418,13 +425,13 @@ namespace Plugin {
          vector<string> processNames;
          _processThread->GetProcessNames(processNames);
 
-         output << _T("time (s)");
+         output << _T("time (s)\tJiffies");
          for (const string& processName : processNames) {
-            output << _T("\t") << processName << _T(" (VSS)\t") << processName << _T(" (USS)");
+            output << _T("\t") << processName << _T(" (VSS)\t") << processName << _T(" (USS)\t") << processName << _T(" (jiffies)");
          }
          output << endl;
 
-         vector<uint32_t> pageVector(processNames.size() * 2);
+         vector<uint64_t> pageVector(processNames.size() * 3);
          bool seenFirstTimestamp = false;
          uint32_t firstTimestamp = 0;
 
@@ -445,31 +452,38 @@ namespace Plugin {
             uint32_t processCount = 0;
             fread(&processCount, sizeof(processCount), 1, inFile);
 
+            uint64_t totalJiffies = 0;
+            fread(&totalJiffies, sizeof(totalJiffies), 1, inFile);
+
             for (uint32_t processIndex = 0; processIndex < processCount; processIndex++) {
                uint32_t nameLength = 0;
                fread(&nameLength, sizeof(nameLength), 1, inFile);
                // TODO: unicode?
                char nameBuffer[nameLength + 1];
                fread(nameBuffer, sizeof(char), nameLength, inFile);
+
                nameBuffer[nameLength] = '\0';
                string name(nameBuffer);
 
                vector<string>::const_iterator nameIterator = std::find(processNames.cbegin(), processNames.cend(), name);
 
                uint32_t vss, uss;
+               uint64_t jiffies;
                fread(&vss, sizeof(vss), 1, inFile);
                fread(&uss, sizeof(uss), 1, inFile);
+               fread(&jiffies, sizeof(jiffies), 1, inFile);
                if (nameIterator == processNames.cend()) {
                    continue;
                }
 
                int index = nameIterator - processNames.cbegin();
 
-               pageVector[index * 2] = vss;
-               pageVector[index * 2 + 1] = uss;
+               pageVector[index * 3] = static_cast<uint64_t>(vss);
+               pageVector[index * 3 + 1] = static_cast<uint64_t>(uss);
+               pageVector[index * 3 + 2] = jiffies;
             }
 
-            output << (timestamp - firstTimestamp);
+            output << (timestamp - firstTimestamp) << "\t" << totalJiffies;
             for (uint32_t pageEntry : pageVector) {
                output << "\t" << pageEntry;
             }
