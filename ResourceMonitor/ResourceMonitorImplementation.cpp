@@ -15,9 +15,6 @@ using std::vector;
 
 namespace WPEFramework {
 namespace Plugin {
-   // TODO: read name via link from "/usr/bin/WPEFramework" ?
-   const string g_parentProcessName = _T("WPEFramework-1.0.0");
-
    class ResourceMonitorImplementation : public Exchange::IResourceMonitor {
   private:
       class Config : public Core::JSON::Container {
@@ -143,6 +140,14 @@ namespace Plugin {
 
             // TODO: check if only one, warning otherwise?
             // TOOD: what if none found? will cause segfault when using .front() later on.
+            if (processes.empty()) {
+               TRACE_L1("Failed to find process %s", _parentName);
+               return;
+            }
+
+            if (processes.size() > 1) {
+               TRACE_L1("Found more than one process named %s, only tracking first", _parentName);
+            }
 
             uint32_t mapBufferSize = sizeof(_ourMap[0]) * _bufferEntries;
             memset(_ourMap, 0, mapBufferSize);
@@ -163,9 +168,9 @@ namespace Plugin {
 
                processTree.MarkOccupiedPages(_ourMap, mapBufferSize);
 
-               for (::ThreadId pid : processTree.GetProcessIds()) {
-                  processIds.push_back(pid);
-               }
+               std::list<::ThreadId> addedProcessIds;
+               processTree.GetProcessIds(addedProcessIds);
+               processIds.insert(processIds.end(), addedProcessIds.begin(), addedProcessIds.end());
             }
 
             memset(_otherMap, 0, mapBufferSize);
@@ -238,7 +243,7 @@ namespace Plugin {
             list<Core::ProcessInfo> processes;
             Core::ProcessInfo::FindByName(processName, false, processes);
 
-            vector<std::pair<::ThreadId, string> > processIds;
+            vector<std::pair<Core::ProcessInfo, string> > processIds;
             for (const Core::ProcessInfo& processInfo : processes) {
                std::list<string> commandLine = processInfo.CommandLine();
 
@@ -253,7 +258,7 @@ namespace Plugin {
                      if (*i == _parentName) {
                         columnName = _parentName + " (" + std::to_string(processInfo.Id()) + ")";
                         processIds.push_back(std::pair<::ThreadId, string>(processInfo.Id(), columnName));
-                           shouldTrack = true;
+                        shouldTrack = true;
                      }
                   }
                }
@@ -270,8 +275,7 @@ namespace Plugin {
             }
 
             StartLogLine(processIds.size());
-
-            for (std::pair<::ThreadId, string> processDesc : processIds) {
+            for (std::pair<Core::ProcessInfo, string> processDesc : processIds) {
                Core::ProcessTree tree(processDesc.first);
 
                uint32_t mapBufferSize = sizeof(_ourMap[0]) * _bufferEntries;
@@ -293,9 +297,7 @@ namespace Plugin {
                   _otherMap[i] = ~_otherMap[i];
                }
 
-               // TODO: can we store process info beforehand?
-               Core::ProcessInfo processInfo(processDesc.first);
-               LogProcess(processDesc.second, processInfo);
+               LogProcess(processDesc.second, processDesc.first);
             }
          }
 
