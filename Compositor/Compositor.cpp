@@ -314,6 +314,9 @@ namespace Plugin {
 
             _adminLock.Unlock();
 
+            // Client should be on top.
+            client->ZOrder(0);
+
             TRACE(Trace::Information, (_T("Client %s attached"), name.c_str()));
         }
     }
