@@ -23,12 +23,55 @@
 
 #include <regex>
 
+// helper functions
+namespace {
+    
+    void ReplaceString(std::string& subject, const std::string& search,const std::string& replace) 
+    {
+        size_t pos = 0;
+        while ((pos = subject.find(search, pos)) != std::string::npos) {
+             subject.replace(pos, search.length(), replace);
+             pos += replace.length();
+        }
+    }
+    
+    std::string CreateRegex(const std::string& input)
+    {
+        std::string regex = input;
+        
+        // order of replacing is important
+        ReplaceString(regex,"*","^[a-zA-Z0-9.]+$");
+        ReplaceString(regex,".","\\.");
+        
+        return regex;
+    }
+    
+    std::string CreateUrlRegex(const std::string& input)
+    {
+        std::string regex = input;
+        
+        // order of replacing is important
+        ReplaceString(regex,"/","\\/");
+        ReplaceString(regex,"[","\\[");
+        ReplaceString(regex,"]","\\]");
+        ReplaceString(regex,":*",":[0-9]+");
+        ReplaceString(regex,"*:","[a-z]+:");
+        ReplaceString(regex,".","\\.");
+        ReplaceString(regex,"*","[a-zA-Z0-9\\.]+");
+        regex.insert(regex.begin(),'(');
+        regex.insert(regex.end(),')');
+        
+        return regex;
+    }
+
+}
+
 namespace WPEFramework {
 namespace Plugin {
 
     //Allow -> Check first
-    //			if Block then check for Block[] and block if present
-    //			 else must be explicitly allowed
+    //if Block then check for Block[] and block if present
+    //else must be explicitly allowed
 
     class EXTERNAL AccessControlList {
     private:
@@ -170,12 +213,15 @@ namespace Plugin {
             Filter(const JSONACL::Config& filter)
             {
                 Core::JSON::ArrayType<Core::JSON::String>::ConstIterator index(filter.Allow.Elements());
+                std::string str;
                 while (index.Next() == true) {
-                    _allow.emplace_back(index.Current().Value());
+                    str = index.Current().Value();
+                    _allow.emplace_back(CreateRegex(str));
                 }
                 index = (filter.Block.Elements());
                 while (index.Next() == true) {
-                    _block.emplace_back(index.Current().Value());
+                    str = index.Current().Value();
+                    _block.emplace_back(CreateRegex(str));
                 }
             }
             ~Filter()
@@ -188,15 +234,19 @@ namespace Plugin {
                 bool allowed = false;
                 if (_allowSet) {
                     std::list<string>::const_iterator index(_allow.begin());
-                    while ((index != _allow.end()) && (allowed == false)) {
-                        allowed = strncmp(index->c_str(), method.c_str(), index->length()) == 0;
+                    while ((index != _allow.end()) && (allowed == false)) { 
+                        std::regex expression(index->c_str());
+                        std::smatch matchList;
+                        allowed = std::regex_search(method, matchList, expression);
                         index++;
                     }
                 } else {
                     allowed = true;
                     std::list<string>::const_iterator index(_block.begin());
                     while ((index != _block.end()) && (allowed == true)) {
-                        allowed = strncmp(index->c_str(), method.c_str(), index->length()) != 0;
+                        std::regex expression(index->c_str());
+                        std::smatch matchList;
+                        allowed = !std::regex_search(method, matchList, expression);
                         index++;
                     }
                 }
@@ -302,9 +352,12 @@ namespace Plugin {
                     }
                 } else {
                     Filter& entry(selectedFilter->second);
-
+                    
+                    // create regex for url
+                    std::string url_regex = CreateUrlRegex(index.Current().URL.Value());
+                    
                     _urlMap.emplace_back(std::pair<string, Filter&>(
-                        index.Current().URL.Value(), entry));
+                        url_regex, entry));
 
                     std::list<string>::iterator found = std::find(_unusedRoles.begin(), _unusedRoles.end(), role);
 
@@ -317,7 +370,8 @@ namespace Plugin {
         }
 
     private:
-        URLList _urlMap;
+	//_urlMap contains list of entries of urls under "groups" to the allow/block filters set for that role under "thunder"
+        URLList _urlMap; 
         std::map<string, Filter> _filterMap;
         std::list<string> _unusedRoles;
         std::list<string> _undefinedURLS;
