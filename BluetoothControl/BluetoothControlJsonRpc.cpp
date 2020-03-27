@@ -120,7 +120,7 @@ namespace Plugin {
 
         DeviceImpl* device = Find(Bluetooth::Address(address.c_str()));
         if (device != nullptr) {
-            result = device->Disconnect(2);
+            result = device->Disconnect();
         }
 
         return (result);
@@ -137,9 +137,9 @@ namespace Plugin {
         uint32_t result = Core::ERROR_UNKNOWN_KEY;
         const string& address = params.Address.Value();
 
-        DeviceImpl* device = Find(Bluetooth::Address(address.c_str()));
+        DeviceImpl* device = Find<DeviceImpl>(Bluetooth::Address(address.c_str()));
         if (device != nullptr) {
-            result = device->Pair(IBluetooth::IDevice::DISPLAY_ONLY);
+            result = device->Pair(IBluetooth::DISPLAY_YES_NO);
         }
 
         return (result);
@@ -155,7 +155,7 @@ namespace Plugin {
         uint32_t result = Core::ERROR_UNKNOWN_KEY;
         const string& address = params.Address.Value();
 
-        DeviceImpl* device = Find(Bluetooth::Address(address.c_str()));
+        DeviceImpl* device = Find<DeviceImpl>(Bluetooth::Address(address.c_str()));
         if (device != nullptr) {
             result = device->Unpair();
         }
@@ -226,13 +226,16 @@ namespace Plugin {
 
         DeviceImpl* device = Find(Bluetooth::Address(index.c_str()));
         if (device != nullptr) {
-            response.Name = device->Name();
             response.Type = (device->LowEnergy()? DevicetypeType::LOWENERGY : DevicetypeType::CLASSIC);
+            if (device->Name().empty() == false) {
+                response.Name = device->Name();
+            }
             if (device->Class() != 0) {
                 response.Class = device->Class();
             }
             response.Connected = device->IsConnected();
             response.Paired = device->IsBonded();
+
             result = Core::ERROR_NONE;
         }
 

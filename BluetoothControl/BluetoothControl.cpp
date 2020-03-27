@@ -302,7 +302,6 @@ namespace Plugin {
 
         if (index.IsValid() == true) {
             if (index.Next()) {
-
                 if (index.Current() == _T("Scan")) {
                     Core::URL::KeyValue options(request.Query.Value());
 
@@ -333,7 +332,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Device not found.");
                     } else if (pair == true) {
-                        uint32_t res = device->Pair(IBluetooth::IDevice::DISPLAY_ONLY);
+                        uint32_t res = device->Pair(IBluetooth::DISPLAY_YES_NO);
                         if (res == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Paired device.");
@@ -407,14 +406,7 @@ namespace Plugin {
                             result->Message = _T("Unable to Unpair device.");
                         }
                     } else {
-                        uint16_t reason = 0;
-                        if (index.Next() == true) {
-                            reason = Core::NumberType<uint16_t>(index.Current()).Value();
-                        } else if (request.HasBody() == true) {
-                            reason = request.Body<const DeviceImpl::Data>()->Reason;
-                        }
-
-                        if (device->Disconnect(reason) == Core::ERROR_NONE) {
+                        if (device->Disconnect() == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Disconnected device.");
                         } else {
@@ -518,26 +510,21 @@ namespace Plugin {
     }
     BluetoothControl::DeviceImpl* BluetoothControl::Discovered(const bool lowEnergy, const Bluetooth::Address& address, const Bluetooth::EIR& info)
     {
-        DeviceImpl* impl = nullptr;
-
         _adminLock.Lock();
 
-        std::list<DeviceImpl*>::iterator index = _devices.begin();
+        DeviceImpl* impl = Find(address, lowEnergy);
 
-        while ((index != _devices.end()) && (*(*index) != address)) {
-            index++;
-        }
-
-        if (index == _devices.end()) {
+        if (impl == nullptr) {
             if (lowEnergy == true) {
-                _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address, info));
+                impl = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address, info);
             } else {
-                _devices.push_back(Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address, info));
+                impl = Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address, info);
             }
 
-            impl = _devices.back();
+            ASSERT(impl != nullptr);
+            _devices.push_back(impl);
 
-            TRACE(Trace::Information, (_T("Added %s Bluetooth device: %s, name: %s, class: 0x%06X"),
+            TRACE(Trace::Information, (_T("Added %s Bluetooth device: %s, name: '%s', class: 0x%06X"),
                                        (lowEnergy? "LowEnergy" : "classic"), address.ToString().c_str(),
                                        impl->Name().c_str(), impl->Class()));
 
@@ -589,7 +576,19 @@ namespace Plugin {
 
         return (index != _devices.end() ? (*index) : nullptr);
     }
-    BluetoothControl::DeviceImpl* BluetoothControl::Find(const uint16_t handle) const {
+    BluetoothControl::DeviceImpl* BluetoothControl::Find(const Bluetooth::Address& search, bool lowEnergy) const
+    {
+        std::list<DeviceImpl*>::const_iterator index = _devices.begin();
+
+        while ((index != _devices.end()) && ((*index)->operator==(std::make_pair(search, lowEnergy)) == false)) {
+            index++;
+        }
+
+        return (index != _devices.end() ? (*index) : nullptr);
+    }
+    template<typename DEVICE=BluetoothControl::DeviceImpl>
+    DEVICE* BluetoothControl::Find(const uint16_t handle) const
+    {
         std::list<DeviceImpl*>::const_iterator index = _devices.begin();
 
         while ((index != _devices.end()) && ((*index)->ConnectionId() != handle)) {
