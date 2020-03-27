@@ -18,6 +18,8 @@
 set(PLUGIN_NAME WifiControl)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
+set(PLUGIN_WIFICONTROL_AUTOSTART true CACHE STRING "Automatically start WifiControl plugin")
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)

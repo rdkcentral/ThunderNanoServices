@@ -17,10 +17,11 @@
  * limitations under the License.
  */
  
-#include <interfaces/IPower.h>
-
+#include "Module.h"
 #include "Handler.h"
 #include "TimedInput.h"
+
+#include <interfaces/IPower.h>
 
 namespace WPEFramework {
 
@@ -28,16 +29,11 @@ namespace Plugin {
 
     class PowerDown : public IHandler {
     private:
-        PowerDown();
-        PowerDown(const PowerDown&);
-        PowerDown& operator=(const PowerDown&);
-
         class Config : public Core::JSON::Container {
-        private:
+        public:
             Config(const Config& copy) = delete;
             Config& operator=(const Config& RHS) = delete;
 
-        public:
             Config()
                 : Callsign()
                 , State()
@@ -48,7 +44,7 @@ namespace Plugin {
                 Add(_T("longpress"), &LongPress);
                 Add(_T("poweroff"), &PowerOff);
             }
-            virtual ~Config()
+            ~Config() override
             {
             }
 
@@ -59,7 +55,11 @@ namespace Plugin {
         };
 
     public:
-        PowerDown(PluginHost::IShell* service, const string& configuration)
+        PowerDown() = delete;
+        PowerDown(const PowerDown&) = delete;
+        PowerDown& operator=(const PowerDown&) = delete;
+
+        PowerDown(PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end)
             : _service(service)
             , _state()
             , _marker1(0)
@@ -69,29 +69,28 @@ namespace Plugin {
             _callsign = config.Callsign.Value();
             _marker2 = config.LongPress.Value();
             _powerOff = config.PowerOff.Value();
-        }
-        virtual ~PowerDown()
-        {
-        }
 
-    public:
-        void Interval(const uint32_t start, const uint32_t end) override {
             _marker2 = start + (_marker2 - _ marker1);
             _marker1 = start;
-            _state.Clear();
             _state.Add(_marker1);
             if (_marker2 < end) {
                 _state.Add(_marker2);
             }
             _state.Add(end);
+ 
         }
+        ~PowerDown() override
+        {
+        }
+
+    public:
         void Trigger(GPIO::Pin& pin) override
         {
             uint32_t marker;
 
             ASSERT(_service != nullptr);
 
-            if (_state.Analyse(pin.Set(), marker) == true) {
+            if (_state.Reached(pin.Get(), marker) == true) {
                 Exchange::IPower* handler(_service->QueryInterfaceByCallsign<Exchange::IPower>(_callsign));
 
                 if (handler != nullptr) {
@@ -125,7 +124,7 @@ namespace Plugin {
     private:
         PluginHost::IShell* _service;
         string _callsign;
-        TimedInput _state;
+        GPIO::TimedInput _state;
         uint32_t _marker1;
         uint32_t _marker2;
         Exchange::IPower::PCState _powerOff;
