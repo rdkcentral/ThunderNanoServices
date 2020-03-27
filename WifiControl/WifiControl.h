@@ -133,6 +133,60 @@ namespace Plugin {
             uint32_t _pid;
         };
 
+        class WifiConnector
+        {
+        public:
+            WifiConnector() = delete;
+            WifiConnector(const WifiConnector&) = delete;
+            WifiConnector& operator=(const WifiConnector&) = delete;
+
+            using Job = Core::WorkerPool::JobType<WifiConnector&>;
+
+        public:
+            WifiConnector(WifiControl* parent)
+                : _adminLock()
+                , _parent(*parent)
+                , _job(*this)
+                , _connectInProgress(false)
+            {
+                ASSERT(parent != nullptr);
+            }
+            ~WifiConnector()
+            {
+            }
+            void Dispatch()
+            {
+                _parent.Connect();
+
+                _adminLock.Lock();
+                _connectInProgress = false;
+                _adminLock.Unlock();
+            }
+            void Connect()
+            {
+                uint64_t scheduleTime = 0;
+
+                _adminLock.Lock();
+
+                if (_connectInProgress == false) {
+                    scheduleTime = Core::Time::Now().Ticks();
+                    _connectInProgress = true;
+                }
+
+                _adminLock.Unlock();
+
+                if (scheduleTime != 0) {
+                    _job.Schedule(scheduleTime);
+                }
+            }
+
+        private:
+            Core::CriticalSection _adminLock;
+            WifiControl& _parent;
+            Job _job;
+            bool _connectInProgress;
+        };
+
     public:
         class Config : public Core::JSON::Container {
         private:
@@ -141,13 +195,16 @@ namespace Plugin {
 
         public:
             Config()
-                : Connector(_T("/var/run/wpa_supplicant"))
+                : Core::JSON::Container()
+                , Connector(_T("/var/run/wpa_supplicant"))
                 , Interface(_T("wlan0"))
                 , Application(_T("/usr/sbin/wpa_supplicant"))
+                , AutoConnect(false)
             {
                 Add(_T("connector"), &Connector);
                 Add(_T("interface"), &Interface);
                 Add(_T("application"), &Application);
+                Add(_T("autoconnect"), &AutoConnect);
             }
             virtual ~Config()
             {
@@ -157,6 +214,7 @@ namespace Plugin {
             Core::JSON::String Connector;
             Core::JSON::String Interface;
             Core::JSON::String Application;
+            Core::JSON::Boolean AutoConnect;
         };
 
         static void FillNetworkInfo(const WPASupplicant::Network& info, JsonData::WifiControl::NetworkInfo& net)
@@ -322,6 +380,21 @@ namespace Plugin {
             UnregisterAll();
         }
 
+        uint32_t Connect()
+        {
+            uint32_t result = Core::ERROR_BAD_REQUEST;
+
+            WPASupplicant::Config::Iterator list(_controller->Configs());
+            while (list.Next() == true) {
+                const WPASupplicant::Config& element = list.Current();
+                result = _controller->Connect(element.SSID().c_str());
+                if (result == Core::ERROR_NONE) {
+                    break;
+                }
+            }
+            return (result);
+        }
+
         BEGIN_INTERFACE_MAP(WifiControl)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
@@ -355,6 +428,9 @@ namespace Plugin {
         Sink _sink;
         WifiDriver _wpaSupplicant;
         Core::ProxyType<WPASupplicant::Controller> _controller;
+        WifiConnector _wifiConnector;
+        bool _connectedState;
+        bool _autoConnect;
         void RegisterAll();
         void UnregisterAll();
         uint32_t endpoint_delete(const JsonData::WifiControl::DeleteParamsInfo& params);
