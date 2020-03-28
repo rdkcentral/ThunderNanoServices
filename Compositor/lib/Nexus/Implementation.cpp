@@ -52,9 +52,11 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , HardwareDelay(0)
                 , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
+                , AllowedClients()
             {
                 Add(_T("hardwareready"), &HardwareDelay);
                 Add(_T("resolution"), &Resolution);
+                Add(_T("allowedclients"), &AllowedClients);
             }
             ~Config()
             {
@@ -63,6 +65,7 @@ namespace Plugin {
         public:
             Core::JSON::DecUInt8 HardwareDelay;
             Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
+            Core::JSON::ArrayType<Core::JSON::String> AllowedClients;
         };
 
         class Postpone : public Core::Thread {
@@ -156,6 +159,7 @@ namespace Plugin {
             , _service(nullptr)
             , _observers()
             , _clients()
+            , _allowedClients()
             , _joined(false)
             , _joinSettings()
             , _displayFormat()
@@ -206,6 +210,11 @@ namespace Plugin {
 
             Config info;
             info.FromString(configuration);
+
+            auto index(info.AllowedClients.Elements());
+            while (index.Next() == true) {
+                _allowedClients.emplace_back(index.Current().Value());
+            }
 
             HardwareDelay(info.HardwareDelay.Value(), info.Resolution.Value());
 
@@ -341,27 +350,42 @@ namespace Plugin {
                 if (name.empty() == true) {
                     TRACE(Trace::Information, (_T("Registration of a nameless client.")));
                 } else {
-                    std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
+                    bool allowed = true;
 
-                    while ((index != _clients.end()) && (name != (*index)->Name())) {
-                        index++;
+                    if (!_allowedClients.empty()) {
+                        std::list<string>::iterator index(_allowedClients.begin());
+                        while ((index != _allowedClients.end()) && (name != (*index))) {
+                            index++;
+                        }
+                        if (index == _allowedClients.end()) {
+                            TRACE(Trace::Information, (_T("Allowed list not empty and client %s not there."), name.c_str()));
+                            allowed = false;
+                        }
                     }
 
-                    if (index != _clients.end()) {
-                        TRACE(Trace::Information, (_T("Client already registered %s."), name.c_str()));
-                    } else {
-                        client->AddRef();
-                        _clients.push_back(client);
+                    if (allowed) {
+                        std::list<Exchange::IComposition::IClient*>::iterator index(_clients.begin());
 
-                        TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
+                        while ((index != _clients.end()) && (name != (*index)->Name())) {
+                            index++;
+                        }
 
-                        if (_observers.size() > 0) {
+                        if (index != _clients.end()) {
+                            TRACE(Trace::Information, (_T("Client already registered %s."), name.c_str()));
+                        } else {
+                            client->AddRef();
+                            _clients.push_back(client);
 
-                            std::list<Exchange::IComposition::INotification*>::iterator index(_observers.begin());
+                            TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
 
-                            while (index != _observers.end()) {
-                                (*index)->Attached(name, client);
-                                index++;
+                            if (_observers.size() > 0) {
+
+                                std::list<Exchange::IComposition::INotification*>::iterator index(_observers.begin());
+
+                                while (index != _observers.end()) {
+                                    (*index)->Attached(name, client);
+                                    index++;
+                                }
                             }
                         }
                     }
@@ -453,6 +477,7 @@ namespace Plugin {
         PluginHost::IShell* _service;
         std::list<Exchange::IComposition::INotification*> _observers;
         std::list<Exchange::IComposition::IClient*> _clients;
+        std::list<string> _allowedClients;
 
         bool _joined;
         NxClient_JoinSettings _joinSettings;
