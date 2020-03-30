@@ -59,7 +59,7 @@ namespace Plugin {
                 while (entry != _pins.cend()) {
                     if ((entry->first & 0xFFFF) == pinId) {
                         response = entry->second.Get();
-                        result = ERROR_NONE;
+                        result = Core::ERROR_NONE;
                         break;
                     } else {
                         ++entry;
