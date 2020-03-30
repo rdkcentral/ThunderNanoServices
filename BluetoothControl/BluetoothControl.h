@@ -771,8 +771,8 @@ class BluetoothControl : public PluginHost::IPlugin
             public:
                 void Submit(bool enable)
                 {
-                    Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
                     _enable = enable;
+                    Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
                 }
 
             private:
