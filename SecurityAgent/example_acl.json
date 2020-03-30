@@ -1,5 +1,5 @@
 {
-  "groups": [
+  "assign": [
     {
       "url": "*://localhost",
       "role": "local"
@@ -134,223 +134,85 @@
     }
   ],
   "roles": {
-    "default": {
-      "url": {
-        "allow": [
-          "*"
-        ],
-        "block": [
-          "*://localhost",
-          "*://localhost:*",
-          "*://127.0.0.1",
-          "*://127.0.0.1:*",
-          "*://[::1]",
-          "*://[::1]:*",
-          "*://[0:0:0:0:0:0:0:1]",
-          "*://[0:0:0:0:0:0:0:1]:*",
-          "file://*"
-        ]
-      },
-      "serviceManager": {
-        "block": [
-          "*"
-        ]
-      },
-      "rtRemote": {
-        "block": [
-          "*"
-        ]
-      },
-      "features": {
-        "allow": [
-          "*"
-        ]
-      },
-      "applications": {
-        "allow": [
-          "*"
+    "default" : {
+      "thunder": {
+        "block" : [
+            "*"
         ]
       }
     },
     "xreapps.net": {
-      "serviceManager": {
-        "allow": [
-          "get_*"
-
-        ]
-      },
-      "rtRemote": {
-        "block": [
-          "*"
-        ]
-      },
-      "features": {
+      "thunder": {
         "allow": [
           "*"
-        ]
-      },
-      "applications": {
-        "allow": [
-          "*"
+        ],
+        "block" : [
+            "DeviceInfo"
         ]
       }
     },
     "local": {
-      "url": {
+      "thunder": {
         "allow": [
           "*"
-        ]
-      },
-      "serviceManager": {
-        "allow": [
-          "*"
-        ]
-      },
-      "rtRemote": {
-        "block": [
-          "*"
-        ]
-      },
-      "features": {
-        "allow": [
-          "*"
-        ]
-      },
-      "applications": {
-        "allow": [
-          "*"
+        ],
+        "block" : [
         ]
       }
     },
     "comcast": {
-      "DeviceInfo": {
+      "thunder": {
         "allow": [
-          "*"
-        ]
-      },
-      "Tracing": {
-        "block": [
-          "*"
+          "DeviceInfo"
+        ],
+        "block" : [
         ]
       }
     },
     "metrological": {
-      "DeviceInfo": {
+      "thunder": {
         "allow": [
           "*"
-        ]
-      },
-      "Tracing": {
-        "allow": [
-          "*"
+        ],
+        "block" : [
         ]
       }
     },
     "pxscene.org": {
-      "url": {
+      "thunder": {
         "allow": [
           "*"
-        ]
-      },
-      "serviceManager": {
-        "allow": [
-          "*"
-        ]
-      },
-      "rtRemote": {
-        "block": [
-          "*"
-        ]
-      },
-      "features": {
-        "allow": [
-          "*"
-        ]
-      },
-      "applications": {
-        "allow": [
-          "*"
+        ],
+        "block" : [
         ]
       }
     },
     "pxscene-samples": {
-      "url": {
+     "thunder": {
         "allow": [
           "*"
-        ]
-      },
-      "serviceManager": {
-        "allow": [
-          "*"
-        ]
-      },
-      "rtRemote": {
-        "block": [
-          "*"
-        ]
-      },
-      "features": {
-        "allow": [
-          "*"
-        ]
-      },
-      "applications": {
-        "allow": [
-          "*"
+        ],
+        "block" : [
         ]
       }
     },
     "cts": {
-      "url": {
+      "thunder": {
         "allow": [
           "*"
-        ]
-      },
-      "serviceManager": {
-        "allow": [
-          "*"
-        ]
-      },
-      "rtRemote": {
-        "block": [
-          "*"
-        ]
-      },
-      "features": {
-        "allow": [
-          "*"
-        ]
-      },
-      "applications": {
-        "allow": [
-          "*"
+        ],
+        "block" : [
+        "DeviceInfo"
         ]
       }
     },
     "sparkui.org": {
-      "url": {
+      "thunder": {
         "allow": [
           "*"
-        ]
-      },
-      "serviceManager": {
-        "allow": [
-          "*"
-        ]
-      },
-      "rtRemote": {
-        "block": [
-          "*"
-        ]
-      },
-      "features": {
-        "allow": [
-          "*"
-        ]
-      },
-      "applications": {
-        "allow": [
-          "*"
+        ],
+        "block" : [
+            "DeviceInfo"
         ]
       }
     }
