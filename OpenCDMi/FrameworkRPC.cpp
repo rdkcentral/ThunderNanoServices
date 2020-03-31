@@ -574,9 +574,9 @@ namespace Plugin {
                     _mediaKeySession->Close();
                 }
 
-                virtual void PlaybackStopped() override {
-                    TRACE_L1("PlaybackStopped! %p", this);
-                    _mediaKeySession->PlaybackStopped();
+                virtual void ResetOutputProtection() override {
+                    TRACE_L1("ResetOutputProtection! %p", this);
+                    _mediaKeySession->ResetOutputProtection();
                 }
 
                 virtual void Revoke(OCDM::ISession::ICallback* callback) override
