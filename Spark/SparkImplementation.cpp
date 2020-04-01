@@ -168,7 +168,7 @@ namespace Plugin {
                 virtual void Execute() override {
 
                     if (_parent._view != nullptr) {
-                        pxScriptView* realClass = reinterpret_cast<pxScriptView*>(_parent._view.getPtr());
+                        pxScriptView* realClass = static_cast<pxScriptView*>(_parent._view.getPtr());
 
                         if (realClass != nullptr) {
                             rtValue r;
