@@ -83,15 +83,16 @@ namespace Plugin {
          Core::JSON::String ParentName;
       };
 
-      class ProcessThread : public Core::Thread {
+      class StatCollecter {
      public:
-         explicit ProcessThread(const Config& config)
+         explicit StatCollecter(const Config& config)
              : _binFile(nullptr)
              , _otherMap(nullptr)
              , _ourMap(nullptr)
              , _bufferEntries(0)
              , _interval(0)
              , _collectMode(Config::CollectMode::Invalid)
+             , _activity(*this)
          {
             _binFile = fopen(config.Path.Value().c_str(), "w");
 
@@ -111,13 +112,12 @@ namespace Plugin {
             _interval = config.Interval.Value();
             _collectMode = config.GetCollectMode();
             _parentName = config.ParentName.Value();
+
+            _activity.Submit();
          }
 
-         ~ProcessThread()
+         ~StatCollecter()
          {
-            Core::Thread::Stop();
-            Core::Thread::Wait(STOPPED, Core::infinite);
-
             fclose(_binFile);
 
             delete [] _ourMap;
@@ -288,7 +288,7 @@ namespace Plugin {
          }
 
      protected:
-         virtual uint32_t Worker()
+         void Dispatch()
          {
             switch(_collectMode) {
                case Config::CollectMode::Single:
@@ -308,9 +308,7 @@ namespace Plugin {
                   break;
             }
 
-
-            Thread::Block();
-            return _interval * 1000;
+            _activity.Schedule(Core::Time::Now().Add(_interval * 1000));
          }
 
     private:
@@ -366,6 +364,9 @@ namespace Plugin {
          uint32_t _interval; // Seconds between measurement.
          Config::CollectMode _collectMode; // Collection style.
          string _parentName; // Process/plugin name we are looking for.
+         Core::WorkerPool::JobType<StatCollecter&> _activity;
+
+         friend Core::ThreadPool::JobType<StatCollecter&>;
       };
 
   private:
@@ -398,8 +399,7 @@ namespace Plugin {
 
          result = Core::ERROR_NONE;
 
-         _processThread = new ProcessThread(config);
-         _processThread->Run();
+         _processThread = new StatCollecter(config);
 
          return (result);
       }
@@ -488,7 +488,7 @@ namespace Plugin {
       END_INTERFACE_MAP
 
   private:
-      ProcessThread* _processThread;
+      StatCollecter* _processThread;
       string _binPath;
    };
 
