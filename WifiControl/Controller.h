@@ -313,6 +313,7 @@ namespace WPASupplicant {
                 : Request()
                 , _scanning(false)
                 , _parent(parent)
+                , _eventReporting(~0)
             {
             }
             virtual ~ScanRequest()
@@ -340,6 +341,10 @@ namespace WPASupplicant {
             {
                 return (Request::Set(string(_TXT("SCAN_RESULTS"))));
             }
+            inline void Event(const events value)
+            {
+                _eventReporting = value;
+            }
             virtual void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
@@ -355,6 +360,10 @@ namespace WPASupplicant {
                         NetworkInfo newEntry;
                         _parent.Add(Transform(element, newEntry), newEntry);
                     }
+                }
+                if (_eventReporting != static_cast<uint32_t>(~0)) {
+                    _parent.Notify(static_cast<events>(_eventReporting));
+                    _eventReporting = static_cast<uint32_t>(~0);
                 }
                 _scanning = false;
             }
@@ -394,6 +403,7 @@ namespace WPASupplicant {
         private:
             bool _scanning;
             Controller& _parent;
+            uint32_t _eventReporting;
         };
         class StatusRequest : public Request {
         private:

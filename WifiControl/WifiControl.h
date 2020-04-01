@@ -143,11 +143,26 @@ namespace Plugin {
             using Job = Core::WorkerPool::JobType<WifiConnector&>;
 
         public:
+            enum states
+            {
+                CONN_STATE_SCANNING,
+                CONN_STATE_SCANNED,
+                CONN_STATE_CONNECTING,
+                CONN_STATE_CONNECTED,
+                CONN_STATE_DISCONNECTING,
+                CONN_STATE_DISCONNECTED,
+            };
+
+            typedef std::multimap<int, std::string, std::greater<int>> SsidMap;
+
             WifiConnector(WifiControl* parent)
-                : _adminLock()
-                , _parent(*parent)
-                , _job(*this)
-                , _connectInProgress(false)
+                : _adminLock(),
+                  _parent(*parent),
+                  _job(*this),
+                  _state(CONN_STATE_SCANNING),
+                  _ssidPreferred(),
+                  _ssidMap(),
+                  _schedInterval(5)
             {
                 ASSERT(parent != nullptr);
             }
@@ -156,35 +171,131 @@ namespace Plugin {
             }
             void Dispatch()
             {
-                _parent.Connect();
+                int32_t scheduleTime = -1;
 
                 _adminLock.Lock();
-                _connectInProgress = false;
+
+                if ((_state == CONN_STATE_DISCONNECTED)
+                        || (_state == CONN_STATE_SCANNING)) {
+
+                    _parent._controller->Scan();
+                    _state = CONN_STATE_SCANNING;
+                    scheduleTime = _schedInterval;
+
+                } else if (_state == CONN_STATE_SCANNED) {
+
+                    _ssidMap.clear();
+
+                    /* Arrange SSIDs in sorted order as per signal strength */
+                    WPASupplicant::Network::Iterator list(
+                            _parent._controller->Networks());
+                    while (list.Next() == true) {
+                        const WPASupplicant::Network& net = list.Current();
+                        if (_parent._controller->Get(net.SSID()).IsValid()) {
+                            if (net.SSID().compare(_ssidPreferred) == 0) {
+                                _ssidMap.emplace(0, net.SSID());
+                            } else {
+                                _ssidMap.emplace(net.Signal(), net.SSID());
+                            }
+                        }
+                    }
+                    _state = CONN_STATE_CONNECTING;
+                    scheduleTime = 0;
+
+                } else if (_state == CONN_STATE_CONNECTING) {
+
+                    uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                    auto itr = _ssidMap.begin();
+                    while ((itr != _ssidMap.end()) && (result != Core::ERROR_NONE)) {
+                        result = _parent._controller->Connect(itr->second);
+                        itr = _ssidMap.erase(itr);
+                    }
+                    if (result != Core::ERROR_NONE) {
+                        _state = CONN_STATE_DISCONNECTED;
+                    }
+                    scheduleTime = _schedInterval;
+
+                } else if (_state == CONN_STATE_DISCONNECTING) {
+
+                    _parent._controller->Disconnect(_parent._controller->Current());
+                    scheduleTime = _schedInterval;
+                }
+
                 _adminLock.Unlock();
+
+                if (scheduleTime != -1) {
+                    _job.Schedule(
+                            Core::Time::Now().Ticks() + scheduleTime * 1000 * 1000);
+                }
             }
-            void Connect()
+            void Scanned()
             {
-                uint64_t scheduleTime = 0;
-
                 _adminLock.Lock();
+                if (_state == CONN_STATE_SCANNING) {
+                    _state = CONN_STATE_SCANNED;
+                    _adminLock.Unlock();
 
-                if (_connectInProgress == false) {
-                    scheduleTime = Core::Time::Now().Ticks();
-                    _connectInProgress = true;
+                    _job.Revoke();
+                    _job.Submit();
+                } else {
+                    _adminLock.Unlock();
                 }
-
+            }
+            void Connected()
+            {
+                _adminLock.Lock();
+                _state = CONN_STATE_CONNECTED;
                 _adminLock.Unlock();
 
-                if (scheduleTime != 0) {
-                    _job.Schedule(scheduleTime);
+                _job.Revoke();
+            }
+            void Disconnected()
+            {
+                _adminLock.Lock();
+                _state = CONN_STATE_DISCONNECTED;
+                _adminLock.Unlock();
+
+                _job.Revoke();
+                _job.Submit();
+            }
+            uint32_t Connect(const std::string& ssid)
+            {
+                if (ssid.compare(_parent._controller->Current()) != 0) {
+
+                    _adminLock.Lock();
+                    _ssidPreferred.assign(ssid);
+                    _state = CONN_STATE_DISCONNECTING;
+                    _adminLock.Unlock();
+
+                    _job.Revoke();
+                    _job.Submit();
                 }
+                return Core::ERROR_NONE;
+            }
+            uint32_t Disconnect(const std::string& ssid)
+            {
+                if (ssid.compare(_parent._controller->Current()) == 0) {
+
+                    _adminLock.Lock();
+                    _ssidPreferred.assign(std::string());
+                    _state = CONN_STATE_DISCONNECTING;
+                    _adminLock.Unlock();
+
+                    _job.Revoke();
+                    _job.Submit();
+                }
+                return Core::ERROR_NONE;
             }
 
         private:
             Core::CriticalSection _adminLock;
             WifiControl& _parent;
             Job _job;
-            bool _connectInProgress;
+            states _state;
+            std::string _ssidPreferred;
+            SsidMap _ssidMap;
+            uint64_t _schedInterval;
         };
 
     public:
@@ -380,21 +491,6 @@ namespace Plugin {
             UnregisterAll();
         }
 
-        uint32_t Connect()
-        {
-            uint32_t result = Core::ERROR_BAD_REQUEST;
-
-            WPASupplicant::Config::Iterator list(_controller->Configs());
-            while (list.Next() == true) {
-                const WPASupplicant::Config& element = list.Current();
-                result = _controller->Connect(element.SSID().c_str());
-                if (result == Core::ERROR_NONE) {
-                    break;
-                }
-            }
-            return (result);
-        }
-
         BEGIN_INTERFACE_MAP(WifiControl)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
@@ -429,7 +525,6 @@ namespace Plugin {
         WifiDriver _wpaSupplicant;
         Core::ProxyType<WPASupplicant::Controller> _controller;
         WifiConnector _wifiConnector;
-        bool _connectedState;
         bool _autoConnect;
         void RegisterAll();
         void UnregisterAll();

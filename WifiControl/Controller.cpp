@@ -222,6 +222,7 @@ namespace WPASupplicant {
                 } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS)) {
                     _adminLock.Lock();
                     if (_scanRequest.Set() == true) {
+                        _scanRequest.Event(event.Value());
                         _adminLock.Unlock();
                         Submit(&_scanRequest);
                     } else {
