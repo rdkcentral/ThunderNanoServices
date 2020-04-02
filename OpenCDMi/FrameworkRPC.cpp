@@ -397,6 +397,14 @@ namespace Plugin {
                             key = ::OCDM::ISession::Released;
                         else if (::strcmp(keyMessage, "KeyExpired") == 0)
                             key = ::OCDM::ISession::Expired;
+                        else if (::strcmp(keyMessage, "KeyOutputRestricted") == 0)
+                            key = ::OCDM::ISession::OutputRestricted;
+                        else if (::strcmp(keyMessage, "KeyOutputDownscaled") == 0)
+                            key = ::OCDM::ISession::OutputDownscaled;
+                        else if (::strcmp(keyMessage, "SEC_RESULT_HW_FAILURE") == 0)
+                            key = ::OCDM::ISession::HWError;
+                        else if (::strcmp(keyMessage, "KeyOutputRestrictedHDCP22") == 0)
+                            key = ::OCDM::ISession::OutputRestrictedHDCP22;
                         else
                             key = ::OCDM::ISession::InternalError;
 
