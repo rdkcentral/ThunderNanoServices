@@ -49,7 +49,7 @@ target_include_directories( ${MODULE_NAME}
         PUBLIC
           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
-if (${POWER_PLATFORM_IMPL} STREQUAL "Nexus")
+if (${WPE_POWER_PLATFORM_IMPL} STREQUAL "Nexus")
 	find_package(NEXUS REQUIRED)
 	find_package(NXCLIENT REQUIRED)
 	find_package(BcmPowerManager REQUIRED)
@@ -63,7 +63,7 @@ if (${POWER_PLATFORM_IMPL} STREQUAL "Nexus")
 	else()
 		message("Error: missing Nexus libraries....")
 	endif()
-elseif (${POWER_PLATFORM_IMPL} STREQUAL "Amlogic")
+elseif (${WPE_POWER_PLATFORM_IMPL} STREQUAL "Amlogic")
 	message("Building Amlogic implementation(HP40A)....")
 	target_sources(${MODULE_NAME} PRIVATE PowerImplementation/Amlogic/PowerImplementation.cpp)
 else()
@@ -77,7 +77,7 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-if (${POWER_PLATFORM_IMPL} STREQUAL "Nexus")
+if (${WPE_POWER_PLATFORM_IMPL} STREQUAL "Nexus")
 	if (BCM_PM_FOUND)
 		set(POWER_LIBS -Wl,--whole-archive ${BCM_PM_LIBRARIES} -Wl,--no-whole-archive)
 		target_link_libraries(${MODULE_NAME}
