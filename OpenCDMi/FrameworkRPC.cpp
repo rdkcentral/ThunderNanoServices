@@ -582,6 +582,11 @@ namespace Plugin {
                     _mediaKeySession->Close();
                 }
 
+                virtual void ResetOutputProtection() override {
+                    TRACE_L1("ResetOutputProtection! %p", this);
+                    _mediaKeySession->ResetOutputProtection();
+                }
+
                 virtual void Revoke(OCDM::ISession::ICallback* callback) override
                 {
                     _sink.Revoke(callback);
