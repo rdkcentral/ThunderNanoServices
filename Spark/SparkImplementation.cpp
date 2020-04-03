@@ -39,7 +39,7 @@ pxContext context;
 extern rtScript script;
 extern bool gDirtyRectsEnabled;
 extern rtThreadQueue* gUIThreadQueue;
-extern bool gNewSceneIsTop;
+extern bool topSparkView;
 
 namespace WPEFramework {
 namespace Plugin {
@@ -168,7 +168,7 @@ namespace Plugin {
                 virtual void Execute() override {
 
                     if (_parent._view != nullptr) {
-                        pxScriptView* realClass = reinterpret_cast<pxScriptView*>(_parent._view.getPtr());
+                        pxScriptView* realClass = static_cast<pxScriptView*>(_parent._view.getPtr());
 
                         if (realClass != nullptr) {
                             rtValue r;
@@ -326,6 +326,8 @@ namespace Plugin {
                 Core::SystemInfo::SetEnvironment(_T("NODE_PATH"), service->DataPath());
                 Core::SystemInfo::SetEnvironment(_T("SPARK_PATH"), service->DataPath());
                 Core::SystemInfo::SetEnvironment(_T("RT_EGL_PROVIDER"), config.EGLProvider.Value());
+                Core::SystemInfo::SetEnvironment(_T("SCREEN_WIDTH"), std::to_string(_width));
+                Core::SystemInfo::SetEnvironment(_T("SCREEN_HEIGHT"), std::to_string(_height));
 
                 if (config.ClientIdentifier.IsSet() == true) {
                     string value(service->Callsign() + ',' + config.ClientIdentifier.Value());
@@ -631,7 +633,7 @@ namespace Plugin {
                     Block();
                 }
                 else {
-                    gNewSceneIsTop = true; // Set new Scene as the topest
+                    topSparkView = true; // Set new Scene as the topest
 
                     pxScriptView *scriptView = new pxScriptView(_fullPath.c_str(),"javascript/node/v8");
                     _view = static_cast<pxViewRef> (scriptView);
