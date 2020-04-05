@@ -135,34 +135,30 @@ namespace Plugin {
 
         class WifiConnector
         {
+        private:
+            using Job = Core::WorkerPool::JobType<WifiConnector&>;
+            using SsidList = std::list <std::pair<int32_t, const string> >;
+
+            enum states
+            {
+                IDLE,
+                SCANNING,
+                PROCESSING,
+                CONNECTING,
+            };
+
         public:
             WifiConnector() = delete;
             WifiConnector(const WifiConnector&) = delete;
             WifiConnector& operator=(const WifiConnector&) = delete;
 
-            using Job = Core::WorkerPool::JobType<WifiConnector&>;
-
-        public:
-            enum states
-            {
-                CONN_STATE_SCANNING,
-                CONN_STATE_SCANNED,
-                CONN_STATE_CONNECTING,
-                CONN_STATE_CONNECTED,
-                CONN_STATE_DISCONNECTING,
-                CONN_STATE_DISCONNECTED,
-            };
-
-            typedef std::multimap<int, std::string, std::greater<int>> SsidMap;
-
-            WifiConnector(WifiControl* parent)
-                : _adminLock(),
-                  _parent(*parent),
-                  _job(*this),
-                  _state(CONN_STATE_SCANNING),
-                  _ssidPreferred(),
-                  _ssidMap(),
-                  _schedInterval(5)
+            WifiConnector(WifiControl* parent, const uint8_t scheduleInterval)
+                : _adminLock()
+                , _parent(*parent)
+                , _job(*this)
+                , _state(IDLE)
+                , _ssidList()
+                , _schedInterval(scheduleInterval * 1000)
             {
                 ASSERT(parent != nullptr);
             }
@@ -171,20 +167,16 @@ namespace Plugin {
             }
             void Dispatch()
             {
-                int32_t scheduleTime = -1;
+                uint32_t scheduleTime = ~0;
 
                 _adminLock.Lock();
 
-                if ((_state == CONN_STATE_DISCONNECTED)
-                        || (_state == CONN_STATE_SCANNING)) {
+                if (_state == SCANNING) {
 
                     _parent._controller->Scan();
-                    _state = CONN_STATE_SCANNING;
                     scheduleTime = _schedInterval;
 
-                } else if (_state == CONN_STATE_SCANNED) {
-
-                    _ssidMap.clear();
+                } else if (_state == PROCESSING) {
 
                     /* Arrange SSIDs in sorted order as per signal strength */
                     WPASupplicant::Network::Iterator list(
@@ -192,48 +184,48 @@ namespace Plugin {
                     while (list.Next() == true) {
                         const WPASupplicant::Network& net = list.Current();
                         if (_parent._controller->Get(net.SSID()).IsValid()) {
-                            if (net.SSID().compare(_ssidPreferred) == 0) {
-                                _ssidMap.emplace(0, net.SSID());
-                            } else {
-                                _ssidMap.emplace(net.Signal(), net.SSID());
+
+                            int32_t strength(net.Signal());
+                            if (net.SSID().compare(_parent.PreferredSSID()) == 0) {
+                                strength = Core::NumberType<int32_t>::Max();
                             }
+                            auto index(_ssidList.begin());
+                            while ((index != _ssidList.end())
+                                    && (index->first > strength)) {
+                                index++;
+                            }
+                            _ssidList.emplace(index,
+                                    std::pair<int32_t, string>(strength,
+                                            net.SSID()));
                         }
                     }
-                    _state = CONN_STATE_CONNECTING;
-                    scheduleTime = 0;
+                    _state = CONNECTING;
+                }
 
-                } else if (_state == CONN_STATE_CONNECTING) {
+                if (_state == CONNECTING) {
 
-                    uint32_t result = Core::ERROR_BAD_REQUEST;
-
-                    auto itr = _ssidMap.begin();
-                    while ((itr != _ssidMap.end()) && (result != Core::ERROR_NONE)) {
-                        result = _parent._controller->Connect(itr->second);
-                        itr = _ssidMap.erase(itr);
+                    if (_ssidList.empty() == false) {
+                        _parent._controller->Connect(_ssidList.front().second,
+                                true);
+                        _ssidList.pop_front();
+                    } else {
+                        TRACE(Trace::Warning, (_T("Tried all opportunities, retrying again")));
+                        _state = SCANNING;
                     }
-                    if (result != Core::ERROR_NONE) {
-                        _state = CONN_STATE_DISCONNECTED;
-                    }
-                    scheduleTime = _schedInterval;
-
-                } else if (_state == CONN_STATE_DISCONNECTING) {
-
-                    _parent._controller->Disconnect(_parent._controller->Current());
                     scheduleTime = _schedInterval;
                 }
 
                 _adminLock.Unlock();
 
-                if (scheduleTime != -1) {
-                    _job.Schedule(
-                            Core::Time::Now().Ticks() + scheduleTime * 1000 * 1000);
+                if (scheduleTime != static_cast<uint32_t>(~0)) {
+                    _job.Schedule(Core::Time::Now().Add(scheduleTime));
                 }
             }
             void Scanned()
             {
                 _adminLock.Lock();
-                if (_state == CONN_STATE_SCANNING) {
-                    _state = CONN_STATE_SCANNED;
+                if (_state == SCANNING) {
+                    _state = PROCESSING;
                     _adminLock.Unlock();
 
                     _job.Revoke();
@@ -242,50 +234,26 @@ namespace Plugin {
                     _adminLock.Unlock();
                 }
             }
-            void Connected()
+            void Connect()
             {
-                _adminLock.Lock();
-                _state = CONN_STATE_CONNECTED;
-                _adminLock.Unlock();
-
-                _job.Revoke();
-            }
-            void Disconnected()
-            {
-                _adminLock.Lock();
-                _state = CONN_STATE_DISCONNECTED;
-                _adminLock.Unlock();
-
-                _job.Revoke();
-                _job.Submit();
-            }
-            uint32_t Connect(const std::string& ssid)
-            {
-                if (ssid.compare(_parent._controller->Current()) != 0) {
-
+                if (_parent.PreferredSSID().empty() == false)
+                {
                     _adminLock.Lock();
-                    _ssidPreferred.assign(ssid);
-                    _state = CONN_STATE_DISCONNECTING;
+                    _state = SCANNING;
                     _adminLock.Unlock();
 
                     _job.Revoke();
                     _job.Submit();
                 }
-                return Core::ERROR_NONE;
             }
-            uint32_t Disconnect(const std::string& ssid)
+            void Reset()
             {
-                if (ssid.compare(_parent._controller->Current()) == 0) {
+                _adminLock.Lock();
+                _state = IDLE;
+                _adminLock.Unlock();
 
-                    _adminLock.Lock();
-                    _ssidPreferred.assign(std::string());
-                    _state = CONN_STATE_DISCONNECTING;
-                    _adminLock.Unlock();
-
-                    _job.Revoke();
-                    _job.Submit();
-                }
-                return Core::ERROR_NONE;
+                _job.Revoke();
+                _ssidList.clear();
             }
 
         private:
@@ -293,9 +261,8 @@ namespace Plugin {
             WifiControl& _parent;
             Job _job;
             states _state;
-            std::string _ssidPreferred;
-            SsidMap _ssidMap;
-            uint64_t _schedInterval;
+            SsidList _ssidList;
+            uint32_t _schedInterval;
         };
 
     public:
@@ -490,6 +457,33 @@ namespace Plugin {
         {
             UnregisterAll();
         }
+        const string& PreferredSSID() const
+        {
+            return (_preferredSsid);
+        }
+        uint32_t Connect(const std::string& ssid)
+        {
+            if (ssid.compare(_controller->Current()) != 0) {
+
+                _preferredSsid.assign(ssid);
+                if (_controller->Current().empty() == true) {
+                    _wifiConnector.Connect();
+                } else {
+                    _controller->Disconnect(_controller->Current());
+                }
+            }
+            return Core::ERROR_NONE;
+        }
+        uint32_t Disconnect(const std::string& ssid)
+        {
+            uint32_t result = Core::ERROR_UNKNOWN_KEY;
+            if (ssid.compare(_controller->Current()) == 0) {
+
+                _preferredSsid.clear();
+                result = _controller->Disconnect(_controller->Current());
+            }
+            return result;
+        }
 
         BEGIN_INTERFACE_MAP(WifiControl)
         INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -526,6 +520,7 @@ namespace Plugin {
         Core::ProxyType<WPASupplicant::Controller> _controller;
         WifiConnector _wifiConnector;
         bool _autoConnect;
+        std::string _preferredSsid;
         void RegisterAll();
         void UnregisterAll();
         uint32_t endpoint_delete(const JsonData::WifiControl::DeleteParamsInfo& params);

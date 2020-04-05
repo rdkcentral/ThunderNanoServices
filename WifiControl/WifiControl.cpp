@@ -47,8 +47,9 @@ namespace Plugin
         , _sink(*this)
         , _wpaSupplicant()
         , _controller()
-        , _wifiConnector(this)
+        , _wifiConnector(this, 5)
         , _autoConnect(false)
+        , _preferredSsid("Initial")
     {
         RegisterAll();
     }
@@ -94,7 +95,6 @@ namespace Plugin
                     result = _T("Could not establish a link with WPA_SUPPLICANT");
                 } else {
                     _controller->Callback(&_sink);
-                    _controller->Scan();
 
                     Core::File configFile(_configurationStore);
 
@@ -117,6 +117,11 @@ namespace Plugin
 
                             UpdateConfig(profile, index.Current());
                         }
+                    }
+                    if (_autoConnect == true) {
+                        _wifiConnector.Connect();
+                    } else {
+                        _controller->Scan();
                     }
                 }
             }
@@ -402,7 +407,7 @@ namespace Plugin
             _service->Notify(message);
             event_connectionchange(_controller->Current());
             if (_autoConnect == true) {
-                _wifiConnector.Connected();
+                _wifiConnector.Reset();
             }
             break;
         }
@@ -411,7 +416,8 @@ namespace Plugin
             _service->Notify(message);
             event_connectionchange(string());
             if (_autoConnect == true) {
-                _wifiConnector.Disconnected();
+                _wifiConnector.Reset();
+                _wifiConnector.Connect();
             }
             break;
         }

@@ -134,7 +134,7 @@ namespace Plugin {
         const string& ssid = params.Ssid.Value();
 
         if (_autoConnect == true) {
-            return _wifiConnector.Connect(ssid);
+            return Connect(ssid);
         } else {
             return _controller->Connect(ssid);
         }
@@ -150,7 +150,7 @@ namespace Plugin {
         const string& ssid = params.Ssid.Value();
 
         if (_autoConnect == true) {
-            return _wifiConnector.Disconnect(ssid);
+            return Disconnect(ssid);
         } else {
             return _controller->Disconnect(ssid);
         }

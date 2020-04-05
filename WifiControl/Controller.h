@@ -693,11 +693,12 @@ namespace WPASupplicant {
             CustomRequest& operator=(const CustomRequest&) = delete;
 
         public:
-            CustomRequest(const string& custom)
+            CustomRequest(const string& custom, const bool async = false)
                 : Request(custom)
                 , _signaled(false, true)
                 , _response()
                 , _result(Core::ERROR_NONE)
+                , _asyncReq(async)
             {
             }
             virtual ~CustomRequest()
@@ -716,10 +717,13 @@ namespace WPASupplicant {
             }
             virtual void Completed(const string& response, const bool abort) override
             {
-
-                _result = (abort == false ? Core::ERROR_NONE : Core::ERROR_ASYNC_ABORTED);
-                _response = response;
-                _signaled.SetEvent();
+                if (_asyncReq == true) {
+                    delete this;
+                } else {
+                    _result = (abort == false ? Core::ERROR_NONE : Core::ERROR_ASYNC_ABORTED);
+                    _response = response;
+                    _signaled.SetEvent();
+                }
             }
             inline uint32_t Result() const
             {
@@ -739,6 +743,7 @@ namespace WPASupplicant {
             Core::Event _signaled;
             string _response;
             uint32_t _result;
+            bool _asyncReq;
         };
 
         typedef std::map<const uint64_t, NetworkInfo> NetworkInfoContainer;
@@ -1178,7 +1183,7 @@ namespace WPASupplicant {
 
             return (result);
         }
-        inline uint32_t Connect(const string& SSID)
+        inline uint32_t Connect(const string& SSID, const bool async = false)
         {
 
             uint32_t result = Core::ERROR_UNKNOWN_KEY;
@@ -1208,7 +1213,11 @@ namespace WPASupplicant {
                 }
 
                 if ((AP == true) || (bssid != 0)) {
-                    result = Connect(SSID, bssid);
+                    if (async == true) {
+                        result = ConnectAsync(SSID, bssid);
+                    } else {
+                        result = Connect(SSID, bssid);
+                    }
                 } else {
                     TRACE_L1("No associated BSSID to connect to and not defined as AccessPoint. (%llu)", bssid);
                     result = Core::ERROR_BAD_REQUEST;
@@ -1263,6 +1272,38 @@ namespace WPASupplicant {
                 }
 
                 Revoke(&exchange);
+            } else {
+                _adminLock.Unlock();
+            }
+
+            return (result);
+        }
+        inline uint32_t ConnectAsync(const string& SSID, const uint64_t bssid)
+        {
+            uint32_t result = Core::ERROR_UNKNOWN_KEY;
+
+            _adminLock.Lock();
+
+            EnabledContainer::iterator index(_enabled.find(SSID));
+
+            if (index != _enabled.end()) {
+                _adminLock.Unlock();
+                result = Core::ERROR_NONE;
+
+                CustomRequest *exchange = new CustomRequest(string(_TXT("SELECT_NETWORK ")) + Core::NumberType<uint32_t>(index->second.Id()).Text(), true);
+                Submit(exchange);
+
+                index->second.State(ConfigInfo::SELECTED);
+
+                if (bssid != 0) {
+
+                    CustomRequest *exchange = new CustomRequest(string(_TXT("RECONNECT")), true);
+                    Submit(exchange);
+                    {
+                        CustomRequest *exchange = new CustomRequest(string(_TXT("PREAUTH ")) + BSSID(bssid), true);
+                        Submit(exchange);
+                    }
+                }
             } else {
                 _adminLock.Unlock();
             }
