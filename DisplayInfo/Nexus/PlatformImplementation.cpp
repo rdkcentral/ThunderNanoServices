@@ -336,8 +336,6 @@ private:
 
     inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height, HDCPProtectionType& hdcpprotection, HDRType& type) const
     {
-            printf("UpdateDisplayInfo!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-
         NEXUS_Error rc = NEXUS_SUCCESS;
 
         hdcpprotection = HDCPProtectionType::HDCP_Unencrypted; // reset to safe level in case value could not be retrieved
