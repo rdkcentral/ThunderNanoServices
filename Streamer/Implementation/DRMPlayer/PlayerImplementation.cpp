@@ -1,5 +1,7 @@
 #include "DRMPlayer.h"
+#include "GstCallbacks.h"
 
+#include <opencdm/open_cdm.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 
@@ -9,47 +11,11 @@ namespace Player {
 
         namespace {
 
-            gboolean gstBusCallback(GstBus* bus, GstMessage* message, DRMPlayer::PipelineData* data)
-            {
-                switch (GST_MESSAGE_TYPE(message)) {
-                case GST_MESSAGE_ERROR: {
-
-                    GError* err;
-                    gchar* debugInfo;
-                    gst_message_parse_error(message, &err, &debugInfo);
-                    TRACE_L1("Error received from element %s: %s\n", gst_object_get_name(message->src), err->message);
-                    TRACE_L1("Debugging information: %s\n", debugInfo ? debugInfo : "none");
-                    g_clear_error(&err);
-                    g_free(debugInfo);
-
-                    gst_element_set_state(data->_playbin, GST_STATE_NULL);
-                    g_main_loop_quit(data->_mainLoop);
-                    break;
-                }
-                case GST_MESSAGE_EOS: {
-                    gst_element_set_state(data->_playbin, GST_STATE_NULL);
-                    break;
-                }
-                default:
-                    break;
-                }
-                return TRUE;
-            }
-
-            class Config : public Core::JSON::Container {
-            public:
-                Config(const Config&) = delete;
-                Config& operator=(const Config&) = delete;
-
-                Config()
-                    : Core::JSON::Container()
-                    , Speeds()
-                {
-                    Add(_T("speeds"), &Speeds);
-                }
-
-                Core::JSON::ArrayType<Core::JSON::DecSInt32> Speeds;
-            } config;
+            PlayerPlatformRegistrationType<DRMPlayer, Exchange::IStream::streamtype::IP> Register(
+                /*  Initialize */ [](const string& configuration) -> uint32_t {
+                    config.FromString(configuration);
+                    return (Core::ERROR_NONE);
+                });
 
             DRMPlayer::DRMPlayer(const Exchange::IStream::streamtype streamType, const uint8_t index)
                 : _index(index)
@@ -105,15 +71,22 @@ namespace Player {
 
             uint32_t DRMPlayer::SetupGstElements()
             {
-                _data._playbin = gst_element_factory_make("playbin", "playbin");
+                gst_plugin_register_static(GST_VERSION_MAJOR,
+                    GST_VERSION_MINOR,
+                    "ocdmdecrypt",
+                    "description",
+                    GstCallbacks::plugin_init, "1.0", "LGPL", "package", "package-origin", "website");
+
+                _data._playbin = gst_element_factory_make("playbin", nullptr);
                 _bus = gst_element_get_bus(_data._playbin);
-                gst_bus_add_watch(_bus, (GstBusFunc)gstBusCallback, &_data);
+                gst_bus_add_watch(_bus, (GstBusFunc)GstCallbacks::gstBusCallback, &_data);
 
                 _data._mainLoop = g_main_loop_new(NULL, FALSE);
                 if (_data._mainLoop == nullptr || _data._playbin == nullptr) {
                     TRACE_L1("Could not initialize the gstreamer pipeline");
                     return Core::ERROR_OPENING_FAILED;
                 }
+
                 return Core::ERROR_NONE;
             }
 
@@ -195,11 +168,16 @@ namespace Player {
             {
                 _adminLock.Lock();
 
+                initializeOcdm();
                 gst_element_set_state(_data._playbin, GstState::GST_STATE_NULL);
                 g_object_set(_data._playbin, "uri", uri.c_str(), NULL);
 
                 _adminLock.Unlock();
                 return Error();
+            }
+
+            void DRMPlayer::initializeOcdm()
+            {
             }
 
             uint32_t DRMPlayer::AttachDecoder(const uint8_t index VARIABLE_IS_NOT_USED)
@@ -246,7 +224,7 @@ namespace Player {
                 } else {
                     result = Core::ERROR_UNAVAILABLE;
                 }
-                
+
                 _adminLock.Unlock();
                 return result;
             }
@@ -292,11 +270,11 @@ namespace Player {
             {
                 gint64 duration;
                 _adminLock.Lock();
+
                 gst_element_query_duration(_data._playbin, GST_FORMAT_TIME, &duration);
                 if (absoluteTime < static_cast<uint64_t>(duration)) {
                     gst_element_send_event(_data._playbin, CreateSeekEvent(absoluteTime));
                     _adminLock.Unlock();
-                    TRACE_L1("Moving to timestamp: %ld", absoluteTime);
                 } else {
                     _adminLock.Unlock();
                     TRACE_L1("Absolute time cannot be bigger than the file duration");
@@ -344,12 +322,6 @@ namespace Player {
                 TRACE_L1("DRMPlayer elementary streams not supported");
                 return {};
             }
-
-            PlayerPlatformRegistrationType<DRMPlayer, Exchange::IStream::streamtype::IP> Register(
-                /*  Initialize */ [](const string& configuration) -> uint32_t {
-                    config.FromString(configuration);
-                    return (Core::ERROR_NONE);
-                });
         }
     }
 }

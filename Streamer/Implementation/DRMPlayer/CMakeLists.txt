@@ -19,15 +19,22 @@ set(PLAYER_NAME DRMPlayer)
 message("Building ${PLAYER_NAME} Streamer....")
 
 find_package(${NAMESPACE}Core REQUIRED)
-find_package(PkgConfig)
-pkg_check_modules(GST REQUIRED gstreamer-1.0>=1.4
-                               gstreamer-sdp-1.0>=1.4
-                               gstreamer-video-1.0>=1.4
-                               gstreamer-app-1.0>=1.4)
+find_package(PkgConfig REQUIRED)
+find_package(ocdm REQUIRED)
+
+pkg_check_modules(GST 
+    REQUIRED 
+        gstreamer-1.0>=1.4
+        gstreamer-sdp-1.0>=1.4
+        gstreamer-video-1.0>=1.4
+        gstreamer-app-1.0>=1.4
+        gstreamer-base-1.0>=1.4)
 
 set(LIB_NAME PlayerPlatform${PLAYER_NAME})
+
 add_library(${LIB_NAME} STATIC
-     PlayerImplementation.cpp)
+     PlayerImplementation.cpp
+     ${CMAKE_CURRENT_SOURCE_DIR}/GstDecrypt/GstOcdmDecrypt.cpp)
 
 set_target_properties(${LIB_NAME} PROPERTIES
         CXX_STANDARD 11
@@ -36,12 +43,15 @@ set_target_properties(${LIB_NAME} PROPERTIES
 target_include_directories(${LIB_NAME}
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../../
+        ${CMAKE_CURRENT_SOURCE_DIR}/GstDecrypt
         ${GST_INCLUDE_DIRS})
 
 target_link_libraries(${LIB_NAME}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
-        ${GST_LIBRARIES})
+        ${GST_LIBRARIES}
+        ocdm::ocdm
+        ${OCDM_LIBRARIES})
 
 install(TARGETS ${LIB_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/)

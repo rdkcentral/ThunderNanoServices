@@ -19,7 +19,6 @@ namespace Player {
                 DRMPlayer(const Exchange::IStream::streamtype streamType, const uint8_t index);
 
             public:
-                // Class used as a MT-safe gstreamer data container.
                 struct PipelineData {
                     PipelineData()
                         : _playbin(nullptr)
@@ -44,8 +43,8 @@ namespace Player {
                 uint32_t Error() const override;
                 uint8_t Index() const override;
                 uint32_t Load(const string& uri) override;
-                uint32_t AttachDecoder(const uint8_t index VARIABLE_IS_NOT_USED) override;
-                uint32_t DetachDecoder(const uint8_t index VARIABLE_IS_NOT_USED) override;
+                uint32_t AttachDecoder(const uint8_t) override;
+                uint32_t DetachDecoder(const uint8_t) override;
                 uint32_t Speed(const int32_t speed) override;
                 int32_t Speed() const override;
                 const std::vector<int32_t>& Speeds() const override;
@@ -63,11 +62,16 @@ namespace Player {
                 uint32_t Worker() override;
 
             private:
+                // Gstreamer helper methods
+                // ----------------------------------------------
                 uint32_t SetupGstElements();
                 uint32_t TeardownGstElements();
-
                 void SendSeekEvent();
                 GstEvent* CreateSeekEvent(const uint64_t position);
+
+                // OCDM helper methods
+                // -----------------------------------------------
+                void initializeOcdm();
 
                 uint8_t _index;
                 int32_t _speed;
@@ -78,7 +82,24 @@ namespace Player {
                 mutable Core::CriticalSection _adminLock;
                 PipelineData _data;
                 GstBus* _bus;
+
+                // OpenCDMSystem* _system;
             };
+
+            class Config : public Core::JSON::Container {
+            public:
+                Config(const Config&) = delete;
+                Config& operator=(const Config&) = delete;
+
+                Config()
+                    : Core::JSON::Container()
+                    , Speeds()
+                {
+                    Add(_T("speeds"), &Speeds);
+                }
+
+                Core::JSON::ArrayType<Core::JSON::DecSInt32> Speeds;
+            } config;
         } // namespace
 
     } // namespace Implementation
