@@ -255,6 +255,20 @@ namespace Plugin {
                 _job.Revoke();
                 _ssidList.clear();
             }
+            void Disconnected()
+            {
+                _adminLock.Lock();
+                if (_state == CONNECTING) {
+                    _adminLock.Unlock();
+
+                    _job.Revoke();
+                    _job.Submit();
+                } else {
+                    _adminLock.Unlock();
+                    Reset();
+                    Connect();
+                }
+            }
 
         private:
             Core::CriticalSection _adminLock;

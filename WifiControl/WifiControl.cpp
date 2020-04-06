@@ -416,8 +416,7 @@ namespace Plugin
             _service->Notify(message);
             event_connectionchange(string());
             if (_autoConnect == true) {
-                _wifiConnector.Reset();
-                _wifiConnector.Connect();
+                _wifiConnector.Disconnected();
             }
             break;
         }
