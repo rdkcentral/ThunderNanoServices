@@ -17,10 +17,11 @@
  * limitations under the License.
  */
  
-#include <interfaces/IKeyHandler.h>
-
+#include "Module.h"
 #include "Handler.h"
 #include "TimedInput.h"
+
+#include <interfaces/IKeyHandler.h>
 
 namespace WPEFramework {
 
@@ -28,16 +29,11 @@ namespace Plugin {
 
     class RemotePairing : public IHandler {
     private:
-        RemotePairing();
-        RemotePairing(const RemotePairing&);
-        RemotePairing& operator=(const RemotePairing&);
-
         class Config : public Core::JSON::Container {
-        private:
+        public:
             Config(const Config& copy) = delete;
             Config& operator=(const Config& RHS) = delete;
 
-        public:
             Config()
                 : Callsign()
                 , Producer()
@@ -45,7 +41,7 @@ namespace Plugin {
                 Add(_T("callsign"), &Callsign);
                 Add(_T("producer"), &Producer);
             }
-            virtual ~Config()
+            ~Config() override
             {
             }
 
@@ -55,38 +51,33 @@ namespace Plugin {
         };
 
     public:
-        RemotePairing(PluginHost::IShell* service, const string& configuration)
+        RemotePairing() = delete;
+        RemotePairing(const RemotePairing&) = delete;
+        RemotePairing& operator=(const RemotePairing&) = delete;
+
+        RemotePairing(PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end)
             : _service(service)
         {
             Config config;
             config.FromString(configuration);
             _producer = config.Producer.Value();
             _callsign = config.Callsign.Value();
-        }
-        virtual ~RemotePairing()
-        {
-        }
-
-    public:
-        void Interval(const uint32_t start, const uint32_t end) override {
-            _state.Clear();
             _state.Add(start);
             _state.Add(end);
             _marker = start;
         }
-        void Trigger(GPIO::Pin& pin) override
+        ~RemotePairing() override
         {
+        }
 
-            ASSERT(_service != nullptr);
-
-       }
-       void Trigger(GPIO::Pin& pin) override
+    public:
+        void Trigger(GPIO::Pin& pin) override
         {
             uint32_t marker;
 
             ASSERT(_service != nullptr);
 
-            if ( (_state.Analyse(pin.Set(), marker) == true) && (_marker == marker) ) {
+            if ( (_state.Reached(pin.Get(), marker) == true) && (_marker == marker) ) {
                 Exchange::IKeyHandler* handler(_service->QueryInterfaceByCallsign<Exchange::IKeyHandler>(_callsign));
 
                 if (handler != nullptr) {
@@ -106,7 +97,7 @@ namespace Plugin {
         PluginHost::IShell* _service;
         string _callsign;
         string _producer;
-        TimedInput _state;
+        GPIO::TimedInput _state;
         uint32_t _marker;
     };
 

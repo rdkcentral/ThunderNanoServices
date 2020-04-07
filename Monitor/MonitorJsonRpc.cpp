@@ -55,8 +55,7 @@ namespace Plugin {
         const string& callsign = params.Callsign.Value();
         _monitor->Update(
             callsign,
-            params.Operational.Window.Value(), params.Operational.Limit.Value(),
-            params.Memory.Window.Value(), params.Memory.Limit.Value());
+            params.Restart.Window.Value(), params.Restart.Limit.Value());
         return Core::ERROR_NONE;
     }
 

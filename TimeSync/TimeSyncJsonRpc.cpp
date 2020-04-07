@@ -107,7 +107,7 @@ namespace Plugin {
         if (result == Core::ERROR_NONE) {
             // Stop automatic synchronisation
             _client->Cancel();
-            PluginHost::WorkerPool::Instance().Revoke(_activity);
+            Core::IWorkerPool::Instance().Revoke(_activity);
 
             if (newTime.IsValid()) {
                 Core::SystemInfo::Instance().SetTime(newTime);

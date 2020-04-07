@@ -397,6 +397,14 @@ namespace Plugin {
                             key = ::OCDM::ISession::Released;
                         else if (::strcmp(keyMessage, "KeyExpired") == 0)
                             key = ::OCDM::ISession::Expired;
+                        else if (::strcmp(keyMessage, "KeyOutputRestricted") == 0)
+                            key = ::OCDM::ISession::OutputRestricted;
+                        else if (::strcmp(keyMessage, "KeyOutputDownscaled") == 0)
+                            key = ::OCDM::ISession::OutputDownscaled;
+                        else if (::strcmp(keyMessage, "SEC_RESULT_HW_FAILURE") == 0)
+                            key = ::OCDM::ISession::HWError;
+                        else if (::strcmp(keyMessage, "KeyOutputRestrictedHDCP22") == 0)
+                            key = ::OCDM::ISession::OutputRestrictedHDCP22;
                         else
                             key = ::OCDM::ISession::InternalError;
 
@@ -572,6 +580,11 @@ namespace Plugin {
                     TRACE(Trace::Information, ("Close()"));
 
                     _mediaKeySession->Close();
+                }
+
+                virtual void ResetOutputProtection() override {
+                    TRACE_L1("ResetOutputProtection! %p", this);
+                    _mediaKeySession->ResetOutputProtection();
                 }
 
                 virtual void Revoke(OCDM::ISession::ICallback* callback) override
@@ -1156,7 +1169,7 @@ namespace Plugin {
             }
 
             _entryPoint = Core::Service<AccessorOCDM>::Create<::OCDM::IAccessorOCDM>(this, config.SharePath.Value(), config.ShareSize.Value());
-            Core::ProxyType<RPC::InvokeServer> server = Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance());
+            Core::ProxyType<RPC::InvokeServer> server = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
             _service = new ExternalAccess(Core::NodeId(config.Connector.Value().c_str()), _entryPoint, server);
 
             if (_service != nullptr) {

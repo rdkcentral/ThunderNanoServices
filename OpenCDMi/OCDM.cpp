@@ -195,7 +195,7 @@ namespace Plugin {
 
         TRACE(Trace::Information, (string(_T("Received OCDM request"))));
 
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length() - _skipURL)), false, '/');
 
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -270,7 +270,7 @@ namespace Plugin {
 
             ASSERT(_service != nullptr);
 
-            Core::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service,
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service,
                 PluginHost::IShell::DEACTIVATED,
                 PluginHost::IShell::FAILURE));
         }

@@ -29,37 +29,37 @@ ENUM_CONVERSION_BEGIN(GPIO::Pin::trigger_mode)
     { GPIO::Pin::HIGH, _TXT(_T("high")) },
     { GPIO::Pin::LOW, _TXT(_T("low")) },
 
-    ENUM_CONVERSION_END(GPIO::Pin::trigger_mode)
+ENUM_CONVERSION_END(GPIO::Pin::trigger_mode)
 
-        ENUM_CONVERSION_BEGIN(GPIO::Pin::pin_mode)
+ENUM_CONVERSION_BEGIN(GPIO::Pin::pin_mode)
 
-            { GPIO::Pin::INPUT, _TXT(_T("in")) },
+    { GPIO::Pin::INPUT, _TXT(_T("in")) },
     { GPIO::Pin::OUTPUT, _TXT(_T("out")) },
     { GPIO::Pin::PWM_TONE, _TXT(_T("tone")) },
     { GPIO::Pin::PWM, _TXT(_T("pwm")) },
     { GPIO::Pin::CLOCK, _TXT(_T("clock")) },
 
-    ENUM_CONVERSION_END(GPIO::Pin::pin_mode)
+ENUM_CONVERSION_END(GPIO::Pin::pin_mode)
 
-        ENUM_CONVERSION_BEGIN(GPIO::Pin::pull_mode)
+ENUM_CONVERSION_BEGIN(GPIO::Pin::pull_mode)
 
-            { GPIO::Pin::OFF, _TXT(_T("0")) },
+    { GPIO::Pin::OFF, _TXT(_T("0")) },
     { GPIO::Pin::DOWN, _TXT(_T("1")) },
     { GPIO::Pin::UP, _TXT(_T("2")) },
 
-    ENUM_CONVERSION_END(GPIO::Pin::pull_mode)
+ENUM_CONVERSION_END(GPIO::Pin::pull_mode)
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
 
-        namespace GPIO
+namespace GPIO
 {
 
     // ----------------------------------------------------------------------------------------------------
     // Class: PIN
     // ----------------------------------------------------------------------------------------------------
 
-    Pin::Pin(const uint8_t pin, const bool activeLow)
+    Pin::Pin(const uint16_t pin, const bool activeLow)
         : BaseClass(pin, IExternal::regulator, IExternal::general, IExternal::logic, 0)
         , _pin(pin)
         , _activeLow(activeLow ? 1 : 0)
@@ -67,17 +67,16 @@ ENUM_CONVERSION_BEGIN(GPIO::Pin::trigger_mode)
         , _descriptor(-1)
         , _timedPin(this)
     {
-        if (_pin != 0xFF) {
+        if (_pin != 0xFFFF) {
             struct stat properties;
             char buffer[64];
             sprintf(buffer, "/sys/class/gpio/gpio%d/value", _pin);
-
             // See if this pin already exists
             if (stat(buffer, &properties) < 0) {
                 int fd = open("/sys/class/gpio/export", O_WRONLY);
                 if (fd > 0) {
                     // Time to register the pin
-                    char id[4];
+                    char id[8] = {};
                     int index = 0;
                     int pin = _pin;
                     do {
@@ -85,7 +84,6 @@ ENUM_CONVERSION_BEGIN(GPIO::Pin::trigger_mode)
                         id[sizeof(id) - index] = '0' + (pin % 10);
                         pin /= 10;
                     } while ((pin > 0) && (index < static_cast<int>(sizeof(id) - 1)));
-
                     (void)write(fd, &(id[sizeof(id) - index]), index);
                     close(fd);
                 }
@@ -101,6 +99,7 @@ ENUM_CONVERSION_BEGIN(GPIO::Pin::trigger_mode)
     /* virtual */ Pin::~Pin()
     {
         if (_descriptor != -1) {
+
             Core::ResourceMonitor::Instance().Unregister(*this);
 
             close(_descriptor);
@@ -123,8 +122,11 @@ ENUM_CONVERSION_BEGIN(GPIO::Pin::trigger_mode)
             }
         }
 
+        Period(0);
+
         _timedPin.DropReference();
         _timedPin.CompositRelease();
+
     }
 
     void Pin::Flush()
@@ -321,12 +323,12 @@ ENUM_CONVERSION_BEGIN(GPIO::Pin::trigger_mode)
 
     /* virtual */ void Pin::Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job)
     {
-        PluginHost::WorkerPool::Instance().Schedule(time, job);
+        Core::IWorkerPool::Instance().Schedule(time, job);
     }
 
     /* virtual */ void Pin::Revoke(const Core::ProxyType<Core::IDispatch>& job)
     {
-        PluginHost::WorkerPool::Instance().Revoke(job);
+        Core::IWorkerPool::Instance().Revoke(job);
     }
 }
 } // namespace WPEFramework::Linux

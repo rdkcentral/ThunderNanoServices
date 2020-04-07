@@ -130,7 +130,7 @@ namespace Plugin {
     {
         ASSERT(_skipURL <= request.Path.length());
 
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         Core::TextSegmentIterator index(
             Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
 
@@ -156,7 +156,7 @@ namespace Plugin {
 
     Core::ProxyType<Web::Response> Streamer::GetMethod(Core::TextSegmentIterator& index)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         Core::ProxyType<Web::JSONBodyType<Data>> response(jsonBodyDataFactory.Element());
 
         if (index.Next()) {
@@ -229,7 +229,7 @@ namespace Plugin {
 
     Core::ProxyType<Web::Response> Streamer::PutMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported PUT request.");
 
@@ -319,7 +319,7 @@ namespace Plugin {
 
     Core::ProxyType<Web::Response> Streamer::PostMethod(Core::TextSegmentIterator& index, const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported POST requestservice.");
         TRACE(Trace::Information, (string(__FUNCTION__)));
@@ -367,7 +367,7 @@ namespace Plugin {
 
     Core::ProxyType<Web::Response> Streamer::DeleteMethod(Core::TextSegmentIterator& index)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported DELETE request.");
 
@@ -406,7 +406,7 @@ namespace Plugin {
         // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
         if (_connectionId == connection->Id()) {
             ASSERT(_service != nullptr);
-            PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
 

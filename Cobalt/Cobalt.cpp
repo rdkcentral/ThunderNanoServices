@@ -110,13 +110,9 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         _notification.Release();
     }
 
-    if (_cobalt->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+    _cobalt->Release();
 
-        ASSERT(_connectionId != 0);
-        TRACE_L1("Cobalt Plugin is not properly destructed. %d", _connectionId);
-
-        ConnectionTermination(_connectionId);
-    }
+    ConnectionTermination(_connectionId);
 
     // Deinitialize what we initialized..
     _memory = nullptr;
@@ -144,7 +140,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
     TRACE(Trace::Information, (string(_T("Received cobalt request"))));
 
     Core::ProxyType < Web::Response
-            > result(PluginHost::Factories::Instance().Response());
+            > result(PluginHost::IFactories::Instance().Response());
 
     Core::TextSegmentIterator index(
             Core::TextFragment(request.Path, _skipURL,
@@ -223,7 +219,7 @@ void Cobalt::StateChange(const PluginHost::IStateControl::state state) {
         break;
     case PluginHost::IStateControl::EXITED:
         // Exited by Cobalt app
-        PluginHost::WorkerPool::Instance().Submit(
+        Core::IWorkerPool::Instance().Submit(
                 PluginHost::IShell::Job::Create(_service,
                         PluginHost::IShell::DEACTIVATED,
                         PluginHost::IShell::REQUESTED));
@@ -240,7 +236,7 @@ void Cobalt::Deactivated(RPC::IRemoteConnection *connection) {
     if (connection->Id() == _connectionId) {
 
         ASSERT(_service != nullptr);
-        PluginHost::WorkerPool::Instance().Submit(
+        Core::IWorkerPool::Instance().Submit(
                 PluginHost::IShell::Job::Create(_service,
                         PluginHost::IShell::DEACTIVATED,
                         PluginHost::IShell::FAILURE));

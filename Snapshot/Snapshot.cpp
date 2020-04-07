@@ -238,7 +238,7 @@ namespace Plugin {
         ASSERT(_skipURL <= request.Path.length());
 
         // Proxy object for response type.
-        Core::ProxyType<Web::Response> response(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
 
         // Default is not allowed.
         response->Message = _T("Method not allowed");

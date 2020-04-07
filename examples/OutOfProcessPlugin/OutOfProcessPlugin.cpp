@@ -89,6 +89,8 @@ namespace Plugin {
         ASSERT(service == _service);
         ASSERT(_browser != nullptr);
 
+        fprintf(stderr, "================ Deinitializing the OutOfProcessPlugin forcefully =================\n"); fflush(stderr);
+
         _service->DisableWebServer();
         _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
         _browser->Unregister(_notification);
@@ -107,14 +109,19 @@ namespace Plugin {
         if (_browser->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 
             ASSERT(_connectionId != 0);
+
+
             TRACE_L1("OutOfProcess Plugin is not properly destructed. PID: %d", _connectionId);
 
+            fprintf(stderr, "================ Deactivating the OutOfProcessPlugin forcefully =================\n"); fflush(stderr);
             ConnectionTermination(_connectionId);
+            fprintf(stderr, "================ Deactivated the OutOfProcessPlugin forcefully ==================\n"); fflush(stderr);
         }
 
         _memory = nullptr;
         _browser = nullptr;
         _service = nullptr;
+        fprintf(stderr, "================ Deinitialized the OutOfProcessPlugin forcefully ==================\n"); fflush(stderr);
     }
 
     /* virtual */ string OutOfProcessPlugin::Information() const
@@ -153,7 +160,7 @@ namespace Plugin {
 
         TRACE(Trace::Information, (string(_T("Received request"))));
 
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length() - _skipURL)), false, '/');
 
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -229,6 +236,7 @@ namespace Plugin {
         info.ToString(message);
         TRACE_L1("Received a new URL: %s", message.c_str());
         TRACE_L1("URL length: %u", static_cast<uint32_t>(message.length()));
+        fprintf(stderr, "================ URL Changed [%s] =================\n", URL.c_str()); fflush(stderr);
 
         _service->Notify(message);
     }
@@ -264,7 +272,7 @@ namespace Plugin {
 
             ASSERT(_service != nullptr);
 
-            PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
 }

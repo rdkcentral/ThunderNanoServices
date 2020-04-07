@@ -113,7 +113,7 @@ namespace Plugin {
     {
         ASSERT(_skipURL <= request.Path.length());
 
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         Core::TextSegmentIterator index(
             Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
 

@@ -93,7 +93,7 @@ namespace Plugin {
     {
         ASSERT(_skipURL <= request.Path.length());
 
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
 
         // By default, we assume everything works..
         result->ErrorCode = Web::STATUS_OK;
@@ -129,8 +129,7 @@ namespace Plugin {
         displayInfo.Connected = _connectionProperties->Connected();
         displayInfo.Width = _connectionProperties->Width();
         displayInfo.Height = _connectionProperties->Height();
-        displayInfo.Hdcpmajor = _connectionProperties->HDCPMajor();
-        displayInfo.Hdcpminor = _connectionProperties->HDCPMinor();
+        displayInfo.Hdcpprotection = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdcpprotectionType>(_connectionProperties->HDCPProtection());
         displayInfo.Hdrtype = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdrtypeType>(_connectionProperties->Type());
     }
 

@@ -74,7 +74,7 @@ namespace Plugin {
     {
         ASSERT(_skipURL <= request.Path.length());
 
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length() - _skipURL)), false, '/');
 
         // If there is an entry, the first one will alwys be a '/', skip this one..
@@ -125,21 +125,15 @@ namespace Plugin {
             Core::ProxyType<const Monitor::Data> body(request.Body<const Monitor::Data>());
             string observable = body->Observable.Value();
 
-			uint16_t operationalWindow = 0;
-            uint8_t operationalLimit = 0;
-            uint16_t memoryWindow = 0;
-            uint8_t memoryLimit = 0;
+            uint16_t restartWindow = 0;
+            uint8_t restartLimit = 0;
 
-            if ((body->Restart.IsSet()) && (body->Restart.Memory.IsSet())) {
-                memoryWindow = body->Restart.Memory.Window;
-                memoryLimit = body->Restart.Memory.Limit;
+            if (body->Restart.IsSet()) {
+                restartWindow = body->Restart.Window;
+                restartLimit = body->Restart.Limit;
             }
-            if ((body->Restart.IsSet()) && (body->Restart.Operational.IsSet())) {
-                operationalWindow = body->Restart.Operational.Window;
-                operationalLimit = body->Restart.Operational.Limit;
-            }
-            TRACE(Trace::Information, (_T("Sets Restart Limits: MEMORY:[LIMIT:%d, WINDOW:%d], OPERATIONAL:[LIMIT:%d, WINDOW:%d]"), memoryLimit, memoryWindow, operationalLimit, operationalWindow));
-            _monitor->Update(observable, operationalWindow, operationalLimit, memoryWindow, memoryLimit);
+            TRACE(Trace::Information, (_T("Sets Restart Limits:[LIMIT:%d, WINDOW:%d]"), restartLimit, restartWindow));
+            _monitor->Update(observable, restartWindow, restartLimit);
         } else {
             result->ErrorCode = Web::STATUS_BAD_REQUEST;
             result->Message = _T(" could not handle your request.");

@@ -135,11 +135,11 @@ namespace Plugin {
             }
             void Schedule() {
                 Core::ProxyType<Core::IDispatch> job(*this);
-                PluginHost::WorkerPool::Instance().Submit(job);
+                Core::IWorkerPool::Instance().Submit(job);
             }
             void Stop() {
                 Core::ProxyType<Core::IDispatch> job(*this);
-                PluginHost::WorkerPool::Instance().Revoke(job);
+                Core::IWorkerPool::Instance().Revoke(job);
             }
             virtual void Dispatch() override {
                 _parent.Upgrade();

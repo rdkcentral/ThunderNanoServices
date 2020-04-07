@@ -299,7 +299,7 @@ namespace Plugin
                 Core::FileSystemMonitor::Instance().Unregister(&(*_job), _path);
 
                 // Potentially the Job might still be waiting, let’s kill it
-                PluginHost::WorkerPool::Instance().Revoke(Core::proxy_cast<Core::IDispatchType<void> >(_job));
+                Core::IWorkerPool::Instance().Revoke(Core::proxy_cast<Core::IDispatchType<void> >(_job));
 
                 _path = EMPTY_STRING;
                 _position = 0;
@@ -332,7 +332,7 @@ namespace Plugin
             }
             void Updated()
             {
-                PluginHost::WorkerPool::Instance().Submit(Core::proxy_cast<Core::IDispatchType<void> >(_job));
+                Core::IWorkerPool::Instance().Submit(Core::proxy_cast<Core::IDispatchType<void> >(_job));
             }
 
         private:
@@ -502,7 +502,7 @@ namespace Plugin
                                 Add(_T("port"), &Port);
                                 Add(_T("binding"), &Binding);
                             }
-                            NetworkNode(const NetworkNode &copy)
+                            NetworkNode(const NetworkNode& copy)
                                 : Core::JSON::Container(), Port(copy.Port), Binding(copy.Binding)
                             {
                                 Add(_T("port"), &Port);

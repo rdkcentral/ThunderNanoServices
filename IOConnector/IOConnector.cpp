@@ -148,54 +148,60 @@ namespace Plugin
                     break;
                 }
 
-                if (index.Current().Handlers.IsSet() != false) {
-                    std::list< std::pair<uint32_t, uint32_t> > intervals;
+                if (_pins.find(pin->Identifier()) != _pins.end()) {
+                    SYSLOG(Logging::Startup, (_T("Pin [%d] defined multiple times, only the first definitions is used !!"), pin->Identifier() & 0xFFFF));
+                }
+                else {
+                    auto newEntry = _pins.emplace(std::piecewise_construct,
+                                                  std::forward_as_tuple(pin->Identifier()),
+                                                  std::forward_as_tuple(pin));
 
-                    Core::JSON::ArrayType<Config::Pin::Handler>::Iterator handler(index.Current().Handlers.Elements());
+                    if (index.Current().Handlers.IsSet() == true) {
+                        std::list< std::pair<uint32_t, uint32_t> > intervals;
 
-                    if (mode == 0) {
-                        SYSLOG(Logging::Startup, (_T("Pin [%d] defined as output but handlers associated with it!"), pin->Identifier() & 0xFFFF));
-                    }
-                    else if (mode == 1) {
-                        SYSLOG(Logging::Startup, (_T("Handlers requires input pins where BOTH states are reported. Error on pin [%d]."), pin->Identifier() & 0xFFFF));
-                    }
+                        Core::JSON::ArrayType<Config::Pin::Handler>::Iterator handler(index.Current().Handlers.Elements());
 
-                    while (handler.Next() == true) {
-                          
-                        Config::Pin::Handler& info(handler.Current());
-
-                        uint32_t start = info.Start.Value();
-                        uint32_t end   = info.End.Value();
-
-                        if (start > end) {
-                            SYSLOG(Logging::Startup, (_T("Handler [%s] on pin [%d] has an incorrect interval [%d-%d]."), info.Name.Value().c_str(), pin->Identifier() & 0xFFFF, start, end));
+                        if (mode == 0) {
+                            SYSLOG(Logging::Startup, (_T("Pin [%d] defined as output but handlers associated with it!"), pin->Identifier() & 0xFFFF));
                         }
-                        else {
-                            std::list< std::pair<uint32_t, uint32_t> >::iterator loop(intervals.begin());
-                            start *= 1000;
-                            end   *= 1000;
-                            // Check for overlapping intervals. If they exist report a warning...
-                            while ((loop != intervals.end()) && (((start < loop->first) || (start >= loop->second)) && ((end <= loop->first) || (end > loop->second)))) {
-                                loop++;
-                            }
+                        else if (mode == 1) {
+                            SYSLOG(Logging::Startup, (_T("Handlers requires input pins where BOTH states are reported. Error on pin [%d]."), pin->Identifier() & 0xFFFF));
+                        }
 
-                            if (loop != intervals.end()) {
-                                SYSLOG(Logging::Startup, (_T("Interval conflict on pin [%d], at handler [%s]."), pin->Identifier() & 0xFFFF, info.Name.Value().c_str()));
+                        while (handler.Next() == true) {
+                          
+                            Config::Pin::Handler& info(handler.Current());
+
+                            uint32_t start = info.Start.Value();
+                            uint32_t end   = info.End.Value();
+
+                            if (start > end) {
+                                SYSLOG(Logging::Startup, (_T("Handler [%s] on pin [%d] has an incorrect interval [%d-%d]."), info.Name.Value().c_str(), pin->Identifier() & 0xFFFF, start, end));
                             }
                             else {
-                                IHandler* method = HandlerAdministrator::Instance().Handler(info.Name.Value(), _service, info.Config.Value());
-                                if (method != nullptr) {
+                                std::list< std::pair<uint32_t, uint32_t> >::iterator loop(intervals.begin());
+                                start *= 1000;
+                                end   *= 1000;
+                                // Check for overlapping intervals. If they exist report a warning...
+                                while ((loop != intervals.end()) && (((start < loop->first) || (start >= loop->second)) && ((end <= loop->first) || (end > loop->second)))) {
+                                    loop++;
+                                }
+
+                                if (loop != intervals.end()) {
+                                    SYSLOG(Logging::Startup, (_T("Interval conflict on pin [%d], at handler [%s]."), pin->Identifier() & 0xFFFF, info.Name.Value().c_str()));
+                                }
+                                else if (newEntry.first->second.Add(_service, info.Name.Value(), info.Config.Value(), start, end) == false) {
                                     SYSLOG(Logging::Startup, (_T("Could not instantiate handler [%s] on pin [%d]."), info.Name.Value().c_str(), pin->Identifier() & 0xFFFF));
                                 }
                                 else {
-                                    method->Interval(start, end);
                                     intervals.push_back(std::pair<uint32_t,uint32_t>(start,end));
-                                    _pins.push_back(PinHandler(pin, method));
                                 }
                             }
                         }
                     }
                 }
+
+                pin->Release();
             }
         }
 
@@ -221,15 +227,11 @@ namespace Plugin
         Exchange::IExternal* result = nullptr;
 
         // Lets find the pin and trigger if posisble...
-        Pins::iterator index = _pins.begin();
+        Pins::iterator index = _pins.find(id);
 
-        while ((index != _pins.end()) && (result == nullptr)) {
-            if (index->first->Identifier() == id) {
-                result = index->first;
-                result->AddRef();
-            } else {
-                index++;
-            }
+        if (index != _pins.end()) {
+            result = index->second.Pin();
+            result->AddRef();
         }
 
         return (result);
@@ -240,13 +242,11 @@ namespace Plugin
         ASSERT(_service == service);
 
         while (_pins.size() > 0) {
-            _pins.front().first->Unsubscribe(&_sink);
-            if (_pins.front().second != nullptr) {
-                delete _pins.front().second;
-            }
-            _pins.front().first->Release();
-            _pins.pop_front();
+            _pins.begin()->second.Unsubscribe(&_sink);
+            _pins.erase(_pins.begin());
         }
+
+        _pins.clear();
 
         _service = nullptr;
     }
@@ -267,7 +267,7 @@ namespace Plugin
     {
         ASSERT(_skipURL <= request.Path.length());
 
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         Core::TextSegmentIterator index(
             Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
 
@@ -283,16 +283,19 @@ namespace Plugin
             // Find the pin..
             Pins::iterator entry = _pins.begin();
 
-            while ((entry != _pins.end()) && ((entry->first->Identifier() & 0xFFFF) != pinId)) {
+            while ((entry != _pins.end()) && ((entry->first & 0xFFFF) != pinId)) {
                 entry++;
             }
 
             if (entry != _pins.end()) {
-                GPIO::Pin& pin(*(entry->first));
+                GPIO::Pin* pin(entry->second.Pin());
+
+                ASSERT (pin != nullptr);
+
                 if (request.Verb == Web::Request::HTTP_GET) {
-                    GetMethod(*result, index, pin);
+                    GetMethod(*result, index, *pin);
                 } else if ((request.Verb == Web::Request::HTTP_POST) && (index.Next() == true)) {
-                    PostMethod(*result, index, pin);
+                    PostMethod(*result, index, *pin);
                 }
             }
         }
@@ -331,18 +334,21 @@ namespace Plugin
 
         while (index != _pins.end()) {
 
-            if (index->first->HasChanged()) {
-                GPIO::Pin& pin(*(index->first));
+            GPIO::Pin* pin(index->second.Pin());
 
-                pin.Align();
+            ASSERT (pin != nullptr);
 
-                TRACE(IOState, (&pin));
+            if (pin->HasChanged()) {
 
-                if (index->second != nullptr) {
-                    index->second->Trigger(pin);
+                pin->Align();
+
+                TRACE(IOState, (pin));
+
+                if (index->second.HasHandlers() == true) {
+                    index->second.Handle();
                 } else {
-                    int32_t value = (pin.Get() ? 1 : 0);
-                    string pinAsText (Core::NumberType<uint16_t>(pin.Identifier() & 0xFFFF).Text());
+                    int32_t value = (pin->Get() ? 1 : 0);
+                    string pinAsText (Core::NumberType<uint16_t>(pin->Identifier() & 0xFFFF).Text());
                     _service->Notify(_T("{ \"id\": ") + pinAsText + _T(", \"state\": \"") + (value != 0 ? _T("Set\" }") : _T("Clear\" }")));
 
                     event_pinactivity(pinAsText, value);

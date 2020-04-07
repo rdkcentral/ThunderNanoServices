@@ -253,7 +253,7 @@ namespace Plugin
     /* virtual */ Core::ProxyType<Web::Response>
     NetworkControl::Process(const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint16_t>(request.Path.length()) - _skipURL), false, '/');
 
         // By default, we assume everything works..
@@ -876,6 +876,9 @@ namespace Plugin
                         Reload(interfaceName, how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC);
                     }
                 }
+            } else {
+                ClearAssignedIPV4IPs(adapter);
+                ClearAssignedIPV6IPs(adapter);
             }
 
             _adminLock.Unlock();

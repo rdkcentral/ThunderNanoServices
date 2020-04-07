@@ -24,7 +24,6 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(DeviceInfo, 1, 0);
 
-    static Core::ProxyPoolType<Web::Response> responseFactory(4);
     static Core::ProxyPoolType<Web::JSONBodyType<DeviceInfo::Data>> jsonResponseFactory(4);
 
     /* virtual */ const string DeviceInfo::Initialize(PluginHost::IShell* service)
@@ -74,7 +73,7 @@ namespace Plugin {
     {
         ASSERT(_skipURL <= request.Path.length());
 
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
 
         // By default, we assume everything works..
         result->ErrorCode = Web::STATUS_OK;

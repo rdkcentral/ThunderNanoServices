@@ -38,10 +38,12 @@ namespace Plugin {
                 : Sleep(90)
                 , Crash(false)
                 , Destruct(1000)
+                , Single(false)
             {
                 Add(_T("sleep"), &Sleep);
                 Add(_T("crash"), &Crash);
                 Add(_T("destruct"), &Destruct);
+                Add(_T("single"), &Single);
             }
             ~Config()
             {
@@ -51,6 +53,7 @@ namespace Plugin {
             Core::JSON::DecUInt16 Sleep;
             Core::JSON::Boolean Crash;
             Core::JSON::DecUInt32 Destruct;
+            Core::JSON::Boolean Single;
         };
 
         class Job : public Core::IDispatch {
@@ -128,13 +131,17 @@ namespace Plugin {
             , _hidden(false)
             , _executor(1, 0, 4)
         {
+            fprintf(stderr, "---------------- Constructed the OutOfProcessImplementation ----------------------\n"); fflush(stderr);
         }
         virtual ~OutOfProcessImplementation()
         {
+            fprintf(stderr, "---------------- Destructing the OutOfProcessImplementation ----------------------\n"); fflush(stderr);
             Block();
 
             if (Wait(Core::Thread::STOPPED | Core::Thread::BLOCKED, _config.Destruct.Value()) == false)
                 TRACE_L1("Bailed out before the thread signalled completion. %d ms", _config.Destruct.Value());
+
+            fprintf(stderr, "---------------- Destructed the OutOfProcessImplementation -----------------------\n"); fflush(stderr);
         }
 
     public:
@@ -152,6 +159,7 @@ namespace Plugin {
 
         virtual uint32_t Configure(PluginHost::IShell* service)
         {
+            fprintf(stderr, "---------------- Configuring the OutOfProcessImplementation -----------------------\n"); fflush(stderr);
             _dataPath = service->DataPath();
             _config.FromString(service->ConfigLine());
             _endTime = Core::Time::Now();
@@ -162,6 +170,7 @@ namespace Plugin {
             }
 
             Run();
+            fprintf(stderr, "---------------- Configured the OutOfProcessImplementation ------------------------\n"); fflush(stderr);
             return (Core::ERROR_NONE);
         }
         virtual string GetURL() const
@@ -234,7 +243,8 @@ namespace Plugin {
             std::list<Exchange::IBrowser::INotification*>::iterator index(std::find(_browserClients.begin(), _browserClients.end(), sink));
 
             // Make sure you do not unregister something you did not register !!!
-            ASSERT(index != _browserClients.end());
+            // Since we have the Single shot parameter, it could be that it is deregistered, it is not an error !!!!
+            // ASSERT(index != _browserClients.end());
 
             if (index != _browserClients.end()) {
                 TRACE_L1("IBrowser::INotification Removing registered listener from browser %d", __LINE__);
@@ -331,38 +341,44 @@ namespace Plugin {
     private:
         virtual uint32_t Worker()
         {
-            if (Core::Time::Now() >= _endTime) {
-                if (_config.Crash.Value() == true) {
-                    SleepMs(_config.Sleep.Value() * 1000);
-                    TRACE_L1("Going to CRASH as requested %d.", 0);
-                    abort();
-                }
+            fprintf(stderr, "---------------- Running the OutOfProcessImplementation ------------------------\n"); fflush(stderr);
+            // First Sleep the expected time..
+            SleepMs(_config.Sleep.Value() * 1000);
 
-                exit(0);
+            fprintf(stderr, "---------------- Notifying the OutOfProcessImplementation ------------------------\n"); fflush(stderr);
+            _adminLock.Lock();
+
+            std::list<Exchange::IBrowser::INotification*>::iterator index(_browserClients.begin());
+
+            _setURL = _requestedURL;
+
+            while (index != _browserClients.end()) {
+                (*index)->URLChanged(_setURL);
+                // See if we need to "Fire and forget, single shot..
+                if (_config.Single.Value() == true) {
+                    (*index)->Release();
+                }
+                index++;
             }
 
-            if (_setURL != _requestedURL) {
-                SleepMs(100);
-                _adminLock.Lock();
+            if (_config.Single.Value() == true) {
+                _browserClients.clear();
+            }
 
-                std::list<Exchange::IBrowser::INotification*>::iterator index(_browserClients.begin());
+            _adminLock.Unlock();
 
-                _setURL = _requestedURL;
-
-                while (index != _browserClients.end()) {
-                    (*index)->URLChanged(_setURL);
-                    index++;
-                }
-
-                _adminLock.Unlock();
+            if (_config.Crash.Value() == true) {
+                fprintf(stderr, "---------------- Crashing the OutOfProcessImplementation ------------------------\n"); fflush(stderr);
+                TRACE_L1("Going to CRASH as requested %d.", 0);
+                abort();
             }
 
             // Just do nothing :-)
             Block();
 
-            Core::Time now(Core::Time::Now());
+            fprintf(stderr, "---------------- Completed the OutOfProcessImplementation ------------------------\n"); fflush(stderr);
 
-            return (now > _endTime ? Core::infinite : static_cast<uint32_t>(1000));
+            return (Core::infinite);
         }
 
     private:

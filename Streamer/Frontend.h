@@ -107,6 +107,9 @@ namespace Player {
                 uint32_t Release() const override
                 {
                     if (Core::InterlockedDecrement(_referenceCount) == 0) {
+
+                        ASSERT(_callback == nullptr);
+
                         if (_callback != nullptr) {
                             _callback->Release();
                         }
@@ -272,6 +275,8 @@ namespace Player {
                     ASSERT(_player != nullptr);
                     ASSERT(_administrator != nullptr);
                     _player->Callback(nullptr);
+
+                    ASSERT(_callback == nullptr);
                     if (_callback) {
                         _callback->Release();
                     }
