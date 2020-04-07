@@ -120,8 +120,9 @@ namespace GPIO
                 (void)write(fd, &(buffer[sizeof(buffer) - index]), index);
                 close(fd);
             }
-            Period(0);
         }
+
+        Period(0);
 
         _timedPin.DropReference();
         _timedPin.CompositRelease();
