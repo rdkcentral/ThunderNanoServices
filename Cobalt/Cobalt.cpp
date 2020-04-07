@@ -110,13 +110,9 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         _notification.Release();
     }
 
-    if (_cobalt->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+    _cobalt->Release();
 
-        ASSERT(_connectionId != 0);
-        TRACE_L1("Cobalt Plugin is not properly destructed. %d", _connectionId);
-
-        ConnectionTermination(_connectionId);
-    }
+    ConnectionTermination(_connectionId);
 
     // Deinitialize what we initialized..
     _memory = nullptr;

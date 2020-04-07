@@ -155,10 +155,12 @@ private:
 
     inline void ConnectionTermination(uint32_t connectionId)
     {
-        RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
-        if (connection != nullptr) {
-            connection->Terminate();
-            connection->Release();
+        if (connectionId != 0) {
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
+            if (connection != nullptr) {
+                connection->Terminate();
+                connection->Release();
+            }
         }
     }
 
