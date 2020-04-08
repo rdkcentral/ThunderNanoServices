@@ -57,31 +57,27 @@ private:
 
         Job (PowerImplementation& parent)
             : _parent(parent)
-            , _mode(Exchange::IPower::PCState::On)
-            , _waitTimeOutSec(0) {
+            , _mode(Exchange::IPower::PCState::On) {
         }
         ~Job() {
         }
 
     public:
-        void Set(Exchange::IPower::PCState mode, uint32_t waitTimeOutSec) {
+        void Set(Exchange::IPower::PCState mode) {
             _mode = mode;
-            _waitTimeOutSec = waitTimeOutSec;
         }
         void Dispatch() {
-            _parent.UpdateState(_mode, _waitTimeOutSec);
+            _parent.UpdateState(_mode);
         }
 
     private:
         PowerImplementation& _parent;
         Exchange::IPower::PCState _mode;
-        uint32_t _waitTimeOutSec;
     };
 
 public:
     PowerImplementation(power_state_change callback, void* userData)
-        : _adminLock()
-        , _currentState(Exchange::IPower::PCState::On)
+        : _currentState(Exchange::IPower::PCState::On)
         , _supportedModes(0)
         , _triggerFile(-1)
         , _callback(callback)
@@ -162,8 +158,10 @@ public:
             if (job.IsValid() == false) {
                 result = false;
             } else {
-                static_cast<Job&>(_job).Set(state, waitTimeOut);
-                Core::IWorkerPool::Instance().Submit(job);
+                static_cast<Job&>(_job).Set(state);
+                TRACE(Trace::Information, (_T("Scheduled Job: change Power mode to %d after %dsec."),
+                                state, waitTimeOut));
+                Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(waitTimeOut * 1000), job);
             }
         }
         return (result);
@@ -185,52 +183,49 @@ private:
         }
         return (result);
     }
-    void UpdateState(Exchange::IPower::PCState state, const uint32_t waitTimeOut) {
-        mode* newMode = FindMode(state);
+    void UpdateState(Exchange::IPower::PCState state) {
+        if (_currentState != state) {
+            mode* newMode = FindMode(state);
 
-        if (newMode != nullptr) {
-            uint8_t value = -1;
-            TRACE(Trace::Information, (_T("Scheduled Job: change Power mode to %d after %dsec."),
-                        state, waitTimeOut));
-            SleepMs(waitTimeOut * 1000);
-            Notify(state);
-            TRACE(Trace::Information, (_T("Scheduled Job: changing Power mode to %d."), state));
-            _currentState = state;
+            if (newMode != nullptr) {
+                uint8_t value = -1;
+                TRACE(Trace::Information, (_T("Scheduled Job: changing Power mode to %s[%d]."),
+                            newMode->label, state));
+                Notify(state);
+                _currentState = state;
 
-            switch (state) {
-                case Exchange::IPower::PCState::ActiveStandby:
-                case Exchange::IPower::PCState::PassiveStandby:
-                case Exchange::IPower::PCState::SuspendToRAM:
-                case Exchange::IPower::PCState::Hibernate:
-                    {
-                        ::write(_triggerFile, "1", 1);
-                        /* We will be able to write state only if we are in 'On' State. */
-                        ::write(_stateFile, newMode->label, newMode->length);
-                        /* Read possible only if device is awaken by external Power 'On' Trigger. */
-                        lseek(_triggerFile, 0, SEEK_SET);
-                        ::read(_triggerFile, &value, 1);
-                        /* Reset the early wakeup trigger for low level drivers. */
-                        ::write(_triggerFile, "0", 1);
-                        /* Reset the State to 'On' */
-                        SetState(Exchange::IPower::PCState::On, 0);
-                    }
-                    break;
-                case Exchange::IPower::PCState::PowerOff:
-                    system("poweroff");
-                    break;
-                default:
-                    TRACE(Trace::Error, (_T("Should not reach here at any case...!!!")));
+                switch (state) {
+                    case Exchange::IPower::PCState::On: break;
+                    case Exchange::IPower::PCState::ActiveStandby:
+                    case Exchange::IPower::PCState::PassiveStandby:
+                    case Exchange::IPower::PCState::SuspendToRAM:
+                    case Exchange::IPower::PCState::Hibernate:
+                        {
+                            ::write(_triggerFile, "1", 1);
+                            /* We will be able to write state only if we are in 'On' State. */
+                            ::write(_stateFile, newMode->label, newMode->length);
+                            /* Read possible only if device is awaken by extrenal Power 'On' Trigger. */
+                            lseek(_triggerFile, 0, SEEK_SET);
+                            ::read(_triggerFile, &value, 1);
+                            /* Reset the early wakeup trigger for low level drivers. */
+                            ::write(_triggerFile, "0", 1);
+                            /* Reset the State to 'On' once device wakes-up. */
+                            SetState(Exchange::IPower::PCState::On, 0);
+                        }
+                        break;
+                    case Exchange::IPower::PCState::PowerOff:
+                        system("poweroff");
+                        break;
+                    default:
+                        TRACE(Trace::Error, (_T("Should not reach here at any case...!!!")));
+                }
             }
         }
     }
     void Notify (const Exchange::IPower::PCState mode) {
-       _adminLock.Lock();
-
        if (_callback != nullptr) {
            _callback(_userData, mode);
        }
-
-       _adminLock.Unlock();
     }
 
 public:
@@ -242,7 +237,6 @@ private:
     power_state_change _callback;
     void* _userData;
     Core::ThreadPool::JobType<Job> _job;
-    Core::CriticalSection _adminLock;
     Exchange::IPower::PCState _currentState;
 };
 
