@@ -117,13 +117,8 @@ public:
         return _height;
     }
     // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
-    uint8_t HDCPMajor() const override
-    {
-        return 0;
-    }
-    uint8_t HDCPMinor() const override
-    {
-        return 0;
+    HDCPProtectionType HDCPProtection() const override {
+        return HDCPProtectionType::HDCP_Unencrypted;
     }
     HDRType Type() const override
     {
