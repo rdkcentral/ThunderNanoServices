@@ -434,6 +434,11 @@ namespace Plugin
         case WPASupplicant::Controller::WPS_AP_AVAILABLE:
         case WPASupplicant::Controller::AP_ENABLED:
             break;
+        case WPASupplicant::Controller::CTRL_EVENT_OK:
+            if (_autoConnect == true) {
+                _wifiConnector.OKReceived();
+            }
+            break;
         }
     }
 

@@ -145,6 +145,8 @@ namespace Plugin {
                 SCANNING,
                 PROCESSING,
                 CONNECTING,
+                RECONNECTING,
+                AUTHENTICATION,
             };
 
         public:
@@ -157,8 +159,11 @@ namespace Plugin {
                 , _parent(*parent)
                 , _job(*this)
                 , _state(IDLE)
+                , _prevState(IDLE)
                 , _ssidList()
                 , _schedInterval(scheduleInterval * 1000)
+                , _exchange(string(_TXT("")))
+                , _bssid(0)
             {
                 ASSERT(parent != nullptr);
             }
@@ -199,22 +204,37 @@ namespace Plugin {
                                             net.SSID()));
                         }
                     }
-                    _state = CONNECTING;
+                    _state = _prevState = CONNECTING;
                 }
+                if (_state >= CONNECTING) {
 
-                if (_state == CONNECTING) {
-
-                    if (_ssidList.empty() == false) {
-                        _parent._controller->Connect(_ssidList.front().second,
-                                true);
-                        _ssidList.pop_front();
+                    if (_prevState != _state) {
+                        _prevState = _state;
                     } else {
-                        TRACE(Trace::Warning, (_T("Tried all opportunities, retrying again")));
-                        _state = SCANNING;
+                        // Move to next SSID
+                        _state = CONNECTING;
                     }
+                    if (_state == CONNECTING) {
+
+                        if (_ssidList.empty() == false) {
+
+                            _parent._controller->SelectNetwork(_exchange,
+                                    _ssidList.front().second, _bssid);
+                            _ssidList.pop_front();
+                        } else {
+                            TRACE(Trace::Warning, (_T("Tried all opportunities, retrying again")));
+                            _state = SCANNING;
+                        }
+                    } else if (_state == RECONNECTING) {
+
+                        _parent._controller->Reconnect(_exchange);
+                    } else if (_state == AUTHENTICATION) {
+
+                        _parent._controller->Authenticate(_exchange, _bssid);
+                    }
+
                     scheduleTime = _schedInterval;
                 }
-
                 _adminLock.Unlock();
 
                 if (scheduleTime != static_cast<uint32_t>(~0)) {
@@ -258,7 +278,7 @@ namespace Plugin {
             void Disconnected()
             {
                 _adminLock.Lock();
-                if (_state == CONNECTING) {
+                if (_state >= CONNECTING) {
                     _adminLock.Unlock();
 
                     _job.Revoke();
@@ -269,14 +289,42 @@ namespace Plugin {
                     Connect();
                 }
             }
+            void OKReceived()
+            {
+                bool stateChanged = true;
+
+                _adminLock.Lock();
+
+                if (_state == CONNECTING) {
+                    if (_bssid != 0) {
+                        _state = RECONNECTING;
+                    } else {
+                        stateChanged = false;
+                    }
+                } else if (_state == RECONNECTING) {
+                    _state = AUTHENTICATION;
+                } else if (_state == AUTHENTICATION) {
+                    stateChanged = false;
+                }
+
+                _adminLock.Unlock();
+
+                if (stateChanged == true) {
+                    _job.Revoke();
+                    _job.Submit();
+                }
+            }
 
         private:
             Core::CriticalSection _adminLock;
             WifiControl& _parent;
             Job _job;
             states _state;
+            states _prevState;
             SsidList _ssidList;
             uint32_t _schedInterval;
+            WPASupplicant::Controller::CustomRequest _exchange;
+            uint64_t _bssid;
         };
 
     public:
