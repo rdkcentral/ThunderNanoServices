@@ -349,6 +349,7 @@ namespace Plugin {
         uint32_t endpoint_unpair(const JsonData::RemoteControl::UnpairParamsData& params);
         uint32_t get_devices(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t get_device(const string& index, JsonData::RemoteControl::DeviceData& response) const;
+        void event_keypressed(const string& id, const bool& pressed);
 
     private:
         uint32_t _skipURL;
