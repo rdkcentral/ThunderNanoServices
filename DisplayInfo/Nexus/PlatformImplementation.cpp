@@ -51,7 +51,7 @@ public:
        , _adminLock()
        , _activity(*this) {
 
-        NEXUS_Error rc = NxClient_Join(NULL);
+        VARIABLE_IS_NOT_USED NEXUS_Error rc = NxClient_Join(NULL);
         ASSERT(!rc);
         NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
         NEXUS_Platform_GetConfiguration(&_platformConfig);
