@@ -153,7 +153,6 @@ namespace Plugin {
             }
             uint32_t ZOrder(const uint16_t index) override
             {
-                uint32_t result = Core::ERROR_UNAVAILABLE;
                 _surface.ZOrder(index);
                 if (index == 0) {
                     SetInput();

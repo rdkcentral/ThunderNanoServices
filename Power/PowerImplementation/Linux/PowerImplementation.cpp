@@ -77,17 +77,17 @@ private:
 
 public:
     PowerImplementation(power_state_change callback, void* userData)
-        : _currentState(Exchange::IPower::PCState::On)
-        , _supportedModes(0)
+        : _supportedModes(0)
+        , _stateFile(-1)
         , _triggerFile(-1)
         , _callback(callback)
         , _userData(userData)
         , _job(*this)
+        , _currentState(Exchange::IPower::PCState::On)
     {
         TRACE(Trace::Information, (_T("LinuxPowerImplementation()")));
-        const char DiskFile[]    = "/sys/power/disk";
-        const char StateFile[]   = "/sys/power/state";
-        const char TriggerFile[] = "/sys/power/early_suspend_trigger";
+        static constexpr char StateFile[]   = "/sys/power/state";
+        static constexpr char TriggerFile[] = "/sys/power/early_suspend_trigger";
 
         /* Get the list of supported modes from /sys/power/state */
         char buffer[128] = {};
@@ -148,6 +148,9 @@ public:
     }
 
 public:
+    bool IsSupported(const Exchange::IPower::PCState state) const {
+        return ((_supportedModes & (1 << state)) != 0);
+    }
     bool SetState(const Exchange::IPower::PCState state, const uint32_t waitTimeOut)
     {
         bool result = (_triggerFile > 0);
@@ -228,10 +231,8 @@ private:
        }
     }
 
-public:
-    uint32_t _supportedModes;
-
 private:
+    uint32_t _supportedModes;
     int _stateFile;
     int _triggerFile;
     power_state_change _callback;
@@ -259,7 +260,7 @@ uint32_t power_set_state(const enum WPEFramework::Exchange::IPower::PCState stat
     ASSERT (implementation != nullptr);
 
     if (implementation != nullptr) {
-        if ((implementation->_supportedModes & (1 << state)) && (implementation->SetState(state, sleepTime) == true)) {
+        if ((implementation->IsSupported(state)) && (implementation->SetState(state, sleepTime) == true)) {
             return (Core::ERROR_NONE);
         }
     }
