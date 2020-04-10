@@ -135,6 +135,7 @@ namespace Plugin {
         , _virtualDevices()
         , _inputHandler(PluginHost::InputHandler::Handler())
         , _persistentPath()
+        , _feedback(*this)
     {
         ASSERT(_inputHandler != nullptr);
 
@@ -269,6 +270,8 @@ namespace Plugin {
             admin.Callback(static_cast<IWheelHandler*>(this));
             admin.Callback(static_cast<IPointerHandler*>(this));
             admin.Callback(static_cast<ITouchHandler*>(this));
+
+            _inputHandler->Register(&_feedback);
         }
 
         // On succes return nullptr, to indicate there is no error text.
@@ -277,6 +280,8 @@ namespace Plugin {
 
     /* virtual */ void RemoteControl::Deinitialize(PluginHost::IShell* service)
     {
+
+        _inputHandler->Unregister(&_feedback);
 
         Remotes::RemoteAdministrator& admin(Remotes::RemoteAdministrator::Instance());
         Remotes::RemoteAdministrator::Iterator index(admin.Producers());
@@ -856,6 +861,15 @@ namespace Plugin {
         }
 
         _eventLock.Unlock();
+    }
+
+    void RemoteControl::Activity(const IVirtualInput::KeyData::type type, const uint32_t code) 
+    {
+        // Lets call the JSONRPC method: 
+        if ( (type == IVirtualInput::KeyData::type::RELEASED) || (type == IVirtualInput::KeyData::type::PRESSED) ) {
+            string keyCode (Core::NumberType<uint32_t>(code).Text());
+            event_keypressed(keyCode, (type == IVirtualInput::KeyData::type::PRESSED));
+        }
     }
 }
 }
