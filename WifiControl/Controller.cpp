@@ -189,7 +189,11 @@ namespace WPASupplicant {
     }
     /* virtual */ uint16_t Controller::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
     {
+        return ProcessResponse(dataFrame, receivedSize);
+    }
 
+    uint16_t Controller::ProcessResponse(uint8_t* dataFrame, const uint16_t receivedSize)
+    {
         string response = string(reinterpret_cast<const char*>(dataFrame), (dataFrame[receivedSize - 1] == '\n' ? receivedSize - 1 : receivedSize));
 
         if (response[0] == '<') {
@@ -217,16 +221,28 @@ namespace WPASupplicant {
                 TRACE(Communication, (_T("Dispatch message: [%s]"), message.c_str()));
 
                 if ((event == CTRL_EVENT_CONNECTED) || (event == CTRL_EVENT_DISCONNECTED) || (event == WPS_AP_AVAILABLE)) {
-                    _statusRequest.Event(event.Value());
-                    Submit(&_statusRequest);
-                } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS)) {
-                    _adminLock.Lock();
-                    if (_scanRequest.Set() == true) {
+                     _adminLock.Lock();
+                    if (_statusRequest.Set() == true) {
+                        _statusRequest.Event(event.Value());
                         _adminLock.Unlock();
-                        Submit(&_scanRequest);
+                        Submit(&_statusRequest);
                     } else {
                         _adminLock.Unlock();
                     }
+                } else if ((event == CTRL_EVENT_SCAN_STARTED)) {
+                    // if it is already set then scan started by us in Scan() otherwise intiiated by supplicant e.g. Scan during Connect OR autoscan
+                    _scanning = true;
+                    _scanStartTime = Core::Time::Now().Ticks();
+                    _added = 0;
+                    _removed = 0;
+                    TRACE(Trace::Information, ("Scan started"));
+                } else if ((event == CTRL_EVENT_SCAN_RESULTS)) {
+                    _scanning = false;
+                    uint64_t elapsed = Core::Time::Now().Ticks() - _scanStartTime;
+                    _adminLock.Lock();
+                    Reevaluate();
+                    _adminLock.Unlock();
+                    TRACE(Trace::Information, ("Scan completed added=%d remove=%d in %lf sec", _added, _removed, ((double_t)elapsed)/1000000) );
                 } else if ((event == CTRL_EVENT_BSS_ADDED) || (event == CTRL_EVENT_BSS_REMOVED)) {
 
                     ASSERT(position != string::npos);
@@ -248,24 +264,19 @@ namespace WPASupplicant {
                     _adminLock.Lock();
 
                     // Let see what we need to do with this BSSID, add or remove :-)
-                    if ((event == CTRL_EVENT_BSS_ADDED) && (_detailRequest.Set(bssid) == true)) {
-                        // send out a request for detail.
-                        _adminLock.Unlock();
-                        Submit(&_detailRequest);
-                        _adminLock.Lock();
+                    if (event == CTRL_EVENT_BSS_ADDED) {
+                        ++_added;
+                        NetworkInfo newEntry;
+                        _networks[bssid] = newEntry;
                     } else if (event == CTRL_EVENT_BSS_REMOVED) {
 
+                        ++_removed;
                         NetworkInfoContainer::iterator network(_networks.find(bssid));
 
                         if (network != _networks.end()) {
                             _networks.erase(network);
                         }
                     }
-
-                    if (_callback != nullptr) {
-                        _callback->Dispatch(event.Value());
-                    }
-
                     _adminLock.Unlock();
                 }
             } else {
@@ -386,6 +397,103 @@ namespace WPASupplicant {
         } else {
             _callback->Dispatch(CTRL_EVENT_NETWORK_CHANGED);
         }
+    }
+
+    uint64_t Controller::Timed(const uint64_t scheduledTime)
+    {
+        uint32_t rc = Scan();
+        if ( rc ) {
+            TRACE(Trace::Error, ("%s: Scan Failed (%d)", __FUNCTION__, rc));
+        }
+        ScheduleScan(_scanInterval);
+        return 0;
+    }
+
+    void Controller::ScheduleScan(uint32_t scanInterval)
+    {
+        _scanInterval = scanInterval;
+
+        if (_scanTimer.Pending()) {
+            TRACE(Trace::Information, ("%s: Ignoring, timer is pending (%d)", __FUNCTION__, _scanTimer.Pending()));
+        } else {
+            TRACE_L1("%s: Scheudling next scan in %u ms", __FUNCTION__, _scanInterval);
+            Core::Time NextTick = Core::Time::Now();
+            NextTick.Add(scanInterval);
+            _scanTimer.Schedule(NextTick.Ticks(), ScanTimer(*this));
+        }
+    }
+
+    Controller::ControlSocket::ControlSocket(Controller& parent)
+        : BaseClass(false, Core::NodeId(), Core::NodeId(), SendBufSize, RecvBufSize)
+        , _parent(parent)
+        , _attached(false)
+    {
+    }
+
+    Controller::ControlSocket::~ControlSocket()
+    {
+        if (BaseClass::IsOpen()) {
+            if (BaseClass::Close(MaxConnectionTime) != Core::ERROR_NONE) {
+                TRACE_L1("Could not close the channel. %d", __LINE__);
+            }
+        }
+    }
+
+    void Controller::ControlSocket::Open(const string& local, const string& remote)
+    {
+        string localControl = local + "_control";
+        LocalNode(Core::NodeId(localControl.c_str()));
+        RemoteNode(Core::NodeId(remote.c_str()));
+        uint32_t _error = BaseClass::Open(MaxConnectionTime);
+        TRACE(Trace::Information,("Opening Control Socket loacl=%s remote=%s _error=%d", localControl.c_str(), remote.c_str(), _error));
+        if (_error == Core::ERROR_NONE) {
+            _command = "ATTACH";
+            Trigger();
+        } else {
+            TRACE(Trace::Error,("Failed to open control socket"));
+        }
+    }
+
+    void Controller::ControlSocket::Close()
+    {
+        if ( IsOpen() ) {
+            if (BaseClass::Close(MaxConnectionTime) != Core::ERROR_NONE) {
+                TRACE_L1("Could not close the channel. %d", __LINE__);
+            }
+        }
+    }
+
+    void Controller::ControlSocket::StateChange()
+    {
+        TRACE(Trace::Information,("ControlSocket::StateChange: %s", IsOpen() ? _T("true") : _T("false")));
+    }
+
+    uint16_t Controller::ControlSocket::SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
+    {
+        uint16_t result = _command.size();
+
+        if (!_attached && result) {
+            memcpy(dataFrame, _command.c_str(), result);
+            TRACE(Communication, ("ControlSocket::%s: [%s]", __FUNCTION__, _command.c_str()));
+            _command = "";
+        }
+
+        return result;
+    }
+
+    uint16_t Controller::ControlSocket::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
+    {
+        uint16_t result = 0;
+        string response = string(reinterpret_cast<const char*>(dataFrame), (dataFrame[receivedSize - 1] == '\n' ? receivedSize - 1 : receivedSize));
+
+        if (response[0] == '<') {
+            result = _parent.ProcessResponse(dataFrame, receivedSize);
+        } else {
+            TRACE(Communication, ("ControlSocket::%s: [%s]", __FUNCTION__, response.c_str()));
+            result = receivedSize;
+        }
+
+        return result;
     }
 }
 } // WPEFramework::WPASupplicant

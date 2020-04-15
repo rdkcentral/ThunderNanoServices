@@ -76,13 +76,13 @@ namespace Plugin
         }
 #else
         if ((config.Application.Value().empty() == false) && (::strncmp(config.Application.Value().c_str(), _TXT("null")) != 0)) {
-            if (_wpaSupplicant.Lauch(config.Connector.Value(), config.Interface.Value(), 15) != Core::ERROR_NONE) {
+            if (_wpaSupplicant.Launch(config.Application.Value(), config.Connector.Value(), config.Interface.Value(), 15) != Core::ERROR_NONE) {
                 result = _T("Could not start WPA_SUPPLICANT");
             }
         }
 
         if (result.empty() == true) {
-            _controller = WPASupplicant::Controller::Create(config.Connector.Value(), config.Interface.Value(), 10);
+            _controller = WPASupplicant::Controller::Create(config.Connector.Value(), config.Interface.Value(), config.BssExpirationAge.Value(), 10);
 
             if (_controller.IsValid() == true) {
                 if (_controller->IsOperational() == false) {
@@ -90,7 +90,6 @@ namespace Plugin
                     result = _T("Could not establish a link with WPA_SUPPLICANT");
                 } else {
                     _controller->Callback(&_sink);
-                    _controller->Scan();
 
                     Core::File configFile(_configurationStore);
 
@@ -114,6 +113,12 @@ namespace Plugin
                             UpdateConfig(profile, index.Current());
                         }
                     }
+                    uint32_t scanInterval = config.ScanInterval.Value() * 1000;
+                    if (scanInterval) {
+                        TRACE(Trace::Information, (_T("Scan scheduled for every %d ms"), scanInterval));
+                        _controller->ScheduleScan(scanInterval);
+                    }
+                    _controller->Scan();
                 }
             }
         }
@@ -129,10 +134,11 @@ namespace Plugin
     {
 #ifndef USE_WIFI_HAL
         _controller->Callback(nullptr);
+        if( _wpaSupplicant.WasStarted() == true ) {
         _controller->Terminate();
+            _wpaSupplicant.Terminate();
+        }
         _controller.Release();
-
-        _wpaSupplicant.Terminate();
 #endif
 
         ASSERT(_service == service);
@@ -193,7 +199,6 @@ namespace Plugin
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = _T("Unsupported GET request.");
 
-        if (index.IsValid() == true) {
             if (index.Next() && index.IsValid()) {
                 if (index.Current().Text() == _T("Networks")) {
 
@@ -241,7 +246,6 @@ namespace Plugin
                 status->Scanning = _controller->IsScanning();
 
                 result->Body(status);
-            }
         }
 
         return result;

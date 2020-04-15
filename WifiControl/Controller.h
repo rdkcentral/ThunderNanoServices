@@ -23,13 +23,18 @@
 #include "Module.h"
 #include "Network.h"
 
+#include <core/Queue.h>
 // Interface specification taken from:
 // https://w1.fi/wpa_supplicant/devel/ctrl_iface_page.html
 
 namespace WPEFramework {
 namespace WPASupplicant {
 
-    class Controller : public Core::StreamType<Core::SocketDatagram> {
+    static constexpr uint16_t SendBufSize = 512;
+    static constexpr uint16_t RecvBufSize = 32767;
+    typedef Core::StreamType<Core::SocketDatagram> BaseClass;
+
+    class Controller : public BaseClass {
     public:
         static uint16_t KeyPair(const Core::TextFragment& element, uint32_t& keys);
         static string BSSID(const uint64_t& bssid);
@@ -56,6 +61,20 @@ namespace WPASupplicant {
         Controller() = delete;
         Controller(const Controller&) = delete;
         Controller& operator=(const Controller&) = delete;
+        class ControlSocket : public BaseClass {
+            public:
+                ControlSocket(Controller& parent);
+                ~ControlSocket();
+                void Open(const string& local, const string& remote);
+                void Close();
+                void StateChange();
+                uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize);
+                uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize);
+            private:
+                Controller& _parent;
+                bool _attached;
+                string _command;
+        };
 
         class ConfigInfo {
         public:
@@ -221,7 +240,8 @@ namespace WPASupplicant {
         private:
             void SetSSID(const string& ssid)
             {
-                _hidden = (ssid[0] == '\0');
+                static constexpr const TCHAR HIDDEN_SSID[] = "\\x00";
+                _hidden = (ssid.compare(0, sizeof(HIDDEN_SSID)-1, HIDDEN_SSID) == 0);
                 if (_hidden == false) {
                     _ssid = ssid;
                 }
@@ -302,99 +322,7 @@ namespace WPASupplicant {
 #endif // __DEBUG__
             bool _settable;
         };
-        class ScanRequest : public Request {
-        private:
-            ScanRequest() = delete;
-            ScanRequest(const ScanRequest&) = delete;
-            ScanRequest& operator=(const ScanRequest&) = delete;
 
-        public:
-            ScanRequest(Controller& parent)
-                : Request()
-                , _scanning(false)
-                , _parent(parent)
-            {
-            }
-            virtual ~ScanRequest()
-            {
-            }
-
-        public:
-            inline bool Activated()
-            {
-                if (_scanning == false) {
-                    _scanning = true;
-                    return (true);
-                }
-                return (false);
-            }
-            inline void Aborted()
-            {
-                _scanning = false;
-            }
-            inline bool IsScanning() const
-            {
-                return (_scanning);
-            }
-            bool Set()
-            {
-                return (Request::Set(string(_TXT("SCAN_RESULTS"))));
-            }
-            virtual void Completed(const string& response, const bool abort) override
-            {
-                if (abort == false) {
-                    Core::TextFragment data(response.c_str(), response.length());
-                    uint32_t marker = data.ForwardFind('\n');
-                    uint32_t markerEnd = data.ForwardFind('\n', marker + 1);
-
-                    while (marker != markerEnd) {
-
-                        Core::TextFragment element(data, marker + 1, (markerEnd - marker - 1));
-                        marker = markerEnd;
-                        markerEnd = data.ForwardFind('\n', marker + 1);
-                        NetworkInfo newEntry;
-                        _parent.Add(Transform(element, newEntry), newEntry);
-                    }
-                }
-                _scanning = false;
-            }
-
-        private:
-            uint64_t Transform(const Core::TextFragment& infoLine, NetworkInfo& source)
-            {
-                // First thing we find will be 6 bytes...
-                uint64_t bssid = BSSID(infoLine.Text());
-
-                // Next is the frequency
-                uint16_t index = infoLine.ForwardSkip(_T(" \t"), 18);
-                uint16_t end = infoLine.ForwardFind(_T(" \t"), index);
-
-                uint32_t frequency = Core::NumberType<uint32_t>(Core::TextFragment(infoLine, index, end - index));
-
-                // Next we will find the Signal Strength
-                index = infoLine.ForwardSkip(_T(" \t"), end);
-                end = infoLine.ForwardFind(_T(" \t"), index);
-
-                int32_t signal = Core::NumberType<int32_t>(Core::TextFragment(infoLine, index, end - index));
-
-                // Extract the flags from the information
-                index = infoLine.ForwardSkip(_T(" \t"), end);
-                end = infoLine.ForwardFind(_T(" \t"), index);
-
-                uint32_t keys = 0;
-                uint16_t pairs = KeyPair(Core::TextFragment(infoLine, index, end - index), keys);
-
-                // And last but not least, we will find the SSID
-                index = infoLine.ForwardSkip(_T(" \t"), end);
-                source.Set(Core::TextFragment(infoLine, index, infoLine.Length() - index).Text(), frequency, signal, pairs, keys);
-
-                return (bssid);
-            }
-
-        private:
-            bool _scanning;
-            Controller& _parent;
-        };
         class StatusRequest : public Request {
         private:
             StatusRequest() = delete;
@@ -403,7 +331,7 @@ namespace WPASupplicant {
 
         public:
             StatusRequest(Controller& parent)
-                : Request(string(_TXT("STATUS")))
+                : Request()
                 , _parent(parent)
                 , _signaled(false, true)
                 , _bssid(0)
@@ -456,6 +384,10 @@ namespace WPASupplicant {
                 _key = 0;
             }
 
+            bool Set()
+            {
+                return Request::Set(string(_TXT("STATUS")));
+            }
         private:
             virtual void Completed(const string& response, const bool abort) override
             {
@@ -498,9 +430,6 @@ namespace WPASupplicant {
                     _parent.Notify(static_cast<events>(_eventReporting));
                     _eventReporting = static_cast<uint32_t>(~0);
                 }
-
-                // Reload for the next run...
-                Set(string(_TXT("STATUS")));
 
                 _signaled.SetEvent();
             }
@@ -731,85 +660,99 @@ namespace WPASupplicant {
             uint32_t _result;
         };
 
+        class ScanTimer {
+        public:
+            ScanTimer(Controller& parent)
+                : _parent(&parent)
+            {
+            }
+            ScanTimer(const ScanTimer& copy)
+                : _parent(copy._parent)
+            {
+            }
+            ~ScanTimer()
+            {
+            }
+
+            ScanTimer& operator=(const ScanTimer& RHS)
+            {
+                _parent = RHS._parent;
+                return (*this);
+            }
+
+            uint64_t Timed(const uint64_t scheduledTime)
+            {
+                ASSERT(_parent != nullptr);
+                return (_parent->Timed(scheduledTime));
+            }
+
+        private:
+            Controller* _parent;
+            uint64_t _interval;
+        };
         typedef std::map<const uint64_t, NetworkInfo> NetworkInfoContainer;
         typedef std::map<const string, ConfigInfo> EnabledContainer;
-        typedef Core::StreamType<Core::SocketDatagram> BaseClass;
 
     protected:
-        Controller(const string& supplicantBase, const string& interfaceName, const uint16_t waitTime)
-            : BaseClass(false, Core::NodeId(), Core::NodeId(), 512, 32768)
+        Controller(const string& supplicantBase, const string& interfaceName, const string& bssexpirationage, const uint16_t waitTime)
+            : BaseClass(false, Core::NodeId(), Core::NodeId(), SendBufSize, RecvBufSize)
+            , _controlSocket(*this)
             , _adminLock()
             , _requests()
             , _networks()
             , _enabled()
             , _error(Core::ERROR_UNAVAILABLE)
             , _callback(nullptr)
-            , _scanRequest(*this)
             , _detailRequest(*this)
             , _networkRequest(*this)
             , _statusRequest(*this)
+            , _scanTimer(Core::Thread::DefaultStackSize(), _T("ScanTimer"))
+            , _scanning(false)
         {
             string remoteName(Core::Directory::Normalize(supplicantBase) + interfaceName);
 
             if (Core::File(remoteName).Exists() == true) {
 
-                string data(
+                string localName(
                     Core::Directory::Normalize(supplicantBase) + _T("wpa_ctrl_") + interfaceName + '_' + Core::NumberType<uint32_t>(::getpid()).Text());
 
-                LocalNode(Core::NodeId(data.c_str()));
+                LocalNode(Core::NodeId(localName.c_str()));
 
                 RemoteNode(Core::NodeId(remoteName.c_str()));
 
                 _error = BaseClass::Open(MaxConnectionTime);
+                TRACE(Trace::Information, ("Opening Socket local=%s remote=%s _error=%d", localName.c_str(), remoteName.c_str(), _error));
 
                 if ((_error == Core::ERROR_NONE) && (Probe(waitTime) == true)) {
 
-                    CustomRequest exchange(string(_TXT("ATTACH")));
-
-                    Submit(&exchange);
-
-                    if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
-                        _error = Core::ERROR_COULD_NOT_SET_ADDRESS;
-                    }
-                    else if (SetKey("bss_expiration_age", "180") != Core::ERROR_NONE) {
+                    if (SetKey("bss_expiration_age", bssexpirationage.c_str()) != Core::ERROR_NONE) {
                         _error = Core::ERROR_GENERAL;
-                    }
-                    else if (SetKey("autoscan", "periodic:120") != Core::ERROR_NONE) {
+                    } else if (SetKey("bss_max_count", "1024") != Core::ERROR_NONE) {
                         _error = Core::ERROR_GENERAL;
-                    }
-                    else {
+                    } else {
+                        _controlSocket.Open(localName, remoteName);
+                        const bool set = _statusRequest.Set();
+                        ASSERT(set == true || !"StatusRequest::Set failed yet the request has just been constructed. Is must be settable.");
                         Submit(&_statusRequest);
                     }
-
-                    Revoke(&exchange);
                 }
             }
         }
 
     public:
-        static Core::ProxyType<Controller> Create(const string& supplicantBase, const string& interfaceName, const uint16_t waitTime)
+        static Core::ProxyType<Controller> Create(const string& supplicantBase, const string& interfaceName, const string& bssexpirationage, const uint16_t waitTime)
         {
-            return (Core::ProxyType<Controller>::Create(supplicantBase, interfaceName, waitTime));
+            return (Core::ProxyType<Controller>::Create(supplicantBase, interfaceName, bssexpirationage, waitTime));
         }
         virtual ~Controller()
         {
 
+            _controlSocket.Close();
             if (IsClosed() == false) {
 
-                CustomRequest exchange(string(_TXT("DETACH")));
-
-                Submit(&exchange);
-
-                if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
-
-                    // We are disconnected
-                    TRACE_L1("Could not detach from the supplicant. %d", __LINE__);
-                }
                 if (BaseClass::Close(MaxConnectionTime) != Core::ERROR_NONE) {
                     TRACE_L1("Could not close the channel. %d", __LINE__);
                 }
-
-                Revoke(&exchange);
 
                 // Now abort, for anything still in there.
                 Abort();
@@ -827,10 +770,7 @@ namespace WPASupplicant {
         }
         inline bool IsScanning() const
         {
-            _adminLock.Lock();
-            const bool result = _scanRequest.IsScanning();
-            _adminLock.Unlock();
-            return result;
+            return _scanning;
         }
         inline const string& Current() const
         {
@@ -847,11 +787,9 @@ namespace WPASupplicant {
         {
 
             uint32_t result = Core::ERROR_INPROGRESS;
-            _adminLock.Lock();
-            const bool activated = _scanRequest.Activated();
-            _adminLock.Unlock();
 
-            if (activated == true) {
+            if (!_scanning) {
+                _scanning = true;
                 result = Core::ERROR_NONE;
 
                 CustomRequest exchange(string(_TXT("SCAN")));
@@ -859,13 +797,12 @@ namespace WPASupplicant {
                 Submit(&exchange);
 
                 if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
-                    _adminLock.Lock();
-                    _scanRequest.Aborted();
-                    _adminLock.Unlock();
                     result = Core::ERROR_UNAVAILABLE;
                 }
 
                 Revoke(&exchange);
+            } else {
+                TRACE(Trace::Information, ("%s: Scan in progress", __FUNCTION__));
             }
 
             return (result);
@@ -1292,6 +1229,8 @@ namespace WPASupplicant {
             return (result);
         }
 
+        void ScheduleScan(uint32_t scanInterval);
+
     private:
         friend class Network;
         friend class Config;
@@ -1479,7 +1418,7 @@ namespace WPASupplicant {
 
             return (result);
         }
-        inline uint32_t SetKey(const string& key, const string& value) 
+        inline uint32_t SetKey(const string& key, const string& value)
         {
             uint32_t result = Core::ERROR_NONE;
 
@@ -1490,7 +1429,7 @@ namespace WPASupplicant {
             if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
 
                 result = Core::ERROR_ASYNC_ABORTED;
-            } 
+            }
 
             Revoke(&exchange);
 
@@ -1507,7 +1446,7 @@ namespace WPASupplicant {
             if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
 
                 result = Core::ERROR_ASYNC_ABORTED;
-            } 
+            }
             else {
                 result = Core::ERROR_NONE;
                 value = exchange.Response();
@@ -1608,6 +1547,7 @@ namespace WPASupplicant {
         void Reevaluate();
         virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize);
         virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize);
+        uint16_t ProcessResponse(uint8_t* dataFrame, const uint16_t receivedSize);
 
         void Revoke(const Request* id) const
         {
@@ -1631,7 +1571,7 @@ namespace WPASupplicant {
 
         virtual void StateChange()
         {
-            TRACE_L1("StateChange: %s\n", IsOpen() ? _T("true") : _T("false"));
+            TRACE_L1("StateChange: %s", IsOpen() ? _T("true") : _T("false"));
         }
 
         void Abort()
@@ -1662,22 +1602,28 @@ namespace WPASupplicant {
 
                 const_cast<Controller*>(this)->Trigger();
             } else {
-                TRACE_L1("Submit does not trigger, there are %d messages pending [%s,%s]", static_cast<unsigned int>(_requests.size()), _requests.front()->Original().c_str(), _requests.front()->Message().c_str());
+                TRACE_L2("Submit does not trigger, there are %d messages pending [%s,%s]", static_cast<unsigned int>(_requests.size()), _requests.front()->Original().c_str(), _requests.front()->Message().c_str());
                 _adminLock.Unlock();
             }
         }
+        uint64_t Timed(const uint64_t scheduledTime);
 
     private:
+        ControlSocket _controlSocket;
         mutable Core::CriticalSection _adminLock;
         mutable std::list<Request*> _requests;
         NetworkInfoContainer _networks;
         EnabledContainer _enabled;
         uint32_t _error;
         Core::IDispatchType<const events>* _callback;
-        ScanRequest _scanRequest;
         DetailRequest _detailRequest;
         NetworkRequest _networkRequest;
         StatusRequest _statusRequest;
+        Core::TimerType<ScanTimer> _scanTimer;
+        uint32_t _scanInterval;
+        bool _scanning;
+        uint64_t _scanStartTime;
+        uint16_t _added, _removed;
     };
 }
 } // namespace WPEFramework::WPASupplicant

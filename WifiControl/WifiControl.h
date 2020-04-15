@@ -27,6 +27,7 @@
 #else
 #include "Controller.h"
 #endif
+#include <core/Timer.h>
 #include <interfaces/json/JsonData_WifiControl.h>
 
 namespace WPEFramework {
@@ -76,12 +77,12 @@ namespace Plugin {
             }
 
         public:
-            uint32_t Lauch(const string& connector, const string& interfaceName, const uint16_t waitTime)
+            uint32_t Launch(const string& application, const string& connector, const string& interfaceName, const uint16_t waitTime)
             {
                 _interfaceName = interfaceName;
                 _connector = connector;
 
-                Core::Process::Options options(_T("/usr/sbin/wpa_supplicant"));
+                Core::Process::Options options(application);
                 /* interface name *mandatory */
                 options.Add(_T("-i")+ _interfaceName);
 
@@ -125,6 +126,9 @@ namespace Plugin {
                 _process.Kill(false);
                 _process.WaitProcessCompleted(1000);
             }
+            inline bool WasStarted() const {
+                return _process.IsActive();
+            }
 
         private:
             string _interfaceName;
@@ -144,10 +148,14 @@ namespace Plugin {
                 : Connector(_T("/var/run/wpa_supplicant"))
                 , Interface(_T("wlan0"))
                 , Application(_T("/usr/sbin/wpa_supplicant"))
+                , BssExpirationAge(_T("180"))
+                , ScanInterval(120)
             {
                 Add(_T("connector"), &Connector);
                 Add(_T("interface"), &Interface);
                 Add(_T("application"), &Application);
+                Add(_T("bssexpiration"), &BssExpirationAge);
+                Add(_T("scanInterval"), &ScanInterval);
             }
             virtual ~Config()
             {
@@ -157,6 +165,8 @@ namespace Plugin {
             Core::JSON::String Connector;
             Core::JSON::String Interface;
             Core::JSON::String Application;
+            Core::JSON::String BssExpirationAge;
+            Core::JSON::DecUInt32 ScanInterval;
         };
 
         static void FillNetworkInfo(const WPASupplicant::Network& info, JsonData::WifiControl::NetworkInfo& net)
