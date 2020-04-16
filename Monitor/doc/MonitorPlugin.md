@@ -100,12 +100,9 @@ Sets new restart limits for a service.
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.callsign | string | The callsign of a service to reset measurements snapshot of |
-| params.operational | object | Restart settings for memory consumption type of failures |
-| params.operational.limit | number | Maximum number or restarts to be attempted |
-| params.operational.window | number | Time period within which failures must happen for the limit to be considered crossed |
-| params.memory | object | Restart settings for stability type of failures |
-| params.memory.limit | number | Maximum number or restarts to be attempted |
-| params.memory.window | number | Time period within which failures must happen for the limit to be considered crossed |
+| params.restart | object |  |
+| params.restart.limit | number | Maximum number or restarts to be attempted |
+| params.restart.window | number | Time period (in seconds) within which failures must happen for the limit to be considered crossed |
 
 ### Result
 
@@ -124,11 +121,7 @@ Sets new restart limits for a service.
     "method": "Monitor.1.restartlimits",
     "params": {
         "callsign": "WebServer",
-        "operational": {
-            "limit": 3,
-            "window": 60
-        },
-        "memory": {
+        "restart": {
             "limit": 3,
             "window": 60
         }
@@ -185,13 +178,9 @@ Resets memory and process statistics for a single service watched by the Monitor
 | result.measurements.operational | boolean | Whether the service is up and running |
 | result.measurements.count | number | Number of measurements |
 | result.observable | string | A callsign of the watched service |
-| result?.restart | object | <sup>*(optional)*</sup> Restart limits for memory/operational failures applying to the service |
-| result?.restart?.memory | object | <sup>*(optional)*</sup> Restart limits for memory consumption related failures applying to the service |
-| result?.restart?.memory.limit | number | Maximum number or restarts to be attempted |
-| result?.restart?.memory.window | number | Time period within which failures must happen for the limit to be considered crossed |
-| result?.restart?.operational | object | <sup>*(optional)*</sup> Restart limits for stability failures applying to the service |
-| result?.restart?.operational.limit | number | Maximum number or restarts to be attempted |
-| result?.restart?.operational.window | number | Time period within which failures must happen for the limit to be considered crossed |
+| result.restart | object | Restart limits for memory/operational failures applying to the service |
+| result.restart.limit | number | Maximum number or restarts to be attempted |
+| result.restart.window | number | Time period (in seconds) within which failures must happen for the limit to be considered crossed |
 
 ### Example
 
@@ -244,14 +233,8 @@ Resets memory and process statistics for a single service watched by the Monitor
         },
         "observable": "callsign",
         "restart": {
-            "memory": {
-                "limit": 3,
-                "window": 60
-            },
-            "operational": {
-                "limit": 3,
-                "window": 60
-            }
+            "limit": 3,
+            "window": 60
         }
     }
 }
@@ -304,13 +287,9 @@ Provides access to the service statistics.
 | (property)[#].measurements.operational | boolean | Whether the service is up and running |
 | (property)[#].measurements.count | number | Number of measurements |
 | (property)[#].observable | string | A callsign of the watched service |
-| (property)[#]?.restart | object | <sup>*(optional)*</sup> Restart limits for memory/operational failures applying to the service |
-| (property)[#]?.restart?.memory | object | <sup>*(optional)*</sup> Restart limits for memory consumption related failures applying to the service |
-| (property)[#]?.restart?.memory.limit | number | Maximum number or restarts to be attempted |
-| (property)[#]?.restart?.memory.window | number | Time period within which failures must happen for the limit to be considered crossed |
-| (property)[#]?.restart?.operational | object | <sup>*(optional)*</sup> Restart limits for stability failures applying to the service |
-| (property)[#]?.restart?.operational.limit | number | Maximum number or restarts to be attempted |
-| (property)[#]?.restart?.operational.window | number | Time period within which failures must happen for the limit to be considered crossed |
+| (property)[#].restart | object | Restart limits for memory/operational failures applying to the service |
+| (property)[#].restart.limit | number | Maximum number or restarts to be attempted |
+| (property)[#].restart.window | number | Time period (in seconds) within which failures must happen for the limit to be considered crossed |
 
 > The *callsign* shall be passed as the index to the property, e.g. *Monitor.1.status@WebServer*. If omitted then all observed objects will be returned on read.
 
@@ -363,14 +342,8 @@ Provides access to the service statistics.
             },
             "observable": "callsign",
             "restart": {
-                "memory": {
-                    "limit": 3,
-                    "window": 60
-                },
-                "operational": {
-                    "limit": 3,
-                    "window": 60
-                }
+                "limit": 3,
+                "window": 60
             }
         }
     ]
@@ -379,7 +352,7 @@ Provides access to the service statistics.
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers.Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the Monitor plugin:
 

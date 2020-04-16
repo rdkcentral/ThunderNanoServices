@@ -19,6 +19,7 @@ set(PLUGIN_NAME IOConnector)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
@@ -27,11 +28,16 @@ add_library(${MODULE_NAME} SHARED
     IOConnectorJsonRpc.cpp
     GPIO.cpp
     Handler.cpp
+    Reporter.cpp
 )
 
 if(PLUGIN_IOCONNECTOR_PAIRING_PIN)
     target_sources(${MODULE_NAME} PRIVATE RemotePairing.cpp)
 endif(PLUGIN_IOCONNECTOR_PAIRING_PIN)
+
+if(PLUGIN_IOCONNECTOR_POWER_PIN)
+    target_sources(${MODULE_NAME} PRIVATE PowerDown.cpp)
+endif(PLUGIN_IOCONNECTOR_POWER_PIN)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
@@ -40,7 +46,8 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME} 
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)

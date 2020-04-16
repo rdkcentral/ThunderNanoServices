@@ -153,7 +153,6 @@ namespace Plugin {
             }
             uint32_t ZOrder(const uint16_t index) override
             {
-                uint32_t result = Core::ERROR_UNAVAILABLE;
                 _surface.ZOrder(index);
                 if (index == 0) {
                     SetInput();
@@ -423,8 +422,6 @@ namespace Plugin {
                     std::list<Exchange::IComposition::INotification*>::iterator index(_compositionClients.begin());
 
                     while (index != _compositionClients.end()) {
-                        entry->ZOrder(0);
-                        entry->SetInput();
                         (*index)->Attached(entry->Name(), entry);
                         index++;
                     }

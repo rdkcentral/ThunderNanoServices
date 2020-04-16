@@ -110,6 +110,7 @@ namespace Plugin {
 
         _controller = config.Controller.Value();
         _record     = config.Recorder.Value();
+        _keyMap     = config.KeyMap.Value();
 
         if ((_record & 0x0F) == 0) {
             sequence = ("voice.wav");

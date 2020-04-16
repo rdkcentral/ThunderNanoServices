@@ -24,6 +24,17 @@
 #include <nexus_platform.h>
 #include <nxclient.h>
 
+
+#if ( (NEXUS_PLATFORM_VERSION_MAJOR > 18) ||  \
+      ( (NEXUS_PLATFORM_VERSION_MAJOR == 18) && (NEXUS_PLATFORM_VERSION_MINOR >= 2) ) \
+    )
+
+#define NEXUS_HDCPVERSION_SUPPORTED
+#define NEXUS_HDR_SUPPORTED
+
+#endif
+
+
 namespace WPEFramework {
 namespace Plugin {
 
@@ -33,22 +44,21 @@ public:
        : _width(0)
        , _height(0)
        , _connected(false)
-       , _major(0)
-       , _minor(0)
+       , _hdcpprotection(HDCPProtectionType::HDCP_Unencrypted)
        , _type(HDR_OFF)
        , _totalGpuRam(0)
        , _audioPassthrough(false)
        , _adminLock()
        , _activity(*this) {
 
-        NEXUS_Error rc = NxClient_Join(NULL);
+        VARIABLE_IS_NOT_USED NEXUS_Error rc = NxClient_Join(NULL);
         ASSERT(!rc);
         NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
         NEXUS_Platform_GetConfiguration(&_platformConfig);
 
         UpdateTotalGpuRam(_totalGpuRam);
 
-        UpdateDisplayInfo(_connected, _width, _height, _major, _minor, _type);
+        UpdateDisplayInfo(_connected, _width, _height, _hdcpprotection, _type);
         UpdateAudioPassthrough(_audioPassthrough);
 
         RegisterCallback();
@@ -142,7 +152,7 @@ public:
     bool Connected() const override
     {
         return _connected;
-    }
+    } 
     uint32_t Width() const override
     {
         return _width;
@@ -151,17 +161,12 @@ public:
     {
         return _height;
     }
-    uint8_t HDCPMajor() const override
-    {
-        return _major;
-    }
-    uint8_t HDCPMinor() const override
-    {
-        return _minor;
-    }
     HDRType Type() const override
     {
         return _type;
+    }
+    HDCPProtectionType HDCPProtection() const override {
+        return _hdcpprotection;
     }
     void Dispatch() const
     {
@@ -224,9 +229,116 @@ private:
             }
         }
     }
-    inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height, uint8_t& major, uint8_t& minor, HDRType type) const
+
+    static string NEXUSHdmiOutputHdcpStateToString(const NEXUS_HdmiOutputHdcpState state) {
+
+        struct HdmiOutputHdcpStateStrings {
+            NEXUS_HdmiOutputHdcpState state;
+            const char* strValue;
+        };
+
+        static const HdmiOutputHdcpStateStrings StateToStringTable[] = { 
+                                                {NEXUS_HdmiOutputHdcpState_eUnpowered, _T("Unpowered")},
+                                                {NEXUS_HdmiOutputHdcpState_eUnauthenticated, _T("Unauthenticated")},
+                                                {NEXUS_HdmiOutputHdcpState_eWaitForValidVideo, _T("WaitForValidVideo")},
+                                                {NEXUS_HdmiOutputHdcpState_eInitializedAuthentication, _T("InitializedAuthentication")},
+                                                {NEXUS_HdmiOutputHdcpState_eWaitForReceiverAuthentication, _T("WaitForReceiverAuthentication")},
+                                                {NEXUS_HdmiOutputHdcpState_eReceiverR0Ready, _T("ReceiverR0Ready")},
+                                                {NEXUS_HdmiOutputHdcpState_eR0LinkFailure, _T("R0LinkFailure")},
+                                                {NEXUS_HdmiOutputHdcpState_eReceiverAuthenticated, _T("ReceiverAuthenticated")},
+                                                {NEXUS_HdmiOutputHdcpState_eWaitForRepeaterReady, _T("WaitForRepeaterReady")},
+                                                {NEXUS_HdmiOutputHdcpState_eCheckForRepeaterReady, _T("CheckForRepeaterReady")},
+                                                {NEXUS_HdmiOutputHdcpState_eRepeaterReady, _T("RepeaterReady")},
+                                                {NEXUS_HdmiOutputHdcpState_eLinkAuthenticated, _T("LinkAuthenticated")},
+                                                {NEXUS_HdmiOutputHdcpState_eEncryptionEnabled, _T("EncryptionEnabled")},
+                                                {NEXUS_HdmiOutputHdcpState_eRepeaterAuthenticationFailure, _T("RepeaterAuthenticationFailure")},
+                                                {NEXUS_HdmiOutputHdcpState_eRiLinkIntegrityFailure, _T("RiLinkIntegrityFailure")},
+                                                {NEXUS_HdmiOutputHdcpState_ePjLinkIntegrityFailure, _T("PjLinkIntegrityFailure")},
+                                              };
+        static const HdmiOutputHdcpStateStrings* end = {StateToStringTable + (sizeof(StateToStringTable)/sizeof(HdmiOutputHdcpStateStrings))};
+        const HdmiOutputHdcpStateStrings * it = std::find_if(StateToStringTable, end,
+                                                           [state](const HdmiOutputHdcpStateStrings& item){
+                                                                return item.state == state;
+                                                            });
+
+        string result;
+
+        if( it != end ) {
+            result = it->strValue;
+        } else {
+            result = _T("Unknown(") + Core::NumberType<std::underlying_type<NEXUS_HdmiOutputHdcpState>::type>(state).Text() + _T(")");
+        }
+
+        return result;
+    }
+
+    static string NEXUSHdmiOutputHdcpErrorToString(const NEXUS_HdmiOutputHdcpError error) {
+
+        struct HdmiOutputHdcpErrorStrings {
+            NEXUS_HdmiOutputHdcpError error;
+            const char* strValue;
+        };
+
+        static const HdmiOutputHdcpErrorStrings ErrorToStringTable[] = { 
+                                                {NEXUS_HdmiOutputHdcpError_eSuccess, _T("Success")},
+                                                {NEXUS_HdmiOutputHdcpError_eRxBksvError, _T("RxBksvError")},
+                                                {NEXUS_HdmiOutputHdcpError_eRxBksvRevoked, _T("RxBksvRevoked")},
+                                                {NEXUS_HdmiOutputHdcpError_eRxBksvI2cReadError, _T("RxBksvI2cReadError")},
+                                                {NEXUS_HdmiOutputHdcpError_eTxAksvError, _T("TxAksvError")},
+                                                {NEXUS_HdmiOutputHdcpError_eTxAksvI2cWriteError, _T("TxAksvI2cWriteError")},
+                                                {NEXUS_HdmiOutputHdcpError_eReceiverAuthenticationError, _T("ReceiverAuthenticationError")},
+                                                {NEXUS_HdmiOutputHdcpError_eRepeaterAuthenticationError, _T("RepeaterAuthenticationError")},
+                                                {NEXUS_HdmiOutputHdcpError_eRxDevicesExceeded, _T("RxDevicesExceeded")},
+                                                {NEXUS_HdmiOutputHdcpError_eRepeaterDepthExceeded, _T("RepeaterDepthExceeded")},
+                                                {NEXUS_HdmiOutputHdcpError_eRepeaterFifoNotReady, _T("RepeaterFifoNotReady")},
+                                                {NEXUS_HdmiOutputHdcpError_eRepeaterDeviceCount0, _T("RepeaterDeviceCount")},
+                                                {NEXUS_HdmiOutputHdcpError_eRepeaterLinkFailure, _T("RepeaterLinkFailure")},
+                                                {NEXUS_HdmiOutputHdcpError_eLinkRiFailure, _T("LinkRiFailure")},
+                                                {NEXUS_HdmiOutputHdcpError_eLinkPjFailure, _T("LinkPjFailure")},
+                                                {NEXUS_HdmiOutputHdcpError_eFifoUnderflow, _T("FifoUnderflow")},
+                                                {NEXUS_HdmiOutputHdcpError_eFifoOverflow, _T("FifoOverflow")},
+                                                {NEXUS_HdmiOutputHdcpError_eMultipleAnRequest, _T("MultipleAnRequest")},
+                                              };
+        static const HdmiOutputHdcpErrorStrings* end = {ErrorToStringTable + (sizeof(ErrorToStringTable)/sizeof(HdmiOutputHdcpErrorStrings))};
+        const HdmiOutputHdcpErrorStrings * it = std::find_if(ErrorToStringTable, end,
+                                                           [error](const HdmiOutputHdcpErrorStrings& item){
+                                                                return item.error == error;
+                                                            });
+
+        string result;
+
+        if( it != end ) {
+            result = it->strValue;
+        } else {
+            result = _T("Unknown(") + Core::NumberType<std::underlying_type<NEXUS_HdmiOutputHdcpError>::type>(error).Text() + _T(")");
+        }
+
+        return result;
+    }
+
+#ifdef NEXUS_HDCPVERSION_SUPPORTED
+
+    static string NEXUSHdcpVersionToString(const NEXUS_HdcpVersion version) {
+        string result;
+        if( version == NEXUS_HdcpVersion_e1x ) {
+            result = _T("1x");
+        }
+        else if( version == NEXUS_HdcpVersion_e2x ) {
+            result = _T("2x");
+        }
+        else {
+            result = _T("Unknown(") + Core::NumberType<std::underlying_type<NEXUS_HdcpVersion>::type>(version).Text() + _T(")");
+        }
+        return result;
+    }
+
+#endif
+
+    inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height, HDCPProtectionType& hdcpprotection, HDRType& type) const
     {
         NEXUS_Error rc = NEXUS_SUCCESS;
+
+        hdcpprotection = HDCPProtectionType::HDCP_Unencrypted; // reset to safe level in case value could not be retrieved
 
         NEXUS_HdmiOutputHandle hdmiOutput;
         hdmiOutput = NEXUS_HdmiOutput_Open(NEXUS_ALIAS_ID + 0, NULL);
@@ -239,7 +351,7 @@ private:
 
             NxClient_DisplaySettings displaySettings;
             NxClient_GetDisplaySettings(&displaySettings);
-#if defined(DISPLAYINFO_BCM_VERSION_MAJOR) && (DISPLAYINFO_BCM_VERSION_MAJOR > 18)
+#ifdef NEXUS_HDR_SUPPORTED
             // Read HDR status
             switch (displaySettings.hdmiPreferences.dynamicRangeMode) {
             case NEXUS_VideoDynamicRangeMode_eHdr10: {
@@ -261,27 +373,62 @@ private:
                 break;
             }
 
-
             // Check HDCP version
             NEXUS_HdmiOutputHdcpStatus hdcpStatus;
             rc = NEXUS_HdmiOutput_GetHdcpStatus(hdmiOutput, &hdcpStatus);
 
             if (rc  == NEXUS_SUCCESS) {
-#if defined(DISPLAYINFO_BCM_VERSION_MAJOR) && (DISPLAYINFO_BCM_VERSION_MAJOR >= 18)
-                if (hdcpStatus.selectedHdcpVersion == NEXUS_HdcpVersion_e2x) {
-#else
-                if (hdcpStatus.hdcp2_2Features == true) {
+                TRACE(Trace::Information, (_T(" HDCP Error=[%s]")
+                                           _T(" TransmittingEncrypted=[%s]")
+                                           _T(" HDCP2.2Features=[%s]")
+#ifdef NEXUS_HDCPVERSION_SUPPORTED
+                                           _T(" SelectedHDCPVersion=[%s]")
 #endif
-                    major = 2;
-                    minor = 2;
-                } else {
-                    major = 1;
-                    minor = 1;
+                                           , NEXUSHdmiOutputHdcpErrorToString(hdcpStatus.hdcpError).c_str()
+                                           , hdcpStatus.transmittingEncrypted ? _T("true") : _T("false")
+                                           , hdcpStatus.hdcp2_2Features ? _T("true") : _T("false")
+#ifdef NEXUS_HDCPVERSION_SUPPORTED
+                                           , NEXUSHdcpVersionToString(hdcpStatus.selectedHdcpVersion).c_str()
+#endif
+                                        ) );
+
+                TRACE(Trace::Information, (_T("HDCP State=[%s]")
+                                           _T(" ReadyForEncryption=[%s]")
+                                           _T(" HDCP1.1Features=[%s]")
+                                           _T(" 1.xDeviceDownstream=[%s]")
+#ifdef NEXUS_HDCPVERSION_SUPPORTED
+                                           _T(" MaxHDCPVersion=[%s]")
+#endif
+                                           , NEXUSHdmiOutputHdcpStateToString(hdcpStatus.hdcpState).c_str()
+                                           , hdcpStatus.linkReadyForEncryption ? _T("true") : _T("false")
+                                           , hdcpStatus.hdcp1_1Features ? _T("true") : _T("false")
+                                           , hdcpStatus.hdcp2_2RxInfo.hdcp1_xDeviceDownstream ? _T("true") : _T("false")
+#ifdef NEXUS_HDCPVERSION_SUPPORTED
+                                           , NEXUSHdcpVersionToString(hdcpStatus.rxMaxHdcpVersion).c_str()
+#endif
+                                        ) );
+
+
+                if(  hdcpStatus.transmittingEncrypted == false ) {
+                    hdcpprotection = HDCPProtectionType::HDCP_Unencrypted;
+                }  else {
+
+#ifdef NEXUS_HDCPVERSION_SUPPORTED
+                    if (hdcpStatus.selectedHdcpVersion == NEXUS_HdcpVersion_e2x) {
+#else
+                    if (hdcpStatus.hdcp2_2Features == true) {
+#endif
+                        hdcpprotection = HDCPProtectionType::HDCP_2X;
+
+                    } else {
+                        hdcpprotection = HDCPProtectionType::HDCP_1X;
+                    }
                 }
             } else {
-                major = 0;
-                minor = 0;
+                TRACE(Trace::Error, (_T("Error retrieving HDCP status")));
             }
+        } else {
+            TRACE(Trace::Error, (_T("Error opening Nexus HDMI ouput")));
         }
 
         // Read display width and height
@@ -290,6 +437,7 @@ private:
         width = capabilities.display[0].graphics.width;
         height = capabilities.display[0].graphics.height;
     }
+
     void RegisterCallback()
     {
         NxClient_CallbackThreadSettings settings;
@@ -303,6 +451,10 @@ private:
         settings.displaySettingsChanged.context = reinterpret_cast<void*>(this);
         settings.displaySettingsChanged.param = 1;
 
+        settings.hdmiOutputHdcpChanged.callback = Callback;
+        settings.hdmiOutputHdcpChanged.context = reinterpret_cast<void*>(this);
+        settings.hdmiOutputHdcpChanged.param = 2;
+
         if (NxClient_StartCallbackThread(&settings) != NEXUS_SUCCESS) {
             TRACE_L1(_T("Error in starting nexus callback thread"));
         }
@@ -313,10 +465,11 @@ private:
 
         switch (param) {
         case 0:
-        case 1: {
+        case 1:
+        case 2: {
             platform->UpdateDisplayInfo();
             break;
-        }
+        } 
         default:
             break;
         }
@@ -324,7 +477,7 @@ private:
     void UpdateDisplayInfo()
     {
         _adminLock.Lock();
-        UpdateDisplayInfo(_connected, _width, _height, _major, _minor, _type);
+        UpdateDisplayInfo(_connected, _width, _height, _hdcpprotection, _type);
         _adminLock.Unlock();
 
         _activity.Submit();
@@ -335,8 +488,7 @@ private:
     uint32_t _height;
     bool _connected;
 
-    uint8_t _major;
-    uint8_t _minor;
+    HDCPProtectionType _hdcpprotection;
     HDRType _type;
 
     uint64_t _totalGpuRam;

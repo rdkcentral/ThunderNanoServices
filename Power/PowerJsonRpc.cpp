@@ -32,14 +32,14 @@ namespace Plugin {
 
     void Power::RegisterAll()
     {
-        Register<PowerData,void>(_T("set"), &Power::endpoint_set, this);
-        Property<Core::JSON::EnumType<StateType>>(_T("state"), &Power::get_state, nullptr, this);
+        PluginHost::JSONRPC::Register<PowerData,void>(_T("set"), &Power::endpoint_set, this);
+        PluginHost::JSONRPC::Property<Core::JSON::EnumType<StateType>>(_T("state"), &Power::get_state, nullptr, this);
     }
 
     void Power::UnregisterAll()
     {
-        Unregister(_T("set"));
-        Unregister(_T("state"));
+        PluginHost::JSONRPC::Unregister(_T("set"));
+        PluginHost::JSONRPC::Unregister(_T("state"));
     }
 
     inline Exchange::IPower::PCState Power::TranslateIn(StateType value)
@@ -132,28 +132,7 @@ namespace Plugin {
                     const uint32_t& timeout = params.Timeout.Value();
                     ControlClients(state);
 
-                    Exchange::IPower::PCStatus status = _power->SetState(state, timeout);
-                    switch(status)
-                    {
-                        case Exchange::IPower::PCStatus::PCSuccess:
-                            result = Core::ERROR_NONE;
-                            break;
-                        case Exchange::IPower::PCStatus::PCFailure:
-                            result = Core::ERROR_GENERAL;
-                            break;
-                        case Exchange::IPower::PCStatus::PCSameMode:
-                            result = Core::ERROR_DUPLICATE_KEY;
-                            break;
-                        case Exchange::IPower::PCStatus::PCInvalidState:
-                            result = Core::ERROR_UNAVAILABLE;
-                            break;
-                        case Exchange::IPower::PCStatus::PCNotSupportedState:
-                            result = Core::ERROR_ILLEGAL_STATE;
-                            break;
-                        default:
-                            ASSERT(false); // Invalid state.
-                            break;
-                    }
+                    result = SetState(state, timeout);
                 } else {
                     result = Core::ERROR_UNKNOWN_KEY;
                 }
@@ -170,7 +149,7 @@ namespace Plugin {
         //  - ERROR_NONE: Success
         uint32_t Power::get_state(Core::JSON::EnumType<StateType>& response) const
         {
-            response = TranslateOut(_power->GetState());
+            response = TranslateOut(GetState());
 
             return Core::ERROR_NONE;
         }

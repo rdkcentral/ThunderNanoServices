@@ -37,7 +37,7 @@ namespace Plugin {
     public:
         Initializer()
         {
-            NEXUS_Error rc = NxClient_Join(NULL);
+            VARIABLE_IS_NOT_USED NEXUS_Error rc = NxClient_Join(NULL);
             ASSERT(!rc);
         }
 
