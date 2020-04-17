@@ -527,12 +527,18 @@ namespace Plugin {
         }
 
         if (index == _devices.end()) {
+            struct InvalidChar {
+                bool operator()(char c) const { return !isprint(static_cast<unsigned char>(c)); }
+            };
+            string safeName (name);
+            safeName.erase(std::remove_if(safeName.begin(),safeName.end(),InvalidChar()), safeName.end());
+            
             if (lowEnergy == true) {
-                TRACE(Trace::Information, ("Added LowEnergy Bluetooth device: %s, name: %s", address.ToString().c_str(), name.c_str()));
-                _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address, name));
+                TRACE(Trace::Information, ("Added LowEnergy Bluetooth device: %s, name: %s", address.ToString().c_str(), safeName.c_str()));
+                _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address, safeName));
             } else {
-                TRACE(Trace::Information, ("Added Regular Bluetooth device: %s, name: %s", address.ToString().c_str(), name.c_str()));
-                _devices.push_back(Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address, name));
+                TRACE(Trace::Information, ("Added Regular Bluetooth device: %s, name: %s", address.ToString().c_str(), safeName.c_str()));
+                _devices.push_back(Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address, safeName));
             }
         }
 
