@@ -460,9 +460,6 @@ namespace Plugin {
                             // Remove unresponsive offer from potential candidates
                             DHCPClientImplementation::Offer copy = offer.Current(); 
                             _client.RemoveUnleasedOffer(offer.Current());
-                            
-                            // Inform controller that request failed
-                            _parent.RequestFailed(_client.Interface(), copy);
                         }
                     }
                 }
