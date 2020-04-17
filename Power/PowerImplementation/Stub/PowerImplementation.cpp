@@ -17,70 +17,37 @@
  * limitations under the License.
  */
  
-#include "Module.h"
-#include <interfaces/IPower.h>
+#include "../../Implementation.h"
 
-namespace WPEFramework {
+namespace {
 
-class PowerImplementation : public Exchange::IPower {
-private:
-    PowerImplementation(const PowerImplementation&) = delete;
-    PowerImplementation& operator=(const PowerImplementation&) = delete;
+static void*              _userData = nullptr;
+static power_state_change _callback = nullptr;
+static enum PCState       _state    = WPEFramework::Exchange::IPower::PCStatus::PCSuccess;
 
-public:
-    PowerImplementation()
-    {
-        _currentState = PCState::On;
-        TRACE(Trace::Information, (_T("PowerImplementation::Construct()")));
-    }
-
-    virtual ~PowerImplementation()
-    {
-        TRACE(Trace::Information, (_T("PowerImplementation::Destruct()")));
-    }
-
-    BEGIN_INTERFACE_MAP(PowerImplementation)
-    INTERFACE_ENTRY(Exchange::IPower)
-    END_INTERFACE_MAP
-
-    // IPower methods
-    virtual PCState GetState() const override
-    {
-        TRACE(Trace::Information, (_T("PowerImplementation::GetState() => %d"), _currentState));
-        return (_currentState);
-    }
-    virtual PCStatus SetState(const PCState state, const uint32_t waitTime) override
-    {
-
-        TRACE(Trace::Information, (_T("PowerImplementation::SetState(%d, %d) => PCSuccess"), state, waitTime));
-
-        _currentState = state;
-
-        return (PCSuccess);
-    }
-    virtual void PowerKey() override
-    {
-        TRACE(Trace::Information, (_T("PowerImplementation::PowerKey()")));
-    }
-    virtual void Configure(const string& settings)
-    {
-        TRACE(Trace::Information, (_T("PowerImplementation::Configure()")));
-    }
-    virtual void Register(Exchange::IPower::INotification* sink) override
-    {
-        TRACE(Trace::Information, (_T("PowerImplementation::Register()")));
-    }
-    virtual void Unregister(Exchange::IPower::INotification* sink) override
-    {
-        TRACE(Trace::Information, (_T("PowerImplementation::Unregister()")));
-    }
-
-private:
-    PCState _currentState;
-};
-
-// The essence of making the IPower interface available. This instantiates
-// an object that can be created from the outside of the library by looking
-// for the PowerImplementation class name, that realizes the IPower interface.
-SERVICE_REGISTRATION(PowerImplementation, 1, 0);
+void power_initialize(power_state_change callback, void* userData, const char*) {
+    ASSERT ((_callback != nullptr) ^ (callback != nullptr));
+    _userData = userData;
+    _callback = callback;
 }
+
+void power_deinitialize() {
+    _callback = nullptr;
+    _userData = nullptr;
+}
+
+uint32_t power_set_state(const enum WPEFramework::Exchange::IPower::PCState state, const uint32_t sleepTime) {
+    _state = state;
+    if (_callback != nullptr) {
+        _callback(_userData);
+    }
+    return (Core::ERROR_NONE);
+}
+
+WPEFramework::Exchange::IPower::PCState power_get_state() {
+    status = _status;
+    return (_state);
+}
+
+}
+

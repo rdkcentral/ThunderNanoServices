@@ -27,21 +27,22 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class Power : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
+    class Power 
+        : public PluginHost::IPlugin 
+        , public PluginHost::IWeb
+        , public Exchange::IPower
+        , public PluginHost::JSONRPC {
+
     private:
-        Power(const Power&) = delete;
-        Power& operator=(const Power&) = delete;
+        class Notification 
+            : public PluginHost::IPlugin::INotification
+            , public PluginHost::VirtualInput::INotifier {
 
-        class Notification : public PluginHost::IPlugin::INotification,
-                             public PluginHost::VirtualInput::INotifier,
-                             public Exchange::IPower::INotification {
-
-        private:
+        public:
             Notification() = delete;
             Notification(const Notification&) = delete;
             Notification& operator=(const Notification&) = delete;
 
-        public:
             explicit Notification(Power* parent)
                 : _parent(*parent)
             {
@@ -58,20 +59,13 @@ namespace Plugin {
                     _parent.KeyEvent(code);
                 }
             }
-
             virtual void StateChange(PluginHost::IShell* plugin)
             {
                 _parent.StateChange(plugin);
             }
 
-            virtual void StateChange(Exchange::IPower::PCState state)
-            {
-                _parent.ControlClients(state);
-            }
-
             BEGIN_INTERFACE_MAP(Notification)
-            INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
-            INTERFACE_ENTRY(Exchange::IPower::INotification)
+                INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -130,21 +124,21 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
-                , OutOfProcess(true)
                 , PowerKey(0)
+                , OffMode(Exchange::IPower::PCState::SuspendToRAM)
                 , ControlClients(true)
             {
-                Add(_T("outofprocess"), &OutOfProcess);
                 Add(_T("powerkey"), &PowerKey);
-                Add(_T("controlclients"), &ControlClients);
+                Add(_T("offmode"), &OffMode);
+                Add(_T("control"), &ControlClients);
             }
             ~Config()
             {
             }
 
         public:
-            Core::JSON::Boolean OutOfProcess;
             Core::JSON::DecUInt32 PowerKey;
+            Core::JSON::EnumType<Exchange::IPower::PCState> OffMode;
             Core::JSON::Boolean ControlClients;
         };
 
@@ -178,6 +172,9 @@ namespace Plugin {
         };
 
     public:
+        Power(const Power&) = delete;
+        Power& operator=(const Power&) = delete;
+
 #ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
@@ -186,10 +183,11 @@ namespace Plugin {
             , _skipURL(0)
             , _service(nullptr)
             , _clients()
-            , _power(nullptr)
             , _sink(this)
+            , _notificationClients()
             , _powerKey(0)
             , _controlClients(true)
+            , _powerOffMode(Exchange::IPower::PCState::SuspendToRAM)
         {
             RegisterAll();
         }
@@ -205,7 +203,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(Power)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
-        INTERFACE_AGGREGATE(Exchange::IPower, _power)
+        INTERFACE_ENTRY(Exchange::IPower)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
@@ -218,23 +216,32 @@ namespace Plugin {
         // If there is an error, return a string describing the issue why the initialisation failed.
         // The Service object is *NOT* reference counted, lifetime ends if the plugin is deactivated.
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
-        virtual const string Initialize(PluginHost::IShell* service);
+        const string Initialize(PluginHost::IShell* service) override;
 
         // The plugin is unloaded from WPEFramework. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After theis call, the lifetime of the Service object ends.
-        virtual void Deinitialize(PluginHost::IShell* service);
+        void Deinitialize(PluginHost::IShell* service) override;
 
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
-        virtual string Information() const;
+        string Information() const override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request);
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
-        PluginHost::IShell* GetService() { return _service; }
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+
+        //  IPower methods
+        // -------------------------------------------------------------------------------------------------------
+        void Register(IPower::INotification* sink) override;
+        void Unregister(IPower::INotification* sink) override;
+        PCState GetState() const override;
+        uint32_t SetState(const PCState, const uint32_t) override;
+        void PowerKey() override;
+
+        void PowerChange(const Exchange::IPower::PCState state);
 
     private:
         void KeyEvent(const uint32_t keyCode);
@@ -254,10 +261,11 @@ namespace Plugin {
         uint32_t _skipURL;
         PluginHost::IShell* _service;
         Clients _clients;
-        Exchange::IPower* _power;
         Core::Sink<Notification> _sink;
+        std::list<Exchange::IPower::INotification*> _notificationClients;
         uint32_t _powerKey;
         bool _controlClients;
+        Exchange::IPower::PCState _powerOffMode;
     };
 } //namespace Plugin
 } //namespace WPEFramework
