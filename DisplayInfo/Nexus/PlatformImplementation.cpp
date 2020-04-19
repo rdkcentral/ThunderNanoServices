@@ -19,6 +19,7 @@
  
 #include "../Module.h"
 #include <interfaces/IDisplayInfo.h>
+#include "../DisplayInfoTracing.h"
 
 #include <nexus_config.h>
 #include <nexus_platform.h>
@@ -58,7 +59,13 @@ public:
 
         UpdateTotalGpuRam(_totalGpuRam);
 
-        UpdateDisplayInfo(_connected, _width, _height, _hdcpprotection, _type);
+        NexusHdmiOutput hdmihandle;
+        if( hdmihandle ) {
+            UpdateDisplayInfoConnected(hdmihandle, _connected);
+            UpdateDisplayInfoHDCP(hdmihandle, _hdcpprotection);
+        }
+        UpdateDisplayInfoDisplayStatus(_width, _height, _type);
+
         UpdateAudioPassthrough(_audioPassthrough);
 
         RegisterCallback();
@@ -334,101 +341,71 @@ private:
 
 #endif
 
-    inline void UpdateDisplayInfo(bool& connected, uint32_t& width, uint32_t& height, HDCPProtectionType& hdcpprotection, HDRType& type) const
+    class NexusHdmiOutput {
+        public:
+        NexusHdmiOutput(const NexusHdmiOutput&) = delete;
+        NexusHdmiOutput& operator=(const NexusHdmiOutput&) = delete;
+
+        NexusHdmiOutput() : _hdmiOutput(nullptr) {
+
+            _hdmiOutput = NEXUS_HdmiOutput_Open(NEXUS_ALIAS_ID + 0, NULL);
+
+            if( _hdmiOutput == nullptr ) {
+                TRACE(Trace::Error, (_T("Error opening Nexus HDMI ouput")));
+            }
+        }
+
+        ~NexusHdmiOutput() {
+            if( _hdmiOutput != nullptr ) {
+                NEXUS_HdmiOutput_Close(_hdmiOutput);
+            }
+        }
+
+        operator bool() const {
+            return (_hdmiOutput != nullptr);
+        }
+
+        operator NEXUS_HdmiOutputHandle() const { 
+            return _hdmiOutput; 
+        }
+
+        private:
+            NEXUS_HdmiOutputHandle _hdmiOutput;
+    };
+
+    void UpdateDisplayInfoConnected(const NEXUS_HdmiOutputHandle& hdmiOutput, bool& connected) const
     {
-        NEXUS_Error rc = NEXUS_SUCCESS;
+        NEXUS_HdmiOutputStatus status;
+        NEXUS_Error rc = NEXUS_HdmiOutput_GetStatus(hdmiOutput, &status);
+        if (rc == NEXUS_SUCCESS) {
+            connected = status.connected;
+        }
+    }
 
-        hdcpprotection = HDCPProtectionType::HDCP_Unencrypted; // reset to safe level in case value could not be retrieved
-
-        NEXUS_HdmiOutputHandle hdmiOutput;
-        hdmiOutput = NEXUS_HdmiOutput_Open(NEXUS_ALIAS_ID + 0, NULL);
-        if (hdmiOutput) {
-            NEXUS_HdmiOutputStatus status;
-            rc = NEXUS_HdmiOutput_GetStatus(hdmiOutput, &status);
-            if (rc == NEXUS_SUCCESS) {
-                connected = status.connected;
-            }
-
-            NxClient_DisplaySettings displaySettings;
-            NxClient_GetDisplaySettings(&displaySettings);
+    void UpdateDisplayInfoDisplayStatus(uint32_t& width, uint32_t& height, HDRType& type) const
+    {
+        NxClient_DisplaySettings displaySettings;
+        NxClient_GetDisplaySettings(&displaySettings);
 #ifdef NEXUS_HDR_SUPPORTED
-            // Read HDR status
-            switch (displaySettings.hdmiPreferences.dynamicRangeMode) {
-            case NEXUS_VideoDynamicRangeMode_eHdr10: {
-                type = HDR_10;
-                break;
-            }
-            case NEXUS_VideoDynamicRangeMode_eHdr10Plus: {
-                type = HDR_10PLUS;
-                break;
-            }
+        // Read HDR status
+        switch (displaySettings.hdmiPreferences.dynamicRangeMode) {
+        case NEXUS_VideoDynamicRangeMode_eHdr10: {
+            type = HDR_10;
+            break;
+        }
+        case NEXUS_VideoDynamicRangeMode_eHdr10Plus: {
+            type = HDR_10PLUS;
+            break;
+        }
 #else
-            switch  (displaySettings.hdmiPreferences.drmInfoFrame.eotf) {
-            case NEXUS_VideoEotf_eHdr10: {
-                type = HDR_10;
-                break;
-            }
+        switch  (displaySettings.hdmiPreferences.drmInfoFrame.eotf) {
+        case NEXUS_VideoEotf_eHdr10: {
+            type = HDR_10;
+            break;
+        }
 #endif
-            default:
-                break;
-            }
-
-            // Check HDCP version
-            NEXUS_HdmiOutputHdcpStatus hdcpStatus;
-            rc = NEXUS_HdmiOutput_GetHdcpStatus(hdmiOutput, &hdcpStatus);
-
-            if (rc  == NEXUS_SUCCESS) {
-                TRACE(Trace::Information, (_T(" HDCP Error=[%s]")
-                                           _T(" TransmittingEncrypted=[%s]")
-                                           _T(" HDCP2.2Features=[%s]")
-#ifdef NEXUS_HDCPVERSION_SUPPORTED
-                                           _T(" SelectedHDCPVersion=[%s]")
-#endif
-                                           , NEXUSHdmiOutputHdcpErrorToString(hdcpStatus.hdcpError).c_str()
-                                           , hdcpStatus.transmittingEncrypted ? _T("true") : _T("false")
-                                           , hdcpStatus.hdcp2_2Features ? _T("true") : _T("false")
-#ifdef NEXUS_HDCPVERSION_SUPPORTED
-                                           , NEXUSHdcpVersionToString(hdcpStatus.selectedHdcpVersion).c_str()
-#endif
-                                        ) );
-
-                TRACE(Trace::Information, (_T("HDCP State=[%s]")
-                                           _T(" ReadyForEncryption=[%s]")
-                                           _T(" HDCP1.1Features=[%s]")
-                                           _T(" 1.xDeviceDownstream=[%s]")
-#ifdef NEXUS_HDCPVERSION_SUPPORTED
-                                           _T(" MaxHDCPVersion=[%s]")
-#endif
-                                           , NEXUSHdmiOutputHdcpStateToString(hdcpStatus.hdcpState).c_str()
-                                           , hdcpStatus.linkReadyForEncryption ? _T("true") : _T("false")
-                                           , hdcpStatus.hdcp1_1Features ? _T("true") : _T("false")
-                                           , hdcpStatus.hdcp2_2RxInfo.hdcp1_xDeviceDownstream ? _T("true") : _T("false")
-#ifdef NEXUS_HDCPVERSION_SUPPORTED
-                                           , NEXUSHdcpVersionToString(hdcpStatus.rxMaxHdcpVersion).c_str()
-#endif
-                                        ) );
-
-
-                if(  hdcpStatus.transmittingEncrypted == false ) {
-                    hdcpprotection = HDCPProtectionType::HDCP_Unencrypted;
-                }  else {
-
-#ifdef NEXUS_HDCPVERSION_SUPPORTED
-                    if (hdcpStatus.selectedHdcpVersion == NEXUS_HdcpVersion_e2x) {
-#else
-                    if (hdcpStatus.hdcp2_2Features == true) {
-#endif
-                        hdcpprotection = HDCPProtectionType::HDCP_2X;
-
-                    } else {
-                        hdcpprotection = HDCPProtectionType::HDCP_1X;
-                    }
-                }
-            } else {
-                TRACE(Trace::Error, (_T("Error retrieving HDCP status")));
-            }
-        } else {
-            TRACE(Trace::Error, (_T("Error opening Nexus HDMI ouput")));
+        default:
+            break;
         }
 
         // Read display width and height
@@ -438,6 +415,67 @@ private:
         height = capabilities.display[0].graphics.height;
     }
 
+    void UpdateDisplayInfoHDCP(const NEXUS_HdmiOutputHandle& hdmiOutput, HDCPProtectionType& hdcpprotection) const
+    {
+        // Check HDCP version
+        NEXUS_HdmiOutputHdcpStatus hdcpStatus;
+        NEXUS_Error rc = NEXUS_HdmiOutput_GetHdcpStatus(hdmiOutput, &hdcpStatus);
+
+        if (rc  == NEXUS_SUCCESS) {
+             TRACE(Trace::Information, (_T(" HDCP Error=[%s]")
+                                        _T(" TransmittingEncrypted=[%s]")
+                                        _T(" HDCP2.2Features=[%s]")
+#ifdef NEXUS_HDCPVERSION_SUPPORTED
+                                        _T(" SelectedHDCPVersion=[%s]")
+#endif
+                                        , NEXUSHdmiOutputHdcpErrorToString(hdcpStatus.hdcpError).c_str()
+                                        , hdcpStatus.transmittingEncrypted ? _T("true") : _T("false")
+                                        , hdcpStatus.hdcp2_2Features ? _T("true") : _T("false")
+#ifdef NEXUS_HDCPVERSION_SUPPORTED
+                                        , NEXUSHdcpVersionToString(hdcpStatus.selectedHdcpVersion).c_str()
+#endif
+                                    ) );
+
+            TRACE(HDCPDetailedInfo, 
+                                       (_T("HDCP State=[%s]")
+                                        _T(" ReadyForEncryption=[%s]")
+                                        _T(" HDCP1.1Features=[%s]")
+                                        _T(" 1.xDeviceDownstream=[%s]")
+#ifdef NEXUS_HDCPVERSION_SUPPORTED
+                                        _T(" MaxHDCPVersion=[%s]")
+#endif
+                                        , NEXUSHdmiOutputHdcpStateToString(hdcpStatus.hdcpState).c_str()
+                                        , hdcpStatus.linkReadyForEncryption ? _T("true") : _T("false")
+                                        , hdcpStatus.hdcp1_1Features ? _T("true") : _T("false")
+                                        , hdcpStatus.hdcp2_2RxInfo.hdcp1_xDeviceDownstream ? _T("true") : _T("false")
+#ifdef NEXUS_HDCPVERSION_SUPPORTED
+                                        , NEXUSHdcpVersionToString(hdcpStatus.rxMaxHdcpVersion).c_str()
+#endif
+                                    ) );
+
+
+            if(  hdcpStatus.transmittingEncrypted == false ) {
+                hdcpprotection = HDCPProtectionType::HDCP_Unencrypted;
+            }  else {
+
+#ifdef NEXUS_HDCPVERSION_SUPPORTED
+                if (hdcpStatus.selectedHdcpVersion == NEXUS_HdcpVersion_e2x) {
+#else
+                if (hdcpStatus.hdcp2_2Features == true) {
+#endif
+                    hdcpprotection = HDCPProtectionType::HDCP_2X;
+
+                } else {
+                    hdcpprotection = HDCPProtectionType::HDCP_1X;
+                }
+            }
+        } else {
+            TRACE(Trace::Error, (_T("Error retrieving HDCP status")));
+        }
+    }
+
+    enum class CallbackType : int { HotPlug, DisplaySettings, HDCP };
+
     void RegisterCallback()
     {
         NxClient_CallbackThreadSettings settings;
@@ -445,41 +483,62 @@ private:
 
         settings.hdmiOutputHotplug.callback = Callback;
         settings.hdmiOutputHotplug.context = reinterpret_cast<void*>(this);
-        settings.hdmiOutputHotplug.param = 0;
+        settings.hdmiOutputHotplug.param = static_cast<int>(CallbackType::HotPlug);
 
         settings.displaySettingsChanged.callback = Callback;
         settings.displaySettingsChanged.context = reinterpret_cast<void*>(this);
-        settings.displaySettingsChanged.param = 1;
+        settings.displaySettingsChanged.param = static_cast<int>(CallbackType::DisplaySettings);
 
         settings.hdmiOutputHdcpChanged.callback = Callback;
         settings.hdmiOutputHdcpChanged.context = reinterpret_cast<void*>(this);
-        settings.hdmiOutputHdcpChanged.param = 2;
+        settings.hdmiOutputHdcpChanged.param = static_cast<int>(CallbackType::HDCP);
 
         if (NxClient_StartCallbackThread(&settings) != NEXUS_SUCCESS) {
             TRACE_L1(_T("Error in starting nexus callback thread"));
         }
     }
+    
     static void Callback(void *cbData, int param)
     {
         DisplayInfoImplementation* platform = static_cast<DisplayInfoImplementation*>(cbData);
 
-        switch (param) {
-        case 0:
-        case 1:
-        case 2: {
-            platform->UpdateDisplayInfo();
+        ASSERT(platform != nullptr);
+
+        if( platform != nullptr ) {
+            platform->UpdateDisplayInfo(static_cast<CallbackType>(param));
+        }
+    }
+
+    void UpdateDisplayInfo(const CallbackType callbacktype)
+    {
+        switch ( callbacktype ) {
+        case CallbackType::HotPlug : { 
+            NexusHdmiOutput hdmihandle;
+            if( hdmihandle ) {
+                _adminLock.Lock();
+                UpdateDisplayInfoConnected(hdmihandle, _connected);
+                _adminLock.Unlock();
+            }
             break;
-        } 
+        }
+        case CallbackType::DisplaySettings : {  // DiplaySettings Changed
+            _adminLock.Lock();
+            UpdateDisplayInfoDisplayStatus(_width, _height, _type);
+            _adminLock.Unlock();
+            break;
+        }
+        case CallbackType::HDCP : {  // HDCP settings changed
+            NexusHdmiOutput hdmihandle;
+            if( hdmihandle ) {
+                _adminLock.Lock();
+                UpdateDisplayInfoHDCP(hdmihandle, _hdcpprotection);
+                _adminLock.Unlock();
+            }
+            break;
+        }
         default:
             break;
         }
-    }
-    void UpdateDisplayInfo()
-    {
-        _adminLock.Lock();
-        UpdateDisplayInfo(_connected, _width, _height, _hdcpprotection, _type);
-        _adminLock.Unlock();
-
         _activity.Submit();
     }
 
