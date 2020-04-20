@@ -52,6 +52,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(GLIB REQUIRED)
 find_package(WPEWebKit REQUIRED)
 find_package(WPEBackend REQUIRED)
+find_package(LibSoup REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     Module.cpp
@@ -71,6 +72,7 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ${WPE_BACKEND_LIBRARIES}
+        ${LIBSOUP_LIBRARIES}
         ${GLIB_LIBRARIES}
         ${WPE_WEBKIT_LIBRARIES}
         ${SECURITY_TOKEN_LIBRARY})
@@ -80,10 +82,15 @@ target_include_directories(${MODULE_NAME}
         ${WPE_BACKEND_INCLUDE_DIRS}
         ${WPE_WEBKIT_INCLUDE_DIRS}
         ${WPE_WEBKIT_INCLUDE_DIRS}/WPE
+        ${LIBSOUP_INCLUDE_DIRS}
         ${GLIB_INCLUDE_DIRS})
 
 if(WPE_WEBKIT_DEPRECATED_API)
     target_compile_definitions(${MODULE_NAME} PRIVATE WPE_WEBKIT_DEPRECATED_API=${WPE_WEBKIT_DEPRECATED_API})
+endif()
+
+if(WEBKIT_GLIB_API)
+    target_compile_definitions(${MODULE_NAME} PRIVATE WEBKIT_GLIB_API=${WEBKIT_GLIB_API})
 endif()
 
 install(
@@ -91,8 +98,10 @@ install(
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins
     COMPONENT ${MODULE_NAME})
 
-# also build injected bundle
-add_subdirectory(InjectedBundle)
+if(NOT DEFINED WEBKIT_GLIB_API)
+	# also build injected bundle
+	add_subdirectory(InjectedBundle)
+endif()
 
 # resolution handling
 if(PLUGIN_WEBKITBROWSER_RESOLUTION EQUAL "720p")
