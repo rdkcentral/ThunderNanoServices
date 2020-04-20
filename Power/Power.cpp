@@ -64,7 +64,8 @@ namespace Plugin {
         }
 
         // Receive all plugin information on state changes.
-        _service->Register(&_sink);
+        if (_controlClients)
+            _service->Register(&_sink);
 
         power_initialize(PowerStateChange, this, _service->ConfigLine().c_str(), persistedState);
 
@@ -76,7 +77,8 @@ namespace Plugin {
         ASSERT(_service == service);
 
         // No need to monitor the Process::Notification anymore, we will kill it anyway.
-        _service->Unregister(&_sink);
+        if (_controlClients)
+            _service->Unregister(&_sink);
 
         // Remove all registered clients
         _clients.clear();
@@ -262,6 +264,10 @@ namespace Plugin {
     }
     void Power::StateChange(PluginHost::IShell* plugin)
     {
+        if (!_controlClients) {
+            return;
+        }
+
         const string callsign(plugin->Callsign());
 
         _adminLock.Lock();
