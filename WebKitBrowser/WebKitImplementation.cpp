@@ -1227,6 +1227,8 @@ static GSourceFuncs _handlerIntervention =
             // Turn on/off WebGL
             webkit_settings_set_enable_webgl(preferences, _config.WebGLEnabled.Value());
 
+	    webkit_settings_set_enable_non_composited_webgl(preferences, _config.NonCompositedWebGLEnabled.Value());		
+		
             if (_config.UserAgent.IsSet() == true && _config.UserAgent.Value().empty() == false)
                 webkit_settings_set_user_agent(preferences, _config.UserAgent.Value().c_str());
 
