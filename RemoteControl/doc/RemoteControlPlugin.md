@@ -15,6 +15,7 @@ RemoteControl plugin for Thunder framework.
 - [Configuration](#head.Configuration)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
+- [Notifications](#head.Notifications)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -22,7 +23,7 @@ RemoteControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the RemoteControl plugin. It includes detailed specification of its configuration, methods and properties provided.
+This document describes purpose and functionality of the RemoteControl plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -775,6 +776,44 @@ Provides access to the metadata of a specific device.
     "id": 1234567890,
     "result": {
         "metadata": "It is based on protocol A"
+    }
+}
+```
+<a name="head.Notifications"></a>
+# Notifications
+
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers.Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+
+The following events are provided by the RemoteControl plugin:
+
+RemoteControl interface events:
+
+| Event | Description |
+| :-------- | :-------- |
+| [keypressed](#event.keypressed) | Notifies of a key press/release action |
+
+<a name="event.keypressed"></a>
+## *keypressed <sup>event</sup>*
+
+Notifies of a key press/release action.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.pressed | boolean | Denotes if the key was pressed (true) or released (false) |
+
+> The *key code* shall be passed within the designator, e.g. *42.client.events.1*.
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "42.client.events.1.keypressed",
+    "params": {
+        "pressed": false
     }
 }
 ```

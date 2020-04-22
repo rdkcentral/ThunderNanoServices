@@ -416,6 +416,19 @@ namespace Plugin {
         }
         return result;
     }
+
+    // Event: keypressed - Notifies of a key press/release action
+    void RemoteControl::event_keypressed(const string& id, const bool& pressed)
+    {
+        KeypressedParamsData params;
+        params.Pressed = pressed;
+
+        Notify(_T("keypressed"), params, [&](const string& designator) -> bool {
+            const string designator_id = designator.substr(0, designator.find('@'));
+            return (id == designator_id);
+        });
+    }
+
 } // namespace Plugin
 
 } // namespace WPEFramework

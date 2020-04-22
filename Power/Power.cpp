@@ -18,6 +18,7 @@
  */
  
 #include "Power.h"
+#include "Implementation.h"
 
 namespace WPEFramework {
 namespace Plugin {
@@ -27,45 +28,43 @@ namespace Plugin {
     static Core::ProxyPoolType<Web::JSONBodyType<Power::Data>> jsonBodyDataFactory(2);
     static Core::ProxyPoolType<Web::JSONBodyType<Power::Data>> jsonResponseFactory(4);
 
+    extern "C" {
+
+    static void PowerStateChange(void* userData, enum WPEFramework::Exchange::IPower::PCState newState) {
+        reinterpret_cast<Power*>(userData)->PowerChange(newState);
+    }
+
+    }
+
     /* virtual */ const string Power::Initialize(PluginHost::IShell* service)
     {
         string message;
 
-        ASSERT(_power == nullptr);
         ASSERT(_service == nullptr);
 
         // Setup skip URL for right offset.
         _service = service;
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
 
-        _power = Core::ServiceAdministrator::Instance().Instantiate<Exchange::IPower>(Core::Library(), _T("PowerImplementation"), static_cast<uint32_t>(~0));
+        Config config;
 
-        if (_power != nullptr) {
-            Config config;
+        config.FromString(_service->ConfigLine());
 
-            config.FromString(_service->ConfigLine());
+        _powerKey = config.PowerKey.Value();
+        _powerOffMode = config.OffMode.Value();
+        _controlClients = config.ControlClients.Value();
+        if (_powerKey != KEY_RESERVED) {
+            PluginHost::VirtualInput* keyHandler(PluginHost::InputHandler::Handler());
 
-            _controlClients = config.ControlClients.Value();
-            _powerKey = config.PowerKey.Value();
-            if (_powerKey != KEY_RESERVED) {
-                PluginHost::VirtualInput* keyHandler(PluginHost::InputHandler::Handler());
+            ASSERT(keyHandler != nullptr);
 
-                ASSERT(keyHandler != nullptr);
-
-                keyHandler->Register(&_sink, _powerKey);
-            }
-
-            // Receive all plugin information on state changes.
-            _service->Register(&_sink);
-            _power->Register(&_sink);
-
-            _power->Configure(_service->ConfigLine());
-
-        } else {
-            _service = nullptr;
-
-            message = _T("Power could not be instantiated.");
+            keyHandler->Register(&_sink, _powerKey);
         }
+
+        // Receive all plugin information on state changes.
+        _service->Register(&_sink);
+
+        power_initialize(PowerStateChange, this, _service->ConfigLine().c_str());
 
         return message;
     }
@@ -73,7 +72,6 @@ namespace Plugin {
     /* virtual */ void Power::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
-        ASSERT(_power != nullptr);
 
         // No need to monitor the Process::Notification anymore, we will kill it anyway.
         _service->Unregister(&_sink);
@@ -89,11 +87,7 @@ namespace Plugin {
             keyHandler->Unregister(&_sink, _powerKey);
         }
 
-        _power->Unregister(&_sink);
-
-        _power->Release();
-
-        _power = nullptr;
+        power_deinitialize();
         _service = nullptr;
     }
 
@@ -120,16 +114,12 @@ namespace Plugin {
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
         result->Message = "Unknown error";
 
-        ASSERT(_power != nullptr);
-
         if ((request.Verb == Web::Request::HTTP_GET) && ((index.Next() == true) && (index.Next() == true))) {
-            TRACE(Trace::Information, (string(_T("GET request"))));
             result->ErrorCode = Web::STATUS_OK;
             result->Message = "OK";
             if (index.Remainder() == _T("State")) {
-                TRACE(Trace::Information, (string(_T("State"))));
                 Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
-                response->PowerState = _power->GetState();
+                response->PowerState = power_get_state();
                 if (response->PowerState) {
                     result->ContentType = Web::MIMETypes::MIME_JSON;
                     result->Body(Core::proxy_cast<Web::IBody>(response));
@@ -141,18 +131,16 @@ namespace Plugin {
                 result->Message = "Unknown error";
             }
         } else if ((request.Verb == Web::Request::HTTP_POST) && (index.Next() == true) && (index.Next() == true)) {
-            TRACE(Trace::Information, (string(_T("POST request"))));
             result->ErrorCode = Web::STATUS_OK;
             result->Message = "OK";
             if (index.Remainder() == _T("State")) {
-                TRACE(Trace::Information, (string(_T("State "))));
                 uint32_t timeout = request.Body<const Data>()->Timeout.Value();
                 Exchange::IPower::PCState state = static_cast<Exchange::IPower::PCState>(request.Body<const Data>()->PowerState.Value());
 
                 ControlClients(state);
 
                 Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
-                response->Status = _power->SetState(state, timeout);
+                response->Status = SetState(state, timeout);
                 result->ContentType = Web::MIMETypes::MIME_JSON;
                 result->Body(Core::proxy_cast<Web::IBody>(response));
             } else {
@@ -164,18 +152,108 @@ namespace Plugin {
         return result;
     }
 
+    void Power::Register(Exchange::IPower::INotification* sink)
+    {
+        _adminLock.Lock();
+
+        // Make sure a sink is not registered multiple times.
+        ASSERT(std::find(_notificationClients.begin(), _notificationClients.end(), sink) == _notificationClients.end());
+
+        _notificationClients.push_back(sink);
+        sink->AddRef();
+
+        _adminLock.Unlock();
+
+        TRACE(Trace::Information, (_T("Registered a sink on the power")));
+    }
+
+    void Power::Unregister(Exchange::IPower::INotification* sink)
+    {
+        _adminLock.Lock();
+
+        std::list<Exchange::IPower::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));
+
+        // Make sure you do not unregister something you did not register !!!
+        ASSERT(index != _notificationClients.end());
+
+        if (index != _notificationClients.end()) {
+            (*index)->Release();
+            _notificationClients.erase(index);
+            TRACE(Trace::Information, (_T("Unregistered a sink on the power")));
+        }
+
+        _adminLock.Unlock();
+    }
+
+    Exchange::IPower::PCState Power::GetState() const /* override */ {
+        return (power_get_state());
+    }
+
+    uint32_t Power::SetState(const Exchange::IPower::PCState state, const uint32_t waitTime) /* override */ {
+        uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+        if (power_get_state() == state) {
+            TRACE(Trace::Information, (_T("No need to change power states, we are already at this stage!")));
+        }
+        else {
+            _adminLock.Unlock();
+
+            std::list<Exchange::IPower::INotification*>::iterator index(_notificationClients.begin());
+
+            while (index != _notificationClients.end()) {
+                (*index)->StateChange(state);
+                index++;
+            }
+
+            _adminLock.Unlock();
+ 
+            if (state != Exchange::IPower::PCState::On) {
+                ControlClients(state);
+            }
+
+            if ( (result = power_set_state(state, waitTime)) != Core::ERROR_NONE) {
+                TRACE(Trace::Information, (_T("Could not change the power state, error: %d"), result));
+            }
+        }
+
+        return (result);
+    }
+    void Power::PowerChange(const Exchange::IPower::PCState state) {
+
+        if (state == Exchange::IPower::PCState::On) {
+            ControlClients(state);
+        }
+
+        _adminLock.Lock();
+
+        std::list<Exchange::IPower::INotification*>::iterator index(_notificationClients.begin());
+
+        while (index != _notificationClients.end()) {
+            (*index)->StateChange(state);
+            index++;
+        }
+
+        _adminLock.Unlock();
+    }
+    void Power::PowerKey() /* override */ {
+        if (power_get_state() == Exchange::IPower::PCState::On) {
+            // Maybe this value should be coming from the config :-)
+            SetState(_powerOffMode, ~0);
+        }
+        else {
+            SetState(Exchange::IPower::PCState::On, 0);
+        }
+    }
     void Power::KeyEvent(const uint32_t keyCode)
     {
-
         // We only subscribed for the KEY_POWER event so do not
         // expect anything else !!!
         ASSERT(keyCode == KEY_POWER)
 
         if (keyCode == KEY_POWER) {
-            _power->PowerKey();
+            PowerKey();
         }
     }
-
     void Power::StateChange(PluginHost::IShell* plugin)
     {
         const string callsign(plugin->Callsign());
