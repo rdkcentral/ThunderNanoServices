@@ -119,7 +119,7 @@ namespace Plugin {
                 Source& operator=(const Source&) = delete;
 
                 Source(const string& tracePath, RPC::IRemoteConnection* connection)
-                    : Core::CyclicBuffer(SourceName(tracePath, connection), File::USER_READ|File::GROUP_READ|File::CREATE|File::SHAREABLE, 0, true)
+                    : Core::CyclicBuffer(SourceName(tracePath, connection), Core::File::USER_READ|Core::File::GROUP_READ|Core::File::CREATE|Core::File::SHAREABLE, 0, true)
                     , _iterator(connection == nullptr ? &_localIterator : nullptr)
                     , _control(connection == nullptr ? &_localIterator : nullptr)
                     , _connection(connection)
@@ -204,9 +204,9 @@ namespace Plugin {
 
                 state Load()
                 {
-                    bool available = (_IsValid() == false);
+                    bool available = (IsValid() == false);
 
-                    if (available = false) {
+                    if (available == false) {
                         available = Load();
                     }
 
