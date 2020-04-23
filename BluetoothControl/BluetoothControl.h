@@ -1613,7 +1613,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
     public:
         inline static ControlSocket& Connector() {
-            return (_application);
+            return (*_appInstance);
         }
 
     private:
@@ -1672,7 +1672,8 @@ class BluetoothControl : public PluginHost::IPlugin
         std::list<DeviceImpl*> _devices;
         std::list<IBluetooth::INotification*> _observers;
         Config _config;
-        static ControlSocket _application;
+        ControlSocket _application;
+        static ControlSocket* _appInstance;
         string _persistentStoragePath;
     };
 

@@ -48,10 +48,6 @@ namespace Plugin {
         public:
             class Source : public Core::CyclicBuffer {
             private:
-                Source() = delete;
-                Source(const Source&) = delete;
-                Source& operator=(const Source&) = delete;
-
                 class LocalIterator : public Trace::ITraceIterator, public Trace::ITraceController {
                 private:
                     LocalIterator(const LocalIterator&) = delete;
@@ -118,8 +114,12 @@ namespace Plugin {
                 };
 
             public:
+                Source() = delete;
+                Source(const Source&) = delete;
+                Source& operator=(const Source&) = delete;
+
                 Source(const string& tracePath, RPC::IRemoteConnection* connection)
-                    : Core::CyclicBuffer(SourceName(tracePath, connection), 0, true)
+                    : Core::CyclicBuffer(SourceName(tracePath, connection), Core::File::USER_READ|Core::File::GROUP_READ|Core::File::CREATE|Core::File::SHAREABLE, 0, true)
                     , _iterator(connection == nullptr ? &_localIterator : nullptr)
                     , _control(connection == nullptr ? &_localIterator : nullptr)
                     , _connection(connection)
@@ -204,53 +204,61 @@ namespace Plugin {
 
                 state Load()
                 {
-                    uint32_t length;
+                    bool available = (IsValid() == false);
 
-                    // Traces will be commited in one go, First reserve, then write. So if there is a length (2 bytes)
-                    // The full trace has to be available as well.
-                    if ((_state == EMPTY) && ((length = Read(_traceBuffer, sizeof(_traceBuffer))) != 0)) {
+                    if (available == false) {
+                        available = Load();
+                    }
 
-                        if (length < 2) {
-                            // Didn't even get enough data to read entry size. This is impossible, fallback to failure.
-                            TRACE_L1("Inconsistent trace dump. Need to flush. %d", length);
-                            _state = FAILURE;
-                        } else {
-                            // TODO: This is platform dependend, needs to ba agnostic to the platform.
-                            uint16_t requiredLength = (_traceBuffer[1] << 8) | _traceBuffer[0];
+                    if (available == true) {
+                        uint32_t length;
 
-                            if (requiredLength != length) {
-                                // Something went wrong, didn't read a full entry.
+                        // Traces will be commited in one go, First reserve, then write. So if there is a length (2 bytes)
+                        // The full trace has to be available as well.
+                        if ((_state == EMPTY) && ((length = Read(_traceBuffer, sizeof(_traceBuffer))) != 0)) {
+
+                            if (length < 2) {
+                                // Didn't even get enough data to read entry size. This is impossible, fallback to failure.
+                                TRACE_L1("Inconsistent trace dump. Need to flush. %d", length);
                                 _state = FAILURE;
                             } else {
-                                // length(2 bytes) - clock ticks (8 bytes) - line number (4 bytes) - file/module/category/className
+                                // TODO: This is platform dependend, needs to ba agnostic to the platform.
+                                uint16_t requiredLength = (_traceBuffer[1] << 8) | _traceBuffer[0];
 
-                                // Keep track of location in buffer.
-                                uint32_t offset = /* length */ 2 /* clock */ + 8 /* Skip line number */ + 4;
+                                if (requiredLength != length) {
+                                    // Something went wrong, didn't read a full entry.
+                                    _state = FAILURE;
+                                } else {
+                                    // length(2 bytes) - clock ticks (8 bytes) - line number (4 bytes) - file/module/category/className
 
-                                // Skip file name.
-                                offset += static_cast<uint32_t>(strlen(reinterpret_cast<char*>(_traceBuffer + offset)) + 1);
+                                    // Keep track of location in buffer.
+                                    uint32_t offset = /* length */ 2 /* clock */ + 8 /* Skip line number */ + 4;
 
-                                // Get module offset.
-                                _module = offset;
-                                offset += static_cast<uint32_t>(strlen(reinterpret_cast<char*>(_traceBuffer + _module)) + 1);
+                                    // Skip file name.
+                                    offset += static_cast<uint32_t>(strlen(reinterpret_cast<char*>(_traceBuffer + offset)) + 1);
 
-                                // Get category offset.
-                                _category = offset;
-                                offset += static_cast<uint32_t>(strlen(reinterpret_cast<char*>(_traceBuffer + _category)) + 1);
+                                    // Get module offset.
+                                    _module = offset;
+                                    offset += static_cast<uint32_t>(strlen(reinterpret_cast<char*>(_traceBuffer + _module)) + 1);
 
-                                // Get class name offset.
-                                _classname = offset;
-                                offset += static_cast<uint32_t>(strlen(reinterpret_cast<char*>(_traceBuffer + _classname)) + 1);
+                                    // Get category offset.
+                                    _category = offset;
+                                    offset += static_cast<uint32_t>(strlen(reinterpret_cast<char*>(_traceBuffer + _category)) + 1);
 
-                                ASSERT(length >= offset);
+                                    // Get class name offset.
+                                    _classname = offset;
+                                    offset += static_cast<uint32_t>(strlen(reinterpret_cast<char*>(_traceBuffer + _classname)) + 1);
 
-                                // Rest of entry is information.
-                                _information = offset;
-                                _length = requiredLength - offset;
-                                _traceBuffer[requiredLength] = '\0';
+                                    ASSERT(length >= offset);
 
-                                // Entries are read in whole, so we are done.
-                                _state = LOADED;
+                                    // Rest of entry is information.
+                                    _information = offset;
+                                    _length = requiredLength - offset;
+                                    _traceBuffer[requiredLength] = '\0';
+
+                                    // Entries are read in whole, so we are done.
+                                    _state = LOADED;
+                                }
                             }
                         }
                     }
