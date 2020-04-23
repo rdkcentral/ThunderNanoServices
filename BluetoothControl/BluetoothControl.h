@@ -326,6 +326,9 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 return(_administrator);
             }
+            Bluetooth::ManagementSocket::Info Settings() const {
+                return(_administrator.Settings());
+            }
             BluetoothControl* Application()
             {
                 return (_parent);
@@ -848,7 +851,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 uint32_t result = Core::ERROR_INPROGRESS;
 
                 if (SetState(PAIRING) == Core::ERROR_NONE) {
-                    result = BluetoothControl::Connector().Pair(_remote, _type, static_cast<Bluetooth::ManagementSocket::capabilities>(caps));
+                    result = _parent->Connector().Pair(_remote, _type, static_cast<Bluetooth::ManagementSocket::capabilities>(caps));
                     if ( (result != Core::ERROR_ALREADY_CONNECTED) && (result != Core::ERROR_NONE) ) {
                         TRACE(Trace::Error, (_T("Failed to pair [%d]"), result));
                     }
@@ -863,7 +866,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 if (SetState(UNPAIRING) == Core::ERROR_NONE) {
                     PurgeSecurityKeys();
 
-                    result = BluetoothControl::Connector().Unpair(_remote, _type);
+                    result = _parent->Connector().Unpair(_remote, _type);
                     if (result != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Failed to unpair [%d]"), result));
                     }
@@ -960,6 +963,9 @@ class BluetoothControl : public PluginHost::IPlugin
         protected:
             friend class ControlSocket;
 
+            inline ControlSocket& Connector() {
+                return (_parent->Connector());
+            }
             void BondedChange()
             {
                 _parent->BondedChange(this);
@@ -1200,7 +1206,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 cmd->pscan_mode = 0x00;
                 cmd->pscan_rep_mode = 0x02;
                 cmd->clock_offset = 0x0000;
-                BluetoothControl::Connector().Execute<Bluetooth::HCISocket::Command::RemoteName>(MAX_ACTION_TIMEOUT, cmd, [&](Bluetooth::HCISocket::Command::RemoteName& cmd, const uint32_t error) {
+                Connector().Execute<Bluetooth::HCISocket::Command::RemoteName>(MAX_ACTION_TIMEOUT, cmd, [&](Bluetooth::HCISocket::Command::RemoteName& cmd, const uint32_t error) {
                     if (error == Core::ERROR_NONE) {
                         Update(cmd);
                     }
@@ -1223,7 +1229,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     connect->clock_offset = 0x0000;
                     connect->role_switch = 0x01;
 
-                    result = BluetoothControl::Connector().Exchange(MAX_ACTION_TIMEOUT, connect, connect);
+                    result = Connector().Exchange(MAX_ACTION_TIMEOUT, connect, connect);
 
                     if (result == Core::ERROR_NONE) {
                         Connection (connect.Response().handle, 0);
@@ -1247,7 +1253,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     disconnect->handle = htobs(ConnectionId());
                     disconnect->reason = (reason & 0xFF);
 
-                    result = BluetoothControl::Connector().Exchange(MAX_ACTION_TIMEOUT, disconnect, disconnect);
+                    result = Connector().Exchange(MAX_ACTION_TIMEOUT, disconnect, disconnect);
 
                     if (result != Core::ERROR_NONE) {
                         TRACE(ControlFlow, (_T("Failed to disconnect. Error [%d]"), result));
@@ -1375,7 +1381,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     connect->min_ce_length = htobs(0x0001);
                     connect->max_ce_length = htobs(0x0001);
 
-                    result = BluetoothControl::Connector().Exchange(MAX_ACTION_TIMEOUT, connect, connect);
+                    result = Connector().Exchange(MAX_ACTION_TIMEOUT, connect, connect);
                     if (result != Core::ERROR_NONE) {
                         TRACE(ControlFlow, (_T("Failed to connect. Error [%d]"), result));
                         ClearState(CONNECTING);
@@ -1398,7 +1404,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     disconnect->handle = htobs(ConnectionId());
                     disconnect->reason = reason & 0xFF;
 
-                    result = BluetoothControl::Connector().Exchange(MAX_ACTION_TIMEOUT, disconnect, disconnect);
+                    result = Connector().Exchange(MAX_ACTION_TIMEOUT, disconnect, disconnect);
                     if (result != Core::ERROR_NONE) {
                         TRACE(ControlFlow, (_T("Failed to disconnect. Error [%d]"), result));
                         ClearState(DISCONNECTING);
@@ -1612,8 +1618,8 @@ class BluetoothControl : public PluginHost::IPlugin
         virtual IBluetooth::IDevice::IIterator* Devices() override;
 
     public:
-        inline static ControlSocket& Connector() {
-            return (*_appInstance);
+        inline ControlSocket& Connector() {
+            return (_application);
         }
 
     private:
@@ -1673,7 +1679,6 @@ class BluetoothControl : public PluginHost::IPlugin
         std::list<IBluetooth::INotification*> _observers;
         Config _config;
         ControlSocket _application;
-        static ControlSocket* _appInstance;
         string _persistentStoragePath;
     };
 

@@ -28,8 +28,6 @@ namespace Plugin {
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::DeviceImpl::Data>> jsonResponseFactoryDevice(1);
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::Status>> jsonResponseFactoryStatus(1);
 
-    /* static */ BluetoothControl::ControlSocket* BluetoothControl::_appInstance;
-
     /* virtual */ const string BluetoothControl::Initialize(PluginHost::IShell* service)
     {
         string result;
@@ -46,7 +44,6 @@ namespace Plugin {
             result = Core::ToString(driverMessage);
         }
         else {
-            _appInstance = &_application;
             Bluetooth::ManagementSocket& administrator = _application.Control();
             Bluetooth::ManagementSocket::Devices(_adapters);
             administrator.DeviceId(_config.Interface.Value());
@@ -166,8 +163,6 @@ namespace Plugin {
         // We bring the interface up, so we should bring it down as well..
         _application.Close();
         ::destruct_bluetooth_driver();
-
-        _appInstance = nullptr;
     }
 
     /* virtual */ string BluetoothControl::Information() const
