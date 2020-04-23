@@ -28,8 +28,6 @@ namespace Plugin {
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::DeviceImpl::Data>> jsonResponseFactoryDevice(1);
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::Status>> jsonResponseFactoryStatus(1);
 
-    /* static */ BluetoothControl::ControlSocket BluetoothControl::_application;
-
     /* virtual */ const string BluetoothControl::Initialize(PluginHost::IShell* service)
     {
         string result;
