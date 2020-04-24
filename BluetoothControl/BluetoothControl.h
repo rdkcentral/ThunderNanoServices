@@ -198,6 +198,9 @@ class BluetoothControl : public PluginHost::IPlugin
                     case MGMT_EV_CONTROLLER_ERROR:
                         Update(reinterpret_cast<const mgmt_ev_controller_error*>(data));
                         break;
+                    case MGMT_EV_AUTH_FAILED:
+                        Update(reinterpret_cast<const mgmt_ev_auth_failed*>(data));
+                        break;
                     case MGMT_EV_NEW_CONN_PARAM:
                         Update(reinterpret_cast<const mgmt_ev_new_conn_param*>(data));
                         break;
@@ -243,6 +246,12 @@ class BluetoothControl : public PluginHost::IPlugin
                 {
                     TRACE(ManagementFlow, (_T("MGMT_EV_CONTROLLER_ERROR(%02X)"), MGMT_EV_CONTROLLER_ERROR));
                     TRACE(ManagementFlow, (_T("  error_code=0x%02X"), info->error_code));
+                }
+                void Update(const mgmt_ev_auth_failed* info)
+                {
+                    TRACE(ManagementFlow, (MGMT_EV_AUTH_FAILED, _T("MGMT_EV_AUTH_FAILED"),
+                                           Bluetooth::Address(info->addr.bdaddr), info->addr.type));
+                    TRACE(ManagementFlow, (_T("  status=0x%02X"), info->status));
                 }
                 void Update(const mgmt_ev_new_conn_param* info)
                 {
