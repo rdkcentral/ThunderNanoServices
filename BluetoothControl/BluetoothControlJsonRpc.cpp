@@ -184,7 +184,7 @@ namespace Plugin {
         uint32_t result = Core::ERROR_UNKNOWN_KEY;
 
         if (atoi(index.c_str()) == _btInterface) {
-            Bluetooth::ManagementSocket::Info info(_application.Control().Settings());
+            Bluetooth::ManagementSocket::Info info(_application.Settings());
             response.Interface = ("hci" + Core::ToString(_btInterface));
             response.Address = info.Address().ToString();
             response.Version = info.Version();
