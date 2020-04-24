@@ -392,11 +392,8 @@ static GSourceFuncs _handlerIntervention =
                 : Core::JSON::Container()
                 , UserAgent()
                 , URL(_T("http://www.google.com"))
-#ifdef WEBKIT_GLIB_API
                 , Whitelist()
-#else
                 , PageGroup(_T("WPEPageGroup"))
-#endif
                 , CookieStorage()
                 , LocalStorage()
                 , Secure(false)
@@ -430,11 +427,8 @@ static GSourceFuncs _handlerIntervention =
             {
                 Add(_T("useragent"), &UserAgent);
                 Add(_T("url"), &URL);
-#ifdef WEBKIT_GLIB_API
                 Add(_T("whitelist"), &Whitelist);
-#else
                 Add(_T("pagegroup"), &PageGroup);
-#endif
                 Add(_T("cookiestorage"), &CookieStorage);
                 Add(_T("localstorage"), &LocalStorage);
                 Add(_T("secure"), &Secure);
@@ -475,11 +469,8 @@ static GSourceFuncs _handlerIntervention =
         public:
             Core::JSON::String UserAgent;
             Core::JSON::String URL;
-#ifdef WEBKIT_GLIB_API
             Core::JSON::String Whitelist;
-#else
             Core::JSON::String PageGroup;
-#endif
             Core::JSON::String CookieStorage;
             Core::JSON::String LocalStorage;
             Core::JSON::Boolean Secure;
@@ -724,20 +715,10 @@ static GSourceFuncs _handlerIntervention =
 #ifdef WEBKIT_GLIB_API
         void OnLoadFinished()
         {
-            _adminLock.Lock();
-
             string URL = Core::ToString(webkit_web_view_get_uri(_view));
-
-            std::list<Exchange::IBrowser::INotification*>::iterator index(_notificationClients.begin());
-
-            while (index != _notificationClients.end()) {
-                (*index)->LoadFinished(URL);
-                index++;
-            }
-
-            _adminLock.Unlock();
+            OnLoadFinished(URL);
         }
-#else
+#endif
         void OnLoadFinished(const string& URL)
         {
             _adminLock.Lock();
@@ -753,7 +734,6 @@ static GSourceFuncs _handlerIntervention =
 
             _adminLock.Unlock();
         }
-#endif
         void OnStateChange(const PluginHost::IStateControl::state newState)
         {
             _adminLock.Lock();
@@ -794,12 +774,6 @@ static GSourceFuncs _handlerIntervention =
                 std::cout << "  " << line << std::endl;
             }
         }
-#ifndef WEBKIT_GLIB_API
-        void OnNotificationShown(uint64_t notificationID) const
-        {
-            WKNotificationManagerProviderDidShowNotification(_notificationManager, notificationID);
-        }
-#endif
         virtual uint32_t Configure(PluginHost::IShell* service)
         {
             _dataPath = service->DataPath();
@@ -961,6 +935,11 @@ static GSourceFuncs _handlerIntervention =
             return (value);
         }
 #ifndef WEBKIT_GLIB_API
+        void OnNotificationShown(uint64_t notificationID) const
+        {
+            WKNotificationManagerProviderDidShowNotification(_notificationManager, notificationID);
+        }
+
         void OnRequestAutomationSession(WKContextRef context, WKStringRef sessionID)
         {
             _automationSession = WKWebAutomationSessionCreate(sessionID);
