@@ -40,19 +40,6 @@ namespace Broadcom {
         return (::std::string(Id()));
     }
 
-    /* virtual */ void Platform::Client::Kill()
-    {
-        ASSERT(_client != nullptr);
-
-        /* must call nxserver_ipc so it can unwind first. */
-        nxserver_ipc_close_client(_client);
-
-        TRACE(Trace::Information, (_T("Kill client %s."), Name().c_str()));
-
-        /* We expect the Disconnect Client to be triggered by the previous call
-           TODO: Double check this is true, and if not call it explicitly here. */
-    }
-
     /* virtual */ void Platform::Client::Opacity(const uint32_t value)
     {
         ASSERT(_client != nullptr);

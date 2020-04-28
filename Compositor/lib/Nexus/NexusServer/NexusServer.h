@@ -77,7 +77,6 @@ namespace Broadcom {
             }
 
             string Name() const override;
-            void Kill() override;
             void Opacity(const uint32_t value) override;
             uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override;
             Exchange::IComposition::Rectangle Geometry() const override;

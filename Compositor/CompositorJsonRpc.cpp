@@ -32,12 +32,9 @@ namespace Plugin {
 
     void Compositor::RegisterAll()
     {
-        Register<PutontopParamsInfo,void>(_T("putontop"), &Compositor::endpoint_putontop, this);
-        Register<PutbelowParamsData,void>(_T("putbelow"), &Compositor::endpoint_putbelow, this);
-        Register<PutontopParamsInfo,void>(_T("kill"), &Compositor::endpoint_kill, this);
+        Register<PutontopParamsData,void>(_T("putontop"), &Compositor::endpoint_putontop, this);
         Property<Core::JSON::EnumType<ResolutionType>>(_T("resolution"), &Compositor::get_resolution, &Compositor::set_resolution, this);
         Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("clients"), &Compositor::get_clients, nullptr, this);
-        Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("zorder"), &Compositor::get_zorder, nullptr, this);
         Property<GeometryData>(_T("geometry"), &Compositor::get_geometry, &Compositor::set_geometry, this);
         Property<Core::JSON::EnumType<VisiblityType>>(_T("visiblity"), nullptr, &Compositor::set_visiblity, this);
         Property<Core::JSON::DecUInt8>(_T("opacity"), nullptr, &Compositor::set_opacity, this);
@@ -45,15 +42,12 @@ namespace Plugin {
 
     void Compositor::UnregisterAll()
     {
-        Unregister(_T("kill"));
-        Unregister(_T("putbelow"));
-        Unregister(_T("putontop"));
         Unregister(_T("opacity"));
         Unregister(_T("visiblity"));
         Unregister(_T("geometry"));
-        Unregister(_T("zorder"));
         Unregister(_T("clients"));
         Unregister(_T("resolution"));
+        Unregister(_T("putontop"));
     }
 
     // API implementation
@@ -63,34 +57,11 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
-    uint32_t Compositor::endpoint_putontop(const PutontopParamsInfo& params)
+    uint32_t Compositor::endpoint_putontop(const PutontopParamsData& params)
     {
         const string& client = params.Client.Value();
 
         return ToTop(client);
-    }
-
-    // Method: putbelow - Puts client surface below another surface
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client(s) not found
-    uint32_t Compositor::endpoint_putbelow(const PutbelowParamsData& params)
-    {
-        const string& client = params.Client.Value();
-        const string& relative = params.Relative.Value();
-
-        return PutBefore(relative, client);
-    }
-
-    // Method: kill - Kills a client
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
-    uint32_t Compositor::endpoint_kill(const PutontopParamsInfo& params)
-    {
-        const string& client = params.Client.Value();
-
-        return Kill(client);;
     }
 
     // Property: resolution - Screen resolution
@@ -202,22 +173,6 @@ namespace Plugin {
         ZOrder(response);
 
         return Core::ERROR_NONE;
-    }
-
-    // Property: zorder - List of compositor clients sorted by z-order
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_GENERAL: Failed to get z-order list
-    uint32_t Compositor::get_zorder(Core::JSON::ArrayType<Core::JSON::String>& response) const
-    {
-        uint32_t result = Core::ERROR_NONE;
-
-        ZOrder(response);
-        if ((response.Length() == 0) && (_clients.size() != 0)) {
-            result = Core::ERROR_GENERAL;
-        }
-
-        return result;
     }
 
     // Property: geometry - Client surface geometry
