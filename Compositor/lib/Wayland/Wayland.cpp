@@ -126,10 +126,6 @@ namespace Plugin {
             {
                 return _surface.Name();
             }
-            void Kill() override
-            {
-                //TODO: to be implemented.
-            }
             void Opacity(const uint32_t value) override
             {
                 if ((value == Exchange::IComposition::minOpacity) || (value == Exchange::IComposition::maxOpacity)) {

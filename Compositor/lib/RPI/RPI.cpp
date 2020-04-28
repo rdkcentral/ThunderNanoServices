@@ -89,6 +89,7 @@ namespace Plugin {
             , _externalAccess(nullptr)
             , _observers()
             , _clients()
+            , _zOrder()
         {
         }
 
@@ -260,6 +261,12 @@ namespace Plugin {
                         index->Attached(name, client);
                     }
 
+                    // If it is a new addition, it is on top, by definition...
+                    _zOrder.push_front(name);
+
+                    // Client should be on top.
+                    client->ZOrder(0);
+
                     _adminLock.Unlock();
                 }
             }
@@ -275,16 +282,27 @@ namespace Plugin {
             while ( (it != _clients.end()) && (it->second.clientInterface != client) ) { ++it; }
 
             if (it != _clients.end()) {
-                TRACE(Trace::Information, (_T("Remove client %s."), it->first.c_str()));
+                string name (it->first);
+                TRACE(Trace::Information, (_T("Remove client %s."), name.c_str()));
                 for (auto index : _observers) {
                     // note as we have the name here, we could more efficiently pass the name to the
                     // caller as it is not allowed to get it from the pointer passes, but we are going
                     // to restructure the interface anyway
-                    index->Detached(it->first.c_str());
+                    index->Detached(name.c_str());
+                }
+
+                // Remove it from the zOrder
+                std::list<string>::iterator index (std::find(_zOrder.begin(), _zOrder.end(), name));
+  
+                ASSERT (index != _zOrder.end());
+
+                if (index != _zOrder.end()) {
+                    _zOrder.erase(index);
                 }
 
                 _clients.erase(it);
             }
+
             _adminLock.Unlock();
 
             TRACE(Trace::Information, (_T("Client detached completed")));
@@ -375,6 +393,7 @@ namespace Plugin {
         ExternalAccess* _externalAccess;
         std::list<Exchange::IComposition::INotification*> _observers;
         ClientDataContainer _clients;
+        std::list<string> _zOrder;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
