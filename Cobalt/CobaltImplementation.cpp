@@ -153,10 +153,10 @@ private:
         bool Suspend(const bool suspend)
         {
             if (suspend == true) {
-                kill(getpid(), SIGUSR1);
+                third_party::starboard::wpe::shared::Suspend();
             }
             else {
-                kill(getpid(), SIGCONT);
+                third_party::starboard::wpe::shared::Resume();
             }
             return (true);
         }
@@ -205,7 +205,9 @@ public:
 
     virtual uint32_t Configure(PluginHost::IShell *service) {
         uint32_t result = _window.Configure(service);
-        _state = PluginHost::IStateControl::RESUMED;
+        _window.Suspend(true);
+        _state = PluginHost::IStateControl::SUSPENDED;
+
         return (result);
     }
 
@@ -296,7 +298,6 @@ public:
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
         _adminLock.Lock();
-
         if (_state == PluginHost::IStateControl::UNINITIALIZED) {
             // Seems we are passing state changes before we reached an operational Cobalt.
             // Just move the state to what we would like it to be :-)
@@ -325,7 +326,6 @@ public:
                 break;
             }
         }
-
         _adminLock.Unlock();
 
         return result;
