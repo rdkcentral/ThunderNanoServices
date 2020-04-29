@@ -98,10 +98,8 @@ install(
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins
     COMPONENT ${MODULE_NAME})
 
-if(NOT DEFINED WEBKIT_GLIB_API)
-	# also build injected bundle
-	add_subdirectory(InjectedBundle)
-endif()
+# also build injected bundle
+add_subdirectory(InjectedBundle)
 
 # resolution handling
 if(PLUGIN_WEBKITBROWSER_RESOLUTION EQUAL "720p")
