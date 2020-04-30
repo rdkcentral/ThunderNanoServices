@@ -416,6 +416,7 @@ static GSourceFuncs _handlerIntervention =
                 , PTSOffset(0)
                 , ScaleFactor(1.0)
                 , MaxFPS(60)
+                , ExecPath()
             {
                 Add(_T("useragent"), &UserAgent);
                 Add(_T("url"), &URL);
@@ -452,6 +453,7 @@ static GSourceFuncs _handlerIntervention =
                 Add(_T("scalefactor"), &ScaleFactor);
                 Add(_T("maxfps"), &MaxFPS);
                 Add(_T("bundle"), &Bundle);
+                Add(_T("execpath"), &ExecPath);
             }
             ~Config()
             {
@@ -493,6 +495,7 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::DecUInt16 ScaleFactor;
             Core::JSON::DecUInt8 MaxFPS; // A value between 1 and 100...
             BundleConfig Bundle;
+            Core::JSON::String ExecPath;
         };
 
     private:
@@ -866,6 +869,11 @@ static GSourceFuncs _handlerIntervention =
             if (_config.PTSOffset.IsSet() == true) {
                 string ptsoffset(Core::NumberType<int16_t>(_config.PTSOffset.Value()).Text());
                 Core::SystemInfo::SetEnvironment(_T("PTS_REPORTING_OFFSET_MS"), ptsoffset, !environmentOverride);
+            }
+
+            // ExecPath
+            if (_config.ExecPath.IsSet() == true) {
+                Core::SystemInfo::SetEnvironment(_T("WEBKIT_EXEC_PATH"), _config.ExecPath.Value(), !environmentOverride);
             }
 
             string width(Core::NumberType<uint16_t>(_config.Width.Value()).Text());
