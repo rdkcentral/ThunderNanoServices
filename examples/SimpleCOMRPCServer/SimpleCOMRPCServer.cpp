@@ -126,7 +126,8 @@ private:
 
         Implementation() 
             : _adminLock()
-            , _callback(nullptr) {
+            , _callback(nullptr)
+            , _interval(~0) {
 
         }
         ~Implementation() override {
@@ -224,11 +225,13 @@ public:
 
     COMServer(
         const Core::NodeId& source,
-        const string& proxyServerPath)
+        const string& proxyServerPath,
+        const Core::ProxyType< RPC::InvokeServerType<1, 0, 4> >& engine)
         : RPC::Communicator(
             source, 
             proxyServerPath, 
-            Core::proxy_cast<Core::IIPCServer>(Core::ProxyType< RPC::InvokeServerType<1, 0, 4>>::Create()))
+            Core::proxy_cast<Core::IIPCServer>(engine))
+        , _remoteEntry(nullptr)
     {
         // Once the socket is opened the first exchange between client and server is an 
         // announce message. This announce message hold information the otherside requires
@@ -239,7 +242,7 @@ public:
         // over socket, the announce message could be handled on the communication thread
         // or better, if possible, it can be run on the thread of the engine we have just 
         // created.
-        // engine->Announcements(client->Announcement());
+        engine->Announcements(Announcement());
 
         Open(Core::infinite);
     }
@@ -269,19 +272,38 @@ private:
         }
         return (result);
     }
+    void Offer(Core::IUnknown* remote, const uint32_t interfaceId) override
+    {
+        if (interfaceId == Exchange::IMath::ID) {
+            if (_remoteEntry == nullptr) {
+                printf("From now on we can do calculations, an IMath is offered!\n");
+            }
+            else {
+                printf("Dropping the IMath interfae we were offered. A new ne is offered!\n");
+                _remoteEntry->Release();
+            }
+            _remoteEntry = remote->QueryInterface<Exchange::IMath>();
+        }
+    }
+    // note: do NOT do a QueryInterface on the IUnknown pointer (or any other method for that matter), the object it points to might already be destroyed
+    void Revoke(const Core::IUnknown* remote, const uint32_t interfaceId) override
+    {
+        if ((interfaceId == Exchange::IMath::ID) && (remote == _remoteEntry)) {
+            // Seems we need to drop it..
+            printf("Dropping the IMath interfae we were offered. It is revoked!\n");
+            _remoteEntry->Release();
+            _remoteEntry = nullptr;
+        }
+    }
+private:
+    Exchange::IMath* _remoteEntry;
 };
-
-#ifdef __WINDOWS__
-const TCHAR defaultAddress[] = _T("127.0.0.1:63000");
-#else
-const TCHAR defaultAddress[] = _T("/tmp/comserver");
-#endif
 
 bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel, string& psPath)
 {
     int index = 1;
     bool showHelp = false;
-    Core::NodeId nodeId(defaultAddress);
+    comChannel = Core::NodeId(Exchange::SimpleTestAddress);
     psPath = _T(".");
 
     while ((index < argc) && (!showHelp)) {
@@ -310,17 +332,20 @@ int main(int argc, char* argv[])
     Core::NodeId comChannel;
     string psPath;
 
+    printf("\npierre is old and builds a COMServer for funs and giggles :-)\n");
+
     if (ParseOptions(argc, argv, comChannel, psPath) == true) {
-        printf("\npierre is old and builds a COMServer for funs and giggles :-)\n");
         printf("Options:\n");
-        printf("-listen <IP/FQDN>:<port> [default: %s]\n", defaultAddress);
+        printf("-listen <IP/FQDN>:<port> [default: %s]\n", Exchange::SimpleTestAddress);
         printf("-path <Path to the location of the ProxyStubs> [default: .]\n");
         printf("-h This text\n\n");
     }
     else
     {
         int element;
-        COMServer server(comChannel, psPath);
+        COMServer server(comChannel, psPath, Core::ProxyType< RPC::InvokeServerType<1, 0, 4> >::Create());
+        printf("Channel:        %s:[%d]\n", comChannel.HostAddress().c_str(), comChannel.PortNumber());
+        printf("ProxyStub path: %s\n\n", psPath.c_str());
 
         do {
             printf("\n>");
