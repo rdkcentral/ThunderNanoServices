@@ -269,9 +269,8 @@ namespace Plugin {
             }
 
             _skipURL = static_cast<uint32_t>(service->WebPrefix().length());
-            _inputHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value());
             uint16_t repeatLimit = ((config.ReleaseTimeout.Value() - config.RepeatStart.Value()) / config.RepeatInterval.Value()) + 1;
-            _inputHandler->RepeatLimit(repeatLimit);
+            _inputHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value(), repeatLimit);
             _inputHandler->Default(DefaultMappingTable);
             admin.Callback(static_cast<IKeyHandler*>(this));
             admin.Callback(static_cast<IWheelHandler*>(this));
