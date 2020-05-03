@@ -252,6 +252,13 @@ namespace Plugin {
                 _virtualDevices.push_back(configList.Current().Name.Value());
             }
 
+            if (config.PostLookupFile.IsSet() == true) {
+                string mappingFile(MappingFile(config.PostLookupFile.Value(), service->PersistentPath(), service->DataPath()));
+                if (mappingFile.empty() == false) {
+                    _inputHandler->PostLookup(EMPTY_STRING, mappingFile);
+                }
+            }
+
             auto postLookup(config.Links.Elements());
 
             while (postLookup.Next() == true) {
