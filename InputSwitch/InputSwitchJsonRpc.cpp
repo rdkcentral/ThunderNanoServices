@@ -66,20 +66,17 @@ namespace Plugin {
         const bool enabled = params.Enabled.Value();
 
         if (params.Name.IsSet() == true) {
-            if (FindChannel(params.Name.Value()) == false) {
+            if (ChannelExists(params.Name.Value()) == false) {
                 result = Core::ERROR_UNKNOWN_KEY;
             }
             else {
-                _handler.Enable(enabled);
-
-                _handler.Reset();
+                _handler->Consumer(params.Name.Value(), enabled);
             }
         }
         else {
-            // Set all channels to the requested status..
-            _handler.Reset();
-            while (_handler.Next() == true) {
-                _handler.Enable(enabled);
+            PluginHost::VirtualInput::Iterator index (_handler->Consumers());
+            while (index.Next() == true) {
+                _handler->Consumer(index.Name(), enabled);
             }
         }
 
@@ -95,26 +92,24 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
 
         if (params.Name.IsSet() == true) {
-            if (FindChannel(params.Name.Value()) == false) {
+            if (ChannelExists(params.Name.Value()) == false) {
                 result = Core::ERROR_UNKNOWN_KEY;
             }
             else {
                 ChannelParamsInfo& element(response.Add());
 
-                element.Name = _handler.Name();
-                element.Enabled = _handler.Enabled();
-
-                _handler.Reset();
+                element.Name = params.Name.Value();
+                element.Enabled = _handler->Consumer(params.Name.Value());
             }
         }
         else {
+            PluginHost::VirtualInput::Iterator index (_handler->Consumers());
             // Insert all channels with there status..
-            _handler.Reset();
-            while (_handler.Next() == true) {
+            while (index.Next() == true) {
                 ChannelParamsInfo& element(response.Add());
 
-                element.Name = _handler.Name();
-                element.Enabled = _handler.Enabled();
+                element.Name = index.Name();
+                element.Enabled = _handler->Consumer(index.Name());
             }
         }
 

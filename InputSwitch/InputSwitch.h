@@ -97,7 +97,7 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
-        bool FindChannel(const string& name);
+        bool ChannelExists(const string& name) const;
 
         // JsonRpc
         void RegisterAll();
@@ -107,7 +107,7 @@ namespace Plugin {
 
     private:
         uint8_t _skipURL;
-        PluginHost::IPCUserInput::Iterator _handler;
+        PluginHost::VirtualInput* _handler;
     };
 
 } // namespace Plugin
