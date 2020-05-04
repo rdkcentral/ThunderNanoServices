@@ -89,7 +89,7 @@ namespace Plugin {
                     const string& callsign (index.Name());
 
                     element.Callsign = callsign;
-                    element.Enabled = _handler->Consumer(callsign);
+                    element.Enabled = Consumer(callsign);
                 }
 
                 result->ContentType = Web::MIMETypes::MIME_JSON;
@@ -108,7 +108,7 @@ namespace Plugin {
                     Data& element(response->Add());
 
                     element.Callsign = name;
-                    element.Enabled = _handler->Consumer(name);
+                    element.Enabled = Consumer(name);
 
                     result->ContentType = Web::MIMETypes::MIME_JSON;
                     result->Body(Core::proxy_cast<Web::IBody>(response));
@@ -136,20 +136,24 @@ namespace Plugin {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
                     result->Message = _T("Need at least a state wich is applicable to the channel.");
                 }
-                else if ((index.Remainder() != _T("On")) || (index.Remainder() != _T("Off"))) {
+                else if ((index.Remainder() != _T("On")) || (index.Remainder() != _T("Off")) || (index.Remainder() != _T("Slave"))) {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                    result->Message = _T("The requested state should be <On> or <Off>.");
+                    result->Message = _T("The requested state should be <On>, <Off> or <Slave>.");
                 }
                 else {
                     Core::ProxyType<Web::JSONBodyType< Core::JSON::ArrayType <Data> > > response(jsonResponseFactory.Element());
 
                     // Insert the requested channel with its status..
                     Data& element(response->Add());
-                    bool enabled = (index.Remainder() != _T("On"));
-                    _handler->Consumer(name, enabled);
+                    Exchange::IInputSwitch::mode mode = (index.Remainder() == _T("On")  ? 
+                                                         Exchange::IInputSwitch::ENABLED : 
+                                                         (index.Remainder() == _T("Slave")   ? 
+                                                          Exchange::IInputSwitch::SLAVE      :
+                                                          Exchange::IInputSwitch::DISABLED) );
+                    Consumer(name, mode);
 
                     element.Callsign = name;
-                    element.Enabled = enabled;
+                    element.Enabled  = (mode == Exchange::IInputSwitch::ENABLED);
 
                     result->ContentType = Web::MIMETypes::MIME_JSON;
                     result->Body(Core::proxy_cast<Web::IBody>(response));
@@ -169,6 +173,57 @@ namespace Plugin {
         return (index.IsValid());
     }
 
+    RPC::IStringIterator* InputSwitch::Consumers() const /* override */ {
+        return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(_handler->Consumers().Container()));
+    }
+
+    bool InputSwitch::Consumer(const string& name) const /* override */ {
+        return(_handler->Consumer(name));
+    }
+
+    uint32_t InputSwitch::Consumer(const string& name, const Exchange::IInputSwitch::mode value) /* override */ {
+        ImunityList::iterator index (std::find(_imunityList.begin(), _imunityList.end(), name));
+        
+        if (value == Exchange::IInputSwitch::SLAVE) {
+            // Remove it from the list of agnostic consumers.
+            if (index != _imunityList.end()) {
+                _imunityList.erase(index);
+                _handler->Consumer(name, false);
+            }
+        }
+        else {
+            // Add it to the list
+            if (index == _imunityList.end()) {
+                _imunityList.push_front(name);
+            }
+            _handler->Consumer(name, (value == Exchange::IInputSwitch::ENABLED));
+        }
+
+        return (Core::ERROR_NONE);
+    }
+
+    uint32_t InputSwitch::Select(const string& name) /* override */ {
+        uint32_t result = Core::ERROR_UNAVAILABLE;
+
+        PluginHost::VirtualInput::Iterator index (_handler->Consumers());
+        while (index.Next() == true) {
+            const string& current(index.Name());
+            ImunityList::iterator index (std::find(_imunityList.begin(), _imunityList.end(), current));
+            if (name == current) {
+                if (index != _imunityList.end()) {
+                    _imunityList.erase(index);
+                }
+                _handler->Consumer(current, true);
+                result = Core::ERROR_NONE;
+            }
+            else if (index == _imunityList.end()) {
+                // Seems the consumer has no imunity :-)
+                _handler->Consumer(current, false);
+            }
+        }
+
+        return (result);
+    }
 
 } // namespace Plugin
 } // namespace WPEFramework
