@@ -32,9 +32,11 @@ namespace Plugin {
 
     void Compositor::RegisterAll()
     {
-        Register<PutontopParamsData,void>(_T("putontop"), &Compositor::endpoint_putontop, this);
+        Register<PutontopParamsInfo,void>(_T("putontop"), &Compositor::endpoint_putontop, this);
+        Register<PutontopParamsInfo,void>(_T("select"), &Compositor::endpoint_select, this);
+        Register<PutbelowParamsData,void>(_T("putbelow"), &Compositor::endpoint_putbelow, this);
         Property<Core::JSON::EnumType<ResolutionType>>(_T("resolution"), &Compositor::get_resolution, &Compositor::set_resolution, this);
-        Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("clients"), &Compositor::get_clients, nullptr, this);
+        Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("zorder"), &Compositor::get_zorder, nullptr, this);
         Property<GeometryData>(_T("geometry"), &Compositor::get_geometry, &Compositor::set_geometry, this);
         Property<Core::JSON::EnumType<VisiblityType>>(_T("visiblity"), nullptr, &Compositor::set_visiblity, this);
         Property<Core::JSON::DecUInt8>(_T("opacity"), nullptr, &Compositor::set_opacity, this);
@@ -45,8 +47,10 @@ namespace Plugin {
         Unregister(_T("opacity"));
         Unregister(_T("visiblity"));
         Unregister(_T("geometry"));
-        Unregister(_T("clients"));
+        Unregister(_T("zorder"));
         Unregister(_T("resolution"));
+        Unregister(_T("putbelow"));
+        Unregister(_T("select"));
         Unregister(_T("putontop"));
     }
 
@@ -57,11 +61,35 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
-    uint32_t Compositor::endpoint_putontop(const PutontopParamsData& params)
+    uint32_t Compositor::endpoint_putontop(const PutontopParamsInfo& params)
     {
         const string& client = params.Client.Value();
 
         return ToTop(client);
+    }
+
+    // Method: select the surface that should receive the inputs.
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
+    uint32_t Compositor::endpoint_select(const PutontopParamsInfo& params)
+    {
+        const string& client = params.Client.Value();
+
+        return Select(client);
+    }
+
+
+    // Method: putbelow - Puts client surface below another surface
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client(s) not found
+    uint32_t Compositor::endpoint_putbelow(const PutbelowParamsData& params)
+    {
+        const string& client = params.Client.Value();
+        const string& relative = params.Relative.Value();
+
+        return PutBefore(relative, client);
     }
 
     // Property: resolution - Screen resolution
@@ -168,7 +196,7 @@ namespace Plugin {
     // Property: clients - List of compositor clients
     // Return codes:
     //  - ERROR_NONE: Success
-    uint32_t Compositor::get_clients(Core::JSON::ArrayType<Core::JSON::String>& response) const
+    uint32_t Compositor::get_zorder(Core::JSON::ArrayType<Core::JSON::String>& response) const
     {
         ZOrder(response);
 

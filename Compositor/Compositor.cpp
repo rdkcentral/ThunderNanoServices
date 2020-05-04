@@ -18,6 +18,7 @@
  */
  
 #include "Compositor.h"
+#include <interfaces/IInputSwitch.h>
 
 namespace WPEFramework {
 
@@ -34,6 +35,9 @@ namespace Plugin {
         , _composition(nullptr)
         , _service(nullptr)
         , _connectionId()
+        , _inputSwitchCallsign()
+        , _topHasInput(false)
+
     {
         RegisterAll();
     }
@@ -75,6 +79,9 @@ namespace Plugin {
             _notification.Initialize(service, _composition);
 
             _composition->Configure(_service);
+
+            _inputSwitchCallsign = config.InputSwitch.Value();
+            _topHasInput = config.TopHasInput.Value();
         }
 
         // On succes return empty, to indicate there is no error text.
@@ -391,13 +398,31 @@ namespace Plugin {
         Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
         if (client != nullptr) {
             result = client->ZOrder(0);
+
+            if(_topHasInput == true) {
+                Select(callsign);
+            }
         }
             
         _adminLock.Unlock();
 
         return (result);
     }
+    uint32_t Compositor::Select(const string& callsign) {
 
+        uint32_t result = Core::ERROR_GENERAL;
+
+        Exchange::IInputSwitch* switcher = _service->QueryInterfaceByCallsign<Exchange::IInputSwitch>(_inputSwitchCallsign);
+
+        if (switcher != nullptr) {
+            result = switcher->Select(callsign);
+            switcher->Release();
+        }
+        return (result);
+    }
+    uint32_t Compositor::PutBefore(const string& relative, const string& callsign) {
+        return (Core::ERROR_NONE);
+    }
     Exchange::IComposition::IClient* Compositor::InterfaceByCallsign(const string& callsign) const
     {
         Exchange::IComposition::IClient* client = nullptr;
