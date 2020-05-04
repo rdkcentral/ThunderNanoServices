@@ -113,9 +113,13 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , System(_T("Controller"))
                 , WorkDir()
+                , InputSwitch(_T("InputSwitch"))
+                , TopHasInput(false)
             {
                 Add(_T("system"), &System);
                 Add(_T("workdir"), &WorkDir);
+                Add(_T("inputswitch"), &InputSwitch);
+                Add(_T("tophasinput"), &TopHasInput);
             }
             ~Config()
             {
@@ -124,6 +128,8 @@ namespace Plugin {
         public:
             Core::JSON::String System;
             Core::JSON::String WorkDir;
+            Core::JSON::String InputSwitch;
+            Core::JSON::Boolean TopHasInput;
         };
 
     public:
@@ -187,6 +193,7 @@ namespace Plugin {
         void Detached(const string& name);
 
         void ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const;
+
         void Resolution(const Exchange::IComposition::ScreenResolution);
         Exchange::IComposition::ScreenResolution Resolution() const;
 
@@ -195,6 +202,8 @@ namespace Plugin {
         uint32_t Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle);
         Exchange::IComposition::Rectangle Geometry(const string& callsign) const;
         uint32_t ToTop(const string& callsign);
+        uint32_t Select(const string& callsign);
+        uint32_t PutBefore(const string& relative, const string& callsign);
 
         Exchange::IComposition::IClient* InterfaceByCallsign(const string& callsign) const;
 
@@ -202,10 +211,12 @@ namespace Plugin {
         /* JSON-RPC */
         void RegisterAll();
         void UnregisterAll();
-        uint32_t endpoint_putontop(const JsonData::Compositor::PutontopParamsData& params);
+        uint32_t endpoint_putontop(const JsonData::Compositor::PutontopParamsInfo& params);
+        uint32_t endpoint_select(const JsonData::Compositor::PutontopParamsInfo& params);
+        uint32_t endpoint_putbelow(const JsonData::Compositor::PutbelowParamsData& params);
         uint32_t get_resolution(Core::JSON::EnumType<JsonData::Compositor::ResolutionType>& response) const;
         uint32_t set_resolution(const Core::JSON::EnumType<JsonData::Compositor::ResolutionType>& param);
-        uint32_t get_clients(Core::JSON::ArrayType<Core::JSON::String>& response) const;
+        uint32_t get_zorder(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t get_geometry(const string& index, JsonData::Compositor::GeometryData& response) const;
         uint32_t set_geometry(const string& index, const JsonData::Compositor::GeometryData& param);
         uint32_t set_visiblity(const string& index, const Core::JSON::EnumType<JsonData::Compositor::VisiblityType>& param);
@@ -219,6 +230,8 @@ namespace Plugin {
         PluginHost::IShell* _service;
         uint32_t _connectionId;
         std::map<string, Exchange::IComposition::IClient*> _clients;
+        string _inputSwitchCallsign;
+        bool _topHasInput;
     };
 }
 }
