@@ -119,7 +119,7 @@ namespace Plugin {
                 Source& operator=(const Source&) = delete;
 
                 Source(const string& tracePath, RPC::IRemoteConnection* connection)
-                    : Core::CyclicBuffer(SourceName(tracePath, connection), Core::File::USER_READ|Core::File::GROUP_READ|Core::File::CREATE|Core::File::SHAREABLE, 0, true)
+                    : Core::CyclicBuffer(SourceName(tracePath, connection), Core::File::USER_WRITE|Core::File::USER_READ|Core::File::SHAREABLE, 0, true)
                     , _iterator(connection == nullptr ? &_localIterator : nullptr)
                     , _control(connection == nullptr ? &_localIterator : nullptr)
                     , _connection(connection)
@@ -204,10 +204,10 @@ namespace Plugin {
 
                 state Load()
                 {
-                    bool available = (IsValid() == false);
+                    bool available = Core::CyclicBuffer::IsValid();
 
                     if (available == false) {
-                        available = Load();
+                        available = Core::CyclicBuffer::Validate();
                     }
 
                     if (available == true) {
@@ -568,7 +568,6 @@ namespace Plugin {
             {
                 ASSERT(_refcount == 0);
                 ASSERT(_buffers.size() == 0);
-                _traceControl.Relinquish();
                 Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
             }
 
@@ -580,6 +579,7 @@ namespace Plugin {
             void Start() 
             {
                 _buffers.insert(std::pair<const uint32_t, Source*>(0, new Source(_parent.TracePath(), nullptr)));
+                _traceControl.Announce();
                 Thread::Run();
             }
             void Stop()
@@ -608,6 +608,7 @@ namespace Plugin {
 
                 // By definition, get the buffer file from WPEFramework (local source)
                 _buffers.insert(std::pair<const uint32_t, Source*>(connection->Id(), new Source(_parent.TracePath(), connection)));
+                _traceControl.Announce();
 
                 _adminLock.Unlock();
             }
