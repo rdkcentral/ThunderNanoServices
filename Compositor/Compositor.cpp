@@ -66,7 +66,7 @@ namespace Plugin {
 
             Core::SystemInfo::SetEnvironment(_T("XDG_RUNTIME_DIR"), runTimeDir);
 
-            TRACE(Trace::Information, (_T("XDG_RUNTIME_DIR is set to %s "), runTimeDir));
+            TRACE(Trace::Information, (_T("XDG_RUNTIME_DIR is set to %s "), runTimeDir.c_str()));
         }
 
         _composition = service->Root<Exchange::IComposition>(_connectionId, 2000, _T("CompositorImplementation"));
@@ -284,7 +284,7 @@ namespace Plugin {
 
         if (client != nullptr) {
             _adminLock.Lock();
-            std::map<string, Exchange::IComposition::IClient*>::iterator it = _clients.find(name);
+            Clients::iterator it = _clients.find(name);
 
             if (it != _clients.end()) {
                 TRACE(Trace::Information, (_T("Client %s was already attached, old instance removed"), name.c_str()));
@@ -305,11 +305,9 @@ namespace Plugin {
     void Compositor::Detached(const string& name)
     {
         // note do not release by looking up the name, client might live in another process and the name call might fail if the connection is gone
-        TRACE(Trace::Information, (_T("Client detached starting")));
-
         _adminLock.Lock();
 
-        auto it = _clients.find(name);
+        Clients::iterator it = _clients.find(name);
         if (it != _clients.end()) {
 
             Exchange::IComposition::IClient* removedclient = it->second;
@@ -321,13 +319,8 @@ namespace Plugin {
         }
 
         _adminLock.Unlock();
-
-        TRACE(Trace::Information, (_T("Client detached completed")));
     }
 
-    void Compositor::ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const
-    {
-    }
     void Compositor::Resolution(const Exchange::IComposition::ScreenResolution format)
     {
         ASSERT(_composition != nullptr);
@@ -391,23 +384,6 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t Compositor::ToTop(const string& callsign)
-    {
-        uint32_t result = Core::ERROR_UNAVAILABLE;
-
-        Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
-        if (client != nullptr) {
-            result = client->ZOrder(0);
-
-            if(_topHasInput == true) {
-                Select(callsign);
-            }
-        }
-            
-        _adminLock.Unlock();
-
-        return (result);
-    }
     uint32_t Compositor::Select(const string& callsign) {
 
         uint32_t result = Core::ERROR_GENERAL;
@@ -420,16 +396,166 @@ namespace Plugin {
         }
         return (result);
     }
-    uint32_t Compositor::PutBefore(const string& relative, const string& callsign) {
-        return (Core::ERROR_NONE);
+
+    uint32_t Compositor::ToTop(const string& callsign)
+    {
+        uint32_t result = Core::ERROR_UNAVAILABLE;
+
+        if (PutBefore(EMPTY_STRING, callsign) == Core::ERROR_NONE) {
+            if(_topHasInput == true) {
+                Select(callsign);
+            }
+        }
+            
+        return (result);
     }
+    void Rearrange(std::list<Exchange::IComposition::IClient*>& list, uint16_t index, uint16_t location, uint16_t start, uint16_t end) {
+        // Now we have all the information, reconstruct the zOrder branch..
+        std::list<Exchange::IComposition::IClient*> set;
+        std::list<Exchange::IComposition::IClient*>* swapList = nullptr;
+
+        ASSERT (location != start);
+
+        // Now create a list with the items swapped.
+        if (location == 0) {
+
+            // Moving the callsign up in the order
+            std::list<Exchange::IComposition::IClient*>::iterator loop(list.begin());
+
+            while (loop != list.end()) {
+                if      (start != 0) { start--; }
+                else if (end   != 0) { end--; set.push_back(*loop); }
+
+                if      (start == 0) { loop = list.erase(loop); }
+                else                 { loop++; }
+            }
+            // Now push the safed entries in front, in the same order :-)
+            set.splice(set.end(), std::move(list));
+                
+            swapList = &set;
+        }
+        else {
+            ASSERT (location >= end);
+
+            // Moving the callsign down in the order
+            std::list<Exchange::IComposition::IClient*>::iterator loop(list.begin());
+               
+            while (loop != list.end()) {
+                if (end != 0) { 
+                    end--;
+                    location--;
+                    set.push_back(*loop);
+                    loop = list.erase(loop); 
+                }
+                else if (location != 0) { 
+                    location--; 
+                    loop++;
+                }
+                else {
+                    loop = list.erase(loop); 
+                }
+            }
+
+            // If we are already in the right order, I guess there is nothing to do :-)
+            if (list.size() != 0) {
+                // Now push the safed entries at the back, in the same order :-)
+                list.splice(list.end(), std::move(set));
+            }
+                
+            swapList = &list;
+        }
+
+        // Time to set the new ZOrder. All effected clients have been listed...
+        std::list<Exchange::IComposition::IClient*>::iterator loop(swapList->begin());
+        while (loop != swapList->end()) {
+            (*loop)->ZOrder(index);
+            index++;
+            loop++;
+        }
+    }
+ 
+    uint32_t Compositor::PutBefore(const string& relative, const string& callsign) {
+        uint32_t result = Core::ERROR_UNAVAILABLE;
+
+        std::list<Exchange::IComposition::IClient*> zOrderedList;
+
+        uint16_t relativeIndex      (relative.empty() ? 0 : ~0);
+        uint16_t callsignStartIndex (~0);
+        uint16_t callsignEndIndex   (~0);
+
+        _adminLock.Lock();
+
+        Clients::iterator index (_clients.begin());
+
+        // Construct the list on z-order
+        while (index != _clients.end()) {
+            uint16_t layer = index->second->ZOrder();
+            std::list<Exchange::IComposition::IClient*>::iterator loop (zOrderedList.begin());
+            while ((loop != zOrderedList.end()) && ((*loop)->ZOrder() < layer)) {
+                loop++;
+            }
+            if (loop == zOrderedList.end()) {
+                zOrderedList.push_back(index->second);
+            }
+            else {
+                zOrderedList.insert(loop, index->second);
+            }
+            index++;
+        }
+
+        // Find the index of what we need to move
+        uint32_t current = 0;
+        std::list<Exchange::IComposition::IClient*>::iterator loop (zOrderedList.begin());
+
+        while (loop != zOrderedList.end()) {
+            string layerName = (*loop)->Name();
+            size_t pos = layerName.find(':', 0);
+            if (pos != string::npos) {
+                layerName = layerName.substr(0, pos);
+            }
+            if ( (relativeIndex == static_cast<uint16_t>(~0)) && (layerName == relative) ) {
+                relativeIndex = current;
+            }
+            else if (layerName == callsign) {
+                if (callsignStartIndex == static_cast<uint16_t>(~0)) {
+                    callsignStartIndex  = current;
+                }
+                callsignEndIndex = current;
+            }
+            current++;
+            loop++;
+        }
+
+        // Now we have all the information, reconstruct the zOrder branch..
+        if ((relativeIndex != static_cast<uint16_t>(~0)) && (callsignStartIndex != static_cast<uint16_t>(~0)) && (relativeIndex != callsignStartIndex)) {
+            uint16_t startIndex = std::min(relativeIndex, callsignStartIndex);
+
+            // We have something we can move. First remove the stuff in front that does not move..
+            for (uint16_t current = 0; current < startIndex; current++) {
+                zOrderedList.pop_front();
+            }
+
+            if (relativeIndex < callsignStartIndex) {
+                Rearrange(zOrderedList, startIndex, 0, callsignStartIndex - startIndex, callsignEndIndex - callsignEndIndex + 1);
+            }
+            else {
+                Rearrange(zOrderedList, startIndex, relativeIndex - startIndex, 0, callsignEndIndex - callsignEndIndex + 1);
+            }
+            
+        }
+ 
+        _adminLock.Unlock();
+ 
+        return (result);
+    }
+
     Exchange::IComposition::IClient* Compositor::InterfaceByCallsign(const string& callsign) const
     {
         Exchange::IComposition::IClient* client = nullptr;
 
         _adminLock.Lock();
 
-        auto it = _clients.find(callsign);
+        Clients::const_iterator it = _clients.find(callsign);
 
         if (it != _clients.cend()) {
             client = it->second;
@@ -442,7 +568,38 @@ namespace Plugin {
         return client;
     }
 
+    void Compositor::ZOrder(std::list<string>& zOrderedList) const {
 
+        std::list<std::pair<uint16_t, string>> list;
+
+        _adminLock.Lock();
+
+        Clients::const_iterator index (_clients.cbegin());
+        while (index != _clients.cend()) {
+            uint16_t layer = index->second->ZOrder();
+            std::list<std::pair<uint16_t, string>>::iterator loop (list.begin());
+
+            while ((loop != list.end()) && (loop->first < layer)) {
+                loop++;
+            }
+            if (loop == list.end()) {
+                list.push_back(std::pair<uint16_t, string>(layer, index->first));
+            }
+            else {
+                list.insert(loop, std::pair<uint16_t, string>(layer, index->first));
+            }
+            index++;
+        }
+
+        // Now copy the sorted list to the actual list..
+        std::list<std::pair<uint16_t, string>>::const_iterator loop (list.begin());
+        while (loop != list.end()) {
+            zOrderedList.push_back(loop->second);
+            loop++;
+        }
+
+        _adminLock.Unlock();
+    }
 
 } // namespace Plugin
 } // namespace WPEFramework

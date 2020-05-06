@@ -29,10 +29,8 @@ namespace WPEFramework {
 namespace Plugin {
     class Compositor : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
-        Compositor(const Compositor&) = delete;
-        Compositor& operator=(const Compositor&) = delete;
-        
-    private:
+        typedef std::map<string, Exchange::IComposition::IClient*> Clients;
+
         class Notification : public Exchange::IComposition::INotification {
         private:
             Notification(const Notification&) = delete;
@@ -132,7 +130,6 @@ namespace Plugin {
             Core::JSON::Boolean TopHasInput;
         };
 
-    public:
         class Data : public Core::JSON::Container {
         private:
             Data(const Data&) = delete;
@@ -165,6 +162,9 @@ namespace Plugin {
         };
 
     public:
+        Compositor(const Compositor&) = delete;
+        Compositor& operator=(const Compositor&) = delete;
+        
         Compositor();
         virtual ~Compositor();
 
@@ -192,8 +192,6 @@ namespace Plugin {
         void Attached(const string& name, Exchange::IComposition::IClient* client);
         void Detached(const string& name);
 
-        void ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const;
-
         void Resolution(const Exchange::IComposition::ScreenResolution);
         Exchange::IComposition::ScreenResolution Resolution() const;
 
@@ -205,9 +203,21 @@ namespace Plugin {
         uint32_t Select(const string& callsign);
         uint32_t PutBefore(const string& relative, const string& callsign);
 
+        void ZOrder(std::list<string>& zOrderedList) const;
         Exchange::IComposition::IClient* InterfaceByCallsign(const string& callsign) const;
 
-    private:
+        void ZOrder(Core::JSON::ArrayType<Core::JSON::String>& zOrderedList) const {
+            std::list<string> list;
+            std::list<string>::const_iterator index;
+            ZOrder(list);
+            index = list.begin();
+            while (index != list.end()) {
+                Core::JSON::String& element(zOrderedList.Add());
+                element = *index;
+                index++;
+            }
+        }
+
         /* JSON-RPC */
         void RegisterAll();
         void UnregisterAll();
@@ -229,7 +239,7 @@ namespace Plugin {
         Exchange::IComposition* _composition;
         PluginHost::IShell* _service;
         uint32_t _connectionId;
-        std::map<string, Exchange::IComposition::IClient*> _clients;
+        Clients _clients;
         string _inputSwitchCallsign;
         bool _topHasInput;
     };

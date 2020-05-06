@@ -149,13 +149,16 @@ namespace Plugin {
             }
             uint32_t ZOrder(const uint16_t index) override
             {
+                _layer = index;
                 _surface.ZOrder(index);
-                if (index == 0) {
-                    SetInput();
-                }
 
                 return (Core::ERROR_NONE);
             }
+            void uint32_t ZOrder() const override
+            {
+                return (_layer);
+            }
+
 
             BEGIN_INTERFACE_MAP(Entry)
                 INTERFACE_ENTRY(Exchange::IComposition::IClient)
@@ -165,6 +168,7 @@ namespace Plugin {
             Wayland::Display::Surface _surface;
             Implementation::IServer* _server;
             Exchange::IComposition::Rectangle _rectangle;
+            uint16_t _layer;
         };
 
         class Config : public Core::JSON::Container {
