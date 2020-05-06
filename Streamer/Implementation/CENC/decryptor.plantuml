@@ -1,0 +1,103 @@
+@startuml
+
+
+package CencDecrypt_plugin <<Rectangle>> {
+
+interface IGstDecryptor{
+    +Intialize(const string& keysystem) : gboolean
+    +Parse(GstEvent&) : gboolean
+    +Decrypt(GstBuffer&) : GstFlowReturn
+}
+
+package CencDecrypt_element <<Rectangle>> {
+    class GstCencDecrypt{
+        + parent : GstBaseTransform*
+        + decryptor : IDecryptor*
+    }
+
+    class GstCencDecryptClass {
+        + baseClass : GstBaseTransformClass*
+    }
+}
+
+class OCDMDecryptor{
+    +Intialize(const string& keysystem) : gboolean
+    +Parse(GstEvent&) : gboolean
+    +Decrypt(GstBuffer&) : GstFlowReturn
+    ---
+    - _system : OCDMSystem*
+    - _session : OCDMSession*
+    - _challenger : Challenger
+    ---
+    - ParseProtectionEvent(GstEvent&) : void
+    - ParseDecryptionData(GstEvent&) : void
+}
+
+interface IExchange{
+    + (static) create(url) : IExchange* 
+    + Submit(Core::ProxyType<Web::Request>, IExchange::ICallback*, uint32_t waitTime)
+    + Revoke(IExchange::ICallback*)
+}
+
+interface IExchange::ICallback {
+    + Response(Core::ProxyType<Web::Request>, Core::ProxyType<Web::Response>)
+}
+
+class Exchanger{
+    + Exchanger(string url)
+    + Response() = 0
+    + Submit()
+    + Revoke()
+}
+
+class OCDMChallenger {
+    + Submit(Web::Request)
+    + Response() : Web::Response
+    ' + Callbacks() : OCDMSessionCallbacks
+    ' + KeyResponse(string& response) : void
+    ---
+    - (static) process_challenge_callback(...)
+    - (static) key_update_callback(...)
+    - (static) error_message_callback(...)
+    - (static) keys_updated_callback(...)
+    ---
+    - _callbacks : OCDMSessionCallbacks
+    - _licenseServer : LicenseServerLink
+}
+
+class LicenseServerLink {
+    + Exchange(const string& url, const string& challenge) : void
+    + KeyResponse(string& response) : void
+}
+
+interface IGstDecryptorFactory{
+    + Decryptor() : IGstDecryptor*
+    + Keysystems() : IKeysystems*
+}
+
+class OCDMDecryptorFactory{
+    + Decryptor() : IGstDecryptor*
+    + Keysystems() : IKeysystems*
+}
+
+
+interface IKeysystems {
+    + Get() : RPC::IStringIterator
+}
+
+class OCDMKeysystems {
+    + Get() : RPC::IStringIterator 
+}
+
+
+
+GstCencDecrypt *-- IGstDecryptor
+IGstDecryptor <|-- OCDMDecryptor
+IExchange <|-- LicenseServerLink
+OCDMDecryptor *-- OCDMChallenger
+OCDMChallenger *-- IExchange
+aIGstDecryptorFactory <|-- OCDMDecryptorFactory
+IKeysystems <|-- OCDMKeysystems
+}
+@enduml
+

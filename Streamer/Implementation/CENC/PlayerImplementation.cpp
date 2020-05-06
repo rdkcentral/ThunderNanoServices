@@ -1,5 +1,24 @@
-#include "DRMPlayer.h"
-#include "GstCallbacks.h"
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "CENC.hpp"
+#include "GstCallbacks.hpp"
 
 #include <opencdm/open_cdm.h>
 #include <sys/syscall.h>
@@ -11,13 +30,13 @@ namespace Player {
 
         namespace {
 
-            PlayerPlatformRegistrationType<DRMPlayer, Exchange::IStream::streamtype::IP> Register(
+            PlayerPlatformRegistrationType<CENC, Exchange::IStream::streamtype::IP> Register(
                 /*  Initialize */ [](const string& configuration) -> uint32_t {
                     config.FromString(configuration);
                     return (Core::ERROR_NONE);
                 });
 
-            DRMPlayer::DRMPlayer(const Exchange::IStream::streamtype streamType, const uint8_t index)
+            CENC::CENC(const Exchange::IStream::streamtype streamType, const uint8_t index)
                 : _index(index)
                 , _speed(100)
                 , _vecSpeeds()
@@ -27,7 +46,9 @@ namespace Player {
                 , _data()
                 , _bus(nullptr)
             {
-                gst_init(0, nullptr);
+                if(!gst_is_initialized())
+                    gst_init(0, nullptr);
+                
                 uint16_t speedsLen = config.Speeds.Length();
 
                 if ((config.Speeds.IsSet() == true) && (speedsLen != 0)) {
@@ -46,18 +67,13 @@ namespace Player {
 
             // Core::Thread method
             // -------------------------------------------------------------
-
-            // The g_main_loop_run function is a blocking one.
-            // It's role is to handle incoming messages on the GstBus.
-            // Due to this, it will only be called once, on the first playback startup.
-            // It's exit is tied to the call of DetachDecoder (and indirectly Teardown) method.
-            uint32_t DRMPlayer::Worker()
+            uint32_t CENC::Worker()
             {
                 g_main_loop_run(_data._mainLoop);
-                return (Core::infinite);
+                return Core::infinite;
             }
 
-            uint32_t DRMPlayer::Setup()
+            uint32_t CENC::Setup()
             {
                 uint32_t result = Core::ERROR_NONE;
 
@@ -69,14 +85,8 @@ namespace Player {
                 return result;
             }
 
-            uint32_t DRMPlayer::SetupGstElements()
+            uint32_t CENC::SetupGstElements()
             {
-                gst_plugin_register_static(GST_VERSION_MAJOR,
-                    GST_VERSION_MINOR,
-                    "ocdmdecrypt",
-                    "description",
-                    GstCallbacks::plugin_init, "1.0", "LGPL", "package", "package-origin", "website");
-
                 _data._playbin = gst_element_factory_make("playbin", nullptr);
                 _bus = gst_element_get_bus(_data._playbin);
                 gst_bus_add_watch(_bus, (GstBusFunc)GstCallbacks::gstBusCallback, &_data);
@@ -90,7 +100,7 @@ namespace Player {
                 return Core::ERROR_NONE;
             }
 
-            uint32_t DRMPlayer::Teardown()
+            uint32_t CENC::Teardown()
             {
                 DetachDecoder(_index);
 
@@ -100,10 +110,11 @@ namespace Player {
                 this->Terminate();
 
                 _adminLock.Unlock();
+                
                 return Core::ERROR_NONE;
             }
 
-            uint32_t DRMPlayer::TeardownGstElements()
+            uint32_t CENC::TeardownGstElements()
             {
                 g_main_loop_quit(_data._mainLoop);
                 g_main_loop_unref(_data._mainLoop);
@@ -117,18 +128,18 @@ namespace Player {
                 _data._playbin = nullptr;
             }
 
-            void DRMPlayer::Callback(ICallback* callback)
+            void CENC::Callback(ICallback* callback)
             {
-                TRACE_L1("DRMPlayer callback setter is called, not implemented");
+                TRACE_L1("CENC callback setter is called, not implemented");
             }
 
-            string DRMPlayer::Metadata() const
+            string CENC::Metadata() const
             {
-                TRACE_L1("DRMPlayer metadata is called, not implemented");
+                TRACE_L1("CENC metadata is called, not implemented");
                 return string();
             }
 
-            Exchange::IStream::streamtype DRMPlayer::Type() const
+            Exchange::IStream::streamtype CENC::Type() const
             {
                 _adminLock.Lock();
                 auto streamType = _streamType;
@@ -136,19 +147,19 @@ namespace Player {
                 return streamType;
             }
 
-            Exchange::IStream::drmtype DRMPlayer::DRM() const
+            Exchange::IStream::drmtype CENC::DRM() const
             {
-                TRACE_L1("DRMPlayer DRM getter called, not implemented");
+                TRACE_L1("CENC DRM getter called, not implemented");
                 return Exchange::IStream::drmtype::Unknown;
             }
 
-            Exchange::IStream::state DRMPlayer::State() const
+            Exchange::IStream::state CENC::State() const
             {
-                TRACE_L1("DRMPlayer state changes not implemented");
+                TRACE_L1("CENC state changes not implemented");
                 return Exchange::IStream::state::Prepared;
             }
 
-            uint32_t DRMPlayer::Error() const
+            uint32_t CENC::Error() const
             {
                 _adminLock.Lock();
                 uint32_t error = _error;
@@ -156,7 +167,7 @@ namespace Player {
                 return error;
             }
 
-            uint8_t DRMPlayer::Index() const
+            uint8_t CENC::Index() const
             {
                 _adminLock.Lock();
                 uint8_t index = _index;
@@ -164,23 +175,23 @@ namespace Player {
                 return index;
             }
 
-            uint32_t DRMPlayer::Load(const string& uri)
+            uint32_t CENC::Load(const string& uri)
             {
                 _adminLock.Lock();
 
                 initializeOcdm();
-                gst_element_set_state(_data._playbin, GstState::GST_STATE_NULL);
+                // gst_element_set_state(_data._playbin, GstState::GST_STATE_NULL);
                 g_object_set(_data._playbin, "uri", uri.c_str(), NULL);
 
                 _adminLock.Unlock();
                 return Error();
             }
 
-            void DRMPlayer::initializeOcdm()
+            void CENC::initializeOcdm()
             {
             }
 
-            uint32_t DRMPlayer::AttachDecoder(const uint8_t index VARIABLE_IS_NOT_USED)
+            uint32_t CENC::AttachDecoder(const uint8_t index VARIABLE_IS_NOT_USED)
             {
                 _adminLock.Lock();
 
@@ -192,10 +203,11 @@ namespace Player {
                 return (Core::ERROR_NONE);
             }
 
-            uint32_t DRMPlayer::DetachDecoder(const uint8_t index VARIABLE_IS_NOT_USED)
+            uint32_t CENC::DetachDecoder(const uint8_t index VARIABLE_IS_NOT_USED)
             {
                 _adminLock.Lock();
 
+                
                 gst_element_set_state(_data._playbin, GstState::GST_STATE_NULL);
                 this->Stop();
 
@@ -209,7 +221,7 @@ namespace Player {
             //      - For speed != 0 && speed != 100:
             //          A seek event, with modified playback rates,
             //          has to be issued to the pipeline element.
-            uint32_t DRMPlayer::Speed(const int32_t speed)
+            uint32_t CENC::Speed(const int32_t speed)
             {
                 _adminLock.Lock();
 
@@ -229,7 +241,7 @@ namespace Player {
                 return result;
             }
 
-            void DRMPlayer::SendSeekEvent()
+            void CENC::SendSeekEvent()
             {
                 gint64 position;
                 gst_element_query_position(_data._playbin, GST_FORMAT_TIME, &position);
@@ -238,7 +250,7 @@ namespace Player {
                 gst_element_send_event(_data._playbin, event);
             }
 
-            GstEvent* DRMPlayer::CreateSeekEvent(const uint64_t position)
+            GstEvent* CENC::CreateSeekEvent(const uint64_t position)
             {
                 gdouble newRate = gdouble(gdouble(_speed) / 100);
                 return gst_event_new_seek(newRate,
@@ -250,7 +262,7 @@ namespace Player {
                     0);
             }
 
-            int32_t DRMPlayer::Speed() const
+            int32_t CENC::Speed() const
             {
                 _adminLock.Lock();
                 uint8_t speed = _speed;
@@ -258,7 +270,7 @@ namespace Player {
                 return speed;
             }
 
-            const std::vector<int32_t>& DRMPlayer::Speeds() const
+            const std::vector<int32_t>& CENC::Speeds() const
             {
                 _adminLock.Lock();
                 auto speeds = _vecSpeeds;
@@ -266,7 +278,7 @@ namespace Player {
                 return speeds;
             }
 
-            void DRMPlayer::Position(const uint64_t absoluteTime)
+            void CENC::Position(const uint64_t absoluteTime)
             {
                 gint64 duration;
                 _adminLock.Lock();
@@ -281,7 +293,7 @@ namespace Player {
                 }
             }
 
-            uint64_t DRMPlayer::Position() const
+            uint64_t CENC::Position() const
             {
                 _adminLock.Lock();
                 gint64 position;
@@ -290,36 +302,36 @@ namespace Player {
                 return static_cast<uint64_t>(position);
             }
 
-            void DRMPlayer::TimeRange(uint64_t& begin, uint64_t& end) const
+            void CENC::TimeRange(uint64_t& begin, uint64_t& end) const
             {
-                TRACE_L1("DRMPlayer time range not supported");
+                TRACE_L1("CENC time range not supported");
             }
 
-            const Rectangle& DRMPlayer::Window() const
+            const Rectangle& CENC::Window() const
             {
-                TRACE_L1("DRMPlayer window shape not supported");
+                TRACE_L1("CENC window shape not supported");
                 return Rectangle();
             }
 
-            void DRMPlayer::Window(const Rectangle& rectangle)
+            void CENC::Window(const Rectangle& rectangle)
             {
-                TRACE_L1("DRMPlayer window shape not supported");
+                TRACE_L1("CENC window shape not supported");
             }
 
-            uint32_t DRMPlayer::Order() const
+            uint32_t CENC::Order() const
             {
-                TRACE_L1("DRMPlayer window order not supported");
+                TRACE_L1("CENC window order not supported");
                 return 0;
             }
 
-            void DRMPlayer::Order(const uint32_t order)
+            void CENC::Order(const uint32_t order)
             {
-                TRACE_L1("DRMPlayer window order not supported.");
+                TRACE_L1("CENC window order not supported.");
             }
 
-            const std::list<ElementaryStream>& DRMPlayer::Elements() const
+            const std::list<ElementaryStream>& CENC::Elements() const
             {
-                TRACE_L1("DRMPlayer elementary streams not supported");
+                TRACE_L1("CENC elementary streams not supported");
                 return {};
             }
         }
