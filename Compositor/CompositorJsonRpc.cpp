@@ -40,10 +40,16 @@ namespace Plugin {
         Property<GeometryData>(_T("geometry"), &Compositor::get_geometry, &Compositor::set_geometry, this);
         Property<Core::JSON::EnumType<VisiblityType>>(_T("visiblity"), nullptr, &Compositor::set_visiblity, this);
         Property<Core::JSON::DecUInt8>(_T("opacity"), nullptr, &Compositor::set_opacity, this);
+
+        // Deprecated call, not documented, to be removed if the ThunderUI is adapted!!!
+        Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("clients"), &Compositor::get_zorder, nullptr, this);
     }
 
     void Compositor::UnregisterAll()
     {
+        // Deprecated call, not documented, to be removed if the ThunderUI is adapted!!!
+        Unregister(_T("clients"));  
+
         Unregister(_T("opacity"));
         Unregister(_T("visiblity"));
         Unregister(_T("geometry"));

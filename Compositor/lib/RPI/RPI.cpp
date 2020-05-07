@@ -89,7 +89,6 @@ namespace Plugin {
             , _externalAccess(nullptr)
             , _observers()
             , _clients()
-            , _zOrder()
         {
         }
 
@@ -261,12 +260,6 @@ namespace Plugin {
                         index->Attached(name, client);
                     }
 
-                    // If it is a new addition, it is on top, by definition...
-                    _zOrder.push_front(name);
-
-                    // Client should be on top.
-                    client->ZOrder(0);
-
                     _adminLock.Unlock();
                 }
             }
@@ -289,15 +282,6 @@ namespace Plugin {
                     // caller as it is not allowed to get it from the pointer passes, but we are going
                     // to restructure the interface anyway
                     index->Detached(name.c_str());
-                }
-
-                // Remove it from the zOrder
-                std::list<string>::iterator index (std::find(_zOrder.begin(), _zOrder.end(), name));
-  
-                ASSERT (index != _zOrder.end());
-
-                if (index != _zOrder.end()) {
-                    _zOrder.erase(index);
                 }
 
                 _clients.erase(it);
@@ -393,7 +377,6 @@ namespace Plugin {
         ExternalAccess* _externalAccess;
         std::list<Exchange::IComposition::INotification*> _observers;
         ClientDataContainer _clients;
-        std::list<string> _zOrder;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);

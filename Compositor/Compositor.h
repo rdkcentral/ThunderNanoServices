@@ -29,8 +29,6 @@ namespace WPEFramework {
 namespace Plugin {
     class Compositor : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
-        typedef std::map<string, Exchange::IComposition::IClient*> Clients;
-
         class Notification : public Exchange::IComposition::INotification {
         private:
             Notification(const Notification&) = delete;
@@ -101,6 +99,8 @@ namespace Plugin {
         };
 
     public:
+        typedef std::map<string, Exchange::IComposition::IClient*> Clients;
+
         class Config : public Core::JSON::Container {
         public:
             Config(const Config&);
@@ -199,17 +199,18 @@ namespace Plugin {
         uint32_t Visible(const string& callsign, const bool visible);
         uint32_t Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle);
         Exchange::IComposition::Rectangle Geometry(const string& callsign) const;
+        uint32_t ToTop(const string& callsign, Exchange::IComposition::IClient* client);
         uint32_t ToTop(const string& callsign);
         uint32_t Select(const string& callsign);
         uint32_t PutBefore(const string& relative, const string& callsign);
 
-        void ZOrder(std::list<string>& zOrderedList) const;
+        void ZOrder(std::list<string>& zOrderedList, const bool primary) const;
         Exchange::IComposition::IClient* InterfaceByCallsign(const string& callsign) const;
 
         void ZOrder(Core::JSON::ArrayType<Core::JSON::String>& zOrderedList) const {
             std::list<string> list;
             std::list<string>::const_iterator index;
-            ZOrder(list);
+            ZOrder(list, true);
             index = list.begin();
             while (index != list.end()) {
                 Core::JSON::String& element(zOrderedList.Add());
