@@ -112,7 +112,7 @@ namespace Plugin {
                 , System(_T("Controller"))
                 , WorkDir()
                 , InputSwitch(_T("InputSwitch"))
-                , TopHasInput(false)
+                , TopHasInput(true)
             {
                 Add(_T("system"), &System);
                 Add(_T("workdir"), &WorkDir);
@@ -192,7 +192,7 @@ namespace Plugin {
         void Attached(const string& name, Exchange::IComposition::IClient* client);
         void Detached(const string& name);
 
-        void Resolution(const Exchange::IComposition::ScreenResolution);
+        uint32_t Resolution(const Exchange::IComposition::ScreenResolution);
         Exchange::IComposition::ScreenResolution Resolution() const;
 
         uint32_t Opacity(const string& callsign, const uint32_t value);

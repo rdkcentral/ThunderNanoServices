@@ -19,6 +19,7 @@
 
 #include "Wayland.h"
 #include <westeros-compositor.h>
+#include <westeros-gl.h>
 
 #include <png.h>
 
@@ -29,11 +30,6 @@ namespace Westeros {
 
     class Compositor : public Implementation::IServer {
     private:
-        Compositor() = delete;
-        Compositor(const Compositor&) = delete;
-        Compositor& operator=(const Compositor&) = delete;
-
-    public:
         Compositor(const string& renderModule, const string& display, const uint32_t width, const uint32_t height)
             : _compositor(nullptr)
             , _virtualInputHandle(nullptr)
@@ -83,6 +79,19 @@ namespace Westeros {
             }
         }
 
+    public:
+        Compositor() = delete;
+        Compositor(const Compositor&) = delete;
+        Compositor& operator=(const Compositor&) = delete;
+
+        static Compositor* Create(const string& renderer, const string& display, uint32_t width, uint32_t height)
+        {
+            return _instance == nullptr ? new Westeros::Compositor(renderer, display, width, height) : _instance;
+        }
+        static Compositor* Instance() {
+            return (_instance);
+        }
+
         virtual ~Compositor()
         {
             TRACE(Trace::Information, (_T("Destructing the compositor")));
@@ -100,6 +109,7 @@ namespace Westeros {
         }
 
     public:
+
         void KeyEvent(const int keyCode, const unsigned int keyState, const unsigned int keyModifiers)
         {
             ASSERT(_compositor != nullptr);
@@ -139,11 +149,6 @@ namespace Westeros {
 
                 WstCompositorPointerMoveEvent(_compositor, _xPos, _yPos);
             }
-        }
-
-        static Compositor* Create(const string& renderer, const string& display, uint32_t width, uint32_t height)
-        {
-            return _instance == nullptr ? new Westeros::Compositor(renderer, display, width, height) : _instance;
         }
 
         /*virtual*/ void SetInput(const char name[])
@@ -373,6 +378,7 @@ namespace Westeros {
         unsigned char* _cursor;
         int _xPos;
         int _yPos;
+        Exchange::IComposition::ScreenResolution _resolution;
         static Westeros::Compositor* _instance;
     };
 
@@ -411,6 +417,69 @@ namespace Implementation {
         Core::JSON::DecUInt32 Width;
         Core::JSON::DecUInt32 Height;
     };
+ 
+    class WesterosGL {
+    public:
+        WesterosGL(const WesterosGL&) = delete;
+        WesterosGL& operator= (const WesterosGL&) = delete;
+
+        WesterosGL() 
+            : _context(nullptr)
+            , _resolution(Exchange::IComposition::ScreenResolution_1080i50Hz) {
+            _context = WstGLInit();
+        }
+        ~WesterosGL() {
+            WstGLTerm(_context);
+        }
+
+    public:
+        uint32_t SetResolution(const Exchange::IComposition::ScreenResolution value) {
+            uint32_t result = Core::ERROR_UNAVAILABLE;
+
+            #ifdef RESOLUTION_SUPPORT
+
+            const char* request = nullptr;
+            switch(value) {
+                case Exchange::IComposition::ScreenResolution_480i:      request = "768x480";      break;
+                case Exchange::IComposition::ScreenResolution_480p:      request = "768x480";      break;
+                case Exchange::IComposition::ScreenResolution_720p:      request = "1280x720";     break;
+                case Exchange::IComposition::ScreenResolution_720p50Hz:  request = "1280x720x25";  break;
+                case Exchange::IComposition::ScreenResolution_1080p24Hz: request = "1920x1080x12"; break;
+                case Exchange::IComposition::ScreenResolution_1080i50Hz: request = "1920x1080x25"; break;
+                case Exchange::IComposition::ScreenResolution_1080p50Hz: request = "1920x1080x25"; break;
+                case Exchange::IComposition::ScreenResolution_1080p60Hz: request = "1920x1080x30"; break;
+                case Exchange::IComposition::ScreenResolution_2160p50Hz: request = "3840x2160x25"; break;
+                case Exchange::IComposition::ScreenResolution_2160p60Hz: request = "3840x2160x30"; break;
+                default: break;
+            }
+            if ( (request != nullptr) && (WstGLSetDisplayMode(_context, request) == true) ) {
+                result = Core::ERROR_NONE;
+                _resolution = value;
+            }
+
+            #endif
+
+            return (result);
+        }
+
+        Exchange::IComposition::ScreenResolution GetResolution() const {
+            return (_resolution);
+        }
+
+    private:
+        WstGLCtx* _context;
+        Exchange::IComposition::ScreenResolution _resolution;
+    };
+
+    static WesterosGL WesterosContext;
+ 
+    uint32_t SetResolution(Exchange::IComposition::ScreenResolution value) {
+        return (WesterosContext.SetResolution(value));
+    }
+
+    Exchange::IComposition::ScreenResolution GetResolution() {
+        return (WesterosContext.GetResolution());
+    }
 
     IServer* Create(PluginHost::IShell* service)
     {

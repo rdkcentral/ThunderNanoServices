@@ -154,7 +154,7 @@ namespace Plugin {
 
                 return (Core::ERROR_NONE);
             }
-            void uint32_t ZOrder() const override
+            uint32_t ZOrder() const override
             {
                 return (_layer);
             }
@@ -385,13 +385,14 @@ namespace Plugin {
             g_implementationLock.Unlock();
         }
 
-        /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override
+        /* virtual */ uint32_t Resolution(const Exchange::IComposition::ScreenResolution format) override
         {
+            return (Implementation::SetResolution(format));
         }
 
         /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const override
         {
-            return ((Exchange::IComposition::ScreenResolution)0);
+            return (Implementation::GetResolution());
         }
 
         // -------------------------------------------------------------------------------------------------------

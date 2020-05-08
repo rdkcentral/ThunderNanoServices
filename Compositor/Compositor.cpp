@@ -443,13 +443,17 @@ namespace Plugin {
         _adminLock.Unlock();
     }
 
-    void Compositor::Resolution(const Exchange::IComposition::ScreenResolution format)
+    uint32_t Compositor::Resolution(const Exchange::IComposition::ScreenResolution format)
     {
+        uint32_t result = Core::ERROR_UNAVAILABLE;
+
         ASSERT(_composition != nullptr);
 
         if (_composition != nullptr) {
-            _composition->Resolution(format);
+            result = _composition->Resolution(format);
         }
+
+        return (result);
     }
 
     Exchange::IComposition::ScreenResolution Compositor::Resolution() const

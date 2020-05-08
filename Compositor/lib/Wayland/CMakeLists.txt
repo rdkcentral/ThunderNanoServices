@@ -89,6 +89,14 @@ if(WESTEROS_SERVER_FOUND)
         PRIVATE
             WesterosServer::WesterosServer
     )
+
+    find_package(BCM_HOST QUIET)
+    if (NOT BCM_HOST_FOUND)
+        target_compile_definitions(${TARGET}
+            PRIVATE
+                RESOLUTION_SUPPORT=1)
+    endif(NOT BCM_HOST_FOUND)
+
 endif(WESTEROS_SERVER_FOUND)
 
 if(PLUGIN_COMPOSITOR_VIRTUALINPUT)
