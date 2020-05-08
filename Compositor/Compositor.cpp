@@ -502,7 +502,8 @@ namespace Plugin {
         Clients::iterator it = _clients.begin();
 
         while (it != _clients.end()) {
-            if (callsign == PrimaryName(it->first)) {
+            string current (PrimaryName(it->first));
+            if (callsign == current) {
                 it->second->Opacity(value);
                 result = Core::ERROR_NONE;
             }
@@ -528,7 +529,8 @@ namespace Plugin {
         Clients::iterator it = _clients.begin();
 
         while (it != _clients.end()) {
-            if (callsign == PrimaryName(it->first)) {
+            string current (PrimaryName(it->first));
+            if (callsign == current) {
                 it->second->Geometry(rectangle);
                 result = Core::ERROR_NONE;
             }
