@@ -496,12 +496,20 @@ namespace Plugin {
     uint32_t Compositor::Opacity(const string& callsign, const uint32_t value)
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
-        Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
 
-        if (client != nullptr) {
-            client->Opacity(value);
-            client->Release();
+        _adminLock.Lock();
+
+        Clients::iterator it = _clients.begin();
+
+        while (it != _clients.end()) {
+            if (callsign == PrimaryName(it->first)) {
+                it->second->Opacity(value);
+                result = Core::ERROR_NONE;
+            }
+            it++;
         }
+
+        _adminLock.Unlock();
 
         return (result);
     }
@@ -514,12 +522,20 @@ namespace Plugin {
     uint32_t Compositor::Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle)
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
-        Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
 
-        if (client != nullptr) {
-            result = client->Geometry(rectangle);
-            client->Release();
+        _adminLock.Lock();
+
+        Clients::iterator it = _clients.begin();
+
+        while (it != _clients.end()) {
+            if (callsign == PrimaryName(it->first)) {
+                it->second->Geometry(rectangle);
+                result = Core::ERROR_NONE;
+            }
+            it++;
         }
+
+        _adminLock.Unlock();
 
         return (result);
     }
@@ -625,12 +641,15 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        Clients::const_iterator it = _clients.find(callsign);
+        Clients::const_iterator it = _clients.cbegin();
 
-        if (it != _clients.cend()) {
-            client = it->second;
-            ASSERT(client != nullptr);
-            client->AddRef();
+        while ((client == nullptr) && (it != _clients.cend())) {
+            if (callsign == PrimaryName(it->first)) {
+                client = it->second;
+                ASSERT(client != nullptr);
+                client->AddRef();
+            }
+            it++;
         }
 
         _adminLock.Unlock();

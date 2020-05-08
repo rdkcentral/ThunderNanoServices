@@ -208,9 +208,10 @@ namespace Plugin {
         }
 
     public:
-        void Resolution(const Exchange::IComposition::ScreenResolution format) override
+        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format) override
         {
             TRACE(Trace::Information, (_T("Could not set screenresolution to %s. Not supported for Rapberry Pi compositor"), Core::EnumerateType<Exchange::IComposition::ScreenResolution>(format).Data()));
+            return (Core::ERROR_UNAVAILABLE);
         }
 
         Exchange::IComposition::ScreenResolution Resolution() const override
