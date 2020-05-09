@@ -344,7 +344,7 @@ namespace Plugin {
 
             inline uint32_t Discover(const Core::NodeId& preferred)
             {
-                ResetWatchdog();
+                SetupWatchdog();
                 uint32_t result = _client.Discover(preferred);
 
                 return (result);
@@ -367,6 +367,7 @@ namespace Plugin {
             }
 
             void NewOffer(const DHCPClientImplementation::Offer& offer) {
+                StopWatchdog();
                 if (_parent.NewOffer(_client.Interface(), offer) == true) {
                     Request(offer);
                 }
@@ -389,7 +390,7 @@ namespace Plugin {
 
             inline void Request(const DHCPClientImplementation::Offer& offer) {
 
-                ResetWatchdog();
+                SetupWatchdog();
                 _client.Request(offer);
             }
 
@@ -423,12 +424,6 @@ namespace Plugin {
                 Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(*this));
             }
 
-            inline void ResetWatchdog() 
-            {
-                StopWatchdog();
-                SetupWatchdog();
-            }
-
             void CleanUp() 
             {
                 StopWatchdog();
@@ -460,8 +455,6 @@ namespace Plugin {
                             // Remove unresponsive offer from potential candidates
                             DHCPClientImplementation::Offer copy = offer.Current(); 
                             _client.RemoveUnleasedOffer(offer.Current());
-                            
-                            // Inform controller that request failed
                             _parent.RequestFailed(_client.Interface(), copy);
                         }
                     }

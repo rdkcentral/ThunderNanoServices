@@ -103,7 +103,7 @@ namespace WPASupplicant {
 
     bool Config::Hash(const string& hash)
     {
-        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(PROTO, _T("RSN"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, ('\"' + _ssid + '\"'))) && (SetKey(PSK, hash)));
+        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(PROTO, _T("WPA RSN"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, ('\"' + _ssid + '\"'))) && (SetKey(PSK, hash)));
     }
 
     bool Config::PresharedKey(const string& presharedKey)

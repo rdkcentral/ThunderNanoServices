@@ -521,8 +521,8 @@ namespace Plugin
             } else {
                 std::map<const string, Core::ProxyType<DHCPEngine>>::iterator entry(_dhcpInterfaces.find(interfaceName));
 
-                if (entry != _dhcpInterfaces.end()) {                    
-
+                if (entry != _dhcpInterfaces.end()) {
+                    entry->second->StopWatchdog();
                     entry->second->GetIP();
                     result = Core::ERROR_NONE;
                 }

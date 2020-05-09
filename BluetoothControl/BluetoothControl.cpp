@@ -44,12 +44,12 @@ namespace Plugin {
             result = Core::ToString(driverMessage);
         }
         else {
-            Data controllerData;
             Bluetooth::ManagementSocket& administrator = _application.Control();
             Bluetooth::ManagementSocket::Devices(_adapters);
             administrator.DeviceId(_config.Interface.Value());
 
             _persistentStoragePath = _service->PersistentPath() + "Devices/";
+            Data controllerData;
             LoadController(_service->PersistentPath(), controllerData);
 
             if ((_config.PersistMAC.Value() == true) && 
@@ -162,7 +162,6 @@ namespace Plugin {
 
         // We bring the interface up, so we should bring it down as well..
         _application.Close();
-
         ::destruct_bluetooth_driver();
     }
 
