@@ -21,7 +21,7 @@ set(MODULE_NAME WPE${PLUGIN_NAME})
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(securityagent QUIET)
 
-option(PLUGIN_AMAZON_HAWAII "Enable the Amazon Player interface (Hawaii) in javascript." OFF)
+option(PLUGIN_AMAZON_HYBRID "Enable the Amazon Player interface (Hawaii) in the injected bundle and the creation of the Amazon tab" OFF)
 option(PLUGIN_SECURITY_AGENT "Enable the Security Agent Features interface in javascript." OFF)
 
 add_library(${MODULE_NAME} SHARED 
