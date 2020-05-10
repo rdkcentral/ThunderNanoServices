@@ -25,12 +25,14 @@ find_package(LibSoup REQUIRED)
 option(PLUGIN_AMAZON_HAWAII "Enable the Amazon Player interface (Hawaii) in javascript." OFF)
 option(PLUGIN_SECURITY_AGENT "Enable the Security Agent Features interface in javascript." OFF)
 
-set(SOURCE_LIST main.cpp)
+set(SOURCE_LIST
+	main.cpp
+	WhiteListedOriginDomainsList.cpp
+	)
 
 if(NOT DEFINED WEBKIT_GLIB_API)
 	set(SOURCE_LIST
 	    ${SOURCE_LIST}
-	    WhiteListedOriginDomainsList.cpp
 	    Utils.cpp
 	    JavaScriptFunction.cpp
 	    NotifyWPEFramework.cpp

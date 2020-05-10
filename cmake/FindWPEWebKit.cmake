@@ -47,7 +47,7 @@ if(PC_WPE_WEBKIT_FOUND)
     if("${PC_WPE_WEBKIT_VERSION}" STREQUAL "0.0.20170728")
         set(WPE_WEBKIT_DEPRECATED_API TRUE)
     endif()
-    if("${PC_WPE_WEBKIT_VERSION}" STREQUAL "2.28.0")
+    if("${PC_WPE_WEBKIT_VERSION}" STREQUAL "2.28.2")
         set(WEBKIT_GLIB_API TRUE)
     endif()
     find_path(

@@ -39,11 +39,9 @@ using namespace WPEFramework;
 #include "ClassDefinition.h"
 #include "NotifyWPEFramework.h"
 #include "Utils.h"
-#include "WhiteListedOriginDomainsList.h"
 
 using namespace WPEFramework;
 using JavaScript::ClassDefinition;
-using WebKit::WhiteListedOriginDomainsList;
 
 WKBundleRef g_Bundle;
 std::string g_currentURL;
@@ -62,6 +60,9 @@ std::string GetURL() {
 } } }
 
 #endif
+
+#include "WhiteListedOriginDomainsList.h"
+using WebKit::WhiteListedOriginDomainsList;
 
 static Core::NodeId GetConnectionNode()
 {
@@ -90,10 +91,8 @@ public:
         Deinitialize();
     }
 
-#ifdef WEBKIT_GLIB_API
-
 public:
-    void Initialize(WebKitWebExtension* extension, GVariant* userData)
+    void Initialize(WKBundleRef bundle, const void* userData = nullptr)
     {
         // We have something to report back, do so...
         uint32_t result = _comClient->Open(RPC::CommunicationTimeOut);
@@ -103,22 +102,30 @@ public:
             // Due to the LXC container support all ID's get mapped. For the TraceBuffer, use the host given ID.
             Trace::TraceUnit::Instance().Open(_comClient->ConnectionId());
         }
-
-        _extension = WEBKIT_WEB_EXTENSION(g_object_ref(extension));
+#ifdef WEBKIT_GLIB_API
+        _bundle = WEBKIT_WEB_EXTENSION(g_object_ref(bundle));
 
         const char *uid;
         const char *whitelist;
-        g_variant_get(userData, "(&sm&s)", &uid, &whitelist);
+        g_variant_get((GVariant*) userData, "(&sm&s)", &uid, &whitelist);
 
         _scriptWorld = webkit_script_world_new_with_name(uid);
 
         g_signal_connect(_scriptWorld, "window-object-cleared",
                 G_CALLBACK(windowObjectClearedCallback), nullptr);
-        g_signal_connect(extension, "page-created",
+        g_signal_connect(bundle, "page-created",
                 G_CALLBACK(pageCreatedCallback), this);
 
-        if (whitelist != nullptr)
-            addOriginAccessWhiteList(whitelist);
+        if (whitelist != nullptr) {
+            _whiteListedOriginDomainPairs =
+                    WhiteListedOriginDomainsList::RequestFromWPEFramework(
+                            whitelist);
+            WhiteList(bundle);
+        }
+#else
+        _whiteListedOriginDomainPairs = WhiteListedOriginDomainsList::RequestFromWPEFramework();
+#endif
+
     }
 
     void Deinitialize()
@@ -126,15 +133,24 @@ public:
         if (_comClient.IsValid() == true) {
             _comClient.Release();
         }
-
+#ifdef WEBKIT_GLIB_API
         g_object_unref(_scriptWorld);
-        g_object_unref(_extension);
-
+        g_object_unref(_bundle);
+#endif
         Core::Singleton::Dispose();
     }
 
-private:
+    void WhiteList(WKBundleRef bundle)
+    {
+        // Whitelist origin/domain pairs for CORS, if set.
+        if (_whiteListedOriginDomainPairs) {
+            _whiteListedOriginDomainPairs->AddWhiteListToWebKit(bundle);
+        }
+    }
 
+#ifdef WEBKIT_GLIB_API
+
+private:
     static void automationMilestone(const char* arg1, const char* arg2, const char* arg3)
     {
         g_printerr("TEST TRACE: \"%s\" \"%s\" \"%s\"\n", arg1, arg2, arg3);
@@ -192,112 +208,17 @@ private:
         TRACE_GLOBAL(Trace::Information, (messageString));
     }
 
-    void addOriginAccessWhiteList(const char* whitelist)
-    {
-        class JSONEntry : public Core::JSON::Container {
-        private:
-            JSONEntry& operator=(const JSONEntry&) = delete;
-
-        public:
-            JSONEntry()
-                : Core::JSON::Container()
-                , Origin()
-                , Domain()
-                , SubDomain(true)
-            {
-                Add(_T("origin"), &Origin);
-                Add(_T("domain"), &Domain);
-                Add(_T("subdomain"), &SubDomain);
-            }
-
-            JSONEntry(const JSONEntry& rhs)
-                : Core::JSON::Container()
-                , Origin(rhs.Origin)
-                , Domain(rhs.Domain)
-                , SubDomain(rhs.SubDomain)
-            {
-                Add(_T("origin"), &Origin);
-                Add(_T("domain"), &Domain);
-                Add(_T("subdomain"), &SubDomain);
-            }
-
-        public:
-            Core::JSON::String Origin;
-            Core::JSON::ArrayType<Core::JSON::String> Domain;
-            Core::JSON::Boolean SubDomain;
-        };
-
-        Core::JSON::ArrayType<JSONEntry> entries;
-        entries.FromString(Core::ToString(whitelist));
-        Core::JSON::ArrayType<JSONEntry>::Iterator originIndex(entries.Elements());
-
-        while (originIndex.Next() == true) {
-            if ((originIndex.Current().Origin.IsSet() == true) && (originIndex.Current().Domain.IsSet() == true)) {
-                WebKitSecurityOrigin* origin = webkit_security_origin_new_for_uri(originIndex.Current().Origin.Value().c_str());
-                gboolean allowSubdomains = originIndex.Current().SubDomain.Value();
-
-                Core::JSON::ArrayType<Core::JSON::String>::Iterator domainIndex(originIndex.Current().Domain.Elements());
-                while (domainIndex.Next() == true) {
-                    WebKitSecurityOrigin* domain = webkit_security_origin_new_for_uri(domainIndex.Current().Value().c_str());
-                    webkit_web_extension_add_origin_access_whitelist_entry(_extension, origin,
-                        webkit_security_origin_get_protocol(domain), webkit_security_origin_get_host(domain),
-                        allowSubdomains);
-                    webkit_security_origin_unref(domain);
-                    TRACE_L1("Added origin->domain pair to WebKit white list: %s -> %s", originIndex.Current().Origin.Value().c_str(), domainIndex.Current().Value().c_str());
-                }
-
-                webkit_security_origin_unref(origin);
-            }
-        }
-    }
-
-    WebKitWebExtension* _extension;
+    WKBundleRef _bundle;
     WebKitScriptWorld* _scriptWorld;
-
-#else
-
-public:
-    void Initialize(WKBundleRef bundle)
-    {
-        // We have something to report back, do so...
-        uint32_t result = _comClient->Open(RPC::CommunicationTimeOut);
-        if (result != Core::ERROR_NONE) {
-            TRACE(Trace::Error, (_T("Could not open connection to node %s. Error: %s"), _comClient->Source().RemoteId(), Core::NumberType<uint32_t>(result).Text()));
-        } else {
-            // Due to the LXC container support all ID's get mapped. For the TraceBuffer, use the host given ID.
-            Trace::TraceUnit::Instance().Open(_comClient->ConnectionId());
-        }
-
-        _whiteListedOriginDomainPairs = WhiteListedOriginDomainsList::RequestFromWPEFramework();
-    }
-
-    void Deinitialize()
-    {
-        if (_comClient.IsValid() == true) {
-            _comClient.Release();
-        }
-
-        Core::Singleton::Dispose();
-    }
-
-    void WhiteList(WKBundleRef bundle)
-    {
-
-        // Whitelist origin/domain pairs for CORS, if set.
-        if (_whiteListedOriginDomainPairs) {
-            _whiteListedOriginDomainPairs->AddWhiteListToWebKit(bundle);
-        }
-    }
-private:
-
-    // White list for CORS.
-    std::unique_ptr<WhiteListedOriginDomainsList> _whiteListedOriginDomainPairs;
 
 #endif
 
 private:
     Core::ProxyType<RPC::InvokeServerType<2, 0, 4> > _engine;
     Core::ProxyType<RPC::CommunicatorClient> _comClient;
+
+    // White list for CORS.
+    std::unique_ptr<WhiteListedOriginDomainsList> _whiteListedOriginDomainPairs;
 
 } _wpeFrameworkClient;
 
