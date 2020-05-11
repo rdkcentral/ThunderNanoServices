@@ -120,11 +120,11 @@ namespace Plugin {
     uint32_t Containers::get_containers(Core::JSON::ArrayType<Core::JSON::String>& response) const
     {
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        std::vector<string> containers = administrator.Containers();
+        auto containers = administrator.Containers();
 
-        for (auto container : containers) {
+        while(containers->Next()) {
             Core::JSON::String containerName;
-            containerName = container;
+            containerName = containers->Id();
             response.Add(containerName);
         }
 
@@ -143,7 +143,7 @@ namespace Plugin {
         auto container = administrator.Get(index); 
 
         if (container != nullptr) {
-            ProcessContainers::NetworkInterfaceIterator* iterator = container->NetworkInterfaces();
+            auto iterator = container->NetworkInterfaces();
 
             while(iterator->Next() == true) {
                 NetworksData networkData;
@@ -158,7 +158,6 @@ namespace Plugin {
                 }                
             }
 
-            iterator->Release();
             container->Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
@@ -181,9 +180,9 @@ namespace Plugin {
         if (found != nullptr) {
             auto memoryInfo = found->Memory();
             
-            response.Allocated = memoryInfo.allocated;
-            response.Resident = memoryInfo.resident;
-            response.Shared = memoryInfo.shared;
+            response.Allocated = memoryInfo->Allocated();
+            response.Resident = memoryInfo->Resident();
+            response.Shared = memoryInfo->Shared();
 
             found->Release();
         } else {
@@ -207,11 +206,11 @@ namespace Plugin {
         if (container != nullptr) {
             auto cpuInfo = container->Cpu();
             
-            response.Total = cpuInfo.total;
+            response.Total = cpuInfo->TotalUsage();
             
-            for (auto core : cpuInfo.cores) {
+            for (int i = 0; cpuInfo->CoreUsage(i) != UINT64_MAX; i++) {
                 Core::JSON::DecUInt64 coreTime;
-                coreTime = core;
+                coreTime = cpuInfo->CoreUsage(i);
 
                 response.Cores.Add(coreTime);
             }
