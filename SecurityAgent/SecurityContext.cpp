@@ -77,9 +77,8 @@ namespace Plugin {
     {
         bool allowed = (_accessControlList != nullptr);
 
-		if (allowed == true) {
-			
-		}
+        if (allowed == true) {
+        }
 
         return (allowed);
     }
