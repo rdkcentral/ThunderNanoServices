@@ -210,6 +210,7 @@ namespace Plugin {
                         available = Core::CyclicBuffer::Validate();
                     }
 
+                    uint32_t length;
                     // Traces will be commited in one go, First reserve, then write. So if there is a length (2 bytes)
                     // The full trace has to be available as well.
                     if ((available == true) && (_state == EMPTY) && ((length = Read(_traceBuffer, sizeof(_traceBuffer))) != 0)) {
