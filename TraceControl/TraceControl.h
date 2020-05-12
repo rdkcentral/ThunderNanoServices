@@ -204,6 +204,7 @@ namespace Plugin {
 
                 state Load()
                 {
+                    uint32_t length;
                     bool available = Core::CyclicBuffer::IsValid();
 
                     if (available == false) {
