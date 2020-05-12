@@ -126,10 +126,6 @@ namespace Plugin {
             {
                 return _surface.Name();
             }
-            void Kill() override
-            {
-                //TODO: to be implemented.
-            }
             void Opacity(const uint32_t value) override
             {
                 if ((value == Exchange::IComposition::minOpacity) || (value == Exchange::IComposition::maxOpacity)) {
@@ -153,13 +149,16 @@ namespace Plugin {
             }
             uint32_t ZOrder(const uint16_t index) override
             {
+                _layer = index;
                 _surface.ZOrder(index);
-                if (index == 0) {
-                    SetInput();
-                }
 
                 return (Core::ERROR_NONE);
             }
+            uint32_t ZOrder() const override
+            {
+                return (_layer);
+            }
+
 
             BEGIN_INTERFACE_MAP(Entry)
                 INTERFACE_ENTRY(Exchange::IComposition::IClient)
@@ -169,6 +168,7 @@ namespace Plugin {
             Wayland::Display::Surface _surface;
             Implementation::IServer* _server;
             Exchange::IComposition::Rectangle _rectangle;
+            uint16_t _layer;
         };
 
         class Config : public Core::JSON::Container {
@@ -385,13 +385,14 @@ namespace Plugin {
             g_implementationLock.Unlock();
         }
 
-        /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override
+        /* virtual */ uint32_t Resolution(const Exchange::IComposition::ScreenResolution format) override
         {
+            return (Implementation::SetResolution(format));
         }
 
         /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const override
         {
-            return ((Exchange::IComposition::ScreenResolution)0);
+            return (Implementation::GetResolution());
         }
 
         // -------------------------------------------------------------------------------------------------------
