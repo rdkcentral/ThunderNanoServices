@@ -134,7 +134,7 @@ private:
         }
 
     public:
-        virtual uint32_t Callback(ICallback* callback) override
+        uint32_t Callback(ICallback* callback) override
         {
             uint32_t result = Core::ERROR_BAD_REQUEST;
 
@@ -179,7 +179,7 @@ private:
         {
             return (_interval);
         }
-        virtual uint64_t Now() const override
+        uint64_t Now() const override
         {
             // Is a simple implementation but just return the crrent time in ticks...
             return Core::Time::Now().Ticks();
@@ -246,13 +246,13 @@ public:
 
         Open(Core::infinite);
     }
-    ~COMServer()
+    ~COMServer() override
     {
         Close(Core::infinite);
     }
 
 private:
-    virtual void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId)
+    void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
     {
         void* result = nullptr;
 
