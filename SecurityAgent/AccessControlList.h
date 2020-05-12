@@ -83,11 +83,12 @@ namespace Plugin {
     // },
 
     class EXTERNAL AccessControlList {
-    private:
+    public:
         enum mode {
             BLOCKED,
             ALLOWED
         };
+    private:
         class EXTERNAL JSONACL : public Core::JSON::Container {
         public:
             class Plugins : public Core::JSON::Container {
