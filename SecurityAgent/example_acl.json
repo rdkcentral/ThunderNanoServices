@@ -143,12 +143,11 @@
     },
     "xreapps.net": {
       "thunder": {
-        "allow": [
-          "*"
-        ],
-        "block" : [
-            "DeviceInfo"
-        ]
+        "default": "blocked",
+        "DeviceInfo": {
+          "default": "allowed",
+          "block": [ "register", "unregister" ]
+        }
       }
     },
     "local": {

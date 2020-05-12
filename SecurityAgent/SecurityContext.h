@@ -69,6 +69,8 @@ namespace Plugin {
         //! Allow a JSONRPC message to be checked before it is offered for processing.
         bool Allowed(const Core::JSONRPC::Message& message) const override;
 
+        virtual string Identification() const override;
+
     private:
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(SecurityOfficer)
