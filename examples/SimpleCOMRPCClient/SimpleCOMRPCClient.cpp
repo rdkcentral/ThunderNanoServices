@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
         bool subscribed(false);
         Exchange::IWallClock* clock(nullptr);
         Core::Sink<Sink> sink;
-        RPC::CommunicatorClient client(comChannel);
+        Core::ProxyType<RPC::CommunicatorClient> client(Core::ProxyType<RPC::CommunicatorClient>::Create(comChannel));
         Math* outbound = Core::Service<Math>::Create<Math>();
         printf("Channel: %s:[%d]\n\n", comChannel.HostAddress().c_str(), comChannel.PortNumber());
 
@@ -122,15 +122,15 @@ int main(int argc, char* argv[])
             switch (element) {
             case 'O':
                 printf("Offering our IMath interface to te otherside..!\n");
-                if (client.IsOpen() == false) {
-                    client.Open(2000);
+                if (client->IsOpen() == false) {
+                    client->Open(2000);
                 }
 
-                if (client.IsOpen() == false) {
+                if (client->IsOpen() == false) {
                     printf("Could not open a connection to the server. No exchange of interfaces happened!\n");
                 }
                 else {
-                    uint32_t result = client.Offer<Exchange::IMath>(outbound);
+                    uint32_t result = client->Offer<Exchange::IMath>(outbound);
 
                     if (result == Core::ERROR_NONE) {
                         printf("Our IMath nterface has been offered to the other side!\n");
@@ -145,15 +145,15 @@ int main(int argc, char* argv[])
                     printf("There is no need to create a clock, we already have one!\n");
                 }
                 else {
-                    if (client.IsOpen() == false) {
-                        client.Open(2000);
+                    if (client->IsOpen() == false) {
+                        client->Open(2000);
                     }
 
-                    if (client.IsOpen() == false) {
+                    if (client->IsOpen() == false) {
                         printf("Could not open a connection to the server. No exchange of interfaces happened!\n");
                     }
                     else {
-                        clock = client.Aquire<Exchange::IWallClock>(3000, _T("WallClockImplementation"), ~0);
+                        clock = client->Aquire<Exchange::IWallClock>(3000, _T("WallClockImplementation"), ~0);
 
                         if (clock == nullptr) {
                             printf("Tried aquiring the IWallclock, but it is not available\n");
