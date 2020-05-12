@@ -879,6 +879,8 @@ namespace Plugin
             } else {
                 ClearAssignedIPV4IPs(adapter);
                 ClearAssignedIPV6IPs(adapter);
+
+                Core::AdapterIterator::Flush();
             }
 
             _adminLock.Unlock();
