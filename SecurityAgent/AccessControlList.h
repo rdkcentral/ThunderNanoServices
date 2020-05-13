@@ -92,7 +92,7 @@ namespace Plugin {
         class EXTERNAL JSONACL : public Core::JSON::Container {
         public:
             class Plugins : public Core::JSON::Container {
-            private:
+            public:
                 class Rules : public Core::JSON::Container {
                 public:
                     Rules(const Rules&) = delete;
@@ -111,7 +111,7 @@ namespace Plugin {
                     }
 
                 public:
-                    Core::JSON::EnumType<mode> Defaults;
+                    Core::JSON::EnumType<mode> Default;
                     Core::JSON::ArrayType<Core::JSON::String> Methods;
                 };
  
@@ -126,16 +126,16 @@ namespace Plugin {
                 Plugins()
                     : Core::JSON::Container()
                     , Default(BLOCKED)
-                    , Methods()
+                    , _plugins()
                 {
                     Add(_T("default"), &Default);
                 }
-                virtual ~Plugin()
+                ~Plugins() override
                 {
                 }
 
             public:
-                Core::JSON::EnumType<mode> Defaults;
+                Core::JSON::EnumType<mode> Default;
 
                 inline Iterator Elements() const
                 {
@@ -145,7 +145,7 @@ namespace Plugin {
             private:
                 virtual bool Request(const TCHAR label[])
                 {
-                    if (_roles.find(label) == _roles.end()) {
+                    if (_plugins.find(label) == _plugins.end()) {
                         auto element = _plugins.emplace(std::piecewise_construct,
                             std::forward_as_tuple(label),
                             std::forward_as_tuple());
@@ -275,8 +275,8 @@ namespace Plugin {
                 Plugin(const Plugin&) = delete;
                 Plugin& operator= (const Plugin&) = delete;
 
-                Plugin (const Plugins::Rules& rules) 
-                    : _defaultBlocked(rules.Defaults.Value() == mode::BLOCKED) 
+                Plugin (const JSONACL::Plugins::Rules& rules)
+                    : _defaultBlocked(rules.Default.Value() == mode::BLOCKED) 
                     , _methods() {
                     Core::JSON::ArrayType<Core::JSON::String>::ConstIterator index(rules.Methods.Elements());
                     while (index.Next() == true) {
@@ -314,13 +314,13 @@ namespace Plugin {
             Filter& operator=(const Filter&) = delete;
 
             Filter(const JSONACL::Plugins& plugins)
-                : _defaultBlocked(plugins.Defaults.Value() == mode::BLOCKED)
+                : _defaultBlocked(plugins.Default.Value() == mode::BLOCKED)
                 , _plugins()
             {
                 JSONACL::Plugins::Iterator index(plugins.Elements());
           
                 while (index.Next() == true) {
-                    _roles.emplace(std::piecewise_construct,
+                    _plugins.emplace(std::piecewise_construct,
                             std::forward_as_tuple(CreateRegex(index.Key())),
                             std::forward_as_tuple(index.Current()));
                 }
@@ -335,8 +335,8 @@ namespace Plugin {
                 bool found = false;
                 bool pluginFound = false;
 
-                std::list<string>::const_iterator index(_allow.begin());
-                while ((index != _allow.end()) && (pluginFound == false)) { 
+                std::map<string, Plugin>::const_iterator index(_plugins.begin());
+                while ((index != _plugins.end()) && (pluginFound == false)) {
                     std::regex expression(index->first.c_str());
                     std::smatch matchList;
                     pluginFound = std::regex_search(callsign, matchList, expression);
