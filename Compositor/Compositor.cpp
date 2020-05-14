@@ -147,6 +147,7 @@ namespace Plugin {
         , _composition(nullptr)
         , _service(nullptr)
         , _connectionId()
+        , _inputSwitch(nullptr)
         , _inputSwitchCallsign()
 
     {
@@ -567,7 +568,6 @@ namespace Plugin {
             result = _inputSwitch->Select(callsign);
         }
         else {
-
             Exchange::IInputSwitch* switcher = _service->QueryInterfaceByCallsign<Exchange::IInputSwitch>(_inputSwitchCallsign);
             if (switcher != nullptr) {
                 result = switcher->Select(callsign);

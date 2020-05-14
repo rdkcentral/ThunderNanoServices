@@ -113,12 +113,10 @@ namespace Plugin {
                 , System(_T("Controller"))
                 , WorkDir()
                 , InputSwitch(_T("InputSwitch"))
-                , TopHasInput(true)
             {
                 Add(_T("system"), &System);
                 Add(_T("workdir"), &WorkDir);
                 Add(_T("inputswitch"), &InputSwitch);
-                Add(_T("tophasinput"), &TopHasInput);
             }
             ~Config()
             {
@@ -128,7 +126,6 @@ namespace Plugin {
             Core::JSON::String System;
             Core::JSON::String WorkDir;
             Core::JSON::String InputSwitch;
-            Core::JSON::Boolean TopHasInput;
         };
 
         class Data : public Core::JSON::Container {

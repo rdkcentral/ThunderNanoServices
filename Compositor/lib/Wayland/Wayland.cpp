@@ -117,12 +117,6 @@ namespace Plugin {
             {
                 return _surface.IsValid();
             }
-            void SetInput()
-            {
-                if ( (_server != nullptr) && (_surface.Name().empty() == false) && (_surface.Name() != "noname") ) {
-                    _server->SetInput(_surface.Name().c_str());
-                }
-            }
             string Name() const override
             {
                 return _surface.Name();
@@ -414,34 +408,23 @@ namespace Plugin {
         }
         bool Consumer(const string& name) const override
         {
-            bool status = false;
-            std::list<Entry*>::const_iterator index(_clients.begin());
-            while (index != _clients.end()) {
-                if (name == (*index)->Name()) {
-                    status = true;
-                    break;
-                }
-                index++;
-            }
-            return status;
+            return true;
         }
         uint32_t Consumer(const string& name, const mode) override
         {
-            return (Core::ERROR_NONE);;
+            return (Core::ERROR_UNAVAILABLE);
         }
         uint32_t Select(const string& name) override
         {
-            bool status = Core::ERROR_UNAVAILABLE;
-            std::list<Entry*>::const_iterator index(_clients.begin());
+            uint32_t status = Core::ERROR_UNAVAILABLE;
+            std::list<Entry*>::iterator index(_clients.begin());
             while (index != _clients.end()) {
                 if (name == (*index)->Name()) {
-                    (*index)->SetInput();
+                    _server->SetInput(name.c_str());
                     status = Core::ERROR_NONE;
-                    break;
                 }
                 index++;
             }
-
             return status;
         }
 
