@@ -147,8 +147,8 @@ namespace Plugin {
         , _composition(nullptr)
         , _service(nullptr)
         , _connectionId()
+        , _inputSwitch(nullptr)
         , _inputSwitchCallsign()
-        , _topHasInput(false)
 
     {
         RegisterAll();
@@ -192,8 +192,8 @@ namespace Plugin {
 
             _composition->Configure(_service);
 
+            _inputSwitch = _composition->QueryInterface<Exchange::IInputSwitch>();
             _inputSwitchCallsign = config.InputSwitch.Value();
-            _topHasInput = config.TopHasInput.Value();
         }
 
         // On succes return empty, to indicate there is no error text.
@@ -214,6 +214,10 @@ namespace Plugin {
             subSystems->Release();
         }
 
+        if (_inputSwitch != nullptr) {
+            _inputSwitch->Release();
+            _inputSwitch = nullptr;
+        }
         if (_composition != nullptr) {
             _composition->Release();
             _composition = nullptr;
@@ -559,11 +563,16 @@ namespace Plugin {
 
         uint32_t result = Core::ERROR_GENERAL;
 
-        Exchange::IInputSwitch* switcher = _service->QueryInterfaceByCallsign<Exchange::IInputSwitch>(_inputSwitchCallsign);
-
-        if (switcher != nullptr) {
-            result = switcher->Select(callsign);
-            switcher->Release();
+        Exchange::IInputSwitch* switcher;
+        if (_inputSwitch) {
+            result = _inputSwitch->Select(callsign);
+        }
+        else {
+            Exchange::IInputSwitch* switcher = _service->QueryInterfaceByCallsign<Exchange::IInputSwitch>(_inputSwitchCallsign);
+            if (switcher != nullptr) {
+                result = switcher->Select(callsign);
+                switcher->Release();
+            }
         }
         return (result);
     }
@@ -626,15 +635,7 @@ namespace Plugin {
 
     uint32_t Compositor::ToTop(const string& callsign)
     {
-        uint32_t result = Core::ERROR_UNAVAILABLE;
-
-        if (PutBefore(EMPTY_STRING, callsign) == Core::ERROR_NONE) {
-            if(_topHasInput == true) {
-                Select(callsign);
-            }
-        }
-            
-        return (result);
+        return PutBefore(EMPTY_STRING, callsign);
     }
 
     Exchange::IComposition::IClient* Compositor::InterfaceByCallsign(const string& callsign) const

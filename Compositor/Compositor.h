@@ -22,6 +22,7 @@
 
 #include "Module.h"
 #include <interfaces/IComposition.h>
+#include <interfaces/IInputSwitch.h>
 #include <interfaces/json/JsonData_Compositor.h>
 
 
@@ -112,12 +113,10 @@ namespace Plugin {
                 , System(_T("Controller"))
                 , WorkDir()
                 , InputSwitch(_T("InputSwitch"))
-                , TopHasInput(true)
             {
                 Add(_T("system"), &System);
                 Add(_T("workdir"), &WorkDir);
                 Add(_T("inputswitch"), &InputSwitch);
-                Add(_T("tophasinput"), &TopHasInput);
             }
             ~Config()
             {
@@ -127,7 +126,6 @@ namespace Plugin {
             Core::JSON::String System;
             Core::JSON::String WorkDir;
             Core::JSON::String InputSwitch;
-            Core::JSON::Boolean TopHasInput;
         };
 
         class Data : public Core::JSON::Container {
@@ -241,8 +239,8 @@ namespace Plugin {
         PluginHost::IShell* _service;
         uint32_t _connectionId;
         Clients _clients;
+        Exchange::IInputSwitch* _inputSwitch;
         string _inputSwitchCallsign;
-        bool _topHasInput;
     };
 }
 }
