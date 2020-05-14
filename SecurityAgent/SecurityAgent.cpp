@@ -211,6 +211,7 @@ namespace Plugin {
 
 		if (index.Next() == true) {
             // We might be receiving a plugin download request.
+            #ifdef SECURITY_TESTING_MODE
             if ((request.Verb == Web::Request::HTTP_PUT) && (request.HasBody() == true)) {
                 if (index.Current() == _T("Token")) {
                     Core::ProxyType<const Web::TextBody> data(request.Body<Web::TextBody>());
@@ -229,7 +230,10 @@ namespace Plugin {
                         }
                     }
                 }
-            } else if ( (request.Verb == Web::Request::HTTP_GET) && (index.Current() == _T("Valid")) ) {
+            } else
+            #endif      
+
+            if ( (request.Verb == Web::Request::HTTP_GET) && (index.Current() == _T("Valid")) ) {
                 result->ErrorCode = Web::STATUS_FORBIDDEN;
                 result->Message = _T("Missing token");
 
