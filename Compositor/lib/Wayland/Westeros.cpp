@@ -441,7 +441,7 @@ namespace Implementation {
         void InitContext(const string& glName) {
             Core::Library library(glName.c_str());
             if (library.IsLoaded() == true) {
-                _wstGLSetDisplayMode = reinterpret_cast<SetDisplayMode>(library.LoadFunction(_T("_WstGLSetDisplayMode")));
+                _wstGLSetDisplayMode = reinterpret_cast<SetDisplayMode>(library.LoadFunction(_T("WstGLSetDisplayMode")));
                 if (_wstGLSetDisplayMode != nullptr) {
                     _context = WstGLInit();
                 }
