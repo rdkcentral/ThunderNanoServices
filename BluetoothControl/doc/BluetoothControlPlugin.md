@@ -91,6 +91,7 @@ BluetoothControl interface methods:
 | [disconnect](#method.disconnect) | Disconnects from a Bluetooth device |
 | [pair](#method.pair) | Pairs a Bluetooth device |
 | [unpair](#method.unpair) | Unpairs a Bluetooth device |
+| [abortpairing](#method.abortpairing) | Aborts the pairing process |
 
 <a name="method.scan"></a>
 ## *scan <sup>method</sup>*
@@ -346,6 +347,54 @@ Also see: [devicestatechange](#event.devicestatechange)
     "result": null
 }
 ```
+<a name="method.abortpairing"></a>
+## *abortpairing <sup>method</sup>*
+
+Aborts the pairing process.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.address | string | Bluetooth address |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Device not currently pairing |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "BluetoothControl.1.abortpairing",
+    "params": {
+        "address": "81:6F:B0:91:9B:FE"
+    }
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": null
+}
+```
 <a name="head.Properties"></a>
 # Properties
 
@@ -500,6 +549,7 @@ Provides access to the remote Bluetooth device information.
 | (property) | object | Remote Bluetooth device information |
 | (property).name | string | Name of the device |
 | (property).type | string | Bluetooth device type (must be one of the following: *Classic*, *LowEnergy*) |
+| (property)?.class | integer | <sup>*(optional)*</sup> Class of device (3 octets) |
 | (property).connected | boolean | Denotes if the device is currently connected to host |
 | (property).paired | boolean | Denotes if the device is currently paired with host |
 
@@ -531,6 +581,7 @@ Provides access to the remote Bluetooth device information.
     "result": {
         "name": "Acme Bluetooth Device",
         "type": "LowEnergy",
+        "class": 2360324,
         "connected": true,
         "paired": true
     }
@@ -539,7 +590,7 @@ Provides access to the remote Bluetooth device information.
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers.Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the BluetoothControl plugin:
 
