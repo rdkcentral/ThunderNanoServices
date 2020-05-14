@@ -397,10 +397,12 @@ namespace Implementation {
         Config()
             : Core::JSON::Container()
             , Renderer(_T("/usr/lib/libwesteros_render_gl.so"))
+            , GLName(_T("libwesteros_gl.so.0.0.0"))
             , Display(_T("wayland-0"))
             , Cursor(_T(""))
         {
             Add(_T("renderer"), &Renderer);
+            Add(_T("glname"), &GLName);
             Add(_T("display"), &Display);
             Add(_T("cursor"), &Cursor);
             Add(_T("width"), &Width);
@@ -412,6 +414,7 @@ namespace Implementation {
 
     public:
         Core::JSON::String Renderer;
+        Core::JSON::String GLName;
         Core::JSON::String Display;
         Core::JSON::String Cursor;
         Core::JSON::DecUInt32 Width;
@@ -420,26 +423,28 @@ namespace Implementation {
  
     class WesterosGL {
     private:
-        static constexpr TCHAR* WesterosGlLibName = _T("libwesteros_gl.so.0.0.0");
         typedef bool (*SetDisplayMode)(WstGLCtx *ctx, const char *mode);
     public:
         WesterosGL(const WesterosGL&) = delete;
         WesterosGL& operator= (const WesterosGL&) = delete;
 
-        WesterosGL() 
+        WesterosGL()
             : _context(nullptr)
             , _resolution(Exchange::IComposition::ScreenResolution_1080i50Hz) {
-            Core::Library library(WesterosGlLibName);
+        }
+        ~WesterosGL() {
+            if (_context != nullptr) {
+                WstGLTerm(_context);
+            }
+        }
+
+        void InitContext(const string& glName) {
+            Core::Library library(glName.c_str());
             if (library.IsLoaded() == true) {
                 _wstGLSetDisplayMode = reinterpret_cast<SetDisplayMode>(library.LoadFunction(_T("_WstGLSetDisplayMode")));
                 if (_wstGLSetDisplayMode != nullptr) {
                     _context = WstGLInit();
                 }
-            }
-        }
-        ~WesterosGL() {
-            if (_context != nullptr) {
-                WstGLTerm(_context);
             }
         }
 
@@ -478,12 +483,12 @@ namespace Implementation {
 
     private:
         WstGLCtx* _context;
-        Exchange::IComposition::ScreenResolution _resolution;
         SetDisplayMode _wstGLSetDisplayMode;
+        Exchange::IComposition::ScreenResolution _resolution;
     };
 
     static WesterosGL WesterosContext;
- 
+
     uint32_t SetResolution(Exchange::IComposition::ScreenResolution value) {
         return (WesterosContext.SetResolution(value));
     }
@@ -504,6 +509,9 @@ namespace Implementation {
         if(!cursor.empty()) {
             instance->setCursor(cursor);
         }
+
+        WesterosContext.InitContext(config.GLName.Value());
+
         return instance;
     }
 } // namespace Implementation
