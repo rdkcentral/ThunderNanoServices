@@ -38,6 +38,7 @@ namespace Plugin {
         JSONRPC::Register<ConnectParamsInfo,void>(_T("disconnect"), &BluetoothControl::endpoint_disconnect, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("pair"), &BluetoothControl::endpoint_pair, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("unpair"), &BluetoothControl::endpoint_unpair, this);
+        JSONRPC::Register<ConnectParamsInfo,void>(_T("abortpairing"), &BluetoothControl::endpoint_abortpairing, this);
         JSONRPC::Property<Core::JSON::ArrayType<Core::JSON::DecUInt16>>(_T("adapters"), &BluetoothControl::get_adapters, nullptr, this);
         JSONRPC::Property<AdapterData>(_T("adapter"), &BluetoothControl::get_adapter, nullptr, this);
         JSONRPC::Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("devices"), &BluetoothControl::get_devices, nullptr, this);
@@ -46,6 +47,7 @@ namespace Plugin {
 
     void BluetoothControl::UnregisterAll()
     {
+        JSONRPC::Unregister(_T("abortpairing"));
         JSONRPC::Unregister(_T("unpair"));
         JSONRPC::Unregister(_T("pair"));
         JSONRPC::Unregister(_T("disconnect"));
@@ -120,7 +122,7 @@ namespace Plugin {
 
         DeviceImpl* device = Find(Bluetooth::Address(address.c_str()));
         if (device != nullptr) {
-            result = device->Disconnect(2);
+            result = device->Disconnect();
         }
 
         return (result);
@@ -137,9 +139,9 @@ namespace Plugin {
         uint32_t result = Core::ERROR_UNKNOWN_KEY;
         const string& address = params.Address.Value();
 
-        DeviceImpl* device = Find(Bluetooth::Address(address.c_str()));
+        DeviceImpl* device = Find<DeviceImpl>(Bluetooth::Address(address.c_str()));
         if (device != nullptr) {
-            result = device->Pair(IBluetooth::IDevice::DISPLAY_ONLY);
+            result = device->Pair(IBluetooth::DISPLAY_YES_NO);
         }
 
         return (result);
@@ -155,9 +157,27 @@ namespace Plugin {
         uint32_t result = Core::ERROR_UNKNOWN_KEY;
         const string& address = params.Address.Value();
 
-        DeviceImpl* device = Find(Bluetooth::Address(address.c_str()));
+        DeviceImpl* device = Find<DeviceImpl>(Bluetooth::Address(address.c_str()));
         if (device != nullptr) {
             result = device->Unpair();
+        }
+
+        return (result);
+    }
+
+    // Method: abortpairing - Aborts the pairing process
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNKNOWN_KEY: Unknown device
+    //  - ERROR_ILLEGAL_STATE: Device not currently pairing
+    uint32_t BluetoothControl::endpoint_abortpairing(const ConnectParamsInfo& params)
+    {
+        uint32_t result = Core::ERROR_UNKNOWN_KEY;
+        const string& address = params.Address.Value();
+
+        DeviceImpl* device = Find<DeviceImpl>(Bluetooth::Address(address.c_str()));
+        if (device != nullptr) {
+            result = device->AbortPairing();
         }
 
         return (result);
@@ -226,10 +246,16 @@ namespace Plugin {
 
         DeviceImpl* device = Find(Bluetooth::Address(index.c_str()));
         if (device != nullptr) {
-            response.Name = device->Name();
             response.Type = (device->LowEnergy()? DevicetypeType::LOWENERGY : DevicetypeType::CLASSIC);
+            if (device->Name().empty() == false) {
+                response.Name = device->Name();
+            }
+            if (device->Class() != 0) {
+                response.Class = device->Class();
+            }
             response.Connected = device->IsConnected();
             response.Paired = device->IsBonded();
+
             result = Core::ERROR_NONE;
         }
 

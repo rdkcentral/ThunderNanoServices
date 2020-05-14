@@ -502,7 +502,7 @@ namespace Plugin {
                 }
 
                 if (_device != nullptr) {
-                    if (_device->Callback(nullptr) != Core::ERROR_NONE) {
+                    if (_device->Callback(static_cast<Exchange::IBluetooth::IDevice::ICallback*>(nullptr)) != Core::ERROR_NONE) {
                         TRACE(Trace::Fatal, (_T("Could not remove the callback from the device")));
                     }
 
