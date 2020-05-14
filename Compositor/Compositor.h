@@ -22,6 +22,7 @@
 
 #include "Module.h"
 #include <interfaces/IComposition.h>
+#include <interfaces/IInputSwitch.h>
 #include <interfaces/json/JsonData_Compositor.h>
 
 
@@ -241,8 +242,8 @@ namespace Plugin {
         PluginHost::IShell* _service;
         uint32_t _connectionId;
         Clients _clients;
+        Exchange::IInputSwitch* _inputSwitch;
         string _inputSwitchCallsign;
-        bool _topHasInput;
     };
 }
 }

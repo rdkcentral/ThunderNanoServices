@@ -35,6 +35,7 @@ namespace Plugin {
     static Core::CriticalSection g_implementationLock;
 
     class CompositorImplementation : public Exchange::IComposition,
+                                     public Exchange::IInputSwitch,
                                      public Wayland::Display::IProcess {
     private:
         CompositorImplementation(const CompositorImplementation&) = delete;
@@ -158,8 +159,6 @@ namespace Plugin {
             {
                 return (_layer);
             }
-
-
             BEGIN_INTERFACE_MAP(Entry)
                 INTERFACE_ENTRY(Exchange::IComposition::IClient)
             END_INTERFACE_MAP
@@ -296,6 +295,7 @@ namespace Plugin {
     public:
         BEGIN_INTERFACE_MAP(CompositorImplementation)
         INTERFACE_ENTRY(Exchange::IComposition)
+        INTERFACE_ENTRY(Exchange::IInputSwitch)
         END_INTERFACE_MAP
 
     public:
@@ -401,6 +401,48 @@ namespace Plugin {
         /* virtual */ bool Dispatch()
         {
             return (true);
+        }
+        RPC::IStringIterator* Consumers() const override
+        {
+            std::list<string> container;
+            std::list<Entry*>::const_iterator index(_clients.begin());
+            while (index != _clients.end()) {
+                container.push_back((*index)->Name());
+                index++;
+            }
+            return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(container));
+        }
+        bool Consumer(const string& name) const override
+        {
+            bool status = false;
+            std::list<Entry*>::const_iterator index(_clients.begin());
+            while (index != _clients.end()) {
+                if (name == (*index)->Name()) {
+                    status = true;
+                    break;
+                }
+                index++;
+            }
+            return status;
+        }
+        uint32_t Consumer(const string& name, const mode) override
+        {
+            return (Core::ERROR_NONE);;
+        }
+        uint32_t Select(const string& name) override
+        {
+            bool status = Core::ERROR_UNAVAILABLE;
+            std::list<Entry*>::const_iterator index(_clients.begin());
+            while (index != _clients.end()) {
+                if (name == (*index)->Name()) {
+                    (*index)->SetInput();
+                    status = Core::ERROR_NONE;
+                    break;
+                }
+                index++;
+            }
+
+            return status;
         }
 
     private:
