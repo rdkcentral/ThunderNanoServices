@@ -518,7 +518,9 @@ namespace Plugin {
                     delete _profile;
                 }
 
-                _audioProfile->Release();
+                if (_audioProfile) {
+                    _audioProfile->Release();
+                }
             }
 
         public:
@@ -552,13 +554,14 @@ namespace Plugin {
             }
             inline Exchange::IVoiceProducer::IProfile* SelectedProfile() const 
             {
+                ASSERT(_audioProfile != nullptr);
                 _audioProfile->AddRef();
                 return (_audioProfile);
             }
             void Reconfigure(const string& settings) {
                 Config::Profile config; 
                 config.FromString(settings);
-                
+
                 if (_decoder != nullptr) {
                     delete _decoder;
                 }
@@ -567,7 +570,7 @@ namespace Plugin {
                 _decoder = Decoders::IDecoder::Instance(config.Codec.Value(), config.Configuration.Value());
 
                 if (_decoder == nullptr) {
-                    _decoder = nullptr;
+                    _audioProfile = nullptr;
                 }
                 else {
                     _audioProfile = Core::Service<AudioProfile>::Create<AudioProfile>(
@@ -874,7 +877,13 @@ namespace Plugin {
                 info.BatteryLevelHandle = _batteryLevelHandle;
                 info.VoiceCommandHandle = _voiceCommandHandle;
                 info.VoiceDataHandle = _voiceDataHandle;
- 
+
+                // Don't perform service recovery on subsequent connections.
+                if (_profile != nullptr) {
+                    delete _profile;
+                    _profile = nullptr;
+                }
+
                 TRACE(Flow, (_T("All required information gathered. Report it to the parent")));
                 _parent->Operational(info);
             }
