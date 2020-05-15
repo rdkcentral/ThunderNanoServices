@@ -225,7 +225,7 @@ namespace Plugin {
 
                             result->Body(token);
                             result->ContentType = Web::MIMETypes::MIME_TEXT;
-                            result->ErrorCode = Core::ERROR_NONE;
+                            result->ErrorCode = Web::STATUS_OK;
                             result->Message = "Ok";
                         }
                     }

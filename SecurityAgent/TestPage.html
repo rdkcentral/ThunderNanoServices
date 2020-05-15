@@ -41,8 +41,10 @@ params <input type="text" id="params" /> <br/>
 
 var ip = '192.168.1.128'
 var port = 8080
-var withoutTokenJS = new ThunderJS({host: ip, port:port});
 var withTokenJS = null;
+
+
+
 
 var payload = localStorage.getItem('token');
 document.getElementById('tokenBody').value = payload;
@@ -50,11 +52,20 @@ function connectWithToken() {
 	var temp = document.getElementById('tokenBody').value;
 	localStorage.setItem('token', temp);
 	
-	withoutTokenJS.call('SecurityAgent', 'createtoken', {url: temp})	
-	.then(function(res){
-		withTokenJS = new ThunderJS({host: ip, port: port, token: res.token});
-		console.log('connecting with token: ', res.token);
-	});
+
+	var xhr = new XMLHttpRequest();
+	xhr.open('PUT', 'http://' + ip + ':' + port + '/Service/SecurityAgent/Token' , true);
+
+	xhr.onreadystatechange = function() {
+		if (this && this.readyState === 4) {
+			if (this.status === 200) {
+						withTokenJS = new ThunderJS({host: ip, port: port, token: this.responseText});
+				console.log('connecting with token: ', this.responseText);
+			}
+		}
+    }
+	xhr.send(payload);
+
 }
 
 function request(){
