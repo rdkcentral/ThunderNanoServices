@@ -563,7 +563,6 @@ namespace Plugin {
 
         uint32_t result = Core::ERROR_GENERAL;
 
-        Exchange::IInputSwitch* switcher;
         if (_inputSwitch) {
             result = _inputSwitch->Select(callsign);
         }

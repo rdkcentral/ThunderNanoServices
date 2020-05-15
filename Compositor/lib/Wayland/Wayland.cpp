@@ -414,13 +414,13 @@ namespace Plugin {
         {
             return (Core::ERROR_UNAVAILABLE);
         }
-        uint32_t Select(const string& name) override
+        uint32_t Select(const string& callsign) override
         {
             uint32_t status = Core::ERROR_UNAVAILABLE;
             std::list<Entry*>::iterator index(_clients.begin());
             while (index != _clients.end()) {
-                if (name == (*index)->Name()) {
-                    _server->SetInput(name.c_str());
+                if ((*index)->Name().find(callsign) == 0) {
+                    _server->SetInput((*index)->Name().c_str());
                     status = Core::ERROR_NONE;
                 }
                 index++;
