@@ -1015,8 +1015,7 @@ static GSourceFuncs _handlerIntervention =
                     [](gpointer customdata) -> gboolean {
                         WebKitImplementation* object = static_cast<WebKitImplementation*>(customdata);
 #ifdef WEBKIT_GLIB_API
-                        auto* backend = webkit_web_view_backend_get_wpe_backend(webkit_web_view_get_backend(object->_view));
-                        wpe_view_backend_remove_activity_state(backend, wpe_view_activity_state_in_window | wpe_view_activity_state_focused);
+                        webkit_web_view_suspend(object->_view);
 #else
                         WKViewSetViewState(object->_view, (object->_hidden ? 0 : kWKViewStateIsVisible));
 #endif
@@ -1041,11 +1040,7 @@ static GSourceFuncs _handlerIntervention =
                     [](gpointer customdata) -> gboolean {
                         WebKitImplementation* object = static_cast<WebKitImplementation*>(customdata);
 #ifdef WEBKIT_GLIB_API
-                        auto* backend = webkit_web_view_backend_get_wpe_backend(webkit_web_view_get_backend(object->_view));
-                        uint32_t state = wpe_view_activity_state_in_window;
-                        if (!object->_hidden)
-                            state |= wpe_view_activity_state_focused;
-                        wpe_view_backend_add_activity_state(backend, state);
+                        webkit_web_view_resume(object->_view);
 #else
                         WKViewSetViewState(object->_view, (object->_hidden ? 0 : kWKViewStateIsVisible) | kWKViewStateIsInWindow);
 #endif
