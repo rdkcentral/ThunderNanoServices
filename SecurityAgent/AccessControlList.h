@@ -158,29 +158,12 @@ namespace Plugin {
                 PluginsMap _plugins;
             };
 
-            class Role : public Core::JSON::Container {
-            public:
-                Role(const Role&) = delete;
-                Role& operator=(const Role&) = delete;
-
-                Role()
-                    : Configuration()
-                {
-                    Add(_T("thunder"), &Configuration);
-                }
-                virtual ~Role()
-                {
-                }
-
-            public:
-                Plugins Configuration;
-            };
             class Roles : public Core::JSON::Container {
             private:
-                using RolesMap = std::map<string, Role>;
+                using RolesMap = std::map<string, Plugins>;
 
             public:
-                using Iterator = Core::IteratorMapType<const RolesMap, const Role&, const string&, RolesMap::const_iterator>;
+                using Iterator = Core::IteratorMapType<const RolesMap, const Plugins&, const string&, RolesMap::const_iterator>;
 
                 Roles(const Roles&) = delete;
                 Roles& operator=(const Roles&) = delete;
@@ -298,9 +281,11 @@ namespace Plugin {
                         std::regex expression(index->c_str());
                         std::smatch matchList;
                         found = std::regex_search(method, matchList, expression);
-                        index++;
+                        if (found == false) {
+                            index++;
+                        }
                     }
-                    return (_defaultBlocked ^ found);
+                    return !(_defaultBlocked ^ found);
                 }
 
             private:
@@ -332,7 +317,6 @@ namespace Plugin {
         public:
             bool Allowed(const string callsign, const string& method) const
             {
-                bool found = false;
                 bool pluginFound = false;
 
                 std::map<string, Plugin>::const_iterator index(_plugins.begin());
@@ -340,12 +324,12 @@ namespace Plugin {
                     std::regex expression(index->first.c_str());
                     std::smatch matchList;
                     pluginFound = std::regex_search(callsign, matchList, expression);
-                    if (pluginFound == true) {
-                        found = index->second.Allowed(method);
+                    if (pluginFound == false) {
+                        index++;
                     }
-                    index++;
                 }
-                return (_defaultBlocked ^ found);
+
+                return (pluginFound == false ? !_defaultBlocked : index->second.Allowed(method));
             }
 
         private:
@@ -402,7 +386,9 @@ namespace Plugin {
                 if (std::regex_search(URL, matchList, expression) == true) {
                     result = &(index->second);
                 }
-                index++;
+                else {
+                    index++;
+                }
             }
 
             return (result);
@@ -427,7 +413,7 @@ namespace Plugin {
 
                 _filterMap.emplace(std::piecewise_construct,
                     std::forward_as_tuple(roleName),
-                    std::forward_as_tuple(rolesIndex.Current().Configuration));
+                    std::forward_as_tuple(rolesIndex.Current()));
             }
 
             Core::JSON::ArrayType<JSONACL::Group>::Iterator index = controlList.Groups.Elements();
