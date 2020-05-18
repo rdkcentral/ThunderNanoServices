@@ -397,10 +397,12 @@ namespace Implementation {
         Config()
             : Core::JSON::Container()
             , Renderer(_T("/usr/lib/libwesteros_render_gl.so"))
+            , GLName(_T("libwesteros_gl.so.0.0.0"))
             , Display(_T("wayland-0"))
             , Cursor(_T(""))
         {
             Add(_T("renderer"), &Renderer);
+            Add(_T("glname"), &GLName);
             Add(_T("display"), &Display);
             Add(_T("cursor"), &Cursor);
             Add(_T("width"), &Width);
@@ -412,6 +414,7 @@ namespace Implementation {
 
     public:
         Core::JSON::String Renderer;
+        Core::JSON::String GLName;
         Core::JSON::String Display;
         Core::JSON::String Cursor;
         Core::JSON::DecUInt32 Width;
@@ -419,45 +422,57 @@ namespace Implementation {
     };
  
     class WesterosGL {
+    private:
+        typedef bool (*SetDisplayMode)(WstGLCtx *ctx, const char *mode);
     public:
         WesterosGL(const WesterosGL&) = delete;
         WesterosGL& operator= (const WesterosGL&) = delete;
 
-        WesterosGL() 
+        WesterosGL()
             : _context(nullptr)
             , _resolution(Exchange::IComposition::ScreenResolution_1080i50Hz) {
-            _context = WstGLInit();
         }
         ~WesterosGL() {
-            WstGLTerm(_context);
+            if (_context != nullptr) {
+                WstGLTerm(_context);
+            }
+        }
+
+        void InitContext(const string& glName) {
+            Core::Library library(glName.c_str());
+            if (library.IsLoaded() == true) {
+                _wstGLSetDisplayMode = reinterpret_cast<SetDisplayMode>(library.LoadFunction(_T("WstGLSetDisplayMode")));
+                if (_wstGLSetDisplayMode != nullptr) {
+                    _context = WstGLInit();
+                }
+            }
         }
 
     public:
         uint32_t SetResolution(const Exchange::IComposition::ScreenResolution value) {
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
-            #ifdef RESOLUTION_SUPPORT
+            if (_context) {
 
-            const char* request = nullptr;
-            switch(value) {
-                case Exchange::IComposition::ScreenResolution_480i:      request = "768x480";      break;
-                case Exchange::IComposition::ScreenResolution_480p:      request = "768x480";      break;
-                case Exchange::IComposition::ScreenResolution_720p:      request = "1280x720";     break;
-                case Exchange::IComposition::ScreenResolution_720p50Hz:  request = "1280x720x25";  break;
-                case Exchange::IComposition::ScreenResolution_1080p24Hz: request = "1920x1080x12"; break;
-                case Exchange::IComposition::ScreenResolution_1080i50Hz: request = "1920x1080x25"; break;
-                case Exchange::IComposition::ScreenResolution_1080p50Hz: request = "1920x1080x25"; break;
-                case Exchange::IComposition::ScreenResolution_1080p60Hz: request = "1920x1080x30"; break;
-                case Exchange::IComposition::ScreenResolution_2160p50Hz: request = "3840x2160x25"; break;
-                case Exchange::IComposition::ScreenResolution_2160p60Hz: request = "3840x2160x30"; break;
-                default: break;
+                const char* request = nullptr;
+                switch(value) {
+                    case Exchange::IComposition::ScreenResolution_480i:      request = "768x480";      break;
+                    case Exchange::IComposition::ScreenResolution_480p:      request = "768x480";      break;
+                    case Exchange::IComposition::ScreenResolution_720p:      request = "1280x720";     break;
+                    case Exchange::IComposition::ScreenResolution_720p50Hz:  request = "1280x720x25";  break;
+                    case Exchange::IComposition::ScreenResolution_1080p24Hz: request = "1920x1080x12"; break;
+                    case Exchange::IComposition::ScreenResolution_1080i50Hz: request = "1920x1080x25"; break;
+                    case Exchange::IComposition::ScreenResolution_1080p50Hz: request = "1920x1080x25"; break;
+                    case Exchange::IComposition::ScreenResolution_1080p60Hz: request = "1920x1080x30"; break;
+                    case Exchange::IComposition::ScreenResolution_2160p50Hz: request = "3840x2160x25"; break;
+                    case Exchange::IComposition::ScreenResolution_2160p60Hz: request = "3840x2160x30"; break;
+                    default: break;
+                }
+                if ( (request != nullptr) && (_wstGLSetDisplayMode) && (_wstGLSetDisplayMode(_context, request) == true) ) {
+                    result = Core::ERROR_NONE;
+                    _resolution = value;
+                }
             }
-            if ( (request != nullptr) && (WstGLSetDisplayMode(_context, request) == true) ) {
-                result = Core::ERROR_NONE;
-                _resolution = value;
-            }
-
-            #endif
 
             return (result);
         }
@@ -468,11 +483,12 @@ namespace Implementation {
 
     private:
         WstGLCtx* _context;
+        SetDisplayMode _wstGLSetDisplayMode;
         Exchange::IComposition::ScreenResolution _resolution;
     };
 
     static WesterosGL WesterosContext;
- 
+
     uint32_t SetResolution(Exchange::IComposition::ScreenResolution value) {
         return (WesterosContext.SetResolution(value));
     }
@@ -493,6 +509,9 @@ namespace Implementation {
         if(!cursor.empty()) {
             instance->setCursor(cursor);
         }
+
+        WesterosContext.InitContext(config.GLName.Value());
+
         return instance;
     }
 } // namespace Implementation

@@ -28,6 +28,7 @@
 #include <compositor/Client.h>
 #include <compositorclient/Implementation.h>
 #include <interfaces/IComposition.h>
+#include <interfaces/IInputSwitch.h>
 
 #include <virtualinput/virtualinput.h>
 
