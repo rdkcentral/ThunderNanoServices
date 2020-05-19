@@ -127,6 +127,8 @@ namespace Plugin {
             containerName = containers->Id();
             response.Add(containerName);
         }
+        
+        containers->Release();
 
         return Core::ERROR_NONE;
     }
@@ -152,12 +154,13 @@ namespace Plugin {
                 
                 for (int ip = 0; ip < iterator->NumIPs(); ip++) {
                     Core::JSON::String ipJSON;
-                    ipJSON = iterator->IP(ip);
+                    ipJSON = iterator->Address(ip);
 
                     networkData.Ips.Add(ipJSON);
                 }                
             }
 
+            iterator->Release();
             container->Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
@@ -184,6 +187,7 @@ namespace Plugin {
             response.Resident = memoryInfo->Resident();
             response.Shared = memoryInfo->Shared();
 
+            memoryInfo->Release();
             found->Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
@@ -204,17 +208,18 @@ namespace Plugin {
         auto container = administrator.Get(index); 
 
         if (container != nullptr) {
-            auto cpuInfo = container->Cpu();
+            auto processorInfo = container->ProcessorInfo();
             
-            response.Total = cpuInfo->TotalUsage();
+            response.Total = processorInfo->TotalUsage();
             
-            for (int i = 0; cpuInfo->CoreUsage(i) != UINT64_MAX; i++) {
+            for (int i = 0; processorInfo->CoreUsage(i) != UINT64_MAX; i++) {
                 Core::JSON::DecUInt64 coreTime;
-                coreTime = cpuInfo->CoreUsage(i);
+                coreTime = processorInfo->CoreUsage(i);
 
                 response.Cores.Add(coreTime);
             }
 
+            processorInfo->Release();
             container->Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
