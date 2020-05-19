@@ -420,7 +420,6 @@ class BluetoothControl : public PluginHost::IPlugin
             void Update(const le_advertising_info& info) override
             {
                 BT_TRACE(ControlFlow, info);
-
                 if ((Application() != nullptr) && (info.bdaddr_type == 0 /* public */)
                         && ((info.evt_type == 0 /* undirected connectable advertisement */) || (info.evt_type == 4 /* scan response */))) {
                     Bluetooth::EIR eir(info.data, info.length);
@@ -2350,6 +2349,9 @@ class BluetoothControl : public PluginHost::IPlugin
         uint32_t endpoint_pair(const JsonData::BluetoothControl::PairParamsData& params);
         uint32_t endpoint_unpair(const JsonData::BluetoothControl::ConnectParamsInfo& params);
         uint32_t endpoint_abortpairing(const JsonData::BluetoothControl::ConnectParamsInfo& params);
+        uint32_t endpoint_pincode(const JsonData::BluetoothControl::PincodeParamsData& params);
+        uint32_t endpoint_passkey(const JsonData::BluetoothControl::PasskeyParamsInfo& params);
+        uint32_t endpoint_confirmpasskey(const JsonData::BluetoothControl::ConfirmpasskeyParamsData& params);
         uint32_t get_adapters(Core::JSON::ArrayType<Core::JSON::DecUInt16>& response) const;
         uint32_t get_adapter(const string& index, JsonData::BluetoothControl::AdapterData& response) const;
         uint32_t get_devices(Core::JSON::ArrayType<Core::JSON::String>& response) const;
@@ -2357,7 +2359,9 @@ class BluetoothControl : public PluginHost::IPlugin
         void event_scancomplete();
         void event_devicestatechange(const string& address, const JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType& state,
                                      const JsonData::BluetoothControl::DevicestatechangeParamsData::DisconnectreasonType& disconnectreason = JsonData::BluetoothControl::DevicestatechangeParamsData::DisconnectreasonType::TERMINATEDBYHOST);
-
+        void event_pincoderequest(const string& address);
+        void event_passkeyrequest(const string& address);
+        void event_passkeyconfirmrequest(const string& address, const uint32_t& secret);
     private:
         Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
