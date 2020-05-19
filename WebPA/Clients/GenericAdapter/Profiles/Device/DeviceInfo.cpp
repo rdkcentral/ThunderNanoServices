@@ -20,8 +20,8 @@
 #include "Module.h"
 #include "DeviceInfo.h"
 
-#include <interfaces/json/JsonData_DeviceInfo.h>
-#include <jsonrpc/jsonrpc.h>
+u#include <interfaces/json/JsonData_DeviceInfo.h>
+#include <core/JSONRPC.h>
 
 namespace WPEFramework {
 
@@ -305,7 +305,7 @@ DeviceInfo* DeviceInfo::Instance()
 void DeviceInfo::Info()
 {
     Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:80")));
-    JSONRPC::Client remoteObject(_T("DeviceInfo.1"), 1.0);
+    JSONRPC::LinkType<Core::JSON::IElement> remoteObject(_T("DeviceInfo.1"), 1.0);
     if (remoteObject.Get<JsonData::DeviceInfo::SysteminfoData>(1000, _T("systeminfo"), _systemInfoData) == Core::ERROR_NONE) {
         TRACE(Trace::Information, (_T("DeviceInfo: SoftwareVerison = %s, Serialnumber = %s \n"), _systemInfoData.Version.Value().c_str(), _systemInfoData.Serialnumber.Value().c_str()));
     } else {

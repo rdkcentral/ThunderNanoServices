@@ -218,10 +218,9 @@ void GenericAdapter::ConnectToParodus()
 
     int backoffRetryTime = 0;
     int backoffMaxTime = 5;
-    int maxRetrySleep;
-    //Retry Backoff count shall start at c=2 & calculate 2^c - 1.
     int counter = 2;
-    maxRetrySleep = (int) pow(2, backoffMaxTime) - 1;
+    //Retry Backoff count shall start at c=2 & calculate 2^c - 1.
+    int maxRetrySleep = (int) pow(2, backoffMaxTime) - 1;
     TRACE(Trace::Information, (_T("maxRetrySleep = %d"), maxRetrySleep));
 
     libpd_cfg_t clientCFG = {.service_name = "config",
@@ -232,8 +231,7 @@ void GenericAdapter::ConnectToParodus()
 
     TRACE(Trace::Information, (_T("parodusUrl = %s clientUrl = %s"), _parodusURL.c_str(), _clientURL.c_str()));
 
-    while (true)
-    {
+    while (IsRunning()) {
         if (backoffRetryTime < maxRetrySleep) {
             backoffRetryTime = (int) pow(2, counter) - 1;
         }
