@@ -23,142 +23,25 @@
 #include <interfaces/IBluetooth.h>
 #include <interfaces/json/JsonData_BluetoothControl.h>
 
+#include "Tracing.h"
+
 namespace WPEFramework {
 
 namespace Plugin {
+
+using namespace Tracing;
 
 class BluetoothControl : public PluginHost::IPlugin
                        , public PluginHost::IWeb
                        , public PluginHost::JSONRPC
                        , public Exchange::IBluetooth {
+
     private:
         static uint32_t UnpackDeviceClass(const uint8_t buffer[3])
         {
             ASSERT(buffer != nullptr);
             return ((buffer[2] << 16) | (buffer[1] << 8) | (buffer[0]));
         }
-
-        class ManagementFlow {
-        public:
-            ManagementFlow() = delete;
-            ManagementFlow(const ManagementFlow&) = delete;
-            ManagementFlow& operator=(const ManagementFlow&) = delete;
-            ManagementFlow(const TCHAR formatter[], ...)
-            {
-                va_list ap;
-                va_start(ap, formatter);
-                Trace::Format(_text, formatter, ap);
-                va_end(ap);
-            }
-            explicit ManagementFlow(const string& text)
-                : _text(Core::ToString(text))
-            {
-            }
-            ManagementFlow(const uint16_t opcode, const TCHAR* opcodeStr,  const Bluetooth::Address& address, const uint8_t type)
-            {
-                ASSERT(type < 3);
-                static const TCHAR* typeStr[] = { _T("BREDR"), _T("LE_PUBLIC"), _T("LE_RANDOM") };
-                Trace::Format(_text, _T("%s(0x%02X) address=%s, type=%s"), opcodeStr, opcode, address.ToString().c_str(), typeStr[type]);
-            }
-            ~ManagementFlow()
-            {
-            }
-
-        public:
-            inline const char* Data() const
-            {
-                return (_text.c_str());
-            }
-            inline uint16_t Length() const
-            {
-                return (static_cast<uint16_t>(_text.length()));
-            }
-
-        private:
-            std::string _text;
-        }; // class ManagementFlow
-
-        class ControlFlow {
-        public:
-            ControlFlow() = delete;
-            ControlFlow(const ControlFlow&) = delete;
-            ControlFlow& operator=(const ControlFlow&) = delete;
-            ControlFlow(const TCHAR formatter[], ...)
-            {
-                va_list ap;
-                va_start(ap, formatter);
-                Trace::Format(_text, formatter, ap);
-                va_end(ap);
-            }
-            explicit ControlFlow(const string& text)
-                : _text(Core::ToString(text))
-            {
-            }
-            ControlFlow(const uint16_t opcode, const TCHAR* opcodeStr, const uint16_t handle)
-            {
-                Trace::Format(_text, _T("%s(0x%02X) handle=%i"), opcodeStr, opcode, handle);
-            }
-            ControlFlow(const uint16_t opcode, const TCHAR* opcodeStr, const Bluetooth::Address& address)
-            {
-                Trace::Format(_text, _T("%s(0x%02X) address=%s"), opcodeStr, opcode, address.ToString().c_str());
-            }
-            ControlFlow(const uint16_t opcode, const TCHAR* opcodeStr,  const Bluetooth::Address& address, const uint8_t type)
-            {
-                ASSERT(type < 3);
-                static const TCHAR* typeStr[] = { _T("BREDR"), _T("LE_PUBLIC"), _T("LE_RANDOM") };
-                Trace::Format(_text, _T("%s(0x%02X) address=%s, type=%s"), opcodeStr, opcode, address.ToString().c_str(), typeStr[type]);
-            }
-            ~ControlFlow()
-            {
-            }
-
-        public:
-            inline const char* Data() const
-            {
-                return (_text.c_str());
-            }
-            inline uint16_t Length() const
-            {
-                return (static_cast<uint16_t>(_text.length()));
-            }
-
-        private:
-            std::string _text;
-        }; // class ControlFlow
-
-        class DeviceFlow {
-        public:
-            DeviceFlow() = delete;
-            DeviceFlow(const DeviceFlow&) = delete;
-            DeviceFlow& operator=(const DeviceFlow&) = delete;
-            DeviceFlow(const TCHAR formatter[], ...)
-            {
-                va_list ap;
-                va_start(ap, formatter);
-                Trace::Format(_text, formatter, ap);
-                va_end(ap);
-            }
-            explicit DeviceFlow(const string& text)
-                : _text(Core::ToString(text))
-            {
-            }
-            ~DeviceFlow()
-            {
-            }
-
-        public:
-            inline const char* Data() const
-            {
-                return (_text.c_str());
-            }
-            inline uint16_t Length() const
-            {
-                return (static_cast<uint16_t>(_text.length()));
-            }
-
-        private:
-            std::string _text;
-        }; // class DeviceFlow
 
         class ControlSocket : public Bluetooth::HCISocket {
         private:
@@ -178,199 +61,135 @@ class BluetoothControl : public PluginHost::IPlugin
                 void Update(const mgmt_hdr& header) override
                 {
                     const uint8_t* data = &(reinterpret_cast<const uint8_t*>(&header)[sizeof(mgmt_hdr)]);
-                    uint16_t opCode = btohs(header.opcode);
-                    uint16_t device = btohs(header.index);
-                    uint16_t packageLen = btohs(header.len);
-
-                    switch (opCode) {
-                    case MGMT_EV_CMD_COMPLETE: {
-                        const mgmt_ev_cmd_complete* info = reinterpret_cast<const mgmt_ev_cmd_complete*>(data);
-                        TRACE(ManagementFlow, (_T("MGMT_EV_CMD_COMPLETE(%02X)"), MGMT_EV_CMD_COMPLETE));
-                        TRACE(ManagementFlow, (_T("  opcode=%02x"), info->opcode));
-                        if (info->opcode == MGMT_OP_PAIR_DEVICE) {
-                            const mgmt_rp_pair_device* payload = reinterpret_cast<const mgmt_rp_pair_device*>(info->data);
-                            Bluetooth::Address address(payload->addr.bdaddr);
-                            Bluetooth::Address::type type(static_cast<const Bluetooth::Address::type>(payload->addr.type));
-                            _parent.PairingComplete(address, type, info->status);
-                        }
+                    switch (btohs(header.opcode)) {
+                    case MGMT_EV_CMD_COMPLETE:
+                        Update(*reinterpret_cast<const mgmt_ev_cmd_complete*>(data));
                         break;
-                    }
                     case MGMT_EV_CONTROLLER_ERROR:
-                        Update(reinterpret_cast<const mgmt_ev_controller_error*>(data));
+                        Update(*reinterpret_cast<const mgmt_ev_controller_error*>(data));
                         break;
                     case MGMT_EV_AUTH_FAILED:
-                        Update(reinterpret_cast<const mgmt_ev_auth_failed*>(data));
+                        Update(*reinterpret_cast<const mgmt_ev_auth_failed*>(data));
                         break;
                     case MGMT_EV_NEW_CONN_PARAM:
-                        Update(reinterpret_cast<const mgmt_ev_new_conn_param*>(data));
+                        Update(*reinterpret_cast<const mgmt_ev_new_conn_param*>(data));
                         break;
                     case MGMT_EV_DEVICE_CONNECTED:
-                        Update(reinterpret_cast<const mgmt_ev_device_connected*>(data));
+                        Update(*reinterpret_cast<const mgmt_ev_device_connected*>(data));
                         break;
                     case MGMT_EV_DEVICE_DISCONNECTED:
-                        Update(reinterpret_cast<const mgmt_ev_device_disconnected*>(data));
+                        Update(*reinterpret_cast<const mgmt_ev_device_disconnected*>(data));
                         break;
                     case MGMT_EV_PIN_CODE_REQUEST:
-                        Update(reinterpret_cast<const mgmt_ev_pin_code_request*>(data));
+                        Update(*reinterpret_cast<const mgmt_ev_pin_code_request*>(data));
                         break;
                     case MGMT_EV_USER_PASSKEY_REQUEST:
-                        Update(reinterpret_cast<const mgmt_ev_user_passkey_request*>(data));
+                        Update(*reinterpret_cast<const mgmt_ev_user_passkey_request*>(data));
                         break;
                     case MGMT_EV_USER_CONFIRM_REQUEST:
-                        Update(reinterpret_cast<const mgmt_ev_user_confirm_request*>(data));
+                        Update(*reinterpret_cast<const mgmt_ev_user_confirm_request*>(data));
                         break;
                     case MGMT_EV_NEW_LINK_KEY:
-                        Update(reinterpret_cast<const mgmt_ev_new_link_key*>(data));
+                        Update(*reinterpret_cast<const mgmt_ev_new_link_key*>(data));
                         break;
                     case MGMT_EV_NEW_IRK:
-                        Update(reinterpret_cast<const mgmt_ev_new_irk*>(data));
+                        Update(*reinterpret_cast<const mgmt_ev_new_irk*>(data));
                         break;
                     case MGMT_EV_NEW_CSRK:
-                        Update(reinterpret_cast<const mgmt_ev_new_csrk*>(data));
+                        Update(*reinterpret_cast<const mgmt_ev_new_csrk*>(data));
                         break;
                     case MGMT_EV_NEW_LONG_TERM_KEY:
-                        Update(reinterpret_cast<const mgmt_ev_new_long_term_key*>(data));
+                        Update(*reinterpret_cast<const mgmt_ev_new_long_term_key*>(data));
                         break;
                     default:
-                        TRACE(ManagementFlow, (_T("UNKNOWN MGMT EVENT: device=%d, opcode=0x%04X, length=%d"),
-                                               device, opCode, packageLen));
-                        if (packageLen > 0) {
-                            string dataText;
-                            Core::ToHexString(data, packageLen, dataText);
-                            TRACE(ManagementFlow, (_T("  data=%s"), dataText.c_str()));
-                        }
+                        BT_TRACE(ManagementFlow, header, data);
                         break;
                     }
                 }
-                void Update(const mgmt_ev_controller_error* info)
+                void Update(const mgmt_ev_cmd_complete& info)
                 {
-                    TRACE(ManagementFlow, (_T("MGMT_EV_CONTROLLER_ERROR(%02X)"), MGMT_EV_CONTROLLER_ERROR));
-                    TRACE(ManagementFlow, (_T("  error_code=0x%02X"), info->error_code));
-                }
-                void Update(const mgmt_ev_auth_failed* info)
-                {
-                    TRACE(ManagementFlow, (MGMT_EV_AUTH_FAILED, _T("MGMT_EV_AUTH_FAILED"),
-                                           Bluetooth::Address(info->addr.bdaddr), info->addr.type));
-                    TRACE(ManagementFlow, (_T("  status=0x%02X"), info->status));
-                }
-                void Update(const mgmt_ev_new_conn_param* info)
-                {
-                    TRACE(ManagementFlow, (MGMT_EV_NEW_CONN_PARAM, _T("MGMT_EV_NEW_CONN_PARAM"),
-                                           Bluetooth::Address(info->addr.bdaddr), info->addr.type));
-                    TRACE(ManagementFlow, (_T("  store_hint=%d, min_interval=%d, max_interval=%d, latency=%d, timeout=%d"),
-                                           info->store_hint, btohs(info->min_interval), btohs(info->max_interval),
-                                           btohs(info->latency), btohs(info->timeout)));
-                }
-                void Update(const mgmt_ev_device_connected* info)
-                {
-                    string eir; Core::ToHexString(info->eir, btohs(info->eir_len), eir);
-
-                    TRACE(ManagementFlow, (MGMT_EV_DEVICE_CONNECTED, _T("MGMT_EV_DEVICE_CONNECTED"),
-                                           Bluetooth::Address(info->addr.bdaddr), info->addr.type));
-                    TRACE(ManagementFlow, (_T("  flags=0x%08x, eir_len=%i, eir=%s"), btohl(info->flags), btohs(info->eir_len), eir.c_str()));
-                }
-                void Update(const mgmt_ev_device_disconnected* info)
-                {
-                    TRACE(ManagementFlow, (MGMT_EV_DEVICE_DISCONNECTED, _T("MGMT_EV_DEVICE_DISCONNECTED"),
-                                           Bluetooth::Address(info->addr.bdaddr), info->addr.type));
-                    TRACE(ManagementFlow, (_T("  reason=%d"), info->reason));
-                }
-                void Update(const mgmt_ev_pin_code_request* info)
-                {
-                    Bluetooth::Address address(info->addr.bdaddr);
-                    Bluetooth::Address::type type(static_cast<const Bluetooth::Address::type>(info->addr.type));
-
-                    TRACE(ManagementFlow, (MGMT_EV_PIN_CODE_REQUEST, _T("MGMT_EV_PIN_CODE_REQUEST"), address, type));
-                    TRACE(ManagementFlow, (_T("  secure=%d"), info->secure));
-
-                    _parent.RequestPINCode(address, type);
-                }
-                void Update(const mgmt_ev_user_passkey_request* info)
-                {
-                    Bluetooth::Address address(info->addr.bdaddr);
-                    Bluetooth::Address::type type(static_cast<const Bluetooth::Address::type>(info->addr.type));
-
-                    TRACE(ManagementFlow, (MGMT_EV_USER_PASSKEY_REQUEST, _T("MGMT_EV_USER_PASSKEY_REQUEST"), address, type));
-
-                    _parent.RequestPasskey(address, type);
-                }
-                void Update(const mgmt_ev_user_confirm_request* info)
-                {
-                    Bluetooth::Address address(info->addr.bdaddr);
-                    Bluetooth::Address::type type(static_cast<const Bluetooth::Address::type>(info->addr.type));
-                    uint32_t passkey = btohl(info->value);
-
-                    TRACE(ManagementFlow, (MGMT_EV_USER_CONFIRM_REQUEST, _T("MGMT_EV_USER_CONFIRM_REQUEST"), address, type));
-                    TRACE(ManagementFlow, (_T("  hint=%d, value=%06d"), info->confirm_hint, passkey));
-
-                    _parent.RequestPasskeyConfirm(address, type, passkey);
-                }
-                void Update(const mgmt_ev_new_link_key* info)
-                {
-                    Bluetooth::Address address(info->key.addr.bdaddr);
-                    Bluetooth::Address::type type(static_cast<const Bluetooth::Address::type>(info->key.addr.type));
-                    string key; Core::ToHexString(info->key.val, sizeof(info->key.val), key);
-
-                    TRACE(ManagementFlow, (MGMT_EV_NEW_LINK_KEY, _T("MGMT_EV_NEW_LINK_KEY"), address, info->key.addr.type));
-                    TRACE(ManagementFlow, (_T("  store_hint=%d, key.type=%d, key.val=%s"),
-                                           info->store_hint, info->key.type, key.c_str()));
-
-                    if (info->store_hint != 0) {
-                        if (_parent.SecurityKey(address, type,
-                                                Bluetooth::LinkKey(info->key.addr.bdaddr, info->key.val,
-                                                                   info->key.pin_len, info->key.addr.type)) != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, (_T("Failed to store the link key")));
-                        }
+                    BT_TRACE(ManagementFlow, info);
+                    if (info.opcode == MGMT_OP_PAIR_DEVICE) {
+                        const mgmt_rp_pair_device* payload = reinterpret_cast<const mgmt_rp_pair_device*>(info.data);
+                        _parent.PairingComplete(payload->addr.bdaddr, static_cast<const Bluetooth::Address::type>(payload->addr.type), info.status);
                     }
                 }
-                void Update(const mgmt_ev_new_irk* info)
+                void Update(const mgmt_ev_controller_error& info)
                 {
-                    Bluetooth::Address address(info->key.addr.bdaddr);
-                    Bluetooth::Address::type type(static_cast<const Bluetooth::Address::type>(info->key.addr.type));
-                    string key; Core::ToHexString(info->key.val, sizeof(info->key.val), key);
-
-                    TRACE(ManagementFlow, (MGMT_EV_NEW_IRK, _T("MGMT_EV_NEW_IRK"),
-                                           address, info->key.addr.type));
-                    TRACE(ManagementFlow, (_T("  store_hint=%d, rpa=%s, key.val=%s"),
-                                           info->store_hint, Bluetooth::Address(info->rpa).ToString().c_str(), key.c_str()));
-
-                    if (info->store_hint != 0) {
-                        if (_parent.SecurityKey(address, type,
-                                                Bluetooth::IdentityKey(info->key.addr.bdaddr, info->key.addr.type, info->key.val)) != Core::ERROR_NONE) {
+                    BT_TRACE(ManagementFlow, info);
+                }
+                void Update(const mgmt_ev_auth_failed& info)
+                {
+                    BT_TRACE(ManagementFlow, info);
+                }
+                void Update(const mgmt_ev_new_conn_param& info)
+                {
+                    BT_TRACE(ManagementFlow, info);
+                }
+                void Update(const mgmt_ev_device_connected& info)
+                {
+                    BT_TRACE(ManagementFlow, info);
+                }
+                void Update(const mgmt_ev_device_disconnected& info)
+                {
+                    BT_TRACE(ManagementFlow, info);
+                }
+                void Update(const mgmt_ev_pin_code_request& info)
+                {
+                    BT_TRACE(ManagementFlow, info);
+                    _parent.RequestPINCode(info.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.addr.type));
+                }
+                void Update(const mgmt_ev_user_passkey_request& info)
+                {
+                    BT_TRACE(ManagementFlow, info);
+                    _parent.RequestPasskey(info.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.addr.type));
+                }
+                void Update(const mgmt_ev_user_confirm_request& info)
+                {
+                    BT_TRACE(ManagementFlow, info);
+                    _parent.RequestPasskeyConfirm(info.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.addr.type), btohl(info.value));
+                }
+                void Update(const mgmt_ev_new_link_key& info)
+                {
+                    BT_TRACE(ManagementFlow, info);
+                    if (info.store_hint != 0) {
+                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.key.addr.type),
+                                                Bluetooth::LinkKey(info.key.addr.bdaddr, info.key.val, info.key.pin_len, info.key.addr.type)) != Core::ERROR_NONE) {
+                            TRACE(Trace::Error, (_T("Failed to store link key")));
+                        }
+                    } else {
+                        TRACE(ManagementFlow, (_T("Management hints not to store the link key")));
+                    }
+                }
+                void Update(const mgmt_ev_new_irk& info)
+                {
+                    BT_TRACE(ManagementFlow, info);
+                    if (info.store_hint != 0) {
+                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.key.addr.type),
+                                                Bluetooth::IdentityKey(info.key.addr.bdaddr, info.key.addr.type, info.key.val)) != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Failed to store IRK")));
                         }
+                    } else {
+                        TRACE(ManagementFlow, (_T("Management hints not to store IRK")));
                     }
                 }
-                void Update(const mgmt_ev_new_csrk* info)
+                void Update(const mgmt_ev_new_csrk& info)
                 {
-                    string key; Core::ToHexString(info->key.val, sizeof(info->key.val), key);
-
-                    TRACE(ManagementFlow, (MGMT_EV_NEW_CSRK, _T("MGMT_EV_NEW_CSRK"),
-                                           Bluetooth::Address(info->key.addr.bdaddr), info->key.addr.type));
-                    TRACE(ManagementFlow, (_T("  store_hint=%d, key.type=%d, key.val=%s"),
-                                           info->store_hint, info->key.type, key.c_str()));
-
-                    /* For signed GATT writes, not required yet. */
+                    BT_TRACE(ManagementFlow, info);
+                    // For signed GATT writes, not required yet.
                 }
-                void Update(const mgmt_ev_new_long_term_key* info)
+                void Update(const mgmt_ev_new_long_term_key& info)
                 {
-                    Bluetooth::Address address(info->key.addr.bdaddr);
-                    Bluetooth::Address::type type(static_cast<const Bluetooth::Address::type>(info->key.addr.type));
-                    string key; Core::ToHexString(info->key.val, sizeof(info->key.val), key);
-
-                    TRACE(ManagementFlow, (MGMT_EV_NEW_LONG_TERM_KEY, _T("MGMT_EV_NEW_LONG_TERM_KEY"), address, info->key.addr.type));
-                    TRACE(ManagementFlow, (_T("  store_hint=%d, key.type=%d, key.master=%d"),
-                                           info->store_hint, info->key.type, info->key.master));
-                    TRACE(ManagementFlow, (_T("  key.enc_size=%u, key.ediv=%u, key.rand=%llu, key.val=%s"),
-                                           info->key.enc_size, btohs(info->key.ediv), btohll(info->key.rand), key.c_str()));
-
-                    if (info->store_hint != 0) {
-                        if (_parent.SecurityKey(address, type,
-                                                Bluetooth::LongTermKey(info->key.addr.bdaddr, info->key.addr.type, info->key.type,
-                                                                       info->key.master, info->key.enc_size, btohs(info->key.ediv),
-                                                                       btohll(info->key.rand), info->key.val)) != Core::ERROR_NONE) {
+                    BT_TRACE(ManagementFlow, info);
+                    if (info.store_hint != 0) {
+                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.key.addr.type),
+                                                Bluetooth::LongTermKey(info.key.addr.bdaddr, info.key.addr.type, info.key.type,
+                                                                       info.key.master, info.key.enc_size, btohs(info.key.ediv),
+                                                                       btohll(info.key.rand), info.key.val)) != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Failed to store LTK")));
                         }
+                    } else {
+                        TRACE(ManagementFlow, (_T("Management hints not to store LTK")));
                     }
                 }
 
@@ -545,6 +364,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     device->RequestPasskeyConfirm(passkey);
                 });
             }
+
         private:
             template<typename DEVICE, typename LOCATOR>
             void UpdateDevice(const LOCATOR& locator, DEVICE* device, const std::function<void(DEVICE* device)>& action)
@@ -595,19 +415,17 @@ class BluetoothControl : public PluginHost::IPlugin
                     Application()->Discovered(lowEnergy, address, info);
                 }
             }
-            void Update(const le_advertising_info& eventData) override
+
+        public:
+            void Update(const le_advertising_info& info) override
             {
-                string data; Core::ToHexString(eventData.data, eventData.length, data);
-                Bluetooth::Address address(eventData.bdaddr);
+                BT_TRACE(ControlFlow, info);
 
-                TRACE(ControlFlow, (EVT_LE_ADVERTISING_REPORT, _T("EVT_LE_ADVERTISING_REPORT"), address, (eventData.bdaddr_type + 1)));
-                TRACE(ControlFlow, (_T("  evt_type=%d, length=%d, data=%s"), eventData.evt_type, eventData.length, data.c_str()));
+                if ((Application() != nullptr) && (info.bdaddr_type == 0 /* public */)
+                        && ((info.evt_type == 0 /* undirected connectable advertisement */) || (info.evt_type == 4 /* scan response */))) {
+                    Bluetooth::EIR eir(info.data, info.length);
 
-                if ((Application() != nullptr) && (eventData.bdaddr_type == 0 /* public */)
-                        && ((eventData.evt_type == 0 /* undirected connectable advertisement */) || (eventData.evt_type == 4 /* scan response */))) {
-                    Bluetooth::EIR eir(eventData.data, eventData.length);
-
-                    DeviceImpl* device = Application()->Discovered(true, address, eir);
+                    DeviceImpl* device = Application()->Discovered(true, info.bdaddr, eir);
                     if (device != nullptr) {
                         if (eir.Class() != 0) {
                             device->Class(eir.Class());
@@ -618,304 +436,239 @@ class BluetoothControl : public PluginHost::IPlugin
                     }
                 }
             }
-            void Update(const hci_event_hdr& eventData) override
+            void Update(const hci_event_hdr& header) override
             {
-                const uint8_t* data = &(reinterpret_cast<const uint8_t*>(&eventData)[sizeof(hci_event_hdr)]);
+                const uint8_t* data = &(reinterpret_cast<const uint8_t*>(&header)[sizeof(hci_event_hdr)]);
 
-                switch (eventData.evt) {
-                    case EVT_VENDOR: {
-                        TRACE(ControlFlow, (_T("EVT_VENDOR vendor specific information, length [%d]"), eventData.plen));
+                switch (header.evt) {
+                    case EVT_VENDOR:
+                        Update(header.plen, data);
                         break;
-                    }
-                    case EVT_CMD_STATUS: {
-                        const evt_cmd_status* cs = reinterpret_cast<const evt_cmd_status*>(data);
-                        uint16_t opcode = htobs(cs->opcode);
-                        uint8_t cat = (opcode >> 10) & 0x3F;
-                        uint16_t id = (opcode & 0x3FF);
-                        TRACE(ControlFlow, (_T("EVT_CMD_STATUS OpCode: %02X:%03X, Status: %d"), cat, id, cs->status));
+                    case EVT_CMD_COMPLETE:
+                        Update(*reinterpret_cast<const evt_cmd_complete*>(data));
                         break;
-                    }
-                    case EVT_CMD_COMPLETE: {
-                        const evt_cmd_complete* cc = reinterpret_cast<const evt_cmd_complete*>(data);
-                        uint16_t opcode = htobs(cc->opcode);
-                        uint8_t cat = (opcode >> 10) & 0x3F;
-                        uint16_t id = (opcode & 0x3FF);
-                        TRACE(ControlFlow, (_T("EVT_CMD_COMPLETE OpCode: %02X:%03X"), cat, id));
-                        break;
-                    }
-                    case EVT_EXTENDED_INQUIRY_RESULT: {
-                        uint8_t count = data[0];
-                        while (count) {
-                            Update(reinterpret_cast<const extended_inquiry_info*>(data + 1 /* count */ + (count * sizeof(extended_inquiry_info))));
-                            count--;
-                        }
-                        break;
-                    }
-                    case EVT_INQUIRY_RESULT_WITH_RSSI:
-                        Update(reinterpret_cast<const inquiry_info_with_rssi*>(data + 1));
+                    case EVT_CMD_STATUS:
+                        Update(*reinterpret_cast<const evt_cmd_status*>(data));
                         break;
                     case EVT_CONN_REQUEST:
-                        Update(reinterpret_cast<const evt_conn_request*>(data));
+                        Update(*reinterpret_cast<const evt_conn_request*>(data));
                         break;
                     case EVT_CONN_COMPLETE:
-                        Update(reinterpret_cast<const evt_conn_complete*>(data));
+                        Update(*reinterpret_cast<const evt_conn_complete*>(data));
                         break;
                     case EVT_DISCONN_COMPLETE:
-                        Update(reinterpret_cast<const evt_disconn_complete*>(data));
+                        Update(*reinterpret_cast<const evt_disconn_complete*>(data));
                         break;
                     case EVT_REMOTE_NAME_REQ_COMPLETE:
-                        Update(reinterpret_cast<const evt_remote_name_req_complete*>(data));
+                        Update(*reinterpret_cast<const evt_remote_name_req_complete*>(data));
                         break;
                     case EVT_IO_CAPABILITY_REQUEST:
-                        Update(reinterpret_cast<const evt_io_capability_request*>(data));
+                        Update(*reinterpret_cast<const evt_io_capability_request*>(data));
                         break;
                     case EVT_IO_CAPABILITY_RESPONSE:
-                        Update(reinterpret_cast<const evt_io_capability_response*>(data));
+                        Update(*reinterpret_cast<const evt_io_capability_response*>(data));
                         break;
                     case EVT_USER_CONFIRM_REQUEST:
-                        Update(reinterpret_cast<const evt_user_confirm_request*>(data));
+                        Update(*reinterpret_cast<const evt_user_confirm_request*>(data));
                         break;
                     case EVT_USER_PASSKEY_REQUEST:
-                        Update(reinterpret_cast<const evt_user_passkey_request*>(data));
+                        Update(*reinterpret_cast<const evt_user_passkey_request*>(data));
                         break;
                     case EVT_USER_PASSKEY_NOTIFY:
-                        Update(reinterpret_cast<const evt_user_passkey_notify*>(data));
+                        Update(*reinterpret_cast<const evt_user_passkey_notify*>(data));
                         break;
                     case EVT_READ_REMOTE_FEATURES_COMPLETE:
-                        Update(reinterpret_cast<const evt_read_remote_features_complete*>(data));
+                        Update(*reinterpret_cast<const evt_read_remote_features_complete*>(data));
                         break;
                     case EVT_LINK_KEY_REQ:
-                        Update(reinterpret_cast<const evt_link_key_req*>(data));
+                        Update(*reinterpret_cast<const evt_link_key_req*>(data));
                         break;
                     case EVT_LINK_KEY_NOTIFY:
-                        Update(reinterpret_cast<const evt_link_key_notify*>(data));
+                        Update(*reinterpret_cast<const evt_link_key_notify*>(data));
                         break;
                     case EVT_AUTH_COMPLETE:
-                        Update(reinterpret_cast<const evt_auth_complete*>(data));
+                        Update(*reinterpret_cast<const evt_auth_complete*>(data));
                         break;
                     case EVT_SIMPLE_PAIRING_COMPLETE:
-                        Update(reinterpret_cast<const evt_simple_pairing_complete*>(data));
+                        Update(*reinterpret_cast<const evt_simple_pairing_complete*>(data));
                         break;
                     case EVT_LE_META_EVENT: {
                         const evt_le_meta_event* input = reinterpret_cast<const evt_le_meta_event*>(data);
                         switch (input->subevent) {
                         case EVT_LE_CONN_COMPLETE:
-                            Update(reinterpret_cast<const evt_le_connection_complete*>(input->data));
+                            Update(*reinterpret_cast<const evt_le_connection_complete*>(data + sizeof(evt_le_meta_event)));
                             break;
                         case EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE:
-                            Update(reinterpret_cast<const evt_le_read_remote_used_features_complete*>(input->data));
+                            Update(*reinterpret_cast<const evt_le_read_remote_used_features_complete*>(data + sizeof(evt_le_meta_event)));
                             break;
                         case EVT_LE_CONN_UPDATE_COMPLETE:
-                            Update(reinterpret_cast<const evt_le_connection_update_complete*>(input->data));
+                            Update(*reinterpret_cast<const evt_le_connection_update_complete*>(data + sizeof(evt_le_meta_event)));
                             break;
                         default:
-                            TRACE(ControlFlow, (_T("EVT_LE_META_EVENT(%02X): unexpected subevent: %d"),
-                                                EVT_LE_META_EVENT, input->subevent));
+                            BT_TRACE(ControlFlow, header, *input);
                             break;
                         }
                         break;
                     }
+                    case EVT_EXTENDED_INQUIRY_RESULT: {
+                        uint8_t count = data[0];
+                        while (count) {
+                            Update(*reinterpret_cast<const extended_inquiry_info*>(data + 1 /* count */ + (count * sizeof(extended_inquiry_info))));
+                            count--;
+                        }
+                        break;
+                    }
+                    case EVT_INQUIRY_RESULT_WITH_RSSI: {
+                        uint8_t count = data[0];
+                        while (count) {
+                            Update(*reinterpret_cast<const inquiry_info_with_rssi*>(data + 1 /* count */ + (count * sizeof(inquiry_info_with_rssi))));
+                            count--;
+                        }
+                        break;
+                    }
                     default:
-                        TRACE(ControlFlow, (_T("UNKNOWN EVENT: %02X"), eventData.evt));
+                        BT_TRACE(ControlFlow, header, data);
                         break;
                 }
             }
-            void Update(const extended_inquiry_info* data)
+            void Update(const uint8_t length, const uint8_t vendorData[])
             {
-                Bluetooth::Address address(data->bdaddr);
-                uint32_t deviceClass = UnpackDeviceClass(data->dev_class);
-
-                TRACE(ControlFlow, (EVT_EXTENDED_INQUIRY_RESULT, _T("EVT_EXTENDED_INQUIRY_RESULT"), address));
-                TRACE(ControlFlow, (_T("  dev_class=0x%06X, pscan_rep_mode=%d, pscan_period_mode=%d, clock_offset=%d, rssi=%d"),
-                                    deviceClass, data->pscan_rep_mode, data->pscan_period_mode, btohs(data->clock_offset), data->rssi));
-
-                UpdateDevice<DeviceImpl>(address, [&](DeviceImpl* device) {
-                    device->Class(deviceClass);
+                BT_TRACE(ControlFlow, length, vendorData);
+            }
+            void Update(const evt_cmd_status& info)
+            {
+                BT_TRACE(ControlFlow, info);
+            }
+            void Update(const evt_cmd_complete& info)
+            {
+                BT_TRACE(ControlFlow, info);
+            }
+            void Update(const extended_inquiry_info& info)
+            {
+                BT_TRACE(ControlFlow, info);
+                UpdateDevice<DeviceImpl>(info.bdaddr, [&](DeviceImpl* device) {
+                    device->Class(UnpackDeviceClass(info.dev_class));
                 });
             }
-            void Update(const inquiry_info_with_rssi* data)
+            void Update(const inquiry_info_with_rssi& info)
             {
-                Bluetooth::Address address(data->bdaddr);
-                uint32_t deviceClass = UnpackDeviceClass(data->dev_class);
-
-                TRACE(ControlFlow, (EVT_INQUIRY_RESULT_WITH_RSSI, _T("EVT_INQUIRY_RESULT_WITH_RSSI"), address));
-                TRACE(ControlFlow, (_T("  dev_class=0x%06X, pscan_rep_mode=%d, pscan_period_mode=%d, clock_offset=%d, rssi=%d"),
-                                    deviceClass, data->pscan_rep_mode, data->pscan_period_mode, btohs(data->clock_offset), data->rssi));;
-
-                UpdateDevice<DeviceImpl>(address, [&](DeviceImpl* device) {
-                    device->Class(deviceClass);
+                BT_TRACE(ControlFlow, info);
+                UpdateDevice<DeviceImpl>(info.bdaddr, [&](DeviceImpl* device) {
+                    device->Class(UnpackDeviceClass(info.dev_class));
                 });
             }
-            void Update(const evt_conn_request* data)
+            void Update(const evt_conn_request& info)
             {
-                Bluetooth::Address address(data->bdaddr);
-                uint32_t deviceClass = UnpackDeviceClass(data->dev_class);
-
-                TRACE(ControlFlow, (EVT_CONN_REQUEST, _T("EVT_CONN_REQUEST"), address));
-                TRACE(ControlFlow, (_T("  dev_class=0x%06X, link_type=%d"), address.ToString().c_str(), deviceClass, data->link_type));
+                BT_TRACE(ControlFlow, info);
             }
-            void Update(const evt_conn_complete* data)
+            void Update(const evt_conn_complete& info)
             {
-                Bluetooth::Address address(data->bdaddr);
-                uint16_t handle(btohs(data->handle));
-
-                TRACE(ControlFlow, (EVT_CONN_COMPLETE, _T("EVT_CONN_COMPLETE"), address));
-                TRACE(ControlFlow, (_T("  status=%d, handle=%d, link_type=%d, encr_mode=%d"),
-                                    data->status, handle, data->link_type, data->encr_mode));
-
-                if (data->status == 0) {
-                    UpdateDevice<DeviceRegular>(address, [&](DeviceRegular* device) {
-                        device->Connection(handle);
+                BT_TRACE(ControlFlow, info);
+                if (info.status == 0) {
+                    UpdateDevice<DeviceRegular>(info.bdaddr, [&](DeviceRegular* device) {
+                        device->Connection(btohs(info.handle));
                     });
                 }
             }
-            void Update(const evt_disconn_complete* data)
+            void Update(const evt_disconn_complete& info)
             {
-                uint16_t handle(btohs(data->handle));
-
-                TRACE(ControlFlow, (EVT_DISCONN_COMPLETE, _T("EVT_DISCONN_COMPLETE"), handle));
-                TRACE(ControlFlow, (_T("  status=%d, reason=%d"), data->status, data->reason));
-
-                if (data->status == 0) {
-                   UpdateDevice<DeviceImpl>(handle, [&](DeviceImpl* device) {
-                        device->Disconnection(data->reason);
+                BT_TRACE(ControlFlow, info);
+                if (info.status == 0) {
+                   UpdateDevice<DeviceImpl>(btohs(info.handle), [&](DeviceImpl* device) {
+                        device->Disconnection(info.reason);
                     });
                 }
             }
-            void Update(const evt_le_connection_complete* data)
+            void Update(const evt_le_connection_complete& info)
             {
-                uint16_t handle(btohs(data->handle));
-                Bluetooth::Address address(data->peer_bdaddr);
-
-                TRACE(ControlFlow, (EVT_LE_CONN_COMPLETE, _T("EVT_LE_CONN_COMPLETE"), address));
-                TRACE(ControlFlow, (_T("  status=%d, handle=%d"), data->status, handle));
-
-                if (data->status == 0) {
-                    UpdateDevice<DeviceLowEnergy>(address, [&](DeviceLowEnergy* device) {
-                        device->Connection(handle);
+                BT_TRACE(ControlFlow, info);
+                if (info.status == 0) {
+                    UpdateDevice<DeviceLowEnergy>(info.peer_bdaddr, [&](DeviceLowEnergy* device) {
+                        device->Connection(btohs(info.handle));
                     });
                 }
             }
-            void Update(const evt_le_connection_update_complete* data)
+            void Update(const evt_le_connection_update_complete& info)
             {
-                TRACE(ControlFlow, (EVT_LE_CONN_UPDATE_COMPLETE, _T("EVT_LE_CONN_UPDATE_COMPLETE"), btohs(data->handle)));
-                TRACE(ControlFlow, (_T("  status=%d, interval=%d, latency=%d, supervision_timeout=%d"),
-                                    data->status, btohs(data->interval), btohs(data->latency), btohs(data->supervision_timeout)));
+                BT_TRACE(ControlFlow, info);
             }
-            void Update(const evt_remote_name_req_complete* data)
+            void Update(const evt_remote_name_req_complete& info)
             {
-                Bluetooth::Address address(data->bdaddr);
-
                 uint8_t length = 0;
 
-                if (data->status == 0) {
-                    while ((length < HCI_MAX_NAME_LENGTH) && ::isprint(data->name[length])) {
+                if (info.status == 0) {
+                    while ((length < HCI_MAX_NAME_LENGTH) && ::isprint(info.name[length])) {
                         length++;
                     }
                 }
 
-                string friendlyName(reinterpret_cast<const char*>(data->name), length);
+                string friendlyName(reinterpret_cast<const char*>(info.name), length);
 
-                TRACE(ControlFlow, (EVT_REMOTE_NAME_REQ_COMPLETE, _T("EVT_REMOTE_NAME_REQ_COMPLETE"), address));
-                TRACE(ControlFlow, (_T(" status=%d, name='%s'"), data->status, friendlyName.c_str()));
+                BT_TRACE(ControlFlow, info, friendlyName);
 
                 if (friendlyName.empty() == false) {
-                    UpdateDevice<DeviceImpl>(address, [&](DeviceImpl* device) {
+                    UpdateDevice<DeviceImpl>(info.bdaddr, [&](DeviceImpl* device) {
                         device->Name(friendlyName);
                     });
                 }
             }
-            void Update(const evt_io_capability_request* data)
+            void Update(const evt_io_capability_request& info)
             {
-                Bluetooth::Address address(data->bdaddr);
-
-                TRACE(ControlFlow, (EVT_IO_CAPABILITY_REQUEST, _T("EVT_IO_CAPABILITY_REQUEST"), address));
+                BT_TRACE(ControlFlow, info);
             }
-            void Update(const evt_io_capability_response* data)
+            void Update(const evt_io_capability_response& info)
             {
-                Bluetooth::Address address(data->bdaddr);
+                BT_TRACE(ControlFlow, info);
 
-                TRACE(ControlFlow, (EVT_IO_CAPABILITY_RESPONSE, _T("EVT_IO_CAPABILITY_RESPONSE"), address));
-                TRACE(ControlFlow, (_T("  capability=%i, authentication=%i, oob_data=%i"),
-                                    data->capability, data->authentication, data->oob_data));
-
-                UpdateDevice<DeviceImpl>(address, [&](DeviceImpl* device) {
-                    device->Capabilities(data->capability, data->authentication, data->oob_data);
+                UpdateDevice<DeviceImpl>(info.bdaddr, [&](DeviceImpl* device) {
+                    device->Capabilities(info.capability, info.authentication, info.oob_data);
                 });
             }
-            void Update(const evt_user_confirm_request* data)
+            void Update(const evt_user_confirm_request& info)
             {
-                Bluetooth::Address address(data->bdaddr);
-
-                TRACE(ControlFlow, (EVT_USER_CONFIRM_REQUEST, _T("EVT_USER_CONFIRM_REQUEST"), address));
-                TRACE(ControlFlow, (_T("  passkey=%06i"), btohl(data->passkey)));
+                BT_TRACE(ControlFlow, info);
             }
-            void Update(const evt_user_passkey_request* data)
+            void Update(const evt_user_passkey_request& info)
             {
-                Bluetooth::Address address(data->bdaddr);
-
-                TRACE(ControlFlow, (EVT_USER_PASSKEY_REQUEST, _T("EVT_USER_PASSKEY_REQUEST"), address));
+                BT_TRACE(ControlFlow, info);
             }
-            void Update(const evt_user_passkey_notify* data)
+            void Update(const evt_user_passkey_notify& info)
             {
-                Bluetooth::Address address(data->bdaddr);
-
-                TRACE(ControlFlow, (EVT_USER_PASSKEY_NOTIFY, _T("EVT_USER_PASSKEY_NOTIFY"), address));
-                TRACE(ControlFlow, (_T("  passkey=%06i"), btohl(data->passkey)));
+                BT_TRACE(ControlFlow, info);
             }
-            void Update(const evt_read_remote_features_complete* data)
+            void Update(const evt_read_remote_features_complete& info)
             {
-                uint16_t handle(btohs(data->handle));
-                string features; Core::ToHexString(data->features, sizeof(data->features), features);
-
-                TRACE(ControlFlow, (EVT_READ_REMOTE_FEATURES_COMPLETE, _T("EVT_READ_REMOTE_FEATURES_COMPLETE"), handle));
-                TRACE(ControlFlow, (_T("  status=%d, features=%s"), data->status, features.c_str()));
-
-                if (data->status == 0) {
-                    UpdateDevice<DeviceImpl>(handle, [&](DeviceImpl* device) {
-                        device->Features(sizeof(data->features), data->features);
+                BT_TRACE(ControlFlow, info);
+                if (info.status == 0) {
+                    UpdateDevice<DeviceImpl>(btohs(info.handle), [&](DeviceImpl* device) {
+                        device->Features(sizeof(info.features), info.features);
                     });
                 }
             }
-            void Update(const evt_le_read_remote_used_features_complete* data)
+            void Update(const evt_le_read_remote_used_features_complete& info)
             {
-                uint16_t handle(btohs(data->handle));
-                string features; Core::ToHexString(data->features, sizeof(data->features), features);
-
-                TRACE(ControlFlow, (EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE, _T("EVT_LE_READ_REMOTE_USED_FEATURES_COMPLETE"), handle));
-                TRACE(ControlFlow, (_T("  status=%d, features=%s"), data->status, features.c_str()));
-
-                if (data->status == 0) {
-                    UpdateDevice<DeviceImpl>(handle, [&](DeviceImpl* device) {
-                        device->Features(sizeof(data->features), data->features);
+                BT_TRACE(ControlFlow, info);
+                if (info.status == 0) {
+                    UpdateDevice<DeviceImpl>(btohs(info.handle), [&](DeviceImpl* device) {
+                        device->Features(sizeof(info.features), info.features);
                     });
                 }
             }
-            void Update(const evt_link_key_req* data)
+            void Update(const evt_link_key_req& info)
             {
-                Bluetooth::Address address(data->bdaddr);
-
-                TRACE(ControlFlow, (EVT_LINK_KEY_NOTIFY, _T("EVT_LINK_KEY_REQ"), address));
+                BT_TRACE(ControlFlow, info);
             }
-            void Update(const evt_link_key_notify* data)
+            void Update(const evt_link_key_notify& info)
             {
-                Bluetooth::Address address(data->bdaddr);
-                string key; Core::ToHexString(data->link_key, sizeof(data->link_key), key);
-
-                TRACE(ControlFlow, (EVT_LINK_KEY_NOTIFY, _T("EVT_LINK_KEY_NOTIFY"), address));
-                TRACE(ControlFlow, (_T("  key_type=%d, key=%s"), data->key_type, key.c_str()));
+                BT_TRACE(ControlFlow, info);
             }
-            void Update(const evt_auth_complete* data)
+            void Update(const evt_auth_complete& info)
             {
-                TRACE(ControlFlow, (EVT_AUTH_COMPLETE, _T("EVT_AUTH_COMPLETE"), btohs(data->handle)));
-                TRACE(ControlFlow, (_T("  status=%d"), data->status));
+                BT_TRACE(ControlFlow, info);
             }
-            void Update(const evt_simple_pairing_complete* data)
+            void Update(const evt_simple_pairing_complete& info)
             {
-                Bluetooth::Address address(data->bdaddr);
-
-                TRACE(ControlFlow, (EVT_SIMPLE_PAIRING_COMPLETE, _T("EVT_SIMPLE_PAIRING_COMPLETE"), address));
-                TRACE(ControlFlow, (_T("  status=%d"), data->status));
+                BT_TRACE(ControlFlow, info);
             }
 
         private:
@@ -1481,7 +1234,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 return (result);
             }
-            uint32_t Pair(const IBluetooth::pairingcapabilities capabilities) override
+            uint32_t Pair(const IBluetooth::pairingcapabilities capabilities, uint16_t /* timeout */) override
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
 
@@ -2594,7 +2347,7 @@ class BluetoothControl : public PluginHost::IPlugin
         uint32_t endpoint_scan(const JsonData::BluetoothControl::ScanParamsData& params);
         uint32_t endpoint_connect(const JsonData::BluetoothControl::ConnectParamsInfo& params);
         uint32_t endpoint_disconnect(const JsonData::BluetoothControl::ConnectParamsInfo& params);
-        uint32_t endpoint_pair(const JsonData::BluetoothControl::ConnectParamsInfo& params);
+        uint32_t endpoint_pair(const JsonData::BluetoothControl::PairParamsData& params);
         uint32_t endpoint_unpair(const JsonData::BluetoothControl::ConnectParamsInfo& params);
         uint32_t endpoint_abortpairing(const JsonData::BluetoothControl::ConnectParamsInfo& params);
         uint32_t get_adapters(Core::JSON::ArrayType<Core::JSON::DecUInt16>& response) const;

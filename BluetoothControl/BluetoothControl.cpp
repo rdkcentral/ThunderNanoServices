@@ -332,7 +332,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Device not found.");
                     } else if (pair == true) {
-                        uint32_t res = device->Pair(IBluetooth::DISPLAY_YES_NO);
+                        uint32_t res = device->Pair(IBluetooth::DISPLAY_YES_NO, 60);
                         if (res == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Paired device.");

@@ -36,7 +36,7 @@ namespace Plugin {
         JSONRPC::Register<ScanParamsData,void>(_T("scan"), &BluetoothControl::endpoint_scan, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("connect"), &BluetoothControl::endpoint_connect, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("disconnect"), &BluetoothControl::endpoint_disconnect, this);
-        JSONRPC::Register<ConnectParamsInfo,void>(_T("pair"), &BluetoothControl::endpoint_pair, this);
+        JSONRPC::Register<PairParamsData,void>(_T("pair"), &BluetoothControl::endpoint_pair, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("unpair"), &BluetoothControl::endpoint_unpair, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("abortpairing"), &BluetoothControl::endpoint_abortpairing, this);
         JSONRPC::Property<Core::JSON::ArrayType<Core::JSON::DecUInt16>>(_T("adapters"), &BluetoothControl::get_adapters, nullptr, this);
@@ -134,14 +134,15 @@ namespace Plugin {
     //  - ERROR_UNKNOWN_KEY: Unknown device
     //  - ERROR_ALREADY_CONNECTED: Device already paired
     //  - ERROR_GENERAL: Failed to pair the device
-    uint32_t BluetoothControl::endpoint_pair(const ConnectParamsInfo& params)
+    uint32_t BluetoothControl::endpoint_pair(const PairParamsData& params)
     {
         uint32_t result = Core::ERROR_UNKNOWN_KEY;
         const string& address = params.Address.Value();
+        const uint16_t& timeout = params.Timeout.Value();
 
         DeviceImpl* device = Find<DeviceImpl>(Bluetooth::Address(address.c_str()));
         if (device != nullptr) {
-            result = device->Pair(IBluetooth::DISPLAY_YES_NO);
+            result = device->Pair(IBluetooth::DISPLAY_YES_NO, timeout);
         }
 
         return (result);
