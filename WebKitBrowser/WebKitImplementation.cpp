@@ -55,6 +55,7 @@ namespace Plugin {
     static void requestClosure(const void* clientInfo);
     static void didRequestAutomationSession(WKContextRef context, WKStringRef sessionID, const void* clientInfo);
     static WKPageRef onAutomationSessionRequestNewPage(WKWebAutomationSessionRef session, const void* clientInfo);
+    static string WKStringToString(WKStringRef wkStringRef);
 
     // -----------------------------------------------------------------------------------------------------
     // Hide all NASTY C details that come with the POC libraries !!!!!
@@ -113,8 +114,8 @@ namespace Plugin {
         nullptr, // stopUpdating
     };
 
-    WKPageUIClientV6 _handlerPageUI = {
-        { 6, nullptr },
+    WKPageUIClientV8 _handlerPageUI = {
+        { 8, nullptr },
         nullptr, // createNewPage_deprecatedForUseWithV0
         nullptr, // showPage
         // close
@@ -193,6 +194,18 @@ namespace Plugin {
         nullptr, // runJavaScriptPrompt
         nullptr, // mediaSessionMetadataDidChange
         nullptr, // createNewPage
+        nullptr, // runJavaScriptAlert
+        nullptr, // runJavaScriptConfirm
+        nullptr, // runJavaScriptPrompt
+        nullptr, // checkUserMediaPermissionForOrigin
+        nullptr, // runBeforeUnloadConfirmPanel
+        nullptr, // fullscreenMayReturnToInline
+        // willAddDetailedMessageToConsole
+        [](WKPageRef, WKStringRef source, WKStringRef, uint64_t line, uint64_t, WKStringRef message, WKStringRef, const void* clientInfo) {
+            string src = WKStringToString(source);
+            string msg = WKStringToString(message);
+            fprintf(stderr, "[%s:%llu]: %s\n", src.c_str(), line,  msg.c_str());
+        },
     };
 
     WKNotificationProviderV0 _handlerNotificationProvider = {
