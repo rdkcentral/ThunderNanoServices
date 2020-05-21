@@ -182,6 +182,7 @@ public:
                if (client->Launch() == Core::ERROR_NONE) {
                    _clients.insert(std::pair<const string, Exchange::IWebPA::IWebPAClient*>(className, client));
                } else {
+                   client->Release();
                    TRACE(Trace::Error, (_T("WebPA Error in launching client %s"), entry.Current().c_str()));
                }
            } else {
