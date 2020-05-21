@@ -263,19 +263,7 @@ static WKBundlePageUIClientV4 s_pageUIClient = {
     nullptr, // unused4
     nullptr, // unused5
     nullptr, // didClickAutoFillButton
-    //willAddDetailedMessageToConsole
-    [](WKBundlePageRef page, WKConsoleMessageSource source, WKConsoleMessageLevel level, WKStringRef message, uint32_t lineNumber,
-        uint32_t columnNumber, WKStringRef url, const void* clientInfo) {
-        string messageString = WebKit::Utils::WKStringToString(message);
-
-        const uint16_t maxStringLength = Trace::TRACINGBUFFERSIZE - 1;
-        if (messageString.length() > maxStringLength) {
-            messageString = messageString.substr(0, maxStringLength);
-        }
-
-        // TODO: use "Trace" classes for different levels.
-        TRACE_GLOBAL(Trace::Information, (messageString));
-    }
+    nullptr, //willAddDetailedMessageToConsole
 };
 
 static WKBundleClientV1 s_bundleClient = {
