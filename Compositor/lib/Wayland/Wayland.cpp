@@ -416,7 +416,7 @@ namespace Plugin {
         }
         uint32_t Select(const string& callsign) override
         {
-            uint32_t status = Core::ERROR_UNAVAILABLE;
+            uint32_t status = Core::ERROR_UNKNOWN_KEY;
             std::list<Entry*>::iterator index(_clients.begin());
             while (index != _clients.end()) {
                 if ((*index)->Name().find(callsign) == 0) {
