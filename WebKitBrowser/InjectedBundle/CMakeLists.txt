@@ -22,7 +22,7 @@ find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(securityagent QUIET)
 find_package(LibSoup REQUIRED)
 
-option(PLUGIN_AMAZON_HAWAII "Enable the Amazon Player interface (Hawaii) in javascript." OFF)
+option(PLUGIN_AMAZON_HYBRID "Enable the Amazon Player interface (Hawaii) in the injected bundle and the creation of the Amazon tab" OFF)
 option(PLUGIN_SECURITY_AGENT "Enable the Security Agent Features interface in javascript." OFF)
 
 set(SOURCE_LIST
@@ -46,9 +46,8 @@ add_library(${MODULE_NAME} SHARED
     ${SOURCE_LIST}
 )
 
-if(PLUGIN_AMAZON_HAWAII)
+if(PLUGIN_AMAZON_HYBRID)
     target_sources(${MODULE_NAME} PRIVATE HawaiiMessage.cpp)
-    target_compile_definitions(${MODULE_NAME} PRIVATE SECURITY_AGENT_INTERFACE)
 endif()
 
 if(securityagent_FOUND)
@@ -84,7 +83,7 @@ install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/WebKitBrowser
     COMPONENT ${MODULE_NAME})
 
-if(PLUGIN_WEBKITBROWSER_AMAZON)
+if(PLUGIN_AMAZON_HYBRID)
     install(TARGETS ${MODULE_NAME} 
         DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Amazon
         COMPONENT ${MODULE_NAME})

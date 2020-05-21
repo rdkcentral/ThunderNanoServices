@@ -66,7 +66,7 @@ namespace Plugin {
         const string& command = params.Command.Value();
         
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto container = administrator.Find(name); 
+        auto container = administrator.Get(name); 
 
         if (container != nullptr) {
             
@@ -83,11 +83,11 @@ namespace Plugin {
             if (container->Start(command, paramsIterator) != true) {
                 result = Core::ERROR_GENERAL;
             }
+
+            container->Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
-
-        administrator.Release();
 
         return result;
     }
@@ -102,7 +102,7 @@ namespace Plugin {
         const string& name = params.Name.Value();
 
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto container = administrator.Find(name); 
+        auto container = administrator.Get(name); 
 
         if (container != nullptr) {
             container->Stop(0);
@@ -110,8 +110,6 @@ namespace Plugin {
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
-
-        administrator.Release();
 
         return result;
     }
@@ -122,16 +120,13 @@ namespace Plugin {
     uint32_t Containers::get_containers(Core::JSON::ArrayType<Core::JSON::String>& response) const
     {
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto iterator = administrator.Containers();
+        std::vector<string> containers = administrator.Containers();
 
-        while (iterator.Next()) {
+        for (auto container : containers) {
             Core::JSON::String containerName;
-            containerName = iterator.Current()->Id();
-
+            containerName = container;
             response.Add(containerName);
         }
-
-        administrator.Release();
 
         return Core::ERROR_NONE;
     }
@@ -145,7 +140,7 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
 
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto container = administrator.Find(index); 
+        auto container = administrator.Get(index); 
 
         if (container != nullptr) {
             ProcessContainers::NetworkInterfaceIterator* iterator = container->NetworkInterfaces();
@@ -164,11 +159,10 @@ namespace Plugin {
             }
 
             iterator->Release();
+            container->Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
-
-        administrator.Release();
         
         return result;
     }
@@ -182,7 +176,7 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
 
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto found = administrator.Find(index); 
+        auto found = administrator.Get(index); 
 
         if (found != nullptr) {
             auto memoryInfo = found->Memory();
@@ -190,11 +184,11 @@ namespace Plugin {
             response.Allocated = memoryInfo.allocated;
             response.Resident = memoryInfo.resident;
             response.Shared = memoryInfo.shared;
+
+            found->Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
-
-        administrator.Release();
         
         return result;
     }
@@ -208,7 +202,7 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
 
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto container = administrator.Find(index); 
+        auto container = administrator.Get(index); 
 
         if (container != nullptr) {
             auto cpuInfo = container->Cpu();
@@ -221,11 +215,11 @@ namespace Plugin {
 
                 response.Cores.Add(coreTime);
             }
+
+            container->Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
-
-        administrator.Release();
         
         return result;
     }

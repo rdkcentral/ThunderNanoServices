@@ -20,12 +20,16 @@
 #pragma once
 
 #include "Module.h"
+#include <interfaces/IInputSwitch.h>
 #include <interfaces/json/JsonData_InputSwitch.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class InputSwitch : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
+    class InputSwitch : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IInputSwitch, public PluginHost::JSONRPC {
+    private:
+        typedef std::list<string> ImunityList;
+
     public:
         class Data : public Core::JSON::Container {
         public:
@@ -68,7 +72,8 @@ namespace Plugin {
 
         InputSwitch()
             : _skipURL(0)
-            , _handler()
+            , _handler(nullptr)
+            , _imunityList()
         {
             RegisterAll();
         }
@@ -81,33 +86,43 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(InputSwitch)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
+        INTERFACE_ENTRY(Exchange::IInputSwitch)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //   IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request) override;
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+
+        //   IInputSwitch methods
+        // -------------------------------------------------------------------------------------------------------
+        RPC::IStringIterator* Consumers() const override;
+        bool Consumer(const string& name) const override;
+        uint32_t Consumer(const string& name, const mode value) override;
+        uint32_t Select(const string& name) override;
 
     private:
-        bool FindChannel(const string& name);
+        bool ChannelExists(const string& name) const;
 
         // JsonRpc
         void RegisterAll();
         void UnregisterAll();
         uint32_t endpoint_channel(const JsonData::InputSwitch::ChannelParamsInfo& params);
-        uint32_t endpoint_status(const JsonData::InputSwitch::StatusParamsData& params, Core::JSON::ArrayType<JsonData::InputSwitch::ChannelParamsInfo>& response);
+        uint32_t endpoint_status(const JsonData::InputSwitch::SelectParamsInfo& params, Core::JSON::ArrayType<JsonData::InputSwitch::ChannelParamsInfo>& response);
+        uint32_t endpoint_select(const JsonData::InputSwitch::SelectParamsInfo& params);
 
     private:
         uint8_t _skipURL;
-        PluginHost::IPCUserInput::Iterator _handler;
+        PluginHost::VirtualInput* _handler;
+        ImunityList _imunityList;
     };
 
 } // namespace Plugin

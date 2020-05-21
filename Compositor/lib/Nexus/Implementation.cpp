@@ -287,8 +287,10 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override
+        /* virtual */ uint32_t Resolution(const Exchange::IComposition::ScreenResolution format) override
         {
+            uint32_t result = Core::ERROR_UNAVAILABLE;
+
             if (_joined == true) {
 
                 NxClient_DisplaySettings displaySettings;
@@ -305,9 +307,13 @@ namespace Plugin {
                         if (NxClient_SetDisplaySettings(&displaySettings) != 0) {
                             TRACE(Trace::Information, (_T("Errir in setting NxClient DisplaySettings")));
                         }
+                        else {
+                            result = Core::ERROR_NONE;
+                        }
                     }
                 }
             }
+            return (result);
         }
 
         /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const override
