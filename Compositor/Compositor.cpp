@@ -561,7 +561,7 @@ namespace Plugin {
 
     uint32_t Compositor::Select(const string& callsign) {
 
-        uint32_t result = Core::ERROR_GENERAL;
+        uint32_t result = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
 
         if (_inputSwitch) {
             result = _inputSwitch->Select(callsign);
@@ -577,7 +577,7 @@ namespace Plugin {
     }
 
     uint32_t Compositor::PutBefore(const string& relative, const string& callsign) {
-        uint32_t result = Core::ERROR_UNAVAILABLE;
+        uint32_t result = Core::ERROR_NONE;
 
         std::list<client_info> list;
 
@@ -625,6 +625,8 @@ namespace Plugin {
                 Rearrange(list, startIndex, relativeIndex - startIndex, 0, callsignEndIndex - callsignStartIndex + 1);
             }
             
+        } else {
+            result = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
         }
  
         _adminLock.Unlock();
