@@ -341,6 +341,7 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             void RequestPINCode(const Bluetooth::Address& remote, const Bluetooth::Address::type /* type */)
             {
+                // Look up in classic devices only
                 UpdateDevice<DeviceRegular>(remote, [&](DeviceRegular* device) {
                     device->RequestPINCode();
                 });
@@ -1593,8 +1594,8 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 // Kernel does not seem to be sending CONN_COMPLETE when issuing Connect command when not paired,
                 // breaking the state machine here, thus block the possibility altogether. This also enforces "natural"
-                // sequence of first pairing then conencting for both Classic and BLE devices.
-                if (IsBonded() == true) {
+                // sequence of first pairing then connecting for both Classic and BLE devices.
+                if ((IsConnected() == false) && (IsBonded() == true)) {
                     if (SetState(CONNECTING) == Core::ERROR_NONE) {
                         Bluetooth::HCISocket::Command::Connect connect;
 
@@ -1622,7 +1623,7 @@ class BluetoothControl : public PluginHost::IPlugin
                         TRACE(Trace::Information, (_T("Device is currently busy")));
                     }
                 } else {
-                    TRACE(Trace::Information, (_T("Device not paired!")));
+                    TRACE(Trace::Information, (_T("Device already connected or not paired!")));
                 }
 
                 return (result);
@@ -1814,7 +1815,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
                 // Se comment for Connect() at DeviceRegular.
-                if (IsBonded() == true) {
+                if ((IsConnected() == false) && (IsBonded() == true)) {
                     if (SetState(CONNECTING) == Core::ERROR_NONE) {
                         Bluetooth::HCISocket::Command::ConnectLE connect;
                         connect.Clear();
@@ -1848,7 +1849,7 @@ class BluetoothControl : public PluginHost::IPlugin
                         TRACE(Trace::Information, (_T("Device is currently busy")));
                     }
                 } else {
-                    TRACE(Trace::Information, (_T("Device is not paired!")));
+                    TRACE(Trace::Information, (_T("Device already connected or not paired!")));
                 }
 
                 return (result);
