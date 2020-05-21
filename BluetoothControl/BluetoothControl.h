@@ -37,6 +37,57 @@ class BluetoothControl : public PluginHost::IPlugin
                        , public Exchange::IBluetooth {
 
     private:
+        class DecoupledJob : private Core::WorkerPool::JobType<DecoupledJob&> {
+        public:
+            using Job = std::function<void()>;
+
+            DecoupledJob(const DecoupledJob&) = delete;
+            DecoupledJob& operator=(const DecoupledJob&) = delete;
+
+            DecoupledJob()
+                : Core::WorkerPool::JobType<DecoupledJob&>(*this)
+                , _lock()
+                , _job(nullptr)
+            {
+            }
+
+            ~DecoupledJob() = default;
+
+        public:
+            using JobType::Revoke;
+
+            void Submit(const Job& job, const uint32_t defer = 0)
+            {
+                _lock.Lock();
+                if (_job == nullptr) {
+                    _job = job;
+                    if (defer == 0) {
+                        JobType::Submit();
+                    } else {
+                        JobType::Schedule(Core::Time::Now().Add(defer));
+                    }
+                } else {
+                    TRACE(Trace::Information, (_T("Job in progress, skipping request")));
+                }
+                _lock.Unlock();
+            }
+
+        private:
+            friend class Core::ThreadPool::JobType<DecoupledJob&>;
+            void Dispatch()
+            {
+                _lock.Lock();
+                Job job = _job;
+                _job = nullptr;
+                _lock.Unlock();
+                job();
+            }
+
+        private:
+            Core::CriticalSection _lock;
+            Job _job;
+        }; // class DecoupledJob
+
         static uint32_t UnpackDeviceClass(const uint8_t buffer[3])
         {
             ASSERT(buffer != nullptr);
@@ -197,81 +248,12 @@ class BluetoothControl : public PluginHost::IPlugin
                 ControlSocket& _parent;
             }; // class ManagementSocket
 
-            // The bluetooth library has some unexpected behaviour. For example, the scan of NON-BLE devices
-            // is a blocking call for the duration of the passed in time. Which is, I think, very intrusive
-            // fo any responsive design. If a RESTFull call would start a scan, the call would last the duration
-            // of the scan, which is typicall >= 10Secods which is unacceptable, so it needs to be decoupled.
-            // This decoupling is done on this internal Worker thread.
-            class ScanJob : public Core::IDispatch {
-            private:
-                enum scanMode {
-                    LOW_ENERGY = 0x01,
-                    REGULAR = 0x02,
-                    PASSIVE = 0x04,
-                    LIMITED = 0x08
-                };
-
-            public:
-                ScanJob() = delete;
-                ScanJob(const ScanJob&) = delete;
-                ScanJob& operator=(const ScanJob&) = delete;
-                ScanJob(ControlSocket* parent)
-                    : _parent(*parent)
-                    , _mode(0)
-                {
-                }
-                ~ScanJob() = default;
-
-            public:
-                void Load(const uint16_t scanTime, const uint32_t type, const uint8_t flags)
-                {
-                    if (_mode == 0) {
-                        _mode = REGULAR;
-                        _scanTime = scanTime;
-                        _type = type;
-                        _flags = flags;
-                        Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                    }
-                }
-                void Load(const uint16_t scanTime, const bool limited, const bool passive)
-                {
-                    if (_mode == 0) {
-                        _mode = LOW_ENERGY | (passive ? PASSIVE : 0) | (limited ? LIMITED : 0);
-                        _scanTime = scanTime;
-                        Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                    }
-                }
-
-            private:
-                void Dispatch() override
-                {
-                    if ((_mode & REGULAR) != 0) {
-                        TRACE(ControlFlow, (_T("Start regular scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
-                        _parent.Run(_scanTime, _type, _flags);
-                    } else {
-                        TRACE(ControlFlow, (_T("Start Low Energy scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
-                        _parent.Run(_scanTime, ((_mode & LIMITED) != 0), ((_mode & PASSIVE) != 0));
-                    }
-                    TRACE(ControlFlow, (_T("Scan completed: %s"), Core::Time::Now().ToRFC1123().c_str()));
-                    _parent.Application()->event_scancomplete();
-                    _mode = 0;
-                }
-
-            private:
-                ControlSocket& _parent;
-                uint16_t _scanTime;
-                uint32_t _type;
-                uint8_t _flags;
-                uint8_t _mode;
-            }; // class ScanJob
-
         public:
             ControlSocket(const ControlSocket&) = delete;
             ControlSocket& operator=(const ControlSocket&) = delete;
             ControlSocket()
                 : Bluetooth::HCISocket()
                 , _parent(nullptr)
-                , _activity(Core::ProxyType<ScanJob>::Create(this))
                 , _administrator(*this)
             {
             }
@@ -304,32 +286,43 @@ class BluetoothControl : public PluginHost::IPlugin
             void Scan(const uint16_t scanTime, const uint32_t type, const uint8_t flags)
             {
                 if (IsOpen() == true) {
-                    _activity->Load(scanTime, type, flags);
+                    _scanJob.Submit([this, scanTime, type, flags]() {
+                        TRACE(ControlFlow, (_T("Start BT classic scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
+                        Bluetooth::HCISocket::Scan(scanTime, type, flags);
+                        ScanComplete();
+                    });
                 }
             }
             void Scan(const uint16_t scanTime, const bool limited, const bool passive)
             {
                 if (IsOpen() == true) {
-                    _activity->Load(scanTime, limited, passive);
+                    _scanJob.Submit([this, scanTime, limited, passive]() {
+                        TRACE(ControlFlow, (_T("Start BT LowEnergy scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
+                        Bluetooth::HCISocket::Scan(scanTime, limited, passive);
+                        ScanComplete();
+                    });
                 }
             }
             uint32_t Open(BluetoothControl& parent)
             {
                 ASSERT (IsOpen() == false);
-
                 _parent = &parent;
-
                 Bluetooth::HCISocket::LocalNode(Core::NodeId(_administrator.DeviceId(), HCI_CHANNEL_RAW));
                 return (Bluetooth::HCISocket::Open(Core::infinite));
             }
             uint32_t Close()
             {
                 uint32_t result = Bluetooth::HCISocket::Close(Core::infinite);
-                Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_activity));
+                _scanJob.Revoke();
                 Bluetooth::ManagementSocket::Down(_administrator.DeviceId());
                 _administrator.DeviceId(HCI_DEV_NONE);
                 _parent = nullptr;
                 return (result);
+            }
+            void ScanComplete()
+            {
+                TRACE(ControlFlow, (_T("Scan completed: %s"), Core::Time::Now().ToRFC1123().c_str()));
+                Application()->event_scancomplete();
             }
             void PairingComplete(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const uint8_t status)
             {
@@ -400,14 +393,6 @@ class BluetoothControl : public PluginHost::IPlugin
                 if ((Application() != nullptr) ) {
                     UpdateDevice(locator, Application()->Find(locator, lowEnergy), action);
                 }
-            }
-            void Run(const uint16_t scanTime, const uint32_t type, const uint8_t flags)
-            {
-                Bluetooth::HCISocket::Scan(scanTime, type, flags);
-            }
-            void Run(const uint16_t scanTime, const bool limited, const bool passive)
-            {
-                Bluetooth::HCISocket::Scan(scanTime, limited, passive);
             }
             void Discovered(const bool lowEnergy, const Bluetooth::Address& address, const Bluetooth::EIR& info) override
             {
@@ -672,7 +657,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
         private:
             BluetoothControl* _parent;
-            Core::ProxyType<ScanJob> _activity;
+            DecoupledJob _scanJob;
             ManagementSocket _administrator;
         }; // class ControlSocket
 
@@ -946,161 +931,6 @@ class BluetoothControl : public PluginHost::IPlugin
             }; // class IteratorImpl
 
         public:
-            class UpdateJob : public Core::IDispatch {
-            public:
-                UpdateJob() = delete;
-                UpdateJob(const UpdateJob&) = delete;
-                UpdateJob& operator=(const UpdateJob&) = delete;
-
-                UpdateJob(DeviceImpl* parent)
-                    : _parent(parent)
-                {
-                    ASSERT(parent != nullptr);
-                }
-                ~UpdateJob() = default;
-
-            public:
-                void Submit()
-                {
-                    Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                }
-                void Dispatch() override
-                {
-                    _parent->Callback<IBluetooth::IDevice::ICallback>(_parent->Callback(), [](IBluetooth::IDevice::ICallback* cb) {
-                        cb->Updated();
-                    });
-                }
-
-            private:
-                DeviceImpl* _parent;
-            }; // class UpdateJob
-
-        private:
-            class AutoConnectJob : public Core::IDispatch {
-            public:
-                AutoConnectJob() = delete;
-                AutoConnectJob(const AutoConnectJob&) = delete;
-                AutoConnectJob& operator=(const AutoConnectJob&) = delete;
-
-                AutoConnectJob(DeviceImpl* parent)
-                    : _parent(parent)
-                    , _enable(false)
-                {
-                    ASSERT(parent != nullptr);
-                }
-                ~AutoConnectJob() = default;
-
-            public:
-                void Submit(bool enable)
-                {
-                    _enable = enable;
-                    Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                }
-
-            private:
-                void Dispatch() override
-                {
-                    _parent->AutoConnect(_enable);
-                }
-
-            private:
-                DeviceImpl* _parent;
-                bool _enable;
-            };
-
-            class UserRequestJob : public Core::IDispatch {
-            public:
-                UserRequestJob() = delete;
-                UserRequestJob(const UserRequestJob&) = delete;
-                UserRequestJob& operator=(const UserRequestJob&) = delete;
-
-                UserRequestJob(DeviceImpl* parent)
-                    : _parent(parent)
-                    , _passkey(~0)
-                {
-                    ASSERT(parent != nullptr);
-                }
-                ~UserRequestJob() = default;
-
-            public:
-                void Submit(uint32_t passkey)
-                {
-                    TRACE(Trace::Information, (_T("Requesting passkey %06d confirmation..."), passkey));
-                    _passkey = passkey;
-                    Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                }
-                void Submit()
-                {
-                    TRACE(Trace::Information, (_T("Requesting passkey...")));
-                    Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                }
-                void Dispatch() override
-                {
-                    if (_passkey != static_cast<uint32_t>(~0)) {
-                        _parent->Callback<IBluetooth::IDevice::ISecurityCallback>(_parent->SecurityCallback(), [&](IBluetooth::IDevice::ISecurityCallback* cb) {
-                            cb->PasskeyConfirmRequest(_passkey);
-                        });
-                        _passkey = ~0;
-                    } else {
-                        _parent->Callback<IBluetooth::IDevice::ISecurityCallback>(_parent->SecurityCallback(), [&](IBluetooth::IDevice::ISecurityCallback* cb) {
-                            cb->PasskeyRequest();
-                        });
-                    }
-                }
-
-            private:
-                DeviceImpl* _parent;
-                uint32_t _passkey;
-            }; // class UserRequestJob
-
-        private:
-            class UserReplyJob : public Core::IDispatch {
-            public:
-                UserReplyJob() = delete;
-                UserReplyJob(const UserReplyJob&) = delete;
-                UserReplyJob& operator=(const UserReplyJob&) = delete;
-
-                UserReplyJob(DeviceImpl* parent)
-                    : _parent(parent)
-                    , _confirm(false)
-                    , _passkey(~0)
-                {
-                    ASSERT(parent != nullptr);
-                }
-                ~UserReplyJob() = default;
-
-            public:
-                void Submit(const bool confirm)
-                {
-                    TRACE(Trace::Information, (_T("Passkey confirmation reply: %s"), confirm? "YES" : "NO"));
-                    _confirm = confirm;
-                    Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                }
-                void Submit(const uint32_t passkey)
-                {
-                    TRACE(Trace::Information, (_T("Passkey reply: %06d"), passkey));
-                    _passkey = passkey;
-                    Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                }
-
-            private:
-                void Dispatch() override
-                {
-                    if (_passkey != static_cast<uint32_t>(~0)) {
-                        _parent->ReplyPasskey(_passkey);
-                        _passkey = ~0;
-                    } else {
-                        _parent->ReplyPasskeyConfirm(_confirm);
-                    }
-                }
-
-            private:
-                DeviceImpl* _parent;
-                bool _confirm;
-                uint32_t _passkey;
-            }; // class UserReplyJob
-
-        public:
             DeviceImpl() = delete;
             DeviceImpl(const DeviceImpl&) = delete;
             DeviceImpl& operator=(const DeviceImpl&) = delete;
@@ -1126,10 +956,10 @@ class BluetoothControl : public PluginHost::IPlugin
                 , _autoConnection(false)
                 , _callback(nullptr)
                 , _securityCallback(nullptr)
-                , _updateJob(Core::ProxyType<UpdateJob>::Create(this))
-                , _autoConnectJob(Core::ProxyType<AutoConnectJob>::Create(this))
-                , _userRequestJob(Core::ProxyType<UserRequestJob>::Create(this))
-                , _userReplyJob(Core::ProxyType<UserReplyJob>::Create(this))
+                , _deviceUpdateJob()
+                , _autoConnectJob()
+                , _userRequestJob()
+                , _userReplyJob()
             {
                 ASSERT(parent != nullptr);
                 ::memset(_features, 0xFF, sizeof(_features));
@@ -1292,7 +1122,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                     ClearState(UNPAIRING);
                     _autoConnection = false;
-                    _updateJob->Submit();
+                    UpdateListener();
                 } else {
                     TRACE(Trace::Information, (_T("Device is currently busy")));
                 }
@@ -1301,11 +1131,17 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             void Passkey(const uint32_t passkey) override
             {
-                _userReplyJob->Submit(passkey);
+                TRACE(Trace::Information, (_T("Passkey reply: %06d"), passkey));
+                _userReplyJob.Submit([this, passkey]() {
+                    _parent->Connector().Control().UserPasskeyReply(Address(), AddressType(), passkey);
+                });
             }
             void ConfirmPasskey(const bool confirm) override
             {
-                _userReplyJob->Submit(confirm);
+                TRACE(Trace::Information, (_T("Passkey confirmation reply: %s"), confirm? "YES" : "NO"));
+                _userReplyJob.Submit([this, confirm]() {
+                    _parent->Connector().Control().UserPasskeyConfirmReply(Address(), AddressType(), confirm);
+                });
             }
             uint32_t Callback(IBluetooth::IDevice::ICallback* callback) override
             {
@@ -1422,7 +1258,11 @@ class BluetoothControl : public PluginHost::IPlugin
             void RequestPasskey()
             {
                 TRACE(Trace::Information, (_T("Pairing with device %s; requesting passkey..."), Address().ToString().c_str()));
-                _userRequestJob->Submit();
+                _userRequestJob.Submit([this](){
+                    Callback<IBluetooth::IDevice::ISecurityCallback>(SecurityCallback(), [&](IBluetooth::IDevice::ISecurityCallback* cb) {
+                        cb->PasskeyRequest();
+                    });
+                });
             }
             void RequestPasskeyConfirm(const uint32_t passkey)
             {
@@ -1431,10 +1271,14 @@ class BluetoothControl : public PluginHost::IPlugin
                 // Request passkey confirmation from client or, if auto confirm is enabled, reply already.
                 if (_parent->AutoConfirmPasskey() == true) {
                     TRACE(Trace::Information, (_T("Auto-confirm enabled, accepting the passkey!")));
-                    _userReplyJob->Submit(true);
+                    ConfirmPasskey(true);
                 } else {
                     TRACE(Trace::Information, (_T("Waiting for user confirmation of the passkey...")));
-                    _userRequestJob->Submit(passkey);
+                    _userRequestJob.Submit([this, passkey]() {
+                        Callback<IBluetooth::IDevice::ISecurityCallback>(SecurityCallback(), [&](IBluetooth::IDevice::ISecurityCallback* cb) {
+                            cb->PasskeyConfirmRequest(passkey);
+                        });
+                    });
                 }
             }
             void PairingComplete(const uint8_t status = 0)
@@ -1447,7 +1291,7 @@ class BluetoothControl : public PluginHost::IPlugin
             void BondedChange()
             {
                 _parent->BondedChange(this);
-                _updateJob->Submit();
+                UpdateListener();
                 _parent->event_devicestatechange(Address().ToString(), IsBonded()? JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::PAIRED
                                                                                  : JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::UNPAIRED);
             }
@@ -1507,7 +1351,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 _state.Unlock();
 
                 if (updated == true) {
-                    _updateJob->Submit();
+                    UpdateListener();
                     _parent->event_devicestatechange(Address().ToString(), JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::CONNECTED);
                 }
             }
@@ -1525,7 +1369,9 @@ class BluetoothControl : public PluginHost::IPlugin
                     // Setting autoconnection can only be done when the device is disconnected.
                     // The whitelist is not cleared on subsequent connections/disconnections, so this only needs to be done once.
                     // Bonded state has already been set accordingly at this time.
-                    _autoConnectJob->Submit(IsBonded());
+                    _autoConnectJob.Submit([this](){
+                        AutoConnect(IsBonded());
+                    });
                 }
 
                 _state.Unlock();
@@ -1545,7 +1391,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     disconnReason = JsonData::BluetoothControl::DevicestatechangeParamsData::DisconnectreasonType::TERMINATEDBYHOST;
                 }
 
-                _updateJob->Submit();
+                UpdateListener();
                 _parent->event_devicestatechange(Address().ToString(), JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::DISCONNECTED, disconnReason);
             }
             void Name(const string& name)
@@ -1563,7 +1409,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 if (updated == true) {
                     TRACE(DeviceFlow, (_T("Device name updated to: '%s'"), name.c_str()));
-                    _updateJob->Submit();
+                    UpdateListener();
                 }
             }
             void Class(const uint32_t classOfDevice)
@@ -1581,7 +1427,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 if (updated == true) {
                     TRACE(DeviceFlow, (_T("Device class updated to: 0x%06X"), classOfDevice));
-                    _updateJob->Submit();
+                    UpdateListener();
                 }
             }
             void Features(const uint8_t length, const uint8_t feature[])
@@ -1635,6 +1481,15 @@ class BluetoothControl : public PluginHost::IPlugin
 
             virtual Bluetooth::ManagementSocket::autoconnmode AutoConnectMode() const = 0;
 
+            void UpdateListener()
+            {
+                _deviceUpdateJob.Submit([this](){
+                    Callback<IBluetooth::IDevice::ICallback>(Callback(), [](IBluetooth::IDevice::ICallback* cb) {
+                        cb->Updated();
+                    });
+                });
+            }
+
             template<typename ICALLBACK>
             void Callback(ICALLBACK* callbackInstance, const std::function<void(ICALLBACK* cb)>& action)
             {
@@ -1663,16 +1518,6 @@ class BluetoothControl : public PluginHost::IPlugin
                 return (_callback);
             }
 
-        private:
-            void ReplyPasskeyConfirm(const bool confirm)
-            {
-                _parent->Connector().Control().UserPasskeyConfirmReply(Address(), AddressType(), confirm);
-            }
-            void ReplyPasskey(const uint32_t passkey)
-            {
-                _parent->Connector().Control().UserPasskeyReply(Address(), AddressType(), passkey);
-            }
-
         protected:
             BluetoothControl* _parent;
             Core::StateTrigger<state> _state;
@@ -1695,81 +1540,14 @@ class BluetoothControl : public PluginHost::IPlugin
             bool _autoConnection;
             IBluetooth::IDevice::ICallback* _callback;
             IBluetooth::IDevice::ISecurityCallback* _securityCallback;
-            Core::ProxyType<UpdateJob> _updateJob;
-            Core::ProxyType<AutoConnectJob> _autoConnectJob;
-            Core::ProxyType<UserRequestJob> _userRequestJob;
-            Core::ProxyType<UserReplyJob> _userReplyJob;
+            DecoupledJob _deviceUpdateJob;
+            DecoupledJob _autoConnectJob;
+            DecoupledJob _userRequestJob;
+            DecoupledJob _userReplyJob;
         }; // class DeviceImpl
 
     public:
         class EXTERNAL DeviceRegular : public DeviceImpl, public Exchange::IBluetooth::IClassic {
-        private:
-            class UserRequestJob : public Core::IDispatch {
-            public:
-                UserRequestJob() = delete;
-                UserRequestJob(const UserRequestJob&) = delete;
-                UserRequestJob& operator=(const UserRequestJob&) = delete;
-
-                UserRequestJob(DeviceRegular* parent)
-                    : _parent(parent)
-                {
-                    ASSERT(parent != nullptr);
-                }
-                ~UserRequestJob() = default;
-
-            public:
-                void Submit()
-                {
-                    TRACE(Trace::Information, (_T("Requesting PIN code...")));
-                    Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                }
-                void Dispatch() override
-                {
-                    _parent->Callback([&](IBluetooth::IClassic::ISecurityCallback* cb) {
-                        cb->PINCodeRequest();
-                    });
-                }
-
-            private:
-                DeviceRegular* _parent;
-                uint32_t _passkey;
-            }; // class UserRequestJob
-
-        private:
-            class UserReplyJob : public Core::IDispatch {
-            public:
-                UserReplyJob() = delete;
-                UserReplyJob(const UserReplyJob&) = delete;
-                UserReplyJob& operator=(const UserReplyJob&) = delete;
-
-                UserReplyJob(DeviceRegular* parent)
-                    : _parent(parent)
-                    , _pin()
-                {
-                    ASSERT(parent != nullptr);
-                }
-                ~UserReplyJob() = default;
-
-            public:
-                void Submit(const string& pin)
-                {
-                    TRACE(Trace::Information, (_T("PIN code reply: %s"), pin)); // TODO: pitfall; potentially can be binary
-                    _pin = pin;
-                    Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(*this));
-                }
-
-            private:
-                void Dispatch() override
-                {
-                    _parent->ReplyPINCode(_pin);
-                    _pin.clear();
-                }
-
-            private:
-                DeviceRegular* _parent;
-                string _pin;
-            }; // class UserReplyJob
-
         public:
             DeviceRegular() = delete;
             DeviceRegular(const DeviceRegular&) = delete;
@@ -1779,8 +1557,8 @@ class BluetoothControl : public PluginHost::IPlugin
                 : DeviceImpl(parent, Bluetooth::Address::BREDR_ADDRESS, deviceId, address, info)
                 , _securityCallback(nullptr)
                 , _linkKeys()
-                , _userRequestJob(Core::ProxyType<UserRequestJob>::Create(this))
-                , _userReplyJob(Core::ProxyType<UserReplyJob>::Create(this))
+                , _userRequestJob()
+                , _userReplyJob()
             {
                 RemoteName();
             }
@@ -1788,8 +1566,8 @@ class BluetoothControl : public PluginHost::IPlugin
                 : DeviceImpl(parent, Bluetooth::Address::BREDR_ADDRESS, deviceId, address)
                 , _securityCallback(nullptr)
                 , _linkKeys()
-                , _userRequestJob(Core::ProxyType<UserRequestJob>::Create(this))
-                , _userReplyJob(Core::ProxyType<UserReplyJob>::Create(this))
+                , _userRequestJob()
+                , _userReplyJob()
             {
                 ASSERT(config != nullptr);
 
@@ -1801,9 +1579,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     AutoConnect(true);
                 }
             }
-            ~DeviceRegular() override
-            {
-            }
+            ~DeviceRegular() = default;
 
         public:
             // IDevice overrides
@@ -1856,7 +1632,9 @@ class BluetoothControl : public PluginHost::IPlugin
             // IClassic overrides
             void PINCode(const string& pinCode) override
             {
-                _userReplyJob->Submit(pinCode);
+                _userReplyJob.Submit([this, pinCode](){
+                    _parent->Connector().Control().UserPINCodeReply(Address(), AddressType(), pinCode);
+                });
             }
             uint32_t Callback(IBluetooth::IClassic::ISecurityCallback* callback) override
             {
@@ -1897,13 +1675,11 @@ class BluetoothControl : public PluginHost::IPlugin
             void RequestPINCode()
             {
                 TRACE(Trace::Information, (_T("Pairing with legacy device %s; requesting PIN code..."), Address().ToString().c_str()));
-                _userRequestJob->Submit();
-            }
-
-        private:
-            void ReplyPINCode(const string& pinCode)
-            {
-                _parent->Connector().Control().UserPINCodeReply(Address(), AddressType(), pinCode);
+                _userRequestJob.Submit([this]() {
+                    Callback([&](IBluetooth::IClassic::ISecurityCallback* cb) {
+                        cb->PINCodeRequest();
+                    });
+                });
             }
 
         public:
@@ -1990,8 +1766,8 @@ class BluetoothControl : public PluginHost::IPlugin
         private:
             IBluetooth::IClassic::ISecurityCallback* _securityCallback;
             Bluetooth::LinkKeys _linkKeys;
-            Core::ProxyType<UserRequestJob> _userRequestJob;
-            Core::ProxyType<UserReplyJob> _userReplyJob;
+            DecoupledJob _userRequestJob;
+            DecoupledJob _userReplyJob;
         }; // class DeviceRegular
 
     public:
@@ -2362,6 +2138,7 @@ class BluetoothControl : public PluginHost::IPlugin
         void event_pincoderequest(const string& address);
         void event_passkeyrequest(const string& address);
         void event_passkeyconfirmrequest(const string& address, const uint32_t& secret);
+
     private:
         Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
