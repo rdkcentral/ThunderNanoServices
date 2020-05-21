@@ -20,7 +20,7 @@
 #include "Module.h"
 #include "DeviceInfo.h"
 
-u#include <interfaces/json/JsonData_DeviceInfo.h>
+#include <interfaces/json/JsonData_DeviceInfo.h>
 #include <core/JSONRPC.h>
 
 namespace WPEFramework {

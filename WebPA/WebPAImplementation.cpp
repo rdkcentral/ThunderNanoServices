@@ -144,7 +144,6 @@ public:
         } else {
             TRACE(Trace::Error, (_T("WebPA: Error in configuring network interface for communication")));
         }
-
         if (config.PingWaitTimeOut.Value().empty() == false) {
             _options.Add(_T("-t")).Add(config.PingWaitTimeOut.Value());
         }
@@ -179,9 +178,12 @@ public:
            _adminLock.Lock();
            Exchange::IWebPA::IWebPAClient* client = admin.Instantiate<Exchange::IWebPA::IWebPAClient>(entry.Current().c_str(), className, version);
            if (client != nullptr) {
-               _clients.insert(std::pair<const string, Exchange::IWebPA::IWebPAClient*>(className, client));
                client->Configure(service);
-               client->Launch();
+               if (client->Launch() == Core::ERROR_NONE) {
+                   _clients.insert(std::pair<const string, Exchange::IWebPA::IWebPAClient*>(className, client));
+               } else {
+                   TRACE(Trace::Error, (_T("WebPA Error in launching client %s"), entry.Current().c_str()));
+               }
            } else {
                TRACE(Trace::Error, (_T("WebPA Error in the instantiation of client %s"), entry.Current().c_str()));
            }
