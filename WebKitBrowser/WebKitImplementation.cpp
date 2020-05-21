@@ -56,6 +56,7 @@ namespace Plugin {
     static void requestClosure(const void* clientInfo);
     static void didRequestAutomationSession(WKContextRef context, WKStringRef sessionID, const void* clientInfo);
     static WKPageRef onAutomationSessionRequestNewPage(WKWebAutomationSessionRef session, const void* clientInfo);
+
     // -----------------------------------------------------------------------------------------------------
     // Hide all NASTY C details that come with the POC libraries !!!!!
     // -----------------------------------------------------------------------------------------------------
