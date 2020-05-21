@@ -953,7 +953,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 , _interval(0)
                 , _latency(0)
                 , _timeout(0)
-                , _autoConnection(false)
+                , _autoConnectionSubmitted(false)
                 , _callback(nullptr)
                 , _securityCallback(nullptr)
                 , _deviceUpdateJob()
@@ -1121,7 +1121,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     }
 
                     ClearState(UNPAIRING);
-                    _autoConnection = false;
+                    _autoConnectionSubmitted = false;
                     UpdateListener();
                 } else {
                     TRACE(Trace::Information, (_T("Device is currently busy")));
@@ -1365,12 +1365,12 @@ class BluetoothControl : public PluginHost::IPlugin
                 ClearState(DISCONNECTING);
                 _handle = ~0;
 
-                if (IsBonded() && (_autoConnection == false)) {
+                if (IsBonded() && (_autoConnectionSubmitted == false)) {
                     // Setting autoconnection can only be done when the device is disconnected.
                     // The whitelist is not cleared on subsequent connections/disconnections, so this only needs to be done once.
-                    // Bonded state has already been set accordingly at this time.
+                    // Kernel will disable autoconnection on it's own when unbinding, no need to call RemoveDevice then.
                     _autoConnectJob.Submit([this](){
-                        AutoConnect(IsBonded());
+                        AutoConnect(true);
                     });
                 }
 
@@ -1456,7 +1456,7 @@ class BluetoothControl : public PluginHost::IPlugin
                         TRACE(DeviceFlow, (_T("Could not add device %s [%d]"), Address().ToString().c_str(), result));
                     } else {
                         TRACE(DeviceFlow, (_T("Enabled autoconnect of device %s"), Address().ToString().c_str()));
-                        _autoConnection = true;
+                        _autoConnectionSubmitted = true;
                     }
                 } else {
                     uint32_t result = _parent->Connector().Control().RemoveDevice(AddressType(), Address());
@@ -1467,7 +1467,7 @@ class BluetoothControl : public PluginHost::IPlugin
                         TRACE(DeviceFlow, (_T("Disabled autoconnect of device %s"), Address().ToString().c_str()));
                     }
 
-                   _autoConnection = false;
+                   _autoConnectionSubmitted = false;
                 }
             }
 
@@ -1537,7 +1537,7 @@ class BluetoothControl : public PluginHost::IPlugin
             uint16_t _interval;
             uint16_t _latency;
             uint16_t _timeout;
-            bool _autoConnection;
+            bool _autoConnectionSubmitted;
             IBluetooth::IDevice::ICallback* _callback;
             IBluetooth::IDevice::ISecurityCallback* _securityCallback;
             DecoupledJob _deviceUpdateJob;
