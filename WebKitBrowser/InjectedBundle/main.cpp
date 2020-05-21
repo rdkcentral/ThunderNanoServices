@@ -263,7 +263,7 @@ static WKBundlePageUIClientV4 s_pageUIClient = {
     nullptr, // unused4
     nullptr, // unused5
     nullptr, // didClickAutoFillButton
-    nullptr, //willAddDetailedMessageToConsole
+    nullptr, // willAddDetailedMessageToConsole
 };
 
 static WKBundleClientV1 s_bundleClient = {
