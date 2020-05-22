@@ -64,9 +64,11 @@ namespace Broadcom {
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
 
+        _layer = index;
+
         ASSERT(_client != nullptr);
 
-        if (index == 0) {
+        if (_layer == 0) {
             result = Core::ERROR_NONE;
 
             /* the definition of "focus" is variable. this is one impl. */
@@ -84,6 +86,10 @@ namespace Broadcom {
             nxserver_p_focus_surface_client(_client);
         }
         return (result);
+    }
+
+    uint32_t Platform::Client::ZOrder() const {
+        return _layer;
     }
 
     class Config : public Core::JSON::Container {

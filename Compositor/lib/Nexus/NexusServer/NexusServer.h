@@ -47,6 +47,7 @@ namespace Broadcom {
                 : _client(client)
                 , _settings(*settings)
                 , _rectangle( {0,0,0,0} )
+                , _layer(0)
             {
                 TRACE_L1("Created client named: %s", _settings.name);
             }
@@ -81,7 +82,7 @@ namespace Broadcom {
             uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override;
             Exchange::IComposition::Rectangle Geometry() const override;
             uint32_t ZOrder(const uint16_t index) override;
-
+            uint32_t ZOrder() const override;
 
             BEGIN_INTERFACE_MAP(Entry)
                 INTERFACE_ENTRY(Exchange::IComposition::IClient)
@@ -91,6 +92,7 @@ namespace Broadcom {
             nxclient_t _client;
             NxClient_JoinSettings _settings;
             Exchange::IComposition::Rectangle _rectangle;
+            uint16_t _layer;
         };
 
         enum server_state {
