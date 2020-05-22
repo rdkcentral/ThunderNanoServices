@@ -43,14 +43,23 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
     _webpa =  _service->Root<Exchange::IWebPA>(_connectionId, ImplWaitTime, _T("WebPAImplementation"));
 
     if (nullptr != _webpa)  {
-        TRACE(Trace::Information, (_T("Successfully instantiated WebPA Service")));
-            // Configure and Launch Service
-            _webpa->Initialize(_service);
-
+        // Configure and Launch Service
+        if (_webpa->Initialize(_service) == Core::ERROR_NONE) {
+            TRACE(Trace::Information, (_T("Successfully instantiated WebPA Service")));
+        } else {
+            _webpa->Release();
+            _webpa = nullptr;
+            TRACE(Trace::Error, (_T("WebPA Service could not be launched.")));
+            message = _T("WebPA Service could not be launched.");
+        }
     } else {
-        _service->Unregister(&_notification);
         TRACE(Trace::Error, (_T("WebPA Service could not be instantiated.")));
         message = _T("WebPA Service could not be instantiated.");
+    }
+
+    if (_webpa == nullptr) {
+        _service->Unregister(&_notification);
+        _service = nullptr;
     }
 
     return message;

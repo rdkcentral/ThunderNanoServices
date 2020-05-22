@@ -171,7 +171,16 @@ void DeviceControl::CheckForUpdates()
         }
     }
 }
-
-static Administrator::ProfileImplementationType<DeviceControl> Register;
-
 }
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void LoadProfile() {
+    static WPEFramework::WebPA::Administrator::ProfileImplementationType<WPEFramework::DeviceControl> Register;
+}
+
+#ifdef __cplusplus
+}
+#endif

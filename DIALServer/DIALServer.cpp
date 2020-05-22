@@ -583,6 +583,9 @@ namespace Plugin {
                     } else if (request.Verb == Web::Request::HTTP_POST) {
                         StartApplication(request, result, selectedApp->second);
                     }
+                    else if (request.Verb == Web::Request::HTTP_DELETE) {
+                        StopApplication(request, result, selectedApp->second);
+                    }
                 } else if (index.Current() == _DefaultDataUrlExtension) {
                     if (request.Verb == Web::Request::HTTP_GET) {
                         result->ErrorCode = Web::STATUS_OK;
@@ -610,7 +613,7 @@ namespace Plugin {
                       }
                     }
                 } else if (index.Current() == _DefaultRunningExtension) {
-                    if ((request.Verb == Web::Request::HTTP_POST) || (request.Verb != Web::Request::HTTP_DELETE)) {
+                    if ((request.Verb == Web::Request::HTTP_POST) || (request.Verb == Web::Request::HTTP_DELETE)) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("OK");
                         selectedApp->second.Running(request.Verb == Web::Request::HTTP_POST);

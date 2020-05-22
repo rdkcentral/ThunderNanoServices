@@ -62,6 +62,7 @@ add_library(${MODULE_NAME} SHARED
     WebKitBrowserJsonRpc.cpp
     WebKitImplementation.cpp
     InjectedBundle/Tags.cpp
+    InjectedBundle/Utils.cpp
 )
 
 set_target_properties(${MODULE_NAME} PROPERTIES
