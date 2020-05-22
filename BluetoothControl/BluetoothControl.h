@@ -54,8 +54,6 @@ class BluetoothControl : public PluginHost::IPlugin
             ~DecoupledJob() = default;
 
         public:
-            using JobType::Revoke;
-
             void Submit(const Job& job, const uint32_t defer = 0)
             {
                 _lock.Lock();
@@ -69,6 +67,14 @@ class BluetoothControl : public PluginHost::IPlugin
                 } else {
                     TRACE(Trace::Information, (_T("Job in progress, skipping request")));
                 }
+                _lock.Unlock();
+            }
+
+            void Revoke()
+            {
+                _lock.Lock();
+                _job = nullptr;
+                JobType::Revoke();
                 _lock.Unlock();
             }
 
@@ -277,7 +283,7 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             uint32_t PairAbort(const Bluetooth::Address& remote, const Bluetooth::Address::type type)
             {
-                return(_administrator.Pair(remote, type));
+                return(_administrator.PairAbort(remote, type));
             }
             uint32_t Unpair(const Bluetooth::Address& remote, const Bluetooth::Address::type type)
             {
@@ -1064,14 +1070,19 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 return (result);
             }
-            uint32_t Pair(const IBluetooth::pairingcapabilities capabilities, uint16_t /* timeout */) override
+            uint32_t Pair(const IBluetooth::pairingcapabilities capabilities, const uint16_t timeout) override
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
 
                 if (SetState(PAIRING) == Core::ERROR_NONE) {
                     result = _parent->Connector().Pair(Address(), AddressType(), static_cast<Bluetooth::ManagementSocket::capabilities>(capabilities));
                     if (result == Core::ERROR_INPROGRESS) {
+                        _parent->event_devicestatechange(Address().ToString(), JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::PAIRING);
                         TRACE(Trace::Information, (_T("Pairing of device %s in progress..."), Address().ToString().c_str()));
+                        _abortPairingJob.Submit([this](){
+                            TRACE(Trace::Information, (_T("Timeout! Aborting pairing!"), Address().ToString().c_str()));
+                            AbortPairing();
+                        }, 1000L * timeout);
                         result = Core::ERROR_NONE;
                     } else {
                         if (result == Core::ERROR_ALREADY_CONNECTED) {
@@ -1094,12 +1105,14 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 if (SetState(PAIRING) != Core::ERROR_NONE) {
                     result = _parent->Connector().PairAbort(Address(), AddressType());
-                    if (result != Core::ERROR_NONE) {
+                    if (result == Core::ERROR_INPROGRESS) {
+                        TRACE(Trace::Information, (_T("Aborting pairing of device %s in progress..."), Address().ToString().c_str()));
+                    } else if (result != Core::ERROR_NONE) {
+                        ClearState(PAIRING); // Hope for the best anyway...
                         TRACE(Trace::Error, (_T("Failed to abort pairing [%d]"), result));
                     }
-
-                    ClearState(PAIRING);
                 } else {
+                    ClearState(PAIRING);
                     TRACE(Trace::Information, (_T("Not currently pairing to this device")));
                 }
 
@@ -1284,8 +1297,20 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             void PairingComplete(const uint8_t status = 0)
             {
-                if (!IsBonded()) {
-                    TRACE(Trace::Information, (_T("Device %s pairing complete: [%d]"), _remote.ToString().c_str(), status));
+                _abortPairingJob.Revoke();
+                if (status == 0) {
+                    // Pairing is considered successful only if the appropriate keys are exchanged.
+                    if (!IsBonded()) {
+                        TRACE(Trace::Information, (_T("Device %s pairing successful"), _remote.ToString().c_str()));
+                    }
+                } else {
+                    if (status == MGMT_STATUS_CANCELLED) {
+                        TRACE(Trace::Information, (_T("Device %s pairing aborted!"), _remote.ToString().c_str()));
+                    } else {
+                        TRACE(Trace::Error, (_T("Device %s pairing failed! [0x%02x]"), _remote.ToString().c_str(), status));
+                    }
+
+                    BondedChange();
                 }
                 ClearState(PAIRING);
             }
@@ -1543,6 +1568,7 @@ class BluetoothControl : public PluginHost::IPlugin
             IBluetooth::IDevice::ISecurityCallback* _securityCallback;
             DecoupledJob _deviceUpdateJob;
             DecoupledJob _autoConnectJob;
+            DecoupledJob _abortPairingJob;
             DecoupledJob _userRequestJob;
             DecoupledJob _userReplyJob;
         }; // class DeviceImpl

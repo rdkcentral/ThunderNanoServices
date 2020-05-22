@@ -148,7 +148,7 @@ namespace Plugin {
 
         DeviceImpl* device = Find<DeviceImpl>(Bluetooth::Address(address.c_str()));
         if (device != nullptr) {
-            result = device->Pair(IBluetooth::DISPLAY_YES_NO, timeout);
+            result = device->Pair(IBluetooth::DISPLAY_YES_NO, (timeout == 0? 20 : timeout));
         }
 
         return (result);
