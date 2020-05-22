@@ -28,6 +28,7 @@
 #include <compositor/Client.h>
 #include <compositorclient/Implementation.h>
 #include <interfaces/IComposition.h>
+#include <interfaces/IInputSwitch.h>
 
 #include <virtualinput/virtualinput.h>
 
@@ -38,6 +39,10 @@
 extern "C" {
 namespace WPEFramework {
     namespace Implementation {
+
+        uint32_t SetResolution(Exchange::IComposition::ScreenResolution);
+        Exchange::IComposition::ScreenResolution GetResolution();
+        
         struct IServer {
             virtual void SetInput(const char name[]) = 0;
 

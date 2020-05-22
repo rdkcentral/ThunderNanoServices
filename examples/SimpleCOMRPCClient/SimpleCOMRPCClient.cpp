@@ -35,12 +35,12 @@ public:
 
 public:
     // Inherited via IMath
-    virtual uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum) const override
+    uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum) const override
     {
         sum = A + B;
         return (Core::ERROR_NONE);
     }
-    virtual uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum) const override
+    uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum) const override
     {
         sum = A - B;
         return (Core::ERROR_NONE);
