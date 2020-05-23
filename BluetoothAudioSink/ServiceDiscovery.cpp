@@ -22,44 +22,44 @@
 
 namespace WPEFramework {
 
-namespace Implementation {
+namespace A2DP {
 
     void ServiceDiscovery::DumpProfile() const
     {
-        TRACE(SDPFlow, (_T("Discovered %d service(s)"), _profile.Services().size()));
+        TRACE(DiscoveryFlow, (_T("Discovered %d service(s)"), _profile.Services().size()));
 
         uint16_t cnt = 1;
         for (auto const& service : _profile.Services()) {
-            TRACE(SDPFlow, (_T("Service #%i"), cnt++));
-            TRACE(SDPFlow, (_T("  Handle: 0x%08x"), service.Handle()));
+            TRACE(DiscoveryFlow, (_T("Service #%i"), cnt++));
+            TRACE(DiscoveryFlow, (_T("  Handle: 0x%08x"), service.Handle()));
 
             if (service.Classes().empty() == false) {
-                TRACE(SDPFlow, (_T("  Classes:")));
+                TRACE(DiscoveryFlow, (_T("  Classes:")));
                 for (auto const& clazz : service.Classes()) {
-                    TRACE(SDPFlow, (_T("    - %s '%s'"),
+                    TRACE(DiscoveryFlow, (_T("    - %s '%s'"),
                                     clazz.Type().ToString().c_str(), clazz.Name().c_str()));
                 }
             }
             if (service.Profiles().empty() == false) {
-                TRACE(SDPFlow, (_T("  Profiles:")));
+                TRACE(DiscoveryFlow, (_T("  Profiles:")));
                 for (auto const& profile : service.Profiles()) {
-                    TRACE(SDPFlow, (_T("    - %s '%s', version: %d.%d"),
+                    TRACE(DiscoveryFlow, (_T("    - %s '%s', version: %d.%d"),
                                     profile.Type().ToString().c_str(), profile.Name().c_str(),
                                     (profile.Version() >> 8), (profile.Version() & 0xFF)));
                 }
             }
             if (service.Protocols().empty() == false) {
-                TRACE(SDPFlow, (_T("  Protocols:")));
+                TRACE(DiscoveryFlow, (_T("  Protocols:")));
                 for (auto const& protocol : service.Protocols()) {
-                    TRACE(SDPFlow, (_T("    - %s '%s', parameters: %s"),
+                    TRACE(DiscoveryFlow, (_T("    - %s '%s', parameters: %s"),
                                     protocol.Type().ToString().c_str(), protocol.Name().c_str(),
                                     Bluetooth::Record(protocol.Parameters()).ToString().c_str()));
                 }
             }
             if (service.Attributes().empty() == false) {
-                TRACE(SDPFlow, (_T("  Attributes:")));
+                TRACE(DiscoveryFlow, (_T("  Attributes:")));
                 for (auto const& attribute : service.Attributes()) {
-                    TRACE(SDPFlow, (_T("    - %04x '%s', value: %s"),
+                    TRACE(DiscoveryFlow, (_T("    - %04x '%s', value: %s"),
                                     attribute.second.Type(), attribute.second.Name().c_str(),
                                     Bluetooth::Record(attribute.second.Value()).ToString().c_str()));
                 }
@@ -67,6 +67,6 @@ namespace Implementation {
         }
     }
 
-} // namespace Implementation
+} // namespace A2DP
 
 }

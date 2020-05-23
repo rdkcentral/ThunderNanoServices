@@ -28,6 +28,7 @@
 #include <interfaces/JBluetoothAudioSink.h>
 
 #include "ServiceDiscovery.h"
+#include "SignallingChannel.h"
 
 namespace WPEFramework {
 
@@ -53,53 +54,62 @@ namespace Plugin {
             Core::JSON::String Controller;
         }; // class Config
 
-        class DispatchJob {
-        private:
-            class Job : public Core::IDispatch {
-            public:
-                Job(DispatchJob& parent)
-                    :_parent(parent)
-                {
-                }
-                ~Job() = default;
-
-            public:
-                void Dispatch() override
-                {
-                    _parent.Trigger();
-                }
-
-            private:
-                DispatchJob& _parent;
-            };
-
+        class DecoupledJob : private Core::WorkerPool::JobType<DecoupledJob&> {
         public:
-            using Handler = std::function<void()>;
+            using Job = std::function<void()>;
 
-        public:
-            DispatchJob(const DispatchJob&) = delete;
-            DispatchJob& operator=(const DispatchJob&) = delete;
+            DecoupledJob(const DecoupledJob&) = delete;
+            DecoupledJob& operator=(const DecoupledJob&) = delete;
 
-            DispatchJob(const Handler& handler)
-                : _handler(handler)
-                , _job(Core::ProxyType<Job>::Create(*this))
+            DecoupledJob()
+                : Core::WorkerPool::JobType<DecoupledJob&>(*this)
+                , _lock()
+                , _job(nullptr)
             {
-                Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(_job));
+            }
+
+            ~DecoupledJob() = default;
+
+        public:
+            void Submit(const Job& job, const uint32_t defer = 0)
+            {
+                _lock.Lock();
+                if (_job == nullptr) {
+                    _job = job;
+                    if (defer == 0) {
+                        JobType::Submit();
+                    } else {
+                        JobType::Schedule(Core::Time::Now().Add(defer));
+                    }
+                } else {
+                    TRACE(Trace::Information, (_T("Job in progress, skipping request")));
+                }
+                _lock.Unlock();
+            }
+
+            void Revoke()
+            {
+                _lock.Lock();
+                _job = nullptr;
+                JobType::Revoke();
+                _lock.Unlock();
             }
 
         private:
-           ~DispatchJob() = default;
-
-            void Trigger()
+            friend class Core::ThreadPool::JobType<DecoupledJob&>;
+            void Dispatch()
             {
-                _handler();
-                delete this;
+                _lock.Lock();
+                Job job = _job;
+                _job = nullptr;
+                _lock.Unlock();
+                job();
             }
 
         private:
-            Handler _handler;
-            Core::ProxyType<Job> _job;
-        }; // class DispatchJob
+            Core::CriticalSection _lock;
+            Job _job;
+        }; // class DecoupledJob
 
         class A2DPSink {
         private:
@@ -151,7 +161,7 @@ namespace Plugin {
             public:
                 void Updated() override
                 {
-                    _parent.DeviceUpdated();
+                    _parent.OnDeviceUpdated();
                 }
 
                 BEGIN_INTERFACE_MAP(DeviceCallback)
@@ -176,7 +186,9 @@ namespace Plugin {
                 , _device(device)
                 , _callback(this)
                 , _lock()
+                , _job()
                 , _discovery(Designator(device, true), Designator(device, false, Bluetooth::SDPSocket::SDP_PSM /* a well-known PSM */))
+                , _signalling(seid, Designator(device, true), Designator(device, false))
             {
                 ASSERT(parent != nullptr);
                 ASSERT(device != nullptr);
@@ -201,16 +213,16 @@ namespace Plugin {
             }
 
         public:
-            void DeviceUpdated()
+            void OnDeviceUpdated()
             {
                 if (_device->IsBonded() == true) {
                     _lock.Lock();
 
                     if (_device->IsConnected() == true) {
-                        if (_audioService.Type() == Implementation::ServiceDiscovery::AudioService::UNKNOWN) {
+                        if (_audioService.Type() == A2DP::ServiceDiscovery::AudioService::UNKNOWN) {
                             TRACE(A2DPFlow, (_T("Unknown device connected, attempt audio sink discovery...")));
                             DiscoverAudioServices();
-                        } else if (_audioService.Type() == Implementation::ServiceDiscovery::AudioService::SINK) {
+                        } else if (_audioService.Type() == A2DP::ServiceDiscovery::AudioService::SINK) {
                             TRACE(A2DPFlow, (_T("Audio sink device connected, connect to the sink...")));
                             DiscoverAudioStreamEndpoints(_audioService);
                         } else {
@@ -219,30 +231,37 @@ namespace Plugin {
                         }
                     } else {
                         TRACE(A2DPFlow, (_T("Device disconnected")));
-                        _audioService = Implementation::ServiceDiscovery::AudioService();
+                        _audioService = A2DP::ServiceDiscovery::AudioService();
                         _discovery.Disconnect();
+                        _signalling.Disconnect();
                     }
 
                     _lock.Unlock();
                 }
             }
 
+        public:
+            Exchange::IBluetoothAudioSink::status Status() const
+            {
+                return (_signalling.Status());
+            }
+
         private:
             void DiscoverAudioServices()
             {
                 if (_discovery.Connect() == Core::ERROR_NONE) {
-                    _discovery.Discover([this](const std::list<Implementation::ServiceDiscovery::AudioService>& services) {
-                        new DispatchJob([this, &services]() {
-                            AudioServices(services);
+                    _discovery.Discover([this](const std::list<A2DP::ServiceDiscovery::AudioService>& services) {
+                        _job.Submit([this, &services]() {
+                            OnAudioServicesDiscovered(services);
                         });
                     });
                 }
             }
-            void AudioServices(const std::list<Implementation::ServiceDiscovery::AudioService>& services)
+            void OnAudioServicesDiscovered(const std::list<A2DP::ServiceDiscovery::AudioService>& services)
             {
                 _lock.Lock();
 
-                // Audio serivces have been discovered, SDP channel is no longer required.
+                // Audio services have been discovered, SDP channel is no longer required.
                 _discovery.Disconnect();
 
                 // Disregard possibility of multiple sink services for now.
@@ -256,7 +275,32 @@ namespace Plugin {
                                            (_audioService.TransportVersion() >> 8), (_audioService.TransportVersion() & 0xFF),
                                            _audioService.PSM(), std::bitset<8>(_audioService.Features()).to_string().c_str()));
 
+                // Now open AVDTP signalling channel...
+                TRACE(A2DPFlow, (_T("Audio sink device discovered, connect to the sink...")));
+                DiscoverAudioStreamEndpoints(_audioService);
+
                 _lock.Unlock();
+            }
+
+        private:
+            void DiscoverAudioStreamEndpoints(A2DP::ServiceDiscovery::AudioService& service)
+            {
+                if (_signalling.Connect(Designator(_device, false, service.PSM())) == Core::ERROR_NONE) {
+                    _signalling.Discover([this](const std::list<A2DP::SignallingChannel::AudioEndpoint>& endpoints) {
+                        _job.Submit([this, &endpoints]() {
+                            OnAudioStreamEndpointsDiscovered(endpoints);
+                        });
+                    });
+                }
+            }
+            void OnAudioStreamEndpointsDiscovered(const std::list<A2DP::SignallingChannel::AudioEndpoint>& endpoints)
+            {
+                // Endpoints have been discovered, but the AVDTP signalling channel remains open!
+                for (auto& ep : endpoints) {
+                    if (ep.Codec() != A2DP::IAudioCodec::INVALID) {
+                        break;
+                    }
+                }
             }
 
         private:
@@ -264,8 +308,10 @@ namespace Plugin {
             Exchange::IBluetooth::IDevice* _device;
             Core::Sink<DeviceCallback> _callback;
             Core::CriticalSection _lock;
-            Implementation::ServiceDiscovery::AudioService _audioService;
-            Implementation::ServiceDiscovery _discovery;
+            DecoupledJob _job;
+            A2DP::ServiceDiscovery::AudioService _audioService;
+            A2DP::ServiceDiscovery _discovery;
+            A2DP::SignallingChannel _signalling;
         }; // class A2DPSink
 
     public:

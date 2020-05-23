@@ -23,7 +23,7 @@
 
 namespace WPEFramework {
 
-namespace Implementation {
+namespace A2DP {
 
     class ServiceDiscovery : public Bluetooth::SDPSocket {
     private:
@@ -33,20 +33,20 @@ namespace Implementation {
         static constexpr uint16_t DiscoverTimeout = 5000;
 
     private:
-        class SDPFlow {
+        class DiscoveryFlow {
         public:
-            ~SDPFlow() = default;
-            SDPFlow() = delete;
-            SDPFlow(const SDPFlow&) = delete;
-            SDPFlow& operator=(const SDPFlow&) = delete;
-            SDPFlow(const TCHAR formatter[], ...)
+            ~DiscoveryFlow() = default;
+            DiscoveryFlow() = delete;
+            DiscoveryFlow(const DiscoveryFlow&) = delete;
+            DiscoveryFlow& operator=(const DiscoveryFlow&) = delete;
+            DiscoveryFlow(const TCHAR formatter[], ...)
             {
                 va_list ap;
                 va_start(ap, formatter);
                 Trace::Format(_text, formatter, ap);
                 va_end(ap);
             }
-            explicit SDPFlow(const string& text)
+            explicit DiscoveryFlow(const string& text)
                 : _text(Core::ToString(text))
             {
             }
@@ -63,7 +63,7 @@ namespace Implementation {
 
         private:
             std::string _text;
-        }; // class SDPFlow
+        }; // class DiscoveryFlow
 
     public:
         using ClassID = Bluetooth::SDPProfile::ClassID;
@@ -209,7 +209,7 @@ namespace Implementation {
 
         void Operational() override
         {
-            TRACE(SDPFlow, (_T("Bluetooth SDP connection is operational")));
+            TRACE(DiscoveryFlow, (_T("Bluetooth SDP connection is operational")));
         }
 
     public:
@@ -219,7 +219,7 @@ namespace Implementation {
             if (result != Core::ERROR_NONE) {
                 TRACE(Trace::Error, (_T("Failed to open SDP socket [%d]"), result));
             } else {
-                TRACE(SDPFlow, (_T("Successfully opened SDP socket")));
+                TRACE(DiscoveryFlow, (_T("Successfully opened SDP socket")));
             }
 
             return (result);
@@ -233,7 +233,7 @@ namespace Implementation {
                 if (result != Core::ERROR_NONE) {
                     TRACE(Trace::Error, (_T("Failed to close SDP socket [%d]"), result));
                 } else {
-                    TRACE(SDPFlow, (_T("Successfully closed SDP socket")));
+                    TRACE(DiscoveryFlow, (_T("Successfully closed SDP socket")));
                 }
             }
 
@@ -245,7 +245,7 @@ namespace Implementation {
             if (SDPSocket::IsOpen() == true) {
                 _profile.Discover(DiscoverTimeout, *this, std::list<Bluetooth::UUID>{ ClassID::AudioSink }, [&](const uint32_t result) {
                     if (result == Core::ERROR_NONE) {
-                        TRACE(SDPFlow, (_T("Service discovery complete")));
+                        TRACE(DiscoveryFlow, (_T("Service discovery complete")));
 
                         _lock.Lock();
 
@@ -281,6 +281,6 @@ namespace Implementation {
         DiscoveryCompleteCb _discoveryComplete;
     }; // class ServiceDiscovery
 
-} // namespace Implementation
+} // namespace A2DP
 
 }
