@@ -36,9 +36,12 @@ namespace Plugin {
         JSONRPC::Register<ScanParamsData,void>(_T("scan"), &BluetoothControl::endpoint_scan, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("connect"), &BluetoothControl::endpoint_connect, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("disconnect"), &BluetoothControl::endpoint_disconnect, this);
-        JSONRPC::Register<ConnectParamsInfo,void>(_T("pair"), &BluetoothControl::endpoint_pair, this);
+        JSONRPC::Register<PairParamsData,void>(_T("pair"), &BluetoothControl::endpoint_pair, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("unpair"), &BluetoothControl::endpoint_unpair, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("abortpairing"), &BluetoothControl::endpoint_abortpairing, this);
+        JSONRPC::Register<PincodeParamsData,void>(_T("pincode"), &BluetoothControl::endpoint_pincode, this);
+        JSONRPC::Register<PasskeyParamsInfo,void>(_T("passkey"), &BluetoothControl::endpoint_passkey, this);
+        JSONRPC::Register<ConfirmpasskeyParamsData,void>(_T("confirmpasskey"), &BluetoothControl::endpoint_confirmpasskey, this);
         JSONRPC::Property<Core::JSON::ArrayType<Core::JSON::DecUInt16>>(_T("adapters"), &BluetoothControl::get_adapters, nullptr, this);
         JSONRPC::Property<AdapterData>(_T("adapter"), &BluetoothControl::get_adapter, nullptr, this);
         JSONRPC::Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("devices"), &BluetoothControl::get_devices, nullptr, this);
@@ -47,6 +50,9 @@ namespace Plugin {
 
     void BluetoothControl::UnregisterAll()
     {
+        JSONRPC::Unregister(_T("confirmpasskey"));
+        JSONRPC::Unregister(_T("passkey"));
+        JSONRPC::Unregister(_T("pincode"));
         JSONRPC::Unregister(_T("abortpairing"));
         JSONRPC::Unregister(_T("unpair"));
         JSONRPC::Unregister(_T("pair"));
@@ -134,14 +140,15 @@ namespace Plugin {
     //  - ERROR_UNKNOWN_KEY: Unknown device
     //  - ERROR_ALREADY_CONNECTED: Device already paired
     //  - ERROR_GENERAL: Failed to pair the device
-    uint32_t BluetoothControl::endpoint_pair(const ConnectParamsInfo& params)
+    uint32_t BluetoothControl::endpoint_pair(const PairParamsData& params)
     {
         uint32_t result = Core::ERROR_UNKNOWN_KEY;
         const string& address = params.Address.Value();
+        const uint16_t& timeout = params.Timeout.Value();
 
         DeviceImpl* device = Find<DeviceImpl>(Bluetooth::Address(address.c_str()));
         if (device != nullptr) {
-            result = device->Pair(IBluetooth::DISPLAY_YES_NO);
+            result = device->Pair(IBluetooth::DISPLAY_YES_NO, (timeout == 0? 20 : timeout));
         }
 
         return (result);
@@ -178,6 +185,66 @@ namespace Plugin {
         DeviceImpl* device = Find<DeviceImpl>(Bluetooth::Address(address.c_str()));
         if (device != nullptr) {
             result = device->AbortPairing();
+        }
+
+        return (result);
+    }
+
+    // Method: pincode - Specifies a PIN code for authentication during a legacy pairing process
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNKNOWN_KEY: Unknown device
+    //  - ERROR_ILLEGAL_STATE: Device not currently pairing or PIN code has not been requested
+    uint32_t BluetoothControl::endpoint_pincode(const PincodeParamsData& params)
+    {
+        uint32_t result = Core::ERROR_UNKNOWN_KEY;
+        const string& address = params.Address.Value();
+        const string& secret = params.Secret.Value();
+
+        DeviceRegular* device = Find<DeviceRegular>(Bluetooth::Address(address.c_str()));
+        if (device != nullptr) {
+            device->PINCode(secret);
+            result = Core::ERROR_NONE;
+        }
+
+        return (result);
+    }
+
+    // Method: passkey - Specifies a passkey for authentication during a pairing process
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNKNOWN_KEY: Unknown device
+    //  - ERROR_ILLEGAL_STATE: Device not currently pairing or a passkey has not been requested
+    uint32_t BluetoothControl::endpoint_passkey(const PasskeyParamsInfo& params)
+    {
+        uint32_t result = Core::ERROR_UNKNOWN_KEY;
+        const string& address = params.Address.Value();
+        const uint32_t& secret = params.Secret.Value();
+
+        DeviceImpl* device = Find<DeviceImpl>(Bluetooth::Address(address.c_str()));
+        if (device != nullptr) {
+            device->Passkey(secret);
+            result = Core::ERROR_NONE;
+        }
+
+        return (result);
+    }
+
+    // Method: passkeyconfirm - Confirms a passkey for authentication during a pairing process
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNKNOWN_KEY: Unknown device
+    //  - ERROR_ILLEGAL_STATE: Device is currently not pairing or passkey confirmation has not been requested
+    uint32_t BluetoothControl::endpoint_confirmpasskey(const ConfirmpasskeyParamsData& params)
+    {
+        uint32_t result = Core::ERROR_UNKNOWN_KEY;
+        const string& address = params.Address.Value();
+        const bool& iscorrect = params.Iscorrect.Value();
+
+        DeviceImpl* device = Find<DeviceImpl>(Bluetooth::Address(address.c_str()));
+        if (device != nullptr) {
+            device->ConfirmPasskey(iscorrect);
+            result = Core::ERROR_NONE;
         }
 
         return (result);
@@ -280,6 +347,34 @@ namespace Plugin {
         }
 
         Notify(_T("devicestatechange"), params);
+    }
+
+    // Event: pincoderequest - Notifies about a PIN code request
+    void BluetoothControl::event_pincoderequest(const string& address)
+    {
+        ConnectParamsInfo params;
+        params.Address = address;
+
+        Notify(_T("pincoderequest"), params);
+    }
+
+    // Event: passkeyrequest - Notifies about a passkey request
+    void BluetoothControl::event_passkeyrequest(const string& address)
+    {
+        ConnectParamsInfo params;
+        params.Address = address;
+
+        Notify(_T("passkeyrequest"), params);
+    }
+
+    // Event: passkeyconfirmrequest - Notifies about a passkey confirmation request
+    void BluetoothControl::event_passkeyconfirmrequest(const string& address, const uint32_t& secret)
+    {
+        PasskeyParamsInfo params;
+        params.Address = address;
+        params.Secret = secret;
+
+        Notify(_T("passkeyconfirmrequest"), params);
     }
 
 } // namespace Plugin
