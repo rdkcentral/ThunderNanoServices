@@ -49,6 +49,11 @@ namespace WPASupplicant {
             WPS_AP_AVAILABLE,
             AP_ENABLED
         };
+        struct IConnectCallback {
+            ~IConnectCallback() {}
+
+            virtual void Completed(const uint32_t result) = 0;
+        };
 
     private:
         static constexpr uint32_t MaxConnectionTime = 3000;
@@ -273,6 +278,9 @@ namespace WPASupplicant {
                 }
                 return (false);
             }
+            inline bool InProgress() const {
+                return (_settable == false);
+            }
             string& Message()
             {
                 return (_request);
@@ -290,7 +298,7 @@ namespace WPASupplicant {
 
             void Processing(const bool processing)
             {
-                _settable = processing == false;
+                _settable = (processing == false);
             }
 
             virtual void Completed(const string& response, const bool abort) = 0;
@@ -676,6 +684,124 @@ namespace WPASupplicant {
         private:
             Controller& _parent;
         };
+        class ConnectRequest : public Request {
+        private:
+            enum connection {
+                CONNECT_SELECT,
+                CONNECT_RECONNECT,
+                CONNECT_AUTHORIZE
+            };
+
+        public:
+            ConnectRequest() = delete;
+            ConnectRequest(const ConnectRequest&) = delete;
+            ConnectRequest& operator=(const ConnectRequest&) = delete;
+
+            ConnectRequest(Controller& parent)
+                : Request()
+                , _parent(parent)
+                , _adminLock()
+                , _state(CONNECT_SELECT)
+                , _bssid(0)
+                , _ssid()
+                , _callback(nullptr)
+            {
+            }
+            ~ConnectRequest() override
+            {
+            }
+
+        public:
+            uint32_t Invoke(IConnectCallback* callback, const string& ssid, const uint64_t& bssid) {
+
+                uint32_t result = (_callback != nullptr ? Core::ERROR_INPROGRESS        : 
+                                  (bssid     == 0       ? Core::ERROR_INCOMPLETE_CONFIG : 
+                                                          Core::ERROR_UNKNOWN_KEY       ));
+
+                if (result == Core::ERROR_UNKNOWN_KEY) {
+
+                    EnabledContainer::iterator index(_parent._enabled.find(ssid));
+
+                    if (index != _parent._enabled.end()) {
+
+                        result = Core::ERROR_ASYNC_FAILED;
+
+                        if (Request::Set (string(_TXT("SELECT_NETWORK ")) + Core::NumberType<uint32_t>(index->second.Id()).Text()) == true) {
+
+                            _bssid = bssid;
+                            _ssid = ssid;
+                            _state = CONNECT_SELECT;
+                            _callback = callback;
+                            result = Core::ERROR_NONE;
+
+                            _parent.Submit(this);
+                        }
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t Revoke(IConnectCallback* callback) {
+
+                uint32_t result = Core::ERROR_UNAVAILABLE;
+
+                _adminLock.Lock();
+
+                if (callback == _callback) {
+                    _callback = nullptr;
+                    _adminLock.Unlock();
+
+                    _parent.Revoke(this);
+
+                    result = Core::ERROR_NONE;
+                }
+                else {
+                    _adminLock.Unlock();
+                }
+
+                return (result);
+            }
+            void Completed(const string& response, const bool abort) override
+            {
+                uint32_t result = Core::ERROR_REQUEST_SUBMITTED;
+                string newCommand;
+
+                if (abort == true) {
+                    result = Core::ERROR_ASYNC_ABORTED;
+                } 
+                else if (response != _T("OK")) {
+                    result = Core::ERROR_ASYNC_FAILED;
+                }
+                else if (_state == CONNECT_SELECT) {
+                    newCommand = string(_TXT("RECONNECT"));
+                    _state     = CONNECT_RECONNECT;
+                }
+                else if (_state == CONNECT_RECONNECT) {
+                    newCommand = string(_TXT("PREAUTH ")) + BSSID(_bssid);
+                    _state     = CONNECT_AUTHORIZE;
+                }
+                else {
+                    result = Core::ERROR_NONE;
+                }
+                    
+                if ((newCommand.empty() == false) && (Request::Set(newCommand) == true)) {
+                    _parent.Submit(this);
+                }
+                else {
+                    _adminLock.Lock();
+                    _callback->Completed(result);
+                    _adminLock.Unlock();
+                }
+            }
+
+        private:
+            Controller& _parent;
+            Core::CriticalSection _adminLock;
+            connection _state;
+            uint64_t _bssid;
+            string _ssid;
+            IConnectCallback* _callback;
+        };
         class CustomRequest : public Request {
         private:
             CustomRequest() = delete;
@@ -730,7 +856,6 @@ namespace WPASupplicant {
             string _response;
             uint32_t _result;
         };
-
         typedef std::map<const uint64_t, NetworkInfo> NetworkInfoContainer;
         typedef std::map<const string, ConfigInfo> EnabledContainer;
         typedef Core::StreamType<Core::SocketDatagram> BaseClass;
@@ -748,6 +873,7 @@ namespace WPASupplicant {
             , _detailRequest(*this)
             , _networkRequest(*this)
             , _statusRequest(*this)
+            , _connectRequest(*this)
         {
             string remoteName(Core::Directory::Normalize(supplicantBase) + interfaceName);
 
@@ -1209,53 +1335,57 @@ namespace WPASupplicant {
 
             return (result);
         }
-        inline uint32_t Connect(const string& SSID, const uint64_t bssid)
+        inline uint32_t Connect(const string& SSID, const uint64_t& bssid)
         {
-            uint32_t result = Core::ERROR_UNKNOWN_KEY;
+            class ConnectSink : public IConnectCallback {
+            public:
+                ConnectSink(const ConnectSink&) = delete;
+                ConnectSink& operator= (const ConnectSink&) = delete;
+                ConnectSink() : _signal(false, true), _result(Core::ERROR_TIMEDOUT) {}
+                ~ConnectSink() = default;
 
-            _adminLock.Lock();
-
-            EnabledContainer::iterator index(_enabled.find(SSID));
-
-            if (index != _enabled.end()) {
-                _adminLock.Unlock();
-                result = Core::ERROR_NONE;
-                CustomRequest exchange(string(_TXT("SELECT_NETWORK ")) + Core::NumberType<uint32_t>(index->second.Id()).Text());
-
-                Submit(&exchange);
-
-                if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
-
-                    result = Core::ERROR_ASYNC_ABORTED;
-                } else {
-
-                    index->second.State(ConfigInfo::SELECTED);
-
-                    if (bssid != 0) {
-                        exchange = string(_TXT("RECONNECT"));
-
-                        Submit(&exchange);
-
-                        if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
-                            result = Core::ERROR_ASYNC_ABORTED;
-                        } else {
-                            index->second.State(ConfigInfo::SELECTED);
-
-                            exchange = string(_TXT("PREAUTH ")) + BSSID(bssid);
-
-                            Submit(&exchange);
-
-                            if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
-                                result = Core::ERROR_ASYNC_ABORTED;
-                            }
-                        }
-                    }
+            public:
+                uint32_t Wait(const uint32_t waitTime) {
+                    return (_signal.Lock(waitTime) == Core::ERROR_NONE ? _result : Core::ERROR_TIMEDOUT);
+                }
+                void Completed(const uint32_t result) override {
+                    _result = result;
+                    _signal.SetEvent();
                 }
 
-                Revoke(&exchange);
-            } else {
-                _adminLock.Unlock();
+            private:
+                Core::Event _signal;
+                uint32_t _result;
+
+            } waitSink;
+
+            uint32_t result = Connect(&waitSink, SSID, bssid);
+
+            if (result == Core::ERROR_NONE) {
+                result = waitSink.Wait(3 * MaxConnectionTime);
+
+                _connectRequest.Revoke(&waitSink);
             }
+
+            return (result);
+        }
+        inline uint32_t Connect(IConnectCallback* sink, const string& SSID, const uint64_t bssid)
+        {
+            _adminLock.Lock();
+
+            uint32_t result = _connectRequest.Invoke(sink, SSID, bssid);
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        inline uint32_t Revoke(IConnectCallback* sink)
+        {
+            _adminLock.Lock();
+
+            uint32_t result = _connectRequest.Revoke(sink);
+
+            _adminLock.Unlock();
 
             return (result);
         }
@@ -1678,6 +1808,7 @@ namespace WPASupplicant {
         DetailRequest _detailRequest;
         NetworkRequest _networkRequest;
         StatusRequest _statusRequest;
+        ConnectRequest _connectRequest;
     };
 }
 } // namespace WPEFramework::WPASupplicant

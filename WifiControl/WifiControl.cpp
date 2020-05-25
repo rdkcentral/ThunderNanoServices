@@ -47,6 +47,8 @@ namespace Plugin
         , _sink(*this)
         , _wpaSupplicant()
         , _controller()
+        , _autoConnect(false)
+        , _preferred()
     {
         RegisterAll();
     }
@@ -62,6 +64,8 @@ namespace Plugin
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
         _service = service;
+        _autoConnect = config.AutoConnect.Value();
+        _preferred = config.Preferred.Value();
 
         if (Core::Directory(service->PersistentPath().c_str()).CreatePath())
             _configurationStore = service->PersistentPath() + "wpa_supplicant.conf";
