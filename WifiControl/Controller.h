@@ -46,6 +46,7 @@ namespace WPASupplicant {
             CTRL_EVENT_TERMINATING,
             CTRL_EVENT_NETWORK_NOT_FOUND,
             CTRL_EVENT_NETWORK_CHANGED,
+            CTRL_EVENT_SSID_TEMP_DISABLED,
             WPS_AP_AVAILABLE,
             AP_ENABLED
         };
