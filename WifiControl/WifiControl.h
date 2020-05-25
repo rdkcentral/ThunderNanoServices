@@ -35,17 +35,16 @@ namespace Plugin {
     class WifiControl : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
         class Sink : public Core::IDispatchType<const WPASupplicant::Controller::events> {
-        private:
+        public:
             Sink() = delete;
             Sink(const Sink&) = delete;
             Sink& operator=(const Sink&) = delete;
 
-        public:
             Sink(WifiControl& parent)
                 : _parent(parent)
             {
             }
-            virtual ~Sink()
+            ~Sink() override
             {
             }
 
@@ -58,13 +57,11 @@ namespace Plugin {
         private:
             WifiControl& _parent;
         };
-
         class WifiDriver {
-        private:
+        public:
             WifiDriver(const WifiDriver&) = delete;
             WifiDriver& operator=(const WifiDriver&) = delete;
 
-        public:
             WifiDriver()
                 : _interfaceName()
                 , _connector()
@@ -132,7 +129,6 @@ namespace Plugin {
             Core::Process _process;
             uint32_t _pid;
         };
-
         class AutoConnect : public WPASupplicant::Controller::IConnectCallback
         {
         private:
@@ -175,7 +171,7 @@ namespace Plugin {
                 IDLE           = 0x01,
                 SCANNING       = 0x02,
                 CONNECTING     = 0x03,
-                TIMED          = 0x80
+                RETRY          = 0x04
             };
 
         public:
@@ -183,13 +179,15 @@ namespace Plugin {
             AutoConnect(const AutoConnect&) = delete;
             AutoConnect& operator=(const AutoConnect&) = delete;
 
-            AutoConnect(WifiControl& parent, const uint8_t scheduleInterval)
+            AutoConnect(Core::ProxyType<WPASupplicant::Controller>& controller)
                 : _adminLock()
-                , _parent(parent)
+                , _controller(controller)
                 , _job(*this)
                 , _state(IDLE)
                 , _ssidList()
-                , _interval(scheduleInterval * 1000)
+                , _interval(0)
+                , _attempts(0)
+                , _preferred()
             {
             }
             ~AutoConnect()
@@ -197,25 +195,63 @@ namespace Plugin {
             }
 
         public:
+            uint32_t Connect(const string& SSID, const uint8_t scheduleInterval, const uint32_t attempts) 
+            {
+                uint32_t result = Core::ERROR_INPROGRESS;
+
+                _adminLock.Lock();
+
+                if (_state == IDLE) {
+
+                    ASSERT (_controller.IsValid());
+
+                    _preferred = SSID;
+                    _attempts = attempts;
+                    _interval = (scheduleInterval * 1000);
+
+                    MoveState (SCANNING);
+
+                    _controller->Scan();
+
+                    result = Core::ERROR_NONE;
+
+                    _job.Schedule(Core::Time::Now().Add(_interval));
+                }
+
+                _adminLock.Unlock();
+
+                return (result);
+            }
+            uint32_t Revoke()
+            {
+                _adminLock.Lock();
+
+                MoveState(IDLE);
+
+                _attempts = 0;
+                _interval = 0;
+
+                _adminLock.Unlock();
+
+                return(Core::ERROR_INPROGRESS);
+            }
             void Scanned()
             {
                 _adminLock.Lock();
 
-                if ((_state & 0x0F) == SCANNING) {
-
-                    _state = CONNECTING;
+                if ( (_state == SCANNING) || (_state == RETRY) ) {
 
                     _ssidList.clear();
 
                     /* Arrange SSIDs in sorted order as per signal strength */
-                    WPASupplicant::Network::Iterator list(_parent._controller->Networks());
+                    WPASupplicant::Network::Iterator list(_controller->Networks());
 
                     while (list.Next() == true) {
                         const WPASupplicant::Network& net = list.Current();
-                        if (_parent._controller->Get(net.SSID()).IsValid()) {
+                        if (_controller->Get(net.SSID()).IsValid()) {
 
                             int32_t strength(net.Signal());
-                            if (net.SSID().compare(_parent.PreferredSSID()) == 0) {
+                            if (net.SSID().compare(_preferred) == 0) {
                                 strength = Core::NumberType<int32_t>::Max();
                             }
 
@@ -226,120 +262,116 @@ namespace Plugin {
                             _ssidList.emplace(index, strength, net.BSSID(), net.SSID());
                         }
                     }
- 
-                    _adminLock.Unlock();
 
-                    _job.Revoke();
-                    _job.Submit();
+                    MoveState(_ssidList.size() == 0 ? RETRY : CONNECTING);
 
-                } else {
-                    _adminLock.Unlock();
+                    if (_state == CONNECTING) {
+                        _controller->Connect(this, _ssidList.front().SSID(), _ssidList.front().BSSID());
+                    }
+
+                    _job.Schedule(Core::Time::Now().Add(_interval));
                 }
+
+                _adminLock.Unlock();
             }
             void Disconnected ()
             {
                 _adminLock.Lock();
 
-                if ((_state == IDLE) && (_parent.AutoConnect() == true)) {
-                    _job.Submit();
-                }
+                if ((_state == IDLE) && (_attempts > 0)) {
 
-                _adminLock.Unlock();
-            }
+                    MoveState(SCANNING);
 
-        private:
-            void Completed(const uint32_t result) override {
+                    _controller->Scan();
 
-                _parent._controller->Revoke(this);
-
-                _adminLock.Lock();
-
-                if (result == Core::ERROR_NONE) {
-                    _state = IDLE;
-                    _ssidList.clear();
-                    _adminLock.Unlock();
-
-                    _job.Revoke();
-                }
-                else {
-                    if (_ssidList.size() > 0) {
-                        _ssidList.pop_front();
-                    }
-
-                    if (_ssidList.size() == 0) {
-                        _state = IDLE;
-                        _adminLock.Unlock();
-
-                        _job.Revoke();
-                        if (_parent.AutoConnect() == true) {
-                            _job.Schedule(Core::Time::Now().Add(_interval));
-                        }
-                    }
-                    else {
-                        _state = CONNECTING;
-                        _adminLock.Unlock();
-
-                        _job.Revoke();
-                        _job.Submit();
-                    }
-                }
-            }
-        public:
-            void Dispatch()
-            {
-                _adminLock.Lock();
-
-                // Did we time out, or is this just a trigger to take action...
-                if ((_state & TIMED) != 0) {
-                    
-                    states lastState = (static_cast<states>(_state & 0x0F));
-
-                    if (lastState == IDLE) {
-                        _state = IDLE;
-                    }
-                    else if (lastState == SCANNING) {
-                        _state = static_cast<states>(IDLE|TIMED);
-                    }
-                    else if (lastState == CONNECTING) {
-                        if (_ssidList.size() > 0) {
-                            _ssidList.pop_front();
-                        }
-                        _state = (_ssidList.size() == 0 ? static_cast<states>(IDLE|TIMED) : CONNECTING);
-                    }
-                }
-
-                if (_state == IDLE) {
-                    _state = static_cast<states>(SCANNING|TIMED);
-                    _parent._controller->Scan();
-                }
-                else if (_state == SCANNING) {
-                    // This should not be possible, as it would time out than!!
-                    ASSERT(false);
-                    _state = IDLE;
-                }
-                else if (_state == CONNECTING) {
-
-                    // This should not be possible, as the state would be IDLE if the list is empty!!
-                    ASSERT (_ssidList.empty() == false);
-
-                    _parent._controller->Connect(this, _ssidList.front().SSID(), _ssidList.front().BSSID());
-                    _state = static_cast<states>(CONNECTING|TIMED);
-                }
-
-                if ((_state & TIMED) != 0) {
                     _job.Schedule(Core::Time::Now().Add(_interval));
                 }
 
                 _adminLock.Unlock();
             }
 
+            void Dispatch()
+            {
+                _adminLock.Lock();
+
+                // Oke, the Job timed out, or we need a new CONNECTION request....
+                if (_state == SCANNING) {
+                    // Seems that the Scan did not complete in time. Lets reschedule for later...
+                    _state = RETRY;
+                    _job.Schedule(Core::Time::Now().Add(_interval));
+                }
+                else if (_state == CONNECTING) {
+
+                    // If we sre still in the CONNECTING mode, it must mean that previous CONNECT Failed
+                    if (_ssidList.size() > 0) {
+                        _ssidList.pop_front();
+                    }
+
+                    if (_ssidList.size() == 0) {
+                        _state = RETRY;
+                    }
+                    else {
+                        _controller->Connect(this, _ssidList.front().SSID(), _ssidList.front().BSSID());
+                    }
+                    _job.Schedule(Core::Time::Now().Add(_interval));
+                }
+                else if (_state == RETRY) {
+                    if (_attempts == 0) {
+                        _state = IDLE;
+                    }
+                    else {
+                        if (_attempts != static_cast<uint32_t>(~0)) {
+                            --_attempts;
+                        }
+                        _state = SCANNING;
+                        _controller->Scan();
+
+                        _job.Schedule(Core::Time::Now().Add(_interval));
+                    }
+                }
+
+                _adminLock.Unlock();
+            }
+
+        private:
+            void MoveState(const states newState) {
+                _state = IDLE;
+
+                _adminLock.Unlock();
+
+                _job.Revoke();
+
+                _adminLock.Lock();
+
+                _state = newState;
+            }
+            void Completed(const uint32_t result) override {
+
+                _adminLock.Lock();
+
+                if (result == Core::ERROR_NONE) {
+
+                    MoveState(IDLE);
+
+                    _ssidList.clear();
+                }
+                else {
+                    MoveState(CONNECTING);
+
+                    _job.Submit();
+                }
+                _adminLock.Unlock();
+            }
+
         private:
             Core::CriticalSection _adminLock;
-            WifiControl& _parent;
+            Core::ProxyType<WPASupplicant::Controller>& _controller;
             Job _job;
             states _state;
             SSIDList _ssidList;
             uint32_t _interval;
+            uint32_t _attempts;
+            string _preferred;
         };
 
     public:
@@ -537,14 +569,6 @@ namespace Plugin {
         }
 
     public:
-        inline bool AutoConnect() const {
-            return ((_autoConnect == true) && (_preferred.empty() == false));
-        }
-
-        inline const string& PreferredSSID () const {
-            return (_preferred);
-        }
-
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
         virtual const string Initialize(PluginHost::IShell* service) override;
@@ -593,8 +617,7 @@ namespace Plugin {
         Sink _sink;
         WifiDriver _wpaSupplicant;
         Core::ProxyType<WPASupplicant::Controller> _controller;
-        bool _autoConnect;
-        string _preferred;
+        AutoConnect _autoConnect;
     };
 
 } // namespace Plugin

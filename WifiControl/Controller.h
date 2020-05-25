@@ -762,6 +762,16 @@ namespace WPASupplicant {
 
                 return (result);
             }
+            void Disabled ()
+            {
+                _adminLock.Lock();
+
+                if (_callback != nullptr) {
+                    _callback->Completed(Core::ERROR_INVALID_SIGNATURE);
+                }
+
+                _adminLock.Unlock();
+            }
             void Completed(const string& response, const bool abort) override
             {
                 uint32_t result = Core::ERROR_REQUEST_SUBMITTED;
@@ -1430,6 +1440,11 @@ namespace WPASupplicant {
         inline void Notify(const events value)
         {
             _adminLock.Lock();
+
+            if (value == WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED) {
+                _connectRequest.Disabled();
+            }
+
             if (_callback != nullptr) {
                 _callback->Dispatch(value);
             }
