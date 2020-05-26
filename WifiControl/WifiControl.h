@@ -166,12 +166,12 @@ namespace Plugin {
             using Job = Core::WorkerPool::JobType<AutoConnect&>;
             using SSIDList = std::list<AccessPoint>;
 
-            enum states : uint8_t
+            enum class states : uint8_t
             {
-                IDLE           = 0x01,
-                SCANNING       = 0x02,
-                CONNECTING     = 0x03,
-                RETRY          = 0x04
+                IDLE,
+                SCANNING,
+                CONNECTING,
+                RETRY
             };
 
         public:
@@ -183,14 +183,14 @@ namespace Plugin {
                 : _adminLock()
                 , _controller(controller)
                 , _job(*this)
-                , _state(IDLE)
+                , _state(states::IDLE)
                 , _ssidList()
                 , _interval(0)
                 , _attempts(0)
                 , _preferred()
             {
             }
-            ~AutoConnect()
+            ~AutoConnect() override
             {
             }
 
@@ -201,7 +201,7 @@ namespace Plugin {
 
                 _adminLock.Lock();
 
-                if (_state == IDLE) {
+                if (_state == states::IDLE) {
 
                     ASSERT (_controller.IsValid());
 
@@ -209,7 +209,7 @@ namespace Plugin {
                     _attempts = attempts;
                     _interval = (scheduleInterval * 1000);
 
-                    MoveState (SCANNING);
+                    MoveState (states::SCANNING);
 
                     _controller->Scan();
 
@@ -226,7 +226,7 @@ namespace Plugin {
             {
                 _adminLock.Lock();
 
-                MoveState(IDLE);
+                MoveState(states::IDLE);
 
                 _attempts = 0;
                 _interval = 0;
@@ -239,7 +239,7 @@ namespace Plugin {
             {
                 _adminLock.Lock();
 
-                if ( (_state == SCANNING) || (_state == RETRY) ) {
+                if ( (_state == states::SCANNING) || (_state == states::RETRY) ) {
 
                     _ssidList.clear();
 
@@ -263,9 +263,9 @@ namespace Plugin {
                         }
                     }
 
-                    MoveState(_ssidList.size() == 0 ? RETRY : CONNECTING);
+                    MoveState(_ssidList.size() == 0 ? states::RETRY : states::CONNECTING);
 
-                    if (_state == CONNECTING) {
+                    if (_state == states::CONNECTING) {
                         _controller->Connect(this, _ssidList.front().SSID(), _ssidList.front().BSSID());
                     }
 
@@ -278,9 +278,9 @@ namespace Plugin {
             {
                 _adminLock.Lock();
 
-                if ((_state == IDLE) && (_attempts > 0)) {
+                if ((_state == states::IDLE) && (_attempts > 0)) {
 
-                    MoveState(SCANNING);
+                    MoveState(states::SCANNING);
 
                     _controller->Scan();
 
@@ -295,12 +295,12 @@ namespace Plugin {
                 _adminLock.Lock();
 
                 // Oke, the Job timed out, or we need a new CONNECTION request....
-                if (_state == SCANNING) {
+                if (_state == states::SCANNING) {
                     // Seems that the Scan did not complete in time. Lets reschedule for later...
-                    _state = RETRY;
+                    _state = states::RETRY;
                     _job.Schedule(Core::Time::Now().Add(_interval));
                 }
-                else if (_state == CONNECTING) {
+                else if (_state == states::CONNECTING) {
 
                     // If we sre still in the CONNECTING mode, it must mean that previous CONNECT Failed
                     if (_ssidList.size() > 0) {
@@ -308,22 +308,22 @@ namespace Plugin {
                     }
 
                     if (_ssidList.size() == 0) {
-                        _state = RETRY;
+                        _state = states::RETRY;
                     }
                     else {
                         _controller->Connect(this, _ssidList.front().SSID(), _ssidList.front().BSSID());
                     }
                     _job.Schedule(Core::Time::Now().Add(_interval));
                 }
-                else if (_state == RETRY) {
+                else if (_state == states::RETRY) {
                     if (_attempts == 0) {
-                        _state = IDLE;
+                        _state = states::IDLE;
                     }
                     else {
                         if (_attempts != static_cast<uint32_t>(~0)) {
                             --_attempts;
                         }
-                        _state = SCANNING;
+                        _state = states::SCANNING;
                         _controller->Scan();
 
                         _job.Schedule(Core::Time::Now().Add(_interval));
@@ -335,7 +335,7 @@ namespace Plugin {
 
         private:
             void MoveState(const states newState) {
-                _state = IDLE;
+                _state = states::IDLE;
 
                 _adminLock.Unlock();
 
@@ -351,12 +351,12 @@ namespace Plugin {
 
                 if (result == Core::ERROR_NONE) {
 
-                    MoveState(IDLE);
+                    MoveState(states::IDLE);
 
                     _ssidList.clear();
                 }
                 else {
-                    MoveState(CONNECTING);
+                    MoveState(states::CONNECTING);
 
                     _job.Submit();
                 }

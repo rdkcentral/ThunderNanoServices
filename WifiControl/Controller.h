@@ -51,7 +51,7 @@ namespace WPASupplicant {
             AP_ENABLED
         };
         struct IConnectCallback {
-            ~IConnectCallback() {}
+            virtual ~IConnectCallback() {}
 
             virtual void Completed(const uint32_t result) = 0;
         };
@@ -687,10 +687,10 @@ namespace WPASupplicant {
         };
         class ConnectRequest : public Request {
         private:
-            enum connection {
-                CONNECT_SELECT,
-                CONNECT_RECONNECT,
-                CONNECT_AUTHORIZE
+            enum class connection : uint8_t {
+                SELECT,
+                RECONNECT,
+                AUTHORIZE
             };
 
         public:
@@ -702,7 +702,7 @@ namespace WPASupplicant {
                 : Request()
                 , _parent(parent)
                 , _adminLock()
-                , _state(CONNECT_SELECT)
+                , _state(connection::SELECT)
                 , _bssid(0)
                 , _ssid()
                 , _callback(nullptr)
@@ -731,7 +731,7 @@ namespace WPASupplicant {
 
                             _bssid = bssid;
                             _ssid = ssid;
-                            _state = CONNECT_SELECT;
+                            _state = connection::SELECT;
                             _callback = callback;
                             result = Core::ERROR_NONE;
 
@@ -783,13 +783,13 @@ namespace WPASupplicant {
                 else if (response != _T("OK")) {
                     result = Core::ERROR_ASYNC_FAILED;
                 }
-                else if (_state == CONNECT_SELECT) {
+                else if (_state == connection::SELECT) {
                     newCommand = string(_TXT("RECONNECT"));
-                    _state     = CONNECT_RECONNECT;
+                    _state     = connection::RECONNECT;
                 }
-                else if (_state == CONNECT_RECONNECT) {
+                else if (_state == connection::RECONNECT) {
                     newCommand = string(_TXT("PREAUTH ")) + BSSID(_bssid);
-                    _state     = CONNECT_AUTHORIZE;
+                    _state     = connection::AUTHORIZE;
                 }
                 else {
                     result = Core::ERROR_NONE;
@@ -1353,7 +1353,7 @@ namespace WPASupplicant {
                 ConnectSink(const ConnectSink&) = delete;
                 ConnectSink& operator= (const ConnectSink&) = delete;
                 ConnectSink() : _signal(false, true), _result(Core::ERROR_TIMEDOUT) {}
-                ~ConnectSink() = default;
+                ~ConnectSink() override {};
 
             public:
                 uint32_t Wait(const uint32_t waitTime) {
