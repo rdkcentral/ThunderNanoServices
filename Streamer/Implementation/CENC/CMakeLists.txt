@@ -17,6 +17,7 @@
 
 set(PLAYER_NAME CENC)
 
+find_library(GSTCENCDECRYPTOR gstcencdecrypt)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(PkgConfig REQUIRED)
 
@@ -29,8 +30,6 @@ pkg_check_modules(GST
         gstreamer-base-1.0>=1.4)
 
 set(LIB_NAME PlayerPlatform${PLAYER_NAME})
-
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/GstDecrypt)
 
 add_library(${LIB_NAME} STATIC
      PlayerImplementation.cpp)
@@ -47,7 +46,8 @@ target_include_directories(${LIB_NAME}
 target_link_libraries(${LIB_NAME}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
-        ${GST_LIBRARIES})
+        ${GST_LIBRARIES}
+        ${GSTCENCDECRYPTOR})
 
 install(TARGETS ${LIB_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/)
