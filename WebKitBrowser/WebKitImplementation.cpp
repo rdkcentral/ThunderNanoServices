@@ -407,6 +407,7 @@ static GSourceFuncs _handlerIntervention =
                 , MSEBuffers()
                 , MemoryProfile()
                 , MemoryPressure()
+                , MediaContentTypesRequiringHardwareSupport()
                 , MediaDiskCache(true)
                 , DiskCache()
                 , XHRCache(false)
@@ -443,6 +444,7 @@ static GSourceFuncs _handlerIntervention =
                 Add(_T("msebuffers"), &MSEBuffers);
                 Add(_T("memoryprofile"), &MemoryProfile);
                 Add(_T("memorypressure"), &MemoryPressure);
+                Add(_T("mediacontenttypesrequiringhardwaresupport"), &MediaContentTypesRequiringHardwareSupport);
                 Add(_T("mediadiskcache"), &MediaDiskCache);
                 Add(_T("diskcache"), &DiskCache);
                 Add(_T("xhrcache"), &XHRCache);
@@ -486,6 +488,7 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::String MSEBuffers;
             Core::JSON::String MemoryProfile;
             Core::JSON::String MemoryPressure;
+            Core::JSON::String MediaContentTypesRequiringHardwareSupport;
             Core::JSON::Boolean MediaDiskCache;
             Core::JSON::String DiskCache;
             Core::JSON::Boolean XHRCache;
@@ -1209,6 +1212,13 @@ static GSourceFuncs _handlerIntervention =
 
 	    webkit_settings_set_enable_non_composited_webgl(preferences, _config.NonCompositedWebGLEnabled.Value());		
 		
+            // Media Content Types Requiring Hardware Support
+            if (_config.MediaContentTypesRequiringHardwareSupport.IsSet() == true
+                && _config.MediaContentTypesRequiringHardwareSupport.Value().empty() == false) {
+                webkit_settings_set_media_content_types_requiring_hardware_support(preferences,
+                    _config.MediaContentTypesRequiringHardwareSupport.Value().c_str());
+            }
+
             if (_config.UserAgent.IsSet() == true && _config.UserAgent.Value().empty() == false)
                 webkit_settings_set_user_agent(preferences, _config.UserAgent.Value().c_str());
 
@@ -1368,6 +1378,15 @@ static GSourceFuncs _handlerIntervention =
 
             //Turn on/off WebGL
             WKPreferencesSetWebGLEnabled(preferences, _config.WebGLEnabled.Value());
+
+            // Media Content Types Requiring Hardware Support
+            if (_config.MediaContentTypesRequiringHardwareSupport.IsSet() == true
+                && _config.MediaContentTypesRequiringHardwareSupport.Value().empty() == false) {
+              auto contentTypes = WKStringCreateWithUTF8CString(
+                  _config.MediaContentTypesRequiringHardwareSupport.Value().c_str);
+              WKPreferencesSetMediaContentTypesRequiringHardwareSupport(preferences, contentTypes);
+              WKRelease(contentTypes);
+            }
 
             WKPageGroupSetPreferences(pageGroup, preferences);
 
