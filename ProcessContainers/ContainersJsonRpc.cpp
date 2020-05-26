@@ -152,7 +152,7 @@ namespace Plugin {
 
                 networkData.Interface = iterator->Name();
                 
-                for (int ip = 0; ip < iterator->NumIPs(); ip++) {
+                for (int ip = 0; ip < iterator->NumAddresses(); ip++) {
                     Core::JSON::String ipJSON;
                     ipJSON = iterator->Address(ip);
 
@@ -212,7 +212,7 @@ namespace Plugin {
             
             response.Total = processorInfo->TotalUsage();
             
-            for (int i = 0; processorInfo->CoreUsage(i) != UINT64_MAX; i++) {
+            for (int i = 0; i < processorInfo->NumberOfCores(); i++) {
                 Core::JSON::DecUInt64 coreTime;
                 coreTime = processorInfo->CoreUsage(i);
 
