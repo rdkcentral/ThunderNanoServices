@@ -170,6 +170,7 @@ namespace Plugin {
             {
                 IDLE,
                 SCANNING,
+                SCANNED,
                 CONNECTING,
                 RETRY
             };
@@ -241,36 +242,10 @@ namespace Plugin {
 
                 if ( (_state == states::SCANNING) || (_state == states::RETRY) ) {
 
-                    _ssidList.clear();
+                    MoveState(states::SCANNED);
 
-                    /* Arrange SSIDs in sorted order as per signal strength */
-                    WPASupplicant::Network::Iterator list(_controller->Networks());
-
-                    while (list.Next() == true) {
-                        const WPASupplicant::Network& net = list.Current();
-                        if (_controller->Get(net.SSID()).IsValid()) {
-
-                            int32_t strength(net.Signal());
-                            if (net.SSID().compare(_preferred) == 0) {
-                                strength = Core::NumberType<int32_t>::Max();
-                            }
-
-                            SSIDList::iterator index(_ssidList.begin());
-                            while ((index != _ssidList.end()) && (index->Signal() > strength)) {
-                                index++;
-                            }
-                            _ssidList.emplace(index, strength, net.BSSID(), net.SSID());
-                        }
-                    }
-
-                    MoveState(_ssidList.size() == 0 ? states::RETRY : states::CONNECTING);
-
-                    if (_state == states::CONNECTING) {
-                        _controller->Connect(this, _ssidList.front().SSID(), _ssidList.front().BSSID());
-                    }
-
-                    _job.Schedule(Core::Time::Now().Add(_interval));
-                }
+                    _job.Submit();
+               }
 
                 _adminLock.Unlock();
             }
@@ -300,8 +275,45 @@ namespace Plugin {
                     _state = states::RETRY;
                     _job.Schedule(Core::Time::Now().Add(_interval));
                 }
-                else if (_state == states::CONNECTING) {
+                else if (_state == states::SCANNED) {
 
+                    // This is a transitional state due to the fact that the  call to
+                    // _controller->Get(net.SSID()) takes a long time, it should not 
+                    // be executed on an independend worker thread.
+
+                    _ssidList.clear();
+
+                    /* Arrange SSIDs in sorted order as per signal strength */
+                    WPASupplicant::Network::Iterator list(_controller->Networks());
+
+                    while (list.Next() == true) {
+                        const WPASupplicant::Network& net = list.Current();
+                        if (_controller->Get(net.SSID()).IsValid()) {
+
+                            int32_t strength(net.Signal());
+                            if (net.SSID().compare(_preferred) == 0) {
+                                strength = Core::NumberType<int32_t>::Max();
+                            }
+
+                            SSIDList::iterator index(_ssidList.begin());
+                            while ((index != _ssidList.end()) && (index->Signal() > strength)) {
+                                index++;
+                            }
+                            _ssidList.emplace(index, strength, net.BSSID(), net.SSID());
+                        }
+                    }
+
+                    if (_ssidList.size() == 0) {
+                        _state = states::RETRY;
+                    }
+                    else {
+                        _state = states::CONNECTING;
+                        _controller->Connect(this, _ssidList.front().SSID(), _ssidList.front().BSSID());
+                    }
+
+                    _job.Schedule(Core::Time::Now().Add(_interval));
+                }
+                else if (_state == states::CONNECTING) {
                     // If we sre still in the CONNECTING mode, it must mean that previous CONNECT Failed
                     if (_ssidList.size() > 0) {
                         _ssidList.pop_front();
