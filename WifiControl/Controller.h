@@ -746,6 +746,8 @@ namespace WPASupplicant {
                             result = Core::ERROR_NONE;
 
                             _parent.Submit(this);
+
+                            index->second.State(ConfigInfo::SELECTED);
                         }
                     }
                 }
