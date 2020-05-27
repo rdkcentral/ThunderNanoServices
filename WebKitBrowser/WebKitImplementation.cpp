@@ -37,6 +37,7 @@
 #include <glib.h>
 
 #include "HTML5Notification.h"
+#include "BrowserConsoleLog.h"
 #include "WebKitBrowser.h"
 #include "InjectedBundle/Tags.h"
 
@@ -113,8 +114,8 @@ namespace Plugin {
         nullptr, // stopUpdating
     };
 
-    WKPageUIClientV6 _handlerPageUI = {
-        { 6, nullptr },
+    WKPageUIClientV8 _handlerPageUI = {
+        { 8, nullptr },
         nullptr, // createNewPage_deprecatedForUseWithV0
         nullptr, // showPage
         // close
@@ -193,6 +194,16 @@ namespace Plugin {
         nullptr, // runJavaScriptPrompt
         nullptr, // mediaSessionMetadataDidChange
         nullptr, // createNewPage
+        nullptr, // runJavaScriptAlert
+        nullptr, // runJavaScriptConfirm
+        nullptr, // runJavaScriptPrompt
+        nullptr, // checkUserMediaPermissionForOrigin
+        nullptr, // runBeforeUnloadConfirmPanel
+        nullptr, // fullscreenMayReturnToInline
+        // willAddDetailedMessageToConsole
+        [](WKPageRef, WKStringRef source, WKStringRef, uint64_t line, uint64_t column, WKStringRef message, WKStringRef, const void* clientInfo) {
+            TRACE_GLOBAL(BrowserConsoleLog, (message, line, column));
+        },
     };
 
     WKNotificationProviderV0 _handlerNotificationProvider = {
@@ -416,6 +427,7 @@ static GSourceFuncs _handlerIntervention =
                 , PTSOffset(0)
                 , ScaleFactor(1.0)
                 , MaxFPS(60)
+                , ExecPath()
             {
                 Add(_T("useragent"), &UserAgent);
                 Add(_T("url"), &URL);
@@ -452,6 +464,7 @@ static GSourceFuncs _handlerIntervention =
                 Add(_T("scalefactor"), &ScaleFactor);
                 Add(_T("maxfps"), &MaxFPS);
                 Add(_T("bundle"), &Bundle);
+                Add(_T("execpath"), &ExecPath);
             }
             ~Config()
             {
@@ -493,6 +506,7 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::DecUInt16 ScaleFactor;
             Core::JSON::DecUInt8 MaxFPS; // A value between 1 and 100...
             BundleConfig Bundle;
+            Core::JSON::String ExecPath;
         };
 
     private:
@@ -866,6 +880,11 @@ static GSourceFuncs _handlerIntervention =
             if (_config.PTSOffset.IsSet() == true) {
                 string ptsoffset(Core::NumberType<int16_t>(_config.PTSOffset.Value()).Text());
                 Core::SystemInfo::SetEnvironment(_T("PTS_REPORTING_OFFSET_MS"), ptsoffset, !environmentOverride);
+            }
+
+            // ExecPath
+            if (_config.ExecPath.IsSet() == true) {
+                Core::SystemInfo::SetEnvironment(_T("WEBKIT_EXEC_PATH"), _config.ExecPath.Value(), !environmentOverride);
             }
 
             string width(Core::NumberType<uint16_t>(_config.Width.Value()).Text());

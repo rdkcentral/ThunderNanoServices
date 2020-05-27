@@ -32,18 +32,25 @@ ENUM_CONVERSION_END(Data::Response::state)
 
 namespace Plugin
 {
+    bool JSONRPCPlugin::Validation(const string& token, const string& method, const string& parameters) {
+        return (parameters.empty());
+    }
+
     SERVICE_REGISTRATION(JSONRPCPlugin, 1, 0);
+
 
     #ifdef __WINDOWS__
     #pragma warning(disable : 4355)
     #endif
     JSONRPCPlugin::JSONRPCPlugin()
-        : PluginHost::JSONRPC({ 2, 3, 4 }) // version 2, 3 and 4 of the interface, use this as the default :-)
+        : PluginHost::JSONRPC({ 2, 3, 4 }, [&](const string& token, const string& method, const string& parameters) -> bool { return (Validation(token, method, parameters)); }) // version 2, 3 and 4 of the interface, use this as the default :-)
         , _job(Core::ProxyType<PeriodicSync>::Create(this))
         , _window()
         , _data()
         , _array(255)
         , _rpcServer(nullptr)
+        , _jsonServer(nullptr)
+        , _msgServer(nullptr)
     {
         // PluginHost::JSONRPC method to register a JSONRPC method invocation for the method "time".
         Register<void, Core::JSON::String>(_T("time"), &JSONRPCPlugin::time, this);

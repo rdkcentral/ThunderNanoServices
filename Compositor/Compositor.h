@@ -22,16 +22,13 @@
 
 #include "Module.h"
 #include <interfaces/IComposition.h>
+#include <interfaces/IInputSwitch.h>
 #include <interfaces/json/JsonData_Compositor.h>
 
 
 namespace WPEFramework {
 namespace Plugin {
     class Compositor : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
-    private:
-        Compositor(const Compositor&) = delete;
-        Compositor& operator=(const Compositor&) = delete;
-        
     private:
         class Notification : public Exchange::IComposition::INotification {
         private:
@@ -103,6 +100,8 @@ namespace Plugin {
         };
 
     public:
+        typedef std::map<string, Exchange::IComposition::IClient*> Clients;
+
         class Config : public Core::JSON::Container {
         public:
             Config(const Config&);
@@ -113,9 +112,11 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , System(_T("Controller"))
                 , WorkDir()
+                , InputSwitch(_T("InputSwitch"))
             {
                 Add(_T("system"), &System);
                 Add(_T("workdir"), &WorkDir);
+                Add(_T("inputswitch"), &InputSwitch);
             }
             ~Config()
             {
@@ -124,9 +125,9 @@ namespace Plugin {
         public:
             Core::JSON::String System;
             Core::JSON::String WorkDir;
+            Core::JSON::String InputSwitch;
         };
 
-    public:
         class Data : public Core::JSON::Container {
         private:
             Data(const Data&) = delete;
@@ -159,6 +160,9 @@ namespace Plugin {
         };
 
     public:
+        Compositor(const Compositor&) = delete;
+        Compositor& operator=(const Compositor&) = delete;
+        
         Compositor();
         virtual ~Compositor();
 
@@ -186,30 +190,41 @@ namespace Plugin {
         void Attached(const string& name, Exchange::IComposition::IClient* client);
         void Detached(const string& name);
 
-        void ZOrder(Core::JSON::ArrayType<Core::JSON::String>& callsigns) const;
-        void Resolution(const Exchange::IComposition::ScreenResolution);
+        uint32_t Resolution(const Exchange::IComposition::ScreenResolution);
         Exchange::IComposition::ScreenResolution Resolution() const;
 
-        uint32_t Kill(const string& callsign);
         uint32_t Opacity(const string& callsign, const uint32_t value);
         uint32_t Visible(const string& callsign, const bool visible);
         uint32_t Geometry(const string& callsign, const Exchange::IComposition::Rectangle& rectangle);
         Exchange::IComposition::Rectangle Geometry(const string& callsign) const;
+        uint32_t ToTop(const string& callsign, Exchange::IComposition::IClient* client);
         uint32_t ToTop(const string& callsign);
-        uint32_t PutBefore(const string& callsignRelativeTo, const string& callsignToReorder);
+        uint32_t Select(const string& callsign);
+        uint32_t PutBefore(const string& relative, const string& callsign);
 
+        void ZOrder(std::list<string>& zOrderedList, const bool primary) const;
         Exchange::IComposition::IClient* InterfaceByCallsign(const string& callsign) const;
 
-    private:
+        void ZOrder(Core::JSON::ArrayType<Core::JSON::String>& zOrderedList) const {
+            std::list<string> list;
+            std::list<string>::const_iterator index;
+            ZOrder(list, true);
+            index = list.begin();
+            while (index != list.end()) {
+                Core::JSON::String& element(zOrderedList.Add());
+                element = *index;
+                index++;
+            }
+        }
+
         /* JSON-RPC */
         void RegisterAll();
         void UnregisterAll();
         uint32_t endpoint_putontop(const JsonData::Compositor::PutontopParamsInfo& params);
+        uint32_t endpoint_select(const JsonData::Compositor::PutontopParamsInfo& params);
         uint32_t endpoint_putbelow(const JsonData::Compositor::PutbelowParamsData& params);
-        uint32_t endpoint_kill(const JsonData::Compositor::PutontopParamsInfo& params);
         uint32_t get_resolution(Core::JSON::EnumType<JsonData::Compositor::ResolutionType>& response) const;
         uint32_t set_resolution(const Core::JSON::EnumType<JsonData::Compositor::ResolutionType>& param);
-        uint32_t get_clients(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t get_zorder(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t get_geometry(const string& index, JsonData::Compositor::GeometryData& response) const;
         uint32_t set_geometry(const string& index, const JsonData::Compositor::GeometryData& param);
@@ -223,8 +238,9 @@ namespace Plugin {
         Exchange::IComposition* _composition;
         PluginHost::IShell* _service;
         uint32_t _connectionId;
-        std::map<string, Exchange::IComposition::IClient*> _clients;
-        std::list<string> _zOrder;
+        Clients _clients;
+        Exchange::IInputSwitch* _inputSwitch;
+        string _inputSwitchCallsign;
     };
 }
 }

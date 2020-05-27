@@ -40,19 +40,6 @@ namespace Broadcom {
         return (::std::string(Id()));
     }
 
-    /* virtual */ void Platform::Client::Kill()
-    {
-        ASSERT(_client != nullptr);
-
-        /* must call nxserver_ipc so it can unwind first. */
-        nxserver_ipc_close_client(_client);
-
-        TRACE(Trace::Information, (_T("Kill client %s."), Name().c_str()));
-
-        /* We expect the Disconnect Client to be triggered by the previous call
-           TODO: Double check this is true, and if not call it explicitly here. */
-    }
-
     /* virtual */ void Platform::Client::Opacity(const uint32_t value)
     {
         ASSERT(_client != nullptr);
@@ -77,9 +64,11 @@ namespace Broadcom {
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
 
+        _layer = index;
+
         ASSERT(_client != nullptr);
 
-        if (index == 0) {
+        if (_layer == 0) {
             result = Core::ERROR_NONE;
 
             /* the definition of "focus" is variable. this is one impl. */
@@ -97,6 +86,10 @@ namespace Broadcom {
             nxserver_p_focus_surface_client(_client);
         }
         return (result);
+    }
+
+    uint32_t Platform::Client::ZOrder() const {
+        return _layer;
     }
 
     class Config : public Core::JSON::Container {
