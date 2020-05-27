@@ -94,8 +94,9 @@ namespace DIALHandlers {
             return _hidden;
         }
 
-        void URL(const string& url) override {
+        bool URL(const string& url) override {
             _browser->SetURL(url);
+            return (true);
         }
 
     private:
