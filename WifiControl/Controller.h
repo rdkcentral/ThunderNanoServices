@@ -700,7 +700,8 @@ namespace WPASupplicant {
             enum class connection : uint8_t {
                 SELECT,
                 RECONNECT,
-                AUTHORIZE
+                AUTHORIZE,
+                WAITING
             };
 
         public:
@@ -774,16 +775,6 @@ namespace WPASupplicant {
 
                 return (result);
             }
-            void Disabled ()
-            {
-                _adminLock.Lock();
-
-                if (_callback != nullptr) {
-                    _callback->Completed(Core::ERROR_INVALID_SIGNATURE);
-                }
-
-                _adminLock.Unlock();
-            }
             void Completed(const string& response, const bool abort) override
             {
                 uint32_t result = Core::ERROR_REQUEST_SUBMITTED;
@@ -804,17 +795,30 @@ namespace WPASupplicant {
                     _state     = connection::AUTHORIZE;
                 }
                 else {
-                    result = Core::ERROR_NONE;
+                    _state = connection::WAITING;
                 }
                     
                 if ((newCommand.empty() == false) && (Request::Set(newCommand) == true)) {
                     _parent.Submit(this);
-                }
-                else {
+                } 
+                else if (_state != connection::WAITING) {
+                
                     _adminLock.Lock();
-                    _callback->Completed(result);
+
+                    if (_callback != nullptr) {
+                        _callback->Completed(result);
+                    }
                     _adminLock.Unlock();
                 }
+            }
+            void Completed(const uint32_t result) {
+
+                _adminLock.Lock();
+
+                if ((_callback != nullptr) && (_state == connection::WAITING)) {
+                    _callback->Completed(result);
+                }
+                _adminLock.Unlock();
             }
 
         private:
@@ -1454,7 +1458,10 @@ namespace WPASupplicant {
             _adminLock.Lock();
 
             if (value == WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED) {
-                _connectRequest.Disabled();
+                _connectRequest.Completed(Core::ERROR_INVALID_SIGNATURE);
+            }
+            else if (value == WPASupplicant::Controller::CTRL_EVENT_CONNECTED) {
+                _connectRequest.Completed(Core::ERROR_NONE);
             }
 
             if (_callback != nullptr) {
