@@ -270,6 +270,9 @@ namespace WPASupplicant {
 
                     _adminLock.Unlock();
                 }
+                else if (event == CTRL_EVENT_SSID_TEMP_DISABLED) {
+                    Notify(event.Value());
+                }
             } else {
                 TRACE(Communication, (_T("RAW EVENT MESSAGE: [%s]"), message.c_str()));
             }

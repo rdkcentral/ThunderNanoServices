@@ -359,6 +359,8 @@ namespace Plugin {
             }
             void Completed(const uint32_t result) override {
 
+                _controller->Revoke(this);
+
                 _adminLock.Lock();
 
                 if (result == Core::ERROR_NONE) {
