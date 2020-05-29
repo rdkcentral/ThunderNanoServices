@@ -133,6 +133,8 @@ namespace Plugin {
     {
         const string& ssid = params.Ssid.Value();
 
+        _autoConnectState = false;
+
         return _controller->Connect(ssid);
     }
 
@@ -144,6 +146,8 @@ namespace Plugin {
     uint32_t WifiControl::endpoint_disconnect(const DeleteParamsInfo& params)
     {
         const string& ssid = params.Ssid.Value();
+
+        _autoConnectState = false;
 
         return _controller->Disconnect(ssid);
     }

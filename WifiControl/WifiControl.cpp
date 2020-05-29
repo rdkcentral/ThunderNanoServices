@@ -48,6 +48,7 @@ namespace Plugin
         , _wpaSupplicant()
         , _controller()
         , _autoConnect(_controller)
+        , _autoConnectState(false)
     {
         RegisterAll();
     }
@@ -115,7 +116,8 @@ namespace Plugin
                         }
                     }
 
-                    if (config.AutoConnect.Value() == false) {
+                    _autoConnectState = config.AutoConnect.Value();
+                    if (_autoConnectState == false) {
                         _controller->Scan();
                     }
                     else {
@@ -391,7 +393,9 @@ namespace Plugin
 
             networks.Set(list);
 
-            _autoConnect.Scanned();
+            if (_autoConnectState == true) {
+                _autoConnect.Scanned();
+            }
 
             event_scanresults(networks.Networks);
 
@@ -412,7 +416,9 @@ namespace Plugin
             string message("{ \"event\": \"Disconnected\" }");
             _service->Notify(message);
             event_connectionchange(string());
-            _autoConnect.Disconnected();
+            if (_autoConnectState == true) {
+                _autoConnect.Disconnected();
+            }
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_NETWORK_CHANGED: {

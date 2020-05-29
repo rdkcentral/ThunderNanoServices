@@ -632,6 +632,7 @@ namespace Plugin {
         WifiDriver _wpaSupplicant;
         Core::ProxyType<WPASupplicant::Controller> _controller;
         AutoConnect _autoConnect;
+        bool _autoConnectState;
     };
 
 } // namespace Plugin
