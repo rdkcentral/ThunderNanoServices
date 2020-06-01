@@ -229,17 +229,30 @@ namespace WPASupplicant {
                     // Skip bssid=<value> sub-string
                     begin = infoLine.ForwardFind(_T(" \t"), begin);
 
-                    // Skip reason= sub-string & get begin position of reason code
-                    begin = infoLine.ForwardFind(_T("=\t"), begin);
-                    begin = infoLine.ForwardSkip(_T("=\t"), begin);
+                    // Skip white space & get begin position of reason string
+                    begin = infoLine.ForwardSkip(_T(" \t"), begin);
 
-                    // Get end position of reason code
-                    uint16_t end = infoLine.ForwardFind(_T(" \t"), begin);
+                    // Get end position of reason string
+                    uint16_t end = infoLine.ForwardFind(_T("=\t"), begin);
 
-                    // Get reason code
-                    uint32_t reason(Core::NumberType<uint32_t>(Core::TextFragment(infoLine, begin, (end - begin))));
+                    // Get and check if it is a reason string
+                    string reasonStr(Core::TextFragment(infoLine, begin, (end - begin)).Text());
+                    if (reasonStr.compare("reason") == 0) {
 
-                    _statusRequest.DisconnectReason(reason);
+                        // Skip '=' character & get begin position of reason code
+                        begin = infoLine.ForwardSkip(_T("=\t"), end);
+
+                        // Get end position of reason code
+                        end = infoLine.ForwardFind(_T(" \t"), begin);
+
+                        // Get reason code
+                        uint32_t reason = Core::NumberType<uint32_t>(Core::TextFragment(infoLine, begin, (end - begin)));
+
+                        _statusRequest.DisconnectReason(static_cast<reasons>(reason));
+                    }
+                    else {
+                        TRACE(Trace::Error, ("There is no reason code in the event"));
+                    }
                     _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
                 }

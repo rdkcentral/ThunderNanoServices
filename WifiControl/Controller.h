@@ -50,13 +50,70 @@ namespace WPASupplicant {
             WPS_AP_AVAILABLE,
             AP_ENABLED
         };
+        /* Reason codes (IEEE Std 802.11-2016, 9.4.1.7, Table 9-45) */
         enum reasons {
             WLAN_REASON_NOINFO_GIVEN,
             WLAN_REASON_UNSPECIFIED,
             WLAN_REASON_PREV_AUTH_NOT_VALID,
             WLAN_REASON_DEAUTH_LEAVING,
             WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY,
-            WLAN_REASON_DISASSOC_AP_BUSY
+            WLAN_REASON_DISASSOC_AP_BUSY,
+            WLAN_REASON_CLASS2_FRAME_FROM_NONAUTH_STA,
+            WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA,
+            WLAN_REASON_DISASSOC_STA_HAS_LEFT,
+            WLAN_REASON_STA_REQ_ASSOC_WITHOUT_AUTH,
+            WLAN_REASON_PWR_CAPABILITY_NOT_VALID,
+            WLAN_REASON_SUPPORTED_CHANNEL_NOT_VALID,
+            WLAN_REASON_BSS_TRANSITION_DISASSOC,
+            WLAN_REASON_INVALID_IE,
+            WLAN_REASON_MICHAEL_MIC_FAILURE,
+            WLAN_REASON_4WAY_HANDSHAKE_TIMEOUT,
+            WLAN_REASON_GROUP_KEY_UPDATE_TIMEOUT,
+            WLAN_REASON_IE_IN_4WAY_DIFFERS,
+            WLAN_REASON_GROUP_CIPHER_NOT_VALID,
+            WLAN_REASON_PAIRWISE_CIPHER_NOT_VALID,
+            WLAN_REASON_AKMP_NOT_VALID,
+            WLAN_REASON_UNSUPPORTED_RSN_IE_VERSION,
+            WLAN_REASON_INVALID_RSN_IE_CAPAB,
+            WLAN_REASON_IEEE_802_1X_AUTH_FAILED,
+            WLAN_REASON_CIPHER_SUITE_REJECTED,
+            WLAN_REASON_TDLS_TEARDOWN_UNREACHABLE,
+            WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED,
+            WLAN_REASON_SSP_REQUESTED_DISASSOC,
+            WLAN_REASON_NO_SSP_ROAMING_AGREEMENT,
+            WLAN_REASON_BAD_CIPHER_OR_AKM,
+            WLAN_REASON_NOT_AUTHORIZED_THIS_LOCATION,
+            WLAN_REASON_SERVICE_CHANGE_PRECLUDES_TS,
+            WLAN_REASON_UNSPECIFIED_QOS_REASON,
+            WLAN_REASON_NOT_ENOUGH_BANDWIDTH,
+            WLAN_REASON_DISASSOC_LOW_ACK,
+            WLAN_REASON_EXCEEDED_TXOP,
+            WLAN_REASON_STA_LEAVING,
+            WLAN_REASON_END_TS_BA_DLS,
+            WLAN_REASON_UNKNOWN_TS_BA,
+            WLAN_REASON_TIMEOUT,
+            WLAN_REASON_PEERKEY_MISMATCH = 45,
+            WLAN_REASON_AUTHORIZED_ACCESS_LIMIT_REACHED,
+            WLAN_REASON_EXTERNAL_SERVICE_REQUIREMENTS,
+            WLAN_REASON_INVALID_FT_ACTION_FRAME_COUNT,
+            WLAN_REASON_INVALID_PMKID,
+            WLAN_REASON_INVALID_MDE,
+            WLAN_REASON_INVALID_FTE,
+            WLAN_REASON_MESH_PEERING_CANCELLED,
+            WLAN_REASON_MESH_MAX_PEERS,
+            WLAN_REASON_MESH_CONFIG_POLICY_VIOLATION,
+            WLAN_REASON_MESH_CLOSE_RCVD,
+            WLAN_REASON_MESH_MAX_RETRIES,
+            WLAN_REASON_MESH_CONFIRM_TIMEOUT,
+            WLAN_REASON_MESH_INVALID_GTK,
+            WLAN_REASON_MESH_INCONSISTENT_PARAMS,
+            WLAN_REASON_MESH_INVALID_SECURITY_CAP,
+            WLAN_REASON_MESH_PATH_ERROR_NO_PROXY_INFO,
+            WLAN_REASON_MESH_PATH_ERROR_NO_FORWARDING_INFO,
+            WLAN_REASON_MESH_PATH_ERROR_DEST_UNREACHABLE,
+            WLAN_REASON_MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS,
+            WLAN_REASON_MESH_CHANNEL_SWITCH_REGULATORY_REQ,
+            WLAN_REASON_MESH_CHANNEL_SWITCH_UNSPECIFIED,
         };
         struct IConnectCallback {
             virtual ~IConnectCallback() {}
@@ -438,7 +495,7 @@ namespace WPASupplicant {
                 , _pair(0)
                 , _key(0)
                 , _eventReporting(~0)
-                , _disconnectReason(~0)
+                , _disconnectReason(reasons::WLAN_REASON_NOINFO_GIVEN)
             {
             }
             virtual ~StatusRequest()
@@ -475,11 +532,11 @@ namespace WPASupplicant {
             {
                 _eventReporting = value;
             }
-            inline void DisconnectReason(const uint32_t reason)
+            inline void DisconnectReason(const reasons reason)
             {
                 _disconnectReason = reason;
             }
-            inline uint32_t DisconnectReason() const
+            inline reasons DisconnectReason() const
             {
                 return (_disconnectReason);
             }
@@ -549,7 +606,7 @@ namespace WPASupplicant {
             uint32_t _key;
             WPASupplicant::Network::mode _mode;
             uint32_t _eventReporting;
-            uint32_t _disconnectReason;
+            reasons _disconnectReason;
         };
         class DetailRequest : public Request {
         private:
@@ -1009,10 +1066,10 @@ namespace WPASupplicant {
             _adminLock.Unlock();
             return current;
         }
-        inline const uint32_t DisconnectReason() const
+        inline const reasons DisconnectReason() const
         {
             _adminLock.Lock();
-            const uint32_t reason = _statusRequest.DisconnectReason();
+            const reasons reason = _statusRequest.DisconnectReason();
             _adminLock.Unlock();
             return reason;
         }
