@@ -217,7 +217,33 @@ namespace WPASupplicant {
             if (event.IsSet() == true) {
                 TRACE(Communication, (_T("Dispatch message: [%s]"), message.c_str()));
 
-                if ((event == CTRL_EVENT_CONNECTED) || (event == CTRL_EVENT_DISCONNECTED) || (event == WPS_AP_AVAILABLE)) {
+                if (event == CTRL_EVENT_DISCONNECTED) {
+
+                    ASSERT(position != string::npos);
+
+                    Core::TextFragment infoLine(message, position, message.length() - position);
+
+                    // Skip white space
+                    uint16_t begin = infoLine.ForwardSkip(_T(" \t"), 0);
+
+                    // Skip bssid=<value> sub-string
+                    begin = infoLine.ForwardFind(_T(" \t"), begin);
+
+                    // Skip reason= sub-string & get begin position of reason code
+                    begin = infoLine.ForwardFind(_T("=\t"), begin);
+                    begin = infoLine.ForwardSkip(_T("=\t"), begin);
+
+                    // Get end position of reason code
+                    uint16_t end = infoLine.ForwardFind(_T(" \t"), begin);
+
+                    // Get reason code
+                    uint32_t reason(Core::NumberType<uint32_t>(Core::TextFragment(infoLine, begin, (end - begin))));
+
+                    _statusRequest.DisconnectReason(reason);
+                    _statusRequest.Event(event.Value());
+                    Submit(&_statusRequest);
+                }
+                else if ((event == CTRL_EVENT_CONNECTED) || (event == WPS_AP_AVAILABLE)) {
                     _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
                 } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS)) {

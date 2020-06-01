@@ -253,7 +253,10 @@ namespace Plugin {
             {
                 _adminLock.Lock();
 
-                if ((_state == states::IDLE) && (_attempts > 0)) {
+                uint32_t reason = _controller->DisconnectReason();
+
+                if ((reason == WPASupplicant::Controller::WLAN_REASON_NOINFO_GIVEN)
+                        && (_state == states::IDLE) && (_attempts > 0)) {
 
                     MoveState(states::SCANNING);
 

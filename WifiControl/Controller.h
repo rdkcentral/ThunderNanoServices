@@ -50,6 +50,14 @@ namespace WPASupplicant {
             WPS_AP_AVAILABLE,
             AP_ENABLED
         };
+        enum reasons {
+            WLAN_REASON_NOINFO_GIVEN,
+            WLAN_REASON_UNSPECIFIED,
+            WLAN_REASON_PREV_AUTH_NOT_VALID,
+            WLAN_REASON_DEAUTH_LEAVING,
+            WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY,
+            WLAN_REASON_DISASSOC_AP_BUSY
+        };
         struct IConnectCallback {
             virtual ~IConnectCallback() {}
 
@@ -430,6 +438,7 @@ namespace WPASupplicant {
                 , _pair(0)
                 , _key(0)
                 , _eventReporting(~0)
+                , _disconnectReason(~0)
             {
             }
             virtual ~StatusRequest()
@@ -466,7 +475,14 @@ namespace WPASupplicant {
             {
                 _eventReporting = value;
             }
-
+            inline void DisconnectReason(const uint32_t reason)
+            {
+                _disconnectReason = reason;
+            }
+            inline uint32_t DisconnectReason() const
+            {
+                return (_disconnectReason);
+            }
             void Reset()
             {
                 _bssid = 0;
@@ -533,6 +549,7 @@ namespace WPASupplicant {
             uint32_t _key;
             WPASupplicant::Network::mode _mode;
             uint32_t _eventReporting;
+            uint32_t _disconnectReason;
         };
         class DetailRequest : public Request {
         private:
@@ -991,6 +1008,13 @@ namespace WPASupplicant {
             const string& current = (_statusRequest.SSID());
             _adminLock.Unlock();
             return current;
+        }
+        inline const uint32_t DisconnectReason() const
+        {
+            _adminLock.Lock();
+            const uint32_t reason = _statusRequest.DisconnectReason();
+            _adminLock.Unlock();
+            return reason;
         }
         inline uint32_t Error() const
         {
