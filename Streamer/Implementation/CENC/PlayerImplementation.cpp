@@ -180,7 +180,7 @@ namespace Player {
                 _adminLock.Lock();
 
                 initializeOcdm();
-                // gst_element_set_state(_data._playbin, GstState::GST_STATE_NULL);
+                gst_element_set_state(_data._playbin, GstState::GST_STATE_NULL);
                 g_object_set(_data._playbin, "uri", uri.c_str(), NULL);
 
                 _adminLock.Unlock();
