@@ -1834,7 +1834,7 @@ class BluetoothControl : public PluginHost::IPlugin
             // IDevice overrides
             bool IsBonded() const override
             {
-                return ( (_ltks.Entries() >= 2) && (_irk.IsValid()) );
+                return ( (_ltks.Entries() >= 1) && (_irk.IsValid()) );
             }
             virtual uint32_t Connect() override
             {
