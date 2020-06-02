@@ -205,8 +205,9 @@ public:
 
     virtual uint32_t Configure(PluginHost::IShell *service) {
         uint32_t result = _window.Configure(service);
-        _window.Suspend(true);
-        _state = PluginHost::IStateControl::SUSPENDED;
+        bool startSuspended = (service->AutoStart() == true);
+        _window.Suspend(startSuspended);
+        _state = (startSuspended ? PluginHost::IStateControl::SUSPENDED : PluginHost::IStateControl::RESUMED);
 
         return (result);
     }
