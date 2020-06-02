@@ -470,7 +470,7 @@ namespace Plugin {
         }
     }
 
-    void BluetoothRemoteControl::KeyEvent(const bool pressed, const uint16_t keyCode)
+    void BluetoothRemoteControl::KeyEvent(const bool pressed, const uint32_t keyCode)
     {
         _adminLock.Lock();
         if (_inputHandler != nullptr) {            
