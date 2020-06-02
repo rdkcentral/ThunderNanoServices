@@ -286,6 +286,9 @@ namespace Plugin {
 
                     _ssidList.clear();
 
+                    // Get preferred SSID
+                    const string& preferredSsid = (_preferred.empty() == false) ? _preferred : _controller->PreferredSSID();
+
                     /* Arrange SSIDs in sorted order as per signal strength */
                     WPASupplicant::Network::Iterator list(_controller->Networks());
 
@@ -294,7 +297,7 @@ namespace Plugin {
                         if (_controller->Get(net.SSID()).IsValid()) {
 
                             int32_t strength(net.Signal());
-                            if (net.SSID().compare(_preferred) == 0) {
+                            if (net.SSID().compare(preferredSsid) == 0) {
                                 strength = Core::NumberType<int32_t>::Max();
                             }
 
