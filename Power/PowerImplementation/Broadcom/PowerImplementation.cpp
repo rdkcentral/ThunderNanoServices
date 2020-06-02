@@ -23,7 +23,9 @@
 #include <nexus_platform.h>
 #include <nexus_platform_standby.h>
 #include <nxclient.h>
+extern "C" {
 #include <pmlib.h>
+}
 
 /* =============================================================================================
    THE ACTUAL IMPLEMENTATION OF THE IPower INTERFACE FOR BROADCOM BOARDS
