@@ -110,7 +110,7 @@ namespace Plugin {
 
     private:
         class AdapterObserver : public Core::IDispatch,
-                                public WPEFramework::Core::INetworkNotification {
+                                public Core::AdapterObserver::INotification {
         private:
             AdapterObserver() = delete;
             AdapterObserver(const AdapterObserver&) = delete;
