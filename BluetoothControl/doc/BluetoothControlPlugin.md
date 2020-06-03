@@ -122,6 +122,7 @@ Also see: [scancomplete](#event.scancomplete)
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 1 | ```ERROR_GENERAL``` | Failed to scan |
+| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 | 12 | ```ERROR_INPROGRESS``` | Scan already in progress |
 
 ### Example
@@ -174,6 +175,10 @@ Also see: [devicestatechange](#event.devicestatechange)
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 9 | ```ERROR_ALREADY_CONNECTED``` | Device already connected |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Device not paired |
+| 11 | ```ERROR_TIMEDOUT``` | Connect request timed out |
+| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
+| 12 | ```ERROR_INPROGRESS``` | Device is currently busy |
 | 1 | ```ERROR_GENERAL``` | Failed to connect the device |
 
 ### Example
@@ -225,6 +230,9 @@ Also see: [devicestatechange](#event.devicestatechange)
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 36 | ```ERROR_ALREADY_RELEASED``` | Device not connected |
+| 12 | ```ERROR_INPROGRESS``` | Device is currently busy |
+| 11 | ```ERROR_TIMEDOUT``` | Disconnect request timed out |
+| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 
 ### Example
 
@@ -280,6 +288,9 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 9 | ```ERROR_ALREADY_CONNECTED``` | Device already paired |
+| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
+| 12 | ```ERROR_INPROGRESS``` | Device is currently busy |
+| 11 | ```ERROR_TIMEDOUT``` | Pairing timeout elapsed |
 | 1 | ```ERROR_GENERAL``` | Failed to pair the device |
 
 ### Example
@@ -332,6 +343,9 @@ Also see: [devicestatechange](#event.devicestatechange)
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 36 | ```ERROR_ALREADY_RELEASED``` | Device not paired |
+| 12 | ```ERROR_INPROGRESS``` | Device is currently busy |
+| 11 | ```ERROR_TIMEDOUT``` | Unpair request timed out |
+| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 
 ### Example
 
@@ -380,6 +394,8 @@ Aborts the pairing process.
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Device not currently pairing |
+| 11 | ```ERROR_TIMEDOUT``` | Unpair request timed out |
+| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 
 ### Example
 
@@ -435,6 +451,7 @@ Also see: [pincoderequest](#event.pincoderequest)
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Device not currently pairing or PIN code has not been requested |
+| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 
 ### Example
 
@@ -491,6 +508,7 @@ Also see: [passkeyrequest](#event.passkeyrequest)
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Device not currently pairing or a passkey has not been requested |
+| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 
 ### Example
 
@@ -547,6 +565,7 @@ Also see: [passkeyconfirmrequest](#event.passkeyconfirmrequest)
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Device is currently not pairing or passkey confirmation has not been requested |
+| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 
 ### Example
 
