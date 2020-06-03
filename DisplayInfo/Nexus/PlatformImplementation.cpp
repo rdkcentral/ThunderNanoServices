@@ -181,8 +181,9 @@ public:
 
         std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
 
-        if (index != _observers.end()) {
+        while(index != _observers.end()) {
             (*index)->Updated();
+            index++;
         }
 
         _adminLock.Unlock();

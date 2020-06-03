@@ -68,7 +68,6 @@ namespace GPIO {
 
             inline void DropReference()
             {
-                _parent.Revoke(_job);
                 _job.Release();
             }
 
@@ -178,7 +177,7 @@ namespace GPIO {
 
                     ASSERT(_marker == static_cast<uint32_t>(~0));
                     _marker = marker;
-                    _parent.Schedule(Core::Time(), _job);
+                    _parent.Updated();
                     _parent.Unlock();
                 }
             }
@@ -274,7 +273,7 @@ namespace GPIO {
             BaseClass::Unregister(sink);
         }
 
-        void Trigger() override;
+        void Evaluate() override;
         uint32_t Get(int32_t& value) const override;
         uint32_t Set(const int32_t value) override;
 
@@ -294,10 +293,6 @@ namespace GPIO {
         Core::IResource::handle Descriptor() const override;
         uint16_t Events() override;
         void Handle(const uint16_t events) override;
-
-        void Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job) override;
-        void Revoke(const Core::ProxyType<Core::IDispatch>& job) override;
-
         void Flush();
 
     private:
