@@ -223,6 +223,14 @@ namespace Plugin {
 
                 return (result);
             }
+            void SetPreferred(const string& ssid)
+            {
+                _adminLock.Lock();
+
+                _preferred.assign(ssid);
+
+                _adminLock.Unlock();
+            }
             uint32_t Revoke()
             {
                 _adminLock.Lock();
@@ -288,7 +296,6 @@ namespace Plugin {
 
                     /* Arrange SSIDs in sorted order as per signal strength */
                     WPASupplicant::Network::Iterator list(_controller->Networks());
-
                     while (list.Next() == true) {
                         const WPASupplicant::Network& net = list.Current();
                         if (_controller->Get(net.SSID()).IsValid()) {
