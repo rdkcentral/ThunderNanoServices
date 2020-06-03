@@ -426,7 +426,7 @@ namespace Plugin {
                         response->Message = _T("Service Unavailable");
                     } else {
                         response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
-                        response->ErrorCode = Web::STATUS_OK;
+                        response->ErrorCode = Web::STATUS_CREATED;
                         response->Message = _T("Created");
                     }
                 }
@@ -454,12 +454,12 @@ namespace Plugin {
 						if (result == Core::ERROR_NONE) {
                             if (app.URL(parameters) == true) {
                                 response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
-								response->ErrorCode = Web::STATUS_OK;
+								response->ErrorCode = Web::STATUS_CREATED;
 								response->Message = _T("Created");
 							}
 							else {
 								response->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
-								response->Message = _T("Created");
+								response->Message = _T("Not implemented");
 							}
 						}
 						else {
@@ -471,7 +471,7 @@ namespace Plugin {
 					if (request.HasBody() == true) {
 						if (app.URL(parameters) == true) {
 							response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
-							response->ErrorCode = Web::STATUS_OK;
+							response->ErrorCode = Web::STATUS_CREATED;
 							response->Message = _T("Created");
 						}
 						else {
