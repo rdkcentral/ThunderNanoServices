@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "StreamerImplementation.h"
 
 namespace WPEFramework {
@@ -95,5 +95,4 @@ namespace Plugin {
         return (result);
     }
 }
-
 }
