@@ -496,7 +496,6 @@ namespace WPASupplicant {
                 , _key(0)
                 , _eventReporting(~0)
                 , _disconnectReason(reasons::WLAN_REASON_NOINFO_GIVEN)
-                , _preferredSsid()
             {
             }
             virtual ~StatusRequest()
@@ -540,14 +539,6 @@ namespace WPASupplicant {
             inline reasons DisconnectReason() const
             {
                 return (_disconnectReason);
-            }
-            inline void PreferredSSID(const string& ssid)
-            {
-                _preferredSsid.assign(ssid);
-            }
-            inline const string& PreferredSSID() const
-            {
-                return (_preferredSsid);
             }
             void Reset()
             {
@@ -616,7 +607,6 @@ namespace WPASupplicant {
             WPASupplicant::Network::mode _mode;
             uint32_t _eventReporting;
             reasons _disconnectReason;
-            string _preferredSsid;
         };
         class DetailRequest : public Request {
         private:
@@ -1083,13 +1073,6 @@ namespace WPASupplicant {
             _adminLock.Unlock();
             return reason;
         }
-        inline const string& PreferredSSID() const
-        {
-            _adminLock.Lock();
-            const string& preferredSsid = (_statusRequest.PreferredSSID());
-            _adminLock.Unlock();
-            return preferredSsid;
-        }
         inline uint32_t Error() const
         {
             return (_error);
@@ -1450,9 +1433,6 @@ namespace WPASupplicant {
 
                 if ((AP == true) || (bssid != 0)) {
                     result = Connect(SSID, bssid);
-                    if (result == Core::ERROR_NONE) {
-                        _statusRequest.PreferredSSID(SSID);
-                    }
                 } else {
                     TRACE_L1("No associated BSSID to connect to and not defined as AccessPoint. (%llu)", bssid);
                     result = Core::ERROR_BAD_REQUEST;
