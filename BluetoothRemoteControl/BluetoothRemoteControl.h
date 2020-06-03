@@ -58,7 +58,7 @@ namespace Plugin {
                 , KeyMap()
                 , KeyIngest(true)
                 , Recorder(OFF)
-            {    
+            {
                 Add(_T("controller"), &Controller);
                 Add(_T("keymap"), &KeyMap);
                 Add(_T("keyingest"), &KeyIngest);
@@ -123,7 +123,7 @@ namespace Plugin {
                     ASSERT(parent != nullptr);
                 }
                 ~Sink() override
-                {    
+                {
                 }
 
             public:
@@ -146,11 +146,11 @@ namespace Plugin {
                 public:
                     Slot() = delete;
                     Slot& operator= (const Slot&) = delete;
-                    Slot(const uint16_t handle, const uint8_t length, const uint8_t data[]) 
+                    Slot(const uint16_t handle, const uint8_t length, const uint8_t data[])
                         : _handle(handle)
                         , _data(reinterpret_cast<const char*>(data), length) {
                     }
-                    Slot(const Slot& copy) 
+                    Slot(const Slot& copy)
                         : _handle(copy._handle)
                         , _data(copy._data) {
                     }
@@ -223,7 +223,7 @@ namespace Plugin {
             public:
                 AudioProfile(const AudioProfile&) = delete;
                 AudioProfile& operator= (const AudioProfile&) = delete;
-                AudioProfile(const Exchange::IVoiceProducer::IProfile::codec codec, const uint8_t channels, const uint32_t sampleRate, const uint8_t resolution) 
+                AudioProfile(const Exchange::IVoiceProducer::IProfile::codec codec, const uint8_t channels, const uint32_t sampleRate, const uint8_t resolution)
                     : _codec(codec)
                     , _channels(channels)
                     , _sampleRate(sampleRate)
@@ -263,20 +263,20 @@ namespace Plugin {
                 public:
                     Profile(const Profile&) = delete;
                     Profile& operator=(const Profile&) = delete;
-                    Profile() 
+                    Profile()
                         : Core::JSON::Container()
                         , Codec(Exchange::IVoiceProducer::IProfile::codec::PCM)
                         , SampleRate(8000)
                         , Channels(1)
                         , Resolution(16)
-                    {    
+                    {
                         Add(_T("codec"), &Codec);
                         Add(_T("samplerate"), &SampleRate);
                         Add(_T("channels"), &Channels);
                         Add(_T("resolution"), &Resolution);
                         Add(_T("configuration"), &Configuration);
                     }
-                    ~Profile() override 
+                    ~Profile() override
                     {
                     }
 
@@ -297,7 +297,7 @@ namespace Plugin {
                     , ServiceUUID()
                     , CommandUUID()
                     , DataUUID()
-                {    
+                {
                     Add(_T("profile"), &AudioProfile);
                     Add(_T("serviceuuid"), &ServiceUUID);
                     Add(_T("commanduuid"), &CommandUUID);
@@ -320,7 +320,7 @@ namespace Plugin {
                 Profile(const Profile&) = delete;
                 Profile& operator= (const Profile&) = delete;
 
-                Profile(const Config& config) 
+                Profile(const Config& config)
                     : Bluetooth::Profile(true) {
                     VoiceService = Bluetooth::UUID(config.ServiceUUID.Value());
                     VoiceCommandChar = Bluetooth::UUID(config.CommandUUID.Value());
@@ -379,7 +379,6 @@ namespace Plugin {
                     }
                     return (result);
                 }
-
 
             public:
                 Bluetooth::UUID VoiceService;
@@ -452,7 +451,7 @@ namespace Plugin {
             GATTRemote() = delete;
             GATTRemote(const GATTRemote&) = delete;
             GATTRemote& operator=(const GATTRemote&) = delete;
- 
+
             GATTRemote(BluetoothRemoteControl* parent, Exchange::IBluetooth::IDevice* device, const string& configuration)
                 : Bluetooth::GATTSocket(Designator(device->Type(), device->LocalId()), Designator(device->Type(), device->RemoteId()), 255)
                 , _parent(parent)
@@ -566,7 +565,7 @@ namespace Plugin {
             }
 
         public:
-            const string& Name() const 
+            const string& Name() const
             {
                 return(_name);
             }
@@ -594,14 +593,14 @@ namespace Plugin {
             {
                 return (_manufacturerName);
             }
-            inline Exchange::IVoiceProducer::IProfile* SelectedProfile() const 
+            inline Exchange::IVoiceProducer::IProfile* SelectedProfile() const
             {
                 ASSERT(_audioProfile != nullptr);
                 _audioProfile->AddRef();
                 return (_audioProfile);
             }
             void Reconfigure(const string& settings) {
-                Config::Profile config; 
+                Config::Profile config;
                 config.FromString(settings);
 
                 if (_decoder != nullptr) {
@@ -626,7 +625,7 @@ namespace Plugin {
         private:
             void Notification(const uint16_t handle, const uint8_t dataFrame[], const uint16_t length) override
             {
-                // Decouple the notfications from the communciator thread, they will pop-up and need to be handled
+                // Decouple the notifications from the communciator thread, they will pop-up and need to be handled
                 // by the Message method!
                 _decoupling.Submit(handle, static_cast<uint8_t>(length), dataFrame);
             }
@@ -682,7 +681,7 @@ namespace Plugin {
 
                 _adminLock.Unlock();
             }
-            void Constructor(const Config& config) 
+            void Constructor(const Config& config)
             {
                 ASSERT(_parent != nullptr);
                 ASSERT(_device != nullptr);
@@ -698,7 +697,7 @@ namespace Plugin {
 
                 _decoder = Decoders::IDecoder::Instance(config.AudioProfile.Codec.Value(), config.AudioProfile.Configuration.Value());
 
-                if (_decoder != nullptr) { 
+                if (_decoder != nullptr) {
                     _audioProfile = Core::Service<AudioProfile>::Create<AudioProfile>(
                         config.AudioProfile.Codec.Value(),
                         config.AudioProfile.Channels.Value(),
@@ -717,7 +716,7 @@ namespace Plugin {
                 if (_profile == nullptr) {
                     TRACE(Flow, (_T("The received MTU: %d, no need for discovery, we know it all"), MTU()));
 
-                    // No need to do service discovery if device knows the Handles to use. If so, DeviceDiscovery has 
+                    // No need to do service discovery if device knows the Handles to use. If so, DeviceDiscovery has
                     // already been done and the only thing we need to do is get the startingvalues :-)
                     ReadSoftwareRevision();
                 }
@@ -989,7 +988,7 @@ namespace Plugin {
                     Completed();
                 }
             }
-            void Completed() 
+            void Completed()
             {
                 Data info;
 
@@ -1077,13 +1076,13 @@ namespace Plugin {
             Decoupling _decoupling;
             Core::Sink<Sink> _sink;
 
-            // This is the Name, as depicted by the Bluetooth device (generic IF) 
+            // This is the Name, as depicted by the Bluetooth device (generic IF)
             string _name;
             string _address;
 
             // The next section of information is coming from the config that
             // was stored for this remote or it is read from the profile if
-            // this is the first reistration
+            // this is the first registration
             string _modelNumber;
             string _serialNumber;
             string _manufacturerName;
@@ -1091,14 +1090,14 @@ namespace Plugin {
 
             // If we are already registered, no need to read the profile as all
             // is coming from the RemoteControl persistent storage file.
-            // The only thing that might have changed, and what should be read on 
-            // each new creation is the software revision, that might have been 
+            // The only thing that might have changed, and what should be read on
+            // each new creation is the software revision, that might have been
             // upgraded using Android phone upgrades..
             string _softwareRevision;
 
-            // During the intial cretaion/subscribe of this RemoteControl, the
-            // handles that report keys, battery level and Voice (if applicable)
-            // are registsered. Remember these to trigger the right hadler if
+            // During the initial creation/subscribe of this RemoteControl, the
+            // handles that report keys, battery level and voice (if applicable)
+            // are registered. Remember these to trigger the right handler if
             // new data comes in.
             uint16_t _softwareRevisionHandle;
             std::list<uint16_t>_keysDataHandles;
@@ -1122,7 +1121,7 @@ namespace Plugin {
     public:
         BluetoothRemoteControl(const BluetoothRemoteControl&) = delete;
         BluetoothRemoteControl& operator= (const BluetoothRemoteControl&) = delete;
-        BluetoothRemoteControl() 
+        BluetoothRemoteControl()
             : _skipURL()
             , _adminLock()
             , _service()
@@ -1134,7 +1133,7 @@ namespace Plugin {
             , _recordFile()
             , _batteryLevel(~0)
             , _voiceHandler(nullptr)
-            , _inputHandler(nullptr) 
+            , _inputHandler(nullptr)
             , _record(recorder::OFF)
             , _recorder()
         {
@@ -1173,7 +1172,7 @@ namespace Plugin {
                 info.SoftwareRevision = _gattRemote->SoftwareRevision();
                 info.ManufacturerName = _gattRemote->ManufacturerName();
                 info.BatteryLevelHandle = _batteryLevel;
- 
+
                 info.ToString(result);
             }
 
@@ -1191,7 +1190,7 @@ namespace Plugin {
 
             _adminLock.Unlock();
         }
-        uint32_t Callback(Exchange::IVoiceHandler* callback) override 
+        uint32_t Callback(Exchange::IVoiceHandler* callback) override
         {
             _adminLock.Lock();
             if (_voiceHandler != nullptr) {
@@ -1216,7 +1215,7 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         virtual void Inbound(Web::Request& request) override;
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
- 
+
         BEGIN_INTERFACE_MAP(BluetoothRemoteControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IWeb)
@@ -1233,7 +1232,7 @@ namespace Plugin {
         void VoiceData(const uint32_t seq, const uint16_t length, const uint8_t dataBuffer[]);
         void KeyEvent(const bool pressed, const uint32_t keyCode);
         void BatteryLevel(const uint8_t level);
-        
+
         Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> PostMethod(Core::TextSegmentIterator& index, const Web::Request& request);
