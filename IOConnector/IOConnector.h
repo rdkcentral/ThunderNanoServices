@@ -45,12 +45,12 @@ namespace Plugin {
                 : _parent(*parent)
             {
             }
-            virtual ~Sink()
+            ~Sink() override
             {
             }
 
         public:
-            virtual void Update() override
+            void Update(const uint32_t /* id */) override
             {
                 _parent.Activity();
             }
