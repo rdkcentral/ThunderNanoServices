@@ -120,13 +120,15 @@ namespace Plugin {
     uint32_t Containers::get_containers(Core::JSON::ArrayType<Core::JSON::String>& response) const
     {
         auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        std::vector<string> containers = administrator.Containers();
+        auto containers = administrator.Containers();
 
-        for (auto container : containers) {
+        while(containers->Next()) {
             Core::JSON::String containerName;
-            containerName = container;
+            containerName = containers->Id();
             response.Add(containerName);
         }
+        
+        containers->Release();
 
         return Core::ERROR_NONE;
     }
@@ -143,16 +145,16 @@ namespace Plugin {
         auto container = administrator.Get(index); 
 
         if (container != nullptr) {
-            ProcessContainers::NetworkInterfaceIterator* iterator = container->NetworkInterfaces();
+            auto iterator = container->NetworkInterfaces();
 
             while(iterator->Next() == true) {
                 NetworksData networkData;
 
                 networkData.Interface = iterator->Name();
                 
-                for (int ip = 0; ip < iterator->NumIPs(); ip++) {
+                for (int ip = 0; ip < iterator->NumAddresses(); ip++) {
                     Core::JSON::String ipJSON;
-                    ipJSON = iterator->IP(ip);
+                    ipJSON = iterator->Address(ip);
 
                     networkData.Ips.Add(ipJSON);
                 }                
@@ -181,10 +183,11 @@ namespace Plugin {
         if (found != nullptr) {
             auto memoryInfo = found->Memory();
             
-            response.Allocated = memoryInfo.allocated;
-            response.Resident = memoryInfo.resident;
-            response.Shared = memoryInfo.shared;
+            response.Allocated = memoryInfo->Allocated();
+            response.Resident = memoryInfo->Resident();
+            response.Shared = memoryInfo->Shared();
 
+            memoryInfo->Release();
             found->Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
@@ -205,17 +208,18 @@ namespace Plugin {
         auto container = administrator.Get(index); 
 
         if (container != nullptr) {
-            auto cpuInfo = container->Cpu();
+            auto processorInfo = container->ProcessorInfo();
             
-            response.Total = cpuInfo.total;
+            response.Total = processorInfo->TotalUsage();
             
-            for (auto core : cpuInfo.cores) {
+            for (int i = 0; i < processorInfo->NumberOfCores(); i++) {
                 Core::JSON::DecUInt64 coreTime;
-                coreTime = core;
+                coreTime = processorInfo->CoreUsage(i);
 
                 response.Cores.Add(coreTime);
             }
 
+            processorInfo->Release();
             container->Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
