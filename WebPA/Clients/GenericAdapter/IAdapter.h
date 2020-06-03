@@ -29,15 +29,14 @@ namespace Implementation {
     };
 } // Implementation
 
+class IProfileControl;
+
 namespace WebPA {
 
     struct ICallback {
         virtual ~ICallback() {}
         virtual void NotifyEvent() = 0;
     };
-} // WebPA
-
-class IProfileControl;
 
 class Administrator {
 public:
@@ -98,6 +97,7 @@ private:
 private:
     std::map<const string, IProfileControl*> _profiles;
 };
+} // WebPA
 
 #ifdef __cplusplus
 extern "C" {
@@ -120,6 +120,7 @@ public:
         return (WebPAProfileInstance(profileName));
     }
 
+    virtual ~IProfileControl() {}
     virtual bool Initialize() = 0;
     virtual bool Deinitialize() = 0;
 
