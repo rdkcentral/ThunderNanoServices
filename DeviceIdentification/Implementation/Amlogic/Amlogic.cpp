@@ -36,6 +36,7 @@ public:
     {
         UpdateChipset(_chipset);
         UpdateFirmwareVersion(_firmwareVersion);
+        UpdateIdentifier();
     }
 
     DeviceImplementation(const DeviceImplementation&) = delete;
@@ -59,7 +60,15 @@ public:
     // Identifier interface
     uint8_t Identifier(const uint8_t length, uint8_t buffer[]) const override
     {
-        return 0;
+        uint8_t result = 0;
+        if ((_length != 0) && (_status == mfrERR_NONE)) {
+            result = (_length > length ? length : _length);
+            ::memcpy(buffer, reinterpret_cast<const uint8_t*>(&_identity[0]), result);
+        } else {
+            SYSLOG(Logging::Notification, (_T("Cannot determine system identity; Error:[%d]!"),
+                    static_cast<uint8_t>(_status)));
+        }
+        return result;
     }
 
     BEGIN_INTERFACE_MAP(DeviceImplementation)
@@ -70,32 +79,47 @@ public:
 private:
     inline void UpdateFirmwareVersion(string& firmwareVersion) const
     {
-       int retVal = -1;
-	mfrSerializedData_t mfrSerializedData;
-	retVal = mfrGetSerializedData(mfrSERIALIZED_TYPE_SOFTWAREVERSION, &mfrSerializedData);
-	if ((mfrERR_NONE == retVal) && mfrSerializedData.bufLen) {
-		firmwareVersion =  mfrSerializedData.buf;
-		if (mfrSerializedData.freeBuf) {
-			mfrSerializedData.freeBuf(mfrSerializedData.buf);
-		}
-	}
+        int retVal = -1;
+        mfrSerializedData_t mfrSerializedData;
+        retVal = mfrGetSerializedData(mfrSERIALIZED_TYPE_SOFTWAREVERSION, &mfrSerializedData);
+        if ((mfrERR_NONE == retVal) && mfrSerializedData.bufLen) {
+            firmwareVersion =  mfrSerializedData.buf;
+            if (mfrSerializedData.freeBuf) {
+                mfrSerializedData.freeBuf(mfrSerializedData.buf);
+            }
+        }
     }
     inline void UpdateChipset(string& chipset) const
     {
-       int retVal = -1;
-	mfrSerializedData_t mfrSerializedData;
-	retVal = mfrGetSerializedData(mfrSERIALIZED_TYPE_CHIPSETINFO, &mfrSerializedData);
-	if ((mfrERR_NONE == retVal) && mfrSerializedData.bufLen) {
-		chipset = mfrSerializedData.buf;
-		if (mfrSerializedData.freeBuf) {
-			mfrSerializedData.freeBuf(mfrSerializedData.buf);
-		}
-	}
+        int retVal = -1;
+        mfrSerializedData_t mfrSerializedData;
+        retVal = mfrGetSerializedData(mfrSERIALIZED_TYPE_CHIPSETINFO, &mfrSerializedData);
+        if ((mfrERR_NONE == retVal) && mfrSerializedData.bufLen) {
+            chipset = mfrSerializedData.buf;
+            if (mfrSerializedData.freeBuf) {
+                mfrSerializedData.freeBuf(mfrSerializedData.buf);
+            }
+        }
+    }
+    inline void UpdateIdentifier()
+    {
+        mfrSerializedData_t mfrSerializedData;
+        _status = mfrGetSerializedData(mfrSERIALIZED_TYPE_SERIALNUMBER, &mfrSerializedData);
+        if ((mfrERR_NONE == _status) && mfrSerializedData.bufLen) {
+            _identity = mfrSerializedData.buf;
+            _length = _identity.length();
+            if (mfrSerializedData.freeBuf) {
+                mfrSerializedData.freeBuf(mfrSerializedData.buf);
+            }
+        }
     }
 
 private:
     string _chipset;
     string _firmwareVersion;
+    string _identity;
+    uint8_t _length;
+    mfrError_t _status;
 };
 
     SERVICE_REGISTRATION(DeviceImplementation, 1, 0);
