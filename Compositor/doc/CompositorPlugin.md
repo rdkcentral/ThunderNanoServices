@@ -1,10 +1,10 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Compositor_Plugin"></a>
-# Compositor Plugin
+<a name="head.Compositor_API"></a>
+# Compositor API
 
 **Version: 1.0**
 
-**Status: :black_circle::black_circle::black_circle:**
+**Status: :black_circle::white_circle::white_circle:**
 
 Compositor plugin for Thunder framework.
 
@@ -60,7 +60,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-Compositor gives you controll over what is displayed on screen.
+Compositor JSON-RPC interface
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -71,9 +71,7 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *Compositor*) |
 | classname | string | Class name: *Compositor* |
-| locator | string | Library name: *libWPEFrameworkCompositor.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
 
 <a name="head.Methods"></a>
@@ -87,7 +85,7 @@ Compositor interface methods:
 | :-------- | :-------- |
 | [putontop](#method.putontop) | Puts client surface on top in z-order |
 | [putbelow](#method.putbelow) | Puts client surface below another surface |
-| [kill](#method.kill) | Kills a client |
+| [select](#method.select) | Directs the input to the given client, disabling all the others |
 
 <a name="method.putontop"></a>
 ## *putontop <sup>method</sup>*
@@ -193,14 +191,14 @@ Use this method to reorder client surfaces in the z-order list.
     "result": null
 }
 ```
-<a name="method.kill"></a>
-## *kill <sup>method</sup>*
+<a name="method.select"></a>
+## *select <sup>method</sup>*
 
-Kills a client.
+Directs the input to the given client, disabling all the others.
 
 ### Description
 
-Use this method to kill a client. Whenever a client is killed, the execution of the client is stopped and all its resources are released.
+Use this method to direct all inputs to this client. The client that is receiving the inputs prior to this call will nolonger receive it anymore after this call.
 
 ### Parameters
 
@@ -229,7 +227,7 @@ Use this method to kill a client. Whenever a client is killed, the execution of 
 {
     "jsonrpc": "2.0",
     "id": 1234567890,
-    "method": "Compositor.1.kill",
+    "method": "Compositor.1.select",
     "params": {
         "client": "Netflix"
     }
@@ -254,7 +252,6 @@ Compositor interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [resolution](#property.resolution) | Screen resolution |
-| [clients](#property.clients) <sup>RO</sup> | List of compositor clients |
 | [zorder](#property.zorder) <sup>RO</sup> | List of compositor clients sorted by z-order |
 | [geometry](#property.geometry) | Client surface geometry |
 | [visiblity](#property.visiblity) <sup>WO</sup> | Client surface visibility |
@@ -319,46 +316,6 @@ Use this property to set or retrieve the current resolution of the screen.
     "jsonrpc": "2.0",
     "id": 1234567890,
     "result": "null"
-}
-```
-<a name="property.clients"></a>
-## *clients <sup>property</sup>*
-
-Provides access to the list of compositor clients.
-
-> This property is **read-only**.
-
-### Description
-
-Use this property to retrieve the information of actual running clients.
-
-### Value
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | array | List of compositor clients |
-| (property)[#] | string | Client name |
-
-### Example
-
-#### Get Request
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "Compositor.1.clients"
-}
-```
-#### Get Response
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": [
-        "Netflix"
-    ]
 }
 ```
 <a name="property.zorder"></a>
