@@ -426,7 +426,7 @@ namespace Plugin {
                         response->Message = _T("Service Unavailable");
                     } else {
                         response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
-                        response->ErrorCode = Web::STATUS_CREATED;
+                        response->ErrorCode = Web::STATUS_OK;
                         response->Message = _T("Created");
                     }
                 }
@@ -451,24 +451,33 @@ namespace Plugin {
                             response->Message = _T("Internal error");
                         }
                     } else {
-                      if (result == Core::ERROR_NONE) {
-                          app.URL(parameters);
-
-                          response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
-                          response->ErrorCode = Web::STATUS_CREATED;
-                          response->Message = _T("Created");
-                      } else {
-                          response->ErrorCode = Web::STATUS_SERVICE_UNAVAILABLE;
-                          response->Message = _T("Service Unavailable");
-                      }
+						if (result == Core::ERROR_NONE) {
+                            if (app.URL(parameters) == true) {
+                                response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
+								response->ErrorCode = Web::STATUS_OK;
+								response->Message = _T("Created");
+							}
+							else {
+								response->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
+								response->Message = _T("Created");
+							}
+						}
+						else {
+							response->ErrorCode = Web::STATUS_SERVICE_UNAVAILABLE;
+							response->Message = _T("Service Unavailable");
+						}
                     }
                 } else {
-                    if (request.HasBody() == true) {
-                        app.URL(parameters);
-
-                        response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
-                        response->ErrorCode = Web::STATUS_CREATED;
-                        response->Message = _T("Created");
+					if (request.HasBody() == true) {
+						if (app.URL(parameters) == true) {
+							response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
+							response->ErrorCode = Web::STATUS_OK;
+							response->Message = _T("Created");
+						}
+						else {
+                            response->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
+                            response->Message = _T("Can not change the URL runtime");
+                        }
                     } else {
                         response->ErrorCode = Web::STATUS_OK;
                         response->Message = _T("OK");
