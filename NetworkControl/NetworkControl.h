@@ -110,7 +110,7 @@ namespace Plugin {
 
     private:
         class AdapterObserver : public Core::IDispatch,
-                                public WPEFramework::Core::AdapterObserver::INotification {
+                                public Core::AdapterObserver::INotification {
         private:
             AdapterObserver() = delete;
             AdapterObserver(const AdapterObserver&) = delete;
@@ -138,13 +138,10 @@ namespace Plugin {
         public:
             void Open()
             {
-                _observer.Open();
             }
             void Close()
             {
                 Core::ProxyType<Core::IDispatch> job(*this);
-                _observer.Close();
-
                 _adminLock.Lock();
 
                 Core::IWorkerPool::Instance().Revoke(job);
@@ -350,12 +347,12 @@ namespace Plugin {
                 return (result);
             }
 
-            void GetIP() 
+            void AcquireIP() 
             {
-                return (GetIP(Core::NodeId()));
+                return (AcquireIP(Core::NodeId()));
             }
 
-            void GetIP(const Core::NodeId& preferred)
+            void AcquireIP(const Core::NodeId& preferred)
             {
 
                 auto offerIterator = _client.UnleasedOffers();
