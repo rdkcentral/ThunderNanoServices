@@ -29,14 +29,14 @@ class EXTERNAL Recorder {
 public:
     enum codec {
         PCM = 1,
-        ADPCM 
+        ADPCM
     };
 
 public:
     Recorder(const Recorder&) = delete;
     Recorder& operator= (const Recorder&) = delete;
 
-    Recorder() 
+    Recorder()
         : _file() {
     }
     ~Recorder() {
@@ -62,12 +62,12 @@ public:
             _file.Write(reinterpret_cast<const uint8_t*>(_T("WAVE")), 4);
             _file.Write(reinterpret_cast<const uint8_t*>(_T("fmt ")), 4);
             Store<uint32_t>(16);         /* SubChunk1Size is 16 */
-            Store<uint16_t>(type);   
-            Store<uint16_t>(channels);   
-            Store<uint32_t>(sampleRate);   
-            Store<uint32_t>(sampleRate * ( bitsPerSample / 8));   
-            Store<uint16_t>(bitsPerSample / 8);   
-            Store<uint16_t>(bitsPerSample);   
+            Store<uint16_t>(type);
+            Store<uint16_t>(channels);
+            Store<uint32_t>(sampleRate);
+            Store<uint32_t>(sampleRate * ( bitsPerSample / 8));
+            Store<uint16_t>(bitsPerSample / 8);
+            Store<uint16_t>(bitsPerSample);
             _file.Write(reinterpret_cast<const uint8_t*>(_T("data")), 4);
             _file.Write(reinterpret_cast<const uint8_t*>(_T("    ")), 4);
             _fileSize = 0;
@@ -105,5 +105,5 @@ private:
     Core::File _file;
     uint32_t _fileSize;
 };
- 
+
 } } // namespace WPEFramework::WAV

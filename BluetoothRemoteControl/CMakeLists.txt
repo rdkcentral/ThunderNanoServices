@@ -31,6 +31,7 @@ add_library(${MODULE_NAME} SHARED
     BluetoothRemoteControlJsonRpc.cpp
     Administrator.cpp
     T4HDecoders.cpp
+    HID.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES

@@ -46,8 +46,79 @@ namespace WPASupplicant {
             CTRL_EVENT_TERMINATING,
             CTRL_EVENT_NETWORK_NOT_FOUND,
             CTRL_EVENT_NETWORK_CHANGED,
+            CTRL_EVENT_SSID_TEMP_DISABLED,
             WPS_AP_AVAILABLE,
             AP_ENABLED
+        };
+        /* Reason codes (IEEE Std 802.11-2016, 9.4.1.7, Table 9-45) */
+        enum reasons {
+            WLAN_REASON_NOINFO_GIVEN,
+            WLAN_REASON_UNSPECIFIED,
+            WLAN_REASON_PREV_AUTH_NOT_VALID,
+            WLAN_REASON_DEAUTH_LEAVING,
+            WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY,
+            WLAN_REASON_DISASSOC_AP_BUSY,
+            WLAN_REASON_CLASS2_FRAME_FROM_NONAUTH_STA,
+            WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA,
+            WLAN_REASON_DISASSOC_STA_HAS_LEFT,
+            WLAN_REASON_STA_REQ_ASSOC_WITHOUT_AUTH,
+            WLAN_REASON_PWR_CAPABILITY_NOT_VALID,
+            WLAN_REASON_SUPPORTED_CHANNEL_NOT_VALID,
+            WLAN_REASON_BSS_TRANSITION_DISASSOC,
+            WLAN_REASON_INVALID_IE,
+            WLAN_REASON_MICHAEL_MIC_FAILURE,
+            WLAN_REASON_4WAY_HANDSHAKE_TIMEOUT,
+            WLAN_REASON_GROUP_KEY_UPDATE_TIMEOUT,
+            WLAN_REASON_IE_IN_4WAY_DIFFERS,
+            WLAN_REASON_GROUP_CIPHER_NOT_VALID,
+            WLAN_REASON_PAIRWISE_CIPHER_NOT_VALID,
+            WLAN_REASON_AKMP_NOT_VALID,
+            WLAN_REASON_UNSUPPORTED_RSN_IE_VERSION,
+            WLAN_REASON_INVALID_RSN_IE_CAPAB,
+            WLAN_REASON_IEEE_802_1X_AUTH_FAILED,
+            WLAN_REASON_CIPHER_SUITE_REJECTED,
+            WLAN_REASON_TDLS_TEARDOWN_UNREACHABLE,
+            WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED,
+            WLAN_REASON_SSP_REQUESTED_DISASSOC,
+            WLAN_REASON_NO_SSP_ROAMING_AGREEMENT,
+            WLAN_REASON_BAD_CIPHER_OR_AKM,
+            WLAN_REASON_NOT_AUTHORIZED_THIS_LOCATION,
+            WLAN_REASON_SERVICE_CHANGE_PRECLUDES_TS,
+            WLAN_REASON_UNSPECIFIED_QOS_REASON,
+            WLAN_REASON_NOT_ENOUGH_BANDWIDTH,
+            WLAN_REASON_DISASSOC_LOW_ACK,
+            WLAN_REASON_EXCEEDED_TXOP,
+            WLAN_REASON_STA_LEAVING,
+            WLAN_REASON_END_TS_BA_DLS,
+            WLAN_REASON_UNKNOWN_TS_BA,
+            WLAN_REASON_TIMEOUT,
+            WLAN_REASON_PEERKEY_MISMATCH = 45,
+            WLAN_REASON_AUTHORIZED_ACCESS_LIMIT_REACHED,
+            WLAN_REASON_EXTERNAL_SERVICE_REQUIREMENTS,
+            WLAN_REASON_INVALID_FT_ACTION_FRAME_COUNT,
+            WLAN_REASON_INVALID_PMKID,
+            WLAN_REASON_INVALID_MDE,
+            WLAN_REASON_INVALID_FTE,
+            WLAN_REASON_MESH_PEERING_CANCELLED,
+            WLAN_REASON_MESH_MAX_PEERS,
+            WLAN_REASON_MESH_CONFIG_POLICY_VIOLATION,
+            WLAN_REASON_MESH_CLOSE_RCVD,
+            WLAN_REASON_MESH_MAX_RETRIES,
+            WLAN_REASON_MESH_CONFIRM_TIMEOUT,
+            WLAN_REASON_MESH_INVALID_GTK,
+            WLAN_REASON_MESH_INCONSISTENT_PARAMS,
+            WLAN_REASON_MESH_INVALID_SECURITY_CAP,
+            WLAN_REASON_MESH_PATH_ERROR_NO_PROXY_INFO,
+            WLAN_REASON_MESH_PATH_ERROR_NO_FORWARDING_INFO,
+            WLAN_REASON_MESH_PATH_ERROR_DEST_UNREACHABLE,
+            WLAN_REASON_MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS,
+            WLAN_REASON_MESH_CHANNEL_SWITCH_REGULATORY_REQ,
+            WLAN_REASON_MESH_CHANNEL_SWITCH_UNSPECIFIED,
+        };
+        struct IConnectCallback {
+            virtual ~IConnectCallback() {}
+
+            virtual void Completed(const uint32_t result) = 0;
         };
 
     private:
@@ -273,6 +344,9 @@ namespace WPASupplicant {
                 }
                 return (false);
             }
+            inline bool InProgress() const {
+                return (_settable == false);
+            }
             string& Message()
             {
                 return (_request);
@@ -290,7 +364,7 @@ namespace WPASupplicant {
 
             void Processing(const bool processing)
             {
-                _settable = processing == false;
+                _settable = (processing == false);
             }
 
             virtual void Completed(const string& response, const bool abort) = 0;
@@ -313,6 +387,7 @@ namespace WPASupplicant {
                 : Request()
                 , _scanning(false)
                 , _parent(parent)
+                , _eventReporting(~0)
             {
             }
             virtual ~ScanRequest()
@@ -340,6 +415,10 @@ namespace WPASupplicant {
             {
                 return (Request::Set(string(_TXT("SCAN_RESULTS"))));
             }
+            inline void Event(const events value)
+            {
+                _eventReporting = value;
+            }
             virtual void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
@@ -355,6 +434,10 @@ namespace WPASupplicant {
                         NetworkInfo newEntry;
                         _parent.Add(Transform(element, newEntry), newEntry);
                     }
+                }
+                if (_eventReporting != static_cast<uint32_t>(~0)) {
+                    _parent.Notify(static_cast<events>(_eventReporting));
+                    _eventReporting = static_cast<uint32_t>(~0);
                 }
                 _scanning = false;
             }
@@ -394,6 +477,7 @@ namespace WPASupplicant {
         private:
             bool _scanning;
             Controller& _parent;
+            uint32_t _eventReporting;
         };
         class StatusRequest : public Request {
         private:
@@ -411,6 +495,7 @@ namespace WPASupplicant {
                 , _pair(0)
                 , _key(0)
                 , _eventReporting(~0)
+                , _disconnectReason(reasons::WLAN_REASON_NOINFO_GIVEN)
             {
             }
             virtual ~StatusRequest()
@@ -447,7 +532,14 @@ namespace WPASupplicant {
             {
                 _eventReporting = value;
             }
-
+            inline void DisconnectReason(const reasons reason)
+            {
+                _disconnectReason = reason;
+            }
+            inline reasons DisconnectReason() const
+            {
+                return (_disconnectReason);
+            }
             void Reset()
             {
                 _bssid = 0;
@@ -514,6 +606,7 @@ namespace WPASupplicant {
             uint32_t _key;
             WPASupplicant::Network::mode _mode;
             uint32_t _eventReporting;
+            reasons _disconnectReason;
         };
         class DetailRequest : public Request {
         private:
@@ -676,6 +769,140 @@ namespace WPASupplicant {
         private:
             Controller& _parent;
         };
+        class ConnectRequest : public Request {
+        private:
+            enum class connection : uint8_t {
+                SELECT,
+                RECONNECT,
+                AUTHORIZE,
+                WAITING
+            };
+
+        public:
+            ConnectRequest() = delete;
+            ConnectRequest(const ConnectRequest&) = delete;
+            ConnectRequest& operator=(const ConnectRequest&) = delete;
+
+            ConnectRequest(Controller& parent)
+                : Request()
+                , _parent(parent)
+                , _adminLock()
+                , _state(connection::SELECT)
+                , _bssid(0)
+                , _ssid()
+                , _callback(nullptr)
+            {
+            }
+            ~ConnectRequest() override
+            {
+            }
+
+        public:
+            uint32_t Invoke(IConnectCallback* callback, const string& ssid, const uint64_t& bssid) {
+
+                uint32_t result = (_callback != nullptr ? Core::ERROR_INPROGRESS        : 
+                                  (bssid     == 0       ? Core::ERROR_INCOMPLETE_CONFIG : 
+                                                          Core::ERROR_UNKNOWN_KEY       ));
+
+                if (result == Core::ERROR_UNKNOWN_KEY) {
+
+                    EnabledContainer::iterator index(_parent._enabled.find(ssid));
+
+                    if (index != _parent._enabled.end()) {
+
+                        result = Core::ERROR_ASYNC_FAILED;
+
+                        if (Request::Set (string(_TXT("SELECT_NETWORK ")) + Core::NumberType<uint32_t>(index->second.Id()).Text()) == true) {
+
+                            _bssid = bssid;
+                            _ssid = ssid;
+                            _state = connection::SELECT;
+                            _callback = callback;
+                            result = Core::ERROR_NONE;
+
+                            _parent.Submit(this);
+
+                            index->second.State(ConfigInfo::SELECTED);
+                        }
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t Revoke(IConnectCallback* callback) {
+
+                uint32_t result = Core::ERROR_UNAVAILABLE;
+
+                _adminLock.Lock();
+
+                if (callback == _callback) {
+                    _callback = nullptr;
+                    _adminLock.Unlock();
+
+                    _parent.Revoke(this);
+
+                    result = Core::ERROR_NONE;
+                }
+                else {
+                    _adminLock.Unlock();
+                }
+
+                return (result);
+            }
+            void Completed(const string& response, const bool abort) override
+            {
+                uint32_t result = Core::ERROR_REQUEST_SUBMITTED;
+                string newCommand;
+
+                if (abort == true) {
+                    result = Core::ERROR_ASYNC_ABORTED;
+                } 
+                else if (response != _T("OK")) {
+                    result = Core::ERROR_ASYNC_FAILED;
+                }
+                else if (_state == connection::SELECT) {
+                    newCommand = string(_TXT("RECONNECT"));
+                    _state     = connection::RECONNECT;
+                }
+                else if (_state == connection::RECONNECT) {
+                    newCommand = string(_TXT("PREAUTH ")) + BSSID(_bssid);
+                    _state     = connection::AUTHORIZE;
+                }
+                else {
+                    _state = connection::WAITING;
+                }
+                    
+                if ((newCommand.empty() == false) && (Request::Set(newCommand) == true)) {
+                    _parent.Submit(this);
+                } 
+                else if (_state != connection::WAITING) {
+                
+                    _adminLock.Lock();
+
+                    if (_callback != nullptr) {
+                        _callback->Completed(result);
+                    }
+                    _adminLock.Unlock();
+                }
+            }
+            void Completed(const uint32_t result) {
+
+                _adminLock.Lock();
+
+                if ((_callback != nullptr) && (_state == connection::WAITING)) {
+                    _callback->Completed(result);
+                }
+                _adminLock.Unlock();
+            }
+
+        private:
+            Controller& _parent;
+            Core::CriticalSection _adminLock;
+            connection _state;
+            uint64_t _bssid;
+            string _ssid;
+            IConnectCallback* _callback;
+        };
         class CustomRequest : public Request {
         private:
             CustomRequest() = delete;
@@ -730,7 +957,6 @@ namespace WPASupplicant {
             string _response;
             uint32_t _result;
         };
-
         typedef std::map<const uint64_t, NetworkInfo> NetworkInfoContainer;
         typedef std::map<const string, ConfigInfo> EnabledContainer;
         typedef Core::StreamType<Core::SocketDatagram> BaseClass;
@@ -748,6 +974,7 @@ namespace WPASupplicant {
             , _detailRequest(*this)
             , _networkRequest(*this)
             , _statusRequest(*this)
+            , _connectRequest(*this)
         {
             string remoteName(Core::Directory::Normalize(supplicantBase) + interfaceName);
 
@@ -838,6 +1065,13 @@ namespace WPASupplicant {
             const string& current = (_statusRequest.SSID());
             _adminLock.Unlock();
             return current;
+        }
+        inline const reasons DisconnectReason() const
+        {
+            _adminLock.Lock();
+            const reasons reason = _statusRequest.DisconnectReason();
+            _adminLock.Unlock();
+            return reason;
         }
         inline uint32_t Error() const
         {
@@ -1209,53 +1443,57 @@ namespace WPASupplicant {
 
             return (result);
         }
-        inline uint32_t Connect(const string& SSID, const uint64_t bssid)
+        inline uint32_t Connect(const string& SSID, const uint64_t& bssid)
         {
-            uint32_t result = Core::ERROR_UNKNOWN_KEY;
+            class ConnectSink : public IConnectCallback {
+            public:
+                ConnectSink(const ConnectSink&) = delete;
+                ConnectSink& operator= (const ConnectSink&) = delete;
+                ConnectSink() : _signal(false, true), _result(Core::ERROR_TIMEDOUT) {}
+                ~ConnectSink() override {};
 
-            _adminLock.Lock();
-
-            EnabledContainer::iterator index(_enabled.find(SSID));
-
-            if (index != _enabled.end()) {
-                _adminLock.Unlock();
-                result = Core::ERROR_NONE;
-                CustomRequest exchange(string(_TXT("SELECT_NETWORK ")) + Core::NumberType<uint32_t>(index->second.Id()).Text());
-
-                Submit(&exchange);
-
-                if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
-
-                    result = Core::ERROR_ASYNC_ABORTED;
-                } else {
-
-                    index->second.State(ConfigInfo::SELECTED);
-
-                    if (bssid != 0) {
-                        exchange = string(_TXT("RECONNECT"));
-
-                        Submit(&exchange);
-
-                        if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
-                            result = Core::ERROR_ASYNC_ABORTED;
-                        } else {
-                            index->second.State(ConfigInfo::SELECTED);
-
-                            exchange = string(_TXT("PREAUTH ")) + BSSID(bssid);
-
-                            Submit(&exchange);
-
-                            if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
-                                result = Core::ERROR_ASYNC_ABORTED;
-                            }
-                        }
-                    }
+            public:
+                uint32_t Wait(const uint32_t waitTime) {
+                    return (_signal.Lock(waitTime) == Core::ERROR_NONE ? _result : Core::ERROR_TIMEDOUT);
+                }
+                void Completed(const uint32_t result) override {
+                    _result = result;
+                    _signal.SetEvent();
                 }
 
-                Revoke(&exchange);
-            } else {
-                _adminLock.Unlock();
+            private:
+                Core::Event _signal;
+                uint32_t _result;
+
+            } waitSink;
+
+            uint32_t result = Connect(&waitSink, SSID, bssid);
+
+            if (result == Core::ERROR_NONE) {
+                result = waitSink.Wait(3 * MaxConnectionTime);
+
+                _connectRequest.Revoke(&waitSink);
             }
+
+            return (result);
+        }
+        inline uint32_t Connect(IConnectCallback* sink, const string& SSID, const uint64_t bssid)
+        {
+            _adminLock.Lock();
+
+            uint32_t result = _connectRequest.Invoke(sink, SSID, bssid);
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        inline uint32_t Revoke(IConnectCallback* sink)
+        {
+            _adminLock.Lock();
+
+            uint32_t result = _connectRequest.Revoke(sink);
+
+            _adminLock.Unlock();
 
             return (result);
         }
@@ -1299,6 +1537,14 @@ namespace WPASupplicant {
         inline void Notify(const events value)
         {
             _adminLock.Lock();
+
+            if (value == WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED) {
+                _connectRequest.Completed(Core::ERROR_INVALID_SIGNATURE);
+            }
+            else if (value == WPASupplicant::Controller::CTRL_EVENT_CONNECTED) {
+                _connectRequest.Completed(Core::ERROR_NONE);
+            }
+
             if (_callback != nullptr) {
                 _callback->Dispatch(value);
             }
@@ -1678,6 +1924,7 @@ namespace WPASupplicant {
         DetailRequest _detailRequest;
         NetworkRequest _networkRequest;
         StatusRequest _statusRequest;
+        ConnectRequest _connectRequest;
     };
 }
 } // namespace WPEFramework::WPASupplicant

@@ -1,10 +1,10 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Input_Switch_Plugin"></a>
-# Input Switch Plugin
+<a name="head.Input_Switch_API"></a>
+# Input Switch API
 
 **Version: 1.0**
 
-**Status: :black_circle::black_circle::white_circle:**
+**Status: :black_circle::white_circle::white_circle:**
 
 InputSwitch plugin for Thunder framework.
 
@@ -59,7 +59,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-The Input Switch plugin...
+InputSwitch JSON-RPC interface
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -70,9 +70,7 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *InputSwitch*) |
 | classname | string | Class name: *InputSwitch* |
-| locator | string | Library name: *libWPEFrameworkInputSwitch.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
 
 <a name="head.Methods"></a>
@@ -85,6 +83,7 @@ InputSwitch interface methods:
 | Method | Description |
 | :-------- | :-------- |
 | [channel](#method.channel) | Enable or Disable the throughput through the given channel |
+| [select](#method.select) | Enable the given channel, disabling all othe channels, whish are not immune |
 | [status](#method.status) | Check the status of the requested channel |
 
 <a name="method.channel"></a>
@@ -118,11 +117,11 @@ Enable or Disable the throughput through the given channel.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "InputSwitch.1.channel", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "InputSwitch.1.channel",
     "params": {
-        "name": "WebKitBrowser", 
+        "name": "WebKitBrowser",
         "enabled": false
     }
 }
@@ -131,8 +130,55 @@ Enable or Disable the throughput through the given channel.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": null
+}
+```
+<a name="method.select"></a>
+## *select <sup>method</sup>*
+
+Enable the given channel, disabling all othe channels, whish are not immune.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.name | string | Callsign that is the owner of this channel |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Failed to scan |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "InputSwitch.1.select",
+    "params": {
+        "name": "WebKitBrowser"
+    }
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": null
 }
 ```
@@ -169,9 +215,9 @@ Check the status of the requested channel.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "InputSwitch.1.status", 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "InputSwitch.1.status",
     "params": {
         "name": "WebKitBrowser"
     }
@@ -181,11 +227,11 @@ Check the status of the requested channel.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 1234567890,
     "result": [
         {
-            "name": "WebKitBrowser", 
+            "name": "WebKitBrowser",
             "enabled": false
         }
     ]
