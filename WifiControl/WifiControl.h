@@ -35,17 +35,16 @@ namespace Plugin {
     class WifiControl : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
         class Sink : public Core::IDispatchType<const WPASupplicant::Controller::events> {
-        private:
+        public:
             Sink() = delete;
             Sink(const Sink&) = delete;
             Sink& operator=(const Sink&) = delete;
 
-        public:
             Sink(WifiControl& parent)
                 : _parent(parent)
             {
             }
-            virtual ~Sink()
+            ~Sink() override
             {
             }
 
@@ -58,13 +57,11 @@ namespace Plugin {
         private:
             WifiControl& _parent;
         };
-
         class WifiDriver {
-        private:
+        public:
             WifiDriver(const WifiDriver&) = delete;
             WifiDriver& operator=(const WifiDriver&) = delete;
 
-        public:
             WifiDriver()
                 : _interfaceName()
                 , _connector()
@@ -132,22 +129,293 @@ namespace Plugin {
             Core::Process _process;
             uint32_t _pid;
         };
+        class AutoConnect : public WPASupplicant::Controller::IConnectCallback
+        {
+        private:
+            class AccessPoint 
+            {
+            public:
+                AccessPoint() = delete;
+                AccessPoint(const AccessPoint&) = delete;
+                AccessPoint& operator= (const AccessPoint&) = delete;
+
+                AccessPoint(const int32_t strength, const uint64_t& bssid, const string& SSID) 
+                    : _strength(strength)
+                    , _bssid(bssid)
+                    , _ssid(SSID) {
+                }
+                ~AccessPoint() {
+                }
+
+            public:
+                const string& SSID() const {
+                    return(_ssid);
+                }
+                const uint64_t& BSSID() const {
+                    return(_bssid);
+                }
+                int32_t Signal() const {
+                    return (_strength);
+                }
+
+            private:
+                int32_t _strength;
+                uint64_t _bssid;
+                string _ssid;
+            };
+            using Job = Core::WorkerPool::JobType<AutoConnect&>;
+            using SSIDList = std::list<AccessPoint>;
+
+            enum class states : uint8_t
+            {
+                IDLE,
+                SCANNING,
+                SCANNED,
+                CONNECTING,
+                RETRY
+            };
+
+        public:
+            AutoConnect() = delete;
+            AutoConnect(const AutoConnect&) = delete;
+            AutoConnect& operator=(const AutoConnect&) = delete;
+
+            AutoConnect(Core::ProxyType<WPASupplicant::Controller>& controller)
+                : _adminLock()
+                , _controller(controller)
+                , _job(*this)
+                , _state(states::IDLE)
+                , _ssidList()
+                , _interval(0)
+                , _attempts(0)
+                , _preferred()
+            {
+            }
+            ~AutoConnect() override
+            {
+            }
+
+        public:
+            uint32_t Connect(const string& SSID, const uint8_t scheduleInterval, const uint32_t attempts) 
+            {
+                uint32_t result = Core::ERROR_INPROGRESS;
+
+                _adminLock.Lock();
+
+                if (_state == states::IDLE) {
+
+                    ASSERT (_controller.IsValid());
+
+                    _preferred = SSID;
+                    _attempts = attempts;
+                    _interval = (scheduleInterval * 1000);
+
+                    MoveState (states::SCANNING);
+
+                    _controller->Scan();
+
+                    result = Core::ERROR_NONE;
+
+                    _job.Schedule(Core::Time::Now().Add(_interval));
+                }
+
+                _adminLock.Unlock();
+
+                return (result);
+            }
+            void SetPreferred(const string& ssid)
+            {
+                _adminLock.Lock();
+
+                _preferred.assign(ssid);
+
+                _adminLock.Unlock();
+            }
+            uint32_t Revoke()
+            {
+                _adminLock.Lock();
+
+                MoveState(states::IDLE);
+
+                _attempts = 0;
+                _interval = 0;
+
+                _adminLock.Unlock();
+
+                return(Core::ERROR_INPROGRESS);
+            }
+            void Scanned()
+            {
+                _adminLock.Lock();
+
+                if ( (_state == states::SCANNING) || (_state == states::RETRY) ) {
+
+                    MoveState(states::SCANNED);
+
+                    _job.Submit();
+               }
+
+                _adminLock.Unlock();
+            }
+            void Disconnected ()
+            {
+                _adminLock.Lock();
+
+                WPASupplicant::Controller::reasons reason = _controller->DisconnectReason();
+
+                if ((reason == WPASupplicant::Controller::WLAN_REASON_NOINFO_GIVEN)
+                        && (_state == states::IDLE) && (_attempts > 0)) {
+
+                    MoveState(states::SCANNING);
+
+                    _controller->Scan();
+
+                    _job.Schedule(Core::Time::Now().Add(_interval));
+                }
+
+                _adminLock.Unlock();
+            }
+
+            void Dispatch()
+            {
+                _adminLock.Lock();
+
+                // Oke, the Job timed out, or we need a new CONNECTION request....
+                if (_state == states::SCANNING) {
+                    // Seems that the Scan did not complete in time. Lets reschedule for later...
+                    _state = states::RETRY;
+                    _job.Schedule(Core::Time::Now().Add(_interval));
+                }
+                else if (_state == states::SCANNED) {
+
+                    // This is a transitional state due to the fact that the  call to
+                    // _controller->Get(net.SSID()) takes a long time, it should not 
+                    // be executed on an independend worker thread.
+
+                    _ssidList.clear();
+
+                    /* Arrange SSIDs in sorted order as per signal strength */
+                    WPASupplicant::Network::Iterator list(_controller->Networks());
+                    while (list.Next() == true) {
+                        const WPASupplicant::Network& net = list.Current();
+                        if (_controller->Get(net.SSID()).IsValid()) {
+
+                            int32_t strength(net.Signal());
+                            if (net.SSID().compare(_preferred) == 0) {
+                                strength = Core::NumberType<int32_t>::Max();
+                            }
+
+                            SSIDList::iterator index(_ssidList.begin());
+                            while ((index != _ssidList.end()) && (index->Signal() > strength)) {
+                                index++;
+                            }
+                            _ssidList.emplace(index, strength, net.BSSID(), net.SSID());
+                        }
+                    }
+
+                    if (_ssidList.size() == 0) {
+                        _state = states::RETRY;
+                    }
+                    else {
+                        _state = states::CONNECTING;
+                        _controller->Connect(this, _ssidList.front().SSID(), _ssidList.front().BSSID());
+                    }
+
+                    _job.Schedule(Core::Time::Now().Add(_interval));
+                }
+                else if (_state == states::CONNECTING) {
+                    // If we sre still in the CONNECTING mode, it must mean that previous CONNECT Failed
+                    if (_ssidList.size() > 0) {
+                        _ssidList.pop_front();
+                    }
+
+                    if (_ssidList.size() == 0) {
+                        _state = states::RETRY;
+                    }
+                    else {
+                        _controller->Connect(this, _ssidList.front().SSID(), _ssidList.front().BSSID());
+                    }
+                    _job.Schedule(Core::Time::Now().Add(_interval));
+                }
+                else if (_state == states::RETRY) {
+                    if (_attempts == 0) {
+                        _state = states::IDLE;
+                    }
+                    else {
+                        if (_attempts != static_cast<uint32_t>(~0)) {
+                            --_attempts;
+                        }
+                        _state = states::SCANNING;
+                        _controller->Scan();
+
+                        _job.Schedule(Core::Time::Now().Add(_interval));
+                    }
+                }
+
+                _adminLock.Unlock();
+            }
+
+        private:
+            void MoveState(const states newState) {
+                _state = states::IDLE;
+
+                _adminLock.Unlock();
+
+                _job.Revoke();
+
+                _adminLock.Lock();
+
+                _state = newState;
+            }
+            void Completed(const uint32_t result) override {
+
+                _controller->Revoke(this);
+
+                _adminLock.Lock();
+
+                if (result == Core::ERROR_NONE) {
+
+                    MoveState(states::IDLE);
+
+                    _ssidList.clear();
+                }
+                else {
+                    MoveState(states::CONNECTING);
+
+                    _job.Submit();
+                }
+                _adminLock.Unlock();
+            }
+
+        private:
+            Core::CriticalSection _adminLock;
+            Core::ProxyType<WPASupplicant::Controller>& _controller;
+            Job _job;
+            states _state;
+            SSIDList _ssidList;
+            uint32_t _interval;
+            uint32_t _attempts;
+            string _preferred;
+        };
 
     public:
         class Config : public Core::JSON::Container {
-        private:
+        public:
             Config(const Config&) = delete;
             Config& operator=(const Config&) = delete;
 
-        public:
             Config()
                 : Connector(_T("/var/run/wpa_supplicant"))
                 , Interface(_T("wlan0"))
                 , Application(_T("/usr/sbin/wpa_supplicant"))
+                , Preferred()
+                , AutoConnect(false)
             {
                 Add(_T("connector"), &Connector);
                 Add(_T("interface"), &Interface);
                 Add(_T("application"), &Application);
+                Add(_T("preferred"), &Preferred);
+                Add(_T("autoconnect"), &AutoConnect);
             }
             virtual ~Config()
             {
@@ -157,6 +425,8 @@ namespace Plugin {
             Core::JSON::String Connector;
             Core::JSON::String Interface;
             Core::JSON::String Application;
+            Core::JSON::String Preferred;
+            Core::JSON::Boolean AutoConnect;
         };
 
         static void FillNetworkInfo(const WPASupplicant::Network& info, JsonData::WifiControl::NetworkInfo& net)
@@ -322,12 +592,6 @@ namespace Plugin {
             UnregisterAll();
         }
 
-        BEGIN_INTERFACE_MAP(WifiControl)
-        INTERFACE_ENTRY(PluginHost::IPlugin)
-        INTERFACE_ENTRY(PluginHost::IWeb)
-        INTERFACE_ENTRY(PluginHost::IDispatcher)
-        END_INTERFACE_MAP
-
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
@@ -347,14 +611,6 @@ namespace Plugin {
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index);
 
         void WifiEvent(const WPASupplicant::Controller::events& event);
-
-    private:
-        uint8_t _skipURL;
-        PluginHost::IShell* _service;
-        string _configurationStore;
-        Sink _sink;
-        WifiDriver _wpaSupplicant;
-        Core::ProxyType<WPASupplicant::Controller> _controller;
         void RegisterAll();
         void UnregisterAll();
         uint32_t endpoint_delete(const JsonData::WifiControl::DeleteParamsInfo& params);
@@ -371,6 +627,21 @@ namespace Plugin {
         void event_scanresults(const Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& list);
         void event_networkchange();
         void event_connectionchange(const string& ssid);
+ 
+        BEGIN_INTERFACE_MAP(WifiControl)
+            INTERFACE_ENTRY(PluginHost::IPlugin)
+            INTERFACE_ENTRY(PluginHost::IWeb)
+            INTERFACE_ENTRY(PluginHost::IDispatcher)
+        END_INTERFACE_MAP
+
+    private:
+        uint8_t _skipURL;
+        PluginHost::IShell* _service;
+        string _configurationStore;
+        Sink _sink;
+        WifiDriver _wpaSupplicant;
+        Core::ProxyType<WPASupplicant::Controller> _controller;
+        AutoConnect _autoConnect;
     };
 
 } // namespace Plugin
