@@ -47,6 +47,7 @@ namespace Plugin
         , _sink(*this)
         , _wpaSupplicant()
         , _controller()
+        , _autoConnect(_controller)
     {
         RegisterAll();
     }
@@ -90,7 +91,6 @@ namespace Plugin
                     result = _T("Could not establish a link with WPA_SUPPLICANT");
                 } else {
                     _controller->Callback(&_sink);
-                    _controller->Scan();
 
                     Core::File configFile(_configurationStore);
 
@@ -114,6 +114,13 @@ namespace Plugin
                             UpdateConfig(profile, index.Current());
                         }
                     }
+
+                    if (config.AutoConnect.Value() == false) {
+                        _controller->Scan();
+                    }
+                    else {
+                        _autoConnect.Connect(config.Preferred.Value(), 30, ~0);
+                    }
                 }
             }
         }
@@ -133,7 +140,10 @@ namespace Plugin
         _controller.Release();
 
         _wpaSupplicant.Terminate();
+
 #endif
+
+        _autoConnect.Revoke();
 
         ASSERT(_service == service);
         _service = nullptr;
@@ -381,6 +391,8 @@ namespace Plugin
 
             networks.Set(list);
 
+            _autoConnect.Scanned();
+
             event_scanresults(networks.Networks);
 
             string message;
@@ -400,6 +412,7 @@ namespace Plugin
             string message("{ \"event\": \"Disconnected\" }");
             _service->Notify(message);
             event_connectionchange(string());
+            _autoConnect.Disconnected();
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_NETWORK_CHANGED: {
@@ -413,6 +426,7 @@ namespace Plugin
         case WPASupplicant::Controller::CTRL_EVENT_TERMINATING:
         case WPASupplicant::Controller::CTRL_EVENT_NETWORK_NOT_FOUND:
         case WPASupplicant::Controller::CTRL_EVENT_SCAN_STARTED:
+        case WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED:
         case WPASupplicant::Controller::WPS_AP_AVAILABLE:
         case WPASupplicant::Controller::AP_ENABLED:
             break;

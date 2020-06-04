@@ -31,6 +31,7 @@ ENUM_CONVERSION_BEGIN(WPASupplicant::Controller::events)
     { WPASupplicant::Controller::CTRL_EVENT_BSS_REMOVED, _TXT("CTRL-EVENT-BSS-REMOVED") },
     { WPASupplicant::Controller::CTRL_EVENT_TERMINATING, _TXT("CTRL-EVENT-TERMINATING") },
     { WPASupplicant::Controller::CTRL_EVENT_NETWORK_NOT_FOUND, _TXT("CTRL-EVENT-NETWORK-NOT-FOUND") },
+    { WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED, _TXT("CTRL-EVENT-SSID-TEMP-DISABLED") },
     { WPASupplicant::Controller::WPS_AP_AVAILABLE, _TXT("WPS-AP-AVAILABLE") },
     { WPASupplicant::Controller::AP_ENABLED, _TXT("AP-ENABLED") },
 
@@ -216,12 +217,52 @@ namespace WPASupplicant {
             if (event.IsSet() == true) {
                 TRACE(Communication, (_T("Dispatch message: [%s]"), message.c_str()));
 
-                if ((event == CTRL_EVENT_CONNECTED) || (event == CTRL_EVENT_DISCONNECTED) || (event == WPS_AP_AVAILABLE)) {
+                if (event == CTRL_EVENT_DISCONNECTED) {
+
+                    ASSERT(position != string::npos);
+
+                    Core::TextFragment infoLine(message, position, message.length() - position);
+
+                    // Skip white space
+                    uint16_t begin = infoLine.ForwardSkip(_T(" \t"), 0);
+
+                    // Skip bssid=<value> sub-string
+                    begin = infoLine.ForwardFind(_T(" \t"), begin);
+
+                    // Skip white space & get begin position of reason string
+                    begin = infoLine.ForwardSkip(_T(" \t"), begin);
+
+                    // Get end position of reason string
+                    uint16_t end = infoLine.ForwardFind(_T("=\t"), begin);
+
+                    // Get and check if it is a reason string
+                    string reasonStr(Core::TextFragment(infoLine, begin, (end - begin)).Text());
+                    if (reasonStr.compare("reason") == 0) {
+
+                        // Skip '=' character & get begin position of reason code
+                        begin = infoLine.ForwardSkip(_T("=\t"), end);
+
+                        // Get end position of reason code
+                        end = infoLine.ForwardFind(_T(" \t"), begin);
+
+                        // Get reason code
+                        uint32_t reason = Core::NumberType<uint32_t>(Core::TextFragment(infoLine, begin, (end - begin)));
+
+                        _statusRequest.DisconnectReason(static_cast<reasons>(reason));
+                    }
+                    else {
+                        TRACE(Trace::Error, ("There is no reason code in the event"));
+                    }
+                    _statusRequest.Event(event.Value());
+                    Submit(&_statusRequest);
+                }
+                else if ((event == CTRL_EVENT_CONNECTED) || (event == WPS_AP_AVAILABLE)) {
                     _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
                 } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS)) {
                     _adminLock.Lock();
                     if (_scanRequest.Set() == true) {
+                        _scanRequest.Event(event.Value());
                         _adminLock.Unlock();
                         Submit(&_scanRequest);
                     } else {
@@ -267,6 +308,9 @@ namespace WPASupplicant {
                     }
 
                     _adminLock.Unlock();
+                }
+                else if (event == CTRL_EVENT_SSID_TEMP_DISABLED) {
+                    Notify(event.Value());
                 }
             } else {
                 TRACE(Communication, (_T("RAW EVENT MESSAGE: [%s]"), message.c_str()));
