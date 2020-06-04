@@ -40,7 +40,7 @@ namespace PluginHost {
 
     public:
         DownloadEngine(INotifier* notifier, const string& downloadStorage)
-            : BaseClass(false, Core::NodeId(_T("0.0.0.0")), Core::NodeId(), 1024, 1024)
+            : BaseClass(false, Core::NodeId(_T("0.0.0.0")), Core::NodeId(), 1024, ((64 * 1024) - 1))
             , _notifier(notifier)
             , _storage(downloadStorage.c_str(), false)
         {
