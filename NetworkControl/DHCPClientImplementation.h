@@ -964,7 +964,7 @@ namespace Plugin {
                                 auto dispatch = Core::ProxyType<Core::IDispatch>(
                                     Core::ProxyType<FunctorDispatcher<std::function<void()>>>::Create(
                                         [this, copy]() {
-                                            this->_claimCallback(copy, true);
+                                            this->_claimCallback(copy, false);
                                         }
                                 ));
 
