@@ -25,6 +25,17 @@
 namespace WPEFramework {
 
 namespace Plugin {
+    template<typename T>
+    struct FunctorDispatcher : public Core::IDispatch, public T
+    {
+        FunctorDispatcher<T>(T&& x)
+            : T(x) {}
+
+        void Dispatch() override
+        {
+            T::operator()();
+        }
+    };
 
     class DHCPClientImplementation : public Core::SocketDatagram {
     public:
@@ -575,8 +586,8 @@ namespace Plugin {
 
         typedef Core::IteratorType<std::list<Offer>, Offer&, std::list<Offer>::iterator> Iterator;
         typedef Core::IteratorType<const std::list<Offer>, const Offer&, std::list<Offer>::const_iterator> ConstIterator;
-        typedef std::function<void(Offer&)> DiscoverCallback;
-        typedef std::function<void(Offer&, bool)> RequestCallback;
+        typedef std::function<void(Offer)> DiscoverCallback;
+        typedef std::function<void(Offer, bool)> RequestCallback;
 
     public:
         DHCPClientImplementation(const string& interfaceName, DiscoverCallback discoverCallback, RequestCallback claimCallback);
@@ -877,7 +888,9 @@ namespace Plugin {
             return (sizeof(CoreMessage) + index);
         }
 
-        /* parse a DHCP message and take appropiate action */
+        /*  Parse a DHCP message and take appropiate action 
+            This will be called from ResourceMonitor thread
+        */
         uint16_t ProcessMessage(const Core::NodeId& source, const uint8_t stream[], const uint16_t length)
         {
 
@@ -901,7 +914,19 @@ namespace Plugin {
                             if (xid == _discoverXID) {
                                 AddUnleasedOffer(Offer(source, frame, options));
                                 TRACE(Trace::Information, ("Received an Offer from: %s", source.HostAddress().c_str()));
-                                _discoverCallback(_unleasedOffers.back());
+
+                                Offer& offer = _unleasedOffers.back();
+
+                                // Launch callback in another thread, so that we wont block ResourceManager
+                                auto x = Core::ProxyType<Core::IDispatch>(
+                                    Core::ProxyType<FunctorDispatcher<std::function<void()>>>::Create(
+                                        [this, offer]() {
+                                            this->_discoverCallback(offer);
+                                        }
+                                    ));
+
+                                Core::IWorkerPool::Instance().Submit(x);
+
                             } else {
                                 TRACE_L1("Unknown XID encountered: %d", xid);
                             }
@@ -913,9 +938,17 @@ namespace Plugin {
                                         
                             if (offer.IsValid()) {
                                 offer.Current().Update(options); // Update if informations changed since offering
-                                
                                 Offer& leased = MakeLeased(offer.Current());
-                                _claimCallback(leased, true);
+                                
+                                // Launch callback in another thread, so that we wont block ResourceManager
+                                auto dispatch = Core::ProxyType<Core::IDispatch>(
+                                    Core::ProxyType<FunctorDispatcher<std::function<void()>>>::Create(
+                                        [this, leased]() {
+                                            this->_claimCallback(leased, true);
+                                        }
+                                ));
+
+                                Core::IWorkerPool::Instance().Submit(dispatch);
                             }
                             break;
                         }
@@ -927,10 +960,18 @@ namespace Plugin {
                                 Offer copy = offer.Current(); // we need a copy because of deletion
                                 RemoveUnleasedOffer(offer.Current());
 
-                                _claimCallback(copy, false);
+                                // Launch callback in another thread, so that we wont block ResourceManager
+                                auto dispatch = Core::ProxyType<Core::IDispatch>(
+                                    Core::ProxyType<FunctorDispatcher<std::function<void()>>>::Create(
+                                        [this, copy]() {
+                                            this->_claimCallback(copy, true);
+                                        }
+                                ));
+
+                                Core::IWorkerPool::Instance().Submit(dispatch);
                             }
                             break;
-                        }                   
+                        }
                 }
 
                 result = length;

@@ -17,16 +17,69 @@
  * limitations under the License.
  */
  
-#include <memory>
-
 #include "Module.h"
-
 #include "OutOfProcessPlugin.h"
+
+#include <interfaces/ITimeSync.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class OutOfProcessImplementation : public Core::Thread, public Exchange::IBrowser, public PluginHost::IStateControl {
+    class OutOfProcessImplementation 
+        : public Exchange::IBrowser
+        , public PluginHost::IStateControl
+        , public Core::Thread {
+    private:
+        class PluginMonitor : public PluginHost::IPlugin::INotification {
+        private:
+            using Job = Core::ThreadPool::JobType<PluginMonitor>;
+
+        public:
+            PluginMonitor(const PluginMonitor&) = delete;
+            PluginMonitor& operator=(const PluginMonitor&) = delete;
+
+#ifdef __WINDOWS__
+#pragma warning(disable : 4355)
+#endif
+            PluginMonitor(OutOfProcessImplementation& parent)
+                : _parent(parent)
+            {
+            }
+#ifdef __WINDOWS__
+#pragma warning(default : 4355)
+#endif
+            ~PluginMonitor() override = default;
+
+        public:
+            void StateChange(PluginHost::IShell* service) override
+            {
+				if (service->State() == PluginHost::Service::ACTIVATED) {
+                    string name(service->Callsign());
+
+                    Exchange::ITimeSync* time = service->QueryInterface<Exchange::ITimeSync>();
+					if (time != nullptr) {
+						printf("Time interface supported\n");
+						time->Release();
+					}
+				}
+            }
+            BEGIN_INTERFACE_MAP(PluginMonitor)
+                INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
+            END_INTERFACE_MAP
+
+        private:
+            friend Core::ThreadPool::JobType<PluginMonitor&>;
+
+            // Dispatch can be run in an unlocked state as the destruction of the observer list
+            // is always done if the thread that calls the Dispatch is blocked (paused)
+            void Dispatch()
+            {
+            }
+
+        private:
+            OutOfProcessImplementation& _parent;
+        };
+
     public:
         class Config : public Core::JSON::Container {
         private:
@@ -117,23 +170,22 @@ namespace Plugin {
             runtype _type;
         };
 
-    private:
-        OutOfProcessImplementation(const OutOfProcessImplementation&);
-        OutOfProcessImplementation& operator=(const OutOfProcessImplementation&);
-
     public:
+        OutOfProcessImplementation(const OutOfProcessImplementation&) = delete;
+        OutOfProcessImplementation& operator=(const OutOfProcessImplementation&) = delete;
+
         OutOfProcessImplementation()
             : Core::Thread(0, _T("OutOfProcessImplementation"))
-            , _reference()
             , _requestedURL()
             , _setURL()
             , _fps(0)
             , _hidden(false)
             , _executor(1, 0, 4)
+            , _sink(*this)
         {
             fprintf(stderr, "---------------- Constructed the OutOfProcessImplementation ----------------------\n"); fflush(stderr);
         }
-        virtual ~OutOfProcessImplementation()
+        ~OutOfProcessImplementation() override
         {
             fprintf(stderr, "---------------- Destructing the OutOfProcessImplementation ----------------------\n"); fflush(stderr);
             Block();
@@ -334,8 +386,9 @@ namespace Plugin {
         }
 
         BEGIN_INTERFACE_MAP(OutOfProcessImplementation)
-        INTERFACE_ENTRY(Exchange::IBrowser)
-        INTERFACE_ENTRY(PluginHost::IStateControl)
+            INTERFACE_ENTRY(Exchange::IBrowser)
+            INTERFACE_ENTRY(PluginHost::IStateControl)
+            INTERFACE_AGGREGATE(PluginHost::IPlugin::INotification,static_cast<IUnknown*>(&_sink))
         END_INTERFACE_MAP
 
     private:
@@ -382,7 +435,6 @@ namespace Plugin {
         }
 
     private:
-        mutable uint32_t _reference;
         Core::CriticalSection _adminLock;
         Config _config;
         string _requestedURL;
@@ -394,6 +446,7 @@ namespace Plugin {
         std::list<PluginHost::IStateControl::INotification*> _notificationClients;
         std::list<Exchange::IBrowser::INotification*> _browserClients;
         Core::ThreadPool _executor;
+        Core::Sink<PluginMonitor> _sink;
     };
 
     SERVICE_REGISTRATION(OutOfProcessImplementation, 1, 0);

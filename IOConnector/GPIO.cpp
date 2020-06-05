@@ -301,7 +301,7 @@ namespace GPIO
         return(_timedPin.Remove(sink, marker));
     }
 
-    /* virtual */ void Pin::Trigger()
+    /* virtual */ void Pin::Evaluate()
     {
         if (HasChanged() == true) {
             _timedPin.Update(Get());
@@ -319,16 +319,6 @@ namespace GPIO
     {
         Set(value != 0);
         return (Core::ERROR_NONE);
-    }
-
-    /* virtual */ void Pin::Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job)
-    {
-        Core::IWorkerPool::Instance().Schedule(time, job);
-    }
-
-    /* virtual */ void Pin::Revoke(const Core::ProxyType<Core::IDispatch>& job)
-    {
-        Core::IWorkerPool::Instance().Revoke(job);
     }
 }
 } // namespace WPEFramework::Linux

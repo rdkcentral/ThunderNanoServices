@@ -68,14 +68,12 @@ namespace Plugin {
 
                 RPC::IRemoteConnection* connection = _service->RemoteConnection(_connectionId);
 
-                ASSERT(connection != nullptr);
-
                 if(connection != nullptr) {
                     _memory = WPEFramework::WebServer::MemoryObserver(connection);
                     connection->Release();
-                }
 
-                ASSERT(_memory != nullptr);
+                    ASSERT(_memory != nullptr);
+                }
 
                 PluginHost::ISubSystem* subSystem = service->SubSystems();
 
@@ -103,10 +101,11 @@ namespace Plugin {
     {
         ASSERT(_service == _service);
         ASSERT(_server != nullptr);
-        ASSERT(_memory != nullptr);
 
         _service->Unregister(&_notification);
-        _memory->Release();
+        if (_memory != nullptr) {
+            _memory->Release();
+        }
 
         // Stop processing of the browser:
         if (_server->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
