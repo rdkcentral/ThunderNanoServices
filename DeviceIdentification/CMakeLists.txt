@@ -20,6 +20,7 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(NEXUS QUIET)
 find_package(BCM_HOST QUIET)
+find_package(MFRFWLibs QUIET)
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
@@ -45,6 +46,18 @@ elseif (BCM_HOST_FOUND)
     target_link_libraries(${MODULE_NAME}
         PRIVATE
             BCM_HOST::BCM_HOST)
+elseif (MFRFWLIBS_FOUND)
+    message("Found MFRFWLibs; checking ${CMAKE_CURRENT_SOURCE_DIR}/Implementation/${WPE_PLUGIN_DEVICEID_MFRIMPL}/${WPE_PLUGIN_DEVICEID_MFRIMPL}.cpp")
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Implementation/${WPE_PLUGIN_DEVICEID_MFRIMPL}/${WPE_PLUGIN_DEVICEID_MFRIMPL}.cpp")
+        target_sources(${MODULE_NAME}
+            PRIVATE
+	        Implementation/${WPE_PLUGIN_DEVICEID_MFRIMPL}/${WPE_PLUGIN_DEVICEID_MFRIMPL}.cpp)
+        target_link_libraries(${MODULE_NAME}
+            PRIVATE
+                mfrfwlibs::mfrfwlibs)
+    else()
+	message(FATAL_ERROR "${CMAKE_CURRENT_SOURCE_DIR}/Implementation/${WPE_PLUGIN_DEVICEID_MFRIMPL}/${WPE_PLUGIN_DEVICEID_MFRIMPL}.cpp not found.")
+    endif()
 else ()
     message(FATAL_ERROR "There is no platform backend for device identifier plugin")
 endif()
