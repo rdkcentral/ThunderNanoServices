@@ -766,7 +766,7 @@ namespace Plugin
 
     void NetworkControl::RefreshDNS()
     {
-        Core::DataElementFile file(_dnsFile, Core::File::SHAREABLE|Core::File::USER_READ|Core::File::USER_WRITE|Core::File::USER_EXECUTE|Core::File::GROUP_READ|Core::File::GROUP_WRITE);
+        Core::DataElementFile file(_dnsFile, Core::File::SHAREABLE|Core::File::USER_READ|Core::File::USER_WRITE|Core::File::USER_EXECUTE|Core::File::GROUP_READ|Core::File::GROUP_WRITE, 0);
 
         if (file.IsValid() == false) {
             SYSLOG(Logging::Startup, (_T("DNS functionality could NOT be updated [%s]"), _dnsFile.c_str()));
@@ -885,6 +885,8 @@ namespace Plugin
             } else {
                 ClearAssignedIPV4IPs(adapter);
                 ClearAssignedIPV6IPs(adapter);
+
+                Core::AdapterIterator::Flush();
             }
 
             _adminLock.Unlock();

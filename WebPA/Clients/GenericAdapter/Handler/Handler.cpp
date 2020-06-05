@@ -25,8 +25,10 @@ namespace WPEFramework {
 extern "C" {
 #endif
 
+typedef void (*LoadProfileFunc)();
+
 IProfileControl* WebPAProfileInstance(const char* name) {
-    return (Administrator::Instance().Find(name));
+    return (WebPA::Administrator::Instance().Find(name));
 }
 
 #ifdef __cplusplus
@@ -86,7 +88,11 @@ uint32_t Handler::Configure(PluginHost::IShell* service)
     while (entry.Next() == true) {
         Core::Library library(entry.Current().c_str());
         if (library.IsLoaded() == true) {
-            _systemLibraries.push_back(library);
+            LoadProfileFunc handle = reinterpret_cast<LoadProfileFunc>(library.LoadFunction(_T("LoadProfile")));
+            if (handle != nullptr) {
+                handle();
+                _systemLibraries.push_back(library);
+            }
         }
     }
     Core::JSON::ArrayType< Config::Link >::ConstIterator index (static_cast<const Config&>(config).Profiles.Elements());
@@ -99,8 +105,8 @@ uint32_t Handler::Configure(PluginHost::IShell* service)
             systemProfileController.name = name;
 
             systemProfileController.control = WebPAProfileInstance(name.c_str());
-            systemProfileController.control->Initialize();
             if (systemProfileController.control) {
+                systemProfileController.control->Initialize();
                 _systemProfileControllers.insert(std::pair<const std::string, SystemProfileController>(index.Current().ProfileName.Value(), systemProfileController));
             }
         } else {

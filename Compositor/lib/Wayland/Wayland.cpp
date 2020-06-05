@@ -35,6 +35,7 @@ namespace Plugin {
     static Core::CriticalSection g_implementationLock;
 
     class CompositorImplementation : public Exchange::IComposition,
+                                     public Exchange::IInputSwitch,
                                      public Wayland::Display::IProcess {
     private:
         CompositorImplementation(const CompositorImplementation&) = delete;
@@ -116,19 +117,9 @@ namespace Plugin {
             {
                 return _surface.IsValid();
             }
-            void SetInput()
-            {
-                if ( (_server != nullptr) && (_surface.Name().empty() == false) && (_surface.Name() != "noname") ) {
-                    _server->SetInput(_surface.Name().c_str());
-                }
-            }
             string Name() const override
             {
                 return _surface.Name();
-            }
-            void Kill() override
-            {
-                //TODO: to be implemented.
             }
             void Opacity(const uint32_t value) override
             {
@@ -153,14 +144,15 @@ namespace Plugin {
             }
             uint32_t ZOrder(const uint16_t index) override
             {
+                _layer = index;
                 _surface.ZOrder(index);
-                if (index == 0) {
-                    SetInput();
-                }
 
                 return (Core::ERROR_NONE);
             }
-
+            uint32_t ZOrder() const override
+            {
+                return (_layer);
+            }
             BEGIN_INTERFACE_MAP(Entry)
                 INTERFACE_ENTRY(Exchange::IComposition::IClient)
             END_INTERFACE_MAP
@@ -169,6 +161,7 @@ namespace Plugin {
             Wayland::Display::Surface _surface;
             Implementation::IServer* _server;
             Exchange::IComposition::Rectangle _rectangle;
+            uint16_t _layer;
         };
 
         class Config : public Core::JSON::Container {
@@ -296,6 +289,7 @@ namespace Plugin {
     public:
         BEGIN_INTERFACE_MAP(CompositorImplementation)
         INTERFACE_ENTRY(Exchange::IComposition)
+        INTERFACE_ENTRY(Exchange::IInputSwitch)
         END_INTERFACE_MAP
 
     public:
@@ -385,13 +379,14 @@ namespace Plugin {
             g_implementationLock.Unlock();
         }
 
-        /* virtual */ void Resolution(const Exchange::IComposition::ScreenResolution format) override
+        /* virtual */ uint32_t Resolution(const Exchange::IComposition::ScreenResolution format) override
         {
+            return (Implementation::SetResolution(format));
         }
 
         /* virtual */ Exchange::IComposition::ScreenResolution Resolution() const override
         {
-            return ((Exchange::IComposition::ScreenResolution)0);
+            return (Implementation::GetResolution());
         }
 
         // -------------------------------------------------------------------------------------------------------
@@ -400,6 +395,37 @@ namespace Plugin {
         /* virtual */ bool Dispatch()
         {
             return (true);
+        }
+        RPC::IStringIterator* Consumers() const override
+        {
+            std::list<string> container;
+            std::list<Entry*>::const_iterator index(_clients.begin());
+            while (index != _clients.end()) {
+                container.push_back((*index)->Name());
+                index++;
+            }
+            return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(container));
+        }
+        bool Consumer(const string& name) const override
+        {
+            return true;
+        }
+        uint32_t Consumer(const string& name, const mode) override
+        {
+            return (Core::ERROR_UNAVAILABLE);
+        }
+        uint32_t Select(const string& callsign) override
+        {
+            uint32_t status = Core::ERROR_UNKNOWN_KEY;
+            std::list<Entry*>::iterator index(_clients.begin());
+            while (index != _clients.end()) {
+                if ((*index)->Name().find(callsign) == 0) {
+                    _server->SetInput((*index)->Name().c_str());
+                    status = Core::ERROR_NONE;
+                }
+                index++;
+            }
+            return status;
         }
 
     private:

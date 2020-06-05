@@ -133,6 +133,8 @@ namespace Plugin {
     {
         const string& ssid = params.Ssid.Value();
 
+        _autoConnect.SetPreferred(ssid);
+
         return _controller->Connect(ssid);
     }
 

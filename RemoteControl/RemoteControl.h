@@ -131,6 +131,7 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , MapFile("keymap.json")
+                , PostLookupFile()
                 , PassOn(false)
                 , RepeatStart(500)
                 , RepeatInterval(100)
@@ -140,6 +141,7 @@ namespace Plugin {
                 , Links()
             {
                 Add(_T("mapfile"), &MapFile);
+                Add(_T("postlookupfile"), &PostLookupFile);
                 Add(_T("passon"), &PassOn);
                 Add(_T("repeatstart"), &RepeatStart);
                 Add(_T("repeatinterval"), &RepeatInterval);
@@ -154,6 +156,7 @@ namespace Plugin {
 
         public:
             Core::JSON::String MapFile;
+            Core::JSON::String PostLookupFile;
             Core::JSON::Boolean PassOn;
             Core::JSON::DecUInt16 RepeatStart;
             Core::JSON::DecUInt16 RepeatInterval;

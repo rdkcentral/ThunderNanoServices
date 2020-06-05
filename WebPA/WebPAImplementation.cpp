@@ -44,6 +44,7 @@ private:
 
         Config()
             : Core::JSON::Container()
+            , Interface(_T(""))
             , PingWaitTimeOut(_T(""))
             , WebPAUrl(_T(""))
             , ParodusLocalUrl(_T(""))
@@ -53,6 +54,7 @@ private:
             , ForceIPV4(false)
             , Location()
         {
+            Add(_T("interface"), &Interface);
             Add(_T("pingwaittime"), &PingWaitTimeOut);
             Add(_T("webpaurl"), &WebPAUrl);
             Add(_T("paroduslocalurl"), &ParodusLocalUrl);
@@ -67,6 +69,7 @@ private:
         }
 
     public:
+        Core::JSON::String Interface;
         Core::JSON::String PingWaitTimeOut;
         Core::JSON::String WebPAUrl;
         Core::JSON::String ParodusLocalUrl;
@@ -76,6 +79,9 @@ private:
         Core::JSON::Boolean ForceIPV4;
         Core::JSON::String Location;
     };
+
+private:
+    static constexpr const TCHAR* NullMACAddress = _T("00:00:00:00:00:00");
 
 public:
     WebPAImplementation(const WebPAImplementation&) = delete;
@@ -118,14 +124,25 @@ public:
         Core::Process::Options webpaService(_T("WebPAService"));
 
         // Get the point of entry on WPEFramework..
-        Core::AdapterIterator interfaces;
-
-        while (interfaces.Next() == true) {
-            if (interfaces.IPV4Addresses().Count() > 1) { //FIXME: Count checking need to be revisited
-                _options.Add(_T("-d")).Add(interfaces.MACAddress(':'));
-                _options.Add(_T("-i")).Add(interfaces.Name());
-                break;
+        Core::AdapterIterator interface;
+        if (config.Interface.Value().empty() == false) {
+            Core::AdapterIterator index = Core::AdapterIterator(config.Interface.Value());
+            if (IsValidInterface(index) == true) {
+                interface = index;
             }
+        } else {
+            while (interface.Next() == true) {
+                if (IsValidInterface(interface) == true) {
+                    break;
+                }
+            }
+        }
+
+        if (interface.IsValid() == true) {
+            _options.Add(_T("-d")).Add(interface.MACAddress(':'));
+            _options.Add(_T("-i")).Add(interface.Name());
+        } else {
+            TRACE(Trace::Error, (_T("WebPA: Error in configuring network interface for communication")));
         }
         if (config.PingWaitTimeOut.Value().empty() == false) {
             _options.Add(_T("-t")).Add(config.PingWaitTimeOut.Value());
@@ -161,9 +178,13 @@ public:
            _adminLock.Lock();
            Exchange::IWebPA::IWebPAClient* client = admin.Instantiate<Exchange::IWebPA::IWebPAClient>(entry.Current().c_str(), className, version);
            if (client != nullptr) {
-               _clients.insert(std::pair<const string, Exchange::IWebPA::IWebPAClient*>(className, client));
                client->Configure(service);
-               client->Launch();
+               if (client->Launch() == Core::ERROR_NONE) {
+                   _clients.insert(std::pair<const string, Exchange::IWebPA::IWebPAClient*>(className, client));
+               } else {
+                   client->Release();
+                   TRACE(Trace::Error, (_T("WebPA Error in launching client %s"), entry.Current().c_str()));
+               }
            } else {
                TRACE(Trace::Error, (_T("WebPA Error in the instantiation of client %s"), entry.Current().c_str()));
            }
@@ -237,6 +258,9 @@ private:
         return WPEFramework::Core::infinite;
     }
 
+    inline bool IsValidInterface(Core::AdapterIterator interface) {
+        return ((interface.IsValid() == true) && interface.IsUp() && (interface.MACAddress(':') != string(NullMACAddress)));
+    }
 private:
     Core::Process::Options _options;
     Core::CriticalSection _adminLock;

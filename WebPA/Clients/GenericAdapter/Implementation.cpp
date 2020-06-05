@@ -53,11 +53,13 @@ private:
             , ClientURL(_T("tcp://127.0.0.1:6667"))
             , ParodusURL(_T("tcp://127.0.0.1:6666"))
             , NotifyConfigFile(_T(""))
+            , MaxClientRetry(1)
         {
             Add(_T("datamodelfile"), &DataModelFile);
             Add(_T("genericclienturl"), &ClientURL);
             Add(_T("paroduslocalurl"), &ParodusURL);
             Add(_T("notifyconfigfile"), &NotifyConfigFile);
+            Add(_T("maxclientretry"), &MaxClientRetry);
         }
         ~Config()
         {
@@ -68,6 +70,7 @@ private:
         Core::JSON::String ClientURL;
         Core::JSON::String ParodusURL;
         Core::JSON::String NotifyConfigFile;
+        Core::JSON::DecUInt8 MaxClientRetry;
     };
 
     class NotificationCallback : public ICallback {
@@ -100,6 +103,7 @@ public:
         : Core::Thread(0, _T("WebPAClient"))
         , _adminLock()
         , _notificationCallback(nullptr)
+        , _maxRetry(0)
     {
         TRACE(Trace::Information, (_T("GenericAdapter::Construct()")));
         _adapter = new WebPA::Adapter(&_msgHandler);
@@ -142,6 +146,7 @@ public:
         }
         _clientURL = config.ClientURL.Value();
         _parodusURL = config.ParodusURL.Value();
+        _maxRetry = config.MaxClientRetry.Value();
         if (config.NotifyConfigFile.Value().empty() == false) {
              TRACE_GLOBAL(Trace::Information, (_T("NotifyConfigFile = [%s]"), config.NotifyConfigFile.Value().c_str()));
             _adapter->NotifierConfigFile(config.NotifyConfigFile.Value());
@@ -152,8 +157,9 @@ public:
         return Core::ERROR_NONE;
     }
 
-    virtual void Launch() override
+    virtual uint32_t Launch() override
     {
+        uint32_t status = Core::ERROR_GENERAL;
         if (true == IsRunning()) {
             DisconnectFromParodus();
         }
@@ -162,34 +168,36 @@ public:
         Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
         if (State() == Thread::BLOCKED) {
             // Load Data model
-            bool status = false;
             TRACE_GLOBAL(Trace::Information, (_T("WebPAClient Start() : ")));
             _msgHandler.ConfigureProfileControllers();
 
             TRACE_GLOBAL(Trace::Information, (_T("WebPAClient LoadDataModel() : ")));
-            status = _adapter->LoadDataModel(_dataModelFile);
-            if (status == true) {
+            if (_adapter->LoadDataModel(_dataModelFile) == true) {
                 // First connect to parodus
-                ConnectToParodus();
+                status = ConnectToParodus();
+                if (status == Core::ERROR_NONE) {
 
-                // Lets set the Notify Callback function
-                _adapter->SetNotifyCallback(_notificationCallback);
+                    // Lets set the Notify Callback function
+                     _adapter->SetNotifyCallback(_notificationCallback);
 
-                // Lets set the initial Notification
-                _adapter->InitializeNotifyParameters();
+                    // Lets set the initial Notification
+                    _adapter->InitializeNotifyParameters();
 
-                // Call Parodus listner worker function
-                Run();
-
+                    // Call Parodus listner worker function
+                    Run();
+                } else {
+                    TRACE(Trace::Error, (_T("WebPAClient Connection to Parodus Failed ")));
+                }
             } else {
-                TRACE(Trace::Information, (_T("WebPAClient LoadDataModel() Failed: ")));
+                TRACE(Trace::Error, (_T("WebPAClient LoadDataModel() Failed")));
             }
         }
+        return status;
     }
 
 private:
     virtual uint32_t Worker();
-    void ConnectToParodus();
+    uint32_t ConnectToParodus();
     void DisconnectFromParodus();
     long TimeValDiff(struct timespec *starttime, struct timespec *finishtime);
 
@@ -203,6 +211,7 @@ private:
     WebPA::Adapter* _adapter;
 
     libpd_instance_t _libparodusInstance;
+    uint8_t _maxRetry;
     std::string _parodusURL;
     std::string _clientURL;
 };
@@ -212,16 +221,17 @@ private:
 // for the GenericAdapter class name, that realizes the IStateControl interface.
 SERVICE_REGISTRATION(GenericAdapter, 1, 0);
 
-void GenericAdapter::ConnectToParodus()
+uint32_t GenericAdapter::ConnectToParodus()
 {
     TRACE(Trace::Information, (_T("ConnectToParodus")));
+    uint8_t maxRetry = _maxRetry;
+    uint32_t status = Core::ERROR_GENERAL;
 
-    int backoffRetryTime = 0;
-    int backoffMaxTime = 5;
-    int maxRetrySleep;
+    uint16_t backoffRetryTime = 0;
+    uint16_t backoffMaxTime = 5;
     //Retry Backoff count shall start at c=2 & calculate 2^c - 1.
-    int counter = 2;
-    maxRetrySleep = (int) pow(2, backoffMaxTime) - 1;
+    uint16_t counter = 2;
+    uint16_t maxRetrySleep = (uint16_t) pow(2, backoffMaxTime) - 1;
     TRACE(Trace::Information, (_T("maxRetrySleep = %d"), maxRetrySleep));
 
     libpd_cfg_t clientCFG = {.service_name = "config",
@@ -232,10 +242,10 @@ void GenericAdapter::ConnectToParodus()
 
     TRACE(Trace::Information, (_T("parodusUrl = %s clientUrl = %s"), _parodusURL.c_str(), _clientURL.c_str()));
 
-    while (true)
+    while (maxRetry > 0)
     {
         if (backoffRetryTime < maxRetrySleep) {
-            backoffRetryTime = (int) pow(2, counter) - 1;
+            backoffRetryTime = (uint16_t) pow(2, counter) - 1;
         }
 
         TRACE(Trace::Information, (_T("New backoffRetryTime value calculated = %d seconds"), backoffRetryTime));
@@ -243,6 +253,7 @@ void GenericAdapter::ConnectToParodus()
         if (ret == 0) {
             TRACE(Trace::Information, (_T("Init for parodus Success..!!")));
             TRACE(Trace::Information, (_T("WebPA is now ready to process requests")));
+            status = Core::ERROR_NONE;
             break;
         } else {
             TRACE(Trace::Information, (_T("Init for parodus failed: '%s'"), libparodus_strerror((libpd_error_t)ret)));
@@ -253,11 +264,13 @@ void GenericAdapter::ConnectToParodus()
                 counter = 2;
                 backoffRetryTime = 0;
                 TRACE(Trace::Information, (_T("backoffRetryTime reached max value, reseting to initial value")));
+                maxRetry--;
             }
         }
-        ret = libparodus_shutdown(&_libparodusInstance);
+        libparodus_shutdown(&_libparodusInstance);
         TRACE(Trace::Information, (_T("libparodus_shutdown retval %d"), ret));
     }
+    return status;
 }
 
 void GenericAdapter::DisconnectFromParodus()
