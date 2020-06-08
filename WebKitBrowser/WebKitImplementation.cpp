@@ -35,15 +35,19 @@
 #include <WPE/WebKit/WKNotificationProvider.h>
 #include <WPE/WebKit/WKSoupSession.h>
 #include <WPE/WebKit/WKUserMediaPermissionRequest.h>
+#include <WPE/WebKit/WKPreferencesRefPrivate.h>
+
+#include "BrowserConsoleLog.h"
+#include "InjectedBundle/Tags.h"
+
 #endif
+
 #include <wpe/wpe.h>
 
 #include <glib.h>
 
 #include "HTML5Notification.h"
-#include "BrowserConsoleLog.h"
 #include "WebKitBrowser.h"
-#include "InjectedBundle/Tags.h"
 
 #include <iostream>
 
@@ -1221,8 +1225,8 @@ static GSourceFuncs _handlerIntervention =
             // Turn on/off WebGL
             webkit_settings_set_enable_webgl(preferences, _config.WebGLEnabled.Value());
 
-	    webkit_settings_set_enable_non_composited_webgl(preferences, _config.NonCompositedWebGLEnabled.Value());		
-		
+            webkit_settings_set_enable_non_composited_webgl(preferences, _config.NonCompositedWebGLEnabled.Value());
+
             // Media Content Types Requiring Hardware Support
             if (_config.MediaContentTypesRequiringHardwareSupport.IsSet() == true
                 && _config.MediaContentTypesRequiringHardwareSupport.Value().empty() == false) {
@@ -1394,7 +1398,7 @@ static GSourceFuncs _handlerIntervention =
             if (_config.MediaContentTypesRequiringHardwareSupport.IsSet() == true
                 && _config.MediaContentTypesRequiringHardwareSupport.Value().empty() == false) {
               auto contentTypes = WKStringCreateWithUTF8CString(
-                  _config.MediaContentTypesRequiringHardwareSupport.Value().c_str);
+                  _config.MediaContentTypesRequiringHardwareSupport.Value().c_str());
               WKPreferencesSetMediaContentTypesRequiringHardwareSupport(preferences, contentTypes);
               WKRelease(contentTypes);
             }

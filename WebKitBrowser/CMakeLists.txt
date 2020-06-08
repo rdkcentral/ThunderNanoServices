@@ -56,15 +56,27 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(GLIB REQUIRED)
 find_package(WPEWebKit REQUIRED)
 find_package(WPEBackend REQUIRED)
+if(DEFINED WEBKIT_GLIB_API)
 find_package(LibSoup REQUIRED)
+endif()
 
-add_library(${MODULE_NAME} SHARED
+set(SOURCE_LIST
     Module.cpp
     WebKitBrowser.cpp
     WebKitBrowserJsonRpc.cpp
     WebKitImplementation.cpp
-    InjectedBundle/Tags.cpp
-    InjectedBundle/Utils.cpp
+)
+
+if(NOT DEFINED WEBKIT_GLIB_API)
+	set(SOURCE_LIST
+	    ${SOURCE_LIST}
+	    InjectedBundle/Tags.cpp
+	    InjectedBundle/Utils.cpp
+	)
+endif()
+
+add_library(${MODULE_NAME} SHARED
+    ${SOURCE_LIST}
 )
 
 set_target_properties(${MODULE_NAME} PROPERTIES
