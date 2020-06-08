@@ -35,7 +35,6 @@
 #include <WPE/WebKit/WKNotificationProvider.h>
 #include <WPE/WebKit/WKSoupSession.h>
 #include <WPE/WebKit/WKUserMediaPermissionRequest.h>
-#include <WPE/WebKit/WKPreferencesRefPrivate.h>
 
 #include "BrowserConsoleLog.h"
 #include "InjectedBundle/Tags.h"
