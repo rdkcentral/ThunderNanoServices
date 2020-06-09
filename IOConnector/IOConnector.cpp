@@ -233,7 +233,7 @@ namespace Plugin
     {
         _adminLock.Lock();
 
-        // Make sure a sink is not registered multiple times.
+        // Make sure a sink is not unregistered multiple times.
         NotificationList::iterator index = std::find(_notifications.begin(), _notifications.end(), sink);
 
         if (index != _notifications.end()) {
