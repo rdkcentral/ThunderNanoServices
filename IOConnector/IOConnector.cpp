@@ -77,10 +77,12 @@ namespace Plugin
     };
 
     IOConnector::IOConnector()
-        : _service(nullptr)
+        : _adminLock()
+        , _service(nullptr)
         , _sink(this)
         , _pins()
         , _skipURL(0)
+        , _notifications()
     {
         RegisterAll();
     }
@@ -209,42 +211,55 @@ namespace Plugin
         return (_pins.size() > 0 ? string() : _T("Could not instantiate the requested Pin"));
     }
 
-    /* virtual */ void IOConnector::Register(IFactory::IProduced* /* sink */)
+    /* virtual */ void IOConnector::Register(ICatalog::INotification* sink)
     {
-        /* TODO */
-        ASSERT(false);
-    }
+        _adminLock.Lock();
 
-    /* virtual */ void IOConnector::Unregister(IFactory::IProduced* /* sink */)
-    {
-        /* TODO */
-        ASSERT(false);
-    }
+        // Make sure a sink is not registered multiple times.
+        ASSERT(std::find(_notifications.begin(), _notifications.end(), sink) == _notifications.end());
 
-    /* virtual */ Exchange::IExternal* IOConnector::Resource(const uint32_t id)
-    {
+        _notifications.push_back(sink);
+        sink->AddRef();
 
-        Exchange::IExternal* result = nullptr;
-
-        // Lets find the pin and trigger if posisble...
-        Pins::iterator index = _pins.find(id);
-
-        if (index != _pins.end()) {
-            result = index->second.Pin();
-            result->AddRef();
+        // report all the IExternals we have
+        for (std::pair<const uint32_t, PinHandler>& product : _pins) {
+            sink->Update(product.second.Pin());
         }
 
-        return (result);
+        _adminLock.Unlock();
+    }
+
+    /* virtual */ void IOConnector::Unregister(ICatalog::INotification* sink)
+    {
+        _adminLock.Lock();
+
+        // Make sure a sink is not unregistered multiple times.
+        NotificationList::iterator index = std::find(_notifications.begin(), _notifications.end(), sink);
+
+        if (index != _notifications.end()) {
+            (*index)->Release();
+            _notifications.erase(index);
+        }
+
+        _adminLock.Unlock();
+
     }
 
     /* virtual */ void IOConnector::Deinitialize(PluginHost::IShell * service)
     {
         ASSERT(_service == service);
 
-        while (_pins.size() > 0) {
-            _pins.begin()->second.Unsubscribe(&_sink);
-            _pins.erase(_pins.begin());
+        _adminLock.Lock();
+
+        for (std::pair<const uint32_t, PinHandler>& product : _pins) {
+            product.second.Unsubscribe(&_sink);
+
+            for (auto client : _notifications) {
+                client->Update(product.second.Pin());
+            }
         }
+
+        _adminLock.Unlock();
 
         _pins.clear();
 
