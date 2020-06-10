@@ -23,6 +23,7 @@ namespace WPEFramework {
 
 namespace Plugin
 {
+
     SERVICE_REGISTRATION(NetworkControl, 1, 0);
 
     static Core::ProxyPoolType<Web::Response> responseFactory(4);
@@ -434,13 +435,6 @@ namespace Plugin
             if (gateway.IsValid() == true) {
                 adapter.Gateway(Core::IPNode(Core::NodeId("0.0.0.0"), 0), gateway);
             }
-
-            // TODO: Currently not working because gateway is set in a wrong way
-            /*
-            if (broadcast.IsValid() == true) {
-                adapter.Broadcast(broadcast);
-            }
-            */
             
             Core::AdapterIterator::Flush();
 
@@ -529,7 +523,7 @@ namespace Plugin
 
                 if (entry != _dhcpInterfaces.end()) {
                     entry->second->StopWatchdog();
-                    entry->second->AcquireIP();
+                    entry->second->GetIP();
                     result = Core::ERROR_NONE;
                 }
             }
@@ -737,7 +731,7 @@ namespace Plugin
         if (entry != _dhcpInterfaces.end()) {
 
             // Lets try again!
-            entry->second->AcquireIP();
+            entry->second->GetIP();
         } else {
             TRACE_L1("Request denied for nonexisting network interface!");
         }

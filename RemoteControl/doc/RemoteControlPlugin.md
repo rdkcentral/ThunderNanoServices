@@ -804,14 +804,14 @@ Notifies of a key press/release action.
 | params | object |  |
 | params.pressed | boolean | Denotes if the key was pressed (true) or released (false) |
 
-> The *key code* shall be passed within the designator, e.g. *42.client.events.1*.
+> The *key code* shall be passed within the designator, e.g. *42@client.events.1*.
 
 ### Example
 
 ```json
 {
     "jsonrpc": "2.0",
-    "method": "42.client.events.1.keypressed",
+    "method": "42@client.events.1.keypressed",
     "params": {
         "pressed": false
     }
