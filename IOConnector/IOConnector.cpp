@@ -223,7 +223,7 @@ namespace Plugin
 
         // report all the IExternals we have
         for (std::pair<const uint32_t, PinHandler>& product : _pins) {
-            sink->Update(product.second.Pin());
+            sink->Activated(product.second.Pin());
         }
 
         _adminLock.Unlock();
@@ -255,7 +255,7 @@ namespace Plugin
             product.second.Unsubscribe(&_sink);
 
             for (auto client : _notifications) {
-                client->Update(product.second.Pin());
+                client->Deactivated(product.second.Pin());
             }
         }
 
