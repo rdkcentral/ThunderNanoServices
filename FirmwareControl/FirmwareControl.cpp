@@ -109,16 +109,16 @@ namespace Plugin {
             uint32_t status = WaitForCompletion(_waitTime); // To avoid hang situation
             if (status != Core::ERROR_NONE) {
                 Status(UpgradeStatus::INSTALL_ABORTED, Core::ERROR_TIMEDOUT, 0);
+                TRACE(Trace::Error, (_T("Installation aborted since it is not completed within the TimeOut:%d\n"), _waitTime));
             } else {
                 _adminLock.Lock();
                 mfrUpgradeStatus_t installStatus = _installStatus;
                 _adminLock.Unlock();
                 UpgradeStatus upgradeStatus = ConvertMfrWriteStatusToUpgradeStatus(installStatus.progress);
-                TRACE(Trace::Information, (_T("Installation Completed with status :%s\n"), Core::EnumerateType<JsonData::FirmwareControl::StatusType>(upgradeStatus).Data()));
+                TRACE(Trace::Information, (_T("Installation completed with status :%s\n"), Core::EnumerateType<JsonData::FirmwareControl::StatusType>(upgradeStatus).Data()));
                 Status(upgradeStatus, ConvertMfrWriteErrorToUpgradeType(installStatus.error), installStatus.percentage);
             }
         }
-        TRACE(Trace::Information, (string(__FUNCTION__)));
     }
 
     uint32_t FirmwareControl::Download() {
