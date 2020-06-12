@@ -289,14 +289,13 @@ namespace Plugin {
             const uint8_t* rawId(Core::SystemInfo::Instance().RawDeviceId());
             const string deviceId(Core::SystemInfo::Instance().Id(rawId, ~0));
 
-            Core::NodeId source((_config.Interface.Value().empty() == true) || (selectedNode.IsValid() == false) ? selectedNode.AnyInterface() : selectedNode);
-
             _dialURL = Core::URL(service->Accessor());
+            _dialURL.Host(selectedNode.HostAddress());
             _dialPath = '/' + _dialURL.Path().Value();
 
             // TODO: THis used to be the MAC, but I think  it is just a unique number, otherwise, we need the MAC
             //       that goes with the selectedNode !!!!
-            _dialServiceImpl = new DIALServerImpl(deviceId, service->Accessor(), _DefaultAppInfoPath);
+            _dialServiceImpl = new DIALServerImpl(deviceId, _dialURL.Text(), _DefaultAppInfoPath);
 
             ASSERT(_dialServiceImpl != nullptr);
 
