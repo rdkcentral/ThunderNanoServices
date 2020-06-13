@@ -48,6 +48,7 @@ namespace Plugin {
             DOWNLOAD_STARTED,
             DOWNLOAD_ABORTED,
             DOWNLOAD_COMPLETED,
+            INSTALL_INITIATED,
             INSTALL_NOT_STARTED,
             INSTALL_ABORTED,
             INSTALL_STARTED,
