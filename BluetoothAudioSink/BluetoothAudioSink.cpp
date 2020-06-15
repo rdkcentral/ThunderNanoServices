@@ -64,7 +64,9 @@ namespace Plugin {
                 Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address);
                 if (device != nullptr) {
                     const uint8_t seid = 1; // Revisit this if multiple simultaneous sinks are to be supported.
-                    _sink = new A2DPSink(this, device, seid);
+                    _sink = new A2DPSink(this, device, seid, [this](){
+                        Updated();
+                    });
                     if (_sink != nullptr) {
                         result = Core::ERROR_NONE;
                     } else {

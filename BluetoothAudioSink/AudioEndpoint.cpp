@@ -18,13 +18,15 @@
  */
 
 #include "Module.h"
-#include "SignallingChannel.h"
+#include "AudioEndpoint.h"
+#include "AudioCodec.h"
+#include "AudioCodecSBC.h"
 
 namespace WPEFramework {
 
 namespace A2DP {
 
-    void SignallingChannel::AudioEndpoint::ParseCapabilities(const Bluetooth::AVDTPProfile::StreamEndPoint& sep)
+    void AudioEndpoint::ParseCapabilities(const Bluetooth::AVDTPProfile::StreamEndPoint& sep)
     {
         using ServiceCapabilities = Bluetooth::AVDTPProfile::StreamEndPoint::ServiceCapabilities;
 
@@ -95,7 +97,7 @@ namespace A2DP {
         }
     }
 
-    void SignallingChannel::AudioEndpoint::Configure(const IAudioCodec::Format& format, const bool enableCP)
+    uint32_t AudioEndpoint::Configure(const IAudioCodec::Format& format, const bool enableCP)
     {
         using ServiceCapabilities = Bluetooth::AVDTPProfile::StreamEndPoint::ServiceCapabilities;
 
@@ -122,29 +124,7 @@ namespace A2DP {
             configuration.emplace(ServiceCapabilities::MEDIA_CODEC, mcConfig);
         }
 
-        CmdSetConfiguration(configuration);
-    }
-
-    void SignallingChannel::DumpProfile() const
-    {
-        TRACE(SignallingFlow, (_T("Discovered %d stream endpoints(s)"), _profile.StreamEndPoints().size()));
-
-        uint16_t cnt = 1;
-        for (auto const& sep : _profile.StreamEndPoints()) {
-            TRACE(SignallingFlow, (_T("Stream endpoint #%i"), cnt++));
-            TRACE(SignallingFlow, (_T("  SEID: 0x%02x"), sep.SEID()));
-            TRACE(SignallingFlow, (_T("  Service Type: %s"), (sep.ServiceType() == Bluetooth::AVDTPProfile::StreamEndPoint::SINK? "Sink" : "Source")));
-            TRACE(SignallingFlow, (_T("  Media Type: %s"), (sep.MediaType() == Bluetooth::AVDTPProfile::StreamEndPoint::AUDIO? "Audio"
-                                                        : (sep.MediaType() == Bluetooth::AVDTPProfile::StreamEndPoint::VIDEO? "Video" : "Multimedia"))));
-
-            if (sep.Capabilities().empty() == false) {
-                TRACE(SignallingFlow, (_T("  Capabilities:")));
-                for (auto const& caps : sep.Capabilities()) {
-                    TRACE(SignallingFlow, (_T("    - %02x '%s', parameters[%d]: %s"), caps.first, caps.second.Name().c_str(),
-                                        caps.second.Data().size(), Bluetooth::Record(caps.second.Data()).ToString().c_str()));
-                }
-            }
-        }
+        return (CmdSetConfiguration(configuration));
     }
 
 } // namespace A2DP

@@ -23,6 +23,7 @@
 #include "AudioCodec.h"
 #include "AudioCodecSBC.h"
 #include "AudioContentProtection.h"
+#include "AudioEndpoint.h"
 
 #include <interfaces/IBluetoothAudio.h>
 #include <interfaces/JBluetoothAudioSink.h>
@@ -71,176 +72,7 @@ namespace A2DP {
             std::string _text;
         }; // class SignallingFlow
 
-    public:
-        class AudioEndpoint {
-        private:
-            static constexpr uint16_t CommandTimeout = 2000;
-
-        public:
-            using StatusNotifyFn = std::function<void(const Exchange::IBluetoothAudioSink::status)>;
-
-        public:
-            AudioEndpoint() = delete;
-            AudioEndpoint& operator=(const AudioEndpoint&) = delete;
-
-            AudioEndpoint(AVDTPSocket& socket, const Bluetooth::AVDTPProfile::StreamEndPoint& sep,
-                          uint8_t sourceSEID, const StatusNotifyFn& notify)
-                : _acpSeid(sep.SEID())
-                , _intSeid(sourceSEID)
-                , _socket(socket)
-                , _command()
-                , _notify(notify)
-                , _codec(nullptr)
-                , _cp(nullptr)
-                , _cpEnabled(false)
-            {
-                ParseCapabilities(sep);
-            }
-
-            ~AudioEndpoint()
-            {
-                if (_cp != nullptr) {
-                    delete _cp;
-                }
-                if (_codec != nullptr) {
-                    delete _codec;
-                }
-            }
-
-        public:
-            uint8_t SEID() const
-            {
-                return (_acpSeid);
-            }
-            IAudioCodec* Codec() const
-            {
-                return (_codec);
-            }
-            IAudioContentProtection* ContentProtection() const
-            {
-                return (_cp);
-            }
-            void Configuration(IAudioCodec::Format& format, bool& cpEnabled)
-            {
-                ASSERT(_codec != nullptr);
-                _codec->Configuration(format);
-                cpEnabled = _cpEnabled;
-            }
-
-            void Configure(const IAudioCodec::Format& format, const bool enableCP = false);
-
-            void Open()
-            {
-                CmdOpen();
-            }
-            void Close()
-            {
-                CmdClose();
-            }
-            void Start()
-            {
-                CmdStart();
-            }
-            void Stop()
-            {
-                CmdSuspend();
-            }
-
-        public:
-            void CmdSetConfiguration(Bluetooth::AVDTPSocket::SEPConfiguration& config)
-            {
-                _command.SetConfiguration(SEID(), _intSeid, config);
-                _socket.Execute(CommandTimeout, _command, [&](const AVDTPSocket::Command& cmd) {
-                    if ((cmd.Status() == Core::ERROR_NONE) && (cmd.Result().Status() == AVDTPSocket::Command::Signal::SUCCESS)) {
-                        // Read it back...
-                        CmdGetConfiguration();
-                    } else {
-                        TRACE(Trace::Error, (_T("Failed to set endpoint configuration, SEID 0x%02x"), SEID()));
-                    }
-                });
-            }
-            void CmdGetConfiguration()
-            {
-                _command.GetConfiguration(SEID());
-                _socket.Execute(CommandTimeout, _command, [&](const AVDTPSocket::Command& cmd) {
-                    if ((cmd.Status() == Core::ERROR_NONE) && (cmd.Result().Status() == AVDTPSocket::Command::Signal::SUCCESS)) {
-                        cmd.Result().ReadConfiguration([this](const uint8_t category, const Bluetooth::Buffer& data) {
-                            switch(category) {
-                            case Bluetooth::AVDTPProfile::StreamEndPoint::ServiceCapabilities::CONTENT_PROTECTION:
-                                // TODO
-                                break;
-                            case Bluetooth::AVDTPProfile::StreamEndPoint::ServiceCapabilities::MEDIA_CODEC:
-                                // TODO
-                                break;
-                            }
-                        });
-
-                        _notify(Exchange::IBluetoothAudioSink::CONFIGURED);
-                    } else {
-                        TRACE(Trace::Error, (_T("Failed to read endpoint configuration, SEID 0x%02x"), SEID()));
-                    }
-                });
-            }
-            void CmdOpen()
-            {
-                _command.Open(SEID());
-                _socket.Execute(CommandTimeout, _command, [&](const AVDTPSocket::Command& cmd) {
-                    if ((cmd.Status() == Core::ERROR_NONE) && (cmd.Result().Status() == AVDTPSocket::Command::Signal::SUCCESS)) {
-                        _notify(Exchange::IBluetoothAudioSink::OPEN);
-                    } else {
-                        TRACE(Trace::Error, (_T("Failed to open endpoint, SEID 0x%02x"), SEID()));
-                    }
-                });
-            }
-            void CmdClose()
-            {
-                _command.Close(SEID());
-                _socket.Execute(CommandTimeout, _command, [&](const AVDTPSocket::Command& cmd) {
-                    if ((cmd.Status() == Core::ERROR_NONE) && (cmd.Result().Status() == AVDTPSocket::Command::Signal::SUCCESS)) {
-                        _notify(Exchange::IBluetoothAudioSink::CONFIGURED);
-                    } else {
-                        TRACE(Trace::Error, (_T("Failed to close endpoint, SEID 0x%02x"), SEID()));
-                    }
-                });
-            }
-            void CmdStart()
-            {
-                _command.Start(SEID());
-                _socket.Execute(CommandTimeout, _command, [&](const AVDTPSocket::Command& cmd) {
-                    if ((cmd.Status() == Core::ERROR_NONE) && (cmd.Result().Status() == AVDTPSocket::Command::Signal::SUCCESS)) {
-                        _notify(Exchange::IBluetoothAudioSink::STREAMING);
-                    } else {
-                        TRACE(Trace::Error, (_T("Failed to start endpoint, SEID 0x%02x"), SEID()));
-                    }
-                });
-            }
-            void CmdSuspend()
-            {
-                _command.Start(SEID());
-                _socket.Execute(CommandTimeout, _command, [&](const AVDTPSocket::Command& cmd) {
-                    if ((cmd.Status() == Core::ERROR_NONE) && (cmd.Result().Status() == AVDTPSocket::Command::Signal::SUCCESS)) {
-                        _notify(Exchange::IBluetoothAudioSink::OPEN);
-                    } else {
-                        TRACE(Trace::Error, (_T("Failed to suspend endpoint, SEID 0x%02x"), SEID()));
-                    }
-                });
-            }
-
-        private:
-            void ParseCapabilities(const Bluetooth::AVDTPProfile::StreamEndPoint& sep);
-
-        private:
-            uint8_t _acpSeid;
-            uint8_t _intSeid;
-            AVDTPSocket& _socket;
-            AVDTPSocket::Command _command;
-            StatusNotifyFn _notify;
-            IAudioCodec* _codec;
-            IAudioContentProtection* _cp;
-            bool _cpEnabled;
-        }; // class AudioEndpoint
-
-    public:
+   public:
         using DiscoveryCompleteCb = std::function<void(std::list<AudioEndpoint>&)>;
         using UpdatedCb = std::function<void()>;
 
@@ -359,7 +191,29 @@ namespace A2DP {
 
             _lock.Unlock();
         }
-        void DumpProfile() const;
+
+    private:
+        void DumpProfile() const
+        {
+            TRACE(SignallingFlow, (_T("Discovered %d stream endpoints(s)"), _profile.StreamEndPoints().size()));
+
+            uint16_t cnt = 1;
+            for (auto const& sep : _profile.StreamEndPoints()) {
+                TRACE(SignallingFlow, (_T("Stream endpoint #%i"), cnt++));
+                TRACE(SignallingFlow, (_T("  SEID: 0x%02x"), sep.SEID()));
+                TRACE(SignallingFlow, (_T("  Service Type: %s"), (sep.ServiceType() == Bluetooth::AVDTPProfile::StreamEndPoint::SINK? "Sink" : "Source")));
+                TRACE(SignallingFlow, (_T("  Media Type: %s"), (sep.MediaType() == Bluetooth::AVDTPProfile::StreamEndPoint::AUDIO? "Audio"
+                                                            : (sep.MediaType() == Bluetooth::AVDTPProfile::StreamEndPoint::VIDEO? "Video" : "Multimedia"))));
+
+                if (sep.Capabilities().empty() == false) {
+                    TRACE(SignallingFlow, (_T("  Capabilities:")));
+                    for (auto const& caps : sep.Capabilities()) {
+                        TRACE(SignallingFlow, (_T("    - %02x '%s', parameters[%d]: %s"), caps.first, caps.second.Name().c_str(),
+                                            caps.second.Data().size(), Bluetooth::Record(caps.second.Data()).ToString().c_str()));
+                    }
+                }
+            }
+        }
 
     private:
         UpdatedCb _updatedCb;

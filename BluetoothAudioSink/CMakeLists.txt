@@ -27,8 +27,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 add_library(${MODULE_NAME} SHARED
     BluetoothAudioSink.cpp
     AudioCodecSBC.cpp
-    ServiceDiscovery.cpp
-    SignallingChannel.cpp
+    AudioEndpoint.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
