@@ -30,11 +30,11 @@ namespace WPEFramework {
 
 namespace GPIO {
 
-    class Pin : public Exchange::ExternalBase<Exchange::IExternal::GPIO>, 
+    class Pin : public Exchange::ExternalBase, 
                 public Exchange::IInputPin,
                 public Core::IResource {
     private:
-        typedef Exchange::ExternalBase<Exchange::IExternal::GPIO> BaseClass;
+        typedef Exchange::ExternalBase BaseClass;
 
         class TimedPin  : public Core::IDispatch {
         private:
@@ -227,7 +227,7 @@ namespace GPIO {
 
         BEGIN_INTERFACE_MAP(Pin)
             INTERFACE_RELAY(Exchange::IInputPin, this)
-        NEXT_INTERFACE_MAP(Exchange::ExternalBase<Exchange::IExternal::GPIO>)
+        NEXT_INTERFACE_MAP(Exchange::ExternalBase)
 
     private:
         Core::IResource::handle Descriptor() const override;
