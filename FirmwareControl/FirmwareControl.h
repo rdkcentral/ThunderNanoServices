@@ -48,6 +48,7 @@ namespace Plugin {
             DOWNLOAD_STARTED,
             DOWNLOAD_ABORTED,
             DOWNLOAD_COMPLETED,
+            INSTALL_INITIATED,
             INSTALL_NOT_STARTED,
             INSTALL_ABORTED,
             INSTALL_STARTED,
@@ -311,6 +312,7 @@ namespace Plugin {
                 errorType = ErrorType::ERROR_NONE;
                 break;
             case Core::ERROR_UNAVAILABLE:
+            case Core::ERROR_ASYNC_FAILED:
                 errorType = ErrorType::UNAVAILABLE;
                 break;
             case Core::ERROR_INCORRECT_HASH:

@@ -293,12 +293,12 @@ namespace GPIO
         _timedPin.Register(sink);
     }
 
-    uint32_t Pin::AddMarker(const IInputPin::INotification* sink, const uint32_t marker) /* override */ {
-        return(_timedPin.Add(sink, marker));
+    void Pin::AddMarker(const uint32_t marker) /* override */ {
+        _timedPin.Add(marker);
     }
 
-    uint32_t Pin::RemoveMarker(const IInputPin::INotification* sink, const uint32_t marker) /* override */ {
-        return(_timedPin.Remove(sink, marker));
+    void Pin::RemoveMarker(const uint32_t marker) /* override */ {
+        _timedPin.Remove(marker);
     }
 
     /* virtual */ void Pin::Evaluate()

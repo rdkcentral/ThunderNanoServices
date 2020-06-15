@@ -289,14 +289,13 @@ namespace Plugin {
             const uint8_t* rawId(Core::SystemInfo::Instance().RawDeviceId());
             const string deviceId(Core::SystemInfo::Instance().Id(rawId, ~0));
 
-            Core::NodeId source((_config.Interface.Value().empty() == true) || (selectedNode.IsValid() == false) ? selectedNode.AnyInterface() : selectedNode);
-
             _dialURL = Core::URL(service->Accessor());
+            _dialURL.Host(selectedNode.HostAddress());
             _dialPath = '/' + _dialURL.Path().Value();
 
             // TODO: THis used to be the MAC, but I think  it is just a unique number, otherwise, we need the MAC
             //       that goes with the selectedNode !!!!
-            _dialServiceImpl = new DIALServerImpl(deviceId, service->Accessor(), _DefaultAppInfoPath);
+            _dialServiceImpl = new DIALServerImpl(deviceId, _dialURL.Text(), _DefaultAppInfoPath);
 
             ASSERT(_dialServiceImpl != nullptr);
 
@@ -451,30 +450,30 @@ namespace Plugin {
                             response->Message = _T("Internal error");
                         }
                     } else {
-						if (result == Core::ERROR_NONE) {
+                        if (result == Core::ERROR_NONE) {
                             if (app.URL(parameters) == true) {
                                 response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
-								response->ErrorCode = Web::STATUS_CREATED;
-								response->Message = _T("Created");
-							}
-							else {
-								response->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
-								response->Message = _T("Not implemented");
-							}
-						}
-						else {
-							response->ErrorCode = Web::STATUS_SERVICE_UNAVAILABLE;
-							response->Message = _T("Service Unavailable");
-						}
+                                response->ErrorCode = Web::STATUS_CREATED;
+                                response->Message = _T("Created");
+                            }
+                            else {
+                                response->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
+                                response->Message = _T("Not implemented");
+                            }
+                        }
+                        else {
+                            response->ErrorCode = Web::STATUS_SERVICE_UNAVAILABLE;
+                            response->Message = _T("Service Unavailable");
+                        }
                     }
                 } else {
-					if (request.HasBody() == true) {
-						if (app.URL(parameters) == true) {
-							response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
-							response->ErrorCode = Web::STATUS_CREATED;
-							response->Message = _T("Created");
-						}
-						else {
+                    if (request.HasBody() == true) {
+                        if (app.URL(parameters) == true) {
+                            response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
+                            response->ErrorCode = Web::STATUS_CREATED;
+                            response->Message = _T("Created");
+                        }
+                        else {
                             response->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
                             response->Message = _T("Can not change the URL runtime");
                         }
@@ -643,8 +642,9 @@ namespace Plugin {
             }
         }
 
-        if (request.Origin.IsSet() == true)
+        if (request.Origin.IsSet() == true) {
             result->AccessControlOrigin = request.Origin.Value();
+        }
 
         TRACE(Protocol, (&(*result)));
         return (result);

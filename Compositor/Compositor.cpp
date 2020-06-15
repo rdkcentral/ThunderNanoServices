@@ -455,6 +455,8 @@ namespace Plugin {
 
         if (_composition != nullptr) {
             result = _composition->Resolution(format);
+
+            TRACE(Trace::Information, (_T("Current resolution of the screen is set to %d"), format));
         }
 
         return (result);
@@ -510,6 +512,8 @@ namespace Plugin {
             if (callsign == current) {
                 it->second->Opacity(value);
                 result = Core::ERROR_NONE;
+
+                TRACE(Trace::Information, (_T("Opacity level %d is set for client surface %s"), value, callsign.c_str()));
             }
             it++;
         }
@@ -521,6 +525,11 @@ namespace Plugin {
 
     uint32_t Compositor::Visible(const string& callsign, const bool visible)
     {
+        if (visible) {
+            TRACE(Trace::Information, (_T("Client surface %s is set to visible"), callsign.c_str()));
+        } else {
+            TRACE(Trace::Information, (_T("Client surface %s is set to hidden"), callsign.c_str()));
+        }
         return (Opacity(callsign, visible == true ? Exchange::IComposition::maxOpacity : Exchange::IComposition::minOpacity));
     }
 
@@ -537,6 +546,8 @@ namespace Plugin {
             if (callsign == current) {
                 it->second->Geometry(rectangle);
                 result = Core::ERROR_NONE;
+
+                TRACE(Trace::Information, (_T("Geometry x=%d y=%d width=%d height=%d is set for client surface %s"), rectangle.x, rectangle.y, rectangle.width, rectangle.height, callsign.c_str()));
             }
             it++;
         }
@@ -565,12 +576,16 @@ namespace Plugin {
 
         if (_inputSwitch) {
             result = _inputSwitch->Select(callsign);
+
+            TRACE(Trace::Information, (_T("Input is directed to client %s"), callsign.c_str()));
         }
         else {
             Exchange::IInputSwitch* switcher = _service->QueryInterfaceByCallsign<Exchange::IInputSwitch>(_inputSwitchCallsign);
             if (switcher != nullptr) {
                 result = switcher->Select(callsign);
                 switcher->Release();
+
+                TRACE(Trace::Information, (_T("Input is directed to client %s"), callsign.c_str()));
             }
         }
         return (result);
@@ -624,7 +639,8 @@ namespace Plugin {
             else {
                 Rearrange(list, startIndex, relativeIndex - startIndex, 0, callsignEndIndex - callsignStartIndex + 1);
             }
-            
+            TRACE(Trace::Information, (_T("Client surface %s is put below surface %s"), callsign.c_str(), relative.c_str()));
+
         } else {
             result = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
         }
