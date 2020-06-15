@@ -20,19 +20,32 @@ set(MODULE_NAME WPE${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(securityagent QUIET)
+if(DEFINED WEBKIT_GLIB_API)
+find_package(LibSoup REQUIRED)
+endif()
 
 option(PLUGIN_AMAZON_HYBRID "Enable the Amazon Player interface (Hawaii) in the injected bundle and the creation of the Amazon tab" OFF)
 option(PLUGIN_SECURITY_AGENT "Enable the Security Agent Features interface in javascript." OFF)
 
+set(SOURCE_LIST
+	main.cpp
+	WhiteListedOriginDomainsList.cpp
+	)
+
+if(NOT DEFINED WEBKIT_GLIB_API)
+	set(SOURCE_LIST
+	    ${SOURCE_LIST}
+	    Utils.cpp
+	    JavaScriptFunction.cpp
+	    NotifyWPEFramework.cpp
+	    Milestone.cpp
+	    ClassDefinition.cpp
+	    Tags.cpp
+	)
+endif()
+
 add_library(${MODULE_NAME} SHARED 
-    main.cpp
-    WhiteListedOriginDomainsList.cpp
-    Utils.cpp
-    JavaScriptFunction.cpp
-    NotifyWPEFramework.cpp
-    Milestone.cpp
-    ClassDefinition.cpp
-    Tags.cpp
+    ${SOURCE_LIST}
 )
 
 if(PLUGIN_AMAZON_HYBRID)
@@ -53,6 +66,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 target_link_libraries(${MODULE_NAME}
     PRIVATE 
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${LIBSOUP_LIBRARIES}
         ${GLIB_LIBRARIES}
         ${WPE_WEBKIT_LIBRARIES})
 
@@ -60,7 +74,12 @@ target_include_directories(${MODULE_NAME}
     PRIVATE 
         ${WPE_WEBKIT_INCLUDE_DIRS}
         ${WPE_WEBKIT_INCLUDE_DIRS}/WPE
+        ${LIBSOUP_INCLUDE_DIRS}
         ${GLIB_INCLUDE_DIRS})
+
+if(WEBKIT_GLIB_API)
+    target_compile_definitions(${MODULE_NAME} PRIVATE WEBKIT_GLIB_API=${WEBKIT_GLIB_API})
+endif()
 
 install(TARGETS ${MODULE_NAME} 
     DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/WebKitBrowser

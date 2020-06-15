@@ -18,6 +18,8 @@
 set(PLUGIN_NAME DeviceIdentification)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
+option(PLUGIN_DEVICEIDENTIFICATION_USE_MFR "Get device identification details using MFR library" OFF)
+
 find_package(NEXUS QUIET)
 find_package(BCM_HOST QUIET)
 find_package(MFRFWLibs QUIET)
@@ -30,7 +32,14 @@ add_library(${MODULE_NAME} SHARED
     DeviceIdentificationJsonRpc.cpp
     Module.cpp)
 
-if(NEXUS_FOUND)
+if (PLUGIN_DEVICEIDENTIFICATION_USE_MFR AND MFRFWLIBS_FOUND)
+    target_sources(${MODULE_NAME}
+        PRIVATE
+            Implementation/MFR/MFR.cpp)
+    target_link_libraries(${MODULE_NAME}
+        PRIVATE
+            mfrfwlibs::mfrfwlibs)
+elseif (NEXUS_FOUND)
     find_package(NXCLIENT REQUIRED)
     target_link_libraries(${MODULE_NAME} 
         PRIVATE
@@ -46,18 +55,6 @@ elseif (BCM_HOST_FOUND)
     target_link_libraries(${MODULE_NAME}
         PRIVATE
             BCM_HOST::BCM_HOST)
-elseif (MFRFWLIBS_FOUND)
-    message("Found MFRFWLibs; checking ${CMAKE_CURRENT_SOURCE_DIR}/Implementation/${WPE_PLUGIN_DEVICEID_MFRIMPL}/${WPE_PLUGIN_DEVICEID_MFRIMPL}.cpp")
-    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Implementation/${WPE_PLUGIN_DEVICEID_MFRIMPL}/${WPE_PLUGIN_DEVICEID_MFRIMPL}.cpp")
-        target_sources(${MODULE_NAME}
-            PRIVATE
-	        Implementation/${WPE_PLUGIN_DEVICEID_MFRIMPL}/${WPE_PLUGIN_DEVICEID_MFRIMPL}.cpp)
-        target_link_libraries(${MODULE_NAME}
-            PRIVATE
-                mfrfwlibs::mfrfwlibs)
-    else()
-	message(FATAL_ERROR "${CMAKE_CURRENT_SOURCE_DIR}/Implementation/${WPE_PLUGIN_DEVICEID_MFRIMPL}/${WPE_PLUGIN_DEVICEID_MFRIMPL}.cpp not found.")
-    endif()
 else ()
     message(FATAL_ERROR "There is no platform backend for device identifier plugin")
 endif()
