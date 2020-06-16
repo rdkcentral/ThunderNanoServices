@@ -116,6 +116,10 @@ public:
     {
         return _height;
     }
+    uint32_t VerticalFreq() const override
+    {
+        return ~0;
+    }
     // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
     HDCPProtectionType HDCPProtection() const override {
         return HDCPProtectionType::HDCP_Unencrypted;
