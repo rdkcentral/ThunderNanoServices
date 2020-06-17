@@ -107,19 +107,20 @@ namespace A2DP {
     public:
         uint32_t CmdSetConfiguration(Bluetooth::AVDTPSocket::SEPConfiguration& config)
         {
-            uint32_t result = Core::ERROR_GENERAL;
+            uint32_t result = Core::ERROR_NONE;
             _command.SetConfiguration(SEID(), _intSeid, config);
             if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
                 // Read it back...
                 result = CmdGetConfiguration();
             } else {
+                result = Core::ERROR_GENERAL;
                 TRACE(Trace::Error, (_T("Failed to set endpoint configuration, SEID 0x%02x"), SEID()));
             }
             return (result);
         }
         uint32_t CmdGetConfiguration()
         {
-            uint32_t result = Core::ERROR_GENERAL;
+            uint32_t result = Core::ERROR_NONE;
             _command.GetConfiguration(SEID());
             if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
                 _command.Result().ReadConfiguration([this](const uint8_t category, const Bluetooth::Buffer& data) {
@@ -134,53 +135,56 @@ namespace A2DP {
                 });
 
                 _notify(Exchange::IBluetoothAudioSink::CONFIGURED);
-                result = Core::ERROR_NONE;
             } else {
+                result = Core::ERROR_GENERAL;
                 TRACE(Trace::Error, (_T("Failed to read endpoint configuration, SEID 0x%02x"), SEID()));
             }
             return (result);
         }
         uint32_t CmdOpen()
         {
-            uint32_t result = Core::ERROR_GENERAL;
+            uint32_t result = Core::ERROR_NONE;
             _command.Open(SEID());
             if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
                 _notify(Exchange::IBluetoothAudioSink::OPEN);
-                result = Core::ERROR_NONE;
             } else {
+                result = Core::ERROR_GENERAL;
                 TRACE(Trace::Error, (_T("Failed to open endpoint, SEID 0x%02x"), SEID()));
             }
             return (result);
         }
         uint32_t CmdClose()
         {
-            uint32_t result = Core::ERROR_GENERAL;
+            uint32_t result = Core::ERROR_NONE;
             _command.Close(SEID());
             if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
                 _notify(Exchange::IBluetoothAudioSink::CONFIGURED);
             } else {
+                result = Core::ERROR_GENERAL;
                 TRACE(Trace::Error, (_T("Failed to close endpoint, SEID 0x%02x"), SEID()));
             }
             return (result);
         }
         uint32_t CmdStart()
         {
-            uint32_t result = Core::ERROR_GENERAL;
+            uint32_t result = Core::ERROR_NONE;
             _command.Start(SEID());
             if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
                 _notify(Exchange::IBluetoothAudioSink::STREAMING);
             } else {
+                result = Core::ERROR_GENERAL;
                 TRACE(Trace::Error, (_T("Failed to start endpoint, SEID 0x%02x"), SEID()));
             }
             return (result);
         }
         uint32_t CmdSuspend()
         {
-            uint32_t result = Core::ERROR_GENERAL;
+            uint32_t result = Core::ERROR_NONE;
             _command.Start(SEID());
             if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
                 _notify(Exchange::IBluetoothAudioSink::OPEN);
             } else {
+                result = Core::ERROR_GENERAL;
                 TRACE(Trace::Error, (_T("Failed to suspend endpoint, SEID 0x%02x"), SEID()));
             }
             return (result);
