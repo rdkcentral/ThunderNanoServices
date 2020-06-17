@@ -80,9 +80,7 @@ namespace A2DP {
             , _sequence(0)
         {
         }
-        ~TransportChannel() override
-        {
-        }
+        ~TransportChannel() = default;
 
     private:
         bool Initialize() override
@@ -133,10 +131,15 @@ namespace A2DP {
         {
             return (_timestamp);
         }
+        void Timestamp(const uint32_t newTimestamp)
+        {
+            _timestamp = newTimestamp;
+        }
         void Reset()
         {
             _timestamp = 0;
-            _sequence = 0;
+            // Ideally the sequence should start with a random value...
+            _sequence = (Core::Time::Now().Ticks() % 65535);
         }
         uint32_t Transmit(const uint32_t length /* in bytes! */, const uint8_t data[])
         {

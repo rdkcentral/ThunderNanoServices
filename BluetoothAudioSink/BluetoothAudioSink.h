@@ -112,6 +112,7 @@ namespace Plugin {
             Job _job;
         }; // class DecoupledJob
 
+    public:
         class A2DPSink {
         private:
             class ProfileFlow {
@@ -228,9 +229,6 @@ namespace Plugin {
             {
                 ASSERT(_endpoint != nullptr);
 
-                uint32_t result = Core::ERROR_NONE;
-
-                bool contentProtection = false;
                 A2DP::IAudioCodec::Format format;
                 format.samplingFrequency = samplingFrequency;
                 format.channels = channels;
@@ -238,16 +236,7 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("Configuring audio endpoint 0x%02x to %d Hz and %d channel(s)"),
                                             _endpoint->SEID(), format.samplingFrequency, format.channels));
 
-                _endpoint->Configure(format);
-                _endpoint->Configuration(format, contentProtection);
-                if ((format.samplingFrequency == samplingFrequency) && (format.channels == channels) && (contentProtection == false)) {
-                    TRACE(ProfileFlow, (_T("Configure successful")));
-                } else {
-                    TRACE(Trace::Error, (_T("Failed to configure audio endpoint")));
-                    result = Core::ERROR_BAD_REQUEST;
-                }
-
-                return (result);
+                return(_endpoint->Configure(format));
             }
             uint32_t Open()
             {
@@ -274,6 +263,7 @@ namespace Plugin {
             uint32_t Start()
             {
                 ASSERT(_endpoint != nullptr);
+                _transport.Reset();
                 return (_endpoint->Start());
             }
             uint32_t Stop()
@@ -290,6 +280,21 @@ namespace Plugin {
                     TRACE(Trace::Error, (_T("Transport channel is not opened!")));
                     result = Core::ERROR_BAD_REQUEST;
                     transmitted = 0;
+                }
+                return (result);
+            }
+            uint32_t Timestamp(uint32_t& timestamp /* milliseconds */)
+            {
+                uint32_t result = Core::ERROR_NONE;
+                if (_transport.IsOpen() == true) {
+                    bool contentProtection = false;
+                    A2DP::IAudioCodec::Format format;
+                    _endpoint->Configuration(format, contentProtection);
+                    timestamp = ((1000L * _transport.Timestamp()) / format.samplingFrequency);
+                } else {
+                    TRACE(Trace::Error, (_T("Transport channel is not opened!")));
+                    result = Core::ERROR_BAD_REQUEST;
+                    timestamp = 0;
                 }
                 return (result);
             }
@@ -332,6 +337,8 @@ namespace Plugin {
                     TRACE(ProfileFlow, (_T("Audio endpoint open")));
                 } else if (Status() == Exchange::IBluetoothAudioSink::STREAMING) {
                     TRACE(ProfileFlow, (_T("Audio endpoint streaming")));
+                } else if (Status() == Exchange::IBluetoothAudioSink::DISCONNECTED) {
+                    TRACE(ProfileFlow, (_T("Audio endpoint disconnected")));
                 }
                 _updatedCb();
             }
@@ -397,8 +404,14 @@ namespace Plugin {
                     }
                 }
 
+                if (_endpoint != nullptr) {
+                    _job.Submit([this](){
+                        Configure(2, 44100);
+                    });
+                }
+
                 _lock.Unlock();
-            }
+           }
 
         private:
             BluetoothAudioSink& _parent;

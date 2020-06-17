@@ -283,6 +283,7 @@ namespace A2DP {
 
     private:
         void DumpConfiguration() const;
+        void DumpBitrateConfiguration() const;
 
     private:
         void SBCInitialize();

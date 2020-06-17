@@ -351,6 +351,11 @@ namespace A2DP {
         TRACE(Trace::Information, (_T("  [%3d] Maximal bitpool value            [%3d]"), _supported.MaxBitpool(), _actuals.MaxBitpool()));
         #undef ELEM
 
+        DumpBitrateConfiguration();
+    }
+
+    void AudioCodecSBC::DumpBitrateConfiguration() const
+    {
         static const char* profileStr[] = { "SBC compatibility mode", "SBC-LQ", "SBC-MQ", "SBC-HQ", "SBC-XQ" };
         TRACE(Trace::Information, (_T("Quality profile: %s"), profileStr[_profile]));
         TRACE(Trace::Information, (_T("Bitpool value: %d"), _bitpool));
