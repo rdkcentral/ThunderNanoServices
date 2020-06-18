@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #ifndef __BROWSER_H
 #define __BROWSER_H
 
@@ -129,11 +129,13 @@ namespace Plugin {
                 , FPS()
                 , Suspended(false)
                 , Hidden(false)
+                , Path()
             {
                 Add(_T("url"), &URL);
                 Add(_T("fps"), &FPS);
                 Add(_T("suspended"), &Suspended);
                 Add(_T("hidden"), &Hidden);
+                Add(_T("path"), &Path);
             }
             ~Data()
             {
@@ -144,6 +146,7 @@ namespace Plugin {
             Core::JSON::DecUInt32 FPS;
             Core::JSON::Boolean Suspended;
             Core::JSON::Boolean Hidden;
+            Core::JSON::String Path;
         };
 
     public:
@@ -232,6 +235,8 @@ namespace Plugin {
         uint32_t get_fps(Core::JSON::DecUInt32& response) const; // Browser
         uint32_t get_state(Core::JSON::EnumType<JsonData::StateControl::StateType>& response) const; // StateControl
         uint32_t set_state(const Core::JSON::EnumType<JsonData::StateControl::StateType>& param); // StateControl
+        uint32_t endpoint_delete(const JsonData::Browser::DeleteParamsData& params);
+        uint32_t delete_dir(const string& path);
         void event_urlchange(const string& url, const bool& loaded); // Browser
         void event_visibilitychange(const bool& hidden); // Browser
         void event_pageclosure(); // Browser
@@ -246,6 +251,7 @@ namespace Plugin {
         Exchange::IMemory* _memory;
         Core::Sink<Notification> _notification;
         Core::ProxyPoolType<Web::JSONBodyType<WebKitBrowser::Data>> _jsonBodyDataFactory;
+        string _persistentStoragePath;
     };
 }
 }
