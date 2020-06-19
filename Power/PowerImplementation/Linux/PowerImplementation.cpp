@@ -123,8 +123,8 @@ public:
             }
         }
 
-        /* Add POWEROFF since its software implementation. */
-        _supportedModes |= (1 << Exchange::IPower::PCState::PowerOff);
+        /* Add ON & POWEROFF since its software implementation. */
+        _supportedModes |= ((1 << Exchange::IPower::PCState::PowerOff) | (1 << Exchange::IPower::PCState::On));
         TRACE(Trace::Information, (_T("SupportedModes : %d"), _supportedModes));
 
         _stateFile = ::open(StateFile, O_WRONLY);
