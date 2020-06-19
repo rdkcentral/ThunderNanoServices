@@ -25,6 +25,12 @@
 
 #include "../../Implementation.h"
 
+#ifdef MFRBOOTENVLIBS_FOUND
+extern "C" {
+#include "ubootenv.h"
+}
+#endif
+
 /* =============================================================================================
    THE ACTUAL IMPLEMENTATION OF THE IPower INTERFACE FOR LINUX KERNELS
    https://www.kernel.org/doc/Documentation/power/interface.txt
@@ -114,12 +120,12 @@ public:
                         index++;
                     }
                 }
-                TRACE(Trace::Information, (_T("SupportedModes : %d"), _supportedModes));
             }
         }
 
         /* Add POWEROFF since its software implementation. */
         _supportedModes |= (1 << Exchange::IPower::PCState::PowerOff);
+        TRACE(Trace::Information, (_T("SupportedModes : %d"), _supportedModes));
 
         _stateFile = ::open(StateFile, O_WRONLY);
         if (_stateFile < 0) {
@@ -172,8 +178,40 @@ public:
     Exchange::IPower::PCState GetState() const {
         return (_currentState);
     }
+    void switchToPreviourStateIfPowerLossOccured(void)
+    {
+#ifdef MFRBOOTENVLIBS_FOUND
+        bootenv_init();
+        string pmlastmode = bootenv_get("lastpwrmode");
+        Exchange::IPower::PCState pmLastState = FindState(pmlastmode);
+        mode* pmLastMode = FindMode(pmLastState);
+        /* Check if supported mode to avoid lock-state. */
+        if ((Exchange::IPower::PCState::On != pmLastState) && (IsSupported(pmLastState))) {
+            SYSLOG(Logging::Startup, (_T("Putting device back to '%d' power mode...."),
+                        pmLastMode->id));
+            SetState(pmLastState, 0);
+        }
+#else
+        TRACE(Trace::Error, (_T("Special feature not available...")));
+#endif
+    }
 
 private:
+    Exchange::IPower::PCState FindState(string pmMode) {
+        uint8_t index = 0;
+        Exchange::IPower::PCState state = Exchange::IPower::PCState::On;
+        while (index < (sizeof(modes)/sizeof(mode))) {
+            if (pmMode == modes[index].label) {
+                state = modes[index].id;
+                break;
+            }
+            index++;
+        }
+        if (index >= (sizeof(modes)/sizeof(mode))) {
+            state = Exchange::IPower::PCState::On;
+        }
+        return state;
+    }
     mode* FindMode(const Exchange::IPower::PCState state) const {
         uint8_t index = 0;
         mode* result = nullptr;
@@ -190,20 +228,26 @@ private:
         if (_currentState != state) {
             mode* newMode = FindMode(state);
 
-            if (newMode != nullptr) {
+            if ((newMode != nullptr) && IsSupported(state)) {
                 uint8_t value = -1;
                 TRACE(Trace::Information, (_T("Scheduled Job: changing Power mode to %s[%d]."),
                             newMode->label, state));
                 Notify(state);
                 _currentState = state;
+		if (Exchange::IPower::PCState::PowerOff != state) {
+		    /* No need to store PowerOff for resuming to after powerloss. */
+		    updatePowerModeForPowerlossBoot(state);
+		    sync();
+		}
 
                 switch (state) {
                     case Exchange::IPower::PCState::On: break;
                     case Exchange::IPower::PCState::ActiveStandby:
                     case Exchange::IPower::PCState::PassiveStandby:
                     case Exchange::IPower::PCState::SuspendToRAM:
-                    case Exchange::IPower::PCState::Hibernate:
                         {
+                            updatePowerModeForPowerlossBoot(state);
+                            sync();
                             ::write(_triggerFile, "1", 1);
                             /* We will be able to write state only if we are in 'On' State. */
                             ::write(_stateFile, newMode->label, newMode->length);
@@ -216,9 +260,12 @@ private:
                             SetState(Exchange::IPower::PCState::On, 0);
                         }
                         break;
+                    case Exchange::IPower::PCState::Hibernate: break;
                     case Exchange::IPower::PCState::PowerOff:
-                        system("poweroff");
-                        break;
+                        {
+                            system("poweroff");
+                            break;
+                        }
                     default:
                         TRACE(Trace::Error, (_T("Should not reach here at any case...!!!")));
                 }
@@ -229,6 +276,31 @@ private:
        if (_callback != nullptr) {
            _callback(_userData, mode);
        }
+    }
+    void updatePowerModeForPowerlossBoot(Exchange::IPower::PCState state)
+    {
+#ifdef MFRBOOTENVLIBS_FOUND
+        bootenv_init();
+        string pmlastmode = bootenv_get("lastpwrmode");
+        Exchange::IPower::PCState pmLastState = FindState(pmlastmode);
+        mode* pmLastMode = FindMode(pmLastState);
+        TRACE(Trace::Error, (_T("Bootloader env variable = '%d'[%d]"), pmLastMode->id, pmLastState));
+        if (pmLastState != state) {
+            mode* pmNewMode = FindMode(state);
+            TRACE(Trace::Information, (_T("Saving bootloader env variable from '%d[%d]' to '%d[%d]'...."),
+                        pmLastMode->id, pmLastState, pmNewMode->id, state));
+            if (Exchange::IPower::PCState::On != state) {
+                bootenv_update("lastpwrmode", pmNewMode->label);
+            } else {
+                /* Exchange::IPower::PCState::On does not have any associated TXT label. */
+                bootenv_update("lastpwrmode", "On");
+            }
+        }
+        string pmlastmode1 = bootenv_get("lastpwrmode");
+        TRACE(Trace::Error, (_T("Bootloader env variable = '%s'"), pmlastmode1.c_str()));
+#else
+        TRACE(Trace::Error, (_T("Special feature not available...")));
+#endif
     }
 
 private:
@@ -246,6 +318,9 @@ static PowerImplementation* implementation = nullptr;
 void power_initialize(power_state_change callback, void* userData, const char* ) {
     ASSERT (implementation == nullptr);
     implementation = new PowerImplementation(callback, userData);
+    if (nullptr != implementation) {
+        implementation->switchToPreviourStateIfPowerLossOccured();
+    }
 }
 
 void power_deinitialize() {

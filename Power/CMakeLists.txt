@@ -51,6 +51,7 @@ target_include_directories( ${MODULE_NAME}
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
 find_package(BcmPowerManager QUIET)
+find_package(MFRBootenvlibs QUIET)
 
 if(BCM_PM_FOUND)
     find_package(NEXUS REQUIRED)
@@ -70,6 +71,11 @@ if(BCM_PM_FOUND)
 else()
     message("Configuring for ${PLUGIN_POWER_IMPLEMENTATION}....")
     target_sources(${MODULE_NAME} PRIVATE PowerImplementation/${PLUGIN_POWER_IMPLEMENTATION}/PowerImplementation.cpp)
+    if(MFRBOOTENVLIBS_FOUND)
+        message("Found MFRBootenvlibs....Enabling Special features...")
+        add_definitions(-DMFRBOOTENVLIBS_FOUND=1)
+        target_link_libraries(${MODULE_NAME} PRIVATE ${MFRBOOTENVLIBS_LIBRARIES})
+    endif()
 endif()
 
 target_link_libraries(${MODULE_NAME}
