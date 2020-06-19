@@ -1,9 +1,3 @@
-# - Try to find MFRBOOTENVLIBS
-# Once done this will define
-#  MFRBOOTENVLIBS_FOUND - System has bootenvlibs
-#  MFRBOOTENVLIBS_INCLUDE_DIRS - The bootenvlibs include directories
-#  MFRBOOTENVLIBS_LIBRARIES - The libraries needed to use bootenvlibs
-#
 # If not stated otherwise in this file or this component's license file the
 # following copyright and licenses apply:
 #
@@ -20,6 +14,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# - Try to find MFRBOOTENVLIBS
+# Once done this will define
+#  MFRBOOTENVLIBS_FOUND - System has bootenvlibs
+#  MFRBOOTENVLIBS_INCLUDE_DIRS - The bootenvlibs include directories
+#  MFRBOOTENVLIBS_LIBRARIES - The libraries needed to use bootenvlibs
 
 find_package(PkgConfig)
 pkg_check_modules(MFRBOOTENVLIBS libbootenv)
