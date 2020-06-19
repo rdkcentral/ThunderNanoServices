@@ -71,11 +71,11 @@ namespace A2DP {
         TransportChannel(const TransportChannel&) = delete;
         TransportChannel& operator=(const TransportChannel&) = delete;
 
-        TransportChannel(const uint8_t seid, const Core::NodeId& localNode, const Core::NodeId& remoteNode, const uint16_t mtu = DefaultMTU)
+        TransportChannel(const uint8_t ssrc, const Core::NodeId& localNode, const Core::NodeId& remoteNode, const uint16_t mtu = DefaultMTU)
             : Bluetooth::RTPSocket(localNode, remoteNode, mtu)
             , _lock()
             , _codec(nullptr)
-            , _ssrc(seid)
+            , _ssrc(ssrc)
             , _timestamp(0)
             , _sequence(0)
         {

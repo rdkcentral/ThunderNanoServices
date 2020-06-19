@@ -195,7 +195,7 @@ namespace Plugin {
                 , _job()
                 , _discovery(Designator(device, true), Designator(device, false, Bluetooth::SDPSocket::SDP_PSM /* a well-known PSM */))
                 , _signalling(seid, std::bind(&A2DPSink::OnSignallingUpdated, this), Designator(device, true), Designator(device, false))
-                , _transport(seid, Designator(device, true), Designator(device, false))
+                , _transport(1 /* SSRC */, Designator(device, true), Designator(device, false))
                 , _endpoint(nullptr)
             {
                 ASSERT(parent != nullptr);
