@@ -52,6 +52,17 @@ namespace Plugin {
 
                     _player->Release();
                     _player = nullptr;
+                } else {
+
+                    // The code execution should proceed regardless of the _dolbyOut
+                    // value, as it is not a essential.
+                    // The relevant JSONRPC endpoints will return ERROR_UNAVAILABLE,
+                    // if it hasn't been initialized.
+                    _dolbyOut = service->Root<Exchange::Dolby::IOutput>(_connectionId, 2000, _T("DolbyOutputImplementation"));
+                    if(_dolbyOut == nullptr){
+                        TRACE_L1("Dolby output switching service is unavailable.");
+                    }
+
                 }
             } else {
                 _player->Release();

@@ -16,11 +16,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #pragma once
 
 #include "Module.h"
 #include <interfaces/IPlayerInfo.h>
+#include <interfaces/IDolby.h>
 #include <interfaces/json/JsonData_PlayerInfo.h>
 
 namespace WPEFramework {
@@ -37,6 +38,7 @@ namespace Plugin {
             , _player(nullptr)
             , _audioCodecs(nullptr)
             , _videoCodecs(nullptr)
+            , _dolbyOut(nullptr)
         {
             RegisterAll();
         }
@@ -50,6 +52,8 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
+        INTERFACE_AGGREGATE(Exchange::IPlayerProperties, _player)
+        INTERFACE_AGGREGATE(Exchange::Dolby::IOutput, _dolbyOut)
         END_INTERFACE_MAP
 
     public:
@@ -68,17 +72,22 @@ namespace Plugin {
         // JsonRpc
         void RegisterAll();
         void UnregisterAll();
+        
         uint32_t get_playerinfo(JsonData::PlayerInfo::CodecsData&) const;
-
         void Info(JsonData::PlayerInfo::CodecsData&) const;
+        
+        uint32_t get_dolbymode(Core::JSON::EnumType<JsonData::PlayerInfo::DolbyType>&) const;
+        uint32_t set_dolbymode(const Core::JSON::EnumType<JsonData::PlayerInfo::DolbyType>&);
 
     private:
         uint8_t _skipURL;
         uint32_t _connectionId;
-        Exchange::IPlayerProperties* _player;
 
+        Exchange::IPlayerProperties* _player;
         Exchange::IPlayerProperties::IAudioIterator* _audioCodecs;
         Exchange::IPlayerProperties::IVideoIterator* _videoCodecs;
+
+        Exchange::Dolby::IOutput* _dolbyOut;
     };
 
 } // namespace Plugin

@@ -18,6 +18,8 @@
 set(PLUGIN_NAME PlayerInfo)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
+option(DOLBY_SUPPORT "Build the PlayerInfo with dolby support" OFF)
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
@@ -38,6 +40,23 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
 find_package(GSTREAMER REQUIRED)
+
+if(DOLBY_SUPPORT)
+
+    target_sources(${MODULE_NAME}
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/Dolby/DolbyOutput.cpp)
+
+    target_include_directories(${MODULE_NAME}
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/Dolby/include)
+
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Dolby)
+
+    target_link_libraries(${MODULE_NAME}
+        PRIVATE
+            PlayerInfoDolby)
+endif()
 
 if (GSTREAMER_FOUND)
     target_sources(${MODULE_NAME}
