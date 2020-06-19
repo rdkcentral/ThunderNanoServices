@@ -235,9 +235,9 @@ private:
                 Notify(state);
                 _currentState = state;
 		if (Exchange::IPower::PCState::PowerOff != state) {
-		    /* No need to store PowerOff for resuming to after powerloss. */
-		    updatePowerModeForPowerlossBoot(state);
-		    sync();
+			/* No need to store PowerOff for resuming to after powerloss. */
+			updatePowerModeForPowerlossBoot(state);
+			sync();
 		}
 
                 switch (state) {
@@ -246,8 +246,6 @@ private:
                     case Exchange::IPower::PCState::PassiveStandby:
                     case Exchange::IPower::PCState::SuspendToRAM:
                         {
-                            updatePowerModeForPowerlossBoot(state);
-                            sync();
                             ::write(_triggerFile, "1", 1);
                             /* We will be able to write state only if we are in 'On' State. */
                             ::write(_stateFile, newMode->label, newMode->length);
