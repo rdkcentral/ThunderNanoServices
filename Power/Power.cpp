@@ -193,6 +193,7 @@ namespace Plugin {
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
         if (power_get_state() == state) {
+            result = Core::ERROR_DUPLICATE_KEY;
             TRACE(Trace::Information, (_T("No need to change power states, we are already at this stage!")));
         }
         else {
