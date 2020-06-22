@@ -209,7 +209,7 @@ namespace A2DP {
 
         void Operational() override
         {
-            TRACE(DiscoveryFlow, (_T("Bluetooth SDP connection is operational")));
+            TRACE(DiscoveryFlow, (_T("Bluetooth A2DP/SDP connection is operational")));
         }
 
     public:
@@ -217,9 +217,9 @@ namespace A2DP {
         {
             uint32_t result = Open(OpenTimeout);
             if (result != Core::ERROR_NONE) {
-                TRACE(Trace::Error, (_T("Failed to open SDP socket [%d]"), result));
+                TRACE(Trace::Error, (_T("Failed to open A2DP/SDP socket [%d]"), result));
             } else {
-                TRACE(DiscoveryFlow, (_T("Successfully opened SDP socket")));
+                TRACE(DiscoveryFlow, (_T("Successfully opened A2DP/SDP socket")));
             }
 
             return (result);
@@ -231,9 +231,9 @@ namespace A2DP {
             if (IsOpen() == true) {
                 result = Close(CloseTimeout);
                 if (result != Core::ERROR_NONE) {
-                    TRACE(Trace::Error, (_T("Failed to close SDP socket [%d]"), result));
+                    TRACE(Trace::Error, (_T("Failed to close A2DP/SDP socket [%d]"), result));
                 } else {
-                    TRACE(DiscoveryFlow, (_T("Successfully closed SDP socket")));
+                    TRACE(DiscoveryFlow, (_T("Successfully closed A2DP/SDP socket")));
                 }
             }
 

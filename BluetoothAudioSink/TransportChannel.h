@@ -89,7 +89,12 @@ namespace A2DP {
         }
         void Operational() override
         {
-            TRACE(TransportFlow, (_T("Bluetooth AVDTP/RTP transport channel is operational")));
+            TRACE(TransportFlow, (_T("Bluetooth A2DP/RTP transport channel is operational")));
+
+            uint32_t flushable = 1;
+            if (setsockopt(Handle(), SOL_BLUETOOTH, BT_FLUSHABLE, &flushable, sizeof(flushable)) < 0) {
+                TRACE(Trace::Error, (_T("Failed to set the RTP socket flushable")));
+            }
         }
 
     public:
@@ -99,9 +104,9 @@ namespace A2DP {
 
             uint32_t result = Open(OpenTimeout);
             if (result != Core::ERROR_NONE) {
-                TRACE(Trace::Error, (_T("Failed to open AVDTP/RTP transport socket [%d]"), result));
+                TRACE(Trace::Error, (_T("Failed to open A2DP/RTP transport socket [%d]"), result));
             } else {
-                TRACE(TransportFlow, (_T("Successfully opened AVDTP/RTP transport socket")));
+                TRACE(TransportFlow, (_T("Successfully opened A2DP/RTP transport socket")));
                 _codec = codec;
                 Reset();
             }

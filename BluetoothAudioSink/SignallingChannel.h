@@ -105,7 +105,7 @@ namespace A2DP {
         }
         void Operational() override
         {
-            TRACE(SignallingFlow, (_T("Bluetooth AVDTP signalling channel is operational")));
+            TRACE(SignallingFlow, (_T("Bluetooth A2DP/AVDTP signalling channel is operational")));
             Status(Exchange::IBluetoothAudioSink::IDLE);
         }
 
@@ -148,9 +148,9 @@ namespace A2DP {
 
             uint32_t result = Open(OpenTimeout);
             if (result != Core::ERROR_NONE) {
-                TRACE(Trace::Error, (_T("Failed to open AVDTP signalling socket [%d]"), result));
+                TRACE(Trace::Error, (_T("Failed to open A2DP/AVDTP signalling socket [%d]"), result));
             } else {
-                TRACE(SignallingFlow, (_T("Successfully opened AVDTP signalling socket")));
+                TRACE(SignallingFlow, (_T("Successfully opened A2DP/AVDTP signalling socket")));
             }
 
             return (result);
@@ -162,9 +162,9 @@ namespace A2DP {
             if (IsOpen() == true) {
                 result = Close(CloseTimeout);
                 if (result != Core::ERROR_NONE) {
-                    TRACE(Trace::Error, (_T("Failed to close AVDTP signalling socket [%d]"), result));
+                    TRACE(Trace::Error, (_T("Failed to close A2DP/AVDTP signalling socket [%d]"), result));
                 } else {
-                    TRACE(SignallingFlow, (_T("Successfully closed AVDTP signalling socket")));
+                    TRACE(SignallingFlow, (_T("Successfully closed A2DP/AVDTP signalling socket")));
                 }
             }
 
