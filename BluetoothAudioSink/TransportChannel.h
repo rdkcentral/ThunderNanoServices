@@ -135,6 +135,16 @@ namespace A2DP {
         {
             _timestamp = newTimestamp;
         }
+        uint32_t ClockRate() const
+        {
+            ASSERT(_codec != nullptr);
+            return (_codec->ClockRate());
+        }
+        uint8_t Channels() const
+        {
+            ASSERT(_codec != nullptr);
+            return (_codec->Channels());
+        }
         void Reset()
         {
             _timestamp = 0;
@@ -167,11 +177,8 @@ namespace A2DP {
                     TRACE_L1("Failed to send out media packet (%d)", result);
                 }
 
-                IAudioCodec::Format format;
-                _codec->Configuration(format);
-
                 // Timestamp clock frequency is the same as the sampling frequency.
-                _timestamp += (consumed / (format.channels * 2 /* always 16-bit samples! */));
+                _timestamp += (consumed / (_codec->Channels() * 2 /* always 16-bit samples! */));
 
                 _sequence++;
             }

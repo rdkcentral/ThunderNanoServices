@@ -26,176 +26,241 @@
 
 namespace WPEFramework {
 
+ENUM_CONVERSION_BEGIN(A2DP::AudioCodecSBC::qualityprofile)
+    { A2DP::AudioCodecSBC::COMPATIBLE, _TXT("compatible") },
+    { A2DP::AudioCodecSBC::LQ, _TXT("lq") },
+    { A2DP::AudioCodecSBC::MQ, _TXT("mq") },
+    { A2DP::AudioCodecSBC::HQ, _TXT("hq") },
+    { A2DP::AudioCodecSBC::XQ, _TXT("xq") },
+ENUM_CONVERSION_END(A2DP::AudioCodecSBC::qualityprofile);
+
+ENUM_CONVERSION_BEGIN(A2DP::AudioCodecSBC::Config::channels)
+    { A2DP::AudioCodecSBC::Config::MONO, _TXT("mono") },
+    { A2DP::AudioCodecSBC::Config::STEREO, _TXT("stereo") },
+ENUM_CONVERSION_END(A2DP::AudioCodecSBC::Config::channels);
+
 namespace A2DP {
 
-    /* virtual */ void AudioCodecSBC::Configure(const IAudioCodec::Format& preferredFormat)
+    /* virtual */ uint32_t AudioCodecSBC::Configure(const string& format)
     {
-        qualityprofile preferredProfile = _preferredProfile;
+        uint32_t result = Core::ERROR_NONE;
 
-        // Start with sane values.
-        Info::samplingfrequency frequency = Info::SF_44100_HZ;
+        qualityprofile preferredProfile = _preferredProfile;
+        Format::samplingfrequency frequency = Format::SF_INVALID;
+        Format::channelmode channelMode = Format::CM_INVALID;
         uint8_t maxBitpool = _supported.MinBitpool();
 
-        // Joint-Stereo packs better than plain stereo and offers same quality.
-        Info::channelmode channelMode = ((preferredFormat.channels == 1)? Info::CM_MONO : Info::CM_JOINT_STEREO);
-        bool stereo = (preferredFormat.channels == 2);
+        Config config;
+        config.FromString(format);
 
-        // Find a best-matched sampling frequency...
-        if (_supportedSamplingFreqs.empty() == false) {
-            if (preferredFormat.samplingFrequency <= _supportedSamplingFreqs.front().first) {
-                frequency = _supportedSamplingFreqs.front().second;
-            } else if (preferredFormat.samplingFrequency >= _supportedSamplingFreqs.back().first) {
-                frequency = _supportedSamplingFreqs.back().second;
+        if (config.Profile.IsSet() == true) {
+            // Profile requested in config, this will now be the target quality.
+            if (config.Profile.Value() != COMPATIBLE) {
+                preferredProfile = config.Profile.Value();
             } else {
-                for (uint8_t i = 0; i <= ((_supportedSamplingFreqs.size() - 1) - 1); i++ ) {
-                    if ((preferredFormat.samplingFrequency >= _supportedSamplingFreqs[i].first)
-                            && (preferredFormat.samplingFrequency < _supportedSamplingFreqs[i + 1].first)) {
-                        frequency = _supportedSamplingFreqs[i].second;
-                    }
-                }
-            }
-        }
-
-        // Select bitpool and channel mode based on preferred format...
-        // (Note that bitpools for sample rates of 16 and 32 kHz are not specified and will receive same values as 44,1 kHz.)
-        if (preferredProfile == XQ) {
-            if (_supported.MaxBitpool() >= 38) {
-                maxBitpool = 38;
-                if (stereo == true) {
-                    if (_supported.MaxBitpool() >= 76) {
-                        maxBitpool = 76;
-                    } else {
-                        // Max supported bitpool is too low for XQ joint-stereo, so try 38 on dual channel instead,
-                        // what should give roughly same quality/bitrate.
-                        channelMode = Info::CM_DUAL_CHANNEL;
-                    }
-                }
-            } else {
-                preferredProfile = HQ;
-            }
-        }
-
-        if (preferredProfile == HQ) {
-            if (frequency == Info::SF_48000_HZ) {
-                maxBitpool = (stereo? 51 : 29);
-            } else {
-                maxBitpool = (stereo? 53 : 31);
-            }
-
-            if (maxBitpool > _supported.MaxBitpool()) {
-                preferredProfile = MQ;
-            }
-        }
-
-        if (preferredProfile == MQ) {
-            if (frequency == Info::SF_48000_HZ) {
-                maxBitpool = (stereo? 33 : 18);
-            } else {
-                maxBitpool = (stereo? 35 : 19);
-            }
-
-            if (maxBitpool > _supported.MaxBitpool()) {
                 preferredProfile = LQ;
             }
         }
 
-        if (preferredProfile == LQ) {
-            maxBitpool = (stereo? 29 : 15);
-
-            if (maxBitpool > _supported.MaxBitpool()) {
-                preferredProfile = COMPATIBLE;
+        if (config.SampleRate.IsSet() == true) {
+            switch (config.SampleRate.Value()) {
+            case 16000:
+                frequency = Format::SF_16000_HZ;
+                break;
+            case 32000:
+                frequency = Format::SF_32000_HZ;
+                break;
+            case 44100:
+                frequency = Format::SF_44100_HZ;
+                break;
+            case 48000:
+                frequency = Format::SF_48000_HZ;
+                break;
+            default:
+                break;
             }
+
+            frequency = static_cast<Format::samplingfrequency>(frequency & _supported.SamplingFrequency());
         }
 
-        if (preferredProfile == COMPATIBLE) {
-            maxBitpool = _supported.MaxBitpool();
+        if (config.Channels.IsSet() == true) {
+            switch (config.Channels.Value()) {
+            case Config::MONO:
+                channelMode = Format::CM_MONO;
+                break;
+            case Config::STEREO:
+                // Joint-Stereo compresses better than regular stereo when the signal is concentrated
+                // in the middle of the stereo image, what is quite typical.
+                channelMode = Format::CM_JOINT_STEREO;
+                break;
+            }
+
+            channelMode = static_cast<Format::channelmode>(channelMode & _supported.ChannelMode());
         }
 
-        _actuals.SamplingFrequency(frequency);
-        _actuals.ChannelMode(channelMode);
-        _actuals.MaxBitpool(maxBitpool);
+        if ((channelMode != Format::CM_INVALID) && (frequency != Format::SF_INVALID)) {
+            bool stereo = (channelMode != Format::CM_MONO);
 
-        _profile = preferredProfile;
+            // Select bitpool and channel mode based on preferred format...
+            // (Note that bitpools for sample rates of 16 and 32 kHz are not specified, hence will receive same values as 44,1 kHz.)
+            if (preferredProfile == XQ) {
+                if (_supported.MaxBitpool() >= 38) {
+                    maxBitpool = 38;
+                    if (stereo == true) {
+                        if (_supported.MaxBitpool() >= 76) {
+                            maxBitpool = 76;
+                        } else {
+                            // Max supported bitpool is too low for XQ joint-stereo, so try 38 on dual channel instead,
+                            // what should give similar quality/bitrate.
+                            channelMode = Format::CM_DUAL_CHANNEL;
+                        }
+                    }
+                } else {
+                    // XQ not supported, drop to the next best one...
+                    preferredProfile = HQ;
+                }
+            }
 
-        // Configure the encoder
-        SBCConfigure();
+            if (preferredProfile == HQ) {
+                if (frequency == Format::SF_48000_HZ) {
+                    maxBitpool = (stereo? 51 : 29);
+                } else {
+                    maxBitpool = (stereo? 53 : 31);
+                }
 
-        DumpConfiguration();
+                if (maxBitpool > _supported.MaxBitpool()) {
+                    preferredProfile = MQ;
+                }
+            }
+
+            if (preferredProfile == MQ) {
+                if (frequency == Format::SF_48000_HZ) {
+                    maxBitpool = (stereo? 33 : 18);
+                } else {
+                    maxBitpool = (stereo? 35 : 19);
+                }
+
+                if (maxBitpool > _supported.MaxBitpool()) {
+                    preferredProfile = LQ;
+                }
+            }
+
+            if (preferredProfile == LQ) {
+                maxBitpool = (stereo? 29 : 15);
+
+                if (maxBitpool > _supported.MaxBitpool()) {
+                    preferredProfile = COMPATIBLE;
+                }
+            }
+
+            if (preferredProfile == COMPATIBLE) {
+                // Use whatever is the maximum supported bitpool, however low it is.
+                maxBitpool = _supported.MaxBitpool();
+            }
+
+            _actuals.SamplingFrequency(frequency);
+            _actuals.ChannelMode(channelMode);
+            _actuals.MaxBitpool(maxBitpool);
+            _profile = preferredProfile;
+
+            DumpConfiguration();
+
+
+            Bitpool(maxBitpool);
+        } else {
+            result = Core::ERROR_BAD_REQUEST;
+            TRACE(Trace::Error, (_T("Unsuppored SBC paramters requested")));
+        }
+
+        return (result);
     }
 
-    /* virtual */ void AudioCodecSBC::Configuration(IAudioCodec::Format& currentFormat) const
+    /* virtual */ void AudioCodecSBC::Configuration(string& currentFormat) const
     {
+        Config config;
+
         switch (_actuals.SamplingFrequency()) {
-        case Info::SF_48000_HZ:
-            currentFormat.samplingFrequency = 48000;
+        case Format::SF_48000_HZ:
+            config.SampleRate = 48000;
             break;
-        case Info::SF_44100_HZ:
-            currentFormat.samplingFrequency = 44100;
+        case Format::SF_44100_HZ:
+            config.SampleRate = 44100;
             break;
-        case Info::SF_32000_HZ:
-            currentFormat.samplingFrequency = 32000;
+        case Format::SF_32000_HZ:
+            config.SampleRate = 32000;
             break;
-        case Info::SF_16000_HZ:
-            currentFormat.samplingFrequency = 16000;
+        case Format::SF_16000_HZ:
+            config.SampleRate = 16000;
             break;
         default:
-            currentFormat.samplingFrequency = 0;
             ASSERT(false && "Invalid sampling frequency configured");
             break;
         }
 
         switch (_actuals.ChannelMode()) {
-        case Info::CM_MONO:
-            currentFormat.channels = 1;
+        case Format::CM_MONO:
+            config.Channels = Config::MONO;
             break;
-        case Info::CM_DUAL_CHANNEL:
-        case Info::CM_STEREO:
-        case Info::CM_JOINT_STEREO:
-            currentFormat.channels = 2;
+        case Format::CM_DUAL_CHANNEL:
+        case Format::CM_STEREO:
+        case Format::CM_JOINT_STEREO:
+            config.Channels = Config::STEREO;
             break;
         default:
-            currentFormat.channels = 0;
             ASSERT(false && "Invalid channel mode configured");
             break;
         }
+
+        config.Profile = _profile;
+
+        config.ToString(currentFormat);
     }
 
     /* virtual */ uint32_t AudioCodecSBC::Encode(const uint32_t inBufferSize, const uint8_t inBuffer[],
                                                  uint32_t& outSize, uint8_t outBuffer[]) const
     {
-        const uint8_t MAX_FRAMES = 15;
+        ASSERT(_inFrameSize != 0);
+        ASSERT(_outFrameSize != 0);
 
-        uint16_t frames = (inBufferSize / _inFrameSize);
-        uint32_t produced = sizeof(SBCHeader);
-        uint32_t available = (outSize - produced);
+        ASSERT(inBuffer != nullptr);
+        ASSERT(outBuffer != nullptr);
+
         uint32_t consumed = 0;
+        uint32_t produced = sizeof(SBCHeader);
         uint16_t count = 0;
 
-        ASSERT(outSize >= sizeof(SBCHeader));
+        if ((_inFrameSize != 0) && (_outFrameSize != 0)) {
 
-        if (frames > MAX_FRAMES) {
-            frames = MAX_FRAMES;
-        }
+            const uint8_t MAX_FRAMES = 15; // only a four bit number holds the number of frames in a packet
 
+            uint16_t frames = (inBufferSize / _inFrameSize);
+            uint32_t available = (outSize - produced);
 
-        while ((frames-- > 0)
-                && (inBufferSize >= (consumed + _inFrameSize))
-                && (available >= _outFrameSize)) {
+            ASSERT(outSize >= sizeof(SBCHeader));
 
-            ssize_t written = 0;
-            ssize_t read = ::sbc_encode(static_cast<::sbc_t*>(_sbcHandle),
-                                        (inBuffer + consumed), _inFrameSize,
-                                        (outBuffer + produced), available,
-                                        &written);
+            if (frames > MAX_FRAMES) {
+                frames = MAX_FRAMES;
+            }
 
-            if (read < 0) {
-                TRACE(Trace::Error, (_T("Failed to SBC-encode frame!!!")));
-                break;
-            } else {
-                consumed += read;
-                available -= written;
-                produced += written;
-                count++;
+            while ((frames-- > 0)
+                    && (inBufferSize >= (consumed + _inFrameSize))
+                    && (available >= _outFrameSize)) {
+
+                ssize_t written = 0;
+                ssize_t read = ::sbc_encode(static_cast<::sbc_t*>(_sbcHandle),
+                                            (inBuffer + consumed), _inFrameSize,
+                                            (outBuffer + produced), available,
+                                            &written);
+
+                if (read < 0) {
+                    TRACE_L1("Failed to encode an SBC frame!");
+                    break;
+                } else {
+                    consumed += read;
+                    available -= written;
+                    produced += written;
+                    count++;
+                }
             }
         }
 
@@ -247,38 +312,36 @@ namespace A2DP {
 
         ::sbc_t* sbc = static_cast<::sbc_t*>(_sbcHandle);
 
-        _bitpool = _actuals.MaxBitpool(); // Let's start with maximum we have negotiated
         sbc->bitpool = _bitpool;
-
-        sbc->allocation = (_actuals.AllocationMethod() == Info::AM_LOUDNESS? SBC_AM_LOUDNESS : SBC_AM_SNR);
+        sbc->allocation = (_actuals.AllocationMethod() == Format::AM_LOUDNESS? SBC_AM_LOUDNESS : SBC_AM_SNR);
 
         switch (_actuals.SubBands()) {
         default:
-        case Info::SB_8:
+        case Format::SB_8:
             sbc->subbands = SBC_SB_8;
             bands = 8;
             break;
-        case Info::SB_4:
+        case Format::SB_4:
             sbc->subbands = SBC_SB_4;
             bands = 4;
             break;
         }
 
         switch (_actuals.SamplingFrequency()) {
-        case Info::SF_48000_HZ:
+        case Format::SF_48000_HZ:
             sbc->frequency = SBC_FREQ_48000;
             rate = 48000;
             break;
         default:
-        case Info::SF_44100_HZ:
+        case Format::SF_44100_HZ:
             sbc->frequency = SBC_FREQ_44100;
             rate = 44100;
             break;
-        case Info::SF_32000_HZ:
+        case Format::SF_32000_HZ:
             sbc->frequency = SBC_FREQ_32000;
             rate = 32000;
             break;
-        case Info::SF_16000_HZ:
+        case Format::SF_16000_HZ:
             sbc->frequency = SBC_FREQ_16000;
             rate = 16000;
             break;
@@ -286,19 +349,19 @@ namespace A2DP {
 
         switch (_actuals.BlockLength()) {
         default:
-        case Info::BL_16:
+        case Format::BL_16:
             sbc->blocks = SBC_BLK_16;
             blocks = 16;
             break;
-        case Info::BL_12:
+        case Format::BL_12:
             sbc->blocks = SBC_BLK_12;
             blocks = 12;
             break;
-        case Info::BL_8:
+        case Format::BL_8:
             sbc->blocks = SBC_BLK_8;
             blocks = 8;
             break;
-        case Info::BL_4:
+        case Format::BL_4:
             sbc->blocks = SBC_BLK_4;
             blocks = 4;
             break;
@@ -306,16 +369,16 @@ namespace A2DP {
 
         switch (_actuals.ChannelMode()) {
         default:
-        case Info::CM_JOINT_STEREO:
+        case Format::CM_JOINT_STEREO:
             sbc->mode = SBC_MODE_JOINT_STEREO;
             break;
-        case Info::CM_STEREO:
+        case Format::CM_STEREO:
             sbc->mode = SBC_MODE_STEREO;
             break;
-        case Info::CM_DUAL_CHANNEL:
+        case Format::CM_DUAL_CHANNEL:
             sbc->mode = SBC_MODE_DUAL_CHANNEL;
             break;
-        case Info::CM_MONO:
+        case Format::CM_MONO:
             sbc->mode = SBC_MODE_MONO;
             break;
         }
@@ -325,11 +388,14 @@ namespace A2DP {
         _outFrameSize = ::sbc_get_frame_length(sbc); /* bytes */
 
         _bitRate = ((8L * _outFrameSize * rate) / (bands * blocks)); /* bits per second */
+        _channels = (sbc->mode == SBC_MODE_MONO? 1 : 2);
+        _sampleRate = rate;
+
     }
 
     void AudioCodecSBC::DumpConfiguration() const
     {
-        #define ELEM(name, val, prop) (_T("  [  %d] " name " [  %d]"), !!(_supported.val() & Info::prop), !!(_actuals.val() & Info::prop))
+        #define ELEM(name, val, prop) (_T("  [  %d] " name " [  %d]"), !!(_supported.val() & Format::prop), !!(_actuals.val() & Format::prop))
         TRACE(Trace::Information, (_T("SBC configuration:")));
         TRACE(Trace::Information, ELEM("Sampling frequency - 16 kHz     ", SamplingFrequency, SF_16000_HZ));
         TRACE(Trace::Information, ELEM("Sampling frequency - 32 kHz     ", SamplingFrequency, SF_32000_HZ));
@@ -350,14 +416,12 @@ namespace A2DP {
         TRACE(Trace::Information, (_T("  [%3d] Minimal bitpool value            [%3d]"), _supported.MinBitpool(), _actuals.MinBitpool()));
         TRACE(Trace::Information, (_T("  [%3d] Maximal bitpool value            [%3d]"), _supported.MaxBitpool(), _actuals.MaxBitpool()));
         #undef ELEM
-
-        DumpBitrateConfiguration();
     }
 
     void AudioCodecSBC::DumpBitrateConfiguration() const
     {
-        static const char* profileStr[] = { "SBC compatibility mode", "SBC-LQ", "SBC-MQ", "SBC-HQ", "SBC-XQ" };
-        TRACE(Trace::Information, (_T("Quality profile: %s"), profileStr[_profile]));
+        Core::EnumerateType<qualityprofile> profile(_profile);
+        TRACE(Trace::Information, (_T("Quality profile: %s"), (profile.IsSet() == true? profile.Data() : "(error)")));
         TRACE(Trace::Information, (_T("Bitpool value: %d"), _bitpool));
         TRACE(Trace::Information, (_T("Bitrate: %d bps"), _bitRate));
         TRACE(Trace::Information, (_T("Frame size: in %d bytes, out %d bytes (%d us)"), _inFrameSize, _outFrameSize, _frameDuration));

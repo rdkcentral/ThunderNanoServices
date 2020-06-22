@@ -29,14 +29,9 @@ namespace A2DP {
 
         static constexpr uint8_t MEDIA_TYPE = 0x00; // audio
 
-        enum type {
+        enum type : uint8_t {
             INVALID = 0,
             SBC
-        };
-
-        struct Format {
-            uint32_t samplingFrequency;
-            uint8_t channels;
         };
 
         virtual ~IAudioCodec() { }
@@ -44,13 +39,16 @@ namespace A2DP {
         virtual type Type() const = 0;
 
         virtual uint32_t BitRate() const = 0; // bits per second
+        virtual uint32_t ClockRate() const = 0; // bits per second
+        virtual uint8_t Channels() const = 0; // bits per second
+
         virtual uint32_t InputFrameSize() const = 0; // bytes
         virtual uint32_t OutputFrameSize() const = 0; // bytes
         virtual uint32_t FrameDuration() const = 0; // microseconds
         virtual uint32_t HeaderSize() const = 0;
 
-        virtual void Configure(const Format& preferredFormat) = 0;
-        virtual void Configuration(Format& currentFormat) const = 0;
+        virtual uint32_t Configure(const string& format) = 0;
+        virtual void Configuration(string& format) const = 0;
 
         virtual void SerializeConfiguration(Bluetooth::Buffer& output) const = 0;
 

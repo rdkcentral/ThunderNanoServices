@@ -29,10 +29,7 @@ namespace A2DP {
     public:
         static constexpr uint8_t CODEC_TYPE = 0x00; // SBC
 
-    private:
-        static constexpr uint8_t MIN_BITPOOL = 2;
-        static constexpr uint8_t MAX_BITPOOL = 250;
-
+    public:
         enum qualityprofile {
             COMPATIBLE,
             LQ,
@@ -41,41 +38,78 @@ namespace A2DP {
             XQ
         };
 
-        class Info {
+        class Config : public Core::JSON::Container {
+        public:
+            enum channels {
+                STEREO,
+                MONO
+            };
+
+        public:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+            Config()
+                : Core::JSON::Container()
+                , Profile(COMPATIBLE)
+                , SampleRate(44100)
+                , Channels(STEREO)
+            {
+                Add(_T("profile"), &Profile);
+                Add(_T("samplerate"), &SampleRate);
+                Add(_T("channels"), &Channels);
+            }
+            ~Config() = default;
+
+        public:
+            Core::JSON::EnumType<qualityprofile> Profile;
+            Core::JSON::DecUInt32 SampleRate;
+            Core::JSON::EnumType<channels> Channels;
+        }; // class Config
+
+    private:
+        static constexpr uint8_t MIN_BITPOOL = 2;
+        static constexpr uint8_t MAX_BITPOOL = 250;
+
+        class Format {
         public:
             enum samplingfrequency : uint8_t {
+                SF_INVALID      = 0,
                 SF_48000_HZ     = 1, // mandatory for sink
                 SF_44100_HZ     = 2, // mandatory for sink
                 SF_32000_HZ     = 4,
                 SF_16000_HZ     = 8
             };
 
-            enum channelmode : uint8_t {
+            enum channelmode : uint8_t  {
+                CM_INVALID      = 0,
                 CM_JOINT_STEREO = 1, // all mandatory for sink
                 CM_STEREO       = 2,
                 CM_DUAL_CHANNEL = 4,
                 CM_MONO         = 8
             };
 
-            enum blocklength : uint8_t {
+            enum blocklength : uint8_t  {
+                BL_INVALID      = 0,
                 BL_16           = 1,  // all mandatory for sink
                 BL_12           = 2,
                 BL_8            = 4,
                 BL_4            = 8,
             };
 
-            enum subbands : uint8_t {
+            enum subbands : uint8_t  {
+                SB_INVALID      = 0,
                 SB_8            = 1, // all mandatory for sink
                 SB_4            = 2,
             };
 
             enum allocationmethod : uint8_t {
+                AM_INVALID      = 0,
                 AM_LOUDNESS     = 1, // all mandatory for sink
                 AM_SNR          = 2,
             };
 
         public:
-            Info()
+            Format()
                 : _samplingFrequency(SF_44100_HZ)
                 , _channelMode(CM_JOINT_STEREO)
                 , _blockLength(BL_16)
@@ -85,7 +119,7 @@ namespace A2DP {
                 , _maxBitpool(MIN_BITPOOL) // not an error
             {
             }
-            ~Info() = default;
+            ~Format() = default;
 
         public:
             void Serialize(Bluetooth::Buffer& config) const
@@ -199,7 +233,7 @@ namespace A2DP {
             uint8_t _allocationMethod;
             uint8_t _minBitpool;
             uint8_t _maxBitpool;
-        }; // class Info
+        }; // class Format
 
     public:
         AudioCodecSBC(const Bluetooth::Buffer& config)
@@ -211,25 +245,13 @@ namespace A2DP {
             , _sbcHandle(nullptr)
             , _bitpool(0)
             , _bitRate(0)
+            , _sampleRate(0)
+            , _channels(0)
             , _inFrameSize(0)
             , _outFrameSize(0)
             , _frameDuration(0)
         {
             _supported.Deserialize(config);
-
-            // Store real sample rate values in a list, so it's easier to look up later.
-            if (_supported.SamplingFrequency() & Info::SF_16000_HZ) {
-                _supportedSamplingFreqs.emplace_back(16000, Info::SF_16000_HZ);
-            }
-            if (_supported.SamplingFrequency() & Info::SF_32000_HZ) {
-                _supportedSamplingFreqs.emplace_back(32000, Info::SF_32000_HZ);
-            }
-            if (_supported.SamplingFrequency() & Info::SF_44100_HZ) {
-                _supportedSamplingFreqs.emplace_back(44100, Info::SF_44100_HZ);
-            }
-            if (_supported.SamplingFrequency() & Info::SF_48000_HZ) {
-                _supportedSamplingFreqs.emplace_back(48000, Info::SF_48000_HZ);
-            }
 
             _actuals.MinBitpool(_supported.MinBitpool());
 
@@ -249,6 +271,14 @@ namespace A2DP {
         {
             return (_bitRate);
         }
+        uint32_t ClockRate() const override
+        {
+            return (_sampleRate);
+        }
+        uint8_t Channels() const override
+        {
+            return (_channels);
+        }
         uint32_t InputFrameSize() const override
         {
             return (_inFrameSize);
@@ -266,9 +296,9 @@ namespace A2DP {
             return (sizeof(SBCHeader));
         }
 
-        void Configure(const IAudioCodec::Format& preferredFormat) override;
+        uint32_t Configure(const string& format) override;
 
-        void Configuration(IAudioCodec::Format& currentFormat) const override;
+        void Configuration(string& format) const override;
 
         void SerializeConfiguration(Bluetooth::Buffer& output) const override
         {
@@ -282,6 +312,15 @@ namespace A2DP {
                         uint32_t& outBufferSize, uint8_t outBuffer[]) const override;
 
     private:
+        void Bitpool(uint8_t value)
+        {
+            TRACE(Trace::Information, (_T("New bitpool value for SBC: %d"), value));
+            _bitpool = value;
+            SBCConfigure();
+            DumpBitrateConfiguration();
+        }
+
+    private:
         void DumpConfiguration() const;
         void DumpBitrateConfiguration() const;
 
@@ -291,14 +330,16 @@ namespace A2DP {
         void SBCConfigure();
 
     private:
-        Info _supported;
-        Info _actuals;
-        std::vector<std::pair<uint32_t, Info::samplingfrequency>> _supportedSamplingFreqs;
+        Format _supported;
+        Format _actuals;
+        std::vector<std::pair<uint32_t, Format::samplingfrequency>> _supportedSamplingFreqs;
         qualityprofile _preferredProfile;
         qualityprofile _profile;
         void* _sbcHandle;
         uint8_t _bitpool;
         uint32_t _bitRate;
+        uint32_t _sampleRate;
+        uint8_t _channels;
         uint32_t _inFrameSize;
         uint32_t _outFrameSize;
         uint32_t _frameDuration;

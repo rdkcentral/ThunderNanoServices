@@ -285,31 +285,31 @@ namespace A2DP {
                     TRACE(DiscoveryFlow, (_T("  Classes:")));
                     for (auto const& clazz : service.Classes()) {
                         TRACE(DiscoveryFlow, (_T("    - %s '%s'"),
-                                        clazz.Type().ToString().c_str(), clazz.Name().c_str()));
+                                              clazz.Type().ToString().c_str(), clazz.Name().c_str()));
                     }
                 }
                 if (service.Profiles().empty() == false) {
                     TRACE(DiscoveryFlow, (_T("  Profiles:")));
                     for (auto const& profile : service.Profiles()) {
                         TRACE(DiscoveryFlow, (_T("    - %s '%s', version: %d.%d"),
-                                        profile.Type().ToString().c_str(), profile.Name().c_str(),
-                                        (profile.Version() >> 8), (profile.Version() & 0xFF)));
+                                              profile.Type().ToString().c_str(), profile.Name().c_str(),
+                                              (profile.Version() >> 8), (profile.Version() & 0xFF)));
                     }
                 }
                 if (service.Protocols().empty() == false) {
                     TRACE(DiscoveryFlow, (_T("  Protocols:")));
                     for (auto const& protocol : service.Protocols()) {
                         TRACE(DiscoveryFlow, (_T("    - %s '%s', parameters: %s"),
-                                        protocol.Type().ToString().c_str(), protocol.Name().c_str(),
-                                        Bluetooth::Record(protocol.Parameters()).ToString().c_str()));
+                                              protocol.Type().ToString().c_str(), protocol.Name().c_str(),
+                                              Bluetooth::Record(protocol.Parameters()).ToString().c_str()));
                     }
                 }
                 if (service.Attributes().empty() == false) {
                     TRACE(DiscoveryFlow, (_T("  Attributes:")));
                     for (auto const& attribute : service.Attributes()) {
                         TRACE(DiscoveryFlow, (_T("    - %04x '%s', value: %s"),
-                                        attribute.second.Type(), attribute.second.Name().c_str(),
-                                        Bluetooth::Record(attribute.second.Value()).ToString().c_str()));
+                                              attribute.second.Type(), attribute.second.Name().c_str(),
+                                              Bluetooth::Record(attribute.second.Value()).ToString().c_str()));
                     }
                 }
             }

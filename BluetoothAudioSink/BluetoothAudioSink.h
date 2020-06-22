@@ -225,18 +225,13 @@ namespace Plugin {
             {
                 return (_signalling.Status());
             }
-            uint32_t Configure(const uint8_t channels, const uint32_t samplingFrequency)
+            uint32_t Configure(const string& format)
             {
                 ASSERT(_endpoint != nullptr);
 
-                A2DP::IAudioCodec::Format format;
-                format.samplingFrequency = samplingFrequency;
-                format.channels = channels;
+                TRACE(Trace::Information, (_T("Configuring audio endpoint 0x%02x to %s"), _endpoint->SEID(), format.c_str()));
 
-                TRACE(Trace::Information, (_T("Configuring audio endpoint 0x%02x to %d Hz and %d channel(s)"),
-                                            _endpoint->SEID(), format.samplingFrequency, format.channels));
-
-                return(_endpoint->Configure(format));
+                return (_endpoint->Configure(format));
             }
             uint32_t Open()
             {
@@ -283,18 +278,16 @@ namespace Plugin {
                 }
                 return (result);
             }
-            uint32_t Timestamp(uint32_t& timestamp /* milliseconds */)
+            uint32_t PlayTime(uint32_t& time /* milliseconds */)
             {
+                ASSERT(_endpoint != nullptr);
                 uint32_t result = Core::ERROR_NONE;
                 if (_transport.IsOpen() == true) {
-                    bool contentProtection = false;
-                    A2DP::IAudioCodec::Format format;
-                    _endpoint->Configuration(format, contentProtection);
-                    timestamp = ((1000L * _transport.Timestamp()) / format.samplingFrequency);
+                    time = ((1000L * _transport.Timestamp()) / _transport.ClockRate());
                 } else {
                     TRACE(Trace::Error, (_T("Transport channel is not opened!")));
                     result = Core::ERROR_BAD_REQUEST;
-                    timestamp = 0;
+                    time = 0;
                 }
                 return (result);
             }
@@ -406,7 +399,7 @@ namespace Plugin {
 
                 if (_endpoint != nullptr) {
                     _job.Submit([this](){
-                        Configure(2, 44100);
+                        Configure(R"({ "profile":"xq", "samplerate": 44100, "channels": "stereo" })");
                     });
                 }
 

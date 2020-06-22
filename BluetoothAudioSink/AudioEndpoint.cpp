@@ -97,7 +97,7 @@ namespace A2DP {
         }
     }
 
-    uint32_t AudioEndpoint::Configure(const IAudioCodec::Format& format, const bool enableCP)
+    uint32_t AudioEndpoint::Configure(const string& format, const bool enableCP)
     {
         using ServiceCapabilities = Bluetooth::AVDTPProfile::StreamEndPoint::ServiceCapabilities;
 
@@ -116,12 +116,11 @@ namespace A2DP {
 
         // Configure Media Codec
         if (_codec != nullptr) {
-            _codec->Configure(format);
-
-            Bluetooth::Buffer mcConfig;
-            _codec->SerializeConfiguration(mcConfig);
-
-            configuration.emplace(ServiceCapabilities::MEDIA_CODEC, mcConfig);
+            if (_codec->Configure(format) == Core::ERROR_NONE) {
+                Bluetooth::Buffer mcConfig;
+                _codec->SerializeConfiguration(mcConfig);
+                configuration.emplace(ServiceCapabilities::MEDIA_CODEC, mcConfig);
+            }
         }
 
         return (CmdSetConfiguration(configuration));

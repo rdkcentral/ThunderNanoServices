@@ -78,14 +78,14 @@ namespace A2DP {
         {
             return (_cp);
         }
-        void Configuration(IAudioCodec::Format& format, bool& cpEnabled)
+        void Configuration(string& format, bool& cpEnabled)
         {
             ASSERT(_codec != nullptr);
             _codec->Configuration(format);
             cpEnabled = _cpEnabled;
         }
 
-        uint32_t Configure(const IAudioCodec::Format& format, const bool enableCP = false);
+        uint32_t Configure(const string& format, const bool enableCP = false);
 
         uint32_t Open()
         {
