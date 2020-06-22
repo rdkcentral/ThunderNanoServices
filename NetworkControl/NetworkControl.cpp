@@ -217,6 +217,18 @@ namespace Plugin
         // From now on we observer the states of the give interfaces.
         _observer->Open();
 
+        PluginHost::ISubSystem* subSystem = _service->SubSystems();
+
+        ASSERT(subSystem != nullptr);
+
+        if (subSystem != nullptr) {
+            if ((subSystem->IsActive(PluginHost::ISubSystem::NETWORK) == false)) {
+                subSystem->Set(PluginHost::ISubSystem::NETWORK, nullptr);
+            }
+
+            subSystem->Release();
+        }            
+
         // On success return empty, to indicate there is no error text.
         return (result);
     }
@@ -413,17 +425,6 @@ namespace Plugin
                 }
             }
 
-            PluginHost::ISubSystem* subSystem = _service->SubSystems();
-
-            ASSERT(subSystem != nullptr);
-
-            if (subSystem != nullptr) {
-                if ((subSystem->IsActive(PluginHost::ISubSystem::NETWORK) == false) && (ipAddress.IsLocalInterface() == false)) {
-                    subSystem->Set(PluginHost::ISubSystem::NETWORK, nullptr);
-                }
-
-                subSystem->Release();
-            }            
 
             if (addIt == true) {
                 TRACE_L1("Setting IP: %s", ipAddress.HostAddress().c_str());
