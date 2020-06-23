@@ -54,7 +54,6 @@ target_include_directories( ${MODULE_NAME}
 
 find_package(BcmPowerManager QUIET)
 find_package(MFRPwrMgrLibs QUIET)
-find_package(MFRFWLibs QUIET)
 
 if(${PLUGIN_POWER_MFRPERSIST_STATE} STREQUAL ON)
     message("Enabling Persistent power state feature...")
