@@ -134,6 +134,7 @@ namespace Plugin {
                 , Interface()
                 , Path(_T("www"))
                 , IdleTime(180)
+                , ServeFile(true)
             {
                 Add(_T("port"), &Port);
                 Add(_T("binding"), &Binding);
@@ -141,6 +142,7 @@ namespace Plugin {
                 Add(_T("path"), &Path);
                 Add(_T("idletime"), &IdleTime);
                 Add(_T("proxies"), &Proxies);
+                Add(_T("servefile"), &ServeFile);
             }
             ~Config()
             {
@@ -153,6 +155,7 @@ namespace Plugin {
             Core::JSON::String Path;
             Core::JSON::DecUInt16 IdleTime;
             Core::JSON::ArrayType<Proxy> Proxies;
+            Core::JSON::Boolean ServeFile;
         };
 
         class RequestFactory {
@@ -510,6 +513,7 @@ namespace Plugin {
                 , _connectionCheckTimer(0)
                 , _cleanupTimer(Core::Thread::DefaultStackSize(), _T("ConnectionChecker"))
                 , _proxyMap(*this)
+                , _serveFile(true)
             {
             }
 #ifdef __WINDOWS__
@@ -546,6 +550,8 @@ namespace Plugin {
                 } else {
                     _prefixPath = prefixPath + Core::Directory::Normalize(configuration.Path.Value());
                 }
+
+                _serveFile = configuration.ServeFile.Value();
 
                 _proxyMap.Create(index);
 
@@ -624,6 +630,10 @@ namespace Plugin {
             {
                 _proxyMap.RemoveProxy(path);
             }
+            inline bool IsFileServerEnabled()
+            {
+                return _serveFile;
+            }
 
         private:
             uint64_t Timed(const uint64_t scheduledTime)
@@ -658,6 +668,7 @@ namespace Plugin {
             uint32_t _connectionCheckTimer;
             Core::TimerType<TimeHandler> _cleanupTimer;
             ProxyMap _proxyMap;
+            bool _serveFile;
         };
 
     private:
@@ -762,22 +773,27 @@ namespace Plugin {
             Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
             Core::ProxyType<Web::FileBody> fileBody(PluginHost::IFactories::Instance().FileBody());
 
-            // If so, don't deal with it ourselves.
-            Web::MIMETypes result;
-            string fileToService = _parent.PrefixPath();
+            if (_parent.IsFileServerEnabled() == true) {
+                // If so, don't deal with it ourselves.
+                Web::MIMETypes result;
+                string fileToService = _parent.PrefixPath();
 
-            if (Web::MIMETypeForFile(request->Path, fileToService, result) == false) {
+                if (Web::MIMETypeForFile(request->Path, fileToService, result) == false) {
 
-                string fullPath = fileToService + _T("index.html");
+                    string fullPath = fileToService + _T("index.html");
 
-                // No filename gives, be default, we go for the index.html page..
-                *fileBody = fileToService + _T("index.html");
-                response->ContentType = Web::MIME_HTML;
-                response->Body<Web::FileBody>(fileBody);
+                    // No filename gives, be default, we go for the index.html page..
+                    *fileBody = fileToService + _T("index.html");
+                    response->ContentType = Web::MIME_HTML;
+                    response->Body<Web::FileBody>(fileBody);
+                } else {
+                    *fileBody = fileToService;
+                    response->ContentType = result;
+                    response->Body<Web::FileBody>(fileBody);
+                }
             } else {
-                *fileBody = fileToService;
-                response->ContentType = result;
-                response->Body<Web::FileBody>(fileBody);
+                response->ErrorCode = Web::STATUS_BAD_REQUEST;
+                response->Message = "Invalid Request";
             }
             Submit(response);
         }
