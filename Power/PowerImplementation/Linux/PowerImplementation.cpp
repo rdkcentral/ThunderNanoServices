@@ -25,6 +25,12 @@
 
 #include "../../Implementation.h"
 
+#ifdef POWER_PERSIST_STATE
+extern "C" {
+#include "mfrPowerMgr.h"
+}
+#endif
+
 /* =============================================================================================
    THE ACTUAL IMPLEMENTATION OF THE IPower INTERFACE FOR LINUX KERNELS
    https://www.kernel.org/doc/Documentation/power/interface.txt
@@ -114,12 +120,12 @@ public:
                         index++;
                     }
                 }
-                TRACE(Trace::Information, (_T("SupportedModes : %d"), _supportedModes));
             }
         }
 
-        /* Add POWEROFF since its software implementation. */
-        _supportedModes |= (1 << Exchange::IPower::PCState::PowerOff);
+        /* Add POWEROFF & ON since its software implementation. */
+        _supportedModes |= ((1 << Exchange::IPower::PCState::PowerOff) | (1 <<  Exchange::IPower::PCState::On) | (1 <<  Exchange::IPower::PCState::ActiveStandby) | (1 <<  Exchange::IPower::PCState::PassiveStandby) | (1 <<  Exchange::IPower::PCState::Hibernate));
+        TRACE(Trace::Information, (_T("Supported Power Modes : %d"), _supportedModes));
 
         _stateFile = ::open(StateFile, O_WRONLY);
         if (_stateFile < 0) {
@@ -133,6 +139,19 @@ public:
                 ::write(_triggerFile, "0", 1);
             }
         }
+#ifdef POWER_PERSIST_STATE
+        if (!pmInit()) {
+            SYSLOG(Logging::Startup, (_T("Platform pmInit() failed...!!!!")));
+        } else {
+            uint32_t lastDevicePowerState = (uint32_t)Exchange::IPower::PCState::On;
+            if (pmReadPowerState(&lastDevicePowerState) &&
+                    IsSupported((Exchange::IPower::PCState)lastDevicePowerState)) {
+                SYSLOG(Logging::Startup, (_T("Switching to platform saved lastDevicePowerState = %d..."),
+                            lastDevicePowerState));
+                SetState((Exchange::IPower::PCState)lastDevicePowerState, 0);
+            }
+        }
+#endif
     }
     ~PowerImplementation()
     {
@@ -190,19 +209,29 @@ private:
         if (_currentState != state) {
             mode* newMode = FindMode(state);
 
-            if (newMode != nullptr) {
+            if ((newMode != nullptr) && (IsSupported(state))) {
                 uint8_t value = -1;
                 TRACE(Trace::Information, (_T("Scheduled Job: changing Power mode to %s[%d]."),
                             newMode->label, state));
                 Notify(state);
                 _currentState = state;
 
+#ifdef POWER_PERSIST_STATE
+                if (_currentState != Exchange::IPower::PCState::PowerOff) {
+                    /* Save current Power State for Powerloss recovery to the same State. */
+                    if (!pmSavePowerState(_currentState)) {
+                        TRACE(Trace::Error, (_T("Platform pmSavePowerState failed to save current state[%d]."),
+                                    _currentState));
+                    } else {
+                        /* Nothing to do here. */
+                    }
+                }
+#endif
                 switch (state) {
                     case Exchange::IPower::PCState::On: break;
-                    case Exchange::IPower::PCState::ActiveStandby:
-                    case Exchange::IPower::PCState::PassiveStandby:
+                    case Exchange::IPower::PCState::ActiveStandby: break;
+                    case Exchange::IPower::PCState::PassiveStandby: break;
                     case Exchange::IPower::PCState::SuspendToRAM:
-                    case Exchange::IPower::PCState::Hibernate:
                         {
                             ::write(_triggerFile, "1", 1);
                             /* We will be able to write state only if we are in 'On' State. */
@@ -216,6 +245,7 @@ private:
                             SetState(Exchange::IPower::PCState::On, 0);
                         }
                         break;
+                    case Exchange::IPower::PCState::Hibernate: break;
                     case Exchange::IPower::PCState::PowerOff:
                         system("poweroff");
                         break;
@@ -257,14 +287,22 @@ void power_deinitialize() {
 }
 
 uint32_t power_set_state(const enum WPEFramework::Exchange::IPower::PCState state, const uint32_t sleepTime) {
+    uint32_t retStatus = Core::ERROR_UNAVAILABLE;
+
     ASSERT (implementation != nullptr);
 
     if (implementation != nullptr) {
-        if ((implementation->IsSupported(state)) && (implementation->SetState(state, sleepTime) == true)) {
-            return (Core::ERROR_NONE);
+        if (implementation->IsSupported(state)) {
+            if (implementation->SetState(state, sleepTime) == true) {
+                retStatus = Core::ERROR_NONE;
+            } else {
+                retStatus = Core::ERROR_GENERAL;
+            }
+        } else {
+            retStatus = Core::ERROR_ILLEGAL_STATE;
         }
     }
-    return (Core::ERROR_UNAVAILABLE);
+    return retStatus;
 }
 
 WPEFramework::Exchange::IPower::PCState power_get_state() {

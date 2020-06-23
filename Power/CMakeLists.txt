@@ -29,6 +29,8 @@ set(PLUGIN_POWER_POWER_KEY 116 CACHE STRING "Key Code for power key. To disable 
 set(PLUGIN_POWER_CONTROL_CLIENTS true CACHE STRING "Control plugins with IStateControl interface")
 set(PLUGIN_POWER_IMPLEMENTATION "Linux" CACHE STRING "Implementation to be selected for the PowerPlugin, if it could not be autodetected.")
 
+option(PLUGIN_POWER_MFRPERSIST_STATE "Enable device to boot to last power state on power loss reboot. [ON, OFF]." OFF)
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
@@ -51,6 +53,16 @@ target_include_directories( ${MODULE_NAME}
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
 find_package(BcmPowerManager QUIET)
+find_package(MFRPwrMgrLibs QUIET)
+find_package(MFRFWLibs QUIET)
+
+if(${PLUGIN_POWER_MFRPERSIST_STATE} STREQUAL ON)
+    message("Enabling Persistent power state feature...")
+    add_definitions(-DPOWER_PERSIST_STATE=1)
+    if(MFRPWRMGRLIBS_FOUND)
+        target_link_libraries(${MODULE_NAME} PRIVATE pwrmgrlibs::pwrmgrlibs)
+    endif()
+endif()
 
 if(BCM_PM_FOUND)
     find_package(NEXUS REQUIRED)
