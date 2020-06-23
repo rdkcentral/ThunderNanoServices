@@ -350,6 +350,11 @@ namespace Plugin {
                 return (result);
             }
 
+            inline void UpdateMAC(const uint8_t buffer[], const uint8_t size) 
+            {
+                _client.UpdateMAC(buffer, size);
+            }
+
             void GetIP() 
             {
                 return (GetIP(Core::NodeId()));
@@ -357,7 +362,6 @@ namespace Plugin {
 
             void GetIP(const Core::NodeId& preferred)
             {
-
                 auto offerIterator = _client.UnleasedOffers();
                 if (offerIterator.Next() == true) {
                     Request(offerIterator.Current());
