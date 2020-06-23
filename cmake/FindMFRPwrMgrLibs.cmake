@@ -1,9 +1,3 @@
-# - Try to find MFRPWRMGRLIBS
-# Once done this will define
-#  MFRPWRMGRLIBS_FOUND - System has bootenvlibs
-#  MFRPWRMGRLIBS_INCLUDE_DIRS - The bootenvlibs include directories
-#  MFRPWRMGRLIBS_LIBRARIES - The libraries needed to use bootenvlibs
-#
 # If not stated otherwise in this file or this component's license file the
 # following copyright and licenses apply:
 #
@@ -20,6 +14,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# - Try to find MFRPWRMGRLIBS
+# Once done this will define
+#  MFRPWRMGRLIBS_FOUND - System has power manager libraries
+#  MFRPWRMGRLIBS_INCLUDE_DIRS - power manager include directories
+#  MFRPWRMGRLIBS_LIBRARIES - The libraries needed to use power manager
+#
 
 find_package(PkgConfig)
 pkg_check_modules(MFRPWRMGRLIBS libpwrmgr)
