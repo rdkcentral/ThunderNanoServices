@@ -45,13 +45,16 @@ namespace A2DP {
     {
         uint32_t result = Core::ERROR_NONE;
 
+        Config config;
+        config.FromString(format);
+
+        _lock.Lock();
+
         qualityprofile preferredProfile = _preferredProfile;
         Format::samplingfrequency frequency = Format::SF_INVALID;
         Format::channelmode channelMode = Format::CM_INVALID;
         uint8_t maxBitpool = _supported.MinBitpool();
 
-        Config config;
-        config.FromString(format);
 
         if (config.Profile.IsSet() == true) {
             // Profile requested in config, this will now be the target quality.
@@ -158,13 +161,16 @@ namespace A2DP {
                 maxBitpool = _supported.MaxBitpool();
             }
 
+            ASSERT(maxBitpool <= MAX_BITPOOL);
+
             _actuals.SamplingFrequency(frequency);
             _actuals.ChannelMode(channelMode);
+            _actuals.MinBitpool(_supported.MinBitpool());
             _actuals.MaxBitpool(maxBitpool);
+            _preferredBitpool = maxBitpool;
             _profile = preferredProfile;
 
             DumpConfiguration();
-
 
             Bitpool(maxBitpool);
         } else {
@@ -172,12 +178,16 @@ namespace A2DP {
             TRACE(Trace::Error, (_T("Unsuppored SBC paramters requested")));
         }
 
+        _lock.Unlock();
+
         return (result);
     }
 
     /* virtual */ void AudioCodecSBC::Configuration(string& currentFormat) const
     {
         Config config;
+
+        _lock.Lock();
 
         switch (_actuals.SamplingFrequency()) {
         case Format::SF_48000_HZ:
@@ -213,7 +223,16 @@ namespace A2DP {
 
         config.Profile = _profile;
 
+        _lock.Unlock();
+
         config.ToString(currentFormat);
+    }
+
+    /* virtual */ void AudioCodecSBC::SerializeConfiguration(Bluetooth::Buffer& output) const
+    {
+        _lock.Lock();
+        _actuals.Serialize(output);
+        _lock.Unlock();
     }
 
     /* virtual */ uint32_t AudioCodecSBC::Encode(const uint32_t inBufferSize, const uint8_t inBuffer[],
@@ -228,6 +247,8 @@ namespace A2DP {
         uint32_t consumed = 0;
         uint32_t produced = sizeof(SBCHeader);
         uint16_t count = 0;
+
+        _lock.Lock();
 
         if ((_inFrameSize != 0) && (_outFrameSize != 0)) {
 
@@ -264,6 +285,8 @@ namespace A2DP {
             }
         }
 
+        _lock.Unlock();
+
         if (count > 0) {
             SBCHeader* header = reinterpret_cast<SBCHeader*>(outBuffer);
             header->frameCount = (count & 0xF);
@@ -282,27 +305,98 @@ namespace A2DP {
         return (0);
     }
 
+    /* virtual */ uint32_t AudioCodecSBC::QOS(const int8_t policy)
+    {
+        uint32_t result = Core::ERROR_NONE;
+
+        ASSERT(_preferredBitpool != 0);
+
+        if (policy == 0)
+            ASSERT(false);
+        else {
+            printf("x");
+        }
+
+        const uint8_t STEP = (_preferredBitpool / 10);
+
+        _lock.Lock();
+
+        uint8_t newBitpool = _bitpool;
+
+        if (policy == 0) {
+            // reset quality
+            newBitpool = _preferredBitpool;
+        } else if (policy < 0) {
+            // decrease quality
+            if (newBitpool == _supported.MinBitpool()) {
+                result = Core::ERROR_UNAVAILABLE;
+            } else if (newBitpool - STEP < _supported.MinBitpool()) {
+                newBitpool = _supported.MinBitpool();
+            } else {
+                newBitpool -= STEP;
+            }
+        } else {
+            // increase quality
+            if (_bitpool == _preferredBitpool) {
+                newBitpool = Core::ERROR_UNAVAILABLE;
+            } else if (_bitpool + STEP >= _preferredBitpool) {
+                newBitpool = _preferredBitpool;
+            } else {
+                newBitpool += STEP;
+            }
+        }
+
+        if (result == Core::ERROR_NONE) {
+            Bitpool(newBitpool);
+        }
+
+        _lock.Unlock();
+
+        return (result);
+    }
+
+    void AudioCodecSBC::Bitpool(uint8_t value)
+    {
+        ASSERT(value <= MAX_BITPOOL);
+        ASSERT(value >= MIN_BITPOOL);
+
+        _bitpool = value;
+        TRACE(Trace::Information, (_T("New bitpool value for SBC: %d"), _bitpool));
+        SBCConfigure();
+        DumpBitrateConfiguration();
+    }
+
     void AudioCodecSBC::SBCInitialize()
     {
+        _lock.Lock();
+
         ASSERT(_sbcHandle == nullptr);
 
         _sbcHandle = static_cast<void*>(new ::sbc_t);
         ASSERT(_sbcHandle != nullptr);
 
         ::sbc_init(static_cast<::sbc_t*>(_sbcHandle), 0L);
+
+        _lock.Unlock();
     }
 
     void AudioCodecSBC::SBCDeinitialize()
     {
+        _lock.Lock();
+
         if (_sbcHandle != nullptr) {
             ::sbc_finish(static_cast<::sbc_t*>(_sbcHandle));
             delete static_cast<::sbc_t*>(_sbcHandle);
             _sbcHandle = nullptr;
         }
+
+        _lock.Unlock();
     }
 
     void AudioCodecSBC::SBCConfigure()
     {
+        _lock.Lock();
+
         ASSERT(_sbcHandle != nullptr);
         ::sbc_reinit(static_cast<::sbc_t*>(_sbcHandle), 0L);
 
@@ -391,6 +485,7 @@ namespace A2DP {
         _channels = (sbc->mode == SBC_MODE_MONO? 1 : 2);
         _sampleRate = rate;
 
+        _lock.Unlock();
     }
 
     void AudioCodecSBC::DumpConfiguration() const

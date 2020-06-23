@@ -42,10 +42,7 @@ namespace A2DP {
         virtual uint32_t ClockRate() const = 0; // bits per second
         virtual uint8_t Channels() const = 0; // bits per second
 
-        virtual uint32_t InputFrameSize() const = 0; // bytes
-        virtual uint32_t OutputFrameSize() const = 0; // bytes
-        virtual uint32_t FrameDuration() const = 0; // microseconds
-        virtual uint32_t HeaderSize() const = 0;
+        virtual uint32_t QOS(const int8_t policy) = 0;
 
         virtual uint32_t Configure(const string& format) = 0;
         virtual void Configuration(string& format) const = 0;

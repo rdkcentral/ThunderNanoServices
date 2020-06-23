@@ -120,6 +120,8 @@ namespace A2DP {
             {
             }
             ~Format() = default;
+            Format(const Format&) = default;
+            Format& operator=(const Format&) = default;
 
         public:
             void Serialize(Bluetooth::Buffer& config) const
@@ -188,11 +190,11 @@ namespace A2DP {
             }
             uint8_t MinBitpool() const
             {
-                return _minBitpool;
+                return (_minBitpool);
             }
             uint8_t MaxBitpool() const
             {
-                return _maxBitpool;
+                return (_maxBitpool);
             }
 
         public:
@@ -218,11 +220,11 @@ namespace A2DP {
             }
             void MinBitpool(const uint8_t value)
             {
-                _minBitpool = value;
+                _minBitpool = (value < MIN_BITPOOL? MIN_BITPOOL : value);
             }
             void MaxBitpool(const uint8_t value)
             {
-                _maxBitpool = value;
+                _maxBitpool = (value > MAX_BITPOOL? MAX_BITPOOL : value);
             }
 
         private:
@@ -237,12 +239,13 @@ namespace A2DP {
 
     public:
         AudioCodecSBC(const Bluetooth::Buffer& config)
-            : _supported()
+            : _lock()
+            , _supported()
             , _actuals()
-            , _supportedSamplingFreqs()
-            , _preferredProfile(HQ) // TODO: Ideally this should come from a config file
+            , _preferredProfile(HQ) // TODO: Perhaps this should come from a config file...?
             , _profile(COMPATIBLE)
             , _sbcHandle(nullptr)
+            , _preferredBitpool(0)
             , _bitpool(0)
             , _bitRate(0)
             , _sampleRate(0)
@@ -252,9 +255,6 @@ namespace A2DP {
             , _frameDuration(0)
         {
             _supported.Deserialize(config);
-
-            _actuals.MinBitpool(_supported.MinBitpool());
-
             SBCInitialize();
         }
         ~AudioCodecSBC() override
@@ -279,31 +279,15 @@ namespace A2DP {
         {
             return (_channels);
         }
-        uint32_t InputFrameSize() const override
-        {
-            return (_inFrameSize);
-        }
-        uint32_t OutputFrameSize() const override
-        {
-            return (_outFrameSize);
-        }
-        uint32_t FrameDuration() const override
-        {
-            return (_frameDuration);
-        }
-        uint32_t HeaderSize() const override
-        {
-            return (sizeof(SBCHeader));
-        }
 
+    public:
         uint32_t Configure(const string& format) override;
 
         void Configuration(string& format) const override;
 
-        void SerializeConfiguration(Bluetooth::Buffer& output) const override
-        {
-            _actuals.Serialize(output);
-        }
+        void SerializeConfiguration(Bluetooth::Buffer& output) const override;
+
+        uint32_t QOS(const int8_t policy);
 
         uint32_t Encode(const uint32_t inBufferSize, const uint8_t inBuffer[],
                         uint32_t& outBufferSize, uint8_t outBuffer[]) const override;
@@ -312,13 +296,7 @@ namespace A2DP {
                         uint32_t& outBufferSize, uint8_t outBuffer[]) const override;
 
     private:
-        void Bitpool(uint8_t value)
-        {
-            TRACE(Trace::Information, (_T("New bitpool value for SBC: %d"), value));
-            _bitpool = value;
-            SBCConfigure();
-            DumpBitrateConfiguration();
-        }
+        void Bitpool(uint8_t value);
 
     private:
         void DumpConfiguration() const;
@@ -330,12 +308,13 @@ namespace A2DP {
         void SBCConfigure();
 
     private:
+        mutable Core::CriticalSection _lock;
         Format _supported;
         Format _actuals;
-        std::vector<std::pair<uint32_t, Format::samplingfrequency>> _supportedSamplingFreqs;
         qualityprofile _preferredProfile;
         qualityprofile _profile;
         void* _sbcHandle;
+        uint8_t _preferredBitpool;
         uint8_t _bitpool;
         uint32_t _bitRate;
         uint32_t _sampleRate;
