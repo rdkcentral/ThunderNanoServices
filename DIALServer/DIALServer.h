@@ -789,6 +789,11 @@ namespace Plugin {
                 AppInformation::_applicationFactory.erase(index);
             }
 
+            inline bool HasQueryParameter()
+            {
+                return (_url.find('?') != string::npos);
+            }
+
             void GetData(string& data, const Version& version = {}) const;
             void SetData(const string& data);
 
