@@ -80,24 +80,23 @@ private:
 uint32_t
 set_audio_output_type(const Dolby::IOutput::Type type)
 {
-    uint32_t result = Core::ERROR_NONE;
-    if (IsInitialized())
+    uint32_t result = WPEFramework::Core::ERROR_NONE;
+    AudioDevice audioDev;
+    if (audioDev.IsInitialized())
     {
-        AudioDevice audioDev;
-
         audioDev.HdmiFormat(static_cast<int>(type));
         int error = audioDev.Error();
 
         if (error != 0)
         {
             TRACE_L1("Cannot set the HDMI format <%d>", error);
-            result = Core::ERROR_GENERAL;
+            result = WPEFramework::Core::ERROR_GENERAL;
         }
     }
     else
     {
         TRACE_L1("Audio device not initialized");
-        result = Core::ERROR_ILLEGAL_STATE;
+        result = WPEFramework::Core::ERROR_ILLEGAL_STATE;
     }
 
     return result;
@@ -111,28 +110,28 @@ Dolby::IOutput::Type toEnum(int code, uint32_t &error)
     case Dolby::IOutput::Type::AUTO:
     {
         result = Dolby::IOutput::Type::AUTO;
-        error = Core::ERROR_NONE;
+        error = WPEFramework::Core::ERROR_NONE;
         break;
     }
     case Dolby::IOutput::Type::ATMOS_PASS_THROUGH:
     {
         result = Dolby::IOutput::Type::ATMOS_PASS_THROUGH;
-        error = Core::ERROR_NONE;
+        error = WPEFramework::Core::ERROR_NONE;
     }
     case Dolby::IOutput::Type::DIGITAL_PASS_THROUGH:
     {
         result = Dolby::IOutput::Type::DIGITAL_PASS_THROUGH;
-        error = Core::ERROR_NONE;
+        error = WPEFramework::Core::ERROR_NONE;
     }
     case Dolby::IOutput::Type::DIGITAL_PCM:
     {
         result = Dolby::IOutput::Type::DIGITAL_PCM;
-        error = Core::ERROR_NONE;
+        error = WPEFramework::Core::ERROR_NONE;
     }
     default:
     {
         result = Dolby::IOutput::Type::AUTO;
-        error = Core::ERROR_GENERAL;
+        error = WPEFramework::Core::ERROR_GENERAL;
         TRACE_L1("Could not map the provided dolby output: %d to Dolby::IOutput::Type enumeration.");
     }
     }
@@ -145,16 +144,17 @@ get_audio_output_type(uint32_t &error)
 {
     Dolby::IOutput::Type result = Dolby::IOutput::Type::AUTO;
 
-    if (IsInitialized())
+    AudioDevice audioDev;
+
+    if (audioDev.IsInitialized())
     {
-        AudioDevice audioDev;
         int audioType = audioDev.HdmiFormat();
         result = toEnum(audioType, error);
     }
     else
     {
         TRACE_L1("Audio device not initialized");
-        error = Core::ERROR_ILLEGAL_STATE;
+        error = WPEFramework::Core::ERROR_ILLEGAL_STATE;
     }
 
     return result;
