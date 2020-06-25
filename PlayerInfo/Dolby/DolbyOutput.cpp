@@ -40,6 +40,7 @@ namespace WPEFramework
                 Exchange::Dolby::IOutput::Type result = get_audio_output_type(errorCode);
 
                 ASSERT(errorCode == Core::ERROR_NONE);
+                return result;
             };
 
             BEGIN_INTERFACE_MAP(DolbyOutputImplementation)
