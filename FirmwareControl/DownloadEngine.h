@@ -25,12 +25,41 @@ namespace WPEFramework {
 
 struct INotifier {
     virtual ~INotifier() {}
-    virtual void NotifyDownloadStatus(const uint32_t status) = 0;
+    virtual void NotifyStatus(const uint32_t status) = 0;
+    virtual void NotifyProgress(const uint8_t percentage) = 0;
 };
 
 namespace PluginHost {
 
     class DownloadEngine : public Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> {
+
+    private:
+        class ProgressHandler {
+        public:
+            ProgressHandler() = delete;
+            ProgressHandler(const ProgressHandler&) = delete;
+            ProgressHandler& operator=(const ProgressHandler&) = delete;
+
+            ProgressHandler(DownloadEngine* callback)
+                : _callback(callback)
+            {
+            }
+
+            ~ProgressHandler() override
+            {
+            }
+
+        public:
+            uint64_t Timed(const uint64_t scheduledTime)
+            {
+                ASSERT(_callback != nullptr);
+                return _callback->NotifyProgress();
+            }
+
+        private:
+            DownloadEngine* _callback;
+        };
+
     private:
         typedef Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> BaseClass;
 
@@ -43,6 +72,8 @@ namespace PluginHost {
             : BaseClass(false, Core::NodeId(_T("0.0.0.0")), Core::NodeId(), 1024, ((64 * 1024) - 1))
             , _notifier(notifier)
             , _storage(downloadStorage.c_str(), false)
+            , _fileSize(0)
+            , _progressHandler(Core::Thread::DefaultStackSize(), _T("DownloadProgressTimer"))
         {
         }
         virtual ~DownloadEngine()
@@ -79,6 +110,32 @@ namespace PluginHost {
             return (result);
         }
 
+        void StartProgressNotifier(const uint16_t interval)
+        {
+            ProgressHandler entry(*this);
+            _adminLock.Lock();
+            _interval = interval;
+            _progressHandler.Revoke(entry);
+
+            _progressHandler.Schedule(Core::Time::Now().Add(interval), entry);
+
+            _adminLock.Unlock();
+        }
+
+        uint64_t NotifyProgress()
+        {
+            uint64_t nextTick = 0;
+
+            _adminLock.Lock();
+            if ((_notifier != nullptr) && (_storage.Exists())) {
+                uint8_t percentage = ((_storage.Size()/_fileSize) * 100);
+                _notifier->NotifyProgress(percentage);
+                nextTick = Core::Time(scheduleTime).Add(_interval * 1000).Ticks();
+            }
+            _adminLock.Unlock();
+
+            return nextTick;
+        }
         inline void CleanupStorage()
         {
             if (_storage.Exists()) {
@@ -86,6 +143,13 @@ namespace PluginHost {
             }
         }
     private:
+        virtual void Started(const uint16_t size) override
+        {
+            _adminLock.Lock();
+            _fileSize = size;
+            _adminLock.Unlock();
+        }
+
         virtual void Transfered(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
         {
             uint32_t status = result;
@@ -107,7 +171,7 @@ namespace PluginHost {
                 }
             }
             if (_notifier != nullptr) {
-                _notifier->NotifyDownloadStatus(status);
+                _notifier->NotifyStatus(status);
             }
 
             _adminLock.Lock();
@@ -154,6 +218,8 @@ namespace PluginHost {
         Core::CriticalSection _adminLock;
         INotifier* _notifier;
         Core::File _storage;
+        uint16_t _fileSize;
+        Core::TimerType<ProgressHandler> _progressHandler;
     };
 }
 }

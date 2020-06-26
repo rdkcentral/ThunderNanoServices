@@ -110,9 +110,13 @@ namespace Plugin {
             virtual ~Notifier()
             {
             }
-            virtual void NotifyDownloadStatus(const uint32_t status) override
+            virtual void NotifyStatus(const uint32_t status) override
             {
                 _parent.NotifyDownloadStatus(status);
+            }
+            virtual void NotifyProgress(const uint8_t percentage) override
+            {
+                _parent.NotifyProgress(UpgradeStatus::DOWNLOAD_STARTED, Core::ERROR_NONE, percentage);
             }
 
         private:
@@ -209,11 +213,11 @@ namespace Plugin {
             ASSERT(control != nullptr);
 
             if (control != nullptr) {
-               control->NotifyInstallProgress(mfrStatus);
+               control->NotifyInstallStatus(mfrStatus);
             }
         }
 
-        inline void NotifyInstallProgress(mfrUpgradeStatus_t mfrStatus)
+        inline void NotifyInstallStatus(mfrUpgradeStatus_t mfrStatus)
         {
             UpgradeStatus upgradeStatus = ConvertMfrWriteStatusToUpgradeStatus(mfrStatus.progress);
             if ((upgradeStatus == UPGRADE_COMPLETED) || (upgradeStatus == INSTALL_ABORTED)) {
@@ -227,7 +231,7 @@ namespace Plugin {
             }
         }
 
-        inline void NotifyProgress(const UpgradeStatus& upgradeStatus, const ErrorType& errorType, const uint16_t& percentage)
+        inline void NotifyProgress(const UpgradeStatus& upgradeStatus, const ErrorType& errorType, const uint8_t& percentage)
         {
             if ((upgradeStatus == UPGRADE_COMPLETED) ||
                 (upgradeStatus == INSTALL_ABORTED) ||
@@ -255,7 +259,7 @@ namespace Plugin {
         uint32_t endpoint_upgrade(const JsonData::FirmwareControl::UpgradeParamsData& params);
         uint32_t get_status(Core::JSON::EnumType<JsonData::FirmwareControl::StatusType>& response) const;
         void event_upgradeprogress(const JsonData::FirmwareControl::StatusType& status,
-                                   const JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType& error, const uint16_t& percentage);
+                                   const JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType& error, const uint8_t& percentage);
 
         inline uint32_t WaitForCompletion(int32_t waitTime)
         {
@@ -295,7 +299,7 @@ namespace Plugin {
             return status;
         }
 
-        inline void Status(const UpgradeStatus& upgradeStatus, const uint32_t& error, const uint16_t& percentage)
+        inline void Status(const UpgradeStatus& upgradeStatus, const uint32_t& error, const uint8_t& percentage)
         {
             _adminLock.Lock();
             _upgradeStatus = upgradeStatus;
