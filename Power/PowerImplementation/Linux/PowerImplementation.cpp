@@ -243,7 +243,7 @@ private:
 
 static PowerImplementation* implementation = nullptr;
 
-void power_initialize(power_state_change callback, void* userData, const char* ,
+void power_initialize(power_state_change callback, void* userData, const char* config,
         const enum WPEFramework::Exchange::IPower::PCState state)
 {
     ASSERT (implementation == nullptr);
