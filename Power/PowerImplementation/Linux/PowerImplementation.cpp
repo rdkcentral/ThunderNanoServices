@@ -25,12 +25,6 @@
 
 #include "../../Implementation.h"
 
-#ifdef POWER_PERSIST_STATE
-extern "C" {
-#include "mfrPowerMgr.h"
-}
-#endif
-
 /* =============================================================================================
    THE ACTUAL IMPLEMENTATION OF THE IPower INTERFACE FOR LINUX KERNELS
    https://www.kernel.org/doc/Documentation/power/interface.txt
@@ -139,19 +133,6 @@ public:
                 ::write(_triggerFile, "0", 1);
             }
         }
-#ifdef POWER_PERSIST_STATE
-        if (!pmInit()) {
-            SYSLOG(Logging::Startup, (_T("Platform pmInit() failed...!!!!")));
-        } else {
-            uint32_t lastDevicePowerState = (uint32_t)Exchange::IPower::PCState::On;
-            if (pmReadPowerState(&lastDevicePowerState) &&
-                    IsSupported((Exchange::IPower::PCState)lastDevicePowerState)) {
-                SYSLOG(Logging::Startup, (_T("Switching to platform saved lastDevicePowerState = %d..."),
-                            lastDevicePowerState));
-                SetState((Exchange::IPower::PCState)lastDevicePowerState, 0);
-            }
-        }
-#endif
     }
     ~PowerImplementation()
     {
@@ -216,17 +197,6 @@ private:
                 Notify(state);
                 _currentState = state;
 
-#ifdef POWER_PERSIST_STATE
-                if (_currentState != Exchange::IPower::PCState::PowerOff) {
-                    /* Save current Power State for Powerloss recovery to the same State. */
-                    if (!pmSavePowerState(_currentState)) {
-                        TRACE(Trace::Error, (_T("Platform pmSavePowerState failed to save current state[%d]."),
-                                    _currentState));
-                    } else {
-                        /* Nothing to do here. */
-                    }
-                }
-#endif
                 switch (state) {
                     case Exchange::IPower::PCState::On: break;
                     case Exchange::IPower::PCState::ActiveStandby: break;
@@ -273,9 +243,17 @@ private:
 
 static PowerImplementation* implementation = nullptr;
 
-void power_initialize(power_state_change callback, void* userData, const char* ) {
+void power_initialize(power_state_change callback, void* userData, const char* ,
+        const enum WPEFramework::Exchange::IPower::PCState state)
+{
     ASSERT (implementation == nullptr);
     implementation = new PowerImplementation(callback, userData);
+    if (implementation != nullptr) {
+        if ((implementation->IsSupported(state) &&
+                    (WPEFramework::Exchange::IPower::PCState::On != state)) {
+            implementation->SetState(state, 0);
+        }
+    }
 }
 
 void power_deinitialize() {
@@ -316,3 +294,15 @@ WPEFramework::Exchange::IPower::PCState power_get_state() {
     return (result);
 }
 
+bool is_power_state_supported(const enum WPEFramework::Exchange::IPower::PCState state) {
+    ASSERT (implementation != nullptr);
+
+    if (implementation != nullptr) {
+        if (implementation->IsSupported(state)) {
+            return true;
+        } else {
+            /* Nothing to do here. */
+        }
+    }
+    return false;
+}

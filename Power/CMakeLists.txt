@@ -55,12 +55,14 @@ target_include_directories( ${MODULE_NAME}
 find_package(BcmPowerManager QUIET)
 find_package(MFRPwrMgrLibs QUIET)
 
-if(${PLUGIN_POWER_MFRPERSIST_STATE} STREQUAL ON)
+if(${PLUGIN_POWER_MFRPERSIST_STATE} STREQUAL ON AND MFRPWRMGRLIBS_FOUND)
     message("Enabling Persistent power state feature...")
-    add_definitions(-DPOWER_PERSIST_STATE=1)
-    if(MFRPWRMGRLIBS_FOUND)
-        target_link_libraries(${MODULE_NAME} PRIVATE pwrmgrlibs::pwrmgrlibs)
-    endif()
+    target_sources(${MODULE_NAME} PRIVATE
+        PowerImplementation/${PLUGIN_POWER_IMPLEMENTATION}/MFRPersistPower.cpp)
+    target_link_libraries(${MODULE_NAME} PRIVATE pwrmgrlibs::pwrmgrlibs)
+else()
+    target_sources(${MODULE_NAME} PRIVATE
+        PowerImplementation/Stub/MFRPersistPowerStub.cpp)
 endif()
 
 if(BCM_PM_FOUND)
@@ -80,7 +82,8 @@ if(BCM_PM_FOUND)
     endif()
 else()
     message("Configuring for ${PLUGIN_POWER_IMPLEMENTATION}....")
-    target_sources(${MODULE_NAME} PRIVATE PowerImplementation/${PLUGIN_POWER_IMPLEMENTATION}/PowerImplementation.cpp)
+    target_sources(${MODULE_NAME} PRIVATE
+        PowerImplementation/${PLUGIN_POWER_IMPLEMENTATION}/PowerImplementation.cpp)
 endif()
 
 target_link_libraries(${MODULE_NAME}
