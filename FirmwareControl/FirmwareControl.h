@@ -116,7 +116,7 @@ namespace Plugin {
             }
             virtual void NotifyProgress(const uint8_t percentage) override
             {
-                _parent.NotifyProgress(UpgradeStatus::DOWNLOAD_STARTED, Core::ERROR_NONE, percentage);
+                _parent.NotifyProgress(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, percentage);
             }
 
         private:

@@ -36,28 +36,41 @@ namespace PluginHost {
     private:
         class ProgressHandler {
         public:
-            ProgressHandler() = delete;
-            ProgressHandler(const ProgressHandler&) = delete;
-            ProgressHandler& operator=(const ProgressHandler&) = delete;
-
-            ProgressHandler(DownloadEngine* callback)
-                : _callback(callback)
+            ProgressHandler()
+                : _parent(nullptr)
             {
             }
+            ProgressHandler(const ProgressHandler& progressHandler)
+                : _parent(progressHandler._parent)
+            {
+            }
+            ProgressHandler(DownloadEngine* callback)
+                : _parent(callback)
+            {
+            }
+            ProgressHandler& operator=(const ProgressHandler& RHS)
+            {
+                _parent = RHS._parent;
+                return (*this);
+            }
+            bool operator==(const ProgressHandler& RHS) const
+            {
+                return (_parent == RHS._parent);
+            }
 
-            ~ProgressHandler() override
+            virtual ~ProgressHandler()
             {
             }
 
         public:
             uint64_t Timed(const uint64_t scheduledTime)
             {
-                ASSERT(_callback != nullptr);
-                return _callback->NotifyProgress();
+                ASSERT(_parent != nullptr);
+                return _parent->NotifyProgress(scheduledTime);
             }
 
         private:
-            DownloadEngine* _callback;
+            DownloadEngine* _parent;
         };
 
     private:
@@ -72,6 +85,7 @@ namespace PluginHost {
             : BaseClass(false, Core::NodeId(_T("0.0.0.0")), Core::NodeId(), 1024, ((64 * 1024) - 1))
             , _notifier(notifier)
             , _storage(downloadStorage.c_str(), false)
+            , _interval(0)
             , _fileSize(0)
             , _progressHandler(Core::Thread::DefaultStackSize(), _T("DownloadProgressTimer"))
         {
@@ -112,7 +126,7 @@ namespace PluginHost {
 
         void StartProgressNotifier(const uint16_t interval)
         {
-            ProgressHandler entry(*this);
+            ProgressHandler entry(this);
             _adminLock.Lock();
             _interval = interval;
             _progressHandler.Revoke(entry);
@@ -122,7 +136,7 @@ namespace PluginHost {
             _adminLock.Unlock();
         }
 
-        uint64_t NotifyProgress()
+        uint64_t NotifyProgress(uint64_t scheduleTime)
         {
             uint64_t nextTick = 0;
 
@@ -143,7 +157,7 @@ namespace PluginHost {
             }
         }
     private:
-        virtual void Started(const uint16_t size) override
+        virtual void Started(const uint32_t size) override
         {
             _adminLock.Lock();
             _fileSize = size;
@@ -218,6 +232,7 @@ namespace PluginHost {
         Core::CriticalSection _adminLock;
         INotifier* _notifier;
         Core::File _storage;
+        uint16_t _interval;
         uint16_t _fileSize;
         Core::TimerType<ProgressHandler> _progressHandler;
     };
