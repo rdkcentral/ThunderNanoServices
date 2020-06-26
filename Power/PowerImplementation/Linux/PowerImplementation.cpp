@@ -249,7 +249,7 @@ void power_initialize(power_state_change callback, void* userData, const char* c
     ASSERT (implementation == nullptr);
     implementation = new PowerImplementation(callback, userData);
     if (implementation != nullptr) {
-        if ((implementation->IsSupported(state) &&
+        if ((implementation->IsSupported(state)) &&
                     (WPEFramework::Exchange::IPower::PCState::On != state)) {
             implementation->SetState(state, 0);
         }
