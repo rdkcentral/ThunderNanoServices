@@ -92,6 +92,9 @@ namespace PluginHost {
         }
         virtual ~DownloadEngine()
         {
+            _adminLock.Lock();
+            _progressHandler.Revoke(ProgressHandler(this));
+            _adminLock.Unlock();
         }
 
     public:
@@ -138,13 +141,18 @@ namespace PluginHost {
 
         uint64_t NotifyProgress(uint64_t scheduleTime)
         {
+            uint8_t percentage = 0;
             uint64_t nextTick = 0;
 
             _adminLock.Lock();
-            if ((_notifier != nullptr) && (_storage.Exists())) {
-                uint8_t percentage = ((_storage.Size()/_fileSize) * 100);
-                _notifier->NotifyProgress(percentage);
-                nextTick = Core::Time(scheduleTime).Add(_interval * 1000).Ticks();
+            if (_notifier != nullptr) {
+                if (_storage.Exists() && (_storage.Size() > 0) && (_fileSize > 0)) {
+                    percentage = ((_storage.Size()/static_cast<uint64_t>(_fileSize)) * 100);
+                    _notifier->NotifyProgress(percentage);
+                }
+                if (percentage < 100) {
+                    nextTick = Core::Time(scheduleTime).Add(_interval * 1000).Ticks();
+                }
             }
             _adminLock.Unlock();
 
@@ -233,7 +241,7 @@ namespace PluginHost {
         INotifier* _notifier;
         Core::File _storage;
         uint16_t _interval;
-        uint16_t _fileSize;
+        uint32_t _fileSize;
         Core::TimerType<ProgressHandler> _progressHandler;
     };
 }
