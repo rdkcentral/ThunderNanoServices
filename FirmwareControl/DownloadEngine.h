@@ -88,6 +88,7 @@ namespace PluginHost {
             , _interval(0)
             , _fileSize(0)
             , _progressHandler(Core::Thread::DefaultStackSize(), _T("DownloadProgressTimer"))
+            , _destination(nullptr)
         {
         }
         virtual ~DownloadEngine()
@@ -146,18 +147,43 @@ namespace PluginHost {
 
             _adminLock.Lock();
             if (_notifier != nullptr) {
+                _storage.LoadFileInfo();
                 if (_storage.Exists() && (_storage.Size() > 0) && (_fileSize > 0)) {
-                    percentage = ((_storage.Size()/static_cast<uint64_t>(_fileSize)) * 100);
-                    _notifier->NotifyProgress(percentage);
+                    percentage = static_cast<uint8_t>(static_cast<float>(((_storage.Size() * 100)/static_cast<uint64_t>(_fileSize))));
+                    if (percentage) {
+                        _notifier->NotifyProgress(percentage);
+                    }
                 }
                 if (percentage < 100) {
                     nextTick = Core::Time(scheduleTime).Add(_interval * 1000).Ticks();
                 }
+
             }
             _adminLock.Unlock();
 
             return nextTick;
         }
+        uint32_t CheckHMAC()
+        {
+            uint32_t status = Core::ERROR_NONE;
+            uint8_t hashHex[Crypto::HASH_SHA256];
+            if (HashStringToBytes(_hash, hashHex) == true) {
+
+                if (_destination) {
+                    const uint8_t* downloadedHash = _destination->SerializedHashValue();
+                    if (downloadedHash != nullptr) {
+                        for (uint16_t i = 0; i < Crypto::HASH_SHA256; i++) {
+                            if (downloadedHash[i] != hashHex[i]) {
+                                status = Core::ERROR_INCORRECT_HASH;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            return status;
+        }
+
         inline void CleanupStorage()
         {
             if (_storage.Exists()) {
@@ -177,19 +203,7 @@ namespace PluginHost {
             uint32_t status = result;
             if (status == Core::ERROR_NONE) {
                 if (_hash.empty() != true) {
-                    uint8_t hashHex[Crypto::HASH_SHA256];
-                    if (HashStringToBytes(_hash, hashHex) == true) {
-
-                        const uint8_t* downloadedHash = destination.SerializedHashValue();
-                        if (downloadedHash != nullptr) {
-                            for (uint16_t i = 0; i < Crypto::HASH_SHA256; i++) {
-                                if (downloadedHash[i] != hashHex[i]) {
-                                    status = Core::ERROR_INCORRECT_HASH;
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                    _destination = &destination;
                 }
             }
             if (_notifier != nullptr) {
@@ -243,6 +257,7 @@ namespace PluginHost {
         uint16_t _interval;
         uint32_t _fileSize;
         Core::TimerType<ProgressHandler> _progressHandler;
+        const Web::SignedFileBodyType<Crypto::SHA256>* _destination;
     };
 }
 }

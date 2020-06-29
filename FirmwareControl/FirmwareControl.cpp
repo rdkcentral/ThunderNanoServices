@@ -134,11 +134,15 @@ namespace Plugin {
             downloadEngine.StartProgressNotifier(_interval);
             status = WaitForCompletion(_waitTime);
             if ((status == Core::ERROR_NONE) && (DownloadStatus() == Core::ERROR_NONE)) {
-                 Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 0);
-            } else {
-                status = ((status != Core::ERROR_NONE)? status: DownloadStatus());
-                Status(UpgradeStatus::DOWNLOAD_ABORTED, status, 0);
+                 if (_hash.empty() != true) {
+                     status = downloadEngine.CheckHMAC();
+                 }
             }
+        }
+
+        status = ((status != Core::ERROR_NONE)? status: DownloadStatus());
+        if (status == Core::ERROR_NONE) {
+            Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 100);
         } else {
             Status(UpgradeStatus::DOWNLOAD_ABORTED, status, 0);
         }
