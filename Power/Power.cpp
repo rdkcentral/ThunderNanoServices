@@ -240,6 +240,9 @@ namespace Plugin {
         }
 
         _adminLock.Unlock();
+
+        /* May be resuming from another power state; lets update persisted state. */
+        power_set_persisted_state(state);
     }
     void Power::PowerKey() /* override */ {
         if (power_get_state() == Exchange::IPower::PCState::On) {
