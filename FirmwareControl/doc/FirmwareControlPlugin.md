@@ -103,7 +103,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 | params.name | string | name of the firmware |
 | params?.location | string | <sup>*(optional)*</sup> location/url of the firmware to be upgraded |
 | params?.type | string | <sup>*(optional)*</sup> type of the firmware (must be one of the following: *CDL*, *RCDL*) |
-| params?.progressinterval | number | <sup>*(optional)*</sup> number of seconds between progress update events (5 secoonds, 10 seconds etc). 0 means invoking callback only once to report final upgrade result |
+| params?.progressinterval | number | <sup>*(optional)*</sup> number of seconds between progress update events (5 seconds, 10 seconds etc). 0 means invoking callback only once to report final upgrade result |
 | params?.hmac | string | <sup>*(optional)*</sup> HMAC value of firmare |
 
 ### Result
