@@ -39,11 +39,20 @@ private:
         Config& operator=(const Config&);
 
     public:
-        Config() :
-            Core::JSON::Container(), Url() {
+        Config()
+            : Core::JSON::Container()
+            , Url()
+            , Width(1280)
+            , Height(720)
+            , KeyHoldTime()
+            , KeyRepeatTime()
+            , ClientIdentifier()
+        {
             Add(_T("url"), &Url);
             Add(_T("width"), &Width);
             Add(_T("height"), &Height);
+            Add(_T("keyholdtime"), &KeyHoldTime);
+            Add(_T("keyrepeattime"), &KeyRepeatTime);
             Add(_T("clientidentifier"), &ClientIdentifier);
         }
         ~Config() {
@@ -53,6 +62,8 @@ private:
         Core::JSON::String Url;
         Core::JSON::DecUInt16 Width;
         Core::JSON::DecUInt16 Height;
+        Core::JSON::DecUInt32 KeyHoldTime;
+        Core::JSON::DecUInt32 KeyRepeatTime;
         Core::JSON::String ClientIdentifier;
     };
 
@@ -140,6 +151,16 @@ private:
 
             if (height.empty() == false) {
                 Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_HEIGHT"), height);
+            }
+
+            if (config.KeyHoldTime.IsSet() == true) {
+                string keyHoldTime(Core::NumberType<uint32_t>(config.KeyHoldTime.Value()).Text());
+                Core::SystemInfo::SetEnvironment(_T("COBALT_KEY_HOLD_TIME"), keyHoldTime);
+            }
+
+            if (config.KeyRepeatTime.IsSet() == true) {
+                string keyRepeatTime(Core::NumberType<uint32_t>(config.KeyRepeatTime.Value()).Text());
+                Core::SystemInfo::SetEnvironment(_T("COBALT_KEY_REPEAT_TIME"), keyRepeatTime);
             }
 
             if (config.Url.IsSet() == true) {
