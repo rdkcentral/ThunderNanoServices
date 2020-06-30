@@ -34,46 +34,6 @@ namespace PluginHost {
     class DownloadEngine : public Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> {
 
     private:
-        class ProgressHandler {
-        public:
-            ProgressHandler()
-                : _parent(nullptr)
-            {
-            }
-            ProgressHandler(const ProgressHandler& progressHandler)
-                : _parent(progressHandler._parent)
-            {
-            }
-            ProgressHandler(DownloadEngine* callback)
-                : _parent(callback)
-            {
-            }
-            ProgressHandler& operator=(const ProgressHandler& RHS)
-            {
-                _parent = RHS._parent;
-                return (*this);
-            }
-            bool operator==(const ProgressHandler& RHS) const
-            {
-                return (_parent == RHS._parent);
-            }
-
-            virtual ~ProgressHandler()
-            {
-            }
-
-        public:
-            uint64_t Timed(const uint64_t scheduledTime)
-            {
-                ASSERT(_parent != nullptr);
-                return _parent->NotifyProgress(scheduledTime);
-            }
-
-        private:
-            DownloadEngine* _parent;
-        };
-
-    private:
         typedef Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> BaseClass;
 
         DownloadEngine() = delete;
@@ -87,14 +47,14 @@ namespace PluginHost {
             , _storage(downloadStorage.c_str(), false)
             , _interval(0)
             , _fileSize(0)
-            , _progressHandler(Core::Thread::DefaultStackSize(), _T("DownloadProgressTimer"))
+            , _activity(*this)
             , _destination(nullptr)
         {
         }
         virtual ~DownloadEngine()
         {
             _adminLock.Lock();
-            _progressHandler.Revoke(ProgressHandler(this));
+            _activity.Revoke();
             _adminLock.Unlock();
         }
 
@@ -130,20 +90,20 @@ namespace PluginHost {
 
         void StartProgressNotifier(const uint16_t interval)
         {
-            ProgressHandler entry(this);
             _adminLock.Lock();
             _interval = interval;
-            _progressHandler.Revoke(entry);
+            _activity.Revoke();
 
-            _progressHandler.Schedule(Core::Time::Now().Add(interval), entry);
+            if (interval) {
+                _activity.Schedule(Core::Time::Now().Add(_interval * 1000));
+            }
 
             _adminLock.Unlock();
         }
 
-        uint64_t NotifyProgress(uint64_t scheduleTime)
+        void NotifyProgress()
         {
             uint8_t percentage = 0;
-            uint64_t nextTick = 0;
 
             _adminLock.Lock();
             if (_notifier != nullptr) {
@@ -155,13 +115,13 @@ namespace PluginHost {
                     }
                 }
                 if (percentage < 100) {
-                    nextTick = Core::Time(scheduleTime).Add(_interval * 1000).Ticks();
+                    _activity.Schedule(Core::Time::Now().Add(_interval * 1000));
                 }
 
             }
             _adminLock.Unlock();
 
-            return nextTick;
+            return;
         }
         uint32_t CheckHMAC()
         {
@@ -200,17 +160,16 @@ namespace PluginHost {
 
         virtual void Transfered(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
         {
-            uint32_t status = result;
-            if (status == Core::ERROR_NONE) {
+            _adminLock.Lock();
+            if (result == Core::ERROR_NONE) {
                 if (_hash.empty() != true) {
                     _destination = &destination;
                 }
             }
             if (_notifier != nullptr) {
-                _notifier->NotifyStatus(status);
+                _notifier->NotifyStatus(result);
             }
 
-            _adminLock.Lock();
             _storage.Close();
             _adminLock.Unlock();
         }
@@ -248,6 +207,11 @@ namespace PluginHost {
 	    return status;
         }
 
+        friend Core::ThreadPool::JobType<DownloadEngine&>;
+        void Dispatch()
+        {
+           NotifyProgress();
+        }
 
     private:
         string _hash;
@@ -256,7 +220,7 @@ namespace PluginHost {
         Core::File _storage;
         uint16_t _interval;
         uint32_t _fileSize;
-        Core::TimerType<ProgressHandler> _progressHandler;
+        Core::WorkerPool::JobType<DownloadEngine&> _activity;
         const Web::SignedFileBodyType<Crypto::SHA256>* _destination;
     };
 }
