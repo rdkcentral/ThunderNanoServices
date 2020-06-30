@@ -24,34 +24,36 @@
 namespace WPEFramework {
 
 struct INotifier {
-    virtual ~INotifier() {}
+    virtual ~INotifier() = default;
     virtual void NotifyStatus(const uint32_t status) = 0;
     virtual void NotifyProgress(const uint8_t percentage) = 0;
 };
 
 namespace PluginHost {
 
-    class DownloadEngine : public Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> {
+    // Here we might potentially start using Web::SignedFileBodyType<Crypto::HMAC256>>
 
+    class DownloadEngine : public Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> {
     private:
         typedef Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> BaseClass;
 
+    public:
         DownloadEngine() = delete;
         DownloadEngine(const DownloadEngine&) = delete;
         DownloadEngine& operator=(const DownloadEngine&) = delete;
 
-    public:
-        DownloadEngine(INotifier* notifier, const string& downloadStorage)
+        DownloadEngine(INotifier* notifier, const string& hashKey, const uint16_t interval)
             : BaseClass(false, Core::NodeId(_T("0.0.0.0")), Core::NodeId(), 1024, ((64 * 1024) - 1))
+            , _adminLock()
             , _notifier(notifier)
-            , _storage(downloadStorage.c_str(), false)
-            , _interval(0)
-            , _fileSize(0)
+            , _storage()
+            , _interval(interval * 1000)
             , _activity(*this)
-            , _destination(nullptr)
         {
+            // If we are going for HMAC, here we could set our secret...
+            // BaseClass::Hash().Key(hashKey);
         }
-        virtual ~DownloadEngine()
+        ~DownloadEngine() override
         {
             _adminLock.Lock();
             _activity.Revoke();
@@ -59,122 +61,68 @@ namespace PluginHost {
         }
 
     public:
-        uint32_t Start(const string& locator, const string& destination, const string& hash)
+        uint32_t Start(const string& locator, const string& destination, const string& hashValue)
         {
             Core::URL url(locator);
             uint32_t result = (url.IsValid() == true ? Core::ERROR_INPROGRESS : Core::ERROR_INCORRECT_URL);
 
-            if (result == Core::ERROR_INPROGRESS) {
+            _adminLock.Lock();
 
-                _adminLock.Lock();
+            if ( (result == Core::ERROR_INPROGRESS) && (_storage.IsOpen() == false) ) {
 
-                CleanupStorage();
+                result = Core::GENERAL;
 
-                if (_storage.IsOpen() == false) {
+                // But I guess for the firmware control, we are getting the 
+                // HMAC, not via an HTTP header but Through REST API, we need
+                // to remeber what it should be. Lets safe the HMAC for 
+                // validation, if it is transferred here....
+                if (HashStringToBytes(hashValue, _hash) == true) {
 
                     result = Core::ERROR_OPENING_FAILED;
+                    _storage = destination;
 
+                    // The create truncates the file (if it exists), to 0. 
                     if (_storage.Create() == true) {
 
-                        _hash = hash;
-
                         result = BaseClass::Download(url, _storage);
-                    }
-                }
 
-                _adminLock.Unlock();
-            }
-
-            return (result);
-        }
-
-        void StartProgressNotifier(const uint16_t interval)
-        {
-            _adminLock.Lock();
-            _interval = interval;
-            _activity.Revoke();
-
-            if (interval) {
-                _activity.Schedule(Core::Time::Now().Add(_interval * 1000));
-            }
-
-            _adminLock.Unlock();
-        }
-
-        void NotifyProgress()
-        {
-            uint8_t percentage = 0;
-
-            _adminLock.Lock();
-            if (_notifier != nullptr) {
-                _storage.LoadFileInfo();
-                if (_storage.Exists() && (_storage.Size() > 0) && (_fileSize > 0)) {
-                    percentage = static_cast<uint8_t>(static_cast<float>(((_storage.Size() * 100)/static_cast<uint64_t>(_fileSize))));
-                    if (percentage) {
-                        _notifier->NotifyProgress(percentage);
-                    }
-                }
-                if (percentage < 100) {
-                    _activity.Schedule(Core::Time::Now().Add(_interval * 1000));
-                }
-
-            }
-            _adminLock.Unlock();
-
-            return;
-        }
-        uint32_t CheckHMAC()
-        {
-            uint32_t status = Core::ERROR_NONE;
-            uint8_t hashHex[Crypto::HASH_SHA256];
-            if (HashStringToBytes(_hash, hashHex) == true) {
-
-                if (_destination) {
-                    const uint8_t* downloadedHash = _destination->SerializedHashValue();
-                    if (downloadedHash != nullptr) {
-                        for (uint16_t i = 0; i < Crypto::HASH_SHA256; i++) {
-                            if (downloadedHash[i] != hashHex[i]) {
-                                status = Core::ERROR_INCORRECT_HASH;
-                                break;
-                            }
+                        if ((result == Core::ERROR_NONE) && (_interval != 0)) {
+                            _activity.Revoke();
+                            _activity.Schedule(Core::Time::Now().Add(_interval));
                         }
                     }
                 }
             }
-            return status;
-        }
 
-        inline void CleanupStorage()
-        {
-            if (_storage.Exists()) {
-                _storage.Destroy();
-            }
-        }
-    private:
-        virtual void Started(const uint32_t size) override
-        {
-            _adminLock.Lock();
-            _fileSize = size;
             _adminLock.Unlock();
+
+            return (result);
         }
 
-        virtual void Transfered(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
+    private:
+        void Transfered(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
         {
-            _adminLock.Lock();
-            if (result == Core::ERROR_NONE) {
-                if (_hash.empty() != true) {
-                    _destination = &destination;
-                }
+            // Let's see if the calculated HMAC is what we expected....
+            if ((result == Core::ERROR_NONE) && (::memcmp(desination.Hash().Result(), _hash, Crypto::SHA256) != 0)) {
+                result = ERROR_UNATHENTICATED;
             }
+
+            _storage.Close();
+
+            _adminLock.Lock();
+
             if (_notifier != nullptr) {
                 _notifier->NotifyStatus(result);
             }
 
-            _storage.Close();
+            if (result != Core::ERROR_NONE) {
+                _storage.Destroy();
+            }
+
             _adminLock.Unlock();
         }
 
-        virtual bool Setup(const Core::URL& remote) override
+        bool Setup(const Core::URL& remote) override
         {
             bool result = false;
 
@@ -188,7 +136,7 @@ namespace PluginHost {
             return (result);
         }
 
-        inline bool HashStringToBytes(const std::string& hash, uint8_t (&hashHex)[Crypto::HASH_SHA256])
+        inline bool HashStringToBytes(const string& hash, uint8_t hashHex[Crypto::HASH_SHA256])
         {
             bool status = true;
 
@@ -210,18 +158,28 @@ namespace PluginHost {
         friend Core::ThreadPool::JobType<DownloadEngine&>;
         void Dispatch()
         {
-           NotifyProgress();
+            _adminLock.Lock();
+
+            if (_notifier != nullptr) {
+                uint8_t percentage = static_cast<uint8_t>((BaseClass::Transferred() * 100)/BaseClass::FileSize());
+                if (percentage) {
+                    _notifier->NotifyProgress(percentage);
+                }
+                if (percentage < 100) {
+                    _activity.Schedule(Core::Time::Now().Add(_interval));
+                }
+            }
+
+            _adminLock.Unlock();
         }
 
     private:
-        string _hash;
         Core::CriticalSection _adminLock;
         INotifier* _notifier;
         Core::File _storage;
-        uint16_t _interval;
-        uint32_t _fileSize;
+        uint32_t _interval;
         Core::WorkerPool::JobType<DownloadEngine&> _activity;
-        const Web::SignedFileBodyType<Crypto::SHA256>* _destination;
+        uint8_t _HMAC[Crypto::HASH_SHA256];
     };
 }
 }
