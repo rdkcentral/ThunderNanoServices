@@ -67,32 +67,28 @@ namespace PluginHost {
             uint32_t result = (url.IsValid() == true ? Core::ERROR_INPROGRESS : Core::ERROR_INCORRECT_URL);
 
 
-            if (result == Core::ERROR_INPROGRESS) {
+            _adminLock.Lock();
+            if ((result == Core::ERROR_INPROGRESS) && (_storage.IsOpen() == false)) {
                 result = Core::ERROR_GENERAL;
 
-                _adminLock.Lock();
-                CleanupStorage();
 
-                if (_storage.IsOpen() == false) {
+                // But I guess for the firmware control, we are getting the
+                // HMAC, not via an HTTP header but Through REST API, we need
+                // to remeber what it should be. Lets safe the HMAC for
+                // validation, if it is transferred here....
+                if (HashStringToBytes(hashValue, _HMAC) == true) {
 
-                    // But I guess for the firmware control, we are getting the
-                    // HMAC, not via an HTTP header but Through REST API, we need
-                    // to remeber what it should be. Lets safe the HMAC for
-                    // validation, if it is transferred here....
-                    if (HashStringToBytes(hashValue, _HMAC) == true) {
+                    result = Core::ERROR_OPENING_FAILED;
+                    _storage = destination;
 
-                        result = Core::ERROR_OPENING_FAILED;
-                        _storage = destination;
+                    // The create truncates the file (if it exists), to 0.
+                    if (_storage.Create() == true) {
 
-                        // The create truncates the file (if it exists), to 0.
-                        if (_storage.Create() == true) {
+                        result = BaseClass::Download(url, _storage);
 
-                            result = BaseClass::Download(url, _storage);
-
-                            if ((result == Core::ERROR_NONE) && (_interval != 0)) {
-                                _activity.Revoke();
-                                _activity.Schedule(Core::Time::Now().Add(_interval));
-                            }
+                        if (((result == Core::ERROR_NONE) || (result == Core::ERROR_INPROGRESS)) && (_interval != 0)) {
+                            _activity.Revoke();
+                            _activity.Schedule(Core::Time::Now().Add(_interval));
                         }
                     }
                 }
@@ -160,20 +156,14 @@ namespace PluginHost {
 	    return status;
         }
 
-        inline void CleanupStorage()
-        {
-            if (_storage.Exists()) {
-                _storage.Destroy();
-            }
-        }
-
         friend Core::ThreadPool::JobType<DownloadEngine&>;
         void Dispatch()
         {
             _adminLock.Lock();
 
             if (_notifier != nullptr) {
-                uint8_t percentage = static_cast<uint8_t>((BaseClass::Transferred() * 100)/BaseClass::FileSize());
+
+                uint8_t percentage = static_cast<uint8_t>((static_cast<float>(BaseClass::Transferred()) * 100)/static_cast<float>(BaseClass::FileSize()));
                 if (percentage) {
                     _notifier->NotifyProgress(percentage);
                 }
