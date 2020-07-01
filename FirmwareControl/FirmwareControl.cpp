@@ -125,9 +125,9 @@ namespace Plugin {
         TRACE(Trace::Information, (string(__FUNCTION__)));
         Notifier notifier(this);
 
-        PluginHost::DownloadEngine downloadEngine(&notifier, _destination + Name, _interval);
+        PluginHost::DownloadEngine downloadEngine(&notifier, "", _interval);
 
-        uint32_t status = downloadEngine.Start(_source, _destination, _hash);
+        uint32_t status = downloadEngine.Start(_source, _destination + Name, _hash);
         if ((status == Core::ERROR_NONE) || (status == Core::ERROR_INPROGRESS)) {
 
             Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
