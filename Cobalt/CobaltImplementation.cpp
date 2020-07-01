@@ -44,15 +44,15 @@ private:
             , Url()
             , Width(1280)
             , Height(720)
-            , KeyHoldTime()
-            , KeyRepeatTime()
+            , RepeatStart()
+            , RepeatInterval()
             , ClientIdentifier()
         {
             Add(_T("url"), &Url);
             Add(_T("width"), &Width);
             Add(_T("height"), &Height);
-            Add(_T("keyholdtime"), &KeyHoldTime);
-            Add(_T("keyrepeattime"), &KeyRepeatTime);
+            Add(_T("repeatstart"), &RepeatStart);
+            Add(_T("repeatinterval"), &RepeatInterval);
             Add(_T("clientidentifier"), &ClientIdentifier);
         }
         ~Config() {
@@ -62,8 +62,8 @@ private:
         Core::JSON::String Url;
         Core::JSON::DecUInt16 Width;
         Core::JSON::DecUInt16 Height;
-        Core::JSON::DecUInt32 KeyHoldTime;
-        Core::JSON::DecUInt32 KeyRepeatTime;
+        Core::JSON::DecUInt32 RepeatStart;
+        Core::JSON::DecUInt32 RepeatInterval;
         Core::JSON::String ClientIdentifier;
     };
 
@@ -153,14 +153,14 @@ private:
                 Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_HEIGHT"), height);
             }
 
-            if (config.KeyHoldTime.IsSet() == true) {
-                string keyHoldTime(Core::NumberType<uint32_t>(config.KeyHoldTime.Value()).Text());
-                Core::SystemInfo::SetEnvironment(_T("COBALT_KEY_HOLD_TIME"), keyHoldTime);
+            if (config.RepeatStart.IsSet() == true) {
+                string repeatStart(Core::NumberType<uint32_t>(config.RepeatStart.Value()).Text());
+                Core::SystemInfo::SetEnvironment(_T("COBALT_KEY_REPEAT_START"), repeatStart);
             }
 
-            if (config.KeyRepeatTime.IsSet() == true) {
-                string keyRepeatTime(Core::NumberType<uint32_t>(config.KeyRepeatTime.Value()).Text());
-                Core::SystemInfo::SetEnvironment(_T("COBALT_KEY_REPEAT_TIME"), keyRepeatTime);
+            if (config.RepeatInterval.IsSet() == true) {
+                string repeatInterval(Core::NumberType<uint32_t>(config.RepeatInterval.Value()).Text());
+                Core::SystemInfo::SetEnvironment(_T("COBALT_KEY_REPEAT_INTERVAL"), repeatInterval);
             }
 
             if (config.Url.IsSet() == true) {
