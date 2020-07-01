@@ -254,7 +254,7 @@ namespace Plugin {
     {
         // We only subscribed for the KEY_POWER event so do not
         // expect anything else !!!
-        ASSERT(keyCode == KEY_POWER)
+        ASSERT(keyCode == KEY_POWER);
 
         if (keyCode == KEY_POWER) {
             PowerKey();
