@@ -66,35 +66,38 @@ namespace PluginHost {
             Core::URL url(locator);
             uint32_t result = (url.IsValid() == true ? Core::ERROR_INPROGRESS : Core::ERROR_INCORRECT_URL);
 
-            _adminLock.Lock();
 
-            if ( (result == Core::ERROR_INPROGRESS) && (_storage.IsOpen() == false) ) {
+            if (result == Core::ERROR_INPROGRESS) {
+                result = Core::ERROR_GENERAL;
 
-                result = Core::GENERAL;
+                _adminLock.Lock();
+                CleanupStorage();
 
-                // But I guess for the firmware control, we are getting the 
-                // HMAC, not via an HTTP header but Through REST API, we need
-                // to remeber what it should be. Lets safe the HMAC for 
-                // validation, if it is transferred here....
-                if (HashStringToBytes(hashValue, _hash) == true) {
+                if (_storage.IsOpen() == false) {
 
-                    result = Core::ERROR_OPENING_FAILED;
-                    _storage = destination;
+                    // But I guess for the firmware control, we are getting the
+                    // HMAC, not via an HTTP header but Through REST API, we need
+                    // to remeber what it should be. Lets safe the HMAC for
+                    // validation, if it is transferred here....
+                    if (HashStringToBytes(hashValue, _HMAC) == true) {
 
-                    // The create truncates the file (if it exists), to 0. 
-                    if (_storage.Create() == true) {
+                        result = Core::ERROR_OPENING_FAILED;
+                        _storage = destination;
 
-                        result = BaseClass::Download(url, _storage);
+                        // The create truncates the file (if it exists), to 0.
+                        if (_storage.Create() == true) {
 
-                        if ((result == Core::ERROR_NONE) && (_interval != 0)) {
-                            _activity.Revoke();
-                            _activity.Schedule(Core::Time::Now().Add(_interval));
+                            result = BaseClass::Download(url, _storage);
+
+                            if ((result == Core::ERROR_NONE) && (_interval != 0)) {
+                                _activity.Revoke();
+                                _activity.Schedule(Core::Time::Now().Add(_interval));
+                            }
                         }
                     }
                 }
+                _adminLock.Unlock();
             }
-
-            _adminLock.Unlock();
 
             return (result);
         }
@@ -102,9 +105,11 @@ namespace PluginHost {
     private:
         void Transfered(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
         {
+            uint32_t status = result;
             // Let's see if the calculated HMAC is what we expected....
-            if ((result == Core::ERROR_NONE) && (::memcmp(desination.Hash().Result(), _hash, Crypto::SHA256) != 0)) {
-                result = ERROR_UNATHENTICATED;
+            if ((status == Core::ERROR_NONE) &&
+                (::memcmp(const_cast<Web::SignedFileBodyType<Crypto::SHA256>&>(destination).Hash().Result(), _HMAC, Crypto::HASH_SHA256) != 0)) {
+                status = Core::ERROR_UNAUTHENTICATED;
             }
 
             _storage.Close();
@@ -112,10 +117,10 @@ namespace PluginHost {
             _adminLock.Lock();
 
             if (_notifier != nullptr) {
-                _notifier->NotifyStatus(result);
+                _notifier->NotifyStatus(status);
             }
 
-            if (result != Core::ERROR_NONE) {
+            if (status != Core::ERROR_NONE) {
                 _storage.Destroy();
             }
 
@@ -153,6 +158,13 @@ namespace PluginHost {
                 }
             }
 	    return status;
+        }
+
+        inline void CleanupStorage()
+        {
+            if (_storage.Exists()) {
+                _storage.Destroy();
+            }
         }
 
         friend Core::ThreadPool::JobType<DownloadEngine&>;

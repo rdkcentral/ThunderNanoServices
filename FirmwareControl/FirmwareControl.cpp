@@ -125,19 +125,13 @@ namespace Plugin {
         TRACE(Trace::Information, (string(__FUNCTION__)));
         Notifier notifier(this);
 
-        PluginHost::DownloadEngine downloadEngine(&notifier, _destination + Name);
+        PluginHost::DownloadEngine downloadEngine(&notifier, _destination + Name, _interval);
 
         uint32_t status = downloadEngine.Start(_source, _destination, _hash);
         if ((status == Core::ERROR_NONE) || (status == Core::ERROR_INPROGRESS)) {
 
             Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
-            downloadEngine.StartProgressNotifier(_interval);
             status = WaitForCompletion(_waitTime);
-            if ((status == Core::ERROR_NONE) && (DownloadStatus() == Core::ERROR_NONE)) {
-                 if (_hash.empty() != true) {
-                     status = downloadEngine.CheckHMAC();
-                 }
-            }
         }
 
         status = ((status != Core::ERROR_NONE)? status: DownloadStatus());
