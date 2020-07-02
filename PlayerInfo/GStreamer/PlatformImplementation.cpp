@@ -203,7 +203,10 @@ private:
     typedef std::map<const string, const Exchange::IPlayerProperties::IVideoIterator::VideoCodec> VideoCaps;
 
 public:
-    PlayerInfoImplementation() {
+    PlayerInfoImplementation()
+        : _dolbyOut(Core::ServiceAdministrator::Instance()
+                        .Instantiate<Exchange::Dolby::IOutput>(Core::Library(), "DolbyOutputImplementation", ~0))
+    {
         gst_init(0, nullptr);
         UpdateAudioCodecInfo();
         UpdateVideoCodecInfo();
@@ -211,10 +214,13 @@ public:
 
     PlayerInfoImplementation(const PlayerInfoImplementation&) = delete;
     PlayerInfoImplementation& operator= (const PlayerInfoImplementation&) = delete;
-    virtual ~PlayerInfoImplementation()
+    ~PlayerInfoImplementation() override
     {
         _audioCodecs.clear();
         _videoCodecs.clear();
+        if(_dolbyOut != nullptr) {
+            _dolbyOut->Release();
+        }
     }
 
 public:
@@ -227,9 +233,10 @@ public:
         return (Core::Service<VideoIteratorImplementation>::Create<Exchange::IPlayerProperties::IVideoIterator>(_videoCodecs));
     }
 
-   BEGIN_INTERFACE_MAP(PlayerInfoImplementation)
-        INTERFACE_ENTRY(Exchange::IPlayerProperties)
-   END_INTERFACE_MAP
+    BEGIN_INTERFACE_MAP(PlayerInfoImplementation)
+    INTERFACE_ENTRY(Exchange::IPlayerProperties)
+    INTERFACE_AGGREGATE(Exchange::Dolby::IOutput, _dolbyOut)
+    END_INTERFACE_MAP
 
 private:
 

@@ -19,6 +19,7 @@
  
 #include "PlayerInfo.h"
 
+
 namespace WPEFramework {
 namespace Plugin {
 
@@ -58,9 +59,9 @@ namespace Plugin {
                     // value, as it is not a essential.
                     // The relevant JSONRPC endpoints will return ERROR_UNAVAILABLE,
                     // if it hasn't been initialized.
-                    _dolbyOut = service->Root<Exchange::Dolby::IOutput>(_connectionId, 2000, _T("DolbyOutputImplementation"));
+                    _dolbyOut = _player->QueryInterface<Exchange::Dolby::IOutput>();
                     if(_dolbyOut == nullptr){
-                        TRACE_L1("Dolby output switching service is unavailable.");
+                        SYSLOG(Logging::Startup, (_T("Dolby output switching service is unavailable.")));
                     }
 
                 }

@@ -21,8 +21,8 @@
 
 #include "Module.h"
 #include <interfaces/IPlayerInfo.h>
-#include <interfaces/IDolby.h>
 #include <interfaces/json/JsonData_PlayerInfo.h>
+#include <interfaces/IDolby.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -38,7 +38,6 @@ namespace Plugin {
             , _player(nullptr)
             , _audioCodecs(nullptr)
             , _videoCodecs(nullptr)
-            , _dolbyOut(nullptr)
         {
             RegisterAll();
         }
@@ -53,7 +52,6 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(Exchange::IPlayerProperties, _player)
-        INTERFACE_AGGREGATE(Exchange::Dolby::IOutput, _dolbyOut)
         END_INTERFACE_MAP
 
     public:
@@ -86,7 +84,6 @@ namespace Plugin {
         Exchange::IPlayerProperties* _player;
         Exchange::IPlayerProperties::IAudioIterator* _audioCodecs;
         Exchange::IPlayerProperties::IVideoIterator* _videoCodecs;
-
         Exchange::Dolby::IOutput* _dolbyOut;
     };
 
