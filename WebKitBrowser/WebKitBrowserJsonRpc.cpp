@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include <interfaces/json/JsonData_Browser.h>
 #include <interfaces/json/JsonData_StateControl.h>
 #include "WebKitBrowser.h"
@@ -39,7 +39,7 @@ namespace Plugin {
         Property<Core::JSON::EnumType<VisibilityType>>(_T("visibility"), &WebKitBrowser::get_visibility, &WebKitBrowser::set_visibility, this); /* Browser */
         Property<Core::JSON::DecUInt32>(_T("fps"), &WebKitBrowser::get_fps, nullptr, this); /* Browser */
         Property<Core::JSON::EnumType<StateType>>(_T("state"), &WebKitBrowser::get_state, &WebKitBrowser::set_state, this); /* StateControl */
-
+        Register<DeleteParamsData,void>(_T("delete"), &WebKitBrowser::endpoint_delete, this);
     }
 
     void WebKitBrowser::UnregisterAll()
@@ -48,6 +48,7 @@ namespace Plugin {
         Unregister(_T("fps"));
         Unregister(_T("visibility"));
         Unregister(_T("url"));
+        Unregister(_T("delete"));
     }
 
     // API implementation
@@ -136,7 +137,7 @@ namespace Plugin {
         ASSERT(_browser != nullptr);
 
         PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
-        
+
         // In the mean time an out-of-process plugin might have crashed and thus return a nullptr.
         if (stateControl != nullptr) {
 
@@ -160,7 +161,7 @@ namespace Plugin {
 
         if (param.IsSet()) {
             PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
-            
+
             // In the mean time an out-of-process plugin might have crashed and thus return a nullptr.
             if (stateControl != nullptr) {
 
@@ -168,12 +169,37 @@ namespace Plugin {
 
                 stateControl->Release();
             }
-            
+
             result = Core::ERROR_NONE;
         }
 
         return result;
     }
+
+    // Method: endpoint_delete - delete dir
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t WebKitBrowser::endpoint_delete(const DeleteParamsData& params)
+    {
+        return delete_dir(params.Path.Value());
+    }
+
+    uint32_t WebKitBrowser::delete_dir(const string& path)
+    {
+        uint32_t result = Core::ERROR_NONE;
+
+        if (path.empty() == false) {
+            string fullPath = _persistentStoragePath + path;
+            Core::Directory dir(fullPath.c_str());
+            if (!dir.Destroy(true)) {
+                TRACE(Trace::Error, (_T("Failed to delete %s\n"), fullPath.c_str()));
+                result = Core::ERROR_GENERAL;
+            }
+        }
+
+        return result;
+    }
+
 
     // Event: urlchange - Signals a URL change in the browser
     void WebKitBrowser::event_urlchange(const string& url, const bool& loaded) /* Browser */
