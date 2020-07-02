@@ -97,9 +97,9 @@ uint32_t Cobalt::set_visibility(
 
     if (param.IsSet()) {
         if (param == VisibilityType::VISIBLE) {
-            _cobalt->Hide(true);
-        } else {
             _cobalt->Hide(false);
+        } else {
+            _cobalt->Hide(true);
         }
         result = Core::ERROR_NONE;
     }

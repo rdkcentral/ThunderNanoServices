@@ -197,7 +197,8 @@ public:
             _state(PluginHost::IStateControl::UNINITIALIZED),
             _cobaltClients(),
             _stateControlClients(),
-            _sink(*this) {
+            _sink(*this),
+            _hidden(false) {
     }
 
     virtual ~CobaltImplementation() {
@@ -224,6 +225,8 @@ public:
     }
 
     virtual void Hide(const bool hidden) {
+        // TODO: Add Cobalt hide and show functionality
+        Hidden(hidden);
     }
 
     virtual void Register(Exchange::IBrowser::INotification *sink) {
@@ -410,6 +413,24 @@ private:
         _adminLock.Unlock();
     }
 
+    void Hidden(const bool hidden)
+    {
+        _adminLock.Lock();
+
+        if (hidden != _hidden) {
+            _hidden = hidden;
+
+            std::list<Exchange::IBrowser::INotification*>::iterator index(_cobaltClients.begin());
+
+            while (index != _cobaltClients.end()) {
+                (*index)->Hidden(hidden);
+                index++;
+            }
+        }
+
+        _adminLock.Unlock();
+    }
+
 private:
     CobaltWindow _window;
     mutable Core::CriticalSection _adminLock;
@@ -417,6 +438,7 @@ private:
     std::list<Exchange::IBrowser::INotification*> _cobaltClients;
     std::list<PluginHost::IStateControl::INotification*> _stateControlClients;
     NotificationSink _sink;
+    bool _hidden;
 };
 
 SERVICE_REGISTRATION(CobaltImplementation, 1, 0);
