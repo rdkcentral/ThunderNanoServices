@@ -39,6 +39,13 @@ namespace DIALHandlers {
         {
         }
 
+    public:
+        uint32_t Start(const string& params) override {
+            const string query = params + _T("&source_type=12"); // i.e. launched by DIAL
+            Core::SystemInfo::SetEnvironment(_T("ONE_TIME_QUERY_STRING_OVERRIDE"), query.c_str());
+            return Default::Start(params);
+        }
+
     };
 
     static Plugin::DIALServer::ApplicationRegistrationType<Netflix> _netflixHandler;
