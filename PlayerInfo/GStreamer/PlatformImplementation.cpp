@@ -19,6 +19,7 @@
  
 #include "../Module.h"
 #include <interfaces/IPlayerInfo.h>
+#include <interfaces/IDolby.h>
 
 #include <gst/gst.h>
 
@@ -280,6 +281,7 @@ private:
 private:
     std::list<Exchange::IPlayerProperties::IAudioIterator::AudioCodec> _audioCodecs;
     std::list<Exchange::IPlayerProperties::IVideoIterator::VideoCodec> _videoCodecs;
+    Exchange::Dolby::IOutput* _dolbyOut;
 };
 
     SERVICE_REGISTRATION(PlayerInfoImplementation, 1, 0);
