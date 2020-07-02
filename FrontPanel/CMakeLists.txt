@@ -36,7 +36,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins} 
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins 
         ${DSHAL_LIB})
 
 install(TARGETS ${MODULE_NAME} 
