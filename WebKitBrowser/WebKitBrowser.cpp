@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "WebKitBrowser.h"
 
 namespace WPEFramework {
@@ -45,6 +45,7 @@ namespace Plugin {
         _skipURL = _service->WebPrefix().length();
 
         config.FromString(_service->ConfigLine());
+        _persistentStoragePath = _service->PersistentPath();
 
         // Register the Connection::Notification stuff. The Remote process might die before we get a
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
@@ -189,6 +190,12 @@ namespace Plugin {
                     _browser->Hide(false);
                 } else if ((index.Remainder() == _T("URL")) && (request.HasBody() == true) && (request.Body<const Data>()->URL.Value().empty() == false)) {
                     _browser->SetURL(request.Body<const Data>()->URL.Value());
+
+                } else if ((index.Remainder() == _T("Delete")) && (request.HasBody() == true) && (request.Body<const Data>()->Path.Value().empty() == false)) {
+                    if (delete_dir(request.Body<const Data>()->Path.Value()) != Core::ERROR_NONE) {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = "Unknown error";
+                    }
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
                     result->Message = "Unknown error";

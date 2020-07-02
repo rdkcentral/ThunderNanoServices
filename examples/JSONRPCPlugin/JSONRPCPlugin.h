@@ -622,7 +622,7 @@ namespace Plugin {
 
     public:
         JSONRPCPlugin();
-        virtual ~JSONRPCPlugin();
+        ~JSONRPCPlugin() override;
 
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(JSONRPCPlugin)
@@ -634,9 +634,9 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //   Private methods specific to this class.
         // -------------------------------------------------------------------------------------------------------
@@ -654,6 +654,9 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const override;
         uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const override;
+
+    private:
+        bool Validation(const string& token, const string& method, const string& parameters);
 
     private:
         Core::ProxyType<PeriodicSync> _job;

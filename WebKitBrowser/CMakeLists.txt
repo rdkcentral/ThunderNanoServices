@@ -22,12 +22,16 @@ option(PLUGIN_WEBKITBROWSER_YOUTUBE "Include YouTube in seperate plugin." OFF)
 option(PLUGIN_WEBKITBROWSER_APPS "Include Apps instance in seperate plugin." OFF)
 option(PLUGIN_WEBKITBROWSER_UX "Include UX in seperate plugin." OFF)
 
+option(PLUGIN_WEBKITBROWSER_ENABLE_JIT "Enable the use of JIT javascript optimalization" ON)
+option(PLUGIN_WEBKITBROWSER_ENABLE_DFG "Enable the use of DFG javascript optimalization" ON)
+
 set(PLUGIN_WEBKITBROWSER_AUTOSTART false CACHE STRING "Automatically start WebKitBrowser plugin")
 set(PLUGIN_WEBKITBROWSER_TRANSPARENT false CACHE STRING "Set transparency")
 set(PLUGIN_WEBKITBROWSER_STARTURL "about:blank" CACHE STRING "Initial URL for WebKitBrowser plugin")
 set(PLUGIN_WEBKITBROWSER_USERAGENT "Mozilla/5.0 (Macintosh, Intel Mac OS X 10_11_4) AppleWebKit/602.1.28+ (KHTML, like Gecko) Version/9.1 Safari/601.5.17" CACHE STRING "User agent string")
 set(PLUGIN_WEBKITBROWSER_MEMORYPROFILE "512m" CACHE STRING "Memory Profile")
 set(PLUGIN_WEBKITBROWSER_MEMORYPRESSURE "databaseprocess:50m,networkprocess:100m,webprocess:300m,rpcprocess:50m" CACHE STRING "Memory Pressure")
+set(PLUGIN_WEBKITBROWSER_MEDIA_CONTENT_TYPES_REQUIRING_HARDWARE_SUPPORT "video/*" CACHE STRING "Media content types requiring hardware support")
 set(PLUGIN_WEBKITBROWSER_MEDIADISKCACHE false CACHE STRING "Media Disk Cache")
 set(PLUGIN_WEBKITBROWSER_MSEBUFFERS "audio:2m,video:15m,text:1m" CACHE STRING "MSE Buffers for WebKit")
 set(PLUGIN_WEBKITBROWSER_DISKCACHE "0" CACHE STRING "Disk Cache")
@@ -52,13 +56,27 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(GLIB REQUIRED)
 find_package(WPEWebKit REQUIRED)
 find_package(WPEBackend REQUIRED)
+if(DEFINED WEBKIT_GLIB_API)
+find_package(LibSoup REQUIRED)
+endif()
 
-add_library(${MODULE_NAME} SHARED
+set(SOURCE_LIST
     Module.cpp
     WebKitBrowser.cpp
     WebKitBrowserJsonRpc.cpp
     WebKitImplementation.cpp
-    InjectedBundle/Tags.cpp
+)
+
+if(NOT DEFINED WEBKIT_GLIB_API)
+	set(SOURCE_LIST
+	    ${SOURCE_LIST}
+	    InjectedBundle/Tags.cpp
+	    InjectedBundle/Utils.cpp
+	)
+endif()
+
+add_library(${MODULE_NAME} SHARED
+    ${SOURCE_LIST}
 )
 
 set_target_properties(${MODULE_NAME} PROPERTIES
@@ -71,6 +89,7 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ${WPE_BACKEND_LIBRARIES}
+        ${LIBSOUP_LIBRARIES}
         ${GLIB_LIBRARIES}
         ${WPE_WEBKIT_LIBRARIES}
         ${SECURITY_TOKEN_LIBRARY})
@@ -80,10 +99,15 @@ target_include_directories(${MODULE_NAME}
         ${WPE_BACKEND_INCLUDE_DIRS}
         ${WPE_WEBKIT_INCLUDE_DIRS}
         ${WPE_WEBKIT_INCLUDE_DIRS}/WPE
+        ${LIBSOUP_INCLUDE_DIRS}
         ${GLIB_INCLUDE_DIRS})
 
 if(WPE_WEBKIT_DEPRECATED_API)
     target_compile_definitions(${MODULE_NAME} PRIVATE WPE_WEBKIT_DEPRECATED_API=${WPE_WEBKIT_DEPRECATED_API})
+endif()
+
+if(WEBKIT_GLIB_API)
+    target_compile_definitions(${MODULE_NAME} PRIVATE WEBKIT_GLIB_API=${WEBKIT_GLIB_API})
 endif()
 
 install(
@@ -114,7 +138,7 @@ if(PLUGIN_WEBKITBROWSER_YOUTUBE)
 endif()
 
 # amazon configuration
-if(PLUGIN_AMAZON_HAWAII)
+if(PLUGIN_AMAZON_HYBRID)
     write_config( Amazon )
 endif()
 

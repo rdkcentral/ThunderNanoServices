@@ -32,7 +32,7 @@ namespace Plugin {
     class IOConnector
         : public PluginHost::IPlugin,
           public PluginHost::IWeb,
-          public Exchange::IExternal::IFactory,
+          public Exchange::IExternal::ICatalog,
           public PluginHost::JSONRPC {
     private:
         class Sink : public Exchange::IExternal::INotification {
@@ -45,12 +45,12 @@ namespace Plugin {
                 : _parent(*parent)
             {
             }
-            virtual ~Sink()
+            ~Sink() override
             {
             }
 
         public:
-            virtual void Update() override
+            void Update(const uint32_t /* id */) override
             {
                 _parent.Activity();
             }
@@ -115,6 +115,7 @@ namespace Plugin {
             }
             void Unsubscribe(Exchange::IExternal::INotification* sink) {
                 _pin->Unsubscribe(sink);
+                _pin->Deactivate();
             }
             bool HasHandlers() const {
                 return (_handlers.size() > 0);
@@ -125,7 +126,8 @@ namespace Plugin {
             std::list<IHandler*> _handlers;
         };
 
-        typedef std::map<const uint32_t, PinHandler> Pins;
+        using NotificationList = std::list< Exchange::IExternal::ICatalog::INotification* >;
+        using Pins = std::map<const uint32_t, PinHandler>;
 
     public:
         class Config : public Core::JSON::Container {
@@ -273,33 +275,32 @@ namespace Plugin {
         IOConnector& operator=(const IOConnector&) = delete;
 
         IOConnector();
-        virtual ~IOConnector();
+        ~IOConnector() override;
 
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(IOConnector)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
-        INTERFACE_ENTRY(Exchange::IExternal::IFactory)
+        INTERFACE_ENTRY(Exchange::IExternal::ICatalog)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //   IExternal::IFactory methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Register(IFactory::IProduced* sink) override;
-        virtual void Unregister(IFactory::IProduced* sink) override;
-        virtual Exchange::IExternal* Resource(const uint32_t id) override;
+        void Register(ICatalog::INotification* sink) override;
+        void Unregister(ICatalog::INotification* sink) override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request) override;
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
         void Activity();
@@ -314,10 +315,12 @@ namespace Plugin {
         void event_pinactivity(const string& id, const int32_t& value);
 
     private:
+        Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         Core::Sink<Sink> _sink;
         Pins _pins;
         uint8_t _skipURL;
+        NotificationList _notifications;
     };
 
 } // namespace Plugin

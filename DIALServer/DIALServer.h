@@ -294,10 +294,8 @@ namespace Plugin {
                     _parent->event_start(_callsign, data);
                 } else {
                     if (_switchBoard != nullptr) {
-                        printf("%s:%s:%d -Switchboard Mode\n", __FILE__, __func__, __LINE__);
                         result = _switchBoard->Activate(_callsign);
                     } else {
-                        printf("%s:%s:%d -Active Mode\n", __FILE__, __func__, __LINE__);
                         result = _service->Activate(PluginHost::IShell::REQUESTED);
                     }
 
@@ -350,7 +348,6 @@ namespace Plugin {
                         result = true;
                     }
                     else {
-                        // Not implemented in Active mode
                         Exchange::IBrowser* browser = _service->QueryInterface<Exchange::IBrowser>();
 
                         if (browser != nullptr) {
@@ -528,7 +525,11 @@ namespace Plugin {
         public:
             virtual IApplication* Create(PluginHost::IShell* shell, const Config::App& config, DIALServer* parent)
             {
-                return (new HANDLER(shell, config, parent));
+                IApplication* application = nullptr;
+                if (config.Callsign.IsSet() == true) {
+                    return (new HANDLER(shell, config, parent));
+                }
+                return application;
             }
         };
         class EXTERNAL Protocol {
@@ -786,6 +787,11 @@ namespace Plugin {
                 delete index->second;
 
                 AppInformation::_applicationFactory.erase(index);
+            }
+
+            inline bool HasQueryParameter()
+            {
+                return (_url.find('?') != string::npos);
             }
 
             void GetData(string& data, const Version& version = {}) const;

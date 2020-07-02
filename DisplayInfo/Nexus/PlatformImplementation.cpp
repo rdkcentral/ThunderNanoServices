@@ -24,7 +24,7 @@
 #include <nexus_config.h>
 #include <nexus_platform.h>
 #include <nxclient.h>
-
+#include <nexus_core_utils.h>
 
 #if ( (NEXUS_PLATFORM_VERSION_MAJOR > 18) ||  \
       ( (NEXUS_PLATFORM_VERSION_MAJOR == 18) && (NEXUS_PLATFORM_VERSION_MINOR >= 2) ) \
@@ -44,6 +44,7 @@ public:
     DisplayInfoImplementation()
        : _width(0)
        , _height(0)
+       , _verticalFreq(0)
        , _connected(false)
        , _hdcpprotection(HDCPProtectionType::HDCP_Unencrypted)
        , _type(HDR_OFF)
@@ -62,6 +63,7 @@ public:
         NexusHdmiOutput hdmihandle;
         if( hdmihandle ) {
             UpdateDisplayInfoConnected(hdmihandle, _connected);
+            UpdateDisplayInfoVerticalFrequency(hdmihandle, _verticalFreq);
             UpdateDisplayInfoHDCP(hdmihandle, _hdcpprotection);
         }
         UpdateDisplayInfoDisplayStatus(_width, _height, _type);
@@ -168,6 +170,10 @@ public:
     {
         return _height;
     }
+    uint32_t VerticalFreq() const override
+    {
+        return _verticalFreq;
+    }
     HDRType Type() const override
     {
         return _type;
@@ -181,8 +187,9 @@ public:
 
         std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
 
-        if (index != _observers.end()) {
+        while(index != _observers.end()) {
             (*index)->Updated();
+            index++;
         }
 
         _adminLock.Unlock();
@@ -382,6 +389,20 @@ private:
         }
     }
 
+    void UpdateDisplayInfoVerticalFrequency(const NEXUS_HdmiOutputHandle& hdmiOutput, uint32_t& verticalFreq) const
+    {
+        NEXUS_HdmiOutputStatus status;
+        NEXUS_Error rc = NEXUS_HdmiOutput_GetStatus(hdmiOutput, &status);
+        if (rc == NEXUS_SUCCESS) {
+            NEXUS_VideoFormat videoFormat = status.preferredVideoFormat;
+            NEXUS_VideoFormatInfo videoFormatInfo;
+            NEXUS_VideoFormat_GetInfo(videoFormat, &videoFormatInfo);
+
+            // TODO: do we need vertical freq as float, or is nearest uint enough?
+            verticalFreq = videoFormatInfo.verticalFreq + 50 / 100; // vertical frequency is stored multiplied by 100
+        }
+    }
+
     void UpdateDisplayInfoDisplayStatus(uint32_t& width, uint32_t& height, HDRType& type) const
     {
         NxClient_DisplaySettings displaySettings;
@@ -524,6 +545,10 @@ private:
         case CallbackType::DisplaySettings : {  // DiplaySettings Changed
             _adminLock.Lock();
             UpdateDisplayInfoDisplayStatus(_width, _height, _type);
+            NexusHdmiOutput hdmihandle;
+            if( hdmihandle ) {
+                UpdateDisplayInfoVerticalFrequency(hdmihandle, _verticalFreq);
+            }
             _adminLock.Unlock();
             break;
         }
@@ -545,6 +570,7 @@ private:
 private:
     uint32_t _width;
     uint32_t _height;
+    uint32_t _verticalFreq;
     bool _connected;
 
     HDCPProtectionType _hdcpprotection;

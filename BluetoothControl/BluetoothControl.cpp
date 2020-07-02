@@ -47,24 +47,25 @@ namespace Plugin {
             Bluetooth::ManagementSocket& administrator = _application.Control();
             Bluetooth::ManagementSocket::Devices(_adapters);
             administrator.DeviceId(_config.Interface.Value());
+            uint32_t deviceClass(_config.Class.Value());
 
             _persistentStoragePath = _service->PersistentPath() + "Devices/";
             Data controllerData;
             LoadController(_service->PersistentPath(), controllerData);
 
-            if ((_config.PersistMAC.Value() == true) && 
+            if ((_config.PersistMAC.Value() == true) &&
                 (controllerData.MAC.Value().empty() == false) &&
                 (administrator.PublicAddress(Bluetooth::Address(controllerData.MAC.Value().c_str())) != Core::ERROR_NONE)) {
                 result = "Could not set the persistent MAC address for the bluetooth interface.";
             }
             else if (Bluetooth::ManagementSocket::Up(_config.Interface.Value()) == false) {
-                result = "Could not activate bluetooth interface.";
+                result = "Could not activate bluetooth interface";
             }
             else if (administrator.Power(false) != Core::ERROR_NONE) {
                 result = "Failed to power down the bluetooth interface";
             }
             else if (administrator.SimplePairing(true) != Core::ERROR_NONE) {
-                result = "Failed to enable simple pairing on the bluetooth interface";
+                result = "Failed to enable simple pairing on thetrue bluetooth interface";
             }
             else if (administrator.SecureLink(true) != Core::ERROR_NONE) {
                 result = "Failed to enable secure links on the bluetooth interface";
@@ -85,7 +86,11 @@ namespace Plugin {
                 result = "Failed to enable secure connections on the bluetooth interface";
             }
             else if (administrator.Name(_T("Thunder"), _config.Name.Value()) != Core::ERROR_NONE) {
-                result = "Failed to upload identity keys to the bluetooth interface";
+                result = "Failed to set device name";
+            }
+            else if ((deviceClass != 0)
+                    && (administrator.DeviceClass(((deviceClass >> 8) & 0xFF), (deviceClass & 0xFF) >> 2) != Core::ERROR_NONE)) {
+                result = "Failed to set class of device";
             }
             else if (LoadDevices(_persistentStoragePath, administrator) != Core::ERROR_NONE) {
                 result = "Failed to load the stored devices";
@@ -111,7 +116,7 @@ namespace Plugin {
                     controllerData.MAC = info.Address().ToString();
                     SaveController(_service->PersistentPath(), controllerData);
                 }
-                    
+
                 SYSLOG(Logging::Startup, (_T("        Name:              %s"), info.ShortName().c_str()));
                 SYSLOG(Logging::Startup, (_T("        Version:           %d"), info.Version()));
                 SYSLOG(Logging::Startup, (_T("        Address:           %s"), info.Address().ToString().c_str()));
@@ -297,7 +302,6 @@ namespace Plugin {
 
         if (index.IsValid() == true) {
             if (index.Next()) {
-
                 if (index.Current() == _T("Scan")) {
                     Core::URL::KeyValue options(request.Query.Value());
 
@@ -328,7 +332,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Device not found.");
                     } else if (pair == true) {
-                        uint32_t res = device->Pair(IBluetooth::IDevice::DISPLAY_ONLY);
+                        uint32_t res = device->Pair(IBluetooth::DISPLAY_YES_NO, 20);
                         if (res == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Paired device.");
@@ -402,14 +406,7 @@ namespace Plugin {
                             result->Message = _T("Unable to Unpair device.");
                         }
                     } else {
-                        uint16_t reason = 0;
-                        if (index.Next() == true) {
-                            reason = Core::NumberType<uint16_t>(index.Current()).Value();
-                        } else if (request.HasBody() == true) {
-                            reason = request.Body<const DeviceImpl::Data>()->Reason;
-                        }
-
-                        if (device->Disconnect(reason) == Core::ERROR_NONE) {
+                        if (device->Disconnect() == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Disconnected device.");
                         } else {
@@ -499,7 +496,6 @@ namespace Plugin {
 
         return (_application.IsScanning() == enable);
     }
-
     /* virtual */ Exchange::IBluetooth::IDevice* BluetoothControl::Device(const string& address)
     {
         IBluetooth::IDevice* result = Find(Bluetooth::Address(address.c_str()));
@@ -508,32 +504,41 @@ namespace Plugin {
         }
         return (result);
     }
-
     /* virtual */ Exchange::IBluetooth::IDevice::IIterator* BluetoothControl::Devices()
     {
         return (Core::Service<DeviceImpl::IteratorImpl>::Create<IBluetooth::IDevice::IIterator>(_devices));
     }
-    void BluetoothControl::Discovered(const bool lowEnergy, const Bluetooth::Address& address, const string& name)
+    BluetoothControl::DeviceImpl* BluetoothControl::Discovered(const bool lowEnergy, const Bluetooth::Address& address, const Bluetooth::EIR& info)
     {
         _adminLock.Lock();
 
-        std::list<DeviceImpl*>::iterator index = _devices.begin();
+        DeviceImpl* impl = Find(address, lowEnergy);
 
-        while ((index != _devices.end()) && (*(*index) != address)) {
-            index++;
-        }
-
-        if (index == _devices.end()) {
+        if (impl == nullptr) {
             if (lowEnergy == true) {
-                TRACE(Trace::Information, ("Added LowEnergy Bluetooth device: %s, name: %s", address.ToString().c_str(), name.c_str()));
-                _devices.push_back(Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address, name));
+                impl = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address, info);
             } else {
-                TRACE(Trace::Information, ("Added Regular Bluetooth device: %s, name: %s", address.ToString().c_str(), name.c_str()));
-                _devices.push_back(Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address, name));
+                impl = Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address, info);
+            }
+
+            ASSERT(impl != nullptr);
+            _devices.push_back(impl);
+
+            TRACE(Trace::Information, (_T("Added %s Bluetooth device: %s, name: '%s', class: 0x%06X"),
+                                       (lowEnergy? "LowEnergy" : "classic"), address.ToString().c_str(),
+                                       impl->Name().c_str(), impl->Class()));
+
+            if (impl->UUIDs().empty() == false) {
+                TRACE(Trace::Information, (_T("Supported UUIDs:")));
+                for (auto uuid : impl->UUIDs()) {
+                    TRACE(Trace::Information, (_T(" - %s"), uuid.ToString().c_str()));
+                }
             }
         }
 
         _adminLock.Unlock();
+
+        return (impl);
     }
 
     void BluetoothControl::RemoveDevices(std::function<bool(DeviceImpl*)> filter)
@@ -571,7 +576,19 @@ namespace Plugin {
 
         return (index != _devices.end() ? (*index) : nullptr);
     }
-    BluetoothControl::DeviceImpl* BluetoothControl::Find(const uint16_t handle) const {
+    BluetoothControl::DeviceImpl* BluetoothControl::Find(const Bluetooth::Address& search, bool lowEnergy) const
+    {
+        std::list<DeviceImpl*>::const_iterator index = _devices.begin();
+
+        while ((index != _devices.end()) && ((*index)->operator==(std::make_pair(search, lowEnergy)) == false)) {
+            index++;
+        }
+
+        return (index != _devices.end() ? (*index) : nullptr);
+    }
+    template<typename DEVICE=BluetoothControl::DeviceImpl>
+    DEVICE* BluetoothControl::Find(const uint16_t handle) const
+    {
         std::list<DeviceImpl*>::const_iterator index = _devices.begin();
 
         while ((index != _devices.end()) && ((*index)->ConnectionId() != handle)) {
@@ -581,7 +598,7 @@ namespace Plugin {
         return (index != _devices.end() ? (*index) : nullptr);
     }
 
-    uint32_t BluetoothControl::LoadDevices(const string& devicePath, Bluetooth::ManagementSocket& administrator) 
+    uint32_t BluetoothControl::LoadDevices(const string& devicePath, Bluetooth::ManagementSocket& administrator)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -619,7 +636,7 @@ namespace Plugin {
         }
         return (result);
     }
- 
+
     void BluetoothControl::LoadController(const string& pathName, Data& data) const
     {
         Core::File file(pathName + _T("Controller.json"), true);
@@ -629,7 +646,7 @@ namespace Plugin {
         }
     }
 
-    void BluetoothControl::SaveController(const string& pathName, const Data& data) 
+    void BluetoothControl::SaveController(const string& pathName, const Data& data)
     {
         Core::File file(pathName + _T("Controller.json"), true);
         if (file.Create() == true) {
@@ -639,8 +656,8 @@ namespace Plugin {
     }
 
     uint32_t BluetoothControl::LoadDevice(const string& fileName,
-                                          Bluetooth::LinkKeys& linkKeysList, 
-                                          Bluetooth::LongTermKeys& longTermKeysList, 
+                                          Bluetooth::LinkKeys& linkKeysList,
+                                          Bluetooth::LongTermKeys& longTermKeysList,
                                           Bluetooth::IdentityKeys& identityKeysList)
     {
         uint32_t result = Core::ERROR_OPENING_FAILED;
@@ -656,19 +673,19 @@ namespace Plugin {
                 if (config.IElement::FromFile(file) == true) {
                     result = Core::ERROR_INVALID_DESIGNATOR;
 
-                    if ((config.Type.IsSet() == true) && (config.Name.IsSet() == true)) {
+                    if (config.Type.IsSet() == true) {
 
                         DeviceImpl* device;
                         if (config.Type.Value() == Bluetooth::Address::BREDR_ADDRESS) {
 
                             // Classic Bluetooth device
-                            device = Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address, config.Name.Value(), &config);
+                            device = Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address, &config);
                             if (device != nullptr) {
                                 device->SecurityKey(linkKeysList);
                             }
                         } else {
                             // Bluetooth Low Energy device
-                            device = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address, config.Name.Value(), &config);
+                            device = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address, &config);
                             if (device != nullptr) {
                                 device->SecurityKey(longTermKeysList);
                                 const Bluetooth::IdentityKey& identity = device->IdentityKey();
@@ -713,8 +730,14 @@ namespace Plugin {
                 device->SecurityKey(ltks);
                 const Bluetooth::IdentityKey& idKey = device->IdentityKey();
 
-                config.Name = device->Name();
                 config.Type = device->AddressType();
+
+                if (device->Name().empty() == false) {
+                    config.Name = device->Name();
+                }
+                if (device->Class() != 0) {
+                    config.Class = device->Class();
+                }
                 if (lks.Entries() > 0) {
                     config.Set(config.LinkKeys, lks);
                 }

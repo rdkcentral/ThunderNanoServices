@@ -25,9 +25,16 @@ namespace WPEFramework {
 
 namespace Exchange {
 
+#ifdef __WINDOWS__
+    static constexpr TCHAR SimpleTestAddress[] = _T("127.0.0.1:63000");
+#else
+    static constexpr TCHAR SimpleTestAddress[] = _T("/tmp/comserver");
+#endif
+
     enum example_ids {
         ID_WALLCLOCK = 0x80001000,
-        ID_WALLCLOCK_NOTIFICATION = 0x80001001
+        ID_WALLCLOCK_NOTIFICATION = 0x80001001,
+        ID_MATH = 0x80001002
     };
 
     struct IWallClock : virtual public Core::IUnknown {
@@ -50,5 +57,15 @@ namespace Exchange {
         virtual uint64_t Now() const = 0;
     };
 
+    // This is an example to show the workings and how to develope a COMRPC/JSONRPC method/interface
+    struct IMath : virtual public Core::IUnknown {
+
+        enum { ID = ID_MATH };
+
+        virtual ~IMath() {}
+
+        virtual uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const = 0;
+        virtual uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const = 0;
+    };
 }
 }

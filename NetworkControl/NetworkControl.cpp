@@ -482,7 +482,7 @@ namespace Plugin
 
             Core::File leaseFile(_leaseFilePath);
 
-            if (leaseFile.Open(true) == true) {
+            if (leaseFile.Size() != 0 && leaseFile.Open(true) == true) {
 
                 DHCPClientImplementation::Offer::JSON lease;
                 Core::OptionalType<Core::JSON::Error> error;
@@ -521,8 +521,16 @@ namespace Plugin
             } else {
                 std::map<const string, Core::ProxyType<DHCPEngine>>::iterator entry(_dhcpInterfaces.find(interfaceName));
 
-                if (entry != _dhcpInterfaces.end()) {
+                Core::AdapterIterator interface(interfaceName);
+                if (entry != _dhcpInterfaces.end() 
+                    && interface.IsValid() 
+                    && interface.HasMAC()) {
+
                     entry->second->StopWatchdog();
+
+                    uint8_t mac[6];
+                    interface.MACAddress(mac, sizeof(mac));
+                    entry->second->UpdateMAC(mac, sizeof(mac));
                     entry->second->GetIP();
                     result = Core::ERROR_NONE;
                 }
@@ -760,7 +768,7 @@ namespace Plugin
 
     void NetworkControl::RefreshDNS()
     {
-        Core::DataElementFile file(_dnsFile, Core::File::SHAREABLE|Core::File::USER_READ|Core::File::USER_WRITE|Core::File::USER_EXECUTE|Core::File::GROUP_READ|Core::File::GROUP_WRITE);
+        Core::DataElementFile file(_dnsFile, Core::File::SHAREABLE|Core::File::USER_READ|Core::File::USER_WRITE|Core::File::USER_EXECUTE|Core::File::GROUP_READ|Core::File::GROUP_WRITE, 0);
 
         if (file.IsValid() == false) {
             SYSLOG(Logging::Startup, (_T("DNS functionality could NOT be updated [%s]"), _dnsFile.c_str()));
@@ -879,6 +887,8 @@ namespace Plugin
             } else {
                 ClearAssignedIPV4IPs(adapter);
                 ClearAssignedIPV6IPs(adapter);
+
+                Core::AdapterIterator::Flush();
             }
 
             _adminLock.Unlock();

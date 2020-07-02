@@ -293,15 +293,15 @@ namespace GPIO
         _timedPin.Register(sink);
     }
 
-    uint32_t Pin::AddMarker(const IInputPin::INotification* sink, const uint32_t marker) /* override */ {
-        return(_timedPin.Add(sink, marker));
+    void Pin::AddMarker(const uint32_t marker) /* override */ {
+        _timedPin.Add(marker);
     }
 
-    uint32_t Pin::RemoveMarker(const IInputPin::INotification* sink, const uint32_t marker) /* override */ {
-        return(_timedPin.Remove(sink, marker));
+    void Pin::RemoveMarker(const uint32_t marker) /* override */ {
+        _timedPin.Remove(marker);
     }
 
-    /* virtual */ void Pin::Trigger()
+    /* virtual */ void Pin::Evaluate()
     {
         if (HasChanged() == true) {
             _timedPin.Update(Get());
@@ -319,16 +319,6 @@ namespace GPIO
     {
         Set(value != 0);
         return (Core::ERROR_NONE);
-    }
-
-    /* virtual */ void Pin::Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job)
-    {
-        Core::IWorkerPool::Instance().Schedule(time, job);
-    }
-
-    /* virtual */ void Pin::Revoke(const Core::ProxyType<Core::IDispatch>& job)
-    {
-        Core::IWorkerPool::Instance().Revoke(job);
     }
 }
 } // namespace WPEFramework::Linux

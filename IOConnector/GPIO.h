@@ -30,11 +30,11 @@ namespace WPEFramework {
 
 namespace GPIO {
 
-    class Pin : public Exchange::ExternalBase<Exchange::IExternal::GPIO>, 
+    class Pin : public Exchange::ExternalBase, 
                 public Exchange::IInputPin,
                 public Core::IResource {
     private:
-        typedef Exchange::ExternalBase<Exchange::IExternal::GPIO> BaseClass;
+        typedef Exchange::ExternalBase BaseClass;
 
         class TimedPin  : public Core::IDispatch {
         private:
@@ -51,7 +51,6 @@ namespace GPIO {
                 , _marker(~0)
                 , _job()
                 , _observerList()
-                , _markerMap()
                 , _monitor()
             {
                 ASSERT(parent != nullptr);
@@ -68,7 +67,6 @@ namespace GPIO {
 
             inline void DropReference()
             {
-                _parent.Revoke(_job);
                 _job.Release();
             }
 
@@ -87,19 +85,6 @@ namespace GPIO {
             void Unregister(IInputPin::INotification* sink) 
             {
                 _parent.Lock();
-                MarkerMap::iterator loop (_markerMap.begin());
-                while (loop != _markerMap.end()) {
-                    ObserverList::iterator found = std::find(loop->second.begin(), loop->second.end(), sink);
-                    if (found != loop->second.end()) {
-                        loop->second.erase(found);
-                        if (loop->second.size() == 0) {
-                            _monitor.Remove(loop->first);
-                            loop = _markerMap.erase(loop);
-                            continue;
-                        }
-                    }
-                    loop++;
-                }
                 ObserverList::iterator index = std::find(_observerList.begin(), _observerList.end(), sink);
                 ASSERT (index != _observerList.end());
                 if (index != _observerList.end()) {
@@ -109,64 +94,22 @@ namespace GPIO {
                 _parent.Unlock();
             }
 
-            uint32_t Add(const IInputPin::INotification* sink, const uint32_t marker) 
+            void Add(const uint32_t marker) 
             {
-                uint32_t result = Core::ERROR_UNKNOWN_KEY;
-
                 _parent.Lock();
 
-                ObserverList::iterator index = std::find(_observerList.begin(), _observerList.end(), sink);
-
-                if (index != _observerList.end()) {
-                    result = Core::ERROR_NONE;
-                    MarkerMap::iterator loop (_markerMap.find(marker));
-                    if (loop == _markerMap.end()) {
-                        auto newEntry = _markerMap.emplace(std::piecewise_construct, std::forward_as_tuple(marker), std::forward_as_tuple());
-                        newEntry.first->second.push_back(*index);
-                        _monitor.Add(marker);
-                    }
-                    else {
-                        ObserverList::iterator found = std::find(loop->second.begin(), loop->second.end(), sink);
-
-                        if (found != loop->second.end()) {
-                            result = Core::ERROR_DUPLICATE_KEY;
-                        }
-                        else {
-                            loop->second.push_back(*index);
-                        }
-                    }
-                }
+                _monitor.Add(marker);
 
                 _parent.Unlock();
-
-                return (result);
             }
 
-            uint32_t Remove(const IInputPin::INotification* sink, const uint32_t marker) 
+            void Remove(const uint32_t marker) 
             {
-                uint32_t result = Core::ERROR_UNKNOWN_KEY;
-
                 _parent.Lock();
 
-                MarkerMap::iterator loop (_markerMap.find(marker));
-                if (loop != _markerMap.end()) {
-                    ObserverList::iterator found = std::find(loop->second.begin(), loop->second.end(), sink);
-
-                    if (found != loop->second.end()) {
-                        result = Core::ERROR_NONE;
-
-                        loop->second.erase(found);
-                        if (loop->second.size() == 0) {
-                            _monitor.Remove(loop->first);
-                            _markerMap.erase(loop);
-                        }
-                    }
-                }
+                _monitor.Remove(marker);
 
                 _parent.Unlock();
-
-                return (result);
-
             }
             void Update(const bool pressed)
             {
@@ -178,7 +121,7 @@ namespace GPIO {
 
                     ASSERT(_marker == static_cast<uint32_t>(~0));
                     _marker = marker;
-                    _parent.Schedule(Core::Time(), _job);
+                    _parent.Updated();
                     _parent.Unlock();
                 }
             }
@@ -190,22 +133,19 @@ namespace GPIO {
 
                 uint32_t marker = _marker;
 
-                MarkerMap::iterator loop (_markerMap.find(marker));
-                if (loop != _markerMap.end()) {
-                    ObserverList::const_iterator index(loop->second.cbegin());
-                    _marker = ~0;
-                    RecursiveCall(loop->second, index, marker);
-                }
+                ObserverList::const_iterator index(_observerList.cbegin());
+                _marker = ~0;
+                RecursiveCall(index, marker);
             }
-            void RecursiveCall(const ObserverList& list, ObserverList::const_iterator& position, const uint32_t marker)
+            void RecursiveCall(ObserverList::const_iterator& position, const uint32_t marker)
             {
-                if (position == list.cend()) {
+                if (position == _observerList.cend()) {
                     _parent.Unlock();
                 } else {
                     IInputPin::INotification* client(*position);
                     client->AddRef();
                     position++;
-                    RecursiveCall(list, position, marker);
+                    RecursiveCall(position, marker);
                     client->Marker(marker);
                     client->Release();
                 }
@@ -216,7 +156,6 @@ namespace GPIO {
             uint32_t _marker;
             Core::ProxyType<Core::IDispatch> _job;
             ObserverList _observerList;
-            MarkerMap _markerMap;
             TimedInput _monitor;
         };
 
@@ -274,7 +213,7 @@ namespace GPIO {
             BaseClass::Unregister(sink);
         }
 
-        void Trigger() override;
+        void Evaluate() override;
         uint32_t Get(int32_t& value) const override;
         uint32_t Set(const int32_t value) override;
 
@@ -283,21 +222,17 @@ namespace GPIO {
         void Register(IInputPin::INotification* sink) override;
         void Unregister(IInputPin::INotification* sink) override;
 
-        uint32_t AddMarker(const IInputPin::INotification* sink, const uint32_t marker) override;
-        uint32_t RemoveMarker(const IInputPin::INotification* sink, const uint32_t marker) override;
+        void AddMarker(const uint32_t marker) override;
+        void RemoveMarker(const uint32_t marker) override;
 
         BEGIN_INTERFACE_MAP(Pin)
             INTERFACE_RELAY(Exchange::IInputPin, this)
-        NEXT_INTERFACE_MAP(Exchange::ExternalBase<Exchange::IExternal::GPIO>)
+        NEXT_INTERFACE_MAP(Exchange::ExternalBase)
 
     private:
         Core::IResource::handle Descriptor() const override;
         uint16_t Events() override;
         void Handle(const uint16_t events) override;
-
-        void Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job) override;
-        void Revoke(const Core::ProxyType<Core::IDispatch>& job) override;
-
         void Flush();
 
     private:
