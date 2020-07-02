@@ -103,7 +103,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 | params.name | string | name of the firmware |
 | params?.location | string | <sup>*(optional)*</sup> location/url of the firmware to be upgraded |
 | params?.type | string | <sup>*(optional)*</sup> type of the firmware (must be one of the following: *CDL*, *RCDL*) |
-| params?.progressinterval | number | <sup>*(optional)*</sup> number of seconds between progress update events (5 secoonds, 10 seconds etc). 0 means invoking callback only once to report final upgrade result |
+| params?.progressinterval | number | <sup>*(optional)*</sup> number of seconds between progress update events (5 seconds, 10 seconds etc). 0 means invoking callback only once to report final upgrade result |
 | params?.hmac | string | <sup>*(optional)*</sup> HMAC value of firmare |
 
 ### Result
@@ -123,6 +123,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 | 22 | ```ERROR_UNKNOWN_KEY``` | Bad hash value given |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Invalid state of device |
 | 14 | ```ERROR_INCORRECT_HASH``` | Incorrect hash given |
+| 42 | ```ERROR_UNAUTHENTICATED``` | Authenitcation failed |
 
 ### Example
 
@@ -221,7 +222,7 @@ Notifies progress of upgrade.
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.status | string | upgrade status (must be one of the following: *none*, *upgradestarted*, *downloadstarted*, *downloadaborted*, *downloadcompleted*, *installnotstarted*, *installaborted*, *installstarted*, *upgradecompleted*, *upgradecancelled*) |
-| params.error | string | reason of error (must be one of the following: *none*, *generic*, *invalidparameters*, *invalidstate*, *operationotsupported*, *incorrecthash*, *unavailable*, *timedout*, *unkown*) |
+| params.error | string | reason of error (must be one of the following: *none*, *generic*, *invalidparameters*, *invalidstate*, *operationotsupported*, *incorrecthash*, *unautheticated*, *unavailable*, *timedout*, *unkown*) |
 | params.percentage | number |  |
 
 ### Example
