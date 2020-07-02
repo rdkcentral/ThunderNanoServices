@@ -131,7 +131,7 @@ namespace Plugin {
         if ((status == Core::ERROR_NONE) || (status == Core::ERROR_INPROGRESS)) {
 
             Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
-            status = WaitForCompletion(_waitTime);
+            status = WaitForCompletion(_waitTime * 1000);
         }
 
         status = ((status != Core::ERROR_NONE)? status: DownloadStatus());

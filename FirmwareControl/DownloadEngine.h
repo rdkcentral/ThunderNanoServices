@@ -48,9 +48,11 @@ namespace PluginHost {
             , _notifier(notifier)
             , _storage()
             , _interval(interval * 1000)
+            , _checkHash(false)
             , _activity(*this)
         {
             // If we are going for HMAC, here we could set our secret...
+            memset(_HMAC, 0, Crypto::HASH_SHA256);
             // BaseClass::Hash().Key(hashKey);
         }
         ~DownloadEngine() override
@@ -68,32 +70,36 @@ namespace PluginHost {
 
 
             _adminLock.Lock();
-            if ((result == Core::ERROR_INPROGRESS) && (_storage.IsOpen() == false)) {
-                result = Core::ERROR_GENERAL;
 
-
-                // But I guess for the firmware control, we are getting the
-                // HMAC, not via an HTTP header but Through REST API, we need
-                // to remeber what it should be. Lets safe the HMAC for
-                // validation, if it is transferred here....
+            // But I guess for the firmware control, we are getting the
+            // HMAC, not via an HTTP header but Through REST API, we need
+            // to remeber what it should be. Lets safe the HMAC for
+            // validation, if it is transferred here....
+            if (hashValue.empty() == false) {
                 if (HashStringToBytes(hashValue, _HMAC) == true) {
+                    _checkHash = true;
+                } else {
+                    result = Core::ERROR_INCORRECT_HASH;
+                }
+            }
 
-                    result = Core::ERROR_OPENING_FAILED;
-                    _storage = destination;
+            if ((result == Core::ERROR_INPROGRESS) && (_storage.IsOpen() == false)) {
 
-                    // The create truncates the file (if it exists), to 0.
-                    if (_storage.Create() == true) {
+                result = Core::ERROR_OPENING_FAILED;
+                _storage = destination;
 
-                        result = BaseClass::Download(url, _storage);
+                // The create truncates the file (if it exists), to 0.
+                if (_storage.Create() == true) {
 
-                        if (((result == Core::ERROR_NONE) || (result == Core::ERROR_INPROGRESS)) && (_interval != 0)) {
-                            _activity.Revoke();
-                            _activity.Schedule(Core::Time::Now().Add(_interval));
-                        }
+                    result = BaseClass::Download(url, _storage);
+
+                    if (((result == Core::ERROR_NONE) || (result == Core::ERROR_INPROGRESS)) && (_interval != 0)) {
+                        _activity.Revoke();
+                        _activity.Schedule(Core::Time::Now().Add(_interval));
                     }
                 }
-                _adminLock.Unlock();
             }
+            _adminLock.Unlock();
 
             return (result);
         }
@@ -102,12 +108,13 @@ namespace PluginHost {
         void Transfered(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
         {
             uint32_t status = result;
+
             // Let's see if the calculated HMAC is what we expected....
-            if ((status == Core::ERROR_NONE) &&
+            if ((status == Core::ERROR_NONE) && (_checkHash == true) &&
                 (::memcmp(const_cast<Web::SignedFileBodyType<Crypto::SHA256>&>(destination).Hash().Result(), _HMAC, Crypto::HASH_SHA256) != 0)) {
+
                 status = Core::ERROR_UNAUTHENTICATED;
             }
-
             _storage.Close();
 
             _adminLock.Lock();
@@ -179,9 +186,11 @@ namespace PluginHost {
         Core::CriticalSection _adminLock;
         INotifier* _notifier;
         Core::File _storage;
+
         uint32_t _interval;
-        Core::WorkerPool::JobType<DownloadEngine&> _activity;
+        bool _checkHash;
         uint8_t _HMAC[Crypto::HASH_SHA256];
+        Core::WorkerPool::JobType<DownloadEngine&> _activity;
     };
 }
 }

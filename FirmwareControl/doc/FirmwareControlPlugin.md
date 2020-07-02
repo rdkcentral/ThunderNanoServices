@@ -123,6 +123,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 | 22 | ```ERROR_UNKNOWN_KEY``` | Bad hash value given |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Invalid state of device |
 | 14 | ```ERROR_INCORRECT_HASH``` | Incorrect hash given |
+| 42 | ```ERROR_UNAUTHENTICATED``` | Authenitcation failed |
 
 ### Example
 
@@ -221,7 +222,7 @@ Notifies progress of upgrade.
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.status | string | upgrade status (must be one of the following: *none*, *upgradestarted*, *downloadstarted*, *downloadaborted*, *downloadcompleted*, *installnotstarted*, *installaborted*, *installstarted*, *upgradecompleted*, *upgradecancelled*) |
-| params.error | string | reason of error (must be one of the following: *none*, *generic*, *invalidparameters*, *invalidstate*, *operationotsupported*, *incorrecthash*, *unavailable*, *timedout*, *unkown*) |
+| params.error | string | reason of error (must be one of the following: *none*, *generic*, *invalidparameters*, *invalidstate*, *operationotsupported*, *incorrecthash*, *unautheticated*, *unavailable*, *timedout*, *unkown*) |
 | params.percentage | number |  |
 
 ### Example

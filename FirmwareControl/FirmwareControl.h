@@ -62,6 +62,7 @@ namespace Plugin {
             INVALID_STATES,
             OPERATION_NOT_PERMITTED,
             INCORRECT_HASH,
+            UNAUTHENTICATED,
             UNAVAILABLE,
             TIMEDOUT,
             UNKNOWN
@@ -321,6 +322,9 @@ namespace Plugin {
                 break;
             case Core::ERROR_INCORRECT_HASH:
                 errorType = ErrorType::INCORRECT_HASH;
+                break;
+            case Core::ERROR_UNAUTHENTICATED:
+                errorType = ErrorType::UNAUTHENTICATED;
                 break;
             case Core::ERROR_TIMEDOUT:
                 errorType = ErrorType::TIMEDOUT;
