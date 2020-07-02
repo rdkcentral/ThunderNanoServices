@@ -392,23 +392,24 @@ namespace Plugin {
 
     void DIALServer::StartApplication(const Web::Request& request, Core::ProxyType<Web::Response>& response, AppInformation& app)
     {
-        string parameters;
-        string additioanlDataUrl =  "http://localhost/" + app.Name() + "/" + _DefaultDataExtension;
-        TCHAR* encodedDataUrl = static_cast<TCHAR*>(ALLOCA(additioanlDataUrl.length() * 3 * sizeof(TCHAR)));
-        Core::URL::Encode(additioanlDataUrl.c_str(), static_cast<uint16_t>(additioanlDataUrl.length()), encodedDataUrl, static_cast<uint16_t>(additioanlDataUrl.length() * 3 * sizeof(TCHAR)));
-        if (request.HasBody() == true) {
-            parameters = *request.Body<const Web::TextBody>();
-            parameters = app.AppURL() + (app.HasQueryParameter() ? "&" : "?") + parameters;
-            parameters += "&additionalDataUrl=";
-        } else {
-          parameters = app.AppURL() + (app.HasQueryParameter() ? "&" : "?") + "additionalDataUrl=";
-        }
-        parameters += encodedDataUrl;
+        const string payload = ((request.HasBody() == true)? string(*request.Body<const Web::TextBody>()) : "");
 
-        if (parameters.length() > MaxDialQuerySize) {
+        if (payload.length() > MaxDialQuerySize) {
             response->ErrorCode = Web::STATUS_REQUEST_ENTITY_TOO_LARGE;
-            response->Message = _T("Request entity is too big to fit the URL");
+            response->Message = _T("Payload too long");
         } else {
+            const string additionalDataUrl = (_T("http://localhost/") + app.Name() + _T("/") + _DefaultDataExtension);
+            TCHAR encodedDataUrl[additionalDataUrl.length() * 3 * sizeof(TCHAR)];
+            Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, static_cast<uint16_t>(sizeof(encodedDataUrl)));
+
+            string parameters = (app.AppURL() + (app.HasQueryParameter()? _T("&") : _T("?")) + _T("additionalDataUrl=") + encodedDataUrl);
+
+            if (payload.empty() == false) {
+                TCHAR encodedPayload[payload.length() * 3 * sizeof(TCHAR)];
+                Core::URL::Encode(payload.c_str(), static_cast<uint16_t>(payload.length()), encodedPayload, static_cast<uint16_t>(sizeof(encodedPayload)));
+                parameters = parameters + _T("&dial=") + encodedPayload;
+            }
+
             TRACE(Trace::Information, (_T("Launch Application [%s] with params: %s"), app.Name().c_str(), parameters.c_str()));
 
             // See if we can find the plugin..
