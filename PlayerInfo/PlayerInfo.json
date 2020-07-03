@@ -1,0 +1,10 @@
+{
+ "locator":"libWPEFrameworkPlayerInfo.so",
+ "classname":"PlayerInfo",
+ "autostart":true,
+ "configuration":{
+  "root":{
+   "mode":"Off"
+  }
+ }
+}
