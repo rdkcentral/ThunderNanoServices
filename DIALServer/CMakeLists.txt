@@ -33,6 +33,9 @@ set(PLUGIN_DIALSERVER_NETFLIX_CALLSIGN "" CACHE STRING "Callsign of the Netflix 
 set(PLUGIN_DIALSERVER_YOUTUBE_CALLSIGN "" CACHE STRING "Callsign of the Youtube plugin if used in active mode, leave empty to disable")
 
 set(PLUGIN_DIALSERVER_NAME "${MODULE_NAME}" CACHE STRING "DIAL server name")
+set(PLUGIN_DIALSERVER_MODEL "Generic Platform" CACHE STRING "Model of the device")
+set(PLUGIN_DIALSERVER_MANUFACTURER "Metrological" CACHE STRING "Manufacturer of device")
+set(PLUGIN_DIALSERVER_DESCRIPTION "Metrological DIAL reference server." CACHE STRING "Description")
 
 add_library(${MODULE_NAME} SHARED
     DIALServer.cpp

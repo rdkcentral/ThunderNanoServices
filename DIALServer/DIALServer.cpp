@@ -398,10 +398,10 @@ namespace Plugin {
         Core::URL::Encode(additioanlDataUrl.c_str(), static_cast<uint16_t>(additioanlDataUrl.length()), encodedDataUrl, static_cast<uint16_t>(additioanlDataUrl.length() * 3 * sizeof(TCHAR)));
         if (request.HasBody() == true) {
             parameters = *request.Body<const Web::TextBody>();
-            parameters = app.AppURL() + "?" + parameters;
+            parameters = app.AppURL() + (app.HasQueryParameter() ? "&" : "?") + parameters;
             parameters += "&additionalDataUrl=";
         } else {
-          parameters = app.AppURL() + "?additionalDataUrl=";
+          parameters = app.AppURL() + (app.HasQueryParameter() ? "&" : "?") + "additionalDataUrl=";
         }
         parameters += encodedDataUrl;
 

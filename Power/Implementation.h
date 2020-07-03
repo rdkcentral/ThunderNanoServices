@@ -34,7 +34,8 @@ typedef void (*power_state_change)(void* userData, enum WPEFramework::Exchange::
 /**
  * Function to initialize and deinitialize the module
  */
-EXTERNAL void power_initialize(power_state_change callback, void* userData, const char* config);
+EXTERNAL void power_initialize(power_state_change callback, void* userData, const char* config,
+        const enum WPEFramework::Exchange::IPower::PCState persistedState);
 EXTERNAL void power_deinitialize();
 
 /**
@@ -47,6 +48,20 @@ EXTERNAL uint32_t power_set_state(const enum WPEFramework::Exchange::IPower::PCS
  */
 EXTERNAL enum WPEFramework::Exchange::IPower::PCState power_get_state();
 
+/**
+ * Function to check power state is supported by platform
+ */
+EXTERNAL bool is_power_state_supported(const enum WPEFramework::Exchange::IPower::PCState state);
+
+/**
+ * Function to request the persistent power state from platform.
+ */
+EXTERNAL enum WPEFramework::Exchange::IPower::PCState power_get_persisted_state();
+
+/**
+ * Function to save current power state for persistent recovery in platform.
+ */
+EXTERNAL void power_set_persisted_state(const enum WPEFramework::Exchange::IPower::PCState);
 
 #ifdef __cplusplus
 }
