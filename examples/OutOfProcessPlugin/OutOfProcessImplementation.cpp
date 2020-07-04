@@ -174,6 +174,9 @@ namespace Plugin {
         OutOfProcessImplementation(const OutOfProcessImplementation&) = delete;
         OutOfProcessImplementation& operator=(const OutOfProcessImplementation&) = delete;
 
+        #ifdef __WINDOWS__
+        #pragma warning(disable : 4355)
+        #endif
         OutOfProcessImplementation()
             : Core::Thread(0, _T("OutOfProcessImplementation"))
             , _requestedURL()
@@ -185,6 +188,9 @@ namespace Plugin {
         {
             fprintf(stderr, "---------------- Constructed the OutOfProcessImplementation ----------------------\n"); fflush(stderr);
         }
+        #ifdef __WINDOWS__
+        #pragma warning(default : 4355)
+        #endif
         ~OutOfProcessImplementation() override
         {
             fprintf(stderr, "---------------- Destructing the OutOfProcessImplementation ----------------------\n"); fflush(stderr);
