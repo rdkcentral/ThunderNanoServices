@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "PlayerInfo.h"
 
 namespace WPEFramework {
@@ -31,11 +31,13 @@ namespace Plugin {
     void PlayerInfo::RegisterAll()
     {
         Property<CodecsData>(_T("playerinfo"), &PlayerInfo::get_playerinfo, nullptr, this);
+        Property<Core::JSON::EnumType<DolbyType>>(_T("dolbymode"), &PlayerInfo::get_dolbymode, &PlayerInfo::set_dolbymode, this);
     }
 
     void PlayerInfo::UnregisterAll()
     {
         Unregister(_T("playerinfo"));
+        Unregister(_T("dolbymode"));
     }
 
     // API implementation
@@ -51,7 +53,32 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
+    uint32_t PlayerInfo::get_dolbymode(Core::JSON::EnumType<DolbyType>& response) const
+    {
+        uint32_t result = Core::ERROR_NONE;
+        
+        if(_dolbyOut != nullptr){
+            static_cast<DolbyType>(_dolbyOut->Mode());
+        } else {
+            result = Core::ERROR_UNAVAILABLE;
+        }
+        
+        return result;
+    }
+    
+    uint32_t PlayerInfo::set_dolbymode(const Core::JSON::EnumType<DolbyType>& params)
+    {
+        uint32_t result = Core::ERROR_NONE;
+        
+        if(_dolbyOut != nullptr){
+            _dolbyOut->Mode(static_cast<Exchange::Dolby::IOutput::Type>(params.Value()));
+        } else {
+            result = Core::ERROR_UNAVAILABLE;
+        }
+        
+        return result;
+    }
+
 } // namespace Plugin
 
 }
-
