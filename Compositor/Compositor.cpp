@@ -368,7 +368,7 @@ namespace Plugin {
                             } 
 
                             if (error != Core::ERROR_NONE && result->ErrorCode == Web::STATUS_OK) {
-                                if (error == Core::ERROR_FIRST_RESOURCE_NOT_FOUND) {
+                                if (error == Core::ERROR_UNAVAILABLE) {
                                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
                                     result->Message = string(_T("Client ")) + clientName + _T(" is not registered.");
                                 } else {
@@ -572,7 +572,7 @@ namespace Plugin {
 
     uint32_t Compositor::Select(const string& callsign) {
 
-        uint32_t result = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
+        uint32_t result = Core::ERROR_UNAVAILABLE;
 
         if (_inputSwitch) {
             result = _inputSwitch->Select(callsign);
@@ -642,7 +642,7 @@ namespace Plugin {
             TRACE(Trace::Information, (_T("Client surface %s is put below surface %s"), callsign.c_str(), relative.c_str()));
 
         } else {
-            result = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
+            result = Core::ERROR_UNAVAILABLE;
         }
  
         _adminLock.Unlock();
