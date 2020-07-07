@@ -103,12 +103,12 @@ namespace WPASupplicant {
 
     bool Config::Hash(const string& hash)
     {
-        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(PROTO, _T("WPA RSN"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, ('\"' + _ssid + '\"'))) && (SetKey(PSK, hash)));
+        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, ('\"' + _ssid + '\"'))) && (SetKey(PSK, hash)));
     }
 
     bool Config::PresharedKey(const string& presharedKey)
-    {
-        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(PROTO, _T("WPA RSN"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, ('\"' + _ssid + '\"'))) && (SetKey(PSK, ('\"' + presharedKey + '\"'))));
+    {      
+        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, ('\"' + _ssid + '\"'))) && (SetKey(PSK, ('\"' + presharedKey + '\"'))));
     }
 
     bool Config::Enterprise(const string& identity, const string& password)
@@ -125,6 +125,20 @@ namespace WPASupplicant {
     {
         Core::NumberType<uint8_t> textNumber(mode);
         return (SetKey(MODE, textNumber.Text()));
+    }
+
+    // Sets which protocols (WPA, WPA2 or both) are allowed for WPA protection
+    bool Config::Protocols(const uint8_t protocolFlags) 
+    {
+        string protocol = "";
+        if ((protocolFlags & wpa_protocol::WPA) != 0) {
+            protocol += "WPA";
+        }
+        if ((protocolFlags & wpa_protocol::WPA2) != 0) {
+            protocol+= (protocol.size() > 0) ? " RSN" : "RSN";
+        }
+
+        return SetKey(PROTO, protocol);
     }
 
     bool Config::IsUnsecure() const
@@ -172,28 +186,64 @@ namespace WPASupplicant {
         return (_comController.IsValid() && _comController->Exists(_ssid));
     }
 
+    // Tells which Protocols (WPA / WPA2 or both) are allowed for WPA protection.
+    uint8_t Config::Protocols() const
+    {
+        ASSERT(IsWPA() == true);
+
+        uint8_t result = 0;
+
+        string protocols;
+        if (GetKey(PROTO, protocols) == true) {
+            std::size_t tokenStart = 0;
+            std::size_t tokendEnd = 0;
+            while (tokendEnd != protocols.npos) {
+                tokendEnd = protocols.find(' ', tokenStart);
+                std::size_t len = tokendEnd == protocols.npos ? protocols.npos : tokendEnd - tokenStart;
+
+                if (protocols.compare(tokenStart, len, "WPA") == 0) {
+                    result |= wpa_protocol::WPA;
+                } else if ((protocols.compare(tokenStart, len, "RSN") == 0) || (protocols.compare(tokenStart, len, "WPA2") == 0)) {
+                    result |= wpa_protocol::WPA2;
+                }
+
+                tokenStart = tokendEnd + 1;
+            }
+        } else {
+            TRACE_L1("Failed to get PROTO from supplicant");
+            ASSERT(false);
+        }
+        
+        return result;
+    }
+
     void Config::CopyProperties(const Config& copy)
     {
-        string value = PresharedKey();
+        string value = copy.PresharedKey();
 
         if (value.empty() == false) {
             PresharedKey(value);
         }
 
-        value = Hash();
+        value = copy.Hash();
 
         if (value.empty() == false) {
             Hash(value);
         }
 
-        value = Identity();
+        value = copy.Identity();
 
         if (value.empty() == false) {
-            string password = Password();
+            string password = copy.Password();
             Enterprise(value, password);
         }
 
-        Mode(Mode());
+        
+        Mode(copy.Mode());
+
+        if (copy.IsWPA()) {
+            Protocols(copy.Protocols());
+        }
     }
 }
 } // WPEFramework::WPASupplicant

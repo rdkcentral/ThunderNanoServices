@@ -223,6 +223,11 @@ namespace WPASupplicant {
         static constexpr const TCHAR* PROTO = _T("proto");
         static constexpr const TCHAR* AUTH = _T("auth_alg");
 
+        enum wpa_protocol : uint8_t {
+            WPA = 0x1,
+            WPA2 = 0x2,
+        };
+
     public:
         class Iterator {
         private:
@@ -354,6 +359,7 @@ namespace WPASupplicant {
         bool IsEnterprise() const;
         bool IsAccessPoint() const;
         bool IsHidden() const;
+        uint8_t Protocols() const; 
 
         // Methods to apply to a network.
         bool Connect();
@@ -365,6 +371,8 @@ namespace WPASupplicant {
         bool Hash(const string& hash);
         bool PresharedKey(const string& presharedKey);
         bool Enterprise(const string& identity, const string& password);
+        bool Protocols(const uint8_t protocolFlags);  
+
 
         inline const string& SSID() const
         {

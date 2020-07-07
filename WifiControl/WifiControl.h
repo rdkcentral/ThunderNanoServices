@@ -475,7 +475,8 @@ namespace Plugin {
             if (element.IsUnsecure() == true) {
                 info.Type = JsonData::WifiControl::TypeType::UNSECURE;
             } else if (element.IsWPA() == true) {
-                info.Type = JsonData::WifiControl::TypeType::WPA;
+                info.Type = GetWPAProtocolType(element.Protocols());
+
                 if (element.Hash().empty() == false) {
                     info.Hash = element.Hash();
                 } else {
@@ -494,12 +495,18 @@ namespace Plugin {
         static void UpdateConfig(WPASupplicant::Config& profile, const JsonData::WifiControl::ConfigInfo& settings)
         {
 
-            if (settings.Hash.IsSet() == true) {
+            if (settings.Hash.IsSet() == true || settings.Psk.IsSet() == true) {
+
                 // Seems we are in WPA mode !!!
-                profile.Hash(settings.Hash.Value());
-            } else if (settings.Psk.IsSet() == true) {
-                // Seems we are in WPA mode !!!
-                profile.PresharedKey(settings.Psk.Value());
+                uint8_t protocolFlags = GetWPAProtocolFlags(settings, true);
+                profile.Protocols(protocolFlags);
+
+                if (settings.Hash.IsSet() == true) {
+                    profile.Hash(settings.Hash.Value());
+                } else {
+                    profile.PresharedKey(settings.Psk.Value());
+                }
+
             } else if ((settings.Identity.IsSet() == true) && (settings.Password.IsSet() == true)) {
                 // Seems we are in Enterprise mode !!!
                 profile.Enterprise(settings.Identity.Value(), settings.Password.Value());
@@ -604,6 +611,11 @@ namespace Plugin {
         virtual void Inbound(Web::Request& request) override;
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
+    private:
+        // Helper methods
+        static uint8_t GetWPAProtocolFlags(const JsonData::WifiControl::ConfigInfo& settings, const bool safeFallback);
+        static JsonData::WifiControl::TypeType GetWPAProtocolType(const uint8_t protocolFlags);
+    
     private:
         Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
