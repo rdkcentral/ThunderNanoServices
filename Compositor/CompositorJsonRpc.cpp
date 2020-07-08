@@ -66,7 +66,7 @@ namespace Plugin {
     // Method: putontop - Puts client surface on top in z-order
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
+    //  - ERROR_UNAVAILABLE: Client not found
     uint32_t Compositor::endpoint_putontop(const PutontopParamsInfo& params)
     {
         const string& client = params.Client.Value();
@@ -77,7 +77,7 @@ namespace Plugin {
     // Method: select the surface that should receive the inputs.
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
+    //  - ERROR_UNAVAILABLE: Client not found
     uint32_t Compositor::endpoint_select(const PutontopParamsInfo& params)
     {
         const string& client = params.Client.Value();
@@ -89,7 +89,7 @@ namespace Plugin {
     // Method: putbelow - Puts client surface below another surface
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client(s) not found
+    //  - ERROR_UNAVAILABLE: Client(s) not found
     uint32_t Compositor::endpoint_putbelow(const PutbelowParamsData& params)
     {
         const string& client = params.Client.Value();
@@ -212,10 +212,10 @@ namespace Plugin {
     // Property: geometry - Client surface geometry
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
+    //  - ERROR_UNAVAILABLE: Client not found
     uint32_t Compositor::get_geometry(const string& index, GeometryData& response) const
     {
-        uint32_t result = Core::ERROR_FIRST_RESOURCE_NOT_FOUND;
+        uint32_t result = Core::ERROR_UNAVAILABLE;
 
         if (_clients.find(index) != _clients.end()) {
             Exchange::IComposition::Rectangle rectangle = Geometry(index);
@@ -232,7 +232,7 @@ namespace Plugin {
     // Property: geometry - Client surface geometry
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
+    //  - ERROR_UNAVAILABLE: Client not found
     uint32_t Compositor::set_geometry(const string& index, const GeometryData& param)
     {
         Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
@@ -247,7 +247,7 @@ namespace Plugin {
     // Property: visiblity - Client surface visibility
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
+    //  - ERROR_UNAVAILABLE: Client not found
     uint32_t Compositor::set_visiblity(const string& index, const Core::JSON::EnumType<VisiblityType>& param)
     {
         return Visible(index, (param.Value() == VisiblityType::VISIBLE));
@@ -256,7 +256,7 @@ namespace Plugin {
     // Property: opacity - Client surface opacity
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_FIRST_RESOURCE_NOT_FOUND: Client not found
+    //  - ERROR_UNAVAILABLE: Client not found
     uint32_t Compositor::set_opacity(const string& index, const Core::JSON::DecUInt8& param)
     {
         return Opacity(index, param.Value());
