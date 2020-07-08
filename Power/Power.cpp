@@ -218,8 +218,6 @@ namespace Plugin {
             if ( (result = power_set_state(state, waitTime)) != Core::ERROR_NONE) {
                 TRACE(Trace::Information, (_T("Could not change the power state, error: %d"), result));
             }
-        } else {
-            result = Core::ERROR_UNAVAILABLE;
         }
 
         return (result);

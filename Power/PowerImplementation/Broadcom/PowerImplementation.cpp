@@ -348,14 +348,18 @@ void power_deinitialize() {
 }
 
 uint32_t power_set_state(const enum WPEFramework::Exchange::IPower::PCState state, const uint32_t sleepTime) {
+    uint32_t retStatus = Core::ERROR_GENERAL;
+
     ASSERT (implementation != nullptr);
 
     if (implementation != nullptr) {
         if (implementation->SetState(state, sleepTime) == true) {
-            return (Core::ERROR_NONE);
+            retStatus = Core::ERROR_NONE;
+        } else {
+            retStatus = Core::ERROR_ILLEGAL_STATE;
         }
     }
-    return (Core::ERROR_UNAVAILABLE);
+    return retStatus;
 }
 
 WPEFramework::Exchange::IPower::PCState power_get_state() {

@@ -105,8 +105,7 @@ Sets power state.
 | 1 | ```ERROR_GENERAL``` | General failure |
 | 29 | ```ERROR_DUPLICATE_KEY``` | Trying to set the same power mode |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Power state is not supported |
-| 2 | ```ERROR_UNAVAILABLE``` | Power state is invalid |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| 30 | ```ERROR_BAD_REQUEST``` | Invalid Power state or Bad JSON param data format |
 
 ### Example
 
