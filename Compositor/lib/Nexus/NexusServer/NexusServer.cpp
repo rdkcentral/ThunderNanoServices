@@ -52,7 +52,7 @@ namespace Broadcom {
         ASSERT(_client != nullptr);
         _rectangle = rectangle;
 
-        return (Core::ERROR_UNAVAILABLE);
+        return (Core::ERROR_NONE);
     }
     Exchange::IComposition::Rectangle Platform::Client::Geometry() const /* override */
     {

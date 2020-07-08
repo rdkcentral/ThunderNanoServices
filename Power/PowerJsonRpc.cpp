@@ -120,8 +120,7 @@ namespace Plugin {
         //  - ERROR_GENERAL: General failure
         //  - ERROR_DUPLICATE_KEY: Trying to set the same power mode
         //  - ERROR_ILLEGAL_STATE: Power state is not supported
-        //  - ERROR_UNAVAILABLE: Power state is invalid
-        //  - ERROR_BAD_REQUEST: Bad JSON param data format
+        //  - ERROR_BAD_REQUEST: Invalid Power state or Bad JSON param data format
         uint32_t Power::endpoint_set(const PowerData& params)
         {
             uint32_t result = Core::ERROR_NONE;

@@ -81,6 +81,8 @@ namespace Plugin {
             }
             ::free(image);
         }
+
+        return result;
     }
 
     static uint32_t UnloadModule(const string& moduleName)

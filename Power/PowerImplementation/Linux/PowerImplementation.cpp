@@ -114,12 +114,12 @@ public:
                         index++;
                     }
                 }
-                TRACE(Trace::Information, (_T("SupportedModes : %d"), _supportedModes));
             }
         }
 
-        /* Add POWEROFF since its software implementation. */
-        _supportedModes |= (1 << Exchange::IPower::PCState::PowerOff);
+        /* Add POWEROFF & ON since its software implementation. */
+        _supportedModes |= ((1 << Exchange::IPower::PCState::PowerOff) | (1 <<  Exchange::IPower::PCState::On));
+        TRACE(Trace::Information, (_T("Supported Power Modes : %d"), _supportedModes));
 
         _stateFile = ::open(StateFile, O_WRONLY);
         if (_stateFile < 0) {
@@ -190,7 +190,7 @@ private:
         if (_currentState != state) {
             mode* newMode = FindMode(state);
 
-            if (newMode != nullptr) {
+            if ((newMode != nullptr) && (IsSupported(state))) {
                 uint8_t value = -1;
                 TRACE(Trace::Information, (_T("Scheduled Job: changing Power mode to %s[%d]."),
                             newMode->label, state));
@@ -199,10 +199,9 @@ private:
 
                 switch (state) {
                     case Exchange::IPower::PCState::On: break;
-                    case Exchange::IPower::PCState::ActiveStandby:
-                    case Exchange::IPower::PCState::PassiveStandby:
+                    case Exchange::IPower::PCState::ActiveStandby: break;
+                    case Exchange::IPower::PCState::PassiveStandby: break;
                     case Exchange::IPower::PCState::SuspendToRAM:
-                    case Exchange::IPower::PCState::Hibernate:
                         {
                             ::write(_triggerFile, "1", 1);
                             /* We will be able to write state only if we are in 'On' State. */
@@ -216,6 +215,7 @@ private:
                             SetState(Exchange::IPower::PCState::On, 0);
                         }
                         break;
+                    case Exchange::IPower::PCState::Hibernate: break;
                     case Exchange::IPower::PCState::PowerOff:
                         system("poweroff");
                         break;
@@ -243,9 +243,17 @@ private:
 
 static PowerImplementation* implementation = nullptr;
 
-void power_initialize(power_state_change callback, void* userData, const char* ) {
+void power_initialize(power_state_change callback, void* userData, const char* config,
+        const enum WPEFramework::Exchange::IPower::PCState state)
+{
     ASSERT (implementation == nullptr);
     implementation = new PowerImplementation(callback, userData);
+    if (implementation != nullptr) {
+        if ((implementation->IsSupported(state)) &&
+                    (WPEFramework::Exchange::IPower::PCState::On != state)) {
+            implementation->SetState(state, 0);
+        }
+    }
 }
 
 void power_deinitialize() {
@@ -257,14 +265,22 @@ void power_deinitialize() {
 }
 
 uint32_t power_set_state(const enum WPEFramework::Exchange::IPower::PCState state, const uint32_t sleepTime) {
+    uint32_t retStatus = Core::ERROR_GENERAL;
+
     ASSERT (implementation != nullptr);
 
     if (implementation != nullptr) {
-        if ((implementation->IsSupported(state)) && (implementation->SetState(state, sleepTime) == true)) {
-            return (Core::ERROR_NONE);
+        if (implementation->IsSupported(state)) {
+            if (implementation->SetState(state, sleepTime) == true) {
+                retStatus = Core::ERROR_NONE;
+            } else {
+                retStatus = Core::ERROR_GENERAL;
+            }
+        } else {
+            retStatus = Core::ERROR_ILLEGAL_STATE;
         }
     }
-    return (Core::ERROR_UNAVAILABLE);
+    return retStatus;
 }
 
 WPEFramework::Exchange::IPower::PCState power_get_state() {
@@ -278,3 +294,15 @@ WPEFramework::Exchange::IPower::PCState power_get_state() {
     return (result);
 }
 
+bool is_power_state_supported(const enum WPEFramework::Exchange::IPower::PCState state) {
+    ASSERT (implementation != nullptr);
+
+    if (implementation != nullptr) {
+        if (implementation->IsSupported(state)) {
+            return true;
+        } else {
+            /* Nothing to do here. */
+        }
+    }
+    return false;
+}

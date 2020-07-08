@@ -39,6 +39,7 @@ namespace Plugin {
     /* virtual */ const string Power::Initialize(PluginHost::IShell* service)
     {
         string message;
+        WPEFramework::Exchange::IPower::PCState persistedState = power_get_persisted_state();
 
         ASSERT(_service == nullptr);
 
@@ -64,7 +65,7 @@ namespace Plugin {
         // Receive all plugin information on state changes.
         _service->Register(&_sink);
 
-        power_initialize(PowerStateChange, this, _service->ConfigLine().c_str());
+        power_initialize(PowerStateChange, this, _service->ConfigLine().c_str(), persistedState);
 
         return message;
     }
@@ -193,9 +194,9 @@ namespace Plugin {
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
         if (power_get_state() == state) {
+            result = Core::ERROR_DUPLICATE_KEY;
             TRACE(Trace::Information, (_T("No need to change power states, we are already at this stage!")));
-        }
-        else {
+        } else if (is_power_state_supported(state)) {
             _adminLock.Unlock();
 
             std::list<Exchange::IPower::INotification*>::iterator index(_notificationClients.begin());
@@ -210,6 +211,9 @@ namespace Plugin {
             if (state != Exchange::IPower::PCState::On) {
                 ControlClients(state);
             }
+
+            /* Better save target state before triggering the transition (Zero delay ?). */
+            power_set_persisted_state(state);
 
             if ( (result = power_set_state(state, waitTime)) != Core::ERROR_NONE) {
                 TRACE(Trace::Information, (_T("Could not change the power state, error: %d"), result));
@@ -234,6 +238,9 @@ namespace Plugin {
         }
 
         _adminLock.Unlock();
+
+        /* May be resuming from another power state; lets update persisted state. */
+        power_set_persisted_state(state);
     }
     void Power::PowerKey() /* override */ {
         if (power_get_state() == Exchange::IPower::PCState::On) {
@@ -248,7 +255,7 @@ namespace Plugin {
     {
         // We only subscribed for the KEY_POWER event so do not
         // expect anything else !!!
-        ASSERT(keyCode == KEY_POWER)
+        ASSERT(keyCode == KEY_POWER);
 
         if (keyCode == KEY_POWER) {
             PowerKey();
@@ -288,7 +295,7 @@ namespace Plugin {
 
     void Power::ControlClients(Exchange::IPower::PCState state)
     {
-        if (_controlClients) {
+        if ((_controlClients) && (is_power_state_supported(state))) {
             Clients::iterator client(_clients.begin());
 
             switch (state) {

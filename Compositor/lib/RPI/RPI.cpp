@@ -335,7 +335,7 @@ namespace Plugin {
 
             _adminLock.Unlock();
 
-            return (clientdata != nullptr ? Core::ERROR_NONE : Core::ERROR_FIRST_RESOURCE_NOT_FOUND);
+            return (clientdata != nullptr ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
         }
 
         IClient* FindClient(const string& name) const

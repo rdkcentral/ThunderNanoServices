@@ -327,7 +327,9 @@ private:
 
 static PowerImplementation* implementation = nullptr;
 
-void power_initialize(power_state_change callback, void* userData, const char* config) {
+void power_initialize(power_state_change callback, void* userData, const char* config,
+        const enum WPEFramework::Exchange::IPower::PCState persistedState)
+{
     ASSERT (implementation == nullptr);
     string configuration;
     if (config != nullptr) {
@@ -346,14 +348,18 @@ void power_deinitialize() {
 }
 
 uint32_t power_set_state(const enum WPEFramework::Exchange::IPower::PCState state, const uint32_t sleepTime) {
+    uint32_t retStatus = Core::ERROR_GENERAL;
+
     ASSERT (implementation != nullptr);
 
     if (implementation != nullptr) {
         if (implementation->SetState(state, sleepTime) == true) {
-            return (Core::ERROR_NONE);
+            retStatus = Core::ERROR_NONE;
+        } else {
+            retStatus = Core::ERROR_ILLEGAL_STATE;
         }
     }
-    return (Core::ERROR_UNAVAILABLE);
+    return retStatus;
 }
 
 WPEFramework::Exchange::IPower::PCState power_get_state() {
@@ -365,4 +371,14 @@ WPEFramework::Exchange::IPower::PCState power_get_state() {
         result = implementation->GetState();
     }
     return (result);
+}
+
+bool is_power_state_supported(const enum WPEFramework::Exchange::IPower::PCState state) {
+    ASSERT (implementation != nullptr);
+
+    if (implementation != nullptr) {
+        /* TODO: dummy implementation; populate proper logic to match. */
+        return true;
+    }
+    return false;
 }
