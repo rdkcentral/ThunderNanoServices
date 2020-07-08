@@ -1,10 +1,10 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Compositor_API"></a>
-# Compositor API
+<a name="head.Compositor_Plugin"></a>
+# Compositor Plugin
 
 **Version: 1.0**
 
-**Status: :black_circle::white_circle::white_circle:**
+**Status: :black_circle::black_circle::black_circle:**
 
 Compositor plugin for Thunder framework.
 
@@ -60,7 +60,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-Compositor JSON-RPC interface
+Compositor gives you controll over what is displayed on screen.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -71,7 +71,9 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
+| callsign | string | Plugin instance name (default: *Compositor*) |
 | classname | string | Class name: *Compositor* |
+| locator | string | Library name: *libWPEFrameworkCompositor.so* |
 | autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
 
 <a name="head.Methods"></a>
@@ -113,7 +115,7 @@ Use this method to get a client's surface to the top position.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
+| 2 | ```ERROR_UNAVAILABLE``` | Client not found |
 
 ### Example
 
@@ -165,7 +167,7 @@ Use this method to reorder client surfaces in the z-order list.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client(s) not found |
+| 2 | ```ERROR_UNAVAILABLE``` | Client(s) not found |
 
 ### Example
 
@@ -217,7 +219,7 @@ Use this method to direct all inputs to this client. The client that is receivin
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
+| 2 | ```ERROR_UNAVAILABLE``` | Client not found |
 
 ### Example
 
@@ -389,7 +391,7 @@ Use this property to update or retrieve the geometry of a client's surface.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
+| 2 | ```ERROR_UNAVAILABLE``` | Client not found |
 
 ### Example
 
@@ -463,7 +465,7 @@ Use this property to set the client's surface visibility.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
+| 2 | ```ERROR_UNAVAILABLE``` | Client not found |
 
 ### Example
 
@@ -509,7 +511,7 @@ Use this property to set the client's surface opacity level.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
+| 2 | ```ERROR_UNAVAILABLE``` | Client not found |
 
 ### Example
 
