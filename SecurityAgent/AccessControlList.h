@@ -23,58 +23,147 @@
 
 #include <regex>
 
+// helper functions
+namespace {
+    
+    void ReplaceString(string& subject, const string& search,const string& replace) 
+    {
+        size_t pos = 0;
+        while ((pos = subject.find(search, pos)) != string::npos) {
+             subject.replace(pos, search.length(), replace);
+             pos += replace.length();
+        }
+    }
+    
+    string CreateRegex(const string& input)
+    {
+        string regex = input;
+        
+        // order of replacing is important
+        ReplaceString(regex,"*","^[a-zA-Z0-9.]+$");
+        ReplaceString(regex,".","\\.");
+        
+        return regex;
+    }
+    
+    string CreateUrlRegex(const string& input)
+    {
+        string regex = input;
+        
+        // order of replacing is important
+        ReplaceString(regex,"/","\\/");
+        ReplaceString(regex,"[","\\[");
+        ReplaceString(regex,"]","\\]");
+        ReplaceString(regex,":*",":[0-9]+");
+        ReplaceString(regex,"*:","[a-z]+:");
+        ReplaceString(regex,".","\\.");
+        ReplaceString(regex,"*","[a-zA-Z0-9\\.]+");
+        regex.insert(regex.begin(),'(');
+        regex.insert(regex.end(),')');
+        
+        return regex;
+    }
+}
+
 namespace WPEFramework {
 namespace Plugin {
 
     //Allow -> Check first
-    //			if Block then check for Block[] and block if present
-    //			 else must be explicitly allowed
+    //if Block then check for Block[] and block if present
+    //else must be explicitly allowed
+
+    // "xreapps.net": {
+    //   "thunder": {
+    //     "default": "blocked",
+    //     "DeviceInfo": {
+    //       "default": "allowed",
+    //       "methods": [ "register", "unregister" ]
+    //     }
+    //   }
+    // },
 
     class EXTERNAL AccessControlList {
+    public:
+        enum mode {
+            BLOCKED,
+            ALLOWED
+        };
     private:
         class EXTERNAL JSONACL : public Core::JSON::Container {
         public:
-            class Config : public Core::JSON::Container {
+            class Plugins : public Core::JSON::Container {
             public:
-                Config(const Config&) = delete;
-                Config& operator=(const Config&) = delete;
+                class Rules : public Core::JSON::Container {
+                public:
+                    Rules(const Rules&) = delete;
+                    Rules& operator=(const Rules&) = delete;
 
-                Config()
+                    Rules()
+                        : Core::JSON::Container()
+                        , Default(BLOCKED)
+                        , Methods()
+                    {
+                        Add(_T("default"), &Default);
+                        Add(_T("methods"), &Methods);
+                    }
+                    ~Rules() override
+                    {
+                    }
+
+                public:
+                    Core::JSON::EnumType<mode> Default;
+                    Core::JSON::ArrayType<Core::JSON::String> Methods;
+                };
+ 
+                using PluginsMap = std::map<string, Rules>;
+
+            public:
+                using Iterator = Core::IteratorMapType<const PluginsMap, const Rules&, const string&, PluginsMap::const_iterator>;
+
+                Plugins(const Plugins&) = delete;
+                Plugins& operator=(const Plugins&) = delete;
+
+                Plugins()
+                    : Core::JSON::Container()
+                    , Default(BLOCKED)
+                    , _plugins()
                 {
-                    Add(_T("allow"), &Allow);
-                    Add(_T("block"), &Block);
+                    Add(_T("default"), &Default);
                 }
-                virtual ~Config()
+                ~Plugins() override
                 {
                 }
 
             public:
-                Core::JSON::ArrayType<Core::JSON::String> Allow;
-                Core::JSON::ArrayType<Core::JSON::String> Block;
+                Core::JSON::EnumType<mode> Default;
+
+                inline Iterator Elements() const
+                {
+                    return (Iterator(_plugins));
+                }
+
+            private:
+                virtual bool Request(const TCHAR label[])
+                {
+                    if (_plugins.find(label) == _plugins.end()) {
+                        auto element = _plugins.emplace(std::piecewise_construct,
+                            std::forward_as_tuple(label),
+                            std::forward_as_tuple());
+                        Add(element.first->first.c_str(), &(element.first->second));
+                    }
+                    return (true);
+                }
+
+            private:
+                PluginsMap _plugins;
             };
-            class Role : public Core::JSON::Container {
-            public:
-                Role(const Role&) = delete;
-                Role& operator=(const Role&) = delete;
 
-                Role()
-                    : Configuration()
-                {
-                    Add(_T("thunder"), &Configuration);
-                }
-                virtual ~Role()
-                {
-                }
-
-            public:
-                Config Configuration;
-            };
             class Roles : public Core::JSON::Container {
             private:
-                using RolesMap = std::map<string, Role>;
+                using RolesMap = std::map<string, Plugins>;
 
             public:
-                using Iterator = Core::IteratorMapType<const RolesMap, const Role&, const string&, RolesMap::const_iterator>;
+                using Iterator = Core::IteratorMapType<const RolesMap, const Plugins&, const string&, RolesMap::const_iterator>;
 
                 Roles(const Roles&) = delete;
                 Roles& operator=(const Roles&) = delete;
@@ -162,20 +251,63 @@ namespace Plugin {
 
     public:
         class Filter {
+        private:
+            class Plugin {
+            public:
+                Plugin() = delete;
+                Plugin(const Plugin&) = delete;
+                Plugin& operator= (const Plugin&) = delete;
+
+                Plugin (const JSONACL::Plugins::Rules& rules)
+                    : _defaultBlocked(rules.Default.Value() == mode::BLOCKED) 
+                    , _methods() {
+                    Core::JSON::ArrayType<Core::JSON::String>::ConstIterator index(rules.Methods.Elements());
+                    while (index.Next() == true) {
+                        string str = index.Current().Value();
+                        _methods.emplace_back(CreateRegex(str));
+                    }
+                }
+                ~Plugin() {
+                }
+
+            public:
+                bool Allowed(const string& method) const
+                {
+                    bool found = false;
+
+                    std::list<string>::const_iterator index(_methods.begin());
+
+                    while ((index != _methods.end()) && (found == false)) { 
+                        std::regex expression(index->c_str());
+                        std::smatch matchList;
+                        found = std::regex_search(method, matchList, expression);
+                        if (found == false) {
+                            index++;
+                        }
+                    }
+                    return !(_defaultBlocked ^ found);
+                }
+
+            private:
+                bool _defaultBlocked;
+                std::list<string> _methods;
+            };
+
         public:
             Filter() = delete;
             Filter(const Filter&) = delete;
             Filter& operator=(const Filter&) = delete;
 
-            Filter(const JSONACL::Config& filter)
+            Filter(const JSONACL::Plugins& plugins)
+                : _defaultBlocked(plugins.Default.Value() == mode::BLOCKED)
+                , _plugins()
             {
-                Core::JSON::ArrayType<Core::JSON::String>::ConstIterator index(filter.Allow.Elements());
+                JSONACL::Plugins::Iterator index(plugins.Elements());
+          
                 while (index.Next() == true) {
-                    _allow.emplace_back(index.Current().Value());
-                }
-                index = (filter.Block.Elements());
-                while (index.Next() == true) {
-                    _block.emplace_back(index.Current().Value());
+                    _plugins.emplace(std::piecewise_construct,
+                            std::forward_as_tuple(CreateRegex(index.Key())),
+                            std::forward_as_tuple(index.Current()));
                 }
             }
             ~Filter()
@@ -183,30 +315,26 @@ namespace Plugin {
             }
 
         public:
-            bool Allowed(const string& method) const
+            bool Allowed(const string callsign, const string& method) const
             {
-                bool allowed = false;
-                if (_allowSet) {
-                    std::list<string>::const_iterator index(_allow.begin());
-                    while ((index != _allow.end()) && (allowed == false)) {
-                        allowed = strncmp(index->c_str(), method.c_str(), index->length()) == 0;
-                        index++;
-                    }
-                } else {
-                    allowed = true;
-                    std::list<string>::const_iterator index(_block.begin());
-                    while ((index != _block.end()) && (allowed == true)) {
-                        allowed = strncmp(index->c_str(), method.c_str(), index->length()) != 0;
+                bool pluginFound = false;
+
+                std::map<string, Plugin>::const_iterator index(_plugins.begin());
+                while ((index != _plugins.end()) && (pluginFound == false)) {
+                    std::regex expression(index->first.c_str());
+                    std::smatch matchList;
+                    pluginFound = std::regex_search(callsign, matchList, expression);
+                    if (pluginFound == false) {
                         index++;
                     }
                 }
-                return (allowed);
+
+                return (pluginFound == false ? !_defaultBlocked : index->second.Allowed(method));
             }
 
         private:
-            bool _allowSet;
-            std::list<string> _allow;
-            std::list<string> _block;
+            bool _defaultBlocked;
+            std::map<string, Plugin> _plugins;
         };
 
         using URLList = std::list<std::pair<string, Filter&>>;
@@ -258,7 +386,9 @@ namespace Plugin {
                 if (std::regex_search(URL, matchList, expression) == true) {
                     result = &(index->second);
                 }
-                index++;
+                else {
+                    index++;
+                }
             }
 
             return (result);
@@ -283,7 +413,7 @@ namespace Plugin {
 
                 _filterMap.emplace(std::piecewise_construct,
                     std::forward_as_tuple(roleName),
-                    std::forward_as_tuple(rolesIndex.Current().Configuration));
+                    std::forward_as_tuple(rolesIndex.Current()));
             }
 
             Core::JSON::ArrayType<JSONACL::Group>::Iterator index = controlList.Groups.Elements();
@@ -302,9 +432,12 @@ namespace Plugin {
                     }
                 } else {
                     Filter& entry(selectedFilter->second);
-
+                    
+                    // create regex for url
+                    string url_regex = CreateUrlRegex(index.Current().URL.Value());
+                    
                     _urlMap.emplace_back(std::pair<string, Filter&>(
-                        index.Current().URL.Value(), entry));
+                        url_regex, entry));
 
                     std::list<string>::iterator found = std::find(_unusedRoles.begin(), _unusedRoles.end(), role);
 
@@ -317,7 +450,8 @@ namespace Plugin {
         }
 
     private:
-        URLList _urlMap;
+	//_urlMap contains list of entries of urls under "groups" to the allow/block filters set for that role under "thunder"
+        URLList _urlMap; 
         std::map<string, Filter> _filterMap;
         std::list<string> _unusedRoles;
         std::list<string> _undefinedURLS;

@@ -59,7 +59,7 @@ namespace GPIO
     // Class: PIN
     // ----------------------------------------------------------------------------------------------------
 
-    Pin::Pin(const uint8_t pin, const bool activeLow)
+    Pin::Pin(const uint16_t pin, const bool activeLow)
         : BaseClass(pin, IExternal::regulator, IExternal::general, IExternal::logic, 0)
         , _pin(pin)
         , _activeLow(activeLow ? 1 : 0)
@@ -67,17 +67,16 @@ namespace GPIO
         , _descriptor(-1)
         , _timedPin(this)
     {
-        if (_pin != 0xFF) {
+        if (_pin != 0xFFFF) {
             struct stat properties;
             char buffer[64];
             sprintf(buffer, "/sys/class/gpio/gpio%d/value", _pin);
-
             // See if this pin already exists
             if (stat(buffer, &properties) < 0) {
                 int fd = open("/sys/class/gpio/export", O_WRONLY);
                 if (fd > 0) {
                     // Time to register the pin
-                    char id[4];
+                    char id[8] = {};
                     int index = 0;
                     int pin = _pin;
                     do {
@@ -85,7 +84,6 @@ namespace GPIO
                         id[sizeof(id) - index] = '0' + (pin % 10);
                         pin /= 10;
                     } while ((pin > 0) && (index < static_cast<int>(sizeof(id) - 1)));
-
                     (void)write(fd, &(id[sizeof(id) - index]), index);
                     close(fd);
                 }
@@ -122,11 +120,13 @@ namespace GPIO
                 (void)write(fd, &(buffer[sizeof(buffer) - index]), index);
                 close(fd);
             }
-            Period(0);
         }
+
+        Period(0);
 
         _timedPin.DropReference();
         _timedPin.CompositRelease();
+
     }
 
     void Pin::Flush()
@@ -293,15 +293,15 @@ namespace GPIO
         _timedPin.Register(sink);
     }
 
-    uint32_t Pin::AddMarker(const IInputPin::INotification* sink, const uint32_t marker) /* override */ {
-        return(_timedPin.Add(sink, marker));
+    void Pin::AddMarker(const uint32_t marker) /* override */ {
+        _timedPin.Add(marker);
     }
 
-    uint32_t Pin::RemoveMarker(const IInputPin::INotification* sink, const uint32_t marker) /* override */ {
-        return(_timedPin.Remove(sink, marker));
+    void Pin::RemoveMarker(const uint32_t marker) /* override */ {
+        _timedPin.Remove(marker);
     }
 
-    /* virtual */ void Pin::Trigger()
+    /* virtual */ void Pin::Evaluate()
     {
         if (HasChanged() == true) {
             _timedPin.Update(Get());
@@ -319,16 +319,6 @@ namespace GPIO
     {
         Set(value != 0);
         return (Core::ERROR_NONE);
-    }
-
-    /* virtual */ void Pin::Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job)
-    {
-        Core::IWorkerPool::Instance().Schedule(time, job);
-    }
-
-    /* virtual */ void Pin::Revoke(const Core::ProxyType<Core::IDispatch>& job)
-    {
-        Core::IWorkerPool::Instance().Revoke(job);
     }
 }
 } // namespace WPEFramework::Linux

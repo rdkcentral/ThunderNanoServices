@@ -33,8 +33,28 @@ namespace Plugin {
                           public Exchange::IPointerHandler,  public Exchange::ITouchHandler,
                           public Exchange::IRemoteControl {
     private:
-        RemoteControl(const RemoteControl&);
-        RemoteControl& operator=(const RemoteControl&);
+        class Feedback : public PluginHost::VirtualInput::INotifier {
+        public:
+            Feedback() = delete;
+            Feedback(const Feedback&) = delete;
+            Feedback& operator= (const Feedback&) = delete;
+
+            Feedback(RemoteControl& parent) 
+                : _parent(parent) 
+            {
+            }
+            ~Feedback() override 
+            {
+            } 
+
+        public:
+            void Dispatch(const IVirtualInput::KeyData::type type, const uint32_t code)  override {
+                _parent.Activity(type, code);
+            }
+
+        private:
+            RemoteControl& _parent;
+        };
 
     public:
         class Config : public Core::JSON::Container {
@@ -111,6 +131,7 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , MapFile("keymap.json")
+                , PostLookupFile()
                 , PassOn(false)
                 , RepeatStart(500)
                 , RepeatInterval(100)
@@ -120,6 +141,7 @@ namespace Plugin {
                 , Links()
             {
                 Add(_T("mapfile"), &MapFile);
+                Add(_T("postlookupfile"), &PostLookupFile);
                 Add(_T("passon"), &PassOn);
                 Add(_T("repeatstart"), &RepeatStart);
                 Add(_T("repeatinterval"), &RepeatInterval);
@@ -134,6 +156,7 @@ namespace Plugin {
 
         public:
             Core::JSON::String MapFile;
+            Core::JSON::String PostLookupFile;
             Core::JSON::Boolean PassOn;
             Core::JSON::DecUInt16 RepeatStart;
             Core::JSON::DecUInt16 RepeatInterval;
@@ -166,6 +189,9 @@ namespace Plugin {
         };
 
     public:
+        RemoteControl(const RemoteControl&) = delete;
+        RemoteControl& operator=(const RemoteControl&) = delete;
+
         RemoteControl();
         virtual ~RemoteControl();
 
@@ -331,6 +357,7 @@ namespace Plugin {
         const string FindDevice(Core::TextSegmentIterator& index) const;
         bool ParseRequestBody(const Web::Request& request, uint32_t& code, uint16_t& key, uint32_t& modifiers);
         Core::ProxyType<Web::IBody> CreateResponseBody(uint32_t code, uint32_t key, uint16_t modifiers) const;
+        void Activity(const IVirtualInput::KeyData::type type, const uint32_t code);
 
         void RegisterAll();
         void UnregisterAll();
@@ -349,12 +376,14 @@ namespace Plugin {
         uint32_t endpoint_unpair(const JsonData::RemoteControl::UnpairParamsData& params);
         uint32_t get_devices(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t get_device(const string& index, JsonData::RemoteControl::DeviceData& response) const;
+        void event_keypressed(const string& id, const bool& pressed);
 
     private:
         uint32_t _skipURL;
         std::list<string> _virtualDevices;
         PluginHost::VirtualInput* _inputHandler;
         string _persistentPath;
+        Feedback _feedback;
         Core::CriticalSection _eventLock;
         std::list<Exchange::IRemoteControl::INotification*> _notificationClients;
     };

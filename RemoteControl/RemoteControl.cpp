@@ -135,6 +135,7 @@ namespace Plugin {
         , _virtualDevices()
         , _inputHandler(PluginHost::InputHandler::Handler())
         , _persistentPath()
+        , _feedback(*this)
     {
         ASSERT(_inputHandler != nullptr);
 
@@ -251,6 +252,13 @@ namespace Plugin {
                 _virtualDevices.push_back(configList.Current().Name.Value());
             }
 
+            if (config.PostLookupFile.IsSet() == true) {
+                string mappingFile(MappingFile(config.PostLookupFile.Value(), service->PersistentPath(), service->DataPath()));
+                if (mappingFile.empty() == false) {
+                    _inputHandler->PostLookup(EMPTY_STRING, mappingFile);
+                }
+            }
+
             auto postLookup(config.Links.Elements());
 
             while (postLookup.Next() == true) {
@@ -261,14 +269,15 @@ namespace Plugin {
             }
 
             _skipURL = static_cast<uint32_t>(service->WebPrefix().length());
-            _inputHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value());
             uint16_t repeatLimit = ((config.ReleaseTimeout.Value() - config.RepeatStart.Value()) / config.RepeatInterval.Value()) + 1;
-            _inputHandler->RepeatLimit(repeatLimit);
+            _inputHandler->Interval(config.RepeatStart.Value(), config.RepeatInterval.Value(), repeatLimit);
             _inputHandler->Default(DefaultMappingTable);
             admin.Callback(static_cast<IKeyHandler*>(this));
             admin.Callback(static_cast<IWheelHandler*>(this));
             admin.Callback(static_cast<IPointerHandler*>(this));
             admin.Callback(static_cast<ITouchHandler*>(this));
+
+            _inputHandler->Register(&_feedback);
         }
 
         // On succes return nullptr, to indicate there is no error text.
@@ -277,6 +286,8 @@ namespace Plugin {
 
     /* virtual */ void RemoteControl::Deinitialize(PluginHost::IShell* service)
     {
+
+        _inputHandler->Unregister(&_feedback);
 
         Remotes::RemoteAdministrator& admin(Remotes::RemoteAdministrator::Instance());
         Remotes::RemoteAdministrator::Iterator index(admin.Producers());
@@ -856,6 +867,15 @@ namespace Plugin {
         }
 
         _eventLock.Unlock();
+    }
+
+    void RemoteControl::Activity(const IVirtualInput::KeyData::type type, const uint32_t code) 
+    {
+        // Lets call the JSONRPC method: 
+        if ( (type == IVirtualInput::KeyData::type::RELEASED) || (type == IVirtualInput::KeyData::type::PRESSED) ) {
+            string keyCode (Core::NumberType<uint32_t>(code).Text());
+            event_keypressed(keyCode, (type == IVirtualInput::KeyData::type::PRESSED));
+        }
     }
 }
 }

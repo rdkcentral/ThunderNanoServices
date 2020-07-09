@@ -32,29 +32,25 @@ namespace Plugin {
     class IOConnector
         : public PluginHost::IPlugin,
           public PluginHost::IWeb,
-          public Exchange::IExternal::IFactory,
+          public Exchange::IExternal::ICatalog,
           public PluginHost::JSONRPC {
     private:
-        IOConnector(const IOConnector&) = delete;
-        IOConnector& operator=(const IOConnector&) = delete;
-
         class Sink : public Exchange::IExternal::INotification {
-        private:
+        public:
             Sink() = delete;
             Sink(const Sink&) = delete;
-            Sink& operator=(const Sink&) = delete;
+            Sink& operator= (const Sink&) = delete;
 
-        public:
             Sink(IOConnector* parent)
                 : _parent(*parent)
             {
             }
-            virtual ~Sink()
+            ~Sink() override
             {
             }
 
         public:
-            virtual void Update() override
+            void Update(const uint32_t /* id */) override
             {
                 _parent.Activity();
             }
@@ -66,16 +62,75 @@ namespace Plugin {
         private:
             IOConnector& _parent;
         };
+        class PinHandler {
+        public:
+            PinHandler() = delete;
+            PinHandler(const PinHandler&) = delete;
+            PinHandler& operator= (const PinHandler&) = delete;
 
-        typedef std::pair<GPIO::Pin*, IHandler*> PinHandler;
-        typedef std::list<PinHandler> Pins;
+            PinHandler(GPIO::Pin* pin) 
+                : _pin(pin)
+                , _handlers() {
+
+                ASSERT (pin != nullptr);
+
+                _pin->AddRef();
+            }
+            ~PinHandler() {
+                std::list<IHandler*>::iterator index (_handlers.begin());
+
+                while (index != _handlers.end()) {
+                    delete (*index);
+                    index++;
+                }
+                _handlers.clear();
+
+                _pin->Release();;
+            }
+
+        public:
+            bool Add(PluginHost::IShell* service, const string& name, const string& config, const uint32_t begin, const uint32_t end) {
+                IHandler* method = HandlerAdministrator::Instance().Handler(name, service, config, begin, end);
+                if (method != nullptr) {
+                    _handlers.emplace_back(method);
+                }
+                return (method != nullptr);
+            }
+            void Handle() {
+                std::list<IHandler*>::iterator index (_handlers.begin());
+
+                while (index != _handlers.end()) {
+                    (*index)->Trigger(*_pin);
+                    index++;
+                }
+            }
+            GPIO::Pin* Pin() {
+                return (_pin);
+            }
+            bool Get() const {
+                return (_pin->Get());
+            }
+            void Set(const bool value) {
+                return (_pin->Set(value));
+            }
+            void Unsubscribe(Exchange::IExternal::INotification* sink) {
+                _pin->Unsubscribe(sink);
+                _pin->Deactivate();
+            }
+            bool HasHandlers() const {
+                return (_handlers.size() > 0);
+            }
+
+        private:
+            GPIO::Pin* _pin;
+            std::list<IHandler*> _handlers;
+        };
+
+        using NotificationList = std::list< Exchange::IExternal::ICatalog::INotification* >;
+        using Pins = std::map<const uint32_t, PinHandler>;
 
     public:
         class Config : public Core::JSON::Container {
-        private:
-            Config(const Config&) = delete;
-            Config& operator=(const Config&) = delete;
-
         public:
             class Pin : public Core::JSON::Container {
             public:
@@ -119,8 +174,8 @@ namespace Plugin {
                 public:
                     Core::JSON::String Name;
                     Core::JSON::String Config;
-                    Core::JSON::DecUInt8 Start;
-                    Core::JSON::DecUInt8 End;
+                    Core::JSON::DecUInt16 Start;
+                    Core::JSON::DecUInt16 End;
                 };
 
                 enum mode {
@@ -155,7 +210,7 @@ namespace Plugin {
                     Add(_T("activelow"), &ActiveLow);
                     Add(_T("handlers"), &Handlers);
                 }
-                virtual ~Pin()
+                ~Pin() override
                 {
                 }
 
@@ -170,19 +225,22 @@ namespace Plugin {
                 }
 
             public:
-                Core::JSON::DecUInt8 Id;
+                Core::JSON::DecUInt16 Id;
                 Core::JSON::EnumType<mode> Mode;
                 Core::JSON::Boolean ActiveLow;
                 Core::JSON::ArrayType<Handler> Handlers;
             };
 
         public:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+
             Config()
                 : Core::JSON::Container()
             {
                 Add(_T("pins"), &Pins);
             }
-            virtual ~Config()
+            ~Config() override
             {
             }
 
@@ -191,11 +249,10 @@ namespace Plugin {
         };
 
         class Data : public Core::JSON::Container {
-        private:
+        public:
             Data(const Data&) = delete;
             Data& operator=(const Data&) = delete;
 
-        public:
             Data()
                 : Core::JSON::Container()
                 , Id()
@@ -204,7 +261,7 @@ namespace Plugin {
                 Add(_T("id"), &Id);
                 Add(_T("value"), &Value);
             }
-            ~Data()
+            ~Data() override
             {
             }
 
@@ -214,34 +271,36 @@ namespace Plugin {
         };
 
     public:
+        IOConnector(const IOConnector&) = delete;
+        IOConnector& operator=(const IOConnector&) = delete;
+
         IOConnector();
-        virtual ~IOConnector();
+        ~IOConnector() override;
 
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(IOConnector)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
-        INTERFACE_ENTRY(Exchange::IExternal::IFactory)
+        INTERFACE_ENTRY(Exchange::IExternal::ICatalog)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //   IExternal::IFactory methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Register(IFactory::IProduced* sink) override;
-        virtual void Unregister(IFactory::IProduced* sink) override;
-        virtual Exchange::IExternal* Resource(const uint32_t id) override;
+        void Register(ICatalog::INotification* sink) override;
+        void Unregister(ICatalog::INotification* sink) override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request) override;
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
         void Activity();
@@ -256,10 +315,12 @@ namespace Plugin {
         void event_pinactivity(const string& id, const int32_t& value);
 
     private:
+        Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         Core::Sink<Sink> _sink;
         Pins _pins;
         uint8_t _skipURL;
+        NotificationList _notifications;
     };
 
 } // namespace Plugin

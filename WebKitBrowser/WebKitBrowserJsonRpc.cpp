@@ -43,7 +43,6 @@ namespace Plugin {
         Property<Core::JSON::EnumType<VisibilityType>>(_T("visibility"), &WebKitBrowser::get_visibility, &WebKitBrowser::set_visibility, this); /* Browser */
         Property<Core::JSON::DecUInt32>(_T("fps"), &WebKitBrowser::get_fps, nullptr, this); /* Browser */
         Property<Core::JSON::EnumType<StateType>>(_T("state"), &WebKitBrowser::get_state, &WebKitBrowser::set_state, this); /* StateControl */
-
         Property<Core::JSON::String>(_T("useragent"), &WebKitBrowser::get_useragent, &WebKitBrowser::set_useragent, this);
         Property<Core::JSON::EnumType<HttpcookieacceptpolicyType>>(_T("httpcookieacceptpolicy"), &WebKitBrowser::get_httpcookieacceptpolicy, &WebKitBrowser::set_httpcookieacceptpolicy, this);
         Property<Core::JSON::Boolean>(_T("localstorageenabled"), &WebKitBrowser::get_localstorageenabled, &WebKitBrowser::set_localstorageenabled, this);
@@ -51,6 +50,7 @@ namespace Plugin {
         Property<Core::JSON::ArrayType<HeadersData>>(_T("headers"), &WebKitBrowser::get_headers, &WebKitBrowser::set_headers, this);
         Register<Core::JSON::String,void>(_T("bridgereply"), &WebKitBrowser::endpoint_bridgereply, this);
         Register<Core::JSON::String,void>(_T("bridgeevent"), &WebKitBrowser::endpoint_bridgeevent, this);
+        Register<DeleteParamsData,void>(_T("delete"), &WebKitBrowser::endpoint_delete, this);
     }
 
     void WebKitBrowser::UnregisterAll()
@@ -65,6 +65,7 @@ namespace Plugin {
         Unregister(_T("httpcookieacceptpolicy"));
         Unregister(_T("useragent"));
         Unregister(_T("bridgereply"));
+        Unregister(_T("delete"));
     }
 
     // API implementation
@@ -218,6 +219,31 @@ namespace Plugin {
 
         return result;
     }
+
+    // Method: endpoint_delete - delete dir
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t WebKitBrowser::endpoint_delete(const DeleteParamsData& params)
+    {
+        return delete_dir(params.Path.Value());
+    }
+
+    uint32_t WebKitBrowser::delete_dir(const string& path)
+    {
+        uint32_t result = Core::ERROR_NONE;
+
+        if (path.empty() == false) {
+            string fullPath = _persistentStoragePath + path;
+            Core::Directory dir(fullPath.c_str());
+            if (!dir.Destroy(true)) {
+                TRACE(Trace::Error, (_T("Failed to delete %s\n"), fullPath.c_str()));
+                result = Core::ERROR_GENERAL;
+            }
+        }
+
+        return result;
+    }
+
 
     // Event: urlchange - Signals a URL change in the browser
     void WebKitBrowser::event_urlchange(const string& url, const bool& loaded) /* Browser */

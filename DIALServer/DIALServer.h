@@ -23,6 +23,7 @@
 #include "Module.h"
 #include <interfaces/ISwitchBoard.h>
 #include <interfaces/IWebServer.h>
+#include <interfaces/IBrowser.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -43,12 +44,14 @@ namespace Plugin {
                     , Handler()
                     , URL()
                     , Config()
+                    , RuntimeChange(false)
                 {
                     Add(_T("name"), &Name);
                     Add(_T("callsign"), &Callsign);
                     Add(_T("handler"), &Handler);
                     Add(_T("url"), &URL);
                     Add(_T("config"), &Config);
+                    Add(_T("runtimechange"), &RuntimeChange);
                 }
                 App(const App& copy)
                     : Core::JSON::Container()
@@ -57,12 +60,14 @@ namespace Plugin {
                     , Handler(copy.Handler)
                     , URL(copy.URL)
                     , Config(copy.Config)
+                    , RuntimeChange(copy.RuntimeChange)
                 {
                     Add(_T("name"), &Name);
                     Add(_T("callsign"), &Callsign);
                     Add(_T("handler"), &Handler);
                     Add(_T("url"), &URL);
                     Add(_T("config"), &Config);
+                    Add(_T("runtimechange"), &RuntimeChange);
                 }
                 virtual ~App()
                 {
@@ -74,6 +79,7 @@ namespace Plugin {
                 Core::JSON::String Handler;
                 Core::JSON::String URL;
                 Core::JSON::String Config;
+                Core::JSON::Boolean RuntimeChange;
             };
 
         private:
@@ -167,7 +173,7 @@ namespace Plugin {
 
             // Methods for passing a URL to DIAL handler
             virtual string URL() const = 0;
-            virtual void URL(const string& url) = 0;
+            virtual bool URL(const string& url) = 0;
 
             // Methods used for passing additional data to DIAL handler
             virtual AdditionalDataType AdditionalData() const = 0;
@@ -206,7 +212,7 @@ namespace Plugin {
             uint32_t Show() override { return Core::ERROR_GENERAL; }
             void Hide() override {}
             string URL() const override { return {}; }
-            void URL(const string& url) override {};
+            bool URL(const string& url) override { return (false); };
             AdditionalDataType AdditionalData() const override { return { }; }
             void AdditionalData(AdditionalDataType&& data) override {}
             void Running(const bool isRunning) override {}
@@ -234,6 +240,7 @@ namespace Plugin {
                 , _callsign(config.Callsign.IsSet() == true ? config.Callsign.Value() : config.Name.Value())
                 , _passiveMode(config.Callsign.IsSet() == false)
                 , _isRunning(false)
+                , _hasRuntimeChange(config.RuntimeChange.Value())
                 , _parent(parent)
             {
                 ASSERT(_parent != nullptr);
@@ -287,10 +294,8 @@ namespace Plugin {
                     _parent->event_start(_callsign, data);
                 } else {
                     if (_switchBoard != nullptr) {
-                        printf("%s:%s:%d -Switchboard Mode\n", __FILE__, __func__, __LINE__);
                         result = _switchBoard->Activate(_callsign);
                     } else {
-                        printf("%s:%s:%d -Active Mode\n", __FILE__, __func__, __LINE__);
                         result = _service->Activate(PluginHost::IShell::REQUESTED);
                     }
 
@@ -313,8 +318,6 @@ namespace Plugin {
                     _service->Notify(message);
                     _parent->event_stop(_callsign, data);
                 } else {
-                    Stopped(data);
-
                     if (_switchBoard != nullptr) {
                         _switchBoard->Deactivate(_callsign);
                     } else {
@@ -322,30 +325,45 @@ namespace Plugin {
                     }
                 }
             }
-            virtual bool IsConnected() override
+            bool IsConnected() override
             {
                 return true;
             }
-            virtual bool Connect() override
+            bool Connect() override
             {
                 return true;
             }
-            virtual void Stopped(const string& /* data */)
-            {
-            }
-            virtual string URL() const
+            string URL() const override
             {
                 return ("");
             }
-            void URL(const string& url) override 
+            bool URL(const string& url) override 
             {
-                TRACE_L1("Setting URL not implemented in Default DIAL application");
-            };
+                bool result = false;
+
+                if (_hasRuntimeChange == true) {
+                    if (_passiveMode == true) {
+                        const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"change\", \"data\":\"" + url + "\"}"));
+                        _service->Notify(message);
+                        result = true;
+                    }
+                    else {
+                        Exchange::IBrowser* browser = _service->QueryInterface<Exchange::IBrowser>();
+
+                        if (browser != nullptr) {
+                            browser->SetURL(url);
+                            browser->Release();
+                            result = true;
+                        }
+                    }
+                }
+                return (result);
+            }
             void AdditionalData(AdditionalDataType&& data) override
             {
                 _additionalData = std::move(data);
             }
-            virtual AdditionalDataType AdditionalData() const
+            AdditionalDataType AdditionalData() const override
             {
                 return _additionalData;
             }
@@ -385,6 +403,7 @@ namespace Plugin {
             string _callsign;
             bool _passiveMode;
             bool _isRunning;
+            bool _hasRuntimeChange;
             DIALServer* _parent;
             AdditionalDataType _additionalData;
         };
@@ -506,7 +525,11 @@ namespace Plugin {
         public:
             virtual IApplication* Create(PluginHost::IShell* shell, const Config::App& config, DIALServer* parent)
             {
-                return (new HANDLER(shell, config, parent));
+                IApplication* application = nullptr;
+                if (config.Callsign.IsSet() == true) {
+                    return (new HANDLER(shell, config, parent));
+                }
+                return application;
             }
         };
         class EXTERNAL Protocol {
@@ -739,9 +762,9 @@ namespace Plugin {
             {
                 return (_application->URL());
             }
-            inline void URL(const string& url) 
+            inline bool URL(const string& url) 
             {
-                _application->URL(url);
+                return (_application->URL(url));
             }
             inline void SwitchBoard(Exchange::ISwitchBoard* switchBoard)
             {
@@ -764,6 +787,11 @@ namespace Plugin {
                 delete index->second;
 
                 AppInformation::_applicationFactory.erase(index);
+            }
+
+            inline bool HasQueryParameter()
+            {
+                return (_url.find('?') != string::npos);
             }
 
             void GetData(string& data, const Version& version = {}) const;

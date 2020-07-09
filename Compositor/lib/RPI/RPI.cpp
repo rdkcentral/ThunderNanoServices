@@ -208,9 +208,10 @@ namespace Plugin {
         }
 
     public:
-        void Resolution(const Exchange::IComposition::ScreenResolution format) override
+        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format) override
         {
             TRACE(Trace::Information, (_T("Could not set screenresolution to %s. Not supported for Rapberry Pi compositor"), Core::EnumerateType<Exchange::IComposition::ScreenResolution>(format).Data()));
+            return (Core::ERROR_UNAVAILABLE);
         }
 
         Exchange::IComposition::ScreenResolution Resolution() const override
@@ -275,16 +276,18 @@ namespace Plugin {
             while ( (it != _clients.end()) && (it->second.clientInterface != client) ) { ++it; }
 
             if (it != _clients.end()) {
-                TRACE(Trace::Information, (_T("Remove client %s."), it->first.c_str()));
+                string name (it->first);
+                TRACE(Trace::Information, (_T("Remove client %s."), name.c_str()));
                 for (auto index : _observers) {
                     // note as we have the name here, we could more efficiently pass the name to the
                     // caller as it is not allowed to get it from the pointer passes, but we are going
                     // to restructure the interface anyway
-                    index->Detached(it->first.c_str());
+                    index->Detached(name.c_str());
                 }
 
                 _clients.erase(it);
             }
+
             _adminLock.Unlock();
 
             TRACE(Trace::Information, (_T("Client detached completed")));
@@ -332,7 +335,7 @@ namespace Plugin {
 
             _adminLock.Unlock();
 
-            return (clientdata != nullptr ? Core::ERROR_NONE : Core::ERROR_FIRST_RESOURCE_NOT_FOUND);
+            return (clientdata != nullptr ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
         }
 
         IClient* FindClient(const string& name) const

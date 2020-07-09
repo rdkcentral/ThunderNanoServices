@@ -105,7 +105,7 @@ namespace Plugin {
         if (mfrERR_NONE != mfrStatus) {
             Status(UpgradeStatus::INSTALL_ABORTED, ConvertMfrStatusToCore(mfrStatus), 0);
         } else {
-            Status(UpgradeStatus::INSTALL_STARTED, ErrorType::ERROR_NONE, 0);
+            Status(UpgradeStatus::INSTALL_INITIATED, ErrorType::ERROR_NONE, 0);
             uint32_t status = WaitForCompletion(_waitTime); // To avoid hang situation
             if (status != Core::ERROR_NONE) {
                 Status(UpgradeStatus::INSTALL_ABORTED, Core::ERROR_TIMEDOUT, 0);
@@ -114,11 +114,10 @@ namespace Plugin {
                 mfrUpgradeStatus_t installStatus = _installStatus;
                 _adminLock.Unlock();
                 UpgradeStatus upgradeStatus = ConvertMfrWriteStatusToUpgradeStatus(installStatus.progress);
-                TRACE(Trace::Information, (_T("Installation Completed with status :%s\n"), Core::EnumerateType<JsonData::FirmwareControl::StatusType>(upgradeStatus).Data()));
+                TRACE(Trace::Information, (_T("Installation completed with status : %s\n"), ((upgradeStatus == UPGRADE_COMPLETED) ? "Success": "Failure")));
                 Status(upgradeStatus, ConvertMfrWriteErrorToUpgradeType(installStatus.error), installStatus.percentage);
             }
         }
-        TRACE(Trace::Information, (string(__FUNCTION__)));
     }
 
     uint32_t FirmwareControl::Download() {
@@ -126,24 +125,22 @@ namespace Plugin {
         TRACE(Trace::Information, (string(__FUNCTION__)));
         Notifier notifier(this);
 
-        PluginHost::DownloadEngine downloadEngine(&notifier, _destination + Name);
+        PluginHost::DownloadEngine downloadEngine(&notifier, "", _interval);
 
-        uint32_t status = downloadEngine.Start(_source, _destination, _hash);
+        uint32_t status = downloadEngine.Start(_source, _destination + Name, _hash);
         if ((status == Core::ERROR_NONE) || (status == Core::ERROR_INPROGRESS)) {
 
-            Status(UpgradeStatus::DOWNLOAD_STARTED, status, 0);
-            status = WaitForCompletion(_waitTime);
-            if ((status == Core::ERROR_NONE) && (DownloadStatus() == Core::ERROR_NONE)) {
-                 Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 0);
-            } else {
-                status = ((status != Core::ERROR_NONE)? status: DownloadStatus());
-                Status(UpgradeStatus::DOWNLOAD_ABORTED, status, 0);
-            }
+            Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
+            status = WaitForCompletion(_waitTime * 1000);
+        }
+
+        status = ((status != Core::ERROR_NONE)? status: DownloadStatus());
+        if (status == Core::ERROR_NONE) {
+            Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 100);
         } else {
             Status(UpgradeStatus::DOWNLOAD_ABORTED, status, 0);
         }
 
-        TRACE(Trace::Information, (string(__FUNCTION__)));
         return status;
     }
 

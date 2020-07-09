@@ -32,19 +32,13 @@ namespace Plugin {
         string message;
 
         ASSERT(service != nullptr);
+        ASSERT(_handler == nullptr);
 
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
+        _handler = PluginHost::InputHandler::Handler();
 
-        PluginHost::VirtualInput* handler = PluginHost::InputHandler::Handler();
-
-        PluginHost::IPCUserInput* derived = dynamic_cast<PluginHost::IPCUserInput*>(handler);
-
-        if (handler == nullptr) {
+        if (dynamic_cast<PluginHost::IPCUserInput*>(_handler) == nullptr) {
             message = _T("This plugin requires the VirtualInput (IPC Relay) to be instantiated");
-        }
-        else
-        {
-            _handler = derived->Inputs();
         }
 
         // On success return empty, to indicate there is no error text.
@@ -53,7 +47,7 @@ namespace Plugin {
 
     /* virtual */ void InputSwitch::Deinitialize(PluginHost::IShell* service)
     {
-        _handler.Reset();
+        _handler = nullptr;
     }
 
     /* virtual */ string InputSwitch::Information() const
@@ -88,19 +82,22 @@ namespace Plugin {
                 Core::ProxyType<Web::JSONBodyType< Core::JSON::ArrayType <Data> > > response(jsonResponseFactory.Element());
 
                 // Insert all channels with there status..
-                _handler.Reset();
-                while (_handler.Next() == true) {
+                PluginHost::VirtualInput::Iterator index (_handler->Consumers());
+                while (index.Next() == true) {
                     Data& element (response->Add());
 
-                    element.Callsign = _handler.Name();
-                    element.Enabled = _handler.Enabled();
+                    const string& callsign (index.Name());
+
+                    element.Callsign = callsign;
+                    element.Enabled = Consumer(callsign);
                 }
 
                 result->ContentType = Web::MIMETypes::MIME_JSON;
                 result->Body(Core::proxy_cast<Web::IBody>(response));
             }
             else {
-                if (FindChannel(index.Current().Text()) == false) {
+                string name (index.Current().Text());
+                if (ChannelExists(name) == false) {
                     result->ErrorCode = Web::STATUS_MOVED_TEMPORARY;
                     result->Message = _T("Could not find the inidicated channel.");
                 }
@@ -110,12 +107,8 @@ namespace Plugin {
                     // Insert the requested channel with its status..
                     Data& element(response->Add());
 
-                    element.Callsign = _handler.Name();
-                    element.Enabled = _handler.Enabled();
-
-                    // Make sure we reset the handler, otherwise we maintain  
-                    // a reference to the selected channel!!
-                    _handler.Reset();
+                    element.Callsign = name;
+                    element.Enabled = Consumer(name);
 
                     result->ContentType = Web::MIMETypes::MIME_JSON;
                     result->Body(Core::proxy_cast<Web::IBody>(response));
@@ -132,35 +125,39 @@ namespace Plugin {
                 result->ErrorCode = Web::STATUS_BAD_REQUEST;
                 result->Message = _T("Need at least a channel name and a requested state.");
             }
-            else if (FindChannel(index.Current().Text()) == false) {
+            else if (ChannelExists(index.Current().Text()) == false) {
                 result->ErrorCode = Web::STATUS_MOVED_TEMPORARY;
                 result->Message = _T("Could not find the indicated channel.");
             }
-            else if (index.Next() == false) {
-                result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                result->Message = _T("Need at least a state wich is applicable to the channel.");
-            }
-            else if ((index.Remainder() != _T("On")) || (index.Remainder() != _T("Off"))) {
-                result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                result->Message = _T("The requested state should be <On> or <Off>.");
-            }
             else {
-                Core::ProxyType<Web::JSONBodyType< Core::JSON::ArrayType <Data> > > response(jsonResponseFactory.Element());
+                string name (index.Current().Text());
 
-                // Insert the requested channel with its status..
-                Data& element(response->Add());
+                if (index.Next() == false) {
+                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                    result->Message = _T("Need at least a state wich is applicable to the channel.");
+                }
+                else if ((index.Remainder() != _T("On")) || (index.Remainder() != _T("Off")) || (index.Remainder() != _T("Slave"))) {
+                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                    result->Message = _T("The requested state should be <On>, <Off> or <Slave>.");
+                }
+                else {
+                    Core::ProxyType<Web::JSONBodyType< Core::JSON::ArrayType <Data> > > response(jsonResponseFactory.Element());
 
-                _handler.Enable((index.Remainder() != _T("On")));
+                    // Insert the requested channel with its status..
+                    Data& element(response->Add());
+                    Exchange::IInputSwitch::mode mode = (index.Remainder() == _T("On")  ? 
+                                                         Exchange::IInputSwitch::ENABLED : 
+                                                         (index.Remainder() == _T("Slave")   ? 
+                                                          Exchange::IInputSwitch::SLAVE      :
+                                                          Exchange::IInputSwitch::DISABLED) );
+                    Consumer(name, mode);
 
-                element.Callsign = _handler.Name();
-                element.Enabled = _handler.Enabled();
+                    element.Callsign = name;
+                    element.Enabled  = (mode == Exchange::IInputSwitch::ENABLED);
 
-                // Make sure we reset the handler, otherwise we maintain  
-                // a reference to the selected channel!!
-                _handler.Reset();
-
-                result->ContentType = Web::MIMETypes::MIME_JSON;
-                result->Body(Core::proxy_cast<Web::IBody>(response));
+                    result->ContentType = Web::MIMETypes::MIME_JSON;
+                    result->Body(Core::proxy_cast<Web::IBody>(response));
+                }
             }
         } else {
             result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -170,12 +167,63 @@ namespace Plugin {
         return result;
     }
 
-    bool InputSwitch::FindChannel(const string& name) {
-        _handler.Reset();
-        while ((_handler.Next() == true) && (_handler.Name() != name)) /* Intetionally left empty */;
-        return (_handler.IsValid());
+    bool InputSwitch::ChannelExists(const string& name) const {
+        PluginHost::VirtualInput::Iterator index (_handler->Consumers());
+        while ( (index.Next() == true) && (index.Name() != name) ) /* INTENTIONALLY LEFT EMPTY */ ;
+        return (index.IsValid());
     }
 
+    RPC::IStringIterator* InputSwitch::Consumers() const /* override */ {
+        return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(_handler->Consumers().Container()));
+    }
+
+    bool InputSwitch::Consumer(const string& name) const /* override */ {
+        return(_handler->Consumer(name));
+    }
+
+    uint32_t InputSwitch::Consumer(const string& name, const Exchange::IInputSwitch::mode value) /* override */ {
+        ImunityList::iterator index (std::find(_imunityList.begin(), _imunityList.end(), name));
+        
+        if (value == Exchange::IInputSwitch::SLAVE) {
+            // Remove it from the list of agnostic consumers.
+            if (index != _imunityList.end()) {
+                _imunityList.erase(index);
+                _handler->Consumer(name, false);
+            }
+        }
+        else {
+            // Add it to the list
+            if (index == _imunityList.end()) {
+                _imunityList.push_front(name);
+            }
+            _handler->Consumer(name, (value == Exchange::IInputSwitch::ENABLED));
+        }
+
+        return (Core::ERROR_NONE);
+    }
+
+    uint32_t InputSwitch::Select(const string& name) /* override */ {
+        uint32_t result = Core::ERROR_UNAVAILABLE;
+
+        PluginHost::VirtualInput::Iterator index (_handler->Consumers());
+        while (index.Next() == true) {
+            const string& current(index.Name());
+            ImunityList::iterator index (std::find(_imunityList.begin(), _imunityList.end(), current));
+            if (name == current) {
+                if (index != _imunityList.end()) {
+                    _imunityList.erase(index);
+                }
+                _handler->Consumer(current, true);
+                result = Core::ERROR_NONE;
+            }
+            else if (index == _imunityList.end()) {
+                // Seems the consumer has no imunity :-)
+                _handler->Consumer(current, false);
+            }
+        }
+
+        return (result);
+    }
 
 } // namespace Plugin
 } // namespace WPEFramework

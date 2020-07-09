@@ -344,10 +344,15 @@ namespace Plugin {
 
             inline uint32_t Discover(const Core::NodeId& preferred)
             {
-                ResetWatchdog();
+                SetupWatchdog();
                 uint32_t result = _client.Discover(preferred);
 
                 return (result);
+            }
+
+            inline void UpdateMAC(const uint8_t buffer[], const uint8_t size) 
+            {
+                _client.UpdateMAC(buffer, size);
             }
 
             void GetIP() 
@@ -357,7 +362,6 @@ namespace Plugin {
 
             void GetIP(const Core::NodeId& preferred)
             {
-
                 auto offerIterator = _client.UnleasedOffers();
                 if (offerIterator.Next() == true) {
                     Request(offerIterator.Current());
@@ -367,6 +371,7 @@ namespace Plugin {
             }
 
             void NewOffer(const DHCPClientImplementation::Offer& offer) {
+                StopWatchdog();
                 if (_parent.NewOffer(_client.Interface(), offer) == true) {
                     Request(offer);
                 }
@@ -389,7 +394,7 @@ namespace Plugin {
 
             inline void Request(const DHCPClientImplementation::Offer& offer) {
 
-                ResetWatchdog();
+                SetupWatchdog();
                 _client.Request(offer);
             }
 
@@ -423,12 +428,6 @@ namespace Plugin {
                 Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(*this));
             }
 
-            inline void ResetWatchdog() 
-            {
-                StopWatchdog();
-                SetupWatchdog();
-            }
-
             void CleanUp() 
             {
                 StopWatchdog();
@@ -460,8 +459,6 @@ namespace Plugin {
                             // Remove unresponsive offer from potential candidates
                             DHCPClientImplementation::Offer copy = offer.Current(); 
                             _client.RemoveUnleasedOffer(offer.Current());
-                            
-                            // Inform controller that request failed
                             _parent.RequestFailed(_client.Interface(), copy);
                         }
                     }

@@ -39,11 +39,20 @@ private:
         Config& operator=(const Config&);
 
     public:
-        Config() :
-            Core::JSON::Container(), Url() {
+        Config()
+            : Core::JSON::Container()
+            , Url()
+            , Width(1280)
+            , Height(720)
+            , RepeatStart()
+            , RepeatInterval()
+            , ClientIdentifier()
+        {
             Add(_T("url"), &Url);
             Add(_T("width"), &Width);
             Add(_T("height"), &Height);
+            Add(_T("repeatstart"), &RepeatStart);
+            Add(_T("repeatinterval"), &RepeatInterval);
             Add(_T("clientidentifier"), &ClientIdentifier);
         }
         ~Config() {
@@ -53,6 +62,8 @@ private:
         Core::JSON::String Url;
         Core::JSON::DecUInt16 Width;
         Core::JSON::DecUInt16 Height;
+        Core::JSON::DecUInt32 RepeatStart;
+        Core::JSON::DecUInt32 RepeatInterval;
         Core::JSON::String ClientIdentifier;
     };
 
@@ -142,6 +153,16 @@ private:
                 Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_HEIGHT"), height);
             }
 
+            if (config.RepeatStart.IsSet() == true) {
+                string repeatStart(Core::NumberType<uint32_t>(config.RepeatStart.Value()).Text());
+                Core::SystemInfo::SetEnvironment(_T("COBALT_KEY_REPEAT_START"), repeatStart);
+            }
+
+            if (config.RepeatInterval.IsSet() == true) {
+                string repeatInterval(Core::NumberType<uint32_t>(config.RepeatInterval.Value()).Text());
+                Core::SystemInfo::SetEnvironment(_T("COBALT_KEY_REPEAT_INTERVAL"), repeatInterval);
+            }
+
             if (config.Url.IsSet() == true) {
               _url = config.Url.Value();
             }
@@ -153,10 +174,10 @@ private:
         bool Suspend(const bool suspend)
         {
             if (suspend == true) {
-                kill(getpid(), SIGUSR1);
+                third_party::starboard::wpe::shared::Suspend();
             }
             else {
-                kill(getpid(), SIGCONT);
+                third_party::starboard::wpe::shared::Resume();
             }
             return (true);
         }
@@ -205,7 +226,9 @@ public:
 
     virtual uint32_t Configure(PluginHost::IShell *service) {
         uint32_t result = _window.Configure(service);
-        _state = PluginHost::IStateControl::RESUMED;
+        _window.Suspend(true);
+        _state = PluginHost::IStateControl::SUSPENDED;
+
         return (result);
     }
 
@@ -296,7 +319,6 @@ public:
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
         _adminLock.Lock();
-
         if (_state == PluginHost::IStateControl::UNINITIALIZED) {
             // Seems we are passing state changes before we reached an operational Cobalt.
             // Just move the state to what we would like it to be :-)
@@ -325,7 +347,6 @@ public:
                 break;
             }
         }
-
         _adminLock.Unlock();
 
         return result;

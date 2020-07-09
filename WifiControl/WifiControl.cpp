@@ -47,6 +47,7 @@ namespace Plugin
         , _sink(*this)
         , _wpaSupplicant()
         , _controller()
+        , _autoConnect(_controller)
     {
         RegisterAll();
     }
@@ -90,7 +91,6 @@ namespace Plugin
                     result = _T("Could not establish a link with WPA_SUPPLICANT");
                 } else {
                     _controller->Callback(&_sink);
-                    _controller->Scan();
 
                     Core::File configFile(_configurationStore);
 
@@ -114,6 +114,13 @@ namespace Plugin
                             UpdateConfig(profile, index.Current());
                         }
                     }
+
+                    if (config.AutoConnect.Value() == false) {
+                        _controller->Scan();
+                    }
+                    else {
+                        _autoConnect.Connect(config.Preferred.Value(), 30, ~0);
+                    }
                 }
             }
         }
@@ -133,7 +140,10 @@ namespace Plugin
         _controller.Release();
 
         _wpaSupplicant.Terminate();
+
 #endif
+
+        _autoConnect.Revoke();
 
         ASSERT(_service == service);
         _service = nullptr;
@@ -187,6 +197,45 @@ namespace Plugin
         return result;
     }
 
+    uint8_t WifiControl::GetWPAProtocolFlags(const JsonData::WifiControl::ConfigInfo& settings, const bool safeFallback) {
+        uint8_t protocolFlags = 0;
+
+        switch (settings.Type.Value()) {
+            case JsonData::WifiControl::TypeType::WPA:
+                protocolFlags = WPASupplicant::Config::wpa_protocol::WPA;
+                break;
+            case JsonData::WifiControl::TypeType::WPA2:
+                protocolFlags = WPASupplicant::Config::WPA2;
+                break;
+            case JsonData::WifiControl::TypeType::WPA_WPA2:
+                protocolFlags = WPASupplicant::Config::WPA | WPASupplicant::Config::WPA2;
+                break;
+            default:
+                if (safeFallback) {
+                    protocolFlags = WPASupplicant::Config::WPA | WPASupplicant::Config::WPA2;
+                    TRACE_L1("Unknown WPA protocol type %d. Assuming WPA/WPA2", settings.Type.Value());
+                } else {
+                    TRACE_L1("Unknown WPA protocol type %d", settings.Type.Value());
+                }
+        }
+
+        return protocolFlags;
+    }
+
+    JsonData::WifiControl::TypeType WifiControl::GetWPAProtocolType(const uint8_t protocolFlags) {
+        JsonData::WifiControl::TypeType result = JsonData::WifiControl::TypeType::UNKNOWN;
+        
+        if (protocolFlags == (WPASupplicant::Config::wpa_protocol::WPA | WPASupplicant::Config::wpa_protocol::WPA2)) {
+            result = JsonData::WifiControl::TypeType::WPA_WPA2;
+        } else if ((protocolFlags & WPASupplicant::Config::wpa_protocol::WPA2) != 0) {
+            result = JsonData::WifiControl::TypeType::WPA2;
+        } else if ((protocolFlags & WPASupplicant::Config::wpa_protocol::WPA) != 0) {
+            result = JsonData::WifiControl::TypeType::WPA;
+        } 
+
+        return result;
+    }
+    
     Core::ProxyType<Web::Response> WifiControl::GetMethod(Core::TextSegmentIterator & index)
     {
         Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
@@ -381,6 +430,8 @@ namespace Plugin
 
             networks.Set(list);
 
+            _autoConnect.Scanned();
+
             event_scanresults(networks.Networks);
 
             string message;
@@ -400,6 +451,7 @@ namespace Plugin
             string message("{ \"event\": \"Disconnected\" }");
             _service->Notify(message);
             event_connectionchange(string());
+            _autoConnect.Disconnected();
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_NETWORK_CHANGED: {
@@ -413,6 +465,7 @@ namespace Plugin
         case WPASupplicant::Controller::CTRL_EVENT_TERMINATING:
         case WPASupplicant::Controller::CTRL_EVENT_NETWORK_NOT_FOUND:
         case WPASupplicant::Controller::CTRL_EVENT_SCAN_STARTED:
+        case WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED:
         case WPASupplicant::Controller::WPS_AP_AVAILABLE:
         case WPASupplicant::Controller::AP_ENABLED:
             break;

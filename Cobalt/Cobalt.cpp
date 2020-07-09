@@ -110,13 +110,9 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         _notification.Release();
     }
 
-    if (_cobalt->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+    _cobalt->Release();
 
-        ASSERT(_connectionId != 0);
-        TRACE_L1("Cobalt Plugin is not properly destructed. %d", _connectionId);
-
-        ConnectionTermination(_connectionId);
-    }
+    ConnectionTermination(_connectionId);
 
     // Deinitialize what we initialized..
     _memory = nullptr;
@@ -160,6 +156,8 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
             PluginHost::IStateControl *stateControl(
                     _cobalt->QueryInterface<PluginHost::IStateControl>());
             if (stateControl != nullptr) {
+                result->ErrorCode = Web::STATUS_OK;
+                result->Message = "OK";
                 if (index.Remainder() == _T("Suspend")) {
                     stateControl->Request(PluginHost::IStateControl::SUSPEND);
                 } else if (index.Remainder() == _T("Resume")) {
@@ -169,6 +167,9 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
                         && (request.Body<const Data>()->URL.Value().empty()
                                 == false)) {
                     _cobalt->SetURL(request.Body<const Data>()->URL.Value());
+                } else {
+                    result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                    result->Message = "Unknown error";
                 }
                 stateControl->Release();
             }

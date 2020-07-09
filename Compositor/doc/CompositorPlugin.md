@@ -87,7 +87,7 @@ Compositor interface methods:
 | :-------- | :-------- |
 | [putontop](#method.putontop) | Puts client surface on top in z-order |
 | [putbelow](#method.putbelow) | Puts client surface below another surface |
-| [kill](#method.kill) | Kills a client |
+| [select](#method.select) | Directs the input to the given client, disabling all the others |
 
 <a name="method.putontop"></a>
 ## *putontop <sup>method</sup>*
@@ -115,7 +115,7 @@ Use this method to get a client's surface to the top position.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
+| 2 | ```ERROR_UNAVAILABLE``` | Client not found |
 
 ### Example
 
@@ -167,7 +167,7 @@ Use this method to reorder client surfaces in the z-order list.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client(s) not found |
+| 2 | ```ERROR_UNAVAILABLE``` | Client(s) not found |
 
 ### Example
 
@@ -193,14 +193,14 @@ Use this method to reorder client surfaces in the z-order list.
     "result": null
 }
 ```
-<a name="method.kill"></a>
-## *kill <sup>method</sup>*
+<a name="method.select"></a>
+## *select <sup>method</sup>*
 
-Kills a client.
+Directs the input to the given client, disabling all the others.
 
 ### Description
 
-Use this method to kill a client. Whenever a client is killed, the execution of the client is stopped and all its resources are released.
+Use this method to direct all inputs to this client. The client that is receiving the inputs prior to this call will nolonger receive it anymore after this call.
 
 ### Parameters
 
@@ -219,7 +219,7 @@ Use this method to kill a client. Whenever a client is killed, the execution of 
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
+| 2 | ```ERROR_UNAVAILABLE``` | Client not found |
 
 ### Example
 
@@ -229,7 +229,7 @@ Use this method to kill a client. Whenever a client is killed, the execution of 
 {
     "jsonrpc": "2.0",
     "id": 1234567890,
-    "method": "Compositor.1.kill",
+    "method": "Compositor.1.select",
     "params": {
         "client": "Netflix"
     }
@@ -254,7 +254,6 @@ Compositor interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [resolution](#property.resolution) | Screen resolution |
-| [clients](#property.clients) <sup>RO</sup> | List of compositor clients |
 | [zorder](#property.zorder) <sup>RO</sup> | List of compositor clients sorted by z-order |
 | [geometry](#property.geometry) | Client surface geometry |
 | [visiblity](#property.visiblity) <sup>WO</sup> | Client surface visibility |
@@ -319,46 +318,6 @@ Use this property to set or retrieve the current resolution of the screen.
     "jsonrpc": "2.0",
     "id": 1234567890,
     "result": "null"
-}
-```
-<a name="property.clients"></a>
-## *clients <sup>property</sup>*
-
-Provides access to the list of compositor clients.
-
-> This property is **read-only**.
-
-### Description
-
-Use this property to retrieve the information of actual running clients.
-
-### Value
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | array | List of compositor clients |
-| (property)[#] | string | Client name |
-
-### Example
-
-#### Get Request
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "Compositor.1.clients"
-}
-```
-#### Get Response
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": [
-        "Netflix"
-    ]
 }
 ```
 <a name="property.zorder"></a>
@@ -432,7 +391,7 @@ Use this property to update or retrieve the geometry of a client's surface.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
+| 2 | ```ERROR_UNAVAILABLE``` | Client not found |
 
 ### Example
 
@@ -506,7 +465,7 @@ Use this property to set the client's surface visibility.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
+| 2 | ```ERROR_UNAVAILABLE``` | Client not found |
 
 ### Example
 
@@ -552,7 +511,7 @@ Use this property to set the client's surface opacity level.
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 34 | ```ERROR_FIRST_RESOURCE_NOT_FOUND``` | Client not found |
+| 2 | ```ERROR_UNAVAILABLE``` | Client not found |
 
 ### Example
 

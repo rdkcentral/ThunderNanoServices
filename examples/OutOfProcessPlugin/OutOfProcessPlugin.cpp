@@ -68,17 +68,29 @@ namespace Plugin {
 
             PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
 
-            ASSERT(stateControl != nullptr);
+            if (stateControl != nullptr) {
 
-            stateControl->Configure(_service);
-            stateControl->Register(_notification);
-            stateControl->Release();
+                stateControl->Configure(_service);
+                stateControl->Register(_notification);
+                stateControl->Release();
 
-            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
+                PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
 
-            _memory = WPEFramework::OutOfProcessPlugin::MemoryObserver(remoteConnection);
-            ASSERT(_memory != nullptr);
-            remoteConnection->Release();
+                if (sink != nullptr) {
+                    _service->Register(sink);
+                    sink->Release();
+
+                    RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
+                    if (remoteConnection != nullptr) {
+                        _memory = WPEFramework::OutOfProcessPlugin::MemoryObserver(remoteConnection);
+                        ASSERT(_memory != nullptr);
+                        remoteConnection->Release();
+                    }
+                    else {
+                        message = _T("Failed to instantiate the Server.");
+                    }
+                }
+            }
         }
 
         return message;
@@ -89,10 +101,19 @@ namespace Plugin {
         ASSERT(service == _service);
         ASSERT(_browser != nullptr);
 
+        fprintf(stderr, "================ Deinitializing the OutOfProcessPlugin forcefully =================\n"); fflush(stderr);
+
         _service->DisableWebServer();
         _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
         _browser->Unregister(_notification);
         _memory->Release();
+
+        PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
+
+        if (sink != nullptr) {
+            _service->Unregister(sink);
+            sink->Release();
+        }
 
         PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
 
@@ -107,14 +128,19 @@ namespace Plugin {
         if (_browser->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
 
             ASSERT(_connectionId != 0);
+
+
             TRACE_L1("OutOfProcess Plugin is not properly destructed. PID: %d", _connectionId);
 
+            fprintf(stderr, "================ Deactivating the OutOfProcessPlugin forcefully =================\n"); fflush(stderr);
             ConnectionTermination(_connectionId);
+            fprintf(stderr, "================ Deactivated the OutOfProcessPlugin forcefully ==================\n"); fflush(stderr);
         }
 
         _memory = nullptr;
         _browser = nullptr;
         _service = nullptr;
+        fprintf(stderr, "================ Deinitialized the OutOfProcessPlugin forcefully ==================\n"); fflush(stderr);
     }
 
     /* virtual */ string OutOfProcessPlugin::Information() const
@@ -229,6 +255,7 @@ namespace Plugin {
         info.ToString(message);
         TRACE_L1("Received a new URL: %s", message.c_str());
         TRACE_L1("URL length: %u", static_cast<uint32_t>(message.length()));
+        fprintf(stderr, "================ URL Changed [%s] =================\n", URL.c_str()); fflush(stderr);
 
         _service->Notify(message);
     }
