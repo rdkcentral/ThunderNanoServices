@@ -279,6 +279,7 @@ Use this property to set or retrieve the current resolution of the screen.
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown resolution |
+| 2 | ```ERROR_UNAVAILABLE``` | Set resolution is not supported or failed |
 | 1 | ```ERROR_GENERAL``` | Failed to set resolution |
 
 ### Example
