@@ -266,7 +266,7 @@ namespace Implementation {
 #endif
                 , _adminLock()
             {
-                ASSERT(_initialized == false)
+                ASSERT(_initialized == false);
                 ASSERT(_aampPlayer == nullptr);
                 ASSERT(_aampGstPlayerMainLoop == nullptr);
 
