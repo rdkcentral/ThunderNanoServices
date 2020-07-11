@@ -178,6 +178,8 @@ private:
             Core::JSON::EnumType<JsonData::StateControl::StateType> &response) const; // StateControl
     uint32_t set_state(
             const Core::JSON::EnumType<JsonData::StateControl::StateType> &param); // StateControl
+    uint32_t endpoint_delete(const JsonData::Browser::DeleteParamsData& params);
+    uint32_t delete_dir(const string& path);
     void event_urlchange(const string &url, const bool &loaded); // Browser
     void event_visibilitychange(const bool &hidden); // Browser
     void event_statechange(const bool &suspended); // StateControl
@@ -190,6 +192,7 @@ private:
     Exchange::IMemory *_memory;
     PluginHost::IShell *_service;
     Core::Sink<Notification> _notification;
+    string _persistentStoragePath;
 };
 }
 } // namespace

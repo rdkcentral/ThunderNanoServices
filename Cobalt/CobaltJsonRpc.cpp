@@ -41,6 +41,7 @@ void Cobalt::RegisterAll() {
     Property < Core::JSON::EnumType
             < StateType
                     >> (_T("state"), &Cobalt::get_state, &Cobalt::set_state, this); /* StateControl */
+    Register<DeleteParamsData,void>(_T("delete"), &Cobalt::endpoint_delete, this);
 }
 
 void Cobalt::UnregisterAll() {
@@ -48,6 +49,7 @@ void Cobalt::UnregisterAll() {
     Unregister(_T("fps"));
     Unregister(_T("visibility"));
     Unregister(_T("url"));
+    Unregister(_T("delete"));
 }
 
 // API implementation
@@ -83,8 +85,11 @@ uint32_t Cobalt::set_url(const Core::JSON::String &param) /* Browser */
 //  - ERROR_NONE: Success
 uint32_t Cobalt::get_visibility(
         Core::JSON::EnumType<VisibilityType> &response) const /* Browser */ {
+    /*
     response = (_hidden ? VisibilityType::HIDDEN : VisibilityType::VISIBLE);
     return Core::ERROR_NONE;
+    */
+    return Core::ERROR_UNAVAILABLE;
 }
 
 // Property: visibility - Current browser visibility
@@ -92,9 +97,9 @@ uint32_t Cobalt::get_visibility(
 //  - ERROR_NONE: Success
 uint32_t Cobalt::set_visibility(
         const Core::JSON::EnumType<VisibilityType> &param) /* Browser */ {
+    /*
     ASSERT(_cobalt != nullptr);
     uint32_t result = Core::ERROR_BAD_REQUEST;
-
     if (param.IsSet()) {
         if (param == VisibilityType::VISIBLE) {
             _cobalt->Hide(true);
@@ -104,6 +109,8 @@ uint32_t Cobalt::set_visibility(
         result = Core::ERROR_NONE;
     }
     return result;
+    */
+    return Core::ERROR_UNAVAILABLE;
 }
 
 // Property: fps - Current number of frames per second the browser is rendering
@@ -155,6 +162,31 @@ uint32_t Cobalt::set_state(const Core::JSON::EnumType<StateType> &param) /* Stat
         }
         result = Core::ERROR_NONE;
     }
+    return result;
+}
+
+// Method: endpoint_delete - delete dir
+// Return codes:
+//  - ERROR_NONE: Success
+//  - ERROR_UNKNOWN_KEY: The given path was incorrect
+uint32_t Cobalt::endpoint_delete(const DeleteParamsData& params)
+{
+    return delete_dir(params.Path.Value());
+}
+
+uint32_t Cobalt::delete_dir(const string& path)
+{
+    uint32_t result = Core::ERROR_NONE;
+
+    if (path.empty() == false) {
+        string fullPath = _persistentStoragePath + path;
+        Core::Directory dir(fullPath.c_str());
+        if (!dir.Destroy(true)) {
+            TRACE(Trace::Error, (_T("Failed to delete %s\n"), fullPath.c_str()));
+            result = Core::ERROR_UNKNOWN_KEY;
+        }
+    }
+
     return result;
 }
 

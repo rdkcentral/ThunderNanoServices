@@ -197,6 +197,45 @@ namespace Plugin
         return result;
     }
 
+    uint8_t WifiControl::GetWPAProtocolFlags(const JsonData::WifiControl::ConfigInfo& settings, const bool safeFallback) {
+        uint8_t protocolFlags = 0;
+
+        switch (settings.Type.Value()) {
+            case JsonData::WifiControl::TypeType::WPA:
+                protocolFlags = WPASupplicant::Config::wpa_protocol::WPA;
+                break;
+            case JsonData::WifiControl::TypeType::WPA2:
+                protocolFlags = WPASupplicant::Config::WPA2;
+                break;
+            case JsonData::WifiControl::TypeType::WPA_WPA2:
+                protocolFlags = WPASupplicant::Config::WPA | WPASupplicant::Config::WPA2;
+                break;
+            default:
+                if (safeFallback) {
+                    protocolFlags = WPASupplicant::Config::WPA | WPASupplicant::Config::WPA2;
+                    TRACE_L1("Unknown WPA protocol type %d. Assuming WPA/WPA2", settings.Type.Value());
+                } else {
+                    TRACE_L1("Unknown WPA protocol type %d", settings.Type.Value());
+                }
+        }
+
+        return protocolFlags;
+    }
+
+    JsonData::WifiControl::TypeType WifiControl::GetWPAProtocolType(const uint8_t protocolFlags) {
+        JsonData::WifiControl::TypeType result = JsonData::WifiControl::TypeType::UNKNOWN;
+        
+        if (protocolFlags == (WPASupplicant::Config::wpa_protocol::WPA | WPASupplicant::Config::wpa_protocol::WPA2)) {
+            result = JsonData::WifiControl::TypeType::WPA_WPA2;
+        } else if ((protocolFlags & WPASupplicant::Config::wpa_protocol::WPA2) != 0) {
+            result = JsonData::WifiControl::TypeType::WPA2;
+        } else if ((protocolFlags & WPASupplicant::Config::wpa_protocol::WPA) != 0) {
+            result = JsonData::WifiControl::TypeType::WPA;
+        } 
+
+        return result;
+    }
+    
     Core::ProxyType<Web::Response> WifiControl::GetMethod(Core::TextSegmentIterator & index)
     {
         Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());

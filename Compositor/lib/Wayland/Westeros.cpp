@@ -452,7 +452,7 @@ namespace Implementation {
         uint32_t SetResolution(const Exchange::IComposition::ScreenResolution value) {
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
-            if (_context) {
+            if (_context && _wstGLSetDisplayMode) {
 
                 const char* request = nullptr;
                 switch(value) {
@@ -468,9 +468,15 @@ namespace Implementation {
                     case Exchange::IComposition::ScreenResolution_2160p60Hz: request = "3840x2160x60"; break;
                     default: break;
                 }
-                if ( (request != nullptr) && (_wstGLSetDisplayMode) && (_wstGLSetDisplayMode(_context, request) == true) ) {
-                    result = Core::ERROR_NONE;
-                    _resolution = value;
+                if (request != nullptr) {
+                    if (_wstGLSetDisplayMode(_context, request) == true) {
+                        result = Core::ERROR_NONE;
+                        _resolution = value;
+                    } else {
+                        result = Core::ERROR_GENERAL;
+                    }
+                } else {
+                    result = Core::ERROR_UNKNOWN_KEY;
                 }
             }
 
