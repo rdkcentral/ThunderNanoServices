@@ -305,12 +305,15 @@ namespace Plugin {
 
                         displaySettings.format = index->second;
                         if (NxClient_SetDisplaySettings(&displaySettings) != 0) {
-                            TRACE(Trace::Information, (_T("Errir in setting NxClient DisplaySettings")));
+                            TRACE(Trace::Information, (_T("Error in setting NxClient DisplaySettings")));
+                            result = Core::ERROR_GENERAL;
                         }
                         else {
                             result = Core::ERROR_NONE;
                         }
                     }
+                } else {
+                    result = ERROR_UNKNOWN_KEY;
                 }
             }
             return (result);

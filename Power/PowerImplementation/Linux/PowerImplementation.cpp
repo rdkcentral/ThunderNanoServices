@@ -265,7 +265,7 @@ void power_deinitialize() {
 }
 
 uint32_t power_set_state(const enum WPEFramework::Exchange::IPower::PCState state, const uint32_t sleepTime) {
-    uint32_t retStatus = Core::ERROR_UNAVAILABLE;
+    uint32_t retStatus = Core::ERROR_GENERAL;
 
     ASSERT (implementation != nullptr);
 

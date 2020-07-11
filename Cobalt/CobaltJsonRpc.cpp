@@ -85,8 +85,11 @@ uint32_t Cobalt::set_url(const Core::JSON::String &param) /* Browser */
 //  - ERROR_NONE: Success
 uint32_t Cobalt::get_visibility(
         Core::JSON::EnumType<VisibilityType> &response) const /* Browser */ {
+    /*
     response = (_hidden ? VisibilityType::HIDDEN : VisibilityType::VISIBLE);
     return Core::ERROR_NONE;
+    */
+    return Core::ERROR_UNAVAILABLE;
 }
 
 // Property: visibility - Current browser visibility
@@ -94,9 +97,9 @@ uint32_t Cobalt::get_visibility(
 //  - ERROR_NONE: Success
 uint32_t Cobalt::set_visibility(
         const Core::JSON::EnumType<VisibilityType> &param) /* Browser */ {
+    /*
     ASSERT(_cobalt != nullptr);
     uint32_t result = Core::ERROR_BAD_REQUEST;
-
     if (param.IsSet()) {
         if (param == VisibilityType::VISIBLE) {
             _cobalt->Hide(true);
@@ -106,6 +109,8 @@ uint32_t Cobalt::set_visibility(
         result = Core::ERROR_NONE;
     }
     return result;
+    */
+    return Core::ERROR_UNAVAILABLE;
 }
 
 // Property: fps - Current number of frames per second the browser is rendering

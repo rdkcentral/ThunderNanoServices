@@ -125,19 +125,18 @@ namespace Plugin {
         TRACE(Trace::Information, (string(__FUNCTION__)));
         Notifier notifier(this);
 
-        PluginHost::DownloadEngine downloadEngine(&notifier, _destination + Name);
+        PluginHost::DownloadEngine downloadEngine(&notifier, "", _interval);
 
-        uint32_t status = downloadEngine.Start(_source, _destination, _hash);
+        uint32_t status = downloadEngine.Start(_source, _destination + Name, _hash);
         if ((status == Core::ERROR_NONE) || (status == Core::ERROR_INPROGRESS)) {
 
             Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
-            status = WaitForCompletion(_waitTime);
-            if ((status == Core::ERROR_NONE) && (DownloadStatus() == Core::ERROR_NONE)) {
-                 Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 0);
-            } else {
-                status = ((status != Core::ERROR_NONE)? status: DownloadStatus());
-                Status(UpgradeStatus::DOWNLOAD_ABORTED, status, 0);
-            }
+            status = WaitForCompletion(_waitTime * 1000);
+        }
+
+        status = ((status != Core::ERROR_NONE)? status: DownloadStatus());
+        if (status == Core::ERROR_NONE) {
+            Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 100);
         } else {
             Status(UpgradeStatus::DOWNLOAD_ABORTED, status, 0);
         }

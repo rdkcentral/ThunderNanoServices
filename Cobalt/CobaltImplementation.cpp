@@ -39,11 +39,20 @@ private:
         Config& operator=(const Config&);
 
     public:
-        Config() :
-            Core::JSON::Container(), Url() {
+        Config()
+            : Core::JSON::Container()
+            , Url()
+            , Width(1280)
+            , Height(720)
+            , RepeatStart()
+            , RepeatInterval()
+            , ClientIdentifier()
+        {
             Add(_T("url"), &Url);
             Add(_T("width"), &Width);
             Add(_T("height"), &Height);
+            Add(_T("repeatstart"), &RepeatStart);
+            Add(_T("repeatinterval"), &RepeatInterval);
             Add(_T("clientidentifier"), &ClientIdentifier);
         }
         ~Config() {
@@ -53,6 +62,8 @@ private:
         Core::JSON::String Url;
         Core::JSON::DecUInt16 Width;
         Core::JSON::DecUInt16 Height;
+        Core::JSON::DecUInt32 RepeatStart;
+        Core::JSON::DecUInt32 RepeatInterval;
         Core::JSON::String ClientIdentifier;
     };
 
@@ -140,6 +151,16 @@ private:
 
             if (height.empty() == false) {
                 Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_HEIGHT"), height);
+            }
+
+            if (config.RepeatStart.IsSet() == true) {
+                string repeatStart(Core::NumberType<uint32_t>(config.RepeatStart.Value()).Text());
+                Core::SystemInfo::SetEnvironment(_T("COBALT_KEY_REPEAT_START"), repeatStart);
+            }
+
+            if (config.RepeatInterval.IsSet() == true) {
+                string repeatInterval(Core::NumberType<uint32_t>(config.RepeatInterval.Value()).Text());
+                Core::SystemInfo::SetEnvironment(_T("COBALT_KEY_REPEAT_INTERVAL"), repeatInterval);
             }
 
             if (config.Url.IsSet() == true) {

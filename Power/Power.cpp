@@ -218,8 +218,6 @@ namespace Plugin {
             if ( (result = power_set_state(state, waitTime)) != Core::ERROR_NONE) {
                 TRACE(Trace::Information, (_T("Could not change the power state, error: %d"), result));
             }
-        } else {
-            result = Core::ERROR_UNAVAILABLE;
         }
 
         return (result);
@@ -257,7 +255,7 @@ namespace Plugin {
     {
         // We only subscribed for the KEY_POWER event so do not
         // expect anything else !!!
-        ASSERT(keyCode == KEY_POWER)
+        ASSERT(keyCode == KEY_POWER);
 
         if (keyCode == KEY_POWER) {
             PowerKey();

@@ -169,6 +169,12 @@ Also see: [visibilitychange](#event.visibilitychange)
 | :-------- | :-------- | :-------- |
 | (property) | string | Current browser visibility (must be one of the following: *visible*, *hidden*) |
 
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Returned when the operation is unavailable |
+
 ### Example
 
 #### Get Request
