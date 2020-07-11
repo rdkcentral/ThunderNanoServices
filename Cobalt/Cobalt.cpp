@@ -42,6 +42,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
     ASSERT(_memory == nullptr);
 
     config.FromString(service->ConfigLine());
+    _persistentStoragePath = service->PersistentPath();
 
     _connectionId = 0;
     _service = service;
