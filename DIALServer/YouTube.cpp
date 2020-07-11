@@ -47,12 +47,13 @@ namespace DIALHandlers {
 #endif
         virtual ~YouTube()
         {
-            Stopped({});
+            Stopped({}, {});
         }
 
     public:
-        uint32_t Start(const string& params) override {
-            return Default::Start(params);
+        uint32_t Start(const string& params, const string& payload) override
+        {
+            return Default::Start(params + _T("&") + payload, {});
         }
 
         bool Connect() override
@@ -68,7 +69,7 @@ namespace DIALHandlers {
         {
             return _browser != nullptr;
         }
-        virtual void Stopped(const string& data)
+        virtual void Stopped(const string& data, const string& payload)
         {
             if (_browser != nullptr) {
                 _browser->Unregister(&_notification);
@@ -94,8 +95,8 @@ namespace DIALHandlers {
             return _hidden;
         }
 
-        bool URL(const string& url) override {
-            _browser->SetURL(url);
+        bool URL(const string& url, const string& payload) override {
+            _browser->SetURL(url + _T("&") + payload);
             return (true);
         }
 
