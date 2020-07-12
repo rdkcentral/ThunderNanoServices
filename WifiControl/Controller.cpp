@@ -41,7 +41,7 @@ namespace WPASupplicant {
 
     static const TCHAR hexArray[] = "0123456789abcdef";
 
-    class EXTERNAL Communication {
+    class Communication {
     private:
         Communication(const Communication& a_Copy) = delete;
         Communication& operator=(const Communication& a_RHS) = delete;
