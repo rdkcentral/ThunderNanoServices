@@ -31,7 +31,9 @@ namespace DIALHandlers {
         Netflix(const Netflix&) = delete;
         Netflix& operator=(const Netflix&) = delete;
 
-    public:
+        #ifdef __WINDOWS__
+        #pragma warning(disable : 4355)
+        #endif
         Netflix(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config, Plugin::DIALServer *parent)
             : Default(service, config, parent)
             , _netflix(nullptr)
@@ -47,6 +49,10 @@ namespace DIALHandlers {
                 service->Register(&_notification);
             }
         }
+        #ifdef __WINDOWS__
+        #pragma warning(default : 4355)
+        #endif
+
         ~Netflix() override
         {
             Detach();
@@ -65,7 +71,7 @@ namespace DIALHandlers {
 
             if (payload.empty() == false) {
                 // Netflix expects the payload as urlencoded option "dial"
-                TCHAR encodedPayload[payload.length() * 3 * sizeof(TCHAR)];
+                TCHAR* encodedPayload = reinterpret_cast<TCHAR*>(ALLOCA(payload.length() * 3 * sizeof(TCHAR)));
                 Core::URL::Encode(payload.c_str(), static_cast<uint16_t>(payload.length()), encodedPayload, static_cast<uint16_t>(sizeof(encodedPayload)));
                 query = query + _T("&dial=") + encodedPayload;
             }
