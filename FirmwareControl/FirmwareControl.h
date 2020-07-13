@@ -115,9 +115,9 @@ namespace Plugin {
             {
                 _parent.NotifyDownloadStatus(status);
             }
-            virtual void NotifyProgress(const uint8_t percentage) override
+            virtual void NotifyProgress(const uint32_t transferred) override
             {
-                _parent.NotifyProgress(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, percentage);
+                _parent.NotifyProgress(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, transferred);
             }
 
         private:
@@ -232,18 +232,18 @@ namespace Plugin {
             }
         }
 
-        inline void NotifyProgress(const UpgradeStatus& upgradeStatus, const ErrorType& errorType, const uint8_t& percentage)
+        inline void NotifyProgress(const UpgradeStatus& upgradeStatus, const ErrorType& errorType, const uint32_t& progress)
         {
             if ((upgradeStatus == UPGRADE_COMPLETED) ||
                 (upgradeStatus == INSTALL_ABORTED) ||
                 (upgradeStatus == DOWNLOAD_ABORTED)) {
                 event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
-                                      static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), percentage);
+                                      static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), progress);
                 ResetStatus();
                 RemoveDownloadedFile();
             } else if (_interval) { // Send intermediate staus/progress of upgrade
                 event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
-                                      static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), percentage);
+                                      static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), progress);
             }
         }
 
@@ -262,7 +262,7 @@ namespace Plugin {
         uint32_t get_downloadsize(Core::JSON::DecUInt64& response) const;
 
         void event_upgradeprogress(const JsonData::FirmwareControl::StatusType& status,
-                                   const JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType& error, const uint8_t& percentage);
+                                   const JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType& error, const uint32_t& progress);
 
         inline uint32_t WaitForCompletion(int32_t waitTime)
         {
@@ -302,13 +302,13 @@ namespace Plugin {
             return status;
         }
 
-        inline void Status(const UpgradeStatus& upgradeStatus, const uint32_t& error, const uint8_t& percentage)
+        inline void Status(const UpgradeStatus& upgradeStatus, const uint32_t& error, const uint32_t& progress)
         {
             _adminLock.Lock();
             _upgradeStatus = upgradeStatus;
             _adminLock.Unlock();
 
-            NotifyProgress(upgradeStatus, ConvertCoreErrorToUpgradeError(error), percentage);
+            NotifyProgress(upgradeStatus, ConvertCoreErrorToUpgradeError(error), progress);
         }
 
         inline uint64_t DownloadMaxSize() const
