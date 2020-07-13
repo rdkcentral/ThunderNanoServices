@@ -396,7 +396,7 @@ namespace Plugin {
             response->Message = _T("Payload too long");
         } else {
             const string additionalDataUrl = (_T("http://localhost/") + app.Name() + _T("/") + _DefaultDataExtension);
-            TCHAR encodedDataUrl[additionalDataUrl.length() * 3 * sizeof(TCHAR)];
+            TCHAR* encodedDataUrl = reinterpret_cast<TCHAR*>(ALLOCA(additionalDataUrl.length() * 3 * sizeof(TCHAR)));
             Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, static_cast<uint16_t>(sizeof(encodedDataUrl)));
             string parameters = (app.AppURL() + (app.HasQueryParameter()? _T("&") : _T("?")) + _T("additionalDataUrl=") + encodedDataUrl);
 
