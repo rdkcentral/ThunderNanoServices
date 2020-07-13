@@ -22,10 +22,11 @@
 namespace WPEFramework {
 
 namespace WebKitBrowser {
-
+    // TODO: can't this be done via header file instead of extern?
     // An implementation file needs to implement this method to return an operational browser, wherever that would be :-)
     extern Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection);
 }
+
 
 namespace Plugin {
 
@@ -51,7 +52,7 @@ namespace Plugin {
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
         _service->Register(&_notification);
 
-        _browser = service->Root<Exchange::IWebKitBrowser>(_connectionId, 2000, _T("WebKitImplementation"));
+        _browser = service->Root<Exchange::IWebBrowser>(_connectionId, 2000, _T("WebKitImplementation"));
 
         if (_browser != nullptr) {
             PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
@@ -165,13 +166,23 @@ namespace Plugin {
             ASSERT(stateControl != nullptr);
 
             if (request.Verb == Web::Request::HTTP_GET) {
-                auto visibilityState = _browser->GetVisibility();
+                //auto visibilityState = _browser->GetVisibility();
+                //WPEFramework::Exchange::IWebBrowser::Visibility visibilityState;
+                bool visible;
+                static_cast<const WPEFramework::Exchange::IWebBrowser*>(_browser)->Visible(visible);
                 PluginHost::IStateControl::state currentState = stateControl->State();
                 Core::ProxyType<Web::JSONBodyType<WebKitBrowser::Data>> body(_jsonBodyDataFactory.Element());
-                body->URL = _browser->GetURL();
-                body->FPS = _browser->GetFPS();
+                //body->URL = _browser->GetURL();
+                string url;
+                static_cast<const WPEFramework::Exchange::IWebBrowser*>(_browser)->URL(url);
+                body->URL = url;
+                //body->FPS = _browser->GetFPS();
+                uint8_t fps = 0;
+                _browser->FPS(fps);
+                body->FPS = fps;
                 body->Suspended = (currentState == PluginHost::IStateControl::SUSPENDED);
-                body->Hidden = (visibilityState != Exchange::IWebKitBrowser::Visibility::VISIBLE);
+                //body->Hidden = (visibilityState != Exchange::IWebBrowser::Visibility::VISIBLE);
+                body->Hidden = !visible;
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";
                 result->Body<Web::JSONBodyType<WebKitBrowser::Data>>(body);
@@ -185,12 +196,13 @@ namespace Plugin {
                 } else if (index.Remainder() == _T("Resume")) {
                     stateControl->Request(PluginHost::IStateControl::RESUME);
                 } else if (index.Remainder() == _T("Hide")) {
-                    _browser->SetVisibility(Exchange::IWebKitBrowser::Visibility::HIDDEN);
+                    _browser->Visible(Exchange::IWebBrowser::Visibility::HIDDEN);
                 } else if (index.Remainder() == _T("Show")) {
-                    _browser->SetVisibility(Exchange::IWebKitBrowser::Visibility::VISIBLE);
+                    _browser->Visible(Exchange::IWebBrowser::Visibility::VISIBLE);
                 } else if ((index.Remainder() == _T("URL")) && (request.HasBody() == true) && (request.Body<const Data>()->URL.Value().empty() == false)) {
-                    _browser->SetURL(request.Body<const Data>()->URL.Value());
-
+                    fprintf(stderr, "%s:%u\n", __FILE__, __LINE__);
+                    const string url = request.Body<const Data>()->URL.Value();
+                    _browser->URL(url);
                 } else if ((index.Remainder() == _T("Delete")) && (request.HasBody() == true) && (request.Body<const Data>()->Path.Value().empty() == false)) {
                     if (delete_dir(request.Body<const Data>()->Path.Value()) != Core::ERROR_NONE) {
                         result->ErrorCode = Web::STATUS_BAD_REQUEST;

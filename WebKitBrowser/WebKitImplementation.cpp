@@ -305,7 +305,7 @@ static GSourceFuncs _handlerIntervention =
     nullptr
 };
 --------------------------------------------------------------------------------------------------- */
-    static Exchange::IWebKitBrowser* implementation = nullptr;
+    static Exchange::IWebBrowser* implementation = nullptr;
 #endif // !WEBKIT_GLIB_API
 
     static void CloseDown()
@@ -317,7 +317,7 @@ static GSourceFuncs _handlerIntervention =
         }
     }
 
-    class WebKitImplementation : public Core::Thread, public Exchange::IWebKitBrowser, public PluginHost::IStateControl {
+    class WebKitImplementation : public Core::Thread, public Exchange::IWebBrowser, public PluginHost::IStateControl {
     public:
         class BundleConfig : public Core::JSON::Container {
         private:
@@ -588,15 +588,17 @@ static GSourceFuncs _handlerIntervention =
         }
 
     public:
-        virtual string GetHeaders() const final
+        //virtual string GetHeaders() const final
+        uint32_t Headers(string& headers) const override
         {
             _adminLock.Lock();
-            string headers = _headers;
+            headers = _headers;
             _adminLock.Unlock();
-            return headers;
+            return 0;
         }
 
-        virtual void SetHeaders(const string& headers) final
+        //virtual void SetHeaders(const string& headers) final
+        uint32_t Headers(const string& headers) override
         {
             _adminLock.Lock();
             _headers = headers;
@@ -624,27 +626,31 @@ static GSourceFuncs _handlerIntervention =
                     },
                     this);
             }
+
+            return 0;
         }
 
-        virtual string GetUserAgent() const final
+        //virtual string GetUserAgent() const final
+        uint32_t UserAgent(string& ua) const override
         {
             _adminLock.Lock();
-            string useragent = _config.UserAgent.Value();
+            ua = _config.UserAgent.Value();
             _adminLock.Unlock();
 
-            return useragent;
+            return 0;
         }
 
-        virtual void SetUserAgent(const string& useragent) final
+        //virtual void SetUserAgent(const string& useragent) final
+        uint32_t UserAgent(const string& ua) override
         {
             _adminLock.Lock();
-            _config.UserAgent = useragent;
+            _config.UserAgent = ua;
             _adminLock.Unlock();
 
-            TRACE(Trace::Information, (_T("New user agent: %s"), useragent.c_str()));
+            TRACE(Trace::Information, (_T("New user agent: %s"), ua.c_str()));
 
             if (_context == nullptr)
-                return;
+                return 1; // TODO: what value to return here?
 
             g_main_context_invoke(
                 _context,
@@ -663,20 +669,26 @@ static GSourceFuncs _handlerIntervention =
                     return G_SOURCE_REMOVE;
                 },
                 this);
+
+            return 0;
         }
 
-        virtual string GetLanguages() const final
+        //virtual string GetLanguages() const final
+        uint32_t Languages(string& langs) const override
         {
             _adminLock.Lock();
-            Core::JSON::ArrayType<Core::JSON::String> langs = _config.Languages;
+            Core::JSON::ArrayType<Core::JSON::String> langsArray = _config.Languages;
+            //langs = _config.Languages.Data();
             _adminLock.Unlock();
 
-            string result;
-            langs.ToString(result);
-            return result;
+            //string result;
+            langsArray.ToString(langs);
+            //return result;
+            return 0;
         }
 
-        virtual void SetLanguages(const string& langs) final
+        //virtual void SetLanguages(const string& langs) final
+        uint32_t Languages(const string& langs) override
         {
             Core::OptionalType<Core::JSON::Error> error;
             Core::JSON::ArrayType<Core::JSON::String> array;
@@ -685,7 +697,7 @@ static GSourceFuncs _handlerIntervention =
                 TRACE(Trace::Error,
                      (_T("Failed to parse languages array, error='%s', array='%s'\n"),
                       (error.IsSet() ? error.Value().Message().c_str() : "unknown"), langs.c_str()));
-                return;
+                return 1; // TODO: what to return here?
             }
 
             _adminLock.Lock();
@@ -693,7 +705,7 @@ static GSourceFuncs _handlerIntervention =
             _adminLock.Unlock();
 
             if (_context == nullptr)
-                return;
+                return 1; // TODO: what to return here?
 
             g_main_context_invoke(
                 _context,
@@ -720,25 +732,29 @@ static GSourceFuncs _handlerIntervention =
                     return G_SOURCE_REMOVE;
                 },
                 this);
+
+            return 0;
         }
 
-        virtual bool GetLocalStorageEnabled() const final
+        //virtual bool GetLocalStorageEnabled() const final
+        uint32_t LocalStorageEnabled(bool& enabled) const override
         {
             _adminLock.Lock();
-            bool enabled = _localStorageEnabled;
+            enabled = _localStorageEnabled;
             _adminLock.Unlock();
 
-            return enabled;
+            return 0;
         }
 
-        virtual void SetLocalStorageEnabled(const bool enabled) final
+        //virtual void SetLocalStorageEnabled(const bool enabled) final
+        uint32_t LocalStorageEnabled(const bool enabled) override
         {
             _adminLock.Lock();
             _localStorageEnabled = enabled;
             _adminLock.Unlock();
 
             if (_context == nullptr)
-                return;
+                return 1; // TODO: what to return here?
 
             g_main_context_invoke(
                 _context,
@@ -756,44 +772,48 @@ static GSourceFuncs _handlerIntervention =
                     return G_SOURCE_REMOVE;
                 },
                 this);
+
+            return 0;
         }
 
-        virtual Exchange::IWebKitBrowser::HTTPCookieAcceptPolicy GetHTTPCookieAcceptPolicy() final
+        //virtual Exchange::IWebBrowser::HTTPCookieAcceptPolicyType GetHTTPCookieAcceptPolicy() final
+        uint32_t HTTPCookieAcceptPolicy(HTTPCookieAcceptPolicyType& policy) const override
         {
             auto translatePolicy =
                 [](WKHTTPCookieAcceptPolicy policy) {
                     switch(policy) {
                         case kWKHTTPCookieAcceptPolicyAlways:
-                            return Exchange::IWebKitBrowser::ALWAYS;
+                            return Exchange::IWebBrowser::ALWAYS;
                         case kWKHTTPCookieAcceptPolicyNever:
-                            return Exchange::IWebKitBrowser::NEVER;
+                            return Exchange::IWebBrowser::NEVER;
                         case kWKHTTPCookieAcceptPolicyOnlyFromMainDocumentDomain:
-                            return Exchange::IWebKitBrowser::ONLY_FROM_MAIN_DOCUMENT_DOMAIN;
+                            return Exchange::IWebBrowser::ONLY_FROM_MAIN_DOCUMENT_DOMAIN;
                         case kWKHTTPCookieAcceptPolicyExclusivelyFromMainDocumentDomain:
-                            return Exchange::IWebKitBrowser::EXCLUSIVELY_FROM_MAIN_DOCUMENT_DOMAIN;
+                            return Exchange::IWebBrowser::EXCLUSIVELY_FROM_MAIN_DOCUMENT_DOMAIN;
                     }
                     ASSERT(false);
-                    return Exchange::IWebKitBrowser::ONLY_FROM_MAIN_DOCUMENT_DOMAIN;
+                    return Exchange::IWebBrowser::ONLY_FROM_MAIN_DOCUMENT_DOMAIN;
                 };
 
             _adminLock.Lock();
-            Exchange::IWebKitBrowser::HTTPCookieAcceptPolicy policy = translatePolicy(_httpCookieAcceptPolicy);
+            policy = translatePolicy(_httpCookieAcceptPolicy);
             _adminLock.Unlock();
-            return policy;
+            return 0;
         }
 
-        virtual void SetHTTPCookieAcceptPolicy(const Exchange::IWebKitBrowser::HTTPCookieAcceptPolicy policy) final
+        //virtual void SetHTTPCookieAcceptPolicy(const Exchange::IWebBrowser::HTTPCookieAcceptPolicyType policy) final
+        uint32_t HTTPCookieAcceptPolicy(const HTTPCookieAcceptPolicyType policy) override
         {
             auto translatePolicy =
-                [](Exchange::IWebKitBrowser::HTTPCookieAcceptPolicy policy) {
+                [](Exchange::IWebBrowser::HTTPCookieAcceptPolicyType policy) {
                     switch(policy) {
-                        case Exchange::IWebKitBrowser::ALWAYS:
+                        case Exchange::IWebBrowser::ALWAYS:
                             return kWKHTTPCookieAcceptPolicyAlways;
-                        case Exchange::IWebKitBrowser::NEVER:
+                        case Exchange::IWebBrowser::NEVER:
                             return kWKHTTPCookieAcceptPolicyNever;
-                        case Exchange::IWebKitBrowser::ONLY_FROM_MAIN_DOCUMENT_DOMAIN:
+                        case Exchange::IWebBrowser::ONLY_FROM_MAIN_DOCUMENT_DOMAIN:
                             return kWKHTTPCookieAcceptPolicyOnlyFromMainDocumentDomain;
-                        case Exchange::IWebKitBrowser::EXCLUSIVELY_FROM_MAIN_DOCUMENT_DOMAIN:
+                        case Exchange::IWebBrowser::EXCLUSIVELY_FROM_MAIN_DOCUMENT_DOMAIN:
                             return kWKHTTPCookieAcceptPolicyExclusivelyFromMainDocumentDomain;
                     }
                     ASSERT(false);
@@ -805,7 +825,7 @@ static GSourceFuncs _handlerIntervention =
             _adminLock.Unlock();
 
             if (_context == nullptr)
-                return;
+                return 1; // TODO: what to return here?
 
             g_main_context_invoke(
                 _context,
@@ -823,6 +843,8 @@ static GSourceFuncs _handlerIntervention =
                     return G_SOURCE_REMOVE;
                 },
                 this);
+
+           return 0;
         }
 
         virtual void BridgeReply(const string& payload) final
@@ -866,25 +888,32 @@ static GSourceFuncs _handlerIntervention =
                 });
         }
 
-        virtual Exchange::IWebKitBrowser::Visibility GetVisibility() const final
+        //virtual Exchange::IWebBrowser::Visibility GetVisibility() const final
+        uint32_t Visible(bool& visible) const override
         {
             _adminLock.Lock();
-            Exchange::IWebKitBrowser::Visibility state = _hidden
-                ? Exchange::IWebKitBrowser::Visibility::HIDDEN
-                : Exchange::IWebKitBrowser::Visibility::VISIBLE;
+            //Exchange::IWebBrowser::Visibility state = _hidden
+            //    ? Exchange::IWebBrowser::Visibility::HIDDEN
+            //    : Exchange::IWebBrowser::Visibility::VISIBLE;
+            visible = !_hidden;
             _adminLock.Unlock();
-            return state;
+            return 0;
         }
-        virtual void SetVisibility(const Exchange::IWebKitBrowser::Visibility state) final
+        //virtual void SetVisibility(const Exchange::IWebBrowser::Visibility state) final
+        uint32_t Visible(const bool visible) override
         {
-            if (state == Exchange::IWebKitBrowser::Visibility::HIDDEN)
-                Hide(true);
-            else
-                Hide(false);
+            //if (state == Exchange::IWebBrowser::Visibility::HIDDEN)
+            //    Hide(true);
+            //else
+            //    Hide(false);
+            Hide(!visible);
+            return 0;
         }
 
-        virtual void SetURL(const string& URL) final
+        //virtual void SetURL(const string& URL) final
+        virtual uint32_t URL(const string& URL) final
         {
+            fprintf(stderr, "%s:%u\n", __FILE__, __LINE__);
             _adminLock.Lock();
             _URL = URL;
             _adminLock.Unlock();
@@ -892,6 +921,7 @@ static GSourceFuncs _handlerIntervention =
             TRACE(Trace::Information, (_T("New URL: %s"), _URL.c_str()));
 
             if (_context != nullptr) {
+                fprintf(stderr, "%s:%u\n", __FILE__, __LINE__);
                 g_main_context_invoke(
                     _context,
                     [](gpointer customdata) -> gboolean {
@@ -900,6 +930,7 @@ static GSourceFuncs _handlerIntervention =
                         webkit_web_view_load_uri(object->_view, object->_URL.c_str());
 #else
                         auto shellURL = WKURLCreateWithUTF8CString(object->_URL.c_str());
+                        fprintf(stderr, "%s:%u %s\n", __FILE__, __LINE__, object->_URL.c_str());
                         WKPageLoadURL(object->_page, shellURL);
                         WKRelease(shellURL);
 #endif
@@ -907,18 +938,25 @@ static GSourceFuncs _handlerIntervention =
                     },
                     this);
             }
+
+            return 0;
         }
-        virtual string GetURL() const final
+        //virtual string GetURL() const final
+        virtual uint32_t URL(string& url) const final
         {
+            fprintf(stderr, "%s:%u\n", __FILE__, __LINE__);
             _adminLock.Lock();
-            string url = _URL;
+            url = _URL;
             _adminLock.Unlock();
 
-            return url;
+            return 0;
         }
-        virtual uint32_t GetFPS() const final
+        //virtual uint32_t GetFPS() const final
+        uint32_t FPS(uint8_t& fps /* @out */) const override
         {
-            return _fps;
+            //return _fps;
+            fps = _fps;
+            return 0;
         }
         virtual PluginHost::IStateControl::state State() const final
         {
@@ -997,7 +1035,7 @@ static GSourceFuncs _handlerIntervention =
                 Show();
             }
         }
-        virtual void Register(Exchange::IWebKitBrowser::INotification* sink)
+        virtual void Register(Exchange::IWebBrowser::INotification* sink)
         {
             _adminLock.Lock();
 
@@ -1012,11 +1050,11 @@ static GSourceFuncs _handlerIntervention =
             TRACE_L1("Registered a sink on the browser %p", sink);
         }
 
-        virtual void Unregister(Exchange::IWebKitBrowser::INotification* sink)
+        virtual void Unregister(Exchange::IWebBrowser::INotification* sink)
         {
             _adminLock.Lock();
 
-            std::list<Exchange::IWebKitBrowser::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));
+            std::list<Exchange::IWebBrowser::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));
 
             // Make sure you do not unregister something you did not register !!!
             ASSERT(index != _notificationClients.end());
@@ -1036,7 +1074,7 @@ static GSourceFuncs _handlerIntervention =
 
             _URL = URL;
 
-            std::list<Exchange::IWebKitBrowser::INotification*>::iterator index(_notificationClients.begin());
+            std::list<Exchange::IWebBrowser::INotification*>::iterator index(_notificationClients.begin());
 
             while (index != _notificationClients.end()) {
                 (*index)->URLChange(URL, false);
@@ -1058,7 +1096,7 @@ static GSourceFuncs _handlerIntervention =
 
             _URL = URL;
 
-            std::list<Exchange::IWebKitBrowser::INotification*>::iterator index(_notificationClients.begin());
+            std::list<Exchange::IWebBrowser::INotification*>::iterator index(_notificationClients.begin());
 
             while (index != _notificationClients.end()) {
                 (*index)->LoadFinished(URL, _httpStatusCode);
@@ -1071,7 +1109,7 @@ static GSourceFuncs _handlerIntervention =
         {
             _adminLock.Lock();
 
-            std::list<Exchange::IWebKitBrowser::INotification*>::iterator index(_notificationClients.begin());
+            std::list<Exchange::IWebBrowser::INotification*>::iterator index(_notificationClients.begin());
 
             while (index != _notificationClients.end()) {
                 (*index)->LoadFailed(_URL);
@@ -1104,7 +1142,7 @@ static GSourceFuncs _handlerIntervention =
             if (hidden != _hidden) {
                 _hidden = hidden;
 
-                std::list<Exchange::IWebKitBrowser::INotification*>::iterator index(_notificationClients.begin());
+                std::list<Exchange::IWebBrowser::INotification*>::iterator index(_notificationClients.begin());
 
                 while (index != _notificationClients.end()) {
                     (*index)->VisibilityChange(hidden);
@@ -1124,7 +1162,7 @@ static GSourceFuncs _handlerIntervention =
         {
             _adminLock.Lock();
 
-            std::list<Exchange::IWebKitBrowser::INotification*>::iterator index(_notificationClients.begin());
+            std::list<Exchange::IWebBrowser::INotification*>::iterator index(_notificationClients.begin());
 
             while (index != _notificationClients.end()) {
                 (*index)->BridgeQuery(text);
@@ -1138,10 +1176,6 @@ static GSourceFuncs _handlerIntervention =
             _httpStatusCode = code;
         }
 
-        void OnNotificationShown(uint64_t notificationID) const
-        {
-            WKNotificationManagerProviderDidShowNotification(_notificationManager, notificationID);
-        }
         virtual uint32_t Configure(PluginHost::IShell* service)
         {
             _dataPath = service->DataPath();
@@ -1258,6 +1292,7 @@ static GSourceFuncs _handlerIntervention =
 
             if (_config.LocalStorageEnabled.IsSet() == true) {
                 _localStorageEnabled = _config.LocalStorageEnabled.Value();
+            }
 
             // ExecPath
             if (_config.ExecPath.IsSet() == true) {
@@ -1301,7 +1336,7 @@ static GSourceFuncs _handlerIntervention =
         {
             _adminLock.Lock();
 
-            std::list<Exchange::IWebKitBrowser::INotification*>::iterator index(_notificationClients.begin());
+            std::list<Exchange::IWebBrowser::INotification*>::iterator index(_notificationClients.begin());
 
             while (index != _notificationClients.end()) {
                 (*index)->PageClosure();
@@ -1342,7 +1377,7 @@ static GSourceFuncs _handlerIntervention =
         }
 #endif
         BEGIN_INTERFACE_MAP(WebKitImplementation)
-        INTERFACE_ENTRY(Exchange::IWebKitBrowser)
+        INTERFACE_ENTRY(Exchange::IWebBrowser)
         INTERFACE_ENTRY(PluginHost::IStateControl)
         END_INTERFACE_MAP
 
@@ -1769,10 +1804,14 @@ static GSourceFuncs _handlerIntervention =
             // Media Content Types Requiring Hardware Support
             if (_config.MediaContentTypesRequiringHardwareSupport.IsSet() == true
                 && _config.MediaContentTypesRequiringHardwareSupport.Value().empty() == false) {
+/*
               auto contentTypes = WKStringCreateWithUTF8CString(
                   _config.MediaContentTypesRequiringHardwareSupport.Value().c_str());
               WKPreferencesSetMediaContentTypesRequiringHardwareSupport(preferences, contentTypes);
               WKRelease(contentTypes);
+ */
+                // TODO: this one doesn't work on nexus?
+                fprintf(stderr, "ERROR: something about hardware support...\n");
             }
 
             WKPageGroupSetPreferences(pageGroup, preferences);
@@ -1840,7 +1879,8 @@ static GSourceFuncs _handlerIntervention =
                 TRACE(Trace::Information, (_T("Current user agent: '%s'"), _config.UserAgent.Value().c_str()));
             }
 
-            SetURL(_URL);
+            //static_cast<const IWebBrowser *>(this)->URL(_URL);
+            static_cast<IWebBrowser *>(this)->URL(static_cast<const string>(_URL));
 
             // Move into the correct state, as requested
             _adminLock.Lock();
@@ -1878,7 +1918,7 @@ static GSourceFuncs _handlerIntervention =
 
             return Core::infinite;
         }
-#endif
+#endif // WEBKIT_GLIB_API
 
     private:
         Config _config;
@@ -1895,20 +1935,19 @@ static GSourceFuncs _handlerIntervention =
 #else
         WKViewRef _view;
         WKPageRef _page;
+        WKWebAutomationSessionRef _automationSession;
         mutable Core::CriticalSection _adminLock;
         WKNotificationManagerRef _notificationManager;
-        WKWebAutomationSessionRef _automationSession;
 #endif
         uint32_t _fps;
         GMainLoop* _loop;
         GMainContext* _context;
-        std::list<Exchange::IWebKitBrowser::INotification*> _notificationClients;
+        std::list<Exchange::IWebBrowser::INotification*> _notificationClients;
         std::list<PluginHost::IStateControl::INotification*> _stateControlClients;
         PluginHost::IStateControl::state _state;
         bool _hidden;
         uint64_t _time;
         bool _compliant;
-        WKWebAutomationSessionRef _automationSession;
         Core::StateTrigger<bool> _configurationCompleted { false };
     };
 
@@ -1936,7 +1975,10 @@ static GSourceFuncs _handlerIntervention =
             string messageText = WKStringToString(messageBodyStr);
             const_cast<WebKitImplementation*>(browser)->OnBrdidgeQuery(messageText);
         } else if (name == Tags::URL) {
-            *returnData = WKStringCreateWithUTF8CString(browser->GetURL().c_str());
+            string url;
+            //*returnData = WKStringCreateWithUTF8CString(browser->GetURL().c_str());
+            browser->URL(url);
+            *returnData = WKStringCreateWithUTF8CString(url.c_str());
         } else if (name.compare(0, configLen, Tags::Config) == 0) {
             // Second part of this string is the key we are looking for, extract it...
             std::string utf8Json = Core::ToString(browser->GetConfig(name.substr(configLen)));
@@ -2093,7 +2135,6 @@ static GSourceFuncs _handlerIntervention =
         exit(1);
     }
 #endif // !WEBKIT_GLIB_API
-
 } // namespace Plugin
 
 namespace WebKitBrowser {
@@ -2253,5 +2294,19 @@ namespace WebKitBrowser {
         Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
         return (result);
     }
-}
 } // namespace WebKitBrowser
+} // namespace WPEFramework
+
+/*
+namespace WPEFramework
+{
+namespace WebKitBrowser
+{
+    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
+    {
+        Exchange::IMemory* result = Core::Service<WebKitBrowser::MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
+        return (result);
+    }
+}
+}
+*/

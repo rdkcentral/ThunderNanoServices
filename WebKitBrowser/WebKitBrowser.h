@@ -23,11 +23,14 @@
 #include "Module.h"
 #include <interfaces/IBrowser.h>
 
-#include "./interfaces/IWebKitBrowser.h"
+//#include "./interfaces/IWebBrowser.h"
 #include <interfaces/IMemory.h>
 #include <interfaces/json/JsonData_Browser.h>
+#include <interfaces/json/JsonData_WebBrowser.h>
+#include <interfaces/json/JsonData_WebKitBrowser.h>
 #include <interfaces/json/JsonData_StateControl.h>
-#include "./interfaces/json/JsonData_WebKitBrowser.h"
+//#include "./interfaces/json/JsonData_WebKitBrowser.h"
+//#include <interfaces/JsonData_WebBrowser.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -39,7 +42,7 @@ namespace Plugin {
 
         class Notification : public RPC::IRemoteConnection::INotification,
                              public PluginHost::IStateControl::INotification,
-                             public Exchange::IWebKitBrowser::INotification {
+                             public Exchange::IWebBrowser::INotification {
         private:
             Notification() = delete;
             Notification(const Notification&) = delete;
@@ -93,7 +96,7 @@ namespace Plugin {
             }
 
             BEGIN_INTERFACE_MAP(Notification)
-            INTERFACE_ENTRY(Exchange::IWebKitBrowser::INotification)
+            INTERFACE_ENTRY(Exchange::IWebBrowser::INotification)
             INTERFACE_ENTRY(PluginHost::IStateControl::INotification)
             INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
@@ -171,7 +174,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(PluginHost::IStateControl, _browser)
         INTERFACE_AGGREGATE(Exchange::IBrowser, _browser)
-        INTERFACE_AGGREGATE(Exchange::IWebKitBrowser, _browser)
+        INTERFACE_AGGREGATE(Exchange::IWebBrowser, _browser)
         INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
         END_INTERFACE_MAP
 
@@ -233,14 +236,14 @@ namespace Plugin {
         uint32_t set_useragent(const Core::JSON::String& param);
         uint32_t get_languages(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t set_languages(const Core::JSON::ArrayType<Core::JSON::String>& param);
-        uint32_t get_headers(Core::JSON::ArrayType<JsonData::WebKitBrowser::HeadersData>& response) const;
-        uint32_t set_headers(const Core::JSON::ArrayType<JsonData::WebKitBrowser::HeadersData>& param);
+        //uint32_t get_headers(Core::JSON::ArrayType<JsonData::WebBrowser::HeadersData>& response) const;
+        //uint32_t set_headers(const Core::JSON::ArrayType<JsonData::WebBrowser::HeadersData>& param);
         uint32_t endpoint_bridgereply(const Core::JSON::String& params);
         uint32_t endpoint_bridgeevent(const Core::JSON::String& params);
         uint32_t get_localstorageenabled(Core::JSON::Boolean& response) const;
         uint32_t set_localstorageenabled(const Core::JSON::Boolean& param);
-        uint32_t get_httpcookieacceptpolicy(Core::JSON::EnumType<JsonData::WebKitBrowser::HttpcookieacceptpolicyType>& response) const;
-        uint32_t set_httpcookieacceptpolicy(const Core::JSON::EnumType<JsonData::WebKitBrowser::HttpcookieacceptpolicyType>& param);
+        //uint32_t get_httpcookieacceptpolicy(Core::JSON::EnumType<JsonData::WebBrowser::HttpcookieacceptpolicytypeType>& response) const;
+        //uint32_t set_httpcookieacceptpolicy(const Core::JSON::EnumType<JsonData::WebBrowser::HttpcookieacceptpolicytypeType>& param);
 
         void event_loadfinished(const string& url, const int32_t& httpstatus);
         void event_loadfailed(const string& url);
@@ -250,7 +253,7 @@ namespace Plugin {
         uint8_t _skipURL;
         uint32_t _connectionId;
         PluginHost::IShell* _service;
-        Exchange::IWebKitBrowser* _browser;
+        Exchange::IWebBrowser* _browser;
         Exchange::IMemory* _memory;
         Core::Sink<Notification> _notification;
         Core::ProxyPoolType<Web::JSONBodyType<WebKitBrowser::Data>> _jsonBodyDataFactory;
