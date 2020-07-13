@@ -259,6 +259,8 @@ namespace Plugin {
         void UnregisterAll();
         uint32_t endpoint_upgrade(const JsonData::FirmwareControl::UpgradeParamsData& params);
         uint32_t get_status(Core::JSON::EnumType<JsonData::FirmwareControl::StatusType>& response) const;
+        uint32_t get_downloadsize(Core::JSON::DecUInt64& response) const;
+
         void event_upgradeprogress(const JsonData::FirmwareControl::StatusType& status,
                                    const JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType& error, const uint8_t& percentage);
 
@@ -307,6 +309,17 @@ namespace Plugin {
             _adminLock.Unlock();
 
             NotifyProgress(upgradeStatus, ConvertCoreErrorToUpgradeError(error), percentage);
+        }
+
+        inline uint64_t DownloadMaxSize()
+        {
+            uint64_t availableSize = 0;
+            Partition path(_distination.c_str());
+            if (path.IsValid()) {
+                availableSize = path.Size();
+            }
+
+            return availableSize;
         }
 
         inline ErrorType ConvertCoreErrorToUpgradeError(uint32_t error) const

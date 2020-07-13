@@ -55,6 +55,7 @@ namespace Plugin {
     //  - ERROR_UNKNOWN_KEY: Bad hash value given
     //  - ERROR_ILLEGAL_STATE: Invalid state of device
     //  - ERROR_INCORRECT_HASH: Incorrect hash given
+    //  - ERROR_UNAUTHENTICATED: Authentication failure
     uint32_t FirmwareControl::endpoint_upgrade(const UpgradeParamsData& params)
     {
         TRACE(Trace::Information, (string(__FUNCTION__)));
@@ -131,6 +132,16 @@ namespace Plugin {
         response = static_cast<JsonData::FirmwareControl::StatusType>(_upgradeStatus);
         _adminLock.Unlock();
         TRACE(Trace::Information, (_T("status = [%s] \n"), Core::EnumerateType<JsonData::FirmwareControl::StatusType>(response).Data()));
+
+        return Core::ERROR_NONE;
+    }
+
+    // Property: downloadsize - Max free space available to download image
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t FirmwareControl::get_downloadsize(Core::JSON::DecUInt64& response) const
+    {
+        response = DownloadMaxSize();
 
         return Core::ERROR_NONE;
     }
