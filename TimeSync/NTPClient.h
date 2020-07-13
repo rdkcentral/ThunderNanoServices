@@ -26,7 +26,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class EXTERNAL NTPClient : public Core::SocketDatagram, public Exchange::ITimeSync, public PluginHost::ISubSystem::ITime {
+    class NTPClient : public Core::SocketDatagram, public Exchange::ITimeSync, public PluginHost::ISubSystem::ITime {
     public:
         static constexpr uint32_t MilliSeconds = 1000;
         static constexpr uint32_t MicroSeconds = 1000 * MilliSeconds;

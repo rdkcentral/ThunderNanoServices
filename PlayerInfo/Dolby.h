@@ -26,9 +26,9 @@
 extern "C" {
 #endif
 
-EXTERNAL void set_audio_output_type(enum WPEFramework::Exchange::Dolby::IOutput::Type type);
+void set_audio_output_type(enum WPEFramework::Exchange::Dolby::IOutput::Type type);
 
-EXTERNAL enum WPEFramework::Exchange::Dolby::IOutput::Type get_audio_output_type(void);
+enum WPEFramework::Exchange::Dolby::IOutput::Type get_audio_output_type(void);
 
 #ifdef __cplusplus
 }

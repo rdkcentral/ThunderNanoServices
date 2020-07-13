@@ -25,8 +25,6 @@
 #include <iostream>
 #include <fstream>
 
-#undef EXTERNAL
-
 using namespace WPEFramework;
 
 namespace WPEFramework {

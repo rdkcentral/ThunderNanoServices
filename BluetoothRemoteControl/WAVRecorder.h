@@ -25,7 +25,7 @@ namespace WPEFramework {
 
 namespace WAV {
 
-class EXTERNAL Recorder {
+class Recorder {
 public:
     enum codec {
         PCM = 1,

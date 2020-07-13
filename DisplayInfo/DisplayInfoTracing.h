@@ -24,7 +24,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class EXTERNAL HDCPDetailedInfo {
+    class HDCPDetailedInfo {
     public:
         // -------------------------------------------------------------------
         // This object should not be copied or assigned. Prevent the copy

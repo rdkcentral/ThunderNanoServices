@@ -532,7 +532,7 @@ namespace Plugin {
                 return application;
             }
         };
-        class EXTERNAL Protocol {
+        class Protocol {
         private:
             // -------------------------------------------------------------------
             // This object should not be copied or assigned. Prevent the copy

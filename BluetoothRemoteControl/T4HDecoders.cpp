@@ -23,7 +23,7 @@ namespace WPEFramework {
 
 namespace Decoders {
 
-class EXTERNAL ADPCM : public IDecoder {
+class ADPCM : public IDecoder {
 private:
     const uint8_t  WindowSize = 32;
 
@@ -129,7 +129,7 @@ public:
 
 static DecoderFactory<ADPCM> _adpcmFactory;
 
-class EXTERNAL PCM : public IDecoder {
+class PCM : public IDecoder {
 private:
     const uint8_t  WindowSize = 32;
 

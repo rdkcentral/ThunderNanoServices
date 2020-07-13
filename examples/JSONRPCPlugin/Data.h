@@ -30,7 +30,7 @@ namespace Data {
         uint32_t Height;
     };
 
-    class EXTERNAL Geometry : public Core::JSON::Container {
+    class Geometry : public Core::JSON::Container {
     public:
         Geometry()
             : Core::JSON::Container()
@@ -91,7 +91,7 @@ namespace Data {
         Core::JSON::DecUInt32 Width;
         Core::JSON::DecUInt32 Height;
     };
-    class EXTERNAL Time : public Core::JSON::Container {
+    class Time : public Core::JSON::Container {
     private:
         Time(const Time&) = delete;
         Time& operator=(const Time&) = delete;
@@ -129,7 +129,7 @@ namespace Data {
         Core::JSON::DecUInt8 Minutes;
         Core::JSON::DecUInt8 Seconds;
     };
-    class EXTERNAL Parameters : public Core::JSON::Container {
+    class Parameters : public Core::JSON::Container {
     private:
         Parameters(const Parameters&) = delete;
         Parameters& operator=(const Parameters&) = delete;
@@ -161,7 +161,7 @@ namespace Data {
         Core::JSON::String Location;
         Core::JSON::Boolean UTC;
     };
-    class EXTERNAL MessageParameters : public Core::JSON::Container {
+    class MessageParameters : public Core::JSON::Container {
     private:
         MessageParameters(const MessageParameters&) = delete;
         MessageParameters& operator=(const MessageParameters&) = delete;
@@ -193,7 +193,7 @@ namespace Data {
         Core::JSON::String Recipient;
         Core::JSON::String Message;
     };
-    class EXTERNAL Response : public Core::JSON::Container {
+    class Response : public Core::JSON::Container {
     private:
         Response(const Response&) = delete;
         Response& operator=(const Response&) = delete;

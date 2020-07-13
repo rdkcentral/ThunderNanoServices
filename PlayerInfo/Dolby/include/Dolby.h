@@ -34,7 +34,7 @@ extern "C" {
  *  - ERROR_ILLEGAL_STATE - The audio device could not be initialized.
  *  - ERROR_GENERAL - Setting the parameter has failed.
  */
-EXTERNAL uint32_t 
+uint32_t 
 set_audio_output_type(const enum WPEFramework::Exchange::Dolby::IOutput::Type type);
 
 /**
@@ -48,7 +48,7 @@ set_audio_output_type(const enum WPEFramework::Exchange::Dolby::IOutput::Type ty
  * 
  * @return Type returned by the query.
  */
-EXTERNAL enum WPEFramework::Exchange::Dolby::IOutput::Type 
+enum WPEFramework::Exchange::Dolby::IOutput::Type 
 get_audio_output_type(uint32_t& error);
 
 #ifdef __cplusplus

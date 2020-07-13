@@ -22,21 +22,12 @@
 #include <vector>
 
 #include "Module.h"
+#include "CENCParser.h"
 
 // Get in the definitions required for access to the sepcific
 // DRM engines.
 #include <interfaces/IDRM.h>
-
-// Get in the definitions required for access to the OCDM
-// counter part living in the applications
-#include <ocdm/DataExchange.h>
-#include <ocdm/IOCDM.h>
-
 #include <interfaces/IContentDecryption.h>
-
-#include "CENCParser.h"
-
-#include <ocdm/open_cdm.h>
 
 extern "C" {
 
