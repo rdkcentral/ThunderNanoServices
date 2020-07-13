@@ -311,10 +311,10 @@ namespace Plugin {
             NotifyProgress(upgradeStatus, ConvertCoreErrorToUpgradeError(error), percentage);
         }
 
-        inline uint64_t DownloadMaxSize()
+        inline uint64_t DownloadMaxSize() const
         {
             uint64_t availableSize = 0;
-            Partition path(_distination.c_str());
+            Core::Partition path(_destination.c_str());
             if (path.IsValid()) {
                 availableSize = path.Size();
             }
