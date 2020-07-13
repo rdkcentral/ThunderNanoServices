@@ -313,7 +313,7 @@ namespace Plugin {
                         }
                     }
                 } else {
-                    result = ERROR_UNKNOWN_KEY;
+                    result = Core::ERROR_UNKNOWN_KEY;
                 }
             }
             return (result);
