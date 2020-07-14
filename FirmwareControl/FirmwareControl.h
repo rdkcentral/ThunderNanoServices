@@ -60,6 +60,7 @@ namespace Plugin {
             GENERIC,
             INVALID_PARAMETERS,
             INVALID_STATES,
+            NO_ENOUGH_SPACE,
             OPERATION_NOT_PERMITTED,
             INCORRECT_HASH,
             UNAUTHENTICATED,
@@ -335,6 +336,9 @@ namespace Plugin {
                 break;
             case Core::ERROR_INCORRECT_HASH:
                 errorType = ErrorType::INCORRECT_HASH;
+                break;
+            case Core::ERROR_WRITE_ERROR:
+                errorType = ErrorType::NO_ENOUGH_SPACE;
                 break;
             case Core::ERROR_UNAUTHENTICATED:
                 errorType = ErrorType::UNAUTHENTICATED;
