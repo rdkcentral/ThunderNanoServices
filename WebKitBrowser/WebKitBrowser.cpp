@@ -21,13 +21,6 @@
 
 namespace WPEFramework {
 
-namespace WebKitBrowser {
-    // TODO: can't this be done via header file instead of extern?
-    // An implementation file needs to implement this method to return an operational browser, wherever that would be :-)
-    extern Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection);
-}
-
-
 namespace Plugin {
 
     SERVICE_REGISTRATION(WebKitBrowser, 1, 0);
@@ -166,22 +159,17 @@ namespace Plugin {
             ASSERT(stateControl != nullptr);
 
             if (request.Verb == Web::Request::HTTP_GET) {
-                //auto visibilityState = _browser->GetVisibility();
-                //WPEFramework::Exchange::IWebBrowser::Visibility visibilityState;
-                bool visible;
+                bool visible = false;
                 static_cast<const WPEFramework::Exchange::IWebBrowser*>(_browser)->Visible(visible);
                 PluginHost::IStateControl::state currentState = stateControl->State();
                 Core::ProxyType<Web::JSONBodyType<WebKitBrowser::Data>> body(_jsonBodyDataFactory.Element());
-                //body->URL = _browser->GetURL();
                 string url;
                 static_cast<const WPEFramework::Exchange::IWebBrowser*>(_browser)->URL(url);
                 body->URL = url;
-                //body->FPS = _browser->GetFPS();
                 uint8_t fps = 0;
                 _browser->FPS(fps);
                 body->FPS = fps;
                 body->Suspended = (currentState == PluginHost::IStateControl::SUSPENDED);
-                //body->Hidden = (visibilityState != Exchange::IWebBrowser::Visibility::VISIBLE);
                 body->Hidden = !visible;
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";
@@ -200,7 +188,6 @@ namespace Plugin {
                 } else if (index.Remainder() == _T("Show")) {
                     _browser->Visible(Exchange::IWebBrowser::Visibility::VISIBLE);
                 } else if ((index.Remainder() == _T("URL")) && (request.HasBody() == true) && (request.Body<const Data>()->URL.Value().empty() == false)) {
-                    fprintf(stderr, "%s:%u\n", __FILE__, __LINE__);
                     const string url = request.Body<const Data>()->URL.Value();
                     _browser->URL(url);
                 } else if ((index.Remainder() == _T("Delete")) && (request.HasBody() == true) && (request.Body<const Data>()->Path.Value().empty() == false)) {

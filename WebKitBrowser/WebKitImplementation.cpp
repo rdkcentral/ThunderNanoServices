@@ -588,16 +588,14 @@ static GSourceFuncs _handlerIntervention =
         }
 
     public:
-        //virtual string GetHeaders() const final
         uint32_t Headers(string& headers) const override
         {
             _adminLock.Lock();
             headers = _headers;
             _adminLock.Unlock();
-            return 0;
+            return Core::ERROR_NONE;
         }
 
-        //virtual void SetHeaders(const string& headers) final
         uint32_t Headers(const string& headers) override
         {
             _adminLock.Lock();
@@ -627,20 +625,18 @@ static GSourceFuncs _handlerIntervention =
                     this);
             }
 
-            return 0;
+            return Core::ERROR_NONE;
         }
 
-        //virtual string GetUserAgent() const final
         uint32_t UserAgent(string& ua) const override
         {
             _adminLock.Lock();
             ua = _config.UserAgent.Value();
             _adminLock.Unlock();
 
-            return 0;
+            return Core::ERROR_NONE;
         }
 
-        //virtual void SetUserAgent(const string& useragent) final
         uint32_t UserAgent(const string& ua) override
         {
             _adminLock.Lock();
@@ -650,7 +646,7 @@ static GSourceFuncs _handlerIntervention =
             TRACE(Trace::Information, (_T("New user agent: %s"), ua.c_str()));
 
             if (_context == nullptr)
-                return 1; // TODO: what value to return here?
+                return Core::ERROR_GENERAL;
 
             g_main_context_invoke(
                 _context,
@@ -670,24 +666,19 @@ static GSourceFuncs _handlerIntervention =
                 },
                 this);
 
-            return 0;
+            return Core::ERROR_NONE;
         }
 
-        //virtual string GetLanguages() const final
         uint32_t Languages(string& langs) const override
         {
             _adminLock.Lock();
             Core::JSON::ArrayType<Core::JSON::String> langsArray = _config.Languages;
-            //langs = _config.Languages.Data();
             _adminLock.Unlock();
 
-            //string result;
             langsArray.ToString(langs);
-            //return result;
-            return 0;
+            return Core::ERROR_NONE;
         }
 
-        //virtual void SetLanguages(const string& langs) final
         uint32_t Languages(const string& langs) override
         {
             Core::OptionalType<Core::JSON::Error> error;
@@ -697,7 +688,7 @@ static GSourceFuncs _handlerIntervention =
                 TRACE(Trace::Error,
                      (_T("Failed to parse languages array, error='%s', array='%s'\n"),
                       (error.IsSet() ? error.Value().Message().c_str() : "unknown"), langs.c_str()));
-                return 1; // TODO: what to return here?
+                return Core::ERROR_GENERAL;
             }
 
             _adminLock.Lock();
@@ -705,7 +696,7 @@ static GSourceFuncs _handlerIntervention =
             _adminLock.Unlock();
 
             if (_context == nullptr)
-                return 1; // TODO: what to return here?
+                return Core::ERROR_GENERAL;
 
             g_main_context_invoke(
                 _context,
@@ -733,20 +724,18 @@ static GSourceFuncs _handlerIntervention =
                 },
                 this);
 
-            return 0;
+            return Core::ERROR_NONE;
         }
 
-        //virtual bool GetLocalStorageEnabled() const final
         uint32_t LocalStorageEnabled(bool& enabled) const override
         {
             _adminLock.Lock();
             enabled = _localStorageEnabled;
             _adminLock.Unlock();
 
-            return 0;
+            return Core::ERROR_NONE;
         }
 
-        //virtual void SetLocalStorageEnabled(const bool enabled) final
         uint32_t LocalStorageEnabled(const bool enabled) override
         {
             _adminLock.Lock();
@@ -754,7 +743,7 @@ static GSourceFuncs _handlerIntervention =
             _adminLock.Unlock();
 
             if (_context == nullptr)
-                return 1; // TODO: what to return here?
+                return Core::ERROR_GENERAL;
 
             g_main_context_invoke(
                 _context,
@@ -773,10 +762,9 @@ static GSourceFuncs _handlerIntervention =
                 },
                 this);
 
-            return 0;
+            return Core::ERROR_NONE;
         }
 
-        //virtual Exchange::IWebBrowser::HTTPCookieAcceptPolicyType GetHTTPCookieAcceptPolicy() final
         uint32_t HTTPCookieAcceptPolicy(HTTPCookieAcceptPolicyType& policy) const override
         {
             auto translatePolicy =
@@ -798,10 +786,9 @@ static GSourceFuncs _handlerIntervention =
             _adminLock.Lock();
             policy = translatePolicy(_httpCookieAcceptPolicy);
             _adminLock.Unlock();
-            return 0;
+            return Core::ERROR_NONE;
         }
 
-        //virtual void SetHTTPCookieAcceptPolicy(const Exchange::IWebBrowser::HTTPCookieAcceptPolicyType policy) final
         uint32_t HTTPCookieAcceptPolicy(const HTTPCookieAcceptPolicyType policy) override
         {
             auto translatePolicy =
@@ -825,7 +812,7 @@ static GSourceFuncs _handlerIntervention =
             _adminLock.Unlock();
 
             if (_context == nullptr)
-                return 1; // TODO: what to return here?
+                return Core::ERROR_GENERAL;
 
             g_main_context_invoke(
                 _context,
@@ -844,7 +831,7 @@ static GSourceFuncs _handlerIntervention =
                 },
                 this);
 
-           return 0;
+           return Core::ERROR_NONE;
         }
 
         virtual void BridgeReply(const string& payload) final
@@ -888,32 +875,22 @@ static GSourceFuncs _handlerIntervention =
                 });
         }
 
-        //virtual Exchange::IWebBrowser::Visibility GetVisibility() const final
         uint32_t Visible(bool& visible) const override
         {
             _adminLock.Lock();
-            //Exchange::IWebBrowser::Visibility state = _hidden
-            //    ? Exchange::IWebBrowser::Visibility::HIDDEN
-            //    : Exchange::IWebBrowser::Visibility::VISIBLE;
             visible = !_hidden;
             _adminLock.Unlock();
             return 0;
         }
-        //virtual void SetVisibility(const Exchange::IWebBrowser::Visibility state) final
+
         uint32_t Visible(const bool visible) override
         {
-            //if (state == Exchange::IWebBrowser::Visibility::HIDDEN)
-            //    Hide(true);
-            //else
-            //    Hide(false);
             Hide(!visible);
             return 0;
         }
 
-        //virtual void SetURL(const string& URL) final
         virtual uint32_t URL(const string& URL) final
         {
-            fprintf(stderr, "%s:%u\n", __FILE__, __LINE__);
             _adminLock.Lock();
             _URL = URL;
             _adminLock.Unlock();
@@ -921,7 +898,6 @@ static GSourceFuncs _handlerIntervention =
             TRACE(Trace::Information, (_T("New URL: %s"), _URL.c_str()));
 
             if (_context != nullptr) {
-                fprintf(stderr, "%s:%u\n", __FILE__, __LINE__);
                 g_main_context_invoke(
                     _context,
                     [](gpointer customdata) -> gboolean {
@@ -930,7 +906,6 @@ static GSourceFuncs _handlerIntervention =
                         webkit_web_view_load_uri(object->_view, object->_URL.c_str());
 #else
                         auto shellURL = WKURLCreateWithUTF8CString(object->_URL.c_str());
-                        fprintf(stderr, "%s:%u %s\n", __FILE__, __LINE__, object->_URL.c_str());
                         WKPageLoadURL(object->_page, shellURL);
                         WKRelease(shellURL);
 #endif
@@ -939,22 +914,18 @@ static GSourceFuncs _handlerIntervention =
                     this);
             }
 
-            return 0;
+            return Core::ERROR_NONE;
         }
-        //virtual string GetURL() const final
         virtual uint32_t URL(string& url) const final
         {
-            fprintf(stderr, "%s:%u\n", __FILE__, __LINE__);
             _adminLock.Lock();
             url = _URL;
             _adminLock.Unlock();
 
             return 0;
         }
-        //virtual uint32_t GetFPS() const final
-        uint32_t FPS(uint8_t& fps /* @out */) const override
+        uint32_t FPS(uint8_t& fps) const override
         {
-            //return _fps;
             fps = _fps;
             return 0;
         }
@@ -1879,8 +1850,7 @@ static GSourceFuncs _handlerIntervention =
                 TRACE(Trace::Information, (_T("Current user agent: '%s'"), _config.UserAgent.Value().c_str()));
             }
 
-            //static_cast<const IWebBrowser *>(this)->URL(_URL);
-            static_cast<IWebBrowser *>(this)->URL(static_cast<const string>(_URL));
+            URL(static_cast<const string>(_URL));
 
             // Move into the correct state, as requested
             _adminLock.Lock();
@@ -1976,8 +1946,7 @@ static GSourceFuncs _handlerIntervention =
             const_cast<WebKitImplementation*>(browser)->OnBrdidgeQuery(messageText);
         } else if (name == Tags::URL) {
             string url;
-            //*returnData = WKStringCreateWithUTF8CString(browser->GetURL().c_str());
-            browser->URL(url);
+            static_cast<const WebKitImplementation*>(browser)->URL(url);
             *returnData = WKStringCreateWithUTF8CString(url.c_str());
         } else if (name.compare(0, configLen, Tags::Config) == 0) {
             // Second part of this string is the key we are looking for, extract it...
@@ -2297,16 +2266,3 @@ namespace WebKitBrowser {
 } // namespace WebKitBrowser
 } // namespace WPEFramework
 
-/*
-namespace WPEFramework
-{
-namespace WebKitBrowser
-{
-    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
-    {
-        Exchange::IMemory* result = Core::Service<WebKitBrowser::MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
-        return (result);
-    }
-}
-}
-*/

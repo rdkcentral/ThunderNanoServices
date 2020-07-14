@@ -19,7 +19,6 @@
 
 #include <interfaces/json/JsonData_Browser.h>
 #include <interfaces/json/JsonData_StateControl.h>
-//#include "./interfaces/json/JsonData_WebKitBrowser.h"
 
 #include "WebKitBrowser.h"
 #include "Module.h"
@@ -44,10 +43,10 @@ namespace Plugin {
         Property<Core::JSON::DecUInt32>(_T("fps"), &WebKitBrowser::get_fps, nullptr, this); /* Browser */
         Property<Core::JSON::EnumType<StateType>>(_T("state"), &WebKitBrowser::get_state, &WebKitBrowser::set_state, this); /* StateControl */
         Property<Core::JSON::String>(_T("useragent"), &WebKitBrowser::get_useragent, &WebKitBrowser::set_useragent, this);
-        //Property<Core::JSON::EnumType<HttpcookieacceptpolicyType>>(_T("httpcookieacceptpolicy"), &WebKitBrowser::get_httpcookieacceptpolicy, &WebKitBrowser::set_httpcookieacceptpolicy, this);
+        Property<Core::JSON::EnumType<JsonData::WebKitBrowser::HttpcookieacceptpolicyType>>(_T("httpcookieacceptpolicy"), &WebKitBrowser::get_httpcookieacceptpolicy, &WebKitBrowser::set_httpcookieacceptpolicy, this);
         Property<Core::JSON::Boolean>(_T("localstorageenabled"), &WebKitBrowser::get_localstorageenabled, &WebKitBrowser::set_localstorageenabled, this);
         Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("languages"), &WebKitBrowser::get_languages, &WebKitBrowser::set_languages, this);
-        //Property<Core::JSON::ArrayType<HeadersData>>(_T("headers"), &WebKitBrowser::get_headers, &WebKitBrowser::set_headers, this);
+        Property<Core::JSON::ArrayType<JsonData::WebKitBrowser::HeadersData>>(_T("headers"), &WebKitBrowser::get_headers, &WebKitBrowser::set_headers, this);
         Register<Core::JSON::String,void>(_T("bridgereply"), &WebKitBrowser::endpoint_bridgereply, this);
         Register<Core::JSON::String,void>(_T("bridgeevent"), &WebKitBrowser::endpoint_bridgeevent, this);
         Register<DeleteParamsData,void>(_T("delete"), &WebKitBrowser::endpoint_delete, this);
@@ -59,10 +58,10 @@ namespace Plugin {
         Unregister(_T("fps"));
         Unregister(_T("visibility"));
         Unregister(_T("url"));
-        //Unregister(_T("headers"));
+        Unregister(_T("headers"));
         Unregister(_T("languages"));
         Unregister(_T("localstorageenabled"));
-        //Unregister(_T("httpcookieacceptpolicy"));
+        Unregister(_T("httpcookieacceptpolicy"));
         Unregister(_T("useragent"));
         Unregister(_T("bridgereply"));
         Unregister(_T("delete"));
@@ -102,7 +101,7 @@ namespace Plugin {
     {
         ASSERT(_browser != nullptr);
 
-        //response = _browser->GetURL();
+
         string url;
         static_cast<const IWebBrowser*>(_browser)->URL(url);
         response = url;
@@ -133,11 +132,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     uint32_t WebKitBrowser::get_visibility(Core::JSON::EnumType<VisibilityType>& response) const /* Browser */
     {
-        //auto state = _browser->GetVisibility();
-        //Exchange::IWebBrowser::Visibility state;
         bool state = false;
-        //static_cast<const IWebBrowser*>(_browser)->Visible(state);
-        //static_cast<const IWebBrowser*>(_browser)->Visible(state);
         _browser->Visible(state);
 
         response = (state == Exchange::IWebBrowser::Visibility::VISIBLE)
@@ -157,12 +152,8 @@ namespace Plugin {
         uint32_t result = Core::ERROR_BAD_REQUEST;
 
         if (param.IsSet()) {
-            auto state = (param == VisibilityType::VISIBLE)
-                ? Exchange::IWebBrowser::Visibility::VISIBLE
-                : Exchange::IWebBrowser::Visibility::HIDDEN;
-
-            //_browser->SetVisibility(state);
-            _browser->Visible(state);
+            const bool visible = param == VisibilityType::VISIBLE;
+            _browser->Visible(visible);
 
             result = Core::ERROR_NONE;
         }
@@ -177,7 +168,6 @@ namespace Plugin {
     {
         ASSERT(_browser != nullptr);
 
-        //response = _browser->GetFPS();
         uint8_t fps;
         _browser->FPS(fps);
         response = fps;
@@ -289,7 +279,6 @@ namespace Plugin {
     {
         ASSERT(_browser != nullptr);
 
-        //string useragent = _browser->GetUserAgent();
         string useragent;
         static_cast<const IWebBrowser*>(_browser)->UserAgent(useragent);
 
@@ -305,37 +294,35 @@ namespace Plugin {
     {
         ASSERT(_browser != nullptr);
 
-        //_browser->SetUserAgent(param.Value());
-        _browser->UserAgent(param.Value());
+        const string userAgent = param.Value();
+        _browser->UserAgent(userAgent);
 
         return Core::ERROR_NONE;
     }
 
-/*
     // Property: httpcookieacceptpolicy - HTTP cookies accept policy
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown policy
-    uint32_t WebKitBrowser::get_httpcookieacceptpolicy(Core::JSON::EnumType<HttpcookieacceptpolicyType>& response) const
+    uint32_t WebKitBrowser::get_httpcookieacceptpolicy(Core::JSON::EnumType<JsonData::WebKitBrowser::HttpcookieacceptpolicyType>& response) const
     {
         ASSERT(_browser != nullptr);
 
-        //auto policy = _browser->GetHTTPCookieAcceptPolicy();
-        Exchange::IWebBrowser::HTTPCookieAcceptPolicy policy;
-        _browser->HTTPCookieAcceptPolicy(policy);
+        Exchange::IWebBrowser::HTTPCookieAcceptPolicyType policy;
+        static_cast<const IWebBrowser*>(_browser)->HTTPCookieAcceptPolicy(policy);
 
         switch(policy) {
             case Exchange::IWebBrowser::ALWAYS:
-                response = HttpcookieacceptpolicyType::ALWAYS;
+                response = JsonData::WebKitBrowser::HttpcookieacceptpolicyType::ALWAYS;
                 break;
             case Exchange::IWebBrowser::NEVER:
-                response = HttpcookieacceptpolicyType::NEVER;
+                response = JsonData::WebKitBrowser::HttpcookieacceptpolicyType::NEVER;
                 break;
             case Exchange::IWebBrowser::ONLY_FROM_MAIN_DOCUMENT_DOMAIN:
-                response = HttpcookieacceptpolicyType::ONLYFROMMAINDOCUMENTDOMAIN;
+                response = JsonData::WebKitBrowser::HttpcookieacceptpolicyType::ONLYFROMMAINDOCUMENTDOMAIN;
                 break;
             case Exchange::IWebBrowser::EXCLUSIVELY_FROM_MAIN_DOCUMENT_DOMAIN:
-                response = HttpcookieacceptpolicyType::EXCLUSIVELYFROMMAINDOCUMENTDOMAIN;
+                response = JsonData::WebKitBrowser::HttpcookieacceptpolicyType::EXCLUSIVELYFROMMAINDOCUMENTDOMAIN;
                 break;
             default:
                 ASSERT(false);
@@ -349,34 +336,33 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown policy
-    uint32_t WebKitBrowser::set_httpcookieacceptpolicy(const Core::JSON::EnumType<HttpcookieacceptpolicyType>& param)
+    uint32_t WebKitBrowser::set_httpcookieacceptpolicy(const Core::JSON::EnumType<JsonData::WebKitBrowser::HttpcookieacceptpolicyType>& param)
     {
         ASSERT(_browser != nullptr);
 
-        Exchange::IWebBrowser::HTTPCookieAcceptPolicy policy;
+        Exchange::IWebBrowser::HTTPCookieAcceptPolicyType policy;
 
         switch(param.Value()) {
-            case HttpcookieacceptpolicyType::ALWAYS:
-                policy = Exchange::IWebBrowser::ALWAYS;
+            case JsonData::WebKitBrowser::HttpcookieacceptpolicyType::ALWAYS:
+                policy = Exchange::IWebBrowser::HTTPCookieAcceptPolicyType::ALWAYS;
                 break;
-            case HttpcookieacceptpolicyType::NEVER:
-                policy = Exchange::IWebBrowser::NEVER;
+            case JsonData::WebKitBrowser::HttpcookieacceptpolicyType::NEVER:
+                policy = Exchange::IWebBrowser::HTTPCookieAcceptPolicyType::NEVER;
                 break;
-            case HttpcookieacceptpolicyType::ONLYFROMMAINDOCUMENTDOMAIN:
-                policy = Exchange::IWebBrowser::ONLY_FROM_MAIN_DOCUMENT_DOMAIN;
+            case JsonData::WebKitBrowser::HttpcookieacceptpolicyType::ONLYFROMMAINDOCUMENTDOMAIN:
+                policy = Exchange::IWebBrowser::HTTPCookieAcceptPolicyType::ONLY_FROM_MAIN_DOCUMENT_DOMAIN;
                 break;
-            case HttpcookieacceptpolicyType::EXCLUSIVELYFROMMAINDOCUMENTDOMAIN:
-                policy = Exchange::IWebBrowser::EXCLUSIVELY_FROM_MAIN_DOCUMENT_DOMAIN;
+            case JsonData::WebKitBrowser::HttpcookieacceptpolicyType::EXCLUSIVELYFROMMAINDOCUMENTDOMAIN:
+                policy = Exchange::IWebBrowser::HTTPCookieAcceptPolicyType::EXCLUSIVELY_FROM_MAIN_DOCUMENT_DOMAIN;
                 break;
             default:
                 ASSERT(false);
                 return Core::ERROR_UNKNOWN_KEY;
         }
 
-        _browser->SetHTTPCookieAcceptPolicy(policy);
+        _browser->HTTPCookieAcceptPolicy(static_cast<const Exchange::IWebBrowser::HTTPCookieAcceptPolicyType>(policy));
         return Core::ERROR_NONE;
     }
-*/
 
     // Property: localstorageenabled - Controls the local storage availability
     // Return codes:
@@ -384,9 +370,8 @@ namespace Plugin {
     uint32_t WebKitBrowser::get_localstorageenabled(Core::JSON::Boolean& response) const
     {
         ASSERT(_browser != nullptr);
-        //response = _browser->GetLocalStorageEnabled();
         bool enabled = false;
-        _browser->LocalStorageEnabled(enabled);
+        static_cast<const IWebBrowser*>(_browser)->LocalStorageEnabled(enabled);
         response = enabled;
         return Core::ERROR_NONE;
     }
@@ -397,8 +382,8 @@ namespace Plugin {
     uint32_t WebKitBrowser::set_localstorageenabled(const Core::JSON::Boolean& param)
     {
         ASSERT(_browser != nullptr);
-        //_browser->SetLocalStorageEnabled(param.Value());
-        _browser->LocalStorageEnabled(param.Value());
+        const bool enabled = param.Value();
+        _browser->LocalStorageEnabled(enabled);
         return Core::ERROR_NONE;
     }
 
@@ -409,7 +394,6 @@ namespace Plugin {
     {
         ASSERT(_browser != nullptr);
 
-        //string langs = _browser->GetLanguages();
         string langs;
         static_cast<const IWebBrowser*>(_browser)->Languages(langs);
         response.FromString(langs);
@@ -428,20 +412,20 @@ namespace Plugin {
         if ( param.IsSet() ) {
             param.ToString(langs);
         }
-        //_browser->SetLanguages(langs);
-        static_cast<IWebBrowser*>(_browser)->Languages(static_cast<const string>(langs));
+        _browser->Languages(static_cast<const string>(langs));
 
         return Core::ERROR_NONE;
     }
 
-/*
     // Property: headers - Headers to send on all requests that the browser makes
     // Return codes:
     //  - ERROR_NONE: Success
-    uint32_t WebKitBrowser::get_headers(Core::JSON::ArrayType<JsonData::WebBrowser::HeadersData>& response) const
+    uint32_t WebKitBrowser::get_headers(Core::JSON::ArrayType<JsonData::WebKitBrowser::HeadersData>& response) const
     {
         ASSERT(_browser != nullptr);
-        string headers = _browser->GetHeaders();
+        string headers;
+        static_cast<const IWebBrowser*>(_browser)->Headers(headers);
+
         response.FromString(headers);
         return Core::ERROR_NONE;
     }
@@ -459,32 +443,27 @@ namespace Plugin {
             param.ToString(headers);
         }
 
-        _browser->SetHeaders(headers);
+        _browser->Headers(static_cast<const string>(headers));
         return Core::ERROR_NONE;
     }
-*/
 
     // Event: loadfinished - Signals initial HTML document has been completely loaded and parsed
     void WebKitBrowser::event_loadfinished(const string& url, const int32_t& httpstatus)
     {
-/*
-        LoadfinishedParamsData params;
+        JsonData::WebKitBrowser::LoadfinishedParamsData params;
         params.Url = url;
         params.Httpstatus = httpstatus;
 
         Notify(_T("loadfinished"), params);
- */
     }
 
     // Event: loadfailed - Browser failed to load page
     void WebKitBrowser::event_loadfailed(const string& url)
     {
-/*
-        LoadfailedParamsData params;
+        JsonData::WebKitBrowser::LoadfailedParamsData params;
         params.Url = url;
 
         Notify(_T("loadfailed"), params);
- */
     }
 
     // Event: bridgequery - A message from legacy $badger bridge

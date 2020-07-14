@@ -23,16 +23,19 @@
 #include "Module.h"
 #include <interfaces/IBrowser.h>
 
-//#include "./interfaces/IWebBrowser.h"
 #include <interfaces/IMemory.h>
 #include <interfaces/json/JsonData_Browser.h>
 #include <interfaces/json/JsonData_WebBrowser.h>
 #include <interfaces/json/JsonData_WebKitBrowser.h>
 #include <interfaces/json/JsonData_StateControl.h>
-//#include "./interfaces/json/JsonData_WebKitBrowser.h"
-//#include <interfaces/JsonData_WebBrowser.h>
 
 namespace WPEFramework {
+
+namespace WebKitBrowser {
+    // An implementation file needs to implement this method to return an operational browser, wherever that would be :-)
+    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection);
+}
+
 namespace Plugin {
 
     class WebKitBrowser : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
@@ -236,14 +239,14 @@ namespace Plugin {
         uint32_t set_useragent(const Core::JSON::String& param);
         uint32_t get_languages(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t set_languages(const Core::JSON::ArrayType<Core::JSON::String>& param);
-        //uint32_t get_headers(Core::JSON::ArrayType<JsonData::WebBrowser::HeadersData>& response) const;
-        //uint32_t set_headers(const Core::JSON::ArrayType<JsonData::WebBrowser::HeadersData>& param);
+        uint32_t get_headers(Core::JSON::ArrayType<JsonData::WebKitBrowser::HeadersData>& response) const;
+        uint32_t set_headers(const Core::JSON::ArrayType<JsonData::WebKitBrowser::HeadersData>& param);
         uint32_t endpoint_bridgereply(const Core::JSON::String& params);
         uint32_t endpoint_bridgeevent(const Core::JSON::String& params);
         uint32_t get_localstorageenabled(Core::JSON::Boolean& response) const;
         uint32_t set_localstorageenabled(const Core::JSON::Boolean& param);
-        //uint32_t get_httpcookieacceptpolicy(Core::JSON::EnumType<JsonData::WebBrowser::HttpcookieacceptpolicytypeType>& response) const;
-        //uint32_t set_httpcookieacceptpolicy(const Core::JSON::EnumType<JsonData::WebBrowser::HttpcookieacceptpolicytypeType>& param);
+        uint32_t get_httpcookieacceptpolicy(Core::JSON::EnumType<JsonData::WebKitBrowser::HttpcookieacceptpolicyType>& response) const;
+        uint32_t set_httpcookieacceptpolicy(const Core::JSON::EnumType<JsonData::WebKitBrowser::HttpcookieacceptpolicyType>& param);
 
         void event_loadfinished(const string& url, const int32_t& httpstatus);
         void event_loadfailed(const string& url);

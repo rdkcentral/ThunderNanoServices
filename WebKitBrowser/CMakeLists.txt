@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+project(WebKitBrowser)
+
 set(PLUGIN_NAME WebKitBrowser)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
