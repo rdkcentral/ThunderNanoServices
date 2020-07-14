@@ -147,17 +147,17 @@ namespace Plugin {
     }
 
     // Event: upgradeprogress - Notifies progress of upgrade
-    void FirmwareControl::event_upgradeprogress(const StatusType& status, const UpgradeprogressParamsData::ErrorType& error, const uint8_t& percentage)
+    void FirmwareControl::event_upgradeprogress(const StatusType& status, const UpgradeprogressParamsData::ErrorType& error, const uint32_t& progress)
     {
         UpgradeprogressParamsData params;
         params.Status = status;
         params.Error = error;
-        params.Percentage = percentage;
+        params.Progress = progress;
 
-        TRACE(Trace::Information, (_T("status = [%s] error = [%s] percentage = [%d]\n"),
+        TRACE(Trace::Information, (_T("status = [%s] error = [%s] progresse = [%d]\n"),
               Core::EnumerateType<JsonData::FirmwareControl::StatusType>(status).Data(),
               Core::EnumerateType<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(error).Data(),
-              percentage));
+              progress));
         Notify(_T("upgradeprogress"), params);
     }
 
