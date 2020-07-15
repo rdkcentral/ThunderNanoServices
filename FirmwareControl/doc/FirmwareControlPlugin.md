@@ -91,7 +91,7 @@ FirmwareControl interface methods:
 <a name="method.upgrade"></a>
 ## *upgrade <sup>method</sup>*
 
-Upgrade the device to the given firmware.
+Upgrade the device to the given firmware. (Note: Ensure size of firmware image should be < 500MB).
 
 Also see: [upgradeprogress](#event.upgradeprogress)
 
