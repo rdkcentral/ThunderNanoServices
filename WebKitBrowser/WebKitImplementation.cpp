@@ -1775,14 +1775,10 @@ static GSourceFuncs _handlerIntervention =
             // Media Content Types Requiring Hardware Support
             if (_config.MediaContentTypesRequiringHardwareSupport.IsSet() == true
                 && _config.MediaContentTypesRequiringHardwareSupport.Value().empty() == false) {
-/*
               auto contentTypes = WKStringCreateWithUTF8CString(
                   _config.MediaContentTypesRequiringHardwareSupport.Value().c_str());
               WKPreferencesSetMediaContentTypesRequiringHardwareSupport(preferences, contentTypes);
               WKRelease(contentTypes);
- */
-                // TODO: this one doesn't work on nexus?
-                fprintf(stderr, "ERROR: something about hardware support...\n");
             }
 
             WKPageGroupSetPreferences(pageGroup, preferences);
