@@ -804,7 +804,8 @@ namespace WPASupplicant {
 
                 uint32_t result = (_callback != nullptr ? Core::ERROR_INPROGRESS        : 
                                   (bssid     == 0       ? Core::ERROR_INCOMPLETE_CONFIG : 
-                                                          Core::ERROR_UNKNOWN_KEY       ));
+                                  (_parent.Current().empty() == false ? Core::ERROR_ALREADY_CONNECTED :
+                                                          Core::ERROR_UNKNOWN_KEY       )));
 
                 if (result == Core::ERROR_UNKNOWN_KEY) {
 
