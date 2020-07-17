@@ -1494,21 +1494,17 @@ namespace WPASupplicant {
         }
         inline uint32_t Connect(IConnectCallback* sink, const string& SSID, const uint64_t bssid)
         {
-            _adminLock.Lock();
 
             uint32_t result = _connectRequest.Invoke(sink, SSID, bssid);
 
-            _adminLock.Unlock();
 
             return (result);
         }
         inline uint32_t Revoke(IConnectCallback* sink)
         {
-            _adminLock.Lock();
 
             uint32_t result = _connectRequest.Revoke(sink);
 
-            _adminLock.Unlock();
 
             return (result);
         }
@@ -1551,7 +1547,6 @@ namespace WPASupplicant {
 
         inline void Notify(const events value)
         {
-            _adminLock.Lock();
 
             if (value == WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED) {
                 _connectRequest.Completed(Core::ERROR_INVALID_SIGNATURE);
@@ -1560,6 +1555,7 @@ namespace WPASupplicant {
                 _connectRequest.Completed(Core::ERROR_NONE);
             }
 
+            _adminLock.Lock();
             if (_callback != nullptr) {
                 _callback->Dispatch(value);
             }
