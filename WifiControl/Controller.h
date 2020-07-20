@@ -775,7 +775,8 @@ namespace WPASupplicant {
                 SELECT,
                 RECONNECT,
                 AUTHORIZE,
-                WAITING
+                WAITING,
+                ERROR
             };
 
         public:
@@ -791,6 +792,7 @@ namespace WPASupplicant {
                 , _bssid(0)
                 , _ssid()
                 , _callback(nullptr)
+                , _error(Core::ERROR_NONE)
             {
             }
             ~ConnectRequest() override
@@ -802,7 +804,8 @@ namespace WPASupplicant {
 
                 uint32_t result = (_callback != nullptr ? Core::ERROR_INPROGRESS        : 
                                   (bssid     == 0       ? Core::ERROR_INCOMPLETE_CONFIG : 
-                                                          Core::ERROR_UNKNOWN_KEY       ));
+                                  (_parent.Current().empty() == false ? Core::ERROR_ALREADY_CONNECTED :
+                                                          Core::ERROR_UNKNOWN_KEY       )));
 
                 if (result == Core::ERROR_UNKNOWN_KEY) {
 
@@ -868,6 +871,9 @@ namespace WPASupplicant {
                     newCommand = string(_TXT("PREAUTH ")) + BSSID(_bssid);
                     _state     = connection::AUTHORIZE;
                 }
+                else if (_state == connection::ERROR) {
+                    result = _error;
+                }
                 else {
                     _state = connection::WAITING;
                 }
@@ -889,7 +895,15 @@ namespace WPASupplicant {
 
                 _adminLock.Lock();
 
-                if ((_callback != nullptr) && (_state == connection::WAITING)) {
+                if (result != Core::ERROR_NONE) {
+
+                    _error = result;
+                    _state = connection::ERROR;
+
+                    Request::Set(string(_TXT("DISCONNECT")));
+                    _parent.Submit(this);
+                }
+                else if ((_callback != nullptr) && (_state == connection::WAITING)) {
                     _callback->Completed(result);
                 }
                 _adminLock.Unlock();
@@ -902,6 +916,7 @@ namespace WPASupplicant {
             uint64_t _bssid;
             string _ssid;
             IConnectCallback* _callback;
+            uint32_t _error;
         };
         class CustomRequest : public Request {
         private:
