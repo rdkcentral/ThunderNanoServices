@@ -1,0 +1,14 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "DTV Plugin",
+    "callsign": "DTV",
+    "locator": "libWPEFrameworkDTV.so",
+    "status": "alpha",
+    "description": "The DTV plugin provides access to DVB services provided by a DVB stack.",
+    "version": "1.0"
+  },
+  "interface": {
+    "$ref": "{interfacedir}/DTV.json#"
+  }
+}

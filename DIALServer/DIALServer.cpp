@@ -215,10 +215,7 @@ namespace Plugin {
         bool isAtLeast2_1 = Version{2, 1, 0} <= version;
         // allowSop is mandatory to be true starting from 2.1
         string allowStop = isAtLeast2_1 == true || HasStartAndStop() == true ? "true" : "false";
-        string dialVersion;
-        if (isAtLeast2_1 == true) {
-          dialVersion = " dialVer=\"2.1\" ";
-        }
+        string dialVersion = " dialVer=\"2.1\" ";
 
         data = _T("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
                _T("<service xmlns=\"urn:dial-multiscreen-org:schemas:dial\"") + dialVersion + _T(">")
@@ -226,7 +223,7 @@ namespace Plugin {
             + Name() + _T("</name>")
                        _T("<options allowStop=\"")
             + allowStop + _T("\"/><state>")
-            // 2.2 spec adds "hidden" state. It also introduces "installable" state.
+            // 2.1 spec adds "hidden" state. It also introduces "installable" state.
             // We may consider adding support for it at some point - thanks to the Packager.
             + (running == true ? (hidden == true && isAtLeast2_1 == true ? _T("hidden") : _T("running")) : _T("stopped")) + _T("</state>")
             // <link> element is DEPRECATED starting from 2.1
@@ -392,23 +389,17 @@ namespace Plugin {
 
     void DIALServer::StartApplication(const Web::Request& request, Core::ProxyType<Web::Response>& response, AppInformation& app)
     {
-        string parameters;
-        string additioanlDataUrl =  "http://localhost/" + app.Name() + "/" + _DefaultDataExtension;
-        TCHAR* encodedDataUrl = static_cast<TCHAR*>(ALLOCA(additioanlDataUrl.length() * 3 * sizeof(TCHAR)));
-        Core::URL::Encode(additioanlDataUrl.c_str(), static_cast<uint16_t>(additioanlDataUrl.length()), encodedDataUrl, static_cast<uint16_t>(additioanlDataUrl.length() * 3 * sizeof(TCHAR)));
-        if (request.HasBody() == true) {
-            parameters = *request.Body<const Web::TextBody>();
-            parameters = app.AppURL() + (app.HasQueryParameter() ? "&" : "?") + parameters;
-            parameters += "&additionalDataUrl=";
-        } else {
-          parameters = app.AppURL() + (app.HasQueryParameter() ? "&" : "?") + "additionalDataUrl=";
-        }
-        parameters += encodedDataUrl;
+        const string payload = ((request.HasBody() == true)? string(*request.Body<const Web::TextBody>()) : "");
 
-        if (parameters.length() > MaxDialQuerySize) {
+        if (payload.length() > MaxDialQuerySize) {
             response->ErrorCode = Web::STATUS_REQUEST_ENTITY_TOO_LARGE;
-            response->Message = _T("Request entity is too big to fit the URL");
+            response->Message = _T("Payload too long");
         } else {
+            const string additionalDataUrl = (_T("http://localhost/") + app.Name() + _T("/") + _DefaultDataExtension);
+            TCHAR* encodedDataUrl = reinterpret_cast<TCHAR*>(ALLOCA(additionalDataUrl.length() * 3 * sizeof(TCHAR)));
+            Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, static_cast<uint16_t>(sizeof(encodedDataUrl)));
+            string parameters = (app.AppURL() + (app.HasQueryParameter()? _T("&") : _T("?")) + _T("additionalDataUrl=") + encodedDataUrl);
+
             TRACE(Trace::Information, (_T("Launch Application [%s] with params: %s"), app.Name().c_str(), parameters.c_str()));
 
             // See if we can find the plugin..
@@ -419,7 +410,7 @@ namespace Plugin {
                     response->ErrorCode = Web::STATUS_FORBIDDEN;
                     response->Message = _T("Forbidden");
                 } else {
-                    uint32_t result = app.Start(parameters);
+                    uint32_t result = app.Start(parameters, payload);
                     if (result != Core::ERROR_NONE && result != Core::ERROR_INPROGRESS) {
                         response->ErrorCode = Web::STATUS_SERVICE_UNAVAILABLE;
                         response->Message = _T("Service Unavailable");
@@ -451,7 +442,7 @@ namespace Plugin {
                         }
                     } else {
                         if (result == Core::ERROR_NONE) {
-                            if (app.URL(parameters) == true) {
+                            if (app.URL(parameters, payload) == true) {
                                 response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
                                 response->ErrorCode = Web::STATUS_CREATED;
                                 response->Message = _T("Created");
@@ -468,7 +459,7 @@ namespace Plugin {
                     }
                 } else {
                     if (request.HasBody() == true) {
-                        if (app.URL(parameters) == true) {
+                        if (app.URL(parameters, payload) == true) {
                             response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
                             response->ErrorCode = Web::STATUS_CREATED;
                             response->Message = _T("Created");
@@ -498,7 +489,7 @@ namespace Plugin {
             } else {
                 response->ErrorCode = Web::STATUS_OK;
                 response->Message = _T("OK");
-                app.Stop(_T(""));
+                app.Stop(_T(""), _T(""));
             }
         }
     }
@@ -607,18 +598,23 @@ namespace Plugin {
                     if (request.Verb == Web::Request::HTTP_DELETE) {
                         StopApplication(request, result, selectedApp->second);
                     } else if (request.Verb == Web::Request::HTTP_POST) {
-                      if (index.Next() == true && index.Current() == kHideCommand) {
-                          if (selectedApp->second.HasHideAndShow() == true) {
-                              result->ErrorCode = Web::STATUS_OK;
-                              result->Message = _T("OK");
-                              selectedApp->second.Hide();
-                          } else {
-                              result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
-                              result->Message = _T("Not Implemented");
-                          }
-                      } else {
-                          StartApplication(request, result, selectedApp->second);
-                      }
+                        if (index.Next() == true && index.Current() == kHideCommand) {
+                            if (selectedApp->second.IsRunning() == true) {
+                                if (selectedApp->second.HasHideAndShow() == true) {
+                                    result->ErrorCode = Web::STATUS_OK;
+                                    result->Message = _T("OK");
+                                    selectedApp->second.Hide();
+                                } else {
+                                    result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
+                                    result->Message = _T("Not Implemented");
+                                }
+                            } else {
+                                result->ErrorCode = Web::STATUS_NOT_FOUND;
+                                result->Message = _T("App not running");
+                            }
+                        } else {
+                            StartApplication(request, result, selectedApp->second);
+                        }
                     }
                 } else if (index.Current() == _DefaultRunningExtension) {
                     if ((request.Verb == Web::Request::HTTP_POST) || (request.Verb == Web::Request::HTTP_DELETE)) {

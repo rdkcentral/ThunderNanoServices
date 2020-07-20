@@ -461,7 +461,7 @@ namespace Plugin {
 
 namespace OutOfProcessPlugin {
 
-    class EXTERNAL MemoryObserverImpl : public Exchange::IMemory {
+    class MemoryObserverImpl : public Exchange::IMemory {
     private:
         MemoryObserverImpl();
         MemoryObserverImpl(const MemoryObserverImpl&);

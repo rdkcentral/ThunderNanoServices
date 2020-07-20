@@ -115,7 +115,7 @@ namespace Plugin {
         };
 #pragma pack(pop)
 
-        class EXTERNAL Flow {
+        class Flow {
         private:
             Flow(const Flow& a_Copy) = delete;
             Flow& operator=(const Flow& a_RHS) = delete;

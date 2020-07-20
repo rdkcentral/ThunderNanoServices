@@ -41,7 +41,7 @@ namespace Plugin
 
     static Core::ProxyPoolType<Web::JSONBodyType<IOConnector::Data>> jsonBodyDataFactory(1);
 
-    class EXTERNAL IOState {
+    class IOState {
     private:
         // -------------------------------------------------------------------
         // This object should not be copied or assigned. Prevent the copy

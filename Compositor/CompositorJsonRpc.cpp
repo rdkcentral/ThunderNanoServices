@@ -145,7 +145,8 @@ namespace Plugin {
     // Property: resolution - Screen resolution
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - UNKNOWN_KEY: Unknown resolution
+    //  - ERROR_UNKNOWN_KEY: Unknown resolution
+    //  - ERROR_UNAVAILABLE: Set resultion is not supported
     //  - ERROR_GENERAL: Failed to set resultion
     uint32_t Compositor::set_resolution(const Core::JSON::EnumType<ResolutionType>& param)
     {
@@ -188,12 +189,7 @@ namespace Plugin {
                 resolution = Exchange::IComposition::ScreenResolution_Unknown;
             }
 
-            Resolution(resolution);
-            if (Resolution() != resolution) {
-                result = Core::ERROR_GENERAL;
-            } else {
-                result = Core::ERROR_NONE;
-            }
+            result = Resolution(resolution);
         }
 
         return result;

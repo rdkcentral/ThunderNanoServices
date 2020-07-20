@@ -150,7 +150,7 @@ namespace Plugin {
 
             // Start an application with specified URL / payload
             // Can only be called if HasStartAndStop() evaluates to true
-            virtual uint32_t Start(const string& data) = 0;
+            virtual uint32_t Start(const string& data, const string& payload) = 0;
 
             // Connect DIAL handler with the service (eg. DIAL of youtube to cobalt).
             // Returns true if connection is successfull, false otherwise
@@ -161,7 +161,7 @@ namespace Plugin {
 
             // Stop a running service. Additional data can be passed if in passive mode
             // Can only be called if HasStartAndStop() evaluates to true
-            virtual void Stop(const string& data) = 0;
+            virtual void Stop(const string& data, const string& payload) = 0;
 
             virtual bool IsHidden() const = 0;
 
@@ -173,7 +173,7 @@ namespace Plugin {
 
             // Methods for passing a URL to DIAL handler
             virtual string URL() const = 0;
-            virtual bool URL(const string& url) = 0;
+            virtual bool URL(const string& url, const string& payload) = 0;
 
             // Methods used for passing additional data to DIAL handler
             virtual AdditionalDataType AdditionalData() const = 0;
@@ -200,19 +200,19 @@ namespace Plugin {
             ~System() override {}
             bool IsRunning() const { return true; }
             bool HasStartAndStop() const override { return false; }
-            uint32_t Start(const string& data) override {
+            uint32_t Start(const string& data, const string& payload) override {
                 ASSERT(!"Not supported and not even supposed to");
                 return Core::ERROR_GENERAL;
             }
             bool Connect() override { return true;}
             bool IsConnected() override {return true;}
-            void Stop(const string& data) { ASSERT(!"Not supported and not even supposed to"); }
+            void Stop(const string& data, const string& payload) { ASSERT(!"Not supported and not even supposed to"); }
             bool HasHideAndShow() const { return true; }
             bool IsHidden() const { return true; }
             uint32_t Show() override { return Core::ERROR_GENERAL; }
             void Hide() override {}
             string URL() const override { return {}; }
-            bool URL(const string& url) override { return (false); };
+            bool URL(const string& url, const string& payload) override { return (false); };
             AdditionalDataType AdditionalData() const override { return { }; }
             void AdditionalData(AdditionalDataType&& data) override {}
             void Running(const bool isRunning) override {}
@@ -285,7 +285,7 @@ namespace Plugin {
             bool HasStartAndStop() const override { return true; }
             uint32_t Show() override { return Core::ERROR_GENERAL; }
             void Hide() override {}
-            virtual uint32_t Start(const string& data)
+            virtual uint32_t Start(const string& data, const string& payload)
             {
                 uint32_t result = Core::ERROR_NONE;
                 if (_passiveMode == true) {
@@ -304,14 +304,14 @@ namespace Plugin {
                             TRACE_L1("DIAL: Failed to attach to service");
                             result = Core::ERROR_UNAVAILABLE;
                         } else {
-                            URL(data);
+                            URL(data, payload);
                         }
                     }
                 }
 
                 return result;
             }
-            virtual void Stop(const string& data)
+            virtual void Stop(const string& data, const string& payload)
             {
                 if (_passiveMode == true) {
                     const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"stop\", \"data\":\"" + data + "\"}"));
@@ -337,7 +337,7 @@ namespace Plugin {
             {
                 return ("");
             }
-            bool URL(const string& url) override 
+            bool URL(const string& url, const string& payload) override
             {
                 bool result = false;
 
@@ -532,7 +532,7 @@ namespace Plugin {
                 return application;
             }
         };
-        class EXTERNAL Protocol {
+        class Protocol {
         private:
             // -------------------------------------------------------------------
             // This object should not be copied or assigned. Prevent the copy
@@ -742,13 +742,13 @@ namespace Plugin {
             {
                 _application->Running(isRunning);
             }
-            inline uint32_t Start(const string& data)
+            inline uint32_t Start(const string& data, const string& payload)
             {
-                return _application->Start(data);
+                return _application->Start(data, payload);
             }
-            inline void Stop(const string& data)
+            inline void Stop(const string& data, const string& payload)
             {
-                _application->Stop(data);
+                _application->Stop(data, payload);
             }
             inline bool HasStartAndStop() const
             {
@@ -762,9 +762,9 @@ namespace Plugin {
             {
                 return (_application->URL());
             }
-            inline bool URL(const string& url) 
+            inline bool URL(const string& url, const string& payload)
             {
-                return (_application->URL(url));
+                return (_application->URL(url, payload));
             }
             inline void SwitchBoard(Exchange::ISwitchBoard* switchBoard)
             {

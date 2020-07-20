@@ -19,17 +19,11 @@
 
 #pragma once
 
-#include "Module.h"
-#include <interfaces/IDolby.h>
-
-#ifdef __cplusplus
-extern "C" {
+#ifndef MODULE_NAME
+#define MODULE_NAME Plugin_DTV
 #endif
 
-void set_audio_output_type(enum WPEFramework::Exchange::Dolby::IOutput::Type type);
+#include <plugins/plugins.h>
 
-enum WPEFramework::Exchange::Dolby::IOutput::Type get_audio_output_type(void);
-
-#ifdef __cplusplus
-}
-#endif
+#undef EXTERNAL
+#define EXTERNAL

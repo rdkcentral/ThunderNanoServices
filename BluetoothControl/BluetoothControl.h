@@ -717,7 +717,7 @@ class BluetoothControl : public PluginHost::IPlugin
         }; // class Data
 
     public:
-        class EXTERNAL DeviceImpl : public Exchange::IBluetooth::IDevice {
+        class DeviceImpl : public Exchange::IBluetooth::IDevice {
         private:
             static constexpr uint16_t ACTION_MASK = 0x00FF;
 
@@ -1576,7 +1576,7 @@ class BluetoothControl : public PluginHost::IPlugin
         }; // class DeviceImpl
 
     public:
-        class EXTERNAL DeviceRegular : public DeviceImpl, public Exchange::IBluetooth::IClassic {
+        class DeviceRegular : public DeviceImpl, public Exchange::IBluetooth::IClassic {
         public:
             DeviceRegular() = delete;
             DeviceRegular(const DeviceRegular&) = delete;
@@ -1803,7 +1803,7 @@ class BluetoothControl : public PluginHost::IPlugin
         }; // class DeviceRegular
 
     public:
-        class EXTERNAL DeviceLowEnergy : public DeviceImpl, public Exchange::IBluetooth::ILowEnergy {
+        class DeviceLowEnergy : public DeviceImpl, public Exchange::IBluetooth::ILowEnergy {
         public:
             DeviceLowEnergy() = delete;
             DeviceLowEnergy(const DeviceLowEnergy&) = delete;
@@ -1964,9 +1964,9 @@ class BluetoothControl : public PluginHost::IPlugin
         }; // class DeviceLowEnergy
 
     public:
-        class EXTERNAL Status : public Core::JSON::Container {
+        class Status : public Core::JSON::Container {
         public:
-            class EXTERNAL Property : public Core::JSON::Container {
+            class Property : public Core::JSON::Container {
             public:
                 Property& operator=(const Property&) = delete;
                 Property()
