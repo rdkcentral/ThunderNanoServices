@@ -26,10 +26,13 @@ endif()
 
 option(PLUGIN_AMAZON_HYBRID "Enable the Amazon Player interface (Hawaii) in the injected bundle and the creation of the Amazon tab" OFF)
 option(PLUGIN_SECURITY_AGENT "Enable the Security Agent Features interface in javascript." OFF)
+option(PLUGIN_WEBKITBROWSER_AAMP_JSBINDINGS "Enable AAMP JS bindings." OFF)
 
 set(SOURCE_LIST
 	main.cpp
 	WhiteListedOriginDomainsList.cpp
+   RequestHeaders.cpp
+   BridgeObject.cpp
 	)
 
 if(NOT DEFINED WEBKIT_GLIB_API)
@@ -57,6 +60,15 @@ if(securityagent_FOUND)
     target_link_libraries(${MODULE_NAME}
         PRIVATE 
             securityagent::securityagent)
+endif()
+
+if(PLUGIN_WEBKITBROWSER_AAMP_JSBINDINGS)
+    find_package(AampJSBindings REQUIRED)
+    target_sources(${MODULE_NAME} PRIVATE AAMPJSBindings.cpp)
+    target_compile_definitions(${MODULE_NAME} PRIVATE ENABLE_AAMP_JSBINDINGS)
+    target_link_libraries(${MODULE_NAME}
+        PRIVATE
+        ${AAMP_JSBINDINGS_LIBRARIES})
 endif()
 
 set_target_properties(${MODULE_NAME} PROPERTIES
