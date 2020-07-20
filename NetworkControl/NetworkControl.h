@@ -317,7 +317,8 @@ namespace Plugin {
                 : _parent(*parent)
                 , _retries(0)
                 , _client(interfaceName, std::bind(&DHCPEngine::NewOffer, this, std::placeholders::_1), 
-                          std::bind(&DHCPEngine::RequestResult, this, std::placeholders::_1, std::placeholders::_2))
+                          std::bind(&DHCPEngine::RequestResult, this, std::placeholders::_1, std::placeholders::_2),
+                          std::bind(&DHCPEngine::LeaseExpired, this, std::placeholders::_1))
                 , _leaseFilePath((persistentStoragePath.empty()) ? "" :  (persistentStoragePath + _client.Interface() + ".json"))
             {
 
@@ -332,6 +333,7 @@ namespace Plugin {
             // Permanent IP storage
             void SaveLeases();
             bool LoadLeases();
+            void MakeUnleased();
 
             inline DHCPClientImplementation::classifications Classification() const
             {
@@ -357,7 +359,10 @@ namespace Plugin {
 
             void GetIP() 
             {
-                return (GetIP(Core::NodeId()));
+                Core::AdapterIterator adapter(_client.Interface());
+                if ((adapter.IsValid() == true) && (adapter.IsRunning() == true)) {
+                    (GetIP(Core::NodeId()));
+                }
             }
 
             void GetIP(const Core::NodeId& preferred)
@@ -365,15 +370,19 @@ namespace Plugin {
                 auto offerIterator = _client.UnleasedOffers();
                 if (offerIterator.Next() == true) {
                     Request(offerIterator.Current());
-                } else {
+                } else if (_client.LeasedOffer().IsValid() != true) {
                     Discover(preferred);
                 }
             }
 
             void NewOffer(const DHCPClientImplementation::Offer& offer) {
                 StopWatchdog();
-                if (_parent.NewOffer(_client.Interface(), offer) == true) {
-                    Request(offer);
+                Core::AdapterIterator adapter(_client.Interface());
+                if ((adapter.IsValid() == true) && (adapter.IsRunning() == true)) {
+
+                    if (_parent.NewOffer(_client.Interface(), offer) == true) {
+                        Request(offer);
+                    }
                 }
             }
 
@@ -392,8 +401,18 @@ namespace Plugin {
                 _parent.event_connectionchange(_client.Interface().c_str(), offer.Address().HostAddress().c_str(), status);
             }
 
-            inline void Request(const DHCPClientImplementation::Offer& offer) {
+            void LeaseExpired(const DHCPClientImplementation::Offer& offer) {
+                Core::AdapterIterator adapter(_client.Interface());
 
+                if (adapter.IsValid() == true) {
+                    _parent.ClearAssignedIPs(adapter);
+                    if (adapter.IsRunning() == true) {
+                        GetIP(Core::NodeId());
+                    }
+                }
+            }
+
+            inline void Request(const DHCPClientImplementation::Offer& offer) {
                 SetupWatchdog();
                 _client.Request(offer);
             }
@@ -402,10 +421,12 @@ namespace Plugin {
             {
                 _client.Completed();
             }
+
             inline DHCPClientImplementation::Iterator UnleasedOffers()
             {
                 return (_client.UnleasedOffers());
             }
+
             inline void RemoveUnleasedOffer(const DHCPClientImplementation::Offer& offer) 
             {
                 _client.RemoveUnleasedOffer(offer);
@@ -525,6 +546,18 @@ namespace Plugin {
         inline uint8_t Retries() const
         {
             return (_retries);
+        }
+        inline void ClearAssignedIPs(Core::AdapterIterator& adapter)
+        {
+            ClearAssignedIPV4IPs(adapter);
+            ClearAssignedIPV6IPs(adapter);
+
+            std::map<const string, Core::ProxyType<DHCPEngine>>::const_iterator entry(_dhcpInterfaces.find(adapter.Name()));
+
+            if (entry != _dhcpInterfaces.end()) {
+                entry->second->MakeUnleased();
+            }
+
         }
         void ClearAssignedIPV4IPs(Core::AdapterIterator& adapter);
         void ClearAssignedIPV6IPs(Core::AdapterIterator& adapter);

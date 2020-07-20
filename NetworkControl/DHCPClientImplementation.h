@@ -51,6 +51,7 @@ namespace Plugin {
             RECEIVING
         };
 
+        static constexpr uint8_t leaseCheckInterval = 1;
         // Name of file containing last ip
         static constexpr TCHAR lastIPFileName[] = _T("dhcpclient.json");
 
@@ -551,6 +552,10 @@ namespace Plugin {
             {
                 return (_leaseTime);
             }
+            void LeaseTime(uint32_t leaseTime)
+            {
+                _leaseTime = leaseTime;
+            }
             uint32_t RenewalTime() const
             {
                 return (_renewalTime);
@@ -576,10 +581,11 @@ namespace Plugin {
         typedef Core::IteratorType<std::list<Offer>, Offer&, std::list<Offer>::iterator> Iterator;
         typedef Core::IteratorType<const std::list<Offer>, const Offer&, std::list<Offer>::const_iterator> ConstIterator;
         typedef std::function<void(Offer&)> DiscoverCallback;
+        typedef std::function<void(Offer&)> LeaseExpiredCallback;
         typedef std::function<void(Offer&, bool)> RequestCallback;
 
     public:
-        DHCPClientImplementation(const string& interfaceName, DiscoverCallback discoverCallback, RequestCallback claimCallback);
+        DHCPClientImplementation(const string& interfaceName, DiscoverCallback discoverCallback, RequestCallback claimCallback, LeaseExpiredCallback leaseExpiredCallback);
         virtual ~DHCPClientImplementation();
 
     public:
@@ -731,6 +737,11 @@ namespace Plugin {
         {
             return _leasedOffer;
         }
+        inline void ClearLeasedOffer()
+        {
+             Offer offer;
+             _leasedOffer = offer;
+        }
 
         inline Iterator CurrentlyRequestedOffer() {
             Iterator result(_unleasedOffers);
@@ -741,6 +752,17 @@ namespace Plugin {
             }
 
             return result;
+        }
+
+        void MakeUnleasedOffer() {
+             _adminLock.Lock();
+             if (_leasedOffer.IsValid() == true) {
+                 AddUnleasedOffer(_leasedOffer);
+                 ClearLeasedOffer();
+             }
+             _adminLock.Unlock();
+
+             return;
         }
 
         inline void RemoveUnleasedOffer(const Offer& offer) 
@@ -793,8 +815,10 @@ namespace Plugin {
             _adminLock.Lock();
 
             _leasedOffer = offer;
-            _unleasedOffers.remove_if([offer] (Offer& o) {return o.Id() == offer.Id();}); 
-            
+            _unleasedOffers.remove_if([offer] (Offer& o) {return o.Id() == offer.Id();});
+
+            _activity.Revoke();
+            _activity.Schedule(Core::Time::Now().Add(_interval * 1000));
             _adminLock.Unlock();
 
             return _leasedOffer;
@@ -914,12 +938,13 @@ namespace Plugin {
                         }
                     case CLASSIFICATION_ACK: 
                         {
-                            Iterator offer = FindUnleasedOffer(xid);
+                            Iterator index = FindUnleasedOffer(xid);
+                            Offer offer = (index.IsValid())? index.Current(): LeasedOffer();
                                         
-                            if (offer.IsValid()) {
-                                offer.Current().Update(options); // Update if informations changed since offering
+                            if (offer.IsValid() && offer.Id() == xid) {
+                                offer.Update(options); // Update if informations changed since offering
                                 
-                                Offer& leased = MakeLeased(offer.Current());
+                                Offer& leased = MakeLeased(offer);
                                 _claimCallback(leased, true);
                             }
                             break;
@@ -944,6 +969,20 @@ namespace Plugin {
             return (result);
         }
 
+        friend Core::ThreadPool::JobType<DHCPClientImplementation&>;
+        void Dispatch()
+        {
+            _adminLock.Lock();
+            uint32_t leasedTime = _leasedOffer.LeaseTime();
+            if (leasedTime > 0) {
+                _leasedOffer.LeaseTime(leasedTime - _interval);
+                _activity.Schedule(Core::Time::Now().Add(_interval * 1000));
+            } else {
+                _leaseExpiredCallback(_leasedOffer);
+            }
+            _adminLock.Unlock();
+        }
+
     private:
         Core::CriticalSection _adminLock;
         string _interfaceName;
@@ -956,8 +995,11 @@ namespace Plugin {
         Core::NodeId _preferred;
         DiscoverCallback _discoverCallback;
         RequestCallback _claimCallback;
-        std::list<Offer> _unleasedOffers;
+        LeaseExpiredCallback _leaseExpiredCallback;
+        uint32_t _interval;
         Offer _leasedOffer;
+        std::list<Offer> _unleasedOffers;
+        Core::WorkerPool::JobType<DHCPClientImplementation&> _activity;
     };
 }
 } // namespace WPEFramework::Plugin
