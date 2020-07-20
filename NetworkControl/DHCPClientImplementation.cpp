@@ -39,6 +39,8 @@ namespace Plugin {
          * implement IP header on raw socket level. Otherwise network driver can 
          * interpret 0.0.0.0 as IPADDR_ANY and reassign it if it has any.
         */
+    public:
+        static constexpr uint16_t minimumFrameSize = sizeof(iphdr) + sizeof(udphdr);
 
     public:
         DHCPIPPacket() = delete;
@@ -105,7 +107,7 @@ namespace Plugin {
             const udphdr* udpHeader = reinterpret_cast<udphdr*>(_buffer + udpHeaderOffset);
 
 
-            return (_bufferSize > (sizeof(iphdr) + sizeof(udphdr))) 
+            return (_bufferSize > minimumFrameSize) 
                     && (ipHeader->protocol == PROTOCOL_UDP)
                     && (udpHeader->dest == htons(68));
         }
@@ -213,8 +215,9 @@ namespace Plugin {
             _state = RECEIVING;
             TRACE_L1("Sending DHCP message type: %d for interface: %s", _modus, _interfaceName.c_str());
 
+            ASSERT(maxSendSize > DHCPIPPacket::minimumFrameSize);
+
             DHCPIPPacket frame(dataFrame, maxSendSize, true);
- 
             result = Message(frame.DHCPFrame(), frame.MaxDHCPFrameSize());
 
             if (result > 0) {
@@ -230,7 +233,6 @@ namespace Plugin {
     /* virtual */ uint16_t DHCPClientImplementation::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
     {
         DHCPIPPacket frame(dataFrame, receivedSize, false);
-
         if (frame.IsIncomingMessage()) {
             ProcessMessage(SocketDatagram::ReceivedNode(), frame.DHCPFrame(), frame.MaxDHCPFrameSize());
         }
