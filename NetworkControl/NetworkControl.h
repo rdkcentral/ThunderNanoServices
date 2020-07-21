@@ -404,8 +404,9 @@ namespace Plugin {
             }
 
             void LeaseExpired(const DHCPClientImplementation::Offer& offer) {
-                Core::AdapterIterator adapter(_client.Interface());
+                MakeUnleased();
 
+                Core::AdapterIterator adapter(_client.Interface());
                 if ((adapter.IsValid() == true) && (adapter.IsRunning() == true)) {
                     GetIP(Core::NodeId());
                 }
@@ -556,8 +557,8 @@ namespace Plugin {
             if (entry != _dhcpInterfaces.end()) {
                 entry->second->MakeUnleased();
             }
-
         }
+
         void ClearAssignedIPV4IPs(Core::AdapterIterator& adapter);
         void ClearAssignedIPV6IPs(Core::AdapterIterator& adapter);
 
