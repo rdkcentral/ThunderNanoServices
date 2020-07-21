@@ -109,7 +109,7 @@ namespace Plugin {
 
             return (_bufferSize > minimumFrameSize) 
                     && (ipHeader->protocol == PROTOCOL_UDP)
-                    && (udpHeader->dest == htons(68));
+                    && (udpHeader->dest == htons(DHCPClientImplementation::DefaultDHCPClientPort));
         }
     private:
         void InitIpHeader() 
@@ -129,8 +129,8 @@ namespace Plugin {
             udphdr* udpHeader = reinterpret_cast<udphdr*>(_buffer + udpHeaderOffset);
 
             memset(udpHeader, 0, sizeof(udphdr));
-            udpHeader->source = htons(68);
-            udpHeader->dest = htons(67);
+            udpHeader->source = htons(DHCPClientImplementation::DefaultDHCPClientPort);
+            udpHeader->dest = htons(DHCPClientImplementation::DefaultDHCPServerPort);
         }
 
         void RecalcHeadersSizes() 
