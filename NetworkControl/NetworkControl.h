@@ -368,10 +368,12 @@ namespace Plugin {
             void GetIP(const Core::NodeId& preferred)
             {
                 auto offerIterator = _client.UnleasedOffers();
-                if (offerIterator.Next() == true) {
-                    Request(offerIterator.Current());
-                } else if (_client.LeasedOffer().IsValid() != true) {
-                    Discover(preferred);
+                if (_client.LeasedOffer().IsValid() != true) {
+                    if (offerIterator.Next() == true) {
+                        Request(offerIterator.Current());
+                    } else {
+                        Discover(preferred);
+                    }
                 }
             }
 
@@ -404,11 +406,8 @@ namespace Plugin {
             void LeaseExpired(const DHCPClientImplementation::Offer& offer) {
                 Core::AdapterIterator adapter(_client.Interface());
 
-                if (adapter.IsValid() == true) {
-                    _parent.ClearAssignedIPs(adapter);
-                    if (adapter.IsRunning() == true) {
-                        GetIP(Core::NodeId());
-                    }
+                if ((adapter.IsValid() == true) && (adapter.IsRunning() == true)) {
+                    GetIP(Core::NodeId());
                 }
             }
 

@@ -51,7 +51,7 @@ namespace Plugin {
             RECEIVING
         };
 
-        static constexpr uint8_t leaseCheckInterval = 1;
+        static constexpr float LeaseRenewTime = 0.5;
         // Name of file containing last ip
         static constexpr TCHAR lastIPFileName[] = _T("dhcpclient.json");
 
@@ -515,6 +515,21 @@ namespace Plugin {
                 return (*this);
             }
 
+            void Clear()
+            {
+                Core::NodeId node;
+                _source = node;
+                _offer = node;
+                _gateway = node;
+                _broadcast = node;
+                _dns.clear();
+                _netmask = 0;
+                _leaseTime = 0;
+                _renewalTime = 0;
+                _rebindingTime = 0;
+                _id = 0;
+            }
+
         public:
             uint32_t Id() const 
             {
@@ -737,11 +752,6 @@ namespace Plugin {
         {
             return _leasedOffer;
         }
-        inline void ClearLeasedOffer()
-        {
-             Offer offer;
-             _leasedOffer = offer;
-        }
 
         inline Iterator CurrentlyRequestedOffer() {
             Iterator result(_unleasedOffers);
@@ -758,7 +768,7 @@ namespace Plugin {
              _adminLock.Lock();
              if (_leasedOffer.IsValid() == true) {
                  AddUnleasedOffer(_leasedOffer);
-                 ClearLeasedOffer();
+                 _leasedOffer.Clear();
              }
              _adminLock.Unlock();
 
@@ -818,7 +828,8 @@ namespace Plugin {
             _unleasedOffers.remove_if([offer] (Offer& o) {return o.Id() == offer.Id();});
 
             _activity.Revoke();
-            _activity.Schedule(Core::Time::Now().Add(_interval * 1000));
+
+            _activity.Schedule(Core::Time::Now().Add(static_cast<uint32_t>(static_cast<float>(_leasedOffer.LeaseTime()) * LeaseRenewTime)));
             _adminLock.Unlock();
 
             return _leasedOffer;
@@ -972,15 +983,7 @@ namespace Plugin {
         friend Core::ThreadPool::JobType<DHCPClientImplementation&>;
         void Dispatch()
         {
-            _adminLock.Lock();
-            uint32_t leasedTime = _leasedOffer.LeaseTime();
-            if (leasedTime > 0) {
-                _leasedOffer.LeaseTime(leasedTime - _interval);
-                _activity.Schedule(Core::Time::Now().Add(_interval * 1000));
-            } else {
-                _leaseExpiredCallback(_leasedOffer);
-            }
-            _adminLock.Unlock();
+            _leaseExpiredCallback(_leasedOffer);
         }
 
     private:
@@ -996,7 +999,6 @@ namespace Plugin {
         DiscoverCallback _discoverCallback;
         RequestCallback _claimCallback;
         LeaseExpiredCallback _leaseExpiredCallback;
-        uint32_t _interval;
         Offer _leasedOffer;
         std::list<Offer> _unleasedOffers;
         Core::WorkerPool::JobType<DHCPClientImplementation&> _activity;

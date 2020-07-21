@@ -48,7 +48,6 @@ namespace Plugin {
         , _discoverCallback(discoverCallback)
         , _claimCallback(claimCallback)
         , _leaseExpiredCallback(leaseExpiredCallback)
-        , _interval(leaseCheckInterval)
         , _leasedOffer()
         , _unleasedOffers()
         , _activity(*this)
