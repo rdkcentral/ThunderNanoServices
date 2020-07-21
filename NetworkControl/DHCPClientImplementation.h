@@ -829,7 +829,7 @@ namespace Plugin {
 
             _activity.Revoke();
 
-            _activity.Schedule(Core::Time::Now().Add(static_cast<uint32_t>(static_cast<float>(_leasedOffer.LeaseTime()) * LeaseRenewTime)));
+            _activity.Schedule(Core::Time::Now().Add((static_cast<uint32_t>(static_cast<float>(_leasedOffer.LeaseTime()) * LeaseRenewTime)) * 1000));
             _adminLock.Unlock();
 
             return _leasedOffer;
