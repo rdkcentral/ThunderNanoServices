@@ -36,8 +36,9 @@ namespace DIALHandlers {
 
             if (payload.empty() == false) {
                 // Netflix expects the payload as urlencoded option "dial"
-                TCHAR* encodedPayload = reinterpret_cast<TCHAR*>(ALLOCA(payload.length() * 3 * sizeof(TCHAR)));
-                Core::URL::Encode(payload.c_str(), static_cast<uint16_t>(payload.length()), encodedPayload, static_cast<uint16_t>(sizeof(encodedPayload)));
+                const uint16_t maxEncodeSize = static_cast<uint16_t>(payload.length() * 3 * sizeof(TCHAR));
+                TCHAR* encodedPayload = reinterpret_cast<TCHAR*>(ALLOCA(maxEncodeSize));
+                Core::URL::Encode(payload.c_str(), static_cast<uint16_t>(payload.length()), encodedPayload, maxEncodeSize);
                 query = query + _T("&dial=") + encodedPayload;
             }
 

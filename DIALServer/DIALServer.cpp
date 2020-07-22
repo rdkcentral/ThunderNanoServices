@@ -396,8 +396,9 @@ namespace Plugin {
             response->Message = _T("Payload too long");
         } else {
             const string additionalDataUrl = (_T("http://localhost/") + app.Name() + _T("/") + _DefaultDataExtension);
-            TCHAR* encodedDataUrl = reinterpret_cast<TCHAR*>(ALLOCA(additionalDataUrl.length() * 3 * sizeof(TCHAR)));
-            Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, static_cast<uint16_t>(sizeof(encodedDataUrl)));
+            const uint16_t maxEncodedSize = static_cast<uint16_t>(additionalDataUrl.length() * 3 * sizeof(TCHAR));
+            TCHAR* encodedDataUrl = reinterpret_cast<TCHAR*>(ALLOCA(maxEncodedSize));
+            Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, maxEncodedSize);
             string parameters = (app.AppURL() + (app.HasQueryParameter()? _T("&") : _T("?")) + _T("additionalDataUrl=") + encodedDataUrl);
 
             TRACE(Trace::Information, (_T("Launch Application [%s] with params: %s, payload: %s"), app.Name().c_str(), parameters.c_str(), payload.c_str()));
