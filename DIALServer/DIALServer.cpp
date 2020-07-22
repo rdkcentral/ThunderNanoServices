@@ -400,7 +400,7 @@ namespace Plugin {
             Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, static_cast<uint16_t>(sizeof(encodedDataUrl)));
             string parameters = (app.AppURL() + (app.HasQueryParameter()? _T("&") : _T("?")) + _T("additionalDataUrl=") + encodedDataUrl);
 
-            TRACE(Trace::Information, (_T("Launch Application [%s] with params: %s"), app.Name().c_str(), parameters.c_str()));
+            TRACE(Trace::Information, (_T("Launch Application [%s] with params: %s, payload: %s"), app.Name().c_str(), parameters.c_str(), payload.c_str()));
 
             // See if we can find the plugin..
             ASSERT(_service != NULL);
