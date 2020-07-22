@@ -504,11 +504,6 @@ namespace Plugin
         return result;
     }
 
-    void NetworkControl::DHCPEngine::MakeUnleased()
-    {
-        _client.MakeUnleasedOffer();
-    }
-
     uint32_t NetworkControl::Reload(const string& interfaceName, const bool dynamic)
     {
 

@@ -764,6 +764,10 @@ namespace Plugin {
             return result;
         }
 
+        void RevokeLeaseTimer() {
+            _activity.Revoke();
+        }
+
         void MakeUnleasedOffer() {
              _adminLock.Lock();
              if (_leasedOffer.IsValid() == true) {

@@ -333,12 +333,17 @@ namespace Plugin {
             // Permanent IP storage
             void SaveLeases();
             bool LoadLeases();
-            void MakeUnleased();
+
+            inline void MakeUnleased()
+            {
+                _client.MakeUnleasedOffer();
+            }
 
             inline DHCPClientImplementation::classifications Classification() const
             {
                 return (_client.Classification());
             }
+
             inline uint32_t Discover()
             {
                 return (Discover(Core::NodeId()));
@@ -420,6 +425,10 @@ namespace Plugin {
             inline void Completed()
             {
                 _client.Completed();
+            }
+
+            inline void RevokeLeaseTimer() {
+                _client.RevokeLeaseTimer();
             }
 
             inline DHCPClientImplementation::Iterator UnleasedOffers()
@@ -555,6 +564,7 @@ namespace Plugin {
             std::map<const string, Core::ProxyType<DHCPEngine>>::const_iterator entry(_dhcpInterfaces.find(adapter.Name()));
 
             if (entry != _dhcpInterfaces.end()) {
+                entry->second->RevokeLeaseTimer();
                 entry->second->MakeUnleased();
             }
         }
