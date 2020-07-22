@@ -488,7 +488,7 @@ namespace Plugin
                 Core::OptionalType<Core::JSON::Error> error;
                 if (lease.IElement::FromFile(leaseFile, error) == true) {
 
-                    _client.AddUnleasedOffer(lease.Get());
+                    _client.AddUnleasedOfferToEnd(lease.Get());
                 }
 
                 if (error.IsSet() == true) {

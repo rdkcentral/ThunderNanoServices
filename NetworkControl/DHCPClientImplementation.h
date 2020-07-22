@@ -723,7 +723,15 @@ namespace Plugin {
             return (result);
         }
 
-        inline void AddUnleasedOffer(const Offer& offer) {
+        inline void AddUnleasedOfferToBegin(const Offer& offer) {
+            _adminLock.Lock();
+
+            _unleasedOffers.push_front(offer);
+
+            _adminLock.Unlock();
+        }
+
+        inline void AddUnleasedOfferToEnd(const Offer& offer) {
             _adminLock.Lock();
 
             _unleasedOffers.push_back(offer);
@@ -771,7 +779,7 @@ namespace Plugin {
         void MakeUnleasedOffer() {
              _adminLock.Lock();
              if (_leasedOffer.IsValid() == true) {
-                 AddUnleasedOffer(_leasedOffer);
+                 AddUnleasedOfferToBegin(_leasedOffer);
                  _leasedOffer.Clear();
              }
              _adminLock.Unlock();
@@ -943,7 +951,7 @@ namespace Plugin {
                     case CLASSIFICATION_OFFER:
                         {
                             if (xid == _discoverXID) {
-                                AddUnleasedOffer(Offer(source, frame, options));
+                                AddUnleasedOfferToBegin(Offer(source, frame, options));
                                 TRACE(Trace::Information, ("Received an Offer from: %s", source.HostAddress().c_str()));
                                 _discoverCallback(_unleasedOffers.back());
                             } else {
