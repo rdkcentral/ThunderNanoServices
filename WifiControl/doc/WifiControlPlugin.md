@@ -245,6 +245,8 @@ Also see: [connectionchange](#event.connectionchange)
 | 22 | ```ERROR_UNKNOWN_KEY``` | Returned when the network with a the given SSID doesn't exists |
 | 30 | ```ERROR_BAD_REQUEST``` | Returned when connection fails if there is no associated bssid to connect and not defined as AccessPoint. Rescan and try to connect |
 | 4 | ```ERROR_ASYNC_ABORTED``` | Returned when connection attempt fails for other reasons |
+| 4 | ```ERROR_ASYNC_ABORTED``` | Returned when connection attempt fails for other reasons |
+| 9 | ```ERROR_ALREADY_CONNECTED``` | Returned when there is already a connection |
 
 ### Example
 

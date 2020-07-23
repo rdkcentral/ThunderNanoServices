@@ -129,6 +129,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Returned when the network with a the given SSID doesn't exists
     //  - ERROR_ASYNC_ABORTED: Returned when connection attempt fails for other reasons
+    //  - ERROR_ALREADY_CONNECTED: Returned when there is already a connection
     uint32_t WifiControl::endpoint_connect(const DeleteParamsInfo& params)
     {
         const string& ssid = params.Ssid.Value();
