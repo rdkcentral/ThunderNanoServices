@@ -177,166 +177,179 @@ namespace WPASupplicant {
     /* virtual */ uint16_t Controller::SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
     {
         uint16_t result = 0;
-        _adminLock.Lock();
-        if ((_requests.size() > 0) && (_requests.front()->Message().empty() == false)) {
-            string& data = _requests.front()->Message();
-            TRACE(Communication, (_T("Send: [%s]"), data.c_str()));
-            result = (data.length() > maxSendSize ? maxSendSize : data.length());
-            memcpy(dataFrame, data.c_str(), result);
-            data = data.substr(result);
+        string request = RetrieveRequest();
+
+        if (request.size() > 0) {
+            TRACE(Communication, (_T("Send: [%s]"), request.c_str()));
+            result = (request.length() > maxSendSize ? maxSendSize : request.length());
+            memcpy(dataFrame, request.c_str(), result);
+            request = request.substr(result);
         }
-        _adminLock.Unlock();
         return (result);
     }
     /* virtual */ uint16_t Controller::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
     {
+        AddResponse(dataFrame, receivedSize);
+        _activity.Schedule(Core::Time::Now().Ticks());
 
-        string response = string(reinterpret_cast<const char*>(dataFrame), (dataFrame[receivedSize - 1] == '\n' ? receivedSize - 1 : receivedSize));
+        return receivedSize;
+    }
 
-        if (response[0] == '<') {
+    void Controller::ProcessResponse()
+    {
+        uint16_t responseCount = 0;
+        do {
+            string response = RetrieveResponse();
+            if (response.size() > 0) {
+                if (response[0] == '<') {
 
-            uint32_t number = 0;
-            uint16_t index = 1;
+                    uint32_t number = 0;
+                    uint16_t index = 1;
 
-            // See if there are only digit between this and the closing bracket.
-            while ((index < response.length()) && (isdigit(response[index]) == true)) {
-                number += (number * 10) + (response[index] - '0');
-                ++index;
-            }
-
-            ASSERT((index < response.length()) && (response[index] == '>'));
-
-            // Seems that sometimes the end is a WhiteSpace, remove it as well.
-            string message = (response.substr(index + 1, (response[response.length() - 1] == ' ' ? response.length() - 2 - index : string::npos)));
-
-            const size_t position = message.find(' ');
-
-            // Looks like it is a unsolicited message
-            Core::EnumerateType<Controller::events> event(position == string::npos ? message.c_str() : message.substr(0, position).c_str());
-
-            if (event.IsSet() == true) {
-                TRACE(Communication, (_T("Dispatch message: [%s]"), message.c_str()));
-
-                if (event == CTRL_EVENT_DISCONNECTED) {
-
-                    _statusRequest.Reset();
-
-                    ASSERT(position != string::npos);
-
-                    Core::TextFragment infoLine(message, position, message.length() - position);
-
-                    // Skip white space
-                    uint16_t begin = infoLine.ForwardSkip(_T(" \t"), 0);
-
-                    // Skip bssid=<value> sub-string
-                    begin = infoLine.ForwardFind(_T(" \t"), begin);
-
-                    // Skip white space & get begin position of reason string
-                    begin = infoLine.ForwardSkip(_T(" \t"), begin);
-
-                    // Get end position of reason string
-                    uint16_t end = infoLine.ForwardFind(_T("=\t"), begin);
-
-                    // Get and check if it is a reason string
-                    string reasonStr(Core::TextFragment(infoLine, begin, (end - begin)).Text());
-                    if (reasonStr.compare("reason") == 0) {
-
-                        // Skip '=' character & get begin position of reason code
-                        begin = infoLine.ForwardSkip(_T("=\t"), end);
-
-                        // Get end position of reason code
-                        end = infoLine.ForwardFind(_T(" \t"), begin);
-
-                        // Get reason code
-                        uint32_t reason = Core::NumberType<uint32_t>(Core::TextFragment(infoLine, begin, (end - begin)));
-
-                        _statusRequest.DisconnectReason(static_cast<reasons>(reason));
+                    // See if there are only digit between this and the closing bracket.
+                    while ((index < response.length()) && (isdigit(response[index]) == true)) {
+                        number += (number * 10) + (response[index] - '0');
+                        ++index;
                     }
-                    else {
-                        TRACE(Trace::Error, ("There is no reason code in the event"));
-                    }
-                    _statusRequest.Event(event.Value());
-                    Submit(&_statusRequest);
-                }
-                else if ((event == CTRL_EVENT_CONNECTED) || (event == WPS_AP_AVAILABLE)) {
-                    _statusRequest.Event(event.Value());
-                    Submit(&_statusRequest);
-                } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS)) {
-                    _adminLock.Lock();
-                    if (_scanRequest.Set() == true) {
-                        _scanRequest.Event(event.Value());
-                        _adminLock.Unlock();
-                        Submit(&_scanRequest);
-                    } else {
-                        _adminLock.Unlock();
-                    }
-                } else if ((event == CTRL_EVENT_BSS_ADDED) || (event == CTRL_EVENT_BSS_REMOVED)) {
 
-                    ASSERT(position != string::npos);
+                    ASSERT((index < response.length()) && (response[index] == '>'));
 
-                    Core::TextFragment infoLine(message, position, message.length() - position);
+                    // Seems that sometimes the end is a WhiteSpace, remove it as well.
+                    string message = (response.substr(index + 1, (response[response.length() - 1] == ' ' ? response.length() - 2 - index : string::npos)));
 
-                    // extract the Network ID from the list
-                    uint16_t index = infoLine.ForwardSkip(_T(" \t"), 0);
+                    const size_t position = message.find(' ');
 
-                    // Skip over the Network ID
-                    index = infoLine.ForwardFind(_T(" \t"), index);
+                    // Looks like it is a unsolicited message
+                    Core::EnumerateType<Controller::events> event(position == string::npos ? message.c_str() : message.substr(0, position).c_str());
 
-                    // Skip this white space then we are at the BSSID
-                    index = infoLine.ForwardSkip(_T(" \t"), index);
+                    if (event.IsSet() == true) {
+                        TRACE(Communication, (_T("Dispatch message: [%s]"), message.c_str()));
 
-                    // now take out the BSSID
-                    uint64_t bssid = BSSID(Core::TextFragment(infoLine, index, infoLine.Length() - index).Text());
+                        if (event == CTRL_EVENT_DISCONNECTED) {
 
-                    _adminLock.Lock();
+                            ASSERT(position != string::npos);
 
-                    // Let see what we need to do with this BSSID, add or remove :-)
-                    if ((event == CTRL_EVENT_BSS_ADDED) && (_detailRequest.Set(bssid) == true)) {
-                        // send out a request for detail.
-                        _adminLock.Unlock();
-                        Submit(&_detailRequest);
-                        _adminLock.Lock();
-                    } else if (event == CTRL_EVENT_BSS_REMOVED) {
+                            Core::TextFragment infoLine(message, position, message.length() - position);
 
-                        NetworkInfoContainer::iterator network(_networks.find(bssid));
+                            // Skip white space
+                            uint16_t begin = infoLine.ForwardSkip(_T(" \t"), 0);
 
-                        if (network != _networks.end()) {
-                            _networks.erase(network);
+                            // Skip bssid=<value> sub-string
+                            begin = infoLine.ForwardFind(_T(" \t"), begin);
+
+                            // Skip white space & get begin position of reason string
+                            begin = infoLine.ForwardSkip(_T(" \t"), begin);
+
+                            // Get end position of reason string
+                            uint16_t end = infoLine.ForwardFind(_T("=\t"), begin);
+
+                            // Get and check if it is a reason string
+                            string reasonStr(Core::TextFragment(infoLine, begin, (end - begin)).Text());
+                            if (reasonStr.compare("reason") == 0) {
+
+                                // Skip '=' character & get begin position of reason code
+                                begin = infoLine.ForwardSkip(_T("=\t"), end);
+
+                                // Get end position of reason code
+                                end = infoLine.ForwardFind(_T(" \t"), begin);
+
+                                // Get reason code
+                                uint32_t reason = Core::NumberType<uint32_t>(Core::TextFragment(infoLine, begin, (end - begin)));
+
+                                _statusRequest.DisconnectReason(static_cast<reasons>(reason));
+                            }
+                            else {
+                                TRACE(Trace::Error, ("There is no reason code in the event"));
+                            }
+                            _statusRequest.Event(event.Value());
+                            Submit(&_statusRequest);
+
+                       } else if ((event == CTRL_EVENT_CONNECTED) || (event == WPS_AP_AVAILABLE)) {
+                                    _statusRequest.Event(event.Value());
+                                    Submit(&_statusRequest);
+                       } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS)) {
+                                _adminLock.Lock();
+                                if (_scanRequest.Set() == true) {
+                                    _scanRequest.Event(event.Value());
+                                    _adminLock.Unlock();
+                                    Submit(&_scanRequest);
+                                } else {
+                                    _adminLock.Unlock();
+                                }
+                        } else if ((event == CTRL_EVENT_BSS_ADDED) || (event == CTRL_EVENT_BSS_REMOVED)) {
+
+                            ASSERT(position != string::npos);
+
+                            Core::TextFragment infoLine(message, position, message.length() - position);
+
+                            // extract the Network ID from the list
+                            uint16_t index = infoLine.ForwardSkip(_T(" \t"), 0);
+
+                            // Skip over the Network ID
+                            index = infoLine.ForwardFind(_T(" \t"), index);
+
+                            // Skip this white space then we are at the BSSID
+                            index = infoLine.ForwardSkip(_T(" \t"), index);
+
+                            // now take out the BSSID
+                            uint64_t bssid = BSSID(Core::TextFragment(infoLine, index, infoLine.Length() - index).Text());
+
+                            _adminLock.Lock();
+
+                            // Let see what we need to do with this BSSID, add or remove :-)
+                            if (event == CTRL_EVENT_BSS_ADDED) {
+                                if (_detailRequest.Set(bssid) == true) {
+                                    // send out a request for detail.
+                                    _adminLock.Unlock();
+                                    Submit(&_detailRequest);
+                                    _adminLock.Lock();
+                                }
+                            } else if (event == CTRL_EVENT_BSS_REMOVED) {
+
+                                NetworkInfoContainer::iterator network(_networks.find(bssid));
+
+                                if (network != _networks.end()) {
+                                    _networks.erase(network);
+                                }
+                            }
+
+                            if (_callback != nullptr) {
+                                _callback->Dispatch(event.Value());
+                            }
+
+                            _adminLock.Unlock();
                         }
+                        else if (event == CTRL_EVENT_SSID_TEMP_DISABLED) {
+                            Notify(event.Value());
+                        }
+                    } else {
+                       TRACE(Communication, (_T("RAW EVENT MESSAGE: [%s]"), message.c_str()));
                     }
-
-                    if (_callback != nullptr) {
-                        _callback->Dispatch(event.Value());
-                    }
-
+                } else {
+                    _adminLock.Lock();
+                    size_t requestsNumber = _requests.size();
                     _adminLock.Unlock();
+                    if (requestsNumber > 0) {
+                        _adminLock.Lock();
+                        Request* current = _requests.front();
+                        _requests.pop_front();
+                        current->Processing(false);
+                        current->Completed(response, false);
+
+                        _adminLock.Unlock();
+
+                        Trigger();
+                    } else {
+                        TRACE(Trace::Error, ("There is no pending request to process"));
+                    }
                 }
-                else if (event == CTRL_EVENT_SSID_TEMP_DISABLED) {
-                    Notify(event.Value());
-                }
-            } else {
-                TRACE(Communication, (_T("RAW EVENT MESSAGE: [%s]"), message.c_str()));
             }
-        } else {
-            _adminLock.Lock();
-            size_t requestsNumber = _requests.size();
-            _adminLock.Unlock();
-            if (requestsNumber > 0) {
-                _adminLock.Lock();
-                Request* current = _requests.front();
-                _requests.pop_front();
-                current->Processing(false);
-                current->Completed(response, false);
+            _dataLock.Lock();
+            responseCount = _responseMessages.size();
+            _dataLock.Unlock();
+        } while(responseCount);
 
-                _adminLock.Unlock();
-
-                Trigger();
-            } else {
-                TRACE(Trace::Error, ("There is no pending request to process"));
-            }
-        }
-
-        return (receivedSize);
+        return;
     }
     // These methods (add/add/update) are assumed to be running in a locked context.
     // Completion of requests are running in a locked context, so oke to update maps/lists

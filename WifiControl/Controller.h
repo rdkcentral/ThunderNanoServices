@@ -802,8 +802,8 @@ namespace WPASupplicant {
         public:
             uint32_t Invoke(IConnectCallback* callback, const string& ssid, const uint64_t& bssid) {
 
-                uint32_t result = (_callback != nullptr ? Core::ERROR_INPROGRESS        : 
-                                  (bssid     == 0       ? Core::ERROR_INCOMPLETE_CONFIG : 
+                uint32_t result = (_callback != nullptr ? Core::ERROR_INPROGRESS        :
+                                  (bssid     == 0       ? Core::ERROR_INCOMPLETE_CONFIG :
                                   (_parent.Current().empty() == false ? Core::ERROR_ALREADY_CONNECTED :
                                                           Core::ERROR_UNKNOWN_KEY       )));
 
@@ -981,6 +981,9 @@ namespace WPASupplicant {
             : BaseClass(false, Core::NodeId(), Core::NodeId(), 512, 32768)
             , _adminLock()
             , _requests()
+            , _dataLock()
+            , _requestMessages()
+            , _responseMessages()
             , _networks()
             , _enabled()
             , _error(Core::ERROR_UNAVAILABLE)
@@ -990,6 +993,7 @@ namespace WPASupplicant {
             , _networkRequest(*this)
             , _statusRequest(*this)
             , _connectRequest(*this)
+            , _activity(*this)
         {
             string remoteName(Core::Directory::Normalize(supplicantBase) + interfaceName);
 
@@ -1035,6 +1039,9 @@ namespace WPASupplicant {
         }
         virtual ~Controller()
         {
+            _activity.Revoke();
+            _requestMessages.clear();
+            _responseMessages.clear();
 
             if (IsClosed() == false) {
 
@@ -1494,17 +1501,21 @@ namespace WPASupplicant {
         }
         inline uint32_t Connect(IConnectCallback* sink, const string& SSID, const uint64_t bssid)
         {
+            _adminLock.Lock();
 
             uint32_t result = _connectRequest.Invoke(sink, SSID, bssid);
 
+            _adminLock.Unlock();
 
             return (result);
         }
         inline uint32_t Revoke(IConnectCallback* sink)
         {
+            _adminLock.Lock();
 
             uint32_t result = _connectRequest.Revoke(sink);
 
+            _adminLock.Unlock();
 
             return (result);
         }
@@ -1547,6 +1558,7 @@ namespace WPASupplicant {
 
         inline void Notify(const events value)
         {
+            _adminLock.Lock();
 
             if (value == WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED) {
                 _connectRequest.Completed(Core::ERROR_INVALID_SIGNATURE);
@@ -1555,7 +1567,6 @@ namespace WPASupplicant {
                 _connectRequest.Completed(Core::ERROR_NONE);
             }
 
-            _adminLock.Lock();
             if (_callback != nullptr) {
                 _callback->Dispatch(value);
             }
@@ -1863,6 +1874,7 @@ namespace WPASupplicant {
         void Update(const uint64_t& bssid, const uint32_t id, const uint32_t throughput);
         void Update(const string& ssid, const uint32_t id, const bool succeeded);
         void Reevaluate();
+        void ProcessResponse();
         virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize);
         virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize);
 
@@ -1914,19 +1926,77 @@ namespace WPASupplicant {
             data->Processing(true);
             _requests.push_back(data);
 
-            if (_requests.size() == 1) {
-                _adminLock.Unlock();
+            uint8_t requestSize = _requests.size();
+
+            _adminLock.Unlock();
+
+            AddRequest(data->Message());
+
+            if (requestSize == 1) {
 
                 const_cast<Controller*>(this)->Trigger();
             } else {
                 TRACE_L1("Submit does not trigger, there are %d messages pending [%s,%s]", static_cast<unsigned int>(_requests.size()), _requests.front()->Original().c_str(), _requests.front()->Message().c_str());
-                _adminLock.Unlock();
             }
+        }
+        inline void AddRequest(const string& request) const {
+            if (request.empty() == false) {
+                _dataLock.Lock();
+                _requestMessages.push_back(request);
+                _dataLock.Unlock();
+            }
+        }
+        inline string RetrieveRequest() {
+            string request;
+
+            _dataLock.Lock();
+            if (_requestMessages.size() > 0) {
+                request = _requestMessages.front();
+                _requestMessages.pop_front();
+            }
+            _dataLock.Unlock();
+
+            return request;
+        }
+
+        void AddResponse(const uint8_t* dataFrame, const uint16_t receivedSize) {
+            string response = string(reinterpret_cast<const char*>(dataFrame), (dataFrame[receivedSize - 1] == '\n' ? receivedSize - 1 : receivedSize));
+
+            if (response.empty() == false) {
+                _dataLock.Lock();
+                if (std::find(_responseMessages.begin(), _responseMessages.end(), response) == _responseMessages.end()) {
+                    _responseMessages.push_back(response);
+                }
+                _dataLock.Unlock();
+            }
+        }
+        inline string RetrieveResponse() {
+            string response;
+
+            _dataLock.Lock();
+            if (_responseMessages.size() > 0) {
+                response = _responseMessages.front();
+                _responseMessages.pop_front();
+            }
+            _dataLock.Unlock();
+
+            return response;
+        }
+
+        friend Core::ThreadPool::JobType<Controller&>;
+        void Dispatch()
+        {
+            ProcessResponse();
         }
 
     private:
         mutable Core::CriticalSection _adminLock;
         mutable std::list<Request*> _requests;
+
+        mutable Core::CriticalSection _dataLock;
+        mutable std::list<string> _requestMessages;
+        mutable std::list<string> _responseMessages;
+
         NetworkInfoContainer _networks;
         EnabledContainer _enabled;
         uint32_t _error;
@@ -1936,6 +2006,7 @@ namespace WPASupplicant {
         NetworkRequest _networkRequest;
         StatusRequest _statusRequest;
         ConnectRequest _connectRequest;
+        Core::WorkerPool::JobType<Controller&> _activity;
     };
 }
 } // namespace WPEFramework::WPASupplicant
