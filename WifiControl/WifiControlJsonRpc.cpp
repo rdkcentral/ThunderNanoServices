@@ -39,7 +39,7 @@
         uint32_t get_config(const string& index, JsonData::WifiControl::ConfigInfo& response) const;
         uint32_t set_config(const string& index, const JsonData::WifiControl::ConfigInfo& param);
         uint32_t set_debug(const Core::JSON::DecUInt32& param);
-        void event_scanresults(const Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& list)
+        void event_scanresults(const Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& list);
         void event_networkchange();
         void event_connectionchange(const string& ssid);
 */
@@ -128,8 +128,10 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Returned when the network with a the given SSID doesn't exists
-    //  - ERROR_ASYNC_ABORTED: Returned when connection attempt fails for other reasons
+    //  - ERROR_BAD_REQUEST: Returned when connection fails if there is no associated bssid to connect and not defined as AccessPoint. Rescan and try to connect"
+    //  - ERROR_INVALID_SIGNATURE: Returned when connection is attempted with wrong password
     //  - ERROR_ALREADY_CONNECTED: Returned when there is already a connection
+    //  - ERROR_ASYNC_ABORTED: Returned when connection attempt fails for other reasons
     uint32_t WifiControl::endpoint_connect(const DeleteParamsInfo& params)
     {
         const string& ssid = params.Ssid.Value();
