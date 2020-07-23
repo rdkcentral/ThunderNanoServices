@@ -802,31 +802,43 @@ namespace WPASupplicant {
         public:
             uint32_t Invoke(IConnectCallback* callback, const string& ssid, const uint64_t& bssid) {
 
-                uint32_t result = (_callback != nullptr ? Core::ERROR_INPROGRESS        :
-                                  (bssid     == 0       ? Core::ERROR_INCOMPLETE_CONFIG :
-                                  (_parent.Current().empty() == false ? Core::ERROR_ALREADY_CONNECTED :
-                                                          Core::ERROR_UNKNOWN_KEY       )));
+                uint32_t result = ((bssid == 0) ? Core::ERROR_INCOMPLETE_CONFIG :
+                                  ((_parent.Current().empty() == false) ? Core::ERROR_ALREADY_CONNECTED :
+                                  Core::ERROR_UNKNOWN_KEY));
 
                 if (result == Core::ERROR_UNKNOWN_KEY) {
 
-                    EnabledContainer::iterator index(_parent._enabled.find(ssid));
+                    _adminLock.Lock();
+                    if (_callback == nullptr) {
 
-                    if (index != _parent._enabled.end()) {
+                        EnabledContainer::iterator index(_parent._enabled.find(ssid));
 
-                        result = Core::ERROR_ASYNC_FAILED;
+                        if (index != _parent._enabled.end()) {
 
-                        if (Request::Set (string(_TXT("SELECT_NETWORK ")) + Core::NumberType<uint32_t>(index->second.Id()).Text()) == true) {
+                            result = Core::ERROR_ASYNC_FAILED;
 
-                            _bssid = bssid;
-                            _ssid = ssid;
-                            _state = connection::SELECT;
-                            _callback = callback;
-                            result = Core::ERROR_NONE;
+                            if (Request::Set (string(_TXT("SELECT_NETWORK ")) + Core::NumberType<uint32_t>(index->second.Id()).Text()) == true) {
 
-                            _parent.Submit(this);
+                                _bssid = bssid;
+                                _ssid = ssid;
+                                _state = connection::SELECT;
+                                _callback = callback;
+                                _adminLock.Unlock();
 
-                            index->second.State(ConfigInfo::SELECTED);
+                                result = Core::ERROR_NONE;
+
+                                _parent.Submit(this);
+
+                                index->second.State(ConfigInfo::SELECTED);
+                            } else {
+                                _adminLock.Unlock();
+                            }
+                        } else {
+                            _adminLock.Unlock();
                         }
+                    } else {
+                       _adminLock.Unlock();
+                       result = Core::ERROR_INPROGRESS;
                     }
                 }
 
@@ -857,6 +869,7 @@ namespace WPASupplicant {
                 uint32_t result = Core::ERROR_REQUEST_SUBMITTED;
                 string newCommand;
 
+                _adminLock.Lock();
                 if (abort == true) {
                     result = Core::ERROR_ASYNC_ABORTED;
                 } 
@@ -883,13 +896,12 @@ namespace WPASupplicant {
                 } 
                 else if (_state != connection::WAITING) {
                 
-                    _adminLock.Lock();
 
                     if (_callback != nullptr) {
                         _callback->Completed(result);
                     }
-                    _adminLock.Unlock();
                 }
+                _adminLock.Unlock();
             }
             void Completed(const uint32_t result) {
 
@@ -900,13 +912,16 @@ namespace WPASupplicant {
                     _error = result;
                     _state = connection::ERROR;
 
+                    _adminLock.Unlock();
                     Request::Set(string(_TXT("DISCONNECT")));
                     _parent.Submit(this);
                 }
                 else if ((_callback != nullptr) && (_state == connection::WAITING)) {
                     _callback->Completed(result);
+                    _adminLock.Unlock();
+                } else {
+                    _adminLock.Unlock();
                 }
-                _adminLock.Unlock();
             }
 
         private:
@@ -1501,23 +1516,11 @@ namespace WPASupplicant {
         }
         inline uint32_t Connect(IConnectCallback* sink, const string& SSID, const uint64_t bssid)
         {
-            _adminLock.Lock();
-
-            uint32_t result = _connectRequest.Invoke(sink, SSID, bssid);
-
-            _adminLock.Unlock();
-
-            return (result);
+            return (_connectRequest.Invoke(sink, SSID, bssid));
         }
         inline uint32_t Revoke(IConnectCallback* sink)
         {
-            _adminLock.Lock();
-
-            uint32_t result = _connectRequest.Revoke(sink);
-
-            _adminLock.Unlock();
-
-            return (result);
+            return (_connectRequest.Revoke(sink));
         }
         inline uint32_t Disconnect(const string& SSID)
         {
