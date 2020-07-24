@@ -851,16 +851,15 @@ namespace WPASupplicant {
                 _adminLock.Lock();
 
                 if (callback == _callback) {
-                    _callback = nullptr;
                     _adminLock.Unlock();
 
                     _parent.Revoke(this);
 
+                    _adminLock.Lock();
+                    _callback = nullptr;
                     result = Core::ERROR_NONE;
                 }
-                else {
-                    _adminLock.Unlock();
-                }
+                _adminLock.Unlock();
 
                 return (result);
             }
@@ -890,18 +889,18 @@ namespace WPASupplicant {
                 else {
                     _state = connection::WAITING;
                 }
-                    
+                _adminLock.Unlock();
+
                 if ((newCommand.empty() == false) && (Request::Set(newCommand) == true)) {
                     _parent.Submit(this);
                 } 
-                else if (_state != connection::WAITING) {
-                
-
-                    if (_callback != nullptr) {
+                else {
+                    _adminLock.Lock();
+                    if ((_state != connection::WAITING) && (_callback != nullptr)) {
                         _callback->Completed(result);
                     }
+                    _adminLock.Unlock();
                 }
-                _adminLock.Unlock();
             }
             void Completed(const uint32_t result) {
 
@@ -1089,10 +1088,10 @@ namespace WPASupplicant {
             _adminLock.Unlock();
             return result;
         }
-        inline const string& Current() const
+        inline const string Current() const
         {
             _adminLock.Lock();
-            const string& current = (_statusRequest.SSID());
+            const string current = (_statusRequest.SSID());
             _adminLock.Unlock();
             return current;
         }
