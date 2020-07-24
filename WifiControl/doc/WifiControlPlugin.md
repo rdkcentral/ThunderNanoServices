@@ -243,6 +243,9 @@ Also see: [connectionchange](#event.connectionchange)
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Returned when the network with a the given SSID doesn't exists |
+| 30 | ```ERROR_BAD_REQUEST``` | Returned when connection fails if there is no associated bssid to connect and not defined as AccessPoint. Rescan and try to connect |
+| 38 | ```ERROR_INVALID_SIGNATURE``` | Returned when connection is attempted with wrong password |
+| 9 | ```ERROR_ALREADY_CONNECTED``` | Returned when there is already a connection |
 | 4 | ```ERROR_ASYNC_ABORTED``` | Returned when connection attempt fails for other reasons |
 
 ### Example
@@ -330,7 +333,7 @@ WifiControl interface properties:
 | [status](#property.status) <sup>RO</sup> | Network status |
 | [networks](#property.networks) <sup>RO</sup> | Available networks |
 | [configs](#property.configs) <sup>RO</sup> | All WiFi configurations |
-| [config](#property.config) | Single WiFi conifguration |
+| [config](#property.config) | Single WiFi configuration |
 | [debug](#property.debug) <sup>WO</sup> | Sets debug level |
 
 <a name="property.status"></a>
@@ -443,7 +446,7 @@ Provides access to the all WiFi configurations.
 | (property) | array | All WiFi configurations |
 | (property)[#] | object |  |
 | (property)[#].ssid | string | Identifier of a network |
-| (property)[#]?.type | string | <sup>*(optional)*</sup> Level of security (must be one of the following: *Unknown*, *Unsecure*, *WPA*, *Enterprise*) |
+| (property)[#]?.type | string | <sup>*(optional)*</sup> Type of protection. WPA_WPA2 means both WPA and WPA2 types are allowed (must be one of the following: *Unknown*, *Unsecure*, *WPA*, *WPA2*, *WPA_WPA2*, *Enterprise*) |
 | (property)[#].hidden | boolean | Indicates whether a network is hidden |
 | (property)[#].accesspoint | boolean | Indicates if the network operates in AP mode |
 | (property)[#]?.psk | string | <sup>*(optional)*</sup> Network's PSK in plaintext (irrelevant if hash is provided) |
@@ -477,7 +480,7 @@ Provides access to the all WiFi configurations.
     "result": [
         {
             "ssid": "MyCorporateNetwork",
-            "type": "WPA",
+            "type": "WPA_WPA2",
             "hidden": false,
             "accesspoint": true,
             "psk": "secretpresharedkey",
@@ -491,15 +494,15 @@ Provides access to the all WiFi configurations.
 <a name="property.config"></a>
 ## *config <sup>property</sup>*
 
-Provides access to the single WiFi conifguration.
+Provides access to the single WiFi configuration.
 
 ### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Single WiFi conifguration |
+| (property) | object | Single WiFi configuration |
 | (property).ssid | string | Identifier of a network |
-| (property)?.type | string | <sup>*(optional)*</sup> Level of security (must be one of the following: *Unknown*, *Unsecure*, *WPA*, *Enterprise*) |
+| (property)?.type | string | <sup>*(optional)*</sup> Type of protection. WPA_WPA2 means both WPA and WPA2 types are allowed (must be one of the following: *Unknown*, *Unsecure*, *WPA*, *WPA2*, *WPA_WPA2*, *Enterprise*) |
 | (property).hidden | boolean | Indicates whether a network is hidden |
 | (property).accesspoint | boolean | Indicates if the network operates in AP mode |
 | (property)?.psk | string | <sup>*(optional)*</sup> Network's PSK in plaintext (irrelevant if hash is provided) |
@@ -535,7 +538,7 @@ Provides access to the single WiFi conifguration.
     "id": 1234567890,
     "result": {
         "ssid": "MyCorporateNetwork",
-        "type": "WPA",
+        "type": "WPA_WPA2",
         "hidden": false,
         "accesspoint": true,
         "psk": "secretpresharedkey",
@@ -554,7 +557,7 @@ Provides access to the single WiFi conifguration.
     "method": "WifiControl.1.config@MyCorporateNetwork",
     "params": {
         "ssid": "MyCorporateNetwork",
-        "type": "WPA",
+        "type": "WPA_WPA2",
         "hidden": false,
         "accesspoint": true,
         "psk": "secretpresharedkey",
@@ -616,7 +619,7 @@ Provides access to the sets debug level.
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers.Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the WifiControl plugin:
 
@@ -625,8 +628,8 @@ WifiControl interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [scanresults](#event.scanresults) | Signals that the scan operation has finished |
-| [networkchange](#event.networkchange) | Signals that a network property has changed  |
-| [connectionchange](#event.connectionchange) | Notifies about connection state change  |
+| [networkchange](#event.networkchange) | Signals that a network property has changed |
+| [connectionchange](#event.connectionchange) | Notifies about connection state change |
 
 <a name="event.scanresults"></a>
 ## *scanresults <sup>event</sup>*
@@ -676,7 +679,7 @@ Signals that the scan operation has finished.
 <a name="event.networkchange"></a>
 ## *networkchange <sup>event</sup>*
 
-Signals that a network property has changed (e.g. frequency).
+Signals that a network property has changed. e.g. frequency.
 
 ### Parameters
 
@@ -693,7 +696,7 @@ This event carries no parameters.
 <a name="event.connectionchange"></a>
 ## *connectionchange <sup>event</sup>*
 
-Notifies about connection state change (i.e. connected/disconnected).
+Notifies about connection state change. i.e. connected/disconnected.
 
 ### Parameters
 
