@@ -22,7 +22,7 @@
 * [NetworkControl](NetworkControl/doc/NetworkControlPlugin.md)
 * [OpenCDMi](OpenCDMi/doc/OpenCDMiPlugin.md)
 * [Packager](Packager/doc/PackagerPlugin.md)
-* PlayerInfo
+* [PlayerInfo](PlayerInfo/doc/PlayerInfo.md)
 * [Power](Power/doc/PowerPlugin.md)
 * ProcessMonitor
 * [RemoteControl](RemoteControl/doc/RemoteControlPlugin.md)
