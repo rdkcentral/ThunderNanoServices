@@ -1561,7 +1561,6 @@ namespace WPASupplicant {
 
         inline void Notify(const events value)
         {
-            _adminLock.Lock();
 
             if (value == WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED) {
                 _connectRequest.Completed(Core::ERROR_INVALID_SIGNATURE);
@@ -1570,6 +1569,7 @@ namespace WPASupplicant {
                 _connectRequest.Completed(Core::ERROR_NONE);
             }
 
+            _adminLock.Lock();
             if (_callback != nullptr) {
                 _callback->Dispatch(value);
             }
