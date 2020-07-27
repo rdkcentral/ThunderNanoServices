@@ -889,16 +889,13 @@ namespace WPASupplicant {
                 else {
                     _state = connection::WAITING;
                 }
-                _adminLock.Unlock();
 
                 if ((newCommand.empty() == false) && (Request::Set(newCommand) == true)) {
+                    _adminLock.Unlock();
                     _parent.Submit(this);
                 } 
-                else {
-                    _adminLock.Lock();
-                    if ((_state != connection::WAITING) && (_callback != nullptr)) {
-                        _callback->Completed(result);
-                    }
+                else if ((_state != connection::WAITING) && (_callback != nullptr)) {
+                    _callback->Completed(result);
                     _adminLock.Unlock();
                 }
             }
