@@ -223,11 +223,17 @@ namespace Plugin {
 
                 return (result);
             }
-            void SetPreferred(const string& ssid)
+            void SetPreferred(const string& ssid, const uint8_t scheduleInterval, const uint32_t attempts)
             {
                 _adminLock.Lock();
-
                 _preferred.assign(ssid);
+
+                if (scheduleInterval) {
+                    MoveState(states::CONNECTING);
+                    _attempts = attempts;
+                    _interval = (scheduleInterval * 1000);
+                    _job.Schedule(Core::Time::Now().Add(_interval));
+                }
 
                 _adminLock.Unlock();
             }
@@ -329,6 +335,7 @@ namespace Plugin {
                         _ssidList.pop_front();
                     }
 
+                    _controller->Revoke(this);
                     if (_ssidList.size() == 0) {
                         _state = states::RETRY;
                     }
@@ -338,7 +345,6 @@ namespace Plugin {
                     _job.Schedule(Core::Time::Now().Add(_interval));
                 }
                 else if (_state == states::RETRY) {
-                    if (_attempts == 0) {
                         _state = states::IDLE;
                     }
                     else {
@@ -410,12 +416,14 @@ namespace Plugin {
                 , Application(_T("/usr/sbin/wpa_supplicant"))
                 , Preferred()
                 , AutoConnect(false)
+                , RetryInterval(30)
             {
                 Add(_T("connector"), &Connector);
                 Add(_T("interface"), &Interface);
                 Add(_T("application"), &Application);
                 Add(_T("preferred"), &Preferred);
                 Add(_T("autoconnect"), &AutoConnect);
+                Add(_T("retryinterval"), &RetryInterval);
             }
             virtual ~Config()
             {
@@ -427,6 +435,7 @@ namespace Plugin {
             Core::JSON::String Application;
             Core::JSON::String Preferred;
             Core::JSON::Boolean AutoConnect;
+            Core::JSON::DecUInt8 RetryInterval;
         };
 
         static void FillNetworkInfo(const WPASupplicant::Network& info, JsonData::WifiControl::NetworkInfo& net)
@@ -640,6 +649,15 @@ namespace Plugin {
         void event_networkchange();
         void event_connectionchange(const string& ssid);
  
+        inline uint32_t Connect(const string& ssid) {
+            _autoConnect.SetPreferred(ssid, _retryInterval, ~0);
+            return _controller->Connect(ssid);
+        }
+        inline uint32_t Disconnect(const string& ssid) {
+            _autoConnect.Revoke();
+            return _controller->Disconnect(ssid);
+        }
+
         BEGIN_INTERFACE_MAP(WifiControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IWeb)
@@ -648,6 +666,7 @@ namespace Plugin {
 
     private:
         uint8_t _skipURL;
+        uint8_t _retryInterval;
         PluginHost::IShell* _service;
         string _configurationStore;
         Sink _sink;

@@ -1554,7 +1554,7 @@ namespace WPASupplicant {
         inline void Notify(const events value)
         {
 
-            if (value == WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED) {
+            if ((value == WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED) || (value == CTRL_EVENT_NETWORK_NOT_FOUND)) {
                 _connectRequest.Completed(Core::ERROR_INVALID_SIGNATURE);
             }
             else if (value == WPASupplicant::Controller::CTRL_EVENT_CONNECTED) {

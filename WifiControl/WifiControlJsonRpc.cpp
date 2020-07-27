@@ -136,9 +136,7 @@ namespace Plugin {
     {
         const string& ssid = params.Ssid.Value();
 
-        _autoConnect.SetPreferred(ssid);
-
-        return _controller->Connect(ssid);
+        return Connect(ssid);
     }
 
     // Method: disconnect - Disconnects from a network
@@ -150,7 +148,7 @@ namespace Plugin {
     {
         const string& ssid = params.Ssid.Value();
 
-        return _controller->Disconnect(ssid);
+        return Disconnect(ssid);
     }
 
     // Property: status - Network status

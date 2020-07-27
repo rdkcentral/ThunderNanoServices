@@ -42,6 +42,7 @@ namespace Plugin
 
     WifiControl::WifiControl()
         : _skipURL(0)
+        , _retryInterval(0)
         , _service(nullptr)
         , _configurationStore()
         , _sink(*this)
@@ -119,7 +120,8 @@ namespace Plugin
                         _controller->Scan();
                     }
                     else {
-                        _autoConnect.Connect(config.Preferred.Value(), 30, ~0);
+                        _retryInterval = config.RetryInterval.Value();
+                        _autoConnect.Connect(config.Preferred.Value(), _retryInterval, ~0);
                     }
                 }
             }
@@ -329,7 +331,7 @@ namespace Plugin
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Connect started.");
 
-                        _controller->Connect(SSIDDecode(index.Current().Text()));
+                        Connect(SSIDDecode(index.Current().Text()));
                     }
                 } else if (index.Current().Text() == _T("Store")) {
                     Core::File configFile(_configurationStore);
@@ -409,7 +411,7 @@ namespace Plugin
                     if (index.Next() == true) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Disconnected.");
-                        _controller->Disconnect(SSIDDecode(index.Current().Text()));
+                        Disconnect(SSIDDecode(index.Current().Text()));
                     }
                 }
             }
@@ -443,11 +445,13 @@ namespace Plugin
         }
         case WPASupplicant::Controller::CTRL_EVENT_CONNECTED: {
             string message("{ \"event\": \"Connected\", \"ssid\": \"" + _controller->Current() + "\" }");
+                TRACE(Trace::Error, (_T("WifiController.cpp:%s:%d result = %d\n"),  __func__, __LINE__, event));  
             _service->Notify(message);
             event_connectionchange(_controller->Current());
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_DISCONNECTED: {
+                TRACE(Trace::Error, (_T("WifiController.cpp:%s:%d result = %d\n"),  __func__, __LINE__, event));  
             string message("{ \"event\": \"Disconnected\" }");
             _service->Notify(message);
             event_connectionchange(string());
