@@ -446,7 +446,7 @@ Provides access to the all WiFi configurations.
 | (property) | array | All WiFi configurations |
 | (property)[#] | object |  |
 | (property)[#].ssid | string | Identifier of a network |
-| (property)[#]?.type | string | <sup>*(optional)*</sup> Type of protection. WPA_WPA2 means both WPA and WPA2 types are allowed (must be one of the following: *Unknown*, *Unsecure*, *WPA*, *WPA2*, *WPA_WPA2*, *Enterprise*) |
+| (property)[#]?.type | string | <sup>*(optional)*</sup> Type of protection. WPA_WPA2 means WPA, WPA2 and mixed types are allowed (must be one of the following: *Unknown*, *Unsecure*, *WPA*, *WPA2*, *WPA_WPA2*, *Enterprise*) |
 | (property)[#].hidden | boolean | Indicates whether a network is hidden |
 | (property)[#].accesspoint | boolean | Indicates if the network operates in AP mode |
 | (property)[#]?.psk | string | <sup>*(optional)*</sup> Network's PSK in plaintext (irrelevant if hash is provided) |
@@ -502,7 +502,7 @@ Provides access to the single WiFi configuration.
 | :-------- | :-------- | :-------- |
 | (property) | object | Single WiFi configuration |
 | (property).ssid | string | Identifier of a network |
-| (property)?.type | string | <sup>*(optional)*</sup> Type of protection. WPA_WPA2 means both WPA and WPA2 types are allowed (must be one of the following: *Unknown*, *Unsecure*, *WPA*, *WPA2*, *WPA_WPA2*, *Enterprise*) |
+| (property)?.type | string | <sup>*(optional)*</sup> Type of protection. WPA_WPA2 means WPA, WPA2 and mixed types are allowed (must be one of the following: *Unknown*, *Unsecure*, *WPA*, *WPA2*, *WPA_WPA2*, *Enterprise*) |
 | (property).hidden | boolean | Indicates whether a network is hidden |
 | (property).accesspoint | boolean | Indicates if the network operates in AP mode |
 | (property)?.psk | string | <sup>*(optional)*</sup> Network's PSK in plaintext (irrelevant if hash is provided) |
