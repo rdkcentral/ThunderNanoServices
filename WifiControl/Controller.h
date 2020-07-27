@@ -898,6 +898,9 @@ namespace WPASupplicant {
                     _callback->Completed(result);
                     _adminLock.Unlock();
                 }
+                else {
+                    _adminLock.Unlock();
+                }
             }
             void Completed(const uint32_t result) {
 
