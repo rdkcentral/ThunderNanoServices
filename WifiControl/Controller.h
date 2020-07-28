@@ -1499,7 +1499,7 @@ namespace WPASupplicant {
             uint32_t result = Connect(&waitSink, SSID, bssid);
 
             if (result == Core::ERROR_NONE) {
-                result = waitSink.Wait(3 * MaxConnectionTime);
+                result = waitSink.Wait(5 * MaxConnectionTime);
 
                 _connectRequest.Revoke(&waitSink);
             }
@@ -1554,8 +1554,11 @@ namespace WPASupplicant {
         inline void Notify(const events value)
         {
 
-            if ((value == WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED) || (value == CTRL_EVENT_NETWORK_NOT_FOUND)) {
+            if (value == WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED) {
                 _connectRequest.Completed(Core::ERROR_INVALID_SIGNATURE);
+            }
+            else if (value == WPASupplicant::Controller::CTRL_EVENT_NETWORK_NOT_FOUND) {
+                _connectRequest.Completed(Core::ERROR_UNKNOWN_KEY);
             }
             else if (value == WPASupplicant::Controller::CTRL_EVENT_CONNECTED) {
                 _connectRequest.Completed(Core::ERROR_NONE);
