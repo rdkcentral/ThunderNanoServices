@@ -445,13 +445,11 @@ namespace Plugin
         }
         case WPASupplicant::Controller::CTRL_EVENT_CONNECTED: {
             string message("{ \"event\": \"Connected\", \"ssid\": \"" + _controller->Current() + "\" }");
-                TRACE(Trace::Error, (_T("WifiController.cpp:%s:%d result = %d\n"),  __func__, __LINE__, event));  
             _service->Notify(message);
             event_connectionchange(_controller->Current());
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_DISCONNECTED: {
-                TRACE(Trace::Error, (_T("WifiController.cpp:%s:%d result = %d\n"),  __func__, __LINE__, event));  
             string message("{ \"event\": \"Disconnected\" }");
             _service->Notify(message);
             event_connectionchange(string());
