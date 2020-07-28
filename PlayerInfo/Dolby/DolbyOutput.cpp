@@ -27,21 +27,15 @@ namespace WPEFramework
         class DolbyOutputImplementation : public Exchange::Dolby::IOutput
         {
         public:
-            void Mode(const Exchange::Dolby::IOutput::Type value) override
+            uint32_t Mode(const Exchange::Dolby::IOutput::Type& mode) override
             {
-                uint32_t errorCode = set_audio_output_type(value);
+                return set_audio_output_type(mode);
+            }
 
-                ASSERT(errorCode == Core::ERROR_NONE);
-            };
-
-            Exchange::Dolby::IOutput::Type Mode() const override
+            uint32_t Mode(Exchange::Dolby::IOutput::Type& mode) const override
             {
-                uint32_t errorCode = Core::ERROR_NONE;
-                Exchange::Dolby::IOutput::Type result = get_audio_output_type(errorCode);
-
-                ASSERT(errorCode == Core::ERROR_NONE);
-                return result;
-            };
+                return get_audio_output_type(&mode);
+            }
 
             BEGIN_INTERFACE_MAP(DolbyOutputImplementation)
                 INTERFACE_ENTRY(Exchange::Dolby::IOutput)
