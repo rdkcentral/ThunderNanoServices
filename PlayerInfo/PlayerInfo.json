@@ -1,10 +1,12 @@
 {
- "locator":"libWPEFrameworkPlayerInfo.so",
- "classname":"PlayerInfo",
- "autostart":true,
- "configuration":{
-  "root":{
-   "mode":"Off"
-  }
- }
+    "$schema": "plugin.schema.json",
+    "info": {
+        "title": "PlayerInfo Plugin",
+        "callsign": "PlayerInfo",
+        "locator": "libWPEFrameworkPlayerInfo.so",
+        "version": "1.0"
+    },
+    "interface": {
+        "$ref": "{interfacedir}/PlayerInfo.json"
+    }
 }
