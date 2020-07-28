@@ -37,19 +37,19 @@ extern "C" {
 uint32_t 
 set_audio_output_type(const enum WPEFramework::Exchange::Dolby::IOutput::Type type);
 
+
 /**
  * @brief Queries the implementation for dolby output mode.
  * 
- * @param error - Possible values:
+ * @param type - Address where the getter result will be stored.
+ * @return  uint32_t possible error codes:
  *  - ERROR_NONE - All went well.
  *  - ERROR_ILLEGAL_STATE - The audio device could not be initialized.
  *  - ERROR_GENERAL - The queried result could not be 
- *          mapped to Dolby::IOutput::Type enumeration.
- * 
- * @return Type returned by the query.
+ *    mapped to Dolby::IOutput::Type enumeration.
  */
-enum WPEFramework::Exchange::Dolby::IOutput::Type 
-get_audio_output_type(uint32_t& error);
+EXTERNAL uint32_t 
+get_audio_output_type(enum WPEFramework::Exchange::Dolby::IOutput::Type* type);
 
 #ifdef __cplusplus
 }
