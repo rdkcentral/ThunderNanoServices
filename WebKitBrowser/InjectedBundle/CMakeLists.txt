@@ -31,13 +31,13 @@ option(PLUGIN_WEBKITBROWSER_AAMP_JSBINDINGS "Enable AAMP JS bindings." OFF)
 set(SOURCE_LIST
 	main.cpp
 	WhiteListedOriginDomainsList.cpp
-   RequestHeaders.cpp
-   BridgeObject.cpp
 	)
 
 if(NOT DEFINED WEBKIT_GLIB_API)
 	set(SOURCE_LIST
 	    ${SOURCE_LIST}
+	    RequestHeaders.cpp
+	    BridgeObject.cpp
 	    Utils.cpp
 	    JavaScriptFunction.cpp
 	    NotifyWPEFramework.cpp
