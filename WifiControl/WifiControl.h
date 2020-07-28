@@ -228,7 +228,7 @@ namespace Plugin {
                 _adminLock.Lock();
                 _preferred.assign(ssid);
 
-                if (scheduleInterval) {
+                if ((scheduleInterval) && (_state == states::IDLE)) {
                     MoveState(states::CONNECTING);
                     _attempts = attempts;
                     _interval = (scheduleInterval * 1000);
@@ -345,6 +345,7 @@ namespace Plugin {
                     _job.Schedule(Core::Time::Now().Add(_interval));
                 }
                 else if (_state == states::RETRY) {
+                    if (_attempts == 0) {
                         _state = states::IDLE;
                     }
                     else {
