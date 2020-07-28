@@ -167,6 +167,7 @@ namespace Plugin
                         SYSLOG(Logging::Startup, (_T("Interface [%s] activated, no IP associated"), interfaceName.c_str()));
                     } else {
                         if (how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) {
+                            ClearAssignedIPs(adapter);
                             if (dhcpInterface.first->second->LoadLeases() == true) {
                                 SYSLOG(Logging::Startup, (_T("Leased list for interface [%s] loaded!"), interfaceName.c_str()));
                             }
@@ -366,8 +367,7 @@ namespace Plugin
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = string(_T("Interface: ")) + interfaceName + _T(" not found.");
                     } else {
-                        ClearAssignedIPV4IPs(adapter);
-                        ClearAssignedIPV6IPs(adapter);
+                        ClearAssignedIPs(adapter);
 
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = string(_T("OK, ")) + interfaceName + _T(" set DOWN.");
@@ -488,7 +488,7 @@ namespace Plugin
                 Core::OptionalType<Core::JSON::Error> error;
                 if (lease.IElement::FromFile(leaseFile, error) == true) {
 
-                    _client.AddUnleasedOffer(lease.Get());
+                    _client.AddUnleasedOfferToEnd(lease.Get());
                 }
 
                 if (error.IsSet() == true) {
@@ -524,7 +524,8 @@ namespace Plugin
                 Core::AdapterIterator interface(interfaceName);
                 if (entry != _dhcpInterfaces.end() 
                     && interface.IsValid() 
-                    && interface.HasMAC()) {
+                    && interface.HasMAC()
+                    && interface.IsRunning()) {
 
                     entry->second->StopWatchdog();
 
@@ -885,9 +886,7 @@ namespace Plugin
                     }
                 }
             } else {
-                ClearAssignedIPV4IPs(adapter);
-                ClearAssignedIPV6IPs(adapter);
-
+                ClearAssignedIPs(adapter);
                 Core::AdapterIterator::Flush();
             }
 
