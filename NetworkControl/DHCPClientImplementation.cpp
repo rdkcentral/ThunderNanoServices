@@ -32,7 +32,7 @@ namespace Plugin {
 
     /* static */ constexpr uint8_t DHCPClientImplementation::MagicCookie[];
 
-    class DHCPIPPacket {
+    class DHCPPacket : public Core::IPUDPPacket {
         /*
          * DHCP Protocol (rfc2131) defines, that every message prior to acquiring IP 
          * should be send from 0.0.0.0 source. To reliably force that we need to 
@@ -40,44 +40,27 @@ namespace Plugin {
          * interpret 0.0.0.0 as IPADDR_ANY and reassign it if it has any.
         */
     public:
-        static constexpr uint16_t minimumFrameSize = sizeof(iphdr) + sizeof(udphdr);
+        DHCPPacket() = delete;
+        DHCPPacket& operator=(const DHCPPacket&) = delete;
 
-    public:
-        DHCPIPPacket() = delete;
-        DHCPIPPacket(const DHCPIPPacket&) = delete;
-        DHCPIPPacket& operator=(const DHCPIPPacket&) = delete;
-
-        DHCPIPPacket(uint8_t* buffer, const uint16_t bufferSize, const bool initialize) 
-            : _buffer(buffer)
-            , _bufferSize(bufferSize)
+        DHCPPacket(uint8_t* buffer, const uint16_t bufferSize, const Core::NodeId& source, const Core::NodeId& target)
+            : IPUDPPacket(buffer, bufferSize, source, target)
         {
-            if (initialize == true) {
-                InitIpHeader();
-                InitUDPHeader();
-            }
+        }
+
+        DHCPPacket(uint8_t* buffer, const uint16_t bufferSize)
+            : IPUDPPacket(buffer, bufferSize)
+        {
         }
 
         uint8_t* DHCPFrame() 
         {
-            return _buffer + dhcpHeaderOffset;   
+            return IPUDPPacket::Payload();   
         }
 
         const uint16_t MaxDHCPFrameSize()
         {
-            return _bufferSize - sizeof(iphdr) - sizeof(udphdr);
-        } 
-
-        const uint16_t TotalSize()
-        {
-            return _dhcpFrameSize + sizeof(iphdr) + sizeof(udphdr);
-        } 
-
-        void DHCPFrameSize(const uint16_t size)
-        {
-            _dhcpFrameSize = size;
-
-            RecalcHeadersSizes();
-            RecalcIpHeaderChecksum();
+            return _bufferSize - TotalHeaderLength();
         } 
 
         static Core::NodeId BroadcastNode(const string& interfaceName)
@@ -103,76 +86,11 @@ namespace Plugin {
 
         const bool IsIncomingMessage()
         {
-            const iphdr* ipHeader = reinterpret_cast<iphdr*>(_buffer);
-            const udphdr* udpHeader = reinterpret_cast<udphdr*>(_buffer + udpHeaderOffset);
-
-
-            return (_bufferSize > minimumFrameSize) 
-                    && (ipHeader->protocol == PROTOCOL_UDP)
-                    && (udpHeader->dest == htons(DHCPClientImplementation::DefaultDHCPClientPort));
-        }
-    private:
-        void InitIpHeader() 
-        {
-            iphdr* ipHeader = reinterpret_cast<iphdr*>(_buffer);
-
-            memset(ipHeader, 0, sizeof(iphdr));
-            ipHeader->version = 4; // Use IPv4
-            ipHeader->ihl = 5; // Standard IP header length
-            ipHeader->ttl = 64; // Standard TTL
-            ipHeader->protocol = PROTOCOL_UDP;
-            memset(&(ipHeader->daddr), 0xff, sizeof(ipHeader->daddr));
+            return (_bufferSize > TotalHeaderLength()) 
+                    && (IPHeader()->protocol == PROTOCOL_UDP)
+                    && (UDPHeader()->dest == htons(DHCPClientImplementation::DefaultDHCPClientPort));
         }
 
-        void InitUDPHeader() 
-        {
-            udphdr* udpHeader = reinterpret_cast<udphdr*>(_buffer + udpHeaderOffset);
-
-            memset(udpHeader, 0, sizeof(udphdr));
-            udpHeader->source = htons(DHCPClientImplementation::DefaultDHCPClientPort);
-            udpHeader->dest = htons(DHCPClientImplementation::DefaultDHCPServerPort);
-        }
-
-        void RecalcHeadersSizes() 
-        {
-            iphdr* ipHeader = reinterpret_cast<iphdr*>(_buffer);
-            udphdr* udpHeader = reinterpret_cast<udphdr*>(_buffer + udpHeaderOffset);
-
-            ipHeader->tot_len = htons(sizeof(iphdr) + sizeof(udphdr) + _dhcpFrameSize);
-            udpHeader->len = htons(sizeof(udphdr) + _dhcpFrameSize);
-        }
-
-        void RecalcIpHeaderChecksum() 
-        {
-            // src: https://gist.github.com/david-hoze/0c7021434796997a4ca42d7731a7073a
-            iphdr* ipHeader = reinterpret_cast<iphdr*>(_buffer);
-            uint16_t* data = reinterpret_cast<uint16_t*>(ipHeader);
-            uint32_t count = (ipHeader->ihl) << 2;
-
-            // Checksum should be calculated on itself set to 0
-            ipHeader->check = 0;
-
-            uint32_t sum = 0;
-            while (count > 1) {
-                sum += * data++;
-                count -= 2;
-            }
-
-            if(count > 0) {
-                sum += ((*data)&htons(0xFF00));
-            }
-            
-            while (sum>>16) {
-                sum = (sum & 0xffff) + (sum >> 16);
-            }
-
-            sum = ~sum;
-            ipHeader->check = static_cast<uint16_t>(sum);
-        }
-    private:
-        uint8_t* _buffer;
-        const uint16_t _bufferSize;
-        uint16_t _dhcpFrameSize;
     private:
         static constexpr uint16_t udpHeaderOffset = sizeof(iphdr);
         static constexpr uint16_t dhcpHeaderOffset = udpHeaderOffset + sizeof(udphdr);
@@ -180,7 +98,7 @@ namespace Plugin {
     };
 
     DHCPClientImplementation::DHCPClientImplementation(const string& interfaceName, DiscoverCallback discoverCallback, RequestCallback claimCallback)
-        : Core::SocketDatagram(false, DHCPIPPacket::BroadcastNode(interfaceName), DHCPIPPacket::BroadcastNode(interfaceName), 512, 1024)
+        : Core::SocketDatagram(false, DHCPPacket::BroadcastNode(interfaceName), DHCPPacket::BroadcastNode(interfaceName), 512, 1024)
         , _adminLock()
         , _interfaceName(interfaceName)
         , _state(IDLE)
@@ -215,15 +133,13 @@ namespace Plugin {
             _state = RECEIVING;
             TRACE_L1("Sending DHCP message type: %d for interface: %s", _modus, _interfaceName.c_str());
 
-            ASSERT(maxSendSize > DHCPIPPacket::minimumFrameSize);
-
-            DHCPIPPacket frame(dataFrame, maxSendSize, true);
+            DHCPPacket frame(dataFrame, maxSendSize, Core::NodeId("0.0.0.0", DHCPClientImplementation::DefaultDHCPClientPort), Core::NodeId("255.255.255.255", DHCPClientImplementation::DefaultDHCPServerPort));
             result = Message(frame.DHCPFrame(), frame.MaxDHCPFrameSize());
 
             if (result > 0) {
 
-                frame.DHCPFrameSize(result);
-                result = frame.TotalSize();
+                frame.PayloadSet(result);
+                result = frame.PacketLength();
             }
         }
 
@@ -232,7 +148,7 @@ namespace Plugin {
 
     /* virtual */ uint16_t DHCPClientImplementation::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
     {
-        DHCPIPPacket frame(dataFrame, receivedSize, false);
+        DHCPPacket frame(dataFrame, receivedSize);
         if (frame.IsIncomingMessage()) {
             ProcessMessage(SocketDatagram::ReceivedNode(), frame.DHCPFrame(), frame.MaxDHCPFrameSize());
         }
