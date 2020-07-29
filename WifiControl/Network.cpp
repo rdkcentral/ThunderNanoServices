@@ -98,22 +98,22 @@ namespace WPASupplicant {
 
     bool Config::Unsecure()
     {
-        return ((SetKey(KEY, _T("NONE"))) && (SetKey(SSIDKEY, ('\"' + _ssid + '\"'))));
+        return ((SetKey(KEY, _T("NONE"))) && (SetKey(SSIDKEY, StringToHex(_ssid))));
     }
 
     bool Config::Hash(const string& hash)
     {
-        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, ('\"' + _ssid + '\"'))) && (SetKey(PSK, hash)));
+        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, StringToHex(_ssid))) && (SetKey(PSK, hash)));
     }
 
     bool Config::PresharedKey(const string& presharedKey)
     {      
-        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, ('\"' + _ssid + '\"'))) && (SetKey(PSK, ('\"' + presharedKey + '\"'))));
+        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, StringToHex(_ssid))) && (SetKey(PSK, ('\"' + presharedKey + '\"'))));
     }
 
     bool Config::Enterprise(const string& identity, const string& password)
     {
-        return ((SetKey(KEY, _T("IEEE8021X"))) && (SetKey(SSIDKEY, ('\"' + _ssid + '\"'))) && (SetKey(IDENTITY, identity)) && (SetKey(PASSWORD, password)) && (SetKey(_T("eap"), _T("PEAP"))) && (SetKey(_T("phase2"), _T("auth=MSCHAPV2"))));
+        return ((SetKey(KEY, _T("IEEE8021X"))) && (SetKey(SSIDKEY, StringToHex(_ssid))) && (SetKey(IDENTITY, identity)) && (SetKey(PASSWORD, password)) && (SetKey(_T("eap"), _T("PEAP"))) && (SetKey(_T("phase2"), _T("auth=MSCHAPV2"))));
     }
 
     bool Config::Hidden(const bool hidden)
