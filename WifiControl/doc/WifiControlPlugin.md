@@ -243,7 +243,7 @@ Also see: [connectionchange](#event.connectionchange)
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Returned when the network with a the given SSID doesn't exists |
-| 30 | ```ERROR_BAD_REQUEST``` | Returned when connection fails if there is no associated bssid to connect and not defined as AccessPoint. Rescan and try to connect |
+| 2 | ```ERROR_UNAVAILABLE``` | Returned when connection fails if there is no associated bssid to connect and not defined as AccessPoint. Rescan and try to connect |
 | 38 | ```ERROR_INVALID_SIGNATURE``` | Returned when connection is attempted with wrong password |
 | 9 | ```ERROR_ALREADY_CONNECTED``` | Returned when there is already a connection |
 | 4 | ```ERROR_ASYNC_ABORTED``` | Returned when connection attempt fails for other reasons |
