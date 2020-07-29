@@ -49,6 +49,7 @@ namespace Plugin
         , _wpaSupplicant()
         , _controller()
         , _autoConnect(_controller)
+        , _autoConnectEnabled(false)
     {
         RegisterAll();
     }
@@ -120,6 +121,7 @@ namespace Plugin
                         _controller->Scan();
                     }
                     else {
+                        _autoConnectEnabled = true;
                         _retryInterval = config.RetryInterval.Value();
                         _autoConnect.Connect(config.Preferred.Value(), _retryInterval, ~0);
                     }

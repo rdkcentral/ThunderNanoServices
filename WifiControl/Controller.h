@@ -912,8 +912,10 @@ namespace WPASupplicant {
                     _state = connection::ERROR;
 
                     _adminLock.Unlock();
-                    Request::Set(string(_TXT("DISCONNECT")));
-                    _parent.Submit(this);
+                    if (_parent.IsSubmitted(this) == false) {
+                        Request::Set(string(_TXT("DISCONNECT")));
+                        _parent.Submit(this);
+                    }
                 }
                 else if ((_callback != nullptr) && (_state == connection::WAITING)) {
                     _callback->Completed(result);
@@ -1932,6 +1934,24 @@ namespace WPASupplicant {
                 TRACE_L1("Submit does not trigger, there are %d messages pending [%s,%s]", static_cast<unsigned int>(_requests.size()), _requests.front()->Original().c_str(), _requests.front()->Message().c_str());
                 _adminLock.Unlock();
             }
+        }
+
+        inline bool IsSubmitted(Request* id) const
+        {
+            bool status = false;
+
+            _adminLock.Lock();
+            std::list<Request*>::iterator index(std::find(_requests.begin(), _requests.end(), id));
+            if (index != _requests.end()) {
+                _adminLock.Unlock();
+
+                const_cast<Controller*>(this)->Trigger();
+                status = true;
+            } else {
+                _adminLock.Unlock();
+            }
+
+            return status;
         }
 
     private:

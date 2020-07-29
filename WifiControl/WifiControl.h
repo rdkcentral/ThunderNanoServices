@@ -200,23 +200,16 @@ namespace Plugin {
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
 
+                ASSERT (_controller.IsValid());
+
                 _adminLock.Lock();
 
                 if (_state == states::IDLE) {
 
-                    ASSERT (_controller.IsValid());
-
                     _preferred = SSID;
                     _attempts = attempts;
                     _interval = (scheduleInterval * 1000);
-
-                    MoveState (states::SCANNING);
-
-                    _controller->Scan();
-
-                    result = Core::ERROR_NONE;
-
-                    _job.Schedule(Core::Time::Now().Add(_interval));
+                    result = Scan();
                 }
 
                 _adminLock.Unlock();
@@ -226,16 +219,21 @@ namespace Plugin {
             void SetPreferred(const string& ssid, const uint8_t scheduleInterval, const uint32_t attempts)
             {
                 _adminLock.Lock();
-                _preferred.assign(ssid);
 
-                if ((scheduleInterval) && (_state == states::IDLE)) {
-                    MoveState(states::CONNECTING);
-                    _attempts = attempts;
-                    _interval = (scheduleInterval * 1000);
-                    _job.Schedule(Core::Time::Now().Add(_interval));
-                }
+                _preferred.assign(ssid);
+                _attempts = attempts;
+                _interval = (scheduleInterval * 1000);
 
                 _adminLock.Unlock();
+            }
+            inline uint32_t Scan()
+            {
+                MoveState (states::SCANNING);
+
+                _controller->Scan();
+                _job.Schedule(Core::Time::Now().Add(_interval));
+
+                return Core::ERROR_NONE;
             }
             uint32_t Revoke()
             {
@@ -266,19 +264,12 @@ namespace Plugin {
             void Disconnected ()
             {
                 _adminLock.Lock();
-
                 WPASupplicant::Controller::reasons reason = _controller->DisconnectReason();
 
                 if ((reason == WPASupplicant::Controller::WLAN_REASON_NOINFO_GIVEN)
                         && (_state == states::IDLE) && (_attempts > 0)) {
-
-                    MoveState(states::SCANNING);
-
-                    _controller->Scan();
-
-                    _job.Schedule(Core::Time::Now().Add(_interval));
+                    Scan();
                 }
-
                 _adminLock.Unlock();
             }
 
@@ -361,6 +352,25 @@ namespace Plugin {
 
                 _adminLock.Unlock();
             }
+            void Completed(const uint32_t result) override {
+
+                _controller->Revoke(this);
+
+                _adminLock.Lock();
+
+                if ((result == Core::ERROR_NONE) || (result == Core::ERROR_ALREADY_CONNECTED) ) {
+
+                    MoveState(states::IDLE);
+
+                    _ssidList.clear();
+                }
+                else {
+                    MoveState(states::CONNECTING);
+
+                    _job.Submit();
+                }
+                _adminLock.Unlock();
+            }
 
         private:
             void MoveState(const states newState) {
@@ -373,25 +383,6 @@ namespace Plugin {
                 _adminLock.Lock();
 
                 _state = newState;
-            }
-            void Completed(const uint32_t result) override {
-
-                _controller->Revoke(this);
-
-                _adminLock.Lock();
-
-                if (result == Core::ERROR_NONE) {
-
-                    MoveState(states::IDLE);
-
-                    _ssidList.clear();
-                }
-                else {
-                    MoveState(states::CONNECTING);
-
-                    _job.Submit();
-                }
-                _adminLock.Unlock();
             }
 
         private:
@@ -651,8 +642,15 @@ namespace Plugin {
         void event_connectionchange(const string& ssid);
  
         inline uint32_t Connect(const string& ssid) {
-            _autoConnect.SetPreferred(ssid, _retryInterval, ~0);
-            return _controller->Connect(ssid);
+
+            uint32_t result = _controller->Connect(ssid);
+
+            if ((result != Core::ERROR_INPROGRESS) && (_autoConnectEnabled == true)) {
+                _autoConnect.SetPreferred(ssid, _retryInterval, ~0);
+                _autoConnect.Completed(result);
+            }
+
+            return result;
         }
         inline uint32_t Disconnect(const string& ssid) {
             _autoConnect.Revoke();
@@ -674,6 +672,7 @@ namespace Plugin {
         WifiDriver _wpaSupplicant;
         Core::ProxyType<WPASupplicant::Controller> _controller;
         AutoConnect _autoConnect;
+        bool _autoConnectEnabled;
     };
 
 } // namespace Plugin
