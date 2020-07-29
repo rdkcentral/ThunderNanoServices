@@ -1464,7 +1464,7 @@ namespace WPASupplicant {
                     result = Connect(SSID, bssid);
                 } else {
                     TRACE_L1("No associated BSSID to connect to and not defined as AccessPoint. (%llu)", bssid);
-                    result = Core::ERROR_BAD_REQUEST;
+                    result = Core::ERROR_UNAVAILABLE;
                 }
             } else {
                 _adminLock.Unlock();
