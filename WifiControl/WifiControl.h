@@ -353,24 +353,17 @@ namespace Plugin {
 
                 _adminLock.Unlock();
             }
-            void Completed(const uint32_t result) override {
 
-                _controller->Revoke(this);
+            void UpdateStatus(const uint32_t result) {
 
-                _adminLock.Lock();
+                if ((result != Core::ERROR_NONE) && (result != Core::ERROR_ALREADY_CONNECTED)) {
+                    _adminLock.Lock();
 
-                if ((result == Core::ERROR_NONE) || (result == Core::ERROR_ALREADY_CONNECTED) ) {
-
-                    MoveState(states::IDLE);
-
-                    _ssidList.clear();
-                }
-                else {
-                    MoveState(states::CONNECTING);
+                    _state = states::CONNECTING;
+                    _adminLock.Unlock();
 
                     _job.Submit();
                 }
-                _adminLock.Unlock();
             }
 
         private:
@@ -385,6 +378,27 @@ namespace Plugin {
 
                 _state = newState;
             }
+
+            void Completed(const uint32_t result) override {
+
+                _controller->Revoke(this);
+
+                _adminLock.Lock();
+
+                if ((result == Core::ERROR_NONE) || (result == Core::ERROR_ALREADY_CONNECTED)) {
+
+                    MoveState(states::IDLE);
+
+                    _ssidList.clear();
+                }
+                else {
+                    MoveState(states::CONNECTING);
+
+                    _job.Submit();
+                }
+                _adminLock.Unlock();
+            }
+
 
         private:
             Core::CriticalSection _adminLock;
@@ -652,7 +666,7 @@ namespace Plugin {
 
             if ((result != Core::ERROR_INPROGRESS) && (_autoConnectEnabled == true)) {
                 _autoConnect.SetPreferred(ssid, _retryInterval, ~0);
-                _autoConnect.Completed(result);
+                _autoConnect.UpdateStatus(result);
             }
 
             return result;
