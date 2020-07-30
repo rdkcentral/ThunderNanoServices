@@ -208,32 +208,41 @@ namespace Plugin {
 
     void WebKitBrowser::LoadFinished(const string& URL, int32_t code)
     {
-        TRACE(Trace::Information, (_T("LoadFinished: { \"url\": \"%s\", \"httpstatus\": %d}"), URL.c_str(), code));
+        string message(string("{ \"url\": \"") + URL + string("\", \"loaded\":true }"));
+        TRACE(Trace::Information, (_T("LoadFinished: %s"), message.c_str()));
+        _service->Notify(message);
         event_loadfinished(URL, code);
         URLChange(URL, true);
     }
 
     void WebKitBrowser::LoadFailed(const string& URL)
     {
-        TRACE(Trace::Information, (_T("LoadFailed: { \"url\": \"%s\" }"), URL.c_str()));
+        string message(string("{ \"url\": \"") + URL + string("\" }"));
+        TRACE(Trace::Information, (_T("LoadFailed: %s"), message.c_str()));
+        _service->Notify(message);
         event_loadfailed(URL);
     }
 
     void WebKitBrowser::URLChange(const string& URL, bool loaded)
     {
-        TRACE(Trace::Information, (_T("URLChange: { \"url\": \"%s\", \"loaded\": \"%s\" }"), URL.c_str(), (loaded ? "true" : "false")));
+        string message(string("{ \"url\": \"") + URL + string("\" }"));
+        TRACE(Trace::Information, (_T("URLChanged: %s"), message.c_str()));
+        _service->Notify(message);
         event_urlchange(URL, loaded);
     }
 
     void WebKitBrowser::VisibilityChange(const bool hidden)
     {
-        TRACE(Trace::Information, (_T("VisibilityChange: { \"hidden\": \"%s\"}"), (hidden ? "true" : "false")));
+        TRACE(Trace::Information, (_T("Hidden: %s }"), (hidden ? "true" : "false")));
+        string message(string("{ \"hidden\": ") + (hidden ? _T("true") : _T("false")) + string("}"));
+        _service->Notify(message);
         event_visibilitychange(hidden);
     }
 
     void WebKitBrowser::PageClosure()
     {
-        TRACE(Trace::Information, (_T("PageClosure")));
+        TRACE(Trace::Information, (_T("Closure: \"true\"")));
+        _service->Notify(_T("{\"Closure\": true }"));
         event_pageclosure();
     }
 
@@ -246,6 +255,8 @@ namespace Plugin {
     void WebKitBrowser::StateChange(const PluginHost::IStateControl::state state)
     {
         TRACE(Trace::Information, (_T("StateChange: { \"State\": %d }"), state));
+        string message(string("{ \"suspended\": ") + (state == PluginHost::IStateControl::SUSPENDED ? _T("true") : _T("false")) + string(" }"));
+        _service->Notify(message);
         event_statechange(state == PluginHost::IStateControl::SUSPENDED);
     }
 
