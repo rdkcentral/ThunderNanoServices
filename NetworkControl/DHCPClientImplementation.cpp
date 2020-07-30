@@ -37,7 +37,7 @@ namespace Plugin {
         return (Core::NodeId(sockaddr_broadcast));
     }
 
-    DHCPClientImplementation::DHCPClientImplementation(const string& interfaceName, DiscoverCallback discoverCallback, RequestCallback claimCallback)
+    DHCPClientImplementation::DHCPClientImplementation(const string& interfaceName, DiscoverCallback discoverCallback, RequestCallback claimCallback, LeaseExpiredCallback leaseExpiredCallback)
         : Core::SocketDatagram(false, Core::NodeId(_T("0.0.0.0"), DefaultDHCPClientPort, Core::NodeId::TYPE_IPV4), RemoteAddress(), 1024, 2048)
         , _adminLock()
         , _interfaceName(interfaceName)
@@ -47,8 +47,10 @@ namespace Plugin {
         , _preferred()
         , _discoverCallback(discoverCallback)
         , _claimCallback(claimCallback)
-        , _unleasedOffers()
+        , _leaseExpiredCallback(leaseExpiredCallback)
         , _leasedOffer()
+        , _unleasedOffers()
+        , _activity(*this)
     {
         Core::AdapterIterator adapters(_interfaceName);
 
@@ -57,11 +59,11 @@ namespace Plugin {
         } else {
             TRACE_L1("Could not read mac address of %s\n", _interfaceName.c_str());
         }
-  
     }
 
     /* virtual */ DHCPClientImplementation::~DHCPClientImplementation()
     {
+        _activity.Revoke();
         SocketDatagram::Close(Core::infinite);
     }
 

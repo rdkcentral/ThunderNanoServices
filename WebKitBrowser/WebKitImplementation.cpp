@@ -305,8 +305,9 @@ static GSourceFuncs _handlerIntervention =
     nullptr
 };
 --------------------------------------------------------------------------------------------------- */
-    static Exchange::IWebBrowser* implementation = nullptr;
 #endif // !WEBKIT_GLIB_API
+
+    static Exchange::IWebBrowser* implementation = nullptr;
 
     static void CloseDown()
     {
@@ -588,6 +589,20 @@ static GSourceFuncs _handlerIntervention =
         }
 
     public:
+#ifdef WEBKIT_GLIB_API
+        uint32_t Headers(string& headers) const override { return Core::ERROR_UNAVAILABLE; }
+        uint32_t Headers(const string& headers) override { return Core::ERROR_UNAVAILABLE; }
+        uint32_t UserAgent(string& ua) const override { return Core::ERROR_UNAVAILABLE; }
+        uint32_t UserAgent(const string& ua) override { return Core::ERROR_UNAVAILABLE; }
+        uint32_t Languages(string& langs) const override { return Core::ERROR_UNAVAILABLE; }
+        uint32_t Languages(const string& langs) override { return Core::ERROR_UNAVAILABLE; }
+        uint32_t LocalStorageEnabled(bool& enabled) const override { return Core::ERROR_UNAVAILABLE; }
+        uint32_t LocalStorageEnabled(const bool enabled) override { return Core::ERROR_UNAVAILABLE; }
+        uint32_t HTTPCookieAcceptPolicy(HTTPCookieAcceptPolicyType& policy) const override { return Core::ERROR_UNAVAILABLE; }
+        uint32_t HTTPCookieAcceptPolicy(const HTTPCookieAcceptPolicyType policy) override { return Core::ERROR_UNAVAILABLE; }
+        virtual void BridgeReply(const string& payload) final {}
+        virtual void BridgeEvent(const string& payload) final {}
+#else
         uint32_t Headers(string& headers) const override
         {
             _adminLock.Lock();
@@ -874,7 +889,7 @@ static GSourceFuncs _handlerIntervention =
                     delete static_cast<BridgeMessageData*>(customdata);
                 });
         }
-
+#endif
         uint32_t Visible(bool& visible) const override
         {
             _adminLock.Lock();
@@ -1644,7 +1659,9 @@ static GSourceFuncs _handlerIntervention =
             g_signal_connect(_view, "permission-request", reinterpret_cast<GCallback>(decidePermissionCallback), nullptr);
             g_signal_connect(_view, "show-notification", reinterpret_cast<GCallback>(showNotificationCallback), this);
 
-            SetURL(_URL);
+            _configurationCompleted.SetState(true);
+
+            URL(static_cast<const string>(_URL));
 
             // Move into the correct state, as requested
             auto* backend = webkit_web_view_backend_get_wpe_backend(webkit_web_view_get_backend(_view));
@@ -1893,7 +1910,6 @@ static GSourceFuncs _handlerIntervention =
         string _headers;
         bool _localStorageEnabled { false };
         int32_t _httpStatusCode { -1 };
-        WKHTTPCookieAcceptPolicy _httpCookieAcceptPolicy { kWKHTTPCookieAcceptPolicyOnlyFromMainDocumentDomain };
 
 #ifdef WEBKIT_GLIB_API
         WebKitWebView* _view;
@@ -1902,9 +1918,10 @@ static GSourceFuncs _handlerIntervention =
         WKViewRef _view;
         WKPageRef _page;
         WKWebAutomationSessionRef _automationSession;
-        mutable Core::CriticalSection _adminLock;
         WKNotificationManagerRef _notificationManager;
+        WKHTTPCookieAcceptPolicy _httpCookieAcceptPolicy { kWKHTTPCookieAcceptPolicyOnlyFromMainDocumentDomain };
 #endif
+        mutable Core::CriticalSection _adminLock;
         uint32_t _fps;
         GMainLoop* _loop;
         GMainContext* _context;
