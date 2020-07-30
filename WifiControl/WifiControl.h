@@ -243,6 +243,7 @@ namespace Plugin {
 
                 _attempts = 0;
                 _interval = 0;
+                _controller->Revoke(this);
 
                 _adminLock.Unlock();
 
@@ -643,6 +644,10 @@ namespace Plugin {
  
         inline uint32_t Connect(const string& ssid) {
 
+            if (_autoConnectEnabled == true) {
+                _autoConnect.Revoke();
+            }
+
             uint32_t result = _controller->Connect(ssid);
 
             if ((result != Core::ERROR_INPROGRESS) && (_autoConnectEnabled == true)) {
@@ -653,7 +658,11 @@ namespace Plugin {
             return result;
         }
         inline uint32_t Disconnect(const string& ssid) {
-            _autoConnect.Revoke();
+
+            if (_autoConnectEnabled == true) {
+                _autoConnect.Revoke();
+            }
+
             return _controller->Disconnect(ssid);
         }
 
