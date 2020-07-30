@@ -803,7 +803,7 @@ namespace WPASupplicant {
             uint32_t Invoke(IConnectCallback* callback, const string& ssid, const uint64_t& bssid) {
 
                 uint32_t result = ((bssid == 0) ? Core::ERROR_INCOMPLETE_CONFIG :
-                                  ((_parent.Current().empty() == false) ? Core::ERROR_ALREADY_CONNECTED :
+                                  (((_parent.Current().empty() == false) && (_parent.Current() == ssid)) ? Core::ERROR_ALREADY_CONNECTED :
                                   Core::ERROR_UNKNOWN_KEY));
 
                 if (result == Core::ERROR_UNKNOWN_KEY) {
