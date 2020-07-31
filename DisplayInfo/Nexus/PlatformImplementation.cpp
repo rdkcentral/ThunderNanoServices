@@ -46,7 +46,7 @@ public:
        , _height(0)
        , _verticalFreq(0)
        , _connected(false)
-       , _hdcpprotection(HDCP_Unencrypted)
+       , _hdcpprotection(HDCPProtectionType::HDCP_Unencrypted)
        , _type(HDR_OFF)
        , _totalGpuRam(0)
        , _audioPassthrough(false)
@@ -390,9 +390,15 @@ private:
                 NxClient_DisplaySettings displaySettings;
                 NxClient_GetDisplaySettings(&displaySettings);
 
+                NxClient_DisplayStatus status;
+                NEXUS_Error rcStatus = NxClient_GetDisplayStatus(&status);
+                if(rcStatus != NEXUS_SUCCESS){
+                    TRACE_L1(_T("Failed to get display status with rc=%d", rcStatus));
+                }
+
 #ifdef NEXUS_HDR_SUPPORTED
                 // Read HDR status
-                switch (displaySettings.hdmiPreferences.dynamicRangeMode) {
+                switch (status.hdmi.dynamicRangeMode) {
                 case NEXUS_VideoDynamicRangeMode_eHdr10:
                     hdr = HDR_10;
                     break;
