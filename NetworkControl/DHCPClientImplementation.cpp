@@ -60,7 +60,7 @@ namespace Plugin {
 
         const uint16_t MaxDHCPFrameSize()
         {
-            return _bufferSize - TotalHeaderLength();
+            return TotalBufferSize() - TotalHeaderLength();
         } 
 
         static Core::NodeId BroadcastNode(const string& interfaceName)
@@ -84,11 +84,10 @@ namespace Plugin {
             return Core::NodeId(target);
         }
 
-        const bool IsIncomingMessage()
+        bool IsIncomingMessage() const override
         {
-            return (_bufferSize > TotalHeaderLength()) 
-                    && (IPHeader()->protocol == PROTOCOL_UDP)
-                    && (UDPHeader()->dest == htons(DHCPClientImplementation::DefaultDHCPClientPort));
+            return (Core::IPUDPPacket::IsIncomingMessage()  && (UDPHeader()->dest == htons(DHCPClientImplementation::DefaultDHCPClientPort)) 
+                                                            && (IPHeader()->protocol == PROTOCOL_UDP) );
         }
 
     private:
