@@ -413,18 +413,6 @@ namespace Plugin
                 }
             }
 
-            PluginHost::ISubSystem* subSystem = _service->SubSystems();
-
-            ASSERT(subSystem != nullptr);
-
-            if (subSystem != nullptr) {
-                if ((subSystem->IsActive(PluginHost::ISubSystem::NETWORK) == false) && (ipAddress.IsLocalInterface() == false)) {
-                    subSystem->Set(PluginHost::ISubSystem::NETWORK, nullptr);
-                }
-
-                subSystem->Release();
-            }            
-
             if (addIt == true) {
                 TRACE_L1("Setting IP: %s", ipAddress.HostAddress().c_str());
                 adapter.Add(ipAddress);
@@ -435,8 +423,19 @@ namespace Plugin
             if (gateway.IsValid() == true) {
                 adapter.Gateway(Core::IPNode(Core::NodeId("0.0.0.0"), 0), gateway);
             }
-            
+
             Core::AdapterIterator::Flush();
+
+            PluginHost::ISubSystem* subSystem = _service->SubSystems();
+            ASSERT(subSystem != nullptr);
+
+            if (subSystem != nullptr) {
+                if ((subSystem->IsActive(PluginHost::ISubSystem::NETWORK) == false) && (ipAddress.IsLocalInterface() == false)) {
+                    subSystem->Set(PluginHost::ISubSystem::NETWORK, nullptr);
+                }
+
+                subSystem->Release();
+            }
 
             string message(string("{ \"interface\": \"") + adapter.Name() + string("\", \"status\":0, \"ip\":\"" + ipAddress.HostAddress() + "\" }"));
             TRACE(Trace::Information, (_T("DHCP Request set on: %s"), adapter.Name().c_str()));
