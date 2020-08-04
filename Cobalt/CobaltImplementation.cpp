@@ -47,6 +47,13 @@ private:
             , RepeatStart()
             , RepeatInterval()
             , ClientIdentifier()
+            , ManufacturerName()
+            , ChipsetModelNumber()
+            , FirmwareVersion()
+            , ModelName()
+            , ModelYear()
+            , OperatorName()
+            , FriendlyName()
         {
             Add(_T("url"), &Url);
             Add(_T("width"), &Width);
@@ -54,6 +61,13 @@ private:
             Add(_T("repeatstart"), &RepeatStart);
             Add(_T("repeatinterval"), &RepeatInterval);
             Add(_T("clientidentifier"), &ClientIdentifier);
+            Add(_T("manufacturername"), &ManufacturerName);
+            Add(_T("chipsetmodelnumber"), &ChipsetModelNumber);
+            Add(_T("firmwareversion"), &FirmwareVersion);
+            Add(_T("modelname"), &ModelName);
+            Add(_T("modelyear"), &ModelYear);
+            Add(_T("operatorname"), &OperatorName);
+            Add(_T("friendlyname"), &FriendlyName);
         }
         ~Config() {
         }
@@ -65,6 +79,13 @@ private:
         Core::JSON::DecUInt32 RepeatStart;
         Core::JSON::DecUInt32 RepeatInterval;
         Core::JSON::String ClientIdentifier;
+        Core::JSON::String ManufacturerName;
+        Core::JSON::String ChipsetModelNumber;
+        Core::JSON::String FirmwareVersion;
+        Core::JSON::String ModelName;
+        Core::JSON::String ModelYear;
+        Core::JSON::String OperatorName;
+        Core::JSON::String FriendlyName;
     };
 
     class NotificationSink: public Core::Thread {
@@ -161,6 +182,34 @@ private:
             if (config.RepeatInterval.IsSet() == true) {
                 string repeatInterval(Core::NumberType<uint32_t>(config.RepeatInterval.Value()).Text());
                 Core::SystemInfo::SetEnvironment(_T("COBALT_KEY_REPEAT_INTERVAL"), repeatInterval);
+            }
+
+            if (config.ManufacturerName.IsSet() == true) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_MANUFACTURER_NAME"), config.ManufacturerName.Value());
+            }
+
+            if (config.ChipsetModelNumber.IsSet() == true) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_CHIPSET_MODEL_NUMBER"), config.ChipsetModelNumber.Value());
+            }
+
+            if (config.FirmwareVersion.IsSet() == true) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_FIRMWARE_VERSION"), config.FirmwareVersion.Value());
+            }
+
+            if (config.ModelName.IsSet() == true) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_MODEL_NAME"), config.ModelName.Value());
+            }
+
+            if (config.ModelYear.IsSet() == true) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_MODEL_YEAR"), config.ModelYear.Value());
+            }
+
+            if (config.OperatorName.IsSet() == true) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_OPERATOR_NAME"), config.OperatorName.Value());
+            }
+
+            if (config.FriendlyName.IsSet() == true) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_FRIENDLY_NAME"), config.FriendlyName.Value());
             }
 
             if (config.Url.IsSet() == true) {
