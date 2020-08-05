@@ -32,7 +32,6 @@
     )
 
 #define NEXUS_HDCPVERSION_SUPPORTED
-#define NEXUS_HDR_SUPPORTED
 
 #endif
 
@@ -395,31 +394,28 @@ private:
                 NxClient_DisplaySettings displaySettings;
                 NxClient_GetDisplaySettings(&displaySettings);
 
-                NxClient_DisplayStatus status;
-                NEXUS_Error rcStatus = NxClient_GetDisplayStatus(&status);
-                if(rcStatus != NEXUS_SUCCESS){
-                    TRACE_L1(_T("Failed to get display status with rc=%d", rcStatus));
-                }
-
-
 #if ((NEXUS_PLATFORM_VERSION_MAJOR >= 19) && (NEXUS_PLATFORM_VERSION_MINOR >= 2))
                 NEXUS_HdmiOutputEdidRxDolbyAudioCodecDependent edidDataDolby;
                 NEXUS_HdmiOutput_GetDbCodecDependentEdidData(hdmiOutput, &edidDataDolby);
                 isAtmosSupported = edidDataDolby.ddpAtmosSupported;
 #endif
 
-#ifdef NEXUS_HDR_SUPPORTED
-                // Read HDR status
-                switch (status.hdmi.dynamicRangeMode) {
-                case NEXUS_VideoDynamicRangeMode_eHdr10:
-                    hdr = HDR_10;
-                    break;
-                case NEXUS_VideoDynamicRangeMode_eHdr10Plus:
-                    hdr = HDR_10PLUS;
-                    break;
-                default:
-                    hdr = HDR_OFF;
-                    break;
+#if ((NEXUS_PLATFORM_VERSION_MAJOR >= 19) && (NEXUS_PLATFORM_VERSION_MINOR >= 2))
+                NEXUS_HdmiOutputEdidData edidData;
+                NEXUS_Error edidRc = NEXUS_HdmiOutput_GetEdidData(hdmiOutput, &edidData);
+                if(edidRc != NEXUS_SUCCESS){
+                    TRACE_L1(_T("Failed to get edidData with rc=%d", edidRc));
+                }
+                if(edidData.hdrdb.valid == true) {
+                    if((edidData.hdrdb.eotfSupported[NEXUS_VideoEotf_eHdr10] == true) || (edidData.hdrdb.eotfSupported[NEXUS_VideoEotf_ePq] == true)){
+                        hdr = HDR_10;
+                    } else if(edidData.hdrdb.eotfSupported[NEXUS_VideoEotf_eHlg] == true) {
+                        hdr = HDR_HLG;
+                    } else {
+                        hdr = HDR_OFF;
+                    }
+                } else {
+                    TRACE_L1(_T("Failed to get edid hdr db"));
                 }
 #else
                 switch (displaySettings.hdmiPreferences.drmInfoFrame.eotf) {
