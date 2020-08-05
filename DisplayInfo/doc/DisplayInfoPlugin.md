@@ -105,6 +105,7 @@ Provides access to the display general information.
 | (property).connected | boolean | HDMI display connection status |
 | (property).width | number | Width of the connected HDMI display |
 | (property).height | number | Height of the connected HDMI display |
+| (property).atmossupported | boolean | Dolby ATMOS support of the connected HDMI display |
 | (property).hdcpprotection | string | HDCP Protection (must be one of the following: *Unencrypted*, *HDCP1x*, *HDCP2x*) |
 | (property).hdrtype | string | HDR Type used (must be one of the following: *HDROff*, *HDR10*, *HDR10Plus*, *HDRDolbyVision*, *HDRTechnicolor*) |
 
@@ -132,6 +133,7 @@ Provides access to the display general information.
         "connected": true,
         "width": 1280,
         "height": 720,
+        "atmossupported": false,
         "hdcpprotection": "HDCP1x",
         "hdrtype": "HDROff"
     }

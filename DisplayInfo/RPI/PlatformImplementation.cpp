@@ -120,6 +120,10 @@ public:
     {
         return ~0;
     }
+    // Atmos on RPI is not used
+    bool IsAtmosSupported() const override {
+        return false;
+    }
     // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
     HDCPProtectionType HDCPProtection() const override {
         return HDCPProtectionType::HDCP_Unencrypted;

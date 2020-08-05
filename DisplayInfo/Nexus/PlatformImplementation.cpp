@@ -25,6 +25,7 @@
 #include <nexus_platform.h>
 #include <nxclient.h>
 #include <nexus_core_utils.h>
+#include "nexus_hdmi_output_dba.h"
 
 #if ( (NEXUS_PLATFORM_VERSION_MAJOR > 18) ||  \
       ( (NEXUS_PLATFORM_VERSION_MAJOR == 18) && (NEXUS_PLATFORM_VERSION_MINOR >= 2) ) \
@@ -50,6 +51,7 @@ public:
        , _type(HDR_OFF)
        , _totalGpuRam(0)
        , _audioPassthrough(false)
+       , _atmosSupport(false)
        , _adminLock()
        , _activity(*this) {
 
@@ -62,7 +64,7 @@ public:
 
         NexusHdmiOutput hdmihandle;
         if( hdmihandle ) {
-            UpdateDisplayInfoConnected(hdmihandle, _connected, _width, _height, _verticalFreq, _type);
+            UpdateDisplayInfoConnected(hdmihandle, _connected, _width, _height, _verticalFreq, _type, _atmosSupport);
             UpdateDisplayInfoHDCP(hdmihandle, _hdcpprotection);
         }
 
@@ -175,6 +177,9 @@ public:
     HDRType Type() const override
     {
         return _type;
+    }
+    bool IsAtmosSupported() const override {
+        return _atmosSupport;
     }
     HDCPProtectionType HDCPProtection() const override {
         return _hdcpprotection;
@@ -380,7 +385,7 @@ private:
 
     void UpdateDisplayInfoConnected(const NEXUS_HdmiOutputHandle& hdmiOutput,
                                     bool& connected, uint32_t& width, uint32_t& height,
-                                    uint32_t& verticalFreq, HDRType& hdr) const
+                                    uint32_t& verticalFreq, HDRType& hdr, bool& isAtmosSupported) const
     {
         NEXUS_HdmiOutputStatus status;
         NEXUS_Error rc = NEXUS_HdmiOutput_GetStatus(hdmiOutput, &status);
@@ -395,6 +400,13 @@ private:
                 if(rcStatus != NEXUS_SUCCESS){
                     TRACE_L1(_T("Failed to get display status with rc=%d", rcStatus));
                 }
+
+
+#if ((NEXUS_PLATFORM_VERSION_MAJOR >= 19) && (NEXUS_PLATFORM_VERSION_MINOR >= 2))
+                NEXUS_HdmiOutputEdidRxDolbyAudioCodecDependent edidDataDolby;
+                NEXUS_HdmiOutput_GetDbCodecDependentEdidData(hdmiOutput, &edidDataDolby);
+                isAtmosSupported = edidDataDolby.ddpAtmosSupported;
+#endif
 
 #ifdef NEXUS_HDR_SUPPORTED
                 // Read HDR status
@@ -430,6 +442,7 @@ private:
                 height = 0;
                 verticalFreq = 0;
                 hdr = HDR_OFF;
+                isAtmosSupported = false;
             }
         }
 
@@ -549,7 +562,7 @@ private:
                 /* fall-through! */
             case CallbackType::HotPlug:
             case CallbackType::DisplaySettings:
-                UpdateDisplayInfoConnected(hdmiHandle, connected, _width, _height, _verticalFreq, _type);
+                UpdateDisplayInfoConnected(hdmiHandle, connected, _width, _height, _verticalFreq, _type, _atmosSupport);
                 if (connected == false) {
                     _hdcpprotection = HDCP_Unencrypted;
                     notify = _connected; // don't bother with notifying disconnected->disconnected
@@ -580,6 +593,7 @@ private:
 
     uint64_t _totalGpuRam;
     bool _audioPassthrough;
+    bool _atmosSupport;
 
     std::list<IConnectionProperties::INotification*> _observers;
 
