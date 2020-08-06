@@ -282,7 +282,7 @@ namespace Plugin {
                     stateControl->Release();
                 }
             }
-        } else if (plugin->State() == PluginHost::IShell::DEACTIVATED) {
+        } else if (plugin->State() == PluginHost::IShell::DEACTIVATION) {
 
             if (index != _clients.end()) { // Remove from the list, if it is already there
                 _clients.erase(index);
