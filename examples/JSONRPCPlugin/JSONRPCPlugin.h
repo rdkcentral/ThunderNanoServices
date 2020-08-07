@@ -31,6 +31,8 @@
 // within the plugin to make it available. 
 #include <interfaces/IMath.h>
 
+// note JMath tests disabled until this interface is generated from the IMath.h interface
+#if 0
 // From the source, included above (IMath.h) a precompiler will create a method that 
 // can connect a JSONRPC class to the interface implementation. This is typically done 
 // in the constructor of the plugin!
@@ -39,6 +41,7 @@
 // <interface name>::Register(PluginHost::JSONRPC& handler, <interface name>* implementation);
 // <interface name>::Unregister(PluginHost::JSONRPC& handler);
 #include <interfaces/JMath.h>
+#endif
 
 namespace WPEFramework {
 
@@ -575,6 +578,12 @@ namespace Plugin {
         {
             Core::ProxyType<Core::IDispatch> job(Core::ProxyType<Callback>::Create(this, connection));
             Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(seconds * 1000), job);
+        }
+        uint32_t checkvalidation(Core::JSON::String& response)
+        {
+            response.SetQuoted(true);
+            response = "Passed Validation";
+            return (Core::ERROR_NONE);
         }
 
         // Methods for performance measurements

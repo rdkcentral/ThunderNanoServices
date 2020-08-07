@@ -55,28 +55,34 @@ namespace Plugin {
 
     uint32_t PlayerInfo::get_dolbymode(Core::JSON::EnumType<DolbyType>& response) const
     {
-        uint32_t result = Core::ERROR_NONE;
-        
+        uint32_t error = Core::ERROR_NONE;
         if(_dolbyOut != nullptr){
-            static_cast<DolbyType>(_dolbyOut->Mode());
+
+            Exchange::Dolby::IOutput::Type outputType = Exchange::Dolby::IOutput::Type::DIGITAL_PCM;
+            error = const_cast<const Exchange::Dolby::IOutput*>(_dolbyOut)->Mode(outputType);
+
+            response = static_cast<DolbyType>(outputType);
         } else {
-            result = Core::ERROR_UNAVAILABLE;
+            error = Core::ERROR_UNAVAILABLE;
         }
         
-        return result;
+        return error;
     }
     
     uint32_t PlayerInfo::set_dolbymode(const Core::JSON::EnumType<DolbyType>& params)
     {
-        uint32_t result = Core::ERROR_NONE;
+        uint32_t error = Core::ERROR_NONE;
         
-        if(_dolbyOut != nullptr){
-            _dolbyOut->Mode(static_cast<Exchange::Dolby::IOutput::Type>(params.Value()));
+        if(!params.IsSet()){
+            error = Core::ERROR_GENERAL;
+        }
+        else if(_dolbyOut == nullptr){
+            error = Core::ERROR_UNAVAILABLE;
         } else {
-            result = Core::ERROR_UNAVAILABLE;
+            error = _dolbyOut->Mode(static_cast<Exchange::Dolby::IOutput::Type>(params.Value()));
         }
         
-        return result;
+        return error;
     }
 
 } // namespace Plugin
