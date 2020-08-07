@@ -39,9 +39,10 @@ namespace Plugin {
                 , _device(nullptr)
             {
                 audio_hw_load_interface(&_device);
-                int error = _device->init_check(_device);
-                if (error != 0) {
-                    SYSLOG(Logging::Startup, (_T("Failed to initialized audio interface.")));
+                if(_device != nullptr && _device->init_check(_device) == 0){
+                    SYSLOG(Logging::Startup, (_T("Initialized audio_client interface.")));
+                } else {
+                    SYSLOG(Logging::Startup, (_T("Failed to initialize audio_client interface.")));
                     _device = nullptr;
                 }
             }
