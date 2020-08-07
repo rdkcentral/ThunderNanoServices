@@ -351,22 +351,6 @@ namespace WPASupplicant {
             return (*this);
         }
 
-        std::string StringToHex(const std::string& input)
-        {
-            std::string result;
-            const char hexdigits[] = "0123456789abcdef";
-            for (std::string::size_type pos = 0; pos < input.length(); ++pos) {
-                if (input.compare(pos, 2, "\\x") == 0) {
-                    result += input.substr(pos + 2, 2);
-                    pos += 3;
-                } else {
-                    result += hexdigits[input[pos] >> 4];
-                    result += hexdigits[input[pos] & 15];
-                }
-            }
-            return result;
-        }
-
     public:
         bool IsValid() const;
         bool IsConnected() const;

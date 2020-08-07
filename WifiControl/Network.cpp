@@ -98,22 +98,34 @@ namespace WPASupplicant {
 
     bool Config::Unsecure()
     {
-        return ((SetKey(KEY, _T("NONE"))) && (SetKey(SSIDKEY, StringToHex(_ssid))));
+        string hexSSID;
+        Core::ToHexString(reinterpret_cast<const uint8_t*>(_ssid.c_str()), _ssid.length(), hexSSID);
+
+        return ((SetKey(KEY, _T("NONE"))) && (SetKey(SSIDKEY, hexSSID)));
     }
 
     bool Config::Hash(const string& hash)
     {
-        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, StringToHex(_ssid))) && (SetKey(PSK, hash)));
+        string hexSSID;
+        Core::ToHexString(reinterpret_cast<const uint8_t*>(_ssid.c_str()), _ssid.length(), hexSSID);
+
+        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, hexSSID)) && (SetKey(PSK, hash)));
     }
 
     bool Config::PresharedKey(const string& presharedKey)
     {      
-        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, StringToHex(_ssid))) && (SetKey(PSK, ('\"' + presharedKey + '\"'))));
+        string hexSSID;
+        Core::ToHexString(reinterpret_cast<const uint8_t*>(_ssid.c_str()), _ssid.length(), hexSSID);
+
+        return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, hexSSID)) && (SetKey(PSK, ('\"' + presharedKey + '\"'))));
     }
 
     bool Config::Enterprise(const string& identity, const string& password)
     {
-        return ((SetKey(KEY, _T("IEEE8021X"))) && (SetKey(SSIDKEY, StringToHex(_ssid))) && (SetKey(IDENTITY, identity)) && (SetKey(PASSWORD, password)) && (SetKey(_T("eap"), _T("PEAP"))) && (SetKey(_T("phase2"), _T("auth=MSCHAPV2"))));
+        string hexSSID;
+        Core::ToHexString(reinterpret_cast<const uint8_t*>(_ssid.c_str()), _ssid.length(), hexSSID);
+
+        return ((SetKey(KEY, _T("IEEE8021X"))) && (SetKey(SSIDKEY, hexSSID)) && (SetKey(IDENTITY, identity)) && (SetKey(PASSWORD, password)) && (SetKey(_T("eap"), _T("PEAP"))) && (SetKey(_T("phase2"), _T("auth=MSCHAPV2"))));
     }
 
     bool Config::Hidden(const bool hidden)
