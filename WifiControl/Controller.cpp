@@ -219,6 +219,8 @@ namespace WPASupplicant {
 
                 if (event == CTRL_EVENT_DISCONNECTED) {
 
+                    _statusRequest.Reset();
+
                     ASSERT(position != string::npos);
 
                     Core::TextFragment infoLine(message, position, message.length() - position);
