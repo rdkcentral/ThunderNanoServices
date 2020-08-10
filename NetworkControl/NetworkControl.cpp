@@ -167,6 +167,7 @@ namespace Plugin
                         SYSLOG(Logging::Startup, (_T("Interface [%s] activated, no IP associated"), interfaceName.c_str()));
                     } else {
                         if (how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) {
+                            ClearAssignedIPs(adapter);
                             if (dhcpInterface.first->second->LoadLeases() == true) {
                                 SYSLOG(Logging::Startup, (_T("Leased list for interface [%s] loaded!"), interfaceName.c_str()));
                             }
@@ -366,8 +367,7 @@ namespace Plugin
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = string(_T("Interface: ")) + interfaceName + _T(" not found.");
                     } else {
-                        ClearAssignedIPV4IPs(adapter);
-                        ClearAssignedIPV6IPs(adapter);
+                        ClearAssignedIPs(adapter);
 
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = string(_T("OK, ")) + interfaceName + _T(" set DOWN.");
@@ -413,18 +413,6 @@ namespace Plugin
                 }
             }
 
-            PluginHost::ISubSystem* subSystem = _service->SubSystems();
-
-            ASSERT(subSystem != nullptr);
-
-            if (subSystem != nullptr) {
-                if ((subSystem->IsActive(PluginHost::ISubSystem::NETWORK) == false) && (ipAddress.IsLocalInterface() == false)) {
-                    subSystem->Set(PluginHost::ISubSystem::NETWORK, nullptr);
-                }
-
-                subSystem->Release();
-            }            
-
             if (addIt == true) {
                 TRACE_L1("Setting IP: %s", ipAddress.HostAddress().c_str());
                 adapter.Add(ipAddress);
@@ -435,8 +423,19 @@ namespace Plugin
             if (gateway.IsValid() == true) {
                 adapter.Gateway(Core::IPNode(Core::NodeId("0.0.0.0"), 0), gateway);
             }
-            
+
             Core::AdapterIterator::Flush();
+
+            PluginHost::ISubSystem* subSystem = _service->SubSystems();
+            ASSERT(subSystem != nullptr);
+
+            if (subSystem != nullptr) {
+                if ((subSystem->IsActive(PluginHost::ISubSystem::NETWORK) == false) && (ipAddress.IsLocalInterface() == false)) {
+                    subSystem->Set(PluginHost::ISubSystem::NETWORK, nullptr);
+                }
+
+                subSystem->Release();
+            }
 
             string message(string("{ \"interface\": \"") + adapter.Name() + string("\", \"status\":0, \"ip\":\"" + ipAddress.HostAddress() + "\" }"));
             TRACE(Trace::Information, (_T("DHCP Request set on: %s"), adapter.Name().c_str()));
@@ -488,7 +487,7 @@ namespace Plugin
                 Core::OptionalType<Core::JSON::Error> error;
                 if (lease.IElement::FromFile(leaseFile, error) == true) {
 
-                    _client.AddUnleasedOffer(lease.Get());
+                    _client.AddUnleasedOfferToEnd(lease.Get());
                 }
 
                 if (error.IsSet() == true) {
@@ -524,7 +523,8 @@ namespace Plugin
                 Core::AdapterIterator interface(interfaceName);
                 if (entry != _dhcpInterfaces.end() 
                     && interface.IsValid() 
-                    && interface.HasMAC()) {
+                    && interface.HasMAC()
+                    && interface.IsRunning()) {
 
                     entry->second->StopWatchdog();
 
@@ -885,9 +885,7 @@ namespace Plugin
                     }
                 }
             } else {
-                ClearAssignedIPV4IPs(adapter);
-                ClearAssignedIPV6IPs(adapter);
-
+                ClearAssignedIPs(adapter);
                 Core::AdapterIterator::Flush();
             }
 

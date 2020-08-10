@@ -27,8 +27,8 @@ target_include_directories(PlayerInfoDolby
 
 if(${DOLBY_IMPLEMENTATION} STREQUAL "AMLogic")
 
-    find_library(DOLBY_LIBRARY
-        NAMES dolbyms12)
+    find_library(AUDIO_CLIENT
+        NAMES audio_client)
 
     target_sources(PlayerInfoDolby
         PRIVATE
@@ -36,7 +36,7 @@ if(${DOLBY_IMPLEMENTATION} STREQUAL "AMLogic")
 
     target_link_libraries(PlayerInfoDolby
         PRIVATE
-            ${DOLBY_LIBRARY}
+            ${AUDIO_CLIENT}
             ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 else()

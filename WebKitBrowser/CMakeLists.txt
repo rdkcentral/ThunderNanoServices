@@ -15,12 +15,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+project(WebKitBrowser)
+
 set(PLUGIN_NAME WebKitBrowser)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 option(PLUGIN_WEBKITBROWSER_YOUTUBE "Include YouTube in seperate plugin." OFF)
 option(PLUGIN_WEBKITBROWSER_APPS "Include Apps instance in seperate plugin." OFF)
 option(PLUGIN_WEBKITBROWSER_UX "Include UX in seperate plugin." OFF)
+option(PLUGIN_WEBKITBROWSER_RESIDENT_APP "Include Resident App in seperate plugin." OFF)
+option(PLUGIN_WEBKITBROWSER_SEARCH_AND_DISCOVERY_APP "Include Search&Discovery App in seperate plugin." OFF)
+option(PLUGIN_WEBKITBROWSER_HTML_APP "Include HTML App in seperate plugin." OFF)
+option(PLUGIN_WEBKITBROWSER_LIGHTNING_APP "Include Lightning App in seperate plugin." OFF)
 
 option(PLUGIN_WEBKITBROWSER_ENABLE_JIT "Enable the use of JIT javascript optimalization" ON)
 option(PLUGIN_WEBKITBROWSER_ENABLE_DFG "Enable the use of DFG javascript optimalization" ON)
@@ -42,11 +48,49 @@ set(PLUGIN_WEBKITBROWSER_WINDOWCLOSE false CACHE STRING "Allow window close")
 set(PLUGIN_WEBKITBROWSER_WEBGL true CACHE STRING "Enable WebGL")
 set(PLUGIN_WEBKITBROWSER_RESOLUTION "720p" CACHE STRING "Browser resolution")
 set(PLUGIN_WEBKITBROWSER_THREADEDPAINTING "1" CACHE STRING "Threads for the Threaded Painting")
+set(PLUGIN_WEBKITBROWSER_WEBINSPECTOR_ADDRESS 0.0.0.0:9224 CACHE STRING "IP:Port for WebInspector of WebKitBrowser")
+set(PLUGIN_WEBKITBROWSER_LOCALSTORAGE_ENABLE true CACHE STRING "Enable LocalStorage of WebKitBrowser")
+
+set(PLUGIN_YOUTUBE_AUTOSTART false CACHE STRING "Automatically start Youtube plugin")
 set(PLUGIN_YOUTUBE_USERAGENT ${PLUGIN_WEBKITBROWSER_USERAGENT} CACHE STRING "User agent string YouTube")
+set(PLUGIN_YOUTUBE_WEBINSPECTOR_ADDRESS 0.0.0.0:9999 CACHE STRING "IP:Port for WebInspector of YouTube")
+set(PLUGIN_YOUTUBE_LOCALSTORAGE_ENABLE true CACHE STRING "Enable LocalStorage of YouTube App")
+
 set(PLUGIN_UX_AUTOSTART false CACHE STRING "Automatically start UX plugin")
 set(PLUGIN_UX_USERAGENT ${PLUGIN_WEBKITBROWSER_USERAGENT} CACHE STRING "User agent string for UX")
+set(PLUGIN_UX_WEBINSPECTOR_ADDRESS 0.0.0.0:10000 CACHE STRING "IP:Port for WebInspector of UX")
+set(PLUGIN_UX_LOCALSTORAGE_ENABLE true CACHE STRING "Enable LocalStorage of UX")
+
 set(PLUGIN_APPS_AUTOSTART false CACHE STRING "Automatically start Apps plugin")
 set(PLUGIN_APPS_USERAGENT ${PLUGIN_WEBKITBROWSER_USERAGENT} CACHE STRING "User agent string for Apps")
+set(PLUGIN_APPS_WEBINSPECTOR_ADDRESS 0.0.0.0:10001 CACHE STRING "IP:Port for WebInspector of Apps")
+set(PLUGIN_APPS_LOCALSTORAGE_ENABLE true CACHE STRING "Enable LocalStorage of Apps")
+
+set(PLUGIN_RESIDENT_APP_AUTOSTART false CACHE STRING "Automatically start Resident App plugin")
+set(PLUGIN_RESIDENT_APP_USERAGENT ${PLUGIN_WEBKITBROWSER_USERAGENT} CACHE STRING "User agent string for Resident App")
+set(PLUGIN_RESIDENT_APP_WEBINSPECTOR_ADDRESS :::10000 CACHE STRING "IP:Port for WebInspector of Resident App")
+set(PLUGIN_RESIDENT_APP_STARTURL "about:blank" CACHE STRING "Initial URL for Resident App plugin")
+set(PLUGIN_RESIDENT_APP_LOCALSTORAGE_ENABLE true CACHE STRING "Enable LocalStorage of Resident App")
+
+set(PLUGIN_SEARCH_AND_DISCOVERY_APP_AUTOSTART false CACHE STRING "Automatically start Search&Discovery App plugin")
+set(PLUGIN_SEARCH_AND_DISCOVERY_APP_USERAGENT ${PLUGIN_WEBKITBROWSER_USERAGENT} CACHE STRING "User agent string for Search&Discovery App")
+set(PLUGIN_SEARCH_AND_DISCOVERY_APP_WEBINSPECTOR_ADDRESS :::10003 CACHE STRING "IP:Port for WebInspector of Search&Discovery App")
+set(PLUGIN_SEARCH_AND_DISCOVERY_APP_LOCALSTORAGE_ENABLE false CACHE STRING "Enable LocalStorage of Search&Discovery App")
+
+set(PLUGIN_HTML_APP_AUTOSTART false CACHE STRING "Automatically start Htmp App plugin")
+set(PLUGIN_HTML_APP_USERAGENT ${PLUGIN_WEBKITBROWSER_USERAGENT} CACHE STRING "User agent string for Html App")
+set(PLUGIN_HTML_APP_WEBINSPECTOR_ADDRESS :::10001 CACHE STRING "IP:Port for WebInspector of Html App")
+set(PLUGIN_HTML_APP_LOCALSTORAGE_ENABLE false CACHE STRING "Enable LocalStorage of Html App")
+
+set(PLUGIN_LIGHTNING_APP_AUTOSTART false CACHE STRING "Automatically start Lightninig App plugin")
+set(PLUGIN_LIGHTNING_APP_USERAGENT ${PLUGIN_WEBKITBROWSER_USERAGENT} CACHE STRING "User agent string for Lightning App")
+set(PLUGIN_LIGHTNING_APP_WEBINSPECTOR_ADDRESS :::10002 CACHE STRING "IP:Port for WebInspector of Lightning App")
+set(PLUGIN_LIGHTNING_APP_LOCALSTORAGE_ENABLE false CACHE STRING "Enable LocalStorage of Lightning App")
+
+set(PLUGIN_AMAZON_AUTOSTART false CACHE STRING "Automatically start Amazon plugin")
+set(PLUGIN_AMAZON_USERAGENT ${PLUGIN_WEBKITBROWSER_USERAGENT} CACHE STRING "User agent string for Amazon App")
+set(PLUGIN_AMAZON_WEBINSPECTOR_ADDRESS 0.0.0.0:9999 CACHE STRING "IP:Port for WebInspector of Amazon")
+set(PLUGIN_AMAZON_LOCALSTORAGE_ENABLE true CACHE STRING "Enable LocalStorage of Amazon")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -99,8 +143,10 @@ target_include_directories(${MODULE_NAME}
         ${WPE_BACKEND_INCLUDE_DIRS}
         ${WPE_WEBKIT_INCLUDE_DIRS}
         ${WPE_WEBKIT_INCLUDE_DIRS}/WPE
+        ${GLIB_INCLUDE_DIRS}
+        #${CMAKE_CURRENT_SOURCE_DIR}
         ${LIBSOUP_INCLUDE_DIRS}
-        ${GLIB_INCLUDE_DIRS})
+)
 
 if(WPE_WEBKIT_DEPRECATED_API)
     target_compile_definitions(${MODULE_NAME} PRIVATE WPE_WEBKIT_DEPRECATED_API=${WPE_WEBKIT_DEPRECATED_API})
@@ -147,7 +193,27 @@ if(PLUGIN_WEBKITBROWSER_APPS)
     write_config( Apps )
 endif()
 
-# youtube configuration
+# UX configuration
 if(PLUGIN_WEBKITBROWSER_UX)
     write_config( UX )
+endif()
+
+# Resident App configuration
+if(PLUGIN_WEBKITBROWSER_RESIDENT_APP)
+    write_config( ResidentApp )
+endif()
+
+# Search&Discovery configuration
+if(PLUGIN_WEBKITBROWSER_SEARCH_AND_DISCOVERY_APP)
+    write_config( SearchAndDiscoveryApp )
+endif()
+
+# Html App configuration
+if(PLUGIN_WEBKITBROWSER_HTML_APP)
+    write_config( HtmlApp )
+endif()
+
+# Lightning App configuration
+if(PLUGIN_WEBKITBROWSER_LIGHTNING_APP)
+    write_config( LightningApp )
 endif()

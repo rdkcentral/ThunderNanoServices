@@ -189,8 +189,10 @@ namespace Plugin {
         , _preferred()
         , _discoverCallback(discoverCallback)
         , _claimCallback(claimCallback)
-        , _unleasedOffers()
+        , _leaseExpiredCallback(leaseExpiredCallback)
         , _leasedOffer()
+        , _unleasedOffers()
+        , _activity(*this)
     {
         Core::AdapterIterator adapters(_interfaceName);
 
@@ -203,6 +205,7 @@ namespace Plugin {
 
     /* virtual */ DHCPClientImplementation::~DHCPClientImplementation()
     {
+        _activity.Revoke();
         SocketDatagram::Close(Core::infinite);
     }
 
