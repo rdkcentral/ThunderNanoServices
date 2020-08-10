@@ -317,7 +317,7 @@ namespace Plugin {
             uint64_t availableSize = 0;
             Core::Partition path(_destination.c_str());
             if (path.IsValid()) {
-                availableSize = path.Size();
+                availableSize = path.Free();
             }
 
             return availableSize;

@@ -34,6 +34,7 @@ namespace Plugin {
     {
         Register<UpgradeParamsData,void>(_T("upgrade"), &FirmwareControl::endpoint_upgrade, this);
         Property<Core::JSON::EnumType<StatusType>>(_T("status"), &FirmwareControl::get_status, nullptr, this);
+        Property<Core::JSON::DecUInt64>(_T("downloadsize"), &FirmwareControl::get_downloadsize, nullptr, this);
     }
 
     void FirmwareControl::UnregisterAll()
@@ -154,7 +155,7 @@ namespace Plugin {
         params.Error = error;
         params.Progress = progress;
 
-        TRACE(Trace::Information, (_T("status = [%s] error = [%s] progresse = [%d]\n"),
+        TRACE(Trace::Information, (_T("status = [%s] error = [%s] progress = [%d]\n"),
               Core::EnumerateType<JsonData::FirmwareControl::StatusType>(status).Data(),
               Core::EnumerateType<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(error).Data(),
               progress));
