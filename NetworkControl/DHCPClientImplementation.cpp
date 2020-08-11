@@ -179,7 +179,7 @@ namespace Plugin {
         static constexpr uint16_t PROTOCOL_UDP = 17;
     };
 
-    DHCPClientImplementation::DHCPClientImplementation(const string& interfaceName, DiscoverCallback discoverCallback, RequestCallback claimCallback)
+    DHCPClientImplementation::DHCPClientImplementation(const string& interfaceName, DiscoverCallback discoverCallback, RequestCallback claimCallback, LeaseExpiredCallback leaseExpiredCallback)
         : Core::SocketDatagram(false, DHCPIPPacket::BroadcastNode(interfaceName), DHCPIPPacket::BroadcastNode(interfaceName), 512, 1024)
         , _adminLock()
         , _interfaceName(interfaceName)
