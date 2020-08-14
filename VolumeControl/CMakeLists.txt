@@ -25,6 +25,8 @@ find_package(BCM_HOST QUIET)
 find_package(NEXUS QUIET)
 find_package(NXCLIENT QUIET)
 
+option(RDK_AUDIO_HAL "Link against the RDK audio client" OFF)
+
 add_library(${MODULE_NAME} SHARED
     VolumeControl.cpp
     VolumeControlImplementation.cpp
@@ -54,6 +56,18 @@ elseif (BCM_HOST_FOUND)
     target_sources(${MODULE_NAME}
         PRIVATE
             Stub/VolumeControlPlatform.cpp)
+elseif (RDK_AUDIO_HAL)
+    
+    find_library(AUDIO_CLIENT
+        NAMES audio_client)
+
+    target_link_libraries(${MODULE_NAME}
+        PRIVATE
+            ${AUDIO_CLIENT})
+    target_sources(${MODULE_NAME}
+        PRIVATE
+            AMLogic/VolumeControlPlatform.cpp)
+            
 else ()
     message("Using STUB Volume control platform")
     target_sources(${MODULE_NAME}
