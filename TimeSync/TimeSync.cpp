@@ -82,6 +82,7 @@ namespace Plugin {
     {
         Core::IWorkerPool::Instance().Revoke(_activity);
         _sink.Deinitialize();
+        _service->SetSubsystem(PluginHost::ISubSystem::NOT_TIME, nullptr);
 
         ASSERT(_service != nullptr);
         _service->Release();
@@ -194,16 +195,7 @@ namespace Plugin {
     void TimeSync::EnsureSubsystemIsActive()
     {
         ASSERT(_service != nullptr);
-        PluginHost::ISubSystem* subSystem = _service->SubSystems();
-        ASSERT(subSystem != nullptr);
-
-        if (subSystem != nullptr) {
-            if (subSystem->IsActive(PluginHost::ISubSystem::TIME) == false) {
-                subSystem->Set(PluginHost::ISubSystem::TIME, _client);
-            }
-
-            subSystem->Release();
-        }
+        _service->SetSubsystem(PluginHost::ISubSystem::TIME, _client);
     }
 
 } // namespace Plugin

@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "DeviceIdentification.h"
 #include "IdentityProvider.h"
 
@@ -43,7 +43,7 @@ namespace Plugin {
             } else {
                 _deviceId = GetDeviceId();
                 if (_deviceId.empty() != true) {
-                    service->SubSystems()->Set(PluginHost::ISubSystem::IDENTIFIER, _device);
+                    service->SetSubsystem(PluginHost::ISubSystem::IDENTIFIER, _device);
                 }
             }
         }
@@ -63,7 +63,7 @@ namespace Plugin {
         ASSERT(_identifier != nullptr);
         if (_identifier != nullptr) {
             if (_deviceId.empty() != true) {
-                service->SubSystems()->Set(PluginHost::ISubSystem::IDENTIFIER, nullptr);
+                service->SetSubsystem(PluginHost::ISubSystem::NOT_IDENTIFIER, nullptr);
                 _deviceId.clear();
             }
             _identifier->Release();

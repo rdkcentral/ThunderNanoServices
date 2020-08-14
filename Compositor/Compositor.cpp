@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "Compositor.h"
 #include <interfaces/IInputSwitch.h>
 
@@ -26,7 +26,7 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(Compositor, 1, 0);
 
-    static string PrimaryName(const string& layerName) 
+    static string PrimaryName(const string& layerName)
     {
         size_t pos = layerName.find(':', 0);
         if (pos != string::npos) {
@@ -85,23 +85,23 @@ namespace Plugin {
             std::list<client_info>::iterator loop(list.begin());
 
             while (loop != list.end()) {
-                if (start != 0) { 
-                    start--; 
-                    loop++; 
+                if (start != 0) {
+                    start--;
+                    loop++;
                 }
-                else if (end   != 0) { 
-                    end--; 
-                    set.push_back(*loop); 
-                    loop = list.erase(loop); 
+                else if (end   != 0) {
+                    end--;
+                    set.push_back(*loop);
+                    loop = list.erase(loop);
                 }
-                else { 
-                    loop = list.erase(loop); 
+                else {
+                    loop = list.erase(loop);
                 }
             }
 
             // Now push the safed entries in front, in the same order :-)
             set.splice(set.end(), list);
-                
+
             SetZOrderList(set, index);
         }
         else {
@@ -109,20 +109,20 @@ namespace Plugin {
 
             // Moving the callsign down in the order
             std::list<client_info>::iterator loop(list.begin());
-               
+
             while (loop != list.end()) {
-                if (end != 0) { 
+                if (end != 0) {
                     end--;
                     location--;
                     set.push_back(*loop);
-                    loop = list.erase(loop); 
+                    loop = list.erase(loop);
                 }
-                else if (location != 0) { 
-                    location--; 
+                else if (location != 0) {
+                    location--;
                     loop++;
                 }
                 else {
-                    loop = list.erase(loop); 
+                    loop = list.erase(loop);
                 }
             }
 
@@ -204,15 +204,8 @@ namespace Plugin {
         ASSERT(service == _service);
 
         // We would actually need to handle setting the Graphics event in the CompositorImplementation. For now, we do it here.
-        PluginHost::ISubSystem* subSystems = _service->SubSystems();
-
-        ASSERT(subSystems != nullptr);
-
-        if (subSystems != nullptr) {
-            // Set Graphics event. We need to set up a handler for this at a later moment
-            subSystems->Set(PluginHost::ISubSystem::NOT_GRAPHICS, nullptr);
-            subSystems->Release();
-        }
+        // Set Graphics event. We need to set up a handler for this at a later moment
+        _service->SetSubsystem(PluginHost::ISubSystem::NOT_GRAPHICS, nullptr);
 
         if (_inputSwitch != nullptr) {
             _inputSwitch->Release();
@@ -365,7 +358,7 @@ namespace Plugin {
                                 error = Geometry(clientName, rectangle);
                             } else if (index.Current() == _T("Top")) { /* http://<ip>/Service/Compositor/Netflix/Top */
                                 error = ToTop(clientName);
-                            } 
+                            }
 
                             if (error != Core::ERROR_NONE && result->ErrorCode == Web::STATUS_OK) {
                                 if (error == Core::ERROR_UNAVAILABLE) {
@@ -437,7 +430,7 @@ namespace Plugin {
         if (it != _clients.end()) {
 
             Exchange::IComposition::IClient* removedclient = it->second;
-            
+
             TRACE(Trace::Information, (_T("Client %s detached"), it->first.c_str()));
             _clients.erase(it);
 
@@ -492,7 +485,7 @@ namespace Plugin {
                     zOrderedList.push_back(layerName);
                 }
             }
-                
+
             loop++;
         }
 
@@ -644,9 +637,9 @@ namespace Plugin {
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
- 
+
         _adminLock.Unlock();
- 
+
         return (result);
     }
 

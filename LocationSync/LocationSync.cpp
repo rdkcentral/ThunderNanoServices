@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "LocationSync.h"
 
 namespace WPEFramework {
@@ -73,6 +73,8 @@ namespace Plugin {
         ASSERT(_service == service);
 
         _sink.Deinitialize();
+        service->SetSubsystem(PluginHost::ISubSystem::NOT_INTERNET, _sink.Network());
+        service->SetSubsystem(PluginHost::ISubSystem::NOT_LOCATION, _sink.Location());
     }
 
     /* virtual */ string LocationSync::Information() const
@@ -138,20 +140,12 @@ namespace Plugin {
 
     void LocationSync::SyncedLocation()
     {
-        PluginHost::ISubSystem* subSystem = _service->SubSystems();
+        _service->SetSubsystem(PluginHost::ISubSystem::INTERNET, _sink.Network());
+        _service->SetSubsystem(PluginHost::ISubSystem::LOCATION, _sink.Location());
 
-        ASSERT(subSystem != nullptr);
-
-        if (subSystem != nullptr) {
-
-            subSystem->Set(PluginHost::ISubSystem::INTERNET, _sink.Network());
-            subSystem->Set(PluginHost::ISubSystem::LOCATION, _sink.Location());
-            subSystem->Release();
-
-            if ((_sink.Location() != nullptr) && (_sink.Location()->TimeZone().empty() == false)) {
-                Core::SystemInfo::SetEnvironment(_T("TZ"), _sink.Location()->TimeZone());
-                event_locationchange();
-            }
+        if ((_sink.Location() != nullptr) && (_sink.Location()->TimeZone().empty() == false)) {
+            Core::SystemInfo::SetEnvironment(_T("TZ"), _sink.Location()->TimeZone());
+            event_locationchange();
         }
     }
 

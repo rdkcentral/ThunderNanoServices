@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "SecurityAgent.h"
 #include "SecurityContext.h"
 
@@ -114,20 +114,8 @@ namespace Plugin {
             }
         }
 
-        PluginHost::ISubSystem* subSystem = service->SubSystems();
-
-        ASSERT(subSystem != nullptr);
-
-        if (subSystem != nullptr) {
-            Core::Sink<SecurityCallsign> information(service->Callsign());
-
-            if (subSystem->IsActive(PluginHost::ISubSystem::SECURITY) != false) {
-                SYSLOG(Logging::Startup, (_T("Security is not defined as External !!")));
-            } 
-
-            subSystem->Set(PluginHost::ISubSystem::SECURITY, &information);
-            subSystem->Release();
-        }
+        Core::Sink<SecurityCallsign> information(service->Callsign());
+        service->SetSubsystem(PluginHost::ISubSystem::SECURITY, &information);
 
         ASSERT(_dispatcher == nullptr);
 
@@ -144,17 +132,9 @@ namespace Plugin {
 
     /* virtual */ void SecurityAgent::Deinitialize(PluginHost::IShell* service)
     {
-        PluginHost::ISubSystem* subSystem = service->SubSystems();
-
-        ASSERT(subSystem != nullptr);
-
         delete _dispatcher;
         _dispatcher = nullptr;
-
-        if (subSystem != nullptr) {
-            subSystem->Set(PluginHost::ISubSystem::NOT_SECURITY, nullptr);
-            subSystem->Release();
-        }
+        service->SetSubsystem(PluginHost::ISubSystem::NOT_SECURITY, nullptr);
         _acl.Clear();
     }
 
@@ -209,7 +189,7 @@ namespace Plugin {
 
         index.Next();
 
-		if (index.Next() == true) {
+        if (index.Next() == true) {
             // We might be receiving a plugin download request.
             #ifdef SECURITY_TESTING_MODE
             if ((request.Verb == Web::Request::HTTP_PUT) && (request.HasBody() == true)) {
@@ -231,7 +211,7 @@ namespace Plugin {
                     }
                 }
             } else
-            #endif      
+            #endif
 
             if ( (request.Verb == Web::Request::HTTP_GET) && (index.Current() == _T("Valid")) ) {
                 result->ErrorCode = Web::STATUS_FORBIDDEN;
@@ -258,11 +238,11 @@ namespace Plugin {
                             TRACE(Trace::Information, (_T("Token contents: %s"), reinterpret_cast<const TCHAR*>(payload)));
                         }
                     }
-                
-				}
+
+                }
             }
         }
-		return (result);
+        return (result);
     }
 
 } // namespace Plugin

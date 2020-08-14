@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "WebServer.h"
 
 namespace WPEFramework {
@@ -75,16 +75,7 @@ namespace Plugin {
                     ASSERT(_memory != nullptr);
                 }
 
-                PluginHost::ISubSystem* subSystem = service->SubSystems();
-
-                if (subSystem != nullptr) {
-                    if (subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
-                        SYSLOG(Logging::Startup, (_T("WebSource is not defined as External !!")));
-                    } else {
-                        subSystem->Set(PluginHost::ISubSystem::WEBSOURCE, nullptr);
-                    }
-                    subSystem->Release();
-                }
+                _service->SetSubsystem(PluginHost::ISubSystem::WEBSOURCE, nullptr);
             }
         }
 
@@ -125,13 +116,7 @@ namespace Plugin {
             }
         }
 
-        PluginHost::ISubSystem* subSystem = service->SubSystems();
-
-        if (subSystem != nullptr) {
-            ASSERT(subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true);
-            subSystem->Set(PluginHost::ISubSystem::NOT_WEBSOURCE, nullptr);
-            subSystem->Release();
-        }
+        _service->SetSubsystem(PluginHost::ISubSystem::NOT_WEBSOURCE, nullptr);
 
         _memory = nullptr;
         _server = nullptr;

@@ -139,12 +139,7 @@ namespace Plugin {
                 SYSLOG(Logging::Startup, (_T("%s StaticAddress:     %s"), supported.HasStaticAddress() ? _T("[true] ") : _T("[false]"), actuals.HasStaticAddress() ? _T("on") : _T("off")));
 
                 // Bluetooth is ready!
-                PluginHost::ISubSystem* subSystems(_service->SubSystems());
-                ASSERT(subSystems != nullptr);
-                if (subSystems != nullptr) {
-                    subSystems->Set(PluginHost::ISubSystem::BLUETOOTH, nullptr);
-                    subSystems->Release();
-                }
+                _service->SetSubsystem(PluginHost::ISubSystem::BLUETOOTH, nullptr);
             }
         }
 
@@ -155,12 +150,7 @@ namespace Plugin {
     {
         ASSERT(_service == service);
 
-        PluginHost::ISubSystem* subSystems(_service->SubSystems());
-        ASSERT(subSystems != nullptr);
-        if (subSystems != nullptr) {
-            subSystems->Set(PluginHost::ISubSystem::NOT_BLUETOOTH, nullptr);
-            subSystems->Release();
-        }
+        _service->SetSubsystem(PluginHost::ISubSystem::NOT_BLUETOOTH, nullptr);
 
         // Deinitialize what we initialized..
         _service = nullptr;

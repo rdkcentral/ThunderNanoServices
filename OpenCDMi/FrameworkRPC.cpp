@@ -108,8 +108,8 @@ namespace Plugin {
 
         public:
             ExternalAccess(
-                const Core::NodeId& source, 
-                ::OCDM::IAccessorOCDM* parentInterface, 
+                const Core::NodeId& source,
+                ::OCDM::IAccessorOCDM* parentInterface,
                 const Core::ProxyType<RPC::InvokeServer> & engine)
                 : RPC::Communicator(source, _T(""), Core::ProxyType<Core::IIPCServer>(engine))
                 , _parentInterface(parentInterface)
@@ -700,8 +700,8 @@ namespace Plugin {
 
                      // OKe we got a buffer machanism to transfer the raw data, now create
                      // the session.
-                     if (system->CreateMediaKeySession(keySystem, licenseType, 
-                                        initDataType.c_str(), initData, initDataLength, 
+                     if (system->CreateMediaKeySession(keySystem, licenseType,
+                                        initDataType.c_str(), initData, initDataLength,
                                         CDMData, CDMDataLength, &sessionInterface) == 0)
                      {
                          if (sessionInterface != nullptr)
@@ -712,7 +712,7 @@ namespace Plugin {
                              if (_administrator.AquireBuffer(bufferId) == true)
                              {
 
-                                 SessionImplementation *newEntry = 
+                                 SessionImplementation *newEntry =
                                     Core::Service<SessionImplementation>::Create<SessionImplementation>(this,
                                                  keySystem, sessionInterface,
                                                  callback, bufferId, _defaultSize, &keyIds);
@@ -723,7 +723,7 @@ namespace Plugin {
                                  _adminLock.Lock();
 
                                  _sessionList.push_front(newEntry);
-                                
+
                                 if(false == keyIds.IsEmpty())
                                 {
                                     CommonEncryptionData::Iterator index(keyIds.Keys());
@@ -1077,11 +1077,6 @@ namespace Plugin {
         {
             uint32_t result = Core::ERROR_OPENING_FAILED;
 
-            // On activation subscribe, on deactivation un-subscribe
-            PluginHost::ISubSystem* subSystem = service->SubSystems();
-
-            ASSERT(subSystem != nullptr);
-
             // Start loading the configured factories
             Config config;
             config.FromString(service->ConfigLine());
@@ -1171,14 +1166,10 @@ namespace Plugin {
                     _service = nullptr;
                     _entryPoint = nullptr;
                 } else {
-                    if (subSystem != nullptr) {
+                    // Announce the port on which we are listening
+                    Core::SystemInfo::SetEnvironment(_T("OPEN_CDM_SERVER"), config.Connector.Value(), true);
 
-                        // Announce the port on which we are listening
-                        Core::SystemInfo::SetEnvironment(_T("OPEN_CDM_SERVER"), config.Connector.Value(), true);
-
-                        ASSERT(subSystem->IsActive(PluginHost::ISubSystem::DECRYPTION) == false);
-                        subSystem->Set(PluginHost::ISubSystem::DECRYPTION, this);
-                    }
+                    service->SetSubsystem(PluginHost::ISubSystem::DECRYPTION, this);
                     if (_systemToFactory.size() == 0) {
                         SYSLOG(Logging::Startup, (string(_T("OCDM server has NO key systems registered!!!"))));
                     }
@@ -1194,12 +1185,12 @@ namespace Plugin {
             while (factory != _systemToFactory.end()) {
                 std::list<CDMi::ISystemFactory*>::iterator index(std::find(deinitialized.begin(), deinitialized.end(), factory->second.Factory));
 
-                if(index == deinitialized.end()){ 
+                if(index == deinitialized.end()){
                     TRACE_L1("Deinitializing factory(%p) for key system %s", factory->second.Factory, factory->second.Factory->KeySystem());
                     factory->second.Factory->Deinitialize(service);
                     deinitialized.push_back(factory->second.Factory);
                 }
-                
+
                 factory++;
             }
         }

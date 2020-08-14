@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "Module.h"
 
 #ifndef NEXUS_SERVER_EXTERNAL
@@ -441,28 +441,21 @@ namespace Plugin {
             if (_delay != nullptr)
                 Resolution(_displayFormat);
 
-            PluginHost::ISubSystem* subSystems(_service->SubSystems());
+            // Set Graphics event. We need to set up a handler for this at a later moment
+            _service->SetSubsystem(PluginHost::ISubSystem::PLATFORM, nullptr);
+            _service->SetSubsystem(PluginHost::ISubSystem::GRAPHICS, nullptr);
 
-            ASSERT(subSystems != nullptr);
-
-            if (subSystems != nullptr) {
-                // Set Graphics event. We need to set up a handler for this at a later moment
-                subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
-                subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
-                subSystems->Release();
-
-                // Now the platform is ready we should Join it as well, since we
-                // will do generic (not client related) stuff as well.
+            // Now the platform is ready we should Join it as well, since we
+            // will do generic (not client related) stuff as well.
 #ifndef NEXUS_SERVER_EXTERNAL
-                if ((_nxserver != nullptr) && (Join() != true)) {
-                    TRACE(Trace::Information, (_T("Could not Join the started NXServer.")));
-                }
-#else
-                if (Join() != true) {
-                    TRACE(Trace::Information, (_T("Could not Join the NXServer.")));
-                }
-#endif
+            if ((_nxserver != nullptr) && (Join() != true)) {
+                TRACE(Trace::Information, (_T("Could not Join the started NXServer.")));
             }
+#else
+            if (Join() != true) {
+                TRACE(Trace::Information, (_T("Could not Join the NXServer.")));
+            }
+#endif
         }
         inline void HardwareDelay(const uint16_t time, Exchange::IComposition::ScreenResolution format)
         {

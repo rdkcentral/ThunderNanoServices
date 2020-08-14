@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "Streamer.h"
 
 namespace WPEFramework {
@@ -50,17 +50,7 @@ namespace Plugin {
         if ((_player != nullptr) && (_service != nullptr)) {
             TRACE(Trace::Information, (_T("Successfully instantiated Streamer")));
             _player->Configure(_service);
-
-            PluginHost::ISubSystem* subSystem = service->SubSystems();
-            if (subSystem != nullptr) {
-                if (subSystem->IsActive(PluginHost::ISubSystem::STREAMING) == true) {
-                    SYSLOG(Logging::Startup, (_T("Streamer is not defined as External !!")));
-                } else {
-                    subSystem->Set(PluginHost::ISubSystem::STREAMING, nullptr);
-                }
-                subSystem->Release();
-            }
-
+            _service->SetSubsystem(PluginHost::ISubSystem::STREAMING, nullptr);
         } else {
             TRACE(Trace::Error, (_T("Streamer could not be initialized.")));
             message = _T("Streamer could not be initialized.");
@@ -94,12 +84,7 @@ namespace Plugin {
             }
         }
 
-        PluginHost::ISubSystem* subSystem = service->SubSystems();
-        if (subSystem != nullptr) {
-            ASSERT(subSystem->IsActive(PluginHost::ISubSystem::STREAMING) == true);
-            subSystem->Set(PluginHost::ISubSystem::NOT_STREAMING, nullptr);
-            subSystem->Release();
-        }
+        _service->SetSubsystem(PluginHost::ISubSystem::NOT_STREAMING, nullptr);
         _player = nullptr;
         _service = nullptr;
     }

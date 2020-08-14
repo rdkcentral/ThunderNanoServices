@@ -86,9 +86,9 @@ namespace Plugin {
 
     /* virtual */ const string OCDM::Initialize(PluginHost::IShell* service)
     {
-		#ifdef __WINDOWS__
+        #ifdef __WINDOWS__
         ForceLinkingOfOpenCDM();
-		#endif
+        #endif
 
         string message;
 
@@ -162,15 +162,7 @@ namespace Plugin {
             }
         }
 
-        PluginHost::ISubSystem* subSystem = service->SubSystems();
-
-        ASSERT(subSystem != nullptr);
-
-        if (subSystem != nullptr) {
-            ASSERT(subSystem->IsActive(PluginHost::ISubSystem::DECRYPTION) == true);
-            subSystem->Set(PluginHost::ISubSystem::NOT_DECRYPTION, nullptr);
-            subSystem->Release();
-        }
+        service->SetSubsystem(PluginHost::ISubSystem::NOT_DECRYPTION, nullptr);
 
         // Deinitialize what we initialized..
         _memory = nullptr;

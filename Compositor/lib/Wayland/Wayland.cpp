@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "Wayland.h"
 #ifdef ENABLE_NXSERVER
 #include "NexusServer/Settings.h"
@@ -127,18 +127,18 @@ namespace Plugin {
                     _surface.Visibility(value == Exchange::IComposition::maxOpacity);
                 }
                 else
-                {  
+                {
                     _surface.Opacity(value);
                 }
             }
-            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override 
+            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override
             {
                 _rectangle = rectangle;
                 _surface.Resize(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
 
                 return (Core::ERROR_NONE);
             }
-            Exchange::IComposition::Rectangle Geometry() const override 
+            Exchange::IComposition::Rectangle Geometry() const override
             {
                 return (_rectangle);
             }
@@ -500,13 +500,7 @@ namespace Plugin {
         {
             ASSERT(_service != nullptr);
 
-            PluginHost::ISubSystem* subSystems = _service->SubSystems();
-
-            ASSERT(subSystems != nullptr);
-
-            if (subSystems != nullptr) {
-                subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
-            }
+            _service->SetSubsystem(PluginHost::ISubSystem::PLATFORM, nullptr);
 
             // As there are currently two flavors of the potential Wayland Compositor Implementations, e.g.
             // Westeros and Weston, we do not want to decide here which one we instantiate. We have given both
@@ -534,14 +528,8 @@ namespace Plugin {
 
                 TRACE(Trace::Information, (_T("Compositor initialized\n")));
 
-                if (subSystems != nullptr) {
-                    // Set Graphics event. We need to set up a handler for this at a later moment
-                    subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
-                }
-            }
-
-            if (subSystems != nullptr) {
-                subSystems->Release();
+                // Set Graphics event. We need to set up a handler for this at a later moment
+                _service->SetSubsystem(PluginHost::ISubSystem::GRAPHICS, nullptr);
             }
         }
 

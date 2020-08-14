@@ -235,6 +235,7 @@ namespace Plugin
             index++;
         }
 
+        _service->SetSubsystem(PluginHost::ISubSystem::NOT_NETWORK, nullptr);
         _dns.clear();
         _dhcpInterfaces.clear();
         _interfaces.clear();
@@ -393,7 +394,7 @@ namespace Plugin
                     addIt = true;
                 } else {
                     Core::IPV4AddressIterator checker(adapter.IPV4Addresses());
-                    while ((checker.Next() == true) && (checker.Address() != ipAddress)) {   
+                    while ((checker.Next() == true) && (checker.Address() != ipAddress)) {
                         /* INTENTINALLY LEFT EMPTY */
                     }
 
@@ -405,7 +406,7 @@ namespace Plugin
                     addIt = true;
                 } else {
                     Core::IPV6AddressIterator checker(adapter.IPV6Addresses());
-                    while ((checker.Next() == true) && (checker.Address() != ipAddress)) {   
+                    while ((checker.Next() == true) && (checker.Address() != ipAddress)) {
                         /* INTENTINALLY LEFT EMPTY */
                     }
 
@@ -426,28 +427,21 @@ namespace Plugin
 
             Core::AdapterIterator::Flush();
 
-            PluginHost::ISubSystem* subSystem = _service->SubSystems();
-            ASSERT(subSystem != nullptr);
-
-            if (subSystem != nullptr) {
-                if ((subSystem->IsActive(PluginHost::ISubSystem::NETWORK) == false) && (ipAddress.IsLocalInterface() == false)) {
-                    subSystem->Set(PluginHost::ISubSystem::NETWORK, nullptr);
-                }
-
-                subSystem->Release();
+            if (ipAddress.IsLocalInterface() == false) {
+                _service->SetSubsystem(PluginHost::ISubSystem::NETWORK, nullptr);
             }
 
             string message(string("{ \"interface\": \"") + adapter.Name() + string("\", \"status\":0, \"ip\":\"" + ipAddress.HostAddress() + "\" }"));
             TRACE(Trace::Information, (_T("DHCP Request set on: %s"), adapter.Name().c_str()));
 
-            _service->Notify(message); 
+            _service->Notify(message);
         }
 
         return (Core::ERROR_NONE);
     }
 
     /* Saves leased offer to file */
-    void NetworkControl::DHCPEngine::SaveLeases() 
+    void NetworkControl::DHCPEngine::SaveLeases()
     {
         if (_leaseFilePath.empty() == false) {
             Core::File leaseFile(_leaseFilePath);
@@ -460,7 +454,7 @@ namespace Plugin
 
                 if (lease.IElement::ToFile(leaseFile) == false) {
                     TRACE(Trace::Warning, ("Error occured while trying to save dhcp lease to file!"));
-                } 
+                }
 
                 leaseFile.Close();
             } else {
@@ -468,12 +462,12 @@ namespace Plugin
             }
         }
     }
-    
+
     /*
-        Loads list of previously saved offers and adds it to unleased list 
+        Loads list of previously saved offers and adds it to unleased list
         for requesting in future.
     */
-    bool NetworkControl::DHCPEngine::LoadLeases() 
+    bool NetworkControl::DHCPEngine::LoadLeases()
     {
         bool result = false;
 
@@ -521,8 +515,8 @@ namespace Plugin
                 std::map<const string, Core::ProxyType<DHCPEngine>>::iterator entry(_dhcpInterfaces.find(interfaceName));
 
                 Core::AdapterIterator interface(interfaceName);
-                if (entry != _dhcpInterfaces.end() 
-                    && interface.IsValid() 
+                if (entry != _dhcpInterfaces.end()
+                    && interface.IsValid()
                     && interface.HasMAC()
                     && interface.IsRunning()) {
 
@@ -710,13 +704,13 @@ namespace Plugin
                 }
 
                 SetIP(adapter, Core::IPNode(offer.Address(), offer.Netmask()), offer.Gateway(), offer.Broadcast(), true);
-                
+
                 // Update leases file
                 entry->second->SaveLeases();
 
                 // We are done for now
                 entry->second->Completed();
-                
+
                 TRACE_L1("New IP Granted for %s:", interfaceName.c_str());
                 TRACE_L1("     Source:    %s", offer.Source().HostAddress().c_str());
                 TRACE_L1("     Address:   %s", offer.Address().HostAddress().c_str());
@@ -730,7 +724,7 @@ namespace Plugin
         }
     }
 
-    void NetworkControl::RequestFailed(const string& interfaceName, const DHCPClientImplementation::Offer& offer) 
+    void NetworkControl::RequestFailed(const string& interfaceName, const DHCPClientImplementation::Offer& offer)
     {
         TRACE(Trace::Information, ("DHCP Request for ip %s failed!\n", offer.Address().HostAddress().c_str()));
 

@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "Module.h"
 
 #include <interfaces/IComposition.h>
@@ -39,9 +39,9 @@ namespace Plugin {
 
         public:
             ExternalAccess(
-                CompositorImplementation& parent, 
-                const Core::NodeId& source, 
-                const string& proxyStubPath, 
+                CompositorImplementation& parent,
+                const Core::NodeId& source,
+                const string& proxyStubPath,
                 const Core::ProxyType<RPC::InvokeServer>& handler)
                 : RPC::Communicator(source,  proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath, Core::ProxyType<Core::IIPCServer>(handler))
                 , _parent(parent)
@@ -167,7 +167,7 @@ namespace Plugin {
 
             if (_externalAccess->IsListening() == true) {
                 PlatformReady();
-                
+
             } else {
                 delete _externalAccess;
                 _externalAccess = nullptr;
@@ -296,13 +296,8 @@ namespace Plugin {
 
         void PlatformReady()
         {
-            PluginHost::ISubSystem* subSystems(_service->SubSystems());
-            ASSERT(subSystems != nullptr);
-            if (subSystems != nullptr) {
-                subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
-                subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
-                subSystems->Release();
-            }
+            _service->SetSubsystem(PluginHost::ISubSystem::PLATFORM, nullptr);
+            _service->SetSubsystem(PluginHost::ISubSystem::GRAPHICS, nullptr);
         }
 
         Exchange::IComposition::Rectangle FindClientRectangle(const string& name) const
