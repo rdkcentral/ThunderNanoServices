@@ -42,12 +42,14 @@ namespace Plugin
 
     WifiControl::WifiControl()
         : _skipURL(0)
+        , _retryInterval(0)
         , _service(nullptr)
         , _configurationStore()
         , _sink(*this)
         , _wpaSupplicant()
         , _controller()
         , _autoConnect(_controller)
+        , _autoConnectEnabled(false)
     {
         RegisterAll();
     }
@@ -119,7 +121,9 @@ namespace Plugin
                         _controller->Scan();
                     }
                     else {
-                        _autoConnect.Connect(config.Preferred.Value(), 30, ~0);
+                        _autoConnectEnabled = true;
+                        _retryInterval = config.RetryInterval.Value();
+                        _autoConnect.Connect(config.Preferred.Value(), _retryInterval, ~0);
                     }
                 }
             }
@@ -329,7 +333,7 @@ namespace Plugin
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Connect started.");
 
-                        _controller->Connect(SSIDDecode(index.Current().Text()));
+                        Connect(SSIDDecode(index.Current().Text()));
                     }
                 } else if (index.Current().Text() == _T("Store")) {
                     Core::File configFile(_configurationStore);
@@ -409,7 +413,7 @@ namespace Plugin
                     if (index.Next() == true) {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Disconnected.");
-                        _controller->Disconnect(SSIDDecode(index.Current().Text()));
+                        Disconnect(SSIDDecode(index.Current().Text()));
                     }
                 }
             }

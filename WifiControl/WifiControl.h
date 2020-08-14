@@ -200,36 +200,40 @@ namespace Plugin {
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
 
+                ASSERT (_controller.IsValid());
+
                 _adminLock.Lock();
 
                 if (_state == states::IDLE) {
 
-                    ASSERT (_controller.IsValid());
-
                     _preferred = SSID;
                     _attempts = attempts;
                     _interval = (scheduleInterval * 1000);
-
-                    MoveState (states::SCANNING);
-
-                    _controller->Scan();
-
-                    result = Core::ERROR_NONE;
-
-                    _job.Schedule(Core::Time::Now().Add(_interval));
+                    result = Scan();
                 }
 
                 _adminLock.Unlock();
 
                 return (result);
             }
-            void SetPreferred(const string& ssid)
+            void SetPreferred(const string& ssid, const uint8_t scheduleInterval, const uint32_t attempts)
             {
                 _adminLock.Lock();
 
                 _preferred.assign(ssid);
+                _attempts = attempts;
+                _interval = (scheduleInterval * 1000);
 
                 _adminLock.Unlock();
+            }
+            inline uint32_t Scan()
+            {
+                MoveState (states::SCANNING);
+
+                _controller->Scan();
+                _job.Schedule(Core::Time::Now().Add(_interval));
+
+                return Core::ERROR_NONE;
             }
             uint32_t Revoke()
             {
@@ -239,6 +243,7 @@ namespace Plugin {
 
                 _attempts = 0;
                 _interval = 0;
+                _controller->Revoke(this);
 
                 _adminLock.Unlock();
 
@@ -260,19 +265,12 @@ namespace Plugin {
             void Disconnected ()
             {
                 _adminLock.Lock();
-
                 WPASupplicant::Controller::reasons reason = _controller->DisconnectReason();
 
                 if ((reason == WPASupplicant::Controller::WLAN_REASON_NOINFO_GIVEN)
                         && (_state == states::IDLE) && (_attempts > 0)) {
-
-                    MoveState(states::SCANNING);
-
-                    _controller->Scan();
-
-                    _job.Schedule(Core::Time::Now().Add(_interval));
+                    Scan();
                 }
-
                 _adminLock.Unlock();
             }
 
@@ -329,6 +327,7 @@ namespace Plugin {
                         _ssidList.pop_front();
                     }
 
+                    _controller->Revoke(this);
                     if (_ssidList.size() == 0) {
                         _state = states::RETRY;
                     }
@@ -355,6 +354,18 @@ namespace Plugin {
                 _adminLock.Unlock();
             }
 
+            void UpdateStatus(const uint32_t result) {
+
+                if ((result != Core::ERROR_NONE) && (result != Core::ERROR_ALREADY_CONNECTED)) {
+                    _adminLock.Lock();
+
+                    _state = states::CONNECTING;
+                    _adminLock.Unlock();
+
+                    _job.Submit();
+                }
+            }
+
         private:
             void MoveState(const states newState) {
                 _state = states::IDLE;
@@ -367,13 +378,14 @@ namespace Plugin {
 
                 _state = newState;
             }
+
             void Completed(const uint32_t result) override {
 
                 _controller->Revoke(this);
 
                 _adminLock.Lock();
 
-                if (result == Core::ERROR_NONE) {
+                if ((result == Core::ERROR_NONE) || (result == Core::ERROR_ALREADY_CONNECTED)) {
 
                     MoveState(states::IDLE);
 
@@ -386,6 +398,7 @@ namespace Plugin {
                 }
                 _adminLock.Unlock();
             }
+
 
         private:
             Core::CriticalSection _adminLock;
@@ -410,12 +423,14 @@ namespace Plugin {
                 , Application(_T("/usr/sbin/wpa_supplicant"))
                 , Preferred()
                 , AutoConnect(false)
+                , RetryInterval(30)
             {
                 Add(_T("connector"), &Connector);
                 Add(_T("interface"), &Interface);
                 Add(_T("application"), &Application);
                 Add(_T("preferred"), &Preferred);
                 Add(_T("autoconnect"), &AutoConnect);
+                Add(_T("retryinterval"), &RetryInterval);
             }
             virtual ~Config()
             {
@@ -427,6 +442,7 @@ namespace Plugin {
             Core::JSON::String Application;
             Core::JSON::String Preferred;
             Core::JSON::Boolean AutoConnect;
+            Core::JSON::DecUInt8 RetryInterval;
         };
 
         static void FillNetworkInfo(const WPASupplicant::Network& info, JsonData::WifiControl::NetworkInfo& net)
@@ -640,6 +656,30 @@ namespace Plugin {
         void event_networkchange();
         void event_connectionchange(const string& ssid);
  
+        inline uint32_t Connect(const string& ssid) {
+
+            if (_autoConnectEnabled == true) {
+                _autoConnect.Revoke();
+            }
+
+            uint32_t result = _controller->Connect(ssid);
+
+            if ((result != Core::ERROR_INPROGRESS) && (_autoConnectEnabled == true)) {
+                _autoConnect.SetPreferred(ssid, _retryInterval, ~0);
+                _autoConnect.UpdateStatus(result);
+            }
+
+            return result;
+        }
+        inline uint32_t Disconnect(const string& ssid) {
+
+            if (_autoConnectEnabled == true) {
+                _autoConnect.Revoke();
+            }
+
+            return _controller->Disconnect(ssid);
+        }
+
         BEGIN_INTERFACE_MAP(WifiControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IWeb)
@@ -648,12 +688,14 @@ namespace Plugin {
 
     private:
         uint8_t _skipURL;
+        uint8_t _retryInterval;
         PluginHost::IShell* _service;
         string _configurationStore;
         Sink _sink;
         WifiDriver _wpaSupplicant;
         Core::ProxyType<WPASupplicant::Controller> _controller;
         AutoConnect _autoConnect;
+        bool _autoConnectEnabled;
     };
 
 } // namespace Plugin

@@ -803,7 +803,7 @@ namespace WPASupplicant {
             uint32_t Invoke(IConnectCallback* callback, const string& ssid, const uint64_t& bssid) {
 
                 uint32_t result = ((bssid == 0) ? Core::ERROR_INCOMPLETE_CONFIG :
-                                  ((_parent.Current().empty() == false) ? Core::ERROR_ALREADY_CONNECTED :
+                                  (((_parent.Current().empty() == false) && (_parent.Current() == ssid)) ? Core::ERROR_ALREADY_CONNECTED :
                                   Core::ERROR_UNKNOWN_KEY));
 
                 if (result == Core::ERROR_UNKNOWN_KEY) {
@@ -912,8 +912,10 @@ namespace WPASupplicant {
                     _state = connection::ERROR;
 
                     _adminLock.Unlock();
-                    Request::Set(string(_TXT("DISCONNECT")));
-                    _parent.Submit(this);
+                    if (_parent.IsSubmitted(this) == false) {
+                        Request::Set(string(_TXT("DISCONNECT")));
+                        _parent.Submit(this);
+                    }
                 }
                 else if ((_callback != nullptr) && (_state == connection::WAITING)) {
                     _callback->Completed(result);
@@ -1464,7 +1466,7 @@ namespace WPASupplicant {
                     result = Connect(SSID, bssid);
                 } else {
                     TRACE_L1("No associated BSSID to connect to and not defined as AccessPoint. (%llu)", bssid);
-                    result = Core::ERROR_BAD_REQUEST;
+                    result = Core::ERROR_UNAVAILABLE;
                 }
             } else {
                 _adminLock.Unlock();
@@ -1499,7 +1501,7 @@ namespace WPASupplicant {
             uint32_t result = Connect(&waitSink, SSID, bssid);
 
             if (result == Core::ERROR_NONE) {
-                result = waitSink.Wait(3 * MaxConnectionTime);
+                result = waitSink.Wait(5 * MaxConnectionTime);
 
                 _connectRequest.Revoke(&waitSink);
             }
@@ -1556,6 +1558,9 @@ namespace WPASupplicant {
 
             if (value == WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED) {
                 _connectRequest.Completed(Core::ERROR_INVALID_SIGNATURE);
+            }
+            else if (value == WPASupplicant::Controller::CTRL_EVENT_NETWORK_NOT_FOUND) {
+                _connectRequest.Completed(Core::ERROR_UNKNOWN_KEY);
             }
             else if (value == WPASupplicant::Controller::CTRL_EVENT_CONNECTED) {
                 _connectRequest.Completed(Core::ERROR_NONE);
@@ -1929,6 +1934,24 @@ namespace WPASupplicant {
                 TRACE_L1("Submit does not trigger, there are %d messages pending [%s,%s]", static_cast<unsigned int>(_requests.size()), _requests.front()->Original().c_str(), _requests.front()->Message().c_str());
                 _adminLock.Unlock();
             }
+        }
+
+        inline bool IsSubmitted(Request* id) const
+        {
+            bool status = false;
+
+            _adminLock.Lock();
+            std::list<Request*>::iterator index(std::find(_requests.begin(), _requests.end(), id));
+            if (index != _requests.end()) {
+                _adminLock.Unlock();
+
+                const_cast<Controller*>(this)->Trigger();
+                status = true;
+            } else {
+                _adminLock.Unlock();
+            }
+
+            return status;
         }
 
     private:

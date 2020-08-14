@@ -311,7 +311,7 @@ namespace WPASupplicant {
 
                     _adminLock.Unlock();
                 }
-                else if (event == CTRL_EVENT_SSID_TEMP_DISABLED) {
+                else if ((event == CTRL_EVENT_SSID_TEMP_DISABLED) || (event == CTRL_EVENT_NETWORK_NOT_FOUND)) {
                     Notify(event.Value());
                 }
             } else {
