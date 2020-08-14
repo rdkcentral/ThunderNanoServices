@@ -26,7 +26,7 @@ namespace WPEFramework {
 struct INotifier {
     virtual ~INotifier() = default;
     virtual void NotifyStatus(const uint32_t status) = 0;
-    virtual void NotifyProgress(const uint8_t percentage) = 0;
+    virtual void NotifyProgress(const uint32_t transferred) = 0;
 };
 
 namespace PluginHost {
@@ -170,13 +170,12 @@ namespace PluginHost {
 
             if (_notifier != nullptr) {
 
-                uint8_t percentage = static_cast<uint8_t>((static_cast<float>(BaseClass::Transferred()) * 100)/static_cast<float>(BaseClass::FileSize()));
-                if (percentage) {
-                    _notifier->NotifyProgress(percentage);
+                uint32_t transferred = BaseClass::Transferred();
+                if (transferred) {
+                    _notifier->NotifyProgress(transferred);
                 }
-                if (percentage < 100) {
-                    _activity.Schedule(Core::Time::Now().Add(_interval));
-                }
+
+                _activity.Schedule(Core::Time::Now().Add(_interval));
             }
 
             _adminLock.Unlock();

@@ -132,6 +132,9 @@ namespace Plugin {
 
             Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
             status = WaitForCompletion(_waitTime * 1000);
+            if (status != Core::ERROR_NONE) {
+                downloadEngine.Close();
+            }
         }
 
         status = ((status != Core::ERROR_NONE)? status: DownloadStatus());

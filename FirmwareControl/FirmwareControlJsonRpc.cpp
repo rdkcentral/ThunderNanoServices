@@ -34,6 +34,7 @@ namespace Plugin {
     {
         Register<UpgradeParamsData,void>(_T("upgrade"), &FirmwareControl::endpoint_upgrade, this);
         Property<Core::JSON::EnumType<StatusType>>(_T("status"), &FirmwareControl::get_status, nullptr, this);
+        Property<Core::JSON::DecUInt64>(_T("downloadsize"), &FirmwareControl::get_downloadsize, nullptr, this);
     }
 
     void FirmwareControl::UnregisterAll()
@@ -55,6 +56,7 @@ namespace Plugin {
     //  - ERROR_UNKNOWN_KEY: Bad hash value given
     //  - ERROR_ILLEGAL_STATE: Invalid state of device
     //  - ERROR_INCORRECT_HASH: Incorrect hash given
+    //  - ERROR_UNAUTHENTICATED: Authentication failure
     uint32_t FirmwareControl::endpoint_upgrade(const UpgradeParamsData& params)
     {
         TRACE(Trace::Information, (string(__FUNCTION__)));
@@ -135,18 +137,28 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
+    // Property: downloadsize - Max free space available to download image
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t FirmwareControl::get_downloadsize(Core::JSON::DecUInt64& response) const
+    {
+        response = DownloadMaxSize();
+
+        return Core::ERROR_NONE;
+    }
+
     // Event: upgradeprogress - Notifies progress of upgrade
-    void FirmwareControl::event_upgradeprogress(const StatusType& status, const UpgradeprogressParamsData::ErrorType& error, const uint8_t& percentage)
+    void FirmwareControl::event_upgradeprogress(const StatusType& status, const UpgradeprogressParamsData::ErrorType& error, const uint32_t& progress)
     {
         UpgradeprogressParamsData params;
         params.Status = status;
         params.Error = error;
-        params.Percentage = percentage;
+        params.Progress = progress;
 
-        TRACE(Trace::Information, (_T("status = [%s] error = [%s] percentage = [%d]\n"),
+        TRACE(Trace::Information, (_T("status = [%s] error = [%s] progress = [%d]\n"),
               Core::EnumerateType<JsonData::FirmwareControl::StatusType>(status).Data(),
               Core::EnumerateType<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(error).Data(),
-              percentage));
+              progress));
         Notify(_T("upgradeprogress"), params);
     }
 
