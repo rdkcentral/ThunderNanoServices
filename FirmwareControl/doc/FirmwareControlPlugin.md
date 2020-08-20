@@ -120,10 +120,8 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 | 15 | ```ERROR_INCORRECT_URL``` | Invalid location given |
 | 2 | ```ERROR_UNAVAILABLE``` | Error in download |
 | 30 | ```ERROR_BAD_REQUEST``` | Bad file name given |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Bad hash value given |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Invalid state of device |
 | 14 | ```ERROR_INCORRECT_HASH``` | Incorrect hash given |
-| 42 | ```ERROR_UNAUTHENTICATED``` | Authentication failure |
 
 ### Example
 

@@ -66,6 +66,7 @@ namespace Plugin {
             UNAUTHENTICATED,
             UNAVAILABLE,
             TIMEDOUT,
+            DOWNLOAD_DIR_NOT_EXIST,
             UNKNOWN
         };
     private:
@@ -346,8 +347,11 @@ namespace Plugin {
             case Core::ERROR_TIMEDOUT:
                 errorType = ErrorType::TIMEDOUT;
                 break;
-            default: //Expand later on need basis.
+            case Core::ERROR_NOT_EXIST:
+                errorType = ErrorType::DOWNLOAD_DIR_NOT_EXIST;
+                break;
 
+            default: //Expand later on need basis.
                 break;
             }
             return errorType;
