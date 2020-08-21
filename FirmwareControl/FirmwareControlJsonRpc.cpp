@@ -53,10 +53,8 @@ namespace Plugin {
     //  - ERROR_INCORRECT_URL: Invalid location given
     //  - ERROR_UNAVAILABLE: Error in download
     //  - ERROR_BAD_REQUEST: Bad file name given
-    //  - ERROR_UNKNOWN_KEY: Bad hash value given
     //  - ERROR_ILLEGAL_STATE: Invalid state of device
     //  - ERROR_INCORRECT_HASH: Incorrect hash given
-    //  - ERROR_UNAUTHENTICATED: Authentication failure
     uint32_t FirmwareControl::endpoint_upgrade(const UpgradeParamsData& params)
     {
         TRACE(Trace::Information, (string(__FUNCTION__)));
