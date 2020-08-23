@@ -26,5 +26,6 @@
 
 #include <core/core.h>
 #include <tracing/tracing.h>
+#include <com/com.h>
 
 #endif // __MODULE_COMPOSITION_IMPLEMENTATION_H
