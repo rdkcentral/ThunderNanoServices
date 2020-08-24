@@ -17,15 +17,6 @@
  * limitations under the License.
  */
  
-#ifndef __MODULE_COMPOSITION_IMPLEMENTATION_H
-#define __MODULE_COMPOSITION_IMPLEMENTATION_H
+#include "Module.h"
 
-#ifndef MODULE_NAME
-#define MODULE_NAME Compositor_Implementation
-#endif
-
-#include <core/core.h>
-#include <tracing/tracing.h>
-#include <com/com.h>
-
-#endif // __MODULE_COMPOSITION_IMPLEMENTATION_H
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)
