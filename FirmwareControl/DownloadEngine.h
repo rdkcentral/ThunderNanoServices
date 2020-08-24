@@ -36,8 +36,8 @@ namespace PluginHost {
     class DownloadEngine : public Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> {
     private:
         typedef Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> BaseClass;
-        static int32_t constexpr ProgressInterval = 1000;
-        static int32_t constexpr ProgressWaitTimeOut = 60;
+        static int32_t constexpr ProgressInterval = 1000;   // In millisconds
+        static int32_t constexpr ProgressWaitTimeOut = 120; // In seconds
 
     public:
         DownloadEngine() = delete;
