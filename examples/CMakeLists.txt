@@ -22,6 +22,7 @@ option(PLUGIN_TESTUTILITY "Include TestUtility plugin" OFF)
 option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
+option(PLUGIN_STATECONTROLLER "Include StateController plugin" OFF)
 
 if(PLUGIN_TESTUTILITY)
     add_subdirectory(TestUtility)
@@ -43,3 +44,8 @@ endif()
 if(PLUGIN_OUTOFPROCESS)
     add_subdirectory(OutOfProcessPlugin)
 endif()
+
+if(PLUGIN_STATECONTROLLER)
+    add_subdirectory(StateController)
+endif()
+

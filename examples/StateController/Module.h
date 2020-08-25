@@ -17,15 +17,16 @@
  * limitations under the License.
  */
  
-#ifndef __MODULE_COMPOSITION_IMPLEMENTATION_H
-#define __MODULE_COMPOSITION_IMPLEMENTATION_H
+#ifndef __MODULE_PLUGIN_STATE_CONTROLLER
 
 #ifndef MODULE_NAME
-#define MODULE_NAME Compositor_Implementation
+#define MODULE_NAME Plugin_StateController
 #endif
 
-#include <core/core.h>
+#include <plugins/plugins.h>
 #include <tracing/tracing.h>
-#include <com/com.h>
 
-#endif // __MODULE_COMPOSITION_IMPLEMENTATION_H
+#undef EXTERNAL
+#define EXTERNAL
+
+#endif // __MODULE_PLUGIN_STATE_CONTROLLER

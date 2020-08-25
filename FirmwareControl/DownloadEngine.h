@@ -36,6 +36,8 @@ namespace PluginHost {
     class DownloadEngine : public Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> {
     private:
         typedef Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> BaseClass;
+        static int32_t constexpr ProgressInterval = 1000;   // In millisconds
+        static int32_t constexpr ProgressWaitTimeOut = 120; // In seconds
 
     public:
         DownloadEngine() = delete;
@@ -47,7 +49,10 @@ namespace PluginHost {
             , _adminLock()
             , _notifier(notifier)
             , _storage()
-            , _interval(interval * 1000)
+            , _transferred(0)
+            , _interval(interval)
+            , _progressInterval(1)
+            , _progressWaitTime(0)
             , _checkHash(false)
             , _activity(*this)
         {
@@ -95,7 +100,7 @@ namespace PluginHost {
 
                     if (((result == Core::ERROR_NONE) || (result == Core::ERROR_INPROGRESS)) && (_interval != 0)) {
                         _activity.Revoke();
-                        _activity.Schedule(Core::Time::Now().Add(_interval));
+                        _activity.Schedule(Core::Time::Now().Add(ProgressInterval));
                     }
                 }
             }
@@ -171,14 +176,31 @@ namespace PluginHost {
             if (_notifier != nullptr) {
 
                 uint32_t transferred = BaseClass::Transferred();
-                if (transferred) {
-                    _notifier->NotifyProgress(transferred);
+                if (transferred == _transferred) {
+                    _progressWaitTime++;
+                } else {
+                    _progressWaitTime = 0;
                 }
 
-                _activity.Schedule(Core::Time::Now().Add(_interval));
+                if (_progressWaitTime == ProgressWaitTimeOut) {
+                    _adminLock.Unlock();
+                    Close();
+                } else {
+                    if (_interval && (_progressInterval == _interval)) {
+                        if (transferred && (transferred > _transferred)) {
+                            _notifier->NotifyProgress(transferred);
+                            _transferred = transferred;
+                        }
+                        _progressInterval = 1;
+                    } else {
+                        _progressInterval++;
+                    }
+                    _activity.Schedule(Core::Time::Now().Add(ProgressInterval));
+                    _adminLock.Unlock();
+                }
+            } else {
+                _adminLock.Unlock();
             }
-
-            _adminLock.Unlock();
         }
 
     private:
@@ -186,7 +208,11 @@ namespace PluginHost {
         INotifier* _notifier;
         Core::File _storage;
 
-        uint32_t _interval;
+        uint32_t _transferred;
+        uint16_t _interval;
+        uint16_t _progressInterval;
+        uint16_t _progressWaitTime;
+
         bool _checkHash;
         uint8_t _HMAC[Crypto::HASH_SHA256];
         Core::WorkerPool::JobType<DownloadEngine&> _activity;
