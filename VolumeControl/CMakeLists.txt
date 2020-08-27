@@ -20,6 +20,7 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(PLAFORM_VOLUMECONTROL volumectrlplatform)
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(BCM_HOST QUIET)
 find_package(NEXUS QUIET)
@@ -39,7 +40,8 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 if (NXCLIENT_FOUND AND NEXUS_FOUND)
     target_link_libraries(${MODULE_NAME}
