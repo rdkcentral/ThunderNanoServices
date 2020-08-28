@@ -41,7 +41,8 @@ namespace Plugin {
 
     static Core::ProxyPoolType<Web::TextBody> _textBodies(5);
 
-    static constexpr uint16_t TimeToInterfaceReady = 1000;
+    static constexpr uint8_t InterfaceRetryCount = 5;
+    static constexpr uint16_t InterfaceWaitTime = 1000;
 
     /* static */ const Core::NodeId DIALServer::DIALServerImpl::DialServerInterface(_T("239.255.255.250"), 1900);
     /* static */ std::map<string, DIALServer::IApplicationFactory*> DIALServer::AppInformation::_applicationFactory;
@@ -286,14 +287,20 @@ namespace Plugin {
 
             // Just retry if the interface is configured
             if (_config.Interface.IsSet() == true) {
-                SleepMs(TimeToInterfaceReady);
-                selectedNode = Plugin::Config::IPV4UnicastNode(_config.Interface.Value());
+
+                uint8_t retries = 0;
+                do {
+
+                    SleepMs(InterfaceWaitTime);
+                    selectedNode = Plugin::Config::IPV4UnicastNode(_config.Interface.Value());
+                } while ((selectedNode.IsValid() == false) && (retries++ < InterfaceRetryCount));
 
                 if (selectedNode.IsValid() == false) {
                     // Requested interface is not ready
                     result = _T("Requested interface is not ready");
+                } else {
+                    Setup(service, selectedNode);
                 }
-                Setup(service, selectedNode);
             } else {
                 // Oops no way we can operate...
                 result = _T("No DIALInterface available.");
