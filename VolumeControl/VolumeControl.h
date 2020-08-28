@@ -21,7 +21,7 @@
 
 #include "Module.h"
 #include <interfaces/IVolumeControl.h>
-#include <interfaces/JVolumeControl.h>
+#include <interfaces/json/JVolumeControl.h>
 
 namespace WPEFramework {
 namespace Plugin {
