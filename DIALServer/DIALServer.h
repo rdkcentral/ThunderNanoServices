@@ -1069,6 +1069,7 @@ namespace Plugin {
         void Deactivated(Exchange::IWebServer* webserver);
         void Activated(Exchange::ISwitchBoard* switchBoard);
         void Deactivated(Exchange::ISwitchBoard* switchBoard);
+        void Setup(PluginHost::IShell* service, Core::NodeId& selectedNode);
         void StartApplication(const Web::Request& request, Core::ProxyType<Web::Response>& response, AppInformation& app);
         void StopApplication(const Web::Request& request, Core::ProxyType<Web::Response>& response, AppInformation& app);
 

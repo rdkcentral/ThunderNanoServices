@@ -41,6 +41,8 @@ namespace Plugin {
 
     static Core::ProxyPoolType<Web::TextBody> _textBodies(5);
 
+    static constexpr uint16_t TimeToInterfaceReady = 1000;
+
     /* static */ const Core::NodeId DIALServer::DIALServerImpl::DialServerInterface(_T("239.255.255.250"), 1900);
     /* static */ std::map<string, DIALServer::IApplicationFactory*> DIALServer::AppInformation::_applicationFactory;
 
@@ -281,77 +283,97 @@ namespace Plugin {
         Core::NodeId selectedNode = Plugin::Config::IPV4UnicastNode(_config.Interface.Value());
 
         if (selectedNode.IsValid() == false) {
-            // Oops no way we can operate...
-            result = _T("No DIALInterface available.");
-        } else {
-            const uint8_t* rawId(Core::SystemInfo::Instance().RawDeviceId());
-            const string deviceId(Core::SystemInfo::Instance().Id(rawId, ~0));
 
-            _dialURL = Core::URL(service->Accessor());
-            _dialURL.Host(selectedNode.HostAddress());
-            _dialPath = '/' + _dialURL.Path().Value();
+            // Just retry if the interface is configured
+            if (_config.Interface.IsSet() == true) {
+                SleepMs(TimeToInterfaceReady);
+                selectedNode = Plugin::Config::IPV4UnicastNode(_config.Interface.Value());
 
-            // TODO: THis used to be the MAC, but I think  it is just a unique number, otherwise, we need the MAC
-            //       that goes with the selectedNode !!!!
-            _dialServiceImpl = new DIALServerImpl(deviceId, _dialURL.Text(), _DefaultAppInfoPath);
-
-            ASSERT(_dialServiceImpl != nullptr);
-
-            _skipURL = static_cast<uint16_t>(service->WebPrefix().length());
-
-            (*_deviceInfo) = _T("<?xml version=\"1.0\"?>")
-                             _T("<root xmlns=\"urn:schemas-upnp-org:device-1-0\">")
-                             _T("<specVersion>")
-                             _T("<major>1</major>")
-                             _T("<minor>0</minor>")
-                             _T("</specVersion>")
-                             _T("<device>")
-                             _T("<deviceType>urn:schemas-upnp-org:device:tvdevice:1</deviceType>")
-                             _T("<friendlyName>")
-                + _config.Name.Value() + _T("</friendlyName>")
-                                         _T("<manufacturer>")
-                + _config.Manufacturer.Value() + _T("</manufacturer>")
-                + ( _config.ManufacturerURL.IsSet() == true ? _T("<manufacturerURL>") + _config.ManufacturerURL.Value() + _T("</manufacturerURL>") : _T("") )
-                +                                 _T("<modelDescription>")
-                + _config.Description.Value() + _T("</modelDescription>")
-                                                _T("<modelName>")
-                + _config.Model.Value() + _T("</modelName>")
-                + ( _config.ModelNumber.IsSet() == true ? _T("<modelNumber>") + _config.ModelNumber.Value() + _T("</modelNumber>") : _T("") )
-                + ( _config.ModelURL.IsSet() == true ? _T("<modelURL>") + _config.ModelURL.Value() + _T("</modelURL>") : _T("") )
-                + ( _config.SerialNumber.IsSet() == true ? _T("<serialNumber>") + _config.SerialNumber.Value() + _T("</serialNumber>") : _T("") )
-                +                          _T("<UDN>uuid:")
-                + deviceId + _T("</UDN>")
-                + ( _config.UPC.IsSet() == true ? _T("<UPC>") + _config.UPC.Value() + _T("</UPC>") : _T("") )
-                +            _T("</device>")
-                             _T("</root>");
-
-            // Create a list of all servicable Apps:
-            auto index(_config.Apps.Elements());
-
-            while (index.Next() == true) {
-                if (index.Current().Name.IsSet() == true) {
-                    _appInfo.emplace(std::piecewise_construct, std::make_tuple(index.Current().Name.Value()), std::make_tuple(service, index.Current(), this));
+                if (selectedNode.IsValid() == false) {
+                    // Requested interface is not ready
+                    result = _T("Requested interface is not ready");
                 }
+                Setup(service, selectedNode);
+            } else {
+                // Oops no way we can operate...
+                result = _T("No DIALInterface available.");
             }
-
-            AppInformation::Announce(_SystemApp, new SystemApplicationFactory);
-            Config::App systemCfg;
-            systemCfg.Name = _SystemApp;
-            _appInfo.emplace(std::piecewise_construct, std::make_tuple(_SystemApp), std::make_tuple(service, systemCfg, this));
-
-            _service = service;
-
-            _adminLock.Lock();
-
-            // Register the sink *AFTER* the apps have been created so the apps will receive the
-            // switchboard, if it is already active and configured !!!
-            _sink.Register(service, _config.WebServer.Value(), _config.SwitchBoard.Value());
-
-            _adminLock.Unlock();
+        } else {
+            Setup(service, selectedNode);
         }
 
         // On succes return NULL, to indicate there is no error text.
-        return (result);
+        return result;
+    }
+
+    void DIALServer::Setup(PluginHost::IShell* service, Core::NodeId& selectedNode)
+    {
+        const uint8_t* rawId(Core::SystemInfo::Instance().RawDeviceId());
+        const string deviceId(Core::SystemInfo::Instance().Id(rawId, ~0));
+
+        _dialURL = Core::URL(service->Accessor());
+        _dialURL.Host(selectedNode.HostAddress());
+        _dialPath = '/' + _dialURL.Path().Value();
+
+        // TODO: THis used to be the MAC, but I think  it is just a unique number, otherwise, we need the MAC
+        //       that goes with the selectedNode !!!!
+        _dialServiceImpl = new DIALServerImpl(deviceId, _dialURL.Text(), _DefaultAppInfoPath);
+
+        ASSERT(_dialServiceImpl != nullptr);
+
+        _skipURL = static_cast<uint16_t>(service->WebPrefix().length());
+
+        (*_deviceInfo) = _T("<?xml version=\"1.0\"?>")
+                         _T("<root xmlns=\"urn:schemas-upnp-org:device-1-0\">")
+                         _T("<specVersion>")
+                         _T("<major>1</major>")
+                         _T("<minor>0</minor>")
+                         _T("</specVersion>")
+                         _T("<device>")
+                         _T("<deviceType>urn:schemas-upnp-org:device:tvdevice:1</deviceType>")
+                         _T("<friendlyName>")
+            + _config.Name.Value() + _T("</friendlyName>")
+                                     _T("<manufacturer>")
+            + _config.Manufacturer.Value() + _T("</manufacturer>")
+            + ( _config.ManufacturerURL.IsSet() == true ? _T("<manufacturerURL>") + _config.ManufacturerURL.Value() + _T("</manufacturerURL>") : _T("") )
+            +                                 _T("<modelDescription>")
+            + _config.Description.Value() + _T("</modelDescription>")
+                                            _T("<modelName>")
+            + _config.Model.Value() + _T("</modelName>")
+            + ( _config.ModelNumber.IsSet() == true ? _T("<modelNumber>") + _config.ModelNumber.Value() + _T("</modelNumber>") : _T("") )
+            + ( _config.ModelURL.IsSet() == true ? _T("<modelURL>") + _config.ModelURL.Value() + _T("</modelURL>") : _T("") )
+            + ( _config.SerialNumber.IsSet() == true ? _T("<serialNumber>") + _config.SerialNumber.Value() + _T("</serialNumber>") : _T("") )
+            +                          _T("<UDN>uuid:")
+            + deviceId + _T("</UDN>")
+            + ( _config.UPC.IsSet() == true ? _T("<UPC>") + _config.UPC.Value() + _T("</UPC>") : _T("") )
+            +            _T("</device>")
+                         _T("</root>");
+
+        // Create a list of all servicable Apps:
+        auto index(_config.Apps.Elements());
+
+        while (index.Next() == true) {
+            if (index.Current().Name.IsSet() == true) {
+                _appInfo.emplace(std::piecewise_construct, std::make_tuple(index.Current().Name.Value()), std::make_tuple(service, index.Current(), this));
+            }
+        }
+
+        AppInformation::Announce(_SystemApp, new SystemApplicationFactory);
+        Config::App systemCfg;
+        systemCfg.Name = _SystemApp;
+        _appInfo.emplace(std::piecewise_construct, std::make_tuple(_SystemApp), std::make_tuple(service, systemCfg, this));
+
+        _service = service;
+
+        _adminLock.Lock();
+
+        // Register the sink *AFTER* the apps have been created so the apps will receive the
+        // switchboard, if it is already active and configured !!!
+        _sink.Register(service, _config.WebServer.Value(), _config.SwitchBoard.Value());
+
+        _adminLock.Unlock();
+
+        return;
     }
 
     /* virtual */ void DIALServer::Deinitialize(PluginHost::IShell* service)
