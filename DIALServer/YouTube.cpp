@@ -79,6 +79,7 @@ namespace DIALHandlers {
                 : Passive(service, config, parent)
                 , _browser(nullptr)
                 , _hidden(false)
+                , _hasHideAndShow(config.Hide.Value())
                 , _notification(this)
             {
             }
@@ -114,7 +115,7 @@ namespace DIALHandlers {
             }
             bool HasHideAndShow() const override
             {
-                return _browser != nullptr;
+                return ((_browser != nullptr) && (_hasHideAndShow == true));
             }
             uint32_t Show() override
             {
@@ -169,6 +170,7 @@ namespace DIALHandlers {
 
             Exchange::IBrowser* _browser;
             bool _hidden;
+            bool _hasHideAndShow;
             Core::Sink<Notification> _notification;
         }; // class Active
 
