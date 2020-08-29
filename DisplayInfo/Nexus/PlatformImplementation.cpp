@@ -41,7 +41,10 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
+class DisplayInfoImplementation : 
+    public Exchange::IGraphicsProperties, 
+    public Exchange::IConnectionProperties,
+    public Exchange::IHDRProperties  {
 public:
     DisplayInfoImplementation()
        : _width(0)
@@ -155,33 +158,68 @@ public:
         return (Core::ERROR_NONE);
     }
 
-    bool IsAudioPassthrough () const override
+    uint32_t IsAudioPassthrough (bool& value) const override
     {
-        return _audioPassthrough;
+        value = _audioPassthrough;
+        return (Core::ERROR_NONE);
     }
-    bool Connected() const override
+    uint32_t Connected(bool& connected) const override
     {
-        return _connected;
+        connected = _connected;
+        return (Core::ERROR_NONE);
     } 
-    uint32_t Width() const override
+    uint32_t Width(uint32_t& value) const override
     {
-        return _width;
+        value = _width;
+        return (Core::ERROR_NONE);
     }
-    uint32_t Height() const override
+    uint32_t Height(uint32_t& value) const override
     {
-        return _height;
+        value = _height;
+        return (Core::ERROR_NONE);
     }
-    uint32_t VerticalFreq() const override
+    uint32_t VerticalFreq(uint32_t& value) const override
     {
-        return _verticalFreq;
+        value = _verticalFreq;
+        return (Core::ERROR_NONE);
     }
-    HDRType Type() const override
-    {
-        return _type;
+    uint32_t HDCPProtection(HDCPProtectionType& value) const override {
+        value = _hdcpprotection;
+        return (Core::ERROR_NONE);
     }
-    HDCPProtectionType HDCPProtection() const override {
-        return _hdcpprotection;
+    uint32_t HDCPProtection(const HDCPProtectionType& /* value */) override {
+        return (Core::ERROR_GENERAL);
     }
+    uint32_t EDID (const uint16_t& length /* @inout */, uint8_t data[] /* @out @length:length */) const override {
+        return (Core::ERROR_NONE);
+    }
+    uint32_t PortName (string& name /* @out */) const {
+        name = "HDMI" + Core::NumberType<uint8_t>(0).Text();
+        return (Core::ERROR_NONE);
+    }
+
+    // @property
+    // @brief HDR formats supported by TV
+    // @return HDRType: array of HDR formats
+    uint32_t TVCapabilities(IHDRIterator* type /* out */) const override {
+        type = nullptr;
+        return (Core::ERROR_GENERAL);
+    }
+    // @property
+    // @brief HDR formats supported by STB
+    // @return HDRType: array of HDR formats
+    uint32_t STBCapabilities(IHDRIterator* type /* out */) const override {
+        type = nullptr;
+        return (Core::ERROR_GENERAL);
+    }
+    // @property
+    // @brief HDR format in use
+    // @param type: HDR format
+    uint32_t HDRSetting(HDRType& type /* @out */) const override {
+        type = _type;
+        return (Core::ERROR_NONE);
+    }
+
     void Dispatch() const
     {
         _adminLock.Lock();
@@ -189,7 +227,7 @@ public:
         std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
 
         while(index != _observers.end()) {
-            (*index)->Updated();
+            (*index)->Updated(IConnectionProperties::INotification::Source::HDCP_CHANGE);
             index++;
         }
 
@@ -199,6 +237,7 @@ public:
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
         INTERFACE_ENTRY(Exchange::IGraphicsProperties)
         INTERFACE_ENTRY(Exchange::IConnectionProperties)
+        INTERFACE_ENTRY(Exchange::IHDRProperties)
     END_INTERFACE_MAP
 
 private:
@@ -565,7 +604,7 @@ private:
                 break;
             }
             if (connected == true) {
-                ReadEDID(hdmiHandle, _EDID);
+                RetrieveEDID(hdmiHandle, _EDID);
             }
         }
         _adminLock.Unlock();
