@@ -31,6 +31,7 @@ namespace Plugin {
     static const string _DefaultControlExtension(_T("Run"));
     static const string _DefaultAppInfoDevice(_T("DeviceInfo.xml"));
     static const string _DefaultRunningExtension(_T("Running"));
+    static const string _DefaultHiddingExtension(_T("Hidding"));
     static const string _SystemApp(_T("system"));
 
     constexpr char kHideCommand[] = "hide";
@@ -395,11 +396,13 @@ namespace Plugin {
             response->ErrorCode = Web::STATUS_REQUEST_ENTITY_TOO_LARGE;
             response->Message = _T("Payload too long");
         } else {
-            const string additionalDataUrl = (_T("http://localhost/") + app.Name() + _T("/") + _DefaultDataExtension);
+            // FIXME: At the moment part of additionalDataUrl parameter is hardcoded, localhost is obligatory by Netflix 
+            // but rest of the path can be created dynamically or should be retrived from configuration
+            const string additionalDataUrl = (_T("http://localhost/Service/DIALServer/Apps/") + app.Name() + _T("/") + _DefaultDataExtension);
             const uint16_t maxEncodedSize = static_cast<uint16_t>(additionalDataUrl.length() * 3 * sizeof(TCHAR));
             TCHAR* encodedDataUrl = reinterpret_cast<TCHAR*>(ALLOCA(maxEncodedSize));
-            Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, maxEncodedSize);
-            string parameters = (app.AppURL() + (app.HasQueryParameter()? _T("&") : _T("?")) + _T("additionalDataUrl=") + encodedDataUrl);
+            uint16_t dialpayload = Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, maxEncodedSize);
+            string parameters = (app.AppURL() + (app.HasQueryParameter()? _T("&") : _T("?")) + _T("dialpayload=") + std::to_string(dialpayload) + _T("&additionalDataUrl=") + encodedDataUrl);
 
             TRACE(Trace::Information, (_T("Launch Application [%s] with params: %s, payload: %s"), app.Name().c_str(), parameters.c_str(), payload.c_str()));
 
@@ -443,15 +446,9 @@ namespace Plugin {
                         }
                     } else {
                         if (result == Core::ERROR_NONE) {
-                            if (app.URL(parameters, payload) == true) {
-                                response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
-                                response->ErrorCode = Web::STATUS_CREATED;
-                                response->Message = _T("Created");
-                            }
-                            else {
-                                response->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
-                                response->Message = _T("Not implemented");
-                            }
+                            response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
+                            response->ErrorCode = Web::STATUS_CREATED;
+                            response->Message = _T("Created");
                         }
                         else {
                             response->ErrorCode = Web::STATUS_SERVICE_UNAVAILABLE;
@@ -623,6 +620,12 @@ namespace Plugin {
                         result->Message = _T("OK");
                         selectedApp->second.Running(request.Verb == Web::Request::HTTP_POST);
                     }
+                } else if (index.Current() == _DefaultHiddingExtension) {
+                    if ((request.Verb == Web::Request::HTTP_POST) || (request.Verb == Web::Request::HTTP_DELETE)) {
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("OK");
+                        selectedApp->second.Hidding(request.Verb == Web::Request::HTTP_POST);
+                    }    
                 } else if (index.Current() == _DefaultDataExtension) {
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("OK");

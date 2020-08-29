@@ -56,22 +56,23 @@ public:
       NxClient_AudioSettings audioSettings;
       NxClient_GetAudioSettings(&audioSettings);
       audioSettings.muted = muted;
-      uint32_t result = NxClient_SetAudioSettings(&audioSettings) != 0 ?
-            Core::ERROR_GENERAL :
-            Core::ERROR_NONE;
+      int result = NxClient_SetAudioSettings(&audioSettings); 
 
-      return result;
+      TRACE(Trace::Information, (_T("Hardware set muted: %d [%d]"), audioSettings.muted, result));
+      return (result != 0 ? Core::ERROR_GENERAL : Core::ERROR_NONE);
   }
 
   bool Muted() const override
   {
       NxClient_AudioSettings audioSettings;
       NxClient_GetAudioSettings(&audioSettings);
+      TRACE(Trace::Information, (_T("Hardware get muted: %d"), audioSettings.muted));
       return audioSettings.muted;
   }
 
   uint32_t Volume(uint8_t volume) override
   {
+      const TCHAR* type = _T("Decibel");
       volume = std::max(volume, kMinVolume);
       volume = std::min(volume, kMaxVolume);
       int32_t toSet = volume;
@@ -81,22 +82,32 @@ public:
           toSet = VolumeControlPlatformNexus::ToNexusDb(volume);
       } else {
           toSet = VolumeControlPlatformNexus::ToNexusLinear(volume);
+          type = _T("Linear");
       }
 
       audioSettings.leftVolume = audioSettings.rightVolume = toSet;
-      return NxClient_SetAudioSettings(&audioSettings) != 0 ?
-            Core::ERROR_GENERAL :
-            Core::ERROR_NONE;
+
+      int result = NxClient_SetAudioSettings(&audioSettings);
+
+      TRACE(Trace::Information, (_T("Hardware set volume (%s): %d [%d]"), type, toSet, result));
+
+      return (result != 0 ? Core::ERROR_GENERAL : Core::ERROR_NONE);
   }
 
   uint8_t Volume() const override
   {
+      uint8_t result;
+
       NxClient_AudioSettings audioSettings;
       NxClient_GetAudioSettings(&audioSettings);
       ASSERT(audioSettings.leftVolume == audioSettings.rightVolume);
-      return audioSettings.volumeType == NEXUS_AudioVolumeType_eDecibel ?
+      result = audioSettings.volumeType == NEXUS_AudioVolumeType_eDecibel ?
           VolumeControlPlatformNexus::FromNexusDb(audioSettings.leftVolume) :
           VolumeControlPlatformNexus::FromNexusLinear(audioSettings.leftVolume);
+
+      TRACE(Trace::Information, (_T("Hardware get volume: %d"), result));
+
+      return (result);
   }
 
 private:

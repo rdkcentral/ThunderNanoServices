@@ -59,23 +59,27 @@ namespace Plugin {
 
     uint32_t VolumeControlImplementation::Muted(const bool muted)
     {
+        TRACE(Trace::Information, (_T("Set Muted: %s"), muted ? _T("true") : _T("false")));
         return _platform->Muted(muted);
     }
 
     uint32_t VolumeControlImplementation::Muted(bool& muted) const
     {
         muted = _platform->Muted();
+        TRACE(Trace::Information, (_T("Get Muted: %s"), muted ? _T("true") : _T("false")));
         return Core::ERROR_NONE;
     }
 
     uint32_t VolumeControlImplementation::Volume(const uint8_t volume)
     {
+        TRACE(Trace::Information, (_T("Set Volume: %d"), volume));
         return _platform->Volume(volume);
     }
 
     uint32_t VolumeControlImplementation::Volume(uint8_t& vol) const
     {
         vol = _platform->Volume();
+        TRACE(Trace::Information, (_T("Get Volume: %d"), vol));
         return Core::ERROR_NONE;
     }
 

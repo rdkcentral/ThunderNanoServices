@@ -45,6 +45,7 @@ namespace Plugin {
                     , URL()
                     , Config()
                     , RuntimeChange(false)
+                    , Hide(false)
                 {
                     Add(_T("name"), &Name);
                     Add(_T("callsign"), &Callsign);
@@ -52,6 +53,7 @@ namespace Plugin {
                     Add(_T("url"), &URL);
                     Add(_T("config"), &Config);
                     Add(_T("runtimechange"), &RuntimeChange);
+                    Add(_T("hide"), &Hide);
                 }
                 App(const App& copy)
                     : Core::JSON::Container()
@@ -61,6 +63,7 @@ namespace Plugin {
                     , URL(copy.URL)
                     , Config(copy.Config)
                     , RuntimeChange(copy.RuntimeChange)
+                    , Hide(copy.Hide)
                 {
                     Add(_T("name"), &Name);
                     Add(_T("callsign"), &Callsign);
@@ -68,6 +71,7 @@ namespace Plugin {
                     Add(_T("url"), &URL);
                     Add(_T("config"), &Config);
                     Add(_T("runtimechange"), &RuntimeChange);
+                    Add(_T("hide"), &Hide);
                 }
                 virtual ~App()
                 {
@@ -80,6 +84,7 @@ namespace Plugin {
                 Core::JSON::String URL;
                 Core::JSON::String Config;
                 Core::JSON::Boolean RuntimeChange;
+                Core::JSON::Boolean Hide;
             };
 
         private:
@@ -183,6 +188,10 @@ namespace Plugin {
             // Used only in passive mode
             virtual void Running(const bool isRunning) = 0;
 
+            // Method used for setting the wheter managed service is hidden or not. 
+            // Used only in passive mode
+            virtual void Hidding(const bool isHiding) = 0;
+
             // Method used for passing a SwitchBoard to DIAL handler. 
             // Used only in switchboard mode
             virtual void SwitchBoard(Exchange::ISwitchBoard* switchBoard) = 0;
@@ -216,6 +225,7 @@ namespace Plugin {
             AdditionalDataType AdditionalData() const override { return { }; }
             void AdditionalData(AdditionalDataType&& data) override {}
             void Running(const bool isRunning) override {}
+            void Hidding(const bool isHiding) override {}
             void SwitchBoard(Exchange::ISwitchBoard* switchBoard) override {}
         };
 
@@ -240,7 +250,9 @@ namespace Plugin {
                 , _callsign(config.Callsign.IsSet() == true ? config.Callsign.Value() : config.Name.Value())
                 , _passiveMode(config.Callsign.IsSet() == false)
                 , _isRunning(false)
+                , _isHidding(false)
                 , _hasRuntimeChange(config.RuntimeChange.Value())
+                , _hasHideAndShow(config.Hide.Value())
                 , _parent(parent)
             {
                 ASSERT(_parent != nullptr);
@@ -280,11 +292,26 @@ namespace Plugin {
             {
                 return (_passiveMode == true ? _isRunning : (_switchBoard != nullptr ? _switchBoard->IsActive(_callsign) : (_service->State() == PluginHost::IShell::ACTIVATED)));
             }
-            bool IsHidden() const override { return false; }
-            bool HasHideAndShow() const override { return false; }
+            bool IsHidden() const override { return _isHidding; }
+            bool HasHideAndShow() const override { return _hasHideAndShow; }
             bool HasStartAndStop() const override { return true; }
-            uint32_t Show() override { return Core::ERROR_GENERAL; }
-            void Hide() override {}
+            uint32_t Show() override 
+            {
+                if ((_passiveMode == true) && (_isHidding ==true)) {
+                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"show\" }"));
+                    _service->Notify(message);
+                    _parent->event_show(_callsign);   
+                } 
+                return Core::ERROR_NONE; 
+            }
+            void Hide() override 
+            {
+                if (_passiveMode == true) {
+                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"hide\" }"));
+                    _service->Notify(message);
+                    _parent->event_hide(_callsign);
+                }
+            }
             virtual uint32_t Start(const string& data, const string& payload)
             {
                 uint32_t result = Core::ERROR_NONE;
@@ -376,6 +403,15 @@ namespace Plugin {
 
                 _isRunning = isRunning;
             }
+            virtual void Hidding(const bool isHidding)
+            {
+                // This method is only for the Passive mode..
+                if (_passiveMode != true) {
+                    TRACE_L1(_T("This app is not configured to be Passive !!!!%s"), "");
+                }
+
+                _isHidding = isHidding;
+            }
             virtual void SwitchBoard(Exchange::ISwitchBoard* switchBoard)
             {
                 ASSERT((_switchBoard != nullptr) ^ (switchBoard != nullptr));
@@ -403,7 +439,9 @@ namespace Plugin {
             string _callsign;
             bool _passiveMode;
             bool _isRunning;
+            bool _isHidding;
             bool _hasRuntimeChange;
+            bool _hasHideAndShow;
             DIALServer* _parent;
             AdditionalDataType _additionalData;
         };
@@ -744,6 +782,10 @@ namespace Plugin {
             {
                 _application->Running(isRunning);
             }
+            inline void Hidding(const bool isHidding)
+            {
+                _application->Hidding(isHidding);
+            }
             inline uint32_t Start(const string& data, const string& payload)
             {
                 return _application->Start(data, payload);
@@ -1040,6 +1082,8 @@ namespace Plugin {
         //JsonRpc
         void event_start(const string& application, const string& parameters);
         void event_stop(const string& application, const string& parameters);
+        void event_hide(const string& application);
+        void event_show(const string& application);
 
     private:
         Core::CriticalSection _adminLock;

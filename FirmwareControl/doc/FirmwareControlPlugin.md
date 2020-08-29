@@ -91,7 +91,7 @@ FirmwareControl interface methods:
 <a name="method.upgrade"></a>
 ## *upgrade <sup>method</sup>*
 
-Upgrade the device to the given firmware.
+Upgrade the device to the given firmware. (Note: Ensure size of firmware image should be < 500MB).
 
 Also see: [upgradeprogress](#event.upgradeprogress)
 
@@ -120,10 +120,8 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 | 15 | ```ERROR_INCORRECT_URL``` | Invalid location given |
 | 2 | ```ERROR_UNAVAILABLE``` | Error in download |
 | 30 | ```ERROR_BAD_REQUEST``` | Bad file name given |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Bad hash value given |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Invalid state of device |
 | 14 | ```ERROR_INCORRECT_HASH``` | Incorrect hash given |
-| 42 | ```ERROR_UNAUTHENTICATED``` | Authentication failure |
 
 ### Example
 
@@ -162,6 +160,7 @@ FirmwareControl interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [status](#property.status) <sup>RO</sup> | Current status of a upgrade |
+| [downloadsize](#property.downloadsize) <sup>RO</sup> | Max free space available to download image |
 
 <a name="property.status"></a>
 ## *status <sup>property</sup>*
@@ -198,6 +197,39 @@ Also see: [upgradeprogress](#event.upgradeprogress)
     "result": "completed"
 }
 ```
+<a name="property.downloadsize"></a>
+## *downloadsize <sup>property</sup>*
+
+Provides access to the max free space available to download image.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | number | available free space in bytes |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "FirmwareControl.1.downloadsize"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": 315576
+}
+```
 <a name="head.Notifications"></a>
 # Notifications
 
@@ -222,8 +254,8 @@ Notifies progress of upgrade.
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.status | string | upgrade status (must be one of the following: *none*, *upgradestarted*, *downloadstarted*, *downloadaborted*, *downloadcompleted*, *installinitiated*, *installnotstarted*, *installaborted*, *installstarted*, *upgradecompleted*, *upgradecancelled*) |
-| params.error | string | reason of error (must be one of the following: *none*, *generic*, *invalidparameters*, *invalidstate*, *operationotsupported*, *incorrecthash*, *unauthenticated*, *unavailable*, *timedout*, *unkown*) |
-| params.percentage | number |  |
+| params.error | string | reason of error (must be one of the following: *none*, *generic*, *invalidparameters*, *invalidstate*, *noenoughspace*, *operationotsupported*, *incorrecthash*, *unauthenticated*, *unavailable*, *timedout*, *unkown*) |
+| params.progress | number | Progress of upgrade (number of bytes transferred during download or percentage of completion during install |
 
 ### Example
 
@@ -234,7 +266,7 @@ Notifies progress of upgrade.
     "params": {
         "status": "completed",
         "error": "operationotsupported",
-        "percentage": 89
+        "progress": 89
     }
 }
 ```

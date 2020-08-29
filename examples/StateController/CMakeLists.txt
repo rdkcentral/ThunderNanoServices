@@ -15,29 +15,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME JSONRPCPlugin)
+set(PLUGIN_NAME StateController)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-add_library(${MODULE_NAME} SHARED 
-    JSONRPCPlugin.cpp
+add_library(${MODULE_NAME} SHARED
+    StateController.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
-        CXX_STANDARD 11
-        CXX_STANDARD_REQUIRED YES)
+    CXX_STANDARD 11
+    CXX_STANDARD_REQUIRED YES)
 
-target_link_libraries(${MODULE_NAME} 
+target_link_libraries(${MODULE_NAME}
+    PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+
+target_include_directories( ${MODULE_NAME}
+        PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+
+target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
-        
 
-install(TARGETS ${MODULE_NAME} 
+install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})

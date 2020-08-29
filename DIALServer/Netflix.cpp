@@ -30,10 +30,15 @@ namespace DIALHandlers {
         static string Query(const string& params, const string& payload)
         {
             string query = params;
-
+#ifdef NETFLIX_VERSION_5_1
             // Set proper launch type, i.e. launched by DIAL
             query += _T("&source_type=12");
-
+#endif
+#ifdef NETFLIX_VERSION_5_2
+            // Set proper launch type, i.e. launched by DIAL
+            // FIXME: Use project specific iid for now
+            query += _T("&iid=7637f789");
+#endif
             if (payload.empty() == false) {
                 // Netflix expects the payload as urlencoded option "dial"
                 const uint16_t maxEncodeSize = static_cast<uint16_t>(payload.length() * 3 * sizeof(TCHAR));
@@ -79,6 +84,7 @@ namespace DIALHandlers {
                 , _service(nullptr)
                 , _notification(*this)
                 , _hidden(false)
+                , _hasHideAndShow(config.Hide.Value())
                 , _lock()
                 , _callsign(config.Callsign.Value())
             {
@@ -118,7 +124,7 @@ namespace DIALHandlers {
             }
             bool HasHideAndShow() const override
             {
-                return (_netflix != nullptr);
+                return ((_netflix != nullptr) && (_hasHideAndShow == true));
             }
             uint32_t Show() override
             {
@@ -217,6 +223,7 @@ namespace DIALHandlers {
             PluginHost::IShell* _service;
             Core::Sink<Notification> _notification;
             bool _hidden;
+            bool _hasHideAndShow;
             mutable Core::CriticalSection _lock;
             string _callsign;
         }; // class Active

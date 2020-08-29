@@ -86,9 +86,14 @@ namespace Plugin {
 
     void FirmwareControl::Upgrade() {
         TRACE(Trace::Information, (string(__FUNCTION__)));
-        uint32_t status = Download();
-        if (status == Core::ERROR_NONE && (Status() != UpgradeStatus::UPGRADE_CANCELLED)) {
-            Install();
+        Core::Directory storageLocation(_destination.c_str());
+        if (storageLocation.Next() == true) {
+            uint32_t status = Download();
+            if (status == Core::ERROR_NONE && (Status() != UpgradeStatus::UPGRADE_CANCELLED)) {
+                Install();
+            }
+        } else {
+            Status(UpgradeStatus::DOWNLOAD_ABORTED, Core::ERROR_NOT_EXIST, 0);
         }
     }
 
@@ -132,6 +137,9 @@ namespace Plugin {
 
             Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
             status = WaitForCompletion(_waitTime * 1000);
+            if (status != Core::ERROR_NONE) {
+                downloadEngine.Close();
+            }
         }
 
         status = ((status != Core::ERROR_NONE)? status: DownloadStatus());

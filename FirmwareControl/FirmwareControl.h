@@ -60,11 +60,13 @@ namespace Plugin {
             GENERIC,
             INVALID_PARAMETERS,
             INVALID_STATES,
+            NO_ENOUGH_SPACE,
             OPERATION_NOT_PERMITTED,
             INCORRECT_HASH,
             UNAUTHENTICATED,
             UNAVAILABLE,
             TIMEDOUT,
+            DOWNLOAD_DIR_NOT_EXIST,
             UNKNOWN
         };
     private:
@@ -115,9 +117,9 @@ namespace Plugin {
             {
                 _parent.NotifyDownloadStatus(status);
             }
-            virtual void NotifyProgress(const uint8_t percentage) override
+            virtual void NotifyProgress(const uint32_t transferred) override
             {
-                _parent.NotifyProgress(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, percentage);
+                _parent.NotifyProgress(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, transferred);
             }
 
         private:
@@ -232,18 +234,18 @@ namespace Plugin {
             }
         }
 
-        inline void NotifyProgress(const UpgradeStatus& upgradeStatus, const ErrorType& errorType, const uint8_t& percentage)
+        inline void NotifyProgress(const UpgradeStatus& upgradeStatus, const ErrorType& errorType, const uint32_t& progress)
         {
             if ((upgradeStatus == UPGRADE_COMPLETED) ||
                 (upgradeStatus == INSTALL_ABORTED) ||
                 (upgradeStatus == DOWNLOAD_ABORTED)) {
                 event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
-                                      static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), percentage);
+                                      static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), progress);
                 ResetStatus();
                 RemoveDownloadedFile();
             } else if (_interval) { // Send intermediate staus/progress of upgrade
                 event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
-                                      static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), percentage);
+                                      static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), progress);
             }
         }
 
@@ -259,8 +261,10 @@ namespace Plugin {
         void UnregisterAll();
         uint32_t endpoint_upgrade(const JsonData::FirmwareControl::UpgradeParamsData& params);
         uint32_t get_status(Core::JSON::EnumType<JsonData::FirmwareControl::StatusType>& response) const;
+        uint32_t get_downloadsize(Core::JSON::DecUInt64& response) const;
+
         void event_upgradeprogress(const JsonData::FirmwareControl::StatusType& status,
-                                   const JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType& error, const uint8_t& percentage);
+                                   const JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType& error, const uint32_t& progress);
 
         inline uint32_t WaitForCompletion(int32_t waitTime)
         {
@@ -300,13 +304,24 @@ namespace Plugin {
             return status;
         }
 
-        inline void Status(const UpgradeStatus& upgradeStatus, const uint32_t& error, const uint8_t& percentage)
+        inline void Status(const UpgradeStatus& upgradeStatus, const uint32_t& error, const uint32_t& progress)
         {
             _adminLock.Lock();
             _upgradeStatus = upgradeStatus;
             _adminLock.Unlock();
 
-            NotifyProgress(upgradeStatus, ConvertCoreErrorToUpgradeError(error), percentage);
+            NotifyProgress(upgradeStatus, ConvertCoreErrorToUpgradeError(error), progress);
+        }
+
+        inline uint64_t DownloadMaxSize() const
+        {
+            uint64_t availableSize = 0;
+            Core::Partition path(_destination.c_str());
+            if (path.IsValid()) {
+                availableSize = path.Free();
+            }
+
+            return availableSize;
         }
 
         inline ErrorType ConvertCoreErrorToUpgradeError(uint32_t error) const
@@ -323,14 +338,20 @@ namespace Plugin {
             case Core::ERROR_INCORRECT_HASH:
                 errorType = ErrorType::INCORRECT_HASH;
                 break;
+            case Core::ERROR_WRITE_ERROR:
+                errorType = ErrorType::NO_ENOUGH_SPACE;
+                break;
             case Core::ERROR_UNAUTHENTICATED:
                 errorType = ErrorType::UNAUTHENTICATED;
                 break;
             case Core::ERROR_TIMEDOUT:
                 errorType = ErrorType::TIMEDOUT;
                 break;
-            default: //Expand later on need basis.
+            case Core::ERROR_NOT_EXIST:
+                errorType = ErrorType::DOWNLOAD_DIR_NOT_EXIST;
+                break;
 
+            default: //Expand later on need basis.
                 break;
             }
             return errorType;
