@@ -18,8 +18,10 @@
  */
  
 #include "../Module.h"
-#include <interfaces/IDisplayInfo.h>
 #include "../DisplayInfoTracing.h"
+#include "../ExtendedDisplayIdentification.h"
+
+#include <interfaces/IDisplayInfo.h>
 
 #include <nexus_config.h>
 #include <nexus_platform.h>
@@ -50,6 +52,7 @@ public:
        , _type(HDR_OFF)
        , _totalGpuRam(0)
        , _audioPassthrough(false)
+       , _EDID()
        , _adminLock()
        , _activity(*this) {
 
@@ -347,13 +350,13 @@ private:
 #endif
 
     class NexusHdmiOutput {
-        public:
+    public:
         NexusHdmiOutput(const NexusHdmiOutput&) = delete;
         NexusHdmiOutput& operator=(const NexusHdmiOutput&) = delete;
 
-        NexusHdmiOutput() : _hdmiOutput(nullptr) {
+        NexusHdmiOutput(const uint8_t hdmiPort = 0) : _hdmiOutput(nullptr) {
 
-            _hdmiOutput = NEXUS_HdmiOutput_Open(NEXUS_ALIAS_ID + 0, NULL);
+            _hdmiOutput = NEXUS_HdmiOutput_Open(NEXUS_ALIAS_ID + hdmiPort, NULL);
 
             if( _hdmiOutput == nullptr ) {
                 TRACE(Trace::Error, (_T("Error opening Nexus HDMI ouput")));
@@ -561,6 +564,9 @@ private:
             default:
                 break;
             }
+            if (connected == true) {
+                ReadEDID(hdmiHandle, _EDID);
+            }
         }
         _adminLock.Unlock();
 
@@ -568,6 +574,30 @@ private:
             _activity.Submit();
         }
     }
+
+    // rc = BHDM_EDID_GetHdrStaticMetadatadb(hdmiOutput->hdmHandle, &_hdrdb);
+    void RetrieveEDID(NEXUS_HdmiOutputHandle handle, ExtendedDisplayIdentification& info) {
+        // typedef struct NEXUS_HdmiOutputEdidBlock
+        // {
+        //     uint8_t data[128];
+        // } NEXUS_HdmiOutputEdidBlock;
+
+        // NEXUS_Error NEXUS_HdmiOutput_GetEdidBlock(
+        //      NEXUS_HdmiOutputHandle output,
+        //      unsigned blockNum,
+        //      NEXUS_HdmiOutputEdidBlock *pBlock    /* [out] Block of raw EDID data */
+        //      );
+        NEXUS_Error error;
+        uint8_t index = 0;
+
+        do {
+            error = NEXUS_HdmiOutput_GetEdidBlock(handle, index, reinterpret_cast<NEXUS_HdmiOutputEdidBlock*>(info.Segment(index)));
+
+            index++;
+
+        } while ( (index <= info.Segments()) && (error == 0) );
+    }
+
 
 private:
     uint32_t _width;
@@ -584,6 +614,7 @@ private:
     std::list<IConnectionProperties::INotification*> _observers;
 
     NEXUS_PlatformConfiguration _platformConfig;
+    ExtendedDisplayIdentification _EDID;
 
     mutable Core::CriticalSection _adminLock;
 

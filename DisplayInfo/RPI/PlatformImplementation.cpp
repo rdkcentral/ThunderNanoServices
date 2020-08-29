@@ -18,6 +18,8 @@
  */
  
 #include "../Module.h"
+#include "../ExtendedDisplayIdentification.h"
+
 #include <interfaces/IDisplayInfo.h>
 
 #include <bcm_host.h>
@@ -27,14 +29,17 @@ namespace WPEFramework {
 namespace Plugin {
 
 class DisplayInfoImplementation : public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
-
 public:
+    DisplayInfoImplementation(const DisplayInfoImplementation&) = delete;
+    DisplayInfoImplementation& operator= (const DisplayInfoImplementation&) = delete;
+
     DisplayInfoImplementation()
         : _width(0)
         , _height(0)
         , _connected(false)
         , _totalGpuRam(0)
         , _audioPassthrough(false)
+        , _EDID()
         , _adminLock()
         , _activity(*this) {
 
@@ -46,9 +51,6 @@ public:
 
         vc_tv_register_callback(&DisplayCallback, reinterpret_cast<void*>(this));
     }
-
-    DisplayInfoImplementation(const DisplayInfoImplementation&) = delete;
-    DisplayInfoImplementation& operator= (const DisplayInfoImplementation&) = delete;
     virtual ~DisplayInfoImplementation()
     {
         bcm_host_deinit();
@@ -100,33 +102,45 @@ public:
 
         return (Core::ERROR_NONE);
     }
-    bool IsAudioPassthrough () const override
+    uint32_t IsAudioPassthrough (bool& value) const override
     {
-        return _audioPassthrough;
+        value = _audioPassthrough;
+        return (Core::ERROR_NONE);
     }
-    bool Connected() const override
+    uint32_t Connected(bool& connected) const override
     {
-        return _connected;
+        connected = _connected;
+        return (Core::ERROR_NONE);
     }
-    uint32_t Width() const override
+    uint32_t Width(uint32_t& value) const override
     {
-        return _width;
+        value = _width;
+        return (Core::ERROR_NONE);
     }
-    uint32_t Height() const override
+    uint32_t Height(uint32_t& value) const override
     {
-        return _height;
+        value = _height;
+        return (Core::ERROR_NONE);
     }
-    uint32_t VerticalFreq() const override
+    uint32_t VerticalFreq(uint32_t& value) const override
     {
-        return ~0;
+        value = 0;
+        return (Core::ERROR_NONE);
     }
     // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
-    HDCPProtectionType HDCPProtection() const override {
-        return HDCPProtectionType::HDCP_Unencrypted;
+    uint32_t HDCPProtection(HDCPProtectionType& value) const override {
+        value = HDCPProtectionType::HDCP_Unencrypted;
+        return (Core::ERROR_NONE);
     }
-    HDRType Type() const override
-    {
-        return HDR_OFF;
+    uint32_t HDCPProtection (const HDCPProtectionType& /* value */) override {
+        return (Core::ERROR_GENERAL);
+    }
+    uint32_t EDID (const uint16_t& length /* @inout */, uint8_t data[] /* @out @length:length */) const override {
+        return (Core::ERROR_NONE);
+    }
+    uint32_t PortName (string& name /* @out */) const {
+        name =_T("HDMI") + Core::NumberType<uint8_t>(0).Text();
+        return (Core::ERROR_NONE);
     }
     void Dispatch()
     {
@@ -155,7 +169,7 @@ public:
         std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
 
         if (index != _observers.end()) {
-            (*index)->Updated();
+            (*index)->Updated(Exchange::IConnectionProperties::INotification::Source::HDCP_CHANGE);
         }
 
         _adminLock.Unlock();
@@ -255,12 +269,32 @@ private:
         }
     }
 
+    void RetrieveEDID(ExtendedDisplayIdentification& info, int displayId = -1) {
+        int size;
+        uint8_t  index = 0;
+
+        do {
+            if (displayId != -1) {
+                #ifdef RPI4 // or higer
+                size = vc_tv_hdmi_ddc_read_id(displayId, index * info.Length(), info.Length(), info.Segment(index));
+                #endif
+            }
+            else {
+                size = vc_tv_hdmi_ddc_read(index * info.Length(), index * info.Length(), info.Segment(index));
+            }
+
+            index++;
+
+        } while ( (index <= info.Segments()) && (size == info.Length()) );
+    } 
+
 private:
     uint32_t _width;
     uint32_t _height;
     bool _connected;
     uint64_t _totalGpuRam;
     bool _audioPassthrough;
+    ExtendedDisplayIdentification _EDID;
 
     std::list<IConnectionProperties::INotification*> _observers;
 

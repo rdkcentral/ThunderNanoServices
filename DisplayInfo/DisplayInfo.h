@@ -60,9 +60,9 @@ namespace Plugin {
                     _client = nullptr;
                 }
             }
-            void Updated() override
+            void Updated(const Exchange::IConnectionProperties::INotification::Source event) override
             {
-                _parent.Updated();
+                _parent.Updated(event);
             }
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(Exchange::IConnectionProperties::INotification)
@@ -82,6 +82,7 @@ namespace Plugin {
             , _connectionId(0)
             , _graphicsProperties(nullptr)
             , _connectionProperties(nullptr)
+            , _hdrProperties(nullptr)
             , _notification(this)
         {
             RegisterAll();
@@ -97,6 +98,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_AGGREGATE(Exchange::IGraphicsProperties, _graphicsProperties)
         INTERFACE_AGGREGATE(Exchange::IConnectionProperties, _connectionProperties)
+        INTERFACE_AGGREGATE(Exchange::IHDRProperties, _hdrProperties)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
@@ -112,7 +114,7 @@ namespace Plugin {
         virtual void Inbound(Web::Request& request) override;
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
-        void Updated()
+        void Updated(const Exchange::IConnectionProperties::INotification::Source /* event */)
         {
             event_updated();
         }
@@ -131,6 +133,7 @@ namespace Plugin {
         uint32_t _connectionId;
         Exchange::IGraphicsProperties* _graphicsProperties;
         Exchange::IConnectionProperties* _connectionProperties;
+        Exchange::IHDRProperties* _hdrProperties;
         Core::Sink<Notification> _notification;
     };
 

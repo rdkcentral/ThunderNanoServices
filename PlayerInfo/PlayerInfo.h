@@ -82,8 +82,8 @@ namespace Plugin {
         uint32_t _connectionId;
 
         Exchange::IPlayerProperties* _player;
-        Exchange::IPlayerProperties::IAudioIterator* _audioCodecs;
-        Exchange::IPlayerProperties::IVideoIterator* _videoCodecs;
+        Exchange::IPlayerProperties::IAudioCodecIterator* _audioCodecs;
+        Exchange::IPlayerProperties::IVideoCodecIterator* _videoCodecs;
         Exchange::Dolby::IOutput* _dolbyOut;
     };
 

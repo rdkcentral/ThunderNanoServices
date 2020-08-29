@@ -42,32 +42,34 @@ namespace Plugin {
 
         if (_player != nullptr) {
 
-            _audioCodecs = _player->AudioCodec();
-            if (_audioCodecs != nullptr) {
-
-                _videoCodecs = _player->VideoCodec();
-                if (_videoCodecs == nullptr) {
-
+            if ( (_player->AudioCodecs(_audioCodecs) != Core::ERROR_NONE)  || (_audioCodecs == nullptr) ) {
+                if (_audioCodecs != nullptr) {
                     _audioCodecs->Release();
                     _audioCodecs = nullptr;
-
-                    _player->Release();
-                    _player = nullptr;
-                } else {
-
-                    // The code execution should proceed regardless of the _dolbyOut
-                    // value, as it is not a essential.
-                    // The relevant JSONRPC endpoints will return ERROR_UNAVAILABLE,
-                    // if it hasn't been initialized.
-                    _dolbyOut = _player->QueryInterface<Exchange::Dolby::IOutput>();
-                    if(_dolbyOut == nullptr){
-                        SYSLOG(Logging::Startup, (_T("Dolby output switching service is unavailable.")));
-                    }
-
                 }
-            } else {
                 _player->Release();
                 _player = nullptr;
+            }
+            else if ((_player->VideoCodecs(_videoCodecs) != Core::ERROR_NONE) || (_videoCodecs == nullptr) ) {
+                if (_videoCodecs == nullptr) {
+
+                    _videoCodecs->Release();
+                    _videoCodecs = nullptr;
+                }
+                _audioCodecs->Release();
+                _audioCodecs = nullptr;
+                _player->Release();
+                _player = nullptr;
+            } else {
+
+                // The code execution should proceed regardless of the _dolbyOut
+                // value, as it is not a essential.
+                // The relevant JSONRPC endpoints will return ERROR_UNAVAILABLE,
+                // if it hasn't been initialized.
+                _dolbyOut = _player->QueryInterface<Exchange::Dolby::IOutput>();
+                if(_dolbyOut == nullptr){
+                    SYSLOG(Logging::Startup, (_T("Dolby output switching service is unavailable.")));
+                }
             }
         }
 
@@ -130,15 +132,17 @@ namespace Plugin {
     void PlayerInfo::Info(JsonData::PlayerInfo::CodecsData& playerInfo) const
     {
         Core::JSON::EnumType<JsonData::PlayerInfo::CodecsData::AudiocodecsType> audioCodec;
-        _audioCodecs->Reset();
-        while(_audioCodecs->Next()) {
-            playerInfo.Audio.Add(audioCodec = static_cast<JsonData::PlayerInfo::CodecsData::AudiocodecsType>(_audioCodecs->Codec()));
+        _audioCodecs->Reset(0);
+        Exchange::IPlayerProperties::AudioCodec audio;
+        while(_audioCodecs->Next(audio)) {
+            playerInfo.Audio.Add(audioCodec = static_cast<JsonData::PlayerInfo::CodecsData::AudiocodecsType>(audio));
         }
 
         Core::JSON::EnumType<JsonData::PlayerInfo::CodecsData::VideocodecsType> videoCodec;
-        _videoCodecs->Reset();
-        while(_videoCodecs->Next()) {
-            playerInfo.Video.Add(videoCodec = static_cast<JsonData::PlayerInfo::CodecsData::VideocodecsType>(_videoCodecs->Codec()));
+        Exchange::IPlayerProperties::VideoCodec video;
+        _videoCodecs->Reset(0);
+        while(_videoCodecs->Next(video)) {
+            playerInfo.Video.Add(videoCodec = static_cast<JsonData::PlayerInfo::CodecsData::VideocodecsType>(video));
         }
     }
 
