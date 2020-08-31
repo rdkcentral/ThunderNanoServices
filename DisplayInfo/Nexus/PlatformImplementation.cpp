@@ -191,6 +191,7 @@ public:
         return (Core::ERROR_GENERAL);
     }
     uint32_t EDID (const uint16_t& length /* @inout */, uint8_t data[] /* @out @length:length */) const override {
+        /* length = */ _EDID.Raw(length, data);
         return (Core::ERROR_NONE);
     }
     uint32_t PortName (string& name /* @out */) const {

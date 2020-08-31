@@ -136,6 +136,7 @@ public:
         return (Core::ERROR_GENERAL);
     }
     uint32_t EDID (const uint16_t& length /* @inout */, uint8_t data[] /* @out @length:length */) const override {
+        /* length = */ _EDID.Raw(length, data);
         return (Core::ERROR_NONE);
     }
     uint32_t PortName (string& name /* @out */) const {
@@ -165,6 +166,16 @@ public:
  
 
         _adminLock.Lock();
+
+        if (_connected == true) {
+            TRACE(Trace::Information, (_T("HDCP connected: [%d,%d]"), _width, _height));
+            
+            RetrieveEDID(_EDID, -1);
+        }
+        else {
+            TRACE(Trace::Information, (_T("HDCP disconnected")));
+        }
+
 
         std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
 
@@ -280,12 +291,15 @@ private:
                 #endif
             }
             else {
-                size = vc_tv_hdmi_ddc_read(index * info.Length(), index * info.Length(), info.Segment(index));
+                uint8_t* buffer = info.Segment(index);
+                size = vc_tv_hdmi_ddc_read(index * info.Length(), info.Length(), buffer);
             }
 
             index++;
 
-        } while ( (index <= info.Segments()) && (size == info.Length()) );
+        } while ( (index < info.Segments()) && (size == info.Length()) );
+
+        TRACE(Trace::Information, (_T("EDID, Read %d segments [%d]"), index, size));
     } 
 
 private:

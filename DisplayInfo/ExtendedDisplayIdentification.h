@@ -173,6 +173,28 @@ namespace Plugin {
                      (_base[7] == 0x00) );
         }
 
+        uint16_t Raw(const uint16_t length, uint8_t data[]) const {
+            uint16_t written = 0;
+
+            // We always have a base if it is valid...
+            if (IsValid() == true) {
+                uint16_t segment = std::min(Length(), length);
+                BufferList::const_iterator index(_segments.cbegin());
+
+                // By definition, we can copy the base...
+                ::memcpy(data, _base, segment);
+                written = segment;
+                
+                while ( (written < length) && (index != _segments.cend()) ) {
+                    segment = std::min(Length(), static_cast<uint16_t>(length - written));
+                    ::memcpy(&(data[written]), *index, segment);
+                    index++;
+                    written += segment;
+                }
+            }
+            return (written);
+        }
+
         // -------------------------------------------------------------
         // Accessors to the base information of the EDID raw buffer.
         // -------------------------------------------------------------
@@ -251,12 +273,12 @@ namespace Plugin {
             ASSERT (index <= Segments());
 
             if (index == 0) {
-                result = _base;
+                result = _base.operator uint8_t* ();
             }
             else if (index <= Segments()) {
                 BufferList::iterator pointer = _segments.begin();
                 uint8_t current = 1;
-                while (current != index) { 
+                while (current <= index) { 
                     if (pointer != _segments.end()) {
                         pointer++;
                     }
@@ -265,7 +287,7 @@ namespace Plugin {
                     }
                     current++;
                 }
-                result = (pointer != _segments.end() ? *pointer : _segments.back());
+                result = (pointer != _segments.end() ? pointer->operator uint8_t*() : _segments.back().operator uint8_t* ());
             }
 
             return (result);
