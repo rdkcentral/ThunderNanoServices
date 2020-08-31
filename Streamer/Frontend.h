@@ -234,7 +234,6 @@ namespace Player {
                 IControl::ICallback* _callback;
             };
 
-
         public:
             Frontend(Administrator* administration, IPlayerPlatform* player)
                 : _refCount(1)
@@ -354,6 +353,33 @@ namespace Player {
                 }
                 _callback = callback;
                 _adminLock.Unlock();
+            }
+            void Attach(IStream::ICallback* callback) override
+            {
+                _adminLock.Lock();
+
+                if (callback != nullptr && _callback == nullptr) {
+                    callback->AddRef();
+                    _callback = callback;
+                }
+
+                _adminLock.Unlock();
+            }
+            uint32_t Detach(IStream::ICallback* callback) override
+            {
+                uint32_t result = Core::ERROR_NONE;
+                
+                _adminLock.Lock();
+
+                if (_callback != nullptr && _callback == callback) {
+                    TRACE_L1("Releasing the callback");
+                    result = callback->Release();
+                    _callback = nullptr;
+                }
+
+                _adminLock.Unlock();
+
+                return result;
             }
             state State() const override
             {
@@ -501,4 +527,3 @@ namespace Player {
 } // Player
 
 }
-
