@@ -70,13 +70,16 @@ namespace Plugin {
     uint32_t FirmwareControl::Schedule(const std::string& name, const std::string& path, const FirmwareControl::Type& type, const uint16_t& interval, const std::string& hash)
     {
         TRACE(Trace::Information, (string(__FUNCTION__)));
+
+        _adminLock.Lock();
         if (path.empty() != true) {
             _source = path + "/" + name;
         }
-        _adminLock.Lock();
         _type = type;
         _interval = interval;
         _hash = hash;
+
+        _signal.ResetEvent();
 
         _upgrader->Schedule();
         _adminLock.Unlock();
