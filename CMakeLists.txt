@@ -112,10 +112,6 @@ if(PLUGIN_DEVICEIDENTIFICATION)
     add_subdirectory(DeviceIdentification)
 endif()
 
-if(PLUGIN_DEVICEINFO)
-    add_subdirectory(DeviceInfo)
-endif()
-
 if(PLUGIN_DISPLAYINFO)
     add_subdirectory(DisplayInfo)
 endif()
@@ -160,16 +156,8 @@ if(PLUGIN_SICONTROL)
     add_subdirectory (SIControl)
 endif(PLUGIN_SICONTROL)
 
-if(PLUGIN_LOCATIONSYNC)
-    add_subdirectory(LocationSync)
-endif()
-
 if(PLUGIN_MESSENGER)
     add_subdirectory(Messenger)
-endif()
-
-if(PLUGIN_MONITOR)
-    add_subdirectory(Monitor)
 endif()
 
 if(PLUGIN_PROCESSMONITOR)
@@ -178,10 +166,6 @@ endif()
 
 if(PLUGIN_NETWORKCONTROL)
     add_subdirectory(NetworkControl)
-endif()
-
-if(PLUGIN_OPENCDMI)
-    add_subdirectory(OpenCDMi)
 endif()
 
 if(PLUGIN_POWER)
@@ -238,10 +222,6 @@ endif()
 
 if(PLUGIN_TIMESYNC)
     add_subdirectory(TimeSync)
-endif()
-
-if(PLUGIN_TRACECONTROL)
-    add_subdirectory(TraceControl)
 endif()
 
 if(PLUGIN_VOLUMECONTROL)
