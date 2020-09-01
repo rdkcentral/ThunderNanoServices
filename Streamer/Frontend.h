@@ -372,7 +372,6 @@ namespace Player {
                 _adminLock.Lock();
 
                 if (_callback != nullptr && _callback == callback) {
-                    TRACE_L1("Releasing the callback");
                     result = callback->Release();
                     _callback = nullptr;
                 }
