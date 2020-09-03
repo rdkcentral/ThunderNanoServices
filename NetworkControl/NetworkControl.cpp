@@ -459,12 +459,8 @@ namespace Plugin
             if (leaseFile.Create() == true) {
                 Store storage;
 
-                for (std::pair<uint16_t, Core::NodeId>& entry : _dns) {
-                    storage.DNS.Add() = entry.second.HostAddress();
-                }
-
                 for (std::pair<const string, DHCPEngine>& entry : _dhcpInterfaces) {
-                    Entry& result = storage.Interfaces.Add();
+                    Entry& result = storage.Add();
                     result = entry.second.Info();
                     result.Interface = entry.first;
                 }
@@ -498,17 +494,7 @@ namespace Plugin
                 Core::OptionalType<Core::JSON::Error> error;
                 if (storage.IElement::FromFile(leaseFile, error) == true) {
                     
-                    Core::JSON::ArrayType<Core::JSON::String>::Iterator entries(storage.DNS.Elements());
-
-                    while (entries.Next() == true) {
-                        Core::NodeId entry(entries.Current().Value().c_str());
-
-                        if (entry.IsValid() == true) {
-                            _dns.push_back(std::pair<uint16_t, Core::NodeId>(1, entry));
-                        }
-                    }
-
-                    Core::JSON::ArrayType<Entry>::Iterator loop(storage.Interfaces.Elements());
+                    Core::JSON::ArrayType<Entry>::Iterator loop(storage.Elements());
 
                     while (loop.Next() == true) {
                         info.emplace(std::piecewise_construct,
@@ -607,7 +593,7 @@ namespace Plugin
         return (result);
     }
 
-    /* virtual */ uint32_t NetworkControl::AddDNS(IIPNetwork::IDNSServers * dnsEntries)
+    /* virtual */ uint32_t NetworkControl::AddDNS(IIPNetwork::IDNSServers* dnsEntries)
     {
         uint32_t result = Core::ERROR_UNKNOWN_KEY;
         bool syncDNS = false;
@@ -794,6 +780,16 @@ namespace Plugin
             while (pointer != _dns.end()) {
                 data += string(NAMESERVER, sizeof(NAMESERVER) - 1) + pointer->second.HostAddress() + '\n';
                 pointer++;
+            }
+
+            // Strawl through the list of dhcp entries and get the DNS entries from there
+            std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.begin());
+
+            while (index != _dhcpInterfaces.end()) {
+                
+                
+                data += string(NAMESERVER, sizeof(NAMESERVER) - 1) + index->second.HostAddress() + '\n';
+                index++;
             }
 
             _adminLock.Unlock();

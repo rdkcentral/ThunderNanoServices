@@ -138,22 +138,7 @@ namespace Plugin {
         };
 
     private:
-        class Store : public Core::JSON::Container {
-        public:
-            Store(const Store&) = delete;
-            Store& operator= (const Store&) = delete;
-
-            Store() 
-                : Core::JSON::Container()
-                , Interfaces()
-                , DNS() {
-            }
-            ~Store() override = default;
-
-        public:
-            Core::JSON::ArrayType<Entry> Interfaces;
-            Core::JSON::ArrayType<Core::JSON::String> DNS;
-        };
+        using Store = Core::JSON::ArrayType<Entry>;
 
         class Settings {
         public:
@@ -343,14 +328,13 @@ namespace Plugin {
 #pragma warning(disable : 4355)
 #endif
             DHCPEngine(NetworkControl& parent, const string& interfaceName, const uint8_t waitTimeSeconds, const uint8_t maxRetries)
-                : _adminLock()
-                , _parent(parent)
+                : _parent(parent)
                 , _retries(0)
                 , _maxRetries(maxRetries)
                 , _handleTime(1000 * waitTimeSeconds)
                 , _client(interfaceName, this)
-                , _offers()
                 , _watchdog(*this)
+                , _dns()
             {
             }
 #ifdef __WINDOWS__
@@ -363,6 +347,7 @@ namespace Plugin {
             {
                 SetWatchdog(_handleTime);
                 uint32_t result = _client.Discover(preferred);
+                _dns.Clear();
 
                 return (result);
             }
@@ -372,9 +357,7 @@ namespace Plugin {
             }
             void Dispatch()
             {
-                _adminLock.Lock();
                 Retry();
-                _adminLock.Unlock();
             }
             const Settings& Info() const {
                 return (_settings);
@@ -384,60 +367,24 @@ namespace Plugin {
             }
 
         private:
-            void Discovered (const DHCPClient::Offer& offer) override {
-                _adminLock.Lock();
-                _offers.emplace_back(offer);
-                
-                if (_client.Classification() == DHCPClient::CLASSIFICATION_DISCOVER) {
-                    // This is the first time we are going to "request" an IP address.
-                    SetWatchdog(_handleTime);
-                    _client.Request(_offers.front());
-                }
-                _adminLock.Unlock();
-            }
-
-            void Acknowledged(const DHCPClient::Offer& offer) override {
+            void Approved(const DHCPClient::Offer& offer) override {
                 // Seems we have a hit, report this to the parent..
-                ClearWatchdog();
+                _watchdog.Revoke();
                 _parent.Accepted(_client.Interface(), offer);
-                _client.Close();
-            }
-
-            void Rejected(const DHCPClient::Offer& offer) override {
-                // Seems like we have a rejected one, lets see if we have more to process
-                _adminLock.Lock();
-                _offers.pop_front();
-
-                if (_offers.size() > 0) {
-                    SetWatchdog(_handleTime);
-                    _client.Request(_offers.front());
+                DHCPClient::Offer::DNSIterator index(offer.DNS());
+                while (index.Next()) {
+                    _dns.emplace_back(index.Current());
                 }
-                else {
-                    Retry();
-                }
-                
-                _adminLock.Unlock();
             }
 
             void SetWatchdog (const uint32_t delayMs) {
-                ClearWatchdog();
-                _watchdog.Schedule(Core::Time::Now().Add(delayMs));
-            }
-
-            void ClearWatchdog () {
                 _watchdog.Revoke();
+                _watchdog.Schedule(Core::Time::Now().Add(delayMs));
             }
 
             void Retry() {
                 if (_retries++ < _maxRetries) {
-                    // Where we still in the discover mode ?
-                    if (_client.Classification() == DHCPClient::CLASSIFICATION_DISCOVER) {
-                        _client.Resend();
-                    }
-                    else {
-                        // Lets not assume anything, discover without a preference!
-                        Discover(Core::NodeId());
-                    }
+                    _client.Retry();
                 }
                 else {
                     // Report failure..
@@ -446,15 +393,14 @@ namespace Plugin {
             }
 
         private:
-            Core::CriticalSection _adminLock;
             NetworkControl& _parent;
             uint8_t _retries;
             uint8_t _maxRetries;
             uint32_t _handleTime;
             DHCPClient _client;
-            std::list<DHCPClient::Offer> _offers;
             Core::WorkerPool::JobType<DHCPEngine&> _watchdog;
             Settings _settings;
+            std::list<Core::NodeId> _dns;
         };
 
     public:
@@ -531,7 +477,7 @@ namespace Plugin {
         string _persistentStoragePath;
         uint8_t _responseTime;
         uint8_t _retries;
-        std::list<std::pair<uint16_t, Core::NodeId>> _dns;
+        std::list<Core::NodeId> _dns;
         std::map<const string, DHCPEngine> _dhcpInterfaces;
         AdapterObserver _observer;
     };

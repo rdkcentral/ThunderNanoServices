@@ -35,8 +35,7 @@ namespace Plugin {
         , _xid(0)
         , _discoverXID(0)
         , _acknowledgeXID(0)
-        , _current()
-        , _mode(UNKNOWN)
+        , _offers()
         , _callback(callback)
     {
         Core::AdapterIterator adapters(_interfaceName);

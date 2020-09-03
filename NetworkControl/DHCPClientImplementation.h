@@ -45,11 +45,6 @@ namespace Plugin {
             SENDING,
             RECEIVING
         };
-        enum processState : uint8_t {
-            UNKNOWN,
-            ACKNOWLEDGED,
-            REJECTED
-        };
         // RFC 2131 section 2
         enum operations : uint8_t {
             OPERATION_BOOTREQUEST = 1,
@@ -239,7 +234,7 @@ namespace Plugin {
 
         class Offer {
         public:
-            typedef Core::IteratorType<const std::list<Core::NodeId>, const Core::NodeId&, std::list<Core::NodeId>::const_iterator> DnsIterator;
+            typedef Core::IteratorType<const std::list<Core::NodeId>, const Core::NodeId&, std::list<Core::NodeId>::const_iterator> DNSIterator;
 
             Offer()
                 : _source()
@@ -269,6 +264,18 @@ namespace Plugin {
 
                 Update(options);
             }
+            Offer(const Core::NodeId& source)
+                : _source()
+                , _offer(source)
+                , _gateway()
+                , _broadcast()
+                , _dns()
+                , _netmask(~0)
+                , _leaseTime(0)
+                , _renewalTime(0)
+                , _rebindingTime(0)
+            {
+            }
             Offer(const Offer& copy)
                 : _source(copy._source)
                 , _offer(copy._offer)
@@ -282,9 +289,7 @@ namespace Plugin {
             {
             }
             
-            ~Offer()
-            {
-            }
+            ~Offer() = default;
 
             void Update(Options& options) {
                if (_offer.IsValid() == true) {
@@ -365,13 +370,6 @@ namespace Plugin {
                 _rebindingTime = 0;
             }
 
-            Offer& operator=(const Core::NodeId& rhs) {
-                Clear();
-                _offer = rhs;
-
-                return (*this);
-            }
-
         public:
             bool IsValid() const
             {
@@ -389,7 +387,7 @@ namespace Plugin {
             {
                 return (_gateway);
             }
-            DnsIterator DNS() const
+            DNSIterator DNS() const
             {
                 return (DnsIterator(_dns));
             }
@@ -431,9 +429,7 @@ namespace Plugin {
         };
 
         struct ICallback {
-            virtual void Discovered(const Offer&) = 0;
-            virtual void Acknowledged(const Offer&) = 0;
-            virtual void Rejected(const Offer&) = 0;
+            virtual void Approved(const Offer&) = 0;
         };
 
         typedef Core::IteratorType<std::list<Offer>, Offer&, std::list<Offer>::iterator> Iterator;
@@ -448,33 +444,35 @@ namespace Plugin {
         virtual ~DHCPClient();
 
     public:
-        inline classifications Classification() const
-        {
-            return (_modus);
-        }
-        inline const string& Interface() const
+        const string& Interface() const
         {
             return (_interfaceName);
+        }
+        inline void Retry() {
+            _adminLock.Lock();
+
+            if ((_state == RECEIVING) && (_modus == CLASSIFICATION_REQUEST) && (_offers.size() >= 2)) {
+                // Looks like the ACK on which we where waiting is not coming, move on..
+                _offers.pop_front();
+                RequestAck();
+            }
+            else {
+                _offers.clear();
+                Crypto::Random(_xid);
+
+                _modus = CLASSIFICATION_DISCOVER;
+                _discoverXID = _xid;
+
+                SocketDatagram::Trigger();
+            }
+
+            _adminLock.Unlock();
         }
         inline void UpdateMAC(const uint8_t buffer[], const uint8_t size) {
             ASSERT(size == sizeof(_MAC));
 
             memcpy(_MAC, buffer, sizeof(_MAC));
         }
-        inline void Resend()
-        {
-
-            _adminLock.Lock();
-
-            if (_state == RECEIVING) {
-
-                _state = SENDING;
-                SocketDatagram::Trigger();
-            }
-
-            _adminLock.Unlock();
-        }
-
         /* Ask DHCP servers for offers. */
         inline uint32_t Discover(const Core::NodeId& preferredAddres)
         {
@@ -489,15 +487,15 @@ namespace Plugin {
                 if ((_state == RECEIVING) || (_state == IDLE)) {
 
                     _state = SENDING;
+                    _offers.clear();
+                    _offers.emplace_front(preferredAddres);
                     _adminLock.Unlock();
 
                     Core::SocketDatagram::Broadcast(true);
                     Crypto::Random(_xid);
 
                     _modus = CLASSIFICATION_DISCOVER;
-                    _current = preferredAddres;
                     _discoverXID = _xid;
-                    _mode = UNKNOWN;
 
                     result = Core::ERROR_NONE;
 
@@ -517,56 +515,6 @@ namespace Plugin {
             return (result);
         }
 
-        /* Request an offered DHCP offer @DHCP servers. */
-        uint32_t Request(const Offer& offer) {
-
-            uint32_t result = Core::ERROR_OPENING_FAILED;
-
-            if ((SocketDatagram::IsOpen() == true) || (SocketDatagram::Open(Core::infinite, _interfaceName) == Core::ERROR_NONE)) {
-
-                result = Core::ERROR_INPROGRESS;
-                
-                _adminLock.Lock();
-
-                if ((_state == RECEIVING) || (_state == IDLE)) {
-
-                    _state = SENDING;
-                    _adminLock.Unlock();
-
-                    // Use offer id as transaction id to pair request with correct response
-                    Core::SocketDatagram::Broadcast(true);
-                    Crypto::Random(_xid);
-
-                    _modus = CLASSIFICATION_REQUEST;
-                    _current = offer;
-                    _mode = UNKNOWN;
-                    _acknowledgeXID = _xid;
-
-                    if (_current.Source().IsValid() == true) {
-                        auto addr = reinterpret_cast<const sockaddr_in*>(static_cast<const struct sockaddr*>(offer.Source()));
-                        
-                        memcpy(&_serverIdentifier, &(addr->sin_addr), 4);
-                    }
-
-                    TRACE_L1("Sending a Request for %s", _interfaceName.c_str());                            
-
-                    result = Core::ERROR_NONE;
-                    SocketDatagram::Trigger();
-                }
-                else {
-
-                    _adminLock.Unlock();
-                    TRACE_L1("Incorrect start to start a new DHCP[%s] send. Current State: %d", _interfaceName.c_str(), _state);
-                }
-            } else {
-                TRACE_L1("Failed to open socket whilte trying to request ip %s\n", offer.Address().HostAddress().c_str());
-            }
-
-            _adminLock.Unlock();
-
-            return (result);
-        }
-
         inline uint32_t Decline(const Core::NodeId& acknowledged)
         {
             uint32_t result = Core::ERROR_OPENING_FAILED;
@@ -579,6 +527,8 @@ namespace Plugin {
 
                 if ((_state == RECEIVING) || (_state == IDLE)) {
 
+                    _offers.clear();
+                    _offers.emplace_front(acknowledged);
                     _state = SENDING;
                     _adminLock.Unlock();
 
@@ -586,8 +536,6 @@ namespace Plugin {
                     Crypto::Random(_xid);
 
                     _modus = CLASSIFICATION_NAK;
-                    _current = acknowledged;
-                    _mode = REJECTED;
 
                     TRACE_L1("Sending a NACK for %s", _interfaceName.c_str());                            
 
@@ -683,13 +631,16 @@ namespace Plugin {
             options[2] = _modus;
 
             /* the IP address we're preferring (DISCOVER) /  REQUESTING (REQUEST) */
-            if ((_current.Address().IsValid() == true) && (_current.Address().Type() == Core::NodeId::TYPE_IPV4)) {
-                const struct sockaddr_in* data(reinterpret_cast<const struct sockaddr_in*>(static_cast<const struct sockaddr*>(_current.Address())));
+            if (_offers.size() > 1) {
+                const Core::NodeId& node(_offers.front().Address());
+                if ((node.IsValid() == true) && (node.Type() == Core::NodeId::TYPE_IPV4)) {
+                    const struct sockaddr_in* data(reinterpret_cast<const struct sockaddr_in*>(static_cast<const struct sockaddr*>(node)));
 
-                options[index++] = OPTION_REQUESTEDIPADDRESS;
-                options[index++] = 4;
-                ::memcpy(&(options[index]), &(data->sin_addr.s_addr), 4);
-                index += 4;
+                    options[index++] = OPTION_REQUESTEDIPADDRESS;
+                    options[index++] = 4;
+                    ::memcpy(&(options[index]), &(data->sin_addr.s_addr), 4);
+                    index += 4;
+                }
             }
 
             /* Add identifier so that DHCP server can recognize device */
@@ -722,10 +673,26 @@ namespace Plugin {
             return (sizeof(CoreMessage) + index);
         }
 
+        void RequestAck() {
+            Offer& offer (_offers.front());
+
+            Crypto::Random(_xid);
+
+            _modus = CLASSIFICATION_REQUEST;
+            _acknowledgeXID = _xid;
+
+            if (offer.Source().IsValid() == true) {
+                auto addr = reinterpret_cast<const sockaddr_in*>(static_cast<const struct sockaddr*>(offer.Source()));
+                        
+                memcpy(&_serverIdentifier, &(addr->sin_addr), 4);
+            }
+
+            SocketDatagram::Trigger();
+        }
+
         /* parse a DHCP message and take appropiate action */
         uint16_t ProcessMessage(const Core::NodeId& source, const uint8_t stream[], const uint16_t length)
         {
-
             uint16_t result = sizeof(CoreMessage);
             const CoreMessage& frame(*reinterpret_cast<const CoreMessage*>(stream));
             const uint32_t xid = ntohl(frame.xid);
@@ -740,14 +707,23 @@ namespace Plugin {
 
                 Options options(optionsRaw, optionsLen);
 
+                _adminLock.Lock();
+
                 switch (options.messageType.Value()) {
                     case CLASSIFICATION_OFFER:
                         {
                             if (xid == _discoverXID) {
                                 TRACE(Trace::Information, ("Received an Offer from: %s", source.HostAddress().c_str()));
                                 Offer offer(source, frame, options);
-                                _callback->Discovered(offer);
-                            } else {
+
+                                if (_modus == CLASSIFICATION_OFFER) {
+                                    _offers.clear();
+                                    _offers.emplace_front(offer);
+                                    RequestAck();
+                                }
+                                else {
+                                    _offers.emplace_back(offer);
+                                }
                                 TRACE_L1("Unknown XID encountered: %d", xid);
                             }
                             break;
@@ -755,23 +731,33 @@ namespace Plugin {
                     case CLASSIFICATION_ACK: 
                         {
                             if (xid == _acknowledgeXID) {
-                                _mode = ACKNOWLEDGED;
-                                _current.Update(options); // Update if informations changed since offering
+
+                                ASSERT(_offers.size() >= 1);
+
+                                _offers.front().Update(options); // Update if informations changed since offering
                                 
-                                _callback->Acknowledged(_current);
+                                _callback->Approved(_offers.front());
+
+                                Close();
                             }
                             break;
                         }
                     case CLASSIFICATION_NAK:
                         {
                             if (xid == _acknowledgeXID) {
-                                _mode = REJECTED;
+                                
+                                ASSERT(_offers.size() >= 1);
 
-                                _callback->Rejected(_current);
+                                _offers.pop_front();
+                                if (_offers.size() >= 1) {
+                                    RequestAck();
+                                }
                             }
                             break;
                         }                   
                 }
+
+                _adminLock.Unlock();
 
                 result = length;
             }
@@ -789,8 +775,7 @@ namespace Plugin {
         uint32_t _xid;
         uint32_t _discoverXID;
         uint32_t _acknowledgeXID;
-        Offer _current;
-        processState _mode;
+        std::list<Offer> _offers;
         ICallback* _callback;
     };
 }
