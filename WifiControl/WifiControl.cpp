@@ -336,20 +336,13 @@ namespace Plugin
                         Connect(SSIDDecode(index.Current().Text()));
                     }
                 } else if (index.Current().Text() == _T("Store")) {
-                    Core::File configFile(_configurationStore);
 
-                    if (configFile.Create() != true) {
+                    if (Store() != Core::ERROR_NONE) {
                         result->ErrorCode = Web::STATUS_BAD_REQUEST;
                         result->Message = _T("Could not store the information.");
-
                     } else {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Store started.");
-
-                        WifiControl::ConfigList configs;
-                        WPASupplicant::Config::Iterator list(_controller->Configs());
-                        configs.Set(list);
-                        configs.IElement::ToFile(configFile);
                     }
 
                 } else if ((index.Current().Text() == _T("Debug")) && (index.Next() == true)) {
