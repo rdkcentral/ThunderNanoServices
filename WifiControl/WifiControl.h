@@ -680,7 +680,7 @@ namespace Plugin {
             return _controller->Disconnect(ssid);
         }
         inline uint32_t Store() {
-            uuint32_t result = Core::ERROR_NONE;
+            uint32_t result = Core::ERROR_NONE;
 
             Core::File configFile(_configurationStore);
             WPASupplicant::Config::Iterator list(_controller->Configs());
