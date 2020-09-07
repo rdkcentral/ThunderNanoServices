@@ -24,18 +24,18 @@ namespace WPEFramework {
 namespace Plugin {
 
     /* static */ constexpr uint8_t DHCPClient::MagicCookie[];
+    static Core::NodeId BroadcastClientNode (_T("0.0.0.0"), DHCPClient::DefaultDHCPClientPort, Core::NodeId::TYPE_IPV4);
+    static Core::NodeId BroadcastServerNode (_T("255.255.255.255"), DHCPClient::DefaultDHCPServerPort, Core::NodeId::TYPE_IPV4);
 
     DHCPClient::DHCPClient(const string& interfaceName, ICallback* callback)
-        : Core::SocketDatagram(false, Core::NodeId(), Core::NodeId(), 512, 1024)
+        : Core::SocketDatagram(false, BroadcastClientNode, BroadcastServerNode, 512, 1024)
         , _adminLock()
         , _interfaceName(interfaceName)
         , _state(IDLE)
         , _modus(CLASSIFICATION_INVALID)
         , _serverIdentifier(0)
         , _xid(0)
-        , _discoverXID(0)
-        , _acknowledgeXID(0)
-        , _offers()
+        , _offer()
         , _callback(callback)
     {
         Core::AdapterIterator adapters(_interfaceName);
@@ -59,7 +59,16 @@ namespace Plugin {
 
         if (_state == SENDING) {
             _state = RECEIVING;
-            TRACE_L1("Sending DHCP message type: %d for interface: %s", _modus, _interfaceName.c_str());
+
+            if ( (_modus == CLASSIFICATION_DISCOVER) || (_offer.Source().IsValid() == false) ) {
+                RemoteNode(BroadcastServerNode);
+                TRACE_L1("Sending DHCP message type: %d for interface: %s", _modus, _interfaceName.c_str());
+            }
+            else {
+                //RemoteNode(Core::NodeId(_offers.front().Source(), DHCPClient::DefaultDHCPServerPort));
+                RemoteNode(BroadcastServerNode);
+                TRACE_L1("Sending DHCP message type: %d for interface: %s to [%s] all", _modus, _interfaceName.c_str(), _offer.Source().HostAddress().c_str());
+            }
 
             result = Message(dataFrame, maxSendSize);
         }

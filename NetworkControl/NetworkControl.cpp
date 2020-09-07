@@ -31,47 +31,33 @@ namespace Plugin
     static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<NetworkControl::Entry>>> jsonGetNetworksFactory(1);
     static TCHAR NAMESERVER[] = "nameserver ";
 
-    static bool AddDNSEntry(std::list<std::pair<uint16_t, Core::NodeId>> & container, const Core::NodeId& element)
-    {
-        bool result = false;
+    static bool ExternallyAccessible(const Core::AdapterIterator& index) {
 
-        std::list<std::pair<uint16_t, Core::NodeId>>::iterator finder(container.begin());
+        ASSERT (index.IsValid());
 
-        while ((finder != container.end()) && (finder->second != element)) {
-            finder++;
+        bool accessible = index.IsRunning();
+
+        if (accessible == true) {
+            Core::IPV4AddressIterator checker4(index.IPV4Addresses());
+
+            accessible = false;
+
+            while ((accessible == false) && (checker4.Next() == true)) {
+                accessible = (checker4.Address().IsLocalInterface() == false);
+            }
+
+            if (accessible == false) {
+                Core::IPV6AddressIterator checker6(index.IPV6Addresses());
+
+                while ((accessible == false) && (checker4.Next() == true)) {
+                    accessible = (checker4.Address().IsLocalInterface() == false);
+                }
+            }
         }
 
-        if (finder == container.end()) {
-            result = true;
-            container.push_back(std::pair<uint16_t, Core::NodeId>(1, element));
-        } else {
-            finder->first += 1;
-        }
-
-        return (result);
+        return (accessible);
     }
 
-    static bool RemoveDNSEntry(std::list<std::pair<uint16_t, Core::NodeId>> & container, const Core::NodeId& element)
-    {
-        bool result = true;
-
-        std::list<std::pair<uint16_t, Core::NodeId>>::iterator finder(container.begin());
-
-        while ((finder != container.end()) && (finder->second != element)) {
-            finder++;
-        }
-
-        if (finder == container.end()) {
-            TRACE_L1("How could this be, it does not exist. Time for a refresh. [%s]", element.HostAddress().c_str());
-        } else if (finder->first == 1) {
-            container.erase(finder);
-        } else {
-            result = false;
-            finder->first -= 1;
-        }
-
-        return (result);
-    }
 
     NetworkControl::Entry& NetworkControl::Entry::operator= (const NetworkControl::Settings& info) {
 
@@ -95,8 +81,10 @@ namespace Plugin
         , _responseTime(0)
         , _retries(0)
         , _dns()
+        , _requiredSet()
         , _dhcpInterfaces()
         , _observer(*this)
+        , _open(false)
     {
         RegisterAll();
     }
@@ -178,7 +166,7 @@ namespace Plugin
                         SYSLOG(Logging::Startup, (_T("Interface [%s] activated, no IP associated"), interfaceName.c_str()));
                     } else {
                         if (how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) {
-                            ClearAssignedIPs(adapter);
+                            ClearIP(adapter);
                             SYSLOG(Logging::Startup, (_T("Interface [%s] activated, DHCP request issued"), interfaceName.c_str()));
                             Reload(interfaceName, true);
                         } else {
@@ -193,6 +181,8 @@ namespace Plugin
         if (config.Open.Value() == true) {
             // Find all adapters that are not listed.
             Core::AdapterIterator notListed;
+
+            _open = true;
 
             while (notListed.Next() == true) {
                 const string interfaceName(notListed.Name());
@@ -211,8 +201,13 @@ namespace Plugin
             Core::NodeId entry(entries.Current().Value().c_str());
 
             if (entry.IsValid() == true) {
-                _dns.push_back(std::pair<uint16_t, Core::NodeId>(1, entry));
+                _dns.push_back(entry);
             }
+        }
+
+        Core::JSON::ArrayType<Core::JSON::String>::Iterator entries2(config.Set.Elements());
+        while (entries2.Next() == true) {
+            _requiredSet.emplace_back(entries2.Current().Value());
         }
 
         // Update the DNS information, before we set the new IP, Do not know who triggers
@@ -232,14 +227,6 @@ namespace Plugin
 
         // Stop observing.
         _observer.Close();
-
-        std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.begin());
-
-        while (index != _dhcpInterfaces.end()) {
-            index->second.Close();
-            index++;
-        }
-
         _dns.clear();
         _dhcpInterfaces.clear();
         _service = nullptr;
@@ -371,7 +358,7 @@ namespace Plugin
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = string(_T("Interface: ")) + interfaceName + _T(" not found.");
                     } else {
-                        ClearAssignedIPs(adapter);
+                        ClearIP(adapter);
 
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = string(_T("OK, ")) + interfaceName + _T(" set DOWN.");
@@ -385,35 +372,50 @@ namespace Plugin
         return result;
     }
 
+    void NetworkControl::ClearIP(Core::AdapterIterator& adapter)
+    {
+        Core::IPV4AddressIterator checker4(adapter.IPV4Addresses());
+
+        while (checker4.Next() == true) {
+            adapter.Delete(checker4.Address());
+        }
+
+        Core::IPV6AddressIterator checker6(adapter.IPV6Addresses());
+
+        while (checker6.Next() == true) {
+            adapter.Delete(checker6.Address());
+        }
+ 
+        Core::AdapterIterator::Flush();
+
+        SubSystemValidation();
+    }
+
+
     uint32_t NetworkControl::SetIP(Core::AdapterIterator & adapter, const Core::IPNode& ipAddress, const Core::NodeId& gateway, const Core::NodeId& broadcast, bool clearOld)
     {
-
         if (adapter.IsValid() == true) {
-            bool addIt = false;
+            bool addIt = true;
 
             if (ipAddress.Type() == Core::NodeId::TYPE_IPV4) {
-                if (clearOld == true) {
-                    ClearAssignedIPV4IPs(adapter);
-                    addIt = true;
-                } else {
-                    Core::IPV4AddressIterator checker(adapter.IPV4Addresses());
-                    while ((checker.Next() == true) && (checker.Address() != ipAddress)) {   
-                        /* INTENTINALLY LEFT EMPTY */
+                Core::IPV4AddressIterator checker(adapter.IPV4Addresses());
+                while ((checker.Next() == true) && ((addIt == true) || (clearOld == true))) {   
+                    if (checker.Address() == ipAddress) {
+                        addIt = false;
                     }
-
-                    addIt = (checker.IsValid() == false);
+                    else if (clearOld == true) {
+                        adapter.Delete(checker.Address());
+                    }
                 }
             } else if (ipAddress.Type() == Core::NodeId::TYPE_IPV6) {
-                if (clearOld == true) {
-                    ClearAssignedIPV6IPs(adapter);
-                    addIt = true;
-                } else {
-                    Core::IPV6AddressIterator checker(adapter.IPV6Addresses());
-                    while ((checker.Next() == true) && (checker.Address() != ipAddress)) {   
-                        /* INTENTINALLY LEFT EMPTY */
+                Core::IPV6AddressIterator checker(adapter.IPV6Addresses());
+                while ((checker.Next() == true) && ((addIt == true) || (clearOld == true))) {   
+                    if (checker.Address() == ipAddress) {
+                        addIt = false;
                     }
-
-                    addIt = (checker.IsValid() == false);
+                    else if (clearOld == true) {
+                        adapter.Delete(checker.Address());
+                    }
                 }
             }
 
@@ -430,16 +432,7 @@ namespace Plugin
 
             Core::AdapterIterator::Flush();
 
-            PluginHost::ISubSystem* subSystem = _service->SubSystems();
-            ASSERT(subSystem != nullptr);
-
-            if (subSystem != nullptr) {
-                if ((subSystem->IsActive(PluginHost::ISubSystem::NETWORK) == false) && (ipAddress.IsLocalInterface() == false)) {
-                    subSystem->Set(PluginHost::ISubSystem::NETWORK, nullptr);
-                }
-
-                subSystem->Release();
-            }
+            SubSystemValidation();
 
             string message(string("{ \"interface\": \"") + adapter.Name() + string("\", \"status\":0, \"ip\":\"" + ipAddress.HostAddress() + "\" }"));
             TRACE(Trace::Information, (_T("DHCP Request set on: %s"), adapter.Name().c_str()));
@@ -548,118 +541,47 @@ namespace Plugin
         return (result);
     }
 
-    /* virtual */ uint32_t NetworkControl::AddAddress(const string& interfaceName)
-    {
-        return (Reload(interfaceName, true));
-    }
+    void NetworkControl::SubSystemValidation() {
 
-    /* virtual */ uint32_t NetworkControl::AddAddress(const string& interfaceName, const string& IPAddress, const string& gateway, const string& broadcast, const uint8_t netmask)
-    {
-        uint32_t result = Core::ERROR_UNKNOWN_KEY;
+        uint16_t count = 0;
+        bool fullSet = true;
+        bool validIP = false;
 
-        std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(interfaceName));
+        Core::AdapterIterator adapter;
 
-        if (index != _dhcpInterfaces.end()) {
-
-            Core::IPNode address(Core::NodeId(IPAddress.c_str()), netmask);
-            Core::NodeId ipGateway(gateway.c_str());
-            Core::NodeId ipBroadcast(broadcast.c_str());
-            Core::AdapterIterator adapter(interfaceName);
-
-            result = SetIP(adapter, address, ipGateway, ipBroadcast);
-        }
-
-        return (result);
-    }
-
-    /* virtual */ uint32_t NetworkControl::RemoveAddress(const string& interfaceName, const string& IPAddress, const string& gateway, const string& broadcast)
-    {
-        uint32_t result = Core::ERROR_UNKNOWN_KEY;
-
-        std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(interfaceName));
-
-        if (index != _dhcpInterfaces.end()) {
-
-            Core::NodeId basic(IPAddress.c_str());
-            Core::IPNode address(basic, basic.DefaultMask());
-            Core::NodeId ipGateway(gateway.c_str());
-            Core::NodeId ipBroadcast(broadcast.c_str());
-            Core::AdapterIterator adapter(interfaceName);
-
-            // Todo allow for IP adresses to be removed.
-            //result = SetIP(adapter, index->second.Address(), ipGateway, ipBroadcast);
-        }
-
-        return (result);
-    }
-
-    /* virtual */ uint32_t NetworkControl::AddDNS(IIPNetwork::IDNSServers* dnsEntries)
-    {
-        uint32_t result = Core::ERROR_UNKNOWN_KEY;
-        bool syncDNS = false;
-
-        dnsEntries->Reset();
-
-        _adminLock.Lock();
-
-        while (dnsEntries->Next() == true) {
-
-            const string server(dnsEntries->Server());
-
-            if (server.empty() == false) {
-                Core::NodeId entry(server.c_str());
-
-                if (entry.IsValid() == true) {
-                    syncDNS = AddDNSEntry(_dns, entry) | syncDNS;
+        while (adapter.Next() == true) {
+            const string name (adapter.Name());
+            std::map<const string, DHCPEngine>::iterator index (_dhcpInterfaces.find(name));
+            
+            if (index != _dhcpInterfaces.end()) {
+                bool hasValidIP = ExternallyAccessible(adapter);
+                if (std::find(_requiredSet.cbegin(), _requiredSet.cend(), name) != _requiredSet.cend()) {
+                    count++;
+                    fullSet &= hasValidIP;
                 }
+                validIP |= hasValidIP;
             }
         }
 
-        if (syncDNS == true) {
-            RefreshDNS();
-        }
+        ASSERT (count <= _requiredSet.size());
 
-        _adminLock.Unlock();
+        fullSet &= (count == _requiredSet.size());
 
-        return (result);
-    }
+        PluginHost::ISubSystem* subSystem = _service->SubSystems();
+        ASSERT(subSystem != nullptr);
 
-    /* virtual */ uint32_t NetworkControl::RemoveDNS(IIPNetwork::IDNSServers * dnsEntries)
-    {
-        uint32_t result = Core::ERROR_UNKNOWN_KEY;
-        bool syncDNS = false;
-
-        dnsEntries->Reset();
-
-        _adminLock.Lock();
-
-        while (dnsEntries->Next() == true) {
-
-            const string server(dnsEntries->Server());
-
-            if (server.empty() == false) {
-                Core::NodeId entry(server.c_str());
-
-                if (entry.IsValid() == true) {
-                    syncDNS = RemoveDNSEntry(_dns, entry) | syncDNS;
-                }
+        if (subSystem != nullptr) {
+            if (subSystem->IsActive(PluginHost::ISubSystem::NETWORK) ^ fullSet) {
+                subSystem->Set(fullSet ? PluginHost::ISubSystem::NETWORK : PluginHost::ISubSystem::NOT_NETWORK, nullptr);
             }
+
+            subSystem->Release();
         }
-
-        if (syncDNS == true) {
-            RefreshDNS();
-        }
-
-        _adminLock.Unlock();
-
-        return (result);
     }
 
     void NetworkControl::Accepted(const string& interfaceName, const DHCPClient::Offer& offer)
     {
         std::map<const string, DHCPEngine>::const_iterator entry(_dhcpInterfaces.find(interfaceName));
-
-        TRACE(Trace::Information, ("DHCP Request for interface %s accepted, %s offered IP!\n", interfaceName.c_str(), offer.Address().HostAddress().c_str()));
 
         if (entry != _dhcpInterfaces.end()) {
 
@@ -669,23 +591,12 @@ namespace Plugin
 
             if (adapter.IsValid() == true) {
 
-                bool update = false;
-                _adminLock.Lock();
-
-                // First add all new entries.
-                DHCPClient::Offer::DnsIterator servers(offer.DNS());
-                while (servers.Next() == true) {
-                    update = AddDNSEntry(_dns, servers.Current()) | update;
-                }
-
-                _adminLock.Unlock();
-
-                if (update == true) {
-                    RefreshDNS();
-                }
+                TRACE(Trace::Information, ("DHCP Request for interface %s accepted, %s offered IP!\n", interfaceName.c_str(), offer.Address().HostAddress().c_str()));
 
                 SetIP(adapter, Core::IPNode(offer.Address(), offer.Netmask()), offer.Gateway(), offer.Broadcast(), true);
                 
+                RefreshDNS();
+
                 TRACE_L1("New IP Granted for %s:", interfaceName.c_str());
                 TRACE_L1("     Source:    %s", offer.Source().HostAddress().c_str());
                 TRACE_L1("     Address:   %s", offer.Address().HostAddress().c_str());
@@ -775,21 +686,37 @@ namespace Plugin
 
             _adminLock.Lock();
 
-            std::list<std::pair<uint16_t, Core::NodeId>>::const_iterator pointer(_dns.begin());
+            std::list<Core::NodeId> servers;
+            std::list<Core::NodeId>::const_iterator pointer(_dns.begin());
 
             while (pointer != _dns.end()) {
-                data += string(NAMESERVER, sizeof(NAMESERVER) - 1) + pointer->second.HostAddress() + '\n';
+                servers.emplace_back(*pointer);
                 pointer++;
             }
 
             // Strawl through the list of dhcp entries and get the DNS entries from there
-            std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.begin());
+            std::map<const string, DHCPEngine>::iterator loop(_dhcpInterfaces.begin());
 
-            while (index != _dhcpInterfaces.end()) {
+            while (loop != _dhcpInterfaces.end()) {
                 
+                if (loop->second.Info().Mode() == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) {
+                    DHCPClient::Offer::DNSIterator loop2 (loop->second.Lease().DNS());
+
+                    while (loop2.Next()) {
+                        if (std::find(servers.begin(), servers.end(), loop2.Current()) == servers.end()) {
+                            servers.emplace_back(loop2.Current());
+                        }
+                    }
+                }
                 
-                data += string(NAMESERVER, sizeof(NAMESERVER) - 1) + index->second.HostAddress() + '\n';
-                index++;
+                loop++;
+            }
+
+            std::list<Core::NodeId>::const_iterator loop3(servers.begin());
+
+            while (loop3 != servers.end()) {
+                data += string(NAMESERVER, sizeof(NAMESERVER) - 1) + loop3->HostAddress() + '\n';
+                loop3++;
             }
 
             _adminLock.Unlock();
@@ -805,18 +732,37 @@ namespace Plugin
 
     void NetworkControl::Activity(const string& interfaceName)
     {
-        string message;
         Core::AdapterIterator adapter(interfaceName);
-        JsonData::NetworkControl::ConnectionchangeParamsData::StatusType status;
 
         if (adapter.IsValid() == true) {
+
+            std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(interfaceName));
+            JsonData::NetworkControl::ConnectionchangeParamsData::StatusType status;
+
             // Send a message with the state of the adapter.
-            message = string(_T("{ \"interface\": \"")) + interfaceName + string(_T("\", \"running\": \"")) + string(adapter.IsRunning() ? _T("true") : _T("false")) + string(_T("\", \"up\": \"")) + string(adapter.IsUp() ? _T("true") : _T("false")) + _T("\", \"event\": \"");
+            string message = string(_T("{ \"interface\": \"")) + interfaceName + string(_T("\", \"running\": \"")) + string(adapter.IsRunning() ? _T("true") : _T("false")) + string(_T("\", \"up\": \"")) + string(adapter.IsUp() ? _T("true") : _T("false")) + _T("\", \"event\": \"");
             TRACE(Trace::Information, (_T("Adapter change report on: %s"), interfaceName.c_str()));
 
             _adminLock.Lock();
 
-            if (_dhcpInterfaces.find(interfaceName) == _dhcpInterfaces.end()) {
+           if (index != _dhcpInterfaces.end()) {
+                message += _T("Update\" }");
+                status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::UPDATED;
+                TRACE(Trace::Information, (_T("Updated interface: %s"), interfaceName.c_str()));
+
+                if (adapter.IsRunning() == true) {
+
+                    JsonData::NetworkControl::NetworkData::ModeType how(index->second.Info().Mode());
+                    Reload(interfaceName, how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC);
+
+                } else {
+                    ClearIP(adapter);
+                }
+
+                _service->Notify(message);
+                event_connectionchange(interfaceName.c_str(), string(), status);
+            }
+            else if (_open == true) {
                 _dhcpInterfaces.emplace(std::piecewise_construct,
                     std::forward_as_tuple(interfaceName),
                     std::forward_as_tuple(*this, interfaceName, _responseTime, _retries));
@@ -825,69 +771,14 @@ namespace Plugin
 
                 TRACE(Trace::Information, (_T("Added interface: %s"), interfaceName.c_str()));
                 status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::CREATED;
-            } else {
-                message += _T("Update\" }");
-                status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::UPDATED;
-                TRACE(Trace::Information, (_T("Updated interface: %s"), interfaceName.c_str()));
-            }
 
-            if ((adapter.IsRunning() == true) && (adapter.IsUp() == true)) {
-
-                std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(interfaceName));
-
-                if (index != _dhcpInterfaces.end()) {
-
-                    JsonData::NetworkControl::NetworkData::ModeType how(index->second.Info().Mode());
-                    if (how != JsonData::NetworkControl::NetworkData::ModeType::MANUAL) {
-                        Reload(interfaceName, how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC);
-                    }
-                }
-            } else {
-                ClearAssignedIPs(adapter);
-                Core::AdapterIterator::Flush();
-            }
-
+                _service->Notify(message);
+                event_connectionchange(interfaceName.c_str(), string(), status);
+            } 
+ 
             _adminLock.Unlock();
-
-        } else {
-            // Seems like the adapter disappeared. Remove it.
-            _adminLock.Lock();
-
-            std::map<const string, DHCPEngine>::iterator dhcp(_dhcpInterfaces.find(interfaceName));
-            if (dhcp != _dhcpInterfaces.end()) {
-                _dhcpInterfaces.erase(dhcp);
-            }
-
-            _adminLock.Unlock();
-
-            TRACE(Trace::Information, (_T("Removed interface: %s"), interfaceName.c_str()));
-            status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::REMOVED;
-
-            message = string(_T("{ \"interface\": \"")) + interfaceName + string(_T("\", \"running\": \"false\", \"up\": \"false\", \"event\": \"Delete\" }"));
-        }
-
-        _service->Notify(message);
-        event_connectionchange(interfaceName.c_str(), string(), status);
-    }
-
-    void NetworkControl::ClearAssignedIPV4IPs(Core::AdapterIterator& adapter)
-    {
-        Core::IPV4AddressIterator checker = adapter.IPV4Addresses();
-
-        while (checker.Next() == true) {
-            adapter.Delete(checker.Address());
         }
     }
-
-    void NetworkControl::ClearAssignedIPV6IPs(Core::AdapterIterator& adapter)
-    {
-        Core::IPV6AddressIterator checker = adapter.IPV6Addresses();
-
-        while (checker.Next() == true) {
-            adapter.Delete(checker.Address());
-        }
-    }
-
 
 } // namespace Plugin
 } // namespace WPEFramework

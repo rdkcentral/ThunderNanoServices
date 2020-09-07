@@ -291,9 +291,19 @@ namespace Plugin {
             
             ~Offer() = default;
 
+        public:
+            bool operator== (const Offer& rhs) const {
+                return ((rhs._source == _source) && (rhs._offer == _offer));
+            }
+            bool operator!= (const Offer& rhs) const {
+                return (!operator==(rhs));
+            }
             void Update(Options& options) {
                if (_offer.IsValid() == true) {
                     
+                    _leaseTime = 0;
+                    _rebindingTime = 0;
+                    _renewalTime = 0;
                     _gateway = options.gateway;
                     _broadcast = options.broadcast;
                     _dns = options.dns;
@@ -306,18 +316,31 @@ namespace Plugin {
 
                     if (options.leaseTime.IsSet()) 
                         _leaseTime = options.leaseTime.Value();
-                    else 
-                        TRACE_L1("DHCP message came without lease time information");
 
                     if (options.renewalTime.IsSet()) 
                         _renewalTime = options.renewalTime.Value();
-                    else 
-                        TRACE_L1("DHCP message came without renewal time information");
 
                     if (options.rebindingTime.IsSet()) 
                         _rebindingTime = options.rebindingTime.Value();
-                    else 
-                        TRACE_L1("DHCP message came without rebinding time information");
+
+                    if (_leaseTime != 0) {
+                        if (_renewalTime   == 0) _renewalTime   = (_leaseTime / 2);
+                        if (_rebindingTime == 0) _rebindingTime = ((_leaseTime * 7) / 8);
+                    }
+                    else if (_renewalTime != 0) {
+                        _leaseTime = 2 * _renewalTime;
+                        if (_rebindingTime == 0) _rebindingTime = ((_leaseTime * 7) / 8);
+                    }
+                    else if (_rebindingTime != 0) {
+                        _leaseTime = ((_rebindingTime * 8) / 7);
+                        _renewalTime = _leaseTime / 2;
+                    }
+                    else {
+                        TRACE_L1("DHCP message came without any timing information");
+                        _leaseTime =  24 * 60 * 60; // default to 24 Hours!!!
+                        _renewalTime = _leaseTime / 2;
+                        _rebindingTime = ((_leaseTime * 7) / 8);
+                    }
 
                     if (_netmask == static_cast<uint8_t>(~0)) {
                         _netmask = _offer.DefaultMask();
@@ -336,7 +359,7 @@ namespace Plugin {
 
                     if (_dns.size() == 0) {
                         _dns.push_back(_source);
-                        TRACE_L1("S et the DNS to the source: %s", _source.HostAddress().c_str());
+                        TRACE_L1("Set the DNS to the source: %s", _source.HostAddress().c_str());
                     }
                 }
             }
@@ -389,7 +412,7 @@ namespace Plugin {
             }
             DNSIterator DNS() const
             {
-                return (DnsIterator(_dns));
+                return (DNSIterator(_dns));
             }
             const Core::NodeId& Broadcast() const
             {
@@ -429,7 +452,9 @@ namespace Plugin {
         };
 
         struct ICallback {
+            virtual void Offered(const Offer&) = 0;
             virtual void Approved(const Offer&) = 0;
+            virtual void Rejected(const Offer&) = 0;
         };
 
         typedef Core::IteratorType<std::list<Offer>, Offer&, std::list<Offer>::iterator> Iterator;
@@ -444,31 +469,20 @@ namespace Plugin {
         virtual ~DHCPClient();
 
     public:
+        bool HasActiveLease() const {
+            return (_expired.IsValid() == true);
+        }
+        const Core::Time& Expired() const {
+            return (_expired);
+        }
+        const Offer& Lease() const {
+            return (_offer);
+        }
         const string& Interface() const
         {
             return (_interfaceName);
         }
-        inline void Retry() {
-            _adminLock.Lock();
-
-            if ((_state == RECEIVING) && (_modus == CLASSIFICATION_REQUEST) && (_offers.size() >= 2)) {
-                // Looks like the ACK on which we where waiting is not coming, move on..
-                _offers.pop_front();
-                RequestAck();
-            }
-            else {
-                _offers.clear();
-                Crypto::Random(_xid);
-
-                _modus = CLASSIFICATION_DISCOVER;
-                _discoverXID = _xid;
-
-                SocketDatagram::Trigger();
-            }
-
-            _adminLock.Unlock();
-        }
-        inline void UpdateMAC(const uint8_t buffer[], const uint8_t size) {
+       inline void UpdateMAC(const uint8_t buffer[], const uint8_t size) {
             ASSERT(size == sizeof(_MAC));
 
             memcpy(_MAC, buffer, sizeof(_MAC));
@@ -487,75 +501,97 @@ namespace Plugin {
                 if ((_state == RECEIVING) || (_state == IDLE)) {
 
                     _state = SENDING;
-                    _offers.clear();
-                    _offers.emplace_front(preferredAddres);
+                    _offer.Clear();
+                    _expired = Core::Time();
                     _adminLock.Unlock();
 
-                    Core::SocketDatagram::Broadcast(true);
                     Crypto::Random(_xid);
 
                     _modus = CLASSIFICATION_DISCOVER;
-                    _discoverXID = _xid;
 
                     result = Core::ERROR_NONE;
 
                     TRACE_L1("Sending a Discover for %s", _interfaceName.c_str());                            
 
+                    Core::SocketDatagram::Broadcast(true);
                     SocketDatagram::Trigger();
 
                 } else {
-
                     _adminLock.Unlock();
-                    TRACE_L1("Incorrect start to start a new DHCP[%s] send. Current State: %d", _interfaceName.c_str(), _state);
                 }
-            } else {
-                TRACE_L1("DatagramSocket for DHCP[%s] could not be opened.", _interfaceName.c_str());
             }
 
             return (result);
         }
+        inline uint32_t Acknowledge(const Offer& offer) {
 
-        inline uint32_t Decline(const Core::NodeId& acknowledged)
+            uint32_t result = Core::ERROR_INPROGRESS;
+
+            _adminLock.Lock();
+
+            if ((SocketDatagram::IsOpen() == true) && (_state == RECEIVING)) {
+
+                // Looks like the ACK on which we where waiting is not coming, move on..
+                ASSERT(offer.Source().IsValid() == true);
+
+                _modus = CLASSIFICATION_REQUEST;
+                _state = SENDING;
+                _offer = offer;
+
+                _adminLock.Unlock();
+
+                result = Core::ERROR_NONE;
+                auto addr = reinterpret_cast<const sockaddr_in*>(static_cast<const struct sockaddr*>(offer.Source()));
+                        
+                memcpy(&_serverIdentifier, &(addr->sin_addr), 4);
+                TRACE_L1("Request ACK: [%s]@[%s]", offer.Address().HostAddress().c_str(), offer.Source().HostAddress().c_str());
+
+                SocketDatagram::Trigger();
+            }
+            else {
+                _adminLock.Unlock();
+            }
+
+            return (result);
+        }
+        inline uint32_t Release()
         {
             uint32_t result = Core::ERROR_OPENING_FAILED;
 
-            if ((SocketDatagram::IsOpen() == true) || (SocketDatagram::Open(Core::infinite, _interfaceName) == Core::ERROR_NONE)) {
+            if ( (_offer.Address().IsValid() == true) && (_offer.Source().IsValid() == true) ) {
 
-                result = Core::ERROR_INPROGRESS;
+                result = Core::ERROR_OPENING_FAILED;
+
+                if ((SocketDatagram::IsOpen() == true) || (SocketDatagram::Open(Core::infinite, _interfaceName) == Core::ERROR_NONE)) {
+
+                    result = Core::ERROR_INPROGRESS;
                 
-                _adminLock.Lock();
+                    _adminLock.Lock();
 
-                if ((_state == RECEIVING) || (_state == IDLE)) {
+                    if ((_state == RECEIVING) || (_state == IDLE)) {
 
-                    _offers.clear();
-                    _offers.emplace_front(acknowledged);
-                    _state = SENDING;
-                    _adminLock.Unlock();
+                        _expired = Core::Time();
+                        _state = SENDING;
+                        _adminLock.Unlock();
 
-                    Core::SocketDatagram::Broadcast(true);
-                    Crypto::Random(_xid);
+                        Crypto::Random(_xid);
 
-                    _modus = CLASSIFICATION_NAK;
+                        _modus = CLASSIFICATION_RELEASE;
 
-                    TRACE_L1("Sending a NACK for %s", _interfaceName.c_str());                            
+                        TRACE_L1("Sending a Release for %s", _interfaceName.c_str());                            
 
-                    result = Core::ERROR_NONE;
-                    SocketDatagram::Trigger();
+                        result = Core::ERROR_NONE;
+                        Core::SocketDatagram::Broadcast(true);
+                        SocketDatagram::Trigger();
+                    }
+                    else {
+                        _adminLock.Unlock();
+                    }
                 }
-                else {
-
-                    _adminLock.Unlock();
-                    TRACE_L1("Incorrect start to start a new DHCP[%s] send. Current State: %d", _interfaceName.c_str(), _state);
-                }
-            } else {
-                TRACE_L1("Failed to open socket whilte trying to decline ip %s\n", acknowledged.HostAddress().c_str());
             }
-
-            _adminLock.Unlock();
 
             return (result);
         }
-
         inline void Close()
         {
             _adminLock.Lock();
@@ -631,16 +667,13 @@ namespace Plugin {
             options[2] = _modus;
 
             /* the IP address we're preferring (DISCOVER) /  REQUESTING (REQUEST) */
-            if (_offers.size() > 1) {
-                const Core::NodeId& node(_offers.front().Address());
-                if ((node.IsValid() == true) && (node.Type() == Core::NodeId::TYPE_IPV4)) {
-                    const struct sockaddr_in* data(reinterpret_cast<const struct sockaddr_in*>(static_cast<const struct sockaddr*>(node)));
+            if (_offer.Address().Type() == Core::NodeId::TYPE_IPV4) {
+                const struct sockaddr_in* data(reinterpret_cast<const struct sockaddr_in*>(static_cast<const struct sockaddr*>(_offer.Address())));
 
-                    options[index++] = OPTION_REQUESTEDIPADDRESS;
-                    options[index++] = 4;
-                    ::memcpy(&(options[index]), &(data->sin_addr.s_addr), 4);
-                    index += 4;
-                }
+                options[index++] = OPTION_REQUESTEDIPADDRESS;
+                options[index++] = 4;
+                ::memcpy(&(options[index]), &(data->sin_addr.s_addr), 4);
+                index += 4;
             }
 
             /* Add identifier so that DHCP server can recognize device */
@@ -673,23 +706,6 @@ namespace Plugin {
             return (sizeof(CoreMessage) + index);
         }
 
-        void RequestAck() {
-            Offer& offer (_offers.front());
-
-            Crypto::Random(_xid);
-
-            _modus = CLASSIFICATION_REQUEST;
-            _acknowledgeXID = _xid;
-
-            if (offer.Source().IsValid() == true) {
-                auto addr = reinterpret_cast<const sockaddr_in*>(static_cast<const struct sockaddr*>(offer.Source()));
-                        
-                memcpy(&_serverIdentifier, &(addr->sin_addr), 4);
-            }
-
-            SocketDatagram::Trigger();
-        }
-
         /* parse a DHCP message and take appropiate action */
         uint16_t ProcessMessage(const Core::NodeId& source, const uint8_t stream[], const uint16_t length)
         {
@@ -712,46 +728,45 @@ namespace Plugin {
                 switch (options.messageType.Value()) {
                     case CLASSIFICATION_OFFER:
                         {
-                            if (xid == _discoverXID) {
-                                TRACE(Trace::Information, ("Received an Offer from: %s", source.HostAddress().c_str()));
+                            if (xid == _xid) {
+
                                 Offer offer(source, frame, options);
 
-                                if (_modus == CLASSIFICATION_OFFER) {
-                                    _offers.clear();
-                                    _offers.emplace_front(offer);
-                                    RequestAck();
-                                }
-                                else {
-                                    _offers.emplace_back(offer);
-                                }
-                                TRACE_L1("Unknown XID encountered: %d", xid);
+                                _callback->Offered(offer);
+                            }
+                            else {
+                                TRACE_L1("Unknown Discover XID encountered: %d", xid);
                             }
                             break;
                         }
                     case CLASSIFICATION_ACK: 
                         {
-                            if (xid == _acknowledgeXID) {
+                            if (xid == _xid) {
 
-                                ASSERT(_offers.size() >= 1);
-
-                                _offers.front().Update(options); // Update if informations changed since offering
+                                _offer.Update(options); // Update if informations changed since offering
                                 
-                                _callback->Approved(_offers.front());
+                                _expired = Core::Time::Now().Add(_offer.LeaseTime() * 1000);
+
+                                _callback->Approved(_offer);
 
                                 Close();
+                            }
+                            else {
+                                TRACE_L1("Unknown Acknowledge XID encountered: %d", xid);
                             }
                             break;
                         }
                     case CLASSIFICATION_NAK:
                         {
-                            if (xid == _acknowledgeXID) {
+                            if (xid == _xid) {
                                 
-                                ASSERT(_offers.size() >= 1);
+                                Offer offer(_offer);
+                                _offer.Clear();
 
-                                _offers.pop_front();
-                                if (_offers.size() >= 1) {
-                                    RequestAck();
-                                }
+                                _callback->Rejected(offer);
+                            }
+                            else {
+                                TRACE_L1("Unknown Negative Acknowledge XID encountered: %d", xid);
                             }
                             break;
                         }                   
@@ -773,10 +788,9 @@ namespace Plugin {
         uint8_t _MAC[6];
         uint32_t _serverIdentifier;
         uint32_t _xid;
-        uint32_t _discoverXID;
-        uint32_t _acknowledgeXID;
-        std::list<Offer> _offers;
+        Offer _offer;
         ICallback* _callback;
+        Core::Time _expired;
     };
 }
 } // namespace WPEFramework::Plugin

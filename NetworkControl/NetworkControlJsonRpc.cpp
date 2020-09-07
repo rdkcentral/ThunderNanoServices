@@ -64,9 +64,9 @@ namespace Plugin {
         _adminLock.Lock();
 
         if(params.Device.IsSet() == true) {
-            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Device.Value()));
-            if (entry != _dhcpInterfaces.end()) {
-                if (entry->second.Info().Mode() == NetworkData::ModeType::STATIC) {
+            std::map<const string, StaticInfo>::iterator entry(_interfaces.find(params.Device.Value()));
+            if (entry != _interfaces.end()) {
+                if (entry->second.Mode() == NetworkData::ModeType::STATIC) {
                     result = Reload(entry->first, false);
                 } else {
                     result = Reload(entry->first, true);
@@ -90,8 +90,8 @@ namespace Plugin {
         _adminLock.Lock();
 
         if(params.Device.IsSet() == true) {
-            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Device.Value()));
-            if (entry != _dhcpInterfaces.end()) {
+            std::map<const string, StaticInfo>::iterator entry(_interfaces.find(params.Device.Value()));
+            if (entry != _interfaces.end()) {
                 result = Reload(entry->first, true);
             }
         }
@@ -112,8 +112,8 @@ namespace Plugin {
         _adminLock.Lock();
 
         if(params.Device.IsSet() == true) {
-            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Device.Value()));
-            if (entry != _dhcpInterfaces.end()) {
+            std::map<const string, StaticInfo>::iterator entry(_interfaces.find(params.Device.Value()));
+            if (entry != _interfaces.end()) {
                 result = Reload(entry->first, false);
             }
         }
@@ -134,9 +134,9 @@ namespace Plugin {
         _adminLock.Lock();
 
         if(params.Device.IsSet() == true) {
-            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Device.Value()));
-            if (entry != _dhcpInterfaces.end()) {
-                if (entry->second.Info().Mode() == NetworkData::ModeType::STATIC) {
+            std::map<const string, StaticInfo>::iterator entry(_interfaces.find(params.Device.Value()));
+            if (entry != _interfaces.end()) {
+                if (entry->second.Mode() == NetworkData::ModeType::STATIC) {
                     result = Reload(entry->first, false);
                 } else {
                     result = Reload(entry->first, true);
@@ -158,31 +158,31 @@ namespace Plugin {
        uint32_t result = Core::ERROR_NONE;
 
         if(index != "") {
-            auto entry = _dhcpInterfaces.find(index);
-            if (entry != _dhcpInterfaces.end()) {
+            auto entry = _interfaces.find(index);
+            if (entry != _interfaces.end()) {
                 NetworkData data;
                 data.Interface = entry->first;
-                data.Mode = entry->second.Info().Mode();
-                data.Address = entry->second.Info().Address().HostAddress();
-                data.Mask = entry->second.Info().Address().Mask();
-                data.Gateway = entry->second.Info().Gateway().HostAddress();
-                data.Broadcast = entry->second.Info().Broadcast().HostAddress();
+                data.Mode = entry->second.Mode();
+                data.Address = entry->second.Address().HostAddress();
+                data.Mask = entry->second.Address().Mask();
+                data.Gateway = entry->second.Gateway().HostAddress();
+                data.Broadcast = entry->second.Broadcast().HostAddress();
 
                 response.Add(data);
             } else {
                 result = Core::ERROR_UNAVAILABLE;
             }
         } else {
-            auto entry = _dhcpInterfaces.begin();
+            auto entry = _interfaces.begin();
 
-            while (entry != _dhcpInterfaces.end()) {
+            while (entry != _interfaces.end()) {
                 NetworkData data;
                 data.Interface = entry->first;
-                data.Mode = entry->second.Info().Mode();
-                data.Address = entry->second.Info().Address().HostAddress();
-                data.Mask = entry->second.Info().Address().Mask();
-                data.Gateway = entry->second.Info().Gateway().HostAddress();
-                data.Broadcast = entry->second.Info().Broadcast().HostAddress();
+                data.Mode = entry->second.Mode();
+                data.Address = entry->second.Address().HostAddress();
+                data.Mask = entry->second.Address().Mask();
+                data.Gateway = entry->second.Gateway().HostAddress();
+                data.Broadcast = entry->second.Broadcast().HostAddress();
                 response.Add(data);
 
                 entry++;
@@ -201,8 +201,8 @@ namespace Plugin {
         uint32_t result = Core::ERROR_UNAVAILABLE;
 
         if(index != "") {
-            auto entry = _dhcpInterfaces.find(index);
-            if (entry != _dhcpInterfaces.end()) {
+            auto entry = _interfaces.find(index);
+            if (entry != _interfaces.end()) {
                 Core::AdapterIterator adapter(entry->first);
                 if (adapter.IsValid() == true) {
                     response = adapter.IsUp();
@@ -225,8 +225,8 @@ namespace Plugin {
         _adminLock.Lock();
 
         if(index != "") {
-            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(index));
-            if (entry != _dhcpInterfaces.end()) {
+            std::map<const string, StaticInfo>::iterator entry(_interfaces.find(index));
+            if (entry != _interfaces.end()) {
                 Core::AdapterIterator adapter(entry->first);
                 if (adapter.IsValid() == true) {
                     adapter.Up(param);
