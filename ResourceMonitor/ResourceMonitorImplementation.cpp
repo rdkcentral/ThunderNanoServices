@@ -396,6 +396,9 @@ namespace Plugin {
 
          Config config;
          config.FromString(service->ConfigLine());
+         if (config.Path.IsSet() == true) {
+             _binPath = config.Path.Value().c_str();
+         }
 
          result = Core::ERROR_NONE;
 
@@ -408,77 +411,80 @@ namespace Plugin {
       {
          // TODO: should we worry about doing this as repsonse to RPC (could take too long?)
          FILE* inFile = fopen(_binPath.c_str(), "rb");
+
          stringstream output;
+         if (inFile != nullptr) {
 
-         vector<string> processNames;
-         _processThread->GetProcessNames(processNames);
+            vector<string> processNames;
+            _processThread->GetProcessNames(processNames);
 
-         output << _T("time (s)\tJiffies");
-         for (const string& processName : processNames) {
-            output << _T("\t") << processName << _T(" (VSS)\t") << processName << _T(" (USS)\t") << processName << _T(" (jiffies)");
-         }
-         output << endl;
-
-         vector<uint64_t> pageVector(processNames.size() * 3);
-         bool seenFirstTimestamp = false;
-         uint32_t firstTimestamp = 0;
-
-         while (true) {
-            std::fill(pageVector.begin(), pageVector.end(), 0);
-
-            uint32_t timestamp = 0;
-            size_t readCount = fread(&timestamp, sizeof(timestamp), 1, inFile);
-            if (readCount != 1) {
-               break;
-            }
-
-            if (!seenFirstTimestamp) {
-               firstTimestamp = timestamp;
-               seenFirstTimestamp = true;
-            }
-
-            uint32_t processCount = 0;
-            fread(&processCount, sizeof(processCount), 1, inFile);
-
-            uint64_t totalJiffies = 0;
-            fread(&totalJiffies, sizeof(totalJiffies), 1, inFile);
-
-            for (uint32_t processIndex = 0; processIndex < processCount; processIndex++) {
-               uint32_t nameLength = 0;
-               fread(&nameLength, sizeof(nameLength), 1, inFile);
-               // TODO: unicode?
-               char nameBuffer[nameLength + 1];
-               fread(nameBuffer, sizeof(char), nameLength, inFile);
-
-               nameBuffer[nameLength] = '\0';
-               string name(nameBuffer);
-
-               vector<string>::const_iterator nameIterator = std::find(processNames.cbegin(), processNames.cend(), name);
-
-               uint32_t vss, uss;
-               uint64_t jiffies;
-               fread(&vss, sizeof(vss), 1, inFile);
-               fread(&uss, sizeof(uss), 1, inFile);
-               fread(&jiffies, sizeof(jiffies), 1, inFile);
-               if (nameIterator == processNames.cend()) {
-                   continue;
-               }
-
-               int index = nameIterator - processNames.cbegin();
-
-               pageVector[index * 3] = static_cast<uint64_t>(vss);
-               pageVector[index * 3 + 1] = static_cast<uint64_t>(uss);
-               pageVector[index * 3 + 2] = jiffies;
-            }
-
-            output << (timestamp - firstTimestamp) << "\t" << totalJiffies;
-            for (uint32_t pageEntry : pageVector) {
-               output << "\t" << pageEntry;
+            output << _T("time (s)\tJiffies");
+            for (const string& processName : processNames) {
+               output << _T("\t") << processName << _T(" (VSS)\t") << processName << _T(" (USS)\t") << processName << _T(" (jiffies)");
             }
             output << endl;
-         }
 
-         fclose(inFile);
+            vector<uint64_t> pageVector(processNames.size() * 3);
+            bool seenFirstTimestamp = false;
+            uint32_t firstTimestamp = 0;
+
+            while (true) {
+               std::fill(pageVector.begin(), pageVector.end(), 0);
+
+               uint32_t timestamp = 0;
+               size_t readCount = fread(&timestamp, sizeof(timestamp), 1, inFile);
+               if (readCount != 1) {
+                  break;
+               }
+
+               if (!seenFirstTimestamp) {
+                  firstTimestamp = timestamp;
+                  seenFirstTimestamp = true;
+               }
+
+               uint32_t processCount = 0;
+               fread(&processCount, sizeof(processCount), 1, inFile);
+
+               uint64_t totalJiffies = 0;
+               fread(&totalJiffies, sizeof(totalJiffies), 1, inFile);
+
+               for (uint32_t processIndex = 0; processIndex < processCount; processIndex++) {
+                  uint32_t nameLength = 0;
+                  fread(&nameLength, sizeof(nameLength), 1, inFile);
+                  // TODO: unicode?
+                  char nameBuffer[nameLength + 1];
+                  fread(nameBuffer, sizeof(char), nameLength, inFile);
+
+                  nameBuffer[nameLength] = '\0';
+                  string name(nameBuffer);
+
+                  vector<string>::const_iterator nameIterator = std::find(processNames.cbegin(), processNames.cend(), name);
+
+                  uint32_t vss, uss;
+                  uint64_t jiffies;
+                  fread(&vss, sizeof(vss), 1, inFile);
+                  fread(&uss, sizeof(uss), 1, inFile);
+                  fread(&jiffies, sizeof(jiffies), 1, inFile);
+                  if (nameIterator == processNames.cend()) {
+                     continue;
+                  }
+
+                  int index = nameIterator - processNames.cbegin();
+
+                  pageVector[index * 3] = static_cast<uint64_t>(vss);
+                  pageVector[index * 3 + 1] = static_cast<uint64_t>(uss);
+                  pageVector[index * 3 + 2] = jiffies;
+               }
+
+               output << (timestamp - firstTimestamp) << "\t" << totalJiffies;
+               for (uint32_t pageEntry : pageVector) {
+                  output << "\t" << pageEntry;
+               }
+               output << endl;
+            }
+
+            fclose(inFile);
+         }
 
          return output.str();
       }
