@@ -508,7 +508,7 @@ namespace Plugin {
     {
         return (Core::Service<DeviceImpl::IteratorImpl>::Create<IBluetooth::IDevice::IIterator>(_devices));
     }
-    BluetoothControl::DeviceImpl* BluetoothControl::Discovered(const bool lowEnergy, const Bluetooth::Address& address, const Bluetooth::EIR& info)
+    BluetoothControl::DeviceImpl* BluetoothControl::Discovered(const bool lowEnergy, const Bluetooth::Address& address)
     {
         _adminLock.Lock();
 
@@ -516,24 +516,13 @@ namespace Plugin {
 
         if (impl == nullptr) {
             if (lowEnergy == true) {
-                impl = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address, info);
+                impl = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address);
             } else {
-                impl = Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address, info);
+                impl = Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address);
             }
 
             ASSERT(impl != nullptr);
             _devices.push_back(impl);
-
-            TRACE(Trace::Information, (_T("Added %s Bluetooth device: %s, name: '%s', class: 0x%06X"),
-                                       (lowEnergy? "LowEnergy" : "classic"), address.ToString().c_str(),
-                                       impl->Name().c_str(), impl->Class()));
-
-            if (impl->UUIDs().empty() == false) {
-                TRACE(Trace::Information, (_T("Supported UUIDs:")));
-                for (auto uuid : impl->UUIDs()) {
-                    TRACE(Trace::Information, (_T(" - %s"), uuid.ToString().c_str()));
-                }
-            }
         }
 
         _adminLock.Unlock();

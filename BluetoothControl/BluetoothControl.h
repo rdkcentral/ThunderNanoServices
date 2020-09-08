@@ -37,7 +37,7 @@ class BluetoothControl : public PluginHost::IPlugin
                        , public Exchange::IBluetooth {
 
     private:
-        class DecoupledJob : private Core::WorkerPool::JobType<DecoupledJob&> {
+        class DecoupledJob : private Core::ThreadPool::JobType<DecoupledJob&> {
         public:
             using Job = std::function<void()>;
 
@@ -45,52 +45,45 @@ class BluetoothControl : public PluginHost::IPlugin
             DecoupledJob& operator=(const DecoupledJob&) = delete;
 
             DecoupledJob()
-                : Core::WorkerPool::JobType<DecoupledJob&>(*this)
-                , _lock()
+                : Core::ThreadPool::JobType<DecoupledJob&>(*this)
                 , _job(nullptr)
             {
             }
-
             ~DecoupledJob() = default;
 
         public:
             void Submit(const Job& job, const uint32_t defer = 0)
             {
-                _lock.Lock();
-                if (_job == nullptr) {
+                Core::ProxyType<Core::IDispatch> handler(Aquire());
+
+                if (handler.IsValid() == true) {
+
                     _job = job;
+
                     if (defer == 0) {
-                        JobType::Submit();
+                        Core::WorkerPool::Instance().Submit(handler);
                     } else {
-                        JobType::Schedule(Core::Time::Now().Add(defer));
+                        Core::WorkerPool::Instance().Schedule(Core::Time::Now().Add(defer), handler);
                     }
                 } else {
                     TRACE(Trace::Information, (_T("Job in progress, skipping request")));
                 }
-                _lock.Unlock();
             }
-
             void Revoke()
             {
-                _lock.Lock();
+                Core::WorkerPool::Instance().Revoke(Reset());
                 _job = nullptr;
-                JobType::Revoke();
-                _lock.Unlock();
             }
 
         private:
             friend class Core::ThreadPool::JobType<DecoupledJob&>;
             void Dispatch()
             {
-                _lock.Lock();
-                Job job = _job;
+                _job();
                 _job = nullptr;
-                _lock.Unlock();
-                job();
             }
 
         private:
-            Core::CriticalSection _lock;
             Job _job;
         }; // class DecoupledJob
 
@@ -401,29 +394,25 @@ class BluetoothControl : public PluginHost::IPlugin
                     UpdateDevice(locator, Application()->Find(locator, lowEnergy), action);
                 }
             }
-            void Discovered(const bool lowEnergy, const Bluetooth::Address& address, const Bluetooth::EIR& info) override
-            {
-                if (Application() != nullptr) {
-                    Application()->Discovered(lowEnergy, address, info);
-                }
-            }
 
         public:
             void Update(const le_advertising_info& info) override
             {
                 BT_TRACE(ControlFlow, info);
-                if ((Application() != nullptr) && (info.bdaddr_type == 0 /* public */)
-                        && ((info.evt_type == 0 /* undirected connectable advertisement */) || (info.evt_type == 4 /* scan response */))) {
+                if ((Application() != nullptr) && (info.bdaddr_type == 0 /* public */)) {
                     Bluetooth::EIR eir(info.data, info.length);
+                    DeviceImpl* device = nullptr;
 
-                    DeviceImpl* device = Application()->Discovered(true, info.bdaddr, eir);
+                    if (info.evt_type == 4 /* scan response */) {
+                        device = Application()->Discovered(true, info.bdaddr);
+                    }
+                    else if (info.evt_type == 0 /* undirected connectable advertisement */) {
+                        device = Application()->Find(Bluetooth::Address(info.bdaddr));
+                    }
+
                     if (device != nullptr) {
-                        if (eir.Class() != 0) {
-                            device->Class(eir.Class());
-                        }
-                        if (eir.CompleteName().empty() == false) {
-                            device->Name(eir.CompleteName());
-                        }
+                        device->Update(eir);
+                        device->UpdateListener();
                     }
                 }
             }
@@ -971,14 +960,6 @@ class BluetoothControl : public PluginHost::IPlugin
                 ASSERT(parent != nullptr);
                 ::memset(_features, 0xFF, sizeof(_features));
             }
-            DeviceImpl(BluetoothControl* parent, const Bluetooth::Address::type type, const uint16_t deviceId,
-                       const Bluetooth::Address& remote, const Bluetooth::EIR& info)
-                : DeviceImpl(parent, type, deviceId, remote)
-            {
-                _name = info.CompleteName();
-                _class = info.Class();
-                _uuids = info.UUIDs();
-            }
             ~DeviceImpl() override
             {
             }
@@ -1422,41 +1403,52 @@ class BluetoothControl : public PluginHost::IPlugin
                 UpdateListener();
                 _parent->event_devicestatechange(Address().ToString(), JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::DISCONNECTED, disconnReason);
             }
+            void Class(const uint32_t classId) 
+            {
+                _state.Lock();
+
+                if (classId != 0) {
+                    _class = classId;
+                    TRACE(DeviceFlow, (_T("Device class updated to: '%d'"), _class));
+                    UpdateListener();
+                }
+
+                _state.Unlock();
+
+            }
             void Name(const string& name)
             {
-                bool updated = false;
-
                 _state.Lock();
 
                 if (name != _name) {
                     _name = name;
-                    updated = true;
+                    TRACE(DeviceFlow, (_T("Device name updated to: '%s'"), _name.c_str()));
+                    UpdateListener();
                 }
 
                 _state.Unlock();
 
-                if (updated == true) {
-                    TRACE(DeviceFlow, (_T("Device name updated to: '%s'"), name.c_str()));
-                    UpdateListener();
-                }
             }
-            void Class(const uint32_t classOfDevice)
-            {
-                bool updated = false;
+            void Update(const Bluetooth::EIR& eir) {
+
+                Class(eir.Class());
+
+                Name(eir.CompleteName());
 
                 _state.Lock();
 
-                if (classOfDevice != _class) {
-                    _class = classOfDevice;
-                    updated = true;
+                if (eir.UUIDs().empty() == false) {
+                    _uuids.clear();
+
+                    TRACE(DeviceFlow, (_T("Supported UUIDs:")));
+                    for (auto uuid : eir.UUIDs()) {
+                        TRACE(DeviceFlow, (_T(" - %s"), uuid.ToString().c_str()));
+                        _uuids.emplace_back(uuid);
+                    }
+                    UpdateListener();
                 }
 
                 _state.Unlock();
-
-                if (updated == true) {
-                    TRACE(DeviceFlow, (_T("Device class updated to: 0x%06X"), classOfDevice));
-                    UpdateListener();
-                }
             }
             void Features(const uint8_t length, const uint8_t feature[])
             {
@@ -1582,8 +1574,8 @@ class BluetoothControl : public PluginHost::IPlugin
             DeviceRegular(const DeviceRegular&) = delete;
             DeviceRegular& operator=(const DeviceRegular&) = delete;
 
-            DeviceRegular(BluetoothControl* parent, const uint16_t deviceId, const Bluetooth::Address& address, const Bluetooth::EIR& info)
-                : DeviceImpl(parent, Bluetooth::Address::BREDR_ADDRESS, deviceId, address, info)
+            DeviceRegular(BluetoothControl* parent, const uint16_t deviceId, const Bluetooth::Address& address)
+                : DeviceImpl(parent, Bluetooth::Address::BREDR_ADDRESS, deviceId, address)
                 , _securityCallback(nullptr)
                 , _linkKeys()
                 , _userRequestJob()
@@ -1809,8 +1801,8 @@ class BluetoothControl : public PluginHost::IPlugin
             DeviceLowEnergy(const DeviceLowEnergy&) = delete;
             DeviceLowEnergy& operator=(const DeviceLowEnergy&) = delete;
 
-            DeviceLowEnergy(BluetoothControl* parent, const uint16_t deviceId, const Bluetooth::Address& address, const Bluetooth::EIR& info)
-                : DeviceImpl(parent, Bluetooth::Address::LE_PUBLIC_ADDRESS, deviceId, address, info)
+            DeviceLowEnergy(BluetoothControl* parent, const uint16_t deviceId, const Bluetooth::Address& address)
+                : DeviceImpl(parent, Bluetooth::Address::LE_PUBLIC_ADDRESS, deviceId, address)
                 , _ltks()
                 , _irk()
             {
@@ -2135,7 +2127,7 @@ class BluetoothControl : public PluginHost::IPlugin
         template<typename DEVICE>
         DEVICE* Find(const Bluetooth::Address& address) const;
         void RemoveDevices(std::function<bool(DeviceImpl*)> filter);
-        DeviceImpl* Discovered(const bool lowEnergy, const Bluetooth::Address& address, const Bluetooth::EIR& info);
+        DeviceImpl* Discovered(const bool lowEnergy, const Bluetooth::Address& address);
         void Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame);
         void Capabilities(const Bluetooth::Address& device, const uint8_t capability, const uint8_t authentication, const uint8_t oob_data);
         void LoadController(const string& pathName, Data& data) const;

@@ -1038,6 +1038,11 @@ namespace Plugin {
                                 TRACE(Trace::Error, (_T("Failed to close GATT socket [%s]"), _device->RemoteId().c_str()));
                             }
                         }
+                        else {
+                            // Looks like the device is in range again, how about trying a connect?
+                            TRACE(Trace::Information, (_T("Trying to re-establish a connection [%s]"), _device->RemoteId().c_str()));
+                            _device->Connect();
+                        }
                     } else {
                         TRACE(Flow, (_T("Releasing device")));
                         _device->Release();
