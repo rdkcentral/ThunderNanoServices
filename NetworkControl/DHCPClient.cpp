@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-#include "DHCPClientImplementation.h"
+#include "DHCPClient.h"
 
 namespace WPEFramework {
 

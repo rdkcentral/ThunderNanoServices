@@ -21,7 +21,7 @@
 #define PLUGIN_NETWORKCONTROL_H
 
 #include "Module.h"
-#include "DHCPClientImplementation.h"
+#include "DHCPClient.h"
 
 #include <interfaces/IIPNetwork.h>
 #include <interfaces/json/JsonData_NetworkControl.h> 

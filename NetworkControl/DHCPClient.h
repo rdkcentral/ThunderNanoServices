@@ -231,7 +231,6 @@ namespace Plugin {
             Core::OptionalType<uint32_t> renewalTime; /* renewal time in seconds */
             Core::OptionalType<uint32_t> rebindingTime; /* rebinding time in seconds */
         };
-
         class Offer {
         public:
             Offer()
@@ -257,7 +256,12 @@ namespace Plugin {
                 , _renewalTime(0)
                 , _rebindingTime(0)
             {
-                _source = frame.siaddr;
+                if (frame.siaddr.s_addr != 0) {
+                    // There are implementation of DHCP servers out there that do not fill in this 
+                    // So only fill it in if it is set!
+                    _source = frame.siaddr;
+                }
+
                 _offer = frame.yiaddr;
 
                 Update(options);
@@ -376,7 +380,6 @@ namespace Plugin {
 
                 return (*this);
             }
-
             void Clear()
             {
                 Core::NodeId node;
@@ -476,8 +479,7 @@ namespace Plugin {
         const Offer& Lease() const {
             return (_offer);
         }
-        const string& Interface() const
-        {
+        const string& Interface() const {
             return (_interfaceName);
         }
        inline void UpdateMAC(const uint8_t buffer[], const uint8_t size) {
