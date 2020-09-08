@@ -65,8 +65,8 @@ namespace Plugin {
                 TRACE_L1("Sending DHCP message type: %d for interface: %s", _modus, _interfaceName.c_str());
             }
             else {
-                //RemoteNode(Core::NodeId(_offers.front().Source(), DHCPClient::DefaultDHCPServerPort));
-                RemoteNode(BroadcastServerNode);
+                RemoteNode(Core::NodeId(_offer.Source(), DHCPClient::DefaultDHCPServerPort));
+                // RemoteNode(BroadcastServerNode);
                 TRACE_L1("Sending DHCP message type: %d for interface: %s to [%s] all", _modus, _interfaceName.c_str(), _offer.Source().HostAddress().c_str());
             }
 

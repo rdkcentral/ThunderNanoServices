@@ -191,6 +191,24 @@ namespace Plugin {
             {
                 return (_broadcast);
             }
+            bool Store(const DHCPClient::Offer& offer) {
+                bool updated  = false;
+
+                if ( (_address != offer.Address()) || (_address.Mask() != offer.Netmask()) ) {
+                    updated = true;
+                    _address = Core::IPNode(offer.Address(), offer.Netmask());
+                }
+                if (_gateway != offer.Gateway()) {
+                    updated = true;
+                    _gateway = offer.Gateway();
+                }
+                if (_broadcast != offer.Broadcast()) {
+                    updated = true;
+                    _broadcast = offer.Broadcast();
+                }
+ 
+                return(updated);
+            } 
             inline void Store(Entry& info) const
             {
                 info.Mode = _mode;
@@ -330,7 +348,7 @@ namespace Plugin {
 #ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
-            DHCPEngine(NetworkControl& parent, const string& interfaceName, const uint8_t waitTimeSeconds, const uint8_t maxRetries)
+             DHCPEngine(NetworkControl& parent, const string& interfaceName, const uint8_t waitTimeSeconds, const uint8_t maxRetries, const Settings& info)
                 : _parent(parent)
                 , _retries(0)
                 , _maxRetries(maxRetries)
@@ -338,12 +356,13 @@ namespace Plugin {
                 , _client(interfaceName, this)
                 , _offers()
                 , _job(*this)
+                , _settings(info)
             {
             }
 #ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
-            ~DHCPEngine() = default; 
+           ~DHCPEngine() = default; 
 
         public:
             inline uint32_t Discover(const Core::NodeId& preferred)
@@ -422,7 +441,6 @@ namespace Plugin {
                     }
                     else {
                         DHCPClient::Offer& node (_offers.front());
-                        TRACE_L1("Attempting to start using: %s/%d", node.Address().HostAddress().c_str(), node.Netmask());
                         hardware.Add(Core::IPNode(node.Address(), node.Netmask()));
 
                         // Seems we have some offers pending and we are not Active yet, request an ACK
@@ -432,14 +450,17 @@ namespace Plugin {
                     }
                 }
             }
+            bool Store(const DHCPClient::Offer& offer) {
+                return(_settings.Store(offer));
+            }
             const Settings& Info() const {
                 return (_settings);
             }
-            void Info(const Settings& info) {
-                _settings = info;
-            }
-            DHCPClient::Offer Lease() const {
+            const DHCPClient::Offer& Lease() const {
                 return (_client.Lease());
+            }
+            bool HasActiveLease() const {
+                return (_client.HasActiveLease());
             }
 
         private:
@@ -463,12 +484,11 @@ namespace Plugin {
 
                 TRACE(Trace::Information, ("Acknowledged an Offer from: %s for %s", offer.Source().HostAddress().c_str(), offer.Address().HostAddress().c_str()));
 
-                TRACE_L1("Acknowledged: %s/%d", offer.Address().HostAddress().c_str(), offer.Netmask());
                 _job.Reschedule(Core::Time::Now());
             }
             void Rejected(const DHCPClient::Offer& offer) override {
                 _retries = _maxRetries;
-                TRACE(Trace::Information, ("Rejecrted an Offer from: %s for %s", offer.Source().HostAddress().c_str(), offer.Address().HostAddress().c_str()));
+                TRACE(Trace::Information, ("Rejected an Offer from: %s for %s", offer.Source().HostAddress().c_str(), offer.Address().HostAddress().c_str()));
                 _job.Reschedule(Core::Time::Now());
             }
 

@@ -234,8 +234,6 @@ namespace Plugin {
 
         class Offer {
         public:
-            typedef Core::IteratorType<const std::list<Core::NodeId>, const Core::NodeId&, std::list<Core::NodeId>::const_iterator> DNSIterator;
-
             Offer()
                 : _source()
                 , _offer()
@@ -248,7 +246,7 @@ namespace Plugin {
                 , _rebindingTime(0)
             {
             }
-            Offer(const Core::NodeId& source, const CoreMessage& frame, Options& options)
+            Offer(const Core::NodeId& source, const CoreMessage& frame, const Options& options)
                 : _source(source)
                 , _offer()
                 , _gateway()
@@ -298,7 +296,7 @@ namespace Plugin {
             bool operator!= (const Offer& rhs) const {
                 return (!operator==(rhs));
             }
-            void Update(Options& options) {
+            void Update(const Options& options) {
                if (_offer.IsValid() == true) {
                     
                     _leaseTime = 0;
@@ -410,9 +408,9 @@ namespace Plugin {
             {
                 return (_gateway);
             }
-            DNSIterator DNS() const
+            const std::list<Core::NodeId>& DNS() const
             {
-                return (DNSIterator(_dns));
+                return (_dns);
             }
             const Core::NodeId& Broadcast() const
             {
@@ -511,8 +509,6 @@ namespace Plugin {
 
                     result = Core::ERROR_NONE;
 
-                    TRACE_L1("Sending a Discover for %s", _interfaceName.c_str());                            
-
                     Core::SocketDatagram::Broadcast(true);
                     SocketDatagram::Trigger();
 
@@ -525,31 +521,36 @@ namespace Plugin {
         }
         inline uint32_t Acknowledge(const Offer& offer) {
 
-            uint32_t result = Core::ERROR_INPROGRESS;
+            uint32_t result = Core::ERROR_OPENING_FAILED;
 
-            _adminLock.Lock();
+            if ((SocketDatagram::IsOpen() == true) || (SocketDatagram::Open(Core::infinite, _interfaceName) == Core::ERROR_NONE)) {
 
-            if ((SocketDatagram::IsOpen() == true) && (_state == RECEIVING)) {
+                result = Core::ERROR_INPROGRESS;
+                
+                _adminLock.Lock();
 
-                // Looks like the ACK on which we where waiting is not coming, move on..
-                ASSERT(offer.Source().IsValid() == true);
+                if ((_state == RECEIVING) || (_state == IDLE)) {
 
-                _modus = CLASSIFICATION_REQUEST;
-                _state = SENDING;
-                _offer = offer;
+                    // Looks like the ACK on which we where waiting is not coming, move on..
+                    ASSERT(offer.Source().IsValid() == true);
 
-                _adminLock.Unlock();
+                    _modus = CLASSIFICATION_REQUEST;
+                    _state = SENDING;
+                    _offer = offer;
 
-                result = Core::ERROR_NONE;
-                auto addr = reinterpret_cast<const sockaddr_in*>(static_cast<const struct sockaddr*>(offer.Source()));
+                    _adminLock.Unlock();
+  
+                    result = Core::ERROR_NONE;
+                    auto addr = reinterpret_cast<const sockaddr_in*>(static_cast<const struct sockaddr*>(offer.Source()));
                         
-                memcpy(&_serverIdentifier, &(addr->sin_addr), 4);
-                TRACE_L1("Request ACK: [%s]@[%s]", offer.Address().HostAddress().c_str(), offer.Source().HostAddress().c_str());
+                    memcpy(&_serverIdentifier, &(addr->sin_addr), 4);
 
-                SocketDatagram::Trigger();
-            }
-            else {
-                _adminLock.Unlock();
+                    // Core::SocketDatagram::Broadcast(true);
+                    SocketDatagram::Trigger();
+                }
+                else {
+                    _adminLock.Unlock();
+                }
             }
 
             return (result);
@@ -578,8 +579,6 @@ namespace Plugin {
 
                         _modus = CLASSIFICATION_RELEASE;
 
-                        TRACE_L1("Sending a Release for %s", _interfaceName.c_str());                            
-
                         result = Core::ERROR_NONE;
                         Core::SocketDatagram::Broadcast(true);
                         SocketDatagram::Trigger();
@@ -595,8 +594,6 @@ namespace Plugin {
         inline void Close()
         {
             _adminLock.Lock();
-
-            TRACE_L1("Closing the DHCP stuff, we are done! State-Modus: [%d-%d]", _state, _modus);
 
             _state = IDLE;
 
