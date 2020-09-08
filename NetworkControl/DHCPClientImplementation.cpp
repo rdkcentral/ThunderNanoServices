@@ -62,14 +62,12 @@ namespace Plugin {
 
             if ( (_modus == CLASSIFICATION_DISCOVER) || (_offer.Source().IsValid() == false) ) {
                 RemoteNode(BroadcastServerNode);
-                TRACE_L1("Sending DHCP message type: %d for interface: %s", _modus, _interfaceName.c_str());
             }
             else {
                 RemoteNode(Core::NodeId(_offer.Source(), DHCPClient::DefaultDHCPServerPort));
-                // RemoteNode(BroadcastServerNode);
-                TRACE_L1("Sending DHCP message type: %d for interface: %s to [%s] all", _modus, _interfaceName.c_str(), _offer.Source().HostAddress().c_str());
             }
 
+            TRACE_L1("Sending DHCP message type: %d for interface: %s", _modus, _interfaceName.c_str());
             result = Message(dataFrame, maxSendSize);
         }
 

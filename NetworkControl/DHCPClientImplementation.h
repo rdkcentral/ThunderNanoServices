@@ -262,9 +262,9 @@ namespace Plugin {
 
                 Update(options);
             }
-            Offer(const Core::NodeId& source)
-                : _source()
-                , _offer(source)
+            Offer(const Core::NodeId& source, const Core::NodeId& offer)
+                : _source(source)
+                , _offer(offer)
                 , _gateway()
                 , _broadcast()
                 , _dns()
@@ -519,7 +519,7 @@ namespace Plugin {
 
             return (result);
         }
-        inline uint32_t Acknowledge(const Offer& offer) {
+        inline uint32_t Request(const Offer& offer) {
 
             uint32_t result = Core::ERROR_OPENING_FAILED;
 
@@ -545,7 +545,7 @@ namespace Plugin {
                         
                     memcpy(&_serverIdentifier, &(addr->sin_addr), 4);
 
-                    // Core::SocketDatagram::Broadcast(true);
+                    Core::SocketDatagram::Broadcast(true);
                     SocketDatagram::Trigger();
                 }
                 else {
@@ -597,12 +597,12 @@ namespace Plugin {
 
             _state = IDLE;
 
+            _adminLock.Unlock();
+
             // Do not wait for UDP closure, this is also called on the Communication Thread !!!
             if (SocketDatagram::IsOpen()) {
                 SocketDatagram::Close(0);
             }
-
-            _adminLock.Unlock();
         }
 
     private:

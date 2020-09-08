@@ -58,19 +58,6 @@ namespace Plugin
         return (accessible);
     }
 
-
-    NetworkControl::Entry& NetworkControl::Entry::operator= (const NetworkControl::Settings& info) {
-
-        // Interface;
-        Address = info.Address().HostAddress();
-        Mask = info.Address().Mask();
-        Gateway = info.Gateway().HostAddress();
-        Broadcast(info.Broadcast());
-
-        return (*this);
-    }
-
-
 #ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
@@ -147,7 +134,7 @@ namespace Plugin
         }
 
         // Lets download leases for potential DHCP interfaces
-        std::map<const string, const Settings> info;
+        std::map<const string, const Entry> info;
         Load(_persistentStoragePath, info);
 
         Core::JSON::ArrayType<Entry>::Iterator index(config.Interfaces.Elements());
@@ -165,7 +152,7 @@ namespace Plugin
                     SYSLOG(Logging::Startup, (_T("Interface [%s], not available"), interfaceName.c_str()));
                 } else {
                     JsonData::NetworkControl::NetworkData::ModeType how;
-                    std::map<const string, const Settings>::const_iterator more (info.find(interfaceName));
+                    std::map<const string, const Entry>::const_iterator more (info.find(interfaceName));
 
                     if (more != info.end()) {
                         auto element = _dhcpInterfaces.emplace(std::piecewise_construct,
@@ -176,7 +163,7 @@ namespace Plugin
                     else {
                         auto element = _dhcpInterfaces.emplace(std::piecewise_construct,
                             std::forward_as_tuple(interfaceName),
-                            std::forward_as_tuple(*this, interfaceName, _responseTime, _retries, Settings(index.Current())));
+                            std::forward_as_tuple(*this, interfaceName, _responseTime, _retries, index.Current()));
                         how = (element.first->second.Info().Mode());
                     }
 
@@ -204,7 +191,7 @@ namespace Plugin
                 if (_dhcpInterfaces.find(interfaceName) == _dhcpInterfaces.end()) {
                     _dhcpInterfaces.emplace(std::piecewise_construct,
                         std::forward_as_tuple(interfaceName),
-                        std::forward_as_tuple(*this, interfaceName, _responseTime, _retries, Settings()));
+                        std::forward_as_tuple(*this, interfaceName, _responseTime, _retries, Entry()));
                 }
             }
         }
@@ -215,8 +202,6 @@ namespace Plugin
 
     /* virtual */ void NetworkControl::Deinitialize(PluginHost::IShell * service)
     {
-        Save(_persistentStoragePath);
-
         // Stop observing.
         _observer.Close();
         _dns.clear();
@@ -259,11 +244,9 @@ namespace Plugin
 
                     Core::ProxyType<Web::JSONBodyType<NetworkControl::Entry>> data(jsonGetNetworkFactory.Element());
 
-                    entry->second.Info().Store(*data);
-                    data->Interface = entry->first;
+                    entry->second.Get(*data);
 
                     result->Body(data);
-
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = "OK";
                 } else {
@@ -279,8 +262,7 @@ namespace Plugin
 
                     Entry& newSlot = data->Add();
 
-                    entry->second.Info().Store(newSlot);
-                    newSlot.Interface = entry->first;
+                    entry->second.Get(newSlot);
                     entry++;
                 }
                 result->Body(data);
@@ -447,8 +429,7 @@ namespace Plugin
 
                 for (std::pair<const string, DHCPEngine>& entry : _dhcpInterfaces) {
                     Entry& result = storage.Add();
-                    result = entry.second.Info();
-                    result.Interface = entry.first;
+                    entry.second.Get(result);
                 }
 
                 if (storage.IElement::ToFile(leaseFile) == false) {
@@ -466,7 +447,7 @@ namespace Plugin
         Loads list of previously saved offers and adds it to unleased list 
         for requesting in future.
     */
-    bool NetworkControl::Load(const string& filename, std::map<const string, const Settings>& info) 
+    bool NetworkControl::Load(const string& filename, std::map<const string, const Entry>& info) 
     {
         bool result = false;
 
@@ -549,6 +530,8 @@ namespace Plugin
             
             if (index != _dhcpInterfaces.end()) {
                 bool hasValidIP = ExternallyAccessible(adapter);
+                TRACE_L1("Interface [%s] has a public IP: [%s]", name.c_str(), hasValidIP ? _T("true") : _T("false"));
+
                 if (std::find(_requiredSet.cbegin(), _requiredSet.cend(), name) != _requiredSet.cend()) {
                     count++;
                     fullSet &= hasValidIP;
@@ -559,7 +542,7 @@ namespace Plugin
 
         ASSERT (count <= _requiredSet.size());
 
-        fullSet &= (count == _requiredSet.size());
+        fullSet &= ( (count == _requiredSet.size()) && validIP );
 
         PluginHost::ISubSystem* subSystem = _service->SubSystems();
         ASSERT(subSystem != nullptr);
@@ -585,22 +568,21 @@ namespace Plugin
 
             if (adapter.IsValid() == true) {
 
-                if (entry->second.Store(offer) == true) {
+                TRACE(Trace::Information, ("DHCP Request for interface %s accepted, %s offered IP!\n", interfaceName.c_str(), offer.Address().HostAddress().c_str()));
 
-                    TRACE(Trace::Information, ("DHCP Request for interface %s accepted, %s offered IP!\n", interfaceName.c_str(), offer.Address().HostAddress().c_str()));
-
-                    SetIP(adapter, Core::IPNode(offer.Address(), offer.Netmask()), offer.Gateway(), offer.Broadcast(), true);
+                SetIP(adapter, Core::IPNode(offer.Address(), offer.Netmask()), offer.Gateway(), offer.Broadcast(), true);
                 
-                    RefreshDNS();
+                RefreshDNS();
 
-                    TRACE_L1("New IP Granted for %s:", interfaceName.c_str());
-                    TRACE_L1("     Source:    %s", offer.Source().HostAddress().c_str());
-                    TRACE_L1("     Address:   %s", offer.Address().HostAddress().c_str());
-                    TRACE_L1("     Broadcast: %s", offer.Broadcast().HostAddress().c_str());
-                    TRACE_L1("     Gateway:   %s", offer.Gateway().HostAddress().c_str());
-                    TRACE_L1("     DNS:       %d", offer.DNS().size());
-                    TRACE_L1("     Netmask:   %d", offer.Netmask());
-                }
+                TRACE_L1("New IP Granted for %s:", interfaceName.c_str());
+                TRACE_L1("     Source:    %s", offer.Source().HostAddress().c_str());
+                TRACE_L1("     Address:   %s", offer.Address().HostAddress().c_str());
+                TRACE_L1("     Broadcast: %s", offer.Broadcast().HostAddress().c_str());
+                TRACE_L1("     Gateway:   %s", offer.Gateway().HostAddress().c_str());
+                TRACE_L1("     DNS:       %d", offer.DNS().size());
+                TRACE_L1("     Netmask:   %d", offer.Netmask());
+
+                Save(_persistentStoragePath);
             }
         } else {
             TRACE_L1("Request accepted for nonexisting network interface!");
@@ -689,7 +671,7 @@ namespace Plugin
                 
                 if ( (entry.second.Info().Mode() == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) && (entry.second.HasActiveLease() == true) ) {
                   
-                    for (const Core::NodeId& node : entry.second.Lease().DNS()) {
+                    for (const Core::NodeId& node : entry.second.DNS()) {
                         if (std::find(servers.begin(), servers.end(), node) == servers.end()) {
                             servers.push_back(node);
                         }
@@ -747,7 +729,7 @@ namespace Plugin
             else if (_open == true) {
                 _dhcpInterfaces.emplace(std::piecewise_construct,
                     std::forward_as_tuple(interfaceName),
-                    std::forward_as_tuple(*this, interfaceName, _responseTime, _retries, Settings()));
+                    std::forward_as_tuple(*this, interfaceName, _responseTime, _retries, Entry()));
 
                 message += _T("Create\" }");
 

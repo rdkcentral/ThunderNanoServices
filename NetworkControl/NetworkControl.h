@@ -32,19 +32,15 @@ namespace Plugin {
     class NetworkControl : public PluginHost::IPlugin,
                            public PluginHost::IWeb,
                            public PluginHost::JSONRPC {
-    private:
-        class Settings;
-        using DNSIterator = Core::IteratorType<const std::list<Core::NodeId>, const Core::NodeId&, std::list<Core::NodeId>::const_iterator>;
-
     public:
         class Entry : public Core::JSON::Container {
         public:
             Entry& operator=(const Entry&) = delete;
-            Entry& operator=(const Settings&);
 
             Entry()
                 : Core::JSON::Container()
                 , Interface()
+                , Source()
                 , Mode(JsonData::NetworkControl::NetworkData::ModeType::MANUAL)
                 , Address()
                 , Mask(32)
@@ -72,6 +68,7 @@ namespace Plugin {
             Entry(const Entry& copy)
                 : Core::JSON::Container()
                 , Interface(copy.Interface)
+                , Source(copy.Source)
                 , Mode(copy.Mode)
                 , Address(copy.Address)
                 , Mask(copy.Mask)
@@ -142,6 +139,8 @@ namespace Plugin {
 
         class Settings {
         public:
+            Settings& operator= (const Settings& rhs) = delete;
+
             Settings()
                 : _mode(JsonData::NetworkControl::NetworkData::ModeType::MANUAL)
                 , _address()
@@ -164,15 +163,6 @@ namespace Plugin {
             {
             }
             ~Settings() = default;
-
-            Settings& operator= (const Settings& rhs) {
-                _mode = rhs._mode;
-                _address = rhs._address;
-                _gateway = rhs._gateway;
-                _broadcast = rhs._broadcast;
-
-                return(*this);
-            }
 
         public:
             inline JsonData::NetworkControl::NetworkData::ModeType Mode() const
@@ -206,17 +196,9 @@ namespace Plugin {
                     updated = true;
                     _broadcast = offer.Broadcast();
                 }
- 
+
                 return(updated);
             } 
-            inline void Store(Entry& info) const
-            {
-                info.Mode = _mode;
-                info.Address = _address.HostAddress();
-                info.Mask = _address.Mask();
-                info.Gateway = _gateway.HostAddress();
-                info.Broadcast(_broadcast);
-            }
 
         private:
             JsonData::NetworkControl::NetworkData::ModeType _mode;
@@ -266,7 +248,6 @@ namespace Plugin {
             }
             virtual void Event(const string& interface) override
             {
-
                 _adminLock.Lock();
 
                 if (std::find(_reporting.begin(), _reporting.end(), interface) == _reporting.end()) {
@@ -282,6 +263,7 @@ namespace Plugin {
             {
                 // Yippie a yee, we have an interface notification:
                 _adminLock.Lock();
+
                 while (_reporting.size() != 0) {
                     const string interfaceName(_reporting.front());
                     _reporting.pop_front();
@@ -348,7 +330,7 @@ namespace Plugin {
 #ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
-             DHCPEngine(NetworkControl& parent, const string& interfaceName, const uint8_t waitTimeSeconds, const uint8_t maxRetries, const Settings& info)
+             DHCPEngine(NetworkControl& parent, const string& interfaceName, const uint8_t waitTimeSeconds, const uint8_t maxRetries, const Entry& info)
                 : _parent(parent)
                 , _retries(0)
                 , _maxRetries(maxRetries)
@@ -358,6 +340,14 @@ namespace Plugin {
                 , _job(*this)
                 , _settings(info)
             {
+                if ( (_settings.Address().IsValid() == true) && (info.Source.IsSet() == true) ) {
+                    // We can start with an Request, i.s.o. an ack...?
+                    Core::NodeId source(info.Source.Value().c_str());
+
+                    if (source.IsValid() == true) {
+                        _offers.emplace_back(source, static_cast<const Core::NodeId&>(_settings.Address()));
+                    }
+                }
             }
 #ifdef __WINDOWS__
 #pragma warning(default : 4355)
@@ -367,11 +357,18 @@ namespace Plugin {
         public:
             inline uint32_t Discover(const Core::NodeId& preferred)
             {
-                _job.Revoke();
-                _offers.clear();
+                uint32_t result;
                 _retries = 0;
-                _job.Schedule(Core::Time::Now().Add(_handleTime));
-                uint32_t result = _client.Discover(preferred);
+                _job.Revoke();
+                if ( (_offers.size() > 0) && (_offers.front().Address() == preferred) ) {
+                    _job.Schedule(Core::Time::Now().Add(AckWaitTimeout));
+                    result = _client.Request(_offers.front());
+                }
+                else {
+                    _offers.clear();
+                    _job.Schedule(Core::Time::Now().Add(_handleTime));
+                    result = _client.Discover(preferred);
+                }
 
                 return (result);
             }
@@ -394,21 +391,22 @@ namespace Plugin {
                         if (_retries++ >= _maxRetries){
                             // Tried extending the lease but we did not get a response. Rediscover
                             _retries = 0;
-                            _offers.clear();
                             _client.Discover(Core::NodeId());
                             _job.Schedule(Core::Time::Now().Add(_handleTime));
                         }
                         else {
                             // Start refreshing the Lease..
-                            _client.Acknowledge(_client.Lease());
+                            _client.Request(_client.Lease());
                             _job.Schedule(Core::Time::Now().Add(AckWaitTimeout));
                         }
                     }
                     else {
                         TRACE(Trace::Information, ("Installing the lease, Rechecking in %d seconds from now", _client.Lease().LeaseTime()));
 
-                        // We are good to go report success!
-                        _parent.Accepted(_client.Interface(), _client.Lease());
+                        // We are good to go report success!, if this is a different set..
+                        if (_settings.Store(_client.Lease()) == true) {
+                            _parent.Accepted(_client.Interface(), _client.Lease());
+                        }
                         _retries = 0;
                         _job.Schedule(_client.Expired());
                     }
@@ -426,7 +424,7 @@ namespace Plugin {
                 }
                 else if ( (_client.Lease() == _offers.front()) && (_retries++ < _maxRetries) ) {
                     // Looks like the acknwledge did not get a reply, should we retry ?
-                    _client.Acknowledge(_client.Lease());
+                    _client.Request(_client.Lease());
                     _job.Schedule(Core::Time::Now().Add(AckWaitTimeout));
                 }
                 else {
@@ -444,23 +442,31 @@ namespace Plugin {
                         hardware.Add(Core::IPNode(node.Address(), node.Netmask()));
 
                         // Seems we have some offers pending and we are not Active yet, request an ACK
-                        _client.Acknowledge(node);
+                        _client.Request(node);
                         _retries = 0;
                         _job.Schedule(Core::Time::Now().Add(AckWaitTimeout));
                     }
                 }
             }
-            bool Store(const DHCPClient::Offer& offer) {
-                return(_settings.Store(offer));
-            }
             const Settings& Info() const {
                 return (_settings);
             }
-            const DHCPClient::Offer& Lease() const {
-                return (_client.Lease());
+            const std::list<Core::NodeId>& DNS() const {
+                return (_client.Lease().DNS());
             }
             bool HasActiveLease() const {
                 return (_client.HasActiveLease());
+            }
+            void Get(Entry& info) const
+            {
+                info.Mode = _settings.Mode();
+                info.Interface = _client.Interface();
+                info.Address = _settings.Address().HostAddress();
+                info.Gateway = _settings.Gateway().HostAddress();
+                info.Broadcast(_settings.Broadcast());
+                if (_client.HasActiveLease() == true) {
+                    info.Source = _client.Lease().Source().HostAddress();
+                }
             }
 
         private:
@@ -472,18 +478,12 @@ namespace Plugin {
                 _adminLock.Unlock();
 
                 TRACE(Trace::Information, ("Received an Offer from: %s for %s", offer.Source().HostAddress().c_str(), offer.Address().HostAddress().c_str()));
-
                 if (reschedule == true) {
                     _job.Reschedule(Core::Time::Now());
                 }
             }
             void Approved(const DHCPClient::Offer& offer) override {
-                _adminLock.Lock();
-                _offers.clear();
-                _adminLock.Unlock();
-
                 TRACE(Trace::Information, ("Acknowledged an Offer from: %s for %s", offer.Source().HostAddress().c_str(), offer.Address().HostAddress().c_str()));
-
                 _job.Reschedule(Core::Time::Now());
             }
             void Rejected(const DHCPClient::Offer& offer) override {
@@ -532,7 +532,7 @@ namespace Plugin {
 
     private:
         void Save(const string& filename);
-        bool Load(const string& filename, std::map<const string, const Settings>& info);
+        bool Load(const string& filename, std::map<const string, const Entry>& info);
 
         uint32_t Reload(const string& interfaceName, const bool dynamic);
         uint32_t SetIP(Core::AdapterIterator& adapter, const Core::IPNode& ipAddress, const Core::NodeId& gateway, const Core::NodeId& broadcast, bool clearOld = false);
