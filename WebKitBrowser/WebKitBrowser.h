@@ -154,7 +154,6 @@ namespace Plugin {
 
         virtual ~WebKitBrowser()
         {
-            UnregisterAll();
             TRACE_L1("Destructor WebKitBrowser.%d", __LINE__);
         }
 

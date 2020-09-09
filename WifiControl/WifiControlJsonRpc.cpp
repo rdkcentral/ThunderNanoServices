@@ -100,18 +100,7 @@ namespace Plugin {
     //  - ERROR_WRITE_ERROR: Returned when the operation failed
     uint32_t WifiControl::endpoint_store()
     {
-        uint32_t result = Core::ERROR_WRITE_ERROR;
-        Core::File configFile(_configurationStore);
-
-        if (configFile.Create() == true) {
-            WifiControl::ConfigList configs;
-            WPASupplicant::Config::Iterator list(_controller->Configs());
-            configs.Set(list);
-            if (configs.IElement::ToFile(configFile) == true)
-                result = Core::ERROR_NONE;
-        }
-
-        return result;
+        return Store();
     }
 
     // Method: scan - Searches for available networks
