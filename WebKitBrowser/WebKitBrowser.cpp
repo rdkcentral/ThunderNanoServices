@@ -97,6 +97,7 @@ namespace Plugin {
         _service->Unregister(&_notification);
         _browser->Unregister(&_notification);
         _memory->Release();
+        UnregisterAll();
 
         PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
 

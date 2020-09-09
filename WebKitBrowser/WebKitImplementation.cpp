@@ -447,6 +447,7 @@ static GSourceFuncs _handlerIntervention =
                 , ExecPath()
                 , HTTPProxy()
                 , HTTPProxyExclusion()
+                , TCPKeepAlive(false)
             {
                 Add(_T("useragent"), &UserAgent);
                 Add(_T("url"), &URL);
@@ -489,6 +490,7 @@ static GSourceFuncs _handlerIntervention =
                 Add(_T("execpath"), &ExecPath);
                 Add(_T("proxy"), &HTTPProxy);
                 Add(_T("proxyexclusion"), &HTTPProxyExclusion);
+                Add(_T("tcpkeepalive"), &TCPKeepAlive);
             }
             ~Config()
             {
@@ -536,6 +538,7 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::String ExecPath;
             Core::JSON::String HTTPProxy;
             Core::JSON::String HTTPProxyExclusion;
+            Core::JSON::Boolean TCPKeepAlive;
         };
 
     private:
@@ -1293,6 +1296,11 @@ static GSourceFuncs _handlerIntervention =
             // HTTPProxyExclusion
             if (_config.HTTPProxyExclusion.IsSet() == true) {
                 Core::SystemInfo::SetEnvironment(_T("no_proxy"), _config.HTTPProxyExclusion.Value(), !environmentOverride);
+            }
+
+            // HTTPProxyExclusion
+            if (_config.TCPKeepAlive.Value() == true) {
+                Core::SystemInfo::SetEnvironment(_T("WEBKIT_TCP_KEEPALIVE"), _T("1"), !environmentOverride);
             }
 
             string width(Core::NumberType<uint16_t>(_config.Width.Value()).Text());
