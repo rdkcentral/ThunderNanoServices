@@ -563,13 +563,6 @@ namespace Plugin {
         uint32_t set_up(const string& index, const Core::JSON::Boolean& param);
         void event_connectionchange(const string& name, const string& address, const JsonData::NetworkControl::ConnectionchangeParamsData::StatusType& status);
 
-        inline void ClearLease(const string& interfaceName) {
-            std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(interfaceName));
-            if (index != _dhcpInterfaces.end()) {
-                index->second.ClearLease();
-            }
-        }
-
     private:
         Core::CriticalSection _adminLock;
         uint16_t _skipURL;

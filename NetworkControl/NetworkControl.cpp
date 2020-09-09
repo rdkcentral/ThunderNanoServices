@@ -359,9 +359,13 @@ namespace Plugin
         while (checker6.Next() == true) {
             adapter.Delete(checker6.Address());
         }
- 
+
+        std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(adapter.Name()));
+        if (index != _dhcpInterfaces.end()) {
+            index->second.ClearLease();
+        }
+
         Core::AdapterIterator::Flush();
-        ClearLease(adapter.Name());
 
         SubSystemValidation();
     }
