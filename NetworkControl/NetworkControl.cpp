@@ -398,11 +398,11 @@ namespace Plugin
                 TRACE_L1("Setting IP: %s", ipAddress.HostAddress().c_str());
                 adapter.Add(ipAddress);
             }
-            if (gateway.IsValid() == true) {
-                adapter.Gateway(Core::IPNode(Core::NodeId("0.0.0.0"), 0), gateway);
-            }
             if (broadcast.IsValid() == true) {
                 adapter.Broadcast(broadcast);
+            }
+            if (gateway.IsValid() == true) {
+                adapter.Gateway(Core::IPNode(Core::NodeId("0.0.0.0"), 0), gateway);
             }
 
             Core::AdapterIterator::Flush();
