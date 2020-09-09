@@ -348,6 +348,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
+        INTERFACE_AGGREGATE(Exchange::IPlayer, _player)
         END_INTERFACE_MAP
 
     public:
