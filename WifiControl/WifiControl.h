@@ -655,7 +655,7 @@ namespace Plugin {
         void event_scanresults(const Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& list);
         void event_networkchange();
         void event_connectionchange(const string& ssid);
- 
+
         inline uint32_t Connect(const string& ssid) {
 
             if (_autoConnectEnabled == true) {
@@ -678,6 +678,31 @@ namespace Plugin {
             }
 
             return _controller->Disconnect(ssid);
+        }
+        inline uint32_t Store() {
+            uint32_t result = Core::ERROR_NONE;
+
+            Core::File configFile(_configurationStore);
+            WPASupplicant::Config::Iterator list(_controller->Configs());
+            WifiControl::ConfigList configs;
+            configs.Set(list);
+            if (configs.Configs.IsSet()) {
+                if (configFile.Create() == true) {
+                    if (configs.IElement::ToFile(configFile) == true) {
+                    } else {
+                        TRACE(Trace::Information, (_T("Failed to write config settings to %s"), _configurationStore.c_str()));
+                        result = Core::ERROR_WRITE_ERROR;
+                    }
+                } else {
+                    TRACE(Trace::Information, (_T("Failed to create config file %s"), _configurationStore.c_str()));
+                    result = Core::ERROR_WRITE_ERROR;
+                }
+            } else {
+                if (configFile.Exists() == true) {
+                    configFile.Destroy();
+                }
+            }
+            return result;
         }
 
         BEGIN_INTERFACE_MAP(WifiControl)
