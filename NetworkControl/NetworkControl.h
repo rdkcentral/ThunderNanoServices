@@ -198,6 +198,11 @@ namespace Plugin {
                 }
 
                 return(updated);
+            }
+            void Clear() {
+                _address = Core::IPNode();
+                _gateway = Core::NodeId();
+                _broadcast = Core::NodeId();
             } 
 
         private:
@@ -468,6 +473,9 @@ namespace Plugin {
                     info.Source = _client.Lease().Source().HostAddress();
                 }
             }
+            inline void ClearLease() {
+                _settings.Clear();
+            }
 
         private:
             // Offered, Approved and Rejected all run on the communication thread, so be carefull !!
@@ -554,6 +562,13 @@ namespace Plugin {
         uint32_t get_up(const string& index, Core::JSON::Boolean& response) const;
         uint32_t set_up(const string& index, const Core::JSON::Boolean& param);
         void event_connectionchange(const string& name, const string& address, const JsonData::NetworkControl::ConnectionchangeParamsData::StatusType& status);
+
+        inline void ClearLease(const string& interfaceName) {
+            std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(interfaceName));
+            if (index != _dhcpInterfaces.end()) {
+                index->second.ClearLease();
+            }
+        }
 
     private:
         Core::CriticalSection _adminLock;

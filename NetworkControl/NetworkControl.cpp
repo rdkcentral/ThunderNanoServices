@@ -361,6 +361,7 @@ namespace Plugin
         }
  
         Core::AdapterIterator::Flush();
+        ClearLease(adapter.Name());
 
         SubSystemValidation();
     }
