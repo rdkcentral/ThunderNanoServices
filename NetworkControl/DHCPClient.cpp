@@ -60,12 +60,7 @@ namespace Plugin {
         if (_state == SENDING) {
             _state = RECEIVING;
 
-            if ( (_modus == CLASSIFICATION_DISCOVER) || (_offer.Source().IsValid() == false) ) {
-                RemoteNode(BroadcastServerNode);
-            }
-            else {
-                RemoteNode(Core::NodeId(_offer.Source(), DHCPClient::DefaultDHCPServerPort));
-            }
+            RemoteNode(BroadcastServerNode);
 
             TRACE_L1("Sending DHCP message type: %d for interface: %s", _modus, _interfaceName.c_str());
             result = Message(dataFrame, maxSendSize);
