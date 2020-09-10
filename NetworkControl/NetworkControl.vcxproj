@@ -171,13 +171,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="DHCPClientImplementation.cpp" />
+    <ClCompile Include="DHCPClient.cpp" />
     <ClCompile Include="Module.cpp" />
     <ClCompile Include="NetworkControl.cpp" />
     <ClCompile Include="NetworkControlJsonRpc.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DHCPClientImplementation.h" />
+    <ClInclude Include="DHCPClient.h" />
     <ClInclude Include="Module.h" />
     <ClInclude Include="NetworkControl.h" />
   </ItemGroup>
