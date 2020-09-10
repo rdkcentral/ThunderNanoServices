@@ -20,8 +20,8 @@
 #include <interfaces/json/JsonData_Browser.h>
 #include <interfaces/json/JsonData_StateControl.h>
 
-#include "WebKitBrowser.h"
 #include "Module.h"
+#include "WebKitBrowser.h"
 
 namespace WPEFramework {
 
