@@ -44,13 +44,25 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 if (NXCLIENT_FOUND AND NEXUS_FOUND)
+    if (CODE_FROM_EXTERNAL_REPOSITORY)
+        include(GetExternalCode)
+        GetExternalCode(
+            GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/VolumeControl"
+            GIT_TAG "master"
+            SOURCE_DIR "NexusExt"
+        )
+        target_sources(${MODULE_NAME}
+            PRIVATE
+                NexusExt/VolumeControlPlatform.cpp)
+    else()
+        target_sources(${MODULE_NAME}
+            PRIVATE
+                Nexus/VolumeControlPlatform.cpp)
+    endif()
     target_link_libraries(${MODULE_NAME}
         PRIVATE
             NEXUS::NEXUS
             NXCLIENT::NXCLIENT)
-    target_sources(${MODULE_NAME}
-        PRIVATE
-            Nexus/VolumeControlPlatform.cpp)
 elseif (BCM_HOST_FOUND)
     target_link_libraries(${MODULE_NAME}
         PRIVATE
