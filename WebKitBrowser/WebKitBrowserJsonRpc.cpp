@@ -17,14 +17,19 @@
  * limitations under the License.
  */
 
-#include <interfaces/json/JsonData_Browser.h>
-#include <interfaces/json/JsonData_StateControl.h>
-
 #include "Module.h"
 #include "WebKitBrowser.h"
 
-namespace WPEFramework {
+#include <interfaces/json/JsonData_Browser.h>
+#include <interfaces/json/JsonData_StateControl.h>
 
+<<<<<<< HEAD
+#include "Module.h"
+#include "WebKitBrowser.h"
+
+=======
+>>>>>>> c82aa0588b8bad28e90608bb8d3424e37794285f
+namespace WPEFramework {
 
 namespace Plugin {
 
