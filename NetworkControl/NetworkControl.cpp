@@ -503,11 +503,11 @@ namespace Plugin
                 SYSLOG(Logging::Notification, (_T("Adapter [%s] not available or in the wrong state."), interfaceName.c_str()));
             }
             else if (dynamic == false) {
-                if (index->second.Info().Address().IsValid() == true) {
+                if (index->second.Info().Address().IsValid() != true) {
                     SYSLOG(Logging::Notification, (_T("Invalid static IP address, for interfaces: %s"), interfaceName.c_str()));
                 }
                 else { 
-                    result = SetIP(adapter, index->second.Info().Address(), index->second.Info().Gateway(), index->second.Info().Broadcast());
+                    result = SetIP(adapter, index->second.Info().Address(), index->second.Info().Gateway(), index->second.Info().Broadcast(), true);
                 }
             } else {
                 uint8_t mac[6];
@@ -822,12 +822,12 @@ namespace Plugin
 
         Entry entry;
         engine.Get(entry);
-        if (entry.Mode != network.Mode.Value()) {
+
+        if (entry.Mode.Value() != network.Mode.Value()) {
             entry.Mode = network.Mode.Value();
         }
 
         if (entry.Mode == JsonData::NetworkControl::NetworkData::ModeType::STATIC) {
-            Entry entry;
             entry.Address = network.Address.Value();
             entry.Mask = network.Mask.Value();
             entry.Gateway = network.Gateway.Value();
@@ -844,46 +844,50 @@ namespace Plugin
         }
 
         return result;
-     }
+    }
 
-     uint32_t NetworkControl::DNS(Core::JSON::ArrayType<Core::JSON::String>& dns) const {
-         std::list<Core::NodeId> servers;
-         DNS(servers);
+    uint32_t NetworkControl::DNS(Core::JSON::ArrayType<Core::JSON::String>& dns) const {
 
-         for (const Core::NodeId& entry : servers) {
-            Core::JSON::String address(entry.HostAddress());
-            dns.Add(address);
-         }
+        std::list<Core::NodeId> servers;
+        DNS(servers);
 
-         return Core::ERROR_NONE;
-     }
+        for (const Core::NodeId& entry : servers) {
+            Core::JSON::String& address(dns.Add());
+            address = entry.HostAddress();
+        }
 
-     uint32_t NetworkControl::DNS(const Core::JSON::ArrayType<Core::JSON::String>& dns)
-     {
-         Core::JSON::ArrayType<Core::JSON::String>::ConstIterator entries(dns.Elements());
+        return Core::ERROR_NONE;
+    }
 
-         _adminLock.Lock();
-         while (entries.Next() == true) {
-             Core::NodeId entry(entries.Current().Value().c_str());
+    uint32_t NetworkControl::DNS(const Core::JSON::ArrayType<Core::JSON::String>& dns)
+    {
+        Core::JSON::ArrayType<Core::JSON::String>::ConstIterator entries(dns.Elements());
 
-             if (entry.IsValid() == true) {
-                 _dns.push_back(entry);
-             }
-         }
-         _adminLock.Unlock();
+        _adminLock.Lock();
+        while (entries.Next() == true) {
+            Core::NodeId entry(entries.Current().Value().c_str());
 
-         return Core::ERROR_NONE;
-     }
+            if ((entry.IsValid() == true) &&
+                (std::find(_dns.begin(), _dns.end(), entry) == _dns.end())) {
 
-     void NetworkControl::DNS(std::list<Core::NodeId>& servers) const
-     {
+                _dns.push_back(entry);
+            }
+        }
+        _adminLock.Unlock();
+
+        return Core::ERROR_NONE;
+    }
+
+    void NetworkControl::DNS(std::list<Core::NodeId>& servers) const
+    {
         _adminLock.Lock();
 
         servers = _dns;
 
         for (const std::pair<const string, DHCPEngine>& entry : _dhcpInterfaces) {
 
-            if ( (entry.second.Info().Mode() == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) && (entry.second.HasActiveLease() == true) ) {
+            if ((entry.second.Info().Mode() == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) &&
+                (entry.second.HasActiveLease() == true)) {
 
                 for (const Core::NodeId& node : entry.second.DNS()) {
                     if (std::find(servers.begin(), servers.end(), node) == servers.end()) {

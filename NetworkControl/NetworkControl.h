@@ -189,16 +189,16 @@ namespace Plugin {
                     updated = true;
                 }
                 Core::NodeId address(info.Address.Value().c_str());
-                if ((_address != address) || _address.Mask() != info.Mask.Value()) {
+                if ((address.IsValid() == true) && ((_address != address) || _address.Mask() != info.Mask.Value())) {
                     _address = Core::IPNode(address, info.Mask.Value());
                     updated = true;
                 }
                 Core::NodeId gateway(info.Gateway.Value().c_str());
-                if (_gateway != gateway) {
+                if ((gateway.IsValid() == true) && (_gateway != gateway)) {
                     _gateway = gateway;
                     updated = true;
                 }
-                if (_broadcast != info.Broadcast()) {
+                if ((_broadcast.IsValid() == true) && (_broadcast != info.Broadcast())) {
                     _broadcast = info.Broadcast();
                     updated = true;
                 }
