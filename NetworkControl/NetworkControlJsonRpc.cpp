@@ -36,7 +36,8 @@ namespace Plugin {
         Register<ReloadParamsInfo,void>(_T("request"), &NetworkControl::endpoint_request, this);
         Register<ReloadParamsInfo,void>(_T("assign"), &NetworkControl::endpoint_assign, this);
         Register<ReloadParamsInfo,void>(_T("flush"), &NetworkControl::endpoint_flush, this);
-        Property<Core::JSON::ArrayType<NetworkData>>(_T("network"), &NetworkControl::get_network, nullptr, this);
+        Property<Core::JSON::ArrayType<NetworkData>>(_T("network"), &NetworkControl::get_network, &NetworkControl::set_network, this);
+        Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("dns"), &NetworkControl::get_dns, &NetworkControl::set_dns, this);
         Property<Core::JSON::Boolean>(_T("up"), &NetworkControl::get_up, &NetworkControl::set_up, this);
     }
 
@@ -47,16 +48,17 @@ namespace Plugin {
         Unregister(_T("request"));
         Unregister(_T("reload"));
         Unregister(_T("up"));
+        Unregister(_T("dns"));
         Unregister(_T("network"));
     }
 
     // API implementation
     //
 
-    // Method: reload - Reload static and non-static network interface adapter
+    // Method: reload - Reloads a static or non-static network interface adapter
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_UNAVAILABLE: Unavaliable network interface
+    //  - ERROR_UNAVAILABLE: Unavailable network interface
     uint32_t NetworkControl::endpoint_reload(const ReloadParamsInfo& params)
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
@@ -79,7 +81,7 @@ namespace Plugin {
         return result;
     }
 
-    // Method: request - Reload non-static network interface adapter
+    // Method: request - Reloads a non-static network interface adapter
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNAVAILABLE: Unavaliable network interface
@@ -101,7 +103,7 @@ namespace Plugin {
         return result;
     }
 
-    // Method: assign - Reload static network interface adapter
+    // Method: assign - Reloads a static network interface adapter
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNAVAILABLE: Unavaliable network interface
@@ -149,53 +151,44 @@ namespace Plugin {
         return result;
     }
 
-    // Property: network - The actual network information for targeted network interface, if network interface is not given, all network interfaces are returned
+    // Property: network - Network information
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_UNAVAILABLE: Unavaliable network interface
+    //  - ERROR_UNAVAILABLE: Unavailable network interface
     uint32_t NetworkControl::get_network(const string& index, Core::JSON::ArrayType<NetworkData>& response) const
     {
-       uint32_t result = Core::ERROR_NONE;
-
-        if(index != "") {
-            auto entry = _dhcpInterfaces.find(index);
-            if (entry != _dhcpInterfaces.end()) {
-                NetworkData data;
-                data.Interface = entry->first;
-                data.Mode = entry->second.Info().Mode();
-                data.Address = entry->second.Info().Address().HostAddress();
-                data.Mask = entry->second.Info().Address().Mask();
-                data.Gateway = entry->second.Info().Gateway().HostAddress();
-                data.Broadcast = entry->second.Info().Broadcast().HostAddress();
-
-                response.Add(data);
-            } else {
-                result = Core::ERROR_UNAVAILABLE;
-            }
-        } else {
-            auto entry = _dhcpInterfaces.begin();
-
-            while (entry != _dhcpInterfaces.end()) {
-                NetworkData data;
-                data.Interface = entry->first;
-                data.Mode = entry->second.Info().Mode();
-                data.Address = entry->second.Info().Address().HostAddress();
-                data.Mask = entry->second.Info().Address().Mask();
-                data.Gateway = entry->second.Info().Gateway().HostAddress();
-                data.Broadcast = entry->second.Info().Broadcast().HostAddress();
-                response.Add(data);
-
-                entry++;
-            }
-        }
-
-        return result;
+        return NetworkInfo(index, response);
     }
 
-    // Property: up - Determines if interface is up
+    // Property: network - Network information
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_UNAVAILABLE: Unavaliable network interface
+    //  - ERROR_UNAVAILABLE: Unavailable network interface
+    uint32_t NetworkControl::set_network(const string& index, const Core::JSON::ArrayType<NetworkData>& param)
+    {
+        return NetworkInfo(param);
+    }
+
+    // Property: dns - DNS addresses
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t NetworkControl::get_dns(Core::JSON::ArrayType<Core::JSON::String>& response) const
+    {
+        return DNS(response);
+    }
+
+    // Property: dns - DNS addresses
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t NetworkControl::set_dns(const Core::JSON::ArrayType<Core::JSON::String>& param)
+    {
+        return DNS(param);
+    }
+
+    // Property: up - Interface up status
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNAVAILABLE: Unavailable network interface
     uint32_t NetworkControl::get_up(const string& index, Core::JSON::Boolean& response) const
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
@@ -214,10 +207,10 @@ namespace Plugin {
         return result;
     }
 
-    // Property: up - Determines if interface is up
+    // Property: up - Interface up status
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_UNAVAILABLE: Unavaliable network interface
+    //  - ERROR_UNAVAILABLE: Unavailable network interface
     uint32_t NetworkControl::set_up(const string& index, const Core::JSON::Boolean& param)
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;

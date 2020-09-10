@@ -668,23 +668,8 @@ namespace Plugin
 
             offset = (static_cast<uint16_t>(file.Size()) - reduction);
 
-            _adminLock.Lock();
-
-            std::list<Core::NodeId> servers(_dns);
-
-            for (const std::pair<const string, DHCPEngine>& entry : _dhcpInterfaces) {
-                
-                if ( (entry.second.Info().Mode() == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) && (entry.second.HasActiveLease() == true) ) {
-                  
-                    for (const Core::NodeId& node : entry.second.DNS()) {
-                        if (std::find(servers.begin(), servers.end(), node) == servers.end()) {
-                            servers.push_back(node);
-                        }
-                    }
-                }
-            }
-
-            _adminLock.Unlock();
+            std::list<Core::NodeId> servers;
+            DNS(servers);
 
             for (const Core::NodeId& entry : servers) {
                 data += string(NAMESERVER, sizeof(NAMESERVER) - 1) + entry.HostAddress() + '\n';
@@ -747,6 +732,168 @@ namespace Plugin
  
             _adminLock.Unlock();
         }
+    }
+
+    uint32_t NetworkControl::NetworkInfo(const string& index, Core::JSON::ArrayType<JsonData::NetworkControl::NetworkData>& response) const
+    {
+        uint32_t result = Core::ERROR_NONE;
+
+        _adminLock.Lock();
+        if (index != "") {
+            auto entry = _dhcpInterfaces.find(index);
+            if (entry != _dhcpInterfaces.end()) {
+                JsonData::NetworkControl::NetworkData data;
+                data.Interface = entry->first;
+                data.Mode = entry->second.Info().Mode();
+                data.Address = entry->second.Info().Address().HostAddress();
+                data.Mask = entry->second.Info().Address().Mask();
+                data.Gateway = entry->second.Info().Gateway().HostAddress();
+                data.Broadcast = entry->second.Info().Broadcast().HostAddress();
+                // get an interface with its DNS.
+                for (auto& dns:entry->second.DNS()) {
+                    Core::JSON::String address;
+                    address = dns.HostAddress();
+
+                    data.Dns.Add(address);
+                }
+
+                response.Add(data);
+            } else {
+                result = Core::ERROR_UNAVAILABLE;
+            }
+        } else {
+            auto entry = _dhcpInterfaces.begin();
+
+            while (entry != _dhcpInterfaces.end()) {
+                JsonData::NetworkControl::NetworkData data;
+                data.Interface = entry->first;
+                data.Mode = entry->second.Info().Mode();
+                data.Address = entry->second.Info().Address().HostAddress();
+                data.Mask = entry->second.Info().Address().Mask();
+                data.Gateway = entry->second.Info().Gateway().HostAddress();
+                data.Broadcast = entry->second.Info().Broadcast().HostAddress();
+
+                // get an interface with its DNS.
+                for (auto& dns:entry->second.DNS()) {
+                    Core::JSON::String address;
+                    address = dns.HostAddress();
+
+                    data.Dns.Add(address);
+                }
+
+                response.Add(data);
+
+                entry++;
+            }
+        }
+
+        _adminLock.Unlock();
+
+        return result;
+    }
+
+    uint32_t NetworkControl::NetworkInfo(const Core::JSON::ArrayType<JsonData::NetworkControl::NetworkData>& networkData)
+    {
+        uint32_t result = Core::ERROR_NONE;
+        Core::JSON::ArrayType<JsonData::NetworkControl::NetworkData>::ConstIterator networks(networkData.Elements());
+
+        while (networks.Next() == true) {
+
+            const JsonData::NetworkControl::NetworkData& network = networks.Current();
+
+            _adminLock.Lock();
+            std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(network.Interface.Value()));
+            if (index != _dhcpInterfaces.end()) {
+                _adminLock.Unlock();
+                NetworkInfo(network, index->second);
+            } else {
+                result = Core::ERROR_UNAVAILABLE;
+                _adminLock.Unlock();
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    uint32_t NetworkControl::NetworkInfo(const JsonData::NetworkControl::NetworkData& network, DHCPEngine& engine)
+    {
+        uint32_t result = Core::ERROR_NONE;
+
+        Entry entry;
+        engine.Get(entry);
+        if (entry.Mode != network.Mode.Value()) {
+            entry.Mode = network.Mode.Value();
+        }
+
+        if (entry.Mode == JsonData::NetworkControl::NetworkData::ModeType::STATIC) {
+            Entry entry;
+            entry.Address = network.Address.Value();
+            entry.Mask = network.Mask.Value();
+            entry.Gateway = network.Gateway.Value();
+
+            Core::NodeId broadcast(network.Broadcast.Value().c_str());
+            entry.Broadcast(broadcast);
+
+        } else if (entry.Mode == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) {
+            //It should be get from the DHCP server, so ignore the data or return error
+        }
+
+        if (const_cast<Settings&>(engine.Info()).Store(entry) == true) {
+            Reload(network.Interface.Value(), (entry.Mode == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC));
+        }
+
+        return result;
+     }
+
+     uint32_t NetworkControl::DNS(Core::JSON::ArrayType<Core::JSON::String>& dns) const {
+         std::list<Core::NodeId> servers;
+         DNS(servers);
+
+         for (const Core::NodeId& entry : servers) {
+            Core::JSON::String address(entry.HostAddress());
+            dns.Add(address);
+         }
+
+         return Core::ERROR_NONE;
+     }
+
+     uint32_t NetworkControl::DNS(const Core::JSON::ArrayType<Core::JSON::String>& dns)
+     {
+         Core::JSON::ArrayType<Core::JSON::String>::ConstIterator entries(dns.Elements());
+
+         _adminLock.Lock();
+         while (entries.Next() == true) {
+             Core::NodeId entry(entries.Current().Value().c_str());
+
+             if (entry.IsValid() == true) {
+                 _dns.push_back(entry);
+             }
+         }
+         _adminLock.Unlock();
+
+         return Core::ERROR_NONE;
+     }
+
+     void NetworkControl::DNS(std::list<Core::NodeId>& servers) const
+     {
+        _adminLock.Lock();
+
+        servers = _dns;
+
+        for (const std::pair<const string, DHCPEngine>& entry : _dhcpInterfaces) {
+
+            if ( (entry.second.Info().Mode() == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC) && (entry.second.HasActiveLease() == true) ) {
+
+                for (const Core::NodeId& node : entry.second.DNS()) {
+                    if (std::find(servers.begin(), servers.end(), node) == servers.end()) {
+                        servers.push_back(node);
+                    }
+                }
+            }
+        }
+
+        _adminLock.Unlock();
     }
 
 } // namespace Plugin
