@@ -202,14 +202,14 @@ public:
     // @property
     // @brief HDR formats supported by TV
     // @return HDRType: array of HDR formats
-    uint32_t TVCapabilities(IHDRIterator* type /* out */) const override {
+    uint32_t TVCapabilities(IHDRIterator*& type /* out */) const override {
         type = nullptr;
         return (Core::ERROR_GENERAL);
     }
     // @property
     // @brief HDR formats supported by STB
     // @return HDRType: array of HDR formats
-    uint32_t STBCapabilities(IHDRIterator* type /* out */) const override {
+    uint32_t STBCapabilities(IHDRIterator*& type /* out */) const override {
         type = nullptr;
         return (Core::ERROR_GENERAL);
     }
