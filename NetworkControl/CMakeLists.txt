@@ -28,7 +28,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 add_library(${MODULE_NAME} SHARED
     NetworkControl.cpp
     NetworkControlJsonRpc.cpp
-    DHCPClientImplementation.cpp
+    DHCPClient.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES

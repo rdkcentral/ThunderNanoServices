@@ -86,7 +86,7 @@ NetworkControl interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [reload](#method.reload) | Reloads a static and non-static network interface adapter |
+| [reload](#method.reload) | Reloads a static or non-static network interface adapter |
 | [request](#method.request) | Reloads a non-static network interface adapter |
 | [assign](#method.assign) | Reloads a static network interface adapter |
 | [flush](#method.flush) | Flushes a network interface adapter |
@@ -94,14 +94,14 @@ NetworkControl interface methods:
 <a name="method.reload"></a>
 ## *reload <sup>method</sup>*
 
-Reloads a static and non-static network interface adapter.
+Reloads a static or non-static network interface adapter.
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.device | string | Network interface |
+| params.device | string | Network interface name |
 
 ### Result
 
@@ -150,7 +150,7 @@ Also see: [connectionchange](#event.connectionchange)
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.device | string | Network interface |
+| params.device | string | Network interface name |
 
 ### Result
 
@@ -197,7 +197,7 @@ Reloads a static network interface adapter.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.device | string | Network interface |
+| params.device | string | Network interface name |
 
 ### Result
 
@@ -244,7 +244,7 @@ Flushes a network interface adapter.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.device | string | Network interface |
+| params.device | string | Network interface name |
 
 ### Result
 
@@ -290,28 +290,29 @@ NetworkControl interface properties:
 
 | Property | Description |
 | :-------- | :-------- |
-| [network](#property.network) <sup>RO</sup> | Current network information |
+| [network](#property.network) | Network information |
+| [dns](#property.dns) | DNS addresses |
 | [up](#property.up) | Interface up status |
 
 <a name="property.network"></a>
 ## *network <sup>property</sup>*
 
-Provides access to the current network information.
-
-> This property is **read-only**.
+Provides access to the network information.
 
 ### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | Current network information |
+| (property) | array | Network information |
 | (property)[#] | object |  |
-| (property)[#]?.interface | string | <sup>*(optional)*</sup> Interface name |
+| (property)[#]?.interface | string | <sup>*(optional)*</sup> Network interface name |
 | (property)[#]?.mode | string | <sup>*(optional)*</sup> Mode (must be one of the following: *Manual*, *Static*, *Dynamic*) |
 | (property)[#]?.address | string | <sup>*(optional)*</sup> IP address |
 | (property)[#]?.mask | number | <sup>*(optional)*</sup> Network interface mask |
 | (property)[#]?.gateway | string | <sup>*(optional)*</sup> Gateway address |
 | (property)[#]?.broadcast | string | <sup>*(optional)*</sup> Broadcast IP |
+| (property)[#]?.dns | array | <sup>*(optional)*</sup> DNS addresses |
+| (property)[#]?.dns[#] | string | <sup>*(optional)*</sup> DNS addresses |
 
 > The *interface* shall be passed as the index to the property, e.g. *NetworkControl.1.network@eth0*. If network interface is not given, all network interfaces are returned.
 
@@ -345,9 +346,97 @@ Provides access to the current network information.
             "address": "192.168.1.158",
             "mask": 24,
             "gateway": "192.168.1.1",
+            "broadcast": "192.168.1.255",
+            "dns": [
+                "192.168.1.1"
+            ]
+        }
+    ]
+}
+```
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "NetworkControl.1.network@eth0",
+    "params": [
+        {
+            "interface": "eth0",
+            "mode": "dynamic",
+            "address": "192.168.1.158",
+            "mask": 24,
+            "gateway": "192.168.1.1",
             "broadcast": "192.168.1.255"
         }
     ]
+}
+```
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": "null"
+}
+```
+<a name="property.dns"></a>
+## *dns <sup>property</sup>*
+
+Provides access to the DNS addresses.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | array | DNS addresses |
+| (property)[#] | string | DNS addresses |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "NetworkControl.1.dns"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": [
+        "['192.168.1.1', 'www.google.com', '8.8.8.8']"
+    ]
+}
+```
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "NetworkControl.1.dns",
+    "params": [
+        "['192.168.1.1', 'www.google.com', '8.8.8.8']"
+    ]
+}
+
+DNS address will be stored in IP format if it is able to resolve the address with available DNS servers
+```
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": "null"
 }
 ```
 <a name="property.up"></a>
@@ -417,7 +506,7 @@ Provides access to the interface up status.
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers.Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the NetworkControl plugin:
 
@@ -437,7 +526,7 @@ Notifies about connection status (created, updated, removed, connected and conne
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.name | string | Name of network interface |
+| params.name | string | Network interface name |
 | params.address | string | IP Address of network interface, if it is connected |
 | params.status | string | Status of the interface, update, connected or not (must be one of the following: *created*, *updated*, *removed*, *connected*, *connectionfailed*) |
 
