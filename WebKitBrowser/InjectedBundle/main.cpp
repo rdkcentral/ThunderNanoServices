@@ -36,12 +36,19 @@ using namespace WPEFramework;
 #include <WPE/WebKit/WKBundlePage.h>
 #include <WPE/WebKit/WKURL.h>
 
+#include <cstdio>
+#include <memory>
+#include <syslog.h>
+
 #include "ClassDefinition.h"
 #include "NotifyWPEFramework.h"
 #include "Utils.h"
 #include "WhiteListedOriginDomainsList.h"
 #include "RequestHeaders.h"
+
+#if defined(ENABLE_BADGER_BRIDGE)
 #include "BridgeObject.h"
+#endif
 
 #if defined(ENABLE_AAMP_JSBINDINGS)
 #include "AAMPJSBindings.h"
@@ -120,8 +127,6 @@ public:
 
         g_signal_connect(_scriptWorld, "window-object-cleared",
                 G_CALLBACK(windowObjectClearedCallback), nullptr);
-        g_signal_connect(bundle, "page-created",
-                G_CALLBACK(pageCreatedCallback), this);
 
         if (whitelist != nullptr) {
             _whiteListedOriginDomainPairs =
@@ -191,28 +196,6 @@ private:
         g_object_unref(result);
 
         g_object_unref(jsContext);
-    }
-
-    static void pageCreatedCallback(WebKitWebExtension*, WebKitWebPage* page, PluginHost* host)
-    {
-        // Enforce the creation of the script world global context in the main frame.
-        JSCContext* jsContext = webkit_frame_get_js_context_for_script_world(webkit_web_page_get_main_frame(page), host->_scriptWorld);
-        g_object_unref(jsContext);
-
-        g_signal_connect(page, "console-message-sent", G_CALLBACK(consoleMessageSentCallback), nullptr);
-    }
-
-    static void consoleMessageSentCallback(WebKitWebPage* page, WebKitConsoleMessage* message)
-    {
-        string messageString = Core::ToString(webkit_console_message_get_text(message));
-
-        const uint16_t maxStringLength = Trace::TRACINGBUFFERSIZE - 1;
-        if (messageString.length() > maxStringLength) {
-            messageString = messageString.substr(0, maxStringLength);
-        }
-
-        // TODO: use "Trace" classes for different levels.
-        TRACE_GLOBAL(Trace::Information, (messageString));
     }
 
     WKBundleRef _bundle;
@@ -358,7 +341,9 @@ static WKBundlePageLoaderClientV6 s_pageLoaderClient = {
             #if defined(ENABLE_AAMP_JSBINDINGS)
             JavaScript::AAMP::LoadJSBindings(frame);
             #endif
+            #if defined(ENABLE_BADGER_BRIDGE)
             JavaScript::BridgeObject::InjectJS(frame);
+            #endif
         }
 
         // Add JS classes to JS world.
@@ -414,7 +399,21 @@ static WKBundlePageUIClientV4 s_pageUIClient = {
     nullptr, // unused4
     nullptr, // unused5
     nullptr, // didClickAutoFillButton
-    nullptr, // willAddDetailedMessageToConsole
+    //willAddDetailedMessageToConsole
+    [](WKBundlePageRef page, WKConsoleMessageSource source, WKConsoleMessageLevel level, WKStringRef message, uint32_t lineNumber,
+        uint32_t columnNumber, WKStringRef url, const void* clientInfo) {
+        auto prepareMessage = [&]() {
+            string messageString = WebKit::Utils::WKStringToString(message);
+            const uint16_t maxStringLength = Trace::TRACINGBUFFERSIZE - 1;
+            if (messageString.length() > maxStringLength) {
+                messageString = messageString.substr(0, maxStringLength);
+            }
+            return messageString;
+        };
+
+        // TODO: use "Trace" classes for different levels.
+        TRACE_GLOBAL(Trace::Information, (prepareMessage()));
+    }
 };
 
 static WKURLRequestRef willSendRequestForFrame(
@@ -431,8 +430,10 @@ static void didReceiveMessageToPage(
         return;
     }
 
+    #if defined(ENABLE_BADGER_BRIDGE)
     if (JavaScript::BridgeObject::HandleMessageToPage(page, messageName, messageBody))
         return;
+    #endif
 }
 
 static void willDestroyPage(WKBundleRef, WKBundlePageRef page, const void*)
