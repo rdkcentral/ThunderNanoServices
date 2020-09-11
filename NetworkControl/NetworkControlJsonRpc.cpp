@@ -65,8 +65,8 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        if(params.Device.IsSet() == true) {
-            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Device.Value()));
+        if(params.Interface.IsSet() == true) {
+            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Interface.Value()));
             if (entry != _dhcpInterfaces.end()) {
                 if (entry->second.Info().Mode() == NetworkData::ModeType::STATIC) {
                     result = Reload(entry->first, false);
@@ -91,8 +91,8 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        if(params.Device.IsSet() == true) {
-            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Device.Value()));
+        if(params.Interface.IsSet() == true) {
+            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Interface.Value()));
             if (entry != _dhcpInterfaces.end()) {
                 result = Reload(entry->first, true);
             }
@@ -113,8 +113,8 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        if(params.Device.IsSet() == true) {
-            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Device.Value()));
+        if(params.Interface.IsSet() == true) {
+            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Interface.Value()));
             if (entry != _dhcpInterfaces.end()) {
                 result = Reload(entry->first, false);
             }
@@ -125,7 +125,7 @@ namespace Plugin {
         return result;
     }
 
-    // Method: flush - Flush network interface adapter
+    // Method: flush - Flushes a network interface adapter
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNAVAILABLE: Unavaliable network interface
@@ -135,8 +135,8 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        if(params.Device.IsSet() == true) {
-            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Device.Value()));
+        if(params.Interface.IsSet() == true) {
+            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Interface.Value()));
             if (entry != _dhcpInterfaces.end()) {
                 if (entry->second.Info().Mode() == NetworkData::ModeType::STATIC) {
                     result = Reload(entry->first, false);
