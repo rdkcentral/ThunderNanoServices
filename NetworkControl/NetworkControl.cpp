@@ -27,8 +27,7 @@ namespace Plugin
     SERVICE_REGISTRATION(NetworkControl, 1, 0);
 
     static Core::ProxyPoolType<Web::Response> responseFactory(4);
-    static Core::ProxyPoolType<Web::JSONBodyType<NetworkControl::Entry>> jsonGetNetworkFactory(1);
-    static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<NetworkControl::Entry>>> jsonGetNetworksFactory(1);
+    static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<JsonData::NetworkControl::NetworkData>>> jsonNetworksFactory(1);
     static TCHAR NAMESERVER[] = "nameserver ";
 
     static bool ExternallyAccessible(const Core::AdapterIterator& index) {
@@ -234,44 +233,18 @@ namespace Plugin
 
         if (request.Verb == Web::Request::HTTP_GET) {
 
-            _adminLock.Lock();
+            const string interface((index.Next() == true)? index.Current().Text(): "");
+            Core::ProxyType<Web::JSONBodyType<Core::JSON::ArrayType<JsonData::NetworkControl::NetworkData>>> networkData(jsonNetworksFactory.Element());
+            uint32_t status = static_cast<const NetworkControl*>(this)->NetworkInfo(interface, *networkData);
 
-            if (index.Next() == true) {
-
-                std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(index.Current().Text()));
-
-                if (entry != _dhcpInterfaces.end()) {
-
-                    Core::ProxyType<Web::JSONBodyType<NetworkControl::Entry>> data(jsonGetNetworkFactory.Element());
-
-                    entry->second.Get(*data);
-
-                    result->Body(data);
-                    result->ErrorCode = Web::STATUS_OK;
-                    result->Message = "OK";
-                } else {
-                    result->ErrorCode = Web::STATUS_NOT_FOUND;
-                    result->Message = string(_T("Could not find interface: ")) + index.Current().Text();
-                }
-            } else {
-                std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.begin());
-
-                Core::ProxyType<Web::JSONBodyType<Core::JSON::ArrayType<NetworkControl::Entry>>> data(jsonGetNetworksFactory.Element());
-
-                while (entry != _dhcpInterfaces.end()) {
-
-                    Entry& newSlot = data->Add();
-
-                    entry->second.Get(newSlot);
-                    entry++;
-                }
-                result->Body(data);
-
+            if (status == Core::ERROR_NONE) {
+                result->Body(networkData);
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";
+            } else {
+                result->ErrorCode = Web::STATUS_NOT_FOUND;
+                result->Message = string(_T("Could not find interface: ")) + index.Current().Text();
             }
-
-            _adminLock.Unlock();
         } else if ((index.Next() == true) && (request.Verb == Web::Request::HTTP_PUT)) {
 
             _adminLock.Lock();
