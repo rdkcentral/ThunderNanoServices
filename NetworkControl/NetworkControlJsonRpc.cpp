@@ -166,7 +166,7 @@ namespace Plugin {
     //  - ERROR_UNAVAILABLE: Unavailable network interface
     uint32_t NetworkControl::set_network(const string& index, const Core::JSON::ArrayType<NetworkData>& param)
     {
-        return NetworkInfo(param);
+        return NetworkInfo(index, param);
     }
 
     // Property: dns - DNS addresses
