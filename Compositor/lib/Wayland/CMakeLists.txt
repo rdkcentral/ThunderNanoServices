@@ -20,7 +20,17 @@ set(TARGET ${PLATFORM_COMPOSITOR})
 message("Setup ${TARGET} v${VERSION}...")
 
 if (PLUGIN_COMPOSITOR_NXSERVER)
-add_subdirectory (NexusServer)
+if (CODE_FROM_EXTERNAL_REPOSITORY)
+    include(GetExternalCode)
+    GetExternalCode(
+        GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor"
+        GIT_TAG "master"
+        SOURCE_DIR "NexusExt"
+    )
+    add_subdirectory (NexusExt/NexusServer)
+else()
+    add_subdirectory (NexusServer)
+endif()
 endif ()
 
 # add the platformplugin library

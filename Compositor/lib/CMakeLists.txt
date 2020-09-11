@@ -27,25 +27,6 @@ if("${PLUGIN_COMPOSITOR_IMPLEMENTATION}" STREQUAL "Nexus")
     else()
         add_subdirectory(Nexus)
     endif()
-elseif("${PLUGIN_COMPOSITOR_IMPLEMENTATION}" STREQUAL "Wayland")
-    if (CODE_FROM_EXTERNAL_REPOSITORY)
-        include(GetExternalCode)
-        GetExternalCode(
-            GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor"
-            GIT_TAG "master"
-            SOURCE_DIR "NexusExt"
-        )
-        EXECUTE_PROCESS(
-            COMMAND ${CMAKE_COMMAND} -E create_symlink 
-            ../NexusExt/NexusServer
-            ${CMAKE_CURRENT_SOURCE_DIR}/Wayland/NexusServer)
-    else()
-        EXECUTE_PROCESS(
-            COMMAND ${CMAKE_COMMAND} -E create_symlink 
-            ../Nexus/NexusServer
-            ${CMAKE_CURRENT_SOURCE_DIR}/Wayland/NexusServer)
-    endif()
-    add_subdirectory(Wayland)
 else()
     add_subdirectory (${PLUGIN_COMPOSITOR_IMPLEMENTATION})
 endif()
