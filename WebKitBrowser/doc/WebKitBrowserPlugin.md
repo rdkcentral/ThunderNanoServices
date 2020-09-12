@@ -97,6 +97,10 @@ The table below lists configuration options of the plugin.
 | configuration?.whitelist?.domain[#] | string | <sup>*(optional)*</sup> Domain allowed to access from origin |
 | configuration?.whitelist?.subdomain | string | <sup>*(optional)*</sup> whether it is also OK to access subdomains of domains listed in domain |
 | configuration?.localstorageenabled | boolean | <sup>*(optional)*</sup> Controls the local storage availability |
+| configuration?.logtosystemconsoleenabled | boolean | <sup>*(optional)*</sup> Enable page loging to system console (stderr) |
+| configuration?.watchdogchecktimeoutinseconds | number | <sup>*(optional)*</sup> How often to check main event loop for responsiveness (0 - disable) |
+| configuration?.watchdoghangthresholdtinseconds | number | <sup>*(optional)*</sup> The amount of time to give a process to recover before declaring a hang state |
+| configuration?.loadblankpageonsuspendenabled | boolean | <sup>*(optional)*</sup> Load 'about:blank' before suspending the page |
 
 <a name="head.Methods"></a>
 # Methods
@@ -109,6 +113,12 @@ WebKitBrowser interface methods:
 | :-------- | :-------- |
 | [bridgereply](#method.bridgereply) | A response for legacy $badger |
 | [bridgeevent](#method.bridgeevent) | Send legacy $badger event |
+
+Browser interface methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [delete](#method.delete) | Removes contents of a directory from the persistent storage |
 
 <a name="method.bridgereply"></a>
 ## *bridgereply <sup>method</sup>*
@@ -175,6 +185,57 @@ Send legacy $badger event.
     "id": 1234567890,
     "method": "WebKitBrowser.1.bridgeevent",
     "params": ""
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": null
+}
+```
+<a name="method.delete"></a>
+## *delete <sup>method</sup>*
+
+Removes contents of a directory from the persistent storage.
+
+### Description
+
+Use this method to recursively delete contents of a directory
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.path | string | Path to directory (within the persistent storage) to delete contents of |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | The given path was incorrect |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "WebKitBrowser.1.delete",
+    "params": {
+        "path": ".cache/wpe/disk-cache"
+    }
 }
 ```
 #### Response
@@ -559,6 +620,12 @@ Also see: [visibilitychange](#event.visibilitychange)
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | (property) | string | Current browser visibility (must be one of the following: *visible*, *hidden*) |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Returned when the operation is unavailable |
 
 ### Example
 

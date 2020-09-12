@@ -181,6 +181,31 @@ namespace Plugin {
             {
                 return (_broadcast);
             }
+            bool Store(const Entry& info) {
+
+                bool updated = false;
+                if (_mode != info.Mode.Value()) {
+                    _mode = info.Mode.Value();
+                    updated = true;
+                }
+                Core::NodeId address(info.Address.Value().c_str());
+                if ((address.IsValid() == true) && ((_address != address) || (_address.Mask() != info.Mask.Value()))) {
+                    _address = Core::IPNode(address, info.Mask.Value());
+
+                    updated = true;
+                }
+                Core::NodeId gateway(info.Gateway.Value().c_str());
+                if ((gateway.IsValid() == true) && (_gateway != gateway)) {
+                    _gateway = gateway;
+                    updated = true;
+                }
+                if ((_broadcast.IsValid() == true) && (_broadcast != info.Broadcast())) {
+                    _broadcast = info.Broadcast();
+                    updated = true;
+
+                }
+                return updated;
+            }
             bool Store(const DHCPClient::Offer& offer) {
                 bool updated  = false;
 
@@ -467,6 +492,7 @@ namespace Plugin {
                 info.Mode = _settings.Mode();
                 info.Interface = _client.Interface();
                 info.Address = _settings.Address().HostAddress();
+                info.Mask = _settings.Address().Mask();
                 info.Gateway = _settings.Gateway().HostAddress();
                 info.Broadcast(_settings.Broadcast());
                 if (_client.HasActiveLease() == true) {
@@ -544,6 +570,15 @@ namespace Plugin {
 
         uint32_t Reload(const string& interfaceName, const bool dynamic);
         uint32_t SetIP(Core::AdapterIterator& adapter, const Core::IPNode& ipAddress, const Core::NodeId& gateway, const Core::NodeId& broadcast, bool clearOld = false);
+
+        void DNS(std::list<Core::NodeId>& servers) const;
+        uint32_t DNS(Core::JSON::ArrayType<Core::JSON::String>& dns) const;
+        uint32_t DNS(const Core::JSON::ArrayType<Core::JSON::String>& dns);
+
+        uint32_t NetworkInfo(const JsonData::NetworkControl::NetworkData& network);
+        uint32_t NetworkInfo(std::map<const string, DHCPEngine>::const_iterator& engine, Core::JSON::ArrayType<JsonData::NetworkControl::NetworkData>& networkData) const;
+        uint32_t NetworkInfo(const string& index, Core::JSON::ArrayType<JsonData::NetworkControl::NetworkData>& networkData) const;
+        uint32_t NetworkInfo(const string& index, const Core::JSON::ArrayType<JsonData::NetworkControl::NetworkData>& networkData);
         void ClearIP(Core::AdapterIterator& adapter);
 
         void Accepted(const string& interfaceName, const DHCPClient::Offer& offer);
@@ -559,12 +594,15 @@ namespace Plugin {
         uint32_t endpoint_assign(const JsonData::NetworkControl::ReloadParamsInfo& params);
         uint32_t endpoint_flush(const JsonData::NetworkControl::ReloadParamsInfo& params);
         uint32_t get_network(const string& index, Core::JSON::ArrayType<JsonData::NetworkControl::NetworkData>& response) const;
+        uint32_t set_network(const string& index, const Core::JSON::ArrayType<JsonData::NetworkControl::NetworkData>& param);
+        uint32_t get_dns(Core::JSON::ArrayType<Core::JSON::String>& response) const;
+        uint32_t set_dns(const Core::JSON::ArrayType<Core::JSON::String>& param);
         uint32_t get_up(const string& index, Core::JSON::Boolean& response) const;
         uint32_t set_up(const string& index, const Core::JSON::Boolean& param);
         void event_connectionchange(const string& name, const string& address, const JsonData::NetworkControl::ConnectionchangeParamsData::StatusType& status);
 
     private:
-        Core::CriticalSection _adminLock;
+        mutable Core::CriticalSection _adminLock;
         uint16_t _skipURL;
         PluginHost::IShell* _service;
         string _dnsFile;
