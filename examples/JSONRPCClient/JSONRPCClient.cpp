@@ -130,6 +130,7 @@ void ShowMenu()
            "\tX : Measure COM Performance\n"
            "\tY : Measure JSONRPC performance\n"
            "\tZ : Measure MessagePack performance\n"
+           "\t@ : Demonstrate arithmetic Addition/Subtraction using IMath interface\n"
            "\tL : Legacy invoke on version 1 clueless...\n"
            "\tN : Invoke on version 2 clueless...\n"
            "\t+ : Register for a-synchronous events on Version 1 interface\n"
@@ -759,6 +760,16 @@ int main(int argc, char** argv)
             case '@':
             {
                 Exchange::IMath* math = client->Aquire<Exchange::IMath>(2000, _T("JSONRPCPlugin"), ~0);
+                if (math != nullptr) {
+                    uint16_t A = 10;
+                    uint16_t B = 5;
+                    uint16_t Sum = 0;
+                    math->Add(A, B, Sum);
+                    printf("Sum of %d & %d using IMath::Add = %d\n", A, B, Sum);
+                    math->Sub(A, B, Sum);
+                    printf("Diff of %d & %d using IMath::Sub = %d\n", A, B, Sum);
+                }
+                break;
             }
             case 'X':
             {
