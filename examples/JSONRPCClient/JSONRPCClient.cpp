@@ -134,7 +134,9 @@ void ShowMenu()
            "\tN : Invoke on version 2 clueless...\n"
            "\t+ : Register for a-synchronous events on Version 1 interface\n"
            "\t- : Unregister for a-synchronous events on Version 1 interface\n"
+#ifdef ENABLE_SECURITY_AGENT
            "\tA : Get a JSONWebToken for the set URL\n"
+#endif
            "\tH : Help\n"
            "\tQ : Quit\n");
 }
@@ -834,6 +836,7 @@ int main(int argc, char** argv)
                 printf("Unregistered and removed all notification handlers\n");
                 break;
 
+#ifdef ENABLE_SECURITY_AGENT
             case 'A': {
 
                 int length;
@@ -854,6 +857,7 @@ int main(int argc, char** argv)
                 }
                 break;
             }
+#endif
             case '?':
             case 'H':
                 ShowMenu();
