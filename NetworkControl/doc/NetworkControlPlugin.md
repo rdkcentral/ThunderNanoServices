@@ -101,7 +101,7 @@ Reloads a static or non-static network interface adapter.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.device | string | Network interface name |
+| params.interface | string | Network interface name |
 
 ### Result
 
@@ -125,7 +125,7 @@ Reloads a static or non-static network interface adapter.
     "id": 1234567890,
     "method": "NetworkControl.1.reload",
     "params": {
-        "device": "eth0"
+        "interface": "eth0"
     }
 }
 ```
@@ -150,7 +150,7 @@ Also see: [connectionchange](#event.connectionchange)
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.device | string | Network interface name |
+| params.interface | string | Network interface name |
 
 ### Result
 
@@ -174,7 +174,7 @@ Also see: [connectionchange](#event.connectionchange)
     "id": 1234567890,
     "method": "NetworkControl.1.request",
     "params": {
-        "device": "eth0"
+        "interface": "eth0"
     }
 }
 ```
@@ -197,7 +197,7 @@ Reloads a static network interface adapter.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.device | string | Network interface name |
+| params.interface | string | Network interface name |
 
 ### Result
 
@@ -221,7 +221,7 @@ Reloads a static network interface adapter.
     "id": 1234567890,
     "method": "NetworkControl.1.assign",
     "params": {
-        "device": "eth0"
+        "interface": "eth0"
     }
 }
 ```
@@ -244,7 +244,7 @@ Flushes a network interface adapter.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.device | string | Network interface name |
+| params.interface | string | Network interface name |
 
 ### Result
 
@@ -268,7 +268,7 @@ Flushes a network interface adapter.
     "id": 1234567890,
     "method": "NetworkControl.1.flush",
     "params": {
-        "device": "eth0"
+        "interface": "eth0"
     }
 }
 ```
