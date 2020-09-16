@@ -12,16 +12,27 @@ namespace Plugin {
 
     void PerformanceMonitor::RegisterAll()
     {
+        Register<void,void>(_T("clear"), &PerformanceMonitor::endpoint_clear, this);
         Property<MeasurementData>(_T("measurement"), &PerformanceMonitor::get_measurement, nullptr, this);
     }
 
     void PerformanceMonitor::UnregisterAll()
     {
+        Unregister(_T("clear"));
         Unregister(_T("measurement"));
     }
 
     // API implementation
     //
+
+    // Method: clear - Clear all performance data collected
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t PerformanceMonitor::endpoint_clear()
+    {
+        PluginHost::PerformanceAdministrator::Instance().Clear();
+        return Core::ERROR_NONE;
+    }
 
     // Property: measurement - Retrieve the performance measurement against given package size
     // Return codes:

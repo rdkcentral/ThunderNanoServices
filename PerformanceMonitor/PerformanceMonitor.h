@@ -57,10 +57,10 @@ namespace Plugin {
     private:
         void RegisterAll();
         void UnregisterAll();
+        uint32_t endpoint_clear();
+        uint32_t get_measurement(const string& index, JsonData::PerformanceMonitor::MeasurementData& response) const;
 
         void RetrieveInfo(const uint32_t packageSize, JsonData::PerformanceMonitor::MeasurementData& measurementData) const;
-
-        uint32_t get_measurement(const string& index, JsonData::PerformanceMonitor::MeasurementData& response) const;
 
         inline void Measurement(const PluginHost::PerformanceAdministrator::Statistics::Tuple& statistics, JsonData::PerformanceMonitor::MeasurementData::StatisticsData& statisticsData) const {
 
