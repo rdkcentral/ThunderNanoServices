@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "PerformanceMonitor.h"
 
 namespace WPEFramework {
@@ -46,12 +46,13 @@ namespace Plugin {
     }
     void PerformanceMonitor::RetrieveInfo(const uint32_t packageSize, JsonData::PerformanceMonitor::MeasurementData& measurementData) const {
         const PluginHost::PerformanceAdministrator::Statistics& statistics(PluginHost::PerformanceAdministrator::Instance().Retrieve(packageSize));
-        measurementData.Serialization = statistics.Serialization().Measurement();
-        measurementData.Deserialization = statistics.Deserialization().Measurement();
-        measurementData.Execution = statistics.Execution().Measurement();
-        measurementData.Threadpool = statistics.ThreadPool().Measurement();
-        measurementData.Communication = statistics.Communication().Measurement();
-        measurementData.Total = statistics.Total().Measurement();
+
+        Measurement(statistics.Serialization(), measurementData.Serialization);
+        Measurement(statistics.Deserialization(), measurementData.Deserialization);
+        Measurement(statistics.Execution(),  measurementData.Execution);
+        Measurement(statistics.ThreadPool(), measurementData.Threadpool);
+        Measurement(statistics.Communication(), measurementData.Communication);
+        Measurement(statistics.Total(), measurementData.Total);
 
         return;
     }
