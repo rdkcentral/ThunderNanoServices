@@ -498,10 +498,15 @@ namespace Plugin {
     }
     /* virtual */ Exchange::IBluetooth::IDevice* BluetoothControl::Device(const string& address)
     {
+        _adminLock.Lock();
+
         IBluetooth::IDevice* result = Find(Bluetooth::Address(address.c_str()));
         if (result != nullptr) {
             result->AddRef();
         }
+
+        _adminLock.Unlock();
+
         return (result);
     }
     /* virtual */ Exchange::IBluetooth::IDevice::IIterator* BluetoothControl::Devices()
@@ -546,6 +551,8 @@ namespace Plugin {
     }
     void BluetoothControl::Capabilities(const Bluetooth::Address& device, const uint8_t capability, const uint8_t authentication, const uint8_t oob_data)
     {
+        _adminLock.Lock();
+
         DeviceImpl* entry = Find(device);
 
         if (entry != nullptr) {
@@ -554,6 +561,8 @@ namespace Plugin {
         else {
             TRACE(Trace::Information, (_T("Could not set the capabilities for device %s"), device.ToString()));
         }
+
+        _adminLock.Unlock();
     }
     BluetoothControl::DeviceImpl* BluetoothControl::Find(const Bluetooth::Address& search) const
     {

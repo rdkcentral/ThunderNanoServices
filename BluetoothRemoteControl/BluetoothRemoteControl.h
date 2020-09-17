@@ -1045,6 +1045,9 @@ namespace Plugin {
                         }
                     } else {
                         TRACE(Flow, (_T("Releasing device")));
+                        if (_device->Callback(static_cast<Exchange::IBluetooth::IDevice::ICallback*>(nullptr)) != Core::ERROR_NONE) {
+                            TRACE(Trace::Information, (_T("Could not unlink the Callback sink. [%s]"), _device->RemoteId().c_str()));
+                        }
                         _device->Release();
                         _device = nullptr;
                     }

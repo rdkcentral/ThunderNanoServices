@@ -46,6 +46,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
             DecoupledJob()
                 : Core::ThreadPool::JobType<DecoupledJob&>(*this)
+                , _lock()
                 , _job(nullptr)
             {
             }
@@ -56,6 +57,7 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 Core::ProxyType<Core::IDispatch> handler(Aquire());
 
+               _lock.Lock();
                 if (handler.IsValid() == true) {
 
                     _job = job;
@@ -68,22 +70,31 @@ class BluetoothControl : public PluginHost::IPlugin
                 } else {
                     TRACE(Trace::Information, (_T("Job in progress, skipping request")));
                 }
+
+               _lock.Unlock();
             }
             void Revoke()
             {
+                _lock.Lock();
                 Core::WorkerPool::Instance().Revoke(Reset());
                 _job = nullptr;
+                _lock.Unlock();
             }
 
         private:
             friend class Core::ThreadPool::JobType<DecoupledJob&>;
             void Dispatch()
             {
-                _job();
+                _lock.Lock();
+                ASSERT(_job != nullptr);
+                Job job = _job;
                 _job = nullptr;
+                _lock.Unlock();
+                job();
             }
 
         private:
+            Core::CriticalSection _lock;
             Job _job;
         }; // class DecoupledJob
 
@@ -403,16 +414,21 @@ class BluetoothControl : public PluginHost::IPlugin
                     Bluetooth::EIR eir(info.data, info.length);
                     DeviceImpl* device = nullptr;
 
-                    if (info.evt_type == 4 /* scan response */) {
-                        device = Application()->Discovered(true, info.bdaddr);
-                    }
-                    else if (info.evt_type == 0 /* undirected connectable advertisement */) {
-                        device = Application()->Find(Bluetooth::Address(info.bdaddr));
-                    }
+                    const uint8_t SCAN_RESPONSE = 4;
+                    const uint8_t UNDIRECTED_CONNECTABLE_ADVERTISMENT = 0;
 
-                    if (device != nullptr) {
-                        device->Update(eir);
-                        device->UpdateListener();
+                    if ((info.evt_type == SCAN_RESPONSE) || (info.evt_type == UNDIRECTED_CONNECTABLE_ADVERTISMENT)) {
+                        device = Application()->Find(Bluetooth::Address(info.bdaddr));
+
+                        if (device == nullptr) {
+                            device = Application()->Discovered(true, info.bdaddr);
+                        }
+
+                        if (device != nullptr) {
+                            if ((device->Update(eir) == false) && (info.evt_type == UNDIRECTED_CONNECTABLE_ADVERTISMENT)) {
+                                device->UpdateListener();
+                            }
+                        }
                     }
                 }
             }
@@ -1403,41 +1419,54 @@ class BluetoothControl : public PluginHost::IPlugin
                 UpdateListener();
                 _parent->event_devicestatechange(Address().ToString(), JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::DISCONNECTED, disconnReason);
             }
-            void Class(const uint32_t classId) 
+            bool Class(const uint32_t classId, bool notifyListener = true)
             {
+                bool updated = false;
+
                 _state.Lock();
 
                 if (classId != 0) {
                     _class = classId;
                     TRACE(DeviceFlow, (_T("Device class updated to: '%d'"), _class));
-                    UpdateListener();
+                    updated = true;
+                    if (notifyListener == true) {
+                        UpdateListener();
+                    }
                 }
 
                 _state.Unlock();
 
+                return (updated);
             }
-            void Name(const string& name)
+            bool Name(const string& name, bool notifyListener = true)
             {
+                bool updated = false;
+
                 _state.Lock();
 
                 if (name != _name) {
                     _name = name;
                     TRACE(DeviceFlow, (_T("Device name updated to: '%s'"), _name.c_str()));
-                    UpdateListener();
+                    updated = true;
+                    if (notifyListener == true) {
+                        UpdateListener();
+                    }
                 }
 
                 _state.Unlock();
 
+                return (updated);
             }
-            void Update(const Bluetooth::EIR& eir) {
+            bool Update(const Bluetooth::EIR& eir)
+            {
+                bool updated = false;
 
-                Class(eir.Class());
+                updated |= Class(eir.Class(), false);
+                updated |= Name(eir.CompleteName(), false);
 
-                Name(eir.CompleteName());
+                if (eir.UUIDs() != _uuids) {
+                    _state.Lock();
 
-                _state.Lock();
-
-                if (eir.UUIDs().empty() == false) {
                     _uuids.clear();
 
                     TRACE(DeviceFlow, (_T("Supported UUIDs:")));
@@ -1445,10 +1474,16 @@ class BluetoothControl : public PluginHost::IPlugin
                         TRACE(DeviceFlow, (_T(" - %s"), uuid.ToString().c_str()));
                         _uuids.emplace_back(uuid);
                     }
+                    _state.Unlock();
+
+                    updated = true;
+                }
+
+                if (updated == true) {
                     UpdateListener();
                 }
 
-                _state.Unlock();
+                return (updated);
             }
             void Features(const uint8_t length, const uint8_t feature[])
             {
