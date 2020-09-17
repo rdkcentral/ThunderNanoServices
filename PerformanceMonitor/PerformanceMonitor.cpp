@@ -57,5 +57,69 @@ namespace Plugin {
         return;
     }
 
+    uint32_t PerformanceMonitor::Send(const JsonData::PerformanceMonitor::BufferInfo& data, Core::JSON::DecUInt32& result)
+    {
+        uint16_t length = static_cast<uint16_t>(((data.Data.Value().length() * 6) + 7) / 8);
+        uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
+        Core::FromString(data.Data.Value(), buffer, length);
+        result = length;
+
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t PerformanceMonitor::Receive(const Core::JSON::DecUInt16& maxSize, JsonData::PerformanceMonitor::BufferInfo& data)
+    {
+        string convertedBuffer;
+
+        uint16_t length = maxSize.Value();
+        uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
+
+        static uint8_t pattern[] = { 0x00, 0x66, 0xBB, 0xEE };
+        uint8_t patternLength = sizeof(pattern);
+        uint16_t index = 0;
+        uint8_t patternIndex = 0;
+
+        while (index < length) {
+
+            buffer[index++] = pattern[patternIndex++];
+
+            patternIndex %= (patternLength - 1);
+        }
+
+        Core::ToString(buffer, length, false, convertedBuffer);
+        data.Data = convertedBuffer;
+        data.Length = static_cast<uint16_t>(convertedBuffer.length());
+        data.Duration = static_cast<uint16_t>(convertedBuffer.length()) + 1; //Dummy
+
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t PerformanceMonitor::Exchange(const JsonData::PerformanceMonitor::BufferInfo& data, JsonData::PerformanceMonitor::BufferInfo& result)
+    {
+        string convertedBuffer;
+
+        uint16_t length = static_cast<uint16_t>(data.Data.Value().length());
+        uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
+        Core::FromString(data.Data.Value(), buffer, length);
+
+        static uint8_t pattern[] = { 0x00, 0x77, 0xCC, 0x88 };
+        uint8_t patternLength = sizeof(pattern);
+        uint16_t index = 0;
+        uint8_t patternIndex = 0;
+
+        while (index < data.Length.Value()) {
+
+            buffer[index++] = pattern[patternIndex++];
+
+            patternIndex %= (patternLength - 1);
+        }
+
+        Core::ToString(buffer, length, false, convertedBuffer);
+        result.Data = convertedBuffer;
+        result.Length = static_cast<uint16_t>(convertedBuffer.length());
+        result.Duration = static_cast<uint16_t>(convertedBuffer.length()) + 1; //Dummy
+
+        return Core::ERROR_NONE;
+    }
 } // namespace Plugin
 } // namespace WPEFramework

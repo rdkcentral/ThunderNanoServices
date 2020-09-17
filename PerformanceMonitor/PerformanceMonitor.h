@@ -58,9 +58,15 @@ namespace Plugin {
         void RegisterAll();
         void UnregisterAll();
         uint32_t endpoint_clear();
+        uint32_t endpoint_send(const JsonData::PerformanceMonitor::BufferInfo& params, Core::JSON::DecUInt32& response);
+        uint32_t endpoint_receive(const Core::JSON::DecUInt32& params, JsonData::PerformanceMonitor::BufferInfo& response);
+        uint32_t endpoint_exchange(const JsonData::PerformanceMonitor::BufferInfo& params, JsonData::PerformanceMonitor::BufferInfo& response);
         uint32_t get_measurement(const string& index, JsonData::PerformanceMonitor::MeasurementData& response) const;
 
         void RetrieveInfo(const uint32_t packageSize, JsonData::PerformanceMonitor::MeasurementData& measurementData) const;
+        uint32_t Send(const JsonData::PerformanceMonitor::BufferInfo& data, Core::JSON::DecUInt32& result);
+        uint32_t Receive(const Core::JSON::DecUInt16& maxSize, JsonData::PerformanceMonitor::BufferInfo& data);
+        uint32_t Exchange(const JsonData::PerformanceMonitor::BufferInfo& data, JsonData::PerformanceMonitor::BufferInfo& result);
 
         inline void Measurement(const PluginHost::PerformanceAdministrator::Statistics::Tuple& statistics, JsonData::PerformanceMonitor::MeasurementData::StatisticsData& statisticsData) const {
 
