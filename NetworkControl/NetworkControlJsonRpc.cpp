@@ -36,7 +36,8 @@ namespace Plugin {
         Register<ReloadParamsInfo,void>(_T("request"), &NetworkControl::endpoint_request, this);
         Register<ReloadParamsInfo,void>(_T("assign"), &NetworkControl::endpoint_assign, this);
         Register<ReloadParamsInfo,void>(_T("flush"), &NetworkControl::endpoint_flush, this);
-        Property<Core::JSON::ArrayType<NetworkData>>(_T("network"), &NetworkControl::get_network, nullptr, this);
+        Property<Core::JSON::ArrayType<NetworkData>>(_T("network"), &NetworkControl::get_network, &NetworkControl::set_network, this);
+        Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("dns"), &NetworkControl::get_dns, &NetworkControl::set_dns, this);
         Property<Core::JSON::Boolean>(_T("up"), &NetworkControl::get_up, &NetworkControl::set_up, this);
     }
 
@@ -47,26 +48,27 @@ namespace Plugin {
         Unregister(_T("request"));
         Unregister(_T("reload"));
         Unregister(_T("up"));
+        Unregister(_T("dns"));
         Unregister(_T("network"));
     }
 
     // API implementation
     //
 
-    // Method: reload - Reload static and non-static network interface adapter
+    // Method: reload - Reloads a static or non-static network interface adapter
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_UNAVAILABLE: Unavaliable network interface
+    //  - ERROR_UNAVAILABLE: Unavailable network interface
     uint32_t NetworkControl::endpoint_reload(const ReloadParamsInfo& params)
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
 
         _adminLock.Lock();
 
-        if(params.Device.IsSet() == true) {
-            std::map<const string, StaticInfo>::iterator entry(_interfaces.find(params.Device.Value()));
-            if (entry != _interfaces.end()) {
-                if (entry->second.Mode() == NetworkData::ModeType::STATIC) {
+        if(params.Interface.IsSet() == true) {
+            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Interface.Value()));
+            if (entry != _dhcpInterfaces.end()) {
+                if (entry->second.Info().Mode() == NetworkData::ModeType::STATIC) {
                     result = Reload(entry->first, false);
                 } else {
                     result = Reload(entry->first, true);
@@ -79,7 +81,7 @@ namespace Plugin {
         return result;
     }
 
-    // Method: request - Reload non-static network interface adapter
+    // Method: request - Reloads a non-static network interface adapter
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNAVAILABLE: Unavaliable network interface
@@ -89,9 +91,9 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        if(params.Device.IsSet() == true) {
-            std::map<const string, StaticInfo>::iterator entry(_interfaces.find(params.Device.Value()));
-            if (entry != _interfaces.end()) {
+        if(params.Interface.IsSet() == true) {
+            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Interface.Value()));
+            if (entry != _dhcpInterfaces.end()) {
                 result = Reload(entry->first, true);
             }
         }
@@ -101,7 +103,7 @@ namespace Plugin {
         return result;
     }
 
-    // Method: assign - Reload static network interface adapter
+    // Method: assign - Reloads a static network interface adapter
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNAVAILABLE: Unavaliable network interface
@@ -111,9 +113,9 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        if(params.Device.IsSet() == true) {
-            std::map<const string, StaticInfo>::iterator entry(_interfaces.find(params.Device.Value()));
-            if (entry != _interfaces.end()) {
+        if(params.Interface.IsSet() == true) {
+            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Interface.Value()));
+            if (entry != _dhcpInterfaces.end()) {
                 result = Reload(entry->first, false);
             }
         }
@@ -123,7 +125,7 @@ namespace Plugin {
         return result;
     }
 
-    // Method: flush - Flush network interface adapter
+    // Method: flush - Flushes a network interface adapter
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNAVAILABLE: Unavaliable network interface
@@ -133,10 +135,10 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        if(params.Device.IsSet() == true) {
-            std::map<const string, StaticInfo>::iterator entry(_interfaces.find(params.Device.Value()));
-            if (entry != _interfaces.end()) {
-                if (entry->second.Mode() == NetworkData::ModeType::STATIC) {
+        if(params.Interface.IsSet() == true) {
+            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(params.Interface.Value()));
+            if (entry != _dhcpInterfaces.end()) {
+                if (entry->second.Info().Mode() == NetworkData::ModeType::STATIC) {
                     result = Reload(entry->first, false);
                 } else {
                     result = Reload(entry->first, true);
@@ -149,60 +151,51 @@ namespace Plugin {
         return result;
     }
 
-    // Property: network - The actual network information for targeted network interface, if network interface is not given, all network interfaces are returned
+    // Property: network - Network information
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_UNAVAILABLE: Unavaliable network interface
+    //  - ERROR_UNAVAILABLE: Unavailable network interface
     uint32_t NetworkControl::get_network(const string& index, Core::JSON::ArrayType<NetworkData>& response) const
     {
-       uint32_t result = Core::ERROR_NONE;
-
-        if(index != "") {
-            auto entry = _interfaces.find(index);
-            if (entry != _interfaces.end()) {
-                NetworkData data;
-                data.Interface = entry->first;
-                data.Mode = entry->second.Mode();
-                data.Address = entry->second.Address().HostAddress();
-                data.Mask = entry->second.Address().Mask();
-                data.Gateway = entry->second.Gateway().HostAddress();
-                data.Broadcast = entry->second.Broadcast().HostAddress();
-
-                response.Add(data);
-            } else {
-                result = Core::ERROR_UNAVAILABLE;
-            }
-        } else {
-            auto entry = _interfaces.begin();
-
-            while (entry != _interfaces.end()) {
-                NetworkData data;
-                data.Interface = entry->first;
-                data.Mode = entry->second.Mode();
-                data.Address = entry->second.Address().HostAddress();
-                data.Mask = entry->second.Address().Mask();
-                data.Gateway = entry->second.Gateway().HostAddress();
-                data.Broadcast = entry->second.Broadcast().HostAddress();
-                response.Add(data);
-
-                entry++;
-            }
-        }
-
-        return result;
+        return NetworkInfo(index, response);
     }
 
-    // Property: up - Determines if interface is up
+    // Property: network - Network information
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_UNAVAILABLE: Unavaliable network interface
+    //  - ERROR_UNAVAILABLE: Unavailable network interface
+    uint32_t NetworkControl::set_network(const string& index, const Core::JSON::ArrayType<NetworkData>& param)
+    {
+        return NetworkInfo(index, param);
+    }
+
+    // Property: dns - DNS addresses
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t NetworkControl::get_dns(Core::JSON::ArrayType<Core::JSON::String>& response) const
+    {
+        return DNS(response);
+    }
+
+    // Property: dns - DNS addresses
+    // Return codes:
+    //  - ERROR_NONE: Success
+    uint32_t NetworkControl::set_dns(const Core::JSON::ArrayType<Core::JSON::String>& param)
+    {
+        return DNS(param);
+    }
+
+    // Property: up - Interface up status
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNAVAILABLE: Unavailable network interface
     uint32_t NetworkControl::get_up(const string& index, Core::JSON::Boolean& response) const
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
 
         if(index != "") {
-            auto entry = _interfaces.find(index);
-            if (entry != _interfaces.end()) {
+            auto entry = _dhcpInterfaces.find(index);
+            if (entry != _dhcpInterfaces.end()) {
                 Core::AdapterIterator adapter(entry->first);
                 if (adapter.IsValid() == true) {
                     response = adapter.IsUp();
@@ -214,10 +207,10 @@ namespace Plugin {
         return result;
     }
 
-    // Property: up - Determines if interface is up
+    // Property: up - Interface up status
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_UNAVAILABLE: Unavaliable network interface
+    //  - ERROR_UNAVAILABLE: Unavailable network interface
     uint32_t NetworkControl::set_up(const string& index, const Core::JSON::Boolean& param)
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
@@ -225,8 +218,8 @@ namespace Plugin {
         _adminLock.Lock();
 
         if(index != "") {
-            std::map<const string, StaticInfo>::iterator entry(_interfaces.find(index));
-            if (entry != _interfaces.end()) {
+            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(index));
+            if (entry != _dhcpInterfaces.end()) {
                 Core::AdapterIterator adapter(entry->first);
                 if (adapter.IsValid() == true) {
                     adapter.Up(param);

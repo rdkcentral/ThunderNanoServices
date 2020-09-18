@@ -16,7 +16,7 @@
 # limitations under the License.
 
 find_package(${NAMESPACE}Protocols REQUIRED)
-find_package(securityagent REQUIRED)
+find_package(securityagent QUIET)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_executable(JSONRPCClient JSONRPCClient.cpp)
@@ -29,9 +29,18 @@ set_target_properties(JSONRPCClient PROPERTIES
 target_link_libraries(JSONRPCClient 
         PRIVATE
         ${NAMESPACE}Protocols::${NAMESPACE}Protocols
-        securityagent::securityagent
         CompileSettingsDebug::CompileSettingsDebug
     )
+
+if (securityagent_FOUND)
+    target_link_libraries(JSONRPCClient
+        PRIVATE
+        securityagent::securityagent
+    )
+    target_compile_definitions(JSONRPCClient
+        PRIVATE
+            ENABLE_SECURITY_AGENT=1)
+endif()
 
 target_include_directories(JSONRPCClient 
     PRIVATE

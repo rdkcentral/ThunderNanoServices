@@ -57,43 +57,43 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
-            virtual ~Notification()
+            ~Notification() override
             {
             }
 
         public:
-            virtual void LoadFinished(const string& URL, int32_t code) final
+            void LoadFinished(const string& URL, int32_t code) override
             {
                 _parent.LoadFinished(URL, code);
             }
-            virtual void LoadFailed(const string& URL) final
+            void LoadFailed(const string& URL) override
             {
                 _parent.LoadFailed(URL);
             }
-            virtual void URLChange(const string& URL, bool loaded) final
+            void URLChange(const string& URL, bool loaded) override
             {
                 _parent.URLChange(URL, loaded);
             }
-            virtual void VisibilityChange(const bool hidden) final
+            void VisibilityChange(const bool hidden) override
             {
                 _parent.VisibilityChange(hidden);
             }
-            virtual void PageClosure() final
+            void PageClosure() override
             {
                 _parent.PageClosure();
             }
-            virtual void BridgeQuery(const string& message) final
+            void BridgeQuery(const string& message) override
             {
                 _parent.BridgeQuery(message);
             }
-            virtual void StateChange(const PluginHost::IStateControl::state state) final
+            void StateChange(const PluginHost::IStateControl::state state) override
             {
                 _parent.StateChange(state);
             }
-            virtual void Activated(RPC::IRemoteConnection* /* connection */) final
+            void Activated(RPC::IRemoteConnection* /* connection */) override
             {
             }
-            virtual void Deactivated(RPC::IRemoteConnection* connection) final
+            void Deactivated(RPC::IRemoteConnection* connection) override
             {
                 _parent.Deactivated(connection);
             }
@@ -152,9 +152,8 @@ namespace Plugin {
         {
         }
 
-        virtual ~WebKitBrowser()
+        ~WebKitBrowser() override
         {
-            UnregisterAll();
             TRACE_L1("Destructor WebKitBrowser.%d", __LINE__);
         }
 
@@ -191,22 +190,22 @@ namespace Plugin {
         // If there is an error, return a string describing the issue why the initialisation failed.
         // The Service object is *NOT* reference counted, lifetime ends if the plugin is deactivated.
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
-        virtual const string Initialize(PluginHost::IShell* service);
+        const string Initialize(PluginHost::IShell* service) override;
 
         // The plugin is unloaded from WPEFramework. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After theis call, the lifetime of the Service object ends.
-        virtual void Deinitialize(PluginHost::IShell* service);
+        void Deinitialize(PluginHost::IShell* service) override;
 
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
-        virtual string Information() const;
+        string Information() const override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request);
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
         void Deactivated(RPC::IRemoteConnection* connection);
