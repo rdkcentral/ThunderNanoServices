@@ -21,7 +21,7 @@ namespace Plugin {
 
     void PerformanceMonitor::UnregisterAll()
     {
-        Unregister(_T("send"));`
+        Unregister(_T("send"));
         Unregister(_T("receive"));
         Unregister(_T("exchange"));
         Unregister(_T("clear"));

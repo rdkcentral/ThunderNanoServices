@@ -44,7 +44,7 @@ namespace Plugin {
         // No additional info to report.
         return ((_T("The purpose of this plugin is provide ability to collect performance values of JSONRPC communication")));
     }
-    void PerformanceMonitor::RetrieveInfo(const uint32_t packageSize, JsonData::PerformanceMonitor::MeasurementData& measurementData) const {
+    uint32_t PerformanceMonitor::RetrieveInfo(const uint32_t packageSize, JsonData::PerformanceMonitor::MeasurementData& measurementData) const {
         const PluginHost::PerformanceAdministrator::Statistics& statistics(PluginHost::PerformanceAdministrator::Instance().Retrieve(packageSize));
 
         Measurement(statistics.Serialization(), measurementData.Serialization);
@@ -54,7 +54,7 @@ namespace Plugin {
         Measurement(statistics.Communication(), measurementData.Communication);
         Measurement(statistics.Total(), measurementData.Total);
 
-        return;
+        return Core::ERROR_NONE;
     }
 
     uint32_t PerformanceMonitor::Send(const JsonData::PerformanceMonitor::BufferInfo& data, Core::JSON::DecUInt32& result)
@@ -67,16 +67,16 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
-    uint32_t PerformanceMonitor::Receive(const Core::JSON::DecUInt16& maxSize, JsonData::PerformanceMonitor::BufferInfo& data)
+    uint32_t PerformanceMonitor::Receive(const Core::JSON::DecUInt32& maxSize, JsonData::PerformanceMonitor::BufferInfo& data)
     {
         string convertedBuffer;
 
-        uint16_t length = maxSize.Value();
+        uint32_t length = maxSize.Value();
         uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
 
         static uint8_t pattern[] = { 0x00, 0x66, 0xBB, 0xEE };
         uint8_t patternLength = sizeof(pattern);
-        uint16_t index = 0;
+        uint32_t index = 0;
         uint8_t patternIndex = 0;
 
         while (index < length) {

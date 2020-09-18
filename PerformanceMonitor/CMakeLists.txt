@@ -24,7 +24,8 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
         Module.cpp
-        PerformanceMonitor.cpp)
+        PerformanceMonitor.cpp
+        PerformanceMonitorJsonRpc.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
