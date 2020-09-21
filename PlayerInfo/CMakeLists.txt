@@ -26,7 +26,6 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     PlayerInfo.cpp
-    PlayerInfoJsonRpc.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
@@ -59,9 +58,6 @@ if(DOLBY_SUPPORT)
 endif()
 
 if (GSTREAMER_FOUND)
-    target_sources(${MODULE_NAME}
-        PRIVATE
-            GStreamer/PlatformImplementation.cpp)
 
     target_link_libraries(${MODULE_NAME}
         PRIVATE
@@ -70,9 +66,30 @@ if (GSTREAMER_FOUND)
     target_include_directories(${MODULE_NAME}
         PRIVATE
             ${GSTREAMER_INCLUDES})
+
+    if (USE_DEVICESETTINGS)
+        find_package(DS REQUIRED)
+        find_package(IARMBus REQUIRED)
+        target_include_directories(${MODULE_NAME} PRIVATE
+            ${IARMBUS_INCLUDE_DIRS}
+            ${DS_INCLUDE_DIRS}
+            ../helpers)
+        target_link_libraries(${MODULE_NAME} PRIVATE
+            ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+            ${IARMBUS_LIBRARIES}
+            ${DS_LIBRARIES})
+        target_sources(${MODULE_NAME}
+            PRIVATE
+                DeviceSettings/PlatformImplementation.cpp
+                ../helpers/utils.cpp)
+    else()
+        target_sources(${MODULE_NAME}
+            PRIVATE
+                GStreamer/PlatformImplementation.cpp)
+    endif()
 endif ()
 
-install(TARGETS ${MODULE_NAME} 
+install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})
