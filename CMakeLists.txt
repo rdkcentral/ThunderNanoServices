@@ -39,6 +39,7 @@ option(PLUGIN_FIRMWARECONTROL "Include FirmwareControl Plugin" OFF)
 option(PLUGIN_FRONTPANEL "Include FrontPanel plugin" OFF)
 option(PLUGIN_PROCESSMONITOR "Include Process Monitor plugin" OFF)
 option(PLUGIN_NETWORKCONTROL "Include NetworkControlplugin" OFF)
+option(PLUGIN_PERFORMANCEMONITOR "Include Performance Monitor" OFF)
 option(PLUGIN_PLAYERINFO "Include PlayerInfo plugin" OFF)
 option(PLUGIN_POWER "Include Power plugin" OFF)
 option(PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
@@ -152,6 +153,10 @@ endif()
 
 if(PLUGIN_POWER)
     add_subdirectory(Power)
+endif()
+
+if (PLUGIN_PERFORMANCEMONITOR)
+    add_subdirectory(PerformanceMonitor)
 endif()
 
 if(PLUGIN_PLAYERINFO)
