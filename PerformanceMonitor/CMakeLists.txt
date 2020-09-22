@@ -37,10 +37,6 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-target_compile_definitions(${MODULE_NAME}
-    PRIVATE
-        THUNDER_PERFORMANCE=1)
-
 install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
