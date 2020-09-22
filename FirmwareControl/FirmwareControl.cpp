@@ -75,6 +75,7 @@ namespace Plugin {
         if (path.empty() != true) {
             _source = path + "/" + name;
         }
+
         _type = type;
         _interval = interval;
         _hash = hash;
@@ -132,26 +133,33 @@ namespace Plugin {
 
         TRACE(Trace::Information, (string(__FUNCTION__)));
         Notifier notifier(this);
-
         PluginHost::DownloadEngine downloadEngine(&notifier, "", _interval);
 
-        uint32_t status = downloadEngine.Start(_source, _destination + Name, _hash);
+        uint32_t status = downloadEngine.CollectInfo(_source);
         if ((status == Core::ERROR_NONE) || (status == Core::ERROR_INPROGRESS)) {
 
-            Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
             status = WaitForCompletion(_waitTime * 1000);
-            if (status != Core::ERROR_NONE) {
-                downloadEngine.Close();
-            }
-        }
+            if (status == Core::ERROR_NONE) {
 
-        status = ((status != Core::ERROR_NONE)? status: DownloadStatus());
-        if (status == Core::ERROR_NONE) {
-            Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 100);
+                status = downloadEngine.Start(_source, _destination + Name, _hash);
+                if ((status == Core::ERROR_NONE) || (status == Core::ERROR_INPROGRESS)) {
+
+                    Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
+                    status = WaitForCompletion(_waitTime * 1000);
+                    if (status != Core::ERROR_NONE) {
+                        downloadEngine.Close();
+                    }
+                }
+            }
+            status = ((status != Core::ERROR_NONE)? status: DownloadStatus());
+            if (status == Core::ERROR_NONE) {
+                Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 100);
+            } else {
+                Status(UpgradeStatus::DOWNLOAD_ABORTED, status, 0);
+            }
         } else {
             Status(UpgradeStatus::DOWNLOAD_ABORTED, status, 0);
         }
-
         return status;
     }
 

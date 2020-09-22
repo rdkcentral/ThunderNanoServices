@@ -68,11 +68,21 @@ namespace PluginHost {
         }
 
     public:
+        uint32_t CollectInfo(const string& locator)
+        {
+            Core::URL url(locator);
+            uint32_t result = BaseClass::CollectInfo(url);
+
+            if ((result == Core::ERROR_NONE) || (result == Core::ERROR_INPROGRESS)) {
+                //Add code to collect required header info
+            }
+
+            return result;
+        }
         uint32_t Start(const string& locator, const string& destination, const string& hashValue)
         {
             Core::URL url(locator);
             uint32_t result = (url.IsValid() == true ? Core::ERROR_INPROGRESS : Core::ERROR_INCORRECT_URL);
-
 
             _adminLock.Lock();
 
@@ -110,6 +120,14 @@ namespace PluginHost {
         }
 
     private:
+        void InfoCollected(const uint32_t result, const Core::ProxyType<Web::Response> info) override
+        {
+            if (result == Core::ERROR_NONE) {
+            }
+            if (_notifier != nullptr) {
+                _notifier->NotifyStatus(result);
+            }
+        }
         void Transfered(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
         {
             uint32_t status = result;
