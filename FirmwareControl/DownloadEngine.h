@@ -54,6 +54,7 @@ namespace PluginHost {
             , _progressInterval(1)
             , _progressWaitTime(0)
             , _checkHash(false)
+            , _isResumeSupported(false)
             , _activity(*this)
         {
             // If we are going for HMAC, here we could set our secret...
@@ -71,15 +72,10 @@ namespace PluginHost {
         uint32_t CollectInfo(const string& locator)
         {
             Core::URL url(locator);
-            uint32_t result = BaseClass::CollectInfo(url);
-
-            if ((result == Core::ERROR_NONE) || (result == Core::ERROR_INPROGRESS)) {
-                //Add code to collect required header info
-            }
-
-            return result;
+            return BaseClass::CollectInfo(url);
         }
-        uint32_t Start(const string& locator, const string& destination, const string& hashValue)
+
+        uint32_t Start(const string& locator, const string& destination, const string& hashValue, const uint32_t position)
         {
             Core::URL url(locator);
             uint32_t result = (url.IsValid() == true ? Core::ERROR_INPROGRESS : Core::ERROR_INCORRECT_URL);
@@ -103,14 +99,14 @@ namespace PluginHost {
                 result = Core::ERROR_OPENING_FAILED;
                 _storage = destination;
 
-                // The create truncates the file (if it exists), to 0.
-                if (_storage.Create() == true) {
+                (position != 0)? _storage.Create(): _storage.Append();
+                if (_storage.IsOpen() == true) {
 
-                    result = BaseClass::Download(url, _storage);
+                    result = BaseClass::Download(url, _storage, position);
 
                     if (((result == Core::ERROR_NONE) || (result == Core::ERROR_INPROGRESS)) && (_interval != 0)) {
                         _activity.Revoke();
-                        _activity.Schedule(Core::Time::Now().Add(ProgressInterval));
+                       _activity.Schedule(Core::Time::Now().Add(ProgressInterval));
                     }
                 }
             }
@@ -118,11 +114,18 @@ namespace PluginHost {
 
             return (result);
         }
+        bool IsResumeSupported() const
+        {
+            return _isResumeSupported;
+        }
 
     private:
         void InfoCollected(const uint32_t result, const Core::ProxyType<Web::Response> info) override
         {
             if (result == Core::ERROR_NONE) {
+                if (info->AcceptRange.IsSet() == true && (info->AcceptRange.Value() == "bytes")) {
+                    _isResumeSupported = true;
+                }
             }
             if (_notifier != nullptr) {
                 _notifier->NotifyStatus(result);
@@ -232,6 +235,7 @@ namespace PluginHost {
         uint16_t _progressWaitTime;
 
         bool _checkHash;
+        bool _isResumeSupported;
         uint8_t _HMAC[Crypto::HASH_SHA256];
         Core::WorkerPool::JobType<DownloadEngine&> _activity;
     };
