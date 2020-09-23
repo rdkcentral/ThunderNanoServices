@@ -27,7 +27,6 @@ find_package(NXCLIENT QUIET)
 
 add_library(${MODULE_NAME} SHARED
     DisplayInfo.cpp
-    DisplayInfoJsonRpc.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
@@ -40,7 +39,21 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-if (NXCLIENT_FOUND AND NEXUS_FOUND)
+if (USE_DEVICESETTINGS)
+    find_package(DS REQUIRED)
+    find_package(IARMBus REQUIRED)
+    target_include_directories(${MODULE_NAME} PRIVATE ${IARMBUS_INCLUDE_DIRS}
+        ${DS_INCLUDE_DIRS}
+        ../helpers)
+    target_link_libraries(${MODULE_NAME} PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${IARMBUS_LIBRARIES}
+        ${DS_LIBRARIES})
+    target_sources(${MODULE_NAME}
+        PRIVATE
+            DeviceSettings/PlatformImplementation.cpp
+            ../helpers/utils.cpp)
+elseif (NXCLIENT_FOUND AND NEXUS_FOUND)
     target_sources(${MODULE_NAME}
         PRIVATE
             Nexus/PlatformImplementation.cpp)
@@ -60,7 +73,7 @@ else ()
     message(FATAL_ERROR "There is no graphic backend for display info plugin")
 endif ()
 
-install(TARGETS ${MODULE_NAME} 
+install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})

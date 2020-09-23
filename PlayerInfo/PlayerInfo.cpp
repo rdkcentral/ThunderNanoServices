@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "PlayerInfo.h"
 
 
@@ -41,7 +41,7 @@ namespace Plugin {
         _player = service->Root<Exchange::IPlayerProperties>(_connectionId, 2000, _T("PlayerInfoImplementation"));
 
         if (_player != nullptr) {
-
+            Exchange::JPlayerProperties::Register(*this, _player);
             if ( (_player->AudioCodecs(_audioCodecs) != Core::ERROR_NONE)  || (_audioCodecs == nullptr) ) {
                 if (_audioCodecs != nullptr) {
                     _audioCodecs->Release();
@@ -70,6 +70,12 @@ namespace Plugin {
                 if(_dolbyOut == nullptr){
                     SYSLOG(Logging::Startup, (_T("Dolby output switching service is unavailable.")));
                 }
+                else
+                {
+                    _notification.Initialize(_dolbyOut);
+                    Exchange::Dolby::JOutput::Register(*this, _dolbyOut);
+                }
+
             }
         }
 
@@ -83,7 +89,13 @@ namespace Plugin {
     {
         ASSERT(_player != nullptr);
         if (_player != nullptr) {
+            Exchange::JPlayerProperties::Unregister(*this);
             _player->Release();
+        }
+        if (_dolbyOut != nullptr)
+        {
+             _notification.Deinitialize();
+            Exchange::Dolby::JOutput::Unregister(*this);
         }
         _connectionId = 0;
     }

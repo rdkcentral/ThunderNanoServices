@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "DisplayInfo.h"
 
 namespace WPEFramework {
@@ -49,6 +49,8 @@ namespace Plugin {
                 _connectionProperties = nullptr;
             } else {
                 _notification.Initialize(_connectionProperties);
+                Exchange::JConnectionProperties::Register(*this, _connectionProperties);
+                Exchange::JHDRProperties::Register(*this, _hdrProperties);
             }
         }
 
@@ -62,6 +64,9 @@ namespace Plugin {
     /* virtual */ void DisplayInfo::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_connectionProperties != nullptr);
+
+        Exchange::JHDRProperties::Unregister(*this);
+        Exchange::JConnectionProperties::Unregister(*this);
 
         _notification.Deinitialize();
 
@@ -147,6 +152,7 @@ namespace Plugin {
         if (_connectionProperties->Height(value) == Core::ERROR_NONE) {
             displayInfo.Height = value;
         }
+
         if (static_cast<const Exchange::IConnectionProperties*>(_connectionProperties)->HDCPProtection(hdcpType) == Core::ERROR_NONE) {
             displayInfo.Hdcpprotection = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdcpprotectionType>(hdcpType);
         }
