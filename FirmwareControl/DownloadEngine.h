@@ -119,7 +119,7 @@ namespace PluginHost {
         }
 
     private:
-        void InfoCollected(const uint32_t result, const Core::ProxyType<Web::Response> info) override
+        void InfoCollected(const uint32_t result, const Core::ProxyType<Web::Response>& info) override
         {
             if (result == Core::ERROR_NONE) {
                 if (info->AcceptRange.IsSet() == true && (info->AcceptRange.Value() == "bytes")) {
