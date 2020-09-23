@@ -169,6 +169,7 @@ namespace Plugin {
             , _hash()
             , _resume(false)
             , _interval(0)
+            , _position(0)
             , _waitTime(WaitTime)
             , _downloadStatus(Core::ERROR_NONE)
             , _upgradeStatus(UpgradeStatus::NONE)
@@ -445,7 +446,7 @@ namespace Plugin {
         bool   _resume;
         uint16_t _interval;
 
-        bool _position;
+        uint64_t _position;
         int32_t _waitTime;
         uint32_t _downloadStatus;
         UpgradeStatus _upgradeStatus;

@@ -74,8 +74,7 @@ namespace PluginHost {
             Core::URL url(locator);
             return BaseClass::CollectInfo(url);
         }
-
-        uint32_t Start(const string& locator, const string& destination, const string& hashValue, const uint32_t position)
+        uint32_t Start(const string& locator, const string& destination, const string& hashValue, const uint64_t position)
         {
             Core::URL url(locator);
             uint32_t result = (url.IsValid() == true ? Core::ERROR_INPROGRESS : Core::ERROR_INCORRECT_URL);
@@ -106,7 +105,7 @@ namespace PluginHost {
 
                     if (((result == Core::ERROR_NONE) || (result == Core::ERROR_INPROGRESS)) && (_interval != 0)) {
                         _activity.Revoke();
-                       _activity.Schedule(Core::Time::Now().Add(ProgressInterval));
+                        _activity.Schedule(Core::Time::Now().Add(ProgressInterval));
                     }
                 }
             }
@@ -131,7 +130,7 @@ namespace PluginHost {
                 _notifier->NotifyStatus(result);
             }
         }
-        void Transfered(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
+        void Transferred(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
         {
             uint32_t status = result;
 
@@ -149,9 +148,7 @@ namespace PluginHost {
                 _notifier->NotifyStatus(status);
             }
 
-            if (status != Core::ERROR_NONE) {
-                _storage.Destroy();
-            }
+            _activity.Revoke();
 
             _adminLock.Unlock();
         }

@@ -80,6 +80,12 @@ namespace Plugin {
         if (path.empty() != true) {
             _source = path + "/" + name;
         }
+        Core::File _storage(_destination + Name);
+        if ((resume == true) && (_storage.Exists() == true)) {
+            _position = _storage.Core::File::Size();
+        } else {
+            _position = 0;
+        }
 
         _type = type;
         _interval = interval;
@@ -102,7 +108,7 @@ namespace Plugin {
             Notifier notifier(this);
             PluginHost::DownloadEngine downloadEngine(&notifier, "", _interval);
 
-            status = (_resume == true)? Resume(downloadEngine):Download(downloadEngine);
+            status = (_position != 0)? Resume(downloadEngine):Download(downloadEngine);
             downloadEngine.Close();
 
             if (status == Core::ERROR_NONE && (Status() != UpgradeStatus::UPGRADE_CANCELLED)) {
@@ -123,19 +129,14 @@ namespace Plugin {
 
         // Initiate image install
         mfrError_t mfrStatus = mfrWriteImage(Name, _destination.c_str(), static_cast<mfrImageType_t>(_type), mfrNotifier);
-        TRACE(Trace::Information, (string(__FUNCTION__)));
         if (mfrERR_NONE != mfrStatus) {
             Status(UpgradeStatus::INSTALL_ABORTED, ConvertMfrStatusToCore(mfrStatus), 0);
         } else {
             Status(UpgradeStatus::INSTALL_INITIATED, ErrorType::ERROR_NONE, 0);
-        TRACE(Trace::Information, (string(__FUNCTION__)));
             uint32_t status = WaitForCompletion(_waitTime); // To avoid hang situation
-        TRACE(Trace::Information, (string(__FUNCTION__)));
             if (status != Core::ERROR_NONE) {
-        TRACE(Trace::Information, (string(__FUNCTION__)));
                 Status(UpgradeStatus::INSTALL_ABORTED, Core::ERROR_TIMEDOUT, 0);
             } else {
-        TRACE(Trace::Information, (string(__FUNCTION__)));
                 _adminLock.Lock();
                 mfrUpgradeStatus_t installStatus = _installStatus;
                 _adminLock.Unlock();
