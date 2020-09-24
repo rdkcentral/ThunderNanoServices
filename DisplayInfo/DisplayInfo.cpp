@@ -159,7 +159,7 @@ namespace Plugin {
         }
 
         Exchange::IConnectionProperties::HDCPProtectionType hdcpProtection;
-        if (_connectionProperties->HDCPProtection(hdcpProtection) == Core::ERROR_NONE) {
+        if (const_cast<Exchange::IConnectionProperties*>(_connectionProperties)->HDCPProtection(hdcpProtection) == Core::ERROR_NONE) {
             displayInfo.Hdcpprotection = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdcpprotectionType>(hdcpProtection);
         }
 
