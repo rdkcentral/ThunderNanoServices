@@ -85,12 +85,10 @@ namespace Plugin {
             , _videoCodecs(nullptr)
             , _notification(this)
         {
-            RegisterAll();
         }
 
         virtual ~PlayerInfo()
         {
-            UnregisterAll();
         }
 
         BEGIN_INTERFACE_MAP(PlayerInfo)
@@ -113,10 +111,6 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
-        // JsonRpc
-        void RegisterAll();
-        void UnregisterAll();
-        
         uint32_t get_playerinfo(JsonData::PlayerInfo::CodecsData&) const;
         void Info(JsonData::PlayerInfo::CodecsData&) const;
 
