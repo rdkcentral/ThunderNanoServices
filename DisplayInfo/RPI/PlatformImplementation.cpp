@@ -140,12 +140,25 @@ public:
     }
     uint32_t EDID (uint16_t& length, uint8_t data[]) const override
     {
-        return (Core::ERROR_NONE);
+        return (Core::ERROR_NOTSUPPORTED)
     }
     uint32_t PortName (string& name) const override
     {
-        return (Core::ERROR_NONE);
+        return (Core::ERROR_NOTSUPPORTED)
     }
+    uint32_t TVCapabilities(IHDRIterator*& type) const override
+    {
+        return (Core::ERROR_NOTSUPPORTED)
+    }
+    uint32_t STBCapabilities(IHDRIterator*& type) const override
+    {
+        return (Core::ERROR_NOTSUPPORTED)
+    }
+    uint32_t HDRSetting(HDRType& type) const override
+    {
+        return (Core::ERROR_NOTSUPPORTED)
+    }
+
     void Dispatch()
     {
         TV_DISPLAY_STATE_T tvState;
@@ -177,18 +190,6 @@ public:
         }
 
         _adminLock.Unlock();
-    }
-    uint32_t TVCapabilities(IHDRIterator*& type) const override
-    {
-        return Core::ERROR_NONE;
-    }
-    uint32_t STBCapabilities(IHDRIterator*& type) const override
-    {
-        return Core::ERROR_NONE;
-    }
-    uint32_t HDRSetting(HDRType& type) const override
-    {
-        return Core::ERROR_NONE;
     }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
