@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "../Module.h"
 #include <interfaces/IPlayerInfo.h>
 #include <interfaces/IDolby.h>
@@ -95,10 +95,11 @@ private:
     };
 
 private:
+    using AudioIteratorImplementation = RPC::IteratorType<Exchange::IPlayerProperties::IAudioCodecIterator>;
+    using VideoIteratorImplementation = RPC::IteratorType<Exchange::IPlayerProperties::IVideoCodecIterator>;
+
     typedef std::map<const string, const Exchange::IPlayerProperties::AudioCodec> AudioCaps;
     typedef std::map<const string, const Exchange::IPlayerProperties::VideoCodec> VideoCaps;
-    typedef RPC::IteratorType<IAudioCodecIterator> AudioCodecIterator; 
-    typedef RPC::IteratorType<IVideoCodecIterator> VideoCodecIterator;
 
 public:
     PlayerInfoImplementation()
@@ -124,13 +125,21 @@ public:
 public:
     uint32_t AudioCodecs(Exchange::IPlayerProperties::IAudioCodecIterator*& codec) const override
     {
-        codec = (Core::Service<Exchange::IPlayerProperties::AudioCodecIterator>::Create<Exchange::IPlayerProperties::IAudioCodecIterator>(_audioCodecs));
+        codec = (Core::Service<Exchange::IPlayerProperties::AudioCodecIterator>::Create<AudioIteratorImp>(_audioCodecs));
+        return (codec != nullptr ? Core::ERROR_NONE : Core::ERROR_GENERAL);
+    }
+    uint32_t VideoCodecs(Exchange::IPlayerProperties::IVideoCodecIterator*& iterator) const override
+    {
+        iterator = Core::Service<VideoIteratorImplementation>::Create<Exchange::IPlayerProperties::IVideoCodecIterator>(_videoCodecs);
+    }
+
+
         return (Core::ERROR_NONE);
     }
     uint32_t VideoCodecs(Exchange::IPlayerProperties::IVideoCodecIterator*& codec) const override
     {
-        codec = (Core::Service<Exchange::IPlayerProperties::VideoCodecIterator>::Create<Exchange::IPlayerProperties::IVideoCodecIterator>(_videoCodecs));
-        return (Core::ERROR_NONE);
+        codec = (Core::Service<VideoIteratorImplementation>::Create<Exchange::IPlayerProperties::IVideoCodecIterator>(_videoCodecs));
+        return (codec != nullptr ? Core::ERROR_NONE : Core::ERROR_GENERAL);
     }
     uint32_t Resolution(PlaybackResolution& res) const override
     {
