@@ -27,7 +27,6 @@ find_package(NXCLIENT QUIET)
 
 add_library(${MODULE_NAME} SHARED
     DisplayInfo.cpp
-    DisplayInfoJsonRpc.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
@@ -60,7 +59,7 @@ else ()
     message(FATAL_ERROR "There is no graphic backend for display info plugin")
 endif ()
 
-install(TARGETS ${MODULE_NAME} 
+install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})
