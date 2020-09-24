@@ -151,33 +151,48 @@ public:
 
         return (Core::ERROR_NONE);
     }
-
-    bool IsAudioPassthrough () const override
+    uint32_t IsAudioPassthrough (bool& passthru) const override
     {
-        return _audioPassthrough;
+        passthru = _audioPassthrough;
+        return (Core::ERROR_NONE);
     }
-    bool Connected() const override
+    uint32_t Connected(bool& isconnected) const override
     {
-        return _connected;
-    } 
-    uint32_t Width() const override
-    {
-        return _width;
+        isconnected = _connected;
+        return (Core::ERROR_NONE);
     }
-    uint32_t Height() const override
+    uint32_t Width(uint32_t& width) const override
     {
-        return _height;
+        width = _width;
+        return (Core::ERROR_NONE);
     }
-    uint32_t VerticalFreq() const override
+    uint32_t Height(uint32_t& height) const override
     {
-        return _verticalFreq;
+        height = _height;
+        return (Core::ERROR_NONE);
     }
-    HDRType Type() const override
+    uint32_t VerticalFreq(uint32_t& vf) const override
     {
-        return _type;
+        vf = _verticalFreq;
+        return (Core::ERROR_NONE);
     }
-    HDCPProtectionType HDCPProtection() const override {
-        return _hdcpprotection;
+    uint32_t HDCPProtection(HDCPProtectionType& value) const override
+    {
+        value = _hdcpprotection;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t HDCPProtection(const HDCPProtectionType value) override
+    {
+        _hdcpprotection = value;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t EDID (uint16_t& length, uint8_t data[]) const override
+    {
+        return (Core::ERROR_NONE);
+    }
+    uint32_t PortName (string& name) const override
+    {
+        return (Core::ERROR_NONE);
     }
     void Dispatch() const
     {

@@ -125,12 +125,22 @@ namespace Plugin {
         displayInfo.Totalgpuram = _graphicsProperties->TotalGpuRam();
         displayInfo.Freegpuram = _graphicsProperties->FreeGpuRam();
 
-        displayInfo.Audiopassthrough = _connectionProperties->IsAudioPassthrough();
-        displayInfo.Connected = _connectionProperties->Connected();
-        displayInfo.Width = _connectionProperties->Width();
-        displayInfo.Height = _connectionProperties->Height();
-        displayInfo.Hdcpprotection = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdcpprotectionType>(_connectionProperties->HDCPProtection());
-        displayInfo.Hdrtype = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdrtypeType>(_connectionProperties->Type());
+        bool audioPassThrough = false;
+        _connectionProperties->IsAudioPassthrough(audioPassThrough);
+        displayInfo.Audiopassthrough = audioPassThrough;
+        bool connected = false;
+        _connectionProperties->Connected(connected);
+        displayInfo.Connected = connected;
+        uint32_t width = 0;
+        _connectionProperties->Width(width);
+        displayInfo.Width = width;
+        uint32_t height = 0;
+        _connectionProperties->Height(height);
+        displayInfo.Height = height;
+
+        Exchange::IConnectionProperties::HDCPProtectionType hdcpProtection;
+        _connectionProperties->HDCPProtection(hdcpProtection);
+        displayInfo.Hdcpprotection = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdcpprotectionType>(hdcpProtection);
     }
 
 } // namespace Plugin

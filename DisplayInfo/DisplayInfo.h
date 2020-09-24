@@ -60,9 +60,9 @@ namespace Plugin {
                     _client = nullptr;
                 }
             }
-            void Updated() override
+            void Updated(const Exchange::IConnectionProperties::INotification::Source event) override
             {
-                _parent.Updated();
+                _parent.Updated(event);
             }
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(Exchange::IConnectionProperties::INotification)
@@ -112,7 +112,7 @@ namespace Plugin {
         virtual void Inbound(Web::Request& request) override;
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
-        void Updated()
+        void Updated(const Exchange::IConnectionProperties::INotification::Source event)
         {
             event_updated();
         }
