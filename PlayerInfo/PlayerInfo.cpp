@@ -42,10 +42,10 @@ namespace Plugin {
 
         if (_player != nullptr) {
 
-            _audioCodecs = _player->AudioCodec();
+            _player->AudioCodecs(_audioCodecs);
             if (_audioCodecs != nullptr) {
 
-                _videoCodecs = _player->VideoCodec();
+                _player->VideoCodecs(_videoCodecs);
                 if (_videoCodecs == nullptr) {
 
                     _audioCodecs->Release();
@@ -129,16 +129,18 @@ namespace Plugin {
 
     void PlayerInfo::Info(JsonData::PlayerInfo::CodecsData& playerInfo) const
     {
-        Core::JSON::EnumType<JsonData::PlayerInfo::CodecsData::AudiocodecsType> audioCodec;
-        _audioCodecs->Reset();
-        while(_audioCodecs->Next()) {
-            playerInfo.Audio.Add(audioCodec = static_cast<JsonData::PlayerInfo::CodecsData::AudiocodecsType>(_audioCodecs->Codec()));
+        Exchange::IPlayerProperties::AudioCodec audioCodec;
+        _audioCodecs->Reset(0);
+        while(_audioCodecs->Next(audioCodec) == true) {
+            Core::JSON::EnumType<JsonData::PlayerInfo::CodecsData::AudiocodecsType> codec =             static_cast<JsonData::PlayerInfo::CodecsData::AudiocodecsType>(audioCodec);
+            playerInfo.Audio.Add(codec);
         }
 
-        Core::JSON::EnumType<JsonData::PlayerInfo::CodecsData::VideocodecsType> videoCodec;
-        _videoCodecs->Reset();
-        while(_videoCodecs->Next()) {
-            playerInfo.Video.Add(videoCodec = static_cast<JsonData::PlayerInfo::CodecsData::VideocodecsType>(_videoCodecs->Codec()));
+        Exchange::IPlayerProperties::VideoCodec videoCodec;
+        _videoCodecs->Reset(0);
+        while(_videoCodecs->Next(videoCodec)) {
+            Core::JSON::EnumType<JsonData::PlayerInfo::CodecsData::VideocodecsType> codec =             static_cast<JsonData::PlayerInfo::CodecsData::VideocodecsType>(videoCodec);
+            playerInfo.Video.Add(codec);
         }
     }
 
