@@ -181,7 +181,7 @@ public:
         value = _hdcpprotection;
         return (Core::ERROR_NONE);
     }
-    uint32_t HDCPProtection(const HDCPProtectionType value) override
+    uint32_t HDCPProtection(const HDCPProtectionType& value) override
     {
         _hdcpprotection = value;
         return (Core::ERROR_NONE);

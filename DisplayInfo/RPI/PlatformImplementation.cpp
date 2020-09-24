@@ -133,7 +133,7 @@ public:
         return (Core::ERROR_NONE);
     }
     // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
-    uint32_t HDCPProtection(const HDCPProtectionType value) override
+    uint32_t HDCPProtection(const HDCPProtectionType& value) override
     {
         _value = value;
         return (Core::ERROR_NONE);
