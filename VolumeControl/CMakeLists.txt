@@ -44,7 +44,8 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 if (NXCLIENT_FOUND AND NEXUS_FOUND)
-    if (CODE_FROM_EXTERNAL_REPOSITORY)
+    option(VOLUMECONTROL_EXTERNAL_REPOSITORY "Include code from External Repository" ON)
+    if (VOLUMECONTROL_EXTERNAL_REPOSITORY)
         include(GetExternalCode)
         GetExternalCode(
             GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/VolumeControl"
