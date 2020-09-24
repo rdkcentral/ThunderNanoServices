@@ -16,18 +16,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #pragma once
 
 #include "Module.h"
-#include <interfaces/IDisplayInfo.h>
+//#include <interfaces/IDisplayInfo.h>
 #include <interfaces/json/JsonData_DisplayInfo.h>
+#include <interfaces/json/JConnectionProperties.h>
+#include <interfaces/json/JHDRProperties.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
     class DisplayInfo : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
-    private:private:
+    private:
         class Notification : protected Exchange::IConnectionProperties::INotification {
         private:
             Notification() = delete;
@@ -62,6 +64,7 @@ namespace Plugin {
             }
             void Updated(const Exchange::IConnectionProperties::INotification::Source event) override
             {
+                Exchange::JConnectionProperties::Event::Updated(_parent, event);
                 _parent.Updated(event);
             }
             BEGIN_INTERFACE_MAP(Notification)
@@ -82,6 +85,7 @@ namespace Plugin {
             , _connectionId(0)
             , _graphicsProperties(nullptr)
             , _connectionProperties(nullptr)
+            , _hdrProperties(nullptr)
             , _notification(this)
         {
             RegisterAll();
@@ -97,6 +101,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_AGGREGATE(Exchange::IGraphicsProperties, _graphicsProperties)
         INTERFACE_AGGREGATE(Exchange::IConnectionProperties, _connectionProperties)
+        INTERFACE_AGGREGATE(Exchange::IHDRProperties, _hdrProperties)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
@@ -131,6 +136,7 @@ namespace Plugin {
         uint32_t _connectionId;
         Exchange::IGraphicsProperties* _graphicsProperties;
         Exchange::IConnectionProperties* _connectionProperties;
+        Exchange::IHDRProperties* _hdrProperties;
         Core::Sink<Notification> _notification;
     };
 

@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "DisplayInfo.h"
 
 namespace WPEFramework {
@@ -47,7 +47,17 @@ namespace Plugin {
                 _connectionProperties->Release();
                 _connectionProperties = nullptr;
             } else {
-                _notification.Initialize(_connectionProperties);
+                _hdrProperties = _connectionProperties->QueryInterface<Exchang::IHDRProperties>();
+                if (_hdrProperties == nullptr) {
+                    _connectionProperties->Release();
+                    _connectionProperties = nullptr;
+                    _graphicsProperties->Release();
+                    _graphicsProperties = nullptr;
+                } else {
+                    _notification.Initialize(_connectionProperties);
+                    Exchange::JConnectionProperties::Register(*this, _connectionProperties);
+                    Exchange::JHDRProperties::Register(*this, _hdrProperties);
+                }
             }
         }
 
@@ -61,6 +71,9 @@ namespace Plugin {
     /* virtual */ void DisplayInfo::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_connectionProperties != nullptr);
+
+        Exchange::JHDRProperties::Unregister(*this);
+        Exchange::JConnectionProperties::Unregister(*this);
 
         _notification.Deinitialize();
 
@@ -76,6 +89,10 @@ namespace Plugin {
             _connectionProperties = nullptr;
         }
 
+        if (_hdrProperties != nullptr) {
+            _hdrProperties->Release();
+            _hdrProperties = nullptr;
+        }
         _connectionId = 0;
     }
 
@@ -125,22 +142,31 @@ namespace Plugin {
         displayInfo.Totalgpuram = _graphicsProperties->TotalGpuRam();
         displayInfo.Freegpuram = _graphicsProperties->FreeGpuRam();
 
-        bool audioPassThrough = false;
-        _connectionProperties->IsAudioPassthrough(audioPassThrough);
-        displayInfo.Audiopassthrough = audioPassThrough;
-        bool connected = false;
-        _connectionProperties->Connected(connected);
-        displayInfo.Connected = connected;
-        uint32_t width = 0;
-        _connectionProperties->Width(width);
-        displayInfo.Width = width;
-        uint32_t height = 0;
-        _connectionProperties->Height(height);
-        displayInfo.Height = height;
+        bool status = false;
+        if (_connectionProperties->IsAudioPassthrough(audioPassThrough) == Core::ERROR_NONE) {
+            displayInfo.Audiopassthrough = audioPassThrough;
+        }
+        if (_connectionProperties->Connected(status) == Core::ERROR_NONE) {
+            displayInfo.Connected = status;
+        }
+
+        uint32_t value = 0;
+        if (_connectionProperties->Width(width) == Core::ERROR_NONE) {
+            displayInfo.Width = value;
+        }
+        if (_connectionProperties->Height(height) == Core::ERROR_NONE) {
+            displayInfo.Height = value;
+        }
 
         Exchange::IConnectionProperties::HDCPProtectionType hdcpProtection;
-        _connectionProperties->HDCPProtection(hdcpProtection);
-        displayInfo.Hdcpprotection = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdcpprotectionType>(hdcpProtection);
+        if (_connectionProperties->HDCPProtection(hdcpProtection) == Core::ERROR_NONE) {
+            displayInfo.Hdcpprotection = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdcpprotectionType>(hdcpProtection);
+        }
+
+        Exchange::IConnectionProperties::HDCPProtectionType hdcpType;
+        if (_hdrProperties->HDRSetting(hdrType) == Core::ERROR_NONE) {
+            displayInfo.Hdrtype = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdrtypeType>(hdrType);
+        }
     }
 
 } // namespace Plugin

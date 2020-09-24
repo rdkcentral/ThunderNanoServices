@@ -26,7 +26,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
+class DisplayInfoImplementation : public Exchange::IHDRProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
 
 public:
     DisplayInfoImplementation()
@@ -178,8 +178,21 @@ public:
 
         _adminLock.Unlock();
     }
+    uint32_t TVCapabilities(IHDRIterator*& type) const override
+    {
+        return Core::ERROR_NONE;
+    }
+    uint32_t STBCapabilities(IHDRIterator*& type) const override
+    {
+        return Core::ERROR_NONE;
+    }
+    uint32_t HDRSetting(HDRType& type) const override
+    {
+        return Core::ERROR_NONE;
+    }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
+        INTERFACE_ENTRY(Exchange::IHDRProperties)
         INTERFACE_ENTRY(Exchange::IGraphicsProperties)
         INTERFACE_ENTRY(Exchange::IConnectionProperties)
     END_INTERFACE_MAP

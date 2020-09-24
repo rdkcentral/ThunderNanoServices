@@ -194,18 +194,17 @@ public:
     {
         return (Core::ERROR_NONE);
     }
-    void Dispatch() const
+    uint32_t TVCapabilities(IHDRIterator*& type) const override
     {
-        _adminLock.Lock();
-
-        std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
-
-        while(index != _observers.end()) {
-            (*index)->Updated();
-            index++;
-        }
-
-        _adminLock.Unlock();
+        return Core::ERROR_NONE;
+    }
+    uint32_t STBCapabilities(IHDRIterator*& type) const override
+    {
+        return Core::ERROR_NONE;
+    }
+    uint32_t HDRSetting(HDRType& type) const override
+    {
+        return Core::ERROR_NONE;
     }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
