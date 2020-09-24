@@ -40,7 +40,7 @@ target_link_libraries(${MODULE_NAME}
 
 find_package(GSTREAMER REQUIRED)
 
-if(DOLBY_SUPPORT)
+if (DOLBY_SUPPORT)
 
     target_sources(${MODULE_NAME}
         PRIVATE
@@ -57,7 +57,22 @@ if(DOLBY_SUPPORT)
             PlayerInfoDolby)
 endif()
 
-if (GSTREAMER_FOUND)
+if (USE_IARM)
+    find_package(DS REQUIRED)
+    find_package(IARMBus REQUIRED)
+    target_include_directories(${MODULE_NAME} PRIVATE
+        ${IARMBUS_INCLUDE_DIRS}
+        ${DS_INCLUDE_DIRS}
+        ../helpers)
+    target_link_libraries(${MODULE_NAME} PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${IARMBUS_LIBRARIES}
+        ${DS_LIBRARIES})
+    target_sources(${MODULE_NAME}
+        PRIVATE
+            IARM/PlatformImplementation.cpp
+            ../helpers/utils.cpp)
+elseif (GSTREAMER_FOUND)
     target_sources(${MODULE_NAME}
         PRIVATE
             GStreamer/PlatformImplementation.cpp)

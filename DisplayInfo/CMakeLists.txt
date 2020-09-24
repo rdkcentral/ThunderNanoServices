@@ -24,6 +24,11 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(BCM_HOST QUIET)
 find_package(NEXUS QUIET)
 find_package(NXCLIENT QUIET)
+find_package(DRM)
+find_path (STAGING_INCDIR glib-2.0)
+include_directories(include)
+include_directories(${STAGING_INCDIR})
+include_directories(${STAGING_INCDIR}/libdrm)
 
 add_library(${MODULE_NAME} SHARED
     DisplayInfo.cpp
@@ -39,7 +44,22 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-if (NXCLIENT_FOUND AND NEXUS_FOUND)
+if (USE_IARM)
+    find_package(DS REQUIRED)
+    find_package(IARMBus REQUIRED)
+    target_include_directories(${MODULE_NAME} PRIVATE ${IARMBUS_INCLUDE_DIRS}
+        ${DS_INCLUDE_DIRS}
+        ../helpers)
+    target_link_libraries(${MODULE_NAME} PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${IARMBUS_LIBRARIES}
+        ${DS_LIBRARIES})
+    target_sources(${MODULE_NAME}
+        PRIVATE
+            IARM/PlatformImplementation.cpp
+            ../helpers/utils.cpp)
+
+elseif (NXCLIENT_FOUND AND NEXUS_FOUND)
     target_sources(${MODULE_NAME}
         PRIVATE
             Nexus/PlatformImplementation.cpp)
