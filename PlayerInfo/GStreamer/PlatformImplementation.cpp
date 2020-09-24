@@ -125,16 +125,8 @@ public:
 public:
     uint32_t AudioCodecs(Exchange::IPlayerProperties::IAudioCodecIterator*& codec) const override
     {
-        codec = (Core::Service<Exchange::IPlayerProperties::AudioCodecIterator>::Create<AudioIteratorImp>(_audioCodecs));
+        codec = (Core::Service<Exchange::IPlayerProperties::AudioCodecIterator>::Create<Exchange::IPlayerProperties::IAudioCodecIterator>(_audioCodecs));
         return (codec != nullptr ? Core::ERROR_NONE : Core::ERROR_GENERAL);
-    }
-    uint32_t VideoCodecs(Exchange::IPlayerProperties::IVideoCodecIterator*& iterator) const override
-    {
-        iterator = Core::Service<VideoIteratorImplementation>::Create<Exchange::IPlayerProperties::IVideoCodecIterator>(_videoCodecs);
-    }
-
-
-        return (Core::ERROR_NONE);
     }
     uint32_t VideoCodecs(Exchange::IPlayerProperties::IVideoCodecIterator*& codec) const override
     {
@@ -156,8 +148,6 @@ public:
     END_INTERFACE_MAP
 
 private:
-
-
     void UpdateAudioCodecInfo()
     {
         AudioCaps audioCaps = {
@@ -176,7 +166,6 @@ private:
         if (GstUtils::GstRegistryCheckElementsForMediaTypes(audioCaps, _audioCodecs) != true) {
             TRACE_L1(_T("There is no Audio Codec support available"));
         }
-
     }
     void UpdateVideoCodecInfo()
     {

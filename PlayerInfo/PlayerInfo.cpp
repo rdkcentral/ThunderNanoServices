@@ -58,7 +58,7 @@ namespace Plugin {
                         Exchange::Dolby::JOutput::Register(*this, _dolbyOut);
                     }
                 } else {
-                     _audioCodecs->Release
+                     _audioCodecs->Release();
                      _audioCodecs = nullptr;
 
                      _player->Release();
