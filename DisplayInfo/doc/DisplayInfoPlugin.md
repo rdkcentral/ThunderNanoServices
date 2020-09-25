@@ -86,6 +86,12 @@ GraphicsProperties interface properties:
 | :-------- | :-------- |
 | [totalgpuram](#property.totalgpuram) <sup>RO</sup> | Total GPU DRAM memory (in bytes) |
 | [freegpuram](#property.freegpuram) <sup>RO</sup> | Free GPU DRAM memory (in bytes) |
+| [audiopassthrough](#property.audiopassthrough)<sup>RO</sup> | Audio Pass through is support for this device |
+| [connected](#property.connected)<sup>RO</sup> | HDMI display connection status |
+| [width](#property.width)<sup>RO</sup> | Width of the connected HDMI display |
+| [height](#property.height)<sup>RO</sup> | Height of the connected HDMI display |
+| [hdcpprotection](#property.hdcpprotection)<sup>RO</sup> | HDCP Protection Type |
+| [hdrsetting](#property.hdrsetting)<sup>RO</sup> | HDR Type used |
 
 <a name="property.totalgpuram"></a>
 ## *totalgpuram <sup>property</sup>*
@@ -153,3 +159,201 @@ Provides access to the free GPU DRAM memory (in bytes).
     "result": 0
 }
 ```
+<a name="property.audiopassthrough"></a>
+## *audiopassthrough <sup>property</sup>*
+
+Provides the status of the Audio Pass through is support for this device or not
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | boolean | Audio Pass through is support for this device |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "DisplayInfo.1.audiopassthrough"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": true
+}
+```
+<a name="property.connected"></a>
+## *totalgpuram <sup>property</sup>*
+
+Provides status of HDMI display connected or not
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | boolean | HDMI display connection status |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "DisplayInfo.1.connected"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": true
+}
+```
+<a name="property.width"></a>
+## *totalgpuram <sup>property</sup>*
+
+Provides width of the connected HDMI display.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | integer | Width of the connected HDMI display |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "DisplayInfo.1.width"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": 720
+}
+```
+<a name="property.height"></a>
+## *totalgpuram <sup>property</sup>*
+
+Provides height of the connected HDMI display.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | integer | Height of the connected HDMI display |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "DisplayInfo.1.height"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": 1280
+}
+```
+<a name="property.hdcpprotection"></a>
+## *totalgpuram <sup>property</sup>*
+
+Provides status of HDCP Protection
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | string |HDCP Protection (must be one of the following: *Unencrypted*, *HDCP1x*, *HDCP2x*) |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "DisplayInfo.1.hdcpprotection"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": Unencrypted
+}
+```
+<a name="property.hdrsetting"></a>
+## *totalgpuram <sup>property</sup>*
+
+Provides HDR Type used.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | string | HDR Type used (must be one of the following: *HDROff*, *HDR10*, *Resolution480P*, *HDR10Plus*, *HDRHLG*, *HDRDolbyVision*, *HDRTechnicolor*)) |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "DisplayInfo.1.hdrsetting"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": HDROff
+}
+`````
