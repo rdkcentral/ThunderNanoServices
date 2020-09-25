@@ -20,12 +20,10 @@
 #pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME Plugin_DisplayInfo
+#define MODULE_NAME Plugin_PerformanceMonitor
 #endif
 
-#include <core/core.h>
 #include <plugins/plugins.h>
-#include <tracing/tracing.h>
 
 #undef EXTERNAL
 #define EXTERNAL
