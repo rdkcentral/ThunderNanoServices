@@ -17,15 +17,6 @@
  * limitations under the License.
  */
  
-#pragma once
+#include "Module.h"
 
-#ifndef MODULE_NAME
-#define MODULE_NAME Plugin_DisplayInfo
-#endif
-
-#include <core/core.h>
-#include <plugins/plugins.h>
-#include <tracing/tracing.h>
-
-#undef EXTERNAL
-#define EXTERNAL
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)

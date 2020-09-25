@@ -101,7 +101,7 @@ Reloads a static or non-static network interface adapter.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.device | string | Network interface name |
+| params.interface | string | Network interface name |
 
 ### Result
 
@@ -125,7 +125,7 @@ Reloads a static or non-static network interface adapter.
     "id": 1234567890,
     "method": "NetworkControl.1.reload",
     "params": {
-        "device": "eth0"
+        "interface": "eth0"
     }
 }
 ```
@@ -150,7 +150,7 @@ Also see: [connectionchange](#event.connectionchange)
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.device | string | Network interface name |
+| params.interface | string | Network interface name |
 
 ### Result
 
@@ -174,7 +174,7 @@ Also see: [connectionchange](#event.connectionchange)
     "id": 1234567890,
     "method": "NetworkControl.1.request",
     "params": {
-        "device": "eth0"
+        "interface": "eth0"
     }
 }
 ```
@@ -197,7 +197,7 @@ Reloads a static network interface adapter.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.device | string | Network interface name |
+| params.interface | string | Network interface name |
 
 ### Result
 
@@ -221,7 +221,7 @@ Reloads a static network interface adapter.
     "id": 1234567890,
     "method": "NetworkControl.1.assign",
     "params": {
-        "device": "eth0"
+        "interface": "eth0"
     }
 }
 ```
@@ -244,7 +244,7 @@ Flushes a network interface adapter.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.device | string | Network interface name |
+| params.interface | string | Network interface name |
 
 ### Result
 
@@ -268,7 +268,7 @@ Flushes a network interface adapter.
     "id": 1234567890,
     "method": "NetworkControl.1.flush",
     "params": {
-        "device": "eth0"
+        "interface": "eth0"
     }
 }
 ```
@@ -514,12 +514,12 @@ NetworkControl interface events:
 
 | Event | Description |
 | :-------- | :-------- |
-| [connectionchange](#event.connectionchange) | Notifies about connection status (created, updated, removed, connected and connectionfailed) |
+| [connectionchange](#event.connectionchange) | Notifies about connection status (created, updated, removed, connected, ipassigned and connectionfailed) |
 
 <a name="event.connectionchange"></a>
 ## *connectionchange <sup>event</sup>*
 
-Notifies about connection status (created, updated, removed, connected and connectionfailed).
+Notifies about connection status (created, updated, removed, connected, ipassigned and connectionfailed).
 
 ### Parameters
 
@@ -528,7 +528,7 @@ Notifies about connection status (created, updated, removed, connected and conne
 | params | object |  |
 | params.name | string | Network interface name |
 | params.address | string | IP Address of network interface, if it is connected |
-| params.status | string | Status of the interface, update, connected or not (must be one of the following: *created*, *updated*, *removed*, *connected*, *connectionfailed*) |
+| params.status | string | Status of the interface, update, connected or not (must be one of the following: *created*, *updated*, *removed*, *connected*, *ipassigned*, *connectionfailed*) |
 
 ### Example
 

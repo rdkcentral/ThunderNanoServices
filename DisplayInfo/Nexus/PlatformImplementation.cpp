@@ -39,7 +39,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
+class DisplayInfoImplementation : public Exchange::IHDRProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
 public:
     DisplayInfoImplementation()
        : _width(0)
@@ -81,11 +81,12 @@ public:
 
 public:
     // Graphics Properties interface
-    uint64_t TotalGpuRam() const override
+    uint32_t TotalGpuRam(uint64_t& total) const override
     {
-        return _totalGpuRam;
+        total = _totalGpuRam;
+        return (Core::ERROR_NONE);
     }
-    uint64_t FreeGpuRam() const override
+    uint32_t FreeGpuRam(uint64_t& free) const override
     {
         uint64_t freeRam = 0;
         NEXUS_MemoryStatus status;
@@ -115,7 +116,8 @@ public:
             }
         }
 #endif
-        return (freeRam);
+        free = freeRam;
+        return (Core::ERROR_NONE);
     }
 
     // Connection Properties interface
@@ -151,49 +153,69 @@ public:
 
         return (Core::ERROR_NONE);
     }
-
-    bool IsAudioPassthrough () const override
+    uint32_t IsAudioPassthrough (bool& passthru) const override
     {
-        return _audioPassthrough;
+        passthru = _audioPassthrough;
+        return (Core::ERROR_NONE);
     }
-    bool Connected() const override
+    uint32_t Connected(bool& isconnected) const override
     {
-        return _connected;
-    } 
-    uint32_t Width() const override
-    {
-        return _width;
+        isconnected = _connected;
+        return (Core::ERROR_NONE);
     }
-    uint32_t Height() const override
+    uint32_t Width(uint32_t& width) const override
     {
-        return _height;
+        width = _width;
+        return (Core::ERROR_NONE);
     }
-    uint32_t VerticalFreq() const override
+    uint32_t Height(uint32_t& height) const override
     {
-        return _verticalFreq;
+        height = _height;
+        return (Core::ERROR_NONE);
     }
-    HDRType Type() const override
+    uint32_t VerticalFreq(uint32_t& vf) const override
     {
-        return _type;
+        vf = _verticalFreq;
+        return (Core::ERROR_NONE);
     }
-    HDCPProtectionType HDCPProtection() const override {
-        return _hdcpprotection;
+    uint32_t HDCPProtection(HDCPProtectionType& value) const override
+    {
+        value = _hdcpprotection;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t HDCPProtection(const HDCPProtectionType value) override
+    {
+        _hdcpprotection = value;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t EDID(uint16_t& length, uint8_t data[]) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t PortName(string& name) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t TVCapabilities(IHDRIterator*& type) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t STBCapabilities(IHDRIterator*& type) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t HDRSetting(HDRType& type) const override
+    {
+        type = _type;
+        return (Core::ERROR_NONE);
     }
     void Dispatch() const
     {
-        _adminLock.Lock();
-
-        std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
-
-        while(index != _observers.end()) {
-            (*index)->Updated();
-            index++;
-        }
-
-        _adminLock.Unlock();
+        // To be handled based on events
     }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
+        INTERFACE_ENTRY(Exchange::IHDRProperties)
         INTERFACE_ENTRY(Exchange::IGraphicsProperties)
         INTERFACE_ENTRY(Exchange::IConnectionProperties)
     END_INTERFACE_MAP

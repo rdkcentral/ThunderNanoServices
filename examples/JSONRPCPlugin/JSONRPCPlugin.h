@@ -638,6 +638,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_ENTRY(Exchange::IPerformance)
+        INTERFACE_ENTRY(Exchange::IMath)
         END_INTERFACE_MAP
 
     public:

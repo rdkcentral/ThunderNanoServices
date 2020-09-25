@@ -97,6 +97,10 @@ The table below lists configuration options of the plugin.
 | configuration?.whitelist?.domain[#] | string | <sup>*(optional)*</sup> Domain allowed to access from origin |
 | configuration?.whitelist?.subdomain | string | <sup>*(optional)*</sup> whether it is also OK to access subdomains of domains listed in domain |
 | configuration?.localstorageenabled | boolean | <sup>*(optional)*</sup> Controls the local storage availability |
+| configuration?.logtosystemconsoleenabled | boolean | <sup>*(optional)*</sup> Enable page loging to system console (stderr) |
+| configuration?.watchdogchecktimeoutinseconds | number | <sup>*(optional)*</sup> How often to check main event loop for responsiveness (0 - disable) |
+| configuration?.watchdoghangthresholdtinseconds | number | <sup>*(optional)*</sup> The amount of time to give a process to recover before declaring a hang state |
+| configuration?.loadblankpageonsuspendenabled | boolean | <sup>*(optional)*</sup> Load 'about:blank' before suspending the page |
 
 <a name="head.Methods"></a>
 # Methods
@@ -109,6 +113,12 @@ WebKitBrowser interface methods:
 | :-------- | :-------- |
 | [bridgereply](#method.bridgereply) | A response for legacy $badger |
 | [bridgeevent](#method.bridgeevent) | Send legacy $badger event |
+
+Browser interface methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [delete](#method.delete) | Removes contents of a directory from the persistent storage |
 
 <a name="method.bridgereply"></a>
 ## *bridgereply <sup>method</sup>*
@@ -186,6 +196,57 @@ Send legacy $badger event.
     "result": null
 }
 ```
+<a name="method.delete"></a>
+## *delete <sup>method</sup>*
+
+Removes contents of a directory from the persistent storage.
+
+### Description
+
+Use this method to recursively delete contents of a directory
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.path | string | Path to directory (within the persistent storage) to delete contents of |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | The given path was incorrect |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "WebKitBrowser.1.delete",
+    "params": {
+        "path": ".cache/wpe/disk-cache"
+    }
+}
+```
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": null
+}
+```
 <a name="head.Properties"></a>
 # Properties
 
@@ -206,7 +267,7 @@ Browser interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [url](#property.url) | URL loaded in the browser |
-| [visibility](#property.visibility) | Current browser visibility |
+| [visible](#property.visible) | Current browser visible |
 | [fps](#property.fps) <sup>RO</sup> | Current number of frames per second the browser is rendering |
 
 StateControl interface properties:
@@ -547,10 +608,10 @@ Also see: [urlchange](#event.urlchange)
     "result": "null"
 }
 ```
-<a name="property.visibility"></a>
-## *visibility <sup>property</sup>*
+<a name="property.visible"></a>
+## *visible <sup>property</sup>*
 
-Provides access to the current browser visibility.
+Provides access to the current browser visible.
 
 Also see: [visibilitychange](#event.visibilitychange)
 
@@ -558,7 +619,13 @@ Also see: [visibilitychange](#event.visibilitychange)
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Current browser visibility (must be one of the following: *visible*, *hidden*) |
+| (property) | string | Current browser visible (must be one of the following: *visible*, *hidden*) |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Returned when the operation is unavailable |
 
 ### Example
 
@@ -568,7 +635,7 @@ Also see: [visibilitychange](#event.visibilitychange)
 {
     "jsonrpc": "2.0",
     "id": 1234567890,
-    "method": "WebKitBrowser.1.visibility"
+    "method": "WebKitBrowser.1.visible"
 }
 ```
 #### Get Response
@@ -586,7 +653,7 @@ Also see: [visibilitychange](#event.visibilitychange)
 {
     "jsonrpc": "2.0",
     "id": 1234567890,
-    "method": "WebKitBrowser.1.visibility",
+    "method": "WebKitBrowser.1.visible",
     "params": "visible"
 }
 ```
@@ -704,7 +771,7 @@ Browser interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [urlchange](#event.urlchange) | Signals a URL change in the browser |
-| [visibilitychange](#event.visibilitychange) | Signals a visibility change of the browser |
+| [visibilitychange](#event.visibilitychange) | Signals a visible change of the browser |
 | [pageclosure](#event.pageclosure) | Notifies that the web page requests to close its window |
 
 StateControl interface events:
@@ -809,7 +876,7 @@ Signals a URL change in the browser.
 <a name="event.visibilitychange"></a>
 ## *visibilitychange <sup>event</sup>*
 
-Signals a visibility change of the browser.
+Signals a visible change of the browser.
 
 ### Parameters
 
