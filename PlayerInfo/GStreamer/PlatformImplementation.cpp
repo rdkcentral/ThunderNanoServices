@@ -103,8 +103,10 @@ private:
 
 public:
     PlayerInfoImplementation()
+#if DOLBY_SUPPORT
         : _dolbyOut(Core::ServiceAdministrator::Instance()
                         .Instantiate<Exchange::Dolby::IOutput>(Core::Library(), "DolbyOutputImplementation", ~0))
+#endif
     {
         gst_init(0, nullptr);
         UpdateAudioCodecInfo();
@@ -117,9 +119,12 @@ public:
     {
         _audioCodecs.clear();
         _videoCodecs.clear();
+
+#if DOLBY_SUPPORT
         if(_dolbyOut != nullptr) {
             _dolbyOut->Release();
         }
+#endif
     }
 
 public:
@@ -144,7 +149,9 @@ public:
 
     BEGIN_INTERFACE_MAP(PlayerInfoImplementation)
     INTERFACE_ENTRY(Exchange::IPlayerProperties)
+#if DOLBY_SUPPORT
     INTERFACE_AGGREGATE(Exchange::Dolby::IOutput, _dolbyOut)
+#endif
     END_INTERFACE_MAP
 
 private:
@@ -186,7 +193,9 @@ private:
 private:
     std::list<Exchange::IPlayerProperties::AudioCodec> _audioCodecs;
     std::list<Exchange::IPlayerProperties::VideoCodec> _videoCodecs;
+#if DOLBY_SUPPORT
     Exchange::Dolby::IOutput* _dolbyOut;
+#endif
 };
 
     SERVICE_REGISTRATION(PlayerInfoImplementation, 1, 0);

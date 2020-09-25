@@ -21,14 +21,15 @@
 
 #include "Module.h"
 #include <interfaces/json/JsonData_PlayerInfo.h>
-#include <interfaces/json/JDolbyOutput.h>
 #include <interfaces/json/JPlayerProperties.h>
+#include <interfaces/json/JDolbyOutput.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
     class PlayerInfo : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
+#if DOLBY_SUPPORT
         class Notification : protected Exchange::Dolby::IOutput::INotification {
         private:
             Notification() = delete;
@@ -72,7 +73,7 @@ namespace Plugin {
             PlayerInfo& _parent;
             Exchange::Dolby::IOutput* _client;
         };
-
+#endif
     public:
         PlayerInfo(const PlayerInfo&) = delete;
         PlayerInfo& operator=(const PlayerInfo&) = delete;
@@ -83,7 +84,9 @@ namespace Plugin {
             , _player(nullptr)
             , _audioCodecs(nullptr)
             , _videoCodecs(nullptr)
+#if DOLBY_SUPPORT
             , _notification(this)
+#endif
         {
         }
 
@@ -111,11 +114,14 @@ namespace Plugin {
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
-        uint32_t get_playerinfo(JsonData::PlayerInfo::CodecsData&) const;
         void Info(JsonData::PlayerInfo::CodecsData&) const;
+
+#if DOLBY_SUPPORT
+        uint32_t get_playerinfo(JsonData::PlayerInfo::CodecsData&) const;
 
         uint32_t get_dolbymode(Core::JSON::EnumType<JsonData::PlayerInfo::DolbyType>&) const;
         uint32_t set_dolbymode(const Core::JSON::EnumType<JsonData::PlayerInfo::DolbyType>&);
+#endif
 
     private:
         uint8_t _skipURL;
@@ -124,8 +130,10 @@ namespace Plugin {
         Exchange::IPlayerProperties* _player;
         Exchange::IPlayerProperties::IAudioCodecIterator* _audioCodecs;
         Exchange::IPlayerProperties::IVideoCodecIterator* _videoCodecs;
+#if DOLBY_SUPPORT
         Exchange::Dolby::IOutput* _dolbyOut;
         Core::Sink<Notification> _notification;
+#endif
     };
 
 } // namespace Plugin

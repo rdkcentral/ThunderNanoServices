@@ -62,17 +62,17 @@ namespace WPEFramework
 
             uint32_t AtmosMetadata(bool& supported) const override
             {
-                return (Core::ERROR_NOTSUPPORTED)
+                return (Core::ERROR_UNAVAILABLE);
             }
 
             uint32_t SoundMode(Exchange::Dolby::IOutput::SoundModes& mode) const override
             {
-                return (Core::ERROR_NOTSUPPORTED)
+                return (Core::ERROR_UNAVAILABLE);
             }
 
-            uint32_t EnableAtmosOutput(const bool& enable) const override
+            uint32_t EnableAtmosOutput(const bool& enable) override
             {
-                return (Core::ERROR_NOTSUPPORTED)
+                return (Core::ERROR_UNAVAILABLE);
             }
 
             uint32_t Mode(const Exchange::Dolby::IOutput::Type& mode) override

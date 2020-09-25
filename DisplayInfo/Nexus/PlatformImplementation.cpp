@@ -81,11 +81,12 @@ public:
 
 public:
     // Graphics Properties interface
-    uint64_t TotalGpuRam() const override
+    uint32_t TotalGpuRam(uint64_t& total) const override
     {
-        return _totalGpuRam;
+        total = _totalGpuRam;
+        return (Core::ERROR_NONE);
     }
-    uint64_t FreeGpuRam() const override
+    uint32_t FreeGpuRam(uint64_t& free) const override
     {
         uint64_t freeRam = 0;
         NEXUS_MemoryStatus status;
@@ -115,7 +116,8 @@ public:
             }
         }
 #endif
-        return (freeRam);
+        free = freeRam;
+        return (Core::ERROR_NONE);
     }
 
     // Connection Properties interface
@@ -186,11 +188,11 @@ public:
         _hdcpprotection = value;
         return (Core::ERROR_NONE);
     }
-    uint32_t EDID (uint16_t& length, uint8_t data[]) const override
+    uint32_t EDID(uint16_t& length, uint8_t data[]) const override
     {
         return (Core::ERROR_UNAVAILABLE);
     }
-    uint32_t PortName (string& name) const override
+    uint32_t PortName(string& name) const override
     {
         return (Core::ERROR_UNAVAILABLE);
     }
@@ -204,7 +206,8 @@ public:
     }
     uint32_t HDRSetting(HDRType& type) const override
     {
-        return (Core::ERROR_UNAVAILABLE);
+        type = _type;
+        return (Core::ERROR_NONE);
     }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)

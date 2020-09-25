@@ -57,15 +57,17 @@ public:
 
 public:
     // Graphics Properties interface
-    uint64_t TotalGpuRam() const override
+    uint32_t TotalGpuRam(uint64_t& total) const override
     {
-        return _totalGpuRam;
+        total = _totalGpuRam;
+        return (Core::ERROR_NONE);
     }
-    uint64_t FreeGpuRam() const override
+    uint32_t FreeGpuRam(uint64_t& free) const override
     {
         uint64_t result;
         Command("get_mem reloc ", result);
-        return (result);
+        free = (result);
+        return (Core::ERROR_NONE);
     }
 
     // Connection Properties interface
@@ -138,11 +140,11 @@ public:
         _value = value;
         return (Core::ERROR_NONE);
     }
-    uint32_t EDID (uint16_t& length, uint8_t data[]) const override
+    uint32_t EDID(uint16_t& length, uint8_t data[]) const override
     {
         return (Core::ERROR_UNAVAILABLE);
     }
-    uint32_t PortName (string& name) const override
+    uint32_t PortName(string& name) const override
     {
         return (Core::ERROR_UNAVAILABLE);
     }
@@ -156,7 +158,8 @@ public:
     }
     uint32_t HDRSetting(HDRType& type) const override
     {
-        return (Core::ERROR_UNAVAILABLE);
+        type = HDR_OFF;
+        return (Core::ERROR_NONE);
     }
 
     void Dispatch()

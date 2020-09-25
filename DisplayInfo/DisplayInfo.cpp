@@ -55,6 +55,7 @@ namespace Plugin {
                     _graphicsProperties = nullptr;
                 } else {
                     _notification.Initialize(_connectionProperties);
+                    Exchange::JGraphicsProperties::Register(*this, _graphicsProperties);
                     Exchange::JConnectionProperties::Register(*this, _connectionProperties);
                     Exchange::JHDRProperties::Register(*this, _hdrProperties);
                 }
@@ -139,13 +140,20 @@ namespace Plugin {
 
     void DisplayInfo::Info(JsonData::DisplayInfo::DisplayinfoData& displayInfo) const
     {
-        displayInfo.Totalgpuram = _graphicsProperties->TotalGpuRam();
-        displayInfo.Freegpuram = _graphicsProperties->FreeGpuRam();
+        uint64_t ram = 0;
+        if (_graphicsProperties->TotalGpuRam(ram) == Core::ERROR_NONE) {
+            displayInfo.Totalgpuram = ram;
+        }
+        ram = 0;
+        if (_graphicsProperties->FreeGpuRam(ram) == Core::ERROR_NONE) {
+            displayInfo.Freegpuram = ram;
+        }
 
         bool status = false;
         if (_connectionProperties->IsAudioPassthrough(status) == Core::ERROR_NONE) {
             displayInfo.Audiopassthrough = status;
         }
+        status = false;
         if (_connectionProperties->Connected(status) == Core::ERROR_NONE) {
             displayInfo.Connected = status;
         }
@@ -154,16 +162,17 @@ namespace Plugin {
         if (_connectionProperties->Width(value) == Core::ERROR_NONE) {
             displayInfo.Width = value;
         }
+        value = 0;
         if (_connectionProperties->Height(value) == Core::ERROR_NONE) {
             displayInfo.Height = value;
         }
 
-        Exchange::IConnectionProperties::HDCPProtectionType hdcpProtection;
-        if (const_cast<Exchange::IConnectionProperties*>(_connectionProperties)->HDCPProtection(hdcpProtection) == Core::ERROR_NONE) {
+        Exchange::IConnectionProperties::HDCPProtectionType hdcpProtection(Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted);
+        if ((const_cast<const Exchange::IConnectionProperties*>(_connectionProperties))->HDCPProtection(hdcpProtection) == Core::ERROR_NONE) {
             displayInfo.Hdcpprotection = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdcpprotectionType>(hdcpProtection);
         }
 
-        Exchange::IHDRProperties::HDRType hdrType;
+        Exchange::IHDRProperties::HDRType hdrType(Exchange::IHDRProperties::HDRType::HDR_OFF);
         if (_hdrProperties->HDRSetting(hdrType) == Core::ERROR_NONE) {
             displayInfo.Hdrtype = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdrtypeType>(hdrType);
         }

@@ -50,6 +50,10 @@ if (DOLBY_SUPPORT)
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/Dolby/include)
 
+    target_compile_definitions(${MODULE_NAME}
+        PRIVATE
+            DOLBY_SUPPORT=1)
+
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Dolby)
 
     target_link_libraries(${MODULE_NAME}

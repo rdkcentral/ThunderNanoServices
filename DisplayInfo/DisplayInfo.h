@@ -21,6 +21,7 @@
 
 #include "Module.h"
 #include <interfaces/json/JsonData_DisplayInfo.h>
+#include <interfaces/json/JGraphicsProperties.h>
 #include <interfaces/json/JConnectionProperties.h>
 #include <interfaces/json/JHDRProperties.h>
 

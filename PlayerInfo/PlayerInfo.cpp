@@ -44,12 +44,13 @@ namespace Plugin {
 
             if ((_player->AudioCodecs(_audioCodecs) == Core::ERROR_NONE) && (_audioCodecs != nullptr)) {
 
-                if ((_player->VideoCodecs(_videoCodecs) == Core::ERROR_NONE) && (_videoCodecs == nullptr)) {
+                if ((_player->VideoCodecs(_videoCodecs) == Core::ERROR_NONE) && (_videoCodecs != nullptr)) {
                     Exchange::JPlayerProperties::Register(*this, _player);
                     // The code execution should proceed regardless of the _dolbyOut
                     // value, as it is not a essential.
                     // The relevant JSONRPC endpoints will return ERROR_UNAVAILABLE,
                     // if it hasn't been initialized.
+#if DOLBY_SUPPORT
                     _dolbyOut = _player->QueryInterface<Exchange::Dolby::IOutput>();
                     if(_dolbyOut == nullptr){
                         SYSLOG(Logging::Startup, (_T("Dolby output switching service is unavailable.")));
@@ -57,6 +58,7 @@ namespace Plugin {
                         _notification.Initialize(_dolbyOut);
                         Exchange::Dolby::JOutput::Register(*this, _dolbyOut);
                     }
+#endif
                 } else {
                      _audioCodecs->Release();
                      _audioCodecs = nullptr;
@@ -83,10 +85,12 @@ namespace Plugin {
             Exchange::JPlayerProperties::Unregister(*this);
             _player->Release();
         }
+#if DOLBY_SUPPORT
         if (_dolbyOut != nullptr) {
             _notification.Deinitialize();
             Exchange::Dolby::JOutput::Unregister(*this);
         }
+#endif
         _connectionId = 0;
     }
 
