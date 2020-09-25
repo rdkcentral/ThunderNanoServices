@@ -39,7 +39,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
+class DisplayInfoImplementation : public Exchange::IHDRProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
 public:
     DisplayInfoImplementation()
        : _width(0)
@@ -209,8 +209,13 @@ public:
         type = _type;
         return (Core::ERROR_NONE);
     }
+    void Dispatch() const
+    {
+        // To be handled based on events
+    }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
+        INTERFACE_ENTRY(Exchange::IHDRProperties)
         INTERFACE_ENTRY(Exchange::IGraphicsProperties)
         INTERFACE_ENTRY(Exchange::IConnectionProperties)
     END_INTERFACE_MAP
