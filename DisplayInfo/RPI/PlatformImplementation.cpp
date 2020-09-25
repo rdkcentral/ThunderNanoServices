@@ -26,7 +26,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
+class DisplayInfoImplementation : public Exchange::IHDRProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
 
 public:
     DisplayInfoImplementation()
@@ -35,6 +35,7 @@ public:
         , _connected(false)
         , _totalGpuRam(0)
         , _audioPassthrough(false)
+        , _value(HDCP_Unencrypted)
         , _adminLock()
         , _activity(*this) {
 
@@ -56,15 +57,17 @@ public:
 
 public:
     // Graphics Properties interface
-    uint64_t TotalGpuRam() const override
+    uint32_t TotalGpuRam(uint64_t& total) const override
     {
-        return _totalGpuRam;
+        total = _totalGpuRam;
+        return (Core::ERROR_NONE);
     }
-    uint64_t FreeGpuRam() const override
+    uint32_t FreeGpuRam(uint64_t& free) const override
     {
         uint64_t result;
         Command("get_mem reloc ", result);
-        return (result);
+        free = (result);
+        return (Core::ERROR_NONE);
     }
 
     // Connection Properties interface
@@ -100,34 +103,65 @@ public:
 
         return (Core::ERROR_NONE);
     }
-    bool IsAudioPassthrough () const override
+    uint32_t IsAudioPassthrough (bool& passthru) const override
     {
-        return _audioPassthrough;
+        passthru = _audioPassthrough;
+        return (Core::ERROR_NONE);
     }
-    bool Connected() const override
+    uint32_t Connected(bool& isconnected) const override
     {
-        return _connected;
+        isconnected = _connected;
+        return (Core::ERROR_NONE);
     }
-    uint32_t Width() const override
+    uint32_t Width(uint32_t& width) const override
     {
-        return _width;
+        width = _width;
+        return (Core::ERROR_NONE);
     }
-    uint32_t Height() const override
+    uint32_t Height(uint32_t& height) const override
     {
-        return _height;
+        height = _height;
+        return (Core::ERROR_NONE);
     }
-    uint32_t VerticalFreq() const override
+    uint32_t VerticalFreq(uint32_t& vf) const override
     {
-        return ~0;
+        vf = ~0;
+        return (Core::ERROR_NONE);
     }
     // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
-    HDCPProtectionType HDCPProtection() const override {
-        return HDCPProtectionType::HDCP_Unencrypted;
-    }
-    HDRType Type() const override
+    uint32_t HDCPProtection(HDCPProtectionType& value) const override
     {
-        return HDR_OFF;
+        value = HDCPProtectionType::HDCP_Unencrypted;
+        return (Core::ERROR_NONE);
     }
+    // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
+    uint32_t HDCPProtection(const HDCPProtectionType value) override
+    {
+        _value = value;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t EDID(uint16_t& length, uint8_t data[]) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t PortName(string& name) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t TVCapabilities(IHDRIterator*& type) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t STBCapabilities(IHDRIterator*& type) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t HDRSetting(HDRType& type) const override
+    {
+        type = HDR_OFF;
+        return (Core::ERROR_NONE);
+    }
+
     void Dispatch()
     {
         TV_DISPLAY_STATE_T tvState;
@@ -155,13 +189,14 @@ public:
         std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
 
         if (index != _observers.end()) {
-            (*index)->Updated();
+            (*index)->Updated(Exchange::IConnectionProperties::INotification::Source::HDMI_CHANGE);
         }
 
         _adminLock.Unlock();
     }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
+        INTERFACE_ENTRY(Exchange::IHDRProperties)
         INTERFACE_ENTRY(Exchange::IGraphicsProperties)
         INTERFACE_ENTRY(Exchange::IConnectionProperties)
     END_INTERFACE_MAP
@@ -261,6 +296,7 @@ private:
     bool _connected;
     uint64_t _totalGpuRam;
     bool _audioPassthrough;
+    HDCPProtectionType _value;
 
     std::list<IConnectionProperties::INotification*> _observers;
 
