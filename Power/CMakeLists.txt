@@ -71,7 +71,11 @@ if(BCM_PM_FOUND)
     if (NXCLIENT_FOUND)
         message("Configuring for Nexus....")
         set(POWER_LIBS -Wl,--whole-archive ${BCM_PM_LIBRARIES} -Wl,--no-whole-archive)
-        if (CODE_FROM_EXTERNAL_REPOSITORY)
+        if (POWER_IMPLEMENTATION_PATH)
+            target_sources(${MODULE_NAME}
+                PRIVATE
+                    ${POWER_IMPLEMENTATION_PATH}/PowerImplementation.cpp)
+        elseif (CODE_FROM_EXTERNAL_REPOSITORY)
             include(GetExternalCode)
             GetExternalCode(
                 GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Power"

@@ -43,7 +43,11 @@ set_target_properties(${MODULE_NAME}
         CXX_STANDARD_REQUIRED YES)
 
 if (NXCLIENT_FOUND AND NEXUS_FOUND)
-    if (CODE_FROM_EXTERNAL_REPOSITORY)
+    if (SNAPSHOT_IMPLEMENTATION_PATH)
+        target_sources(${MODULE_NAME}
+            PRIVATE
+                ${SNAPSHOT_IMPLEMENTATION_PATH}/NexusCapture.cpp)
+    elseif (CODE_FROM_EXTERNAL_REPOSITORY)
         include(GetExternalCode)
         GetExternalCode(
             GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Snapshot"

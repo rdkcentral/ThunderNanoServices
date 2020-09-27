@@ -57,7 +57,11 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
         target_compile_definitions(${MODULE_NAME} 
             PRIVATE 
                 IR_ENABLED)
-        if (CODE_FROM_EXTERNAL_REPOSITORY)
+        if (REMOTECONTROL_IMPLEMENTATION_PATH)
+            target_sources(${MODULE_NAME}
+                PRIVATE
+                    ${REMOTECONTROL_IMPLEMENTATION_PATH}/IRRemote.cpp)
+        elseif (CODE_FROM_EXTERNAL_REPOSITORY)
             include(GetExternalCode)
             GetExternalCode(
                 GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/RemoteControl"

@@ -20,7 +20,9 @@ set(TARGET ${PLATFORM_COMPOSITOR})
 message("Setup ${TARGET} v${VERSION}...")
 
 if (PLUGIN_COMPOSITOR_NXSERVER)
-if (CODE_FROM_EXTERNAL_REPOSITORY)
+if (COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH)
+    add_subdirectory (${COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH})
+elseif (CODE_FROM_EXTERNAL_REPOSITORY)
     include(GetExternalCode)
     GetExternalCode(
         GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor"
