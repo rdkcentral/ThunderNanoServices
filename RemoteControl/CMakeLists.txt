@@ -57,8 +57,7 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
         target_compile_definitions(${MODULE_NAME} 
             PRIVATE 
                 IR_ENABLED)
-        option(REMOTECONTROL_EXTERNAL_REPOSITORY "Include code from External Repository" ON)
-        if (REMOTECONTROL_EXTERNAL_REPOSITORY)
+        if (CODE_FROM_EXTERNAL_REPOSITORY)
             include(GetExternalCode)
             GetExternalCode(
                 GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/RemoteControl"

@@ -71,8 +71,7 @@ if(BCM_PM_FOUND)
     if (NXCLIENT_FOUND)
         message("Configuring for Nexus....")
         set(POWER_LIBS -Wl,--whole-archive ${BCM_PM_LIBRARIES} -Wl,--no-whole-archive)
-        option(POWER_EXTERNAL_REPOSITORY "Include code from External Repository" ON)
-        if (POWER_EXTERNAL_REPOSITORY)
+        if (CODE_FROM_EXTERNAL_REPOSITORY)
             include(GetExternalCode)
             GetExternalCode(
                 GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Power"

@@ -43,8 +43,7 @@ set_target_properties(${MODULE_NAME}
         CXX_STANDARD_REQUIRED YES)
 
 if (NXCLIENT_FOUND AND NEXUS_FOUND)
-    option(SNAPSHOT_EXTERNAL_REPOSITORY "Include code from External Repository" ON)
-    if (SNAPSHOT_EXTERNAL_REPOSITORY)
+    if (CODE_FROM_EXTERNAL_REPOSITORY)
         include(GetExternalCode)
         GetExternalCode(
             GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Snapshot"

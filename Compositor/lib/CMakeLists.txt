@@ -16,8 +16,7 @@
 # limitations under the License.
 
 if("${PLUGIN_COMPOSITOR_IMPLEMENTATION}" STREQUAL "Nexus")
-    option(COMPOSITOR_EXTERNAL_REPOSITORY "Include code from External Repository" ON)
-    if (COMPOSITOR_EXTERNAL_REPOSITORY)
+    if (CODE_FROM_EXTERNAL_REPOSITORY)
         include(GetExternalCode)
         GetExternalCode(
             GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor"
