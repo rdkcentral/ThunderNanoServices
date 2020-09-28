@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+#include "../../Module.h"
 #include "Dolby.h"
 #include "audio_if.h"
 #include <string.h>

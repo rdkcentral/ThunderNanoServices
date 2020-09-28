@@ -15,36 +15,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find_package(${NAMESPACE}Protocols REQUIRED)
-find_package(securityagent QUIET)
+set(PLUGIN_NAME PerformanceMonitor)
+set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+
+find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-add_executable(JSONRPCClient JSONRPCClient.cpp)
+add_library(${MODULE_NAME} SHARED
+        Module.cpp
+        PerformanceMonitor.cpp
+        PerformanceMonitorJsonRpc.cpp)
 
-set_target_properties(JSONRPCClient PROPERTIES
+set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
-        CXX_STANDARD_REQUIRED YES
-        )     
+        CXX_STANDARD_REQUIRED YES)
 
-target_link_libraries(JSONRPCClient 
-        PRIVATE
-        ${NAMESPACE}Protocols::${NAMESPACE}Protocols
-        CompileSettingsDebug::CompileSettingsDebug
-    )
-
-if (securityagent_FOUND)
-    target_link_libraries(JSONRPCClient
-        PRIVATE
-        securityagent::securityagent
-    )
-    target_compile_definitions(JSONRPCClient
-        PRIVATE
-            ENABLE_SECURITY_AGENT=1)
-endif()
-
-target_include_directories(JSONRPCClient 
+target_link_libraries(${MODULE_NAME}
     PRIVATE
-         "${PROJECT_SOURCE_DIR}/tests"
-)
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-install(TARGETS JSONRPCClient DESTINATION bin)
+install(TARGETS ${MODULE_NAME}
+    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+
+set(PLUGIN_PROCESSMONITOR_AUTOSTART false CACHE STRING "Automatically start ProcessMonitor plugin")
+
+write_config(${PLUGIN_NAME})

@@ -16,20 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#pragma once
-
+ 
 #include "Module.h"
-#include <interfaces/IDolby.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void set_audio_output_type(enum WPEFramework::Exchange::Dolby::IOutput::Type type);
-
-enum WPEFramework::Exchange::Dolby::IOutput::Type get_audio_output_type(void);
-
-#ifdef __cplusplus
-}
-#endif
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)

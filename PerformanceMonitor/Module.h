@@ -16,5 +16,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+ 
 #pragma once
+
+#ifndef MODULE_NAME
+#define MODULE_NAME Plugin_PerformanceMonitor
+#endif
+
+#include <plugins/plugins.h>
+
+#undef EXTERNAL
+#define EXTERNAL
