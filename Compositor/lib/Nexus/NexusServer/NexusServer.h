@@ -23,6 +23,7 @@
 #include <core/core.h>
 #include <nexus_config.h>
 #include <nxserverlib.h>
+#include <tracing/tracing.h>
 
 #include <interfaces/IComposition.h>
 
