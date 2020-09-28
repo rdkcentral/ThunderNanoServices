@@ -267,7 +267,7 @@ Browser interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [url](#property.url) | URL loaded in the browser |
-| [visibility](#property.visibility) | Current browser visibility |
+| [visible](#property.visible) | Current browser visible |
 | [fps](#property.fps) <sup>RO</sup> | Current number of frames per second the browser is rendering |
 
 StateControl interface properties:
@@ -608,10 +608,10 @@ Also see: [urlchange](#event.urlchange)
     "result": "null"
 }
 ```
-<a name="property.visibility"></a>
-## *visibility <sup>property</sup>*
+<a name="property.visible"></a>
+## *visible <sup>property</sup>*
 
-Provides access to the current browser visibility.
+Provides access to the current browser visible.
 
 Also see: [visibilitychange](#event.visibilitychange)
 
@@ -619,7 +619,7 @@ Also see: [visibilitychange](#event.visibilitychange)
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Current browser visibility (must be one of the following: *visible*, *hidden*) |
+| (property) | string | Current browser visible (must be one of the following: *visible*, *hidden*) |
 
 ### Errors
 
@@ -635,7 +635,7 @@ Also see: [visibilitychange](#event.visibilitychange)
 {
     "jsonrpc": "2.0",
     "id": 1234567890,
-    "method": "WebKitBrowser.1.visibility"
+    "method": "WebKitBrowser.1.visible"
 }
 ```
 #### Get Response
@@ -653,7 +653,7 @@ Also see: [visibilitychange](#event.visibilitychange)
 {
     "jsonrpc": "2.0",
     "id": 1234567890,
-    "method": "WebKitBrowser.1.visibility",
+    "method": "WebKitBrowser.1.visible",
     "params": "visible"
 }
 ```
@@ -771,7 +771,7 @@ Browser interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [urlchange](#event.urlchange) | Signals a URL change in the browser |
-| [visibilitychange](#event.visibilitychange) | Signals a visibility change of the browser |
+| [visibilitychange](#event.visibilitychange) | Signals a visible change of the browser |
 | [pageclosure](#event.pageclosure) | Notifies that the web page requests to close its window |
 
 StateControl interface events:
@@ -876,7 +876,7 @@ Signals a URL change in the browser.
 <a name="event.visibilitychange"></a>
 ## *visibilitychange <sup>event</sup>*
 
-Signals a visibility change of the browser.
+Signals a visible change of the browser.
 
 ### Parameters
 

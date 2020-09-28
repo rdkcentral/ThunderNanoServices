@@ -514,12 +514,12 @@ NetworkControl interface events:
 
 | Event | Description |
 | :-------- | :-------- |
-| [connectionchange](#event.connectionchange) | Notifies about connection status (created, updated, removed, connected and connectionfailed) |
+| [connectionchange](#event.connectionchange) | Notifies about connection status (created, updated, removed, connected, ipassigned and connectionfailed) |
 
 <a name="event.connectionchange"></a>
 ## *connectionchange <sup>event</sup>*
 
-Notifies about connection status (created, updated, removed, connected and connectionfailed).
+Notifies about connection status (created, updated, removed, connected, ipassigned and connectionfailed).
 
 ### Parameters
 
@@ -528,7 +528,7 @@ Notifies about connection status (created, updated, removed, connected and conne
 | params | object |  |
 | params.name | string | Network interface name |
 | params.address | string | IP Address of network interface, if it is connected |
-| params.status | string | Status of the interface, update, connected or not (must be one of the following: *created*, *updated*, *removed*, *connected*, *connectionfailed*) |
+| params.status | string | Status of the interface, update, connected or not (must be one of the following: *created*, *updated*, *removed*, *connected*, *ipassigned*, *connectionfailed*) |
 
 ### Example
 
