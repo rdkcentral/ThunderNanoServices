@@ -43,13 +43,29 @@ set_target_properties(${MODULE_NAME}
         CXX_STANDARD_REQUIRED YES)
 
 if (NXCLIENT_FOUND AND NEXUS_FOUND)
+    if (SNAPSHOT_IMPLEMENTATION_PATH)
+        target_sources(${MODULE_NAME}
+            PRIVATE
+                ${SNAPSHOT_IMPLEMENTATION_PATH}/NexusCapture.cpp)
+    elseif (CODE_FROM_EXTERNAL_REPOSITORY)
+        include(GetExternalCode)
+        GetExternalCode(
+            GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Snapshot"
+            GIT_TAG "master"
+            SOURCE_DIR "NexusExt"
+        )
+        target_sources(${MODULE_NAME}
+            PRIVATE
+                NexusExt/NexusCapture.cpp)
+    else()
+        target_sources(${MODULE_NAME} 
+            PRIVATE 
+                Device/NexusCapture.cpp)
+    endif()
     target_link_libraries(${MODULE_NAME} 
         PRIVATE 
             NEXUS::NEXUS 
             NXCLIENT::NXCLIENT) 
-    target_sources(${MODULE_NAME} 
-        PRIVATE 
-            Device/NexusCapture.cpp)
 elseif (BCM_HOST_FOUND)
     target_link_libraries(${MODULE_NAME} 
         PRIVATE 
