@@ -82,7 +82,7 @@ namespace Plugin {
         }
         Core::File _storage(_destination + Name);
         if ((resume == true) && (_storage.Exists() == true)) {
-            _position = _storage.Core::File::Size();
+            _position = _storage.Core::File::Size() - 1;
         } else {
             _position = 0;
         }

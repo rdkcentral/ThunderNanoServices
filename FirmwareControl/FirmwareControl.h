@@ -245,7 +245,9 @@ namespace Plugin {
                 event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
                                       static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), progress);
                 ResetStatus();
-                RemoveDownloadedFile();
+                if (!((upgradeStatus == DOWNLOAD_ABORTED) && (errorType == UNAVAILABLE))) {
+                    RemoveDownloadedFile();
+                }
             } else if (_interval) { // Send intermediate staus/progress of upgrade
                 event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
                                       static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), progress);

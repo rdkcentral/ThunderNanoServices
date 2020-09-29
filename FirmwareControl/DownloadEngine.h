@@ -98,9 +98,8 @@ namespace PluginHost {
                 result = Core::ERROR_OPENING_FAILED;
                 _storage = destination;
 
-                (position != 0)? _storage.Create(): _storage.Append();
+                (position == 0)? _storage.Create(): _storage.Open(false);
                 if (_storage.IsOpen() == true) {
-
                     result = BaseClass::Download(url, _storage, position);
 
                     if (((result == Core::ERROR_NONE) || (result == Core::ERROR_INPROGRESS)) && (_interval != 0)) {
@@ -121,9 +120,13 @@ namespace PluginHost {
     private:
         void InfoCollected(const uint32_t result, const Core::ProxyType<Web::Response>& info) override
         {
+            _isResumeSupported = false;
             if (result == Core::ERROR_NONE) {
-                if (info->AcceptRange.IsSet() == true && (info->AcceptRange.Value() == "bytes")) {
-                    _isResumeSupported = true;
+                if (info.IsValid() == true) {
+                    if (info->AcceptRange.IsSet() == true && (info->AcceptRange.Value() == "bytes")) {
+                        _isResumeSupported = true;
+                    }
+                    info.Release();
                 }
             }
             if (_notifier != nullptr) {
@@ -147,8 +150,6 @@ namespace PluginHost {
             if (_notifier != nullptr) {
                 _notifier->NotifyStatus(status);
             }
-
-            _activity.Revoke();
 
             _adminLock.Unlock();
         }
