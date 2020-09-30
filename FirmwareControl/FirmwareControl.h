@@ -68,6 +68,7 @@ namespace Plugin {
             TIMEDOUT,
             DOWNLOAD_DIR_NOT_EXIST,
             RESUME_NOT_SUPPORTED,
+            INVALID_RANGE,
             UNKNOWN
         };
     private:
@@ -360,6 +361,9 @@ namespace Plugin {
                 break;
             case Core::ERROR_NOT_SUPPORTED:
                 errorType = ErrorType::RESUME_NOT_SUPPORTED;
+                break;
+            case Core::ERROR_INVALID_RANGE:
+                errorType = ErrorType::INVALID_RANGE;
                 break;
             default: //Expand later on need basis.
                 break;
