@@ -33,13 +33,16 @@ namespace Plugin {
         ASSERT(_connectionProperties == nullptr);
 
         string message;
-        Config config;
-
-        config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
         _connectionProperties = service->Root<Exchange::IConnectionProperties>(_connectionId, 2000, _T("DisplayInfoImplementation"));
         if (_connectionProperties != nullptr) {
+
+            Exchange::IWebDriver* configConnection = _connectionProperties->QueryInterface<Exchange::IWebDriver>();
+            if (configConnection != nullptr) {
+                configConnection->Configure(service);
+                configConnection->Release();
+            }
 
             _graphicsProperties = _connectionProperties->QueryInterface<Exchange::IGraphicsProperties>();
             if (_graphicsProperties == nullptr) {
@@ -84,15 +87,16 @@ namespace Plugin {
             _graphicsProperties = nullptr;
         }
 
+        ASSERT(_hdrProperties != nullptr);
+        if (_hdrProperties != nullptr) {
+            _hdrProperties->Release();
+            _hdrProperties = nullptr;
+        }
+        
         ASSERT(_connectionProperties != nullptr);
         if (_connectionProperties != nullptr) {
             _connectionProperties->Release();
             _connectionProperties = nullptr;
-        }
-
-        if (_hdrProperties != nullptr) {
-            _hdrProperties->Release();
-            _hdrProperties = nullptr;
         }
         _connectionId = 0;
     }

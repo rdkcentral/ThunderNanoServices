@@ -24,6 +24,7 @@
 #include <interfaces/json/JGraphicsProperties.h>
 #include <interfaces/json/JConnectionProperties.h>
 #include <interfaces/json/JHDRProperties.h>
+#include <interfaces/IWebDriver.h>
 
 namespace WPEFramework {
 namespace Plugin {
