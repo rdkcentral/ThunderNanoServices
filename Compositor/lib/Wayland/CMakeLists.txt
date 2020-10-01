@@ -24,9 +24,10 @@ if (COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH)
     add_subdirectory (${COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH})
 elseif (CODE_FROM_EXTERNAL_REPOSITORY)
     include(GetExternalCode)
+    set(COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION "master" CACHE STRING "Compositor wayland implementation version")
     GetExternalCode(
         GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor"
-        GIT_TAG "master"
+        GIT_TAG ${COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION}
         SOURCE_DIR "NexusExt"
     )
     add_subdirectory (NexusExt/NexusServer)

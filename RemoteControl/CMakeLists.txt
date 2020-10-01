@@ -63,9 +63,10 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
                     ${REMOTECONTROL_IMPLEMENTATION_PATH}/IRRemote.cpp)
         elseif (CODE_FROM_EXTERNAL_REPOSITORY)
             include(GetExternalCode)
+            set(REMOTECONTROL_IMPLEMENTATION_VERSION "master" CACHE STRING "RemoteControl implementation version")
             GetExternalCode(
                 GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/RemoteControl"
-                GIT_TAG "master"
+                GIT_TAG ${REMOTECONTROL_IMPLEMENTATION_VERSION}
                 SOURCE_DIR "NexusExt"
             )
             target_sources(${MODULE_NAME}

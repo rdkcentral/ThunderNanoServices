@@ -49,9 +49,10 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
                 ${SNAPSHOT_IMPLEMENTATION_PATH}/NexusCapture.cpp)
     elseif (CODE_FROM_EXTERNAL_REPOSITORY)
         include(GetExternalCode)
+        set(SNAPSHOT_IMPLEMENTATION_VERSION "master" CACHE STRING "Snapshot implementation version")
         GetExternalCode(
             GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Snapshot"
-            GIT_TAG "master"
+            GIT_TAG ${SNAPSHOT_IMPLEMENTATION_VERSION}
             SOURCE_DIR "NexusExt"
         )
         target_sources(${MODULE_NAME}

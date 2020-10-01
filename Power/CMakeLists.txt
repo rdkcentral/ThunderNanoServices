@@ -77,9 +77,10 @@ if(BCM_PM_FOUND)
                     ${POWER_IMPLEMENTATION_PATH}/PowerImplementation.cpp)
         elseif (CODE_FROM_EXTERNAL_REPOSITORY)
             include(GetExternalCode)
+            set(POWER_IMPLEMENTATION_VERSION "master" CACHE STRING "Power implementation version")
             GetExternalCode(
                 GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Power"
-                GIT_TAG "master"
+                GIT_TAG ${POWER_IMPLEMENTATION_VERSION}
                 SOURCE_DIR "PowerImplementation/BroadcomExt"
             )
             target_sources(${MODULE_NAME}
