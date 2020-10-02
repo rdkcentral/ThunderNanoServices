@@ -43,7 +43,9 @@ public:
 
         NEXUS_Error rc = NxClient_Join(NULL);
         ASSERT(!rc);
+#if NEXUS_PLATFORM_VERSION_MAJOR > 14
         NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
+#endif
         NEXUS_Platform_GetConfiguration(&_platformConfig);
 
         UpdateTotalGpuRam(_totalGpuRam);
@@ -251,16 +253,20 @@ private:
                 break;
             }
 #else
+#if NEXUS_PLATFORM_VERSION_MAJOR > 14
             switch  (displaySettings.hdmiPreferences.drmInfoFrame.eotf) {
             case NEXUS_VideoEotf_eHdr10: {
                 type = HDR_10;
                 break;
             }
 #endif
+#endif
+#if NEXUS_PLATFORM_VERSION_MAJOR > 14
             default:
                 break;
             }
 
+#endif
 
             // Check HDCP version
             NEXUS_HdmiOutputHdcpStatus hdcpStatus;

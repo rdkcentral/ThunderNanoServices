@@ -46,7 +46,9 @@ public:
     {
         NEXUS_Error rc = NxClient_Join(NULL);
         ASSERT(!rc);
+#if NEXUS_PLATFORM_VERSION_MAJOR > 14
         NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
+#endif
 
         if (rc == NEXUS_SUCCESS) {
             NEXUS_Platform_GetConfiguration(&_platformConfig);
