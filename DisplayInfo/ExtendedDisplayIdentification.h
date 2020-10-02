@@ -192,6 +192,7 @@ namespace Plugin {
                     written += segment;
                 }
             }
+
             return (written);
         }
 
@@ -291,6 +292,19 @@ namespace Plugin {
             }
 
             return (result);
+        }
+
+        uint8_t WidthInCentimeters() const {
+            return IsValid() ? _base[21] : 0;
+        }
+
+        uint8_t HeightInCentimeters() const {
+            return IsValid() ? _base[22] : 0;
+        }
+
+        void Clear() {
+            _base[0] = 0x55;
+            _segments.clear();
         }
 
     private:

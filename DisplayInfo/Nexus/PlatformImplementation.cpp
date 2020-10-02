@@ -70,6 +70,7 @@ public:
         if( hdmihandle ) {
             UpdateDisplayInfoConnected(hdmihandle, _connected, _width, _height, _verticalFreq, _type);
             UpdateDisplayInfoHDCP(hdmihandle, _hdcpprotection);
+            RetrieveEDID(hdmihandle, _EDID);
         }
 
         UpdateAudioPassthrough(_audioPassthrough);
@@ -190,9 +191,17 @@ public:
     uint32_t HDCPProtection(const HDCPProtectionType& /* value */) override {
         return (Core::ERROR_GENERAL);
     }
-    uint32_t EDID (const uint16_t& length /* @inout */, uint8_t data[] /* @out @length:length */) const override {
-        /* length = */ _EDID.Raw(length, data);
-        return (Core::ERROR_NONE);
+    uint32_t EDID (uint16_t& length /* @inout */, uint8_t data[] /* @out @length:length */) const override {
+        length = _EDID.Raw(length, data);
+        return length ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
+    }
+    uint32_t WidthInCentimeters(uint8_t& width) const override {
+        width = _EDID.WidthInCentimeters();
+        return width ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
+    }
+    uint32_t HeightInCentimeters(uint8_t& height) const override {
+        height = _EDID.WidthInCentimeters();
+        return height ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
     }
     uint32_t PortName (string& name /* @out */) const {
         name = "HDMI" + Core::NumberType<uint8_t>(0).Text();
@@ -606,6 +615,8 @@ private:
             }
             if (connected == true) {
                 RetrieveEDID(hdmiHandle, _EDID);
+            } else {
+                _EDID.Clear();
             }
         }
         _adminLock.Unlock();

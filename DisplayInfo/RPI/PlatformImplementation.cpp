@@ -135,10 +135,19 @@ public:
     uint32_t HDCPProtection (const HDCPProtectionType& /* value */) override {
         return (Core::ERROR_GENERAL);
     }
-    uint32_t EDID (const uint16_t& length /* @inout */, uint8_t data[] /* @out @length:length */) const override {
-        /* length = */ _EDID.Raw(length, data);
+    uint32_t EDID (uint16_t& length /* @inout */, uint8_t data[] /* @out @length:length */) const override {
+        length = _EDID.Raw(length, data);
         return (Core::ERROR_NONE);
     }
+    uint32_t WidthInCentimeters(uint8_t& width) const override {
+        width = _EDID.WidthInCentimeters();
+        return width ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
+    }
+    uint32_t HeightInCentimeters(uint8_t& height) const override {
+        height = _EDID.WidthInCentimeters();
+        return height ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
+    }
+
     uint32_t PortName (string& name /* @out */) const {
         name =_T("HDMI") + Core::NumberType<uint8_t>(0).Text();
         return (Core::ERROR_NONE);
@@ -173,6 +182,7 @@ public:
             RetrieveEDID(_EDID, -1);
         }
         else {
+            _EDID.Clear();
             TRACE(Trace::Information, (_T("HDCP disconnected")));
         }
 
