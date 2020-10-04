@@ -390,6 +390,7 @@ namespace Plugin
             string message(string("{ \"interface\": \"") + adapter.Name() + string("\", \"status\":0, \"ip\":\"" + ipAddress.HostAddress() + "\" }"));
             TRACE(Trace::Information, (_T("Interface: [%s] set IP: [%s]"), adapter.Name().c_str(), ipAddress.HostAddress().c_str()));
 
+            event_connectionchange(adapter.Name(), ipAddress.HostAddress(), JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::IPASSIGNED);
             _service->Notify(message); 
         }
 
@@ -475,19 +476,20 @@ namespace Plugin
             if ( (adapter.IsValid() == false) || (adapter.IsRunning() == false) || (adapter.HasMAC() == false) ) {
                 SYSLOG(Logging::Notification, (_T("Adapter [%s] not available or in the wrong state."), interfaceName.c_str()));
             }
-            else if (dynamic == false) {
-                if (index->second.Info().Address().IsValid() != true) {
-                    SYSLOG(Logging::Notification, (_T("Invalid static IP address: %s, for interfaces: %s : %s"), index->second.Info().Address().HostAddress().c_str(), interfaceName.c_str()));
-                }
-                else { 
+            else {
+                if (index->second.Info().Address().IsValid() == true) {
                     result = SetIP(adapter, index->second.Info().Address(), index->second.Info().Gateway(), index->second.Info().Broadcast(), true);
                 }
-            } else {
-                uint8_t mac[6];
-                adapter.MACAddress(mac, sizeof(mac));
-                index->second.UpdateMAC(mac, sizeof(mac));
-                index->second.Discover(index->second.Info().Address());
-                result = Core::ERROR_NONE;
+                else if (dynamic == false) {
+                    SYSLOG(Logging::Notification, (_T("Invalid Static IP address: %s, for interfaces: %s"), index->second.Info().Address().HostAddress().c_str(), interfaceName.c_str()));
+                }
+                if (dynamic == true) {
+                    uint8_t mac[6];
+                    adapter.MACAddress(mac, sizeof(mac));
+                    index->second.UpdateMAC(mac, sizeof(mac));
+                    index->second.Discover(index->second.Info().Address());
+                    result = Core::ERROR_NONE;
+                }
             }
         }
 
@@ -664,7 +666,6 @@ namespace Plugin
         if (adapter.IsValid() == true) {
 
             std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(interfaceName));
-            JsonData::NetworkControl::ConnectionchangeParamsData::StatusType status;
 
             // Send a message with the state of the adapter.
             string message = string(_T("{ \"interface\": \"")) + interfaceName + string(_T("\", \"running\": \"")) + string(adapter.IsRunning() ? _T("true") : _T("false")) + string(_T("\", \"up\": \"")) + string(adapter.IsUp() ? _T("true") : _T("false")) + _T("\", \"event\": \"");
@@ -674,7 +675,6 @@ namespace Plugin
 
            if (index != _dhcpInterfaces.end()) {
                 message += _T("Update\" }");
-                status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::UPDATED;
                 TRACE(Trace::Information, (_T("Statechange on interface: [%s], running: [%s]"), interfaceName.c_str(), adapter.IsRunning() ? _T("true") : _T("false")));
 
                 if (adapter.IsRunning() == true) {
@@ -687,7 +687,7 @@ namespace Plugin
                 }
 
                 _service->Notify(message);
-                event_connectionchange(interfaceName.c_str(), string(), status);
+                event_connectionchange(interfaceName, string(), JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::UPDATED);
             }
             else if (_open == true) {
                 _dhcpInterfaces.emplace(std::piecewise_construct,
@@ -697,10 +697,9 @@ namespace Plugin
                 message += _T("Create\" }");
 
                 TRACE(Trace::Information, (_T("Added interface: %s"), interfaceName.c_str()));
-                status = JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::CREATED;
 
                 _service->Notify(message);
-                event_connectionchange(interfaceName.c_str(), string(), status);
+                event_connectionchange(interfaceName, string(), JsonData::NetworkControl::ConnectionchangeParamsData::StatusType::CREATED);
             } 
  
             _adminLock.Unlock();

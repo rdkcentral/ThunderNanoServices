@@ -35,12 +35,12 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
 find_package(GSTREAMER REQUIRED)
 
-if(DOLBY_SUPPORT)
+if (DOLBY_SUPPORT)
 
     target_sources(${MODULE_NAME}
         PRIVATE
@@ -50,6 +50,10 @@ if(DOLBY_SUPPORT)
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/Dolby/include)
 
+    target_compile_definitions(${MODULE_NAME}
+        PRIVATE
+            DOLBY_SUPPORT=1)
+
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Dolby)
 
     target_link_libraries(${MODULE_NAME}
@@ -57,7 +61,25 @@ if(DOLBY_SUPPORT)
             PlayerInfoDolby)
 endif()
 
-if (GSTREAMER_FOUND)
+if (USE_IARM)
+    find_package(DS REQUIRED)
+    find_package(IARMBus REQUIRED)
+    target_include_directories(${MODULE_NAME} PRIVATE
+        ${IARMBUS_INCLUDE_DIRS}
+        ${DS_INCLUDE_DIRS}
+        ../helpers)
+    target_link_libraries(${MODULE_NAME} PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${IARMBUS_LIBRARIES}
+        ${DS_LIBRARIES})
+    target_sources(${MODULE_NAME}
+        PRIVATE
+            IARM/PlatformImplementation.cpp
+            ../helpers/utils.cpp)
+elseif (GSTREAMER_FOUND)
+    target_sources(${MODULE_NAME}
+        PRIVATE
+            GStreamer/PlatformImplementation.cpp)
 
     target_link_libraries(${MODULE_NAME}
         PRIVATE
@@ -66,27 +88,6 @@ if (GSTREAMER_FOUND)
     target_include_directories(${MODULE_NAME}
         PRIVATE
             ${GSTREAMER_INCLUDES})
-
-    if (USE_DEVICESETTINGS)
-        find_package(DS REQUIRED)
-        find_package(IARMBus REQUIRED)
-        target_include_directories(${MODULE_NAME} PRIVATE
-            ${IARMBUS_INCLUDE_DIRS}
-            ${DS_INCLUDE_DIRS}
-            ../helpers)
-        target_link_libraries(${MODULE_NAME} PRIVATE
-            ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-            ${IARMBUS_LIBRARIES}
-            ${DS_LIBRARIES})
-        target_sources(${MODULE_NAME}
-            PRIVATE
-                DeviceSettings/PlatformImplementation.cpp
-                ../helpers/utils.cpp)
-    else()
-        target_sources(${MODULE_NAME}
-            PRIVATE
-                GStreamer/PlatformImplementation.cpp)
-    endif()
 endif ()
 
 install(TARGETS ${MODULE_NAME}

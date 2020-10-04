@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "../Module.h"
 #include "../DisplayInfoTracing.h"
 #include "../ExtendedDisplayIdentification.h"
@@ -41,10 +41,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : 
-    public Exchange::IGraphicsProperties, 
-    public Exchange::IConnectionProperties,
-    public Exchange::IHDRProperties  {
+class DisplayInfoImplementation : public Exchange::IHDRProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
 public:
     DisplayInfoImplementation()
        : _width(0)
@@ -88,11 +85,12 @@ public:
 
 public:
     // Graphics Properties interface
-    uint64_t TotalGpuRam() const override
+    uint32_t TotalGpuRam(uint64_t& total) const override
     {
-        return _totalGpuRam;
+        total = _totalGpuRam;
+        return (Core::ERROR_NONE);
     }
-    uint64_t FreeGpuRam() const override
+    uint32_t FreeGpuRam(uint64_t& free) const override
     {
         uint64_t freeRam = 0;
         NEXUS_MemoryStatus status;
@@ -122,7 +120,8 @@ public:
             }
         }
 #endif
-        return (freeRam);
+        free = freeRam;
+        return (Core::ERROR_NONE);
     }
 
     // Connection Properties interface
@@ -158,96 +157,83 @@ public:
 
         return (Core::ERROR_NONE);
     }
-
-    uint32_t IsAudioPassthrough (bool& value) const override
+    uint32_t IsAudioPassthrough (bool& passthru) const override
     {
-        value = _audioPassthrough;
+        passthru = _audioPassthrough;
         return (Core::ERROR_NONE);
     }
-    uint32_t Connected(bool& connected) const override
+    uint32_t Connected(bool& isconnected) const override
     {
-        connected = _connected;
-        return (Core::ERROR_NONE);
-    } 
-    uint32_t Width(uint32_t& value) const override
-    {
-        value = _width;
+        isconnected = _connected;
         return (Core::ERROR_NONE);
     }
-    uint32_t Height(uint32_t& value) const override
+    uint32_t Width(uint32_t& width) const override
     {
-        value = _height;
+        width = _width;
         return (Core::ERROR_NONE);
     }
-    uint32_t VerticalFreq(uint32_t& value) const override
+    uint32_t Height(uint32_t& height) const override
     {
-        value = _verticalFreq;
+        height = _height;
         return (Core::ERROR_NONE);
     }
-    uint32_t HDCPProtection(HDCPProtectionType& value) const override {
+    uint32_t VerticalFreq(uint32_t& vf) const override
+    {
+        vf = _verticalFreq;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t HDCPProtection(HDCPProtectionType& value) const override
+    {
         value = _hdcpprotection;
         return (Core::ERROR_NONE);
     }
-    uint32_t HDCPProtection(const HDCPProtectionType& /* value */) override {
-        return (Core::ERROR_GENERAL);
+    uint32_t HDCPProtection(const HDCPProtectionType value) override
+    {
+        _hdcpprotection = value;
+        return (Core::ERROR_NONE);
     }
-    uint32_t EDID (uint16_t& length /* @inout */, uint8_t data[] /* @out @length:length */) const override {
+    uint32_t EDID (uint16_t& length, uint8_t data[]) const override
+    {
         length = _EDID.Raw(length, data);
         return length ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
     }
-    uint32_t WidthInCentimeters(uint8_t& width) const override {
+    uint32_t WidthInCentimeters(uint8_t& width) const override
+    {
         width = _EDID.WidthInCentimeters();
         return width ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
     }
-    uint32_t HeightInCentimeters(uint8_t& height) const override {
+    uint32_t HeightInCentimeters(uint8_t& height) const override
+    {
         height = _EDID.WidthInCentimeters();
         return height ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
     }
-    uint32_t PortName (string& name /* @out */) const {
-        name = "HDMI" + Core::NumberType<uint8_t>(0).Text();
-        return (Core::ERROR_NONE);
+    uint32_t PortName(string& name) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
     }
-
-    // @property
-    // @brief HDR formats supported by TV
-    // @return HDRType: array of HDR formats
-    uint32_t TVCapabilities(IHDRIterator*& type /* out */) const override {
-        type = nullptr;
-        return (Core::ERROR_GENERAL);
+    uint32_t TVCapabilities(IHDRIterator*& type) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
     }
-    // @property
-    // @brief HDR formats supported by STB
-    // @return HDRType: array of HDR formats
-    uint32_t STBCapabilities(IHDRIterator*& type /* out */) const override {
-        type = nullptr;
-        return (Core::ERROR_GENERAL);
+    uint32_t STBCapabilities(IHDRIterator*& type) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
     }
-    // @property
-    // @brief HDR format in use
-    // @param type: HDR format
-    uint32_t HDRSetting(HDRType& type /* @out */) const override {
+    uint32_t HDRSetting(HDRType& type) const override
+    {
         type = _type;
         return (Core::ERROR_NONE);
     }
 
     void Dispatch() const
     {
-        _adminLock.Lock();
-
-        std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
-
-        while(index != _observers.end()) {
-            (*index)->Updated(IConnectionProperties::INotification::Source::HDCP_CHANGE);
-            index++;
-        }
-
-        _adminLock.Unlock();
+        // To be handled based on events
     }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
+        INTERFACE_ENTRY(Exchange::IHDRProperties)
         INTERFACE_ENTRY(Exchange::IGraphicsProperties)
         INTERFACE_ENTRY(Exchange::IConnectionProperties)
-        INTERFACE_ENTRY(Exchange::IHDRProperties)
     END_INTERFACE_MAP
 
 private:
@@ -301,7 +287,7 @@ private:
             const char* strValue;
         };
 
-        static const HdmiOutputHdcpStateStrings StateToStringTable[] = { 
+        static const HdmiOutputHdcpStateStrings StateToStringTable[] = {
                                                 {NEXUS_HdmiOutputHdcpState_eUnpowered, _T("Unpowered")},
                                                 {NEXUS_HdmiOutputHdcpState_eUnauthenticated, _T("Unauthenticated")},
                                                 {NEXUS_HdmiOutputHdcpState_eWaitForValidVideo, _T("WaitForValidVideo")},
@@ -343,7 +329,7 @@ private:
             const char* strValue;
         };
 
-        static const HdmiOutputHdcpErrorStrings ErrorToStringTable[] = { 
+        static const HdmiOutputHdcpErrorStrings ErrorToStringTable[] = {
                                                 {NEXUS_HdmiOutputHdcpError_eSuccess, _T("Success")},
                                                 {NEXUS_HdmiOutputHdcpError_eRxBksvError, _T("RxBksvError")},
                                                 {NEXUS_HdmiOutputHdcpError_eRxBksvRevoked, _T("RxBksvRevoked")},
@@ -422,8 +408,8 @@ private:
             return (_hdmiOutput != nullptr);
         }
 
-        operator NEXUS_HdmiOutputHandle() const { 
-            return _hdmiOutput; 
+        operator NEXUS_HdmiOutputHandle() const {
+            return _hdmiOutput;
         }
 
         private:
@@ -511,7 +497,7 @@ private:
 #endif
                                     ) );
 
-            TRACE(HDCPDetailedInfo, 
+            TRACE(HDCPDetailedInfo,
                                        (_T("HDCP State=[%s]")
                                         _T(" ReadyForEncryption=[%s]")
                                         _T(" HDCP1.1Features=[%s]")

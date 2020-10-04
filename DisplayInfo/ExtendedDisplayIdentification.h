@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-#pragma once 
+#pragma once
 #include "Module.h"
 
 namespace WPEFramework {
@@ -65,17 +65,17 @@ namespace Plugin {
 
         class Iterator {
         public:
-            Iterator() 
+            Iterator()
                 : _segments(nullptr)
                 , _index()
                 , _reset(true) {
             }
-            Iterator(const BufferList& rhs) 
+            Iterator(const BufferList& rhs)
                 : _segments(&rhs)
                 , _index(rhs.begin())
                 , _reset(true) {
             }
-            Iterator(const Iterator& copy) 
+            Iterator(const Iterator& copy)
                 : _segments(copy._segments)
                 , _index()
                 , _reset(true) {
@@ -86,7 +86,7 @@ namespace Plugin {
             ~Iterator() = default;
 
             Iterator& operator= (const Iterator& rhs) {
-                
+
                 return (*this);
             }
 
@@ -116,7 +116,7 @@ namespace Plugin {
                 ASSERT(IsValid() == true);
                 return (*_index);
             }
- 
+
         private:
             const BufferList* _segments;
             BufferList::const_iterator _index;
@@ -125,11 +125,11 @@ namespace Plugin {
 
         class CEA {
         public:
-            CEA() = delete;    
-            CEA(const CEA&) = delete;    
-            CEA& operator= (const CEA&) = delete;    
-            
-            CEA(const Buffer& data) 
+            CEA() = delete;
+            CEA(const CEA&) = delete;
+            CEA& operator= (const CEA&) = delete;
+
+            CEA(const Buffer& data)
                 : _segment(data) {
                 ASSERT(_segment[0] == 0x02);
             }
@@ -163,7 +163,7 @@ namespace Plugin {
         // Only use the accessors if this method return true!!!
         // -------------------------------------------------------------
         inline bool IsValid() const {
-            return ( (_base[0] == 0x00) && 
+            return ( (_base[0] == 0x00) &&
                      (_base[1] == 0xFF) &&
                      (_base[2] == 0xFF) &&
                      (_base[3] == 0xFF) &&
@@ -184,7 +184,7 @@ namespace Plugin {
                 // By definition, we can copy the base...
                 ::memcpy(data, _base, segment);
                 written = segment;
-                
+
                 while ( (written < length) && (index != _segments.cend()) ) {
                     segment = std::min(Length(), static_cast<uint16_t>(length - written));
                     ::memcpy(&(data[written]), *index, segment);
@@ -211,7 +211,7 @@ namespace Plugin {
         }
         uint16_t ProductCode() const {
             uint16_t result = ~0;
- 
+
             if (IsValid() == true) {
                 result = _base[0x0B] << 8 |
                          _base[0x0A];
@@ -228,7 +228,7 @@ namespace Plugin {
             }
             return (result);
         }
-        // If the Week = 0xFF, it means the year is the year when this model was 
+        // If the Week = 0xFF, it means the year is the year when this model was
         // release. If 0 <= week <= 53 the year represnt the year when the device
         // was manufactured.
         uint8_t Week() const {
@@ -279,7 +279,7 @@ namespace Plugin {
             else if (index <= Segments()) {
                 BufferList::iterator pointer = _segments.begin();
                 uint8_t current = 1;
-                while (current <= index) { 
+                while (current <= index) {
                     if (pointer != _segments.end()) {
                         pointer++;
                     }
@@ -311,7 +311,7 @@ namespace Plugin {
         inline TCHAR ManufactereChar(uint8_t value) const {
             return static_cast<TCHAR>('A' + ((value - 1) & 0x1F));
         }
-        
+
     private:
         Buffer _base;
         BufferList _segments;

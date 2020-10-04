@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "../Module.h"
 #include <interfaces/IPlayerInfo.h>
 #include <interfaces/IDolby.h>
@@ -103,8 +103,10 @@ private:
 
 public:
     PlayerInfoImplementation()
+#if DOLBY_SUPPORT
         : _dolbyOut(Core::ServiceAdministrator::Instance()
                         .Instantiate<Exchange::Dolby::IOutput>(Core::Library(), "DolbyOutputImplementation", ~0))
+#endif
     {
         gst_init(0, nullptr);
         UpdateAudioCodecInfo();
@@ -117,39 +119,42 @@ public:
     {
         _audioCodecs.clear();
         _videoCodecs.clear();
+
+#if DOLBY_SUPPORT
         if(_dolbyOut != nullptr) {
             _dolbyOut->Release();
         }
+#endif
     }
 
 public:
-    uint32_t AudioCodecs(Exchange::IPlayerProperties::IAudioCodecIterator*& iterator) const override
+    uint32_t AudioCodecs(Exchange::IPlayerProperties::IAudioCodecIterator*& codec) const override
     {
-        iterator = Core::Service<AudioIteratorImplementation>::Create<Exchange::IPlayerProperties::IAudioCodecIterator>(_audioCodecs);
-        return (iterator != nullptr ? Core::ERROR_NONE : Core::ERROR_GENERAL);
+        codec = (Core::Service<AudioIteratorImplementation>::Create<Exchange::IPlayerProperties::IAudioCodecIterator>(_audioCodecs));
+        return (codec != nullptr ? Core::ERROR_NONE : Core::ERROR_GENERAL);
     }
-    uint32_t VideoCodecs(Exchange::IPlayerProperties::IVideoCodecIterator*& iterator) const override
+    uint32_t VideoCodecs(Exchange::IPlayerProperties::IVideoCodecIterator*& codec) const override
     {
-        iterator = Core::Service<VideoIteratorImplementation>::Create<Exchange::IPlayerProperties::IVideoCodecIterator>(_videoCodecs);
-        return (iterator != nullptr ? Core::ERROR_NONE : Core::ERROR_GENERAL);
+        codec = (Core::Service<VideoIteratorImplementation>::Create<Exchange::IPlayerProperties::IVideoCodecIterator>(_videoCodecs));
+        return (codec != nullptr ? Core::ERROR_NONE : Core::ERROR_GENERAL);
     }
-    uint32_t Resolution(PlaybackResolution& res /* @out */) const override {
-        res = RESOLUTION_UNKNOWN;
-        return (Core::ERROR_GENERAL);
+    uint32_t Resolution(PlaybackResolution& res) const override
+    {
+        return (Core::ERROR_NONE);
     }
-    uint32_t IsAudioEquivalenceEnabled(bool& ae /* @out */) const override {
-        ae = false;
-        return (Core::ERROR_GENERAL);
+    uint32_t IsAudioEquivalenceEnabled(bool& ae) const override
+    {
+        return (Core::ERROR_NONE);
     }
 
     BEGIN_INTERFACE_MAP(PlayerInfoImplementation)
     INTERFACE_ENTRY(Exchange::IPlayerProperties)
+#if DOLBY_SUPPORT
     INTERFACE_AGGREGATE(Exchange::Dolby::IOutput, _dolbyOut)
+#endif
     END_INTERFACE_MAP
 
 private:
-
-
     void UpdateAudioCodecInfo()
     {
         AudioCaps audioCaps = {
@@ -158,17 +163,16 @@ private:
             {"audio/mpeg, mpegversion=(int)4", Exchange::IPlayerProperties::AudioCodec::AUDIO_MPEG4},
             {"audio/mpeg, mpegversion=(int)1, layer=(int)[1, 3]", Exchange::IPlayerProperties::AudioCodec::AUDIO_MPEG3},
             {"audio/mpeg, mpegversion=(int){2, 4}", Exchange::IPlayerProperties::AudioCodec::AUDIO_AAC},
-            {"audio/x-ac3", Exchange::IPlayerProperties::AUDIO_AC3},
-            {"audio/x-eac3", Exchange::IPlayerProperties::AUDIO_AC3_PLUS},
-            {"audio/x-opus", Exchange::IPlayerProperties::AUDIO_OPUS},
-            {"audio/x-dts", Exchange::IPlayerProperties::AUDIO_DTS},
-            {"audio/x-vorbis", Exchange::IPlayerProperties::AUDIO_VORBIS_OGG},
-            {"audio/x-wav", Exchange::IPlayerProperties::AUDIO_WAV},
+            {"audio/x-ac3", Exchange::IPlayerProperties::AudioCodec::AUDIO_AC3},
+            {"audio/x-eac3", Exchange::IPlayerProperties::AudioCodec::AUDIO_AC3_PLUS},
+            {"audio/x-opus", Exchange::IPlayerProperties::AudioCodec::AUDIO_OPUS},
+            {"audio/x-dts", Exchange::IPlayerProperties::AudioCodec::AUDIO_DTS},
+            {"audio/x-vorbis", Exchange::IPlayerProperties::AudioCodec::AUDIO_VORBIS_OGG},
+            {"audio/x-wav", Exchange::IPlayerProperties::AudioCodec::AUDIO_WAV},
         };
         if (GstUtils::GstRegistryCheckElementsForMediaTypes(audioCaps, _audioCodecs) != true) {
             TRACE_L1(_T("There is no Audio Codec support available"));
         }
-
     }
     void UpdateVideoCodecInfo()
     {
@@ -189,7 +193,9 @@ private:
 private:
     std::list<Exchange::IPlayerProperties::AudioCodec> _audioCodecs;
     std::list<Exchange::IPlayerProperties::VideoCodec> _videoCodecs;
+#if DOLBY_SUPPORT
     Exchange::Dolby::IOutput* _dolbyOut;
+#endif
 };
 
     SERVICE_REGISTRATION(PlayerInfoImplementation, 1, 0);

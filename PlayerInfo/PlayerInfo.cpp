@@ -41,41 +41,34 @@ namespace Plugin {
         _player = service->Root<Exchange::IPlayerProperties>(_connectionId, 2000, _T("PlayerInfoImplementation"));
 
         if (_player != nullptr) {
-            Exchange::JPlayerProperties::Register(*this, _player);
-            if ( (_player->AudioCodecs(_audioCodecs) != Core::ERROR_NONE)  || (_audioCodecs == nullptr) ) {
-                if (_audioCodecs != nullptr) {
-                    _audioCodecs->Release();
-                    _audioCodecs = nullptr;
-                }
-                _player->Release();
-                _player = nullptr;
-            }
-            else if ((_player->VideoCodecs(_videoCodecs) != Core::ERROR_NONE) || (_videoCodecs == nullptr) ) {
-                if (_videoCodecs == nullptr) {
 
-                    _videoCodecs->Release();
-                    _videoCodecs = nullptr;
+            if ((_player->AudioCodecs(_audioCodecs) == Core::ERROR_NONE) && (_audioCodecs != nullptr)) {
+
+                if ((_player->VideoCodecs(_videoCodecs) == Core::ERROR_NONE) && (_videoCodecs != nullptr)) {
+                    Exchange::JPlayerProperties::Register(*this, _player);
+                    // The code execution should proceed regardless of the _dolbyOut
+                    // value, as it is not a essential.
+                    // The relevant JSONRPC endpoints will return ERROR_UNAVAILABLE,
+                    // if it hasn't been initialized.
+#if DOLBY_SUPPORT
+                    _dolbyOut = _player->QueryInterface<Exchange::Dolby::IOutput>();
+                    if(_dolbyOut == nullptr){
+                        SYSLOG(Logging::Startup, (_T("Dolby output switching service is unavailable.")));
+                    } else {
+                        _notification.Initialize(_dolbyOut);
+                        Exchange::Dolby::JOutput::Register(*this, _dolbyOut);
+                    }
+#endif
+                } else {
+                     _audioCodecs->Release();
+                     _audioCodecs = nullptr;
+
+                     _player->Release();
+                     _player = nullptr;
                 }
-                _audioCodecs->Release();
-                _audioCodecs = nullptr;
-                _player->Release();
-                _player = nullptr;
             } else {
-
-                // The code execution should proceed regardless of the _dolbyOut
-                // value, as it is not a essential.
-                // The relevant JSONRPC endpoints will return ERROR_UNAVAILABLE,
-                // if it hasn't been initialized.
-                _dolbyOut = _player->QueryInterface<Exchange::Dolby::IOutput>();
-                if(_dolbyOut == nullptr){
-                    SYSLOG(Logging::Startup, (_T("Dolby output switching service is unavailable.")));
-                }
-                else
-                {
-                    _notification.Initialize(_dolbyOut);
-                    Exchange::Dolby::JOutput::Register(*this, _dolbyOut);
-                }
-
+                _player->Release();
+                _player = nullptr;
             }
         }
 
@@ -92,11 +85,12 @@ namespace Plugin {
             Exchange::JPlayerProperties::Unregister(*this);
             _player->Release();
         }
-        if (_dolbyOut != nullptr)
-        {
-             _notification.Deinitialize();
+#if DOLBY_SUPPORT
+        if (_dolbyOut != nullptr) {
+            _notification.Deinitialize();
             Exchange::Dolby::JOutput::Unregister(*this);
         }
+#endif
         _connectionId = 0;
     }
 
@@ -146,14 +140,14 @@ namespace Plugin {
         Core::JSON::EnumType<JsonData::PlayerInfo::CodecsData::AudiocodecsType> audioCodec;
         _audioCodecs->Reset(0);
         Exchange::IPlayerProperties::AudioCodec audio;
-        while(_audioCodecs->Next(audio)) {
+        while(_audioCodecs->Next(audio) == true) {
             playerInfo.Audio.Add(audioCodec = static_cast<JsonData::PlayerInfo::CodecsData::AudiocodecsType>(audio));
         }
 
         Core::JSON::EnumType<JsonData::PlayerInfo::CodecsData::VideocodecsType> videoCodec;
         Exchange::IPlayerProperties::VideoCodec video;
         _videoCodecs->Reset(0);
-        while(_videoCodecs->Next(video)) {
+         while(_videoCodecs->Next(video) == true) {
             playerInfo.Video.Add(videoCodec = static_cast<JsonData::PlayerInfo::CodecsData::VideocodecsType>(video));
         }
     }

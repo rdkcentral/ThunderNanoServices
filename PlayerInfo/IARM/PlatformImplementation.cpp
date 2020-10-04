@@ -167,6 +167,7 @@ public:
         else if(currentResolution == "1080p60") res = RESOLUTION_1080P;
         else if(currentResolution == "2160p30") res = RESOLUTION_2160P30;
         else if(currentResolution == "2160p60") res = RESOLUTION_2160P60;
+        else res = RESOLUTION_UNKNOWN;
 
         return (Core::ERROR_NONE);
     }

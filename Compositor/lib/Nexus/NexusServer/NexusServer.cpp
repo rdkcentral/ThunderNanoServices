@@ -29,6 +29,7 @@
 #endif
 #include <nexus_display.h>
 #include <sys/stat.h>
+#include <tracing/tracing.h>
 
 BDBG_MODULE(NexusServer);
 

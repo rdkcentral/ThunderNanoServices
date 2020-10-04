@@ -79,13 +79,13 @@ public:
 
 public:
     // Graphics Properties interface
-    uint64_t TotalGpuRam() const override
+    uint32_t TotalGpuRam(uint64_t& total) const override
     {
-        return 0; // TODO: Implement using DeviceSettings
+        return (Core::ERROR_UNAVAILABLE); // TODO: Implement using DeviceSettings
     }
-    uint64_t FreeGpuRam() const override
+    uint32_t FreeGpuRam(uint64_t& free) const override
     {
-        return 0; // TODO: Implement using DeviceSettings
+        return (Core::ERROR_UNAVAILABLE); // TODO: Implement using DeviceSettings
     }
 
     // Connection Properties interface
@@ -288,6 +288,16 @@ public:
         length = i;
         return (Core::ERROR_NONE);
 
+    }
+
+    uint32_t WidthInCentimeters(uint8_t& width) const override
+    {
+        return Core::ERROR_UNAVAILABLE;
+    }
+
+    uint32_t HeightInCentimeters(uint8_t& height) const override
+    {
+        return Core::ERROR_UNAVAILABLE;
     }
 
     uint32_t PortName (string& name /* @out */) const
