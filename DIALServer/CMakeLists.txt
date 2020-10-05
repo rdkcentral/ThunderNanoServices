@@ -57,17 +57,6 @@ if(PLUGIN_DIALSERVER_ENABLE_NETFLIX)
             Netflix.cpp)
 endif()
 
-if (NETFLIX_VERSION_5_1)
-    target_compile_definitions(${MODULE_NAME} 
-        PRIVATE 
-            NETFLIX_VERSION_5_1=ON)
-endif()
-if(NETFLIX_VERSION_5_2)
-    target_compile_definitions(${MODULE_NAME}
-    PRIVATE
-        NETFLIX_VERSION_5_2=ON)
-endif()
-
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
