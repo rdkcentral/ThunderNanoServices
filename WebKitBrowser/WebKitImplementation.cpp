@@ -42,15 +42,6 @@
 #include "BrowserConsoleLog.h"
 #include "InjectedBundle/Tags.h"
 
-#endif
-
-#include <wpe/wpe.h>
-
-#include <glib.h>
-
-#include "HTML5Notification.h"
-#include "WebKitBrowser.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -63,6 +54,15 @@ WK_EXPORT WKProcessID WKPageGetProcessIdentifier(WKPageRef page);
 #ifdef __cplusplus
 }
 #endif
+
+#endif
+
+#include <wpe/wpe.h>
+
+#include <glib.h>
+
+#include "HTML5Notification.h"
+#include "WebKitBrowser.h"
 
 namespace WPEFramework {
 namespace Plugin {
@@ -585,7 +585,7 @@ static GSourceFuncs _handlerIntervention =
             Core::JSON::DecUInt16 WatchDogHangThresholdInSeconds;  // The amount of time to give a process to recover before declaring a hang state
             Core::JSON::Boolean LoadBlankPageOnSuspendEnabled;
     };
-
+#ifndef WEBKIT_GLIB_API
         class HangDetector
         {
         private:
@@ -673,6 +673,7 @@ static GSourceFuncs _handlerIntervention =
             HangDetector(const HangDetector&) = delete;
             HangDetector& operator=(const HangDetector&) = delete;
         };
+#endif
 
     private:
         WebKitImplementation(const WebKitImplementation&) = delete;
@@ -697,6 +698,7 @@ static GSourceFuncs _handlerIntervention =
             , _automationSession(nullptr)
             , _notificationManager()
             , _httpCookieAcceptPolicy(kWKHTTPCookieAcceptPolicyOnlyFromMainDocumentDomain)
+            , _navigationRef(nullptr)
 #endif
             , _adminLock()
             , _fps(0)
@@ -712,7 +714,6 @@ static GSourceFuncs _handlerIntervention =
             , _configurationCompleted(false)
             , _webProcessCheckInProgress(false)
             , _unresponsiveReplyNum(0)
-            , _navigationRef(nullptr)
         {
             // Register an @Exit, in case we are killed, with an incorrect ref count !!
             if (atexit(CloseDown) != 0) {
@@ -1080,10 +1081,10 @@ static GSourceFuncs _handlerIntervention =
                             object->_adminLock.Unlock();
 
                             object->SetResponseHTTPStatusCode(-1);
-                            object->SetNavigationRef(nullptr);
     #ifdef WEBKIT_GLIB_API
                             webkit_web_view_load_uri(object->_view, object->_URL.c_str());
     #else
+                            object->SetNavigationRef(nullptr);
                             auto shellURL = WKURLCreateWithUTF8CString(object->_URL.c_str());
                             WKPageLoadURL(object->_page, shellURL);
                             WKRelease(shellURL);
@@ -1294,15 +1295,18 @@ static GSourceFuncs _handlerIntervention =
         void OnLoadFinished()
         {
             string URL = Core::ToString(webkit_web_view_get_uri(_view));
-            OnLoadFinished(URL);         }
-#endif
+            OnLoadFinished(URL);
+        }
+        void OnLoadFinished(const string& URL)
+        {
+#else
         void OnLoadFinished(const string& URL, WKNavigationRef navigation)
         {
             if (_navigationRef != navigation) {
                 TRACE(Trace::Information, (_T("Ignore 'loadfinished' for previous navigation request")));
                 return;
             }
-
+#endif
             _adminLock.Lock();
 
             _URL = URL;
@@ -1406,10 +1410,6 @@ static GSourceFuncs _handlerIntervention =
             _httpStatusCode = code;
         }
 
-        void SetNavigationRef(WKNavigationRef ref)
-        {
-            _navigationRef = ref;
-        }
         uint32_t Configure(PluginHost::IShell* service) override
         {
             _service = service;
@@ -1619,6 +1619,10 @@ static GSourceFuncs _handlerIntervention =
             return (value);
         }
 #ifndef WEBKIT_GLIB_API
+        void SetNavigationRef(WKNavigationRef ref)
+        {
+            _navigationRef = ref;
+        }
         void OnNotificationShown(uint64_t notificationID) const
         {
             WKNotificationManagerProviderDidShowNotification(_notificationManager, notificationID);
@@ -1822,7 +1826,7 @@ static GSourceFuncs _handlerIntervention =
             _loop = g_main_loop_new(_context, FALSE);
             g_main_context_push_thread_default(_context);
 
-            HangDetector hangdetector(*this); 
+            // HangDetector hangdetector(*this);
 
             bool automationEnabled = _config.Automation.Value();
 
@@ -1843,7 +1847,8 @@ static GSourceFuncs _handlerIntervention =
                 if (_config.DiskCacheDir.IsSet() == true && _config.DiskCacheDir.Value().empty() == false)
                     wpeDiskCachePath = g_build_filename(_config.DiskCacheDir.Value().c_str(), "wpe", "disk-cache", nullptr);
                 else
-                    wpeDiskCachePath = g_build_filename(g_get_user_cache_dir(), "wpe", "disk-cache", nullptr);                g_mkdir_with_parents(wpeDiskCachePath, 0700);
+                    wpeDiskCachePath = g_build_filename(g_get_user_cache_dir(), "wpe", "disk-cache", nullptr);
+                g_mkdir_with_parents(wpeDiskCachePath, 0700);
 
                 auto* websiteDataManager = webkit_website_data_manager_new("local-storage-directory", wpeStoragePath, "disk-cache-directory", wpeDiskCachePath, nullptr);
                 g_free(wpeStoragePath);
@@ -2190,7 +2195,6 @@ static GSourceFuncs _handlerIntervention =
 
             return Core::infinite;
         }
-#endif // WEBKIT_GLIB_API
 
        void CheckWebProcess()
         {
@@ -2262,6 +2266,7 @@ static GSourceFuncs _handlerIntervention =
                 self._unresponsiveReplyNum = 0;
             }
         }
+#endif // WEBKIT_GLIB_API
 
         void DeactivateBrowser(PluginHost::IShell::reason reason) {
             ASSERT(_service != nullptr);
@@ -2286,6 +2291,7 @@ static GSourceFuncs _handlerIntervention =
         WKWebAutomationSessionRef _automationSession;
         WKNotificationManagerRef _notificationManager;
         WKHTTPCookieAcceptPolicy _httpCookieAcceptPolicy;
+        WKNavigationRef _navigationRef;
 #endif
         mutable Core::CriticalSection _adminLock;
         uint32_t _fps;
@@ -2301,7 +2307,6 @@ static GSourceFuncs _handlerIntervention =
         Core::StateTrigger<bool> _configurationCompleted;
         bool _webProcessCheckInProgress;
         uint32_t _unresponsiveReplyNum;
-        WKNavigationRef _navigationRef;
 
     };
 
