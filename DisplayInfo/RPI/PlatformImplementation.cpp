@@ -16,8 +16,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "../Module.h"
+#include "../ExtendedDisplayIdentification.h"
+
 #include <interfaces/IDisplayInfo.h>
 
 #include <bcm_host.h>
@@ -26,15 +28,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
+class DisplayInfoImplementation : public Exchange::IHDRProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
 
 public:
+    DisplayInfoImplementation(const DisplayInfoImplementation&) = delete;
+    DisplayInfoImplementation& operator= (const DisplayInfoImplementation&) = delete;
+
     DisplayInfoImplementation()
         : _width(0)
         , _height(0)
         , _connected(false)
         , _totalGpuRam(0)
         , _audioPassthrough(false)
+        , _EDID()
+        , _value(HDCP_Unencrypted)
         , _adminLock()
         , _activity(*this) {
 
@@ -46,9 +53,6 @@ public:
 
         vc_tv_register_callback(&DisplayCallback, reinterpret_cast<void*>(this));
     }
-
-    DisplayInfoImplementation(const DisplayInfoImplementation&) = delete;
-    DisplayInfoImplementation& operator= (const DisplayInfoImplementation&) = delete;
     virtual ~DisplayInfoImplementation()
     {
         bcm_host_deinit();
@@ -56,15 +60,17 @@ public:
 
 public:
     // Graphics Properties interface
-    uint64_t TotalGpuRam() const override
+    uint32_t TotalGpuRam(uint64_t& total) const override
     {
-        return _totalGpuRam;
+        total = _totalGpuRam;
+        return (Core::ERROR_NONE);
     }
-    uint64_t FreeGpuRam() const override
+    uint32_t FreeGpuRam(uint64_t& free) const override
     {
         uint64_t result;
         Command("get_mem reloc ", result);
-        return (result);
+        free = (result);
+        return (Core::ERROR_NONE);
     }
 
     // Connection Properties interface
@@ -100,34 +106,76 @@ public:
 
         return (Core::ERROR_NONE);
     }
-    bool IsAudioPassthrough () const override
+    uint32_t IsAudioPassthrough (bool& passthru) const override
     {
-        return _audioPassthrough;
+        passthru = _audioPassthrough;
+        return (Core::ERROR_NONE);
     }
-    bool Connected() const override
+    uint32_t Connected(bool& isconnected) const override
     {
-        return _connected;
+        isconnected = _connected;
+        return (Core::ERROR_NONE);
     }
-    uint32_t Width() const override
+    uint32_t Width(uint32_t& width) const override
     {
-        return _width;
+        width = _width;
+        return (Core::ERROR_NONE);
     }
-    uint32_t Height() const override
+    uint32_t Height(uint32_t& height) const override
     {
-        return _height;
+        height = _height;
+        return (Core::ERROR_NONE);
     }
-    uint32_t VerticalFreq() const override
+    uint32_t VerticalFreq(uint32_t& vf) const override
     {
-        return ~0;
+        vf = ~0;
+        return (Core::ERROR_NONE);
     }
     // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
-    HDCPProtectionType HDCPProtection() const override {
-        return HDCPProtectionType::HDCP_Unencrypted;
-    }
-    HDRType Type() const override
+    uint32_t HDCPProtection(HDCPProtectionType& value) const override
     {
-        return HDR_OFF;
+        value = HDCPProtectionType::HDCP_Unencrypted;
+        return (Core::ERROR_NONE);
     }
+    // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
+    uint32_t HDCPProtection(const HDCPProtectionType value) override
+    {
+        _value = value;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t EDID (uint16_t& length, uint8_t data[]) const override
+    {
+        length = _EDID.Raw(length, data);
+        return (Core::ERROR_NONE);
+    }
+    uint32_t WidthInCentimeters(uint8_t& width) const override
+    {
+        width = _EDID.WidthInCentimeters();
+        return width ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
+    }
+    uint32_t HeightInCentimeters(uint8_t& height) const override
+    {
+        height = _EDID.WidthInCentimeters();
+        return height ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
+    }
+    uint32_t PortName(string& name) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t TVCapabilities(IHDRIterator*& type) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t STBCapabilities(IHDRIterator*& type) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t HDRSetting(HDRType& type) const override
+    {
+        type = HDR_OFF;
+        return (Core::ERROR_NONE);
+    }
+
     void Dispatch()
     {
         TV_DISPLAY_STATE_T tvState;
@@ -148,20 +196,32 @@ public:
                 _audioPassthrough = false;
             }
         }
- 
+
 
         _adminLock.Lock();
+
+        if (_connected == true) {
+            TRACE(Trace::Information, (_T("HDCP connected: [%d,%d]"), _width, _height));
+
+            RetrieveEDID(_EDID, -1);
+        }
+        else {
+            _EDID.Clear();
+            TRACE(Trace::Information, (_T("HDCP disconnected")));
+        }
+
 
         std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
 
         if (index != _observers.end()) {
-            (*index)->Updated();
+            (*index)->Updated(Exchange::IConnectionProperties::INotification::Source::HDMI_CHANGE);
         }
 
         _adminLock.Unlock();
     }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
+        INTERFACE_ENTRY(Exchange::IHDRProperties)
         INTERFACE_ENTRY(Exchange::IGraphicsProperties)
         INTERFACE_ENTRY(Exchange::IConnectionProperties)
     END_INTERFACE_MAP
@@ -255,12 +315,36 @@ private:
         }
     }
 
+    void RetrieveEDID(ExtendedDisplayIdentification& info, int displayId = -1) {
+        int size;
+        uint8_t  index = 0;
+
+        do {
+            if (displayId != -1) {
+                #ifdef RPI4 // or higer
+                size = vc_tv_hdmi_ddc_read_id(displayId, index * info.Length(), info.Length(), info.Segment(index));
+                #endif
+            }
+            else {
+                uint8_t* buffer = info.Segment(index);
+                size = vc_tv_hdmi_ddc_read(index * info.Length(), info.Length(), buffer);
+            }
+
+            index++;
+
+        } while ( (index < info.Segments()) && (size == info.Length()) );
+
+        TRACE(Trace::Information, (_T("EDID, Read %d segments [%d]"), index, size));
+    }
+
 private:
     uint32_t _width;
     uint32_t _height;
     bool _connected;
     uint64_t _totalGpuRam;
     bool _audioPassthrough;
+    ExtendedDisplayIdentification _EDID;
+    HDCPProtectionType _value;
 
     std::list<IConnectionProperties::INotification*> _observers;
 

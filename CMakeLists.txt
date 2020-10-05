@@ -22,6 +22,8 @@ find_package(WPEFramework)
 # are located in the cmake directory. Include it in the search.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
+option(CODE_FROM_EXTERNAL_REPOSITORY "Include code from External Repository" ON)
+
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(PLUGIN_BLUETOOTHREMOTECONTROL "Include Bluetooth Remote Control plugin" OFF)
 option(PLUGIN_COBALT "Include Cobalt plugin" OFF)
@@ -39,6 +41,7 @@ option(PLUGIN_FIRMWARECONTROL "Include FirmwareControl Plugin" OFF)
 option(PLUGIN_FRONTPANEL "Include FrontPanel plugin" OFF)
 option(PLUGIN_PROCESSMONITOR "Include Process Monitor plugin" OFF)
 option(PLUGIN_NETWORKCONTROL "Include NetworkControlplugin" OFF)
+option(PLUGIN_PERFORMANCEMONITOR "Include Performance Monitor" OFF)
 option(PLUGIN_PLAYERINFO "Include PlayerInfo plugin" OFF)
 option(PLUGIN_POWER "Include Power plugin" OFF)
 option(PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
@@ -152,6 +155,10 @@ endif()
 
 if(PLUGIN_POWER)
     add_subdirectory(Power)
+endif()
+
+if (PLUGIN_PERFORMANCEMONITOR)
+    add_subdirectory(PerformanceMonitor)
 endif()
 
 if(PLUGIN_PLAYERINFO)

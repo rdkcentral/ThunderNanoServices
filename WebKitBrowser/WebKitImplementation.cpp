@@ -751,8 +751,8 @@ static GSourceFuncs _handlerIntervention =
         uint32_t LocalStorageEnabled(const bool enabled) override { return Core::ERROR_UNAVAILABLE; }
         uint32_t HTTPCookieAcceptPolicy(HTTPCookieAcceptPolicyType& policy) const override { return Core::ERROR_UNAVAILABLE; }
         uint32_t HTTPCookieAcceptPolicy(const HTTPCookieAcceptPolicyType policy) override { return Core::ERROR_UNAVAILABLE; }
-        void BridgeReply(const string& payload) override {}
-        void BridgeEvent(const string& payload) override {}
+        uint32_t BridgeReply(const string& payload) override { return Core::ERROR_UNAVAILABLE; }
+        uint32_t BridgeEvent(const string& payload) override { return Core::ERROR_UNAVAILABLE; }
 #else
         uint32_t Headers(string& headers) const override
         {
@@ -997,17 +997,19 @@ static GSourceFuncs _handlerIntervention =
                 },
                 this);
 
-           return Core::ERROR_NONE;
+            return Core::ERROR_NONE;
         }
 
-        void BridgeReply(const string& payload) override
+        uint32_t BridgeReply(const string& payload) override
         {
             SendToBridge(Tags::BridgeObjectReply, payload);
+            return Core::ERROR_NONE;
         }
 
-        void BridgeEvent(const string& payload) override
+        uint32_t BridgeEvent(const string& payload) override
         {
             SendToBridge(Tags::BridgeObjectEvent, payload);
+            return Core::ERROR_NONE;
         }
 
         void SendToBridge(const string& name, const string& payload)
@@ -2354,6 +2356,7 @@ static GSourceFuncs _handlerIntervention =
 
         string url = WKStringToString(urlStringRef);
 
+        browser->SetNavigationRef(navigation);
         browser->OnURLChanged(url);
 
         WKRelease(urlRef);

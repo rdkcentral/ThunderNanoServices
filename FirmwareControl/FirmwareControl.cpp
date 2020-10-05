@@ -67,7 +67,12 @@ namespace Plugin {
         return (string());
     }
 
-    uint32_t FirmwareControl::Schedule(const std::string& name, const std::string& path, const FirmwareControl::Type& type, const uint16_t& interval, const std::string& hash)
+    uint32_t FirmwareControl::Schedule(const std::string& name, const std::string& path)
+    {
+        return Schedule(name, path, _type, _interval, _hash, true);
+    }
+
+    uint32_t FirmwareControl::Schedule(const std::string& name, const std::string& path, const FirmwareControl::Type& type, const uint16_t& interval, const std::string& hash, const bool resume)
     {
         TRACE(Trace::Information, (string(__FUNCTION__)));
 
@@ -75,9 +80,17 @@ namespace Plugin {
         if (path.empty() != true) {
             _source = path + "/" + name;
         }
+        Core::File _storage(_destination + Name);
+        if ((resume == true) && (_storage.Exists() == true)) {
+            _position = _storage.Core::File::Size() - 1;
+        } else {
+            _position = 0;
+        }
+
         _type = type;
         _interval = interval;
         _hash = hash;
+        _resume = resume;
 
         _signal.ResetEvent();
 
@@ -91,7 +104,13 @@ namespace Plugin {
         TRACE(Trace::Information, (string(__FUNCTION__)));
         Core::Directory storageLocation(_destination.c_str());
         if (storageLocation.Next() == true) {
-            uint32_t status = Download();
+            uint32_t status = Core::ERROR_NONE;
+            Notifier notifier(this);
+            PluginHost::DownloadEngine downloadEngine(&notifier, "", _interval);
+
+            status = (_position != 0)? Resume(downloadEngine):Download(downloadEngine);
+            downloadEngine.Close();
+
             if (status == Core::ERROR_NONE && (Status() != UpgradeStatus::UPGRADE_CANCELLED)) {
                 Install();
             }
@@ -128,21 +147,34 @@ namespace Plugin {
         }
     }
 
-    uint32_t FirmwareControl::Download() {
+    uint32_t FirmwareControl::Resume(PluginHost::DownloadEngine& engine) {
+
+        uint32_t status = engine.CollectInfo(_source);
+        if ((status == Core::ERROR_NONE) || (status == Core::ERROR_INPROGRESS)) {
+
+            status = WaitForCompletion(_waitTime * 1000);
+            if (status == Core::ERROR_NONE) {
+                status = (engine.IsResumeSupported() == true)? Core::ERROR_NONE: Core::ERROR_NOT_SUPPORTED;
+            }
+        }
+        if (status == Core::ERROR_NONE) {
+            status = Download(engine);
+        } else {
+            Status(UpgradeStatus::DOWNLOAD_ABORTED, status, 0);
+        }
+
+        return status;
+    }
+
+    uint32_t FirmwareControl::Download(PluginHost::DownloadEngine& engine) {
 
         TRACE(Trace::Information, (string(__FUNCTION__)));
-        Notifier notifier(this);
 
-        PluginHost::DownloadEngine downloadEngine(&notifier, "", _interval);
-
-        uint32_t status = downloadEngine.Start(_source, _destination + Name, _hash);
+        uint32_t status = engine.Start(_source, _destination + Name, _hash, _position);
         if ((status == Core::ERROR_NONE) || (status == Core::ERROR_INPROGRESS)) {
 
             Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);
             status = WaitForCompletion(_waitTime * 1000);
-            if (status != Core::ERROR_NONE) {
-                downloadEngine.Close();
-            }
         }
 
         status = ((status != Core::ERROR_NONE)? status: DownloadStatus());
@@ -151,7 +183,6 @@ namespace Plugin {
         } else {
             Status(UpgradeStatus::DOWNLOAD_ABORTED, status, 0);
         }
-
         return status;
     }
 

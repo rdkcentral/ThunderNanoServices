@@ -16,10 +16,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "../Module.h"
-#include <interfaces/IDisplayInfo.h>
 #include "../DisplayInfoTracing.h"
+#include "../ExtendedDisplayIdentification.h"
+
+#include <interfaces/IDisplayInfo.h>
 
 #include <nexus_config.h>
 #include <nexus_platform.h>
@@ -39,7 +41,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
+class DisplayInfoImplementation : public Exchange::IHDRProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
 public:
     DisplayInfoImplementation()
        : _width(0)
@@ -50,6 +52,7 @@ public:
        , _type(HDR_OFF)
        , _totalGpuRam(0)
        , _audioPassthrough(false)
+       , _EDID()
        , _adminLock()
        , _activity(*this) {
 
@@ -64,6 +67,7 @@ public:
         if( hdmihandle ) {
             UpdateDisplayInfoConnected(hdmihandle, _connected, _width, _height, _verticalFreq, _type);
             UpdateDisplayInfoHDCP(hdmihandle, _hdcpprotection);
+            RetrieveEDID(hdmihandle, _EDID);
         }
 
         UpdateAudioPassthrough(_audioPassthrough);
@@ -81,11 +85,12 @@ public:
 
 public:
     // Graphics Properties interface
-    uint64_t TotalGpuRam() const override
+    uint32_t TotalGpuRam(uint64_t& total) const override
     {
-        return _totalGpuRam;
+        total = _totalGpuRam;
+        return (Core::ERROR_NONE);
     }
-    uint64_t FreeGpuRam() const override
+    uint32_t FreeGpuRam(uint64_t& free) const override
     {
         uint64_t freeRam = 0;
         NEXUS_MemoryStatus status;
@@ -115,7 +120,8 @@ public:
             }
         }
 #endif
-        return (freeRam);
+        free = freeRam;
+        return (Core::ERROR_NONE);
     }
 
     // Connection Properties interface
@@ -151,49 +157,81 @@ public:
 
         return (Core::ERROR_NONE);
     }
+    uint32_t IsAudioPassthrough (bool& passthru) const override
+    {
+        passthru = _audioPassthrough;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t Connected(bool& isconnected) const override
+    {
+        isconnected = _connected;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t Width(uint32_t& width) const override
+    {
+        width = _width;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t Height(uint32_t& height) const override
+    {
+        height = _height;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t VerticalFreq(uint32_t& vf) const override
+    {
+        vf = _verticalFreq;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t HDCPProtection(HDCPProtectionType& value) const override
+    {
+        value = _hdcpprotection;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t HDCPProtection(const HDCPProtectionType value) override
+    {
+        _hdcpprotection = value;
+        return (Core::ERROR_NONE);
+    }
+    uint32_t EDID (uint16_t& length, uint8_t data[]) const override
+    {
+        length = _EDID.Raw(length, data);
+        return length ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
+    }
+    uint32_t WidthInCentimeters(uint8_t& width) const override
+    {
+        width = _EDID.WidthInCentimeters();
+        return width ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
+    }
+    uint32_t HeightInCentimeters(uint8_t& height) const override
+    {
+        height = _EDID.WidthInCentimeters();
+        return height ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
+    }
+    uint32_t PortName(string& name) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t TVCapabilities(IHDRIterator*& type) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t STBCapabilities(IHDRIterator*& type) const override
+    {
+        return (Core::ERROR_UNAVAILABLE);
+    }
+    uint32_t HDRSetting(HDRType& type) const override
+    {
+        type = _type;
+        return (Core::ERROR_NONE);
+    }
 
-    bool IsAudioPassthrough () const override
-    {
-        return _audioPassthrough;
-    }
-    bool Connected() const override
-    {
-        return _connected;
-    } 
-    uint32_t Width() const override
-    {
-        return _width;
-    }
-    uint32_t Height() const override
-    {
-        return _height;
-    }
-    uint32_t VerticalFreq() const override
-    {
-        return _verticalFreq;
-    }
-    HDRType Type() const override
-    {
-        return _type;
-    }
-    HDCPProtectionType HDCPProtection() const override {
-        return _hdcpprotection;
-    }
     void Dispatch() const
     {
-        _adminLock.Lock();
-
-        std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
-
-        while(index != _observers.end()) {
-            (*index)->Updated();
-            index++;
-        }
-
-        _adminLock.Unlock();
+        // To be handled based on events
     }
 
     BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
+        INTERFACE_ENTRY(Exchange::IHDRProperties)
         INTERFACE_ENTRY(Exchange::IGraphicsProperties)
         INTERFACE_ENTRY(Exchange::IConnectionProperties)
     END_INTERFACE_MAP
@@ -249,7 +287,7 @@ private:
             const char* strValue;
         };
 
-        static const HdmiOutputHdcpStateStrings StateToStringTable[] = { 
+        static const HdmiOutputHdcpStateStrings StateToStringTable[] = {
                                                 {NEXUS_HdmiOutputHdcpState_eUnpowered, _T("Unpowered")},
                                                 {NEXUS_HdmiOutputHdcpState_eUnauthenticated, _T("Unauthenticated")},
                                                 {NEXUS_HdmiOutputHdcpState_eWaitForValidVideo, _T("WaitForValidVideo")},
@@ -291,7 +329,7 @@ private:
             const char* strValue;
         };
 
-        static const HdmiOutputHdcpErrorStrings ErrorToStringTable[] = { 
+        static const HdmiOutputHdcpErrorStrings ErrorToStringTable[] = {
                                                 {NEXUS_HdmiOutputHdcpError_eSuccess, _T("Success")},
                                                 {NEXUS_HdmiOutputHdcpError_eRxBksvError, _T("RxBksvError")},
                                                 {NEXUS_HdmiOutputHdcpError_eRxBksvRevoked, _T("RxBksvRevoked")},
@@ -347,13 +385,13 @@ private:
 #endif
 
     class NexusHdmiOutput {
-        public:
+    public:
         NexusHdmiOutput(const NexusHdmiOutput&) = delete;
         NexusHdmiOutput& operator=(const NexusHdmiOutput&) = delete;
 
-        NexusHdmiOutput() : _hdmiOutput(nullptr) {
+        NexusHdmiOutput(const uint8_t hdmiPort = 0) : _hdmiOutput(nullptr) {
 
-            _hdmiOutput = NEXUS_HdmiOutput_Open(NEXUS_ALIAS_ID + 0, NULL);
+            _hdmiOutput = NEXUS_HdmiOutput_Open(NEXUS_ALIAS_ID + hdmiPort, NULL);
 
             if( _hdmiOutput == nullptr ) {
                 TRACE(Trace::Error, (_T("Error opening Nexus HDMI ouput")));
@@ -370,8 +408,8 @@ private:
             return (_hdmiOutput != nullptr);
         }
 
-        operator NEXUS_HdmiOutputHandle() const { 
-            return _hdmiOutput; 
+        operator NEXUS_HdmiOutputHandle() const {
+            return _hdmiOutput;
         }
 
         private:
@@ -459,7 +497,7 @@ private:
 #endif
                                     ) );
 
-            TRACE(HDCPDetailedInfo, 
+            TRACE(HDCPDetailedInfo,
                                        (_T("HDCP State=[%s]")
                                         _T(" ReadyForEncryption=[%s]")
                                         _T(" HDCP1.1Features=[%s]")
@@ -561,6 +599,11 @@ private:
             default:
                 break;
             }
+            if (connected == true) {
+                RetrieveEDID(hdmiHandle, _EDID);
+            } else {
+                _EDID.Clear();
+            }
         }
         _adminLock.Unlock();
 
@@ -568,6 +611,30 @@ private:
             _activity.Submit();
         }
     }
+
+    // rc = BHDM_EDID_GetHdrStaticMetadatadb(hdmiOutput->hdmHandle, &_hdrdb);
+    void RetrieveEDID(NEXUS_HdmiOutputHandle handle, ExtendedDisplayIdentification& info) {
+        // typedef struct NEXUS_HdmiOutputEdidBlock
+        // {
+        //     uint8_t data[128];
+        // } NEXUS_HdmiOutputEdidBlock;
+
+        // NEXUS_Error NEXUS_HdmiOutput_GetEdidBlock(
+        //      NEXUS_HdmiOutputHandle output,
+        //      unsigned blockNum,
+        //      NEXUS_HdmiOutputEdidBlock *pBlock    /* [out] Block of raw EDID data */
+        //      );
+        NEXUS_Error error;
+        uint8_t index = 0;
+
+        do {
+            error = NEXUS_HdmiOutput_GetEdidBlock(handle, index, reinterpret_cast<NEXUS_HdmiOutputEdidBlock*>(info.Segment(index)));
+
+            index++;
+
+        } while ( (index <= info.Segments()) && (error == 0) );
+    }
+
 
 private:
     uint32_t _width;
@@ -584,6 +651,7 @@ private:
     std::list<IConnectionProperties::INotification*> _observers;
 
     NEXUS_PlatformConfiguration _platformConfig;
+    ExtendedDisplayIdentification _EDID;
 
     mutable Core::CriticalSection _adminLock;
 

@@ -24,10 +24,14 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(BCM_HOST QUIET)
 find_package(NEXUS QUIET)
 find_package(NXCLIENT QUIET)
+find_package(DRM)
+find_path (STAGING_INCDIR glib-2.0)
+include_directories(include)
+include_directories(${STAGING_INCDIR})
+include_directories(${STAGING_INCDIR}/libdrm)
 
 add_library(${MODULE_NAME} SHARED
     DisplayInfo.cpp
-    DisplayInfoJsonRpc.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
@@ -40,10 +44,41 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-if (NXCLIENT_FOUND AND NEXUS_FOUND)
+if (USE_IARM)
+    find_package(DS REQUIRED)
+    find_package(IARMBus REQUIRED)
+    target_include_directories(${MODULE_NAME} PRIVATE ${IARMBUS_INCLUDE_DIRS}
+        ${DS_INCLUDE_DIRS}
+        ../helpers)
+    target_link_libraries(${MODULE_NAME} PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${IARMBUS_LIBRARIES}
+        ${DS_LIBRARIES})
     target_sources(${MODULE_NAME}
         PRIVATE
-            Nexus/PlatformImplementation.cpp)
+            IARM/PlatformImplementation.cpp
+            ../helpers/utils.cpp)
+
+elseif (NXCLIENT_FOUND AND NEXUS_FOUND)
+    if (DISPLAYINFO_IMPLEMENTATION_PATH)
+        target_sources(${MODULE_NAME}
+            PRIVATE
+                ${DISPLAYINFO_IMPLEMENTATION_PATH}/PlatformImplementation.cpp)
+    elseif (CODE_FROM_EXTERNAL_REPOSITORY)
+        include(GetExternalCode)
+        GetExternalCode(
+            GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/DisplayInfo"
+            GIT_TAG "master"
+            SOURCE_DIR "NexusExt"
+        )
+        target_sources(${MODULE_NAME}
+            PRIVATE
+                NexusExt/PlatformImplementation.cpp)
+    else()
+        target_sources(${MODULE_NAME}
+            PRIVATE
+                Nexus/PlatformImplementation.cpp)
+    endif()
     target_link_libraries(${MODULE_NAME}
         PRIVATE
             NEXUS::NEXUS
@@ -60,7 +95,7 @@ else ()
     message(FATAL_ERROR "There is no graphic backend for display info plugin")
 endif ()
 
-install(TARGETS ${MODULE_NAME} 
+install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config(${PLUGIN_NAME})
