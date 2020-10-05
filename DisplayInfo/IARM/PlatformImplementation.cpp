@@ -290,6 +290,16 @@ public:
 
     }
 
+    uint32_t WidthInCentimeters(uint8_t& width) const override
+    {
+        return Core::ERROR_UNAVAILABLE;
+    }
+
+    uint32_t HeightInCentimeters(uint8_t& height) const override
+    {
+        return Core::ERROR_UNAVAILABLE;
+    }
+
     uint32_t PortName (string& name /* @out */) const
     {
         try

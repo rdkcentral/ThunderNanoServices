@@ -476,19 +476,20 @@ namespace Plugin
             if ( (adapter.IsValid() == false) || (adapter.IsRunning() == false) || (adapter.HasMAC() == false) ) {
                 SYSLOG(Logging::Notification, (_T("Adapter [%s] not available or in the wrong state."), interfaceName.c_str()));
             }
-            else if (dynamic == false) {
-                if (index->second.Info().Address().IsValid() != true) {
-                    SYSLOG(Logging::Notification, (_T("Invalid static IP address: %s, for interfaces: %s : %s"), index->second.Info().Address().HostAddress().c_str(), interfaceName.c_str()));
-                }
-                else { 
+            else {
+                if (index->second.Info().Address().IsValid() == true) {
                     result = SetIP(adapter, index->second.Info().Address(), index->second.Info().Gateway(), index->second.Info().Broadcast(), true);
                 }
-            } else {
-                uint8_t mac[6];
-                adapter.MACAddress(mac, sizeof(mac));
-                index->second.UpdateMAC(mac, sizeof(mac));
-                index->second.Discover(index->second.Info().Address());
-                result = Core::ERROR_NONE;
+                else if (dynamic == false) {
+                    SYSLOG(Logging::Notification, (_T("Invalid Static IP address: %s, for interfaces: %s"), index->second.Info().Address().HostAddress().c_str(), interfaceName.c_str()));
+                }
+                if (dynamic == true) {
+                    uint8_t mac[6];
+                    adapter.MACAddress(mac, sizeof(mac));
+                    index->second.UpdateMAC(mac, sizeof(mac));
+                    index->second.Discover(index->second.Info().Address());
+                    result = Core::ERROR_NONE;
+                }
             }
         }
 

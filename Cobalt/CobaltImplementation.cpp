@@ -21,7 +21,6 @@
 #include <interfaces/IMemory.h>
 #include <interfaces/IBrowser.h>
 
-#include "starboard/export.h"
 #include "third_party/starboard/wpe/shared/cobalt_api_wpe.h"
 
 extern int StarboardMain(int argc, char **argv);
@@ -54,6 +53,8 @@ private:
             , ModelYear()
             , OperatorName()
             , FriendlyName()
+            , CertificationScope()
+            , CertificationSecret()
         {
             Add(_T("url"), &Url);
             Add(_T("width"), &Width);
@@ -68,6 +69,8 @@ private:
             Add(_T("modelyear"), &ModelYear);
             Add(_T("operatorname"), &OperatorName);
             Add(_T("friendlyname"), &FriendlyName);
+            Add(_T("scope"), &CertificationScope);
+            Add(_T("secret"), &CertificationSecret);
         }
         ~Config() {
         }
@@ -86,6 +89,8 @@ private:
         Core::JSON::String ModelYear;
         Core::JSON::String OperatorName;
         Core::JSON::String FriendlyName;
+        Core::JSON::String CertificationScope;
+        Core::JSON::String CertificationSecret;
     };
 
     class NotificationSink: public Core::Thread {
@@ -210,6 +215,14 @@ private:
 
             if (config.FriendlyName.IsSet() == true) {
                 Core::SystemInfo::SetEnvironment(_T("COBALT_FRIENDLY_NAME"), config.FriendlyName.Value());
+            }
+
+            if (config.CertificationScope.IsSet() == true) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_CERTIFICATION_SCOPE"), config.CertificationScope.Value());
+            }
+
+            if (config.CertificationSecret.IsSet() == true) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_CERTIFICATION_SECRET"), config.CertificationSecret.Value());
             }
 
             if (config.Url.IsSet() == true) {

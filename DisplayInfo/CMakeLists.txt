@@ -60,9 +60,25 @@ if (USE_IARM)
             ../helpers/utils.cpp)
 
 elseif (NXCLIENT_FOUND AND NEXUS_FOUND)
-    target_sources(${MODULE_NAME}
-        PRIVATE
-            Nexus/PlatformImplementation.cpp)
+    if (DISPLAYINFO_IMPLEMENTATION_PATH)
+        target_sources(${MODULE_NAME}
+            PRIVATE
+                ${DISPLAYINFO_IMPLEMENTATION_PATH}/PlatformImplementation.cpp)
+    elseif (CODE_FROM_EXTERNAL_REPOSITORY)
+        include(GetExternalCode)
+        GetExternalCode(
+            GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/DisplayInfo"
+            GIT_TAG "master"
+            SOURCE_DIR "NexusExt"
+        )
+        target_sources(${MODULE_NAME}
+            PRIVATE
+                NexusExt/PlatformImplementation.cpp)
+    else()
+        target_sources(${MODULE_NAME}
+            PRIVATE
+                Nexus/PlatformImplementation.cpp)
+    endif()
     target_link_libraries(${MODULE_NAME}
         PRIVATE
             NEXUS::NEXUS
