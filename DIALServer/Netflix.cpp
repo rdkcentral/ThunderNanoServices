@@ -30,7 +30,15 @@ namespace DIALHandlers {
         static string Query(const string& params, const string& payload)
         {
             string query = params;
-
+#ifdef NETFLIX_VERSION_5_1
+            // Set proper launch type, i.e. launched by DIAL
+            query += _T("&source_type=12");
+#endif
+#ifdef NETFLIX_VERSION_5_2
+            // Set proper launch type, i.e. launched by DIAL
+            // FIXME: Use project specific iid for now
+            query += _T("&iid=7637f789");
+#endif
             if (payload.empty() == false) {
                 // Netflix expects the payload as urlencoded option "dial"
                 const uint16_t maxEncodeSize = static_cast<uint16_t>(payload.length() * 3 * sizeof(TCHAR));
@@ -93,17 +101,8 @@ namespace DIALHandlers {
         public:
             uint32_t Start(const string& params, const string& payload) override
             {
-                string query = Query(params, payload);
+                const string query = Query(params, payload);
 
-#ifdef NETFLIX_VERSION_5_1
-                // Set proper launch type, i.e. launched by DIAL
-                query += _T("&source_type=12");
-#endif
-#ifdef NETFLIX_VERSION_5_2
-                // Set proper launch type, i.e. launched by DIAL
-                // FIXME: Use project specific iid for now
-                query += _T("&iid=7637f789");
-#endif
                 // Set custom query paramters
                 Core::SystemInfo::SetEnvironment(_T("ONE_TIME_QUERY_STRING_OVERRIDE"), query.c_str());
 
