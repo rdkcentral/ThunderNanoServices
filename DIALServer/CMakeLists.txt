@@ -23,14 +23,17 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 option(PLUGIN_DIALSERVER_ENABLE_YOUTUBE "Enable YouTube support for DIAL server" OFF)
 option(PLUGIN_DIALSERVER_ENABLE_NETFLIX "Enable Netflix support for DIAL server" OFF)
+option(PLUGIN_DIALSERVER_ENABLE_AMAZON_PRIME "Enable Amazon Prime support for DIAL server" OFF)
 
 set(PLUGIN_DIALSERVER_YOUTUBE_MODE "passive" CACHE STRING "How the DIAL server should process incomming requests from Youtube (passive/active), leave empty to disable")
 set(PLUGIN_DIALSERVER_NETFLIX_MODE "passive" CACHE STRING "How the DIAL server should process incomming requests from Netflix (passive/active), leave empty to disable")
+set(PLUGIN_DIALSERVER_AMAZON_PRIME_MODE "passive" CACHE STRING "How the DIAL server should process incomming requests from Amazon Prime (passive/active), leave empty to disable")
 
 set(PLUGIN_DIALSERVER_SWITCHBOARD_CALLSIGN "" CACHE STRING "Callsign of the SwitchBoard plugin if used, leave empty to disable")
 set(PLUGIN_DIALSERVER_WEBSERVER_CALLSIGN "" CACHE STRING "Callsign of the WebServer plugin if used, leave empty to disable")
 set(PLUGIN_DIALSERVER_NETFLIX_CALLSIGN "" CACHE STRING "Callsign of the Netflix plugin if used in active mode, leave empty to disable")
 set(PLUGIN_DIALSERVER_YOUTUBE_CALLSIGN "" CACHE STRING "Callsign of the Youtube plugin if used in active mode, leave empty to disable")
+set(PLUGIN_DIALSERVER_AMAZON_PRIME_CALLSIGN "" CACHE STRING "Callsign of the Youtube plugin if used in active mode, leave empty to disable")
 
 set(PLUGIN_DIALSERVER_NAME "${MODULE_NAME}" CACHE STRING "DIAL server name")
 set(PLUGIN_DIALSERVER_MODEL "Generic Platform" CACHE STRING "Model of the device")
