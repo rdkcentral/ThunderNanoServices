@@ -1,4 +1,4 @@
-/*
+/`*
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
@@ -289,9 +289,10 @@ namespace Plugin {
             {
                 uint32_t result = Core::ERROR_NONE;
                 if (_passiveMode == true) {
-                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"start\", \"data\":\"" + data + "\" }"));
+                    const string allData = data + '&' + payload;
+                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"start\", \"data\":\"" + allData + "\" }"));
                     _service->Notify(message);
-                    _parent->event_start(_callsign, data);
+                    _parent->event_start(_callsign, allData);
                 } else {
                     if (_switchBoard != nullptr) {
                         result = _switchBoard->Activate(_callsign);
@@ -314,9 +315,10 @@ namespace Plugin {
             virtual void Stop(const string& data, const string& payload)
             {
                 if (_passiveMode == true) {
-                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"stop\", \"data\":\"" + data + "\"}"));
+                    const string allData = data + '&' + payload;
+                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"stop\", \"data\":\"" + allData + "\"}"));
                     _service->Notify(message);
-                    _parent->event_stop(_callsign, data);
+                    _parent->event_stop(_callsign, allData);
                 } else {
                     if (_switchBoard != nullptr) {
                         _switchBoard->Deactivate(_callsign);
@@ -343,7 +345,8 @@ namespace Plugin {
 
                 if (_hasRuntimeChange == true) {
                     if (_passiveMode == true) {
-                        const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"change\", \"data\":\"" + url + "\"}"));
+                        const string allData = data + '&' + payload;
+                        const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"change\", \"data\":\"" + allData + "\"}"));
                         _service->Notify(message);
                         result = true;
                     }
