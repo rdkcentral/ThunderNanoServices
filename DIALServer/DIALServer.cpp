@@ -31,7 +31,6 @@ namespace Plugin {
     static const string _DefaultControlExtension(_T("Run"));
     static const string _DefaultAppInfoDevice(_T("DeviceInfo.xml"));
     static const string _DefaultRunningExtension(_T("Running"));
-    static const string _DefaultHiddingExtension(_T("Hidding"));
     static const string _SystemApp(_T("system"));
 
     constexpr char kHideCommand[] = "hide";
@@ -446,9 +445,15 @@ namespace Plugin {
                         }
                     } else {
                         if (result == Core::ERROR_NONE) {
-                            response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
-                            response->ErrorCode = Web::STATUS_CREATED;
-                            response->Message = _T("Created");
+                            if (app.URL(parameters, payload) == true) {
+                                response->Location = _dialServiceImpl->URL() + '/' + app.Name() + '/' + _DefaultControlExtension;
+                                response->ErrorCode = Web::STATUS_CREATED;
+                                response->Message = _T("Created");
+                            }
+                            else {
+                                response->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
+                                response->Message = _T("Not implemented");
+                            }
                         }
                         else {
                             response->ErrorCode = Web::STATUS_SERVICE_UNAVAILABLE;
@@ -620,12 +625,6 @@ namespace Plugin {
                         result->Message = _T("OK");
                         selectedApp->second.Running(request.Verb == Web::Request::HTTP_POST);
                     }
-                } else if (index.Current() == _DefaultHiddingExtension) {
-                    if ((request.Verb == Web::Request::HTTP_POST) || (request.Verb == Web::Request::HTTP_DELETE)) {
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("OK");
-                        selectedApp->second.Hidding(request.Verb == Web::Request::HTTP_POST);
-                    }    
                 } else if (index.Current() == _DefaultDataExtension) {
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("OK");
