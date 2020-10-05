@@ -67,6 +67,8 @@ namespace Plugin {
             UNAVAILABLE,
             TIMEDOUT,
             DOWNLOAD_DIR_NOT_EXIST,
+            RESUME_NOT_SUPPORTED,
+            INVALID_RANGE,
             UNKNOWN
         };
     private:
@@ -166,7 +168,9 @@ namespace Plugin {
             , _adminLock()
             , _type(IMAGE_TYPE_CDL)
             , _hash()
+            , _resume(false)
             , _interval(0)
+            , _position(0)
             , _waitTime(WaitTime)
             , _downloadStatus(Core::ERROR_NONE)
             , _upgradeStatus(UpgradeStatus::NONE)
@@ -242,7 +246,9 @@ namespace Plugin {
                 event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
                                       static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), progress);
                 ResetStatus();
-                RemoveDownloadedFile();
+                if (!((upgradeStatus == DOWNLOAD_ABORTED) && (errorType == UNAVAILABLE))) {
+                    RemoveDownloadedFile();
+                }
             } else if (_interval) { // Send intermediate staus/progress of upgrade
                 event_upgradeprogress(static_cast<JsonData::FirmwareControl::StatusType>(upgradeStatus),
                                       static_cast<JsonData::FirmwareControl::UpgradeprogressParamsData::ErrorType>(errorType), progress);
@@ -250,15 +256,18 @@ namespace Plugin {
         }
 
     private:
-        uint32_t Schedule(const std::string& name, const std::string& path, const Type& type, const uint16_t& interval, const std::string& hash);
+        uint32_t Schedule(const std::string& name, const std::string& path);
+        uint32_t Schedule(const std::string& name, const std::string& path, const Type& type, const uint16_t& interval, const std::string& hash, const bool resume);
 
     private:
         void Upgrade();
         void Install();
-        uint32_t Download();
+        uint32_t Resume(PluginHost::DownloadEngine& engine);
+        uint32_t Download(PluginHost::DownloadEngine& engine);
 
         void RegisterAll();
         void UnregisterAll();
+        uint32_t endpoint_resume(const JsonData::FirmwareControl::ResumeParamsData& params);
         uint32_t endpoint_upgrade(const JsonData::FirmwareControl::UpgradeParamsData& params);
         uint32_t get_status(Core::JSON::EnumType<JsonData::FirmwareControl::StatusType>& response) const;
         uint32_t get_downloadsize(Core::JSON::DecUInt64& response) const;
@@ -350,7 +359,12 @@ namespace Plugin {
             case Core::ERROR_NOT_EXIST:
                 errorType = ErrorType::DOWNLOAD_DIR_NOT_EXIST;
                 break;
-
+            case Core::ERROR_NOT_SUPPORTED:
+                errorType = ErrorType::RESUME_NOT_SUPPORTED;
+                break;
+            case Core::ERROR_INVALID_RANGE:
+                errorType = ErrorType::INVALID_RANGE;
+                break;
             default: //Expand later on need basis.
                 break;
             }
@@ -435,8 +449,10 @@ namespace Plugin {
 
         Type _type;
         string _hash;
+        bool   _resume;
         uint16_t _interval;
 
+        uint64_t _position;
         int32_t _waitTime;
         uint32_t _downloadStatus;
         UpgradeStatus _upgradeStatus;
