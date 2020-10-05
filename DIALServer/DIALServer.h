@@ -45,7 +45,6 @@ namespace Plugin {
                     , URL()
                     , Config()
                     , RuntimeChange(false)
-                    , Hide(false)
                 {
                     Add(_T("name"), &Name);
                     Add(_T("callsign"), &Callsign);
@@ -53,7 +52,6 @@ namespace Plugin {
                     Add(_T("url"), &URL);
                     Add(_T("config"), &Config);
                     Add(_T("runtimechange"), &RuntimeChange);
-                    Add(_T("hide"), &Hide);
                 }
                 App(const App& copy)
                     : Core::JSON::Container()
@@ -63,7 +61,6 @@ namespace Plugin {
                     , URL(copy.URL)
                     , Config(copy.Config)
                     , RuntimeChange(copy.RuntimeChange)
-                    , Hide(copy.Hide)
                 {
                     Add(_T("name"), &Name);
                     Add(_T("callsign"), &Callsign);
@@ -71,7 +68,6 @@ namespace Plugin {
                     Add(_T("url"), &URL);
                     Add(_T("config"), &Config);
                     Add(_T("runtimechange"), &RuntimeChange);
-                    Add(_T("hide"), &Hide);
                 }
                 virtual ~App()
                 {
@@ -84,7 +80,6 @@ namespace Plugin {
                 Core::JSON::String URL;
                 Core::JSON::String Config;
                 Core::JSON::Boolean RuntimeChange;
-                Core::JSON::Boolean Hide;
             };
 
         private:
@@ -252,7 +247,6 @@ namespace Plugin {
                 , _isRunning(false)
                 , _isHidding(false)
                 , _hasRuntimeChange(config.RuntimeChange.Value())
-                , _hasHideAndShow(config.Hide.Value())
                 , _parent(parent)
             {
                 ASSERT(_parent != nullptr);
@@ -293,7 +287,7 @@ namespace Plugin {
                 return (_passiveMode == true ? _isRunning : (_switchBoard != nullptr ? _switchBoard->IsActive(_callsign) : (_service->State() == PluginHost::IShell::ACTIVATED)));
             }
             bool IsHidden() const override { return _isHidding; }
-            bool HasHideAndShow() const override { return _hasHideAndShow; }
+            bool HasHideAndShow() const override { return true; }
             bool HasStartAndStop() const override { return true; }
             uint32_t Show() override 
             {
@@ -441,7 +435,6 @@ namespace Plugin {
             bool _isRunning;
             bool _isHidding;
             bool _hasRuntimeChange;
-            bool _hasHideAndShow;
             DIALServer* _parent;
             AdditionalDataType _additionalData;
         };
