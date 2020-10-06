@@ -1,4 +1,4 @@
-/`*
+/*
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
@@ -150,7 +150,7 @@ namespace Plugin {
 
             // Start an application with specified URL / payload
             // Can only be called if HasStartAndStop() evaluates to true
-            virtual uint32_t Start(const string& data, const string& payload) = 0;
+            virtual uint32_t Start(const string& parameters, const string& payload) = 0;
 
             // Connect DIAL handler with the service (eg. DIAL of youtube to cobalt).
             // Returns true if connection is successfull, false otherwise
@@ -159,9 +159,9 @@ namespace Plugin {
             // Returns whether DIAL handler is connected with the service
             virtual bool IsConnected() = 0;
 
-            // Stop a running service. Additional data can be passed if in passive mode
+            // Stop a running service. Additional parameters can be passed if in passive mode
             // Can only be called if HasStartAndStop() evaluates to true
-            virtual void Stop(const string& data, const string& payload) = 0;
+            virtual void Stop(const string& parameters, const string& payload) = 0;
 
             virtual bool IsHidden() const = 0;
 
@@ -200,13 +200,13 @@ namespace Plugin {
             ~System() override {}
             bool IsRunning() const { return true; }
             bool HasStartAndStop() const override { return false; }
-            uint32_t Start(const string& data, const string& payload) override {
+            uint32_t Start(const string& parameters, const string& payload) override {
                 ASSERT(!"Not supported and not even supposed to");
                 return Core::ERROR_GENERAL;
             }
             bool Connect() override { return true;}
             bool IsConnected() override {return true;}
-            void Stop(const string& data, const string& payload) { ASSERT(!"Not supported and not even supposed to"); }
+            void Stop(const string& parameters, const string& payload) { ASSERT(!"Not supported and not even supposed to"); }
             bool HasHideAndShow() const { return true; }
             bool IsHidden() const { return true; }
             uint32_t Show() override { return Core::ERROR_GENERAL; }
@@ -285,14 +285,14 @@ namespace Plugin {
             bool HasStartAndStop() const override { return true; }
             uint32_t Show() override { return Core::ERROR_GENERAL; }
             void Hide() override {}
-            virtual uint32_t Start(const string& data, const string& payload)
+            virtual uint32_t Start(const string& parameters, const string& payload)
             {
                 uint32_t result = Core::ERROR_NONE;
                 if (_passiveMode == true) {
-                    const string allData = data + '&' + payload;
-                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"start\", \"data\":\"" + allData + "\" }"));
+                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"start\",  \"parameters\":\"" + parameters +  ", \"payload\":\"" + payload +"\" }"));
                     _service->Notify(message);
-                    _parent->event_start(_callsign, allData);
+                    _parent->event_start(_callsign, parameters, payload);
+                    
                 } else {
                     if (_switchBoard != nullptr) {
                         result = _switchBoard->Activate(_callsign);
@@ -305,20 +305,19 @@ namespace Plugin {
                             TRACE_L1("DIAL: Failed to attach to service");
                             result = Core::ERROR_UNAVAILABLE;
                         } else {
-                            URL(data, payload);
+                            URL(parameters, payload);
                         }
                     }
                 }
 
                 return result;
             }
-            virtual void Stop(const string& data, const string& payload)
+            virtual void Stop(const string& parameters, const string& payload)
             {
                 if (_passiveMode == true) {
-                    const string allData = data + '&' + payload;
-                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"stop\", \"data\":\"" + allData + "\"}"));
+                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"stop\", \"parameters\":\"" + parameters + ", \"payload\":\"" + payload + "\"}"));            
                     _service->Notify(message);
-                    _parent->event_stop(_callsign, allData);
+                    _parent->event_stop(_callsign, parameters);
                 } else {
                     if (_switchBoard != nullptr) {
                         _switchBoard->Deactivate(_callsign);
@@ -345,8 +344,7 @@ namespace Plugin {
 
                 if (_hasRuntimeChange == true) {
                     if (_passiveMode == true) {
-                        const string allData = data + '&' + payload;
-                        const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"change\", \"data\":\"" + allData + "\"}"));
+                        const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"change\", \"parameters\":\"" + url + "\"}"));
                         _service->Notify(message);
                         result = true;
                     }
@@ -530,9 +528,7 @@ namespace Plugin {
             {
                 IApplication* application = nullptr;
                 if (config.Callsign.IsSet() == true) {
-                    return (new typename HANDLER::Active(shell, config, parent));
-                } else {
-                    return (new typename HANDLER::Passive(shell, config, parent));
+                    return (new HANDLER(shell, config, parent));
                 }
                 return application;
             }
@@ -747,13 +743,13 @@ namespace Plugin {
             {
                 _application->Running(isRunning);
             }
-            inline uint32_t Start(const string& data, const string& payload)
+            inline uint32_t Start(const string& parameters, const string& payload)
             {
-                return _application->Start(data, payload);
+                return _application->Start(parameters, payload);
             }
-            inline void Stop(const string& data, const string& payload)
+            inline void Stop(const string& parameters, const string& payload)
             {
-                _application->Stop(data, payload);
+                _application->Stop(parameters, payload);
             }
             inline bool HasStartAndStop() const
             {
@@ -1041,7 +1037,7 @@ namespace Plugin {
         void StopApplication(const Web::Request& request, Core::ProxyType<Web::Response>& response, AppInformation& app);
 
         //JsonRpc
-        void event_start(const string& application, const string& parameters);
+        void event_start(const string& application, const string& parameters, const string& payload);
         void event_stop(const string& application, const string& parameters);
 
     private:

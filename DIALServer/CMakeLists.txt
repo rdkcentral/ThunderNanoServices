@@ -45,14 +45,14 @@ add_library(${MODULE_NAME} SHARED
     DIALServerJsonRpc.cpp
     Module.cpp)
 
-if(PLUGIN_DIALSERVER_ENABLE_YOUTUBE)
+if(PLUGIN_DIALSERVER_ENABLE_YOUTUBE AND "${PLUGIN_DIALSERVER_YOUTUBE_MODE}" STREQUAL "active")
     target_sources(${MODULE_NAME}
         PRIVATE
             YouTube.cpp)
 endif()
 
-if(PLUGIN_DIALSERVER_ENABLE_NETFLIX)
-    target_sources(${MODULE_NAME}
+if(PLUGIN_DIALSERVER_ENABLE_NETFLIX AND "${PLUGIN_DIALSERVER_NETFLIX_MODE}" STREQUAL "active")
+target_sources(${MODULE_NAME}
         PRIVATE
             Netflix.cpp)
 endif()

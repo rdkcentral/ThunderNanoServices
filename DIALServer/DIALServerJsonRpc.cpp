@@ -31,11 +31,12 @@ namespace Plugin {
     //
 
     // Event: start - Signals that application start was requested over DIAL *(passive mode only)*
-    void DIALServer::event_start(const string& application, const string& parameters)
+    void DIALServer::event_start(const string& application, const string& parameters, const string& payload)
     {
-        StartParamsInfo params;
+        StartParamsData params;
         params.Application = application;
         params.Parameters = parameters;
+        params.Payload = payload;
 
         Notify(_T("start"), params);
     }
@@ -43,7 +44,7 @@ namespace Plugin {
     // Event: stop - Signals that application stop was requested over DIAL *(passive mode only)*
     void DIALServer::event_stop(const string& application, const string& parameters)
     {
-        StartParamsInfo params;
+        StopParamsData params;
         params.Application = application;
         params.Parameters = parameters;
 

@@ -25,7 +25,7 @@
 namespace WPEFramework {
 namespace DIALHandlers {
 
-    class YouTube : public Passive {
+    class YouTube : public Plugin::DIALServer::Default {
     private:
         YouTube() = delete;
         YouTube(const YouTube&) = delete;
@@ -36,7 +36,7 @@ namespace DIALHandlers {
 #pragma warning(disable : 4355)
 #endif
         YouTube(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config, Plugin::DIALServer* parent)
-            : Passive(service, config, parent)
+            : Default(service, config, parent)
             , _browser(nullptr)
             , _hidden(false)
             , _notification(this)

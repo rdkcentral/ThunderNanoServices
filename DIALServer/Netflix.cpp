@@ -25,23 +25,23 @@
 namespace WPEFramework {
 namespace DIALHandlers {
 
-    // static string Query(const string& params, const string& payload)
-    // {
-    //     string query = params;
-    // 
-    //    Set proper launch type, i.e. launched by DIAL
-    //    query += _T("&source_type=12");
-    //
-    //    if (payload.empty() == false) {
-    //        // Netflix expects the payload as urlencoded option "dial"
-    //         const uint16_t maxEncodeSize = static_cast<uint16_t>(payload.length() * 3 * sizeof(TCHAR));
-    //         TCHAR* encodedPayload = reinterpret_cast<TCHAR*>(ALLOCA(maxEncodeSize));
-    //         Core::URL::Encode(payload.c_str(), static_cast<uint16_t>(payload.length()), encodedPayload, maxEncodeSize);
-    //         query = query + _T("&dial=") + encodedPayload;
-    //     }
-    //
-    //     return (query);
-    // }
+    static string Query(const string& params, const string& payload)
+    {
+        string query = params;
+    
+       // Set proper launch type, i.e. launched by DIAL
+       query += _T("&source_type=12");
+    
+       if (payload.empty() == false) {
+           // Netflix expects the payload as urlencoded option "dial"
+            const uint16_t maxEncodeSize = static_cast<uint16_t>(payload.length() * 3 * sizeof(TCHAR));
+            TCHAR* encodedPayload = reinterpret_cast<TCHAR*>(ALLOCA(maxEncodeSize));
+            Core::URL::Encode(payload.c_str(), static_cast<uint16_t>(payload.length()), encodedPayload, maxEncodeSize);
+            query = query + _T("&dial=") + encodedPayload;
+        }
+    
+        return (query);
+    }
 
     class Netflix : public Plugin::DIALServer::Default {
     public:
