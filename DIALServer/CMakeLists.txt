@@ -57,6 +57,12 @@ target_sources(${MODULE_NAME}
             Netflix.cpp)
 endif()
 
+if(PLUGIN_DIALSERVER_ENABLE_AMAZON_PRIME AND "${PLUGIN_DIALSERVER_AMAZON_PRIME_MODE}" STREQUAL "active")
+target_sources(${MODULE_NAME}
+        PRIVATE
+            AmazonPrime.cpp)
+endif()
+
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
