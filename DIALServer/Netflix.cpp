@@ -61,6 +61,7 @@ namespace DIALHandlers {
             , _service(nullptr)
             , _notification(*this)
             , _hidden(false)
+            , _hasHideAndShow(config.Hide.Value())
             , _lock()
             , _callsign(config.Callsign.Value())
         {
@@ -100,7 +101,7 @@ namespace DIALHandlers {
         }
         bool HasHideAndShow() const override
         {
-            return (_netflix != nullptr);
+            return ((_netflix != nullptr) && (_hasHideAndShow == true));
         }
         uint32_t Show() override
         {
@@ -199,6 +200,7 @@ namespace DIALHandlers {
         PluginHost::IShell* _service;
         Core::Sink<Notification> _notification;
         bool _hidden;
+        bool _hasHideAndShow;
         mutable Core::CriticalSection _lock;
         string _callsign;
     }; // class Netflix
