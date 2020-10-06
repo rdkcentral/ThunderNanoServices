@@ -170,7 +170,6 @@ namespace Plugin
                         hardware.Up(true);
                     }
                     else {
-                        //ClearIP(hardware);
                         Reload(interfaceName, (how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC));
                     }
                 }
