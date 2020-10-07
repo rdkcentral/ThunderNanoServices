@@ -170,7 +170,6 @@ namespace Plugin
                         hardware.Up(true);
                     }
                     else {
-                        ClearIP(hardware);
                         Reload(interfaceName, (how == JsonData::NetworkControl::NetworkData::ModeType::DYNAMIC));
                     }
                 }
@@ -338,8 +337,6 @@ namespace Plugin
             index->second.ClearLease();
         }
 
-        Core::AdapterIterator::Flush();
-
         SubSystemValidation();
     }
 
@@ -382,8 +379,6 @@ namespace Plugin
             if (gateway.IsValid() == true) {
                 adapter.Gateway(Core::IPNode(Core::NodeId("0.0.0.0"), 0), gateway);
             }
-
-            Core::AdapterIterator::Flush();
 
             SubSystemValidation();
 

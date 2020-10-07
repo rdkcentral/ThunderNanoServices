@@ -48,6 +48,7 @@ namespace Plugin {
                 , LeaseTime(0)
                 , RenewalTime(0)
                 , RebindingTime(0)
+                , Xid(0)
                 , TimeOut(10)
                 , Retries(3)
                 , _broadcast()
@@ -62,6 +63,7 @@ namespace Plugin {
                 Add(_T("leaseTime"), &LeaseTime);
                 Add(_T("renewalTime"), &RenewalTime);
                 Add(_T("rebindingTime"), &RebindingTime);
+                Add(_T("xid"), &Xid);
                 Add(_T("timeout"), &TimeOut);
                 Add(_T("retries"), &Retries);
             }
@@ -76,6 +78,7 @@ namespace Plugin {
                 , LeaseTime(copy.LeaseTime)
                 , RenewalTime(copy.RenewalTime)
                 , RebindingTime(copy.RebindingTime)
+                , Xid(copy.Xid)
                 , TimeOut(copy.TimeOut)
                 , Retries(copy.Retries)
                 , _broadcast(copy._broadcast)
@@ -90,6 +93,7 @@ namespace Plugin {
                 Add(_T("leaseTime"), &LeaseTime);
                 Add(_T("renewalTime"), &RenewalTime);
                 Add(_T("rebindingTime"), &RebindingTime);
+                Add(_T("xid"), &Xid);
                 Add(_T("timeout"), &TimeOut);
                 Add(_T("retries"), &Retries);
             }
@@ -105,6 +109,7 @@ namespace Plugin {
             Core::JSON::DecUInt32 LeaseTime;
             Core::JSON::DecUInt32 RenewalTime;
             Core::JSON::DecUInt32 RebindingTime;
+            Core::JSON::DecUInt32 Xid;
             Core::JSON::DecUInt8 TimeOut;
             Core::JSON::DecUInt8 Retries;
 
@@ -142,21 +147,24 @@ namespace Plugin {
             Settings& operator= (const Settings& rhs) = delete;
 
             Settings()
-                : _mode(JsonData::NetworkControl::NetworkData::ModeType::MANUAL)
+                : _xid(0)
+                , _mode(JsonData::NetworkControl::NetworkData::ModeType::MANUAL)
                 , _address()
                 , _gateway()
                 , _broadcast()
             {
             }
             Settings(const Entry& info)
-                : _mode(info.Mode.Value())
+                : _xid(info.Xid.Value())
+                , _mode(info.Mode.Value())
                 , _address(Core::IPNode(Core::NodeId(info.Address.Value().c_str()), info.Mask.Value()))
                 , _gateway(Core::NodeId(info.Gateway.Value().c_str()))
                 , _broadcast(info.Broadcast())
             {
             }
             Settings(const Settings& copy)
-                : _mode(copy._mode)
+                : _xid(copy._xid)
+                , _mode(copy._mode)
                 , _address(copy._address)
                 , _gateway(copy._gateway)
                 , _broadcast(copy._broadcast)
@@ -181,9 +189,14 @@ namespace Plugin {
             {
                 return (_broadcast);
             }
+            inline const uint32_t Xid() const
+            {
+                return (_xid);
+            }
             bool Store(const Entry& info) {
 
                 bool updated = false;
+
                 if (_mode != info.Mode.Value()) {
                     _mode = info.Mode.Value();
                     updated = true;
@@ -208,6 +221,9 @@ namespace Plugin {
             }
             bool Store(const DHCPClient::Offer& offer) {
                 bool updated  = false;
+                if (_xid != offer.Xid()) {
+                    _xid = offer.Xid();
+                }
 
                 if ( (_address != offer.Address()) || (_address.Mask() != offer.Netmask()) ) {
                     updated = true;
@@ -231,6 +247,7 @@ namespace Plugin {
             } 
 
         private:
+            uint32_t _xid;
             JsonData::NetworkControl::NetworkData::ModeType _mode;
             Core::IPNode _address;
             Core::NodeId _gateway;
@@ -375,7 +392,7 @@ namespace Plugin {
                     Core::NodeId source(info.Source.Value().c_str());
 
                     if (source.IsValid() == true) {
-                        _offers.emplace_back(source, static_cast<const Core::NodeId&>(_settings.Address()));
+                        _offers.emplace_back(source, static_cast<const Core::NodeId&>(_settings.Address()), _settings.Xid());
                     }
                 }
             }
@@ -495,6 +512,7 @@ namespace Plugin {
                 info.Mask = _settings.Address().Mask();
                 info.Gateway = _settings.Gateway().HostAddress();
                 info.Broadcast(_settings.Broadcast());
+                info.Xid = _settings.Xid();
                 if (_client.HasActiveLease() == true) {
                     info.Source = _client.Lease().Source().HostAddress();
                 }

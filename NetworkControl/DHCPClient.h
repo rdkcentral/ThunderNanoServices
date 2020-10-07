@@ -240,6 +240,7 @@ namespace Plugin {
                 , _broadcast()
                 , _dns()
                 , _netmask(0)
+                , _xid(0)
                 , _leaseTime(0)
                 , _renewalTime(0)
                 , _rebindingTime(0)
@@ -252,6 +253,7 @@ namespace Plugin {
                 , _broadcast()
                 , _dns()
                 , _netmask(~0)
+                , _xid(0)
                 , _leaseTime(0)
                 , _renewalTime(0)
                 , _rebindingTime(0)
@@ -261,18 +263,19 @@ namespace Plugin {
                     // So only fill it in if it is set!
                     _source = frame.siaddr;
                 }
-
                 _offer = frame.yiaddr;
+                _xid = ntohl(frame.xid);
 
                 Update(options);
             }
-            Offer(const Core::NodeId& source, const Core::NodeId& offer)
+            Offer(const Core::NodeId& source, const Core::NodeId& offer, const uint32_t xid)
                 : _source(source)
                 , _offer(offer)
                 , _gateway()
                 , _broadcast()
                 , _dns()
                 , _netmask(~0)
+                , _xid(xid)
                 , _leaseTime(0)
                 , _renewalTime(0)
                 , _rebindingTime(0)
@@ -285,6 +288,7 @@ namespace Plugin {
                 , _broadcast(copy._broadcast)
                 , _dns(copy._dns)
                 , _netmask(copy._netmask)
+                , _xid(copy._xid)
                 , _leaseTime(copy._leaseTime)
                 , _renewalTime(copy._renewalTime)
                 , _rebindingTime(copy._rebindingTime)
@@ -374,6 +378,7 @@ namespace Plugin {
                 _broadcast = rhs._broadcast;
                 _dns = rhs._dns;
                 _netmask = rhs._netmask;
+                _xid = rhs._xid;
                 _leaseTime = rhs._leaseTime;
                 _renewalTime = rhs._renewalTime;
                 _rebindingTime = rhs._rebindingTime;
@@ -389,6 +394,7 @@ namespace Plugin {
                 _broadcast = node;
                 _dns.clear();
                 _netmask = 0;
+                _xid = 0;
                 _leaseTime = 0;
                 _renewalTime = 0;
                 _rebindingTime = 0;
@@ -423,6 +429,10 @@ namespace Plugin {
             {
                 return (_netmask);
             }
+            uint32_t Xid() const
+            {
+                return (_xid);
+            }
             uint32_t LeaseTime() const
             {
                 return (_leaseTime);
@@ -447,6 +457,7 @@ namespace Plugin {
             Core::NodeId _broadcast; /* the IP address that was offered to us */
             std::list<Core::NodeId> _dns; /* the IP address that was offered to us */
             uint8_t _netmask;
+            uint32_t _xid;
             uint32_t _leaseTime; /* lease time in seconds */
             uint32_t _renewalTime; /* renewal time in seconds */
             uint32_t _rebindingTime; /* rebinding time in seconds */
@@ -539,6 +550,7 @@ namespace Plugin {
                     _modus = CLASSIFICATION_REQUEST;
                     _state = SENDING;
                     _offer = offer;
+                    _xid = _offer.Xid();
 
                     _adminLock.Unlock();
   
