@@ -39,7 +39,7 @@ namespace DIALHandlers {
             : Default(service, config, parent)
             , _browser(nullptr)
             , _hidden(false)
-            , _hasHideAndShow(config.Hide.Value())
+            , _hasHide(config.Hide.Value())
             , _notification(this)
         {
         }
@@ -52,6 +52,12 @@ namespace DIALHandlers {
         }
 
     public:
+        uint32_t Start(const string& params, const string& payload) override
+        {
+            _browser->Hide(false);
+
+            return Default::Start(params, payload);
+        }
         bool Connect() override
         {
             _browser = Plugin::DIALServer::Default::QueryInterface<Exchange::IBrowser>();
@@ -73,14 +79,9 @@ namespace DIALHandlers {
                 _browser = nullptr;
             }
         }
-        bool HasHideAndShow() const override
+        bool HasHide() const override
         {
-            return ((_browser != nullptr) && (_hasHideAndShow == true));
-        }
-        uint32_t Show() override
-        {
-            _browser->Hide(false);
-            return Core::ERROR_NONE;
+            return ((_browser != nullptr) && (_hasHide == true));
         }
         void Hide() override
         {
@@ -130,7 +131,7 @@ namespace DIALHandlers {
 
         Exchange::IBrowser* _browser;
         bool _hidden;
-        bool _hasHideAndShow;
+        bool _hasHide;
         Core::Sink<Notification> _notification;
     }; // class YouTube
 

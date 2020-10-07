@@ -34,9 +34,7 @@ namespace DIALHandlers {
             : Default(service, config, parent)
             , _prime(nullptr)
             , _service(nullptr)
-            , _hidden(false)
             , _notification(*this)
-            , _lock()
             , _callsign(config.Callsign.Value())
         {
             ASSERT(service != nullptr);
@@ -51,6 +49,15 @@ namespace DIALHandlers {
         }
 
     public:
+        uint32_t Start(const string& params, const string& payload) override
+        {
+            if ((_stateControl != nullptr)) {
+                _stateControl->Request(PluginHost::IStateControl::RESUME); 
+            }
+
+            return (Default::Start(params, payload));
+        }    
+
         bool Connect() override
         {
             Attach();
@@ -64,30 +71,19 @@ namespace DIALHandlers {
         {
             Detach();
         }
-        bool HasHideAndShow() const override
+        bool HasHide() const override
         {
             return true;
         }
-        uint32_t Show() override
-        {
-            _lock.Lock();
-            if (_stateControl != nullptr){
-                _stateControl->Request(PluginHost::IStateControl::RESUME);
-            }
-            _lock.Unlock();
-            return Core::ERROR_NONE;
-        }
         void Hide() override
         {
-            _lock.Lock();
             if (_stateControl != nullptr){
                 _stateControl->Request(PluginHost::IStateControl::SUSPEND);
             }
-            _lock.Unlock();
         }
         bool IsHidden() const override
         {
-            return _hidden;
+            return (_stateControl->State() == PluginHost::IStateControl::SUSPENDED);
         }
 
     private:
@@ -97,7 +93,6 @@ namespace DIALHandlers {
         }
         void Attach()
         {
-            _lock.Lock();
             if (_prime == nullptr) {
                 _prime = Plugin::DIALServer::Default::QueryInterface<Exchange::IAmazonPrime>();
 
@@ -105,14 +100,10 @@ namespace DIALHandlers {
                     _stateControl = _prime->QueryInterface<PluginHost::IStateControl>();
                 }
             }
-            _lock.Unlock();
         }
 
         void Detach()
         {
-            _lock.Lock();
-            _hidden = false;
-
             if (_stateControl != nullptr) {
                 _stateControl->Release();
                 _stateControl = nullptr;
@@ -122,18 +113,10 @@ namespace DIALHandlers {
                 _prime->Release();
                 _prime = nullptr;
             }
-
-            _lock.Unlock();
-        }
-
-        void StateChange(const PluginHost::IStateControl::state state)
-        {
-            _hidden = (state == PluginHost::IStateControl::SUSPENDED);
         }
 
     private:
-        class Notification : public PluginHost::IPlugin::INotification,
-                             public PluginHost::IStateControl::INotification {
+        class Notification : public PluginHost::IPlugin::INotification {
 
         public:
             Notification() = delete;
@@ -160,15 +143,9 @@ namespace DIALHandlers {
                 }
             }
 
-            virtual void StateChange(const PluginHost::IStateControl::state value)
-            {
-                _parent.StateChange(value);
-            }
-
         public:
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
-            INTERFACE_ENTRY(PluginHost::IStateControl::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -178,9 +155,7 @@ namespace DIALHandlers {
         Exchange::IAmazonPrime* _prime;
         PluginHost::IShell* _service;
         PluginHost::IStateControl* _stateControl;
-        bool _hidden;
         Core::Sink<Notification> _notification;
-        mutable Core::CriticalSection _lock;
         string _callsign;
 
     }; // class AmazonPrime

@@ -61,7 +61,7 @@ namespace DIALHandlers {
             , _service(nullptr)
             , _notification(*this)
             , _hidden(false)
-            , _hasHideAndShow(config.Hide.Value())
+            , _hasHide(config.Hide.Value())
             , _lock()
             , _callsign(config.Callsign.Value())
         {
@@ -80,10 +80,17 @@ namespace DIALHandlers {
         {
             const string query = Query(params, payload);
 
+            _lock.Lock();
+            if ((_netflix != nullptr) && (_hidden == true)) {
+                _netflix->SetVisible(true);
+                _hidden = false;
+            } 
+            _lock.Unlock();
+
             // Set custom query paramters
             Core::SystemInfo::SetEnvironment(_T("ONE_TIME_QUERY_STRING_OVERRIDE"), query.c_str());
 
-            return (Default::Start(query, {}));
+            return (Default::Start(query, payload));
         }
         void Stop(const string& params, const string& payload) override
         {
@@ -99,22 +106,9 @@ namespace DIALHandlers {
         {
             return (_netflix != nullptr);
         }
-        bool HasHideAndShow() const override
+        bool HasHide() const override
         {
-            return ((_netflix != nullptr) && (_hasHideAndShow == true));
-        }
-        uint32_t Show() override
-        {
-            _lock.Lock();
-            uint32_t result = Core::ERROR_NONE;
-            _hidden = false;
-            if (_netflix != nullptr) {
-                _netflix->SetVisible(true);
-            } else {
-                result = Core::ERROR_GENERAL;
-            }
-            _lock.Unlock();
-            return (result);
+            return ((_netflix != nullptr) && (_hasHide == true));
         }
         void Hide() override
         {
@@ -200,7 +194,7 @@ namespace DIALHandlers {
         PluginHost::IShell* _service;
         Core::Sink<Notification> _notification;
         bool _hidden;
-        bool _hasHideAndShow;
+        bool _hasHide;
         mutable Core::CriticalSection _lock;
         string _callsign;
     }; // class Netflix
