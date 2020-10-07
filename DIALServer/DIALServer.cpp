@@ -397,8 +397,8 @@ namespace Plugin {
             response->Message = _T("Payload too long");
         } else {
             // FIXME: At the moment part of additionalDataUrl parameter is hardcoded, localhost is obligatory by Netflix 
-            // but rest of the path can be created dynamically or should be retrived from configuration
-            const string additionalDataUrl = (_T("http://localhost/Service/DIALServer/Apps/") + app.Name() + _T("/") + _DefaultDataExtension);
+            // but rest of the path can be created dynamically or should be retrived from configuration    
+            const string additionalDataUrl = (_T("http://localhost") + ((_webServerPort.empty() == true)? _T("") : _T(":") + _webServerPort) + _T("/Service/DIALServer/Apps/") + app.Name() + _T("/") + _DefaultDataExtension);
             const uint16_t maxEncodedSize = static_cast<uint16_t>(additionalDataUrl.length() * 3 * sizeof(TCHAR));
             TCHAR* encodedDataUrl = reinterpret_cast<TCHAR*>(ALLOCA(maxEncodedSize));
             uint16_t dialpayload = Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, maxEncodedSize);
@@ -658,6 +658,11 @@ namespace Plugin {
 
         // Let's set the URL of the WebServer, as it is active :-)
         _dialServiceImpl->Locator(pluginInterface->Accessor() + _dialPath);
+
+        Core::URL url = Core::URL(pluginInterface->Accessor());
+        if (url.Port().IsSet() == true) {
+            _webServerPort = Core::NumberType<uint16_t>(url.Port().Value()).Text();
+        }
 
         // Redirect all calls to the DIALServer, via a proxy.
         pluginInterface->AddProxy(_dialPath, _dialPath, remote);

@@ -1000,6 +1000,7 @@ namespace Plugin {
             , _service(NULL)
             , _dialURL()
             , _dialPath()
+            , _webServerPort()
             , _dialServiceImpl(NULL)
             , _deviceInfo(Core::ProxyType<Web::TextBody>::Create())
             , _sink(this)
@@ -1073,6 +1074,7 @@ namespace Plugin {
         PluginHost::IShell* _service;
         Core::URL _dialURL;
         string _dialPath;
+        string _webServerPort;
         DIALServerImpl* _dialServiceImpl;
         Core::ProxyType<Web::TextBody> _deviceInfo;
         Core::Sink<Notification> _sink;
