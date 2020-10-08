@@ -25,155 +25,114 @@
 namespace WPEFramework {
 namespace DIALHandlers {
 
-    struct YouTube {
+    class YouTube : public Plugin::DIALServer::Default {
     private:
-        static string Query(const string& params, const string& payload)
+        YouTube() = delete;
+        YouTube(const YouTube&) = delete;
+        YouTube& operator=(const YouTube&) = delete;
+
+    public:
+#ifdef __WINDOWS__
+#pragma warning(disable : 4355)
+#endif
+        YouTube(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config, Plugin::DIALServer* parent)
+            : Default(service, config, parent)
+            , _browser(nullptr)
+            , _hidden(false)
+            , _hasHide(config.Hide.Value())
+            , _notification(this)
         {
-            return (params + _T("&") + payload);
+        }
+#ifdef __WINDOWS__
+#pragma warning(default : 4355)
+#endif
+        ~YouTube() override
+        {
+            Stopped({}, {});
         }
 
     public:
-        class Passive : public Plugin::DIALServer::Default {
-        private:
-            Passive() = delete;
-            Passive(const Passive&) = delete;
-            Passive& operator=(const Passive&) = delete;
+        uint32_t Start(const string& params, const string& payload) override
+        {
+            _browser->Hide(false);
+
+            return Default::Start(params, payload);
+        }
+        bool Connect() override
+        {
+            _browser = Plugin::DIALServer::Default::QueryInterface<Exchange::IBrowser>();
+            if (_browser != nullptr) {
+                _browser->Register(&_notification);
+            }
+
+            return _browser != nullptr;
+        }
+        bool IsConnected() override
+        {
+            return _browser != nullptr;
+        }
+        virtual void Stopped(const string& data, const string& payload)
+        {
+            if (_browser != nullptr) {
+                _browser->Unregister(&_notification);
+                _browser->Release();
+                _browser = nullptr;
+            }
+        }
+        bool HasHide() const override
+        {
+            return ((_browser != nullptr) && (_hasHide == true));
+        }
+        void Hide() override
+        {
+            _browser->Hide(true);
+        }
+        bool IsHidden() const override
+        {
+            return _hidden;
+        }
+
+    private:
+        struct Notification : public Exchange::IBrowser::INotification {
+        public:
+            Notification() = delete;
+            Notification(const Notification&) = delete;
+            Notification& operator=(const Notification&) = delete;
 
         public:
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
-            Passive(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config, Plugin::DIALServer* parent)
-                : Default(service, config, parent)
+            explicit Notification(YouTube* parent)
+                : _parent(parent)
             {
             }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
-            ~Passive() = default;
+            ~Notification() = default;
 
         public:
-            uint32_t Start(const string& params, const string& payload) override
+            void Hidden(const bool hidden) override
             {
-                return Default::Start(Query(params, payload), {});
+                _parent->_hidden = hidden;
             }
-            bool URL(const string& url, const string& payload) override
-            {
-                Default::URL(Query(url, payload), {});
-                return (true);
-            }
-        }; // class Passive
-
-    public:
-        class Active : public Passive {
-        private:
-            Active() = delete;
-            Active(const Active&) = delete;
-            Active& operator=(const Active&) = delete;
-
-        public:
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
-            Active(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config, Plugin::DIALServer* parent)
-                : Passive(service, config, parent)
-                , _browser(nullptr)
-                , _hidden(false)
-                , _hasHideAndShow(config.Hide.Value())
-                , _notification(this)
+            void LoadFinished(const string& URL) override
             {
             }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
-            ~Active() override
+            void URLChanged(const string& URL) override
             {
-                Stopped({}, {});
+            }
+            void Closure() override
+            {
             }
 
-        public:
-            bool Connect() override
-            {
-                _browser = Plugin::DIALServer::Default::QueryInterface<Exchange::IBrowser>();
-                if (_browser != nullptr) {
-                    _browser->Register(&_notification);
-                }
-
-                return _browser != nullptr;
-            }
-            bool IsConnected() override
-            {
-                return _browser != nullptr;
-            }
-            virtual void Stopped(const string& data, const string& payload)
-            {
-                if (_browser != nullptr) {
-                    _browser->Unregister(&_notification);
-                    _browser->Release();
-                    _browser = nullptr;
-                }
-            }
-            bool HasHideAndShow() const override
-            {
-                return ((_browser != nullptr) && (_hasHideAndShow == true));
-            }
-            uint32_t Show() override
-            {
-                _browser->Hide(false);
-                return Core::ERROR_NONE;
-            }
-            void Hide() override
-            {
-                _browser->Hide(true);
-            }
-            bool IsHidden() const override
-            {
-                return _hidden;
-            }
+            BEGIN_INTERFACE_MAP(Notification)
+                INTERFACE_ENTRY(Exchange::IBrowser::INotification)
+            END_INTERFACE_MAP
 
         private:
-            struct Notification : public Exchange::IBrowser::INotification {
-            public:
-                Notification() = delete;
-                Notification(const Notification&) = delete;
-                Notification& operator=(const Notification&) = delete;
+            YouTube* _parent;
+        };
 
-            public:
-                explicit Notification(Active* parent)
-                    : _parent(parent)
-                {
-                }
-                ~Notification() = default;
-
-            public:
-                void Hidden(const bool hidden) override
-                {
-                    _parent->_hidden = hidden;
-                }
-                void LoadFinished(const string& URL) override
-                {
-                }
-                void URLChanged(const string& URL) override
-                {
-                }
-                void Closure() override
-                {
-                }
-
-                BEGIN_INTERFACE_MAP(Notification)
-                    INTERFACE_ENTRY(Exchange::IBrowser::INotification)
-                END_INTERFACE_MAP
-
-            private:
-                Active* _parent;
-            };
-
-            Exchange::IBrowser* _browser;
-            bool _hidden;
-            bool _hasHideAndShow;
-            Core::Sink<Notification> _notification;
-        }; // class Active
-
+        Exchange::IBrowser* _browser;
+        bool _hidden;
+        bool _hasHide;
+        Core::Sink<Notification> _notification;
     }; // class YouTube
 
     static Plugin::DIALServer::ApplicationRegistrationType<YouTube> _youTubeHandler;
