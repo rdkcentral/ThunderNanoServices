@@ -151,11 +151,11 @@ namespace Plugin {
             virtual bool HasStartAndStop() const = 0;
 
             // Returns wheter DIAL handler has ability to hide & show a service
-            virtual bool HasHideAndShow() const = 0;
+            virtual bool HasHide() const = 0;
 
             // Start an application with specified URL / payload
             // Can only be called if HasStartAndStop() evaluates to true
-            virtual uint32_t Start(const string& data, const string& payload) = 0;
+            virtual uint32_t Start(const string& parameters, const string& payload) = 0;
 
             // Connect DIAL handler with the service (eg. DIAL of youtube to cobalt).
             // Returns true if connection is successfull, false otherwise
@@ -164,16 +164,13 @@ namespace Plugin {
             // Returns whether DIAL handler is connected with the service
             virtual bool IsConnected() = 0;
 
-            // Stop a running service. Additional data can be passed if in passive mode
+            // Stop a running service. Additional parameters can be passed if in passive mode
             // Can only be called if HasStartAndStop() evaluates to true
-            virtual void Stop(const string& data, const string& payload) = 0;
+            virtual void Stop(const string& parameters, const string& payload) = 0;
 
             virtual bool IsHidden() const = 0;
 
-            // Make serivce visible. Can be used only if HasHideAndShow() evaluates to true
-            virtual uint32_t Show() = 0;
-
-            // Hide service. Can be used only if HasHideAndShow() evaluates to true
+            // Hide service. Can be used only if HasHide() evaluates to true
             virtual void Hide() = 0;
 
             // Methods for passing a URL to DIAL handler
@@ -190,7 +187,7 @@ namespace Plugin {
 
             // Method used for setting the wheter managed service is hidden or not. 
             // Used only in passive mode
-            virtual void Hidding(const bool isHiding) = 0;
+            virtual void Hidden(const bool isHidden) = 0;
 
             // Method used for passing a SwitchBoard to DIAL handler. 
             // Used only in switchboard mode
@@ -209,23 +206,22 @@ namespace Plugin {
             ~System() override {}
             bool IsRunning() const { return true; }
             bool HasStartAndStop() const override { return false; }
-            uint32_t Start(const string& data, const string& payload) override {
+            uint32_t Start(const string& parameters, const string& payload) override {
                 ASSERT(!"Not supported and not even supposed to");
                 return Core::ERROR_GENERAL;
             }
             bool Connect() override { return true;}
             bool IsConnected() override {return true;}
-            void Stop(const string& data, const string& payload) { ASSERT(!"Not supported and not even supposed to"); }
-            bool HasHideAndShow() const { return true; }
+            void Stop(const string& parameters, const string& payload) { ASSERT(!"Not supported and not even supposed to"); }
+            bool HasHide() const { return true; }
             bool IsHidden() const { return true; }
-            uint32_t Show() override { return Core::ERROR_GENERAL; }
             void Hide() override {}
             string URL() const override { return {}; }
             bool URL(const string& url, const string& payload) override { return (false); };
             AdditionalDataType AdditionalData() const override { return { }; }
             void AdditionalData(AdditionalDataType&& data) override {}
             void Running(const bool isRunning) override {}
-            void Hidding(const bool isHiding) override {}
+            void Hidden(const bool isHidden) override {}
             void SwitchBoard(Exchange::ISwitchBoard* switchBoard) override {}
         };
 
@@ -250,9 +246,9 @@ namespace Plugin {
                 , _callsign(config.Callsign.IsSet() == true ? config.Callsign.Value() : config.Name.Value())
                 , _passiveMode(config.Callsign.IsSet() == false)
                 , _isRunning(false)
-                , _isHidding(false)
+                , _isHidden(false)
                 , _hasRuntimeChange(config.RuntimeChange.Value())
-                , _hasHideAndShow(config.Hide.Value())
+                , _hasHide(config.Hide.Value())
                 , _parent(parent)
             {
                 ASSERT(_parent != nullptr);
@@ -292,18 +288,9 @@ namespace Plugin {
             {
                 return (_passiveMode == true ? _isRunning : (_switchBoard != nullptr ? _switchBoard->IsActive(_callsign) : (_service->State() == PluginHost::IShell::ACTIVATED)));
             }
-            bool IsHidden() const override { return _isHidding; }
-            bool HasHideAndShow() const override { return _hasHideAndShow; }
+            bool IsHidden() const override { return _isHidden; }
+            bool HasHide() const override { return _hasHide; }
             bool HasStartAndStop() const override { return true; }
-            uint32_t Show() override 
-            {
-                if ((_passiveMode == true) && (_isHidding ==true)) {
-                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"show\" }"));
-                    _service->Notify(message);
-                    _parent->event_show(_callsign);   
-                } 
-                return Core::ERROR_NONE; 
-            }
             void Hide() override 
             {
                 if (_passiveMode == true) {
@@ -312,13 +299,14 @@ namespace Plugin {
                     _parent->event_hide(_callsign);
                 }
             }
-            virtual uint32_t Start(const string& data, const string& payload)
+            virtual uint32_t Start(const string& parameters, const string& payload)
             {
                 uint32_t result = Core::ERROR_NONE;
                 if (_passiveMode == true) {
-                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"start\", \"data\":\"" + data + "\" }"));
+                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"start\",  \"parameters\":\"" + parameters +  ", \"payload\":\"" + payload +"\" }"));
                     _service->Notify(message);
-                    _parent->event_start(_callsign, data);
+                    _parent->event_start(_callsign, parameters, payload);
+                    
                 } else {
                     if (_switchBoard != nullptr) {
                         result = _switchBoard->Activate(_callsign);
@@ -331,19 +319,19 @@ namespace Plugin {
                             TRACE_L1("DIAL: Failed to attach to service");
                             result = Core::ERROR_UNAVAILABLE;
                         } else {
-                            URL(data, payload);
+                            URL(parameters, payload);
                         }
                     }
                 }
 
                 return result;
             }
-            virtual void Stop(const string& data, const string& payload)
+            virtual void Stop(const string& parameters, const string& payload)
             {
                 if (_passiveMode == true) {
-                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"stop\", \"data\":\"" + data + "\"}"));
+                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"stop\", \"parameters\":\"" + parameters + ", \"payload\":\"" + payload + "\"}"));            
                     _service->Notify(message);
-                    _parent->event_stop(_callsign, data);
+                    _parent->event_stop(_callsign, parameters);
                 } else {
                     if (_switchBoard != nullptr) {
                         _switchBoard->Deactivate(_callsign);
@@ -370,7 +358,7 @@ namespace Plugin {
 
                 if (_hasRuntimeChange == true) {
                     if (_passiveMode == true) {
-                        const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"change\", \"data\":\"" + url + "\"}"));
+                        const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"change\", \"parameters\":\"" + url + "\"}"));
                         _service->Notify(message);
                         result = true;
                     }
@@ -403,14 +391,14 @@ namespace Plugin {
 
                 _isRunning = isRunning;
             }
-            virtual void Hidding(const bool isHidding)
+            virtual void Hidden(const bool isHidden)
             {
                 // This method is only for the Passive mode..
                 if (_passiveMode != true) {
                     TRACE_L1(_T("This app is not configured to be Passive !!!!%s"), "");
                 }
 
-                _isHidding = isHidding;
+                _isHidden = isHidden;
             }
             virtual void SwitchBoard(Exchange::ISwitchBoard* switchBoard)
             {
@@ -439,9 +427,9 @@ namespace Plugin {
             string _callsign;
             bool _passiveMode;
             bool _isRunning;
-            bool _isHidding;
+            bool _isHidden;
             bool _hasRuntimeChange;
-            bool _hasHideAndShow;
+            bool _hasHide;
             DIALServer* _parent;
             AdditionalDataType _additionalData;
         };
@@ -565,9 +553,7 @@ namespace Plugin {
             {
                 IApplication* application = nullptr;
                 if (config.Callsign.IsSet() == true) {
-                    return (new typename HANDLER::Active(shell, config, parent));
-                } else {
-                    return (new typename HANDLER::Passive(shell, config, parent));
+                    return (new HANDLER(shell, config, parent));
                 }
                 return application;
             }
@@ -758,13 +744,9 @@ namespace Plugin {
             { 
                 return (_application->IsHidden()); 
             }
-            inline bool HasHideAndShow() const
+            inline bool HasHide() const
             {
-                return _application->HasHideAndShow();
-            }
-            inline uint32_t Show()
-            {
-                return _application->Show();
+                return _application->HasHide();
             }
             inline void Hide() 
             { 
@@ -782,17 +764,17 @@ namespace Plugin {
             {
                 _application->Running(isRunning);
             }
-            inline void Hidding(const bool isHidding)
+            inline void Hidden(const bool isHidden)
             {
-                _application->Hidding(isHidding);
+                _application->Hidden(isHidden);
             }
-            inline uint32_t Start(const string& data, const string& payload)
+            inline uint32_t Start(const string& parameters, const string& payload)
             {
-                return _application->Start(data, payload);
+                return _application->Start(parameters, payload);
             }
-            inline void Stop(const string& data, const string& payload)
+            inline void Stop(const string& parameters, const string& payload)
             {
-                _application->Stop(data, payload);
+                _application->Stop(parameters, payload);
             }
             inline bool HasStartAndStop() const
             {
@@ -1018,6 +1000,7 @@ namespace Plugin {
             , _service(NULL)
             , _dialURL()
             , _dialPath()
+            , _webServerPort()
             , _dialServiceImpl(NULL)
             , _deviceInfo(Core::ProxyType<Web::TextBody>::Create())
             , _sink(this)
@@ -1080,10 +1063,9 @@ namespace Plugin {
         void StopApplication(const Web::Request& request, Core::ProxyType<Web::Response>& response, AppInformation& app);
 
         //JsonRpc
-        void event_start(const string& application, const string& parameters);
+        void event_start(const string& application, const string& parameters, const string& payload);
         void event_stop(const string& application, const string& parameters);
         void event_hide(const string& application);
-        void event_show(const string& application);
 
     private:
         Core::CriticalSection _adminLock;
@@ -1092,6 +1074,7 @@ namespace Plugin {
         PluginHost::IShell* _service;
         Core::URL _dialURL;
         string _dialPath;
+        string _webServerPort;
         DIALServerImpl* _dialServiceImpl;
         Core::ProxyType<Web::TextBody> _deviceInfo;
         Core::Sink<Notification> _sink;

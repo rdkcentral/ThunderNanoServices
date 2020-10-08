@@ -1425,7 +1425,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 _state.Lock();
 
-                if (classId != 0) {
+                if ((classId != 0) && (classId != _class)) {
                     _class = classId;
                     TRACE(DeviceFlow, (_T("Device class updated to: '%d'"), _class));
                     updated = true;
@@ -1444,7 +1444,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 _state.Lock();
 
-                if (name != _name) {
+                if ((name.empty() == false) && (name != _name)) {
                     _name = name;
                     TRACE(DeviceFlow, (_T("Device name updated to: '%s'"), _name.c_str()));
                     updated = true;
@@ -1464,9 +1464,9 @@ class BluetoothControl : public PluginHost::IPlugin
                 updated |= Class(eir.Class(), false);
                 updated |= Name(eir.CompleteName(), false);
 
-                if (eir.UUIDs() != _uuids) {
-                    _state.Lock();
+                _state.Lock();
 
+                if (eir.UUIDs() != _uuids) {
                     _uuids.clear();
 
                     TRACE(DeviceFlow, (_T("Supported UUIDs:")));
@@ -1474,10 +1474,11 @@ class BluetoothControl : public PluginHost::IPlugin
                         TRACE(DeviceFlow, (_T(" - %s"), uuid.ToString().c_str()));
                         _uuids.emplace_back(uuid);
                     }
-                    _state.Unlock();
 
                     updated = true;
                 }
+
+                _state.Lock();
 
                 if (updated == true) {
                     UpdateListener();
