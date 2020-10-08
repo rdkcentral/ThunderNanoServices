@@ -63,6 +63,7 @@ option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_DTV "Include DTV plugin" OFF)
+option(PLUGIN_HELLOWORLD "Include HelloWorld plugin" ON)
 
 option(WPEFRAMEWORK_CREATE_IPKG_TARGETS "Generate the CPack configuration for package generation" OFF)
 
@@ -249,6 +250,11 @@ endif()
 if(PLUGIN_DTV)
     add_subdirectory(DTV)
 endif()
+
+if(PLUGIN_HELLOWORLD)
+	add_subdirectory(HelloWorld)
+endif()
+
 
 add_subdirectory(examples)
 
