@@ -204,7 +204,7 @@ public:
     }
     uint32_t HeightInCentimeters(uint8_t& height) const override
     {
-        height = _EDID.WidthInCentimeters();
+        height = _EDID.HeightInCentimeters();
         return height ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
     }
     uint32_t PortName(string& name) const override
