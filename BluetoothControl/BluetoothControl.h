@@ -1478,7 +1478,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     updated = true;
                 }
 
-                _state.Lock();
+                _state.Unlock();
 
                 if (updated == true) {
                     UpdateListener();
