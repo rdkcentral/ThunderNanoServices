@@ -37,7 +37,7 @@ namespace PluginHost {
     private:
         typedef Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> BaseClass;
         static int32_t constexpr ProgressInterval = 1000;   // In millisconds
-        static int32_t constexpr ProgressWaitTimeOut = 120; // In seconds
+        static int32_t constexpr ProgressWaitTimeOut = 60; // In seconds
 
     public:
         DownloadEngine() = delete;
@@ -54,6 +54,7 @@ namespace PluginHost {
             , _progressInterval(1)
             , _progressWaitTime(0)
             , _checkHash(false)
+            , _isResumeSupported(false)
             , _activity(*this)
         {
             // If we are going for HMAC, here we could set our secret...
@@ -68,11 +69,15 @@ namespace PluginHost {
         }
 
     public:
-        uint32_t Start(const string& locator, const string& destination, const string& hashValue)
+        uint32_t CollectInfo(const string& locator)
+        {
+            Core::URL url(locator);
+            return BaseClass::CollectInfo(url);
+        }
+        uint32_t Start(const string& locator, const string& destination, const string& hashValue, const uint64_t position)
         {
             Core::URL url(locator);
             uint32_t result = (url.IsValid() == true ? Core::ERROR_INPROGRESS : Core::ERROR_INCORRECT_URL);
-
 
             _adminLock.Lock();
 
@@ -93,10 +98,9 @@ namespace PluginHost {
                 result = Core::ERROR_OPENING_FAILED;
                 _storage = destination;
 
-                // The create truncates the file (if it exists), to 0.
-                if (_storage.Create() == true) {
-
-                    result = BaseClass::Download(url, _storage);
+                (position == 0)? _storage.Create(): _storage.Open(false);
+                if (_storage.IsOpen() == true) {
+                    result = BaseClass::Download(url, _storage, position);
 
                     if (((result == Core::ERROR_NONE) || (result == Core::ERROR_INPROGRESS)) && (_interval != 0)) {
                         _activity.Revoke();
@@ -108,9 +112,28 @@ namespace PluginHost {
 
             return (result);
         }
+        bool IsResumeSupported() const
+        {
+            return _isResumeSupported;
+        }
 
     private:
-        void Transfered(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
+        void InfoCollected(const uint32_t result, const Core::ProxyType<Web::Response>& info) override
+        {
+            _isResumeSupported = false;
+            if (result == Core::ERROR_NONE) {
+                if (info.IsValid() == true) {
+                    if (info->AcceptRange.IsSet() == true && (info->AcceptRange.Value() == "bytes")) {
+                        _isResumeSupported = true;
+                    }
+                    info.Release();
+                }
+            }
+            if (_notifier != nullptr) {
+                _notifier->NotifyStatus(result);
+            }
+        }
+        void Transferred(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
         {
             uint32_t status = result;
 
@@ -126,10 +149,6 @@ namespace PluginHost {
 
             if (_notifier != nullptr) {
                 _notifier->NotifyStatus(status);
-            }
-
-            if (status != Core::ERROR_NONE) {
-                _storage.Destroy();
             }
 
             _adminLock.Unlock();
@@ -214,6 +233,7 @@ namespace PluginHost {
         uint16_t _progressWaitTime;
 
         bool _checkHash;
+        bool _isResumeSupported;
         uint8_t _HMAC[Crypto::HASH_SHA256];
         Core::WorkerPool::JobType<DownloadEngine&> _activity;
     };

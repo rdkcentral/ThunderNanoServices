@@ -16,8 +16,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "../Module.h"
+#include "../ExtendedDisplayIdentification.h"
+
 #include <interfaces/IDisplayInfo.h>
 
 #include <bcm_host.h>
@@ -29,12 +31,16 @@ namespace Plugin {
 class DisplayInfoImplementation : public Exchange::IHDRProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
 
 public:
+    DisplayInfoImplementation(const DisplayInfoImplementation&) = delete;
+    DisplayInfoImplementation& operator= (const DisplayInfoImplementation&) = delete;
+
     DisplayInfoImplementation()
         : _width(0)
         , _height(0)
         , _connected(false)
         , _totalGpuRam(0)
         , _audioPassthrough(false)
+        , _EDID()
         , _value(HDCP_Unencrypted)
         , _adminLock()
         , _activity(*this) {
@@ -47,9 +53,6 @@ public:
 
         vc_tv_register_callback(&DisplayCallback, reinterpret_cast<void*>(this));
     }
-
-    DisplayInfoImplementation(const DisplayInfoImplementation&) = delete;
-    DisplayInfoImplementation& operator= (const DisplayInfoImplementation&) = delete;
     virtual ~DisplayInfoImplementation()
     {
         bcm_host_deinit();
@@ -140,9 +143,20 @@ public:
         _value = value;
         return (Core::ERROR_NONE);
     }
-    uint32_t EDID(uint16_t& length, uint8_t data[]) const override
+    uint32_t EDID (uint16_t& length, uint8_t data[]) const override
     {
-        return (Core::ERROR_UNAVAILABLE);
+        length = _EDID.Raw(length, data);
+        return (Core::ERROR_NONE);
+    }
+    uint32_t WidthInCentimeters(uint8_t& width) const override
+    {
+        width = _EDID.WidthInCentimeters();
+        return width ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
+    }
+    uint32_t HeightInCentimeters(uint8_t& height) const override
+    {
+        height = _EDID.HeightInCentimeters();
+        return height ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
     }
     uint32_t PortName(string& name) const override
     {
@@ -182,9 +196,20 @@ public:
                 _audioPassthrough = false;
             }
         }
- 
+
 
         _adminLock.Lock();
+
+        if (_connected == true) {
+            TRACE(Trace::Information, (_T("HDCP connected: [%d,%d]"), _width, _height));
+
+            RetrieveEDID(_EDID, -1);
+        }
+        else {
+            _EDID.Clear();
+            TRACE(Trace::Information, (_T("HDCP disconnected")));
+        }
+
 
         std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
 
@@ -290,12 +315,35 @@ private:
         }
     }
 
+    void RetrieveEDID(ExtendedDisplayIdentification& info, int displayId = -1) {
+        int size;
+        uint8_t  index = 0;
+
+        do {
+            if (displayId != -1) {
+                #ifdef RPI4 // or higer
+                size = vc_tv_hdmi_ddc_read_id(displayId, index * info.Length(), info.Length(), info.Segment(index));
+                #endif
+            }
+            else {
+                uint8_t* buffer = info.Segment(index);
+                size = vc_tv_hdmi_ddc_read(index * info.Length(), info.Length(), buffer);
+            }
+
+            index++;
+
+        } while ( (index < info.Segments()) && (size == info.Length()) );
+
+        TRACE(Trace::Information, (_T("EDID, Read %d segments [%d]"), index, size));
+    }
+
 private:
     uint32_t _width;
     uint32_t _height;
     bool _connected;
     uint64_t _totalGpuRam;
     bool _audioPassthrough;
+    ExtendedDisplayIdentification _EDID;
     HDCPProtectionType _value;
 
     std::list<IConnectionProperties::INotification*> _observers;

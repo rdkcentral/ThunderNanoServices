@@ -27,7 +27,7 @@ This document describes purpose and functionality of the PlayerInfo plugin. It i
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers on the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -172,6 +172,15 @@ PlayerProperties interface properties:
 | [resolution](#property.resolution) <sup>RO</sup> | Current Video playback resolution |
 | [isaudioequivalenceenabled](#property.isaudioequivalenceenabled) <sup>RO</sup> | Checks Loudness Equivalence in platform |
 
+Dolby Output interface properties:
+
+| Property | Description |
+| :-------- | :-------- |
+| [dolby atmosmetadata](#property.dolby_atmosmetadata) <sup>RO</sup> | Atmos capabilities of Sink |
+| [dolby soundmode](#property.dolby_soundmode) <sup>RO</sup> | Sound Mode - Mono/Stereo/Surround |
+| [dolby enableatmosoutput](#property.dolby_enableatmosoutput) <sup>WO</sup> | Enable Atmos Audio Output |
+| [dolby mode](#property.dolby_mode) | Dolby Mode |
+
 <a name="property.resolution"></a>
 ## *resolution <sup>property</sup>*
 
@@ -236,5 +245,191 @@ Provides access to the checks Loudness Equivalence in platform.
     "jsonrpc": "2.0",
     "id": 1234567890,
     "result": false
+}
+```
+<a name="property.dolby_atmosmetadata"></a>
+## *dolby_atmosmetadata <sup>property</sup>*
+
+Provides access to the atmos capabilities of Sink.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | boolean | Atmos capabilities of Sink |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "PlayerInfo.1.dolby_atmosmetadata"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": false
+}
+```
+<a name="property.dolby_soundmode"></a>
+## *dolby_soundmode <sup>property</sup>*
+
+Provides access to the sound Mode - Mono/Stereo/Surround.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | string | Sound Mode - Mono/Stereo/Surround (must be one of the following: *Unknown*, *Mono*, *Stereo*, *Surround*, *Passthru*) |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "PlayerInfo.1.dolby_soundmode"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": "Unknown"
+}
+```
+<a name="property.dolby_enableatmosoutput"></a>
+## *dolby_enableatmosoutput <sup>property</sup>*
+
+Provides access to the enable Atmos Audio Output.
+
+> This property is **write-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | boolean | Enable Atmos Audio Output |
+
+### Example
+
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "PlayerInfo.1.dolby_enableatmosoutput",
+    "params": false
+}
+```
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": "null"
+}
+```
+<a name="property.dolby_mode"></a>
+## *dolby_mode <sup>property</sup>*
+
+Provides access to the dolby Mode.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | string | Dolby Mode (must be one of the following: *DigitalPcm*, *DigitalPlus*, *DigitalAc3*, *Auto*) |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "PlayerInfo.1.dolby_mode"
+}
+```
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": "DigitalPcm"
+}
+```
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "PlayerInfo.1.dolby_mode",
+    "params": "DigitalPcm"
+}
+```
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": "null"
+}
+```
+<a name="head.Notifications"></a>
+# Notifications
+
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+
+The following events are provided by the PlayerInfo plugin:
+
+Dolby Output interface events:
+
+| Event | Description |
+| :-------- | :-------- |
+| [dolby audiomodechanged](#event.dolby_audiomodechanged) |  |
+
+<a name="event.dolby_audiomodechanged"></a>
+## *dolby_audiomodechanged <sup>event</sup>*
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.mode | string |  (must be one of the following: *Unknown*, *Mono*, *Stereo*, *Surround*, *Passthru*) |
+| params.enabled | boolean |  |
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "client.events.1.dolby_audiomodechanged",
+    "params": {
+        "mode": "Unknown",
+        "enabled": false
+    }
 }
 ```
