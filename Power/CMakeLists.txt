@@ -75,18 +75,14 @@ if(BCM_PM_FOUND)
             target_sources(${MODULE_NAME}
                 PRIVATE
                     ${POWER_IMPLEMENTATION_PATH}/PowerImplementation.cpp)
-        elseif (CODE_FROM_EXTERNAL_REPOSITORY)
+        else()
             include(GetExternalCode)
             set(POWER_IMPLEMENTATION_VERSION "master" CACHE STRING "Power implementation version")
             GetExternalCode(
                 GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Power"
                 GIT_TAG ${POWER_IMPLEMENTATION_VERSION}
-                SOURCE_DIR "PowerImplementation/BroadcomExt"
+                SOURCE_DIR "PowerImplementation/Broadcom"
             )
-            target_sources(${MODULE_NAME}
-                PRIVATE
-                    PowerImplementation/BroadcomExt/PowerImplementation.cpp)
-        else()
             target_sources(${MODULE_NAME}
                 PRIVATE
                     PowerImplementation/Broadcom/PowerImplementation.cpp)

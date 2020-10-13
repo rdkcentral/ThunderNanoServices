@@ -48,18 +48,14 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
         target_sources(${MODULE_NAME}
             PRIVATE
                 ${VOLUMECONTROL_IMPLEMENTATION_PATH}/VolumeControlPlatform.cpp)
-    elseif (CODE_FROM_EXTERNAL_REPOSITORY)
+    else()
         include(GetExternalCode)
         set(VOLUMECONTROL_IMPLEMENTATION_VERSION "master" CACHE STRING "VolumeControl implementation version")
         GetExternalCode(
             GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/VolumeControl"
             GIT_TAG ${VOLUMECONTROL_IMPLEMENTATION_VERSION}
-            SOURCE_DIR "NexusExt"
+            SOURCE_DIR "Nexus"
         )
-        target_sources(${MODULE_NAME}
-            PRIVATE
-                NexusExt/VolumeControlPlatform.cpp)
-    else()
         target_sources(${MODULE_NAME}
             PRIVATE
                 Nexus/VolumeControlPlatform.cpp)

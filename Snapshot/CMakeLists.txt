@@ -47,21 +47,17 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
         target_sources(${MODULE_NAME}
             PRIVATE
                 ${SNAPSHOT_IMPLEMENTATION_PATH}/NexusCapture.cpp)
-    elseif (CODE_FROM_EXTERNAL_REPOSITORY)
+    else()
         include(GetExternalCode)
         set(SNAPSHOT_IMPLEMENTATION_VERSION "master" CACHE STRING "Snapshot implementation version")
         GetExternalCode(
             GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Snapshot"
             GIT_TAG ${SNAPSHOT_IMPLEMENTATION_VERSION}
-            SOURCE_DIR "NexusExt"
+            SOURCE_DIR "Nexus"
         )
         target_sources(${MODULE_NAME}
             PRIVATE
-                NexusExt/NexusCapture.cpp)
-    else()
-        target_sources(${MODULE_NAME} 
-            PRIVATE 
-                Device/NexusCapture.cpp)
+                Nexus/NexusCapture.cpp)
     endif()
     target_link_libraries(${MODULE_NAME} 
         PRIVATE 
