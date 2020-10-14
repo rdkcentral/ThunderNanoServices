@@ -303,7 +303,7 @@ namespace Plugin {
             {
                 uint32_t result = Core::ERROR_NONE;
                 if (_passiveMode == true) {
-                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"start\",  \"parameters\":\"" + parameters +  ", \"payload\":\"" + payload +"\" }"));
+                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"start\",  \"parameters\":\"" + parameters +  "\", \"payload\":\"" + payload +"\" }"));
                     _service->Notify(message);
                     _parent->event_start(_callsign, parameters, payload);
                     
@@ -329,7 +329,7 @@ namespace Plugin {
             virtual void Stop(const string& parameters, const string& payload)
             {
                 if (_passiveMode == true) {
-                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"stop\", \"parameters\":\"" + parameters + ", \"payload\":\"" + payload + "\"}"));            
+                    const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"stop\", \"parameters\":\"" + parameters + "\", \"payload\":\"" + payload + "\"}"));            
                     _service->Notify(message);
                     _parent->event_stop(_callsign, parameters);
                 } else {
