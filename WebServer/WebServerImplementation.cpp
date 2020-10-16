@@ -206,16 +206,16 @@ namespace Plugin {
         private:
             class OutgoingChannel : public Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, ResponseFactory> {
             private:
-                OutgoingChannel() = delete;
-                OutgoingChannel(const OutgoingChannel&) = delete;
-                OutgoingChannel& operator=(const OutgoingChannel&) = delete;
-
                 struct OutstandingMessage {
                     Core::ProxyType<Web::Request> Request;
                     uint32_t Id;
                 };
 
             public:
+                OutgoingChannel() = delete;
+                OutgoingChannel(const OutgoingChannel&) = delete;
+                OutgoingChannel& operator=(const OutgoingChannel&) = delete;
+
                 OutgoingChannel(const string& path, const string& replacement, ProxyMap& proxyMap, const Core::NodeId& remoteId)
                     : Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, ResponseFactory>(2, false, remoteId.AnyInterface(), remoteId, 1024, 1024)
                     , _path(path)
@@ -223,6 +223,10 @@ namespace Plugin {
                     , _outstandingMessages()
                     , _proxyMap(proxyMap)
                 {
+                }
+                
+                ~OutgoingChannel() override {
+                    Close(Core::infinite);
                 }
 
                 void ProxyRequest(Core::ProxyType<Web::Request>& request, uint32_t id)
@@ -404,20 +408,21 @@ namespace Plugin {
         };
 
         class IncomingChannel : public Web::WebLinkType<Core::SocketStream, Web::Request, Web::Response, RequestFactory> {
-        private:
+        public:
             IncomingChannel() = delete;
             IncomingChannel(const IncomingChannel& copy) = delete;
             IncomingChannel& operator=(const IncomingChannel&) = delete;
-
-        public:
+            
             IncomingChannel(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<IncomingChannel>* parent)
                 : Web::WebLinkType<Core::SocketStream, Web::Request, Web::Response, RequestFactory>(2, false, connector, remoteId, 1024, 1024)
                 , _id(0)
                 , _parent(static_cast<ChannelMap&>(*parent))
             {
             }
-            virtual ~IncomingChannel()
+            
+            ~IncomingChannel() override
             {
+                Close(Core::infinite);
             }
 
         private:
