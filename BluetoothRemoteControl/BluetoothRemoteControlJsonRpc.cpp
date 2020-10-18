@@ -37,6 +37,7 @@ namespace Plugin {
         Property<Core::JSON::String>(_T("name"), &BluetoothRemoteControl::get_name, nullptr, this);
         Property<Core::JSON::String>(_T("address"), &BluetoothRemoteControl::get_address, nullptr, this);
         Property<InfoData>(_T("info"), &BluetoothRemoteControl::get_info, nullptr, this);
+        Property<Core::JSON::Boolean>(_T("voice"), &BluetoothRemoteControl::get_voicecontrol, &BluetoothRemoteControl::set_voicecontrol, this);
         Property<Core::JSON::DecUInt8>(_T("batterylevel"), &BluetoothRemoteControl::get_batterylevel, nullptr, this);
         Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("audioprofiles"), &BluetoothRemoteControl::get_audioprofiles, nullptr, this);
         Property<AudioprofileData>(_T("audioprofile"), &BluetoothRemoteControl::get_audioprofile, nullptr, this);
@@ -48,6 +49,7 @@ namespace Plugin {
         Unregister(_T("assign"));
         Unregister(_T("audioprofile"));
         Unregister(_T("audioprofiles"));
+        Unregister(_T("voice"));
         Unregister(_T("batterylevel"));
         Unregister(_T("info"));
         Unregister(_T("address"));
@@ -154,6 +156,40 @@ namespace Plugin {
         if (_gattRemote != nullptr) {
             response = BatteryLevel();
             result = Core::ERROR_NONE;
+        }
+
+        return (result);
+    }
+
+    // Property: voice - Get the status of the Voice flow
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_GENERAL: Failed to retrieve battery level
+    uint32_t BluetoothRemoteControl::get_voicecontrol(Core::JSON::Boolean& response) const
+    {
+        uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+        if (_gattRemote != nullptr) {
+            response = _gattRemote->VoiceOutput();
+            result = Core::ERROR_NONE;
+        }
+
+        return (result);
+    }
+
+    // Property: voice - Get the status of the Voice flow
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_GENERAL: Failed to retrieve battery level
+    uint32_t BluetoothRemoteControl::set_voicecontrol(const Core::JSON::Boolean& response)
+    {
+        uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+        if (_gattRemote != nullptr) {
+            result = Core::ERROR_GENERAL;
+            if (_gattRemote->VoiceOutput(response.Value()) == Core::ERROR_NONE) {
+                result = Core::ERROR_NONE;
+            };
         }
 
         return (result);

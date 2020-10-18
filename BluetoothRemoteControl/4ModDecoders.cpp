@@ -25,15 +25,6 @@ namespace Decoders {
 
 class ADPCM : public IDecoder {
 private:
-    const uint8_t  WindowSize = 32;
-
-    struct __attribute__((packed)) Header {
-        uint8_t seq;
-        uint8_t step;
-        uint16_t pred;
-        uint8_t compression;
-    };
-
     struct __attribute__((packed)) Preamble {
         // Conforms to MS IMA ADPCM preamble
         uint16_t pred; // little-endian
@@ -43,162 +34,154 @@ private:
 
 public:
     static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::ADPCM;
-    static constexpr TCHAR                                     Name[]      = "Tech4Home";
+    static constexpr TCHAR                                     Name[]      = "4ModRemote";
 
 public:
     ADPCM() = delete;
     ADPCM(const ADPCM&) = delete;
     ADPCM& operator= (const ADPCM&) = delete;
 
-    ADPCM(const string&) {
+    ADPCM(const string&)
+        : _stepIdx(0)
+        , _pred(0)
+        , _frames(0)
+        , _dropped(0)
+        , _frame(0) {
     }
     ~ADPCM() {
     }
 
 public:
+    const uint8_t* Data() const {
+        return (_package);
+    }
+    uint16_t Length() const {
+        return (static_cast<uint16_t>(sizeof(_package)));
+    }
+    uint8_t StepIndex() const {
+        return (_stepIdx);
+    }
+    uint16_t Predicted() const {
+        return (_pred);
+    }
     uint32_t Frames() const override {
-        return (_frames);
+        return _frames;
     }
     uint32_t Dropped() const override {
         return (_dropped);
     }
     void Reset() override {
-        _frames = ~0;
-        _dropped = ~0;
+        _frames = 0;
+        _dropped = 0;
     }
     uint16_t Decode (const uint16_t lengthIn, const uint8_t dataIn[], const uint16_t lengthOut, uint8_t dataOut[]) override
     {
-
         uint16_t result = 0;
 
-	if (lengthIn == 5) {
-            const Header* hdr = reinterpret_cast<const Header*>(dataIn);
-            _seq = hdr->seq;
-            _stepIdx = hdr->step;
-            _pred = btohs(hdr->pred);
-            _compression = hdr->compression;
+        if (AddFrame(lengthIn, dataIn) == true) {
 
-            if (_dropped != static_cast<uint32_t>(~0)) {
-                // Is it a next frame, see if we dropped frames..
-                if (_seq > _nextFrame) {
-                    _dropped += _seq - _nextFrame;
-                }
-                else if (_seq < _nextFrame) {
-                    _dropped += _seq + (WindowSize - _nextFrame);
-                }
-                _frames++;
-            }
-            else {
-                _frames = 0;
-            }
-            _nextFrame = (_seq + 1) % WindowSize;
-        }
-        else if (lengthIn == 1) {
-            // footer nothing to do
-        }
-        else if (_frames != static_cast<uint32_t>(~0)) {
-            ASSERT (lengthOut >= sizeof(Preamble));
+            ASSERT (lengthOut > sizeof(Preamble));
 
             Preamble *preamble = reinterpret_cast<Preamble*>(dataOut);
             preamble->step = _stepIdx;
             preamble->pred = _pred;
             preamble->pad = 0;
 
-            if (_dropped == static_cast<uint32_t>(~0)) {
-                _dropped = 0;
-            }
+            result = std::min(static_cast<uint16_t>(lengthOut - sizeof(Preamble)), static_cast<uint16_t>(sizeof(_package)));
 
-            result = std::min(static_cast<uint16_t>(lengthOut - sizeof(Preamble)), lengthIn);
+            // Add the incoming buffer with the preamble build from the header notification
+            ::memcpy(&(dataOut[sizeof(Preamble)]), _package, result);
 
-            // Add the incoming buffer with the preamble built from the header notification
-            ::memcpy(&(dataOut[sizeof(Preamble)]), dataIn, result);
-
-            result = sizeof(Preamble) + lengthIn;
+            result += sizeof(Preamble);
         }
 
         return (result);
     }
-    private:
-        uint8_t  _seq;
-        uint8_t  _stepIdx;
-        uint16_t _pred;
-        uint8_t  _compression;
-        uint8_t  _nextFrame;
-        uint32_t _frames;
-        uint32_t _dropped;
+
+protected:
+    bool AddFrame(const uint16_t lengthIn, const uint8_t dataIn[]) {
+        _frames++;
+
+	if (_frame == 0) {
+            _pred    = (dataIn[0] << 8) | dataIn[1];
+            _stepIdx = dataIn[2];
+            _frame   = 1;
+            _offset  = (lengthIn - 3);
+
+            ::memcpy(_package, &(dataIn[3]), _offset);
+        }
+        else if ((lengthIn + _offset) < sizeof(_package)) { 
+            ::memcpy(&(_package[_offset]), dataIn, lengthIn);
+            _frame++;
+            _offset = lengthIn;
+        }
+        else {
+            // Seems we have a full frame
+            uint16_t copyLength = std::min(lengthIn, static_cast<uint16_t>(sizeof(_package) - _offset));
+
+            // Last frame should fill up the package...
+            ASSERT (copyLength == lengthIn);
+
+            ::memcpy(&(_package[_offset]), dataIn, copyLength);
+            
+            _frame = 0;
+            _offset = 0;
+        }
+ 
+        // Only the last frame of the sample will be less than 20bytes, all others should be full..
+        bool failure = ( (lengthIn < 20) && (_frame != 0) );
+
+        if (failure == true) {
+            ASSERT (_frame < 7);
+            // Looks like we lost some frames along the way, Reset and retry for the next..
+            _dropped = (7 - _frame);
+            _frame = 0;
+            _offset = 0;
+        }
+
+        return ( (_frame == 0) && (failure == false) );
+    }
+
+private:
+    uint8_t  _stepIdx;
+    uint16_t _pred;
+    uint32_t _frames;
+    uint32_t _dropped;
+
+    uint8_t  _frame;
+    uint8_t  _offset;
+    uint8_t  _package[128];
 };
 
 static DecoderFactory<ADPCM> _adpcmFactory;
 
-class PCM : public IDecoder {
-private:
-    const uint8_t  WindowSize = 32;
-
+class PCM : public ADPCM {
 public:
     static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::PCM;
-    static constexpr TCHAR                                     Name[]      = "Tech4Home";
+    static constexpr TCHAR                                     Name[]      = "4ModRemote";
 
 public:
     PCM() = delete;
     PCM(const PCM&) = delete;
     PCM& operator= (const PCM&) = delete;
 
-    PCM(const string&) {
+    PCM(const string& config) : ADPCM(config) {
     }
     ~PCM() {
     }
 
 public:
-    uint32_t Frames() const override {
-        return (_frames);
-    }
-    uint32_t Dropped() const override {
-        return (_dropped);
-    }
-    void Reset() override {
-        _PV_dec = 0;
-        _SI_dec = 0;
-        _frames = ~0;
-        _dropped = ~0;
-    }
     uint16_t Decode (const uint16_t lengthIn, const uint8_t dataIn[], const uint16_t lengthOut, uint8_t dataOut[]) override {
-
         uint16_t result = 0;
 
-	if (lengthIn == 5) {
-            unsigned char seqNum = (unsigned char)dataIn[0];
+        if (ADPCM::AddFrame(lengthIn, dataIn) == true) {
 
-            // Always use received PV and SI
-            _PV_dec = static_cast<int16_t>((dataIn[3] << 8) | dataIn[2]);
-            _SI_dec = dataIn[1];
+            _PV_dec = ADPCM::Predicted();
+            _SI_dec = ADPCM::StepIndex();
 
-            // Is this the first frame we encounter ?
-            if (_dropped != static_cast<uint32_t>(~0)) {
-                // Is it a next frame, see if we dropped frames..
-                if (dataIn[0] > _nextFrame) {
-                    _dropped += dataIn[0] - _nextFrame;
-                }
-                else if (seqNum < _nextFrame) {
-                    _dropped += dataIn[0] + (WindowSize - _nextFrame);
-                }
-                _frames++;
-            }
-            else {
-                _frames = 0;
-            }
-            _nextFrame = (dataIn[0] + 1) % WindowSize;
+            result = DecodeStream(ADPCM::Length(), ADPCM::Data(), lengthOut, dataOut);
         }
-        else if (lengthIn == 1) {
-            // This is a footer, so what :-)
-        }
-        else if (_frames != static_cast<uint32_t>(~0)) {
 
-            if (_dropped == static_cast<uint32_t>(~0)) {
-                _dropped = 0;
-            }
-
-            result = DecodeStream(lengthIn, dataIn, lengthOut, dataOut);
-        }
         return (result);
     }
 
@@ -295,9 +278,6 @@ private:
 private:
     int16_t  _PV_dec;
     int8_t   _SI_dec;
-    uint8_t  _nextFrame;
-    uint32_t _frames;
-    uint32_t _dropped;
 };
 
 static DecoderFactory<PCM> _pcmFactory;
