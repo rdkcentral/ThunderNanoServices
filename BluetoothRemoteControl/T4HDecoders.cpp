@@ -19,11 +19,11 @@
 
 #include "Administrator.h"
 
-namespace WPEFramework {
+using namespace WPEFramework;
 
-namespace Decoders {
+namespace {
 
-class ADPCM : public IDecoder {
+class ADPCM : public Decoders::IDecoder {
 private:
     const uint8_t  WindowSize = 32;
 
@@ -43,7 +43,7 @@ private:
 
 public:
     static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::ADPCM;
-    static constexpr TCHAR                                     Name[]      = "Tech4Home";
+    static const TCHAR*                                        Name;
 
 public:
     ADPCM() = delete;
@@ -128,15 +128,16 @@ public:
         uint32_t _dropped;
 };
 
-static DecoderFactory<ADPCM> _adpcmFactory;
+static Decoders::DecoderFactory<ADPCM> _adpcmFactory;
+/* static */ const TCHAR* ADPCM::Name = _T("Tech4Home");
 
-class PCM : public IDecoder {
+class PCM : public Decoders::IDecoder {
 private:
     const uint8_t  WindowSize = 32;
 
 public:
     static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::PCM;
-    static constexpr TCHAR                                     Name[]      = "Tech4Home";
+    static const TCHAR*                                        Name;
 
 public:
     PCM() = delete;
@@ -300,6 +301,7 @@ private:
     uint32_t _dropped;
 };
 
-static DecoderFactory<PCM> _pcmFactory;
+static Decoders::DecoderFactory<PCM> _pcmFactory;
+/* static */ const TCHAR* PCM::Name = _T("Tech4Home");
 
-} } // namespace WPEFramework::Decoders
+} // namespace 

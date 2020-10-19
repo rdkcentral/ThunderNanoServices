@@ -608,14 +608,14 @@ namespace Plugin {
 
                 if (_voiceCommandHandle != 0) {
                     GATTSocket::Command cmd;
-                    uint16_t val = htobs(enabled ? 1 : 0);
+                    uint8_t val = htobs(enabled ? 0x01 : 0x00);
                     cmd.Write(_voiceCommandHandle, sizeof(val), reinterpret_cast<const uint8_t*>(&val));
                     if ( ((result = Execute(CommunicationTimeOut, cmd)) == Core::ERROR_NONE) && (cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) ) {
                         TRACE(Flow, (_T("Voice Control (handle 0x%04X) enabled: %s"), _voiceCommandHandle, enabled ? _T("true") : _T("false")));
                         result = Core::ERROR_NONE;
                         _voiceEnabled = enabled;
 
-                        // TOD: Validate, this functionality might alse be triggered by a niootification send from the change on this handle.
+                        // TODO: Validate, this functionality might alse be triggered by a niootification send from the change on this handle.
                         if (_decoder != nullptr) {
                             // If we start, reset.
                             if (enabled == false) {
@@ -630,8 +630,9 @@ namespace Plugin {
                         }
                     }
                     else {
+                        uint32_t outcome = result;
                         result = (result == Core::ERROR_NONE ? (cmd.Error() == Core::ERROR_NONE ? Core::ERROR_PRIVILIGED_REQUEST : cmd.Error()) : result);
-                        TRACE(Trace::Error, (_T("Failed to enable voice (handle 0x%04X), error: %d [%d]"), _voiceCommandHandle, result, result == Core::ERROR_PRIVILIGED_REQUEST ? cmd.Result().Error() : 0));
+                        TRACE(Trace::Error, (_T("Failed to enable voice (handle 0x%04X), error: %d [%d]"), _voiceCommandHandle, outcome, result == Core::ERROR_PRIVILIGED_REQUEST ? cmd.Result().Error() : 0));
                     }
                 }
                 return (result);

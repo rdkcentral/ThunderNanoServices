@@ -244,8 +244,8 @@ namespace Plugin {
         // Nothing here yet
         if ((_gattRemote != nullptr) && (index.IsValid() == true)) {
             if ((index.Current() == _T("Voice")) && (index.Next() != false)) {
-                if (index.Current() == _T("On")) {
-                    uint32_t result = _gattRemote->VoiceOutput(true);
+                if (index.Current() == _T("Off")) {
+                    uint32_t result = _gattRemote->VoiceOutput(false);
                     if (result == Core::ERROR_NONE) {
                         response->ErrorCode = Web::STATUS_OK;
                         response->Message = _T("Voice disabled.");

@@ -51,6 +51,7 @@ namespace Decoders {
         DecoderFactory(const DecoderFactory<DECODER>&) = delete;
         DecoderFactory<DECODER>& operator&(const DecoderFactory<DECODER>&) = delete;
         DecoderFactory() {
+
             IDecoder::Announce(DECODER::Name, DECODER::DecoderType, this);
         }
 

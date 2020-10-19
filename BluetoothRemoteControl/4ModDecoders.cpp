@@ -19,11 +19,11 @@
 
 #include "Administrator.h"
 
-namespace WPEFramework {
+using namespace WPEFramework;
 
-namespace Decoders {
+namespace {
 
-class ADPCM : public IDecoder {
+class ADPCM : public Decoders::IDecoder {
 private:
     struct __attribute__((packed)) Preamble {
         // Conforms to MS IMA ADPCM preamble
@@ -34,7 +34,7 @@ private:
 
 public:
     static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::ADPCM;
-    static constexpr TCHAR                                     Name[]      = "4ModRemote";
+    static const TCHAR*                                    Name;
 
 public:
     ADPCM() = delete;
@@ -113,7 +113,7 @@ protected:
         else if ((lengthIn + _offset) < sizeof(_package)) { 
             ::memcpy(&(_package[_offset]), dataIn, lengthIn);
             _frame++;
-            _offset = lengthIn;
+            _offset += lengthIn;
         }
         else {
             // Seems we have a full frame
@@ -153,12 +153,12 @@ private:
     uint8_t  _package[128];
 };
 
-static DecoderFactory<ADPCM> _adpcmFactory;
+static Decoders::DecoderFactory<ADPCM> _adpcmFactory;
+/* static */ const TCHAR* ADPCM::Name = _T("DStv Remote D1");
 
 class PCM : public ADPCM {
 public:
     static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::PCM;
-    static constexpr TCHAR                                     Name[]      = "4ModRemote";
 
 public:
     PCM() = delete;
@@ -280,6 +280,6 @@ private:
     int8_t   _SI_dec;
 };
 
-static DecoderFactory<PCM> _pcmFactory;
+static Decoders::DecoderFactory<PCM> _pcmFactory;
 
-} } // namespace WPEFramework::Decoders
+} // namespace 
