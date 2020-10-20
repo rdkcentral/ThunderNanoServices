@@ -23,12 +23,12 @@ RemoteControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the RemoteControl plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the RemoteControl plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -75,7 +75,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *RemoteControl*) |
 | classname | string | Class name: *RemoteControl* |
 | locator | string | Library name: *libWPEFrameworkRemoteControl.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Methods"></a>
 # Methods
@@ -97,6 +97,7 @@ RemoteControl interface methods:
 | [save](#method.save) | Saves the device's key map into persistent path |
 | [pair](#method.pair) | Activates pairing mode of a device |
 | [unpair](#method.unpair) | Unpairs a device |
+
 
 <a name="method.key"></a>
 ## *key <sup>method</sup>*
@@ -144,6 +145,7 @@ Gets key code details.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -159,6 +161,7 @@ Gets key code details.
     }
 }
 ```
+
 <a name="method.send"></a>
 ## *send <sup>method</sup>*
 
@@ -203,6 +206,7 @@ Sends a key to a device (press and release).
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -212,6 +216,7 @@ Sends a key to a device (press and release).
     "result": null
 }
 ```
+
 <a name="method.press"></a>
 ## *press <sup>method</sup>*
 
@@ -255,6 +260,7 @@ Presses a key on a device.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -264,6 +270,7 @@ Presses a key on a device.
     "result": null
 }
 ```
+
 <a name="method.release"></a>
 ## *release <sup>method</sup>*
 
@@ -308,6 +315,7 @@ Releases a key on a device.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -317,6 +325,7 @@ Releases a key on a device.
     "result": null
 }
 ```
+
 <a name="method.add"></a>
 ## *add <sup>method</sup>*
 
@@ -366,6 +375,7 @@ Adds a key code to the key map.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -375,6 +385,7 @@ Adds a key code to the key map.
     "result": null
 }
 ```
+
 <a name="method.modify"></a>
 ## *modify <sup>method</sup>*
 
@@ -424,6 +435,7 @@ Modifies a key code in the key map.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -433,6 +445,7 @@ Modifies a key code in the key map.
     "result": null
 }
 ```
+
 <a name="method.delete"></a>
 ## *delete <sup>method</sup>*
 
@@ -475,6 +488,7 @@ Deletes a key code from the key map.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -484,6 +498,7 @@ Deletes a key code from the key map.
     "result": null
 }
 ```
+
 <a name="method.load"></a>
 ## *load <sup>method</sup>*
 
@@ -526,6 +541,7 @@ Re-loads the device's key map from persistent memory.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -535,6 +551,7 @@ Re-loads the device's key map from persistent memory.
     "result": null
 }
 ```
+
 <a name="method.save"></a>
 ## *save <sup>method</sup>*
 
@@ -576,6 +593,7 @@ Saves the device's key map into persistent path.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -585,6 +603,7 @@ Saves the device's key map into persistent path.
     "result": null
 }
 ```
+
 <a name="method.pair"></a>
 ## *pair <sup>method</sup>*
 
@@ -625,6 +644,7 @@ Activates pairing mode of a device.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -634,6 +654,7 @@ Activates pairing mode of a device.
     "result": null
 }
 ```
+
 <a name="method.unpair"></a>
 ## *unpair <sup>method</sup>*
 
@@ -676,6 +697,7 @@ Unpairs a device.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -685,6 +707,7 @@ Unpairs a device.
     "result": null
 }
 ```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -696,6 +719,7 @@ RemoteControl interface properties:
 | :-------- | :-------- |
 | [devices](#property.devices) <sup>RO</sup> | Names of all available devices |
 | [device](#property.device) <sup>RO</sup> | Metadata of a specific device |
+
 
 <a name="property.devices"></a>
 ## *devices <sup>property</sup>*
@@ -722,6 +746,7 @@ Provides access to the names of all available devices.
     "method": "RemoteControl.1.devices"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -733,6 +758,7 @@ Provides access to the names of all available devices.
     ]
 }
 ```
+
 <a name="property.device"></a>
 ## *device <sup>property</sup>*
 
@@ -768,6 +794,7 @@ Provides access to the metadata of a specific device.
     "method": "RemoteControl.1.device@DevInput"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -779,10 +806,11 @@ Provides access to the metadata of a specific device.
     }
 }
 ```
+
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers.Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the RemoteControl plugin:
 
@@ -791,6 +819,7 @@ RemoteControl interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [keypressed](#event.keypressed) | Notifies of a key press/release action |
+
 
 <a name="event.keypressed"></a>
 ## *keypressed <sup>event</sup>*
@@ -804,16 +833,17 @@ Notifies of a key press/release action.
 | params | object |  |
 | params.pressed | boolean | Denotes if the key was pressed (true) or released (false) |
 
-> The *key code* shall be passed within the designator, e.g. *42@client.events.1*.
+> The *key code* shall be passed within the designator, e.g. *42.client.events.1*.
 
 ### Example
 
 ```json
 {
     "jsonrpc": "2.0",
-    "method": "42@client.events.1.keypressed",
+    "method": "42.client.events.1.keypressed",
     "params": {
         "pressed": false
     }
 }
 ```
+

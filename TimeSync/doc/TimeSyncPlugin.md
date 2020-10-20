@@ -23,12 +23,12 @@ TimeSync plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the TimeSync plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the TimeSync plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -75,7 +75,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *TimeSync*) |
 | classname | string | Class name: *TimeSync* |
 | locator | string | Library name: *libWPEFrameworkTimeSync.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 | deferred | boolean | <sup>*(optional)*</sup> Determines if automatic time sync shall be initially disabled |
 | periodicity | number | <sup>*(optional)*</sup> Periodicity of time synchronization (in hours), 0 for one-off synchronization |
 | retries | number | <sup>*(optional)*</sup> Number of synchronization attempts if the source cannot be reached (may be 0) |
@@ -93,6 +93,7 @@ TimeSync interface methods:
 | Method | Description |
 | :-------- | :-------- |
 | [synchronize](#method.synchronize) | Synchronizes time |
+
 
 <a name="method.synchronize"></a>
 ## *synchronize <sup>method</sup>*
@@ -131,6 +132,7 @@ This method takes no parameters.
     "method": "TimeSync.1.synchronize"
 }
 ```
+
 #### Response
 
 ```json
@@ -140,6 +142,7 @@ This method takes no parameters.
     "result": null
 }
 ```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -151,6 +154,7 @@ TimeSync interface properties:
 | :-------- | :-------- |
 | [synctime](#property.synctime) <sup>RO</sup> | Most recent synchronized time |
 | [time](#property.time) | Current system time |
+
 
 <a name="property.synctime"></a>
 ## *synctime <sup>property</sup>*
@@ -178,6 +182,7 @@ Provides access to the most recent synchronized time.
     "method": "TimeSync.1.synctime"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -190,6 +195,7 @@ Provides access to the most recent synchronized time.
     }
 }
 ```
+
 <a name="property.time"></a>
 ## *time <sup>property</sup>*
 
@@ -222,6 +228,7 @@ Upon setting this property automatic time synchronization will be stopped. If no
     "method": "TimeSync.1.time"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -231,6 +238,7 @@ Upon setting this property automatic time synchronization will be stopped. If no
     "result": "2019-05-07T07:20:26Z"
 }
 ```
+
 #### Set Request
 
 ```json
@@ -241,6 +249,7 @@ Upon setting this property automatic time synchronization will be stopped. If no
     "params": "2019-05-07T07:20:26Z"
 }
 ```
+
 #### Set Response
 
 ```json
@@ -250,10 +259,11 @@ Upon setting this property automatic time synchronization will be stopped. If no
     "result": "null"
 }
 ```
+
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the TimeSync plugin:
 
@@ -262,6 +272,7 @@ TimeSync interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [timechange](#event.timechange) | Signals a time change |
+
 
 <a name="event.timechange"></a>
 ## *timechange <sup>event</sup>*
@@ -280,3 +291,4 @@ This event carries no parameters.
     "method": "client.events.1.timechange"
 }
 ```
+
