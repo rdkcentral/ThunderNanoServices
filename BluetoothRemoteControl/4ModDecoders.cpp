@@ -100,46 +100,54 @@ public:
 
 protected:
     bool AddFrame(const uint16_t lengthIn, const uint8_t dataIn[]) {
+
+        bool sendFrame = false;
+
         _frames++;
 
-	if (_frame == 0) {
-            _pred    = (dataIn[0] << 8) | dataIn[1];
-            _stepIdx = dataIn[2];
-            _frame   = 1;
-            _offset  = (lengthIn - 3);
+	if (lengthIn >= 20) {
+            if ((_frame == 0) || (_frame >= 6)) {
+                _pred    = (dataIn[0] << 8) | dataIn[1];
+                _stepIdx = dataIn[2];
+                _offset  = (lengthIn - 3);
 
-            ::memcpy(_package, &(dataIn[3]), _offset);
-        }
-        else if ((lengthIn + _offset) < sizeof(_package)) { 
-            ::memcpy(&(_package[_offset]), dataIn, lengthIn);
+                if (_frame >= 6) {
+                    _frame   = 0;
+                    _dropped += 1;
+                }
+
+                ::memcpy(_package, &(dataIn[3]), _offset);
+            }
+            else if ((lengthIn + _offset) < sizeof(_package)) { 
+                ::memcpy(&(_package[_offset]), dataIn, lengthIn);
+                _offset += lengthIn;
+            }
             _frame++;
-            _offset += lengthIn;
         }
         else {
             // Seems we have a full frame
             uint16_t copyLength = std::min(lengthIn, static_cast<uint16_t>(sizeof(_package) - _offset));
 
             // Last frame should fill up the package...
-            ASSERT (copyLength == lengthIn);
+            if (copyLength == lengthIn) {
 
-            ::memcpy(&(_package[_offset]), dataIn, copyLength);
-            
+                ::memcpy(&(_package[_offset]), dataIn, copyLength);
+                _offset += lengthIn;
+            }
+
+            if (_offset < sizeof(_package)) {
+                // Looks like we lost some frames along the way, Reset and retry for the next..
+                _dropped += 1;
+            }
+            else {
+                sendFrame = true;
+            }
+
             _frame = 0;
             _offset = 0;
         }
  
-        // Only the last frame of the sample will be less than 20bytes, all others should be full..
-        bool failure = ( (lengthIn < 20) && (_frame != 0) );
-
-        if (failure == true) {
-            ASSERT (_frame < 7);
-            // Looks like we lost some frames along the way, Reset and retry for the next..
-            _dropped = (7 - _frame);
-            _frame = 0;
-            _offset = 0;
-        }
-
-        return ( (_frame == 0) && (failure == false) );
+        return ( sendFrame );
     }
 
 private:
@@ -154,7 +162,7 @@ private:
 };
 
 static Decoders::DecoderFactory<ADPCM> _adpcmFactory;
-/* static */ const TCHAR* ADPCM::Name = _T("DStv Remote D1");
+/* static */ const TCHAR* ADPCM::Name = _T("4MOD Technology");
 
 class PCM : public ADPCM {
 public:

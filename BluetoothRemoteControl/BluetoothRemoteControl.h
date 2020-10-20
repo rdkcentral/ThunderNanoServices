@@ -483,14 +483,9 @@ namespace Plugin {
                 Config config;
                 config.FromString(configuration);
 
-                Constructor(config);
+                _profile = new Profile(config);
 
-                if (_device->IsConnected() == true) {
-                    TRACE(Trace::Fatal, (_T("The device is already connected. First disconnect the device")));
-                }
-                else {
-                    _profile = new Profile(config);
-                }
+                Constructor(config);
             }
 
             GATTRemote(BluetoothRemoteControl* parent, Exchange::IBluetooth::IDevice* device, const string& configuration, const Data& data)
@@ -522,17 +517,34 @@ namespace Plugin {
                 , _decoder(nullptr)
                 , _voiceEnabled(false)
             {
+                bool discover = (data.ManufacturerName.IsSet() == false) || (data.ManufacturerName.Value().empty() == true);
+
                 if (data.KeysDataHandle.IsSet() == true) {
-                    _keysDataHandles.push_back(data.KeysDataHandle.Value());
+                    if (data.KeysDataHandle.Value() != static_cast<uint16_t>(~0)) {
+                        _keysDataHandles.push_back(data.KeysDataHandle.Value());
+                    }
+                    else {
+                        discover = false;
+                    }
                 } else {
                     auto index = data.KeysDataHandles.Elements();
                     while (index.Next() == true) {
-                        _keysDataHandles.push_back(index.Current().Value());
+                        if (index.Current().Value() != static_cast<uint16_t>(~0)) {
+                            _keysDataHandles.push_back(index.Current().Value());
+                        }
+                        else {
+                            discover = false;
+                        }
                     }
                 }
 
+
                 Config config;
                 config.FromString(configuration);
+
+                if (discover == true) {
+                    _profile = new Profile(config);
+                }
 
                 Constructor(config);
             }
@@ -637,21 +649,33 @@ namespace Plugin {
                 }
                 return (result);
             }
-            void Reconfigure(const string& settings) {
+            void Decoder (const string& settings) {
                 Config::Profile config;
                 config.FromString(settings);
+                SetDecoder(config);
+            }
+
+        private:
+            void SetDecoder(const Config::Profile& config) {
+
+                Core::EnumerateType<Exchange::IVoiceProducer::IProfile::codec> enumValue (config.Codec.Value());
 
                 if (_decoder != nullptr) {
                     delete _decoder;
+                    if (_audioProfile != nullptr) {
+                        _audioProfile->Release();
+                    }
                 }
-                _audioProfile->Release();
 
-                _decoder = Decoders::IDecoder::Instance(_name.c_str(), config.Codec.Value(), config.Configuration.Value());
+                _decoder = Decoders::IDecoder::Instance(_manufacturerName.c_str(), enumValue.Value(), config.Configuration.Value());
+
 
                 if (_decoder == nullptr) {
+                    TRACE(Trace::Error, (_T("Failed to create a decoder for %s type: [%s]"), _manufacturerName.c_str(), enumValue.Data()));
                     _audioProfile = nullptr;
                 }
                 else {
+                    TRACE(Flow, (_T("Created a decoder for %s type: [%s]"), _manufacturerName.c_str(), enumValue.Data()));
                     _audioProfile = Core::Service<AudioProfile>::Create<AudioProfile>(
                         config.Codec.Value(),
                         config.Channels.Value(),
@@ -659,8 +683,25 @@ namespace Plugin {
                         config.Resolution.Value());
                 }
             }
+            void Discover() 
+            {
+                _profile->Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
+                    if (result == Core::ERROR_NONE) {
+                        DumpProfile();
 
-        private:
+                        if ((*_profile)[Bluetooth::UUID(HID_UUID)] == nullptr) {
+                            TRACE(Flow, (_T("The given bluetooth device does not support a HID service!!")));
+                        }
+                        else {
+                            TRACE(Flow, (_T("Reading the remaining information")));
+                            ReadModelNumber();
+                        }
+                    }
+                    else {
+                        TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
+                    }
+                });
+            }
             void Notification(const uint16_t handle, const uint8_t dataFrame[], const uint16_t length) override
             {
                 // Decouple the notifications from the communciator thread, they will pop-up and need to be handled
@@ -733,17 +774,27 @@ namespace Plugin {
                     TRACE(Trace::Fatal, (_T("The device is already in use. Only 1 callback allowed")));
                 }
 
-                _decoder = Decoders::IDecoder::Instance(_name.c_str(), config.AudioProfile.Codec.Value(), config.AudioProfile.Configuration.Value());
+                if (_profile == nullptr) {
+                    TRACE(Flow, (_T("The HoG device is ready for operation")));
 
-                if (_decoder != nullptr) {
-                    _audioProfile = Core::Service<AudioProfile>::Create<AudioProfile>(
-                        config.AudioProfile.Codec.Value(),
-                        config.AudioProfile.Channels.Value(),
-                        config.AudioProfile.SampleRate.Value(),
-                        config.AudioProfile.Resolution.Value());
+                    SetDecoder(config.AudioProfile);
                 }
-
-                TRACE(Flow, (_T("The HoG device is ready for operation")));
+                else {
+                    if (_device->IsConnected() == true) {
+                        uint32_t result = GATTSocket::Open(5000);
+                        if (result != Core::ERROR_NONE) {
+                            TRACE(Trace::Error, (_T("Failed to open GATT socket [%s]"), _device->RemoteId().c_str()));
+                        }
+                        else {
+                            TRACE(Flow, (_T("The device is not configured. Read the device configuration.")));
+                            Discover();
+                        }
+                    }
+                    else {
+                        TRACE(Flow, (_T("The device is not configured. Connect to it, so we can read the config.")));
+                        _device->Connect();
+                    }
+                }
             }
             bool Initialize() override
             {
@@ -760,24 +811,8 @@ namespace Plugin {
                 }
                 else {
                     TRACE(Flow, (_T("The received MTU: %d, we have no clue yet, start discovery"), MTU()));
-
-                    _profile->Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
-                        if (result == Core::ERROR_NONE) {
-                            DumpProfile();
-
-                            if ((*_profile)[Bluetooth::UUID(HID_UUID)] == nullptr) {
-                                TRACE(Flow, (_T("The given bluetooth device does not support a HID service!!")));
-                            }
-                            else {
-                                TRACE(Flow, (_T("Reading the remaining information")));
-                                ReadModelNumber();
-                            }
-                        }
-                        else {
-                            TRACE(Flow, (_T("The given bluetooth device could not be read for services!!")));
-                        }
-                    });
-                }
+                    Discover();
+               }
             }
             void ReadModelNumber()
             {
@@ -1266,7 +1301,7 @@ namespace Plugin {
             _adminLock.Lock();
 
             if (_gattRemote != nullptr) {
-                _gattRemote->Reconfigure(settings);
+                _gattRemote->Decoder(settings);
             }
 
             _adminLock.Unlock();

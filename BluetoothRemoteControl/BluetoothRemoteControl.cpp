@@ -393,6 +393,8 @@ namespace Plugin {
             settingsFile.Close();
         }
 
+       _gattRemote->Decoder(_configLine); 
+
         if (_inputHandler != nullptr) {
             // Load the keyMap for this remote
             string keyMapFile(_service->DataPath() + (_keyMap.empty() ? _name : _keyMap) + _T(".json"));
