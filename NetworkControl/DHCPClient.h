@@ -638,7 +638,9 @@ namespace Plugin {
 
         uint16_t Message(uint8_t stream[], const uint16_t length) const
         {
-            CoreMessage& frame(*reinterpret_cast<CoreMessage*>(stream));
+            uint16_t headerSize = SocketDatagram::Size();
+
+            CoreMessage& frame(*reinterpret_cast<CoreMessage*>(&stream[headerSize]));
 
             /* clear the packet data structure */
             ::memset(&frame, 0, sizeof(CoreMessage));
@@ -669,7 +671,7 @@ namespace Plugin {
             /* Close down the header field with a magic cookie (as per RFC 2132) */
             ::memcpy(frame.magicCookie, MagicCookie, sizeof(frame.magicCookie));
 
-            uint8_t* options(&stream[sizeof(CoreMessage)]);
+            uint8_t* options(&stream[sizeof(CoreMessage) + headerSize]);
             uint16_t index(3);
 
             /* DHCP message type is embedded in options field */
@@ -714,7 +716,8 @@ namespace Plugin {
 
             options[index++] = OPTION_END;
 
-            return (sizeof(CoreMessage) + index);
+            SocketDatagram::ForceAnyAddress(stream, sizeof(CoreMessage) + index);
+            return (sizeof(CoreMessage) + index + headerSize);
         }
 
         /* parse a DHCP message and take appropiate action */
