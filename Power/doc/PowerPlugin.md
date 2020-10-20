@@ -21,12 +21,12 @@ Power plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Power plugin. It includes detailed specification of its configuration, methods and properties provided.
+This document describes purpose and functionality of the Power plugin. It includes detailed specification about its configuration, methods and properties provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -66,7 +66,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *Power*) |
 | classname | string | Class name: *Power* |
 | locator | string | Library name: *libWPEFrameworkPower.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Methods"></a>
 # Methods
@@ -78,6 +78,7 @@ Power interface methods:
 | Method | Description |
 | :-------- | :-------- |
 | [set](#method.set) | Sets power state |
+
 
 <a name="method.set"></a>
 ## *set <sup>method</sup>*
@@ -122,6 +123,7 @@ Sets power state.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -131,6 +133,7 @@ Sets power state.
     "result": null
 }
 ```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -141,6 +144,7 @@ Power interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [state](#property.state) <sup>RO</sup> | Power state |
+
 
 <a name="property.state"></a>
 ## *state <sup>property</sup>*
@@ -166,6 +170,7 @@ Provides access to the power state.
     "method": "Power.1.state"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -175,3 +180,4 @@ Provides access to the power state.
     "result": "on"
 }
 ```
+

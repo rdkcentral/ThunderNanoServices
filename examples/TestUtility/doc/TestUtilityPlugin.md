@@ -22,12 +22,12 @@ TestUtility plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the TestUtility plugin. It includes detailed specification of its configuration, methods and properties provided.
+This document describes purpose and functionality of the TestUtility plugin. It includes detailed specification about its configuration, methods and properties provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -74,7 +74,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *TestUtility*) |
 | classname | string | Class name: *TestUtility* |
 | locator | string | Library name: *libWPEFrameworkTestUtility.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Methods"></a>
 # Methods
@@ -87,6 +87,7 @@ TestUtility interface methods:
 | :-------- | :-------- |
 | [runmemory](#method.runmemory) | Runs a memory test command |
 | [runcrash](#method.runcrash) | Runs a crash test command |
+
 
 <a name="method.runmemory"></a>
 ## *runmemory <sup>method</sup>*
@@ -132,6 +133,7 @@ Runs a memory test command.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -145,6 +147,7 @@ Runs a memory test command.
     }
 }
 ```
+
 <a name="method.runcrash"></a>
 ## *runcrash <sup>method</sup>*
 
@@ -188,6 +191,7 @@ Runs a crash test command.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -197,6 +201,7 @@ Runs a crash test command.
     "result": null
 }
 ```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -210,6 +215,7 @@ TestUtility interface properties:
 | [description](#property.description) <sup>RO</sup> | Description of a test command |
 | [parameters](#property.parameters) <sup>RO</sup> | Parameters of a test command |
 | [shutdowntimeout](#property.shutdowntimeout) <sup>WO</sup> | Timeout to be waited before deactivating the plugin |
+
 
 <a name="property.commands"></a>
 ## *commands <sup>property</sup>*
@@ -236,6 +242,7 @@ Provides access to the list of test commands.
     "method": "TestUtility.1.commands"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -247,6 +254,7 @@ Provides access to the list of test commands.
     ]
 }
 ```
+
 <a name="property.description"></a>
 ## *description <sup>property</sup>*
 
@@ -281,6 +289,7 @@ Provides access to the description of a test command.
     "method": "TestUtility.1.description@Malloc"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -292,6 +301,7 @@ Provides access to the description of a test command.
     }
 }
 ```
+
 <a name="property.parameters"></a>
 ## *parameters <sup>property</sup>*
 
@@ -334,6 +344,7 @@ Provides access to the parameters of a test command.
     "method": "TestUtility.1.parameters@Malloc"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -356,6 +367,7 @@ Provides access to the parameters of a test command.
     }
 }
 ```
+
 <a name="property.shutdowntimeout"></a>
 ## *shutdowntimeout <sup>property</sup>*
 
@@ -381,6 +393,7 @@ Provides access to the timeout to be waited before deactivating the plugin.
     "params": 5000
 }
 ```
+
 #### Set Response
 
 ```json
@@ -390,3 +403,4 @@ Provides access to the timeout to be waited before deactivating the plugin.
     "result": "null"
 }
 ```
+

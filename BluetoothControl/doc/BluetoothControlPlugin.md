@@ -23,12 +23,12 @@ BluetoothControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the BluetoothControl plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the BluetoothControl plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -75,7 +75,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *BluetoothControl*) |
 | classname | string | Class name: *BluetoothControl* |
 | locator | string | Library name: *libWPEFrameworkBluetoothControl.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Methods"></a>
 # Methods
@@ -95,6 +95,7 @@ BluetoothControl interface methods:
 | [pincode](#method.pincode) | Specifies a PIN code for authentication during a legacy pairing process |
 | [passkey](#method.passkey) | Specifies a passkey for authentication during a pairing process |
 | [confirmpasskey](#method.confirmpasskey) | Confirms a passkey for authentication during a pairing process |
+
 
 <a name="method.scan"></a>
 ## *scan <sup>method</sup>*
@@ -122,7 +123,6 @@ Also see: [scancomplete](#event.scancomplete)
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 1 | ```ERROR_GENERAL``` | Failed to scan |
-| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 | 12 | ```ERROR_INPROGRESS``` | Scan already in progress |
 
 ### Example
@@ -140,6 +140,7 @@ Also see: [scancomplete](#event.scancomplete)
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -149,6 +150,7 @@ Also see: [scancomplete](#event.scancomplete)
     "result": null
 }
 ```
+
 <a name="method.connect"></a>
 ## *connect <sup>method</sup>*
 
@@ -175,10 +177,6 @@ Also see: [devicestatechange](#event.devicestatechange)
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 9 | ```ERROR_ALREADY_CONNECTED``` | Device already connected |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Device not paired |
-| 11 | ```ERROR_TIMEDOUT``` | Connect request timed out |
-| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
-| 12 | ```ERROR_INPROGRESS``` | Device is currently busy |
 | 1 | ```ERROR_GENERAL``` | Failed to connect the device |
 
 ### Example
@@ -195,6 +193,7 @@ Also see: [devicestatechange](#event.devicestatechange)
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -204,6 +203,7 @@ Also see: [devicestatechange](#event.devicestatechange)
     "result": null
 }
 ```
+
 <a name="method.disconnect"></a>
 ## *disconnect <sup>method</sup>*
 
@@ -230,9 +230,6 @@ Also see: [devicestatechange](#event.devicestatechange)
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 36 | ```ERROR_ALREADY_RELEASED``` | Device not connected |
-| 12 | ```ERROR_INPROGRESS``` | Device is currently busy |
-| 11 | ```ERROR_TIMEDOUT``` | Disconnect request timed out |
-| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 
 ### Example
 
@@ -248,6 +245,7 @@ Also see: [devicestatechange](#event.devicestatechange)
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -257,6 +255,7 @@ Also see: [devicestatechange](#event.devicestatechange)
     "result": null
 }
 ```
+
 <a name="method.pair"></a>
 ## *pair <sup>method</sup>*
 
@@ -288,9 +287,6 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 9 | ```ERROR_ALREADY_CONNECTED``` | Device already paired |
-| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
-| 12 | ```ERROR_INPROGRESS``` | Device is currently busy |
-| 11 | ```ERROR_TIMEDOUT``` | Pairing timeout elapsed |
 | 1 | ```ERROR_GENERAL``` | Failed to pair the device |
 
 ### Example
@@ -308,6 +304,7 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -317,6 +314,7 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
     "result": null
 }
 ```
+
 <a name="method.unpair"></a>
 ## *unpair <sup>method</sup>*
 
@@ -343,9 +341,6 @@ Also see: [devicestatechange](#event.devicestatechange)
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 36 | ```ERROR_ALREADY_RELEASED``` | Device not paired |
-| 12 | ```ERROR_INPROGRESS``` | Device is currently busy |
-| 11 | ```ERROR_TIMEDOUT``` | Unpair request timed out |
-| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 
 ### Example
 
@@ -361,6 +356,7 @@ Also see: [devicestatechange](#event.devicestatechange)
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -370,6 +366,7 @@ Also see: [devicestatechange](#event.devicestatechange)
     "result": null
 }
 ```
+
 <a name="method.abortpairing"></a>
 ## *abortpairing <sup>method</sup>*
 
@@ -394,8 +391,6 @@ Aborts the pairing process.
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Device not currently pairing |
-| 11 | ```ERROR_TIMEDOUT``` | Unpair request timed out |
-| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 
 ### Example
 
@@ -411,6 +406,7 @@ Aborts the pairing process.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -420,6 +416,7 @@ Aborts the pairing process.
     "result": null
 }
 ```
+
 <a name="method.pincode"></a>
 ## *pincode <sup>method</sup>*
 
@@ -451,7 +448,6 @@ Also see: [pincoderequest](#event.pincoderequest)
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Device not currently pairing or PIN code has not been requested |
-| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 
 ### Example
 
@@ -468,6 +464,7 @@ Also see: [pincoderequest](#event.pincoderequest)
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -477,6 +474,7 @@ Also see: [pincoderequest](#event.pincoderequest)
     "result": null
 }
 ```
+
 <a name="method.passkey"></a>
 ## *passkey <sup>method</sup>*
 
@@ -508,7 +506,6 @@ Also see: [passkeyrequest](#event.passkeyrequest)
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Device not currently pairing or a passkey has not been requested |
-| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 
 ### Example
 
@@ -525,6 +522,7 @@ Also see: [passkeyrequest](#event.passkeyrequest)
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -534,6 +532,7 @@ Also see: [passkeyrequest](#event.passkeyrequest)
     "result": null
 }
 ```
+
 <a name="method.confirmpasskey"></a>
 ## *confirmpasskey <sup>method</sup>*
 
@@ -565,7 +564,6 @@ Also see: [passkeyconfirmrequest](#event.passkeyconfirmrequest)
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 5 | ```ERROR_ILLEGAL_STATE``` | Device is currently not pairing or passkey confirmation has not been requested |
-| 3 | ```ERROR_ASYNC_FAILED``` | Controller operation failed |
 
 ### Example
 
@@ -582,6 +580,7 @@ Also see: [passkeyconfirmrequest](#event.passkeyconfirmrequest)
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -591,6 +590,7 @@ Also see: [passkeyconfirmrequest](#event.passkeyconfirmrequest)
     "result": null
 }
 ```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -604,6 +604,7 @@ BluetoothControl interface properties:
 | [adapter](#property.adapter) <sup>RO</sup> | Local Bluetooth adapter information |
 | [devices](#property.devices) <sup>RO</sup> | List of known remote Bluetooth devices |
 | [device](#property.device) <sup>RO</sup> | Remote Bluetooth device information |
+
 
 <a name="property.adapters"></a>
 ## *adapters <sup>property</sup>*
@@ -630,6 +631,7 @@ Provides access to the list of local Bluetooth adapters.
     "method": "BluetoothControl.1.adapters"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -641,6 +643,7 @@ Provides access to the list of local Bluetooth adapters.
     ]
 }
 ```
+
 <a name="property.adapter"></a>
 ## *adapter <sup>property</sup>*
 
@@ -679,6 +682,7 @@ Provides access to the local Bluetooth adapter information.
     "method": "BluetoothControl.1.adapter@0"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -695,6 +699,7 @@ Provides access to the local Bluetooth adapter information.
     }
 }
 ```
+
 <a name="property.devices"></a>
 ## *devices <sup>property</sup>*
 
@@ -720,6 +725,7 @@ Provides access to the list of known remote Bluetooth devices.
     "method": "BluetoothControl.1.devices"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -731,6 +737,7 @@ Provides access to the list of known remote Bluetooth devices.
     ]
 }
 ```
+
 <a name="property.device"></a>
 ## *device <sup>property</sup>*
 
@@ -768,6 +775,7 @@ Provides access to the remote Bluetooth device information.
     "method": "BluetoothControl.1.device@81:6F:B0:91:9B:FE"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -783,6 +791,7 @@ Provides access to the remote Bluetooth device information.
     }
 }
 ```
+
 <a name="head.Notifications"></a>
 # Notifications
 
@@ -799,6 +808,7 @@ BluetoothControl interface events:
 | [pincoderequest](#event.pincoderequest) | Notifies about a PIN code request |
 | [passkeyrequest](#event.passkeyrequest) | Notifies about a passkey request |
 | [passkeyconfirmrequest](#event.passkeyconfirmrequest) | Notifies about a passkey confirmation request |
+
 
 <a name="event.scancomplete"></a>
 ## *scancomplete <sup>event</sup>*
@@ -821,6 +831,7 @@ This event carries no parameters.
     "method": "client.events.1.scancomplete"
 }
 ```
+
 <a name="event.devicestatechange"></a>
 ## *devicestatechange <sup>event</sup>*
 
@@ -852,6 +863,7 @@ Register to this event to be notified about device state changes
     }
 }
 ```
+
 <a name="event.pincoderequest"></a>
 ## *pincoderequest <sup>event</sup>*
 
@@ -879,6 +891,7 @@ Register to this event to be notified about PIN code requests during a legacy pa
     }
 }
 ```
+
 <a name="event.passkeyrequest"></a>
 ## *passkeyrequest <sup>event</sup>*
 
@@ -906,6 +919,7 @@ Register to this event to be notified about passkey requests that may be require
     }
 }
 ```
+
 <a name="event.passkeyconfirmrequest"></a>
 ## *passkeyconfirmrequest <sup>event</sup>*
 
@@ -935,3 +949,4 @@ Register to this event to be notified about passkey confirmation requests that m
     }
 }
 ```
+

@@ -21,12 +21,12 @@ DIALServer plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the DIALServer plugin. It includes detailed specification of its configuration and notifications sent.
+This document describes purpose and functionality of the DIALServer plugin. It includes detailed specification about its configuration and notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -78,7 +78,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *DIALServer*) |
 | classname | string | Class name: *DIALServer* |
 | locator | string | Library name: *libWPEFrameworkDIALServer.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | Server configuration |
 | configuration.name | string | User-friendly name of the device |
 | configuration.model | string | Name of the device model |
@@ -103,7 +103,7 @@ The table below lists configuration options of the plugin.
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the DIALServer plugin:
 
@@ -113,6 +113,8 @@ DIALServer interface events:
 | :-------- | :-------- |
 | [start](#event.start) | Signals that application start was requested over DIAL *(passive mode only)* |
 | [stop](#event.stop) | Signals that application stop was requested over DIAL *(passive mode only)* |
+| [hide](#event.hide) | Signals that application hide was requested over DIAL *(passive mode only)* |
+
 
 <a name="event.start"></a>
 ## *start <sup>event</sup>*
@@ -126,6 +128,7 @@ Signals that application start was requested over DIAL *(passive mode only)*.
 | params | object |  |
 | params.application | string | Application name |
 | params?.parameters | string | <sup>*(optional)*</sup> Additional application-specific parameters |
+| params?.payload | string | <sup>*(optional)*</sup> Additional application-specific payload |
 
 ### Example
 
@@ -135,10 +138,12 @@ Signals that application start was requested over DIAL *(passive mode only)*.
     "method": "client.events.1.start",
     "params": {
         "application": "YouTube",
-        "parameters": "watch?v=zpp045FBbQY"
+        "parameters": "watch?v=zpp045FBbQY",
+        "payload": ""
     }
 }
 ```
+
 <a name="event.stop"></a>
 ## *stop <sup>event</sup>*
 
@@ -160,7 +165,32 @@ Signals that application stop was requested over DIAL *(passive mode only)*.
     "method": "client.events.1.stop",
     "params": {
         "application": "YouTube",
-        "parameters": ""
+        "parameters": "watch?v=zpp045FBbQY"
     }
 }
 ```
+
+<a name="event.hide"></a>
+## *hide <sup>event</sup>*
+
+Signals that application hide was requested over DIAL *(passive mode only)*.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.application | string | Application name |
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "client.events.1.hide",
+    "params": {
+        "application": "YouTube"
+    }
+}
+```
+

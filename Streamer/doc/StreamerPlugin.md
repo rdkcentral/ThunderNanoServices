@@ -23,12 +23,12 @@ Streamer plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Streamer plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the Streamer plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -61,7 +61,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-
+.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -75,7 +75,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *Streamer*) |
 | classname | string | Class name: *Streamer* |
 | locator | string | Library name: *libWPEFrameworkStreamer.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Methods"></a>
 # Methods
@@ -91,6 +91,7 @@ Streamer interface methods:
 | [load](#method.load) | Loads a source into a stream |
 | [attach](#method.attach) | Attaches a decoder to the streamer |
 | [detach](#method.detach) | Detaches a decoder from the streamer |
+
 
 <a name="method.create"></a>
 ## *create <sup>method</sup>*
@@ -131,6 +132,7 @@ Creates a stream instance.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -140,6 +142,7 @@ Creates a stream instance.
     "result": 0
 }
 ```
+
 <a name="method.destroy"></a>
 ## *destroy <sup>method</sup>*
 
@@ -178,6 +181,7 @@ Destroys a stream instance.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -187,6 +191,7 @@ Destroys a stream instance.
     "result": null
 }
 ```
+
 <a name="method.load"></a>
 ## *load <sup>method</sup>*
 
@@ -232,6 +237,7 @@ Also see: [statechange](#event.statechange)
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -241,6 +247,7 @@ Also see: [statechange](#event.statechange)
     "result": null
 }
 ```
+
 <a name="method.attach"></a>
 ## *attach <sup>method</sup>*
 
@@ -282,6 +289,7 @@ Attaches a decoder to the streamer.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -291,6 +299,7 @@ Attaches a decoder to the streamer.
     "result": null
 }
 ```
+
 <a name="method.detach"></a>
 ## *detach <sup>method</sup>*
 
@@ -331,6 +340,7 @@ Detaches a decoder from the streamer.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -340,6 +350,7 @@ Detaches a decoder from the streamer.
     "result": null
 }
 ```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -360,6 +371,7 @@ Streamer interface properties:
 | [metadata](#property.metadata) <sup>RO</sup> | Metadata associated with the stream |
 | [error](#property.error) <sup>RO</sup> | Most recent error code |
 | [elements](#property.elements) <sup>RO</sup> | Stream elements |
+
 
 <a name="property.speed"></a>
 ## *speed <sup>property</sup>*
@@ -398,6 +410,7 @@ Also see: [statechange](#event.statechange)
     "method": "Streamer.1.speed@0"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -407,6 +420,7 @@ Also see: [statechange](#event.statechange)
     "result": 100
 }
 ```
+
 #### Set Request
 
 ```json
@@ -417,6 +431,7 @@ Also see: [statechange](#event.statechange)
     "params": 100
 }
 ```
+
 #### Set Response
 
 ```json
@@ -426,6 +441,7 @@ Also see: [statechange](#event.statechange)
     "result": "null"
 }
 ```
+
 <a name="property.position"></a>
 ## *position <sup>property</sup>*
 
@@ -457,6 +473,7 @@ Provides access to the stream position.
     "method": "Streamer.1.position@0"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -466,6 +483,7 @@ Provides access to the stream position.
     "result": 60000
 }
 ```
+
 #### Set Request
 
 ```json
@@ -476,6 +494,7 @@ Provides access to the stream position.
     "params": 60000
 }
 ```
+
 #### Set Response
 
 ```json
@@ -485,6 +504,7 @@ Provides access to the stream position.
     "result": "null"
 }
 ```
+
 <a name="property.window"></a>
 ## *window <sup>property</sup>*
 
@@ -520,6 +540,7 @@ Provides access to the stream playback window.
     "method": "Streamer.1.window@0"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -534,6 +555,7 @@ Provides access to the stream playback window.
     }
 }
 ```
+
 #### Set Request
 
 ```json
@@ -549,6 +571,7 @@ Provides access to the stream playback window.
     }
 }
 ```
+
 #### Set Response
 
 ```json
@@ -558,6 +581,7 @@ Provides access to the stream playback window.
     "result": "null"
 }
 ```
+
 <a name="property.speeds"></a>
 ## *speeds <sup>property</sup>*
 
@@ -592,6 +616,7 @@ Provides access to the speeds supported by the stream player.
     "method": "Streamer.1.speeds@0"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -609,6 +634,7 @@ Provides access to the speeds supported by the stream player.
     ]
 }
 ```
+
 <a name="property.streams"></a>
 ## *streams <sup>property</sup>*
 
@@ -634,6 +660,7 @@ Provides access to the all created stream instance IDs.
     "method": "Streamer.1.streams"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -648,6 +675,7 @@ Provides access to the all created stream instance IDs.
     ]
 }
 ```
+
 <a name="property.type"></a>
 ## *type <sup>property</sup>*
 
@@ -680,6 +708,7 @@ Provides access to the type of a stream.
     "method": "Streamer.1.type@0"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -689,6 +718,7 @@ Provides access to the type of a stream.
     "result": "cable"
 }
 ```
+
 <a name="property.drm"></a>
 ## *drm <sup>property</sup>*
 
@@ -723,6 +753,7 @@ Also see: [drmchange](#event.drmchange)
     "method": "Streamer.1.drm@0"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -732,6 +763,7 @@ Also see: [drmchange](#event.drmchange)
     "result": "clearkey"
 }
 ```
+
 <a name="property.state"></a>
 ## *state <sup>property</sup>*
 
@@ -766,6 +798,7 @@ Also see: [statechange](#event.statechange)
     "method": "Streamer.1.state@0"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -775,6 +808,7 @@ Also see: [statechange](#event.statechange)
     "result": "controlled"
 }
 ```
+
 <a name="property.metadata"></a>
 ## *metadata <sup>property</sup>*
 
@@ -807,6 +841,7 @@ Provides access to the metadata associated with the stream.
     "method": "Streamer.1.metadata@0"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -816,6 +851,7 @@ Provides access to the metadata associated with the stream.
     "result": ""
 }
 ```
+
 <a name="property.error"></a>
 ## *error <sup>property</sup>*
 
@@ -848,6 +884,7 @@ Provides access to the most recent error code.
     "method": "Streamer.1.error@0"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -857,6 +894,7 @@ Provides access to the most recent error code.
     "result": 0
 }
 ```
+
 <a name="property.elements"></a>
 ## *elements <sup>property</sup>*
 
@@ -892,6 +930,7 @@ Provides access to the stream elements.
     "method": "Streamer.1.elements@0"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -905,10 +944,11 @@ Provides access to the stream elements.
     ]
 }
 ```
+
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the Streamer plugin:
 
@@ -921,6 +961,7 @@ Streamer interface events:
 | [stream](#event.stream) | Notifies of a custom stream incident |
 | [player](#event.player) | Notifies of a custom player incident |
 | [drm](#event.drm) | Notifies of a custom DRM-related incident |
+
 
 <a name="event.statechange"></a>
 ## *statechange <sup>event</sup>*
@@ -947,6 +988,7 @@ Notifies of stream state change.
     }
 }
 ```
+
 <a name="event.timeupdate"></a>
 ## *timeupdate <sup>event</sup>*
 
@@ -972,6 +1014,7 @@ Notifies of stream position change. This event is fired every second to indicate
     }
 }
 ```
+
 <a name="event.stream"></a>
 ## *stream <sup>event</sup>*
 
@@ -997,6 +1040,7 @@ Notifies of a custom stream incident.
     }
 }
 ```
+
 <a name="event.player"></a>
 ## *player <sup>event</sup>*
 
@@ -1022,6 +1066,7 @@ Notifies of a custom player incident.
     }
 }
 ```
+
 <a name="event.drm"></a>
 ## *drm <sup>event</sup>*
 
@@ -1047,3 +1092,4 @@ Notifies of a custom DRM-related incident.
     }
 }
 ```
+

@@ -23,12 +23,12 @@ BluetoothRemoteControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the BluetoothRemoteControl plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the BluetoothRemoteControl plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -75,7 +75,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *BluetoothRemoteControl*) |
 | classname | string | Class name: *BluetoothRemoteControl* |
 | locator | string | Library name: *libWPEFrameworkBluetoothRemoteControl.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Methods"></a>
 # Methods
@@ -88,6 +88,7 @@ BluetoothRemoteControl interface methods:
 | :-------- | :-------- |
 | [assign](#method.assign) | Assigns a bluetooth device as a remote control unit |
 | [revoke](#method.revoke) | Revokes the current remote control assignment |
+
 
 <a name="method.assign"></a>
 ## *assign <sup>method</sup>*
@@ -129,6 +130,7 @@ Assigns a bluetooth device as a remote control unit.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -138,6 +140,7 @@ Assigns a bluetooth device as a remote control unit.
     "result": null
 }
 ```
+
 <a name="method.revoke"></a>
 ## *revoke <sup>method</sup>*
 
@@ -170,6 +173,7 @@ This method takes no parameters.
     "method": "BluetoothRemoteControl.1.revoke"
 }
 ```
+
 #### Response
 
 ```json
@@ -179,6 +183,7 @@ This method takes no parameters.
     "result": null
 }
 ```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -193,6 +198,7 @@ BluetoothRemoteControl interface properties:
 | [info](#property.info) <sup>RO</sup> | Unit auxiliary information |
 | [batterylevel](#property.batterylevel) <sup>RO</sup> | Battery level |
 | [audioprofile](#property.audioprofile) <sup>RO</sup> | Audio profile details |
+
 
 <a name="property.name"></a>
 ## *name <sup>property</sup>*
@@ -224,6 +230,7 @@ Provides access to the unit name.
     "method": "BluetoothRemoteControl.1.name"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -233,6 +240,7 @@ Provides access to the unit name.
     "result": "Acme Bluetooth RCU"
 }
 ```
+
 <a name="property.address"></a>
 ## *address <sup>property</sup>*
 
@@ -263,6 +271,7 @@ Provides access to the bluetooth address of the unit.
     "method": "BluetoothRemoteControl.1.address"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -272,6 +281,7 @@ Provides access to the bluetooth address of the unit.
     "result": "81:6F:B0:91:9B:FE"
 }
 ```
+
 <a name="property.info"></a>
 ## *info <sup>property</sup>*
 
@@ -308,6 +318,7 @@ Provides access to the unit auxiliary information.
     "method": "BluetoothRemoteControl.1.info"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -323,6 +334,7 @@ Provides access to the unit auxiliary information.
     }
 }
 ```
+
 <a name="property.batterylevel"></a>
 ## *batterylevel <sup>property</sup>*
 
@@ -354,6 +366,7 @@ Provides access to the battery level.
     "method": "BluetoothRemoteControl.1.batterylevel"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -363,6 +376,7 @@ Provides access to the battery level.
     "result": 50
 }
 ```
+
 <a name="property.audioprofile"></a>
 ## *audioprofile <sup>property</sup>*
 
@@ -398,6 +412,7 @@ Provides access to the audio profile details.
     "method": "BluetoothRemoteControl.1.audioprofile"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -412,10 +427,11 @@ Provides access to the audio profile details.
     }
 }
 ```
+
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the BluetoothRemoteControl plugin:
 
@@ -426,6 +442,7 @@ BluetoothRemoteControl interface events:
 | [audiotransmission](#event.audiotransmission) | Notifies about audio data transmission |
 | [audioframe](#event.audioframe) | Notifies about new audio data available |
 | [batterylevelchange](#event.batterylevelchange) | Notifies about battery level changes |
+
 
 <a name="event.audiotransmission"></a>
 ## *audiotransmission <sup>event</sup>*
@@ -454,6 +471,7 @@ Register to this event to be notified about audio transmission status
     }
 }
 ```
+
 <a name="event.audioframe"></a>
 ## *audioframe <sup>event</sup>*
 
@@ -483,6 +501,7 @@ Register to this event to be notified about audio data
     }
 }
 ```
+
 <a name="event.batterylevelchange"></a>
 ## *batterylevelchange <sup>event</sup>*
 
@@ -510,3 +529,4 @@ Register to this event to be notified about battery level drops
     }
 }
 ```
+
