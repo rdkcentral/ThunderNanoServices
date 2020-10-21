@@ -28,7 +28,7 @@ namespace Plugin {
     static Core::NodeId BroadcastServerNode (_T("255.255.255.255"), DHCPClient::DefaultDHCPServerPort, Core::NodeId::TYPE_IPV4);
 
     DHCPClient::DHCPClient(const string& interfaceName, ICallback* callback)
-        : Core::SocketDatagram(false, BroadcastClientNode, BroadcastServerNode, 512, 1024)
+        : Core::SocketDatagram(false, BroadcastNode(interfaceName), BroadcastNode(interfaceName), 512, 1024)
         , _adminLock()
         , _interfaceName(interfaceName)
         , _state(IDLE)
@@ -38,10 +38,11 @@ namespace Plugin {
         , _offer()
         , _callback(callback)
     {
-        Core::AdapterIterator adapters(_interfaceName);
 
+        Core::AdapterIterator adapters(_interfaceName);
         if (adapters.IsValid() == true) {
             adapters.MACAddress(_MAC, sizeof(_MAC));
+
         } else {
             TRACE_L1("Could not read mac address of %s\n", _interfaceName.c_str());
         }
@@ -50,6 +51,15 @@ namespace Plugin {
     /* virtual */ DHCPClient::~DHCPClient()
     {
         SocketDatagram::Close(Core::infinite);
+    }
+    Core::NodeId DHCPClient::BroadcastNode(const string& interfaceName)
+    {
+        Core::NodeId result;
+        Core::AdapterIterator adapters(interfaceName);
+        if (adapters.IsValid() == true) {
+            result = adapters.Broadcast();
+        }
+        return result;
     }
 
     // Methods to extract and insert data into the socket buffers
@@ -60,10 +70,14 @@ namespace Plugin {
         if (_state == SENDING) {
             _state = RECEIVING;
 
-            RemoteNode(BroadcastServerNode);
-
             TRACE_L1("Sending DHCP message type: %d for interface: %s", _modus, _interfaceName.c_str());
-            result = Message(dataFrame, maxSendSize);
+            result = Message(dataFrame + SocketDatagram::HeaderSize(), maxSendSize - SocketDatagram::HeaderSize());
+
+            if (result > 0) {
+
+               result = SocketDatagram::SetHeader(BroadcastClientNode, BroadcastServerNode, result, dataFrame);
+            }
+
         }
 
         return (result);

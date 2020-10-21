@@ -620,6 +620,7 @@ namespace Plugin {
         }
 
     private:
+        static Core::NodeId BroadcastNode(const string& interfaceName);
         // Methods to extract and insert data into the socket buffers
         virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
         virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
@@ -638,9 +639,8 @@ namespace Plugin {
 
         uint16_t Message(uint8_t stream[], const uint16_t length) const
         {
-            uint16_t headerSize = SocketDatagram::Size();
 
-            CoreMessage& frame(*reinterpret_cast<CoreMessage*>(&stream[headerSize]));
+            CoreMessage& frame(*reinterpret_cast<CoreMessage*>(stream));
 
             /* clear the packet data structure */
             ::memset(&frame, 0, sizeof(CoreMessage));
@@ -671,7 +671,7 @@ namespace Plugin {
             /* Close down the header field with a magic cookie (as per RFC 2132) */
             ::memcpy(frame.magicCookie, MagicCookie, sizeof(frame.magicCookie));
 
-            uint8_t* options(&stream[sizeof(CoreMessage) + headerSize]);
+            uint8_t* options(&stream[sizeof(CoreMessage)]);
             uint16_t index(3);
 
             /* DHCP message type is embedded in options field */
@@ -716,8 +716,7 @@ namespace Plugin {
 
             options[index++] = OPTION_END;
 
-            SocketDatagram::ForceAnyAddress(stream, sizeof(CoreMessage) + index);
-            return (sizeof(CoreMessage) + index + headerSize);
+            return (sizeof(CoreMessage) + index);
         }
 
         /* parse a DHCP message and take appropiate action */
