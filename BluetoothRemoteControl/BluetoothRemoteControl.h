@@ -474,7 +474,7 @@ namespace Plugin {
                 , _voiceDataHandle(~0)
                 , _voiceCommandHandle(~0)
                 , _hidReportCharacteristics()
-                , _hidReportCharacteristicsIterator()
+                , _hidReportCharacteristicsIterator(_hidReportCharacteristics.cbegin())
                 , _hid()
                 , _hidInputReports()
                 , _audioProfile(nullptr)
@@ -979,6 +979,7 @@ namespace Plugin {
                             } else {
                                 TRACE(Flow, (_T("Failed to read ReportReference descriptor")));
                                 _hidReportCharacteristics.erase(_hidReportCharacteristicsIterator, _hidReportCharacteristics.cend());
+                                _hidReportCharacteristicsIterator = _hidReportCharacteristics.cbegin();
                                 EnableEvents();
                             }
                         });
