@@ -22,12 +22,12 @@ IOConnector plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the IOConnector plugin. It includes detailed specification of its configuration, properties provided and notifications sent.
+This document describes purpose and functionality of the IOConnector plugin. It includes detailed specification about its configuration, properties provided and notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -75,7 +75,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *IOConnector*) |
 | classname | string | Class name: *IOConnector* |
 | locator | string | Library name: *libWPEIOConnector.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 | pins | array | List of GPIO pins available on the system |
 | pins[#] | object | Pin properties |
 | pins[#].id | number | Pin ID |
@@ -92,6 +92,7 @@ IOConnector interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [pin](#property.pin) | GPIO pin value |
+
 
 <a name="property.pin"></a>
 ## *pin <sup>property</sup>*
@@ -125,6 +126,7 @@ Also see: [activity](#event.activity)
     "method": "IOConnector.1.pin@189"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -134,6 +136,7 @@ Also see: [activity](#event.activity)
     "result": 1
 }
 ```
+
 #### Set Request
 
 ```json
@@ -144,6 +147,7 @@ Also see: [activity](#event.activity)
     "params": 1
 }
 ```
+
 #### Set Response
 
 ```json
@@ -153,10 +157,11 @@ Also see: [activity](#event.activity)
     "result": "null"
 }
 ```
+
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the IOConnector plugin:
 
@@ -165,6 +170,7 @@ IOConnector interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [activity](#event.activity) | Notifies about GPIO pin activity |
+
 
 <a name="event.activity"></a>
 ## *activity <sup>event</sup>*
@@ -195,3 +201,4 @@ Register to this event to be notified about pin value changes
     }
 }
 ```
+

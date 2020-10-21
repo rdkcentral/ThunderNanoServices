@@ -22,12 +22,12 @@ VolumeControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the VolumeControl plugin. It includes detailed specification of its configuration, properties provided and notifications sent.
+This document describes purpose and functionality of the VolumeControl plugin. It includes detailed specification about its configuration, properties provided and notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -60,7 +60,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-The Volume Control plugin allows to manage system's audio volume
+The Volume Control plugin allows to manage system's audio volume.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -74,7 +74,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *VolumeControl*) |
 | classname | string | Class name: *VolumeControl* |
 | locator | string | Library name: *libWPEVolumeControl.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Properties"></a>
 # Properties
@@ -85,8 +85,9 @@ VolumeControl interface properties:
 
 | Property | Description |
 | :-------- | :-------- |
-| [Muted](#property.Muted) | Audio mute state |
-| [Volume](#property.Volume) | Audio volume level |
+| [muted](#property.muted) | Audio mute state |
+| [volume](#property.volume) | Audio volume level |
+
 
 <a name="property.muted"></a>
 ## *muted <sup>property</sup>*
@@ -116,6 +117,7 @@ Provides access to the audio mute state.
     "method": "VolumeControl.1.muted"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -125,6 +127,7 @@ Provides access to the audio mute state.
     "result": false
 }
 ```
+
 #### Set Request
 
 ```json
@@ -135,6 +138,7 @@ Provides access to the audio mute state.
     "params": false
 }
 ```
+
 #### Set Response
 
 ```json
@@ -144,6 +148,7 @@ Provides access to the audio mute state.
     "result": "null"
 }
 ```
+
 <a name="property.volume"></a>
 ## *volume <sup>property</sup>*
 
@@ -172,6 +177,7 @@ Provides access to the audio volume level.
     "method": "VolumeControl.1.volume"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -181,6 +187,7 @@ Provides access to the audio volume level.
     "result": 100
 }
 ```
+
 #### Set Request
 
 ```json
@@ -191,6 +198,7 @@ Provides access to the audio volume level.
     "params": 100
 }
 ```
+
 #### Set Response
 
 ```json
@@ -200,10 +208,11 @@ Provides access to the audio volume level.
     "result": "null"
 }
 ```
+
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the VolumeControl plugin:
 
@@ -211,11 +220,14 @@ VolumeControl interface events:
 
 | Event | Description |
 | :-------- | :-------- |
-| [Volume](#event.Volume) |  |
-| [Muted](#event.Muted) |  |
+| [volume](#event.volume) | Signals volume change |
+| [muted](#event.muted) | Signals mute state change |
+
 
 <a name="event.volume"></a>
 ## *volume <sup>event</sup>*
+
+Signals volume change.
 
 ### Parameters
 
@@ -235,8 +247,11 @@ VolumeControl interface events:
     }
 }
 ```
+
 <a name="event.muted"></a>
 ## *muted <sup>event</sup>*
+
+Signals mute state change.
 
 ### Parameters
 
@@ -256,3 +271,4 @@ VolumeControl interface events:
     }
 }
 ```
+

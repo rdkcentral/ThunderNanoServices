@@ -22,12 +22,12 @@ TestController plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the TestController plugin. It includes detailed specification of its configuration, methods and properties provided.
+This document describes purpose and functionality of the TestController plugin. It includes detailed specification about its configuration, methods and properties provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -74,7 +74,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *TestController*) |
 | classname | string | Class name: *TestController* |
 | locator | string | Library name: *libWPEFrameworkTestController.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Methods"></a>
 # Methods
@@ -86,6 +86,7 @@ TestController interface methods:
 | Method | Description |
 | :-------- | :-------- |
 | [run](#method.run) | Runs a single test or multiple tests |
+
 
 <a name="method.run"></a>
 ## *run <sup>method</sup>*
@@ -133,6 +134,7 @@ Runs a single test or multiple tests.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -147,6 +149,7 @@ Runs a single test or multiple tests.
     ]
 }
 ```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -159,6 +162,7 @@ TestController interface properties:
 | [categories](#property.categories) <sup>RO</sup> | List of test categories |
 | [tests](#property.tests) <sup>RO</sup> | List of tests for a category |
 | [description](#property.description) <sup>RO</sup> | Description of a test |
+
 
 <a name="property.categories"></a>
 ## *categories <sup>property</sup>*
@@ -185,6 +189,7 @@ Provides access to the list of test categories.
     "method": "TestController.1.categories"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -196,6 +201,7 @@ Provides access to the list of test categories.
     ]
 }
 ```
+
 <a name="property.tests"></a>
 ## *tests <sup>property</sup>*
 
@@ -230,6 +236,7 @@ Provides access to the list of tests for a category.
     "method": "TestController.1.tests@JSONRPC"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -241,6 +248,7 @@ Provides access to the list of tests for a category.
     ]
 }
 ```
+
 <a name="property.description"></a>
 ## *description <sup>property</sup>*
 
@@ -275,6 +283,7 @@ Provides access to the description of a test.
     "method": "TestController.1.description@JSONRPC"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -286,3 +295,4 @@ Provides access to the description of a test.
     }
 }
 ```
+

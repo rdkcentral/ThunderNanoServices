@@ -9,6 +9,7 @@
 * Dictionary
 * [DisplayInfo](DisplayInfo/doc/DisplayInfoPlugin.md)
 * DSResolution
+* [DTV](DTV/doc/DTVPlugin.md)
 * FileTransfer
 * [FirmwareControl](FirmwareControl/doc/FirmwareControlPlugin.md)
 * FrontPanel
@@ -17,7 +18,7 @@
 * [NetworkControl](NetworkControl/doc/NetworkControlPlugin.md)
 * [PlayerInfo](PlayerInfo/doc/PlayerInfo.md)
 * [Power](Power/doc/PowerPlugin.md)
-* ProcessMonitor
+* [ProcessMonitor](ProcessMonitor/doc/ProcessMonitorPlugin.md)
 * [RemoteControl](RemoteControl/doc/RemoteControlPlugin.md)
 * RtspClient
 * SecureShellServer

@@ -56,6 +56,9 @@ public:
       NxClient_AudioSettings audioSettings;
       NxClient_GetAudioSettings(&audioSettings);
       audioSettings.muted = muted;
+      audioSettings.hdmi.muted = muted;
+      audioSettings.spdif.muted = muted;
+      audioSettings.dac.muted = muted;
       int result = NxClient_SetAudioSettings(&audioSettings); 
 
       TRACE(Trace::Information, (_T("Hardware set muted: %d [%d]"), audioSettings.muted, result));
@@ -78,6 +81,11 @@ public:
       int32_t toSet = volume;
       NxClient_AudioSettings audioSettings;
       NxClient_GetAudioSettings(&audioSettings);
+      audioSettings.volumeType = NEXUS_AudioVolumeType_eLinear;
+      audioSettings.dac.volumeType = NEXUS_AudioVolumeType_eLinear;
+      audioSettings.hdmi.volumeType = NEXUS_AudioVolumeType_eLinear;
+      audioSettings.spdif.volumeType = NEXUS_AudioVolumeType_eLinear;
+
       if (audioSettings.volumeType == NEXUS_AudioVolumeType_eDecibel) {
           toSet = VolumeControlPlatformNexus::ToNexusDb(volume);
       } else {
@@ -85,7 +93,14 @@ public:
           type = _T("Linear");
       }
 
+      audioSettings.hdmi.outputMode = NxClient_AudioOutputMode_ePcm;
+      audioSettings.spdif.outputMode = NxClient_AudioOutputMode_ePcm;
+      audioSettings.dac.outputMode = NxClient_AudioOutputMode_ePcm;
+
       audioSettings.leftVolume = audioSettings.rightVolume = toSet;
+      audioSettings.hdmi.leftVolume = audioSettings.hdmi.rightVolume = toSet;
+      audioSettings.spdif.leftVolume = audioSettings.spdif.rightVolume = toSet;
+      audioSettings.dac.leftVolume = audioSettings.dac.rightVolume = toSet;
 
       int result = NxClient_SetAudioSettings(&audioSettings);
 
