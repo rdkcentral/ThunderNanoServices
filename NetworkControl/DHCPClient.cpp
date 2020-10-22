@@ -85,7 +85,10 @@ namespace Plugin {
 
     /* virtual */ uint16_t DHCPClient::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
     {
-        ProcessMessage(SocketDatagram::ReceivedNode(), dataFrame, receivedSize);
+
+        if (SocketDatagram::IsValid(dataFrame, receivedSize, DHCPClient::DefaultDHCPClientPort)) {
+            ProcessMessage(SocketDatagram::ReceivedNode(), dataFrame + SocketDatagram::HeaderSize(), receivedSize - SocketDatagram::HeaderSize());
+        }
 
         return (receivedSize);
     }
