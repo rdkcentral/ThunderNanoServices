@@ -620,13 +620,14 @@ namespace Plugin {
         }
 
     private:
-        static Core::NodeId BroadcastNode(const string& interfaceName);
         // Methods to extract and insert data into the socket buffers
         virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
         virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
 
         // Signal a state change, Opened, Closed or Accepted
         virtual void StateChange() override;
+
+        static Core::NodeId BroadcastNode(const string& interfaceName);
 
         inline bool IsZero(const uint8_t option[], const uint8_t length) const
         {
