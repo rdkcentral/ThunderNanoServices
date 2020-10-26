@@ -510,7 +510,7 @@ namespace Plugin {
                 , _voiceDataHandle(data.VoiceDataHandle.Value())
                 , _voiceCommandHandle(data.VoiceCommandHandle.Value())
                 , _hidReportCharacteristics()
-                , _hidReportCharacteristicsIterator()
+                , _hidReportCharacteristicsIterator(_hidReportCharacteristics.cbegin())
                 , _hid()
                 , _hidInputReports()
                 , _audioProfile(nullptr)
