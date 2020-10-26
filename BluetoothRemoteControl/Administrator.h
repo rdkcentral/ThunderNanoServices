@@ -35,8 +35,8 @@ namespace Decoders {
             virtual IDecoder* Factory(const string& configuration) = 0;
         };
 
-        static void Announce(Exchange::IVoiceProducer::IProfile::codec codec, IFactory* factory);
-        static IDecoder* Instance(Exchange::IVoiceProducer::IProfile::codec codec, const string& configuration);
+        static void Announce(const TCHAR name[], Exchange::IVoiceProducer::IProfile::codec codec, IFactory* factory);
+        static IDecoder* Instance(const TCHAR name[], Exchange::IVoiceProducer::IProfile::codec codec, const string& configuration);
 
         virtual uint32_t Frames() const = 0;
         virtual uint32_t Dropped() const = 0;
@@ -51,7 +51,8 @@ namespace Decoders {
         DecoderFactory(const DecoderFactory<DECODER>&) = delete;
         DecoderFactory<DECODER>& operator&(const DecoderFactory<DECODER>&) = delete;
         DecoderFactory() {
-            IDecoder::Announce(DECODER::DecoderType, this);
+
+            IDecoder::Announce(DECODER::Name, DECODER::DecoderType, this);
         }
 
         virtual ~DecoderFactory() {
