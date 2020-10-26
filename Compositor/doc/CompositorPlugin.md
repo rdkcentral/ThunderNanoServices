@@ -22,12 +22,12 @@ Compositor plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Compositor plugin. It includes detailed specification of its configuration, methods and properties provided.
+This document describes purpose and functionality of the Compositor plugin. It includes detailed specification about its configuration, methods and properties provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -74,7 +74,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *Compositor*) |
 | classname | string | Class name: *Compositor* |
 | locator | string | Library name: *libWPEFrameworkCompositor.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Methods"></a>
 # Methods
@@ -88,6 +88,7 @@ Compositor interface methods:
 | [putontop](#method.putontop) | Puts client surface on top in z-order |
 | [putbelow](#method.putbelow) | Puts client surface below another surface |
 | [select](#method.select) | Directs the input to the given client, disabling all the others |
+
 
 <a name="method.putontop"></a>
 ## *putontop <sup>method</sup>*
@@ -131,6 +132,7 @@ Use this method to get a client's surface to the top position.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -140,6 +142,7 @@ Use this method to get a client's surface to the top position.
     "result": null
 }
 ```
+
 <a name="method.putbelow"></a>
 ## *putbelow <sup>method</sup>*
 
@@ -184,6 +187,7 @@ Use this method to reorder client surfaces in the z-order list.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -193,6 +197,7 @@ Use this method to reorder client surfaces in the z-order list.
     "result": null
 }
 ```
+
 <a name="method.select"></a>
 ## *select <sup>method</sup>*
 
@@ -235,6 +240,7 @@ Use this method to direct all inputs to this client. The client that is receivin
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -244,6 +250,7 @@ Use this method to direct all inputs to this client. The client that is receivin
     "result": null
 }
 ```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -258,6 +265,7 @@ Compositor interface properties:
 | [geometry](#property.geometry) | Client surface geometry |
 | [visiblity](#property.visiblity) <sup>WO</sup> | Client surface visibility |
 | [opacity](#property.opacity) <sup>WO</sup> | Client surface opacity |
+
 
 <a name="property.resolution"></a>
 ## *resolution <sup>property</sup>*
@@ -293,6 +301,7 @@ Use this property to set or retrieve the current resolution of the screen.
     "method": "Compositor.1.resolution"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -302,6 +311,7 @@ Use this property to set or retrieve the current resolution of the screen.
     "result": "1080p24"
 }
 ```
+
 #### Set Request
 
 ```json
@@ -312,6 +322,7 @@ Use this property to set or retrieve the current resolution of the screen.
     "params": "1080p24"
 }
 ```
+
 #### Set Response
 
 ```json
@@ -321,6 +332,7 @@ Use this property to set or retrieve the current resolution of the screen.
     "result": "null"
 }
 ```
+
 <a name="property.zorder"></a>
 ## *zorder <sup>property</sup>*
 
@@ -356,6 +368,7 @@ Use this property to retrieve the list of all clients in z-order. Each client ha
     "method": "Compositor.1.zorder"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -367,6 +380,7 @@ Use this property to retrieve the list of all clients in z-order. Each client ha
     ]
 }
 ```
+
 <a name="property.geometry"></a>
 ## *geometry <sup>property</sup>*
 
@@ -405,6 +419,7 @@ Use this property to update or retrieve the geometry of a client's surface.
     "method": "Compositor.1.geometry@Netflix"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -419,6 +434,7 @@ Use this property to update or retrieve the geometry of a client's surface.
     }
 }
 ```
+
 #### Set Request
 
 ```json
@@ -434,6 +450,7 @@ Use this property to update or retrieve the geometry of a client's surface.
     }
 }
 ```
+
 #### Set Response
 
 ```json
@@ -443,6 +460,7 @@ Use this property to update or retrieve the geometry of a client's surface.
     "result": "null"
 }
 ```
+
 <a name="property.visiblity"></a>
 ## *visiblity <sup>property</sup>*
 
@@ -480,6 +498,7 @@ Use this property to set the client's surface visibility.
     "params": "visible"
 }
 ```
+
 #### Set Response
 
 ```json
@@ -489,6 +508,7 @@ Use this property to set the client's surface visibility.
     "result": "null"
 }
 ```
+
 <a name="property.opacity"></a>
 ## *opacity <sup>property</sup>*
 
@@ -526,6 +546,7 @@ Use this property to set the client's surface opacity level.
     "params": 127
 }
 ```
+
 #### Set Response
 
 ```json
@@ -535,3 +556,4 @@ Use this property to set the client's surface opacity level.
     "result": "null"
 }
 ```
+

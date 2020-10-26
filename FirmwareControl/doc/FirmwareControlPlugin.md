@@ -23,12 +23,12 @@ FirmwareControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the FirmwareControl plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the FirmwareControl plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -61,7 +61,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-Control Firmware upgrade to the device
+Control Firmware upgrade to the device.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -75,7 +75,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *FirmwareControl*) |
 | classname | string | Class name: *FirmwareControl* |
 | locator | string | Library name: *libWPEFrameworkFirmwareControl.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Methods"></a>
 # Methods
@@ -88,6 +88,7 @@ FirmwareControl interface methods:
 | :-------- | :-------- |
 | [upgrade](#method.upgrade) | Upgrade the device to the given firmware |
 | [resume](#method.resume) | Resume download from the last paused position |
+
 
 <a name="method.upgrade"></a>
 ## *upgrade <sup>method</sup>*
@@ -142,6 +143,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -151,6 +153,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
     "result": null
 }
 ```
+
 <a name="method.resume"></a>
 ## *resume <sup>method</sup>*
 
@@ -197,6 +200,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -206,6 +210,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
     "result": null
 }
 ```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -217,6 +222,7 @@ FirmwareControl interface properties:
 | :-------- | :-------- |
 | [status](#property.status) <sup>RO</sup> | Current status of a upgrade |
 | [downloadsize](#property.downloadsize) <sup>RO</sup> | Max free space available to download image |
+
 
 <a name="property.status"></a>
 ## *status <sup>property</sup>*
@@ -244,6 +250,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
     "method": "FirmwareControl.1.status"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -253,6 +260,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
     "result": "completed"
 }
 ```
+
 <a name="property.downloadsize"></a>
 ## *downloadsize <sup>property</sup>*
 
@@ -277,6 +285,7 @@ Provides access to the max free space available to download image.
     "method": "FirmwareControl.1.downloadsize"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -286,6 +295,7 @@ Provides access to the max free space available to download image.
     "result": 315576
 }
 ```
+
 <a name="head.Notifications"></a>
 # Notifications
 
@@ -298,6 +308,7 @@ FirmwareControl interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [upgradeprogress](#event.upgradeprogress) | Notifies progress of upgrade |
+
 
 <a name="event.upgradeprogress"></a>
 ## *upgradeprogress <sup>event</sup>*
@@ -326,3 +337,4 @@ Notifies progress of upgrade.
     }
 }
 ```
+

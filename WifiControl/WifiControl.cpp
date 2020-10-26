@@ -139,6 +139,8 @@ namespace Plugin
     /* virtual */ void WifiControl::Deinitialize(PluginHost::IShell * service)
     {
 #ifndef USE_WIFI_HAL
+
+        _autoConnect.Revoke();
         _controller->Callback(nullptr);
         _controller->Terminate();
         _controller.Release();
@@ -146,9 +148,6 @@ namespace Plugin
         _wpaSupplicant.Terminate();
 
 #endif
-
-        _autoConnect.Revoke();
-
         ASSERT(_service == service);
         _service = nullptr;
     }

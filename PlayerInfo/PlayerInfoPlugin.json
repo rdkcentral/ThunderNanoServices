@@ -8,7 +8,8 @@
     "description": "The PlayerInfo plugin helps to get system supported Audio Video codecs",
     "version": "1.0"
   },
-  "interface": {
-    "$cppref": "{cppinterfacedir}/IPlayerInfo.h"
-  }
+  "interface": [
+      { "$cppref": "{cppinterfacedir}/IPlayerInfo.h" },
+      { "$cppref": "{cppinterfacedir}/IDolby.h" }
+  ]
 }

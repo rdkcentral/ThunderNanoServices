@@ -1,19 +1,18 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.System_Commands_Plugin"></a>
-# System Commands Plugin
+<a name="head.ProcessMonitor_Plugin"></a>
+# ProcessMonitor Plugin
 
 **Version: 1.0**
 
-**Status: :black_circle::black_circle::white_circle:**
+**Status: :black_circle::black_circle::black_circle:**
 
-SystemCommands plugin for Thunder framework.
+ProcessMonitor plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
-- [Methods](#head.Methods)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -21,7 +20,7 @@ SystemCommands plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the SystemCommands plugin. It includes detailed specification about its configuration and methods provided.
+This document describes purpose and functionality of the ProcessMonitor plugin. It includes detailed specification about its configuration.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -59,7 +58,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-The System Commands plugin allows executing of low level actions on the system.
+This ProcessMonitor plugin monitors any deactivated plugin and kills the associate process if it exists even after predefined time.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -70,74 +69,8 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *SystemCommands*) |
-| classname | string | Class name: *SystemCommands* |
-| locator | string | Library name: *libWPEFrameworkSystemCommands.so* |
+| callsign | string | Plugin instance name (default: *ProcessMonitor*) |
+| classname | string | Class name: *ProcessMonitor* |
+| locator | string | Library name: *libWPEFrameworkProcessMonitor.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
-
-<a name="head.Methods"></a>
-# Methods
-
-The following methods are provided by the SystemCommands plugin:
-
-SystemCommands interface methods:
-
-| Method | Description |
-| :-------- | :-------- |
-| [usbreset](#method.usbreset) | Resets a USB device |
-
-
-<a name="method.usbreset"></a>
-## *usbreset <sup>method</sup>*
-
-Resets a USB device.
-
-### Description
-
-With this method a USB device can be reset using USBFS_RESET ioctl command.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | USB device to reset |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 1 | ```ERROR_GENERAL``` | Failed to reset the USB device |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown USB device |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "SystemCommands.1.usbreset",
-    "params": {
-        "device": "/dev/usb/001"
-    }
-}
-```
-
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": null
-}
-```
 

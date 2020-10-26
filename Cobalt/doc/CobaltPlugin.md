@@ -13,6 +13,7 @@ Cobalt plugin for Thunder framework.
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Methods](#head.Methods)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
 
@@ -22,12 +23,12 @@ Cobalt plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Cobalt plugin. It includes detailed specification of its configuration, properties provided and notifications sent.
+This document describes purpose and functionality of the Cobalt plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -74,15 +75,79 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *Cobalt*) |
 | classname | string | Class name: *Cobalt* |
 | locator | string | Library name: *libWPEFrameworkCobalt.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration?.url | string | <sup>*(optional)*</sup> The URL that is loaded upon starting the browser |
+
+<a name="head.Methods"></a>
+# Methods
+
+The following methods are provided by the Cobalt plugin:
+
+Browser interface methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [delete](#method.delete) | Removes contents of a directory from the persistent storage |
+
+
+<a name="method.delete"></a>
+## *delete <sup>method</sup>*
+
+Removes contents of a directory from the persistent storage.
+
+### Description
+
+Use this method to recursively delete contents of a directory
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.path | string | Path to directory (within the persistent storage) to delete contents of |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | The given path was incorrect |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Cobalt.1.delete",
+    "params": {
+        "path": ".cache/wpe/disk-cache"
+    }
+}
+```
+
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": null
+}
+```
 
 <a name="head.Properties"></a>
 # Properties
 
 The following properties are provided by the Cobalt plugin:
-
 
 Browser interface properties:
 
@@ -97,6 +162,7 @@ StateControl interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [state](#property.state) | Running state of the service |
+
 
 <a name="property.url"></a>
 ## *url <sup>property</sup>*
@@ -128,6 +194,7 @@ Also see: [urlchange](#event.urlchange)
     "method": "Cobalt.1.url"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -137,6 +204,7 @@ Also see: [urlchange](#event.urlchange)
     "result": "https://www.google.com"
 }
 ```
+
 #### Set Request
 
 ```json
@@ -147,6 +215,7 @@ Also see: [urlchange](#event.urlchange)
     "params": "https://www.google.com"
 }
 ```
+
 #### Set Response
 
 ```json
@@ -156,6 +225,7 @@ Also see: [urlchange](#event.urlchange)
     "result": "null"
 }
 ```
+
 <a name="property.visibility"></a>
 ## *visibility <sup>property</sup>*
 
@@ -186,6 +256,7 @@ Also see: [visibilitychange](#event.visibilitychange)
     "method": "Cobalt.1.visibility"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -195,6 +266,7 @@ Also see: [visibilitychange](#event.visibilitychange)
     "result": "visible"
 }
 ```
+
 #### Set Request
 
 ```json
@@ -205,6 +277,7 @@ Also see: [visibilitychange](#event.visibilitychange)
     "params": "visible"
 }
 ```
+
 #### Set Response
 
 ```json
@@ -214,6 +287,7 @@ Also see: [visibilitychange](#event.visibilitychange)
     "result": "null"
 }
 ```
+
 <a name="property.fps"></a>
 ## *fps <sup>property</sup>*
 
@@ -238,6 +312,7 @@ Provides access to the current number of frames per second the browser is render
     "method": "Cobalt.1.fps"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -247,6 +322,7 @@ Provides access to the current number of frames per second the browser is render
     "result": 30
 }
 ```
+
 <a name="property.state"></a>
 ## *state <sup>property</sup>*
 
@@ -271,6 +347,7 @@ Also see: [statechange](#event.statechange)
     "method": "Cobalt.1.state"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -280,6 +357,7 @@ Also see: [statechange](#event.statechange)
     "result": "resumed"
 }
 ```
+
 #### Set Request
 
 ```json
@@ -290,6 +368,7 @@ Also see: [statechange](#event.statechange)
     "params": "resumed"
 }
 ```
+
 #### Set Response
 
 ```json
@@ -299,13 +378,13 @@ Also see: [statechange](#event.statechange)
     "result": "null"
 }
 ```
+
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the plugin, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the Cobalt plugin:
-
 
 Browser interface events:
 
@@ -319,6 +398,7 @@ StateControl interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [statechange](#event.statechange) | Signals a state change of the service |
+
 
 <a name="event.urlchange"></a>
 ## *urlchange <sup>event</sup>*
@@ -345,6 +425,7 @@ Signals a URL change in the browser.
     }
 }
 ```
+
 <a name="event.visibilitychange"></a>
 ## *visibilitychange <sup>event</sup>*
 
@@ -368,6 +449,7 @@ Signals a visibility change of the browser.
     }
 }
 ```
+
 <a name="event.statechange"></a>
 ## *statechange <sup>event</sup>*
 
@@ -391,3 +473,4 @@ Signals a state change of the service.
     }
 }
 ```
+
