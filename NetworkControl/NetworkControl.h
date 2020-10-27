@@ -49,6 +49,7 @@ namespace Plugin {
                 , RenewalTime(0)
                 , RebindingTime(0)
                 , Xid(0)
+                , DNS()
                 , TimeOut(10)
                 , Retries(3)
                 , _broadcast()
@@ -64,6 +65,7 @@ namespace Plugin {
                 Add(_T("renewalTime"), &RenewalTime);
                 Add(_T("rebindingTime"), &RebindingTime);
                 Add(_T("xid"), &Xid);
+                Add(_T("dns"), &DNS);
                 Add(_T("timeout"), &TimeOut);
                 Add(_T("retries"), &Retries);
             }
@@ -79,6 +81,7 @@ namespace Plugin {
                 , RenewalTime(copy.RenewalTime)
                 , RebindingTime(copy.RebindingTime)
                 , Xid(copy.Xid)
+                , DNS(copy.DNS)
                 , TimeOut(copy.TimeOut)
                 , Retries(copy.Retries)
                 , _broadcast(copy._broadcast)
@@ -94,6 +97,7 @@ namespace Plugin {
                 Add(_T("renewalTime"), &RenewalTime);
                 Add(_T("rebindingTime"), &RebindingTime);
                 Add(_T("xid"), &Xid);
+                Add(_T("dns"), &DNS);
                 Add(_T("timeout"), &TimeOut);
                 Add(_T("retries"), &Retries);
             }
@@ -110,6 +114,7 @@ namespace Plugin {
             Core::JSON::DecUInt32 RenewalTime;
             Core::JSON::DecUInt32 RebindingTime;
             Core::JSON::DecUInt32 Xid;
+            Core::JSON::ArrayType<Core::JSON::String> DNS;
             Core::JSON::DecUInt8 TimeOut;
             Core::JSON::DecUInt8 Retries;
 
@@ -392,7 +397,20 @@ namespace Plugin {
                     Core::NodeId source(info.Source.Value().c_str());
 
                     if (source.IsValid() == true) {
-                        _offers.emplace_back(source, static_cast<const Core::NodeId&>(_settings.Address()), _settings.Xid());
+                        // Extract the DNS that where associated with this DHCP..
+                        std::list<Core::NodeId> dns;
+                       
+                        Core::JSON::ArrayType<Core::JSON::String>::ConstIterator entries(info.DNS.Elements());
+
+                        while (entries.Next() == true) {
+                            Core::NodeId entry(entries.Current().Value().c_str());
+
+                            if (entry.IsValid() == true) {
+                                dns.push_back(entry);
+                            }
+                        }
+
+                        _offers.emplace_back(source, static_cast<const Core::NodeId&>(_settings.Address()), _settings.Xid(), std::move(dns));
                     }
                 }
             }
@@ -508,13 +526,24 @@ namespace Plugin {
             {
                 info.Mode = _settings.Mode();
                 info.Interface = _client.Interface();
-                info.Address = _settings.Address().HostAddress();
-                info.Mask = _settings.Address().Mask();
-                info.Gateway = _settings.Gateway().HostAddress();
-                info.Broadcast(_settings.Broadcast());
-                info.Xid = _settings.Xid();
+                if (_settings.Address().IsValid() == true) {
+                    info.Address = _settings.Address().HostAddress();
+                    info.Mask = _settings.Address().Mask();
+                    if (_settings.Gateway().IsValid() == true) {
+                        info.Gateway = _settings.Gateway().HostAddress();
+                    }
+                    if (_settings.Broadcast().IsValid() == true) {
+                        info.Broadcast(_settings.Broadcast());
+                    }
+                }
                 if (_client.HasActiveLease() == true) {
-                    info.Source = _client.Lease().Source().HostAddress();
+                    DHCPClient::Offer offer(_client.Lease());
+                    info.Source = offer.Source().HostAddress();
+                    info.Xid = _settings.Xid();
+                    for (const Core::NodeId& value : offer.DNS()) {
+                        Core::JSON::String& entry = info.DNS.Add();
+                        entry = value.HostAddress();
+                    }
                 }
             }
             inline void ClearLease() {
