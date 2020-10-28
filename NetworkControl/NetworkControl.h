@@ -407,6 +407,7 @@ namespace Plugin {
                 , _offers()
                 , _job(*this)
                 , _settings(info)
+                , _interfaceRunning(false)
             {
                 if ( (_settings.Address().IsValid() == true) && (info.Source.IsSet() == true) ) {
                     // We can start with an Request, i.s.o. an ack...?
@@ -565,6 +566,12 @@ namespace Plugin {
             inline void ClearLease() {
                 _settings.Clear();
             }
+            inline bool InterfaceRunning() const {
+                return _interfaceRunning;
+            }
+            inline void InterfaceRunning(const bool running) {
+                _interfaceRunning = running;
+            }
 
         private:
             // Offered, Approved and Rejected all run on the communication thread, so be carefull !!
@@ -599,6 +606,7 @@ namespace Plugin {
             std::list<DHCPClient::Offer> _offers;
             Core::WorkerPool::JobType<DHCPEngine&> _job;
             Settings _settings;
+            bool _interfaceRunning;
         };
 
     public:

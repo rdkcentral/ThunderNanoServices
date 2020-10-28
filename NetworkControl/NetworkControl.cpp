@@ -320,21 +320,20 @@ namespace Plugin
 
     void NetworkControl::ClearIP(Core::AdapterIterator& adapter)
     {
-        Core::IPV4AddressIterator checker4(adapter.IPV4Addresses());
-
-        while (checker4.Next() == true) {
-            adapter.Delete(checker4.Address());
-        }
-
-        Core::IPV6AddressIterator checker6(adapter.IPV6Addresses());
-
-        while (checker6.Next() == true) {
-            adapter.Delete(checker6.Address());
-        }
-
         std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(adapter.Name()));
-        if (index != _dhcpInterfaces.end()) {
+        if ((index != _dhcpInterfaces.end()) && (index->second.InterfaceRunning() == true)) {
+
+            Core::IPV4AddressIterator checker4(adapter.IPV4Addresses());
+            while (checker4.Next() == true) {
+                adapter.Delete(checker4.Address());
+            }
+
+            Core::IPV6AddressIterator checker6(adapter.IPV6Addresses());
+            while (checker6.Next() == true) {
+                adapter.Delete(checker6.Address());
+            }
             index->second.ClearLease();
+            index->second.InterfaceRunning(false);
         }
 
         SubSystemValidation();
@@ -472,6 +471,7 @@ namespace Plugin
                 SYSLOG(Logging::Notification, (_T("Adapter [%s] not available or in the wrong state."), interfaceName.c_str()));
             }
             else {
+                index->second.InterfaceRunning(true);
                 if (index->second.Info().Address().IsValid() == true) {
                     result = SetIP(adapter, index->second.Info().Address(), index->second.Info().Gateway(), index->second.Info().Broadcast(), true);
                 }
