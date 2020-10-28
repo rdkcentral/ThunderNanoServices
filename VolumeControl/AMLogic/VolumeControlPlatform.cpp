@@ -26,8 +26,8 @@ namespace Plugin {
 
     namespace {
 
-        constexpr uint8_t kMinVolume = 0;
-        constexpr uint8_t kMaxVolume = 100;
+        constexpr float kMinVolume = 0.0;
+        constexpr float kMaxVolume = 1.0;
 
         class VolumeControlPlatformAMLogic : public VolumeControlPlatform {
         public:
@@ -87,10 +87,9 @@ namespace Plugin {
             {
                 uint32_t errorCode = Core::ERROR_NONE;
 
-                // From volume level to loudness gain db
-                auto gain = (33.22 * log10(static_cast<double>(volume) / (kMaxVolume - kMinVolume)));
-                // from db to loudness gain ratio factor
-                auto scaledVolume = std::pow(10, (static_cast<double>(gain) / 20.0));
+                // Map the input volume to [0,1] range with saturation.
+                float scaledVolume = static_cast<float>(volume) / 100;
+                scaledVolume = std::max(std::min(scaledVolume, kMaxVolume), kMinVolume);
 
                 if (_device != nullptr) {
                     int error = _device->set_master_volume(_device, scaledVolume);
