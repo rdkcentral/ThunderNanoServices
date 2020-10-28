@@ -320,21 +320,15 @@ namespace Plugin
 
     void NetworkControl::ClearIP(Core::AdapterIterator& adapter)
     {
-        Core::IPV4AddressIterator checker4(adapter.IPV4Addresses());
 
+        Core::IPV4AddressIterator checker4(adapter.IPV4Addresses());
         while (checker4.Next() == true) {
             adapter.Delete(checker4.Address());
         }
 
         Core::IPV6AddressIterator checker6(adapter.IPV6Addresses());
-
         while (checker6.Next() == true) {
             adapter.Delete(checker6.Address());
-        }
-
-        std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(adapter.Name()));
-        if (index != _dhcpInterfaces.end()) {
-            index->second.ClearLease();
         }
 
         SubSystemValidation();
