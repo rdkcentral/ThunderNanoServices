@@ -407,7 +407,6 @@ namespace Plugin {
                 , _offers()
                 , _job(*this)
                 , _settings(info)
-                , _interfaceRunning(false)
             {
                 if ( (_settings.Address().IsValid() == true) && (info.Source.IsSet() == true) ) {
                     // We can start with an Request, i.s.o. an ack...?
@@ -427,7 +426,7 @@ namespace Plugin {
                             }
                         }
 
-                        _offers.emplace_back(source, static_cast<const Core::NodeId&>(_settings.Address()), _settings.Xid(), std::move(dns));
+                        _offers.emplace_back(source, static_cast<const Core::NodeId&>(_settings.Address()), _settings.Gateway(), _settings.Broadcast(), _settings.Xid(), std::move(dns));
                     }
                 }
             }
@@ -447,7 +446,7 @@ namespace Plugin {
                     result = _client.Request(_offers.front());
                 }
                 else {
-                    _offers.clear();
+                    ClearLease();
                     _job.Schedule(Core::Time::Now().Add(_handleTime));
                     result = _client.Discover(preferred);
                 }
@@ -473,6 +472,7 @@ namespace Plugin {
                         if (_retries++ >= _maxRetries){
                             // Tried extending the lease but we did not get a response. Rediscover
                             _retries = 0;
+                            ClearLease();
                             _client.Discover(Core::NodeId());
                             _job.Schedule(Core::Time::Now().Add(_handleTime));
                         }
@@ -496,6 +496,7 @@ namespace Plugin {
                 else if (_offers.size() == 0) {
                     // Looks like the Discovers did not discover anything, should we retry ?
                     if (_retries++ < _maxRetries) {
+                        ClearLease();
                         _client.Discover(Core::NodeId());
                         _job.Schedule(Core::Time::Now().Add(_handleTime));
                     }
@@ -564,13 +565,8 @@ namespace Plugin {
                 }
             }
             inline void ClearLease() {
+                _offers.clear();
                 _settings.Clear();
-            }
-            inline bool InterfaceRunning() const {
-                return _interfaceRunning;
-            }
-            inline void InterfaceRunning(const bool running) {
-                _interfaceRunning = running;
             }
 
         private:
@@ -606,7 +602,6 @@ namespace Plugin {
             std::list<DHCPClient::Offer> _offers;
             Core::WorkerPool::JobType<DHCPEngine&> _job;
             Settings _settings;
-            bool _interfaceRunning;
         };
 
     public:
