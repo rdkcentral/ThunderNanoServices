@@ -157,6 +157,7 @@ namespace Plugin {
                 , _address()
                 , _gateway()
                 , _broadcast()
+                , _dns()
             {
             }
             Settings(const Entry& info)
@@ -165,6 +166,7 @@ namespace Plugin {
                 , _address(Core::IPNode(Core::NodeId(info.Address.Value().c_str()), info.Mask.Value()))
                 , _gateway(Core::NodeId(info.Gateway.Value().c_str()))
                 , _broadcast(info.Broadcast())
+                , _dns()
             {
             }
             Settings(const Settings& copy)
@@ -173,6 +175,7 @@ namespace Plugin {
                 , _address(copy._address)
                 , _gateway(copy._gateway)
                 , _broadcast(copy._broadcast)
+                , _dns()
             {
             }
             ~Settings() = default;
@@ -242,6 +245,18 @@ namespace Plugin {
                     updated = true;
                     _broadcast = offer.Broadcast();
                 }
+                if (_dns.size() == offer.DNS().size()) {
+                    for (auto& dns:offer.DNS()) {
+                        if (std::find(_dns.begin(), _dns.end(), dns) == _dns.end()) {
+                            updated = true;
+                            _dns = offer.DNS();
+                            break;
+                        }
+                    }
+                } else {
+                    updated = true;
+                    _dns = offer.DNS();
+                }
 
                 return(updated);
             }
@@ -257,6 +272,7 @@ namespace Plugin {
             Core::IPNode _address;
             Core::NodeId _gateway;
             Core::NodeId _broadcast;
+            std::list<Core::NodeId> _dns;
         };
 
         class AdapterObserver : public WPEFramework::Core::AdapterObserver::INotification {
