@@ -488,6 +488,7 @@ namespace Plugin {
                         // We are good to go report success!, if this is a different set..
                         if (_settings.Store(_client.Lease()) == true) {
                             _parent.Accepted(_client.Interface(), _client.Lease());
+                            _client.Close();
                         }
                         _retries = 0;
                         _job.Schedule(_client.Expired());
@@ -523,6 +524,8 @@ namespace Plugin {
                     else {
                         DHCPClient::Offer& node (_offers.front());
                         hardware.Add(Core::IPNode(node.Address(), node.Netmask()));
+
+                        TRACE(Trace::Information, ("Requesting a lease, for [%s]", node.Address().HostAddress().c_str()));
 
                         // Seems we have some offers pending and we are not Active yet, request an ACK
                         _client.Request(node);
