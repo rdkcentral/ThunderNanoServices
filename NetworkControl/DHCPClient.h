@@ -40,6 +40,8 @@ namespace Plugin {
         };
 
     private:
+        using UDPv4Frame = Core::UDPv4FrameType<1024>;
+
         enum state : uint8_t {
             IDLE,
             SENDING,
@@ -106,42 +108,6 @@ namespace Plugin {
         };
         #pragma pack(pop)
 
-        class RawSocket : public Core::SocketPort {
-        public:
-            RawSocket() = delete;
-            RawSocket(const RawSocket&) = delete;
-            RawSocket& operator= (const RawSocket&) = delete;
-
-            RawSocket(DHCPClient& parent, const string& interfaceName);
-            ~RawSocket() override;
-
-        public:
-            inline const uint8_t* MAC() const {
-                return (_udpFrame.SourceMAC());
-            }
-            inline bool IsValid () const {
-                return (Core::SocketPort::IsOpen());
-            }
-            inline uint8_t MACLength() const {
-                return (6);
-            }
-            inline void Source(const uint8_t length, const uint8_t source[]) {
-                ASSERT(length == MACLength());
-
-                _udpFrame.SourceMAC(source);
-            }
-
-            // Methods to extract and insert data into the socket buffers
-            uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
-            uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
-
-            // Signal a state change, Opened, Closed or Accepted
-            void StateChange() override;
-
-        private:
-            DHCPClient& _parent;
-            Core::UDPv4FrameType<1024> _udpFrame;
-        };
 
     public:
         // DHCP constants (see RFC 2131 section 4.1)
@@ -531,7 +497,8 @@ namespace Plugin {
             return (_interfaceName);
         }
         void UpdateMAC(const uint8_t buffer[], const uint8_t size) {
-            _rawSocket.Source(size, buffer);
+           ASSERT (size == _udpFrame.MACSize);
+            _udpFrame.SourceMAC(buffer);
         }
         /* Ask DHCP servers for offers. */
         inline uint32_t Discover(const Core::NodeId& preferredAddres)
@@ -558,7 +525,7 @@ namespace Plugin {
                     result = Core::ERROR_NONE;
 
                     Core::SocketDatagram::Broadcast(true);
-                    _rawSocket.Trigger();
+                    Core::SocketDatagram::Trigger();
 
                 } else {
                     _adminLock.Unlock();
@@ -595,7 +562,7 @@ namespace Plugin {
                     memcpy(&_serverIdentifier, &(addr->sin_addr), 4);
 
                     Core::SocketDatagram::Broadcast(true);
-                    _rawSocket.Trigger();
+                    Core::SocketDatagram::Trigger();
                 }
                 else {
                     _adminLock.Unlock();
@@ -629,7 +596,7 @@ namespace Plugin {
                         _modus = CLASSIFICATION_RELEASE;
 
                         result = Core::ERROR_NONE;
-                        _rawSocket.Trigger();
+                        Core::SocketDatagram::Trigger();
                     }
                     else {
                         _adminLock.Unlock();
@@ -685,7 +652,7 @@ namespace Plugin {
             frame.htype = 1; // ETHERNET_HARDWARE_ADDRESS
 
             /* length of our hardware address */
-            frame.hlen = _rawSocket.MACLength(); // ETHERNET_HARDWARE_ADDRESS_LENGTH;
+            frame.hlen = _udpFrame.MACSize; // ETHERNET_HARDWARE_ADDRESS_LENGTH;
 
             frame.hops = 0;
 
@@ -699,7 +666,7 @@ namespace Plugin {
             frame.flags = htons(BroadcastValue);
 
             /* our hardware address */
-            ::memcpy(frame.chaddr, _rawSocket.MAC(), frame.hlen);
+            ::memcpy(frame.chaddr, _udpFrame.SourceMAC(), frame.hlen);
 
             /* Close down the header field with a magic cookie (as per RFC 2132) */
             ::memcpy(frame.magicCookie, MagicCookie, sizeof(frame.magicCookie));
@@ -726,7 +693,7 @@ namespace Plugin {
             options[index++] = OPTION_CLIENTIDENTIFIER;
             options[index++] = frame.hlen + 1; // Identifier length
             options[index++] = 1; // Ethernet hardware
-            ::memcpy(&(options[index]), _rawSocket.MAC(), frame.hlen);
+            ::memcpy(&(options[index]), _udpFrame.SourceMAC(), frame.hlen);
             index += frame.hlen;
 
             /* Ask for extended informations in offer */
@@ -759,9 +726,9 @@ namespace Plugin {
             const CoreMessage& frame(*reinterpret_cast<const CoreMessage*>(stream));
             const uint32_t xid = ntohl(frame.xid);
 
-            if (::memcmp(frame.chaddr, _rawSocket.MAC(), _rawSocket.MACLength()) != 0) {
+            if (::memcmp(frame.chaddr, _udpFrame.SourceMAC(), _udpFrame.MACSize) != 0) {
                 TRACE(Trace::Information, (_T("Unknown CHADDR encountered.")));
-            } else if ((_rawSocket.MACLength() < sizeof(frame.chaddr)) && (IsZero(&(frame.chaddr[_rawSocket.MACLength()]), sizeof(frame.chaddr) - _rawSocket.MACLength()) == false)) {
+            } else if ((_udpFrame.MACSize < sizeof(frame.chaddr)) && (IsZero(&(frame.chaddr[_udpFrame.MACSize]), sizeof(frame.chaddr) - _udpFrame.MACSize) == false)) {
                 TRACE(Trace::Information, (_T("Unknown CHADDR (clearance) encountered.")));
             } else {
                 const uint8_t* optionsRaw = reinterpret_cast<const uint8_t*>(&(stream[result]));
@@ -825,20 +792,6 @@ namespace Plugin {
 
             return (result);
         }
-        bool CanSend() {
-            bool canSend = false;
-
-            _adminLock.Lock();
-
-            if (_state == SENDING) {
-                _state = RECEIVING;
-                canSend = true;
-            }
-
-            _adminLock.Unlock();
-
-            return (canSend);
-        }
 
     private:
         Core::CriticalSection _adminLock;
@@ -848,7 +801,7 @@ namespace Plugin {
         uint32_t _serverIdentifier;
         uint32_t _xid;
         Offer _offer;
-        RawSocket _rawSocket;
+        UDPv4Frame _udpFrame;
         ICallback* _callback;
         Core::Time _expired;
     };

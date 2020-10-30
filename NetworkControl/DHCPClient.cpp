@@ -26,49 +26,15 @@ namespace Plugin {
     /* static */ constexpr uint8_t DHCPClient::MagicCookie[];
     static Core::NodeId BroadcastClientNode (_T("0.0.0.0"), DHCPClient::DefaultDHCPClientPort, Core::NodeId::TYPE_IPV4);
     static Core::NodeId BroadcastServerNode (_T("255.255.255.255"), DHCPClient::DefaultDHCPServerPort, Core::NodeId::TYPE_IPV4);
-
-    DHCPClient::RawSocket::RawSocket(DHCPClient& parent, const string& interfaceName) 
-        : Core::SocketPort(Core::SocketPort::RAW, Core::NodeId(interfaceName.c_str(), 0, 0, 0, nullptr), Core::NodeId(), 512, 0)
-        , _parent(parent) 
-        , _udpFrame(BroadcastClientNode, BroadcastServerNode) {
-
-        SocketPort::Open(1000);
-    }
-
-    DHCPClient::RawSocket::~RawSocket() /* override */ {
-        Close(Core::infinite);
-    }
-
-    // Methods to extract and insert data into the socket buffers
-    uint16_t DHCPClient::RawSocket::SendData(uint8_t* dataFrame, const uint16_t maxSendSize) /* override */ {
-        uint16_t result = 0;
-
-        if (_parent.CanSend() == true) {
-
-            result = _parent.Message(_udpFrame.Frame(), 1024 - _udpFrame.HeaderSize());
-
-            if (result > 0) {
-                _udpFrame.Length(result);
-              
-                result = std::min(maxSendSize, static_cast<uint16_t>(_udpFrame.Size()));
-
-                ::memcpy(dataFrame, _udpFrame.Data(), result);
-            }
-        }
-
-        return (result);
-    }
-
-    uint16_t DHCPClient::RawSocket::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) /* override */ {
-        return (0);
-    }
-
-    // Signal a state change, Opened, Closed or Accepted
-    void DHCPClient::RawSocket::StateChange() /* override */ {
-    }
+    static const uint8_t BroadcastMAC[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
     DHCPClient::DHCPClient(const string& interfaceName, ICallback* callback)
-        : Core::SocketDatagram(false, BroadcastClientNode, BroadcastServerNode, 512, 1024)
+        : Core::SocketDatagram(
+            false, 
+            Core::NodeId(interfaceName.c_str(), ETH_P_IP, PACKET_BROADCAST, 0, sizeof(BroadcastMAC), BroadcastMAC), 
+            Core::NodeId(interfaceName.c_str(), ETH_P_IP, PACKET_BROADCAST, 0, sizeof(BroadcastMAC), BroadcastMAC), 
+            512, 
+            1024)
         , _adminLock()
         , _interfaceName(interfaceName)
         , _state(IDLE)
@@ -76,7 +42,7 @@ namespace Plugin {
         , _serverIdentifier(0)
         , _xid(0)
         , _offer()
-        , _rawSocket(*this, interfaceName)
+        , _udpFrame(BroadcastClientNode, BroadcastServerNode)
         , _callback(callback)
     {
     }
@@ -89,12 +55,49 @@ namespace Plugin {
     // Methods to extract and insert data into the socket buffers
     uint16_t DHCPClient::SendData(uint8_t* dataFrame, const uint16_t maxSendSize) /* override */
     {
-        return (0);
+        uint16_t result = 0;
+
+        _adminLock.Lock();
+
+        if (_state == SENDING) {
+            _state = RECEIVING;
+
+            TRACE_L1 ("Sending for mode :%d", _modus);
+
+            result = Message(_udpFrame.Frame(), _udpFrame.FrameSize);
+
+            if (result > 0) {
+                _udpFrame.Length(result);
+             
+                // We are not running on a RAW socket but on an IP_PACKET socket, so we need to do all from 
+                // the IP layer up. The kernel will add the Ethernet part... 
+                result = std::min(maxSendSize, static_cast<uint16_t>(_udpFrame.Size() - Core::EthernetFrameSize));
+
+                ::memcpy(dataFrame, &(_udpFrame.Data()[Core::EthernetFrameSize]), result);
+            }
+        }
+
+        _adminLock.Unlock();
+
+        return (result);
     }
 
     uint16_t DHCPClient::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) /* override */
     {
-        ProcessMessage(ReceivedNode(), dataFrame, receivedSize);
+        UDPv4Frame udpFrame;
+
+        // The load should take place at the IPFrame level, so at the base of the UDP4Frame...
+        uint16_t result = static_cast<UDPv4Frame::Base&>(udpFrame).Load(dataFrame, receivedSize);
+
+        // Make sure the package fits...       
+        ASSERT (result == receivedSize);
+
+        if ( (udpFrame.IsValid() == true) && 
+             (udpFrame.SourcePort() == DHCPClient::DefaultDHCPServerPort) &&
+             (udpFrame.DestinationPort() == DHCPClient::DefaultDHCPClientPort) ) { 
+        printf ("We a valid signature: %d,%d\n", receivedSize, udpFrame.Length());
+            ProcessMessage(ReceivedNode(), udpFrame.Frame(), udpFrame.Length());
+        }
 
         return (receivedSize);
     }
