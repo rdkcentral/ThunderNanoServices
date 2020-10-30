@@ -95,7 +95,6 @@ namespace Plugin {
         if ( (udpFrame.IsValid() == true) && 
              (udpFrame.SourcePort() == DHCPClient::DefaultDHCPServerPort) &&
              (udpFrame.DestinationPort() == DHCPClient::DefaultDHCPClientPort) ) { 
-        printf ("We a valid signature: %d,%d\n", receivedSize, udpFrame.Length());
             ProcessMessage(ReceivedNode(), udpFrame.Frame(), udpFrame.Length());
         }
 
