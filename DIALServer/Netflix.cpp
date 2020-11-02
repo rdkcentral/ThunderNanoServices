@@ -174,7 +174,7 @@ namespace DIALHandlers {
                 if (shell->Callsign() == _parent.Callsign()) {
                     if (shell->State() == PluginHost::IShell::ACTIVATED) {
                         _parent.Attach();
-                    } else if (shell->State() == PluginHost::IShell::DEACTIVATED) {
+                    } else if (shell->State() == PluginHost::IShell::DEACTIVATION) {
                         _parent.Detach();
                     }
                 }
