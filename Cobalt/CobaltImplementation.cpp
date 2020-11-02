@@ -241,6 +241,10 @@ private:
                 setlocale(LC_ALL, config.Language.Value().c_str());
             }
 
+            if ( (config.Connection.IsSet() == true) && (config.Connection == CobaltImplementation::connection::WIRELESS) ) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_CONNECTION_TYPE"), _T("wireless"));
+            }
+
             if (config.Url.IsSet() == true) {
               _url = config.Url.Value();
             }
