@@ -86,7 +86,7 @@
           "language": {
             "type": "string",
             "description": "The language to be used to for user interaction."
-          }
+          },
           "connection": {
             "description": "The type of connection that is used for internet connectivity",
             "type": "string",
