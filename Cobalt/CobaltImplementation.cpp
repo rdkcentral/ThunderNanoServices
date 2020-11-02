@@ -31,13 +31,18 @@ namespace Plugin {
 class CobaltImplementation:
         public Exchange::IBrowser,
         public PluginHost::IStateControl {
+public:
+    enum connection {
+        CABLE,
+        WIRELESS
+    };
+
 private:
     class Config: public Core::JSON::Container {
-    private:
-        Config(const Config&);
-        Config& operator=(const Config&);
-
     public:
+        Config(const Config&) = delete;
+        Config& operator=(const Config&) = delete;
+
         Config()
             : Core::JSON::Container()
             , Url()
@@ -55,6 +60,8 @@ private:
             , FriendlyName()
             , CertificationScope()
             , CertificationSecret()
+            , Language()
+            , Connection(CABLE)
         {
             Add(_T("url"), &Url);
             Add(_T("width"), &Width);
@@ -71,6 +78,8 @@ private:
             Add(_T("friendlyname"), &FriendlyName);
             Add(_T("scope"), &CertificationScope);
             Add(_T("secret"), &CertificationSecret);
+            Add(_T("language"), &Language);
+            Add(_T("connection"), &Connection);
         }
         ~Config() {
         }
@@ -91,6 +100,8 @@ private:
         Core::JSON::String FriendlyName;
         Core::JSON::String CertificationScope;
         Core::JSON::String CertificationSecret;
+        Core::JSON::String Language;
+        Core::JSON::EnumType<connection> Connection;
     };
 
     class NotificationSink: public Core::Thread {
@@ -552,4 +563,13 @@ private:
         return (result);
     }
 }
+
+
+ENUM_CONVERSION_BEGIN(Plugin::CobaltImplementation::connection)
+
+    { Plugin::CobaltImplementation::connection::CABLE,    _TXT("cable")    },
+    { Plugin::CobaltImplementation::connection::WIRELESS, _TXT("wireless") },
+
+ENUM_CONVERSION_END(Plugin::CobaltImplementation::connection)
+
 } // namespace
