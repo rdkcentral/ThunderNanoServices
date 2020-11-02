@@ -30,10 +30,15 @@ namespace Plugin {
 
     DHCPClient::DHCPClient(const string& interfaceName, ICallback* callback)
         : Core::SocketDatagram(
-            false, 
-            Core::NodeId(interfaceName.c_str(), ETH_P_IP, PACKET_BROADCAST, 0, sizeof(BroadcastMAC), BroadcastMAC), 
-            Core::NodeId(interfaceName.c_str(), ETH_P_IP, PACKET_BROADCAST, 0, sizeof(BroadcastMAC), BroadcastMAC), 
-            512, 
+            false,
+#ifdef __WINDOWS__
+            BroadcastClientNode,
+            BroadcastServerNode,
+#else
+            Core::NodeId(interfaceName.c_str(), ETH_P_IP, PACKET_BROADCAST, 0, sizeof(BroadcastMAC), BroadcastMAC),
+            Core::NodeId(interfaceName.c_str(), ETH_P_IP, PACKET_BROADCAST, 0, sizeof(BroadcastMAC), BroadcastMAC),
+#endif
+            512,
             1024)
         , _adminLock()
         , _interfaceName(interfaceName)
@@ -64,6 +69,9 @@ namespace Plugin {
 
             TRACE_L1 ("Sending for mode :%d", _modus);
 
+#ifdef __WINDOWS__
+            result = Message(dataFrame, maxSendSize);
+#else
             result = Message(_udpFrame.Frame(), _udpFrame.FrameSize);
 
             if (result > 0) {
@@ -75,6 +83,7 @@ namespace Plugin {
 
                 ::memcpy(dataFrame, &(_udpFrame.Data()[Core::EthernetFrameSize]), result);
             }
+#endif
         }
 
         _adminLock.Unlock();
@@ -84,20 +93,23 @@ namespace Plugin {
 
     uint16_t DHCPClient::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) /* override */
     {
+#ifdef __WINDOWS__
+        ProcessMessage(ReceivedNode(), dataFrame, receivedSize);
+#else
         UDPv4Frame udpFrame;
 
         // The load should take place at the IPFrame level, so at the base of the UDP4Frame...
         uint16_t result = static_cast<UDPv4Frame::Base&>(udpFrame).Load(dataFrame, receivedSize);
 
         // Make sure the package fits...       
-        ASSERT (result == receivedSize);
+        ASSERT(result == receivedSize);
 
-        if ( (udpFrame.IsValid() == true) && 
-             (udpFrame.SourcePort() == DHCPClient::DefaultDHCPServerPort) &&
-             (udpFrame.DestinationPort() == DHCPClient::DefaultDHCPClientPort) ) { 
-            ProcessMessage(ReceivedNode(), udpFrame.Frame(), udpFrame.Length());
+        if ((udpFrame.IsValid() == true) &&
+            (udpFrame.SourcePort() == DHCPClient::DefaultDHCPServerPort) &&
+            (udpFrame.DestinationPort() == DHCPClient::DefaultDHCPClientPort)) {
+            ProcessMessage(udpFrame.Source(), udpFrame.Frame(), udpFrame.Length());
         }
-
+#endif
         return (receivedSize);
     }
 

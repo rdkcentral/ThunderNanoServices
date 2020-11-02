@@ -32,7 +32,7 @@ namespace Plugin
 
     static bool ExternallyAccessible(const Core::AdapterIterator& index) {
 
-        ASSERT (index.IsValid());
+        ASSERT(index.IsValid());
 
         bool accessible = index.IsRunning();
 
@@ -509,7 +509,7 @@ namespace Plugin
             }
         }
 
-        ASSERT (count <= _requiredSet.size());
+        ASSERT(count <= _requiredSet.size());
 
         fullSet &= ( (count == _requiredSet.size()) && validIP );
 

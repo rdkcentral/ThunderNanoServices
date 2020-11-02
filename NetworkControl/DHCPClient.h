@@ -497,7 +497,7 @@ namespace Plugin {
             return (_interfaceName);
         }
         void UpdateMAC(const uint8_t buffer[], const uint8_t size) {
-           ASSERT (size == _udpFrame.MACSize);
+            ASSERT(size == _udpFrame.MACSize);
             _udpFrame.SourceMAC(buffer);
         }
         /* Ask DHCP servers for offers. */
