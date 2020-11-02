@@ -20,6 +20,7 @@
 #include "Module.h"
 #include <interfaces/IMemory.h>
 #include <interfaces/IBrowser.h>
+#include <locale.h>
 
 #include "third_party/starboard/wpe/shared/cobalt_api_wpe.h"
 
@@ -234,6 +235,10 @@ private:
 
             if (config.CertificationSecret.IsSet() == true) {
                 Core::SystemInfo::SetEnvironment(_T("COBALT_CERTIFICATION_SECRET"), config.CertificationSecret.Value());
+            }
+
+            if (config.Language.IsSet() == true) {
+                setlocale(LC_ALL, config.Language.Value().c_str());
             }
 
             if (config.Url.IsSet() == true) {
