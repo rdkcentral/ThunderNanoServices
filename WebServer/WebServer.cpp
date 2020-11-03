@@ -108,17 +108,13 @@ namespace Plugin {
         }
 
         // Stop processing of the browser:
-        if (_server->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+        _server->Release();
 
-            ASSERT(_connectionId != 0);
-
-            TRACE_L1("OutOfProcess Plugin is not properly destructed. PID: %d", _connectionId);
-
+        if(_connectionId != 0){
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // The process can disappear in the meantime...
             if (connection != nullptr) {
-
                 // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
                 connection->Terminate();
                 connection->Release();

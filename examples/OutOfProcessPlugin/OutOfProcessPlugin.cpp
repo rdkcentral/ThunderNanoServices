@@ -125,16 +125,10 @@ namespace Plugin {
         }
 
         // Stop processing of the browser:
-        if (_browser->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+        _browser->Release();
 
-            ASSERT(_connectionId != 0);
-
-
-            TRACE_L1("OutOfProcess Plugin is not properly destructed. PID: %d", _connectionId);
-
-            fprintf(stderr, "================ Deactivating the OutOfProcessPlugin forcefully =================\n"); fflush(stderr);
+        if(_connectionId != 0){
             ConnectionTermination(_connectionId);
-            fprintf(stderr, "================ Deactivated the OutOfProcessPlugin forcefully ==================\n"); fflush(stderr);
         }
 
         _memory = nullptr;

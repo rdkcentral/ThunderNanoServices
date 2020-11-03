@@ -120,8 +120,9 @@ namespace Plugin {
         }
         _memory = nullptr;
         
-        if (_testUtilityImp->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
-            TRACE(Trace::Information, (_T("TestUtility is not properly destructed (connection=%d)"), _connection));
+        _testUtilityImp->Release();
+
+        if (_connection != 0) {
             ProcessTermination(_connection);
         }
 
