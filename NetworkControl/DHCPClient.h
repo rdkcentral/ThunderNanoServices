@@ -40,6 +40,8 @@ namespace Plugin {
         };
 
     private:
+        using UDPv4Frame = Core::UDPv4FrameType<1024>;
+
         enum state : uint8_t {
             IDLE,
             SENDING,
@@ -105,6 +107,7 @@ namespace Plugin {
             uint8_t magicCookie[4]; /* fixed cookie to validate the frame */
         };
         #pragma pack(pop)
+
 
     public:
         // DHCP constants (see RFC 2131 section 4.1)
@@ -493,10 +496,9 @@ namespace Plugin {
         const string& Interface() const {
             return (_interfaceName);
         }
-       inline void UpdateMAC(const uint8_t buffer[], const uint8_t size) {
-            ASSERT(size == sizeof(_MAC));
-
-            memcpy(_MAC, buffer, sizeof(_MAC));
+        void UpdateMAC(const uint8_t buffer[], const uint8_t size) {
+            ASSERT(size == _udpFrame.MACSize);
+            _udpFrame.SourceMAC(buffer);
         }
         /* Ask DHCP servers for offers. */
         inline uint32_t Discover(const Core::NodeId& preferredAddres)
@@ -523,7 +525,7 @@ namespace Plugin {
                     result = Core::ERROR_NONE;
 
                     Core::SocketDatagram::Broadcast(true);
-                    SocketDatagram::Trigger();
+                    Core::SocketDatagram::Trigger();
 
                 } else {
                     _adminLock.Unlock();
@@ -560,7 +562,7 @@ namespace Plugin {
                     memcpy(&_serverIdentifier, &(addr->sin_addr), 4);
 
                     Core::SocketDatagram::Broadcast(true);
-                    SocketDatagram::Trigger();
+                    Core::SocketDatagram::Trigger();
                 }
                 else {
                     _adminLock.Unlock();
@@ -594,8 +596,7 @@ namespace Plugin {
                         _modus = CLASSIFICATION_RELEASE;
 
                         result = Core::ERROR_NONE;
-                        Core::SocketDatagram::Broadcast(true);
-                        SocketDatagram::Trigger();
+                        Core::SocketDatagram::Trigger();
                     }
                     else {
                         _adminLock.Unlock();
@@ -638,6 +639,7 @@ namespace Plugin {
 
         uint16_t Message(uint8_t stream[], const uint16_t length) const
         {
+
             CoreMessage& frame(*reinterpret_cast<CoreMessage*>(stream));
 
             /* clear the packet data structure */
@@ -650,7 +652,7 @@ namespace Plugin {
             frame.htype = 1; // ETHERNET_HARDWARE_ADDRESS
 
             /* length of our hardware address */
-            frame.hlen = static_cast<uint8_t>(sizeof(_MAC)); // ETHERNET_HARDWARE_ADDRESS_LENGTH;
+            frame.hlen = _udpFrame.MACSize; // ETHERNET_HARDWARE_ADDRESS_LENGTH;
 
             frame.hops = 0;
 
@@ -664,7 +666,7 @@ namespace Plugin {
             frame.flags = htons(BroadcastValue);
 
             /* our hardware address */
-            ::memcpy(frame.chaddr, _MAC, frame.hlen);
+            ::memcpy(frame.chaddr, _udpFrame.SourceMAC(), frame.hlen);
 
             /* Close down the header field with a magic cookie (as per RFC 2132) */
             ::memcpy(frame.magicCookie, MagicCookie, sizeof(frame.magicCookie));
@@ -691,7 +693,7 @@ namespace Plugin {
             options[index++] = OPTION_CLIENTIDENTIFIER;
             options[index++] = frame.hlen + 1; // Identifier length
             options[index++] = 1; // Ethernet hardware
-            ::memcpy(&(options[index]), _MAC, frame.hlen);
+            ::memcpy(&(options[index]), _udpFrame.SourceMAC(), frame.hlen);
             index += frame.hlen;
 
             /* Ask for extended informations in offer */
@@ -724,9 +726,9 @@ namespace Plugin {
             const CoreMessage& frame(*reinterpret_cast<const CoreMessage*>(stream));
             const uint32_t xid = ntohl(frame.xid);
 
-            if (::memcmp(frame.chaddr, _MAC, sizeof(_MAC)) != 0) {
+            if (::memcmp(frame.chaddr, _udpFrame.SourceMAC(), _udpFrame.MACSize) != 0) {
                 TRACE(Trace::Information, (_T("Unknown CHADDR encountered.")));
-            } else if ((sizeof(_MAC) < sizeof(frame.chaddr)) && (IsZero(&(frame.chaddr[sizeof(_MAC)]), sizeof(frame.chaddr) - sizeof(_MAC)) == false)) {
+            } else if ((_udpFrame.MACSize < sizeof(frame.chaddr)) && (IsZero(&(frame.chaddr[_udpFrame.MACSize]), sizeof(frame.chaddr) - _udpFrame.MACSize) == false)) {
                 TRACE(Trace::Information, (_T("Unknown CHADDR (clearance) encountered.")));
             } else {
                 const uint8_t* optionsRaw = reinterpret_cast<const uint8_t*>(&(stream[result]));
@@ -796,10 +798,10 @@ namespace Plugin {
         string _interfaceName;
         state _state;
         classifications _modus;
-        uint8_t _MAC[6];
         uint32_t _serverIdentifier;
         uint32_t _xid;
         Offer _offer;
+        UDPv4Frame _udpFrame;
         ICallback* _callback;
         Core::Time _expired;
     };

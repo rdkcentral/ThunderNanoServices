@@ -461,7 +461,7 @@ namespace Plugin {
             {
                 Core::AdapterIterator hardware(_client.Interface());
 
-                if (hardware.IsValid() == false) {
+                if ((hardware.IsValid() == false) || (hardware.IsRunning() == false)) {
                     // If the interface is nolonger available, no need to reschedule , just report Failed!
                     _client.Close();
                     _parent.Failed(_client.Interface());
@@ -488,6 +488,7 @@ namespace Plugin {
                         // We are good to go report success!, if this is a different set..
                         if (_settings.Store(_client.Lease()) == true) {
                             _parent.Accepted(_client.Interface(), _client.Lease());
+                            _client.Close();
                         }
                         _retries = 0;
                         _job.Schedule(_client.Expired());
@@ -524,6 +525,8 @@ namespace Plugin {
                         DHCPClient::Offer& node (_offers.front());
                         hardware.Add(Core::IPNode(node.Address(), node.Netmask()));
 
+                        TRACE(Trace::Information, ("Requesting a lease, for [%s]", node.Address().HostAddress().c_str()));
+
                         // Seems we have some offers pending and we are not Active yet, request an ACK
                         _client.Request(node);
                         _retries = 0;
@@ -544,17 +547,17 @@ namespace Plugin {
             {
                 info.Mode = _settings.Mode();
                 info.Interface = _client.Interface();
-                if (_settings.Address().IsValid() == true) {
-                    info.Address = _settings.Address().HostAddress();
-                    info.Mask = _settings.Address().Mask();
-                    if (_settings.Gateway().IsValid() == true) {
-                        info.Gateway = _settings.Gateway().HostAddress();
-                    }
-                    if (_settings.Broadcast().IsValid() == true) {
-                        info.Broadcast(_settings.Broadcast());
-                    }
-                }
                 if (_client.HasActiveLease() == true) {
+                    if (_settings.Address().IsValid() == true) {
+                        info.Address = _settings.Address().HostAddress();
+                        info.Mask = _settings.Address().Mask();
+                        if (_settings.Gateway().IsValid() == true) {
+                            info.Gateway = _settings.Gateway().HostAddress();
+                        }
+                        if (_settings.Broadcast().IsValid() == true) {
+                            info.Broadcast(_settings.Broadcast());
+                        }
+                    }
                     DHCPClient::Offer offer(_client.Lease());
                     info.Source = offer.Source().HostAddress();
                     info.Xid = _settings.Xid();
