@@ -36,9 +36,9 @@ namespace Plugin {
     {
         ASSERT(_service == _service);
 
-        if (_monitor->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
-            TRACE_L1("ResourceMonitor Plugin is not properly destructed. PID: %d", _connectionId);
-
+        _monitor->Release();
+        
+        if (_connectionId != 0) {
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // The process can disappear in the meantime...
