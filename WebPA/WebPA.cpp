@@ -73,15 +73,13 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
     _service->Unregister(&_notification);
 
     _webpa->Deinitialize(_service);
-    if (_webpa->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
-        ASSERT(_connectionId != 0);
-        TRACE(Trace::Error, (_T("OutOfProcess Plugin is not properly destructed. PID: %d"), _connectionId));
+    _webpa->Release();
 
+    if(_connectionId != 0){
         RPC::IRemoteConnection* serviceConnection(_service->RemoteConnection(_connectionId));
 
         // The connection can disappear in the meantime...
         if (nullptr != serviceConnection) {
-
             // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
             serviceConnection->Terminate();
             serviceConnection->Release();

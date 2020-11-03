@@ -114,8 +114,9 @@ namespace Plugin {
 
         _testControllerImp->TearDown();
 
-        if (_testControllerImp->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
-            TRACE_L1("TestController Plugin is not properly destructed. %d", _connection);
+
+        _testControllerImp->Release();  
+        if (_connection != 0) {
             ProcessTermination(_connection);
         }
 

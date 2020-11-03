@@ -110,12 +110,11 @@ namespace Plugin {
         }
 
         // Stop processing of the browser:
-        if (_browser->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
-            ASSERT(_connectionId != 0);
-
-            TRACE_L1("Browser Plugin is not properly destructed. %d", _connectionId);
-
+        _browser->Release();
+        
+        if(_connectionId != 0){
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+
             // The process can disappear in the meantime...
             if (connection != nullptr) {
                 // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)

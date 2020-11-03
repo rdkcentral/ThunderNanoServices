@@ -53,10 +53,9 @@ namespace Plugin {
         _service->Unregister(&_connectionNotification);
         _implementation->Unregister(&_volumeNotification);
 
-        if (_implementation->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+        _implementation->Release();
 
-            ASSERT(_connectionId != 0);
-
+        if(_connectionId != 0){
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // The process can disappear in the meantime...

@@ -114,12 +114,9 @@ namespace Plugin {
             stateControl->Release();
         }
 
-        if (_spark->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+        _spark->Release();
 
-            ASSERT(_connectionId != 0);
-
-            TRACE_L1("Spark Plugin is not properly destructed. %d", _connectionId);
-
+        if(_connectionId != 0){
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // The process can disappear in the meantime...
