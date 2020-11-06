@@ -66,6 +66,7 @@ namespace Plugin {
                         // Asked for history csv
                         result->ErrorCode = Web::STATUS_OK;
                         result->ContentType = Web::MIMETypes::MIME_TEXT;
+                        result->Message = _T("OK");
                         Core::ProxyType<Web::TextBody> body(webBodyFactory.Element());
                         *body = _monitor->CompileMemoryCsv();
                         result->Body(body);
