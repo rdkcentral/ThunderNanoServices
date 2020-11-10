@@ -553,6 +553,7 @@ namespace Plugin {
                     _state = SENDING;
                     _offer = offer;
                     _xid = _offer.Xid();
+                    _expired = Core::Time();
 
                     _adminLock.Unlock();
   
