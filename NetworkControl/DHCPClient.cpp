@@ -49,6 +49,7 @@ namespace Plugin {
         , _offer()
         , _udpFrame(BroadcastClientNode, BroadcastServerNode)
         , _callback(callback)
+        , _expired(Core::Time())
     {
     }
 

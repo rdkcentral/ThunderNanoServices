@@ -271,13 +271,13 @@ namespace Plugin {
 
                 Update(options);
             }
-            Offer(const Core::NodeId& source, const Core::NodeId& offer, const Core::NodeId& gateway, const Core::NodeId& broadcast, const uint32_t xid, std::list<Core::NodeId>&& dns)
+            Offer(const Core::NodeId& source, const Core::NodeId& offer, const uint8_t netmask, const Core::NodeId& gateway, const Core::NodeId& broadcast, const uint32_t xid, std::list<Core::NodeId>&& dns)
                 : _source(source)
                 , _offer(offer)
                 , _gateway(gateway)
                 , _broadcast(broadcast)
                 , _dns(dns)
-                , _netmask(~0)
+                , _netmask(netmask)
                 , _xid(xid)
                 , _leaseTime(0)
                 , _renewalTime(0)
