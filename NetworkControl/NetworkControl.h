@@ -426,7 +426,7 @@ namespace Plugin {
                             }
                         }
 
-                        _offers.emplace_back(source, static_cast<const Core::NodeId&>(_settings.Address()), _settings.Gateway(), _settings.Broadcast(), _settings.Xid(), std::move(dns));
+                        _offers.emplace_back(source, static_cast<const Core::NodeId&>(_settings.Address()), _settings.Address().Mask(), _settings.Gateway(), _settings.Broadcast(), _settings.Xid(), std::move(dns));
                     }
                 }
             }
@@ -518,8 +518,9 @@ namespace Plugin {
                     }
 
                     if (_offers.size() == 0) {
-                        _client.Close();
-                        _parent.Failed(_client.Interface());
+                        // There is no valid offer, so request for new offer
+                        _retries = 0;
+                        _job.Schedule(Core::Time::Now().Add(_handleTime));
                     }
                     else {
                         DHCPClient::Offer& node (_offers.front());
