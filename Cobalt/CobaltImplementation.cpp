@@ -47,7 +47,7 @@ private:
         Config()
             : Core::JSON::Container()
             , Url()
-            , DebugPort()
+            , Inspector()
             , Width(1280)
             , Height(720)
             , RepeatStart()
@@ -66,7 +66,7 @@ private:
             , Connection(CABLE)
         {
             Add(_T("url"), &Url);
-            Add(_T("debugport"), &DebugPort);
+            Add(_T("inspector"), &Inspector);
             Add(_T("width"), &Width);
             Add(_T("height"), &Height);
             Add(_T("repeatstart"), &RepeatStart);
@@ -89,7 +89,7 @@ private:
 
     public:
         Core::JSON::String Url;
-        Core::JSON::DecUInt16 DebugPort;
+        Core::JSON::String Inspector;
         Core::JSON::DecUInt16 Width;
         Core::JSON::DecUInt16 Height;
         Core::JSON::DecUInt32 RepeatStart;
@@ -253,7 +253,13 @@ private:
               _url = config.Url.Value();
             }
 
-            _debugPort = config.DebugPort.Value();
+            if (config.Inspector.Value().empty() == false) {
+                string url(config.Inspector.Value());
+                auto pos = url.find(":");
+                if (pos != std::string::npos) {
+                    _debugPort = static_cast<uint16_t>(std::atoi(url.substr(pos + 1).c_str()));
+                }
+            }
 
             Run();
             return result;
