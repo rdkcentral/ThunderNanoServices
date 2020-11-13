@@ -216,6 +216,7 @@ namespace GPIO {
         void Evaluate() override;
         uint32_t Get(int32_t& value) const override;
         uint32_t Set(const int32_t value) override;
+        string Metadata() const override { return (string()); }
 
         // IInput pin functionality. Get triggered by an IOPin if a marker has been reached
         // ---------------------------------------------------------------------------------
