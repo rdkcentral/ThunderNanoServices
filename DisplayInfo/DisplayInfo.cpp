@@ -87,7 +87,6 @@ namespace Plugin {
             _graphicsProperties = nullptr;
         }
 
-        ASSERT(_hdrProperties != nullptr);
         if (_hdrProperties != nullptr) {
             _hdrProperties->Release();
             _hdrProperties = nullptr;
