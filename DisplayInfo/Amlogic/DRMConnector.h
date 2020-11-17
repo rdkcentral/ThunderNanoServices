@@ -38,7 +38,7 @@ namespace Plugin {
 
         bool operator>(const drmModeModeInfo& lhs, const drmModeModeInfo& rhs)
         {
-            return !(lhs < rhs);
+            return (lhs.hdisplay * lhs.vdisplay) > (rhs.hdisplay * rhs.vdisplay);
         }
 
         class DRMConnector {
@@ -68,13 +68,13 @@ namespace Plugin {
                 close(drmFd);
             }
 
-            bool IsConnected() { return this->_connected; }
+            bool IsConnected() { return _connected; }
 
-            uint32_t Height() { return this->_height; }
+            uint32_t Height() { return _height; }
 
-            uint32_t Width() { return this->_width; }
+            uint32_t Width() { return _width; }
 
-            uint32_t RefreshRate() { return this->_refreshRate; }
+            uint32_t RefreshRate() { return _refreshRate; }
 
         private:
             void InitializeWithConnector(drmModeConnector& connector, bool usePreferredMode)
