@@ -96,6 +96,10 @@
             ],
             "enumtyped": false,
             "example": "cable"
+          },
+          "playbackrates": {
+            "type": "boolean",
+            "description": "If enabled, Cobalt supports different rates, otherwise, it supports only 0 and 1 (default: true)"
           }
         }
       }
