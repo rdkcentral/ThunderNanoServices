@@ -64,6 +64,7 @@ private:
             , CertificationSecret()
             , Language()
             , Connection(CABLE)
+            , PlaybackRates(true)
         {
             Add(_T("url"), &Url);
             Add(_T("inspector"), &Inspector);
@@ -83,6 +84,7 @@ private:
             Add(_T("secret"), &CertificationSecret);
             Add(_T("language"), &Language);
             Add(_T("connection"), &Connection);
+            Add(_T("playbackrates"), &PlaybackRates);
         }
         ~Config() {
         }
@@ -106,6 +108,7 @@ private:
         Core::JSON::String CertificationSecret;
         Core::JSON::String Language;
         Core::JSON::EnumType<connection> Connection;
+        Core::JSON::Boolean PlaybackRates;
     };
 
     class NotificationSink: public Core::Thread {
@@ -248,6 +251,10 @@ private:
 
             if ( (config.Connection.IsSet() == true) && (config.Connection == CobaltImplementation::connection::WIRELESS) ) {
                 Core::SystemInfo::SetEnvironment(_T("COBALT_CONNECTION_TYPE"), _T("wireless"));
+            }
+
+            if ( (config.PlaybackRates.IsSet() == true) && (config.PlaybackRates.Value() == false) ) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_SUPPORT_PLAYBACK_RATES"), _T("false"));
             }
 
             if (config.Url.IsSet() == true) {
