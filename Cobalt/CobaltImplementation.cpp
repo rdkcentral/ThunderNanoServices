@@ -47,7 +47,7 @@ private:
         Config()
             : Core::JSON::Container()
             , Url()
-            , DebugPort()
+            , Inspector()
             , Width(1280)
             , Height(720)
             , RepeatStart()
@@ -67,7 +67,7 @@ private:
             , PlaybackRates(true)
         {
             Add(_T("url"), &Url);
-            Add(_T("debugport"), &DebugPort);
+            Add(_T("inspector"), &Inspector);
             Add(_T("width"), &Width);
             Add(_T("height"), &Height);
             Add(_T("repeatstart"), &RepeatStart);
@@ -91,7 +91,7 @@ private:
 
     public:
         Core::JSON::String Url;
-        Core::JSON::DecUInt16 DebugPort;
+        Core::JSON::String Inspector;
         Core::JSON::DecUInt16 Width;
         Core::JSON::DecUInt16 Height;
         Core::JSON::DecUInt32 RepeatStart;
@@ -161,6 +161,7 @@ private:
         CobaltWindow()
             : Core::Thread(0, _T("Cobalt"))
             , _url{"https://www.youtube.com/tv"}
+            , _debugListenIp("0.0.0.0")
             , _debugPort()
         {
         }
@@ -260,7 +261,14 @@ private:
               _url = config.Url.Value();
             }
 
-            _debugPort = config.DebugPort.Value();
+            if (config.Inspector.Value().empty() == false) {
+                string url(config.Inspector.Value());
+                auto pos = url.find(":");
+                if (pos != std::string::npos) {
+                    _debugListenIp = url.substr(0, pos);
+                    _debugPort = static_cast<uint16_t>(std::atoi(url.substr(pos + 1).c_str()));
+                }
+            }
 
             Run();
             return result;
@@ -293,15 +301,17 @@ private:
         uint32_t Worker() override
         {
             const std::string cmdURL = "--url=" + _url;
+            const std::string cmdDebugListenIp = "--dev_servers_listen_ip=" + _debugListenIp;
             const std::string cmdDebugPort = "--remote_debugging_port=" + std::to_string(_debugPort);
-            const char* argv[] = {"Cobalt", cmdURL.c_str(), cmdDebugPort.c_str()};
+            const char* argv[] = {"Cobalt", cmdURL.c_str(), cmdDebugListenIp.c_str(), cmdDebugPort.c_str()};
             while (IsRunning() == true) {
-                StarboardMain(3, const_cast<char**>(argv));
+                StarboardMain(4, const_cast<char**>(argv));
             }
             return (Core::infinite);
         }
 
         string _url;
+        string _debugListenIp;
         uint16_t _debugPort;
     };
 
