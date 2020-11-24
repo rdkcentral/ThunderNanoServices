@@ -100,6 +100,10 @@
           "playbackrates": {
             "type": "boolean",
             "description": "If enabled, Cobalt supports different rates, otherwise, it supports only 0 and 1 (default: true)"
+          },
+          "deeplink": {
+            "type": "string",
+            "description": "The deeplink that is loaded upon starting the browser (default: launch=menu)"
           }
         }
       }

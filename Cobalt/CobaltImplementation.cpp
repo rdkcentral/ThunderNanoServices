@@ -65,6 +65,7 @@ private:
             , Language()
             , Connection(CABLE)
             , PlaybackRates(true)
+            , DeepLink()
         {
             Add(_T("url"), &Url);
             Add(_T("inspector"), &Inspector);
@@ -85,6 +86,7 @@ private:
             Add(_T("language"), &Language);
             Add(_T("connection"), &Connection);
             Add(_T("playbackrates"), &PlaybackRates);
+            Add(_T("deeplink"), &DeepLink);
         }
         ~Config() {
         }
@@ -109,6 +111,7 @@ private:
         Core::JSON::String Language;
         Core::JSON::EnumType<connection> Connection;
         Core::JSON::Boolean PlaybackRates;
+        Core::JSON::String DeepLink;
     };
 
     class NotificationSink: public Core::Thread {
@@ -163,6 +166,7 @@ private:
             , _url{"https://www.youtube.com/tv"}
             , _debugListenIp("0.0.0.0")
             , _debugPort()
+            , _deepLink("launch=menu")
         {
         }
         virtual ~CobaltWindow()
@@ -270,6 +274,10 @@ private:
                 }
             }
 
+            if (config.DeepLink.IsSet() == true) {
+              _deepLink = config.DeepLink.Value();
+            }
+
             Run();
             return result;
         }
@@ -303,9 +311,10 @@ private:
             const std::string cmdURL = "--url=" + _url;
             const std::string cmdDebugListenIp = "--dev_servers_listen_ip=" + _debugListenIp;
             const std::string cmdDebugPort = "--remote_debugging_port=" + std::to_string(_debugPort);
-            const char* argv[] = {"Cobalt", cmdURL.c_str(), cmdDebugListenIp.c_str(), cmdDebugPort.c_str()};
+            const std::string cmdDeepLink = "--link=" + _deepLink;
+            const char* argv[] = {"Cobalt", cmdURL.c_str(), cmdDebugListenIp.c_str(), cmdDebugPort.c_str(), cmdDeepLink.c_str()};
             while (IsRunning() == true) {
-                StarboardMain(4, const_cast<char**>(argv));
+                StarboardMain(5, const_cast<char**>(argv));
             }
             return (Core::infinite);
         }
@@ -313,6 +322,7 @@ private:
         string _url;
         string _debugListenIp;
         uint16_t _debugPort;
+        string _deepLink;
     };
 
 private:
