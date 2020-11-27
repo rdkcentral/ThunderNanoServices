@@ -512,8 +512,9 @@ namespace Plugin {
                     _job.Schedule(Core::Time::Now().Add(AckWaitTimeout));
                 }
                 else {
-                    if (_client.Lease() == _offers.front()) {
-                        hardware.Delete(Core::IPNode(_client.Lease().Address(), _client.Lease().Netmask()));
+                    // Request retries expired or Request rejected
+                    if (_retries >= _maxRetries) {
+                        hardware.Delete(Core::IPNode(_offers.front().Address(), _offers.front().Netmask()));
                         _offers.pop_front();
                     }
 
