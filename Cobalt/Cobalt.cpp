@@ -39,6 +39,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
 
     ASSERT(_service == nullptr);
     ASSERT(_cobalt == nullptr);
+    ASSERT(_application == nullptr);
     ASSERT(_memory == nullptr);
 
     config.FromString(service->ConfigLine());
@@ -74,6 +75,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
             stateControl->Register(&_notification);
             stateControl->Configure(_service);
             stateControl->Release();
+            _application = _cobalt->QueryInterface<Exchange::IApplication>();
         }
     }
 
@@ -90,6 +92,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
 /* virtual */void Cobalt::Deinitialize(PluginHost::IShell *service) {
     ASSERT(_service == service);
     ASSERT(_cobalt != nullptr);
+    ASSERT(_application != nullptr);
     ASSERT(_memory != nullptr);
 
     PluginHost::IStateControl *stateControl(
@@ -100,6 +103,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
     _service->Unregister(&_notification);
     _cobalt->Unregister(&_notification);
     _memory->Release();
+    _application->Release();
 
     // In case Cobalt crashed, there is no access to the statecontrol interface,
     // check it !!
