@@ -20,6 +20,7 @@
 #include "Module.h"
 #include <interfaces/IMemory.h>
 #include <interfaces/IBrowser.h>
+#include <interfaces/IApplication.h>
 #include <locale.h>
 
 #include "third_party/starboard/wpe/shared/cobalt_api_wpe.h"
@@ -31,6 +32,7 @@ namespace Plugin {
 
 class CobaltImplementation:
         public Exchange::IBrowser,
+        public Exchange::IApplication,
         public PluginHost::IStateControl {
 public:
     enum connection {
@@ -65,7 +67,6 @@ private:
             , Language()
             , Connection(CABLE)
             , PlaybackRates(true)
-            , DeepLink()
         {
             Add(_T("url"), &Url);
             Add(_T("inspector"), &Inspector);
@@ -86,7 +87,6 @@ private:
             Add(_T("language"), &Language);
             Add(_T("connection"), &Connection);
             Add(_T("playbackrates"), &PlaybackRates);
-            Add(_T("deeplink"), &DeepLink);
         }
         ~Config() {
         }
@@ -111,7 +111,6 @@ private:
         Core::JSON::String Language;
         Core::JSON::EnumType<connection> Connection;
         Core::JSON::Boolean PlaybackRates;
-        Core::JSON::String DeepLink;
     };
 
     class NotificationSink: public Core::Thread {
@@ -166,7 +165,6 @@ private:
             , _url{"https://www.youtube.com/tv"}
             , _debugListenIp("0.0.0.0")
             , _debugPort()
-            , _deepLink("launch=menu")
         {
         }
         virtual ~CobaltWindow()
@@ -274,10 +272,6 @@ private:
                 }
             }
 
-            if (config.DeepLink.IsSet() == true) {
-              _deepLink = config.DeepLink.Value();
-            }
-
             Run();
             return result;
         }
@@ -311,10 +305,9 @@ private:
             const std::string cmdURL = "--url=" + _url;
             const std::string cmdDebugListenIp = "--dev_servers_listen_ip=" + _debugListenIp;
             const std::string cmdDebugPort = "--remote_debugging_port=" + std::to_string(_debugPort);
-            const std::string cmdDeepLink = "--link=" + _deepLink;
-            const char* argv[] = {"Cobalt", cmdURL.c_str(), cmdDebugListenIp.c_str(), cmdDebugPort.c_str(), cmdDeepLink.c_str()};
+            const char* argv[] = {"Cobalt", cmdURL.c_str(), cmdDebugListenIp.c_str(), cmdDebugPort.c_str()};
             while (IsRunning() == true) {
-                StarboardMain(5, const_cast<char**>(argv));
+                StarboardMain(4, const_cast<char**>(argv));
             }
             return (Core::infinite);
         }
@@ -322,7 +315,6 @@ private:
         string _url;
         string _debugListenIp;
         uint16_t _debugPort;
-        string _deepLink;
     };
 
 private:
@@ -393,6 +385,12 @@ public:
         }
 
         _adminLock.Unlock();
+    }
+
+    virtual void Reset() { /*Not implemented yet!*/ }
+
+    virtual void DeepLink(const string& deepLink) {
+        third_party::starboard::wpe::shared::DeepLink(deepLink.c_str());
     }
 
     virtual void Register(PluginHost::IStateControl::INotification *sink) {
@@ -505,6 +503,7 @@ public:
     BEGIN_INTERFACE_MAP (CobaltImplementation)
         INTERFACE_ENTRY (Exchange::IBrowser)
         INTERFACE_ENTRY (PluginHost::IStateControl)
+        INTERFACE_ENTRY (Exchange::IApplication)
     END_INTERFACE_MAP
 
 private:
