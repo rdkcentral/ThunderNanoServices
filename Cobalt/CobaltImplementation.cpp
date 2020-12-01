@@ -248,7 +248,8 @@ private:
             }
 
             if (config.Language.IsSet() == true) {
-                setlocale(LC_ALL, config.Language.Value().c_str());
+                Core::SystemInfo::SetEnvironment(_T("LANG"), config.Language.Value().c_str());
+                Core::SystemInfo::SetEnvironment(_T("LANGUAGE"), config.Language.Value().c_str());
             }
 
             if ( (config.Connection.IsSet() == true) && (config.Connection == CobaltImplementation::connection::WIRELESS) ) {
