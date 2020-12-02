@@ -20,18 +20,16 @@
 #include "DIALServer.h"
 
 #include "interfaces/IBrowser.h"
-#include "interfaces/ISwitchBoard.h"
 
 namespace WPEFramework {
 namespace DIALHandlers {
 
     class YouTube : public Plugin::DIALServer::Default {
-    private:
+    public:
         YouTube() = delete;
         YouTube(const YouTube&) = delete;
         YouTube& operator=(const YouTube&) = delete;
 
-    public:
 #ifdef __WINDOWS__
 #pragma warning(disable : 4355)
 #endif
