@@ -42,6 +42,8 @@ void Cobalt::RegisterAll() {
             < StateType
                     >> (_T("state"), &Cobalt::get_state, &Cobalt::set_state, this); /* StateControl */
     Register<DeleteParamsData,void>(_T("delete"), &Cobalt::endpoint_delete, this);
+    Property < Core::JSON::String
+            > (_T("deeplink"), nullptr, &Cobalt::set_deeplink, this); /* Application */
 }
 
 void Cobalt::UnregisterAll() {
@@ -50,6 +52,7 @@ void Cobalt::UnregisterAll() {
     Unregister(_T("visibility"));
     Unregister(_T("url"));
     Unregister(_T("delete"));
+    Unregister(_T("deeplink"));
 }
 
 // API implementation
@@ -187,6 +190,21 @@ uint32_t Cobalt::delete_dir(const string& path)
         }
     }
 
+    return result;
+}
+
+// Property: deeplink - DeepLink loaded in the browser
+// Return codes:
+//  - ERROR_NONE: Success
+//  - ERROR_INCORRECT_URL: Incorrect DeepLink given
+uint32_t Cobalt::set_deeplink(const Core::JSON::String &param) /* Application */
+{
+    ASSERT(_application != nullptr);
+    uint32_t result = Core::ERROR_INCORRECT_URL;
+    if (param.IsSet() && !param.Value().empty()) {
+        _application->DeepLink(param.Value());
+        result = Core::ERROR_NONE;
+    }
     return result;
 }
 

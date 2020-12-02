@@ -1,13 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="DIALServer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DIALServerJsonRpc.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{b155ab49-87de-4d61-b6d5-7de48c46ca37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{dc2ff374-1765-42c6-b1e4-1f706298b3eb}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="Module.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DIALServer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Netflix.cpp">
@@ -16,21 +21,16 @@
     <ClCompile Include="YouTube.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DIALServerJsonRpc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DIALServer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Module.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{9d969440-4d23-48a3-93a4-41dd0a2e5c61}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{61008376-d74b-4052-bb79-676948b07b2c}</UniqueIdentifier>
-    </Filter>
+    <ClInclude Include="DIALServer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

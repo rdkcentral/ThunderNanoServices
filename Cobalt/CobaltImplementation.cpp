@@ -20,6 +20,7 @@
 #include "Module.h"
 #include <interfaces/IMemory.h>
 #include <interfaces/IBrowser.h>
+#include <interfaces/IApplication.h>
 #include <locale.h>
 
 #include "third_party/starboard/wpe/shared/cobalt_api_wpe.h"
@@ -31,6 +32,7 @@ namespace Plugin {
 
 class CobaltImplementation:
         public Exchange::IBrowser,
+        public Exchange::IApplication,
         public PluginHost::IStateControl {
 public:
     enum connection {
@@ -47,7 +49,7 @@ private:
         Config()
             : Core::JSON::Container()
             , Url()
-            , DebugPort()
+            , Inspector()
             , Width(1280)
             , Height(720)
             , RepeatStart()
@@ -64,9 +66,10 @@ private:
             , CertificationSecret()
             , Language()
             , Connection(CABLE)
+            , PlaybackRates(true)
         {
             Add(_T("url"), &Url);
-            Add(_T("debugport"), &DebugPort);
+            Add(_T("inspector"), &Inspector);
             Add(_T("width"), &Width);
             Add(_T("height"), &Height);
             Add(_T("repeatstart"), &RepeatStart);
@@ -83,13 +86,14 @@ private:
             Add(_T("secret"), &CertificationSecret);
             Add(_T("language"), &Language);
             Add(_T("connection"), &Connection);
+            Add(_T("playbackrates"), &PlaybackRates);
         }
         ~Config() {
         }
 
     public:
         Core::JSON::String Url;
-        Core::JSON::DecUInt16 DebugPort;
+        Core::JSON::String Inspector;
         Core::JSON::DecUInt16 Width;
         Core::JSON::DecUInt16 Height;
         Core::JSON::DecUInt32 RepeatStart;
@@ -106,6 +110,7 @@ private:
         Core::JSON::String CertificationSecret;
         Core::JSON::String Language;
         Core::JSON::EnumType<connection> Connection;
+        Core::JSON::Boolean PlaybackRates;
     };
 
     class NotificationSink: public Core::Thread {
@@ -158,6 +163,7 @@ private:
         CobaltWindow()
             : Core::Thread(0, _T("Cobalt"))
             , _url{"https://www.youtube.com/tv"}
+            , _debugListenIp("0.0.0.0")
             , _debugPort()
         {
         }
@@ -242,18 +248,30 @@ private:
             }
 
             if (config.Language.IsSet() == true) {
-                setlocale(LC_ALL, config.Language.Value().c_str());
+                Core::SystemInfo::SetEnvironment(_T("LANG"), config.Language.Value().c_str());
+                Core::SystemInfo::SetEnvironment(_T("LANGUAGE"), config.Language.Value().c_str());
             }
 
             if ( (config.Connection.IsSet() == true) && (config.Connection == CobaltImplementation::connection::WIRELESS) ) {
                 Core::SystemInfo::SetEnvironment(_T("COBALT_CONNECTION_TYPE"), _T("wireless"));
             }
 
+            if ( (config.PlaybackRates.IsSet() == true) && (config.PlaybackRates.Value() == false) ) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_SUPPORT_PLAYBACK_RATES"), _T("false"));
+            }
+
             if (config.Url.IsSet() == true) {
               _url = config.Url.Value();
             }
 
-            _debugPort = config.DebugPort.Value();
+            if (config.Inspector.Value().empty() == false) {
+                string url(config.Inspector.Value());
+                auto pos = url.find(":");
+                if (pos != std::string::npos) {
+                    _debugListenIp = url.substr(0, pos);
+                    _debugPort = static_cast<uint16_t>(std::atoi(url.substr(pos + 1).c_str()));
+                }
+            }
 
             Run();
             return result;
@@ -286,15 +304,17 @@ private:
         uint32_t Worker() override
         {
             const std::string cmdURL = "--url=" + _url;
+            const std::string cmdDebugListenIp = "--dev_servers_listen_ip=" + _debugListenIp;
             const std::string cmdDebugPort = "--remote_debugging_port=" + std::to_string(_debugPort);
-            const char* argv[] = {"Cobalt", cmdURL.c_str(), cmdDebugPort.c_str()};
+            const char* argv[] = {"Cobalt", cmdURL.c_str(), cmdDebugListenIp.c_str(), cmdDebugPort.c_str()};
             while (IsRunning() == true) {
-                StarboardMain(3, const_cast<char**>(argv));
+                StarboardMain(4, const_cast<char**>(argv));
             }
             return (Core::infinite);
         }
 
         string _url;
+        string _debugListenIp;
         uint16_t _debugPort;
     };
 
@@ -366,6 +386,12 @@ public:
         }
 
         _adminLock.Unlock();
+    }
+
+    virtual void Reset() { /*Not implemented yet!*/ }
+
+    virtual void DeepLink(const string& deepLink) {
+        third_party::starboard::wpe::shared::DeepLink(deepLink.c_str());
     }
 
     virtual void Register(PluginHost::IStateControl::INotification *sink) {
@@ -478,6 +504,7 @@ public:
     BEGIN_INTERFACE_MAP (CobaltImplementation)
         INTERFACE_ENTRY (Exchange::IBrowser)
         INTERFACE_ENTRY (PluginHost::IStateControl)
+        INTERFACE_ENTRY (Exchange::IApplication)
     END_INTERFACE_MAP
 
 private:
