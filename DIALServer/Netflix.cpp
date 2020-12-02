@@ -20,7 +20,6 @@
 #include "DIALServer.h"
 
 #include "interfaces/INetflix.h"
-#include "interfaces/ISwitchBoard.h"
 
 namespace WPEFramework {
 namespace DIALHandlers {
@@ -54,7 +53,6 @@ namespace DIALHandlers {
         Netflix(const Netflix&) = delete;
         Netflix& operator=(const Netflix&) = delete;
 
-    public:
         Netflix(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config, Plugin::DIALServer *parent)
             : Default(service, config, parent)
             , _netflix(nullptr)
