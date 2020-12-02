@@ -113,6 +113,12 @@ Dolby::IOutput::Type ToEnum(int code, uint32_t &error)
         error = WPEFramework::Core::ERROR_NONE;
         break;
     }
+    case Dolby::IOutput::Type::DIGITAL_PASSTHROUGH:
+    {
+        result = Dolby::IOutput::Type::DIGITAL_PASSTHROUGH;
+        error = WPEFramework::Core::ERROR_NONE;
+        break;
+    }
     default:
     {
         result = Dolby::IOutput::Type::AUTO;
