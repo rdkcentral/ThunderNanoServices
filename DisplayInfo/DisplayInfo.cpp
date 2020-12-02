@@ -38,7 +38,7 @@ namespace Plugin {
         _connectionProperties = service->Root<Exchange::IConnectionProperties>(_connectionId, 2000, _T("DisplayInfoImplementation"));
         if (_connectionProperties != nullptr) {
 
-            Exchange::IWebDriver* configConnection = _connectionProperties->QueryInterface<Exchange::IWebDriver>();
+            Exchange::IConfiguration* configConnection = _connectionProperties->QueryInterface<Exchange::IConfiguration>();
             if (configConnection != nullptr) {
                 configConnection->Configure(service);
                 configConnection->Release();

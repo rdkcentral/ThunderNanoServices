@@ -22,7 +22,7 @@
 #include <core/Portability.h>
 #include <interfaces/IDRM.h>
 #include <interfaces/IDisplayInfo.h>
-#include <interfaces/IWebDriver.h>
+#include <interfaces/IConfiguration.h>
 
 #include <xf86drm.h>
 #include <xf86drmMode.h>
@@ -113,7 +113,6 @@ namespace Plugin {
 
         uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
         {
-            fprintf(stderr, "\n\n received data \n\n");
             bool foundAll = false;
 
             udev_monitor_netlink_header* header = reinterpret_cast<udev_monitor_netlink_header*>(dataFrame);
@@ -436,7 +435,7 @@ namespace Plugin {
         Exchange::IConnectionProperties::HDCPProtectionType _hdcpLevel;
     };
 
-    class DisplayInfoImplementation : public Exchange::IConnectionProperties, public Exchange::IWebDriver {
+    class DisplayInfoImplementation : public Exchange::IConnectionProperties, public Exchange::IConfiguration {
 
     public:
         DisplayInfoImplementation(const DisplayInfoImplementation&) = delete;
@@ -635,7 +634,7 @@ namespace Plugin {
 
         BEGIN_INTERFACE_MAP(DisplayInfoImplementation)
         INTERFACE_ENTRY(Exchange::IConnectionProperties)
-        INTERFACE_ENTRY(Exchange::IWebDriver)
+        INTERFACE_ENTRY(Exchange::IConfiguration)
         INTERFACE_AGGREGATE(Exchange::IGraphicsProperties, _graphics)
         INTERFACE_AGGREGATE(Exchange::IHDRProperties, _hdr)
         END_INTERFACE_MAP
