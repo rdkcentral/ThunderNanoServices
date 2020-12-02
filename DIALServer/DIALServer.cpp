@@ -615,12 +615,6 @@ namespace Plugin {
 
         if (request.Origin.IsSet() == true) {
             result->AccessControlOrigin = request.Origin.Value();
-
-            // Terrible hack to be removed !!!
-            if (request.Origin.Value().find(".youtube.com") == string::npos && result->ErrorCode == Web::STATUS_NOT_FOUND)
-            {
-                return (result);
-            }
         }
 
         TRACE(Protocol, (&(*result)));
