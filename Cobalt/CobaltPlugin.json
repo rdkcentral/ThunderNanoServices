@@ -18,6 +18,88 @@
           "url": {
             "type": "string",
             "description": "The URL that is loaded upon starting the browser"
+          },
+          "width": {
+            "type": "number",
+            "size": 16,
+            "description": "The width in pixels of the surface to be used by the application",
+            "example": "1920"
+          },
+          "height": {
+            "type": "number",
+            "size": 16,
+            "description": "The height in pixels of the surface to be used by the application",
+            "example": "1080"
+          },
+          "repeatstart": {
+            "type": "number",
+            "size": 16,
+            "description": "The number of milliseconds a key should be pressed to start reapeating (set max to adhere to Thunder)",
+            "example": "65535"
+          },
+          "repeatinterval": {
+            "type": "number",
+            "size": 16,
+            "description": "The number of milliseconds the repeated key is send after it started repeating (set max to adhere to Thunder)",
+            "example": "65535"
+          },
+          "clientidentifier": {
+            "type": "string",
+            "description": "An identifier, used during the surface creation as additional information",
+            "example": "2"
+          },
+          "manufacturername": {
+            "type": "string",
+            "description": "The name of the hardware manufacturer on which this software is running",
+            "example": "Metrological"
+          },
+          "chipmodelnumber": {
+            "type": "string",
+            "description": "The number/string defining the SOC in this device",
+            "example": "BCM2467"
+          },
+          "firmwareversion": {
+            "type": "string",
+            "description": "The firmwareversion defining the Board Support Package (BSP) in this device",
+            "example": "24.22.347a"
+          },
+          "modelname": {
+            "type": "string",
+            "description": "Name of the model on which this software is running",
+            "example": "X5"
+          },
+          "modelyear": {
+            "type": "string",
+            "description": "The year this device is manufactured",
+            "example": "2020"
+          },
+          "operatorname": {
+            "type": "string",
+            "description": "The name of the operator that owns the infrastructure on which this device is running",
+            "example": "Comcast"
+          },
+          "friendlyname": {
+            "type": "string",
+            "description": "A user friendly name given to this device",
+            "example": "Xfinity 2"
+          },
+          "language": {
+            "type": "string",
+            "description": "The language to be used to for user interaction."
+          },
+          "connection": {
+            "description": "The type of connection that is used for internet connectivity",
+            "type": "string",
+            "enum": [
+              "cable",
+              "wireless"
+            ],
+            "enumtyped": false,
+            "example": "cable"
+          },
+          "playbackrates": {
+            "type": "boolean",
+            "description": "If enabled, Cobalt supports different rates, otherwise, it supports only 0 and 1 (default: true)"
           }
         }
       }

@@ -242,6 +242,31 @@ namespace Plugin {
         response->Message = _T("Unsupported PUT request");
 
         // Nothing here yet
+        if ((_gattRemote != nullptr) && (index.IsValid() == true)) {
+            if ((index.Current() == _T("Voice")) && (index.Next() != false)) {
+                if (index.Current() == _T("Off")) {
+                    uint32_t result = _gattRemote->VoiceOutput(false);
+                    if (result == Core::ERROR_NONE) {
+                        response->ErrorCode = Web::STATUS_OK;
+                        response->Message = _T("Voice disabled.");
+                    }
+                    else {
+                        response->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                        response->Message = _T("Voice could not be disabled. Error: ") + Core::NumberType<uint32_t>(result).Text();
+                    }
+                } else if (index.Current() == _T("On")) {
+                    uint32_t result = _gattRemote->VoiceOutput(true);
+                    if (result == Core::ERROR_NONE) {
+                        response->ErrorCode = Web::STATUS_OK;
+                        response->Message = _T("Voice enabled.");
+                    }
+                    else {
+                        response->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
+                        response->Message = _T("Voice could not be enabled. Error: ") + Core::NumberType<uint32_t>(result).Text();
+                    }
+                }
+            }
+        }
 
         return (response);
     }
@@ -367,6 +392,8 @@ namespace Plugin {
             settings.IElement::ToFile(settingsFile);
             settingsFile.Close();
         }
+
+       _gattRemote->Decoder(_configLine); 
 
         if (_inputHandler != nullptr) {
             // Load the keyMap for this remote

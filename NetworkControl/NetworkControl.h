@@ -49,6 +49,7 @@ namespace Plugin {
                 , RenewalTime(0)
                 , RebindingTime(0)
                 , Xid(0)
+                , DNS()
                 , TimeOut(10)
                 , Retries(3)
                 , _broadcast()
@@ -64,6 +65,7 @@ namespace Plugin {
                 Add(_T("renewalTime"), &RenewalTime);
                 Add(_T("rebindingTime"), &RebindingTime);
                 Add(_T("xid"), &Xid);
+                Add(_T("dns"), &DNS);
                 Add(_T("timeout"), &TimeOut);
                 Add(_T("retries"), &Retries);
             }
@@ -79,6 +81,7 @@ namespace Plugin {
                 , RenewalTime(copy.RenewalTime)
                 , RebindingTime(copy.RebindingTime)
                 , Xid(copy.Xid)
+                , DNS(copy.DNS)
                 , TimeOut(copy.TimeOut)
                 , Retries(copy.Retries)
                 , _broadcast(copy._broadcast)
@@ -94,6 +97,7 @@ namespace Plugin {
                 Add(_T("renewalTime"), &RenewalTime);
                 Add(_T("rebindingTime"), &RebindingTime);
                 Add(_T("xid"), &Xid);
+                Add(_T("dns"), &DNS);
                 Add(_T("timeout"), &TimeOut);
                 Add(_T("retries"), &Retries);
             }
@@ -110,6 +114,7 @@ namespace Plugin {
             Core::JSON::DecUInt32 RenewalTime;
             Core::JSON::DecUInt32 RebindingTime;
             Core::JSON::DecUInt32 Xid;
+            Core::JSON::ArrayType<Core::JSON::String> DNS;
             Core::JSON::DecUInt8 TimeOut;
             Core::JSON::DecUInt8 Retries;
 
@@ -152,6 +157,7 @@ namespace Plugin {
                 , _address()
                 , _gateway()
                 , _broadcast()
+                , _dns()
             {
             }
             Settings(const Entry& info)
@@ -160,6 +166,7 @@ namespace Plugin {
                 , _address(Core::IPNode(Core::NodeId(info.Address.Value().c_str()), info.Mask.Value()))
                 , _gateway(Core::NodeId(info.Gateway.Value().c_str()))
                 , _broadcast(info.Broadcast())
+                , _dns()
             {
             }
             Settings(const Settings& copy)
@@ -168,6 +175,7 @@ namespace Plugin {
                 , _address(copy._address)
                 , _gateway(copy._gateway)
                 , _broadcast(copy._broadcast)
+                , _dns()
             {
             }
             ~Settings() = default;
@@ -237,6 +245,18 @@ namespace Plugin {
                     updated = true;
                     _broadcast = offer.Broadcast();
                 }
+                if (_dns.size() == offer.DNS().size()) {
+                    for (auto& dns:offer.DNS()) {
+                        if (std::find(_dns.begin(), _dns.end(), dns) == _dns.end()) {
+                            updated = true;
+                            _dns = offer.DNS();
+                            break;
+                        }
+                    }
+                } else {
+                    updated = true;
+                    _dns = offer.DNS();
+                }
 
                 return(updated);
             }
@@ -252,6 +272,7 @@ namespace Plugin {
             Core::IPNode _address;
             Core::NodeId _gateway;
             Core::NodeId _broadcast;
+            std::list<Core::NodeId> _dns;
         };
 
         class AdapterObserver : public WPEFramework::Core::AdapterObserver::INotification {
@@ -392,7 +413,20 @@ namespace Plugin {
                     Core::NodeId source(info.Source.Value().c_str());
 
                     if (source.IsValid() == true) {
-                        _offers.emplace_back(source, static_cast<const Core::NodeId&>(_settings.Address()), _settings.Xid());
+                        // Extract the DNS that where associated with this DHCP..
+                        std::list<Core::NodeId> dns;
+                       
+                        Core::JSON::ArrayType<Core::JSON::String>::ConstIterator entries(info.DNS.Elements());
+
+                        while (entries.Next() == true) {
+                            Core::NodeId entry(entries.Current().Value().c_str());
+
+                            if (entry.IsValid() == true) {
+                                dns.push_back(entry);
+                            }
+                        }
+
+                        _offers.emplace_back(source, static_cast<const Core::NodeId&>(_settings.Address()), _settings.Address().Mask(), _settings.Gateway(), _settings.Broadcast(), _settings.Xid(), std::move(dns));
                     }
                 }
             }
@@ -412,7 +446,7 @@ namespace Plugin {
                     result = _client.Request(_offers.front());
                 }
                 else {
-                    _offers.clear();
+                    ClearLease();
                     _job.Schedule(Core::Time::Now().Add(_handleTime));
                     result = _client.Discover(preferred);
                 }
@@ -427,7 +461,7 @@ namespace Plugin {
             {
                 Core::AdapterIterator hardware(_client.Interface());
 
-                if (hardware.IsValid() == false) {
+                if ((hardware.IsValid() == false) || (hardware.IsRunning() == false)) {
                     // If the interface is nolonger available, no need to reschedule , just report Failed!
                     _client.Close();
                     _parent.Failed(_client.Interface());
@@ -438,6 +472,7 @@ namespace Plugin {
                         if (_retries++ >= _maxRetries){
                             // Tried extending the lease but we did not get a response. Rediscover
                             _retries = 0;
+                            ClearLease();
                             _client.Discover(Core::NodeId());
                             _job.Schedule(Core::Time::Now().Add(_handleTime));
                         }
@@ -453,6 +488,7 @@ namespace Plugin {
                         // We are good to go report success!, if this is a different set..
                         if (_settings.Store(_client.Lease()) == true) {
                             _parent.Accepted(_client.Interface(), _client.Lease());
+                            _client.Close();
                         }
                         _retries = 0;
                         _job.Schedule(_client.Expired());
@@ -461,6 +497,7 @@ namespace Plugin {
                 else if (_offers.size() == 0) {
                     // Looks like the Discovers did not discover anything, should we retry ?
                     if (_retries++ < _maxRetries) {
+                        ClearLease();
                         _client.Discover(Core::NodeId());
                         _job.Schedule(Core::Time::Now().Add(_handleTime));
                     }
@@ -475,18 +512,22 @@ namespace Plugin {
                     _job.Schedule(Core::Time::Now().Add(AckWaitTimeout));
                 }
                 else {
-                    if (_client.Lease() == _offers.front()) {
-                        hardware.Delete(Core::IPNode(_client.Lease().Address(), _client.Lease().Netmask()));
+                    // Request retries expired or Request rejected
+                    if (_retries >= _maxRetries) {
+                        hardware.Delete(Core::IPNode(_offers.front().Address(), _offers.front().Netmask()));
                         _offers.pop_front();
                     }
 
                     if (_offers.size() == 0) {
-                        _client.Close();
-                        _parent.Failed(_client.Interface());
+                        // There is no valid offer, so request for new offer
+                        _retries = 0;
+                        _job.Schedule(Core::Time::Now().Add(_handleTime));
                     }
                     else {
                         DHCPClient::Offer& node (_offers.front());
                         hardware.Add(Core::IPNode(node.Address(), node.Netmask()));
+
+                        TRACE(Trace::Information, ("Requesting a lease, for [%s]", node.Address().HostAddress().c_str()));
 
                         // Seems we have some offers pending and we are not Active yet, request an ACK
                         _client.Request(node);
@@ -508,16 +549,28 @@ namespace Plugin {
             {
                 info.Mode = _settings.Mode();
                 info.Interface = _client.Interface();
-                info.Address = _settings.Address().HostAddress();
-                info.Mask = _settings.Address().Mask();
-                info.Gateway = _settings.Gateway().HostAddress();
-                info.Broadcast(_settings.Broadcast());
-                info.Xid = _settings.Xid();
                 if (_client.HasActiveLease() == true) {
-                    info.Source = _client.Lease().Source().HostAddress();
+                    if (_settings.Address().IsValid() == true) {
+                        info.Address = _settings.Address().HostAddress();
+                        info.Mask = _settings.Address().Mask();
+                        if (_settings.Gateway().IsValid() == true) {
+                            info.Gateway = _settings.Gateway().HostAddress();
+                        }
+                        if (_settings.Broadcast().IsValid() == true) {
+                            info.Broadcast(_settings.Broadcast());
+                        }
+                    }
+                    DHCPClient::Offer offer(_client.Lease());
+                    info.Source = offer.Source().HostAddress();
+                    info.Xid = _settings.Xid();
+                    for (const Core::NodeId& value : offer.DNS()) {
+                        Core::JSON::String& entry = info.DNS.Add();
+                        entry = value.HostAddress();
+                    }
                 }
             }
             inline void ClearLease() {
+                _offers.clear();
                 _settings.Clear();
             }
 

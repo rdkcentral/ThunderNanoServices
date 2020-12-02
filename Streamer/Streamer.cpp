@@ -77,17 +77,13 @@ namespace Plugin {
 
         service->Unregister(&_notification);
 
-        if (_player->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+        _player->Release();
 
-            ASSERT(_connectionId != 0);
-
-            TRACE(Trace::Error, (_T("OutOfProcess Plugin is not properly destructed. PID: %d"), _connectionId));
-
+        if(_connectionId != 0){
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // The connection can disappear in the meantime...
             if (connection != nullptr) {
-
                 // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
                 connection->Terminate();
                 connection->Release();

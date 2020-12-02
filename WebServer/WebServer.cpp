@@ -63,27 +63,35 @@ namespace Plugin {
                 _server = nullptr;
 
             } else {
-                stateControl->Configure(_service);
+                uint32_t result = stateControl->Configure(_service);
                 stateControl->Release();
 
-                RPC::IRemoteConnection* connection = _service->RemoteConnection(_connectionId);
-
-                if(connection != nullptr) {
-                    _memory = WPEFramework::WebServer::MemoryObserver(connection);
-                    connection->Release();
-
-                    ASSERT(_memory != nullptr);
+                if (result != Core::ERROR_NONE) {
+                    message = _T("WebServer could not be configured.");
+                    _server->Release();
+                    _server = nullptr;
                 }
+                else {
+                    RPC::IRemoteConnection* connection = _service->RemoteConnection(_connectionId);
 
-                PluginHost::ISubSystem* subSystem = service->SubSystems();
+                    if (connection != nullptr) {
+                        _memory = WPEFramework::WebServer::MemoryObserver(connection);
+                        connection->Release();
 
-                if (subSystem != nullptr) {
-                    if (subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
-                        SYSLOG(Logging::Startup, (_T("WebSource is not defined as External !!")));
-                    } else {
-                        subSystem->Set(PluginHost::ISubSystem::WEBSOURCE, nullptr);
+                        ASSERT(_memory != nullptr);
                     }
-                    subSystem->Release();
+
+                    PluginHost::ISubSystem* subSystem = service->SubSystems();
+
+                    if (subSystem != nullptr) {
+                        if (subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
+                            SYSLOG(Logging::Startup, (_T("WebSource is not defined as External !!")));
+                        }
+                        else {
+                            subSystem->Set(PluginHost::ISubSystem::WEBSOURCE, nullptr);
+                        }
+                        subSystem->Release();
+                    }
                 }
             }
         }
@@ -108,17 +116,13 @@ namespace Plugin {
         }
 
         // Stop processing of the browser:
-        if (_server->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+        _server->Release();
 
-            ASSERT(_connectionId != 0);
-
-            TRACE_L1("OutOfProcess Plugin is not properly destructed. PID: %d", _connectionId);
-
+        if(_connectionId != 0){
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             // The process can disappear in the meantime...
             if (connection != nullptr) {
-
                 // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
                 connection->Terminate();
                 connection->Release();

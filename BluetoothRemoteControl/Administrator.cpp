@@ -23,21 +23,52 @@ namespace WPEFramework {
 
 namespace Decoders {
 
-static std::map<Exchange::IVoiceProducer::IProfile::codec, IDecoder::IFactory*> _factories;
+class Key {
+public:
+    Key() = delete;
+    Key(const Key&) = delete;
+    Key& operator= (const Key&) = delete;
 
-/* static */ IDecoder* IDecoder::Instance(Exchange::IVoiceProducer::IProfile::codec codec, const string& configuration)
+    Key(const TCHAR name[], const Exchange::IVoiceProducer::IProfile::codec codec) 
+        : _name(name)
+        , _codec(codec) {
+    }
+    ~Key() = default;
+
+public:
+    bool operator< (const Key& RHS) const {
+        return ((_codec == RHS._codec) ? _name < RHS._name : _codec < RHS._codec);
+    }
+    bool operator== (const Key& RHS) const {
+        return ((_codec == RHS._codec) && (_name == RHS._name));
+    }
+    bool operator!= (const Key& RHS) const {
+        return (!operator==(RHS));
+    }
+  
+private:
+    const string _name;
+    Exchange::IVoiceProducer::IProfile::codec _codec;
+};
+
+static std::map<Key, IDecoder::IFactory*> _factories;
+
+/* static */ IDecoder* IDecoder::Instance(const TCHAR name[], Exchange::IVoiceProducer::IProfile::codec codec, const string& configuration)
 {
     IDecoder* result = nullptr;
-    std::map<Exchange::IVoiceProducer::IProfile::codec, IDecoder::IFactory*>::iterator index = _factories.find(codec);
+    std::map<Key, IDecoder::IFactory*>::iterator index = _factories.find(Key(name, codec));
     if (index != _factories.end()) {
         result = index->second->Factory(configuration);
     }
     return (result);
 }
 
-/* static */ void IDecoder::Announce(Exchange::IVoiceProducer::IProfile::codec codec, IDecoder::IFactory* factory)
+/* static */ void IDecoder::Announce(const TCHAR name[], Exchange::IVoiceProducer::IProfile::codec codec, IDecoder::IFactory* factory)
 {
-    _factories.insert(std::pair<Exchange::IVoiceProducer::IProfile::codec, IDecoder::IFactory*>(codec, factory));
+    // uses pair's piecewise constructor
+    _factories.emplace(std::piecewise_construct,
+              std::forward_as_tuple(name, codec),
+              std::forward_as_tuple(factory));
 }
 
 } } // namespace

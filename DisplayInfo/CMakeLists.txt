@@ -24,7 +24,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(BCM_HOST QUIET)
 find_package(NEXUS QUIET)
 find_package(NXCLIENT QUIET)
-find_package(DRM)
+find_package(LibDRM)
 find_path (STAGING_INCDIR glib-2.0)
 include_directories(include)
 include_directories(${STAGING_INCDIR})
@@ -88,6 +88,14 @@ elseif (BCM_HOST_FOUND)
     target_link_libraries(${MODULE_NAME}
         PRIVATE
             BCM_HOST::BCM_HOST)
+elseif (LIBDRM_FOUND)
+    target_sources(${MODULE_NAME}
+        PRIVATE
+            Amlogic/PlatformImplementation.cpp)
+
+    target_link_libraries(${MODULE_NAME}
+        PRIVATE
+            drm)
 else ()
     message(FATAL_ERROR "There is no graphic backend for display info plugin")
 endif ()

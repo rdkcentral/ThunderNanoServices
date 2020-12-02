@@ -373,7 +373,7 @@ Provides access to the dolby Mode.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Dolby Mode (must be one of the following: *DigitalPcm*, *DigitalPlus*, *DigitalAc3*, *Auto*, *Ms12*) |
+| (property) | string | Dolby Mode (must be one of the following: *DigitalPcm*, *DigitalPlus*, *DigitalAc3*, *Auto*, *DigitalPassthrough*, *Ms12*) |
 
 ### Example
 

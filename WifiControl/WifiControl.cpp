@@ -316,10 +316,13 @@ namespace Plugin
 
                         WPASupplicant::Config settings(_controller->Create(SSIDDecode(config->Ssid.Value())));
 
-                        UpdateConfig(settings, *config);
-
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Config set.");
+                        if (UpdateConfig(settings, *config) == true) {
+                           result->ErrorCode = Web::STATUS_OK;
+                           result->Message = _T("Config set.");
+                        } else {
+                           result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                           result->Message = _T("Incomplete Config.");
+                        }
                     }
                 } else if (index.Current().Text() == _T("Scan")) {
 
@@ -376,10 +379,13 @@ namespace Plugin
                     result->Message = _T("Config key not found.");
                 } else {
 
-                    UpdateConfig(settings, *config);
-
-                    result->ErrorCode = Web::STATUS_OK;
-                    result->Message = _T("Config set.");
+                    if (UpdateConfig(settings, *config) == true) {
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("Config set.");
+                    } else {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = _T("Incomplete Config.");
+                    }
                 }
             }
         }
