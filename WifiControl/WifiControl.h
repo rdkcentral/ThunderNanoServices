@@ -521,17 +521,17 @@ namespace Plugin {
                 if (status == true) {
                     if (settings.Hash.IsSet() == true) {
                         status = profile.Hash(settings.Hash.Value());
-                        TRACE(Trace::Information, (_T("Failed to set Hash %s"), settings.Hash.Value().c_str());
+                        TRACE_L1("Failed to set Hash %s", settings.Hash.Value().c_str());
                     } else {
                         status = profile.PresharedKey(settings.Psk.Value());
-                        TRACE(Trace::Information, (_T("Failed to set PresahredKey %s"), settings.Psk.Value().c_str());
+                        TRACE_L1("Failed to set PresharedKey %s", settings.Psk.Value().c_str());
                     }
                 }
 
             } else if ((settings.Identity.IsSet() == true) && (settings.Password.IsSet() == true)) {
                 // Seems we are in Enterprise mode !!!
                 status = profile.Enterprise(settings.Identity.Value(), settings.Password.Value());
-                TRACE(Trace::Information, (_T("Failed to set Enterprise values %s:%s"),settings.Identity.Value().c_str(), settings.Password.Value().c_str());
+                TRACE_L1("Failed to set Enterprise values %s:%s",settings.Identity.Value().c_str(), settings.Password.Value().c_str());
             } else if ((settings.Identity.IsSet() == false) && (settings.Password.IsSet() == false)) {
                 // Seems we are in UNSECURE mode !!!
                 status = profile.Unsecure();
