@@ -206,7 +206,7 @@ namespace Plugin {
 
         // 2.1 spec adds "hidden" state. It also introduces "installable" state.
         // We may consider adding support for it at some point - thanks to the Packager.
-        string state((running == true) ? _T("running") : ((isAtLeast2_1 == true) && (HasHide() == true) && (IsHidden() == true) ? _T("hidden") : _T("stopped")));
+        string state(((isAtLeast2_1 == true) && (HasHide() == true) && (IsHidden() == true) ? _T("hidden") : ((running == true) ? _T("running") : _T("stopped"))));
 
         // allowStop is mandatory to be true starting from 2.1
         string allowStop((isAtLeast2_1 == true) || (HasStartAndStop() == true) ? "true" : "false");
@@ -627,8 +627,10 @@ namespace Plugin {
         if ((request.Origin.IsSet() == true) && (app.Origin().empty() == false)) {
             Core::OptionalType<string> hostPortion (Core::URL(request.Origin.Value().c_str()).Host());
 
-            if ((hostPortion.IsSet() == true) && (hostPortion.Value().find(app.Origin()) == string::npos)) {
-                safe = false;
+            if (hostPortion.IsSet() == true) {
+                Core::NodeId source(hostPortion.Value().c_str());
+
+                safe = (source.IsLocalInterface() == true) || (hostPortion.Value().find(app.Origin()) != string::npos);
             }
         }
 

@@ -441,7 +441,7 @@ namespace Plugin {
         };
 
     private:
-        static const uint32_t MaxDialQuerySize = 2096;
+        static const uint32_t MaxDialQuerySize = 4096;
 
         class Version {
         public:
