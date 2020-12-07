@@ -76,6 +76,12 @@ The table below lists configuration options of the plugin.
 | classname | string | Class name: *BluetoothControl* |
 | locator | string | Library name: *libWPEFrameworkBluetoothControl.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| configuration | object | <sup>*(optional)*</sup>  |
+| configuration?.interface | number | <sup>*(optional)*</sup> ID of interface |
+| configuration?.name | String | <sup>*(optional)*</sup> Name of interface |
+| configuration?.class | number | <sup>*(optional)*</sup> Number of Class |
+| configuration?.autopasskeyconfirm | boolean | <sup>*(optional)*</sup> Enable autopass confirm |
+| configuration?.persistmac | boolean | <sup>*(optional)*</sup> Enable persistent MAC |
 
 <a name="head.Methods"></a>
 # Methods

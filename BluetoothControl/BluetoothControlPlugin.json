@@ -8,6 +8,39 @@
     "description": "The Bluetooth Control plugin allows Bluetooth device administration.",
     "version": "1.0"
   },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "interface": {
+            "type": "number",
+            "size": "16",
+            "description": "ID of interface."
+          },
+          "name": {
+            "type": "String",
+            "description": "Name of interface."
+          },
+          "class": {
+            "type": "number",
+            "size": "32",
+            "description": "Number of Class."
+          },
+          "autopasskeyconfirm": {
+            "type": "boolean",
+            "description": "Enable autopass confirm."
+          },
+          "persistmac": {
+            "type": "boolean",
+            "description": "Enable persistent MAC."
+          }
+        }
+      }
+    }
+  },
   "interface": {
     "$ref": "{interfacedir}/BluetoothControl.json#"
   }
