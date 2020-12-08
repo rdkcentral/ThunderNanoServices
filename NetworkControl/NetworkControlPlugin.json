@@ -10,6 +10,31 @@
     ],
     "version": "1.0"
   },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "dnsfile": {
+            "type": "string",
+            "description": "Path to DNS resolve file (default: /etc/resolv.conf)"
+          },
+          "response": {
+            "type": "number",
+            "size": 8,
+            "description": "Maximum response time out of the DHCP server"
+          },
+          "retries": {
+            "type": "number",
+            "size": 8,
+            "description": "Maximum number of retries to the DHCP server"
+          }
+        }
+      }
+   }
+  },
   "interface": {
     "$ref": "{interfacedir}/NetworkControl.json#"
   }
