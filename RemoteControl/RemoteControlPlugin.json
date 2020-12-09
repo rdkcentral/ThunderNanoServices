@@ -8,6 +8,112 @@
     "description": "The RemoteControl plugin provides user-input functionality from various key-code sources (e.g. STB RC).",
     "version": "1.0"
   },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "mapfile": {
+            "type": "string",
+            "description": "Map File."
+          },
+          "postlookupfile": {
+            "type": "string",
+            "description": "PostLookup File."
+          },
+          "passon": {
+            "type": "boolean",
+            "description": "Enable passon."
+          },
+          "repeatstart": {
+            "type": "number",
+            "size": 16,
+            "description": "Maximum number of repeats."
+          },
+          "repeatinterval": {
+            "type": "number",
+            "size": 16,
+            "description": "Maximum duration between repeats."
+          },
+          "releasetimeout": {
+            "type": "number",
+            "size": 16,
+            "description": "Release timeout."
+          },
+          "devices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Name."
+                },
+                "mapfile": {
+                  "type": "string",
+                  "description": "Map File"
+                },
+                "passon": {
+                  "type": "boolean",
+                  "description": "Enable passon."
+                },
+                "settings": {
+                  "type": "string",
+                  "description": "Settings."
+                }
+              }
+            },
+
+            "description": "List of devices."
+          },
+          "virtuals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Name."
+                },
+                "mapfile": {
+                  "type": "string",
+                  "description": "Map File"
+                },
+                "passon": {
+                  "type": "boolean",
+                  "description": "Enable passon."
+                },
+                "settings": {
+                  "type": "string",
+                  "description": "Settings."
+                }
+              }
+            },
+            "description": "List of virtuals."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties" : {
+                "name": {
+                  "type": "string",
+                  "description": "Name."
+                },
+                "mapfile": {
+                  "type": "string",
+                  "description": "Map File."
+                }
+              }
+            },
+            "description": "List of Links."
+          }
+        }
+      }
+    }
+  },
   "interface": {
     "$ref": "{interfacedir}/RemoteControl.json#"
   }
