@@ -1,0 +1,39 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "ResourceMonitor Plugin",
+    "callsign": "ResourceMonitor",
+    "locator": "libWPEFrameworkResourceMonitor.so",
+    "status": "alpha",
+    "description": "The ResourceMonitor plugin provides web browsing functionality based on the ResourceMonitor engine.",
+    "version": "1.0"
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Path of resource."
+          },
+          "interval": {
+            "type": "number",
+            "size": "32",
+            "description": "Duration between measurements (default: 5)"
+          },
+          "mode": {
+            "type": "string",
+            "description": "Mode (options: \"single\", \"multiple\", \"callsign\", \"classname\")"
+          },
+          "parent-name": {
+            "type": "string",
+            "description": "Name of parent process."
+          }
+        }
+      }
+    }
+  }
+}
