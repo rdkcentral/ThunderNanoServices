@@ -67,6 +67,13 @@ The table below lists configuration options of the plugin.
 | classname | string | Class name: *Power* |
 | locator | string | Library name: *libWPEFrameworkPower.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| configuration | object | <sup>*(optional)*</sup>  |
+| configuration?.powerkey | number | <sup>*(optional)*</sup> Key associated as powerkey |
+| configuration?.offmode | string | <sup>*(optional)*</sup> Type of offmode |
+| configuration?.control | boolean | <sup>*(optional)*</sup> Enable control clients |
+| configuration?.gpiopin | number | <sup>*(optional)*</sup> GGIO pin (Broadcom) |
+| configuration?.gpiotype | sting | <sup>*(optional)*</sup> GPIO type (Broadcom) |
+| configuration?.statechange | number | <sup>*(optional)*</sup> Statechange (Broadcom) |
 
 <a name="head.Methods"></a>
 # Methods
