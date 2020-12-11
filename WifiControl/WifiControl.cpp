@@ -320,6 +320,7 @@ namespace Plugin
                            result->ErrorCode = Web::STATUS_OK;
                            result->Message = _T("Config set.");
                         } else {
+                           _controller->Destroy(SSIDDecode(config->Ssid.Value()));
                            result->ErrorCode = Web::STATUS_BAD_REQUEST;
                            result->Message = _T("Incomplete Config.");
                         }
@@ -383,6 +384,7 @@ namespace Plugin
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("Config set.");
                     } else {
+                        _controller->Destroy(SSIDDecode(config->Ssid.Value()));
                         result->ErrorCode = Web::STATUS_BAD_REQUEST;
                         result->Message = _T("Incomplete Config.");
                     }
