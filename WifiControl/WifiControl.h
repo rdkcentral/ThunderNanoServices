@@ -73,7 +73,7 @@ namespace Plugin {
             }
 
         public:
-            uint32_t Lauch(const string& connector, const string& interfaceName, const uint16_t waitTime)
+            uint32_t Launch(const string& connector, const string& interfaceName, const uint16_t waitTime)
             {
                 _interfaceName = interfaceName;
                 _connector = connector;
