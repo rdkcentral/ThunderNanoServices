@@ -73,7 +73,7 @@ namespace Plugin {
             }
 
         public:
-            uint32_t Lauch(const string& connector, const string& interfaceName, const uint16_t waitTime)
+            uint32_t Launch(const string& connector, const string& interfaceName, const uint16_t waitTime)
             {
                 _interfaceName = interfaceName;
                 _connector = connector;
@@ -508,35 +508,42 @@ namespace Plugin {
             info.Hidden = element.IsHidden();
         }
 
-        static void UpdateConfig(WPASupplicant::Config& profile, const JsonData::WifiControl::ConfigInfo& settings)
+        static bool UpdateConfig(WPASupplicant::Config& profile, const JsonData::WifiControl::ConfigInfo& settings)
         {
+            bool status = true;
 
             if (settings.Hash.IsSet() == true || settings.Psk.IsSet() == true) {
 
                 // Seems we are in WPA mode !!!
                 uint8_t protocolFlags = GetWPAProtocolFlags(settings, true);
-                profile.Protocols(protocolFlags);
+                status = profile.Protocols(protocolFlags);
 
-                if (settings.Hash.IsSet() == true) {
-                    profile.Hash(settings.Hash.Value());
-                } else {
-                    profile.PresharedKey(settings.Psk.Value());
+                if (status == true) {
+                    if (settings.Hash.IsSet() == true) {
+                        status = profile.Hash(settings.Hash.Value());
+                        TRACE_GLOBAL(Trace::Information, (_T("Failed to set Hash %s"), settings.Hash.Value().c_str()));
+                    } else {
+                        status = profile.PresharedKey(settings.Psk.Value());
+                        TRACE_GLOBAL(Trace::Information, (_T("Failed to set PresharedKey %s"), settings.Psk.Value().c_str()));
+                    }
                 }
 
             } else if ((settings.Identity.IsSet() == true) && (settings.Password.IsSet() == true)) {
                 // Seems we are in Enterprise mode !!!
-                profile.Enterprise(settings.Identity.Value(), settings.Password.Value());
+                status = profile.Enterprise(settings.Identity.Value(), settings.Password.Value());
+                TRACE_GLOBAL(Trace::Information, (_T("Failed to set Enterprise values %s:%s"),settings.Identity.Value().c_str(), settings.Password.Value().c_str()));
             } else if ((settings.Identity.IsSet() == false) && (settings.Password.IsSet() == false)) {
                 // Seems we are in UNSECURE mode !!!
-                profile.Unsecure();
+                status = profile.Unsecure();
             }
 
-            if (settings.Accesspoint.IsSet() == true) {
-                profile.Mode(settings.Accesspoint.Value() ? 2 : 0);
+            if ((status == true) && (settings.Accesspoint.IsSet() == true)) {
+                status = profile.Mode(settings.Accesspoint.Value() ? 2 : 0);
             }
-            if (settings.Hidden.IsSet() == true) {
-                profile.Hidden(settings.Hidden.Value());
+            if ((status == true) && (settings.Hidden.IsSet() == true)) {
+                status = profile.Hidden(settings.Hidden.Value());
             }
+            return status;
         }
 
 

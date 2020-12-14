@@ -79,7 +79,7 @@ namespace Plugin
         }
 #else
         if ((config.Application.Value().empty() == false) && (::strncmp(config.Application.Value().c_str(), _TXT("null")) != 0)) {
-            if (_wpaSupplicant.Lauch(config.Connector.Value(), config.Interface.Value(), 15) != Core::ERROR_NONE) {
+            if ((Core::Directory(config.Connector.Value().c_str()).CreatePath() != true) || (_wpaSupplicant.Launch(config.Connector.Value(), config.Interface.Value(), 15) != Core::ERROR_NONE)) {
                 result = _T("Could not start WPA_SUPPLICANT");
             }
         }
@@ -316,10 +316,14 @@ namespace Plugin
 
                         WPASupplicant::Config settings(_controller->Create(SSIDDecode(config->Ssid.Value())));
 
-                        UpdateConfig(settings, *config);
-
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->Message = _T("Config set.");
+                        if (UpdateConfig(settings, *config) == true) {
+                           result->ErrorCode = Web::STATUS_OK;
+                           result->Message = _T("Config set.");
+                        } else {
+                           _controller->Destroy(SSIDDecode(config->Ssid.Value()));
+                           result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                           result->Message = _T("Incomplete Config.");
+                        }
                     }
                 } else if (index.Current().Text() == _T("Scan")) {
 
@@ -376,10 +380,14 @@ namespace Plugin
                     result->Message = _T("Config key not found.");
                 } else {
 
-                    UpdateConfig(settings, *config);
-
-                    result->ErrorCode = Web::STATUS_OK;
-                    result->Message = _T("Config set.");
+                    if (UpdateConfig(settings, *config) == true) {
+                        result->ErrorCode = Web::STATUS_OK;
+                        result->Message = _T("Config set.");
+                    } else {
+                        _controller->Destroy(SSIDDecode(config->Ssid.Value()));
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = _T("Incomplete Config.");
+                    }
                 }
             }
         }

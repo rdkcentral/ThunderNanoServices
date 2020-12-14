@@ -216,7 +216,10 @@ namespace Plugin {
             result = Core::ERROR_UNKNOWN_KEY;
         } else {
             WPASupplicant::Config profile(_controller->Create(ssid));
-            UpdateConfig(profile, param);
+            if (UpdateConfig(profile, param) != true) {
+                result = Core::ERROR_INCOMPLETE_CONFIG;
+                _controller->Destroy(ssid);
+            }
         }
         return result;
     }
