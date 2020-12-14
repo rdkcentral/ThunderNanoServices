@@ -685,8 +685,8 @@ namespace Plugin {
                 : _lock()
                 , _name(info.Name.Value())
                 , _url(info.URL.Value())
-                , _application(nullptr)
                 , _origin(info.Origin.Value())
+                , _application(nullptr)
             {
                 ASSERT(parent != nullptr);
 
