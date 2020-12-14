@@ -58,7 +58,7 @@ namespace Plugin {
 
                     Exchange::ITimeSync* time = service->QueryInterface<Exchange::ITimeSync>();
 					if (time != nullptr) {
-						printf("Time interface supported\n");
+						TRACE_L1("Time interface supported");
 						time->Release();
 					}
 				}
@@ -89,11 +89,13 @@ namespace Plugin {
         public:
             Config()
                 : Sleep(90)
+                , Init(100)
                 , Crash(false)
                 , Destruct(1000)
                 , Single(false)
             {
                 Add(_T("sleep"), &Sleep);
+                Add(_T("config"), &Init);
                 Add(_T("crash"), &Crash);
                 Add(_T("destruct"), &Destruct);
                 Add(_T("single"), &Single);
@@ -104,6 +106,7 @@ namespace Plugin {
 
         public:
             Core::JSON::DecUInt16 Sleep;
+            Core::JSON::DecUInt16 Init;
             Core::JSON::Boolean Crash;
             Core::JSON::DecUInt32 Destruct;
             Core::JSON::Boolean Single;
@@ -132,9 +135,7 @@ namespace Plugin {
                 , _type(copy._type)
             {
             }
-            ~Job()
-            {
-            }
+            ~Job() override = default;
 
             Job& operator=(const Job& RHS)
             {
@@ -146,15 +147,14 @@ namespace Plugin {
         public:
             void Dispatch() override
             {
-
                 switch (_type) {
                 case SHOW:
+                    ::SleepMs(300);
                     _parent->Hidden(false);
-                    _parent->_hidden = false;
                     break;
                 case HIDE:
+                    ::SleepMs(100);
                     _parent->Hidden(true);
-                    _parent->_hidden = true;
                     break;
                 case RESUMED:
                     _parent->StateChange(PluginHost::IStateControl::RESUMED);
@@ -186,70 +186,56 @@ namespace Plugin {
             , _executor(1, 0, 4)
             , _sink(*this)
         {
-            fprintf(stderr, "---------------- Constructed the OutOfProcessImplementation ----------------------\n"); fflush(stderr);
+            TRACE_L1("---------------- Constructing the OutOfProcessImplementation ----------------------");
+            TRACE(Trace::Information, (_T("Constructed the OutOfProcessImplementation")));
         }
         #ifdef __WINDOWS__
         #pragma warning(default : 4355)
         #endif
         ~OutOfProcessImplementation() override
         {
-            fprintf(stderr, "---------------- Destructing the OutOfProcessImplementation ----------------------\n"); fflush(stderr);
+            TRACE_L1("---------------- Destructing the OutOfProcessImplementation ----------------------");
             Block();
 
             if (Wait(Core::Thread::STOPPED | Core::Thread::BLOCKED, _config.Destruct.Value()) == false)
                 TRACE_L1("Bailed out before the thread signalled completion. %d ms", _config.Destruct.Value());
 
-            fprintf(stderr, "---------------- Destructed the OutOfProcessImplementation -----------------------\n"); fflush(stderr);
+            TRACE_L1("---------------- Destructed the OutOfProcessImplementation -----------------------");
         }
 
     public:
-        virtual void SetURL(const string& URL)
+        void SetURL(const string& URL) override
         {
             _requestedURL = URL;
-
-            TRACE(Trace::Information, (_T("New URL: %s"), URL.c_str()));
-
-            TRACE_L1("Received a new URL: %s", URL.c_str());
-            TRACE_L1("URL length: %u", static_cast<uint32_t>(URL.length()));
-
-            Run();
+            TRACE(Trace::Information, (_T("New URL [%d]: [%s]"), URL.length(), URL.c_str()));
         }
-
-        virtual uint32_t Configure(PluginHost::IShell* service)
+        uint32_t Configure(PluginHost::IShell* service) override
         {
-            fprintf(stderr, "---------------- Configuring the OutOfProcessImplementation -----------------------\n"); fflush(stderr);
+            TRACE(Trace::Information, (_T("Configuring: [%s]"), service->Callsign().c_str()));
+
             _dataPath = service->DataPath();
             _config.FromString(service->ConfigLine());
             _endTime = Core::Time::Now();
 
-            if (_config.Sleep.Value() > 0) {
-                TRACE_L1("Going to sleep for %d seconds.", _config.Sleep.Value());
-                _endTime.Add(1000 * _config.Sleep.Value());
+            if (_config.Init.Value() > 0) {
+                TRACE(Trace::Information, (_T("Configuration requested to take [%d] mS"), _config.Init.Value()));
+                _endTime.Add(_config.Init.Value());
             }
-
             Run();
-            fprintf(stderr, "---------------- Configured the OutOfProcessImplementation ------------------------\n"); fflush(stderr);
+
             return (Core::ERROR_NONE);
         }
-        virtual string GetURL() const
+        string GetURL() const override
         {
-            string message;
-
-            for (unsigned int teller = 0; teller < 120; teller++) {
-                message += static_cast<char>('0' + (teller % 10));
-            }
-            return (message);
+            TRACE(Trace::Information, (_T("Requested URL: [%s]"), _requestedURL.c_str()));
+            return (_requestedURL);
         }
-        virtual bool IsVisible() const
+        uint32_t GetFPS() const override
         {
-            return (!_hidden);
-        }
-        virtual uint32_t GetFPS() const
-        {
-            TRACE(Trace::Fatal, (_T("Fatal ingested: %d!!!"), _fps));
+            TRACE(Trace::Information, (_T("Requested FPS: %d"), _fps));
             return (++_fps);
         }
-        virtual void Register(PluginHost::IStateControl::INotification* sink)
+        void Register(PluginHost::IStateControl::INotification* sink) override
         {
             _adminLock.Lock();
 
@@ -259,11 +245,11 @@ namespace Plugin {
             _notificationClients.push_back(sink);
             sink->AddRef();
 
-            TRACE_L1("IStateControl::INotification Registered in webkitimpl: %p", sink);
+            TRACE(Trace::Information, (_T("IStateControl::INotification Registered: %p"), sink));
             _adminLock.Unlock();
         }
 
-        virtual void Unregister(PluginHost::IStateControl::INotification* sink)
+        void Unregister(PluginHost::IStateControl::INotification* sink) override
         {
             _adminLock.Lock();
 
@@ -273,14 +259,14 @@ namespace Plugin {
             ASSERT(index != _notificationClients.end());
 
             if (index != _notificationClients.end()) {
-                TRACE_L1("IStateControl::INotification Removing registered listener from browser %d", __LINE__);
+                TRACE(Trace::Information, (_T("IStateControl::INotification Unregistered: %p"), sink));
                 (*index)->Release();
                 _notificationClients.erase(index);
             }
 
             _adminLock.Unlock();
         }
-        virtual void Register(Exchange::IBrowser::INotification* sink)
+        void Register(Exchange::IBrowser::INotification* sink) override
         {
             _adminLock.Lock();
 
@@ -290,7 +276,7 @@ namespace Plugin {
             _browserClients.push_back(sink);
             sink->AddRef();
 
-            TRACE_L1("IBrowser::INotification Registered in webkitimpl: %p", sink);
+            TRACE(Trace::Information, (_T("IBrowser::INotification Registered: %p"), sink));
             _adminLock.Unlock();
         }
 
@@ -305,7 +291,7 @@ namespace Plugin {
             // ASSERT(index != _browserClients.end());
 
             if (index != _browserClients.end()) {
-                TRACE_L1("IBrowser::INotification Removing registered listener from browser %d", __LINE__);
+                TRACE(Trace::Information, (_T("IBrowser::INotification Unregistered: %p"), sink));
                 (*index)->Release();
                 _browserClients.erase(index);
             }
@@ -313,9 +299,9 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        virtual uint32_t Request(const PluginHost::IStateControl::command command)
+        uint32_t Request(const PluginHost::IStateControl::command command) override
         {
-
+            TRACE(Trace::Information, (_T("Requested a state change. Moving to %s"), command == PluginHost::IStateControl::command::RESUME ? _T("RESUMING") : _T("SUSPENDING")));
             uint32_t result(Core::ERROR_ILLEGAL_STATE);
 
             switch (command) {
@@ -332,35 +318,21 @@ namespace Plugin {
             return (result);
         }
 
-        virtual PluginHost::IStateControl::state State() const
+        PluginHost::IStateControl::state State() const override
         {
-            return (PluginHost::IStateControl::RESUMED);
+            return (_state);
         }
 
-        virtual void Hide(const bool hidden)
+        void Hide(const bool hidden) override
         {
 
             if (hidden == true) {
-
-                printf("Hide called. About to sleep for 2S.\n");
+                TRACE(Trace::Information, (_T("Requestsed a Hide.")));
                 _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::HIDE)), 20000);
-                SleepMs(2000);
-                printf("Hide completed.\n");
             } else {
-                printf("Show called. About to sleep for 4S.\n");
+                TRACE(Trace::Information, (_T("Requestsed a Show.")));
                 _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::SHOW)), 20000);
-                SleepMs(4000);
-                printf("Show completed.\n");
             }
-        }
-
-        virtual void Precondition(const bool)
-        {
-            printf("We are good to go !!!.\n");
-        }
-        virtual void Closure()
-        {
-            printf("Closure !!!!\n");
         }
         void StateChange(const PluginHost::IStateControl::state state)
         {
@@ -373,6 +345,9 @@ namespace Plugin {
                 (*index)->StateChange(state);
                 index++;
             }
+
+            TRACE(Trace::Information, (_T("Changing state to [%s]"), state == PluginHost::IStateControl::state::RESUMED ? _T("Resumed") : _T("Suspended")));
+            _state = state;
 
             _adminLock.Unlock();
         }
@@ -387,6 +362,9 @@ namespace Plugin {
                 (*index)->Hidden(hidden);
                 index++;
             }
+            TRACE(Trace::Information, (_T("Changing state to [%s]"), hidden ? _T("Hidden") : _T("Shown")));
+
+            _hidden = hidden;
 
             _adminLock.Unlock();
         }
@@ -400,16 +378,19 @@ namespace Plugin {
     private:
         virtual uint32_t Worker()
         {
-            fprintf(stderr, "---------------- Running the OutOfProcessImplementation ------------------------\n"); fflush(stderr);
+            TRACE(Trace::Information, (_T("Main task of execution reached. Starting with a Sleep of [%d] S"), _config.Sleep.Value()));
             // First Sleep the expected time..
             SleepMs(_config.Sleep.Value() * 1000);
 
-            fprintf(stderr, "---------------- Notifying the OutOfProcessImplementation ------------------------\n"); fflush(stderr);
             _adminLock.Lock();
 
             std::list<Exchange::IBrowser::INotification*>::iterator index(_browserClients.begin());
 
+            _state = PluginHost::IStateControl::SUSPENDED;
+
             _setURL = _requestedURL;
+
+            TRACE(Trace::Information, (_T("Send out a notification change of the URL: [%s]"), _setURL.c_str()));
 
             while (index != _browserClients.end()) {
                 (*index)->URLChanged(_setURL);
@@ -427,7 +408,7 @@ namespace Plugin {
             _adminLock.Unlock();
 
             if (_config.Crash.Value() == true) {
-                fprintf(stderr, "---------------- Crashing the OutOfProcessImplementation ------------------------\n"); fflush(stderr);
+                TRACE(Trace::Information, (_T("Crash request honoured. We are going to CRASH!!!")));
                 TRACE_L1("Going to CRASH as requested %d.", 0);
                 abort();
             }
@@ -435,7 +416,11 @@ namespace Plugin {
             // Just do nothing :-)
             Block();
 
-            fprintf(stderr, "---------------- Completed the OutOfProcessImplementation ------------------------\n"); fflush(stderr);
+            while (IsRunning() == true) {
+                SleepMs(200);
+            }
+
+            TRACE(Trace::Information, (_T("Leaving the main task of execution, we are done.")));
 
             return (Core::infinite);
         }
@@ -451,6 +436,7 @@ namespace Plugin {
         Core::Time _endTime;
         std::list<PluginHost::IStateControl::INotification*> _notificationClients;
         std::list<Exchange::IBrowser::INotification*> _browserClients;
+        PluginHost::IStateControl::state _state;
         Core::ThreadPool _executor;
         Core::Sink<PluginMonitor> _sink;
     };

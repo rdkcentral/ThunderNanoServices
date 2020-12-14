@@ -4,18 +4,18 @@
     <ClCompile Include="OutOfProcessImplementation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="OutOfProcessPlugin.cpp">
+    <ClCompile Include="Module.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Module.cpp">
+    <ClCompile Include="OutOfProcessPlugin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="OutOfProcessPlugin.h">
+    <ClInclude Include="Module.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Module.h">
+    <ClInclude Include="OutOfProcessPlugin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -23,11 +23,11 @@
     <Text Include="CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{434a6a2e-3d6d-4ac2-8f58-5fa0f542b4b8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{d35749f8-c80f-44c4-bf1a-2fac71de876b}</UniqueIdentifier>
+      <UniqueIdentifier>{05e0109b-d60d-4e1b-adf7-a09e97b1ebf4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{74d2df41-b460-4bd4-8dc2-45a593098b40}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

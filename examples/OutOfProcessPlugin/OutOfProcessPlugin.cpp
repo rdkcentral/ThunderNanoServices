@@ -37,8 +37,7 @@ namespace Plugin {
 
     static const char SampleData[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=!";
 
-    /* encapsulated class Thread  */
-    /* virtual */ const string OutOfProcessPlugin::Initialize(PluginHost::IShell* service)
+    const string OutOfProcessPlugin::Initialize(PluginHost::IShell* service) /* override */
     {
         string message;
         Config config;
@@ -101,8 +100,6 @@ namespace Plugin {
         ASSERT(service == _service);
         ASSERT(_browser != nullptr);
 
-        fprintf(stderr, "================ Deinitializing the OutOfProcessPlugin forcefully =================\n"); fflush(stderr);
-
         _service->DisableWebServer();
         _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
         _browser->Unregister(_notification);
@@ -134,7 +131,6 @@ namespace Plugin {
         _memory = nullptr;
         _browser = nullptr;
         _service = nullptr;
-        fprintf(stderr, "================ Deinitialized the OutOfProcessPlugin forcefully ==================\n"); fflush(stderr);
     }
 
     /* virtual */ string OutOfProcessPlugin::Information() const
@@ -249,13 +245,14 @@ namespace Plugin {
         info.ToString(message);
         TRACE_L1("Received a new URL: %s", message.c_str());
         TRACE_L1("URL length: %u", static_cast<uint32_t>(message.length()));
-        fprintf(stderr, "================ URL Changed [%s] =================\n", URL.c_str()); fflush(stderr);
+        TRACE(Trace::Information, (_T("Parent process recceived a changed URL: [%s]"), URL.c_str()));
 
         _service->Notify(message);
     }
 
     void OutOfProcessPlugin::Hidden(const bool hidden)
     {
+        TRACE(Trace::Information, (_T("Parent process recceived a changed visibility: [%s]"), hidden ? _T("Hidden") : _T("Shown")));
         string message = "{ \"hidden\": \"" + string(hidden ? _T("true") : _T("false")) + "\" }";
 
         _service->Notify(message);
@@ -263,6 +260,7 @@ namespace Plugin {
 
     void OutOfProcessPlugin::StateChange(const PluginHost::IStateControl::state value)
     {
+        TRACE(Trace::Information, (_T("Parent process recceived a changed state: [%s]"), value == PluginHost::IStateControl::state::RESUMED ? _T("Resumed") : _T("Suspended")));
         string message = "{ \"state\": \"test\" }";
 
         _service->Notify(message);
