@@ -1,15 +1,79 @@
 {
-    "$schema": "plugin.schema.json",
-    "info": {
-      "title": "Compositor Plugin",
-      "callsign": "Compositor",
-      "locator": "libWPEFrameworkCompositor.so",
-      "status": "production",
-      "description": "Compositor gives you controll over what is displayed on screen.",
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Compositor Plugin",
+    "callsign": "Compositor",
+    "locator": "libWPEFrameworkCompositor.so",
+    "status": "production",
+    "description": [
+      "Compositor gives you control over what is displayed on screen."
+      ],
       "version": "1.0"
-    },
-    "interface": {
-      "$ref": "{interfacedir}/Compositor.json#"
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "hardwareready": {
+            "type": "number",
+            "size": "8",
+            "description": "Hardware delay (Nexus)."
+          },
+          "resolution": {
+            "type": "string",
+            "description": "Screen resolution (Nexus)."
+          },
+          "allowedclients": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of allowed clients (Nexus)."
+          },
+          "connector": {
+            "type": "string",
+            "description": "Path of connector (RPI)."
+          },
+          "join": {
+            "type": "boolean",
+            "description": "Enable join (Wayland)."
+          },
+          "display": {
+            "type": "string",
+            "description": "Display (Wayland)."
+          },
+          "connector": {
+            "type": "enum",
+            "description": "Resolution (Wayland)."
+          },
+          "renderer": {
+            "type": "string",
+            "description": "Path of renderer (Westeros)."
+          },
+          "glname": {
+            "type": "string",
+            "description": "Name of GL-library (Westeros)."
+          },
+          "display": {
+            "type": "string",
+            "description": "Display (Westeros)."
+          },
+          "width": {
+            "type": "string",
+            "description": "Screen width (Westeros)."
+          },
+          "height": {
+            "type": "string",
+            "description": "Screen height (Westeros)."
+          }
+        }
+      }     
     }
+  },
+  "interface": {
+    "$ref": "{interfacedir}/Compositor.json#"
   }
-  
+}

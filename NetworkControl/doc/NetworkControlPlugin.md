@@ -23,12 +23,12 @@ NetworkControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the NetworkControl plugin. It includes detailed specification of its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the NetworkControl plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -75,7 +75,11 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *NetworkControl*) |
 | classname | string | Class name: *NetworkControl* |
 | locator | string | Library name: *libWPEFrameworkNetworkControl.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| configuration | object | <sup>*(optional)*</sup>  |
+| configuration?.dnsfile | string | <sup>*(optional)*</sup> Path to DNS resolve file (default: /etc/resolv.conf) |
+| configuration?.response | number | <sup>*(optional)*</sup> Maximum response time out of the DHCP server |
+| configuration?.retries | number | <sup>*(optional)*</sup> Maximum number of retries to the DHCP server |
 
 <a name="head.Methods"></a>
 # Methods
@@ -90,6 +94,7 @@ NetworkControl interface methods:
 | [request](#method.request) | Reloads a non-static network interface adapter |
 | [assign](#method.assign) | Reloads a static network interface adapter |
 | [flush](#method.flush) | Flushes a network interface adapter |
+
 
 <a name="method.reload"></a>
 ## *reload <sup>method</sup>*
@@ -129,6 +134,7 @@ Reloads a static or non-static network interface adapter.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -138,6 +144,7 @@ Reloads a static or non-static network interface adapter.
     "result": null
 }
 ```
+
 <a name="method.request"></a>
 ## *request <sup>method</sup>*
 
@@ -178,6 +185,7 @@ Also see: [connectionchange](#event.connectionchange)
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -187,6 +195,7 @@ Also see: [connectionchange](#event.connectionchange)
     "result": null
 }
 ```
+
 <a name="method.assign"></a>
 ## *assign <sup>method</sup>*
 
@@ -225,6 +234,7 @@ Reloads a static network interface adapter.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -234,6 +244,7 @@ Reloads a static network interface adapter.
     "result": null
 }
 ```
+
 <a name="method.flush"></a>
 ## *flush <sup>method</sup>*
 
@@ -272,6 +283,7 @@ Flushes a network interface adapter.
     }
 }
 ```
+
 #### Response
 
 ```json
@@ -281,6 +293,7 @@ Flushes a network interface adapter.
     "result": null
 }
 ```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -293,6 +306,7 @@ NetworkControl interface properties:
 | [network](#property.network) | Network information |
 | [dns](#property.dns) | DNS addresses |
 | [up](#property.up) | Interface up status |
+
 
 <a name="property.network"></a>
 ## *network <sup>property</sup>*
@@ -333,6 +347,7 @@ Provides access to the network information.
     "method": "NetworkControl.1.network@eth0"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -348,12 +363,13 @@ Provides access to the network information.
             "gateway": "192.168.1.1",
             "broadcast": "192.168.1.255",
             "dns": [
-                "192.168.1.1"
+                "['192.168.1.1', 'www.google.com', '8.8.8.8']"
             ]
         }
     ]
 }
 ```
+
 #### Set Request
 
 ```json
@@ -368,11 +384,15 @@ Provides access to the network information.
             "address": "192.168.1.158",
             "mask": 24,
             "gateway": "192.168.1.1",
-            "broadcast": "192.168.1.255"
+            "broadcast": "192.168.1.255",
+            "dns": [
+                "['192.168.1.1', 'www.google.com', '8.8.8.8']"
+            ]
         }
     ]
 }
 ```
+
 #### Set Response
 
 ```json
@@ -382,6 +402,7 @@ Provides access to the network information.
     "result": "null"
 }
 ```
+
 <a name="property.dns"></a>
 ## *dns <sup>property</sup>*
 
@@ -405,6 +426,7 @@ Provides access to the DNS addresses.
     "method": "NetworkControl.1.dns"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -416,6 +438,7 @@ Provides access to the DNS addresses.
     ]
 }
 ```
+
 #### Set Request
 
 ```json
@@ -427,9 +450,8 @@ Provides access to the DNS addresses.
         "['192.168.1.1', 'www.google.com', '8.8.8.8']"
     ]
 }
-
-DNS address will be stored in IP format if it is able to resolve the address with available DNS servers
 ```
+
 #### Set Response
 
 ```json
@@ -439,6 +461,7 @@ DNS address will be stored in IP format if it is able to resolve the address wit
     "result": "null"
 }
 ```
+
 <a name="property.up"></a>
 ## *up <sup>property</sup>*
 
@@ -475,6 +498,7 @@ Provides access to the interface up status.
     "method": "NetworkControl.1.up@eth0"
 }
 ```
+
 #### Get Response
 
 ```json
@@ -484,6 +508,7 @@ Provides access to the interface up status.
     "result": false
 }
 ```
+
 #### Set Request
 
 ```json
@@ -494,6 +519,7 @@ Provides access to the interface up status.
     "params": false
 }
 ```
+
 #### Set Response
 
 ```json
@@ -503,10 +529,11 @@ Provides access to the interface up status.
     "result": "null"
 }
 ```
+
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers.Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the NetworkControl plugin:
 
@@ -515,6 +542,7 @@ NetworkControl interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [connectionchange](#event.connectionchange) | Notifies about connection status (created, updated, removed, connected, ipassigned and connectionfailed) |
+
 
 <a name="event.connectionchange"></a>
 ## *connectionchange <sup>event</sup>*
@@ -543,3 +571,4 @@ Notifies about connection status (created, updated, removed, connected, ipassign
     }
 }
 ```
+

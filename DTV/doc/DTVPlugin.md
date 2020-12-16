@@ -76,6 +76,9 @@ The table below lists configuration options of the plugin.
 | classname | string | Class name: *DTV* |
 | locator | string | Library name: *libWPEFrameworkDTV.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| configuration | object | <sup>*(optional)*</sup>  |
+| configuration?.subtitleprocessing | boolean | <sup>*(optional)*</sup> Enable subtitle processing |
+| configuration?.teletextproessing | boolean | <sup>*(optional)*</sup> Enable teletext processing |
 
 <a name="head.Methods"></a>
 # Methods
@@ -89,9 +92,9 @@ DTV interface methods:
 | [addLnb](#method.addLnb) | Add a new LNB to the database |
 | [addSatellite](#method.addSatellite) | Add a new satellite to the database |
 | [startServiceSearch](#method.startServiceSearch) | Starts a service search |
-| [finishServiceSearch](#method.finishServiceSearch) |  |
-| [startPlaying](#method.startPlaying) |  |
-| [stopPlaying](#method.stopPlaying) |  |
+| [finishServiceSearch](#method.finishServiceSearch) | Finish a service search |
+| [startPlaying](#method.startPlaying) | Start playing given service |
+| [stopPlaying](#method.stopPlaying) | Stop playing given service |
 
 
 <a name="method.addLnb"></a>
@@ -290,6 +293,8 @@ Also see: [searchstatus](#event.searchstatus)
 <a name="method.finishServiceSearch"></a>
 ## *finishServiceSearch <sup>method</sup>*
 
+Finish a service search.
+
 ### Parameters
 
 | Name | Type | Description |
@@ -333,6 +338,8 @@ Also see: [searchstatus](#event.searchstatus)
 <a name="method.startPlaying"></a>
 ## *startPlaying <sup>method</sup>*
 
+Start playing given service.
+
 ### Parameters
 
 | Name | Type | Description |
@@ -375,6 +382,8 @@ Also see: [searchstatus](#event.searchstatus)
 
 <a name="method.stopPlaying"></a>
 ## *stopPlaying <sup>method</sup>*
+
+Stop playing given service.
 
 ### Parameters
 

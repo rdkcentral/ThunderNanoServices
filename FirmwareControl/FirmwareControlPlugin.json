@@ -8,6 +8,30 @@
     "description": "Control Firmware upgrade to the device",
     "version": "1.0"
   },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Source URL or location of the firmware."
+          },
+          "download": {
+            "type": "string",
+            "description": "Location where the firmware to be downloaded."
+          },
+          "waittime": {
+            "type": "number",
+            "size": "32",
+            "description": "Maximum duration to finish download or install process."
+          }
+        }
+      }
+    }
+  },
   "interface": {
     "$ref": "{interfacedir}/FirmwareControl.json#"
   }
