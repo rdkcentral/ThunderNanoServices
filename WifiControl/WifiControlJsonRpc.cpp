@@ -218,6 +218,7 @@ namespace Plugin {
             WPASupplicant::Config profile(_controller->Create(ssid));
             if (UpdateConfig(profile, param) != true) {
                 result = Core::ERROR_INCOMPLETE_CONFIG;
+                _controller->Destroy(ssid);
             }
         }
         return result;
