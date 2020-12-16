@@ -210,7 +210,7 @@ namespace Plugin {
         {
             auto extractNumbers = [](const std::string& str) {
                 string value;
-                if (str.empty() != true) {
+                if (!str.empty()) {
                     auto first = str.find_first_of("0123456789");
                     auto last = str.find_last_of("0123456789");
                     value = str.substr(first, last - first + 1);
