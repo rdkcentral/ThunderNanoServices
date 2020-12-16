@@ -209,9 +209,13 @@ namespace Plugin {
         uint64_t GetMemory(const std::string& key) const
         {
             auto extractNumbers = [](const std::string& str) {
-                auto first = str.find_first_of("0123456789");
-                auto last = str.find_last_of("0123456789");
-                return std::stoul(str.substr(first, last - first + 1));
+                string value;
+                if (str.empty() != true) {
+                    auto first = str.find_first_of("0123456789");
+                    auto last = str.find_last_of("0123456789");
+                    value = str.substr(first, last - first + 1);
+                }
+                return std::stoul(!value.empty() ? value : "0");
             };
 
             auto value = GetValueForKey(_memoryStatsFile, key);
