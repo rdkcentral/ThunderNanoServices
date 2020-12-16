@@ -1,0 +1,28 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Dictionary Plugin",
+    "callsign": "Dictionary",
+    "locator": "libWPEFrameworkDictionary.so",
+    "status": "production",
+    "description": [
+      "The Dictionary plugin provides functionality for dictionary management."
+    ],
+    "version": "1.0"
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "storage": {
+            "type": "string",
+            "description": "Filename of DataModel file (default: DataModel.json)"
+          }
+        }
+      }
+    }
+  }
+}

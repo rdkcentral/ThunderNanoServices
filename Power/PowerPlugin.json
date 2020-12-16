@@ -7,6 +7,44 @@
     "status": "alpha",
     "version": "1.0"
   },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "powerkey": {
+            "type": "number",
+            "size": 32,
+            "description": "Key associated as powerkey"
+          },
+          "offmode": {
+            "type": "string",
+            "description": "Type of offmode"
+          },
+          "control": {
+            "type": "boolean",
+            "description": "Enable control clients"
+          },
+          "gpiopin": {
+            "type": "number",
+            "size": "32",
+            "description": "GGIO pin (Broadcom)"
+          },
+          "gpiotype": {
+            "type": "sting",
+            "description": "GPIO type (Broadcom)"
+          },
+          "statechange": {
+            "type": "number",
+            "size": "8",
+            "description": "Statechange (Broadcom)"
+          }
+        }
+      }
+    }
+  },
   "interface": {
     "$ref": "{interfacedir}/Power.json"
   }
