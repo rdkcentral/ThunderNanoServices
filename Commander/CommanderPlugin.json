@@ -1,0 +1,24 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Commander Plugin",
+    "callsign": "Commander",
+    "locator": "libWPEFrameworkCommander.so",
+    "status": "alpha",
+    "description": "The Commander plugin provides web browsing functionality based on the Commander engine.",
+    "version": "1.0"
+  },
+  "configuration": {
+    "type": "object",
+    "required": [],
+    "properties": {
+      "sequencers": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of sequencers."
+      }
+    }
+  }
+}

@@ -76,6 +76,7 @@ The table below lists configuration options of the plugin.
 | configuration.servers[#].interface | string | Name of the network interface to bind to |
 | configuration.servers[#].poolstart | number | IP pool start number |
 | configuration.servers[#].poolsize | number | IP pool size (in IP numbers) |
+| configuration.servers[#]?.router | number | <sup>*(optional)*</sup> IP of router |
 
 <a name="head.Methods"></a>
 # Methods

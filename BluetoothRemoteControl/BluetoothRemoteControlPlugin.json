@@ -8,6 +8,33 @@
     "description": "The Bluetooth Remote Control plugin allows configuring and enabling Bluetooth remote control units.",
     "version": "1.0"
   },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "controller": {
+            "type": "string",
+            "description": "Controller"
+          },
+          "keymap": {
+            "type": "string",
+            "description": "Keymap"
+          },
+          "keyingest": {
+            "type": "boolean",
+            "description": "Enable keyingest"
+          },
+          "recorder": {
+            "type": "enum",
+            "description": "Recorder"
+          }
+        }
+      }
+    }
+  },
   "interface": {
     "$ref": "{interfacedir}/BluetoothRemoteControl.json#"
   }

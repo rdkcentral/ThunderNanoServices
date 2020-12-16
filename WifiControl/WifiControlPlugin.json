@@ -1,12 +1,48 @@
 {
   "$schema": "plugin.schema.json",
   "info": {
-    "title": "WiFi Control Plugin",
+    "title": "Wifi Control Plugin",
     "callsign": "WifiControl",
     "locator": "libWPEWifiControl.so",
     "status": "beta",
     "description": "The WiFi Control plugin allows to manage various aspects of wireless connectivity.",
     "version": "1.0"
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "connector": {
+            "type": "string",
+            "description": "Connector name."
+          },
+          "interface": {
+            "type": "string",
+            "description": "Interface name."
+          },
+          "application": {
+            "type": "string",
+            "description": "Application name."
+          },
+          "preferred": {
+            "type": "string",
+            "description": "Preferred."
+          },
+          "autoconnect": {
+            "type": "string",
+            "description": "Enable autoconnect."
+          },
+          "retryinterval": {
+            "type": "string",
+            "description": "Retry interval."
+          }
+
+        }
+      }
+    }
   },
   "interface": {
     "$ref": "{interfacedir}/WifiControl.json#"

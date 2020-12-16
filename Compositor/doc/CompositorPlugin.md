@@ -60,7 +60,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-Compositor gives you controll over what is displayed on screen.
+Compositor gives you control over what is displayed on screen.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -75,6 +75,18 @@ The table below lists configuration options of the plugin.
 | classname | string | Class name: *Compositor* |
 | locator | string | Library name: *libWPEFrameworkCompositor.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| configuration | object | <sup>*(optional)*</sup>  |
+| configuration?.hardwareready | number | <sup>*(optional)*</sup> Hardware delay (Nexus) |
+| configuration?.resolution | string | <sup>*(optional)*</sup> Screen resolution (Nexus) |
+| configuration?.allowedclients | array | <sup>*(optional)*</sup> List of allowed clients (Nexus) |
+| configuration?.allowedclients[#] | string | <sup>*(optional)*</sup>  |
+| configuration?.connector | enum | <sup>*(optional)*</sup> Resolution (Wayland) |
+| configuration?.join | boolean | <sup>*(optional)*</sup> Enable join (Wayland) |
+| configuration?.display | string | <sup>*(optional)*</sup> Display (Westeros) |
+| configuration?.renderer | string | <sup>*(optional)*</sup> Path of renderer (Westeros) |
+| configuration?.glname | string | <sup>*(optional)*</sup> Name of GL-library (Westeros) |
+| configuration?.width | string | <sup>*(optional)*</sup> Screen width (Westeros) |
+| configuration?.height | string | <sup>*(optional)*</sup> Screen height (Westeros) |
 
 <a name="head.Methods"></a>
 # Methods

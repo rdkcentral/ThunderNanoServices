@@ -1,0 +1,58 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "WebPA Plugin",
+    "callsign": "WebPA",
+    "locator": "libWPEFrameworkWebPA.so",
+    "status": "alpha",
+    "description": "The WebPA plugin provides web browsing functionality based on the WebPA engine.",
+    "version": "1.0"
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "interface": {
+            "type": "string",
+            "description": "Interface."
+          },
+          "pingwaittime": {
+            "type": "string",
+            "description": "Ping waittime timout."
+          },
+          "webpaurl": {
+            "type": "string",
+            "description": "WebPA url."
+          },
+          "paroduslocalurl": {
+            "type": "string",
+            "description": "Parodus local url."
+          },
+          "partnerid": {
+            "type": "string",
+            "description": "Partner id."
+          },
+          "webpabackoffmax": {
+            "type": "string",
+            "description": "WebPA backoff max."
+          },
+          "sslcertpath": {
+            "type": "string",
+            "description": "Path of SSL certification."
+          },
+          "forceipv4": {
+            "type": "string",
+            "description": "Force IPv4."
+          },
+          "location": {
+            "type": "string",
+            "description": "Location."
+          }
+        }
+      }
+    }
+  }
+}

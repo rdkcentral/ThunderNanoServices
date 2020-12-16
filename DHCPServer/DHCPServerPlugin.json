@@ -45,6 +45,12 @@
                   "type": "number",
                   "description": "IP pool size (in IP numbers)",
                   "example": 100
+                },
+                "router": {
+                  "type": "number",
+                  "size": 32,
+                  "description": "IP of router",
+                  "example": 100
                 }
               },
               "required": [

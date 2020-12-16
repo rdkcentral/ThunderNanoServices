@@ -76,6 +76,11 @@ The table below lists configuration options of the plugin.
 | classname | string | Class name: *BluetoothRemoteControl* |
 | locator | string | Library name: *libWPEFrameworkBluetoothRemoteControl.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| configuration | object | <sup>*(optional)*</sup>  |
+| configuration?.controller | string | <sup>*(optional)*</sup> Controller |
+| configuration?.keymap | string | <sup>*(optional)*</sup> Keymap |
+| configuration?.keyingest | boolean | <sup>*(optional)*</sup> Enable keyingest |
+| configuration?.recorder | enum | <sup>*(optional)*</sup> Recorder |
 
 <a name="head.Methods"></a>
 # Methods
@@ -197,6 +202,7 @@ BluetoothRemoteControl interface properties:
 | [address](#property.address) <sup>RO</sup> | Bluetooth address of the unit |
 | [info](#property.info) <sup>RO</sup> | Unit auxiliary information |
 | [batterylevel](#property.batterylevel) <sup>RO</sup> | Battery level |
+| [voice](#property.voice) | Enable or Disable the flow of Voice data fragments from the remote |
 | [audioprofile](#property.audioprofile) <sup>RO</sup> | Audio profile details |
 
 
@@ -374,6 +380,66 @@ Provides access to the battery level.
     "jsonrpc": "2.0",
     "id": 1234567890,
     "result": 50
+}
+```
+
+<a name="property.voice"></a>
+## *voice <sup>property</sup>*
+
+Provides access to the enable or Disable the flow of Voice data fragments from the remote.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | boolean | enable (true) or disable (false) flow of voice data |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 1 | ```ERROR_GENERAL``` | Failed to set the voice flow |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "BluetoothRemoteControl.1.voice"
+}
+```
+
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": false
+}
+```
+
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "BluetoothRemoteControl.1.voice",
+    "params": false
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": "null"
 }
 ```
 

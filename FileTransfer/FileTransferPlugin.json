@@ -1,0 +1,31 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "FileTransfer Plugin",
+    "callsign": "FileTransfer",
+    "locator": "libWPEFrameworkFileTransfer.so",
+    "status": "alpha",
+    "description": "The FileTransfer plugin provides web browsing functionality based on the FileTransfer engine.",
+    "version": "1.0"
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "port": {
+            "type": "number",
+            "size": 16,
+            "description": "Port number (default: 2201)."
+          },
+           "fullfile": {
+            "type": "boolean",
+            "description": "If value failse update at the end of the file (default: false)"
+          }         
+        }
+      }
+    }
+  }
+}
