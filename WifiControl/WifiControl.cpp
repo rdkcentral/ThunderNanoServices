@@ -71,7 +71,7 @@ namespace Plugin
         else
             SYSLOG(Logging::Startup, ("Config directory %s doesn't exist and could not be created!\n", service->PersistentPath().c_str()));
 
-        TRACE_L1("Starting the application for wifi called: [%s]", config.Application.Value().c_str());
+        TRACE(Trace::Information, (_T("Starting the application for wifi called: [%s]"), config.Application.Value().c_str()));
 #ifdef USE_WIFI_HAL
         _controller = WPASupplicant::WifiHAL::Create();
         if ((_controller.IsValid() == true) && (_controller->IsOperational() == true)) {
@@ -130,7 +130,7 @@ namespace Plugin
         }
 #endif
 
-        TRACE_L1("Config path = %s", _configurationStore.c_str());
+        TRACE(Trace::Information, (_T("Config path = %s"), _configurationStore.c_str()));
 
         // On success return empty, to indicate there is no error text.
         return (result);
@@ -176,7 +176,7 @@ namespace Plugin
 
     /* virtual */ Core::ProxyType<Web::Response> WifiControl::Process(const Web::Request& request)
     {
-        TRACE_L1("Web request %s", request.Path.c_str());
+        TRACE(Trace::Information, (_T("Web request %s"), request.Path.c_str()));
         ASSERT(_skipURL <= request.Path.length());
 
         Core::ProxyType<Web::Response> result;
@@ -216,9 +216,9 @@ namespace Plugin
             default:
                 if (safeFallback) {
                     protocolFlags = WPASupplicant::Config::WPA | WPASupplicant::Config::WPA2;
-                    TRACE_L1("Unknown WPA protocol type %d. Assuming WPA/WPA2", settings.Type.Value());
+                    TRACE_GLOBAL(Trace::Information, (_T("Unknown WPA protocol type %d. Assuming WPA/WPA2"), settings.Type.Value()));
                 } else {
-                    TRACE_L1("Unknown WPA protocol type %d", settings.Type.Value());
+                    TRACE_GLOBAL(Trace::Information, (_T("Unknown WPA protocol type %d"), settings.Type.Value()));
                 }
         }
 
