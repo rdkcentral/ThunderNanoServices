@@ -96,7 +96,7 @@ namespace Plugin {
                 options.Add(_T("-f/tmp/wpasupplicant.log"));
 #endif
 
-                TRACE_L1("Launching %s.", options.Command().c_str());
+                TRACE(Trace::Information, (_T("Launching %s."), options.Command().c_str()));
                 uint32_t result = _process.Launch(options, &_pid);
 
                 if (result == Core::ERROR_NONE) {
@@ -521,17 +521,17 @@ namespace Plugin {
                 if (status == true) {
                     if (settings.Hash.IsSet() == true) {
                         status = profile.Hash(settings.Hash.Value());
-                        TRACE_GLOBAL(Trace::Information, (_T("Failed to set Hash %s"), settings.Hash.Value().c_str()));
+                        TRACE_GLOBAL(Trace::Information, (_T("Setting Hash %s is %s"), settings.Hash.Value().c_str(), (status ? "Success": "Failed")));
                     } else {
                         status = profile.PresharedKey(settings.Psk.Value());
-                        TRACE_GLOBAL(Trace::Information, (_T("Failed to set PresharedKey %s"), settings.Psk.Value().c_str()));
+                        TRACE_GLOBAL(Trace::Information, (_T("Setting PresharedKey %s is %s"), settings.Psk.Value().c_str(), (status ? "Success": "Failed")));
                     }
                 }
 
             } else if ((settings.Identity.IsSet() == true) && (settings.Password.IsSet() == true)) {
                 // Seems we are in Enterprise mode !!!
                 status = profile.Enterprise(settings.Identity.Value(), settings.Password.Value());
-                TRACE_GLOBAL(Trace::Information, (_T("Failed to set Enterprise values %s:%s"),settings.Identity.Value().c_str(), settings.Password.Value().c_str()));
+                TRACE_GLOBAL(Trace::Information, (_T("Setting Enterprise values %s:%s is %s"),settings.Identity.Value().c_str(), settings.Password.Value().c_str(), (status ? "Success": "Failed")));
             } else if ((settings.Identity.IsSet() == false) && (settings.Password.IsSet() == false)) {
                 // Seems we are in UNSECURE mode !!!
                 status = profile.Unsecure();
