@@ -85,8 +85,6 @@ namespace WPASupplicant { // XXX: Change ???
             _adminLock.Lock();
 
             for (NetworkInfoContainer::iterator it = _networks.begin(); it != _networks.end(); ++it) {
-                //NetworkInfo &info = it->second;
-                //printf("\tSSID=%32s, BSSID=%s pairs=%d keys=%d\n", info._ssid.c_str(), info._bssid.c_str(), info._pairs, info._keys);
                 result.Insert(Network(channel,
                     static_cast<uint32_t>(~0), // XXX: ??? id
                     BSSID(string(it->second._bssid)),
@@ -115,9 +113,8 @@ namespace WPASupplicant { // XXX: Change ???
             while (index != _enabled.end()) {
                 uint32_t id = ~0;
                 bool isSelected = ssidCurrent.compare(index->first) == 0;
-                //result.Insert(index->first, index->second.Id(), index->second.IsEnabled(), index->second.IsSelected());
                 result.Insert(index->first, id, 1, isSelected);
-                TRACE_L2("%s: Inserting %s isSelected=%d", __FUNCTION__, index->first.c_str(), isSelected);
+                TRACE(Trace::Information, (_T("%s: Inserting %s isSelected=%d"), __FUNCTION__, index->first.c_str(), isSelected));
 
                 index++;
             }
@@ -180,9 +177,9 @@ namespace WPASupplicant { // XXX: Change ???
 
             if (entry != _enabled.end()) {
                 result = Config(Core::ProxyType<Controller>(*this), SSID);
-                printf("%s: Config Found ssid=%s\n", __FUNCTION__, SSID.c_str());
+                TRACE(Trace::Information, (_T("%s: Config Found ssid=%s\n"), __FUNCTION__, SSID.c_str()));
             } else {
-                printf("%s: Config Not Found ssid=%s\n", __FUNCTION__, SSID.c_str());
+                TRACE(Trace::Information, (_T("%s: Config Not Found ssid=%s\n"), __FUNCTION__, SSID.c_str()));
             }
 
             _adminLock.Unlock();
@@ -195,7 +192,7 @@ namespace WPASupplicant { // XXX: Change ???
 
             uint32_t result = Core::ERROR_NONE;
 
-            TRACE_L2("%s: SSID=%s key=%s value=%s", __FUNCTION__, SSID.c_str(), key.c_str(), value.c_str());
+            TRACE(Trace::Information, (_T("%s: SSID=%s key=%s value=%s"), __FUNCTION__, SSID.c_str(), key.c_str(), value.c_str()));
 
             _adminLock.Lock();
 
@@ -234,7 +231,6 @@ namespace WPASupplicant { // XXX: Change ???
                 if ((key == Config::PSK) || (key == Config::PASSWORD)) {
                     value = index->second._secret;
                 } else {
-                    //const KeyValue &kv(index->second._keyvalue);
                     KeyValue::const_iterator it(index->second._keyvalue.find(key));
                     if (it != index->second._keyvalue.end()) {
                         value = it->second;
@@ -243,7 +239,7 @@ namespace WPASupplicant { // XXX: Change ???
             } else {
                 TRACE(Trace::Error, ("%s: '%s' Not Enabled", __FUNCTION__, SSID.c_str()));
             }
-            TRACE_L2("%s:%d SSID=%s key=%s value=%s", __FUNCTION__, __LINE__, SSID.c_str(), key.c_str(), value.c_str());
+            TRACE(Trace::Information, (_T("%s:%d SSID=%s key=%s value=%s", __FUNCTION__, __LINE__, SSID.c_str(), key.c_str()), value.c_str()));
 
             _adminLock.Unlock();
 

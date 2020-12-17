@@ -64,17 +64,12 @@ namespace WPASupplicant {
         UINT uSize = 0;
         rc = wifi_getNeighboringWiFiDiagnosticResult(0, &neighbor_ap_array, &uSize);
         if (rc == RETURN_OK) {
-            TRACE_L1("wifi_getNeighboringWiFiDiagnosticResult size=%d", uSize);
+            TRACE(Trace::Information, (_T("wifi_getNeighboringWiFiDiagnosticResult size=%d"), uSize));
             for (int i = 0; i < uSize; i++) {
                 wifi_neighbor_ap_t* ap = &neighbor_ap_array[i];
-                //printf("\tap_SSID=%s, ap_BSSID=%s, ap_SecurityModeEnabled=%s, ap_EncryptionMode=%s\n",
-                //    ap->ap_SSID, ap->ap_BSSID, ap->ap_SecurityModeEnabled, ap->ap_EncryptionMode);
 
                 Network::pair pairs = Network::PAIR_NONE;
                 Network::key keys = Network::KEY_NONE;
-
-                // ap_SecurityModeEnabled=WPA-WPA2, ap_EncryptionMode=TKIP,AES
-                // ap_SecurityModeEnabled=WPA2-Enterprise, ap_EncryptionMode=TKIP,AES
 
                 if (strstr(ap->ap_SecurityModeEnabled, "Enterprise"))
                     pairs = Network::PAIR_ESS;
@@ -88,7 +83,7 @@ namespace WPASupplicant {
                 if (strstr(ap->ap_EncryptionMode, "AES"))
                     keys = (Network::key)(keys | Network::KEY_CCMP);
 
-                TRACE_L3("SSID=%.32s, BSSID=%s Freq=%s pairs=%d keys=%d", ap->ap_SSID, ap->ap_BSSID, ap->ap_OperatingFrequencyBand, pairs, keys);
+                TRACE(Trace::Information, (_T("SSID=%.32s, BSSID=%s Freq=%s pairs=%d keys=%d"), ap->ap_SSID, ap->ap_BSSID, ap->ap_OperatingFrequencyBand, pairs, keys));
 
                 NetworkInfo info;
                 info._ssid = ap->ap_SSID;
@@ -100,14 +95,14 @@ namespace WPASupplicant {
                 info._keys = keys;
                 _networks[info._ssid] = info;
             }
-            TRACE_L1("_networks.size=%d", _networks.size());
+            TRACE(Trace::Information, (_T("_networks.size=%d"), _networks.size()));
 
             wifi_pairedSSIDInfo_t pairedSSIDInfo;
             memset(&pairedSSIDInfo, 0, sizeof(wifi_pairedSSIDInfo_t));
             rc = wifi_lastConnected_Endpoint(&pairedSSIDInfo);
             if (rc == RETURN_OK) {
-                TRACE_L1("pairedSSIDInfo: ap_ssid='%s' ap_bssid='%s' ap_security='%s' ap_passphrase='%s'",
-                    pairedSSIDInfo.ap_ssid, pairedSSIDInfo.ap_bssid, pairedSSIDInfo.ap_security, pairedSSIDInfo.ap_passphrase);
+                TRACE(Trace::Information, (_T("pairedSSIDInfo: ap_ssid='%s' ap_bssid='%s' ap_security='%s' ap_passphrase='%s'"),
+                    pairedSSIDInfo.ap_ssid, pairedSSIDInfo.ap_bssid, pairedSSIDInfo.ap_security, pairedSSIDInfo.ap_passphrase));
 
                 ssidCurrent = pairedSSIDInfo.ap_ssid;
                 if (!ssidCurrent.empty()) {
@@ -144,8 +139,8 @@ namespace WPASupplicant {
         Config config(Get(SSID));
         string strMode;
         GetKey(SSID, Config::MODE, strMode);
-        TRACE_L1("%s: SSID=%s PresharedKey=%s Password=%s mode=%d strMode=%s", __FUNCTION__,
-            config.SSID().c_str(), config.PresharedKey().c_str(), config.Password().c_str(), config.Mode(), strMode.c_str());
+        TRACE(Trace::Information, (_T("%s: SSID=%s PresharedKey=%s Password=%s mode=%d strMode=%s"), __FUNCTION__,
+            config.SSID().c_str(), config.PresharedKey().c_str(), config.Password().c_str(), config.Mode(), strMode.c_str()));
 
         if (config.IsValid() == true) {
 
@@ -176,7 +171,7 @@ namespace WPASupplicant {
             int rc = wifi_connectEndpoint(1, ssid, mode, nullptr, (char*)config.PresharedKey().c_str(),
                 nullptr, bSaveSSID, nullptr, nullptr, nullptr, nullptr);
             if (rc != RETURN_OK) {
-                TRACE_L1("Connect Failed rc=%d", rc);
+                TRACE(Trace::Error, (_T("Connect Failed rc=%d"), rc));
             }
         } else {
             TRACE(Trace::Error, ("Config Not Found"));

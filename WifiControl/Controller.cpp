@@ -253,7 +253,7 @@ namespace WPASupplicant {
                         _statusRequest.DisconnectReason(static_cast<reasons>(reason));
                     }
                     else {
-                        TRACE(Trace::Error, ("There is no reason code in the event"));
+                        TRACE(Trace::Warning, ("There is no reason code in the event"));
                     }
                     _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
@@ -332,7 +332,7 @@ namespace WPASupplicant {
 
                 Trigger();
             } else {
-                TRACE(Trace::Error, ("There is no pending request to process"));
+                TRACE(Trace::Information, ("There is no pending request to process"));
             }
         }
 

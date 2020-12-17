@@ -1061,10 +1061,10 @@ namespace WPASupplicant {
                 if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
 
                     // We are disconnected
-                    TRACE_L1("Could not detach from the supplicant. %d", __LINE__);
+                    TRACE(Trace::Information, (_T("Could not detach from the supplicant. %d"), __LINE__));
                 }
                 if (BaseClass::Close(MaxConnectionTime) != Core::ERROR_NONE) {
-                    TRACE_L1("Could not close the channel. %d", __LINE__);
+                    TRACE(Trace::Information, (_T("Could not close the channel. %d"), __LINE__));
                 }
 
                 Revoke(&exchange);
@@ -1465,7 +1465,7 @@ namespace WPASupplicant {
                 if ((AP == true) || (bssid != 0)) {
                     result = Connect(SSID, bssid);
                 } else {
-                    TRACE_L1("No associated BSSID to connect to and not defined as AccessPoint. (%llu)", bssid);
+                    TRACE(Trace::Information, (_T("No associated BSSID to connect to and not defined as AccessPoint. (%llu)"), bssid));
                     result = Core::ERROR_UNAVAILABLE;
                 }
             } else {
@@ -1900,7 +1900,7 @@ namespace WPASupplicant {
 
         virtual void StateChange()
         {
-            TRACE_L1("StateChange: %s\n", IsOpen() ? _T("true") : _T("false"));
+            TRACE(Trace::Information, (_T("StateChange: %s\n"), IsOpen() ? _T("true") : _T("false")));
         }
 
         void Abort()
@@ -1931,7 +1931,7 @@ namespace WPASupplicant {
 
                 const_cast<Controller*>(this)->Trigger();
             } else {
-                TRACE_L1("Submit does not trigger, there are %d messages pending [%s,%s]", static_cast<unsigned int>(_requests.size()), _requests.front()->Original().c_str(), _requests.front()->Message().c_str());
+                TRACE(Trace::Information, (_T("Submit does not trigger, there are %d messages pending [%s,%s]"), static_cast<unsigned int>(_requests.size()), _requests.front()->Original().c_str(), _requests.front()->Message().c_str()));
                 _adminLock.Unlock();
             }
         }
