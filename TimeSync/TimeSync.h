@@ -129,7 +129,7 @@ namespace Plugin {
                     _parent.EnsureSubsystemIsActive();
                 }
                 else {
-                    SYSLOG(Trace::Error, (_T("TimeSync was unable to set a correct system time!")));
+                    SYSLOG(Logging::Error, (_T("TimeSync was unable to set a correct system time!")));
                  }
             }
 
