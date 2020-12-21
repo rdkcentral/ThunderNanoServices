@@ -31,11 +31,11 @@ namespace Plugin {
         config.FromString(service->ConfigLine());
         if (config.Source.IsSet() == true) {
             _source = config.Source.Value();
-            TRACE_L1("Source location : [%s]\n", _source.c_str());
+            TRACE(Trace::Information, (_T("Source location : [%s]\n"), _source.c_str()));
         }
         if (config.Download.IsSet() == true) {
             _destination = config.Download.Value() + "/";
-            TRACE_L1("Destination location : [%s]\n", _destination.c_str());
+            TRACE(Trace::Information, (_T("Destination location : [%s]\n)"), _destination.c_str()));
         }
         if (config.WaitTime.IsSet() == true) {
             _waitTime = config.WaitTime.Value();
