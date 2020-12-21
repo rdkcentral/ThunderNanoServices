@@ -147,9 +147,9 @@ namespace Plugin {
                 gpSched_ScheduleEvent(0, terminateThread);
 
                 // Wait till gpMain has ended......
-                TRACE_L1("%s: Waiting for GreenPeakDriver to stop:", __FUNCTION__);
+                TRACE(Trace::Information, (_T("%s: Waiting for GreenPeakDriver to stop:"), __FUNCTION__));
                 Wait(Thread::STOPPED | Thread::BLOCKED);
-                TRACE_L1("%s: Done!!! ", __FUNCTION__);
+                TRACE(Trace::Information, (_T("%s: Done!!! "), __FUNCTION__));
             }
 
         private:
@@ -298,7 +298,7 @@ namespace Plugin {
                 }
             } else {
                 // Initialize();
-                TRACE_L1("%s: callback=%p _callback=%p", __FUNCTION__, callback, _callback);
+                TRACE(Trace::Information, (_T("%s: callback=%p _callback=%p"), __FUNCTION__, callback, _callback));
                 _callback = callback;
             }
 
@@ -531,23 +531,23 @@ static void gpApplication_ZRCBindSetup(Bool AllowInteractiveValidation, Bool Pus
             messageZrc.RecipientInteractiveValidationSetup.interactiveValidationAllowed = PushButton ? false : AllowInteractiveValidation;
             result = gpZrc_Set(gpZrc_MsgId_RecipientInteractiveValidationSetup, &messageZrc);
             if (result != gpZrc_ResultSuccess) {
-                TRACE_L1("FAIL in set gpZrc_MsgId_RecipientInteractiveValidationSetup (0x%x)", result);
+                TRACE_GLOBAL(Trace::Warning, (_T("FAIL in set gpZrc_MsgId_RecipientInteractiveValidationSetup (0x%x)"), result));
                 return;
             }
         } else {
-            TRACE_L1("FAIL in set gpZrc_MsgId_RecipientSetOriginatorConfiguration (0x%x)", result);
+            TRACE_GLOBAL(Trace::Warning, (_T("FAIL in set gpZrc_MsgId_RecipientSetOriginatorConfiguration (0x%x)"), result));
             return;
         }
     } else {
-        TRACE_L1("FAIL in get default of gpZrc_MsgId_RecipientSetOriginatorConfiguration (0x%x)", result);
+        TRACE_GLOBAL(Trace::Warning, (_T("FAIL in get default of gpZrc_MsgId_RecipientSetOriginatorConfiguration (0x%x)"), result));
         return;
     }
 
     if (PushButton) {
         result = gpZrc_Msg(gpZrc_MsgId_RecipientPushButton, NULL);
-        TRACE_L1("%s: gpZrc_MsgId_RecipientPushButton result (0x%x)", __FUNCTION__, result);
+        TRACE_GLOBAL(Trace::Information, (_T("%s: gpZrc_MsgId_RecipientPushButton result (0x%x)"), __FUNCTION__, result));
         if (result != gpZrc_ResultSuccess) {
-            TRACE_L1("FAIL in set of gpZrc_MsgId_RecipientPushButton (0x%x)", result);
+            TRACE_GLOBAL(Trace::Warning, (_T("FAIL in set of gpZrc_MsgId_RecipientPushButton (0x%x)"), result));
             return;
         }
     }
@@ -604,12 +604,12 @@ void gpZrc_cbMsg(gpZrc_MsgId_t MsgId, UInt8 length, gpZrc_Msg_t* pMsg)
 
     switch (MsgId) {
     case gpZrc_MsgId_cbRecipientBindingIndication: {
-        TRACE_L1("%s: gpZrc_MsgId_cbRecipientBindingIndication MsgId 0x%x", __FUNCTION__, MsgId);
+        TRACE_GLOBAL(Trace::Information, (_T("%s: gpZrc_MsgId_cbRecipientBindingIndication MsgId 0x%x"), __FUNCTION__, MsgId));
         break;
     }
 
     case gpZrc_MsgId_cbRecipientBindingConfirm: {
-        TRACE_L1("%s: gpZrc_MsgId_cbRecipientBindingConfirm MsgId 0x%x", __FUNCTION__, MsgId);
+        TRACE_GLOBAL(Trace::Information, (_T("%s: gpZrc_MsgId_cbRecipientBindingConfirm MsgId 0x%x"), __FUNCTION__, MsgId));
         gpRf4ce_ProfileId_t ProfileId = gpRf4ce_ProfileIdZrc;
 
         if (pMsg->cbRecipientBindingConfirm.result == gpRf4ce_ResultSuccess) {
@@ -625,17 +625,17 @@ void gpZrc_cbMsg(gpZrc_MsgId_t MsgId, UInt8 length, gpZrc_Msg_t* pMsg)
     }
 
     case gpZrc_MsgId_cbRecipientPowerStatusNotifyIndication: {
-        TRACE_L4("%s: gpZrc_MsgId_cbRecipientPowerStatusNotifyIndication MsgId 0x%x", __FUNCTION__, MsgId);
+        TRACE_GLOBAL(Trace::Information, (_T("%s: gpZrc_MsgId_cbRecipientPowerStatusNotifyIndication MsgId 0x%x"), __FUNCTION__, MsgId));
         break;
     }
 
     case gpZrc_MsgId_cbRecipientValidationResultIndication: {
-        TRACE_L4("%s: gpZrc_MsgId_cbRecipientValidationResultIndication MsgId 0x%x", __FUNCTION__, MsgId);
+        TRACE_GLOBAL(Trace::Information, (_T("%s: gpZrc_MsgId_cbRecipientValidationResultIndication MsgId 0x%x"), __FUNCTION__, MsgId));
         break;
     }
 
     case gpMsoRecipient_MsgId_ValidationComplete: {
-        TRACE_L4("%s: gpMsoRecipient_MsgId_ValidationComplete MsgId 0x%x", __FUNCTION__, MsgId);
+        TRACE_GLOBAL(Trace::Information, (_T("%s: gpMsoRecipient_MsgId_ValidationComplete MsgId 0x%x"), __FUNCTION__, MsgId));
         break;
     }
 
@@ -646,13 +646,13 @@ void gpZrc_cbMsg(gpZrc_MsgId_t MsgId, UInt8 length, gpZrc_Msg_t* pMsg)
             switch (pMsg->cbActionCodesIndicationNoPayload.ActionRecordList[index].ActionControl) {
 
             case gpRf4ceCmd_ZrcActionTypeStart: {
-                TRACE_L1("%s: Key Pressed keyCode=0x%x", __FUNCTION__, keyCode);
+                TRACE_GLOBAL(Trace::Information, (_T("%s: Key Pressed keyCode=0x%x"), __FUNCTION__, keyCode));
                 Plugin::GreenPeak::Dispatch(true, keyCode, 0);
                 break;
             }
             case gpRf4ceCmd_ZrcActionTypeAtomic:
             case gpRf4ceCmd_ZrcActionTypeReleased: {
-                TRACE_L1("%s: Key Released keyCode=0x%x", __FUNCTION__, keyCode);
+                TRACE_GLOBAL(Trace::Information, (_T("%s: Key Released keyCode=0x%x"), __FUNCTION__, keyCode));
                 Plugin::GreenPeak::Dispatch(false, keyCode, 0);
                 break;
             }
@@ -665,9 +665,9 @@ void gpZrc_cbMsg(gpZrc_MsgId_t MsgId, UInt8 length, gpZrc_Msg_t* pMsg)
     }
 
     case gpZrc_MsgId_cbUnbindConfirm:
-        TRACE_L1("%s: gpZrc_MsgId_cbUnbindConfirm", __FUNCTION__);
+        TRACE_GLOBAL(Trace::Information, (_T("%s: gpZrc_MsgId_cbUnbindConfirm", __FUNCTION__);
         if (pMsg->cbUnbindConfirm.status == gpRf4ce_ResultNoPairing) {
-            TRACE_L1("Invalid binding id (0x%x)", pMsg->cbUnbindConfirm.bindingId);
+            TRACE_GLOBAL(Trace::Information, (_T("Invalid binding id (0x%x)"), pMsg->cbUnbindConfirm.bindingId));
         }
 
         // XXX: gpRf4ce_ResultNoAck (0xe9) ???
@@ -675,11 +675,11 @@ void gpZrc_cbMsg(gpZrc_MsgId_t MsgId, UInt8 length, gpZrc_Msg_t* pMsg)
         break;
 
     case gpZrc_MsgId_cbUnbindIndication:
-        TRACE_L1("%s: gpZrc_MsgId_cbUnbindIndication bindingId=%d status=0x%x", __FUNCTION__, pMsg->cbUnbindConfirm.bindingId, pMsg->cbUnbindConfirm.status);
+        TRACE_GLOBAL(Trace::Information, (_T("%s: gpZrc_MsgId_cbUnbindIndication bindingId=%d status=0x%x"), __FUNCTION__, pMsg->cbUnbindConfirm.bindingId, pMsg->cbUnbindConfirm.status));
         break;
 
     default:
-        TRACE_L1("%s: MsgId 0x%x", __FUNCTION__, MsgId);
+        TRACE_GLOBAL(Trace::Information, (_T("%s: MsgId 0x%x"), __FUNCTION__, MsgId));
         break;
     }
 }
@@ -787,12 +787,12 @@ void gpRf4ceBindAuto_cbRecipientBindConfirm(UInt8 bindingId, gpRf4ce_Result_t st
 
 void gpRf4ceBindAuto_cbUnbindIndication(UInt8 bindingId)
 {
-    TRACE_L1("Unbind Indication id: %u", 0, (UInt16)bindingId);
+    TRACE_GLOBAL(Trace::Information, (_T("Unbind Indication id: %u"), 0, (UInt16)bindingId));
 }
 
 void gpRf4ceBindAuto_cbUnbindConfirm(UInt8 bindingId, gpRf4ce_Result_t status)
 {
-    TRACE_L1("Unbind Confirm id: %u", 0, (UInt16)bindingId);
+    TRACE_GLOBAL(Trace::Information, (_T("Unbind Confirm id: %u"), 0, (UInt16)bindingId));
 }
 
 /*****************************************************************************
