@@ -45,7 +45,7 @@ namespace Plugin {
             }
             virtual ~Notification()
             {
-                TRACE_L1("WebServer::Notification destructed. Line: %d", __LINE__);
+                TRACE(Trace::Information, (_T("WebServer::Notification destructed. Line: %d"), __LINE__));
             }
 
         public:
