@@ -431,7 +431,7 @@ private:
                 NxClient_DisplayStatus status;
                 NEXUS_Error rcStatus = NxClient_GetDisplayStatus(&status);
                 if(rcStatus != NEXUS_SUCCESS){
-                    TRACE_L1(_T("Failed to get display status with rc=%d", rcStatus));
+                    TRACE(Trace::Error, (_T(_T("Failed to get display status with rc=%d", rcStatus)));
                 }
 
 #ifdef NEXUS_HDR_SUPPORTED
@@ -555,7 +555,7 @@ private:
         settings.hdmiOutputHdcpChanged.param = static_cast<int>(CallbackType::HDCP);
 
         if (NxClient_StartCallbackThread(&settings) != NEXUS_SUCCESS) {
-            TRACE_L1(_T("Error in starting nexus callback thread"));
+            TRACE(Trace::Error, (_T(_T("Error in starting nexus callback thread")));
         }
     }
 
