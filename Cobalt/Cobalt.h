@@ -121,7 +121,6 @@ public:
         RegisterAll();
     }
     virtual ~Cobalt() {
-        TRACE_L1("Destructor Cobalt.%d", __LINE__);
         UnregisterAll();
     }
 

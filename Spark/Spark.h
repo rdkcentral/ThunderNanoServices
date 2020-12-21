@@ -132,7 +132,6 @@ namespace Plugin {
         }
         virtual ~Spark()
         {
-            TRACE_L1("Destructor Spark.%d", __LINE__);
             UnregisterAll();
         }
 
