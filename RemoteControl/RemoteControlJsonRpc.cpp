@@ -424,7 +424,7 @@ namespace Plugin {
         params.Pressed = pressed;
 
         Notify(_T("keypressed"), params, [&](const string& designator) -> bool {
-            const string designator_id = designator.substr(0, designator.find('@'));
+            const string designator_id = designator.substr(0, designator.find('.'));
             return (id == designator_id);
         });
     }

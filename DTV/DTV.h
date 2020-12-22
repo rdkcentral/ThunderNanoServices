@@ -144,7 +144,6 @@ namespace WPEFramework
 
             virtual ~DTV()
             {
-               TRACE_L1("Destructor DTV.%d", __LINE__);
                UnregisterAll();
             }
 
