@@ -63,7 +63,6 @@ namespace Plugin {
             : _observers()
             , _rtspSession(*this)
         {
-            TRACE_L1("%s: Initializing", __FUNCTION__);
         }
 
         virtual ~RtspClientImplementation()
@@ -127,7 +126,7 @@ namespace Plugin {
         // RtspSession::AnnouncementHandler
         void announce(const RtspAnnounce& announcement)
         {
-            TRACE_L1("%s: Announcement received. code =", __FUNCTION__, announcement.GetCode());
+            TRACE(Trace::Information, (_T("%s: Announcement received. code = %d"), __FUNCTION__, announcement.GetCode()));
         }
 
         BEGIN_INTERFACE_MAP(RtspClientImplementation)
