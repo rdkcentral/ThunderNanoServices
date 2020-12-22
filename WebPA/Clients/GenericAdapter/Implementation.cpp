@@ -86,7 +86,7 @@ private:
         }
         virtual ~NotificationCallback()
         {
-            TRACE_L1("%s destructed. Line: %d", __PRETTY_FUNCTION__, __LINE__);
+            TRACE(Trace::Information, (_T("%s destructed. Line: %d"), __PRETTY_FUNCTION__, __LINE__));
         }
         virtual void NotifyEvent(const std::string& payload, const std::string& source, const std::string& destination) override;
 

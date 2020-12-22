@@ -141,12 +141,12 @@ namespace Plugin {
             // TODO: check if only one, warning otherwise?
             // TOOD: what if none found? will cause segfault when using .front() later on.
             if (processes.empty()) {
-               TRACE_L1("Failed to find process %s", _parentName);
+               TRACE(Trace::Error, (_T("Failed to find process %s"), _parentName));
                return;
             }
 
             if (processes.size() > 1) {
-               TRACE_L1("Found more than one process named %s, only tracking first", _parentName);
+               TRACE(Trace::Information, (_T("Found more than one process named %s, only tracking first"), _parentName));
             }
 
             uint32_t mapBufferSize = sizeof(_ourMap[0]) * _bufferEntries;
