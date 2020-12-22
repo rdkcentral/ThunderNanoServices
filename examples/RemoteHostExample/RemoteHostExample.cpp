@@ -81,7 +81,7 @@ namespace Plugin {
 
     uint32_t RemoteHostExample::TimeUpdate(string time) 
     {
-        TRACE_L1("#### Current time is: %s ####", time.c_str());
+        TRACE(Trace::Information, (_T("#### Current time is: %s ####"), time.c_str()));
 
         return Core::ERROR_NONE;
     }

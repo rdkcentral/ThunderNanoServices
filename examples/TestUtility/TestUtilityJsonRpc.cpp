@@ -62,7 +62,7 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_BAD_REQUEST;
 
-        TRACE_L1("*** Call endpoint_runmemory ***");
+        TRACE(Trace::Information, (_T("*** Call endpoint_runmemory ***")));
 
         if (params.Command.IsSet() == true)
         {
@@ -92,7 +92,7 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_BAD_REQUEST;
 
-        TRACE_L1("*** Call endpoint_runcrash ***");
+        TRACE(Trace::Information, (_T("*** Call endpoint_runcrash ***")));
 
         if (params.Command.IsSet() == true)
         {
@@ -119,7 +119,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     uint32_t TestUtility::get_commands(Core::JSON::ArrayType<Core::JSON::String>& response) const
     {
-        TRACE_L1("*** Call endpoint_commands ***");
+        TRACE(Trace::Information, (_T("*** Call endpoint_commands ***")));
 
         Exchange::ITestUtility::ICommand::IIterator* supportedCommands = _testUtilityImp->Commands();
         ASSERT(supportedCommands != nullptr);
@@ -142,7 +142,7 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_BAD_REQUEST;
 
-        TRACE_L1("*** Call endpoint_description ***");
+        TRACE(Trace::Information, (_T("*** Call endpoint_description ***")));
 
         if (index != "")
         {
