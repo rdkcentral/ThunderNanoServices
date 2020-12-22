@@ -717,7 +717,7 @@ static GSourceFuncs _handlerIntervention =
         {
             // Register an @Exit, in case we are killed, with an incorrect ref count !!
             if (atexit(CloseDown) != 0) {
-                TRACE_L1("Could not register @exit handler. Error: %d.", errno);
+                TRACE(Trace::Information, (_T("Could not register @exit handler. Error: %d."), errno));
                 exit(EXIT_FAILURE);
             }
 
@@ -734,7 +734,7 @@ static GSourceFuncs _handlerIntervention =
                 g_main_loop_quit(_loop);
 
             if (Wait(Core::Thread::STOPPED | Core::Thread::BLOCKED, 6000) == false)
-                TRACE_L1("Bailed out before the end of the WPE main app was reached. %d", 6000);
+                TRACE(Trace::Information, (_T("Bailed out before the end of the WPE main app was reached. %d"), 6000));
 
             implementation = nullptr;
         }
@@ -1163,7 +1163,7 @@ static GSourceFuncs _handlerIntervention =
 
             _adminLock.Unlock();
 
-            TRACE_L1("Registered a sink on the browser %p", sink);
+            TRACE(Trace::Information, (_T("Registered a sink on the browser %p"), sink));
         }
         void Unregister(PluginHost::IStateControl::INotification* sink)
         {
@@ -1177,7 +1177,7 @@ static GSourceFuncs _handlerIntervention =
             if (index != _stateControlClients.end()) {
                 (*index)->Release();
                 _stateControlClients.erase(index);
-                TRACE_L1("Unregistered a sink on the browser %p", sink);
+                TRACE(Trace::Information, (_T("Unregistered a sink on the browser %p"), sink));
             }
 
             _adminLock.Unlock();
@@ -1215,7 +1215,7 @@ static GSourceFuncs _handlerIntervention =
 
             _adminLock.Unlock();
 
-            TRACE_L1("Registered a sink on the browser %p", sink);
+            TRACE(Trace::Information, (_T("Registered a sink on the browser %p"), sink));
         }
 
         void Unregister(Exchange::IWebBrowser::INotification* sink) override
@@ -1230,7 +1230,7 @@ static GSourceFuncs _handlerIntervention =
             if (index != _notificationClients.end()) {
                 (*index)->Release();
                 _notificationClients.erase(index);
-                TRACE_L1("Unregistered a sink on the browser %p", sink);
+                TRACE(Trace::Information, (_T("Unregistered a sink on the browser %p"), sink));
             }
 
             _adminLock.Unlock();
@@ -1247,7 +1247,7 @@ static GSourceFuncs _handlerIntervention =
 
             _adminLock.Unlock();
 
-            TRACE_L1("Registered a sink on the browser %p", sink);
+            TRACE(Trace::Information, (_T("Registered a sink on the browser %p"), sink));
         }
 
         void Unregister(Exchange::IBrowser::INotification* sink) override
@@ -1262,7 +1262,7 @@ static GSourceFuncs _handlerIntervention =
             if (index != _notificationBrowserClients.end()) {
                 (*index)->Release();
                 _notificationBrowserClients.erase(index);
-                TRACE_L1("Unregistered a sink on the browser %p", sink);
+                TRACE(Trace::Information, (_T("Unregistered a sink on the browser %p"), sink));
             }
 
             _adminLock.Unlock();
@@ -1662,7 +1662,7 @@ static GSourceFuncs _handlerIntervention =
                         WKViewSetViewState(object->_view, (object->_state == PluginHost::IStateControl::RESUMED ? kWKViewStateIsInWindow : 0));
 #endif
                         object->Hidden(true);
-                        TRACE_L1("Internal Hide Notification took %d mS.", static_cast<uint32_t>(Core::Time::Now().Ticks() - object->_time));
+                        TRACE_GLOBAL(Trace::Information, (_T("Internal Hide Notification took %d mS."), static_cast<uint32_t>(Core::Time::Now().Ticks() - object->_time)));
 
                         return FALSE;
                     },
@@ -1684,7 +1684,7 @@ static GSourceFuncs _handlerIntervention =
 #endif
                         object->Hidden(false);
 
-                        TRACE_L1("Internal Show Notification took %d mS.", static_cast<uint32_t>(Core::Time::Now().Ticks() - object->_time));
+                        TRACE_GLOBAL(Trace::Information, (_T("Internal Show Notification took %d mS."), static_cast<uint32_t>(Core::Time::Now().Ticks() - object->_time)));
 
                         return FALSE;
                     },
@@ -1708,7 +1708,7 @@ static GSourceFuncs _handlerIntervention =
 #endif
                         object->OnStateChange(PluginHost::IStateControl::SUSPENDED);
 
-                        TRACE_L1("Internal Suspend Notification took %d mS.", static_cast<uint32_t>(Core::Time::Now().Ticks() - object->_time));
+                        TRACE_GLOBAL(Trace::Information, (_T("Internal Suspend Notification took %d mS."), static_cast<uint32_t>(Core::Time::Now().Ticks() - object->_time)));
 
                         return FALSE;
                     },
@@ -1733,7 +1733,7 @@ static GSourceFuncs _handlerIntervention =
 #endif
                         object->OnStateChange(PluginHost::IStateControl::RESUMED);
 
-                        TRACE_L1("Internal Resume Notification took %d mS.", static_cast<uint32_t>(Core::Time::Now().Ticks() - object->_time));
+                        TRACE_GLOBAL(Trace::Information, (_T("Internal Resume Notification took %d mS."), static_cast<uint32_t>(Core::Time::Now().Ticks() - object->_time)));
 
                         return FALSE;
                     },
@@ -2628,7 +2628,6 @@ namespace WebKitBrowser {
                 }
             }
 
-            // TRACE_L1("requiredProcess = %X, IsStarting = %s, main.IsActive = %s", requiredProcesses, IsStarting() ? _T("true") : _T("false"), _main.IsActive() ? _T("true") : _T("false"));
             return (((requiredProcesses == 0) || (true == IsStarting())) && (true == _main.IsActive()));
         }
 
