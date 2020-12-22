@@ -321,7 +321,7 @@ namespace Plugin {
                     if (options.netmask.IsSet()) 
                         _netmask = options.netmask.Value();
                     else 
-                        TRACE_L1("DHCP message without netmask information");
+                        TRACE(Trace::Warning, (_T("DHCP message without netmask information")));
 
                     if (options.leaseTime.IsSet()) 
                         _leaseTime = options.leaseTime.Value();
@@ -345,7 +345,7 @@ namespace Plugin {
                         _renewalTime = _leaseTime / 2;
                     }
                     else {
-                        TRACE_L1("DHCP message came without any timing information");
+                        TRACE(Trace::Warning, (_T("DHCP message came without any timing information")));
                         _leaseTime =  24 * 60 * 60; // default to 24 Hours!!!
                         _renewalTime = _leaseTime / 2;
                         _rebindingTime = ((_leaseTime * 7) / 8);
@@ -353,22 +353,22 @@ namespace Plugin {
 
                     if (_netmask == static_cast<uint8_t>(~0)) {
                         _netmask = _offer.DefaultMask();
-                        TRACE_L1("Set the netmask of the offer: %d", _netmask);
+                        TRACE(Trace::Information, (_T("Set the netmask of the offer: %d"), _netmask));
                     }
 
                     if (_broadcast.IsValid() == false) {
                         _broadcast = Core::IPNode(_offer, _netmask).Broadcast();
-                        TRACE_L1("Set the broadcast of the offer: %s", _broadcast.HostAddress().c_str());
+                        TRACE(Trace::Information, (_T("Set the broadcast of the offer: %s"), _broadcast.HostAddress().c_str()));
                     }
 
                     if (_gateway.IsValid() == false) {
                         _gateway = _source;
-                        TRACE_L1("Set the gateway to the source: %s", _gateway.HostAddress().c_str());
+                        TRACE(Trace::Information, (_T("Set the gateway to the source: %s"), _gateway.HostAddress().c_str()));
                     }
 
                     if (_dns.size() == 0) {
                         _dns.push_back(_source);
-                        TRACE_L1("Set the DNS to the source: %s", _source.HostAddress().c_str());
+                        TRACE(Trace::Information, (_T("Set the DNS to the source: %s"), _source.HostAddress().c_str()));
                     }
                 }
             }
@@ -749,7 +749,7 @@ namespace Plugin {
                                 _callback->Offered(offer);
                             }
                             else {
-                                TRACE_L1("Unknown Discover XID encountered: %d", xid);
+                                TRACE(Trace::Information, (_T("Unknown Discover XID encountered: %d"), xid));
                             }
                             break;
                         }
@@ -766,7 +766,7 @@ namespace Plugin {
                                 Close();
                             }
                             else {
-                                TRACE_L1("Unknown Acknowledge XID encountered: %d", xid);
+                                TRACE(Trace::Information, (_T("Unknown Acknowledge XID encountered: %d"), xid));
                             }
                             break;
                         }
@@ -780,7 +780,7 @@ namespace Plugin {
                                 _callback->Rejected(offer);
                             }
                             else {
-                                TRACE_L1("Unknown Negative Acknowledge XID encountered: %d", xid);
+                                TRACE(Trace::Information, (_T("Unknown Negative Acknowledge XID encountered: %d"), xid));
                             }
                             break;
                         }                   

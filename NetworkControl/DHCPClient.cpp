@@ -68,7 +68,7 @@ namespace Plugin {
         if (_state == SENDING) {
             _state = RECEIVING;
 
-            TRACE_L1 ("Sending for mode :%d", _modus);
+            TRACE(Trace::Information, (_T("Sending for mode :%d"), _modus));
 
 #ifdef __WINDOWS__
             result = Message(dataFrame, maxSendSize);
