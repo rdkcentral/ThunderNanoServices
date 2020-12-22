@@ -61,7 +61,7 @@ namespace Plugin {
 
         Core::Directory directory(_persistentPath.c_str());
         if (directory.CreatePath() == false) {
-            TRACE(Trace::Information, (_T("Could not create DHCPServer persistent path")));
+            TRACE(Trace::Error, (_T("Could not create DHCPServer persistent path")));
             _persistentPath = "";
         }
 
@@ -207,7 +207,7 @@ namespace Plugin {
                 leasesList.IElement::ToFile(leasesFile);
                 leasesFile.Close();
             } else {
-                TRACE(Trace::Information, (_T("Could not save leases in permanent storage area.\n")));
+                TRACE(Trace::Error, (_T("Could not save leases in permanent storage area.\n")));
             }
         }
     }
