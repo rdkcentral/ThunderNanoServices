@@ -44,7 +44,7 @@ namespace Plugin {
             "MAINPID=%lu",
             ::getpid());
         if (rc) {
-            TRACE(Trace::Information, (_T("Notify Nexus Server Ready to systemd: FAILED (%d)\n"), rc));
+            TRACE(Trace::Error, (_T("Notify Nexus Server Ready to systemd: FAILED (%d)\n"), rc));
         } else {
             TRACE(Trace::Information, (_T("Notify Nexus Server Ready to systemd: OK\n")));
         }
