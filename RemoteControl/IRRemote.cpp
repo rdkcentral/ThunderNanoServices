@@ -152,7 +152,7 @@ namespace Plugin {
 
         _NxInputClient = NEXUS_InputClient_Acquire(_allocResults.inputClient[0].id);
         if (_NxInputClient) {
-            TRACE_L1("%s: Acquired NEXUS Input Client", __FUNCTION__);
+            TRACE(Trace::Information, (_T("%s: Acquired NEXUS Input Client"), __FUNCTION__));
             NEXUS_InputClient_GetSettings(_NxInputClient, &settings);
             settings.filterMask = 1 << NEXUS_InputRouterDevice_eIrInput;
 
@@ -160,11 +160,11 @@ namespace Plugin {
             settings.codeAvailable.param = _allocResults.inputClient[0].id;
             settings.codeAvailable.context = static_cast<NEXUS_InputClientHandle>(_NxInputClient);
             rc = NEXUS_InputClient_SetSettings(_NxInputClient, &settings);
-            TRACE_L1("%s: NEXUS_InputClient_SetSettings rc=%d", __FUNCTION__, rc);
+            TRACE(Trace::Information, (_T("%s: NEXUS_InputClient_SetSettings rc=%d"), __FUNCTION__, rc));
             _error = Core::ERROR_NONE;
         } else {
             _error = Core::ERROR_UNAVAILABLE;
-            TRACE_L1("%s: NEXUS_InputClient_Acquire Failed. inputClient=%p", __FUNCTION__, _NxInputClient);
+            TRACE(Trace::Information, (_T("%s: NEXUS_InputClient_Acquire Failed. inputClient=%p"), __FUNCTION__, _NxInputClient));
         }
     }
 
@@ -207,7 +207,7 @@ namespace Plugin {
         } else {
 
             Initialize();
-            TRACE_L1("IRRemote::%s: callback=%p _callback=%p", __FUNCTION__, callback, _callback);
+            TRACE(Trace::Information, (_T("IRRemote::%s: callback=%p _callback=%p"), __FUNCTION__, callback, _callback));
             _callback = callback;
         }
 
@@ -241,7 +241,7 @@ namespace Plugin {
             int rawCode = inputRouterCode.data.irInput.code & _codeMask;
             int repeat = inputRouterCode.data.irInput.repeat;
 
-            TRACE_L2("%s: RawCode 0x%X Codemask:0x%X Code:0x%X repeat=%d", __FUNCTION__, inputRouterCode.data.irInput.code, _codeMask, rawCode, repeat);
+            TRACE(Trace::Information, (_T("%s: RawCode 0x%X Codemask:0x%X Code:0x%X repeat=%d"), __FUNCTION__, inputRouterCode.data.irInput.code, _codeMask, rawCode, repeat));
             if ((rc == 0) && (num != 0)) {
 
                 uint64_t currentTicks = Core::Time::Now().Ticks();
@@ -253,21 +253,21 @@ namespace Plugin {
                     _lastKeyTicks = 0;
 
                 int repeatDiff = (currentTicks - _repeatStart) / 1000;
-                TRACE_L1("%s: repeat=%d diff=%d repeat start diff %d", __FUNCTION__, repeat, diff, repeatDiff);
+                TRACE(Trace::Information, (_T("%s: repeat=%d diff=%d repeat start diff %d"), __FUNCTION__, repeat, diff, repeatDiff));
                 if (repeat && (repeatDiff < _config.RepeatStart.Value()))  {
-                    TRACE_L1("%s: Ignoring initial repeats for %ds", __FUNCTION__, _config.RepeatStart.Value());
+                    TRACE(Trace::Information, (_T("%s: Ignoring initial repeats for %ds"), __FUNCTION__, _config.RepeatStart.Value()));
                 } else if (!repeat && (diff < _config.RepeatInterval.Value())) {
                     // See if this key is coming in more than X after the last one..
-                    TRACE_L1("%s: Ignoring key < %dms", __FUNCTION__, _config.RepeatInterval.Value());
+                    TRACE(Trace::Information, (_T("%s: Ignoring key < %dms"), __FUNCTION__, _config.RepeatInterval.Value()));
                 } else {
-                    TRACE_L1("%s: >>>>>>>>>> sending keycode=%x", __FUNCTION__, rawCode);
+                    TRACE(Trace::Information, (_T("%s: >>>>>>>>>> sending keycode=%x"), __FUNCTION__, rawCode));
                     _callback->KeyEvent(true, rawCode, _resourceName);
                     _callback->KeyEvent(false, rawCode, _resourceName);
                 }
                 _lastKeyTicks = currentTicks;
             }
         } else {
-            TRACE_L1("%s: Device is not connected", __FUNCTION__);
+            TRACE(Trace::Information, (_T("%s: Device is not connected"), __FUNCTION__));
         }
     }
 }
