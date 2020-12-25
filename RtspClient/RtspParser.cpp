@@ -36,7 +36,6 @@ namespace Plugin {
     RtspParser::RtspParser(RtspSessionInfo& info)
         : _sessionInfo(info)
     {
-        TRACE_L2("%s: %s:%d", __FUNCTION__, __FILE__, __LINE__);
     }
 
     RtspMessagePtr RtspParser::BuildSetupRequest(const std::string& server, const std::string& assetId)
@@ -171,11 +170,11 @@ namespace Plugin {
         Parse(response, setupMap, RtspLineTerminator, ": ");
 
         string sess = setupMap["Session"];
-        TRACE_L2("%s: session id='%s'", __FUNCTION__, sess.c_str());
+        TRACE(Trace::Information, (_T("%s: session id='%s'"), __FUNCTION__, sess.c_str()));
         if (sess.find(";") == string::npos) {
             _sessionInfo.sessionId = sess;
             _sessionInfo.sessionTimeout = SEC2MS(_sessionInfo.defaultSessionTimeout);
-            TRACE_L2("%s: using default sessionTimeout %d", __FUNCTION__, _sessionInfo.defaultSessionTimeout);
+            TRACE(Trace::Information, (_T("%s: using default sessionTimeout %d"), __FUNCTION__, _sessionInfo.defaultSessionTimeout));
         } else { // contains heartbeat
             Parse(sess, params, ";", "=");
             NAMED_ARRAY::iterator it = params.begin();
@@ -190,7 +189,7 @@ namespace Plugin {
             if (sess.find(";") == string::npos) {
                 _sessionInfo.ctrlSessionId = sess;
                 _sessionInfo.ctrlSessionTimeout = SEC2MS(_sessionInfo.defaultCtrlSessionTimeout);
-                TRACE_L2("%s: using default ctrlSessionTimeout %d", __FUNCTION__, _sessionInfo.defaultCtrlSessionTimeout);
+                TRACE(Trace::Information, (_T("%s: using default ctrlSessionTimeout %d"), __FUNCTION__, _sessionInfo.defaultCtrlSessionTimeout));
             } else {
                 Parse(sess, params, ";", "=");
                 NAMED_ARRAY::iterator it = params.begin();
@@ -220,8 +219,8 @@ namespace Plugin {
         _sessionInfo.bookmark = atof(setupMap["Bookmark"].c_str());
         _sessionInfo.duration = atoi(setupMap["Duration"].c_str());
 
-        TRACE_L2("%s: f=%d p=%d m=%d s=%d bookmark=%f duration=%d",
-            __FUNCTION__, _sessionInfo.frequency, _sessionInfo.programNum, _sessionInfo.modulation, _sessionInfo.symbolRate, _sessionInfo.bookmark, _sessionInfo.duration);
+        TRACE(Trace::Information, (_T("%s: f=%d p=%d m=%d s=%d bookmark=%f duration=%d"),
+            __FUNCTION__, _sessionInfo.frequency, _sessionInfo.programNum, _sessionInfo.modulation, _sessionInfo.symbolRate, _sessionInfo.bookmark, _sessionInfo.duration));
     }
 
     void RtspParser::UpdateNPT(NAMED_ARRAY& playMap)
@@ -249,7 +248,7 @@ namespace Plugin {
             }
 
             _sessionInfo.npt = SEC2MS(nptStart);
-            TRACE_L2("%s: npt=%6.2f scale=%2.2f oldNPT=%6.2f oldScale=%2.2f", __FUNCTION__, SEC2MS(_sessionInfo.npt), _sessionInfo.scale, oldNPT, oldScale);
+            TRACE(Trace::Information, (_T("%s: npt=%6.2f scale=%2.2f oldNPT=%6.2f oldScale=%2.2f"), __FUNCTION__, SEC2MS(_sessionInfo.npt), _sessionInfo.scale, oldNPT, oldScale));
         }
     }
 
@@ -275,7 +274,7 @@ namespace Plugin {
 
     void RtspParser::Parse(const std::string& str, NAMED_ARRAY& contents, const string& sep1, const string& sep2)
     {
-        TRACE_L4("%s: size=%d input='%s'", __FUNCTION__, str.size(), str.c_str());
+        TRACE(Trace::Information, (_T("%s: size=%d input='%s'"), __FUNCTION__, str.size(), str.c_str()));
         contents.clear();
 
         bool done = false;
@@ -284,7 +283,6 @@ namespace Plugin {
         while (!done) {
             pos = str.find(sep1, start);
 
-            //TRACE_L2("%s: pos=%u start=%u size=%u", __FUNCTION__, pos, start, str.size());
             if ((pos == string::npos) || (pos >= str.size()))
                 done = true;
 
@@ -296,7 +294,7 @@ namespace Plugin {
             } else {
                 string left = sub.substr(0, pos2);
                 string right = sub.substr(pos2 + sep2.size());
-                TRACE_L4("%s:     left=%s right=%s pos=%u", __FUNCTION__, left.c_str(), right.c_str(), pos2);
+                TRACE(Trace::Information, (_T("%s:     left=%s right=%s pos=%u"), __FUNCTION__, left.c_str(), right.c_str(), pos2));
                 contents[left] = right;
             }
 
@@ -305,9 +303,9 @@ namespace Plugin {
                 done = true;
         }
 
-        TRACE_L4("%s: contents.size=%d", __FUNCTION__, contents.size());
+        TRACE(Trace::Information, (_T("%s: contents.size=%d"), __FUNCTION__, contents.size()));
         for (NAMED_ARRAY::iterator it = contents.begin(); it != contents.end(); ++it)
-            TRACE_L4("%s: %s => '%s'", __FUNCTION__, it->first.c_str(), it->second.c_str());
+            TRACE(Trace::Information, (_T("%s: %s => '%s'"), __FUNCTION__, it->first.c_str(), it->second.c_str()));
     }
 
     RtspMessagePtr RtspParser::ParseResponse(const std::string str)
@@ -326,9 +324,6 @@ namespace Plugin {
             string header = str.substr(0, pos);
             std::vector<string> tokens;
             Split(header, " ", tokens);
-            //TRACE_L2( "%s: header.length=%d tokens.size=%d", __FUNCTION__, header.length(), tokens.size());
-            //for (int i = 0; i < tokens.size(); i++)
-            //    TRACE_L2( "%s: %d. '%s'", __FUNCTION__, i, tokens.at(i).c_str());
 
             // Parse rest, only if the header is valid
             if (tokens.size() >= 3) {
@@ -363,7 +358,7 @@ namespace Plugin {
         Parse(response, announceMap, RtspLineTerminator, ": ");
         if (announceMap.size()) {
             int respSeq = atoi(announceMap["CSeq"].c_str());
-            TRACE_L2("%s: respSeq=%d", __FUNCTION__, respSeq);
+            TRACE(Trace::Information, (_T("%s: respSeq=%d"), __FUNCTION__, respSeq));
 
             string notice = announceMap["Notice"];
             size_t pos = notice.find(' ');
@@ -382,7 +377,7 @@ namespace Plugin {
                 }
             }
         } else {
-            TRACE_L1("%s: ANNOUNCEMENT without body", __FUNCTION__, response.c_str());
+            TRACE(Trace::Information, (_T("%s: ANNOUNCEMENT without body"), __FUNCTION__, response.c_str()));
         }
 
         return RtspMessagePtr(new RtspAnnounce(code, reason));
@@ -413,12 +408,12 @@ namespace Plugin {
             ss << char((byte < 32) ? '.' : byte);
 
             if (!((i + 1) % charsPerLine)) {
-                TRACE_L2("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
+                TRACE_GLOBAL(Trace::Information, (_T("%s: %s %s"), label, ssHex.str().c_str(), ss.str().c_str()));
                 ss.str(std::string());
                 ssHex.str(std::string());
             }
         }
-        TRACE_L2("%s: %s %s", label, ssHex.str().c_str(), ss.str().c_str());
+        TRACE_GLOBAL(Trace::Information, (_T("%s: %s %s"), label, ssHex.str().c_str(), ss.str().c_str()));
     }
 }
 } // WPEFramework::Plugin
