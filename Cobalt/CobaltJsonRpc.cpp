@@ -17,10 +17,10 @@
  * limitations under the License.
  */
  
+#include "Module.h"
 #include <interfaces/json/JsonData_Browser.h>
 #include <interfaces/json/JsonData_StateControl.h>
 #include "Cobalt.h"
-#include "Module.h"
 
 namespace WPEFramework {
 namespace Plugin {
