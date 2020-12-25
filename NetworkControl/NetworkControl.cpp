@@ -349,7 +349,7 @@ namespace Plugin
                     else if (clearOld == true) {
                         adapter.Delete(checker.Address());
                     }
-                    TRACE_L1("Validating IP: %s - %s [%s,%s]", checker.Address().HostAddress().c_str(), ipAddress.HostAddress().c_str(), addIt ? _T("true") : _T("false"), clearOld ? _T("true") : _T("false"));
+                    TRACE(Trace::Information, (_T("Validating IP: %s - %s [%s,%s]"), checker.Address().HostAddress().c_str(), ipAddress.HostAddress().c_str(), addIt ? _T("true") : _T("false"), clearOld ? _T("true") : _T("false")));
                 }
             } else if (ipAddress.Type() == Core::NodeId::TYPE_IPV6) {
                 Core::IPV6AddressIterator checker(adapter.IPV6Addresses());
@@ -364,7 +364,7 @@ namespace Plugin
             }
 
             if (addIt == true) {
-                TRACE_L1("Setting IP: %s", ipAddress.HostAddress().c_str());
+                TRACE(Trace::Information, (_T("Setting IP: %s"), ipAddress.HostAddress().c_str()));
                 adapter.Add(ipAddress);
             }
             if (broadcast.IsValid() == true) {
@@ -499,7 +499,7 @@ namespace Plugin
             
             if (index != _dhcpInterfaces.end()) {
                 bool hasValidIP = ExternallyAccessible(adapter);
-                TRACE_L1("Interface [%s] has a public IP: [%s]", name.c_str(), hasValidIP ? _T("true") : _T("false"));
+                TRACE(Trace::Information, (_T("Interface [%s] has a public IP: [%s]"), name.c_str(), hasValidIP ? _T("true") : _T("false")));
 
                 if (std::find(_requiredSet.cbegin(), _requiredSet.cend(), name) != _requiredSet.cend()) {
                     count++;
@@ -543,18 +543,18 @@ namespace Plugin
                 
                 RefreshDNS();
 
-                TRACE_L1("New IP Granted for %s:", interfaceName.c_str());
-                TRACE_L1("     Source:    %s", offer.Source().HostAddress().c_str());
-                TRACE_L1("     Address:   %s", offer.Address().HostAddress().c_str());
-                TRACE_L1("     Broadcast: %s", offer.Broadcast().HostAddress().c_str());
-                TRACE_L1("     Gateway:   %s", offer.Gateway().HostAddress().c_str());
-                TRACE_L1("     DNS:       %d", offer.DNS().size());
-                TRACE_L1("     Netmask:   %d", offer.Netmask());
+                TRACE(Trace::Information, (_T("New IP Granted for %s:"), interfaceName.c_str()));
+                TRACE(Trace::Information, (_T("     Source:    %s"), offer.Source().HostAddress().c_str()));
+                TRACE(Trace::Information, (_T("     Address:   %s"), offer.Address().HostAddress().c_str()));
+                TRACE(Trace::Information, (_T("     Broadcast: %s"), offer.Broadcast().HostAddress().c_str()));
+                TRACE(Trace::Information, (_T("     Gateway:   %s"), offer.Gateway().HostAddress().c_str()));
+                TRACE(Trace::Information, (_T("     DNS:       %d"), offer.DNS().size()));
+                TRACE(Trace::Information, (_T("     Netmask:   %d"), offer.Netmask()));
 
                 Save(_persistentStoragePath);
             }
         } else {
-            TRACE_L1("Request accepted for nonexisting network interface!");
+            TRACE(Trace::Information, (_T("Request accepted for nonexisting network interface!")));
         }
     }
 
