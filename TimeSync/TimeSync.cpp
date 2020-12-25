@@ -184,7 +184,7 @@ namespace Plugin {
             newSyncTime.Add(_periodicity);
 
             // Seems we are synchronised with the time. Schedule the next timesync.
-            TRACE_L1("Waking up again at %s.", newSyncTime.ToRFC1123(false).c_str());
+            TRACE(Trace::Information, (_T("Waking up again at %s."), newSyncTime.ToRFC1123(false).c_str()));
             Core::IWorkerPool::Instance().Schedule(newSyncTime, _activity);
 
             event_timechange();

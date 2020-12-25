@@ -222,7 +222,7 @@ namespace WPASupplicant {
                 tokenStart = tokendEnd + 1;
             }
         } else {
-            TRACE_L1("Failed to get PROTO from supplicant");
+            TRACE(Trace::Warning, (_T("Failed to get PROTO from supplicant")));
             ASSERT(false);
         }
         
