@@ -374,7 +374,7 @@ namespace Plugin {
 
                     if (length >= (sizeof(buffer) - sizeof(prefix))) {
 
-                        SYSLOG(Trace::Warning, (_T("URL size greater than 8000 bytes, so resetting url to browser.js")));
+                        SYSLOG(Logging::Notification, (_T("URL size greater than 8000 bytes, so resetting url to browser.js")));
                         ::strcat(buffer, _T("browser.js"));
                     } else {
                         strncat(buffer, url.c_str(), length);
