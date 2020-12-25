@@ -22,7 +22,9 @@
 #include <core/core.h>
 #include <tracing/tracing.h>
 #include <websocket/websocket.h>
+#ifdef ENABLE_SECURITY_AGENT
 #include <securityagent/securityagent.h>
+#endif
 #include <interfaces/IPerformance.h>
 #include <interfaces/IMath.h>
 
