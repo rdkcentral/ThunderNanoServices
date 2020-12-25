@@ -294,11 +294,11 @@ namespace Broadcom {
 
             // Register an @Exit, in case we are killed, with an incorrect ref count !!
             if (atexit(CloseDown) != 0) {
-                TRACE(Trace::Information, (("Could not register @exit handler. Error: %d."), errno));
+                TRACE(Trace::Error, (("Could not register @exit handler. Error: %d."), errno));
                 exit(EXIT_FAILURE);
             }
 
-            TRACE_L1("Start Nexus server...%d\n", __LINE__);
+            TRACE(Trace::Information, (_T("Start Nexus server...%d\n"), __LINE__));
 
             Config config;
             config.FromString(configuration);
@@ -320,7 +320,7 @@ namespace Broadcom {
                 char stringNumber[10];
                 snprintf(stringNumber, sizeof(stringNumber), "%d", config.BoxMode.Value());
                 ::setenv("B_REFSW_BOXMODE", stringNumber, 1);
-                TRACE_L1("Set BoxMode to %d\n", config.BoxMode.Value());
+                TRACE(Trace::Information, (_T("Set BoxMode to %d\n"), config.BoxMode.Value()));
             }
 
             nxserver_get_default_settings(&(_serverSettings));
@@ -334,35 +334,35 @@ namespace Broadcom {
                 if (memory.GFX.IsSet()) {
                     int index = nxserver_heap_by_type(&_platformSettings, NEXUS_HEAP_TYPE_GRAPHICS);
                     if (index != -1) {
-                        TRACE_L1("Setting gfx heap[%d] to %dMB", index, memory.GFX.Value());
+                        TRACE(Trace::Information, (_T("Setting gfx heap[%d] to %dMB"), index, memory.GFX.Value()));
                         _platformSettings.heap[index].size = (memory.GFX.Value() * 1024 * 1024);
                     }
                 }
                 if (memory.GFX2.IsSet()) {
                     int index = nxserver_heap_by_type(&_platformSettings, NEXUS_HEAP_TYPE_SECONDARY_GRAPHICS);
                     if (index != -1) {
-                        TRACE_L1("Setting gfx2 heap[%d] to %dMB", index, memory.GFX2.Value());
+                        TRACE(Trace::Information, (_T("Setting gfx2 heap[%d] to %dMB"), index, memory.GFX2.Value()));
                         _platformSettings.heap[index].size = (memory.GFX2.Value() * 1024 * 1024);
                     }
                 }
                 if (memory.Restricted.IsSet()) {
                     int index = nxserver_heap_by_type(&_platformSettings, NEXUS_HEAP_TYPE_COMPRESSED_RESTRICTED_REGION);
                     if (index != -1) {
-                        TRACE_L1("Setting secure video heap[%d] to %dMB", index, memory.Restricted.Value());
+                        TRACE(Trace::Information, (_T("Setting secure video heap[%d] to %dMB"), index, memory.Restricted.Value()));
                         _platformSettings.heap[index].size = (memory.Restricted.Value() * 1024 * 1024);
                     }
                 }
                 if (memory.Main.IsSet()) {
                     int index = nxserver_heap_by_type(&_platformSettings, NEXUS_HEAP_TYPE_MAIN);
                     if (index != -1) {
-                        TRACE_L1("Setting main heap[%d] to %dMB", index, memory.Main.Value());
+                        TRACE(Trace::Information, (_T("Setting main heap[%d] to %dMB"), index, memory.Main.Value()));
                         _platformSettings.heap[index].size = (memory.Main.Value() * 1024 * 1024);
                     }
                 }
                 if (memory.Export.IsSet()) {
                     int index = nxserver_heap_by_type(&_platformSettings, NEXUS_HEAP_TYPE_EXPORT_REGION);
                     if (index != -1) {
-                        TRACE_L1("Setting export heap[%d] to %dMB", index, memory.Export.Value());
+                        TRACE(Trace::Information, (_T("Setting export heap[%d] to %dMB"), index, memory.Export.Value()));
                         _platformSettings.heap[index].size = (memory.Export.Value() * 1024 * 1024);
                     }
                 }
@@ -372,7 +372,7 @@ namespace Broadcom {
                     if (mainIndex != -1) {
                         int unused_heap = find_unused_heap(_platformSettings);
                         if (unused_heap != -1) {
-                            TRACE_L1("Setting client heap[%d] to %dMB", unused_heap, memory.Client.Value());
+                            TRACE(Trace::Information, (_T("Setting client heap[%d] to %dMB"), unused_heap, memory.Client.Value()));
                             _serverSettings.heaps.clientFullHeap = unused_heap;
                             _platformSettings.heap[_serverSettings.heaps.clientFullHeap].size = (memory.Client.Value() * 1024 * 1024);
                             _platformSettings.heap[_serverSettings.heaps.clientFullHeap].memcIndex = _platformSettings.heap[mainIndex].memcIndex;
@@ -391,7 +391,7 @@ namespace Broadcom {
                     NEXUS_PlatformConfigCapabilities cap;
                     NEXUS_GetPlatformConfigCapabilities(&_platformSettings, &(_serverSettings.memConfigSettings), &cap);
                     if (cap.secureGraphics[0].valid) {
-                        TRACE_L1("creating securegfx heap[%d] on MEMC%u for %dMB", cap.secureGraphics[0].heapIndex, cap.secureGraphics[0].memcIndex, memory.SecureGFX.Value());
+                        TRACE(Trace::Information, (_T("creating securegfx heap[%d] on MEMC%u for %dMB"), cap.secureGraphics[0].heapIndex, cap.secureGraphics[0].memcIndex, memory.SecureGFX.Value()));
                         _platformSettings.heap[cap.secureGraphics[0].heapIndex].size = (memory.SecureGFX.Value() * 1024 * 1024);
                         _platformSettings.heap[cap.secureGraphics[0].heapIndex].memcIndex = cap.secureGraphics[0].memcIndex;
                         _platformSettings.heap[cap.secureGraphics[0].heapIndex].heapType = NEXUS_HEAP_TYPE_SECURE_GRAPHICS;
@@ -425,7 +425,7 @@ namespace Broadcom {
 
 #if NEXUS_HAS_IR_INPUT
             if (config.IRMode.IsSet()) {
-                TRACE_L1("setting ir_input_mode to %d (%s)", config.IRMode.Value(), config.IRMode.Data());
+                TRACE(Trace::Information, (_T("setting ir_input_mode to %d (%s)"), config.IRMode.Value(), config.IRMode.Data()));
 
                 for (unsigned int i = 0; i < NXCLIENT_MAX_SESSIONS; i++)
 #if NEXUS_PLATFORM_VERSION_MAJOR < 16 || (NEXUS_PLATFORM_VERSION_MAJOR == 16 && NEXUS_PLATFORM_VERSION_MINOR < 3)
@@ -436,7 +436,7 @@ namespace Broadcom {
                     }
 #endif // NEXUS_PLATFORM_VERSION_MAJOR < 17
             } else {
-                TRACE_L1("invalid ir_input_mode from config");
+                TRACE(Trace::Error, (_T("invalid ir_input_mode from config")));
             }
 #endif // NEXUS_HAS_IR_INPUT
 
@@ -492,18 +492,18 @@ namespace Broadcom {
                         rc = nxserver_ipc_init(_instance, _lock);
 
                         if (rc == NEXUS_SUCCESS) {
-                            TRACE_L1("Created NexusServer[%p].\n", &_instance);
+                            TRACE(Trace::Information, (_T("Created NexusServer[%p].\n"), &_instance));
                         } else {
-                            TRACE_L1("nxserver_ipc_init failed [%d]\n", rc);
+                            TRACE(Trace::Error, (_T("nxserver_ipc_init failed [%d]\n"), rc));
                         }
                     } else {
-                        TRACE_L1("nxserverlib_init_extended failed [%d]\n", rc);
+                        TRACE(Trace::Error, (_T("nxserverlib_init_extended failed [%d]\n"), rc));
                     }
                 } else {
-                    TRACE_L1("NEXUS_Platform_MemConfigInit failed [%d]\n", rc);
+                    TRACE(Trace::Error, (_T("NEXUS_Platform_MemConfigInit failed [%d]\n"), rc));
                 }
             } else {
-                TRACE_L1("nxserver_modify_platform_settings failed [%d]\n", rc);
+                TRACE(Trace::Error, (_T("nxserver_modify_platform_settings failed [%d]\n"), rc));
             }
 
             StateChange(rc == NEXUS_SUCCESS ? OPERATIONAL : FAILURE);
@@ -517,7 +517,7 @@ namespace Broadcom {
     // -------------------------------------------------------------------------------------------------------
     void Platform::Add(nxclient_t client, const NxClient_JoinSettings* joinSettings)
     {
-        TRACE_L1("Nexus client %s connected... \n", joinSettings->name);
+        TRACE(Trace::Information, (_T("Nexus client %s connected... \n"), joinSettings->name));
 
         if (_clientHandler != nullptr) {
             Exchange::IComposition::IClient* entry(Platform::Client::Create(client, joinSettings));
@@ -528,7 +528,7 @@ namespace Broadcom {
 
     void Platform::Remove(const char clientName[])
     {
-        TRACE_L1("Nexus client %s disconnected... \n", clientName);
+        TRACE(Trace::Information, (_T("Nexus client %s disconnected... \n"), clientName));
 
         if (_clientHandler != nullptr) {
             _clientHandler->Detached(clientName);
@@ -537,7 +537,7 @@ namespace Broadcom {
 
     void Platform::StateChange(server_state state)
     {
-        TRACE_L1("Nexus server state change [%d -> %d] \n", _state, state);
+        TRACE(Trace::Information, (_T("Nexus server state change [%d -> %d] \n"), _state, state));
 
         _state = state;
 
