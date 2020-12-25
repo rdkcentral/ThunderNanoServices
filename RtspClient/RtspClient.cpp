@@ -52,7 +52,7 @@ namespace Plugin {
             _service = nullptr;
         } else {
             _implementation->Configure(_service);
-            TRACE_L1("RtspClient Plugin initialized %p", _implementation);
+            TRACE(Trace::Information, (_T("RtspClient Plugin initialized %p"), _implementation));
         }
 
         return message;

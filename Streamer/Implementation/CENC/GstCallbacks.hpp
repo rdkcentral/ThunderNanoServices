@@ -34,8 +34,8 @@ namespace Player {
                         GError* err;
                         gchar* debugInfo;
                         gst_message_parse_error(message, &err, &debugInfo);
-                        TRACE_L1("Error received from element %s: %s\n", gst_object_get_name(message->src), err->message);
-                        TRACE_L1("Debugging information: %s\n", debugInfo ? debugInfo : "none");
+                        TRACE_GLOBAL(Trace::Error, (_T("Error received from element %s: %s\n"), gst_object_get_name(message->src), err->message));
+                        TRACE_GLOBAL(Trace::Error, (_T("Debugging information: %s\n"), debugInfo ? debugInfo : "none"));
                         g_clear_error(&err);
                         g_free(debugInfo);
 
@@ -44,7 +44,7 @@ namespace Player {
                         break;
                     }
                     case GST_MESSAGE_EOS: {
-                        TRACE_L1("Reached end of stream");
+                        TRACE_GLOBAL(Trace::Information, (_T("Reached end of stream")));
                         gst_element_set_state(data->_playbin, GST_STATE_NULL);
                         break;
                     }

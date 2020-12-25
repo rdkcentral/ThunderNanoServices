@@ -91,11 +91,11 @@ string response;
 uint32_t result = _implementation->Greet("Hello", response);
 
 if (result == Core::ERROR_TIMEDOUT) {
-    TRACE_L1("Call to _implementation->Greet(...) failed. Conneciton timed out");
+    TRACE(Trace::Error, (_T("Call to _implementation->Greet(...) failed. Conneciton timed out")));
 } else if (result == Core::ERROR_CONNECTION_CLOSED) {
-    TRACE_L1("Call to _implementation->Greet(...) failed. Connection to remote device was closed");
+    TRACE(Trace::Error, (_T("Call to _implementation->Greet(...) failed. Connection to remote device was closed")));
 } else if (result != Core::ERROR_NONE) {
-    TRACE_L1("Call to _implementation->Greet(...) failed. Unknown error");
+    TRACE(Trace::Error, (_T("Call to _implementation->Greet(...) failed. Unknown error")));
 }
 ```
 
