@@ -293,7 +293,7 @@ namespace Plugin {
 
                     if (IsRunning() == true) {
                         if (Connect() == false) {
-                            TRACE_L1("DIAL: Failed to attach to service");
+                            TRACE(Trace::Error, (_T("DIAL: Failed to attach to service")));
                             result = Core::ERROR_UNAVAILABLE;
                         } else {
                             URL(parameters, payload);
@@ -364,7 +364,7 @@ namespace Plugin {
             {
                 // This method is only for the Passive mode..
                 if (_passiveMode != true) {
-                    TRACE_L1(_T("This app is not configured to be Passive !!!!%s"), "");
+                    TRACE(Trace::Information, (_T("This app is not configured to be Passive !!!!%s"), ""));
                 }
 
                 _isRunning = isRunning;
@@ -373,7 +373,7 @@ namespace Plugin {
             {
                 // This method is only for the Passive mode..
                 if (_passiveMode != true) {
-                    TRACE_L1(_T("This app is not configured to be Passive !!!!%s"), "");
+                    TRACE(Trace::Information, (_T("This app is not configured to be Passive !!!!%s"), ""));
                 }
 
                 _isHidden = isHidden;
