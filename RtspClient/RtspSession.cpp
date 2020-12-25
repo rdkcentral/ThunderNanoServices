@@ -59,13 +59,13 @@ namespace Plugin {
             _remote = Core::NodeId(_sessionInfo.srm.name.c_str(), _sessionInfo.srm.port);
             _srmSocket = new RtspSession::Socket(_local, _remote, *this);
             if (_srmSocket->State() == 0) {
-                TRACE_L1("%s: SRM Socket failed. State=%x", __FUNCTION__, _srmSocket->State());
+                TRACE(Trace::Error, (_T("%s: SRM Socket failed. State=%x"), __FUNCTION__, _srmSocket->State()));
                 rc = ERR_SESSION_FAILED;
             } else {
-                TRACE_L1("%s: srmSock->State=%x", __FUNCTION__, _srmSocket->State());
+                TRACE(Trace::Information, (_T("%s: srmSock->State=%x"), __FUNCTION__, _srmSocket->State()));
             }
         } else {
-            TRACE_L1("%s: Initialize failed, session is active", __FUNCTION__);
+            TRACE(Trace::Error, (_T("%s: Initialize failed, session is active"), __FUNCTION__));
             rc = ERR_ACTIVE;
         }
         _adminLock.Unlock();
@@ -77,11 +77,11 @@ namespace Plugin {
     {
         _adminLock.Lock();
 
-        TRACE_L1("%s: closing SRM socket", __FUNCTION__);
+        TRACE(Trace::Information, (_T("%s: closing SRM socket"), __FUNCTION__));
         delete _srmSocket;
         _srmSocket = nullptr;
         if (!IsSrmRtspProxy()) {
-            TRACE_L4("%s: closing control socket", __FUNCTION__);
+            TRACE(Trace::Information, (_T("%s: closing control socket"), __FUNCTION__));
             delete _controlSocket;
             _controlSocket = nullptr;
         }
@@ -123,7 +123,7 @@ namespace Plugin {
             _sessionInfo.reset();
             // new session, flush any remaining message in the queue
             while (!_responseQueue.IsEmpty()) {
-                TRACE_L1("%s: Removing old message", __FUNCTION__);
+                TRACE(Trace::Information, (_T("%s: Removing old message"), __FUNCTION__));
                 _responseQueue.Extract(response, 0);
             }
 
@@ -140,19 +140,19 @@ namespace Plugin {
                 _heartbeatTimer.Schedule(NextTick.Ticks(), HeartbeatTimer(*this));
 
                 if (!IsSrmRtspProxy()) {
-                    TRACE_L1("%s: NOT in rtsp proxy mode, connecting control socket (%s:%d)",
-                        __FUNCTION__, _sessionInfo.pump.address.c_str(), _sessionInfo.pump.port);
+                    TRACE(Trace::Information, (_T("%s: NOT in rtsp proxy mode, connecting control socket (%s:%d)"),
+                        __FUNCTION__, _sessionInfo.pump.address.c_str(), _sessionInfo.pump.port));
                     _controlSocket = new RtspSession::Socket(Core::NodeId(), Core::NodeId(_sessionInfo.pump.address.c_str(), _sessionInfo.pump.port), *this);
                     if (_controlSocket->State() == 0) {
-                        TRACE_L1("%s: Control Socket failed. State=%x", __FUNCTION__, _controlSocket->State());
+                        TRACE(Trace::Error, (_T("%s: Control Socket failed. State=%x"), __FUNCTION__, _controlSocket->State()));
                         rc = ERR_SESSION_FAILED;
                     } else {
-                        TRACE_L1("%s: _controlSocket->State=%x", __FUNCTION__, _controlSocket->State());
+                        TRACE(Trace::Information, (_T("%s: _controlSocket->State=%x"), __FUNCTION__, _controlSocket->State()));
                     }
                 }
                 _adminLock.Unlock();
             } else {
-                TRACE_L1("%s: Failed to get Response", __FUNCTION__);
+                TRACE(Trace::Error, (_T("%s: Failed to get Response"), __FUNCTION__));
                 rc = ERR_TIMED_OUT;
             }
 
@@ -164,7 +164,7 @@ namespace Plugin {
                 Play(1.0, (position == 0) ? _sessionInfo.bookmark : position);
             }
         } else {
-            TRACE_L1("%s: Open failed, session is active", __FUNCTION__);
+            TRACE(Trace::Error, (_T("%s: Open failed, session is active"), __FUNCTION__));
             rc = ERR_ACTIVE;
         }
         return rc;
@@ -182,7 +182,7 @@ namespace Plugin {
             if (_responseQueue.Extract(response, ResponseWaitTime)) {
                 _parser.ProcessTeardownResponse(response->message);
             } else {
-                TRACE_L1("%s: Failed to get Response", __FUNCTION__);
+                TRACE(Trace::Error, (_T("%s: Failed to get Response"), __FUNCTION__));
                 rc = ERR_TIMED_OUT;
             }
 
@@ -199,7 +199,7 @@ namespace Plugin {
         RtspReturnCode rc = ERR_OK;
 
         if (_isSessionActive) {
-            TRACE_L2("%s: scale=%f offset=%d", __FUNCTION__, scale, position);
+            TRACE(Trace::Information, (_T("%s: scale=%f offset=%d"), __FUNCTION__, scale, position));
 
             RtspMessagePtr response;
 
@@ -208,7 +208,7 @@ namespace Plugin {
             if (_responseQueue.Extract(response, ResponseWaitTime)) {
                 _parser.ProcessPlayResponse(response->message);
             } else {
-                TRACE_L1("%s: Failed to get Response", __FUNCTION__);
+                TRACE(Trace::Error, (_T("%s: Failed to get Response"), __FUNCTION__));
                 rc = ERR_TIMED_OUT;
             }
         } else {
@@ -250,7 +250,7 @@ namespace Plugin {
             } else if (dynamic_cast<RtspResponse*>(response.get()) != nullptr) {
                 _responseQueue.Post(response);
             } else {
-                TRACE_L1("%s: UNKNOWN response '%s'", __FUNCTION__, responseStr.c_str());
+                TRACE(Trace::Information, (_T("%s: UNKNOWN response '%s'"), __FUNCTION__, responseStr.c_str()));
             }
         }
         return rc;
@@ -261,7 +261,7 @@ namespace Plugin {
         RtspReturnCode rc = ERR_OK;
         RtspMessagePtr request = _parser.BuildResponse(respSeq, bSRM);
 
-        TRACE_L1("%s: Sending Announcement Response", __FUNCTION__);
+        TRACE(Trace::Information, (_T("%s: Sending Announcement Response"), __FUNCTION__));
         Send(request);
 
         return rc;
@@ -278,7 +278,7 @@ namespace Plugin {
         if (_responseQueue.Extract(response, ResponseWaitTime)) {
             _parser.ProcessGetParamResponse(response->message);
         } else {
-            TRACE_L1("%s: Failed to get Response", __FUNCTION__);
+            TRACE(Trace::Error, (_T("%s: Failed to get Response"), __FUNCTION__));
             rc = ERR_TIMED_OUT;
         }
 
@@ -326,7 +326,7 @@ namespace Plugin {
 
     uint16_t RtspSession::Socket::SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
     {
-        TRACE_L4("%s: _requestQueue.IsEmpty=%d ", __FUNCTION__, _rtspSession._requestQueue.IsEmpty());
+        TRACE(Trace::Information, (_T("%s: _requestQueue.IsEmpty=%d "), __FUNCTION__, _rtspSession._requestQueue.IsEmpty()));
 
         uint16_t len = 0;
         if (!_rtspSession._requestQueue.IsEmpty()) {
@@ -334,7 +334,7 @@ namespace Plugin {
             _rtspSession._requestQueue.Extract(request, 0);
             len = request->message.size();
             memcpy(dataFrame, request->message.c_str(), len);
-            TRACE(Trace::Information, ("%s: maxSendSize=%d bytesToSend=%d", __FUNCTION__, maxSendSize, len));
+            TRACE(Trace::Information, (_T("%s: maxSendSize=%d bytesToSend=%d"), __FUNCTION__, maxSendSize, len));
         }
 
         return len;
@@ -352,10 +352,10 @@ namespace Plugin {
     void RtspSession::Socket::StateChange()
     {
         if (State() == 0) {
-            TRACE_L1("%s: Lost connection", __FUNCTION__, State());
+            TRACE(Trace::Information, (_T("%s: Lost connection"), __FUNCTION__, State()));
             // XXX: Not doing anything if connection is lost, playback might still work but trickplay wont work.
         } else {
-            TRACE_L1("%s: State=%d", __FUNCTION__, State());
+            TRACE(Trace::Information, (_T("%s: State=%d"), __FUNCTION__, State()));
         }
     }
 }

@@ -119,7 +119,6 @@ namespace Plugin {
             , _implementation(nullptr)
             , _notification(this)
         {
-            TRACE_L1("%s: Initializing", __FUNCTION__);
         }
 
         virtual ~RtspClient()

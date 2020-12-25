@@ -50,7 +50,7 @@ namespace Broadcom {
                 , _rectangle( {0,0,0,0} )
                 , _layer(0)
             {
-                TRACE_L1("Created client named: %s", _settings.name);
+                TRACE(Trace::Information, (_T("Created client named: %s"), _settings.name));
             }
 
             static Client* Create(nxclient_t client, const NxClient_JoinSettings* settings)
@@ -61,7 +61,7 @@ namespace Broadcom {
             }
             virtual ~Client()
             {
-                TRACE_L1("Destructing client named: %s", _settings.name);
+                TRACE(Trace::Information, (_T("Destructing client named: %s"), _settings.name));
             }
 
         public:
