@@ -682,7 +682,7 @@ namespace Plugin {
                             const char* nodeId = udev_device_get_devnode(dev);
                             bool reload = ((nodeId != nullptr) && (strncmp(Locator, nodeId, sizeof(Locator) - 1) == 0));
                             udev_device_unref(dev);
-                            TRACE_L1("Changes from udev perspective. Reload (%s)", reload ? _T("true") : _T("false"));
+                            TRACE(Trace::Information, (_T("Changes from udev perspective. Reload (%s)"), reload ? _T("true") : _T("false")));
                             if (reload == true) {
                                 Refresh();
                             }

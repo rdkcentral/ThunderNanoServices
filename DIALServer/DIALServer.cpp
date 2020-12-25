@@ -410,7 +410,7 @@ namespace Plugin {
                 // Make sure that there is connection between DIAL handler and application
                 if (app.IsConnected() == false && app.Connect() == false) {
                     
-                    TRACE_L1("Cannot connect DIAL handler to application %s", app.Name().c_str());
+                    TRACE(Trace::Information, (_T("Cannot connect DIAL handler to application %s"), app.Name().c_str()));
                 } else if (app.HasHide() == true && app.IsHidden() == true) {
                     uint32_t result = (DeprecatedAPI() == true) ? app.Show() : app.Start(parameters, payload);
 
