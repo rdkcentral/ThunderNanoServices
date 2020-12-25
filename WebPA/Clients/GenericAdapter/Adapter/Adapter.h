@@ -57,7 +57,7 @@ private:
             _signaled.SetEvent();
 
             Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
-            TRACE_L1("%s destructed. Line: %d", __PRETTY_FUNCTION__, __LINE__);
+            TRACE(Trace::Information, (_T("%s destructed. Line: %d"), __PRETTY_FUNCTION__, __LINE__));
         }
         virtual void NotifyEvent() override;
 

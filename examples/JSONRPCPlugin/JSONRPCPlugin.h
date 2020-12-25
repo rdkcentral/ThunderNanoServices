@@ -306,7 +306,7 @@ namespace Plugin {
                     }
                     message->Result = result;
                 } else {
-                    TRACE_L1("Unknown method");
+                    TRACE(Trace::Error, (_T("Unknown method")));
                 }
 
                 message->Parameters.Clear();

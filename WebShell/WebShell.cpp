@@ -342,7 +342,7 @@ namespace Plugin {
                 _adminLock.Lock();
 
                 if (result == -1) {
-                    TRACE_L1("poll failed with error <%d>", errno);
+                    TRACE(Trace::Error, (_T("poll failed with error <%d>"), errno));
                 } else if (_slots[0].revents & POLLIN) {
                     /* We have a valid signal, read the info from the fd */
                     struct signalfd_siginfo info;

@@ -391,7 +391,7 @@ private:
             {"audio/x-wav", Exchange::IPlayerProperties::AUDIO_WAV},
         };
         if (GstUtils::GstRegistryCheckElementsForMediaTypes(audioCaps, _audioCodecs) != true) {
-            TRACE_L1(_T("There is no Audio Codec support available"));
+            TRACE(Trace::Warning, (_T("There is no Audio Codec support available")));
         }
 
     }
@@ -407,7 +407,7 @@ private:
             {"video/x-vp10", Exchange::IPlayerProperties::VideoCodec::VIDEO_VP10}
         };
         if (GstUtils::GstRegistryCheckElementsForMediaTypes(videoCaps, _videoCodecs) != true) {
-            TRACE_L1(_T("There is no Video Codec support available"));
+            TRACE(Trace::Warning, (_T("There is no Video Codec support available")));
         }
     }
 

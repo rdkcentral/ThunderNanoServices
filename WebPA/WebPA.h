@@ -44,7 +44,7 @@ private:
         }
         virtual ~Notification()
         {
-            TRACE_L1("WebPA::Notification destructed. Line: %d", __LINE__);
+            TRACE(Trace::Information, (_T("WebPA::Notification destructed. Line: %d"), __LINE__));
         }
 
     public:

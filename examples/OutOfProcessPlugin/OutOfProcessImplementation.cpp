@@ -58,7 +58,7 @@ namespace Plugin {
 
                     Exchange::ITimeSync* time = service->QueryInterface<Exchange::ITimeSync>();
 					if (time != nullptr) {
-						TRACE_L1("Time interface supported");
+						TRACE(Trace::Information, (_T("Time interface supported")));
 						time->Release();
 					}
 				}
@@ -186,7 +186,7 @@ namespace Plugin {
             , _executor(1, 0, 4)
             , _sink(*this)
         {
-            TRACE_L1("---------------- Constructing the OutOfProcessImplementation ----------------------");
+            TRACE(Trace::Information, (_T("---------------- Constructing the OutOfProcessImplementation ----------------------")));
             TRACE(Trace::Information, (_T("Constructed the OutOfProcessImplementation")));
         }
         #ifdef __WINDOWS__
@@ -194,13 +194,13 @@ namespace Plugin {
         #endif
         ~OutOfProcessImplementation() override
         {
-            TRACE_L1("---------------- Destructing the OutOfProcessImplementation ----------------------");
+            TRACE(Trace::Information, (_T("---------------- Destructing the OutOfProcessImplementation ----------------------")));
             Block();
 
             if (Wait(Core::Thread::STOPPED | Core::Thread::BLOCKED, _config.Destruct.Value()) == false)
-                TRACE_L1("Bailed out before the thread signalled completion. %d ms", _config.Destruct.Value());
+                TRACE(Trace::Information, (_T("Bailed out before the thread signalled completion. %d ms"), _config.Destruct.Value()));
 
-            TRACE_L1("---------------- Destructed the OutOfProcessImplementation -----------------------");
+            TRACE(Trace::Information, (_T("---------------- Destructed the OutOfProcessImplementation -----------------------")));
         }
 
     public:
@@ -341,7 +341,7 @@ namespace Plugin {
             std::list<PluginHost::IStateControl::INotification*>::iterator index(_notificationClients.begin());
 
             while (index != _notificationClients.end()) {
-                TRACE_L1("State change from OutofProcessTest 0x%X", state);
+                TRACE(Trace::Information, (_T("State change from OutofProcessTest 0x%X"), state));
                 (*index)->StateChange(state);
                 index++;
             }
@@ -358,7 +358,7 @@ namespace Plugin {
             std::list<Exchange::IBrowser::INotification*>::iterator index(_browserClients.begin());
 
             while (index != _browserClients.end()) {
-                TRACE_L1("State change from OutofProcessTest 0x%X", __LINE__);
+                TRACE(Trace::Information, (_T("State change from OutofProcessTest 0x%X"), __LINE__));
                 (*index)->Hidden(hidden);
                 index++;
             }
@@ -409,7 +409,7 @@ namespace Plugin {
 
             if (_config.Crash.Value() == true) {
                 TRACE(Trace::Information, (_T("Crash request honoured. We are going to CRASH!!!")));
-                TRACE_L1("Going to CRASH as requested %d.", 0);
+                TRACE(Trace::Information, (_T("Going to CRASH as requested %d."), 0));
                 abort();
             }
 

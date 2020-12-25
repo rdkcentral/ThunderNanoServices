@@ -53,7 +53,6 @@ namespace Plugin {
 
     /* virtual */ Core::ProxyType<Web::Response> FrontPanel::Process(const Web::Request& request)
     {
-        TRACE_L1("Web request %s", request.Path.c_str());
         ASSERT(_skipURL <= request.Path.length());
 
         Core::ProxyType<Web::Response> result;

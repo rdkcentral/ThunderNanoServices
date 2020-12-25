@@ -204,7 +204,7 @@ namespace Plugin {
         _device = Exchange::ICapture::Instance();
 
         if (_device != nullptr) {
-            TRACE_L1(_T("Capture device: %s"), _device->Name());
+            TRACE(Trace::Information, (_T("Capture device: %s"), _device->Name()));
         } else {
             result = string("No capture device is registered");
         }
