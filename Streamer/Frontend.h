@@ -257,7 +257,7 @@ namespace Player {
                 ReleaseElements();
 
                 if (_decoder != nullptr) {
-                    TRACE_L1("Forcefull destruction of a stream. Forcefully removing decoder: %d", __LINE__);
+                    TRACE(Trace::Information, (_T("Forcefull destruction of a stream. Forcefully removing decoder: %d"), __LINE__));
                     delete _decoder;
                 }
             }

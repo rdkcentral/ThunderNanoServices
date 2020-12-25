@@ -279,22 +279,22 @@ namespace Plugin {
 #ifdef __DEBUG__
             void DisplayPacket()
             {
-                TRACE_L1("Leap indicator:      %d", LeapIndicator());
-                TRACE_L1("NTP version:         %d", NTPVersion());
-                TRACE_L1("NTP mode:            %d", NTPMode());
-                TRACE_L1("Stratum:             %d", Stratum());
-                TRACE_L1("Poll interval:       %d = %d s", Poll(), 1 << Poll());
-                TRACE_L1("Precision:           %d = %lf s", Precision(), 1.0 / (1 << -Precision()));
+                TRACE(Trace::Information, (_T("Leap indicator:      %d"), LeapIndicator()));
+                TRACE(Trace::Information, (_T("NTP version:         %d"), NTPVersion()));
+                TRACE(Trace::Information, (_T("NTP mode:            %d"), NTPMode()));
+                TRACE(Trace::Information, (_T("Stratum:             %d"), Stratum()));
+                TRACE(Trace::Information, (_T("Poll interval:       %d = %d s"), Poll(), 1 << Poll()));
+                TRACE(Trace::Information, (_T("Precision:           %d = %lf s"), Precision(), 1.0 / (1 << -Precision())));
                 const double Fraction_16_16 = 65536.0;
                 uint32_t delay = RootDelay();
-                TRACE_L1("Root delay:          %d = %lf s", delay, delay / Fraction_16_16);
+                TRACE(Trace::Information, (_T("Root delay:          %d = %lf s"), delay, delay / Fraction_16_16));
                 uint32_t dispersion = RootDispersion();
-                TRACE_L1("Root dispersion:     %d = %lf", dispersion, dispersion / Fraction_16_16);
-                TRACE_L1("Reference id:        %s", ReferenceID().c_str());
-                TRACE_L1("Reference timestamp: %s", Core::Time(ReferenceTimestamp()).ToRFC1123(false).c_str());
-                TRACE_L1("Origin timestamp:    %s", Core::Time(OriginalTimestamp()).ToRFC1123(false).c_str());
-                TRACE_L1("Receive timestamp:   %s", Core::Time(ReceiveTimestamp()).ToRFC1123(false).c_str());
-                TRACE_L1("Transmit timestamp:  %s", Core::Time(TransmitTimestamp()).ToRFC1123(false).c_str());
+                TRACE(Trace::Information, (_T("Root dispersion:     %d = %lf"), dispersion, dispersion / Fraction_16_16));
+                TRACE(Trace::Information, (_T("Reference id:        %s"), ReferenceID().c_str()));
+                TRACE(Trace::Information, (_T("Reference timestamp: %s"), Core::Time(ReferenceTimestamp()).ToRFC1123(false).c_str()));
+                TRACE(Trace::Information, (_T("Origin timestamp:    %s"), Core::Time(OriginalTimestamp()).ToRFC1123(false).c_str()));
+                TRACE(Trace::Information, (_T("Receive timestamp:   %s"), Core::Time(ReceiveTimestamp()).ToRFC1123(false).c_str()));
+                TRACE(Trace::Information, (_T("Transmit timestamp:  %s"), Core::Time(TransmitTimestamp()).ToRFC1123(false).c_str()));
             }
 #endif
 
