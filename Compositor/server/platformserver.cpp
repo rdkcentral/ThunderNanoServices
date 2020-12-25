@@ -34,13 +34,13 @@ public:
     virtual void Attached(Exchange::IComposition::IClient* client)
     {
         string clientName = client->Name();
-        TRACE_L1("plaformserver, client attached: %s", clientName.c_str());
+        TRACE(Trace::Information, (_T("plaformserver, client attached: %s"), clientName.c_str()));
     }
 
     virtual void Detached(Exchange::IComposition::IClient* client)
     {
         string clientName = client->Name();
-        TRACE_L1("plaformserver, client detached: %s", clientName.c_str());
+        TRACE(Trace::Information, (_T("plaformserver, client detached: %s"), clientName.c_str()));
     }
 
     BEGIN_INTERFACE_MAP(MyCompositionListener)
@@ -65,25 +65,25 @@ int main(int argc, char* argv[])
     Exchange::IResourceCenter* resourceCenter = nullptr;
 
     if (resource.IsLoaded() == true) {
-        TRACE_L1("Compositor started in process %s implementation", libPath.c_str());
+        TRACE_GLOBAL(Trace::Information, (_T("Compositor started in process %s implementation"), libPath.c_str()));
     } else {
-        TRACE_L1("FAILED to start in process %s implementation", libPath.c_str());
+        TRACE_GLOBAL(Trace::Error, (_T("FAILED to start in process %s implementation"), libPath.c_str()));
         return 1;
     }
 
     // TODO: straight to composition.
     resourceCenter = Core::ServiceAdministrator::Instance().Instantiate<Exchange::IResourceCenter>(resource, _T("PlatformImplementation"), static_cast<uint32_t>(~0));
     if (resourceCenter) {
-        TRACE_L1("Instantiated resource center [%d]", __LINE__);
+        TRACE_GLOBAL(Trace::Information, (_T("Instantiated resource center [%d]"), __LINE__));
     } else {
-        TRACE_L1("Failed to instantiate resource center [%d]", __LINE__);
+        TRACE_GLOBAL(Trace::Error, (_T("Failed to instantiate resource center [%d]"), __LINE__));
         Core::Singleton::Dispose();
         return 1;
     }
 
     Exchange::IComposition* composition = resourceCenter->QueryInterface<Exchange::IComposition>();
     if (composition == nullptr) {
-        TRACE_L1("Failed to get composition interface [%d]", __LINE__);
+        TRACE_GLOBAL(Trace::Error, (_T("Failed to get composition interface [%d]"), __LINE__));
     }
     else {
         MyCompositionListener* listener = Core::Service<MyCompositionListener>::Create<MyCompositionListener>();
@@ -91,9 +91,9 @@ int main(int argc, char* argv[])
 
         // TODO: this sets default values, should we also allow for string/path passed along on command line?
         uint32_t confResult = resourceCenter->Configure("{}");
-        TRACE_L1("Configured resource center [%d]", confResult);
+        TRACE_GLOBAL(Trace::Information, (_T("Configured resource center [%d]", confResult);
 
-        TRACE_L1("platformserver: dropping into while-true [%d]", __LINE__);
+        TRACE_GLOBAL(Trace::Information, (_T("platformserver: dropping into while-true [%d]"), __LINE__));
         while (true)
             ;
 
