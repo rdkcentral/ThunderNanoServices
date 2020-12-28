@@ -153,7 +153,6 @@ namespace Plugin {
 
         ~WebKitBrowser() override
         {
-            TRACE_L1("Destructor WebKitBrowser.%d", __LINE__);
         }
 
         inline static bool EnvironmentOverride(const bool configFlag)

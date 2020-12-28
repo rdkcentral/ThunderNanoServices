@@ -117,7 +117,7 @@ namespace Plugin {
         if ((_state != INITIAL) && (_state != FAILED) && (_state != SUCCESS)) {
 
             if (!IsClosed()) {
-                TRACE_L1("TimeSync: %s", "Cancelling, Closing socket");
+                TRACE(Trace::Information, (_T("TimeSync: %s"), "Cancelling, Closing socket"));
                 Close(0);
             }
 
@@ -184,7 +184,7 @@ namespace Plugin {
             _packet.Serialize(writer);
 
             result = newFrame.Size();
-            TRACE_L1("Timesync: Send data: %d bytes", result);
+            TRACE(Trace::Information, (_T("Timesync: Send data: %d bytes"), result));
         }
 
         _adminLock.Unlock();
@@ -201,7 +201,7 @@ namespace Plugin {
     {
         double received = static_cast<double>(Core::Time::Now().Ticks() / MicroSeconds);
 
-        TRACE_L1("Timesync: Received data: %d bytes", receivedSize);
+        TRACE(Trace::Information, (_T("Timesync: Received data: %d bytes"), receivedSize));
 
         _adminLock.Lock();
 
@@ -229,14 +229,14 @@ namespace Plugin {
             double roundTrip = elapsedTotal - elapsedServer;
 #endif
 
-            TRACE_L1("Request time diff  = %lf", diffRequest);
-            TRACE_L1("Response time diff = %lf", diffResponse);
-            TRACE_L1("Offset time        = %lf", offset);
+            TRACE(Trace::Information, (_T("Request time diff  = %lf"), diffRequest));
+            TRACE(Trace::Information, (_T("Response time diff = %lf"), diffResponse));
+            TRACE(Trace::Information, (_T("Offset time        = %lf"), offset));
 
 #ifdef __DEBUG__
-            TRACE_L1("Server elapsed time = %lf", elapsedServer);
-            TRACE_L1("Total elapsed time  = %lf", elapsedTotal);
-            TRACE_L1("Round trip time     = %lf", roundTrip);
+            TRACE(Trace::Information, (_T("Server elapsed time = %lf"), elapsedServer));
+            TRACE(Trace::Information, (_T("Total elapsed time  = %lf"), elapsedTotal));
+            TRACE(Trace::Information, (_T("Round trip time     = %lf"), roundTrip));
 #endif
             TRACE(Trace::Information, (_T("TimeSync: Request time diff   = %lf s"), diffRequest));
             TRACE(Trace::Information, (_T("TimeSync: Response time diff  = %lf s"), diffResponse));
@@ -250,7 +250,7 @@ namespace Plugin {
             _state = SUCCESS;
 
             // We don't need the socket anymore, so close it
-            TRACE_L1("TimeSync: %s", "Closing socket, no longer needed");
+            TRACE(Trace::Information, (_T("TimeSync: %s"), "Closing socket, no longer needed"));
             Close(0);
 
             // Lets remove the watchdog subject, we do not want to wait anymore, we got an answer.
