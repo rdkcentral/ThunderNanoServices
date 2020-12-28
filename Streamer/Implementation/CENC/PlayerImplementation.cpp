@@ -93,7 +93,7 @@ namespace Player {
 
                 _data._mainLoop = g_main_loop_new(NULL, FALSE);
                 if (_data._mainLoop == nullptr || _data._playbin == nullptr) {
-                    TRACE_L1("Could not initialize the gstreamer pipeline");
+                    TRACE(Trace::Error, (_T("Could not initialize the gstreamer pipeline")));
                     return Core::ERROR_OPENING_FAILED;
                 }
 
@@ -130,12 +130,12 @@ namespace Player {
 
             void CENC::Callback(ICallback* callback)
             {
-                TRACE_L1("CENC callback setter is called, not implemented");
+                TRACE(Trace::Information, (_T("CENC callback setter is called, not implemented")));
             }
 
             string CENC::Metadata() const
             {
-                TRACE_L1("CENC metadata is called, not implemented");
+                TRACE(Trace::Information, (_T("CENC metadata is called, not implemented")));
                 return string();
             }
 
@@ -149,13 +149,13 @@ namespace Player {
 
             Exchange::IStream::drmtype CENC::DRM() const
             {
-                TRACE_L1("CENC DRM getter called, not implemented");
+                TRACE(Trace::Information, (_T("CENC DRM getter called, not implemented")));
                 return Exchange::IStream::drmtype::Unknown;
             }
 
             Exchange::IStream::state CENC::State() const
             {
-                TRACE_L1("CENC state changes not implemented");
+                TRACE(Trace::Information, (_T("CENC state changes not implemented")));
                 return Exchange::IStream::state::Prepared;
             }
 
@@ -289,7 +289,7 @@ namespace Player {
                     _adminLock.Unlock();
                 } else {
                     _adminLock.Unlock();
-                    TRACE_L1("Absolute time cannot be bigger than the file duration");
+                    TRACE(Trace::Warning, (_T("Absolute time cannot be bigger than the file duration")));
                 }
             }
 
@@ -304,34 +304,34 @@ namespace Player {
 
             void CENC::TimeRange(uint64_t& begin, uint64_t& end) const
             {
-                TRACE_L1("CENC time range not supported");
+                TRACE(Trace::Information, (_T("CENC time range not supported")));
             }
 
             const Rectangle& CENC::Window() const
             {
-                TRACE_L1("CENC window shape not supported");
+                TRACE(Trace::Information, (_T("CENC window shape not supported")));
                 return Rectangle();
             }
 
             void CENC::Window(const Rectangle& rectangle)
             {
-                TRACE_L1("CENC window shape not supported");
+                TRACE(Trace::Information, (_T("CENC window shape not supported")));
             }
 
             uint32_t CENC::Order() const
             {
-                TRACE_L1("CENC window order not supported");
+                TRACE(Trace::Information, (_T("CENC window order not supported")));
                 return 0;
             }
 
             void CENC::Order(const uint32_t order)
             {
-                TRACE_L1("CENC window order not supported.");
+                TRACE(Trace::Information, (_T("CENC window order not supported.")));
             }
 
             const std::list<ElementaryStream>& CENC::Elements() const
             {
-                TRACE_L1("CENC elementary streams not supported");
+                TRACE(Trace::Information, (_T("CENC elementary streams not supported")));
                 return {};
             }
         }

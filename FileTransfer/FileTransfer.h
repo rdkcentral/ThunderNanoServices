@@ -161,7 +161,7 @@ namespace Core {
                     loop->second.Unregister(callback);
                     if (loop->second.HasCallbacks() == false) {
                         if (inotify_rm_watch(_notifyFd, index->second) < 0) {
-                            TRACE_L1(_T("Invoke of inotify_rm_watch failed"));
+                            TRACE(Trace::Error, (_T("Invoke of inotify_rm_watch failed")));
                         }
                         // Clear this index, we are no longer observing
                         _files.erase(index);

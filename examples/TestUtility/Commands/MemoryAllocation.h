@@ -62,7 +62,7 @@ public:
         for (noOfBlocks = 0; noOfBlocks < runs; ++noOfBlocks) {
             _memory.push_back(malloc(static_cast<size_t>(blockSize << 10)));
             if (!_memory.back()) {
-                SYSLOG(Trace::Fatal, (_T("*** Failed allocation !!! ***")));
+                SYSLOG(Logging::Fatal, (_T("*** Failed allocation !!! ***")));
                 break;
             }
 
@@ -131,11 +131,11 @@ private:
 
     void LogMemoryUsage(void)
     {
-        SYSLOG(Trace::Information, (_T("*** Current allocated: %lu Kb ***"), _currentMemoryAllocation));
-        SYSLOG(Trace::Information, (_T("*** Initial Size:     %lu Kb ***"), _startSize));
-        SYSLOG(Trace::Information, (_T("*** Initial Resident: %lu Kb ***"), _startResident));
-        SYSLOG(Trace::Information, (_T("*** Size:     %lu Kb ***"), static_cast<uint32_t>(_process.Allocated() >> 10)));
-        SYSLOG(Trace::Information, (_T("*** Resident: %lu Kb ***"), static_cast<uint32_t>(_process.Resident() >> 10)));
+        SYSLOG(Logging::Notification, (_T("*** Current allocated: %lu Kb ***"), _currentMemoryAllocation));
+        SYSLOG(Logging::Notification, (_T("*** Initial Size:     %lu Kb ***"), _startSize));
+        SYSLOG(Logging::Notification, (_T("*** Initial Resident: %lu Kb ***"), _startResident));
+        SYSLOG(Logging::Notification, (_T("*** Size:     %lu Kb ***"), static_cast<uint32_t>(_process.Allocated() >> 10)));
+        SYSLOG(Logging::Notification, (_T("*** Resident: %lu Kb ***"), static_cast<uint32_t>(_process.Resident() >> 10)));
     }
 
 private:
