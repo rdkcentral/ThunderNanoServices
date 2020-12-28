@@ -1784,10 +1784,10 @@ static GSourceFuncs _handlerIntervention =
         {
             switch (reason) {
             case WEBKIT_WEB_PROCESS_CRASHED:
-                SYSLOG(Trace::Fatal, ("CRASH: WebProcess crashed: exiting ..."));
+                SYSLOG(Logging::Fatal, (_T("CRASH: WebProcess crashed: exiting ...")));
                 break;
             case WEBKIT_WEB_PROCESS_EXCEEDED_MEMORY_LIMIT:
-                SYSLOG(Trace::Fatal, ("CRASH: WebProcess terminated due to memory limit: exiting ..."));
+                SYSLOG(Logging::Fatal, (_T("CRASH: WebProcess terminated due to memory limit: exiting ...")));
                 break;
             }
             exit(1);
@@ -2196,7 +2196,7 @@ static GSourceFuncs _handlerIntervention =
             return Core::infinite;
         }
 
-       void CheckWebProcess()
+        void CheckWebProcess()
         {
             if ( _webProcessCheckInProgress )
                 return;
@@ -2232,14 +2232,14 @@ static GSourceFuncs _handlerIntervention =
 
             if (isWebProcessResponsive)
             {
-                SYSLOG(Trace::Information, ("WebProcess recovered after %d unresponsive replies, pid=%u, url=%s\n",
+                SYSLOG(Logging::Notification, (_T("WebProcess recovered after %d unresponsive replies, pid=%u, url=%s\n"),
                                             _unresponsiveReplyNum, webprocessPID, activeURL.c_str()));
                 _unresponsiveReplyNum = 0;
             }
             else
             {
                 ++_unresponsiveReplyNum;
-                SYSLOG(Trace::Information, ("WebProcess is unresponsive, pid=%u, reply num=%d(max=%d), url=%s\n",
+                SYSLOG(Logging::Notification, (_T("WebProcess is unresponsive, pid=%u, reply num=%d(max=%d), url=%s\n"),
                                             webprocessPID, _unresponsiveReplyNum, kWebProcessUnresponsiveReplyDefaultLimit,
                                             activeURL.c_str()));
             }
@@ -2261,7 +2261,7 @@ static GSourceFuncs _handlerIntervention =
             {
                 std::string activeURL = GetPageActiveURL(page);
                 pid_t webprocessPID = WKPageGetProcessIdentifier(page);
-                SYSLOG(Trace::Information, ("WebProcess recovered after %d unresponsive replies, pid=%u, url=%s\n",
+                SYSLOG(Logging::Notification, (_T("WebProcess recovered after %d unresponsive replies, pid=%u, url=%s\n"),
                                             self._unresponsiveReplyNum, webprocessPID, activeURL.c_str()));
                 self._unresponsiveReplyNum = 0;
             }
@@ -2490,7 +2490,7 @@ static GSourceFuncs _handlerIntervention =
 
     /* static */ void webProcessDidCrash(WKPageRef, const void*)
     {
-        SYSLOG(Trace::Fatal, ("CRASH: WebProcess crashed, exiting..."));
+        SYSLOG(Logging::Fatal, (_T("CRASH: WebProcess crashed, exiting...")));
         exit(1);
     }
 #endif // !WEBKIT_GLIB_API
