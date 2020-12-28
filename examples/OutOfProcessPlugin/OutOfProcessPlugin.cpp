@@ -243,8 +243,8 @@ namespace Plugin {
         Data info(URL);
         string message;
         info.ToString(message);
-        TRACE_L1("Received a new URL: %s", message.c_str());
-        TRACE_L1("URL length: %u", static_cast<uint32_t>(message.length()));
+        TRACE(Trace::Information, (_T("Received a new URL: %s"), message.c_str()));
+        TRACE(Trace::Information, (_T("URL length: %u"), static_cast<uint32_t>(message.length())));
         TRACE(Trace::Information, (_T("Parent process recceived a changed URL: [%s]"), URL.c_str()));
 
         _service->Notify(message);

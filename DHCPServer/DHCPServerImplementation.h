@@ -579,7 +579,7 @@ namespace Plugin {
                         result = INADDR_BROADCAST;
                         break;
                     default:
-                        TRACE_L1("Unknown classification: %d \n", _optionData[2]);
+                        TRACE(Trace::Information, (_T("Unknown classification: %d \n"), _optionData[2]));
                         break;
                     }
                 }
@@ -882,10 +882,10 @@ namespace Plugin {
                 _responses.pop_front();
 
                 if (entry->IsValid() == false) {
-                    TRACE_L1("Dropped a response frame as it is invalid. [%d]", __LINE__);
+                    TRACE(Trace::Information, (_T("Dropped a response frame as it is invalid. [%d]"), __LINE__));
                 } else {
                     SocketDatagram::RemoteNode(entry->Reply());
-                    TRACE_L1("Sending %d to %s:%d", entry->Option(), RemoteNode().HostAddress().c_str(), RemoteNode().PortNumber());
+                    TRACE(Trace::Information, (_T("Sending %d to %s:%d"), entry->Option(), RemoteNode().HostAddress().c_str(), RemoteNode().PortNumber()));
                     result = entry->SendData(dataFrame, length);
                 }
             }
