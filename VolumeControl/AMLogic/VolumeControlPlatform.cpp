@@ -61,7 +61,7 @@ namespace Plugin {
                 if (_device != nullptr) {
                     int error = _device->set_master_mute(_device, muted);
                     if (error != 0) {
-                        TRACE(Trace::Error, (_T("Could not set master to mute."));
+                        TRACE(Trace::Error, (_T("Could not set master to mute.")));
                         errorCode = Core::ERROR_GENERAL;    
                     } else {
                         // _muteChanged();
@@ -78,7 +78,7 @@ namespace Plugin {
                 if (_device != nullptr) {
                     _device->get_master_mute(_device, &mute);
                 } else {
-                    TRACE(Trace::Error, (_T("Cannot query mute property. Device uninitialized."));
+                    TRACE(Trace::Error, (_T("Cannot query mute property. Device uninitialized.")));
                 }
                 return mute;
             }
@@ -94,7 +94,7 @@ namespace Plugin {
                 if (_device != nullptr) {
                     int error = _device->set_master_volume(_device, scaledVolume);
                     if (error != 0) {
-                        TRACE(Trace::Error, (_T"\nCould not set master volume <%d>"), error));
+                        TRACE(Trace::Error, (_T("\nCould not set master volume <%d>"), error));
                         errorCode = Core::ERROR_GENERAL;
                     } else {
                         _volumeChanged();
@@ -111,7 +111,7 @@ namespace Plugin {
                 if (_device != nullptr) {
                     _device->get_master_volume(_device, &volume);
                 } else {
-                    TRACE(Trace::Error, (_T"\nCannot query volume. Device uninitialized.")));
+                    TRACE(Trace::Error, (_T("\nCannot query volume. Device uninitialized.")));
                 }
                 return static_cast<uint8_t>(volume * 100);
             }
