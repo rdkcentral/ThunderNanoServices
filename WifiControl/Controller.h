@@ -1931,7 +1931,9 @@ namespace WPASupplicant {
 
                 const_cast<Controller*>(this)->Trigger();
             } else {
+#ifdef __DEBUG__
                 TRACE(Trace::Information, (_T("Submit does not trigger, there are %d messages pending [%s,%s]"), static_cast<unsigned int>(_requests.size()), _requests.front()->Original().c_str(), _requests.front()->Message().c_str()));
+#endif
                 _adminLock.Unlock();
             }
         }
