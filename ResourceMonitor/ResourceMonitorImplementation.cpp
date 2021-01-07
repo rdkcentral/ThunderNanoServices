@@ -5,14 +5,6 @@
 #include <sstream>
 #include <vector>
 
-using std::cerr; // TODO: temp
-using std::endl;
-using std::list;
-using std::stringstream;
-using std::vector;
-
-// TODO: don't create our own thread, use threadpool from WPEFramework
-
 namespace WPEFramework
 {
    namespace Plugin
@@ -89,7 +81,7 @@ namespace WPEFramework
                delete[] _otherMap;
             }
 
-            void GetProcessNames(vector<string> &processNames)
+            void GetProcessNames(std::vector<string> &processNames)
             {
                _namesLock.Lock();
                processNames = _processNames;
@@ -99,7 +91,7 @@ namespace WPEFramework
          private:
             void Collect()
             {
-               list<Core::ProcessInfo> processes;
+               std::list<Core::ProcessInfo> processes;
                Core::ProcessInfo::FindByName(_parentName, false, processes);
 
                StartLogLine(processes.size());
@@ -123,7 +115,7 @@ namespace WPEFramework
 
                   processTree.MarkOccupiedPages(_ourMap, mapBufferSize);
 
-                  list<Core::ProcessInfo> otherProcesses;
+                  std::list<Core::ProcessInfo> otherProcesses;
                   Core::ProcessInfo::Iterator otherIterator;
                   while (otherIterator.Next())
                   {
@@ -195,7 +187,7 @@ namespace WPEFramework
             }
 
             FILE *_binFile;
-            vector<string> _processNames; // Seen process names.
+            std::vector<string> _processNames; // Seen process names.
             Core::CriticalSection _namesLock;
             uint32_t *_otherMap;     // Buffer used to mark other processes pages.
             uint32_t *_ourMap;       // Buffer for pages used by our process (tree).
@@ -251,11 +243,11 @@ namespace WPEFramework
             // TODO: should we worry about doing this as repsonse to RPC (could take too long?)
             FILE *inFile = fopen(_binPath.c_str(), "rb");
 
-            stringstream output;
+            std::stringstream output;
             if (inFile != nullptr)
             {
 
-               vector<string> processNames;
+               std::vector<string> processNames;
                _processThread->GetProcessNames(processNames);
 
                output << _T("time (s)\tJiffies");
@@ -263,9 +255,9 @@ namespace WPEFramework
                {
                   output << _T("\t") << processName << _T(" (VSS)\t") << processName << _T(" (USS)\t") << processName << _T(" (jiffies)");
                }
-               output << endl;
+               output << std::endl;
 
-               vector<uint64_t> pageVector(processNames.size() * 3);
+               std::vector<uint64_t> pageVector(processNames.size() * 3);
                bool seenFirstTimestamp = false;
                uint32_t firstTimestamp = 0;
 
@@ -303,7 +295,7 @@ namespace WPEFramework
                      nameBuffer[nameLength] = '\0';
                      string name(nameBuffer);
 
-                     vector<string>::const_iterator nameIterator = std::find(processNames.cbegin(), processNames.cend(), name);
+                     std::vector<string>::const_iterator nameIterator = std::find(processNames.cbegin(), processNames.cend(), name);
 
                      uint32_t vss, uss;
                      uint64_t jiffies;
@@ -327,7 +319,7 @@ namespace WPEFramework
                   {
                      output << "\t" << pageEntry;
                   }
-                  output << endl;
+                  output << std::endl;
                }
 
                fclose(inFile);
