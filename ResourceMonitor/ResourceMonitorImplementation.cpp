@@ -209,14 +209,7 @@ namespace WPEFramework
          {
          }
 
-         virtual ~ResourceMonitorImplementation()
-         {
-            if (_processThread != nullptr)
-            {
-               delete _processThread;
-               _processThread = nullptr;
-            }
-         }
+         ~ResourceMonitorImplementation() override = default;
 
          virtual uint32_t Configure(PluginHost::IShell *service) override
          {
@@ -233,7 +226,7 @@ namespace WPEFramework
 
             result = Core::ERROR_NONE;
 
-            _processThread = new StatCollecter(config);
+            _processThread.reset(new StatCollecter(config));
 
             return (result);
          }
@@ -333,7 +326,7 @@ namespace WPEFramework
          END_INTERFACE_MAP
 
       private:
-         StatCollecter *_processThread;
+         std::unique_ptr<StatCollecter> _processThread;
          string _binPath;
       };
 
