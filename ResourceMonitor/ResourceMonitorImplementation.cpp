@@ -22,62 +22,28 @@ namespace WPEFramework
       private:
          class Config : public Core::JSON::Container
          {
-         public:
-            enum class CollectMode
-            {
-               Single,    // Expect one process that can come and go
-               Multiple,  // Expect several processes with the same name
-               Callsign,  // Log Thunder process by callsign
-               ClassName, // Log Thunder process by class name
-               Invalid
-            };
 
-         private:
+         public:
             Config &operator=(const Config &) = delete;
 
-         public:
             Config()
                 : Core::JSON::Container(), Path(), Interval(), Mode(), ParentName()
             {
                Add(_T("path"), &Path);
                Add(_T("interval"), &Interval);
-               Add(_T("mode"), &Mode);
                Add(_T("parent-name"), &ParentName);
             }
+
             Config(const Config &copy)
                 : Core::JSON::Container(), Path(copy.Path), Interval(copy.Interval), Mode(copy.Mode), ParentName(copy.ParentName)
             {
                Add(_T("path"), &Path);
                Add(_T("interval"), &Interval);
-               Add(_T("mode"), &Mode);
                Add(_T("parent-name"), &ParentName);
             }
+
             ~Config()
             {
-            }
-
-            CollectMode GetCollectMode() const
-            {
-               if (Mode == "single")
-               {
-                  return CollectMode::Single;
-               }
-               else if (Mode == "multiple")
-               {
-                  return CollectMode::Multiple;
-               }
-               else if (Mode == "callsign")
-               {
-                  return CollectMode::Callsign;
-               }
-               else if (Mode == "classname")
-               {
-                  return CollectMode::ClassName;
-               }
-
-               // TODO: no assert, should be logged
-               ASSERT(!"Not a valid collect mode!");
-               return CollectMode::Invalid;
             }
 
          public:
@@ -91,7 +57,7 @@ namespace WPEFramework
          {
          public:
             explicit StatCollecter(const Config &config)
-                : _binFile(nullptr), _otherMap(nullptr), _ourMap(nullptr), _bufferEntries(0), _interval(0), _collectMode(Config::CollectMode::Invalid), _activity(*this)
+                : _binFile(nullptr), _otherMap(nullptr), _ourMap(nullptr), _bufferEntries(0), _interval(0), _activity(*this)
             {
                _binFile = fopen(config.Path.Value().c_str(), "w");
 
@@ -110,7 +76,6 @@ namespace WPEFramework
                _ourMap = new uint32_t[_bufferEntries];
                _otherMap = new uint32_t[_bufferEntries];
                _interval = config.Interval.Value();
-               _collectMode = config.GetCollectMode();
                _parentName = config.ParentName.Value();
 
                _activity.Submit();
@@ -132,70 +97,7 @@ namespace WPEFramework
             }
 
          private:
-            // TODO: combine these "Collect*" methods
-            void CollectSingle()
-            {
-               list<Core::ProcessInfo> processes;
-               Core::ProcessInfo::FindByName(_parentName, false, processes);
-
-               // TODO: check if only one, warning otherwise?
-               // TOOD: what if none found? will cause segfault when using .front() later on.
-               if (processes.empty())
-               {
-                  TRACE(Trace::Error, (_T("Failed to find process %s"), _parentName));
-                  return;
-               }
-
-               if (processes.size() > 1)
-               {
-                  TRACE(Trace::Information, (_T("Found more than one process named %s, only tracking first"), _parentName));
-               }
-
-               uint32_t mapBufferSize = sizeof(_ourMap[0]) * _bufferEntries;
-               memset(_ourMap, 0, mapBufferSize);
-               memset(_otherMap, 0, mapBufferSize);
-
-               vector<::ThreadId> processIds;
-
-               for (const Core::ProcessInfo &processInfo : processes)
-               {
-                  string processName = processInfo.Name();
-
-                  _namesLock.Lock();
-                  if (find(_processNames.begin(), _processNames.end(), _parentName) == _processNames.end())
-                  {
-                     _processNames.push_back(_parentName);
-                  }
-                  _namesLock.Unlock();
-
-                  Core::ProcessTree processTree(processInfo.Id());
-
-                  processTree.MarkOccupiedPages(_ourMap, mapBufferSize);
-
-                  std::list<::ThreadId> addedProcessIds;
-                  processTree.GetProcessIds(addedProcessIds);
-                  processIds.insert(processIds.end(), addedProcessIds.begin(), addedProcessIds.end());
-               }
-
-               memset(_otherMap, 0, mapBufferSize);
-
-               // Find other processes
-               list<Core::ProcessInfo> otherProcesses;
-               Core::ProcessInfo::Iterator otherIterator;
-               while (otherIterator.Next())
-               {
-                  ::ThreadId otherId = otherIterator.Current().Id();
-                  if (find(processIds.begin(), processIds.end(), otherId) == processIds.end())
-                  {
-                     otherIterator.Current().MarkOccupiedPages(_otherMap, mapBufferSize);
-                  }
-               }
-
-               StartLogLine(1);
-               LogProcess(_parentName, processes.front());
-            }
-
-            void CollectMultiple()
+            void Collect()
             {
                list<Core::ProcessInfo> processes;
                Core::ProcessInfo::FindByName(_parentName, false, processes);
@@ -236,98 +138,10 @@ namespace WPEFramework
                }
             }
 
-            void CollectWPEProcess(const string &argument)
-            {
-               const string processName = "WPEProcess-1.0.0";
-
-               list<Core::ProcessInfo> processes;
-               Core::ProcessInfo::FindByName(processName, false, processes);
-
-               vector<std::pair<Core::ProcessInfo, string>> processIds;
-               for (const Core::ProcessInfo &processInfo : processes)
-               {
-                  std::list<string> commandLine = processInfo.CommandLine();
-
-                  bool shouldTrack = false;
-                  string columnName;
-
-                  // Get callsign/classname
-                  std::list<string>::const_iterator i = std::find(commandLine.cbegin(), commandLine.cend(), argument);
-                  if (i != commandLine.cend())
-                  {
-                     i++;
-                     if (i != commandLine.cend())
-                     {
-                        if (*i == _parentName)
-                        {
-                           columnName = _parentName + " (" + std::to_string(processInfo.Id()) + ")";
-                           processIds.push_back(std::pair<::ThreadId, string>(processInfo.Id(), columnName));
-                           shouldTrack = true;
-                        }
-                     }
-                  }
-
-                  if (!shouldTrack)
-                  {
-                     continue;
-                  }
-
-                  _namesLock.Lock();
-                  if (std::find(_processNames.cbegin(), _processNames.cend(), columnName) == _processNames.cend())
-                  {
-                     _processNames.push_back(columnName);
-                  }
-                  _namesLock.Unlock();
-               }
-
-               StartLogLine(processIds.size());
-               for (std::pair<Core::ProcessInfo, string> processDesc : processIds)
-               {
-                  Core::ProcessTree tree(processDesc.first);
-
-                  uint32_t mapBufferSize = sizeof(_ourMap[0]) * _bufferEntries;
-                  memset(_ourMap, 0, mapBufferSize);
-                  memset(_otherMap, 0, mapBufferSize);
-
-                  tree.MarkOccupiedPages(_ourMap, mapBufferSize);
-
-                  list<Core::ProcessInfo> otherProcesses;
-                  Core::ProcessInfo::Iterator otherIterator;
-                  while (otherIterator.Next())
-                  {
-                     ::ThreadId otherId = otherIterator.Current().Id();
-                     if (!tree.ContainsProcess(otherId))
-                     {
-                        otherIterator.Current().MarkOccupiedPages(_otherMap, mapBufferSize);
-                     }
-                  }
-
-                  LogProcess(processDesc.second, processDesc.first);
-               }
-            }
-
          protected:
             void Dispatch()
             {
-               switch (_collectMode)
-               {
-               case Config::CollectMode::Single:
-                  CollectSingle();
-                  break;
-               case Config::CollectMode::Multiple:
-                  CollectMultiple();
-                  break;
-               case Config::CollectMode::Callsign:
-                  CollectWPEProcess("-C");
-                  break;
-               case Config::CollectMode::ClassName:
-                  CollectWPEProcess("-c");
-                  break;
-               case Config::CollectMode::Invalid:
-                  // TODO: ASSERT?
-                  break;
-               }
-
+               Collect();
                _activity.Schedule(Core::Time::Now().Add(_interval * 1000));
             }
 
@@ -383,12 +197,11 @@ namespace WPEFramework
             FILE *_binFile;
             vector<string> _processNames; // Seen process names.
             Core::CriticalSection _namesLock;
-            uint32_t *_otherMap;              // Buffer used to mark other processes pages.
-            uint32_t *_ourMap;                // Buffer for pages used by our process (tree).
-            uint32_t _bufferEntries;          // Numer of entries in each buffer.
-            uint32_t _interval;               // Seconds between measurement.
-            Config::CollectMode _collectMode; // Collection style.
-            string _parentName;               // Process/plugin name we are looking for.
+            uint32_t *_otherMap;     // Buffer used to mark other processes pages.
+            uint32_t *_ourMap;       // Buffer for pages used by our process (tree).
+            uint32_t _bufferEntries; // Numer of entries in each buffer.
+            uint32_t _interval;      // Seconds between measurement.
+            string _parentName;      // Process/plugin name we are looking for.
             Core::WorkerPool::JobType<StatCollecter &> _activity;
 
             friend Core::ThreadPool::JobType<StatCollecter &>;
