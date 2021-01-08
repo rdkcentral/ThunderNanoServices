@@ -18,11 +18,20 @@ namespace WPEFramework
             CSVFile(string filepath, string seperator)
                 : _file(filepath, false), _seperator()
             {
-               _seperator = seperator.empty() ? ';' : seperator[0];
                _file.Create();
                if (!_file.IsOpen())
                {
                   TRACE(Trace::Error, (_T("Could not open file <%s>. Full resource monitoring unavailable."), filepath));
+               }
+               else
+               {
+                  if (seperator.empty() || seperator.size() > 1)
+                  {
+                     TRACE(Trace::Error, (_T("Invalid seperator, falling back to ';'.")));
+                     _seperator = ';';
+                  } else {
+                     _seperator = seperator[0];
+                  }
                }
             }
 
@@ -41,7 +50,7 @@ namespace WPEFramework
                   std::string output = _stringstream.str();
                   _file.Write(reinterpret_cast<const uint8_t *>(output.c_str()), output.length());
                }
-               _stringstream.clear();
+               _stringstream.str("");
             }
 
             template <typename ... Args>
@@ -264,7 +273,6 @@ namespace WPEFramework
             }
 
             result = Core::ERROR_NONE;
-
             _processThread.reset(new StatCollecter(config));
 
             return (result);
