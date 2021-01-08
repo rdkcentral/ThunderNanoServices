@@ -14,24 +14,21 @@ namespace WPEFramework
       private:
          class Config : public Core::JSON::Container
          {
-
          public:
             Config &operator=(const Config &) = delete;
 
             Config()
-                : Core::JSON::Container(), Path(), Interval(), Mode(), ParentName()
+                : Core::JSON::Container(), Path(), Seperator(), Interval(), FilterName()
             {
-               Add(_T("path"), &Path);
+               Add(_T("csv_filepath"), &Path);
+               Add(_T("csv_sep"), &Seperator);
                Add(_T("interval"), &Interval);
-               Add(_T("parent-name"), &ParentName);
+               Add(_T("name"), &FilterName);
             }
 
             Config(const Config &copy)
-                : Core::JSON::Container(), Path(copy.Path), Interval(copy.Interval), Mode(copy.Mode), ParentName(copy.ParentName)
+                : Core::JSON::Container(), Path(copy.Path), Interval(copy.Interval), FilterName(copy.FilterName)
             {
-               Add(_T("path"), &Path);
-               Add(_T("interval"), &Interval);
-               Add(_T("parent-name"), &ParentName);
             }
 
             ~Config()
@@ -40,9 +37,9 @@ namespace WPEFramework
 
          public:
             Core::JSON::String Path;
+            Core::JSON::String Seperator;
             Core::JSON::DecUInt32 Interval;
-            Core::JSON::String Mode;
-            Core::JSON::String ParentName;
+            Core::JSON::String FilterName;
          };
 
          class StatCollecter
@@ -68,7 +65,7 @@ namespace WPEFramework
                _ourMap = new uint32_t[_bufferEntries];
                _otherMap = new uint32_t[_bufferEntries];
                _interval = config.Interval.Value();
-               _parentName = config.ParentName.Value();
+               _filterName = config.FilterName.Value();
 
                _activity.Submit();
             }
@@ -92,7 +89,7 @@ namespace WPEFramework
             void Collect()
             {
                std::list<Core::ProcessInfo> processes;
-               Core::ProcessInfo::FindByName(_parentName, false, processes);
+               Core::ProcessInfo::FindByName(_filterName, false, processes);
 
                StartLogLine(processes.size());
 
@@ -189,11 +186,11 @@ namespace WPEFramework
             FILE *_binFile;
             std::vector<string> _processNames; // Seen process names.
             Core::CriticalSection _namesLock;
-            uint32_t *_otherMap;     // Buffer used to mark other processes pages.
-            uint32_t *_ourMap;       // Buffer for pages used by our process (tree).
-            uint32_t _bufferEntries; // Numer of entries in each buffer.
-            uint32_t _interval;      // Seconds between measurement.
-            string _parentName;      // Process/plugin name we are looking for.
+            uint32_t *_otherMap;               // Buffer used to mark other processes pages.
+            uint32_t *_ourMap;                 // Buffer for pages used by our process (tree).
+            uint32_t _bufferEntries;           // Numer of entries in each buffer.
+            uint32_t _interval;                // Seconds between measurement.
+            string _filterName; // Process/plugin name we are looking for.
             Core::WorkerPool::JobType<StatCollecter &> _activity;
 
             friend Core::ThreadPool::JobType<StatCollecter &>;
