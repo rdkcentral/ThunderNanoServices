@@ -12,6 +12,62 @@ namespace WPEFramework
       class ResourceMonitorImplementation : public Exchange::IResourceMonitor
       {
       private:
+         class CSVFile
+         {
+         public:
+            CSVFile(string filepath, string seperator)
+                : _file(filepath, false), _seperator()
+            {
+               _seperator = seperator.empty() ? ';' : seperator[0];
+               _file.Create();
+               if (!_file.IsOpen())
+               {
+                  TRACE(Trace::Error, (_T("Could not open file <%s>. Full resource monitoring unavailable."), filepath));
+               }
+            }
+
+            ~CSVFile()
+            {
+               if (_file.IsOpen())
+               {
+                  _file.Close();
+               }
+            }
+
+            void Store()
+            {
+               if (_file.IsOpen())
+               {
+                  std::string output = _stringstream.str();
+                  _file.Write(reinterpret_cast<const uint8_t *>(output.c_str()), output.length());
+               }
+               _stringstream.clear();
+            }
+
+            template <typename ... Args>
+            void Append(Args ... args) 
+            {
+               Append(_stringstream, args ...);
+            }
+
+         private:
+            template <typename FIRST, typename ... Args>
+            void Append(std::stringstream& ss, const FIRST& first, Args ... rest)
+            {
+               ss << first << _seperator;
+               Append(ss, rest ...);
+            }
+
+            void Append(std::stringstream& ss)
+            {
+               ss << std::endl;
+            }
+            
+            Core::File _file;
+            std::stringstream _stringstream;
+            char _seperator;
+         };
+
          class Config : public Core::JSON::Container
          {
          public:
@@ -46,10 +102,14 @@ namespace WPEFramework
          {
          public:
             explicit StatCollecter(const Config &config)
-                : _binFile(nullptr), _otherMap(nullptr), _ourMap(nullptr), _bufferEntries(0), _interval(0), _activity(*this)
+                : _logfile(config.Path.Value(), config.Seperator.Value())
+                , _otherMap(nullptr)
+                , _ourMap(nullptr)
+                , _bufferEntries(0)
+                , _interval(0)
+                , _activity(*this)
             {
-               _binFile = fopen(config.Path.Value().c_str(), "w");
-
+               _logfile.Append("Time[s]", "Name", "VSS", "USS", "Jiffies", "TotalJiffies");
                uint32_t pageCount = Core::SystemInfo::Instance().GetPhysicalPageCount();
                const uint32_t bitPersUint32 = 32;
                _bufferEntries = pageCount / bitPersUint32;
@@ -72,8 +132,6 @@ namespace WPEFramework
 
             ~StatCollecter()
             {
-               fclose(_binFile);
-
                delete[] _ourMap;
                delete[] _otherMap;
             }
@@ -90,8 +148,6 @@ namespace WPEFramework
             {
                std::list<Core::ProcessInfo> processes;
                Core::ProcessInfo::FindByName(_filterName, false, processes);
-
-               StartLogLine(processes.size());
 
                for (const Core::ProcessInfo &processInfo : processes)
                {
@@ -159,31 +215,17 @@ namespace WPEFramework
 
             void LogProcess(const string &name, const Core::ProcessInfo &info)
             {
+               auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
                uint32_t vss = CountSetBits(_ourMap, nullptr);
                uint32_t uss = CountSetBits(_ourMap, _otherMap);
                uint64_t jiffies = info.Jiffies();
+               uint64_t totalJiffies = Core::SystemInfo::Instance().GetJiffies();
 
-               uint32_t nameSize = name.length();
-               fwrite(&nameSize, sizeof(nameSize), 1, _binFile);
-               fwrite(name.c_str(), sizeof(name[0]), name.length(), _binFile);
-               fwrite(&vss, 1, sizeof(vss), _binFile);
-               fwrite(&uss, 1, sizeof(uss), _binFile);
-               fwrite(&jiffies, 1, sizeof(jiffies), _binFile);
-               fflush(_binFile);
+               _logfile.Append(timestamp, name, vss, uss, jiffies, totalJiffies);
+               _logfile.Store();
             }
 
-            void StartLogLine(uint32_t processCount)
-            {
-               // TODO: no simple time_t alike in Thunder?
-               uint32_t timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
-               uint64_t jiffies = Core::SystemInfo::Instance().GetJiffies();
-
-               fwrite(&timestamp, 1, sizeof(timestamp), _binFile);
-               fwrite(&processCount, 1, sizeof(processCount), _binFile);
-               fwrite(&jiffies, 1, sizeof(jiffies), _binFile);
-            }
-
-            FILE *_binFile;
+            CSVFile _logfile;
             std::vector<string> _processNames; // Seen process names.
             Core::CriticalSection _namesLock;
             uint32_t *_otherMap;               // Buffer used to mark other processes pages.
