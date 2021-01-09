@@ -296,6 +296,7 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         void Register(ICatalog::INotification* sink) override;
         void Unregister(ICatalog::INotification* sink) override;
+        Exchange::IExternal* Resource(const uint32_t id) override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
