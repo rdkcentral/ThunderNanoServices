@@ -53,23 +53,24 @@ namespace WPEFramework
                _stringstream.str("");
             }
 
-            template <typename ... Args>
-            void Append(Args ... args) 
+            template <typename FIRST, typename ... Args>
+            void Append(const FIRST& first, Args ... rest) 
             {
-               Append(_stringstream, args ...);
+               _stringstream << first;
+               Append(true, rest ...);
             }
 
          private:
             template <typename FIRST, typename ... Args>
-            void Append(std::stringstream& ss, const FIRST& first, Args ... rest)
+            void Append(bool dummy, const FIRST& first, Args ... rest)
             {
-               ss << first << _seperator;
-               Append(ss, rest ...);
+               _stringstream << _seperator << first;
+               Append(dummy, rest ...);
             }
 
-            void Append(std::stringstream& ss)
+            void Append(bool dummy)
             {
-               ss << std::endl;
+               _stringstream << std::endl;
             }
             
             Core::File _file;
@@ -141,6 +142,8 @@ namespace WPEFramework
 
             ~StatCollecter()
             {
+               _activity.Revoke();
+
                delete[] _ourMap;
                delete[] _otherMap;
             }
