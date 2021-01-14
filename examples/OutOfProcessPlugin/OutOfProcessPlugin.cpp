@@ -51,13 +51,14 @@ namespace Plugin {
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
         _service->EnableWebServer(_T("UI"), EMPTY_STRING);
         _service->Register(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
-
+        _service->Register(static_cast<PluginHost::IPlugin::INotification*>(_notification));
         config.FromString(_service->ConfigLine());
 
         _browser = service->Root<Exchange::IBrowser>(_connectionId, Core::infinite, _T("OutOfProcessImplementation"));
 
         if (_browser == nullptr) {
             _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
+            _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(_notification));
             _service = nullptr;
 
             ConnectionTermination(_connectionId);
@@ -69,9 +70,10 @@ namespace Plugin {
 
             if (stateControl != nullptr) {
 
-                stateControl->Configure(_service);
-                stateControl->Register(_notification);
-                stateControl->Release();
+                _state = stateControl;
+
+                _state->Configure(_service);
+                _state->Register(_notification);
 
                 PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
 
@@ -102,6 +104,7 @@ namespace Plugin {
 
         _service->DisableWebServer();
         _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
+        _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(_notification));
         _browser->Unregister(_notification);
         _memory->Release();
 
@@ -112,13 +115,11 @@ namespace Plugin {
             sink->Release();
         }
 
-        PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
-
-        if (stateControl != nullptr) {
+        if (_state != nullptr) {
 
             // No longer a need for the notfications..
-            stateControl->Unregister(_notification);
-            stateControl->Release();
+            _state->Unregister(_notification);
+            _state->Release();
         }
 
         // Stop processing of the browser:
@@ -131,6 +132,49 @@ namespace Plugin {
         _memory = nullptr;
         _browser = nullptr;
         _service = nullptr;
+    }
+
+       /* static */ const char* OutOfProcessPlugin::PluginStateStr(const PluginHost::IShell::state state)
+    {
+        switch (state) {
+        case PluginHost::IShell::DEACTIVATED:
+            return "DEACTIVATED";
+        case PluginHost::IShell::DEACTIVATION:
+            return "DEACTIVATION";
+        case PluginHost::IShell::ACTIVATED:
+            return "ACTIVATED";
+        case PluginHost::IShell::ACTIVATION:
+            return "ACTIVATION";
+        case PluginHost::IShell::PRECONDITION:
+            return "PRECONDITION";
+        case PluginHost::IShell::DESTROYED:
+            return "DESTROYED";
+        default:
+            break;
+        }
+
+        return "### UNKNOWN ###";
+    }
+
+    void OutOfProcessPlugin::PluginStateChanged(PluginHost::IShell* plugin)
+    {
+        ASSERT(plugin != nullptr);
+
+        const string callsign = plugin->Callsign();
+        const PluginHost::IShell::state state = plugin->State();
+        const char* stateStr = PluginStateStr(state);
+
+        TRACE(Trace::Information, (_T("OutOfProcessPlugin::PluginStateChanged: Got [%s] plugin [%s] event..."), callsign.c_str(), stateStr));
+
+        if ((callsign == "OutOfProcessPlugin") && (state == PluginHost::IShell::DEACTIVATION)) {
+            if(_state != nullptr) {
+                TRACE(Trace::Information, (_T("OutOfProcessPlugin::PluginStateChanged: Doing RPC call with IShell * ptr...")));
+                _state->Configure(plugin); //note this indeed does not make sense but is used to trigger an IShell* call to the OOP side to reproduce an issue there
+                TRACE(Trace::Information, (_T("OutOfProcessPlugin::PluginStateChanged: Doing RPC call with IShell * ptr...DONE")));
+            }
+        }
+
+        TRACE(Trace::Information, (_T("OutOfProcessPlugin::PluginStateChanged: Got [%s] plugin [%s] event...DONE"), callsign.c_str(), stateStr));
     }
 
     /* virtual */ string OutOfProcessPlugin::Information() const
