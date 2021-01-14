@@ -34,7 +34,8 @@ namespace Plugin {
 
         class Notification : public Exchange::IBrowser::INotification,
                              public PluginHost::IStateControl::INotification,
-                             public RPC::IRemoteConnection::INotification {
+                             public RPC::IRemoteConnection::INotification,
+                             public PluginHost::IPlugin::INotification {
         private:
             Notification();
             Notification(const Notification&);
@@ -82,10 +83,16 @@ namespace Plugin {
             {
             }
 
+            void StateChange(PluginHost::IShell* plugin) override
+            {
+                _parent.PluginStateChanged(plugin);
+            }
+
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(Exchange::IBrowser::INotification)
             INTERFACE_ENTRY(PluginHost::IStateControl::INotification)
             INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+            INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -168,7 +175,7 @@ namespace Plugin {
             , _browser(nullptr)
             , _memory(nullptr)
             , _notification(Core::Service<Notification>::Create<Notification>(this))
-            , _state(PluginHost::IStateControl::UNINITIALIZED)
+            , _state(nullptr)
             , _subscriber(nullptr)
             , _hidden(false)
         {
@@ -232,6 +239,9 @@ namespace Plugin {
         void ConnectionTermination(uint32_t connection);
         void Deactivated(RPC::IRemoteConnection* connection);
 
+        static const char* PluginStateStr(const PluginHost::IShell::state state);
+        void PluginStateChanged(PluginHost::IShell* plugin);
+
     private:
         Core::CriticalSection _adminLock;
         uint8_t _skipURL;
@@ -241,7 +251,7 @@ namespace Plugin {
         Exchange::IBrowser* _browser;
         Exchange::IMemory* _memory;
         Notification* _notification;
-        PluginHost::IStateControl::state _state;
+        PluginHost::IStateControl* _state;
         PluginHost::Channel* _subscriber;
         bool _hidden;
     };
