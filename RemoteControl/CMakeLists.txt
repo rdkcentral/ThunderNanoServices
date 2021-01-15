@@ -61,20 +61,18 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
             target_sources(${MODULE_NAME}
                 PRIVATE
                     ${REMOTECONTROL_IMPLEMENTATION_PATH}/IRRemote.cpp)
-        elseif (CODE_FROM_EXTERNAL_REPOSITORY)
+        else()
             include(GetExternalCode)
+            set(REMOTECONTROL_IMPLEMENTATION_VERSION "master" CACHE STRING "RemoteControl implementation version")
+            set(REMOTECONTROL_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/RemoteControl" CACHE STRING "RemoteControl implementation repository")
             GetExternalCode(
-                GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/RemoteControl"
-                GIT_TAG "master"
-                SOURCE_DIR "NexusExt"
+                GIT_REPOSITORY ${REMOTECONTROL_IMPLEMENTATION_REPOSITORY}
+                GIT_TAG ${REMOTECONTROL_IMPLEMENTATION_VERSION}
+                SOURCE_DIR "Nexus"
             )
             target_sources(${MODULE_NAME}
                 PRIVATE
-                    NexusExt/IRRemote.cpp)
-        else()
-            target_sources(${MODULE_NAME}
-                PRIVATE
-                    IRRemote.cpp)
+                    Nexus/IRRemote.cpp)
         endif()
         target_link_libraries(${MODULE_NAME} 
             PRIVATE 
