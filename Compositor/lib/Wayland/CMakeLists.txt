@@ -22,16 +22,16 @@ message("Setup ${TARGET} v${VERSION}...")
 if (PLUGIN_COMPOSITOR_NXSERVER)
 if (COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH)
     add_subdirectory (${COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH})
-elseif (CODE_FROM_EXTERNAL_REPOSITORY)
-    include(GetExternalCode)
-    GetExternalCode(
-        GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor"
-        GIT_TAG "master"
-        SOURCE_DIR "NexusExt"
-    )
-    add_subdirectory (NexusExt/NexusServer)
 else()
-    add_subdirectory (NexusServer)
+    include(GetExternalCode)
+    set(COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION "master" CACHE STRING "Compositor wayland implementation version")
+    set(COMPOSITOR_WAYLAND_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor" CACHE STRING "Compositor wayland implementation repository")
+    GetExternalCode(
+        GIT_REPOSITORY ${COMPOSITOR_WAYLAND_IMPLEMENTATION_REPOSITORY}
+        GIT_TAG ${COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION}
+        SOURCE_DIR "Nexus"
+    )
+    add_subdirectory (Nexus/NexusServer)
 endif()
 endif ()
 
