@@ -132,7 +132,7 @@ namespace Plugin {
                 , Port(8888)
                 , Binding(_T("0.0.0.0"))
                 , Interface()
-                , Path(_T("www"))
+                , Path()
                 , IdleTime(180)
             {
                 Add(_T("port"), &Port);
@@ -546,10 +546,14 @@ namespace Plugin {
                 Core::NodeId listenNode(configuration.Binding.Value().c_str());
                 Core::JSON::ArrayType<Config::Proxy>::ConstIterator index(configuration.Proxies.Elements());
 
-                if (configuration.Path.Value()[0] == '/') {
-                    _prefixPath = Core::Directory::Normalize(configuration.Path.Value());
+                if( configuration.Path.IsSet() == true ) {
+                    if (configuration.Path.Value()[0] == '/') {
+                        _prefixPath = Core::Directory::Normalize(configuration.Path.Value());
+                    } else {
+                        _prefixPath = prefixPath + Core::Directory::Normalize(configuration.Path.Value());
+                    }
                 } else {
-                    _prefixPath = prefixPath + Core::Directory::Normalize(configuration.Path.Value());
+                    _prefixPath.clear();
                 }
 
                 _proxyMap.Create(index);
@@ -629,7 +633,10 @@ namespace Plugin {
             {
                 _proxyMap.RemoveProxy(path);
             }
-
+            inline bool IsFileServerEnabled()
+            {
+                return (_prefixPath.empty() == false);
+            }
         private:
             uint64_t Timed(const uint64_t scheduledTime)
             {
@@ -767,24 +774,29 @@ namespace Plugin {
             Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
             Core::ProxyType<Web::FileBody> fileBody(PluginHost::IFactories::Instance().FileBody());
 
-            // If so, don't deal with it ourselves.
-            Web::MIMETypes result;
-            string fileToService = _parent.PrefixPath();
+            if( _parent.IsFileServerEnabled() == true ) {
 
-            if (Web::MIMETypeForFile(request->Path, fileToService, result) == false) {
+                // If so, don't deal with it ourselves.
+                Web::MIMETypes result;
+                string fileToService = _parent.PrefixPath();
 
-                string fullPath = fileToService + _T("index.html");
+                if (Web::MIMETypeForFile(request->Path, fileToService, result) == false) {
+                    string fullPath = fileToService + _T("index.html");
 
-                // No filename gives, be default, we go for the index.html page..
-                *fileBody = fileToService + _T("index.html");
-                response->ContentType = Web::MIME_HTML;
-                response->Body<Web::FileBody>(fileBody);
+                    // No filename gives, be default, we go for the index.html page..
+                    *fileBody = fileToService + _T("index.html");
+                    response->ContentType = Web::MIME_HTML;
+                    response->Body<Web::FileBody>(fileBody);
+                } else {
+                    *fileBody = fileToService;
+                    response->ContentType = result;
+                    response->Body<Web::FileBody>(fileBody);
+                }
+                Submit(response);
             } else {
-                *fileBody = fileToService;
-                response->ContentType = result;
-                response->Body<Web::FileBody>(fileBody);
+                response->ErrorCode = Web::STATUS_BAD_REQUEST;
+                response->Message = "Invalid Request";
             }
-            Submit(response);
         }
     }
 

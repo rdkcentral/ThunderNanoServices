@@ -19,8 +19,8 @@
  
 #include "Module.h"
 #include "OutOfProcessPlugin.h"
-
 #include <interfaces/ITimeSync.h>
+
 
 namespace WPEFramework {
 namespace Plugin {
@@ -174,6 +174,50 @@ namespace Plugin {
         OutOfProcessImplementation(const OutOfProcessImplementation&) = delete;
         OutOfProcessImplementation& operator=(const OutOfProcessImplementation&) = delete;
 
+        // note: ExternalAccess not actualy meant to be used (connections to be made to), InvokeServer needed to trigger testing use cases where it is present
+        class ExternalAccess : public RPC::Communicator {
+        private:
+            ExternalAccess() = delete;
+            ExternalAccess(const ExternalAccess&) = delete;
+            ExternalAccess& operator=(const ExternalAccess&) = delete;
+
+        public:
+            ExternalAccess(
+                const Core::NodeId& source,
+                Exchange::IBrowser* parentInterface,
+                const string& proxyStubPath,
+                const Core::ProxyType<RPC::InvokeServer> & engine)
+                : RPC::Communicator(source, proxyStubPath, Core::ProxyType<Core::IIPCServer>(engine))
+                , _parentInterface(parentInterface)
+            {
+                engine->Announcements(Announcement());
+                Open(Core::infinite);
+            }
+            ~ExternalAccess()
+            {
+                Close(Core::infinite);
+            }
+
+        private:
+            virtual void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId)
+            {
+                void* result = nullptr;
+
+                // Currently we only support version 1 of the IRPCLink :-)
+                if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) && ((interfaceId == Exchange::IBrowser::ID) || (interfaceId == Core::IUnknown::ID))) {
+                    // Reference count our parent
+                    _parentInterface->AddRef();
+                    TRACE(Trace::Information, ("Browser interface aquired => %p", this));
+                    // Allright, respond with the interface.
+                    result = _parentInterface;
+                }
+                return (result);
+            }
+
+        private:
+            Exchange::IBrowser* _parentInterface;
+        };
+
         #ifdef __WINDOWS__
         #pragma warning(disable : 4355)
         #endif
@@ -185,6 +229,9 @@ namespace Plugin {
             , _hidden(false)
             , _executor(1, 0, 4)
             , _sink(*this)
+            , _service(nullptr)
+            , _engine()
+            , _externalAccess(nullptr)
         {
             TRACE(Trace::Information, (_T("---------------- Constructing the OutOfProcessImplementation ----------------------")));
             TRACE(Trace::Information, (_T("Constructed the OutOfProcessImplementation")));
@@ -201,6 +248,19 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("Bailed out before the thread signalled completion. %d ms"), _config.Destruct.Value()));
 
             TRACE(Trace::Information, (_T("---------------- Destructed the OutOfProcessImplementation -----------------------")));
+
+        if (_externalAccess != nullptr) {
+
+            TRACE(Trace::Information, (_T("OutOfProcessImplementation::Destructor() : delete instance")));
+            delete _externalAccess;
+            _engine.Release();
+        }
+
+            if (_service) {
+                TRACE(Trace::Information, (_T("OutOfProcessImplementation::DTor: Release service")));
+                _service->Release();
+              _service = nullptr;
+            }
         }
 
     public:
@@ -211,9 +271,41 @@ namespace Plugin {
         }
         uint32_t Configure(PluginHost::IShell* service) override
         {
+                   uint32_t result = Core::ERROR_NONE;
+
             TRACE(Trace::Information, (_T("Configuring: [%s]"), service->Callsign().c_str()));
 
-            _dataPath = service->DataPath();
+        TRACE(Trace::Information, (_T("OutOfProcessImplementation::Configure: Entry")));
+
+        if (_externalAccess != nullptr) {
+            TRACE(Trace::Information, (_T("OutOfProcessImplementation::Configure: Test Configure...")));
+            TRACE(Trace::Information, (_T("OutOfProcessImplementation::Configure: Test Configure...DONE")));
+            return result;
+        }
+
+        TRACE(Trace::Information, (_T("OutOfProcessImplementation::Configure: Normal Configure")));
+
+        _service = service;
+        if (_service) {
+            TRACE(Trace::Information, (_T("OutOfProcessImplementation::Configure: AddRef service")));
+            _service->AddRef();
+        }
+
+        _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
+        _externalAccess = new ExternalAccess(Core::NodeId("/tmp/oopexample"), this, service->ProxyStubPath(), _engine);
+
+        result = Core::ERROR_OPENING_FAILED;
+        if (_externalAccess != nullptr) {
+            if (_externalAccess->IsListening() == false) {
+                delete _externalAccess;
+                _externalAccess = nullptr;
+                _engine.Release();
+            } 
+        }
+
+        if(result == Core::ERROR_NONE) {
+
+           _dataPath = service->DataPath();
             _config.FromString(service->ConfigLine());
             _endTime = Core::Time::Now();
 
@@ -222,8 +314,8 @@ namespace Plugin {
                 _endTime.Add(_config.Init.Value());
             }
             Run();
-
-            return (Core::ERROR_NONE);
+          }
+            return (result);
         }
         string GetURL() const override
         {
@@ -439,6 +531,9 @@ namespace Plugin {
         PluginHost::IStateControl::state _state;
         Core::ThreadPool _executor;
         Core::Sink<PluginMonitor> _sink;
+        PluginHost::IShell* _service;
+        Core::ProxyType<RPC::InvokeServer> _engine;
+        ExternalAccess* _externalAccess;
     };
 
     SERVICE_REGISTRATION(OutOfProcessImplementation, 1, 0);
