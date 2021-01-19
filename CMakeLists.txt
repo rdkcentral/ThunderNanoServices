@@ -16,6 +16,8 @@
 # limitations under the License.
 
 cmake_minimum_required(VERSION 3.3)
+project(NanoServices)
+
 find_package(WPEFramework)
 
 # All packages that did not deliver a CMake Find script (and some deprecated scripts that need to be removed)
