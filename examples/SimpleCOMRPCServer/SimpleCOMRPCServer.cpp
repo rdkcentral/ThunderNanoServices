@@ -304,7 +304,7 @@ bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel, string& psPat
     int index = 1;
     bool showHelp = false;
     comChannel = Core::NodeId(Exchange::SimpleTestAddress);
-    psPath = _T(".");
+    psPath = _T("./PS");
 
     while ((index < argc) && (!showHelp)) {
         if (strcmp(argv[index], "-listen") == 0) {
@@ -337,7 +337,7 @@ int main(int argc, char* argv[])
     if (ParseOptions(argc, argv, comChannel, psPath) == true) {
         printf("Options:\n");
         printf("-listen <IP/FQDN>:<port> [default: %s]\n", Exchange::SimpleTestAddress);
-        printf("-path <Path to the location of the ProxyStubs> [default: .]\n");
+        printf("-path <Path to the location of the ProxyStubs> [default: ./PS]\n");
         printf("-h This text\n\n");
     }
     else
