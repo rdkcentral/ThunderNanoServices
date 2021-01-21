@@ -162,6 +162,7 @@ private:
     public:
         CobaltWindow()
             : Core::Thread(0, _T("Cobalt"))
+            , _language()
             , _url{"https://www.youtube.com/tv"}
             , _debugListenIp("0.0.0.0")
             , _debugPort()
@@ -250,6 +251,7 @@ private:
             if (config.Language.IsSet() == true) {
                 Core::SystemInfo::SetEnvironment(_T("LANG"), config.Language.Value().c_str());
                 Core::SystemInfo::SetEnvironment(_T("LANGUAGE"), config.Language.Value().c_str());
+                _language = config.Language.Value();
             }
 
             if ( (config.Connection.IsSet() == true) && (config.Connection == CobaltImplementation::connection::WIRELESS) ) {
@@ -261,7 +263,7 @@ private:
             }
 
             if (config.Url.IsSet() == true) {
-              _url = config.Url.Value();
+                _url = config.Url.Value();
             }
 
             if (config.Inspector.Value().empty() == false) {
@@ -289,6 +291,7 @@ private:
         }
 
         string Url() const { return _url; }
+        string Language() const { return _language; }
 
     private:
         uint32_t Initialize() override
@@ -314,6 +317,7 @@ private:
         }
 
         string _url;
+        string _language;
         string _debugListenIp;
         uint16_t _debugPort;
     };
@@ -324,6 +328,7 @@ private:
 
 public:
     CobaltImplementation() :
+            _language(),
             _adminLock(),
             _state(PluginHost::IStateControl::UNINITIALIZED),
             _cobaltClients(),
@@ -388,10 +393,41 @@ public:
         _adminLock.Unlock();
     }
 
-    virtual void Reset() { /*Not implemented yet!*/ }
+    uint32_t Reset(const resettype type) override {
+        return Core::ERROR_NOT_SUPPORTED;
+    }
 
-    virtual void DeepLink(const string& deepLink) {
-        third_party::starboard::wpe::shared::DeepLink(deepLink.c_str());
+    virtual uint32_t Identifier(string& id) const override {
+        return Core::ERROR_NOT_SUPPORTED;
+    }
+    uint32_t ContentLink(const string& link) override {
+        third_party::starboard::wpe::shared::DeepLink(link.c_str());
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t LaunchPoint(launchpointtype& point) const override {
+        return Core::ERROR_NOT_SUPPORTED;
+    }
+
+    uint32_t LaunchPoint(const launchpointtype&) override {
+        return Core::ERROR_NOT_SUPPORTED;
+    }
+
+    uint32_t Visible(bool& visiblity) const override {
+        return Core::ERROR_NOT_SUPPORTED;
+    }
+
+    uint32_t Visible(const bool& visiblity) override {
+        return Core::ERROR_NOT_SUPPORTED;
+    }
+
+    uint32_t Language(string& language) const override {
+        return Core::ERROR_NOT_SUPPORTED;
+    }
+
+    uint32_t Language(const string& language) override {
+        language = _window.Language();
+        return Core::ERROR_NONE;
     }
 
     virtual void Register(PluginHost::IStateControl::INotification *sink) {
@@ -549,6 +585,7 @@ private:
     }
 
 private:
+    string _language;
     CobaltWindow _window;
     mutable Core::CriticalSection _adminLock;
     PluginHost::IStateControl::state _state;

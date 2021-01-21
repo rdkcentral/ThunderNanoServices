@@ -193,16 +193,16 @@ uint32_t Cobalt::delete_dir(const string& path)
     return result;
 }
 
-// Property: deeplink - DeepLink loaded in the browser
+// Property: deeplink - ContentLink loaded in the browser
 // Return codes:
 //  - ERROR_NONE: Success
-//  - ERROR_INCORRECT_URL: Incorrect DeepLink given
+//  - ERROR_INCORRECT_URL: Incorrect ContentLink given
 uint32_t Cobalt::set_deeplink(const Core::JSON::String &param) /* Application */
 {
     ASSERT(_application != nullptr);
     uint32_t result = Core::ERROR_INCORRECT_URL;
     if (param.IsSet() && !param.Value().empty()) {
-        _application->DeepLink(param.Value());
+        _application->ContentLink(param.Value());
         result = Core::ERROR_NONE;
     }
     return result;
