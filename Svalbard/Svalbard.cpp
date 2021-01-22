@@ -24,7 +24,7 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(Svalbard, 1, 0);
 
-    /* virtual */ const string Svalbard::Initialize(PluginHost::IShell* service)
+    const string Svalbard::Initialize(PluginHost::IShell* service) /* override */ 
     {
         string message;
 
@@ -33,9 +33,7 @@ namespace Plugin {
         ASSERT(_connectionId == 0);
 
         _service = service;
-
         _service->Register(&_notification);
-
         _svalbard = _service->Root<Exchange::IConfiguration>(_connectionId, Core::infinite, _T("CryptographyImplementation"));
 
         if (_svalbard == nullptr) {
@@ -47,19 +45,20 @@ namespace Plugin {
         return message;
     }
 
-    /* virtual */ void Svalbard::Deinitialize(PluginHost::IShell* service)
+    void Svalbard::Deinitialize(PluginHost::IShell* service)  /* override */
     {
         ASSERT(_service == service);
 
-        if (_svalbard->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+        _svalbard->Release();
 
-            ASSERT(_connectionId != 0);
-
-            TRACE(Trace::Error, (_T("Svalbard is not properly destructed. %d"), _connectionId));
+        if (_connectionId != 0) {
 
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
             if (connection != nullptr) {
+
+                TRACE(Trace::Error, (_T("Svalbard is not properly destructed. %d"), _connectionId));
+
                 connection->Terminate();
                 connection->Release();
             }
@@ -69,7 +68,7 @@ namespace Plugin {
         _service = nullptr;
     }
 
-    /* virtual */ string Svalbard::Information() const
+    string Svalbard::Information() const /* override */
     {
         return string();
     }

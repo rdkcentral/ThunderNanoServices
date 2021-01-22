@@ -610,7 +610,7 @@ namespace Plugin {
             }
 
         private:
-            virtual bool Initialize()
+            bool Initialize() override
             {
                 script.init();
                 pxWindow::init(0, 0, _width, _height);
@@ -623,7 +623,7 @@ namespace Plugin {
                 sprintf(buffer, "Spark: %s", PX_SCENE_VERSION);
                 setTitle(buffer);
 
-                return true;
+                return (Core::ERROR_NONE);
             }
             virtual uint32_t Worker()
             {
