@@ -796,9 +796,9 @@ namespace Plugin {
                     }
                 }
             }
-            bool Initialize() override
+            uint32_t Initialize() override
             {
-                return (Security(BT_SECURITY_LOW));
+                return (Security(BT_SECURITY_LOW) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
             }
             void Operational() override
             {

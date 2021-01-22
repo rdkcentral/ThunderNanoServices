@@ -25,10 +25,6 @@ namespace WPEFramework {
 
 namespace Plugin {
     class CryptographyImplementation : virtual public Exchange::IConfiguration {
-    public:
-        CryptographyImplementation(const CryptographyImplementation&) = delete;
-        CryptographyImplementation& operator=(const CryptographyImplementation&) = delete;
-
     private:
         class ExternalAccess : public RPC::Communicator {
         public:
@@ -53,7 +49,7 @@ namespace Plugin {
             }
 
         private:
-            virtual void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId)
+            void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
             {
                 void* result = nullptr;
 
@@ -68,32 +64,50 @@ namespace Plugin {
         private:
             CryptographyImplementation& _parent;
         };
-
         class Config : public Core::JSON::Container {
-        private:
+        public:
             Config(const Config&) = delete;
             Config& operator=(const Config&) = delete;
 
-        public:
             Config()
                 : Core::JSON::Container()
                 , Connector(_T("/tmp/svalbard"))
             {
                 Add(_T("connector"), &Connector);
             }
-
-            ~Config()
-            {
-            }
+            ~Config() override = default;
 
         public:
             Core::JSON::String Connector;
         };
 
+    public:
+        CryptographyImplementation(const CryptographyImplementation&) = delete;
+        CryptographyImplementation& operator=(const CryptographyImplementation&) = delete;
+
+        CryptographyImplementation()
+            : _cryptography(nullptr)
+            , _rpcLink(nullptr)
+        {
+            TRACE(Trace::Information, (_T("Constructing CryptographyImplementation Service: %p"), this));
+        }
+        ~CryptographyImplementation() override
+        {
+            if (_rpcLink != nullptr) {
+                delete _rpcLink;
+            }
+
+            if (_cryptography != nullptr) {
+                _cryptography->Release();
+            }
+
+            TRACE(Trace::Information, (_T("Destructed CryptographyImplementation Service: %p"), this));
+        }
+
         /*********************************************************************************************
          * Exchange::IConfiguration
          *********************************************************************************************/
-        /* virtual */ uint32_t Configure(PluginHost::IShell* framework)
+        uint32_t Configure(PluginHost::IShell* framework) override
         {
             uint32_t result(Core::ERROR_NONE);
             Config config;
@@ -121,31 +135,10 @@ namespace Plugin {
             return result;
         }
 
-    public:
-        CryptographyImplementation()
-            : _cryptography(nullptr)
-            , _rpcLink(nullptr)
-        {
-            TRACE(Trace::Information, (_T("Constructing CryptographyImplementation Service: %p"), this));
-        }
-
-        virtual ~CryptographyImplementation()
-        {
-            if (_rpcLink != nullptr) {
-                delete _rpcLink;
-            }
-
-            if (_cryptography != nullptr) {
-                _cryptography->Release();
-            }
-
-            TRACE(Trace::Information, (_T("Destructed CryptographyImplementation Service: %p"), this));
-        }
-
     private:
         BEGIN_INTERFACE_MAP(CryptographyImplementation)
-        INTERFACE_ENTRY(Exchange::IConfiguration)
-        INTERFACE_AGGREGATE(Cryptography::ICryptography, _cryptography)
+            INTERFACE_ENTRY(Exchange::IConfiguration)
+            INTERFACE_AGGREGATE(Cryptography::ICryptography, _cryptography)
         END_INTERFACE_MAP
 
     private:
