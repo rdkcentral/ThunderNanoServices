@@ -245,6 +245,20 @@ namespace Plugin
 
     }
 
+    /* virtual */ Exchange::IExternal* IOConnector::Resource(const uint32_t id)
+    {
+        Exchange::IExternal* result = nullptr;
+
+        Pins::iterator index = _pins.find(id);
+
+        if (index != _pins.end()) {
+            result = index->second.Pin();
+            result->AddRef();
+        }
+
+        return (result);
+    }
+
     /* virtual */ void IOConnector::Deinitialize(PluginHost::IShell * service)
     {
         ASSERT(_service == service);
