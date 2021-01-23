@@ -179,7 +179,7 @@ namespace Plugin {
                                 TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
                             }
                             else {
-                                realClass->resume(r, status);
+                                realClass->resume(r, status);https://github.com/rdkcentral/Thunderhttps://github.com/rdkcentral/Thunder/pull/447/pull/447
                                 TRACE(Trace::Information, (_T("Resume requested. Success: %s"), status ? _T("true") : _T("false")));
                             }
                             _status = status;
@@ -548,7 +548,7 @@ namespace Plugin {
             virtual void onChar(uint32_t c) override
             {
                 ENTERSCENELOCK();
-                if (_view != nullptr) {
+                if (_view != nullptr) {https://github.com/rdkcentral/Thunder/pull/447
                     _view->onChar(c);
                 }
                 EXITSCENELOCK();
@@ -610,7 +610,7 @@ namespace Plugin {
             }
 
         private:
-            bool Initialize() override
+            uint32_t Initialize() override
             {
                 script.init();
                 pxWindow::init(0, 0, _width, _height);
