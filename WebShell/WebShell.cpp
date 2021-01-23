@@ -258,7 +258,7 @@ namespace Plugin {
         }
 
     private:
-        virtual uint32_t Initialize()
+        uint32_t Initialize() override
         {
             int err;
             sigset_t sigset;
