@@ -545,11 +545,11 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onChar(uint32_t c) override
+            virtual void onChar(uint32_t character) override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
-                    _view->onChar(c);
+                    _view->onChar(character);
                 }
                 EXITSCENELOCK();
             }
