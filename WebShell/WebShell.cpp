@@ -258,7 +258,7 @@ namespace Plugin {
         }
 
     private:
-        virtual bool Initialize()
+        uint32_t Initialize() override
         {
             int err;
             sigset_t sigset;
@@ -278,7 +278,7 @@ namespace Plugin {
             _signalFD = signalfd(-1, &sigset, 0);
             ASSERT(_signalFD != -1);
 
-            return (err == 0);
+            return (err == 0 ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
         }
 
         virtual uint32_t Worker()

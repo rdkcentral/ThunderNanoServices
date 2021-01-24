@@ -25,39 +25,29 @@
 
 namespace WPEFramework {
 namespace Plugin {
+
     class Svalbard : public PluginHost::IPlugin {
     private:
-        Svalbard(const Svalbard&) = delete;
-        Svalbard& operator=(const Svalbard&) = delete;
-
         class Notification : public RPC::IRemoteConnection::INotification {
-
-        private:
+        public:
             Notification() = delete;
             Notification(const Notification&) = delete;
             Notification& operator=(const Notification&) = delete;
 
-        public:
-            explicit Notification(Svalbard* parent)
-                : _parent(*parent)
-            {
-                ASSERT(parent != nullptr);
+            explicit Notification(Svalbard& parent)
+                : _parent(parent) {
             }
-            ~Notification()
-            {
-            }
+            ~Notification() override = default;
 
         public:
-            virtual void Activated(RPC::IRemoteConnection*)
-            {
+            void Activated(RPC::IRemoteConnection*) override {
             }
-            virtual void Deactivated(RPC::IRemoteConnection* connection)
-            {
+            virtual void Deactivated(RPC::IRemoteConnection* connection) override {
                 _parent.Deactivated(connection);
             }
 
             BEGIN_INTERFACE_MAP(Notification)
-            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+                INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -65,28 +55,33 @@ namespace Plugin {
         };
 
     public:
+        Svalbard(const Svalbard&) = delete;
+        Svalbard& operator=(const Svalbard&) = delete;
+
+        #ifdef __WINDOWS__
+        #pragma warning(disable: 4355)
+        #endif
         Svalbard()
             : _connectionId(0)
             , _service(nullptr)
             , _svalbard(nullptr)
-            , _notification(this)
-        {
+            , _notification(*this) {
         }
-
-        virtual ~Svalbard()
-        {
-        }
+        #ifdef __WINDOWS__
+        #pragma warning(default: 4355)
+        #endif
+        ~Svalbard() override = default;
 
         BEGIN_INTERFACE_MAP(Svalbard)
-        INTERFACE_ENTRY(PluginHost::IPlugin)
+            INTERFACE_ENTRY(PluginHost::IPlugin)
         END_INTERFACE_MAP
 
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service);
-        virtual void Deinitialize(PluginHost::IShell* service);
-        virtual string Information() const;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
     
     private:
         void Deactivated(RPC::IRemoteConnection* connection);
