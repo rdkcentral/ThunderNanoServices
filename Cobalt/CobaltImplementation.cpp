@@ -394,7 +394,30 @@ public:
     }
 
     uint32_t Reset(const resettype type) override {
-        return Core::ERROR_NOT_SUPPORTED;
+
+        uint32_t status = Core::ERROR_GENERAL;
+        switch (type) {
+        case FACTORY:
+            if (third_party::starboard::wpe::shared::Reset(third_party::starboard::wpe::shared::ResetType::kFactory) == true) {
+                status = Core::ERROR_NONE;
+            }
+            break;
+        case CACHE:
+            if (third_party::starboard::wpe::shared::Reset(third_party::starboard::wpe::shared::ResetType::kCache) == true) {
+                status = Core::ERROR_NONE;
+            }
+            break;
+        case CREDENTIALS:
+            if (third_party::starboard::wpe::shared::Reset(third_party::starboard::wpe::shared::ResetType::kCredentials) == true) {
+                status = Core::ERROR_NONE;
+            }
+            break;
+        default:
+            status = Core::ERROR_NOT_SUPPORTED;
+            break;
+        }
+
+        return status;
     }
 
     virtual uint32_t Identifier(string& id) const override {
@@ -422,12 +445,12 @@ public:
     }
 
     uint32_t Language(string& language) const override {
-        return Core::ERROR_NOT_SUPPORTED;
+        language = _window.Language();
+        return Core::ERROR_NONE;
     }
 
     uint32_t Language(const string& language) override {
-        language = _window.Language();
-        return Core::ERROR_NONE;
+        return Core::ERROR_NOT_SUPPORTED;
     }
 
     virtual void Register(PluginHost::IStateControl::INotification *sink) {
