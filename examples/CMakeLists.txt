@@ -17,12 +17,17 @@
 
 cmake_minimum_required(VERSION 3.3)
 
+option(EXAMPLE_COMRPCCLIENT"Include COMRPCClient example" OFF)
 option(PLUGIN_JSONRPC "Include JSONRPCExamplePlugin plugin" OFF)
 option(PLUGIN_TESTUTILITY "Include TestUtility plugin" OFF)
 option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
 option(PLUGIN_STATECONTROLLER "Include StateController plugin" OFF)
+
+if(EXAMPLE_COMRPCCLIENT)
+    add_subdirectory(COMRPCClient)
+endif()
 
 if(PLUGIN_TESTUTILITY)
     add_subdirectory(TestUtility)
