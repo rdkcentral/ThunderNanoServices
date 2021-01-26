@@ -51,10 +51,9 @@ namespace Plugin {
             ~PluginMonitor() override = default;
 
         public:
-            void StateChange(PluginHost::IShell* service) override
+            void StateChange(PluginHost::IShell* service, const string& ) override
             {
 				if (service->State() == PluginHost::Service::ACTIVATED) {
-                    string name(service->Callsign());
 
                     Exchange::ITimeSync* time = service->QueryInterface<Exchange::ITimeSync>();
 					if (time != nullptr) {
