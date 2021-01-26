@@ -84,19 +84,48 @@
 #include <interfaces/IDictionary.h>
 #include <iostream>
 
-namespace WPEFramework {
-    namespace RPC {
-        class InterfaceType {
-        private:
-            using Engine = InvokeServerType<2, 0, 8>;
 
+namespace WPEFramework {
+    namespace Core {
+        template<typename PROXYTYPE>
+        class SingletonProxyType {
+        private:
+            friend class SingletonType< SingletonProxyType<PROXYTYPE> >;
+            template <typename... Args>
+            SingletonProxyType(Args&&... args)
+                : _wrapped(ProxyType<PROXYTYPE>::Create(std::forward<Args>(args)...)) {
+            }
+
+        public:
+            SingletonProxyType(const SingletonProxyType<PROXYTYPE>&) = delete;
+            SingletonProxyType& operator= (const SingletonProxyType< PROXYTYPE>&) = delete;
+
+            template <typename... Args>
+            static ProxyType<PROXYTYPE> Instance() {
+                return (SingletonType< SingletonProxyType<PROXYTYPE> >::Instance()._wrapped);
+            }
+
+        private:
+            ProxyType<PROXYTYPE> _wrapped;
+        };
+    }
+    namespace RPC {
+
+        static Core::ProxyType<RPC::IIPCServer> DefaultInvokeServer() {
+            static Core::ProxyType< RPC::IIPCServer > instance = Core::ProxyType<RPC::IIPCServer>(Core::SingletonProxyType< RPC::InvokeServerType< 1, 0, 8> >::Instance());
+            return (instance);
+        };
+
+        template <Core::ProxyType<RPC::IIPCServer> ENGINE() = DefaultInvokeServer>
+        class ConnectorType {
+        private:
             class Channel : public CommunicatorClient {
             public:
                 Channel() = delete;
                 Channel(const Channel&) = delete;
                 Channel& operator= (const Channel&) = delete;
 
-                Channel(const Core::NodeId& remoteNode, const Core::ProxyType<Engine>& handler)
+                Channel(const Core::NodeId& remoteNode, const Core::ProxyType<RPC::IIPCServer>& handler)
                     : CommunicatorClient(remoteNode, Core::ProxyType<Core::IIPCServer>(handler)) {
                     handler->Announcements(CommunicatorClient::Announcement());
                 }
@@ -109,29 +138,21 @@ namespace WPEFramework {
                 void Deintialize() {
                     CommunicatorClient::Close(Core::infinite);
                 }
-                template <typename INTERFACE>
-                INTERFACE* Aquire(const uint32_t waitTime, const string className, const uint32_t version)
-                {
-                    return CommunicatorClient::Aquire<INTERFACE>(waitTime, className, version);
-                }
             };
 
-            friend class Core::SingletonType<InterfaceType>;
-            InterfaceType()
-                : _engine(Core::ProxyType<Engine>::Create()) {
+        public:
+            ConnectorType(const ConnectorType<ENGINE>&) = delete;
+            ConnectorType<ENGINE>& operator= (const ConnectorType<ENGINE>&) = delete;
+
+            ConnectorType() : _comChannels() {
+                if (_engine.IsValid() == false) {
+                    _engine = ENGINE();
+                }
             }
+            ~ConnectorType() = default;
 
         public:
-            InterfaceType(const InterfaceType&) = delete;
-            InterfaceType& operator= (const InterfaceType&) = delete;
 
-            static InterfaceType& Instance() {
-                static InterfaceType& singleton(Core::SingletonType<InterfaceType>::Instance());
-                return (singleton);
-            }
-            ~InterfaceType() = default;
-
-        public:
             template <typename INTERFACE>
             INTERFACE* Aquire(const uint32_t waitTime, const Core::NodeId& nodeId, const string className, const uint32_t version = ~0) {
                 INTERFACE* result = nullptr;
@@ -146,28 +167,37 @@ namespace WPEFramework {
 
                 return (result);
             }
-            inline void Submit(const Core::ProxyType<Core::IDispatch>& job) {
+            RPC::IIPCServer& Engine() {
                 // The engine has to be running :-)
                 ASSERT(_engine.IsValid() == true);
 
-                _engine->Submit(job, Core::infinite);
+                return (*_engine);
             }
 
         private:
-            Core::ProxyType<Engine> _engine;
             Core::ProxyMapType<Core::NodeId, Channel> _comChannels;
+
+            static Core::ProxyType<RPC::IIPCServer> _engine;
         };
 
-        template<typename HANDLER>
+        template<Core::ProxyType<RPC::IIPCServer> ENGINE()>
+        EXTERNAL_HIDDEN typename Core::ProxyType<RPC::IIPCServer> ConnectorType<ENGINE>::_engine;
+
+        template<typename HANDLER, Core::ProxyType<RPC::IIPCServer> ENGINE() = DefaultInvokeServer>
         class PluginMonitorType {
         private:
+            enum state : uint8_t {
+                UNKNOWN,
+                DEACTIVATED,
+                ACTIVATED
+            };
             class Sink : public PluginHost::IPlugin::INotification {
             public:
                 Sink() = delete;
                 Sink(const Sink&) = delete;
                 Sink& operator= (const Sink&) = delete;
 
-                Sink(PluginMonitorType<HANDLER>& parent)
+                Sink(PluginMonitorType<HANDLER, ENGINE>& parent)
                     : _parent(parent) {
                 }
                 ~Sink() override = default;
@@ -186,7 +216,7 @@ namespace WPEFramework {
                 END_INTERFACE_MAP
 
             private:
-                PluginMonitorType<HANDLER>& _parent;
+                PluginMonitorType<HANDLER, ENGINE>& _parent;
             };
             class Job {
             public:
@@ -194,7 +224,7 @@ namespace WPEFramework {
                 Job(const Job&) = delete;
                 Job& operator= (const Job&) = delete;
 
-                Job(PluginMonitorType<HANDLER>& parent)
+                Job(PluginMonitorType<HANDLER, ENGINE>& parent)
                     : _parent(parent) {
                 }
                 ~Job() = default;
@@ -205,13 +235,13 @@ namespace WPEFramework {
                 }
 
             private:
-                PluginMonitorType<HANDLER>& _parent;
+                PluginMonitorType<HANDLER, ENGINE>& _parent;
             };
 
         public:
             PluginMonitorType() = delete;
-            PluginMonitorType(const PluginMonitorType<HANDLER>&) = delete;
-            PluginMonitorType<HANDLER>& operator= (const PluginMonitorType<HANDLER>&) = delete;
+            PluginMonitorType(const PluginMonitorType<HANDLER, ENGINE>&) = delete;
+            PluginMonitorType<HANDLER, ENGINE>& operator= (const PluginMonitorType<HANDLER, ENGINE>&) = delete;
 
             template <typename... Args>
             PluginMonitorType(Args&&... args)
@@ -222,10 +252,12 @@ namespace WPEFramework {
                 , _sink(*this)
                 , _job(*this)
                 , _controller(nullptr)
-                , _reportedActive(false)
-                , _administrator(InterfaceType::Instance()) {
+                , _state(UNKNOWN)
+                , _administrator() {
             }
-            ~PluginMonitorType() = default;
+            ~PluginMonitorType() {
+                Close(Core::infinite);
+            }
 
         public:
             uint32_t Open(const uint32_t waitTime, const Core::NodeId& node, const string& callsign) {
@@ -238,7 +270,7 @@ namespace WPEFramework {
                     _adminLock.Unlock();
                 }
                 else {
-                    _controller = _administrator.Aquire<PluginHost::IShell>(waitTime, node, _T(""), ~0);
+                    _controller = _administrator.Aquire< PluginHost::IShell>(waitTime, node, _T(""), ~0);
 
                     if (_controller == nullptr) {
                         _adminLock.Unlock();
@@ -250,6 +282,14 @@ namespace WPEFramework {
                         _adminLock.Unlock();
 
                         _controller->Register(&_sink);
+                        Dispatch();
+
+                        _adminLock.Lock();
+
+                        if (_state == state::UNKNOWN) {
+                            _state = state::DEACTIVATED;
+                        }
+                        _adminLock.Unlock();
                     }
                 }
 
@@ -259,11 +299,22 @@ namespace WPEFramework {
                 _adminLock.Lock();
                 if (_controller != nullptr) {
                     _controller->Unregister(&_sink);
+                    if (_state == state::ACTIVATED) {
+                        _reporter.Deactivated(nullptr);
+                    }
                     _controller->Release();
                     _controller = nullptr;
                 }
+                _state = state::UNKNOWN;
                 _adminLock.Unlock();
                 return (Core::ERROR_NONE);
+            }
+            template <typename INTERFACE>
+            INTERFACE* Aquire(const uint32_t waitTime, const Core::NodeId& nodeId, const string className, const uint32_t version = ~0) {
+                return (_administrator.Aquire< INTERFACE >(waitTime, nodeId, className, version));
+            }
+            inline void Submit(const Core::ProxyType<Core::IDispatch>& job) {
+                _administrator.Engine().Submit(job);
             }
 
         private:
@@ -280,12 +331,17 @@ namespace WPEFramework {
 
                     if (current == PluginHost::IShell::ACTIVATED) {
                         _reporter.Activated(evaluate);
-                        _reportedActive = true;
+                        _adminLock.Lock();
+                        _state = state::ACTIVATED;
+                        _adminLock.Unlock();
                     }
                     else if (current == PluginHost::IShell::DEACTIVATION) {
-                        if (_reportedActive == true) {
+                        if (_state == state::ACTIVATED) {
                             _reporter.Deactivated(evaluate);
                         }
+                        _adminLock.Lock();
+                        _state = state::DEACTIVATED;
+                        _adminLock.Unlock();
                     }
                     evaluate->Release();
                 }
@@ -297,9 +353,11 @@ namespace WPEFramework {
                     if (_designated == nullptr) {
                         _designated = plugin;
                         _designated->AddRef();
-                        Core::ProxyType<Core::IDispatch> job(_job.Aquire());
-                        if (job.IsValid() == true) {
-                            _administrator.Submit(job);
+                        if (_state != state::UNKNOWN) {
+                            Core::ProxyType<Core::IDispatch> job(_job.Aquire());
+                            if (job.IsValid() == true) {
+                                _administrator.Engine().Submit(job);
+                            }
                         }
                     }
                     
@@ -316,11 +374,11 @@ namespace WPEFramework {
             Core::ThreadPool::JobType<Job> _job;
             PluginHost::IShell* _designated;
             PluginHost::IShell* _controller;
-            bool _reportedActive;
-            InterfaceType& _administrator;
+            state _state;
+            ConnectorType<ENGINE> _administrator;
         };
 
-        template<typename INTERFACE> 
+        template<typename INTERFACE, Core::ProxyType<RPC::IIPCServer> ENGINE() = DefaultInvokeServer>
         class SmartInterfaceType {
         public:
             #ifdef __WINDOWS__
@@ -347,7 +405,6 @@ namespace WPEFramework {
                 return (_monitor.Open(waitTime, node, callsign));
             }
             uint32_t Close(const uint32_t waitTime) {
-                Deactivated(nullptr);
                 return (_monitor.Close(waitTime));
             }
 
@@ -381,7 +438,7 @@ namespace WPEFramework {
             }
 
         private:
-            friend class PluginMonitorType< SmartInterfaceType<INTERFACE>& >;
+            friend class PluginMonitorType< SmartInterfaceType<INTERFACE,ENGINE>&, ENGINE >;
             void Activated(PluginHost::IShell* plugin) {
                 ASSERT(plugin != nullptr);
                 _adminLock.Lock();
@@ -405,7 +462,7 @@ namespace WPEFramework {
 
         private:
             mutable Core::CriticalSection _adminLock;
-            PluginMonitorType< SmartInterfaceType<INTERFACE>& > _monitor;
+            PluginMonitorType< SmartInterfaceType<INTERFACE,ENGINE>&, ENGINE > _monitor;
             INTERFACE* _smartType;
         };
     }
@@ -413,9 +470,9 @@ namespace WPEFramework {
 
 namespace Thunder = WPEFramework;
 
-class Dictionary : public Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary> {
+class Dictionary : public Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary > {
 private:
-    using BaseClass = Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary>;
+    using BaseClass = Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary >;
 public:
     Dictionary(const uint32_t waitTime, const Thunder::Core::NodeId& node, const string& callsign)
         : BaseClass() {
@@ -549,7 +606,7 @@ int main(int argc, char* argv[])
         // chip.PCD_Init();
         do {
             keyPress = toupper(getchar());
-            \
+            
             switch (keyPress) {
             case 'O': {
                 printf("Operations state issue: %s\n", dictionary.IsOperational() ? _T("true") : _T("false"));
