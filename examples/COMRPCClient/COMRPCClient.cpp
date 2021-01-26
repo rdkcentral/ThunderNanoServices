@@ -86,7 +86,6 @@
 
 namespace WPEFramework {
     namespace RPC {
-        template <typename INTERFACE>
         class InterfaceType {
         private:
             using Engine = InvokeServerType<2, 0, 8>;
@@ -110,24 +109,30 @@ namespace WPEFramework {
                 void Deintialize() {
                     CommunicatorClient::Close(Core::infinite);
                 }
+                template <typename INTERFACE>
+                INTERFACE* Aquire(const uint32_t waitTime, const string className, const uint32_t version)
+                {
+                    return CommunicatorClient::Aquire<INTERFACE>(waitTime, className, version);
+                }
             };
 
-            friend class Core::SingletonType< InterfaceType<INTERFACE> >;
+            friend class Core::SingletonType<InterfaceType>;
             InterfaceType()
                 : _engine(Core::ProxyType<Engine>::Create()) {
             }
 
         public:
-            InterfaceType(const InterfaceType<INTERFACE>&) = delete;
-            InterfaceType<INTERFACE>& operator= (const InterfaceType<INTERFACE>&) = delete;
+            InterfaceType(const InterfaceType&) = delete;
+            InterfaceType& operator= (const InterfaceType&) = delete;
 
-            static InterfaceType<INTERFACE>& Instance() {
-                static InterfaceType<INTERFACE>& singleton(Core::SingletonType< InterfaceType<INTERFACE> >::Instance());
+            static InterfaceType& Instance() {
+                static InterfaceType& singleton(Core::SingletonType<InterfaceType>::Instance());
                 return (singleton);
             }
             ~InterfaceType() = default;
 
         public:
+            template <typename INTERFACE>
             INTERFACE* Aquire(const uint32_t waitTime, const Core::NodeId& nodeId, const string className, const uint32_t version = ~0) {
                 INTERFACE* result = nullptr;
 
@@ -218,7 +223,7 @@ namespace WPEFramework {
                 , _job(*this)
                 , _controller(nullptr)
                 , _reportedActive(false)
-                , _administrator(InterfaceType<PluginHost::IShell>::Instance()) {
+                , _administrator(InterfaceType::Instance()) {
             }
             ~PluginMonitorType() = default;
 
@@ -233,7 +238,7 @@ namespace WPEFramework {
                     _adminLock.Unlock();
                 }
                 else {
-                    _controller = _administrator.Aquire(waitTime, node, _T(""), ~0);
+                    _controller = _administrator.Aquire<PluginHost::IShell>(waitTime, node, _T(""), ~0);
 
                     if (_controller == nullptr) {
                         _adminLock.Unlock();
@@ -312,7 +317,7 @@ namespace WPEFramework {
             PluginHost::IShell* _designated;
             PluginHost::IShell* _controller;
             bool _reportedActive;
-            InterfaceType<PluginHost::IShell>& _administrator;
+            InterfaceType& _administrator;
         };
 
         template<typename INTERFACE> 
