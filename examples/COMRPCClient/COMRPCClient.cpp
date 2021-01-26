@@ -84,7 +84,371 @@
 #include <interfaces/IDictionary.h>
 #include <iostream>
 
+namespace WPEFramework {
+    namespace RPC {
+        template <typename INTERFACE>
+        class InterfaceType {
+        private:
+            using Engine = InvokeServerType<2, 0, 8>;
+
+            class Channel : public CommunicatorClient {
+            public:
+                Channel() = delete;
+                Channel(const Channel&) = delete;
+                Channel& operator= (const Channel&) = delete;
+
+                Channel(const Core::NodeId& remoteNode, const Core::ProxyType<Engine>& handler)
+                    : CommunicatorClient(remoteNode, Core::ProxyType<Core::IIPCServer>(handler)) {
+                    handler->Announcements(CommunicatorClient::Announcement());
+                }
+                ~Channel() override = default;
+
+            public:
+                uint32_t Initialize() {
+                    return (CommunicatorClient::Open(Core::infinite));
+                }
+                void Deintialize() {
+                    CommunicatorClient::Close(Core::infinite);
+                }
+            };
+
+            friend class Core::SingletonType< InterfaceType<INTERFACE> >;
+            InterfaceType()
+                : _engine(Core::ProxyType<Engine>::Create()) {
+            }
+
+        public:
+            InterfaceType(const InterfaceType<INTERFACE>&) = delete;
+            InterfaceType<INTERFACE>& operator= (const InterfaceType<INTERFACE>&) = delete;
+
+            static InterfaceType<INTERFACE>& Instance() {
+                static InterfaceType<INTERFACE>& singleton(Core::SingletonType< InterfaceType<INTERFACE> >::Instance());
+                return (singleton);
+            }
+            ~InterfaceType() = default;
+
+        public:
+            INTERFACE* Aquire(const uint32_t waitTime, const Core::NodeId& nodeId, const string className, const uint32_t version = ~0) {
+                INTERFACE* result = nullptr;
+
+                ASSERT(_engine.IsValid() == true);
+
+                Core::ProxyType<Channel> channel = _comChannels.Instance(nodeId, _engine);
+
+                if (channel.IsValid() == true) {
+                    result = channel->Aquire<INTERFACE>(waitTime, className, version);
+                }
+
+                return (result);
+            }
+            inline void Submit(const Core::ProxyType<Core::IDispatch>& job) {
+                // The engine has to be running :-)
+                ASSERT(_engine.IsValid() == true);
+
+                _engine->Submit(job, Core::infinite);
+            }
+
+        private:
+            Core::ProxyType<Engine> _engine;
+            Core::ProxyMapType<Core::NodeId, Channel> _comChannels;
+        };
+
+        template<typename HANDLER>
+        class PluginMonitorType {
+        private:
+            class Sink : public PluginHost::IPlugin::INotification {
+            public:
+                Sink() = delete;
+                Sink(const Sink&) = delete;
+                Sink& operator= (const Sink&) = delete;
+
+                Sink(PluginMonitorType<HANDLER>& parent)
+                    : _parent(parent) {
+                }
+                ~Sink() override = default;
+
+            public:
+                void StateChange(PluginHost::IShell* plugin, const string& name) override
+                {
+                    _parent.StateChange(plugin, name);
+                }
+                void Dispatch() {
+                    _parent.Dispatch();
+                }
+
+                BEGIN_INTERFACE_MAP(Sink)
+                    INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
+                END_INTERFACE_MAP
+
+            private:
+                PluginMonitorType<HANDLER>& _parent;
+            };
+            class Job {
+            public:
+                Job() = delete;
+                Job(const Job&) = delete;
+                Job& operator= (const Job&) = delete;
+
+                Job(PluginMonitorType<HANDLER>& parent)
+                    : _parent(parent) {
+                }
+                ~Job() = default;
+
+            public:
+                void Dispatch() {
+                    _parent.Dispatch();
+                }
+
+            private:
+                PluginMonitorType<HANDLER>& _parent;
+            };
+
+        public:
+            PluginMonitorType() = delete;
+            PluginMonitorType(const PluginMonitorType<HANDLER>&) = delete;
+            PluginMonitorType<HANDLER>& operator= (const PluginMonitorType<HANDLER>&) = delete;
+
+            template <typename... Args>
+            PluginMonitorType(Args&&... args)
+                : _adminLock()
+                , _reporter(std::forward<Args>(args)...)
+                , _callsign()
+                , _node()
+                , _sink(*this)
+                , _job(*this)
+                , _controller(nullptr)
+                , _reportedActive(false)
+                , _administrator(InterfaceType<PluginHost::IShell>::Instance()) {
+            }
+            ~PluginMonitorType() = default;
+
+        public:
+            uint32_t Open(const uint32_t waitTime, const Core::NodeId& node, const string& callsign) {
+
+                _adminLock.Lock();
+
+                ASSERT(_controller == nullptr);
+
+                if (_controller != nullptr) {
+                    _adminLock.Unlock();
+                }
+                else {
+                    _controller = _administrator.Aquire(waitTime, node, _T(""), ~0);
+
+                    if (_controller == nullptr) {
+                        _adminLock.Unlock();
+                    }
+                    else {
+                        _node = node;
+                        _callsign = callsign;
+
+                        _adminLock.Unlock();
+
+                        _controller->Register(&_sink);
+                    }
+                }
+
+                return (_controller != nullptr ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
+            }
+            uint32_t Close(const uint32_t waitTime) {
+                _adminLock.Lock();
+                if (_controller != nullptr) {
+                    _controller->Unregister(&_sink);
+                    _controller->Release();
+                    _controller = nullptr;
+                }
+                _adminLock.Unlock();
+                return (Core::ERROR_NONE);
+            }
+
+        private:
+            void Dispatch() {
+
+                _adminLock.Lock();
+                PluginHost::IShell* evaluate = _designated;
+                _designated = nullptr;
+                _adminLock.Unlock();
+
+                if (evaluate != nullptr) {
+
+                    PluginHost::IShell::state current = evaluate->State();
+
+                    if (current == PluginHost::IShell::ACTIVATED) {
+                        _reporter.Activated(evaluate);
+                        _reportedActive = true;
+                    }
+                    else if (current == PluginHost::IShell::DEACTIVATION) {
+                        if (_reportedActive == true) {
+                            _reporter.Deactivated(evaluate);
+                        }
+                    }
+                    evaluate->Release();
+                }
+            }
+            void StateChange(PluginHost::IShell* plugin, const string& callsign) {
+                if (callsign == _callsign) {
+                    _adminLock.Lock();
+
+                    if (_designated == nullptr) {
+                        _designated = plugin;
+                        _designated->AddRef();
+                        Core::ProxyType<Core::IDispatch> job(_job.Aquire());
+                        if (job.IsValid() == true) {
+                            _administrator.Submit(job);
+                        }
+                    }
+                    
+                    _adminLock.Unlock();
+                }
+            }
+
+        private:
+            Core::CriticalSection _adminLock;
+            HANDLER _reporter;
+            string _callsign;
+            Core::NodeId _node;
+            Core::Sink<Sink> _sink;
+            Core::ThreadPool::JobType<Job> _job;
+            PluginHost::IShell* _designated;
+            PluginHost::IShell* _controller;
+            bool _reportedActive;
+            InterfaceType<PluginHost::IShell>& _administrator;
+        };
+
+        template<typename INTERFACE> 
+        class SmartInterfaceType {
+        public:
+            #ifdef __WINDOWS__
+            #pragma warning(disable: 4355)
+            #endif
+            SmartInterfaceType()
+                : _adminLock()
+                , _monitor(*this)
+                , _smartType(nullptr) {
+            }
+            #ifdef __WINDOWS__
+            #pragma warning(default: 4355)
+            #endif
+
+            virtual ~SmartInterfaceType() {
+                Close(Core::infinite);
+            }
+
+        public:
+            inline bool IsOperational() const {
+                return (_smartType != nullptr);
+            }
+            uint32_t Open(const uint32_t waitTime, const Core::NodeId& node, const string& callsign) {
+                return (_monitor.Open(waitTime, node, callsign));
+            }
+            uint32_t Close(const uint32_t waitTime) {
+                Deactivated(nullptr);
+                return (_monitor.Close(waitTime));
+            }
+
+            // IMPORTANT NOTE:
+            // If you aquire the interface here, take action on the interface and release it. Do not maintain/stash it
+            // since the interface might require to be dropped in the mean time.
+            // So usage on the interface should be deterministic and short !!!
+            INTERFACE* Interface() {
+                Core::SafeSyncType<Core::CriticalSection> lock (_adminLock);
+                INTERFACE* result = _smartType;
+
+                if (result != nullptr) {
+                    result->AddRef();
+                }
+
+                return (result);
+            }
+            const INTERFACE* Interface() const {
+                Core::SafeSyncType<Core::CriticalSection> lock(_adminLock);
+                const INTERFACE* result = _smartType;
+
+                if (result != nullptr) {
+                    result->AddRef();
+                }
+
+                return (result);
+            }
+
+            // Allow a derived class to take action on a new interface, or almost dissapeared interface..
+            virtual void Operational(const bool upAndRunning) {
+            }
+
+        private:
+            friend class PluginMonitorType< SmartInterfaceType<INTERFACE>& >;
+            void Activated(PluginHost::IShell* plugin) {
+                ASSERT(plugin != nullptr);
+                _adminLock.Lock();
+                DropInterface();
+                _smartType = plugin->QueryInterface<INTERFACE>();
+                _adminLock.Unlock();
+                Operational(true);
+            }
+            void Deactivated(PluginHost::IShell* /* plugin */) {
+                Operational(false);
+                _adminLock.Lock();
+                DropInterface();
+                _adminLock.Unlock();
+            }
+            void DropInterface() {
+                if (_smartType != nullptr) {
+                    _smartType->Release();
+                    _smartType = nullptr;
+                }
+            }
+
+        private:
+            mutable Core::CriticalSection _adminLock;
+            PluginMonitorType< SmartInterfaceType<INTERFACE>& > _monitor;
+            INTERFACE* _smartType;
+        };
+    }
+}
+
 namespace Thunder = WPEFramework;
+
+class Dictionary : public Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary> {
+private:
+    using BaseClass = Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary>;
+public:
+    Dictionary(const uint32_t waitTime, const Thunder::Core::NodeId& node, const string& callsign)
+        : BaseClass() {
+        BaseClass::Open(waitTime, node, callsign);
+    }
+    ~Dictionary() {
+        BaseClass::Close(Thunder::Core::infinite);
+    }
+
+public:
+    bool Get(const string& nameSpace, const string& key, string& value ) const {
+        bool result = false;
+        const Thunder::Exchange::IDictionary* impl = BaseClass::Interface();
+
+        if (impl != nullptr) {
+            result = impl->Get(nameSpace, key, value);
+            impl->Release();
+        }
+
+        return (result);
+    }
+    bool Set(const string& nameSpace, const string& key, const string& value) {
+        bool result = false;
+        Thunder::Exchange::IDictionary* impl = BaseClass::Interface();
+
+        if (impl != nullptr) {
+            result = impl->Set(nameSpace, key, value);
+            impl->Release();
+        }
+
+        return (result);
+    }
+
+private:
+    void Operational(const bool upAndRunning) {
+        printf("Operational state of Dictionary: %s\n", upAndRunning ? _T("true") : _T("false"));
+    }
+};
 
 int main(int argc, char* argv[])
 {
@@ -103,13 +467,13 @@ int main(int argc, char* argv[])
     // throttle.
     // The 1 paramater indicates the number of threads that this engine will create to
     // handle the work. So it holds a threadpool of 1 thread.
-    Thunder::Core::ProxyType< Thunder::RPC::InvokeServerType<1, 0, 4> > engine(
-        Thunder::Core::ProxyType<Thunder::RPC::InvokeServerType<1, 0, 4>>::Create());
+    // Thunder::Core::ProxyType< Thunder::RPC::InvokeServerType<1, 0, 4> > engine(
+    //    Thunder::Core::ProxyType<Thunder::RPC::InvokeServerType<1, 0, 4>>::Create());
 
-    Thunder::Core::ProxyType<Thunder::RPC::CommunicatorClient> client(
-        Thunder::Core::ProxyType<Thunder::RPC::CommunicatorClient>::Create(
-            nodeId,
-            Thunder::Core::ProxyType< Thunder::Core::IIPCServer >(engine)));
+    // Thunder::Core::ProxyType<Thunder::RPC::CommunicatorClient> client(
+    //    Thunder::Core::ProxyType<Thunder::RPC::CommunicatorClient>::Create(
+    //        nodeId,
+    //        Thunder::Core::ProxyType< Thunder::Core::IIPCServer >(engine)));
 
     // Once the socket is opened the first exchange between client and server is an 
     // announce message. This announce message hold information the otherside requires
@@ -120,7 +484,7 @@ int main(int argc, char* argv[])
     // over socket, the announce message could be handled on the communication thread
     // or better, if possible, it can be run on the thread of the engine we have just 
     // created.
-    engine->Announcements(client->Announcement());
+    // engine->Announcements(client->Announcement());
 
     // Since the COMRPC, in comparison to the JSONRPC framework, is host/process/plugin 
     // agnostic, the COMRPC mechanism can only "connect" to a port (Thunder application)
@@ -161,40 +525,52 @@ int main(int argc, char* argv[])
     // client->Open<Thunder::Exchange::IDictionary>("Dictionary");
 
 
-    // Two options to do this:
+    // Three options to do this:
     // 1) 
-    Thunder::PluginHost::IShell* controller = client->Open<Thunder::PluginHost::IShell>(_T("Dictionary"), ~0, 3000);
-
-    // Or option 
+    //    Thunder::PluginHost::IShell* controller = client->Open<Thunder::PluginHost::IShell>(_T("Dictionary"), ~0, 3000);
+    //
+    // Or 
     // 2)
-    // if (client->Open(3000) == Thunder::Core::ERROR_NONE) {
-    //    controller = client->Aquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
-    //}
+    //    if (client->Open(3000) == Thunder::Core::ERROR_NONE) {
+    //        controller = client->Aquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
+    //
+    // Or
+    // 3)
+    {
+        Dictionary  dictionary(3000, nodeId, _T("Dictionary"));
+        char keyPress;
+        uint32_t counter = 8;
 
-    // Once we have the controller interface, we can use this interface to navigate through tho other interfaces.
-    if (controller != nullptr) {
+        // chip.PCD_Init();
+        do {
+            keyPress = toupper(getchar());
+            \
+            switch (keyPress) {
+            case 'O': {
+                printf("Operations state issue: %s\n", dictionary.IsOperational() ? _T("true") : _T("false"));
+                break;
+            }
+            case 'S': {
 
-        Thunder::Exchange::IDictionary* dictionary = controller->QueryInterface<Thunder::Exchange::IDictionary>();
+                string value = Thunder::Core::NumberType<int32_t>(counter++).Text();
+                if (dictionary.Set(_T("/name"), _T("key"), value) == true) {
+                    printf("Set value: %s\n", value.c_str());
+                }
+                break;
+            }
+            case 'G': {
+                string value;
+                if (dictionary.Get(_T("/name"), _T("key"), value) == true) {
+                    printf("Get value: %s\n", value.c_str());
+                }
+                break;
 
-        // Do whatever you want to do on Thunder::Exchange::IDictionary*
-        std::cout << "client.IsValid:" << client.IsValid() << std::endl;
-        std::cout << "client.IsOpen :" << client->IsOpen() << std::endl;
-
-        if (dictionary == nullptr)
-        {
-            std::cout << "failed to get dictionary proxy" << std::endl;
-            return -1;
-        }
-        else
-        {
-            std::cout << "have proxy to dictionary" << std::endl;
-            dictionary->Release();
-            dictionary = nullptr;
-        }
+            }
+            case 'Q': break;
+            default: break;
+            };
+        } while (keyPress != 'Q');
     }
-
-    // You can do this explicitely but it should not be nessecary as the destruction of the Client will close the link anyway.
-    client->Close(1000);
 
     Thunder::Core::Singleton::Dispose();
 
