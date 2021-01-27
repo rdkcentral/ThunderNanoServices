@@ -23,7 +23,6 @@
 #include <string.h>
 #include "hardware/audio.h"
 
-using namespace WPEFramework;
 using namespace WPEFramework::Exchange;
 
 /**
@@ -124,7 +123,7 @@ Dolby::IOutput::Type ToEnum(int code, uint32_t &error)
     {
         result = Dolby::IOutput::Type::AUTO;
         error = WPEFramework::Core::ERROR_GENERAL;
-        TRACE_GLOBAL(Trace::Information, (_T("Could not map the provided dolby output: %d to Dolby::IOutput::Type enumeration."), code));
+        TRACE_GLOBAL(WPEFramework::Trace::Information, (_T("Could not map the provided dolby output: %d to Dolby::IOutput::Type enumeration."), code));
         break;
     }
     }
