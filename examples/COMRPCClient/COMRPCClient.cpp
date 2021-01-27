@@ -154,18 +154,16 @@ namespace WPEFramework {
         public:
 
             template <typename INTERFACE>
-            INTERFACE* Aquire(const uint32_t waitTime, const Core::NodeId& nodeId, const string className, const uint32_t version = ~0) {
-                INTERFACE* result = nullptr;
+            void Aquire(const uint32_t waitTime, const Core::NodeId& nodeId, const string& className, const uint32_t version, INTERFACE*& result) {
+                result = nullptr;
 
                 ASSERT(_engine.IsValid() == true);
 
                 Core::ProxyType<Channel> channel = _comChannels.Instance(nodeId, _engine);
 
                 if (channel.IsValid() == true) {
-                    result = channel->Aquire<INTERFACE>(waitTime, className, version);
+                    result = channel->CommunicatorClient::Aquire<INTERFACE>(waitTime, className, version);
                 }
-
-                return (result);
             }
             RPC::IIPCServer& Engine() {
                 // The engine has to be running :-)
@@ -218,26 +216,6 @@ namespace WPEFramework {
             private:
                 PluginMonitorType<HANDLER, ENGINE>& _parent;
             };
-            class Job {
-            public:
-                Job() = delete;
-                Job(const Job&) = delete;
-                Job& operator= (const Job&) = delete;
-
-                Job(PluginMonitorType<HANDLER, ENGINE>& parent)
-                    : _parent(parent) {
-                }
-                ~Job() = default;
-
-            public:
-                void Dispatch() {
-                    _parent.Dispatch();
-                }
-
-            private:
-                PluginMonitorType<HANDLER, ENGINE>& _parent;
-            };
-
         public:
             PluginMonitorType() = delete;
             PluginMonitorType(const PluginMonitorType<HANDLER, ENGINE>&) = delete;
@@ -250,7 +228,7 @@ namespace WPEFramework {
                 , _callsign()
                 , _node()
                 , _sink(*this)
-                , _job(*this)
+                , _designated(nullptr)
                 , _controller(nullptr)
                 , _state(UNKNOWN)
                 , _administrator() {
@@ -259,6 +237,7 @@ namespace WPEFramework {
                 Close(Core::infinite);
             }
 
+            using controllerInterface = PluginHost::IShell;
         public:
             uint32_t Open(const uint32_t waitTime, const Core::NodeId& node, const string& callsign) {
 
@@ -270,7 +249,7 @@ namespace WPEFramework {
                     _adminLock.Unlock();
                 }
                 else {
-                    _controller = _administrator.Aquire< PluginHost::IShell>(waitTime, node, _T(""), ~0);
+                    _administrator.Aquire(waitTime, node, _T(""), ~0, _controller);
 
                     if (_controller == nullptr) {
                         _adminLock.Unlock();
@@ -281,15 +260,17 @@ namespace WPEFramework {
 
                         _adminLock.Unlock();
 
+                        ASSERT(_state == state::UNKNOWN);
+
                         _controller->Register(&_sink);
-                        Dispatch();
 
                         _adminLock.Lock();
 
-                        if (_state == state::UNKNOWN) {
-                            _state = state::DEACTIVATED;
-                        }
+                        _state = state::DEACTIVATED;
+                        
                         _adminLock.Unlock();
+                        
+                        Reevaluate();
                     }
                 }
 
@@ -311,56 +292,60 @@ namespace WPEFramework {
             }
             template <typename INTERFACE>
             INTERFACE* Aquire(const uint32_t waitTime, const Core::NodeId& nodeId, const string className, const uint32_t version = ~0) {
-                return (_administrator.Aquire< INTERFACE >(waitTime, nodeId, className, version));
+                return (_administrator.CommunicatorClient::Aquire< INTERFACE >(waitTime, nodeId, className, version));
             }
             inline void Submit(const Core::ProxyType<Core::IDispatch>& job) {
                 _administrator.Engine().Submit(job);
             }
 
         private:
-            void Dispatch() {
+            void Reevaluate() {
+                if (_designated != nullptr) {
 
-                _adminLock.Lock();
-                PluginHost::IShell* evaluate = _designated;
-                _designated = nullptr;
-                _adminLock.Unlock();
-
-                if (evaluate != nullptr) {
-
-                    PluginHost::IShell::state current = evaluate->State();
+                    PluginHost::IShell::state current = _designated->State();
 
                     if (current == PluginHost::IShell::ACTIVATED) {
-                        _reporter.Activated(evaluate);
+                        _reporter.Activated(_designated);
                         _adminLock.Lock();
                         _state = state::ACTIVATED;
                         _adminLock.Unlock();
                     }
                     else if (current == PluginHost::IShell::DEACTIVATION) {
                         if (_state == state::ACTIVATED) {
-                            _reporter.Deactivated(evaluate);
+                            _reporter.Deactivated(_designated);
                         }
                         _adminLock.Lock();
                         _state = state::DEACTIVATED;
                         _adminLock.Unlock();
                     }
-                    evaluate->Release();
+                    _designated->Release();
+                    _designated = nullptr;
                 }
             }
             void StateChange(PluginHost::IShell* plugin, const string& callsign) {
                 if (callsign == _callsign) {
                     _adminLock.Lock();
 
-                    if (_designated == nullptr) {
+                    if (_state != state::UNKNOWN) {
+
+                        PluginHost::IShell::state current = plugin->State();
+                        if (current == PluginHost::IShell::ACTIVATED) {
+                            _reporter.Activated(plugin);
+                            _state = state::ACTIVATED;
+                        }
+                        else if (current == PluginHost::IShell::DEACTIVATION) {
+                            if (_state == state::ACTIVATED) {
+                                _reporter.Deactivated(plugin);
+                            }
+                            _state = state::DEACTIVATED;
+                        }
+
+                    } else if (_designated == nullptr)
+                    {    
                         _designated = plugin;
                         _designated->AddRef();
-                        if (_state != state::UNKNOWN) {
-                            Core::ProxyType<Core::IDispatch> job(_job.Aquire());
-                            if (job.IsValid() == true) {
-                                _administrator.Engine().Submit(job);
-                            }
-                        }
                     }
-                    
+
                     _adminLock.Unlock();
                 }
             }
@@ -371,7 +356,6 @@ namespace WPEFramework {
             string _callsign;
             Core::NodeId _node;
             Core::Sink<Sink> _sink;
-            Core::ThreadPool::JobType<Job> _job;
             PluginHost::IShell* _designated;
             PluginHost::IShell* _controller;
             state _state;
