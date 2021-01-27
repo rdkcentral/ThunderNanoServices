@@ -336,16 +336,26 @@ public:
             _state(PluginHost::IStateControl::UNINITIALIZED),
             _cobaltClients(),
             _stateControlClients(),
-            _sink(*this) {
+            _sink(*this),
+            _service(nullptr) {
     }
 
     virtual ~CobaltImplementation() {
+        if (_service) {
+            _service->Release();
+            _service = nullptr;
+        }
     }
 
     virtual uint32_t Configure(PluginHost::IShell *service) {
         uint32_t result = _window.Configure(service);
         _window.Suspend(true);
         _state = PluginHost::IStateControl::SUSPENDED;
+
+        _service = service;
+        if (_service) {
+            _service->AddRef();
+        }
 
         return (result);
     }
@@ -423,7 +433,21 @@ public:
         return status;
     }
 
-    virtual uint32_t Identifier(string& id) const override {
+    uint32_t Identifier(string& id) const override {
+        const PluginHost::ISubSystem::IIdentifier* identifier(_service->SubSystems()->Get<PluginHost::ISubSystem::IIdentifier>());
+
+        if (identifier != nullptr) {
+            uint8_t buffer[64];
+
+            buffer[0] = static_cast<const PluginHost::ISubSystem::IIdentifier*>(identifier)
+                            ->Identifier(sizeof(buffer) - 1, &(buffer[1]));
+
+            if (buffer[0] != 0) {
+                id = Core::SystemInfo::Instance().Id(buffer, ~0);
+            }
+
+            identifier->Release();
+        }
         return Core::ERROR_NOT_SUPPORTED;
     }
 
@@ -620,6 +644,7 @@ private:
     std::list<Exchange::IBrowser::INotification*> _cobaltClients;
     std::list<PluginHost::IStateControl::INotification*> _stateControlClients;
     NotificationSink _sink;
+    PluginHost::IShell* _service;
 };
 
 SERVICE_REGISTRATION(CobaltImplementation, 1, 0);
