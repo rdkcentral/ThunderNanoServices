@@ -162,8 +162,8 @@ private:
     public:
         CobaltWindow()
             : Core::Thread(0, _T("Cobalt"))
-            , _language()
             , _url{"https://www.youtube.com/tv"}
+            , _language()
             , _debugListenIp("0.0.0.0")
             , _debugPort()
         {
@@ -249,9 +249,7 @@ private:
             }
 
             if (config.Language.IsSet() == true) {
-                Core::SystemInfo::SetEnvironment(_T("LANG"), config.Language.Value().c_str());
-                Core::SystemInfo::SetEnvironment(_T("LANGUAGE"), config.Language.Value().c_str());
-                _language = config.Language.Value();
+                Language(config.Language.Value());
             }
 
             if ( (config.Connection.IsSet() == true) && (config.Connection == CobaltImplementation::connection::WIRELESS) ) {
@@ -290,8 +288,13 @@ private:
             return (true);
         }
 
-        string Url() const { return _url; }
-        string Language() const { return _language; }
+        inline string Url() const { return _url; }
+        inline void Language(string& language) const { language = _language; }
+        inline void Language(const string& language) {
+            Core::SystemInfo::SetEnvironment(_T("LANG"), language.c_str());
+            Core::SystemInfo::SetEnvironment(_T("LANGUAGE"), language.c_str());
+            _language = language;
+        }
 
     private:
         uint32_t Initialize() override
@@ -302,7 +305,7 @@ private:
             sigaddset(&mask, SIGUSR1);
             sigaddset(&mask, SIGCONT);
             pthread_sigmask(SIG_UNBLOCK, &mask, nullptr);
-            return (Core::ERROR_NONE);
+            return Core::ERROR_NONE;
         }
         uint32_t Worker() override
         {
@@ -423,34 +426,36 @@ public:
     virtual uint32_t Identifier(string& id) const override {
         return Core::ERROR_NOT_SUPPORTED;
     }
+
     uint32_t ContentLink(const string& link) override {
         third_party::starboard::wpe::shared::DeepLink(link.c_str());
         return Core::ERROR_NONE;
     }
 
     uint32_t LaunchPoint(launchpointtype& point) const override {
-        return Core::ERROR_NOT_SUPPORTED;
+        return Core::ERROR_UNAVAILABLE;
     }
 
     uint32_t LaunchPoint(const launchpointtype&) override {
-        return Core::ERROR_NOT_SUPPORTED;
+        return Core::ERROR_UNAVAILABLE;
     }
 
     uint32_t Visible(bool& visiblity) const override {
-        return Core::ERROR_NOT_SUPPORTED;
+        return Core::ERROR_UNAVAILABLE;
     }
 
     uint32_t Visible(const bool& visiblity) override {
-        return Core::ERROR_NOT_SUPPORTED;
+        return Core::ERROR_UNAVAILABLE;
     }
 
     uint32_t Language(string& language) const override {
-        language = _window.Language();
+        _window.Language(language);
         return Core::ERROR_NONE;
     }
 
     uint32_t Language(const string& language) override {
-        return Core::ERROR_NOT_SUPPORTED;
+        _window.Language(language);
+        return Core::ERROR_NONE;
     }
 
     virtual void Register(PluginHost::IStateControl::INotification *sink) {
