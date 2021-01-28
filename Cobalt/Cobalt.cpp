@@ -65,17 +65,26 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
             _cobalt->Release();
             _cobalt = nullptr;
         } else {
-
-            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
-            _memory = WPEFramework::Cobalt::MemoryObserver(remoteConnection);
-            ASSERT(_memory != nullptr);
-            remoteConnection->Release();
-
-            _cobalt->Register(&_notification);
-            stateControl->Register(&_notification);
-            stateControl->Configure(_service);
-            stateControl->Release();
             _application = _cobalt->QueryInterface<Exchange::IApplication>();
+            if (_application != nullptr) {
+
+                RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
+                _memory = WPEFramework::Cobalt::MemoryObserver(remoteConnection);
+                ASSERT(_memory != nullptr);
+                remoteConnection->Release();
+
+                _cobalt->Register(&_notification);
+                stateControl->Register(&_notification);
+                stateControl->Configure(_service);
+                stateControl->Release();
+
+                RegisterAll();
+                Exchange::JApplication::Register(*this, _application);
+            } else {
+                stateControl->Release();
+                _cobalt->Release();
+                _cobalt = nullptr;
+            }
         }
     }
 
@@ -94,6 +103,9 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
     ASSERT(_cobalt != nullptr);
     ASSERT(_application != nullptr);
     ASSERT(_memory != nullptr);
+
+    Exchange::JApplication::Unregister(*this);
+    UnregisterAll();
 
     PluginHost::IStateControl *stateControl(
             _cobalt->QueryInterface<PluginHost::IStateControl>());
@@ -211,6 +223,22 @@ void Cobalt::Hidden(const bool hidden) {
     _service->Notify(message);
 
     event_visibilitychange(hidden);
+}
+
+uint32_t Cobalt::DeleteDir(const string& path)
+{
+    uint32_t result = Core::ERROR_NONE;
+
+    if (path.empty() == false) {
+        string fullPath = _persistentStoragePath + path;
+        Core::Directory dir(fullPath.c_str());
+        if (!dir.Destroy(true)) {
+            TRACE(Trace::Error, (_T("Failed to delete %s\n"), fullPath.c_str()));
+            result = Core::ERROR_UNKNOWN_KEY;
+        }
+    }
+
+    return result;
 }
 
 void Cobalt::StateChange(const PluginHost::IStateControl::state state) {

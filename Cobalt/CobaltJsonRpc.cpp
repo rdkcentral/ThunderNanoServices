@@ -42,8 +42,6 @@ void Cobalt::RegisterAll() {
             < StateType
                     >> (_T("state"), &Cobalt::get_state, &Cobalt::set_state, this); /* StateControl */
     Register<DeleteParamsData,void>(_T("delete"), &Cobalt::endpoint_delete, this);
-    Property < Core::JSON::String
-            > (_T("deeplink"), nullptr, &Cobalt::set_deeplink, this); /* Application */
 }
 
 void Cobalt::UnregisterAll() {
@@ -52,7 +50,6 @@ void Cobalt::UnregisterAll() {
     Unregister(_T("visibility"));
     Unregister(_T("url"));
     Unregister(_T("delete"));
-    Unregister(_T("deeplink"));
 }
 
 // API implementation
@@ -174,38 +171,7 @@ uint32_t Cobalt::set_state(const Core::JSON::EnumType<StateType> &param) /* Stat
 //  - ERROR_UNKNOWN_KEY: The given path was incorrect
 uint32_t Cobalt::endpoint_delete(const DeleteParamsData& params)
 {
-    return delete_dir(params.Path.Value());
-}
-
-uint32_t Cobalt::delete_dir(const string& path)
-{
-    uint32_t result = Core::ERROR_NONE;
-
-    if (path.empty() == false) {
-        string fullPath = _persistentStoragePath + path;
-        Core::Directory dir(fullPath.c_str());
-        if (!dir.Destroy(true)) {
-            TRACE(Trace::Error, (_T("Failed to delete %s\n"), fullPath.c_str()));
-            result = Core::ERROR_UNKNOWN_KEY;
-        }
-    }
-
-    return result;
-}
-
-// Property: deeplink - ContentLink loaded in the browser
-// Return codes:
-//  - ERROR_NONE: Success
-//  - ERROR_INCORRECT_URL: Incorrect ContentLink given
-uint32_t Cobalt::set_deeplink(const Core::JSON::String &param) /* Application */
-{
-    ASSERT(_application != nullptr);
-    uint32_t result = Core::ERROR_INCORRECT_URL;
-    if (param.IsSet() && !param.Value().empty()) {
-        _application->ContentLink(param.Value());
-        result = Core::ERROR_NONE;
-    }
-    return result;
+    return DeleteDir(params.Path.Value());
 }
 
 // Event: urlchange - Signals a URL change in the browser

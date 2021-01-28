@@ -25,6 +25,7 @@
 #include <interfaces/IMemory.h>
 #include <interfaces/json/JsonData_Browser.h>
 #include <interfaces/json/JsonData_StateControl.h>
+#include <interfaces/json/JApplication.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -118,7 +119,6 @@ public:
     Cobalt() :
             _skipURL(0), _hidden(false), _cobalt(nullptr), _application(nullptr),
             _memory(nullptr), _service(nullptr), _notification(this) {
-        RegisterAll();
     }
     virtual ~Cobalt() {
         UnregisterAll();
@@ -179,8 +179,7 @@ private:
     uint32_t set_state(
             const Core::JSON::EnumType<JsonData::StateControl::StateType> &param); // StateControl
     uint32_t endpoint_delete(const JsonData::Browser::DeleteParamsData& params);
-    uint32_t delete_dir(const string& path);
-    uint32_t set_deeplink(const Core::JSON::String &param); // Application
+    uint32_t DeleteDir(const string& path);
     void event_urlchange(const string &url, const bool &loaded); // Browser
     void event_visibilitychange(const bool &hidden); // Browser
     void event_statechange(const bool &suspended); // StateControl
