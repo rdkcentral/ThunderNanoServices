@@ -121,7 +121,6 @@ public:
             _memory(nullptr), _service(nullptr), _notification(this) {
     }
     virtual ~Cobalt() {
-        UnregisterAll();
     }
 
 public:
@@ -180,6 +179,7 @@ private:
             const Core::JSON::EnumType<JsonData::StateControl::StateType> &param); // StateControl
     uint32_t endpoint_delete(const JsonData::Browser::DeleteParamsData& params);
     uint32_t DeleteDir(const string& path);
+    uint32_t set_deeplink(const Core::JSON::String &param); // Application
     void event_urlchange(const string &url, const bool &loaded); // Browser
     void event_visibilitychange(const bool &hidden); // Browser
     void event_statechange(const bool &suspended); // StateControl
