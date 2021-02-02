@@ -25,6 +25,8 @@
 #include <interfaces/IWebServer.h>
 #include <interfaces/IBrowser.h>
 
+#include <interfaces/json/JsonData_DIALServer.h>
+
 namespace WPEFramework {
 namespace Plugin {
 
@@ -1083,6 +1085,10 @@ namespace Plugin {
         bool SafeOrigin(const Web::Request& request, const AppInformation& app) const;
 
         //JsonRpc
+        void RegisterAll();
+        void UnregisterAll();
+        uint32_t get_state(const string& index, Core::JSON::EnumType<JsonData::DIALServer::StateType>& response) const;
+        uint32_t set_state(const string& index, const Core::JSON::EnumType<JsonData::DIALServer::StateType>& param);
         void event_start(const string& application, const string& parameters, const string& payload);
         void event_change(const string& application, const string& parameters, const string& payload);
         void event_stop(const string& application, const string& parameters);

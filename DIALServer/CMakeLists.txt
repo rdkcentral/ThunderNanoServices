@@ -19,7 +19,9 @@ set(PLUGIN_NAME DIALServer)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+
 
 option(PLUGIN_DIALSERVER_ENABLE_YOUTUBE "Enable YouTube support for DIAL server" OFF)
 option(PLUGIN_DIALSERVER_ENABLE_NETFLIX "Enable Netflix support for DIAL server" OFF)
@@ -55,10 +57,10 @@ if(PLUGIN_DIALSERVER_ENABLE_NETFLIX AND "${PLUGIN_DIALSERVER_NETFLIX_MODE}" STRE
 target_sources(${MODULE_NAME}
         PRIVATE
             Netflix.cpp)
-            
+
 if (NETFLIX_VERSION_5_1)
-    target_compile_definitions(${MODULE_NAME} 
-        PRIVATE 
+    target_compile_definitions(${MODULE_NAME}
+        PRIVATE
             NETFLIX_VERSION_5_1=ON)
 endif()
 if(NETFLIX_VERSION_5_2)
@@ -77,7 +79,8 @@ endif()
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
