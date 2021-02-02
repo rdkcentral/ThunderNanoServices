@@ -286,7 +286,7 @@ namespace Plugin {
             _dialURL = Core::URL(service->Accessor());
             _dialURL.Host(selectedNode.HostAddress());
             _dialPath = '/' + _dialURL.Path().Value();
-            _webServerPort = _dialURL.Port();
+            _webServerPort = _dialURL.Port().IsSet() ? _dialURL.Port().Value() : 80;
 
             // TODO: THis used to be the MAC, but I think  it is just a unique number, otherwise, we need the MAC
             //       that goes with the selectedNode !!!!
@@ -380,7 +380,7 @@ namespace Plugin {
         } else {
             // FIXME: At the moment part of additionalDataUrl parameter is hardcoded, localhost is obligatory by Netflix 
             // but rest of the path can be created dynamically or should be retrived from configuration    
-            const string additionalDataUrl = (_T("http://localhost") + ((_webServerPort != 80)? _T("") : _T(":") + Core::NumberType<uint16_t>(_webServerPort).Text()) + _T("/Service/DIALServer/Apps/") + app.Name() + _T("/") + _DefaultDataExtension);
+            const string additionalDataUrl = (_T("http://localhost") + ((_webServerPort == 80)? _T("") : _T(":") + Core::NumberType<uint16_t>(_webServerPort).Text()) + _T("/Service/DIALServer/Apps/") + app.Name() + _T("/") + _DefaultDataExtension);
             const uint16_t maxEncodedSize = static_cast<uint16_t>(additionalDataUrl.length() * 3 * sizeof(TCHAR));
             TCHAR* encodedDataUrl = reinterpret_cast<TCHAR*>(ALLOCA(maxEncodedSize)); 
             uint16_t dialpayload = Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, maxEncodedSize);
@@ -647,9 +647,7 @@ namespace Plugin {
         _dialServiceImpl->Locator(pluginInterface->Accessor() + _dialPath);
 
         Core::URL url = Core::URL(pluginInterface->Accessor());
-        if (url.Port().IsSet() == true) {
-            _webServerPort = Core::NumberType<uint16_t>(url.Port().Value());
-        }
+        _webServerPort = url.Port().IsSet() ? url.Port().Value() : 80;
 
         // Redirect all calls to the DIALServer, via a proxy.
         pluginInterface->AddProxy(_dialPath, _dialPath, remote);
