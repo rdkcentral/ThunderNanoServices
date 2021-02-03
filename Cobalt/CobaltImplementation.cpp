@@ -435,31 +435,20 @@ public:
 
     uint32_t Identifier(string& id) const override {
 
-        PluginHost::ISubSystem* subSystems(_service->SubSystems());
-        if (subSystems != nullptr) {
+        const PluginHost::ISubSystem::IIdentifier* identifier(_service->SubSystems()->Get<PluginHost::ISubSystem::IIdentifier>());
+        if (identifier != nullptr) {
+            uint8_t buffer[64];
 
-            const Core::IUnknown* base(_service->SubSystems()->Get<PluginHost::ISubSystem::IIdentifier>());
-            if (base != nullptr) {
-                const PluginHost::ISubSystem::IIdentifier* identifier = base->QueryInterface<const PluginHost::ISubSystem::IIdentifier>();
+            buffer[0] = static_cast<const PluginHost::ISubSystem::IIdentifier*>(identifier)
+                        ->Identifier(sizeof(buffer) - 1, &(buffer[1]));
 
-                if (identifier != nullptr) {
-                    uint8_t buffer[64];
-
-                    buffer[0] = static_cast<const PluginHost::ISubSystem::IIdentifier*>(identifier)
-                                ->Identifier(sizeof(buffer) - 1, &(buffer[1]));
-
-                    if (buffer[0] != 0) {
-                        id = Core::SystemInfo::Instance().Id(buffer, ~0);
-                    }
-
-                    identifier->Release();
-                }
-
-                base->Release();
+            if (buffer[0] != 0) {
+                id = Core::SystemInfo::Instance().Id(buffer, ~0);
             }
 
-            subSystems->Release();
+            identifier->Release();
         }
+
         return Core::ERROR_NONE;
     }
 
