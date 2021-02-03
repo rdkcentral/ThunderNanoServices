@@ -334,7 +334,7 @@ public:
             _language(),
             _adminLock(),
             _state(PluginHost::IStateControl::UNINITIALIZED),
-            _cobaltClients(),
+            _cobaltBrowserClients(),
             _stateControlClients(),
             _sink(*this),
             _service(nullptr) {
@@ -379,11 +379,10 @@ public:
         _adminLock.Lock();
 
         // Make sure a sink is not registered multiple times.
-        ASSERT(
-                std::find(_cobaltClients.begin(), _cobaltClients.end(), sink)
-                        == _cobaltClients.end());
+        ASSERT(std::find(_cobaltBrowserClients.begin(), _cobaltBrowserClients.end(), sink)
+               == _cobaltBrowserClients.end());
 
-        _cobaltClients.push_back(sink);
+        _cobaltBrowserClients.push_back(sink);
         sink->AddRef();
 
         _adminLock.Unlock();
@@ -393,17 +392,25 @@ public:
         _adminLock.Lock();
 
         std::list<Exchange::IBrowser::INotification*>::iterator index(
-                std::find(_cobaltClients.begin(), _cobaltClients.end(), sink));
+                std::find(_cobaltBrowserClients.begin(), _cobaltBrowserClients.end(), sink));
 
         // Make sure you do not unregister something you did not register !!!
-        ASSERT(index != _cobaltClients.end());
+        ASSERT(index != _cobaltBrowserClients.end());
 
-        if (index != _cobaltClients.end()) {
+        if (index != _cobaltBrowserClients.end()) {
             (*index)->Release();
-            _cobaltClients.erase(index);
+            _cobaltBrowserClients.erase(index);
         }
 
         _adminLock.Unlock();
+    }
+
+    void Register(Exchange::IApplication::INotification* sink) override {
+        // Kept empty since visibility change is not supported
+    }
+
+    void Unregister(Exchange::IApplication::INotification* sink) override {
+        // Kept empty since visibility change is not supported
     }
 
     uint32_t Reset(const resettype type) override {
@@ -642,7 +649,7 @@ private:
     CobaltWindow _window;
     mutable Core::CriticalSection _adminLock;
     PluginHost::IStateControl::state _state;
-    std::list<Exchange::IBrowser::INotification*> _cobaltClients;
+    std::list<Exchange::IBrowser::INotification*> _cobaltBrowserClients;
     std::list<PluginHost::IStateControl::INotification*> _stateControlClients;
     NotificationSink _sink;
     PluginHost::IShell* _service;
