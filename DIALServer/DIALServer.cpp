@@ -109,6 +109,13 @@ namespace Plugin {
         return (index);
     }
 
+    /* virtual */ uint32_t DIALServer::Default::AdditionalDataURL(string& url) const
+    {
+        const uint16_t port = _parent->WebServerPort();
+        url = (_T("http://localhost") + ((port == 80)? _T("") : _T(":") + Core::NumberType<uint16_t>(port).Text()) + _T("/Service/DIALServer/Apps/") + _callsign + _T("/") + _DefaultDataExtension);
+        return (Core::ERROR_NONE);
+    }
+
     DIALServer::DIALServerImpl::DIALServerImpl(const string& MACAddress, const string& baseURL, const string& appPath)
         : BaseClass(5, false, Core::NodeId(DialServerInterface.AnyInterface(), DialServerInterface.PortNumber()), DialServerInterface.AnyInterface(), 1024, 1024)
         , _response(Core::ProxyType<Web::Response>::Create())
@@ -212,7 +219,7 @@ namespace Plugin {
         string allowStop((isAtLeast2_1 == true) || (HasStartAndStop() == true) ? "true" : "false");
 
         // <link> element is DEPRECATED starting from 2.1!!!!
-        // Although it is deperecated some Cobalt tests are still checking for the presence of this element. Keep on adding it. It does not hurt.... 
+        // Although it is deperecated some Cobalt tests are still checking for the presence of this element. Keep on adding it. It does not hurt....
 
         data = _T("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
             _T("<service xmlns=\"urn:dial-multiscreen-org:schemas:dial\"") + dialVersion + _T(">")
@@ -308,7 +315,7 @@ namespace Plugin {
                                      _T("<friendlyName>") + _config.Name.Value() + _T("</friendlyName>")
                                      _T("<manufacturer>") + _config.Manufacturer.Value() + _T("</manufacturer>") +
                                        ( _config.ManufacturerURL.IsSet() == true ? _T("<manufacturerURL>") + _config.ManufacturerURL.Value() + _T("</manufacturerURL>") : _T("") ) +
-                                     _T("<modelDescription>") + _config.Description.Value() + _T("</modelDescription>") 
+                                     _T("<modelDescription>") + _config.Description.Value() + _T("</modelDescription>")
                                      _T("<modelName>") + _config.Model.Value() + _T("</modelName>") +
                                        ( _config.ModelNumber.IsSet() == true ? _T("<modelNumber>") + _config.ModelNumber.Value() + _T("</modelNumber>") : _T("") ) +
                                        ( _config.ModelURL.IsSet() == true ? _T("<modelURL>") + _config.ModelURL.Value() + _T("</modelURL>") : _T("") ) +
@@ -378,15 +385,16 @@ namespace Plugin {
             response->ErrorCode = Web::STATUS_REQUEST_ENTITY_TOO_LARGE;
             response->Message = _T("Payload too long");
         } else {
-            // FIXME: At the moment part of additionalDataUrl parameter is hardcoded, localhost is obligatory by Netflix 
-            // but rest of the path can be created dynamically or should be retrived from configuration    
-            const string additionalDataUrl = (_T("http://localhost") + ((_webServerPort == 80)? _T("") : _T(":") + Core::NumberType<uint16_t>(_webServerPort).Text()) + _T("/Service/DIALServer/Apps/") + app.Name() + _T("/") + _DefaultDataExtension);
+            string additionalDataUrl;
+            app.Application()->AdditionalDataURL(additionalDataUrl);
+            TRACE(Trace::Information, (_T("Additional data URL for %s: '%s'"), app.Name().c_str(), additionalDataUrl.c_str()));
+
             const uint16_t maxEncodedSize = static_cast<uint16_t>(additionalDataUrl.length() * 3 * sizeof(TCHAR));
-            TCHAR* encodedDataUrl = reinterpret_cast<TCHAR*>(ALLOCA(maxEncodedSize)); 
+            TCHAR* encodedDataUrl = reinterpret_cast<TCHAR*>(ALLOCA(maxEncodedSize));
             uint16_t dialpayload = Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, maxEncodedSize);
             const string parameters = (app.AppURL() + (app.HasQueryParameter() ? _T("&") : _T("?")) + ((DeprecatedAPI() == true) ? (_T("dialpayload=") + std::to_string(dialpayload) + _T("&")) : _T("")) + _T("additionalDataUrl=") + encodedDataUrl);
 
-            TRACE(Trace::Information, (_T("Launch Application [%s] with params: %s, payload: %s"), app.Name().c_str(), parameters.c_str(), payload.c_str()));
+            TRACE(Trace::Information, (_T("Launch Application [%s] with params: '%s', payload: '%s'"), app.Name().c_str(), parameters.c_str(), payload.c_str()));
 
             // See if we can find the plugin..
             ASSERT(_service != NULL);
@@ -409,7 +417,7 @@ namespace Plugin {
             } else {
                 // Make sure that there is connection between DIAL handler and application
                 if (app.IsConnected() == false && app.Connect() == false) {
-                    
+
                     TRACE(Trace::Information, (_T("Cannot connect DIAL handler to application %s"), app.Name().c_str()));
                 } else if (app.HasHide() == true && app.IsHidden() == true) {
                     uint32_t result = (DeprecatedAPI() == true) ? app.Show() : app.Start(parameters, payload);
@@ -596,7 +604,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("OK");
                         selectedApp->second.Hidden(request.Verb == Web::Request::HTTP_POST);
-                    }    
+                    }
                 } else if (index.Current() == _DefaultDataExtension) {
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("OK");
@@ -695,6 +703,22 @@ namespace Plugin {
         }
 
         _adminLock.Unlock();
+    }
+
+    Exchange::IDIALServer::IApplication* DIALServer::Application(const string& name)
+    {
+        Exchange::IDIALServer::IApplication* application = nullptr;
+
+        auto app(_appInfo.find(name));
+        if (app != _appInfo.end()) {
+            application = app->second.Application();
+            application->AddRef();
+        } else {
+            TRACE(Trace::Error, (_T("Application %s not available"), name.c_str()));
+        }
+
+        return (application);
+
     }
 }
 }

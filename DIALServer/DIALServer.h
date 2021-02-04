@@ -25,12 +25,14 @@
 #include <interfaces/IWebServer.h>
 #include <interfaces/IBrowser.h>
 
+#include <interfaces/IDIALServer.h>
 #include <interfaces/json/JsonData_DIALServer.h>
+
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class DIALServer : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
+    class DIALServer : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC, public Exchange::IDIALServer {
     public:
         static constexpr uint8_t DialServerMajor = 2;
         static constexpr uint8_t DialServerMinor = 1;
@@ -150,7 +152,7 @@ namespace Plugin {
             Core::JSON::ArrayType<App> Apps;
         };
 
-        struct IApplication {
+        struct IApplication : public Exchange::IDIALServer::IApplication {
 
             struct IFactory {
                 virtual ~IFactory() = default;
@@ -199,15 +201,15 @@ namespace Plugin {
             virtual AdditionalDataType AdditionalData() const = 0;
             virtual void AdditionalData(AdditionalDataType&& data) = 0;
 
-            // Method used for setting the wheter managed service is running or not. 
+            // Method used for setting the wheter managed service is running or not.
             // Used only in passive mode
             virtual void Running(const bool isRunning) = 0;
 
-            // Method used for setting the wheter managed service is hidden or not. 
+            // Method used for setting the wheter managed service is hidden or not.
             // Used only in passive mode
             virtual void Hidden(const bool isHidden) = 0;
 
-            // Method used for passing a SwitchBoard to DIAL handler. 
+            // Method used for passing a SwitchBoard to DIAL handler.
             // Used only in switchboard mode
             virtual void SwitchBoard(Exchange::ISwitchBoard* switchBoard) = 0;
         };
@@ -249,7 +251,7 @@ namespace Plugin {
                     _service->AddRef();
                 }
             }
-            ~Default() override 
+            ~Default() override
             {
                 if (_switchBoard != nullptr) {
                     _switchBoard->Release();
@@ -264,14 +266,14 @@ namespace Plugin {
             bool IsRunning() const override {
                 return (_passiveMode == true ? _isRunning : (_switchBoard != nullptr ? _switchBoard->IsActive(_callsign) : (_service->State() == PluginHost::IShell::ACTIVATED)));
             }
-            bool IsHidden() const override { 
-                return _isHidden; 
+            bool IsHidden() const override {
+                return _isHidden;
             }
-            bool HasHide() const override { 
-                return _hasHide; 
+            bool HasHide() const override {
+                return _hasHide;
             }
-            bool HasStartAndStop() const override { 
-                return true; 
+            bool HasStartAndStop() const override {
+                return true;
             }
             void Hide() override {
                 if (_passiveMode == true) {
@@ -285,7 +287,7 @@ namespace Plugin {
                 if (_passiveMode == true) {
                     const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"start\",  \"parameters\":\"") + ((_parent->DeprecatedAPI() == true) ? ConcatenatePayload(parameters, payload) : parameters) + _T("\", \"payload\":\"") + payload + _T("\" }"));
                     _service->Notify(message);
-                    _parent->event_start(_callsign, (_parent->DeprecatedAPI() == true) ? ConcatenatePayload(parameters, payload) : parameters, payload);                    
+                    _parent->event_start(_callsign, (_parent->DeprecatedAPI() == true) ? ConcatenatePayload(parameters, payload) : parameters, payload);
                 } else {
                     if (_switchBoard != nullptr) {
                         result = _switchBoard->Activate(_callsign);
@@ -393,6 +395,15 @@ namespace Plugin {
                     _switchBoard->AddRef();
                 }
             }
+
+        public:
+            // IDIALServer::IApplication methods
+            uint32_t AdditionalDataURL(string& url) const override;
+
+        public:
+            BEGIN_INTERFACE_MAP(Default)
+            INTERFACE_ENTRY(Exchange::IDIALServer::IApplication)
+            END_INTERFACE_MAP
 
         protected:
             template <typename REQUESTEDINTERFACE>
@@ -709,13 +720,13 @@ namespace Plugin {
 
                 if (_application == nullptr) {
                     // since we still have nothing, fall back to the default
-                    _application = new DIALServer::Default(service, info, parent);
+                    _application = Core::Service<Default>::Create<IApplication>(service, info, parent);
                 }
             }
             ~AppInformation()
             {
                 if (_application != nullptr) {
-                    delete _application;
+                    _application->Release();
                 }
             }
 
@@ -731,21 +742,21 @@ namespace Plugin {
             const string& Origin() const {
                 return (_origin);
             }
-            inline bool IsRunning() const 
-            { 
-                return _application->IsRunning(); 
+            inline bool IsRunning() const
+            {
+                return _application->IsRunning();
             }
-            inline bool IsHidden() const 
-            { 
-                return (_application->IsHidden()); 
+            inline bool IsHidden() const
+            {
+                return (_application->IsHidden());
             }
             inline bool HasHide() const
             {
                 return _application->HasHide();
             }
-            inline void Hide() 
-            { 
-                _application->Hide(); 
+            inline void Hide()
+            {
+                _application->Hide();
             }
             inline uint32_t Show()
             {
@@ -755,7 +766,7 @@ namespace Plugin {
             {
                 return _application->Connect();
             }
-            bool IsConnected() 
+            bool IsConnected()
             {
                 return _application->IsConnected();
             }
@@ -795,7 +806,6 @@ namespace Plugin {
             {
                 _application->SwitchBoard(switchBoard);
             }
-
             inline static void Announce(const string& name, IApplication::IFactory* factory)
             {
                 ASSERT(AppInformation::_applicationFactory.find(name) == AppInformation::_applicationFactory.end());
@@ -814,10 +824,13 @@ namespace Plugin {
 
                 return (result);
             }
-
             inline bool HasQueryParameter()
             {
                 return (_url.find('?') != string::npos);
+            }
+            inline IDIALServer::IApplication* Application()
+            {
+                return (_application);
             }
 
             void GetData(string& data, const Version& version = {}) const;
@@ -981,7 +994,7 @@ namespace Plugin {
             public:
                 IApplication* Create(PluginHost::IShell* shell, const Config::App& config, DIALServer* parent) override
                 {
-                    return (new HANDLER(shell, config, parent));
+                    return (Core::Service<HANDLER>::template Create<IApplication>(shell, config, parent));
                 }
             };
 
@@ -1039,6 +1052,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
+        INTERFACE_ENTRY(Exchange::IDIALServer)
         END_INTERFACE_MAP
 
     public:
@@ -1075,6 +1089,10 @@ namespace Plugin {
         // based on a a request is handled.
         virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
 
+    public:
+        // IDIALServer methods
+        Exchange::IDIALServer::IApplication* Application(const string& name) override;
+
     private:
         void Activated(Exchange::IWebServer* webserver);
         void Deactivated(Exchange::IWebServer* webserver);
@@ -1094,6 +1112,10 @@ namespace Plugin {
         void event_stop(const string& application, const string& parameters);
         void event_hide(const string& application);
         void event_show(const string& application);
+
+        const uint16_t WebServerPort() const {
+            return _webServerPort;
+        }
 
         bool DeprecatedAPI() const {
             return (_deprecatedAPI);
