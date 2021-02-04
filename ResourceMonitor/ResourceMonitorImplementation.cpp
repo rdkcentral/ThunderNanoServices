@@ -119,8 +119,10 @@ namespace WPEFramework
                 , _interval(0)
                 , _activity(*this)
             {
-               _logfile.Append("Time[s]", "Name", "VSS", "USS", "Jiffies", "TotalJiffies");
+               _logfile.Append("Time[s]", "Name", "VSS[KiB]", "USS[KiB]", "Jiffies", "TotalJiffies");
                uint32_t pageCount = Core::SystemInfo::Instance().GetPhysicalPageCount();
+               _memoryPageSize = Core::SystemInfo::Instance().GetPageSize();
+
                const uint32_t bitPersUint32 = 32;
                _bufferEntries = pageCount / bitPersUint32;
                if ((pageCount % bitPersUint32) != 0)
@@ -230,21 +232,25 @@ namespace WPEFramework
                auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
                uint32_t vss = CountSetBits(_ourMap, nullptr);
                uint32_t uss = CountSetBits(_ourMap, _otherMap);
+               uint64_t ussInKilobytes = (_memoryPageSize / 1024) * uss;
+               uint64_t vssInKilobytes = (_memoryPageSize / 1024) * vss;
                uint64_t jiffies = info.Jiffies();
                uint64_t totalJiffies = Core::SystemInfo::Instance().GetJiffies();
 
-               _logfile.Append(timestamp, name, vss, uss, jiffies, totalJiffies);
+               _logfile.Append(timestamp, name, vssInKilobytes, ussInKilobytes, jiffies, totalJiffies);
                _logfile.Store();
             }
 
             CSVFile _logfile;
+            uint32_t _memoryPageSize;            //size of the device memory page
+
             std::vector<string> _processNames; // Seen process names.
             Core::CriticalSection _namesLock;
             uint32_t *_otherMap;               // Buffer used to mark other processes pages.
             uint32_t *_ourMap;                 // Buffer for pages used by our process (tree).
             uint32_t _bufferEntries;           // Numer of entries in each buffer.
             uint32_t _interval;                // Seconds between measurement.
-            string _filterName; // Process/plugin name we are looking for.
+            string _filterName;                // Process/plugin name we are looking for.
             Core::WorkerPool::JobType<StatCollecter &> _activity;
 
             friend Core::ThreadPool::JobType<StatCollecter &>;
@@ -267,6 +273,12 @@ namespace WPEFramework
             uint32_t result(Core::ERROR_INCOMPLETE_CONFIG);
 
             ASSERT(service != nullptr);
+
+            fprintf(stderr, "RESOURCE MONITOR CONFIGURE METHOD");
+            uint32_t pageSize = Core::SystemInfo::Instance().GetPageSize();
+            fprintf(stderr, "PAGE SIZE IS: %d", pageSize);
+
+
 
             Config config;
             config.FromString(service->ConfigLine());
