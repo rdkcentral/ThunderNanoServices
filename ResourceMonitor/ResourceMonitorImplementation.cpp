@@ -122,6 +122,8 @@ namespace WPEFramework
                _logfile.Append("Time[s]", "Name", "VSS[KiB]", "USS[KiB]", "Jiffies", "TotalJiffies");
                uint32_t pageCount = Core::SystemInfo::Instance().GetPhysicalPageCount();
                _memoryPageSize = Core::SystemInfo::Instance().GetPageSize();
+               _pluginStartupTime = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
+
 
                const uint32_t bitPersUint32 = 32;
                _bufferEntries = pageCount / bitPersUint32;
@@ -229,7 +231,7 @@ namespace WPEFramework
 
             void LogProcess(const string &name, const Core::ProcessInfo &info)
             {
-               auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
+               auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000) - _pluginStartupTime;
                uint32_t vss = CountSetBits(_ourMap, nullptr);
                uint32_t uss = CountSetBits(_ourMap, _otherMap);
                uint64_t ussInKilobytes = (_memoryPageSize / 1024) * uss;
@@ -242,7 +244,8 @@ namespace WPEFramework
             }
 
             CSVFile _logfile;
-            uint32_t _memoryPageSize;            //size of the device memory page
+            uint32_t _memoryPageSize;          //size of the device memory page
+            uint32_t _pluginStartupTime;       //time in which the resurcemonitor started   
 
             std::vector<string> _processNames; // Seen process names.
             Core::CriticalSection _namesLock;
