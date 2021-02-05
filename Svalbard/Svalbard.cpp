@@ -38,6 +38,8 @@ namespace Plugin {
 
         if (_svalbard == nullptr) {
             message = _T("Svalbard could not be instantiated.");
+            _service->Unregister(&_notification);
+            _service = nullptr;
         } else {
             _svalbard->Configure(_service);
         }
@@ -49,6 +51,7 @@ namespace Plugin {
     {
         ASSERT(_service == service);
 
+        _service->Unregister(&_notification);
         _svalbard->Release();
 
         if (_connectionId != 0) {

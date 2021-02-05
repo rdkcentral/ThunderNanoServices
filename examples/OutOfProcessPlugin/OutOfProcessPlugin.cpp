@@ -156,11 +156,10 @@ namespace Plugin {
         return "### UNKNOWN ###";
     }
 
-    void OutOfProcessPlugin::PluginStateChanged(PluginHost::IShell* plugin)
+    void OutOfProcessPlugin::PluginStateChanged(PluginHost::IShell* plugin, const string& callsign)
     {
         ASSERT(plugin != nullptr);
 
-        const string callsign = plugin->Callsign();
         const PluginHost::IShell::state state = plugin->State();
         const char* stateStr = PluginStateStr(state);
 
