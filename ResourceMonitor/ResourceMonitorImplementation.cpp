@@ -4,6 +4,7 @@
 #include <interfaces/IResourceMonitor.h>
 #include <sstream>
 #include <vector>
+#include <fstream>
 
 namespace WPEFramework
 {
@@ -265,7 +266,7 @@ namespace WPEFramework
 
       public:
          ResourceMonitorImplementation()
-             : _processThread(nullptr), _binPath(_T("/tmp/resource-log.bin"))
+             : _processThread(nullptr), _csvFilePath()
          {
          }
 
@@ -277,17 +278,11 @@ namespace WPEFramework
 
             ASSERT(service != nullptr);
 
-            fprintf(stderr, "RESOURCE MONITOR CONFIGURE METHOD");
-            uint32_t pageSize = Core::SystemInfo::Instance().GetPageSize();
-            fprintf(stderr, "PAGE SIZE IS: %d", pageSize);
-
-
-
             Config config;
             config.FromString(service->ConfigLine());
             if (config.Path.IsSet() == true)
             {
-               _binPath = config.Path.Value().c_str();
+               _csvFilePath = config.Path.Value().c_str();
             }
 
             result = Core::ERROR_NONE;
@@ -298,92 +293,39 @@ namespace WPEFramework
 
          string CompileMemoryCsv() override
          {
-            // TODO: should we worry about doing this as repsonse to RPC (could take too long?)
-            FILE *inFile = fopen(_binPath.c_str(), "rb");
+            const uint32_t lastMeasurementsHistory = Core::infinite;
 
-            std::stringstream output;
-            if (inFile != nullptr)
-            {
+            std::ifstream csvFile (_csvFilePath, std::fstream::binary);
+            std::ostringstream result;
+            std::string line;
 
-               std::vector<string> processNames;
-               _processThread->GetProcessNames(processNames);
 
-               output << _T("time (s)\tJiffies");
-               for (const string &processName : processNames)
-               {
-                  output << _T("\t") << processName << _T(" (VSS)\t") << processName << _T(" (USS)\t") << processName << _T(" (jiffies)");
+            //get the first line - header
+            std::getline(csvFile, line);
+            result << line << std::endl;
+
+            if(lastMeasurementsHistory == Core::infinite){
+               while(std::getline(csvFile, line)){
+                  result << line << std::endl; 
                }
-               output << std::endl;
-
-               std::vector<uint64_t> pageVector(processNames.size() * 3);
-               bool seenFirstTimestamp = false;
-               uint32_t firstTimestamp = 0;
-
-               while (true)
-               {
-                  std::fill(pageVector.begin(), pageVector.end(), 0);
-
-                  uint32_t timestamp = 0;
-                  size_t readCount = fread(&timestamp, sizeof(timestamp), 1, inFile);
-                  if (readCount != 1)
-                  {
-                     break;
+            }
+            else{
+               std::vector<std::string> allLines;
+                while(std::getline(csvFile, line)){
+                  allLines.push_back(line); 
+               }  
+               if(allLines.size() > lastMeasurementsHistory){
+                  for(auto currentLine = allLines.end() - lastMeasurementsHistory; currentLine != allLines.end(); ++currentLine){
+                     result << *currentLine << std::endl;
                   }
-
-                  if (!seenFirstTimestamp)
-                  {
-                     firstTimestamp = timestamp;
-                     seenFirstTimestamp = true;
-                  }
-
-                  uint32_t processCount = 0;
-                  fread(&processCount, sizeof(processCount), 1, inFile);
-
-                  uint64_t totalJiffies = 0;
-                  fread(&totalJiffies, sizeof(totalJiffies), 1, inFile);
-
-                  for (uint32_t processIndex = 0; processIndex < processCount; processIndex++)
-                  {
-                     uint32_t nameLength = 0;
-                     fread(&nameLength, sizeof(nameLength), 1, inFile);
-                     // TODO: unicode?
-                     char nameBuffer[nameLength + 1];
-                     fread(nameBuffer, sizeof(char), nameLength, inFile);
-
-                     nameBuffer[nameLength] = '\0';
-                     string name(nameBuffer);
-
-                     std::vector<string>::const_iterator nameIterator = std::find(processNames.cbegin(), processNames.cend(), name);
-
-                     uint32_t vss, uss;
-                     uint64_t jiffies;
-                     fread(&vss, sizeof(vss), 1, inFile);
-                     fread(&uss, sizeof(uss), 1, inFile);
-                     fread(&jiffies, sizeof(jiffies), 1, inFile);
-                     if (nameIterator == processNames.cend())
-                     {
-                        continue;
-                     }
-
-                     int index = nameIterator - processNames.cbegin();
-
-                     pageVector[index * 3] = static_cast<uint64_t>(vss);
-                     pageVector[index * 3 + 1] = static_cast<uint64_t>(uss);
-                     pageVector[index * 3 + 2] = jiffies;
-                  }
-
-                  output << (timestamp - firstTimestamp) << "\t" << totalJiffies;
-                  for (uint32_t pageEntry : pageVector)
-                  {
-                     output << "\t" << pageEntry;
-                  }
-                  output << std::endl;
+               }
+               else{
+                  result << "Not enough measurements yet!" << std::endl;
                }
 
-               fclose(inFile);
             }
 
-            return output.str();
+            return result.str();
          }
 
          BEGIN_INTERFACE_MAP(ResourceMonitorImplementation)
@@ -392,7 +334,7 @@ namespace WPEFramework
 
       private:
          std::unique_ptr<StatCollecter> _processThread;
-         string _binPath;
+         string _csvFilePath;
       };
 
       SERVICE_REGISTRATION(ResourceMonitorImplementation, 1, 0);
