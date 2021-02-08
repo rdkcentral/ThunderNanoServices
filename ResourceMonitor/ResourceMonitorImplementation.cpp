@@ -111,8 +111,6 @@ namespace Plugin {
         public:
             explicit StatCollecter(const Config& config)
                 : _logfile(config.Path.Value(), config.Seperator.Value())
-                , _otherMap(nullptr)
-                , _ourMap(nullptr)
                 , _bufferEntries(0)
                 , _interval(0)
                 , _activity(*this)
@@ -121,16 +119,16 @@ namespace Plugin {
                 _memoryPageSize = Core::SystemInfo::Instance().GetPageSize();
                 _pluginStartupTime = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
 
-            
                 uint32_t pageCount = Core::SystemInfo::Instance().GetPhysicalPageCount();
-                _bufferEntries = DivideAndCeil(pageCount, 32); //divide by number of bits in uint32
+                _bufferEntries = DivideAndCeil(pageCount, sizeof(uint32_t));
                 // Because linux doesn't report the first couple of pages it uses itself,
                 // allocate a little extra to make sure we don't miss the highest ones.
                 // The number here is selected arbitrarily
                 _bufferEntries += _bufferEntries / 10;
+                _mapBufferSize = sizeof(uint32_t) * _bufferEntries;
 
-                _ourMap = new uint32_t[_bufferEntries];
-                _otherMap = new uint32_t[_bufferEntries];
+                _ourMap.reserve(_bufferEntries);
+                _otherMap.reserve(_bufferEntries);
                 _interval = config.Interval.Value();
                 _filterName = config.FilterName.Value();
 
@@ -140,9 +138,6 @@ namespace Plugin {
             ~StatCollecter()
             {
                 _activity.Revoke();
-
-                delete[] _ourMap;
-                delete[] _otherMap;
             }
 
             void GetProcessNames(std::vector<string>& processNames)
@@ -164,9 +159,9 @@ namespace Plugin {
                 Core::ProcessInfo::FindByName(_filterName, false, processes);
 
                 for (const Core::ProcessInfo& processInfo : processes) {
-                    uint32_t mapBufferSize = sizeof(_ourMap[0]) * _bufferEntries;
-                    memset(_ourMap, 0, mapBufferSize);
-                    memset(_otherMap, 0, mapBufferSize);
+                    //reset maps
+                    std::fill(std::begin(_ourMap), std::end(_ourMap), 0);
+                    std::fill(std::begin(_otherMap), std::end(_otherMap), 0);
 
                     string processName = processInfo.Name() + " (" + std::to_string(processInfo.Id()) + ")";
 
@@ -178,14 +173,14 @@ namespace Plugin {
 
                     Core::ProcessTree processTree(processInfo.Id());
 
-                    processTree.MarkOccupiedPages(_ourMap, mapBufferSize);
+                    processTree.MarkOccupiedPages(_ourMap.data(), _mapBufferSize);
 
                     std::list<Core::ProcessInfo> otherProcesses;
                     Core::ProcessInfo::Iterator otherIterator;
                     while (otherIterator.Next()) {
                         ::ThreadId otherId = otherIterator.Current().Id();
                         if (!processTree.ContainsProcess(otherId)) {
-                            otherIterator.Current().MarkOccupiedPages(_otherMap, mapBufferSize);
+                            otherIterator.Current().MarkOccupiedPages(_otherMap.data(), _mapBufferSize);
                         }
                     }
 
@@ -201,34 +196,31 @@ namespace Plugin {
             }
 
         private:
-            uint32_t CountSetBits(uint32_t pageBuffer[], const uint32_t* inverseMask)
+            uint32_t CountSetBits(const bool calculateUSS, const std::vector<uint32_t>& pageBuffer, const std::vector<uint32_t>& inverseMask)
             {
                 uint32_t count = 0;
-
-                if (inverseMask == nullptr) {
-                    for (uint32_t index = 0; index < _bufferEntries; index++) {
-                        count += std::bitset<32>(pageBuffer[index]).count();
-                    }
-                } else {
-
+                if (calculateUSS) {
                     for (uint32_t index = 0; index < _bufferEntries; index++) {
                         count += std::bitset<32>(pageBuffer[index] & (~inverseMask[index])).count();
                     }
+                } else {
+                    for (uint32_t index = 0; index < _bufferEntries; index++) {
+                        count += std::bitset<32>(pageBuffer[index]).count();
+                    }
                 }
-
                 return count;
             }
 
             void LogProcess(const string& name, const Core::ProcessInfo& info)
             {
                 auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000) - _pluginStartupTime;
-                uint32_t vss = CountSetBits(_ourMap, nullptr);
-                uint32_t uss = CountSetBits(_ourMap, _otherMap);
+                uint32_t uss = CountSetBits(true, _ourMap, _otherMap);
+                uint32_t vss = CountSetBits(false, _ourMap, _otherMap);
 
                 //multiply uss and vss with size of page map (in kilobytes)
                 uint64_t ussInKilobytes = (_memoryPageSize / 1024) * uss;
                 uint64_t vssInKilobytes = (_memoryPageSize / 1024) * vss;
-                
+
                 uint64_t jiffies = info.Jiffies();
                 uint64_t totalJiffies = Core::SystemInfo::Instance().GetJiffies();
 
@@ -242,9 +234,10 @@ namespace Plugin {
 
             std::vector<string> _processNames; // Seen process names.
             Core::CriticalSection _namesLock;
-            uint32_t* _otherMap; // Buffer used to mark other processes pages.
-            uint32_t* _ourMap; // Buffer for pages used by our process (tree).
+            std::vector<uint32_t> _otherMap; // Buffer used to mark other processes pages.
+            std::vector<uint32_t> _ourMap; // Buffer for pages used by our process (tree).
             uint32_t _bufferEntries; // Numer of entries in each buffer.
+            uint32_t _mapBufferSize; //size of all map buffer entries
             uint32_t _interval; // Seconds between measurement.
             string _filterName; // Process/plugin name we are looking for.
             Core::WorkerPool::JobType<StatCollecter&> _activity;
