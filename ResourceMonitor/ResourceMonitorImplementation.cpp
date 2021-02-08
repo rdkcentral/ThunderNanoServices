@@ -108,16 +108,37 @@ namespace Plugin {
         };
 
         class StatCollecter {
+        private:
+            class Worker : public Core::IDispatch {
+            public:
+                Worker(StatCollecter* parent)
+                    : _parent(*parent)
+                {
+                }
+
+                void Dispatch() override
+                {
+                    _parent._namesLock.Lock();
+                    _parent.Dispatch();
+                    _parent._namesLock.Unlock();
+
+                    Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(_parent._interval * 1000), Core::ProxyType<Core::IDispatch>(*this));
+                }
+
+            private:
+                StatCollecter& _parent;
+            };
+
         public:
             explicit StatCollecter(const Config& config)
                 : _logfile(config.Path.Value(), config.Seperator.Value())
                 , _bufferEntries(0)
                 , _interval(0)
-                , _activity(*this)
+                , _worker(Core::ProxyType<Worker>::Create(this))
+
             {
                 _logfile.Append("Time[s]", "Name", "VSS[KiB]", "USS[KiB]", "Jiffies", "TotalJiffies");
                 _memoryPageSize = Core::SystemInfo::Instance().GetPageSize();
-                _pluginStartupTime = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
 
                 uint32_t pageCount = Core::SystemInfo::Instance().GetPhysicalPageCount();
                 _bufferEntries = DivideAndCeil(pageCount, sizeof(uint32_t));
@@ -132,12 +153,13 @@ namespace Plugin {
                 _interval = config.Interval.Value();
                 _filterName = config.FilterName.Value();
 
-                _activity.Submit();
+                _pluginStartupTime = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
+                Core::IWorkerPool::Instance().Schedule(Core::Time::Now(), Core::ProxyType<Core::IDispatch>(_worker));
             }
 
             ~StatCollecter()
             {
-                _activity.Revoke();
+                Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_worker), Core::infinite);
             }
 
             void GetProcessNames(std::vector<string>& processNames)
@@ -165,11 +187,9 @@ namespace Plugin {
 
                     string processName = processInfo.Name() + " (" + std::to_string(processInfo.Id()) + ")";
 
-                    _namesLock.Lock();
                     if (find(_processNames.begin(), _processNames.end(), processName) == _processNames.end()) {
                         _processNames.push_back(processName);
                     }
-                    _namesLock.Unlock();
 
                     Core::ProcessTree processTree(processInfo.Id());
 
@@ -188,14 +208,11 @@ namespace Plugin {
                 }
             }
 
-        protected:
             void Dispatch()
             {
                 Collect();
-                _activity.Schedule(Core::Time::Now().Add(_interval * 1000));
             }
 
-        private:
             uint32_t CountSetBits(const bool calculateUSS, const std::vector<uint32_t>& pageBuffer, const std::vector<uint32_t>& inverseMask)
             {
                 uint32_t count = 0;
@@ -228,6 +245,7 @@ namespace Plugin {
                 _logfile.Store();
             }
 
+        private:
             CSVFile _logfile;
             uint32_t _memoryPageSize; //size of the device memory page
             uint32_t _pluginStartupTime; //time in which the resurcemonitor started
@@ -240,9 +258,8 @@ namespace Plugin {
             uint32_t _mapBufferSize; //size of all map buffer entries
             uint32_t _interval; // Seconds between measurement.
             string _filterName; // Process/plugin name we are looking for.
-            Core::WorkerPool::JobType<StatCollecter&> _activity;
 
-            friend Core::ThreadPool::JobType<StatCollecter&>;
+            Core::ProxyType<Worker> _worker;
         };
 
     private:
