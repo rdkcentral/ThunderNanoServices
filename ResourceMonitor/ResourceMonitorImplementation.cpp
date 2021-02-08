@@ -118,18 +118,15 @@ namespace Plugin {
                 , _activity(*this)
             {
                 _logfile.Append("Time[s]", "Name", "VSS[KiB]", "USS[KiB]", "Jiffies", "TotalJiffies");
-                uint32_t pageCount = Core::SystemInfo::Instance().GetPhysicalPageCount();
                 _memoryPageSize = Core::SystemInfo::Instance().GetPageSize();
                 _pluginStartupTime = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
 
-                const uint32_t bitPersUint32 = 32;
-                _bufferEntries = pageCount / bitPersUint32;
-                if ((pageCount % bitPersUint32) != 0) {
-                    _bufferEntries++;
-                }
-
+            
+                uint32_t pageCount = Core::SystemInfo::Instance().GetPhysicalPageCount();
+                _bufferEntries = DivideAndCeil(pageCount, 32); //divide by number of bits in uint32
                 // Because linux doesn't report the first couple of pages it uses itself,
-                //    allocate a little extra to make sure we don't miss the highest ones.
+                // allocate a little extra to make sure we don't miss the highest ones.
+                // The number here is selected arbitrarily
                 _bufferEntries += _bufferEntries / 10;
 
                 _ourMap = new uint32_t[_bufferEntries];
@@ -156,6 +153,11 @@ namespace Plugin {
             }
 
         private:
+            uint32_t DivideAndCeil(uint32_t dividend, uint32_t divisor)
+            {
+                return dividend / divisor + (dividend % divisor != 0);
+            }
+
             void Collect()
             {
                 std::list<Core::ProcessInfo> processes;
@@ -222,8 +224,11 @@ namespace Plugin {
                 auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000) - _pluginStartupTime;
                 uint32_t vss = CountSetBits(_ourMap, nullptr);
                 uint32_t uss = CountSetBits(_ourMap, _otherMap);
+
+                //multiply uss and vss with size of page map (in kilobytes)
                 uint64_t ussInKilobytes = (_memoryPageSize / 1024) * uss;
                 uint64_t vssInKilobytes = (_memoryPageSize / 1024) * vss;
+                
                 uint64_t jiffies = info.Jiffies();
                 uint64_t totalJiffies = Core::SystemInfo::Instance().GetJiffies();
 
@@ -280,32 +285,25 @@ namespace Plugin {
 
         string CompileMemoryCsv() override
         {
-            const uint32_t lastMeasurementsHistory = Core::infinite;
+            const uint8_t lastMeasurementsHistory = 10;
 
             std::ifstream csvFile(_csvFilePath, std::fstream::binary);
             std::ostringstream result;
             std::string line;
+            std::vector<std::string> allLines;
 
-            //get the first line - header
-            std::getline(csvFile, line);
-            result << line << std::endl;
+            while (std::getline(csvFile, line)) {
+                allLines.push_back(line);
+            }
+            if (allLines.size() > lastMeasurementsHistory) {
 
-            if (lastMeasurementsHistory == Core::infinite) {
-                while (std::getline(csvFile, line)) {
-                    result << line << std::endl;
+                result << allLines.front() << std::endl; //write header
+
+                for (auto currentLine = allLines.end() - lastMeasurementsHistory; currentLine != allLines.end(); ++currentLine) {
+                    result << *currentLine << std::endl;
                 }
             } else {
-                std::vector<std::string> allLines;
-                while (std::getline(csvFile, line)) {
-                    allLines.push_back(line);
-                }
-                if (allLines.size() > lastMeasurementsHistory) {
-                    for (auto currentLine = allLines.end() - lastMeasurementsHistory; currentLine != allLines.end(); ++currentLine) {
-                        result << *currentLine << std::endl;
-                    }
-                } else {
-                    result << "Not enough measurements yet!" << std::endl;
-                }
+                result << "Not enough measurements yet!" << std::endl;
             }
 
             return result.str();
