@@ -1,4 +1,5 @@
 #include "Module.h"
+#include <bitset>
 #include <core/ProcessInfo.h>
 #include <fstream>
 #include <interfaces/IMemory.h>
@@ -204,11 +205,12 @@ namespace Plugin {
 
                 if (inverseMask == nullptr) {
                     for (uint32_t index = 0; index < _bufferEntries; index++) {
-                        count += __builtin_popcount(pageBuffer[index]);
+                        count += std::bitset<32>(pageBuffer[index]).count();
                     }
                 } else {
+
                     for (uint32_t index = 0; index < _bufferEntries; index++) {
-                        count += __builtin_popcount(pageBuffer[index] & (~inverseMask[index]));
+                        count += std::bitset<32>(pageBuffer[index] & (~inverseMask[index])).count();
                     }
                 }
 
