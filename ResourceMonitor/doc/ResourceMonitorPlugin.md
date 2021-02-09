@@ -73,9 +73,31 @@ The table below lists configuration options of the plugin.
 | classname | string | Class name: *ResourceMonitor* |
 | locator | string | Library name: *libWPEFrameworkResourceMonitor.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.path | string | <sup>*(optional)*</sup> Path of resource |
-| configuration?.interval | number | <sup>*(optional)*</sup> Duration between measurements (default: 5) |
-| configuration?.mode | string | <sup>*(optional)*</sup> Mode (options: "single", "multiple", "callsign", "classname") |
-| configuration?.parent-name | string | <sup>*(optional)*</sup> Name of parent process |
+| csv_filepath | string |<sup>*(optional)*</sup> Path where .csv file should be saved (default /tmp/resource.csv) |
+| csv_separator | string |<sup>*(optional)*</sup> separator between columns of .csv (default ';' )|
+| interval | number | <sup>*(optional)*</sup> Duration between measurements (default: 5) |
+|name | string | <sup>*(optional)*</sup> Process to monitor (options: WPE - monitors each process begining with "WPE"; WPEFramework-1.0.0; WPEProcess; WPEWebProcess; WPENetworkProcess etc. (default: WPE)
 
+# Methods
+
+The following methods are provided by the ResourceMonitor plugin:
+
+ResourceMonitor interface methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [CompileMemoryCsv](#method.compilememorycsv) | Gets last 10 measurements|
+
+
+<a name="method.compilememorycsv"></a>
+## *CompileMemoryCsv <sup>method</sup>*
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result| string | Last 10 measurements with header|
