@@ -118,9 +118,9 @@ namespace Plugin {
 
                 void Dispatch() override
                 {
-                    _parent._namesLock.Lock();
+                    _parent._guard.Lock();
                     _parent.Dispatch();
-                    _parent._namesLock.Unlock();
+                    _parent._guard.Unlock();
 
                     Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(_parent._interval * 1000), Core::ProxyType<Core::IDispatch>(*this));
                 }
@@ -160,12 +160,6 @@ namespace Plugin {
                 Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_worker), Core::infinite);
             }
 
-            void GetProcessNames(std::vector<string>& processNames)
-            {
-                _namesLock.Lock();
-                processNames = _processNames;
-                _namesLock.Unlock();
-            }
 
         private:
             uint32_t DivideAndCeil(uint32_t dividend, uint32_t divisor)
@@ -248,7 +242,7 @@ namespace Plugin {
             uint32_t _memoryPageSize;            //size of the device memory page
 
             std::vector<string> _processNames; // Seen process names.
-            Core::CriticalSection _namesLock;
+            Core::CriticalSection _guard;
             std::vector<uint32_t> _otherMap; // Buffer used to mark other processes pages.
             std::vector<uint32_t> _ourMap; // Buffer for pages used by our process (tree).
             uint32_t _bufferEntries; // Numer of entries in each buffer.
