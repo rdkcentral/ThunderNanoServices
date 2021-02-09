@@ -141,14 +141,14 @@ namespace Plugin {
                 _memoryPageSize = Core::SystemInfo::Instance().GetPageSize();
 
                 _pageCount = Core::SystemInfo::Instance().GetPhysicalPageCount();
-                _bufferEntries = DivideAndCeil(_pageCount, sizeof(uint32_t));
+                _bufferEntries = DivideAndCeil(_pageCount, 32); //divide by bit size of uint32_t
                 // Because linux doesn't report the first couple of pages it uses itself,
                 // allocate a little extra to make sure we don't miss the highest ones.
                 // The number here is selected arbitrarily
                 _bufferEntries += _bufferEntries / 10;
 
-                _ourMap.reserve(_bufferEntries);
-                _otherMap.reserve(_bufferEntries);
+                _ourMap.resize(_bufferEntries);
+                _otherMap.resize(_bufferEntries);
                 _interval = config.Interval.Value();
                 _filterName = config.FilterName.Value();
 
@@ -282,12 +282,24 @@ namespace Plugin {
 
             Config config;
             config.FromString(service->ConfigLine());
-            if (config.Path.IsSet() == true) {
-                _csvFilePath = config.Path.Value().c_str();
-            }
 
-            result = Core::ERROR_NONE;
-            _processThread.reset(new StatCollecter(config));
+            if (config.Path.IsSet()) {
+                _csvFilePath = config.Path.Value().c_str();
+
+                if (!config.Interval.IsSet()) {
+                    TRACE(Trace::Error, (_T("Interval not specified!")));
+                } else {
+                    if (config.Interval.Value() == 0) {
+                        TRACE(Trace::Error, (_T("Interval must be greater than 0!")));
+                    } else {
+                        _processThread.reset(new StatCollecter(config));
+                        result = Core::ERROR_NONE;
+                    }
+                }
+
+            } else {
+                TRACE(Trace::Error, (_T(".csv filepath not specified!")));
+            }
 
             return (result);
         }
