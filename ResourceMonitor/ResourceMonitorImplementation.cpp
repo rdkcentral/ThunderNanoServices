@@ -142,6 +142,7 @@ namespace Plugin {
 
                 _pageCount = Core::SystemInfo::Instance().GetPhysicalPageCount();
                 _bufferEntries = DivideAndCeil(_pageCount, 32); //divide by bit size of uint32_t
+
                 // Because linux doesn't report the first couple of pages it uses itself,
                 // allocate a little extra to make sure we don't miss the highest ones.
                 // The number here is selected arbitrarily
@@ -159,7 +160,6 @@ namespace Plugin {
             {
                 Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_worker), Core::infinite);
             }
-
 
         private:
             uint32_t DivideAndCeil(uint32_t dividend, uint32_t divisor)
@@ -239,7 +239,7 @@ namespace Plugin {
 
         private:
             CSVFile _logfile;
-            uint32_t _memoryPageSize;            //size of the device memory page
+            uint32_t _memoryPageSize; //size of the device memory page
 
             std::vector<string> _processNames; // Seen process names.
             Core::CriticalSection _guard;
