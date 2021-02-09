@@ -140,13 +140,12 @@ namespace Plugin {
                 _logfile.Append("Time[s]", "Name", "VSS[KiB]", "USS[KiB]", "Jiffies", "TotalJiffies");
                 _memoryPageSize = Core::SystemInfo::Instance().GetPageSize();
 
-                uint32_t pageCount = Core::SystemInfo::Instance().GetPhysicalPageCount();
-                _bufferEntries = DivideAndCeil(pageCount, sizeof(uint32_t));
+                _pageCount = Core::SystemInfo::Instance().GetPhysicalPageCount();
+                _bufferEntries = DivideAndCeil(_pageCount, sizeof(uint32_t));
                 // Because linux doesn't report the first couple of pages it uses itself,
                 // allocate a little extra to make sure we don't miss the highest ones.
                 // The number here is selected arbitrarily
                 _bufferEntries += _bufferEntries / 10;
-                _mapBufferSize = sizeof(uint32_t) * _bufferEntries;
 
                 _ourMap.reserve(_bufferEntries);
                 _otherMap.reserve(_bufferEntries);
@@ -193,14 +192,14 @@ namespace Plugin {
 
                     Core::ProcessTree processTree(processInfo.Id());
 
-                    processTree.MarkOccupiedPages(_ourMap.data(), _mapBufferSize);
+                    processTree.MarkOccupiedPages(_ourMap.data(), _pageCount);
 
                     std::list<Core::ProcessInfo> otherProcesses;
                     Core::ProcessInfo::Iterator otherIterator;
                     while (otherIterator.Next()) {
                         ::ThreadId otherId = otherIterator.Current().Id();
                         if (!processTree.ContainsProcess(otherId)) {
-                            otherIterator.Current().MarkOccupiedPages(_otherMap.data(), _mapBufferSize);
+                            otherIterator.Current().MarkOccupiedPages(_otherMap.data(), _pageCount);
                         }
                     }
 
@@ -255,7 +254,7 @@ namespace Plugin {
             std::vector<uint32_t> _otherMap; // Buffer used to mark other processes pages.
             std::vector<uint32_t> _ourMap; // Buffer for pages used by our process (tree).
             uint32_t _bufferEntries; // Numer of entries in each buffer.
-            uint32_t _mapBufferSize; //size of all map buffer entries
+            uint32_t _pageCount; //number of pages
             uint32_t _interval; // Seconds between measurement.
             string _filterName; // Process/plugin name we are looking for.
 
