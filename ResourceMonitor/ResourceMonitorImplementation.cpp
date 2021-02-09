@@ -152,7 +152,6 @@ namespace Plugin {
                 _interval = config.Interval.Value();
                 _filterName = config.FilterName.Value();
 
-                _pluginStartupTime = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
                 Core::IWorkerPool::Instance().Schedule(Core::Time::Now(), Core::ProxyType<Core::IDispatch>(_worker));
             }
 
@@ -229,7 +228,7 @@ namespace Plugin {
 
             void LogProcess(const string& name, const Core::ProcessInfo& info)
             {
-                auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000) - _pluginStartupTime;
+                auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
                 uint32_t uss = CountSetBits(true, _ourMap, _otherMap);
                 uint32_t vss = CountSetBits(false, _ourMap, _otherMap);
 
@@ -246,8 +245,7 @@ namespace Plugin {
 
         private:
             CSVFile _logfile;
-            uint32_t _memoryPageSize; //size of the device memory page
-            uint32_t _pluginStartupTime; //time in which the resurcemonitor started
+            uint32_t _memoryPageSize;            //size of the device memory page
 
             std::vector<string> _processNames; // Seen process names.
             Core::CriticalSection _namesLock;
