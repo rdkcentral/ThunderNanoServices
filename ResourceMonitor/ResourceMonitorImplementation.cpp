@@ -144,7 +144,8 @@ namespace Plugin {
                 _memoryPageSize = Core::SystemInfo::Instance().GetPageSize();
 
                 _pageCount = Core::SystemInfo::Instance().GetPhysicalPageCount();
-                _bufferEntries = DivideAndCeil(_pageCount, 32); //divide by bit size of uint32_t
+                _bufferEntries = std::ceil(_pageCount / 32.0); //divide by bit size of uint32_t
+
                 // Because linux doesn't report the first couple of pages it uses itself,
                 // allocate a little extra to make sure we don't miss the highest ones.
                 // The number here is selected arbitrarily
@@ -164,10 +165,6 @@ namespace Plugin {
             }
 
         private:
-            uint32_t DivideAndCeil(uint32_t dividend, uint32_t divisor)
-            {
-                return dividend / divisor + (dividend % divisor != 0);
-            }
 
             void Collect()
             {
