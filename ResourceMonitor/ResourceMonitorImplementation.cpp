@@ -132,7 +132,9 @@ namespace Plugin {
         public:
             explicit StatCollecter(const Config& config)
                 : _logfile(config.Path.Value(), config.Seperator.Value())
+                , _memoryPageSize(0)
                 , _bufferEntries(0)
+                , _pageCount(0)
                 , _interval(0)
                 , _worker(Core::ProxyType<Worker>::Create(this))
 
@@ -148,8 +150,8 @@ namespace Plugin {
                 // The number here is selected arbitrarily
                 _bufferEntries += _bufferEntries / 10;
 
-                _ourMap.resize(_bufferEntries);
-                _otherMap.resize(_bufferEntries);
+                _ourProcessPages.resize(_bufferEntries);
+                _otherProcessesPages.resize(_bufferEntries);
                 _interval = config.Interval.Value();
                 _filterName = config.FilterName.Value();
 
@@ -174,8 +176,8 @@ namespace Plugin {
 
                 for (const Core::ProcessInfo& processInfo : processes) {
                     //reset maps
-                    std::fill(std::begin(_ourMap), std::end(_ourMap), 0);
-                    std::fill(std::begin(_otherMap), std::end(_otherMap), 0);
+                    std::fill(std::begin(_ourProcessPages), std::end(_ourProcessPages), 0);
+                    std::fill(std::begin(_otherProcessesPages), std::end(_otherProcessesPages), 0);
 
                     string processName = processInfo.Name() + " (" + std::to_string(processInfo.Id()) + ")";
 
@@ -185,14 +187,14 @@ namespace Plugin {
 
                     Core::ProcessTree processTree(processInfo.Id());
 
-                    processTree.MarkOccupiedPages(_ourMap.data(), _pageCount);
+                    processTree.MarkOccupiedPages(_ourProcessPages.data(), _pageCount);
 
                     std::list<Core::ProcessInfo> otherProcesses;
                     Core::ProcessInfo::Iterator otherIterator;
                     while (otherIterator.Next()) {
                         ::ThreadId otherId = otherIterator.Current().Id();
                         if (!processTree.ContainsProcess(otherId)) {
-                            otherIterator.Current().MarkOccupiedPages(_otherMap.data(), _pageCount);
+                            otherIterator.Current().MarkOccupiedPages(_otherProcessesPages.data(), _pageCount);
                         }
                     }
 
@@ -223,8 +225,8 @@ namespace Plugin {
             void LogProcess(const string& name, const Core::ProcessInfo& info)
             {
                 auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
-                uint32_t uss = CountSetBits(true, _ourMap, _otherMap);
-                uint32_t vss = CountSetBits(false, _ourMap, _otherMap);
+                uint32_t uss = CountSetBits(true, _ourProcessPages, _ourProcessPages);
+                uint32_t vss = CountSetBits(false, _ourProcessPages, _ourProcessPages);
 
                 //multiply uss and vss with size of page map (in kilobytes)
                 uint64_t ussInKilobytes = (_memoryPageSize / 1024) * uss;
@@ -239,16 +241,16 @@ namespace Plugin {
 
         private:
             CSVFile _logfile;
-            uint32_t _memoryPageSize; //size of the device memory page
+            uint32_t _memoryPageSize;
 
-            std::vector<string> _processNames; // Seen process names.
+            std::vector<string> _processNames;
             Core::CriticalSection _guard;
-            std::vector<uint32_t> _otherMap; // Buffer used to mark other processes pages.
-            std::vector<uint32_t> _ourMap; // Buffer for pages used by our process (tree).
-            uint32_t _bufferEntries; // Numer of entries in each buffer.
-            uint32_t _pageCount; //number of pages
-            uint32_t _interval; // Seconds between measurement.
-            string _filterName; // Process/plugin name we are looking for.
+            std::vector<uint32_t> _otherProcessesPages;
+            std::vector<uint32_t> _ourProcessPages;
+            uint32_t _bufferEntries;
+            uint32_t _pageCount;
+            uint32_t _interval;
+            string _filterName;
 
             Core::ProxyType<Worker> _worker;
         };
