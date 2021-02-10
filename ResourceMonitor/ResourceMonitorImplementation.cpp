@@ -4,6 +4,7 @@
 #include <fstream>
 #include <interfaces/IMemory.h>
 #include <interfaces/IResourceMonitor.h>
+#include <numeric>
 #include <sstream>
 #include <vector>
 
@@ -144,7 +145,6 @@ namespace Plugin {
 
                 _pageCount = Core::SystemInfo::Instance().GetPhysicalPageCount();
                 _bufferEntries = DivideAndCeil(_pageCount, 32); //divide by bit size of uint32_t
-
                 // Because linux doesn't report the first couple of pages it uses itself,
                 // allocate a little extra to make sure we don't miss the highest ones.
                 // The number here is selected arbitrarily
@@ -207,17 +207,19 @@ namespace Plugin {
                 Collect();
             }
 
-            uint32_t CountSetBits(const bool calculateUSS, const std::vector<uint32_t>& pageBuffer, const std::vector<uint32_t>& inverseMask)
+          
+            uint32_t CalculateVss(const std::vector<uint32_t>& pageBuffer)
+            {
+                return std::accumulate(std::begin(_ourProcessPages), std::end(_ourProcessPages), 0, [](int total, uint32_t page) {
+                    return total + std::bitset<32>(page).count();
+                });
+            }
+
+            uint32_t CalculateUss(const std::vector<uint32_t>& ourProcessPages, const std::vector<uint32_t>& otherProcessPages)
             {
                 uint32_t count = 0;
-                if (calculateUSS) {
-                    for (uint32_t index = 0; index < _bufferEntries; index++) {
-                        count += std::bitset<32>(pageBuffer[index] & (~inverseMask[index])).count();
-                    }
-                } else {
-                    for (uint32_t index = 0; index < _bufferEntries; index++) {
-                        count += std::bitset<32>(pageBuffer[index]).count();
-                    }
+                for (uint32_t index = 0; index < _bufferEntries; index++) {
+                    count += std::bitset<32>(ourProcessPages[index] & (~otherProcessPages[index])).count();
                 }
                 return count;
             }
@@ -225,8 +227,9 @@ namespace Plugin {
             void LogProcess(const string& name, const Core::ProcessInfo& info)
             {
                 auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
-                uint32_t uss = CountSetBits(true, _ourProcessPages, _ourProcessPages);
-                uint32_t vss = CountSetBits(false, _ourProcessPages, _ourProcessPages);
+
+                uint32_t uss = CalculateUss(_ourProcessPages, _otherProcessesPages);
+                uint32_t vss = CalculateVss(_ourProcessPages);
 
                 //multiply uss and vss with size of page map (in kilobytes)
                 uint64_t ussInKilobytes = (_memoryPageSize / 1024) * uss;
