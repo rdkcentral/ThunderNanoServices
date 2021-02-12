@@ -213,7 +213,14 @@ namespace Plugin {
 
         // 2.1 spec adds "hidden" state. It also introduces "installable" state.
         // We may consider adding support for it at some point - thanks to the Packager.
-        string state(((isAtLeast2_1 == true) && (HasHide() == true) && (IsHidden() == true) ? _T("hidden") : ((running == true) ? _T("running") : _T("stopped"))));
+        string state;
+        if ((HasHide() == true) && (IsHidden() == true)) {
+            state = (isAtLeast2_1? _T("hidden") : _T("stopped"));
+        } else if (running == true) {
+            state = _T("running");
+        } else {
+            state = _T("stopped");
+        }
 
         // allowStop is mandatory to be true starting from 2.1
         string allowStop((isAtLeast2_1 == true) || (HasStartAndStop() == true) ? "true" : "false");
