@@ -25,6 +25,7 @@
 #include <interfaces/IWebServer.h>
 #include <interfaces/IBrowser.h>
 
+#include <interfaces/IApplication.h>
 #include <interfaces/IDIALServer.h>
 #include <interfaces/json/JsonData_DIALServer.h>
 
@@ -263,26 +264,82 @@ namespace Plugin {
 
         public:
             // Methods that the DIALServer requires.
-            bool IsRunning() const override {
-                return (_passiveMode == true ? _isRunning : (_switchBoard != nullptr ? _switchBoard->IsActive(_callsign) : (_service->State() == PluginHost::IShell::ACTIVATED)));
+            bool IsRunning() const override
+            {
+                bool running = false;
+                if (_passiveMode == true) {
+                    running = _isRunning;
+                } else {
+                    if (_switchBoard != nullptr) {
+                        running = _switchBoard->IsActive(_callsign);
+                    } else {
+                        running = (_service->State() == PluginHost::IShell::ACTIVATED);
+                    }
+                    if ((running == true) && (_service->AutoStart() == true)) {
+                        const PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
+                        if (stateCtrl != nullptr) {
+                            running = (stateCtrl->State() == PluginHost::IStateControl::RESUMED);
+                            stateCtrl->Release();
+                        }
+                    }
+                }
+                return (running);
             }
-            bool IsHidden() const override {
-                return _isHidden;
+            bool IsHidden() const override
+            {
+                bool hidden = false;
+                if (_passiveMode == true) {
+                    hidden = _isHidden;
+                } else {
+                    const Exchange::IApplication* app = QueryInterface<Exchange::IApplication>();
+                    if (app != nullptr) {
+                        app->Visible(hidden);
+                        hidden = !hidden;
+                        app->Release();
+                    }
+                }
+                return (hidden);
             }
-            bool HasHide() const override {
-                return _hasHide;
+            bool HasHide() const override
+            {
+                return (_hasHide);
             }
-            bool HasStartAndStop() const override {
-                return true;
+            bool HasStartAndStop() const override
+            {
+                return (true);
             }
-            void Hide() override {
+            void Hide() override
+            {
                 if (_passiveMode == true) {
                     const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"hide\" }"));
                     _service->Notify(message);
                     _parent->event_hide(_callsign);
+                } else {
+                    Exchange::IApplication* app = QueryInterface<Exchange::IApplication>();
+                    if (app != nullptr) {
+                        app->Visible(false);
+                        app->Release();
+                    }
                 }
             }
-            uint32_t Start(const string& parameters, const string& payload) override {
+            uint32_t Start(const string& parameters, const string& payload) override
+            {
+                // DIAL active mode operation logic:
+                // AutoStart: OFF
+                //  - Start activates the app, sets launch point, sets content link and sets visible state, resumes if needed
+                //  - Stop deactivates the app
+                //  - Hide sets app's invisible state
+                //  - 'Running' state is when service is activated and in visible state
+                //  - 'Hidden' state is when service is activated and in invisible state
+                //  - 'Stopped' state is when service is deactivated
+                // AutoStart: ON
+                //  - Start activates the app if needed, sets launch point, sets content link and sets visible state and resumes
+                //  - Stop suspends the app
+                //  - Hide sets app's invisible state
+                //  - 'Running' state is when service is activated, resumed and in visible state
+                //  - 'Hidden' state is when service is activated and in invisible state
+                //  - 'Stopped' state is when service is deactivated or suspended
+
                 uint32_t result = Core::ERROR_NONE;
                 if (_passiveMode == true) {
                     const string message(_T("{ \"application\": \"") + _callsign + _T("\", \"request\":\"start\",  \"parameters\":\"") + ((_parent->DeprecatedAPI() == true) ? ConcatenatePayload(parameters, payload) : parameters) + _T("\", \"payload\":\"") + payload + _T("\" }"));
@@ -290,22 +347,45 @@ namespace Plugin {
                     _parent->event_start(_callsign, (_parent->DeprecatedAPI() == true) ? ConcatenatePayload(parameters, payload) : parameters, payload);
                 } else {
                     if (_switchBoard != nullptr) {
-                        result = _switchBoard->Activate(_callsign);
+                        _switchBoard->Activate(_callsign);
                     } else {
-                        result = _service->Activate(PluginHost::IShell::REQUESTED);
+                        _service->Activate(PluginHost::IShell::REQUESTED);
                     }
-
-                    if (IsRunning() == true) {
+                    if (_service->State() == PluginHost::IShell::ACTIVATED) {
                         if (Connect() == false) {
                             TRACE(Trace::Error, (_T("DIAL: Failed to attach to service")));
                             result = Core::ERROR_UNAVAILABLE;
                         } else {
+                            Exchange::IApplication* app = QueryInterface<Exchange::IApplication>();
+                            if (app != nullptr) {
+                                app->LaunchPoint(Exchange::IApplication::DIAL);
+                                if (_hasRuntimeChange == false) {
+                                    app->ContentLink(ConcatenatePayload(parameters, payload));
+                                }
+                                app->Visible(true); // If suspended, the application is still expected to stay invisible until resumed.
+                                app->Release();
+                            } else {
+                                TRACE(Trace::Information, (_T("No IApplication available for '%s'"), _callsign.c_str()));
+                            }
+
+                            PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
+                            if (stateCtrl != nullptr) {
+                                if (stateCtrl->State() == PluginHost::IStateControl::SUSPENDED) {
+                                    stateCtrl->Request(PluginHost::IStateControl::RESUME);
+                                }
+                                stateCtrl->Release();
+                            } else {
+                                TRACE(Trace::Information, (_T("No IStateControl available for '%s'"), _callsign.c_str()));
+                            }
+
                             URL(parameters, payload);
                         }
+                    } else {
+                        TRACE(Trace::Information, (_T("Failed to activate '%s'"), _callsign.c_str()));
+                        result = Core::ERROR_GENERAL;
                     }
                 }
-
-                return result;
+                return (result);
             }
             void Stop(const string& parameters, const string& payload) override
             {
@@ -314,20 +394,31 @@ namespace Plugin {
                     _service->Notify(message);
                     _parent->event_stop(_callsign, parameters);
                 } else {
-                    if (_switchBoard != nullptr) {
-                        _switchBoard->Deactivate(_callsign);
+                    if (_service->AutoStart() == true) {
+                        PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
+                        if (stateCtrl != nullptr) {
+                            if (stateCtrl->State() != PluginHost::IStateControl::SUSPENDED) {
+                                stateCtrl->Request(PluginHost::IStateControl::SUSPEND);
+                            }
+                            stateCtrl->Release();
+                        }
+
                     } else {
-                        _service->Deactivate(PluginHost::IShell::REQUESTED);
+                        if (_switchBoard != nullptr) {
+                            _switchBoard->Deactivate(_callsign);
+                        } else {
+                            _service->Deactivate(PluginHost::IShell::REQUESTED);
+                        }
                     }
                 }
             }
             bool IsConnected() override
             {
-                return true;
+                return (true);
             }
             bool Connect() override
             {
-                return true;
+                return (true);
             }
             string URL() const override
             {
@@ -345,15 +436,24 @@ namespace Plugin {
                         result = true;
                     }
                     else {
-                        Exchange::IBrowser* browser = _service->QueryInterface<Exchange::IBrowser>();
-
-                        if (browser != nullptr) {
-                            browser->SetURL(url);
-                            browser->Release();
+                        Exchange::IApplication* app = QueryInterface<Exchange::IApplication>();
+                        if (app != nullptr) {
+                            app->ContentLink(ConcatenatePayload(url, payload));
+                            app->Release();
                             result = true;
+                        }
+
+                        if (result == false) {
+                            Exchange::IBrowser* browser = QueryInterface<Exchange::IBrowser>();
+                            if (browser != nullptr) {
+                                browser->SetURL(url);
+                                browser->Release();
+                                result = true;
+                            }
                         }
                     }
                 }
+
                 return (result);
             }
             void AdditionalData(AdditionalDataType&& data) override
@@ -362,25 +462,25 @@ namespace Plugin {
             }
             AdditionalDataType AdditionalData() const override
             {
-                return _additionalData;
+                return (_additionalData);
             }
             void Running(const bool isRunning) override
             {
                 // This method is only for the Passive mode..
                 if (_passiveMode != true) {
-                    TRACE(Trace::Information, (_T("This app is not configured to be Passive !!!!%s"), ""));
+                    TRACE(Trace::Information, (_T("This app is not configured to be Passive!")));
+                } else {
+                    _isRunning = isRunning;
                 }
-
-                _isRunning = isRunning;
             }
             void Hidden(const bool isHidden) override
             {
                 // This method is only for the Passive mode..
                 if (_passiveMode != true) {
-                    TRACE(Trace::Information, (_T("This app is not configured to be Passive !!!!%s"), ""));
+                    TRACE(Trace::Information, (_T("This app is not configured to be Passive!")));
+                } else {
+                    _isHidden = isHidden;
                 }
-
-                _isHidden = isHidden;
             }
             void SwitchBoard(Exchange::ISwitchBoard* switchBoard) override
             {
@@ -412,9 +512,15 @@ namespace Plugin {
                 return (_service->QueryInterface<REQUESTEDINTERFACE>());
             }
 
+            template <typename REQUESTEDINTERFACE>
+            const REQUESTEDINTERFACE* QueryInterface() const
+            {
+                return (_service->QueryInterface<REQUESTEDINTERFACE>());
+            }
+
         private:
             // ------------------------------------------------------------------------------------------------------
-            // The following methods should be redundant if we stop supporting the deprecated interface
+            // The following method should be redundant if we stop supporting the deprecated interface
             // ------------------------------------------------------------------------------------------------------
             uint32_t Show() override
             {
@@ -425,12 +531,14 @@ namespace Plugin {
                 }
                 return Core::ERROR_NONE;
             }
+
+        private:
             string ConcatenatePayload(const string& params, const string& payload)
             {
+                // By convention use "dial" parameter to pass the DIAL payload.
                 string result = params;
 
                 if (payload.empty() == false) {
-                    // Netflix expects the payload as urlencoded option "dial"
                     const uint16_t maxEncodeSize = static_cast<uint16_t>(payload.length() * 3 * sizeof(TCHAR));
                     TCHAR* encodedPayload = reinterpret_cast<TCHAR*>(ALLOCA(maxEncodeSize));
                     Core::URL::Encode(payload.c_str(), static_cast<uint16_t>(payload.length()), encodedPayload, maxEncodeSize);
