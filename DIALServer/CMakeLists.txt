@@ -53,23 +53,6 @@ if(PLUGIN_DIALSERVER_ENABLE_YOUTUBE AND "${PLUGIN_DIALSERVER_YOUTUBE_MODE}" STRE
             YouTube.cpp)
 endif()
 
-if(PLUGIN_DIALSERVER_ENABLE_NETFLIX AND "${PLUGIN_DIALSERVER_NETFLIX_MODE}" STREQUAL "active")
-target_sources(${MODULE_NAME}
-        PRIVATE
-            Netflix.cpp)
-
-if (NETFLIX_VERSION_5_1)
-    target_compile_definitions(${MODULE_NAME}
-        PRIVATE
-            NETFLIX_VERSION_5_1=ON)
-endif()
-if(NETFLIX_VERSION_5_2)
-    target_compile_definitions(${MODULE_NAME}
-    PRIVATE
-        NETFLIX_VERSION_5_2=ON)
-endif()
-endif()
-
 if(PLUGIN_DIALSERVER_ENABLE_AMAZON_PRIME AND "${PLUGIN_DIALSERVER_AMAZON_PRIME_MODE}" STREQUAL "active")
 target_sources(${MODULE_NAME}
         PRIVATE
