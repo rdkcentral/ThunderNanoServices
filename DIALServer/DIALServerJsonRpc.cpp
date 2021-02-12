@@ -109,7 +109,7 @@ namespace Plugin {
     // Event: hide - Signals that application hide was requested over DIAL
     void DIALServer::event_hide(const string& application)
     {
-        HideParamsData params;
+        HideParamsInfo params;
         params.Application = application;
 
         Notify(_T("hide"), params);
@@ -118,7 +118,7 @@ namespace Plugin {
     // Event: show - Signals that application show was requested over DIAL (DEPRECATED)
     void DIALServer::event_show(const string& application)
     {
-        HideParamsData params;
+        HideParamsInfo params;
         params.Application = application;
 
         Notify(_T("show"), params);
@@ -129,8 +129,12 @@ namespace Plugin {
     {
         StartParamsData params;
         params.Application = application;
-        params.Parameters = parameters;
-        params.Payload = payload;
+        if (parameters.empty() == false) {
+            params.Parameters = parameters;
+        }
+        if (payload.empty() == false) {
+            params.Payload = payload;
+        }
 
         Notify(_T("start"), params);
     }
@@ -140,8 +144,12 @@ namespace Plugin {
     {
         StartParamsData params;
         params.Application = application;
-        params.Parameters = parameters;
-        params.Payload = payload;
+        if (parameters.empty() == false) {
+            params.Parameters = parameters;
+        }
+        if (payload.empty() == false) {
+            params.Payload = payload;
+        }
 
         Notify(_T("change"), params);
     }
