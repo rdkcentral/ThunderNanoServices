@@ -341,6 +341,8 @@ namespace Plugin {
             _sink.Register(service, _config.WebServer.Value(), _config.SwitchBoard.Value());
 
             _adminLock.Unlock();
+
+            RegisterAll();
         }
 
         // On succes return NULL, to indicate there is no error text.
@@ -351,6 +353,8 @@ namespace Plugin {
     {
         ASSERT(_service != NULL);
         ASSERT(_dialServiceImpl != NULL);
+
+        UnregisterAll();
 
         _adminLock.Lock();
 
@@ -391,8 +395,9 @@ namespace Plugin {
 
             const uint16_t maxEncodedSize = static_cast<uint16_t>(additionalDataUrl.length() * 3 * sizeof(TCHAR));
             TCHAR* encodedDataUrl = reinterpret_cast<TCHAR*>(ALLOCA(maxEncodedSize));
-            uint16_t dialpayload = Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, maxEncodedSize);
-            const string parameters = (app.AppURL() + (app.HasQueryParameter() ? _T("&") : _T("?")) + ((DeprecatedAPI() == true) ? (_T("dialpayload=") + std::to_string(dialpayload) + _T("&")) : _T("")) + _T("additionalDataUrl=") + encodedDataUrl);
+            Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, maxEncodedSize);
+
+            const string parameters = (app.AppURL() + (app.HasQueryParameter() ? _T("&") : _T("?")) + _T("additionalDataUrl=") + encodedDataUrl);
 
             TRACE(Trace::Information, (_T("Launch Application [%s] with params: '%s', payload: '%s'"), app.Name().c_str(), parameters.c_str(), payload.c_str()));
 
