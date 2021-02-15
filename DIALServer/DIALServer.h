@@ -297,6 +297,13 @@ namespace Plugin {
                         hidden = !hidden;
                         app->Release();
                     }
+                    if ((hidden == true) && (_service->AutoStart() == true)) {
+                        const PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
+                        if (stateCtrl != nullptr) {
+                            hidden = (stateCtrl->State() == PluginHost::IStateControl::RESUMED);
+                            stateCtrl->Release();
+                        }
+                    }
                 }
                 return (hidden);
             }
@@ -362,7 +369,7 @@ namespace Plugin {
                                 if (_hasRuntimeChange == false) {
                                     app->ContentLink(ConcatenatePayload(parameters, payload));
                                 }
-                                app->Visible(true); // If suspended, the application is still expected to stay invisible until resumed.
+                                app->Visible(true);
                                 app->Release();
                             } else {
                                 TRACE(Trace::Information, (_T("No IApplication available for '%s'"), _callsign.c_str()));
