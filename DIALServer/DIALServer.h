@@ -1046,9 +1046,9 @@ namespace Plugin {
             END_INTERFACE_MAP
 
         private:
-            void StateChange(PluginHost::IShell* shell, const string& callsign) override
+            void StateChange(PluginHost::IShell* shell) override
             {
-                if (callsign == _webServer) {
+                if (shell->Callsign() == _webServer) {
 
                     if (shell->State() == PluginHost::IShell::ACTIVATED) {
                         ASSERT(_webServerPtr == nullptr);
@@ -1066,7 +1066,7 @@ namespace Plugin {
                             _webServerPtr = nullptr;
                         }
                     }
-                } else if (callsign == _switchBoard) {
+                } else if (shell->Callsign() == _switchBoard) {
 
                     if (shell->State() == PluginHost::IShell::ACTIVATED) {
 
