@@ -203,6 +203,10 @@ void telnetd_main()
     int on = 1;
     socklen_t fromlen;
 
+    //initsetproctitle(0, NULL, NULL);
+    pfrontp = pbackp = ptyobuf;
+    netip = netibuf;
+
     wait_for_connection("telnet");
 
     openlog("telnetd", LOG_PID | LOG_ODELAY, LOG_DAEMON);
@@ -214,10 +218,12 @@ void telnetd_main()
         setsockopt(0, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof (on)) < 0) {
         syslog(LOG_WARNING, "setsockopt (SO_KEEPALIVE): %m");
     }
-
+TR();
     net = 0;
-    //netopen();
+    netopen();
+TR();
     doit((struct sockaddr *)&from, fromlen);
+TR();
 }
 #else
 int
@@ -465,7 +471,6 @@ getterminaltype(char *name)
 {
     int retval = -1;
     (void)name;
-
     settimer(baseline);
 #if defined(AUTHENTICATE)
     /*
@@ -493,7 +498,7 @@ getterminaltype(char *name)
        his_will_wont_is_changing(TELOPT_TTYPE) ||
        his_will_wont_is_changing(TELOPT_TSPEED) ||
        his_will_wont_is_changing(TELOPT_XDISPLOC) ||
-       his_will_wont_is_changing(TELOPT_ENVIRON)) {
+	   his_will_wont_is_changing(TELOPT_ENVIRON)) {
     ttloop();
     }
 #if defined(ENCRYPT)
@@ -684,11 +689,14 @@ static void
 doit(struct sockaddr *who, socklen_t who_len)
 {
     const char *host;
-    int level;
+    int level = 0;
     char user_name[256];
     int i;
     struct addrinfo hints, *res;
 
+    struct sockaddr_in *addr_in = (struct sockaddr_in *)who;
+    char *ip = inet_ntoa(addr_in->sin_addr);
+    syslog(LOG_INFO, "%s: Connected to'%.14s'\n", __FUNCTION__, ip);
     /*
      * Find an available pty to use.
      */
@@ -701,7 +709,8 @@ doit(struct sockaddr *who, socklen_t who_len)
             sizeof(remote_host_name), 0, 0, 0)) {
         syslog(LOG_ERR, "doit: getnameinfo: %m");
         *remote_host_name = 0;
-        }
+    }
+    syslog(LOG_INFO, "%s: remote_host_name='%.32s'\n", __FUNCTION__, remote_host_name);
 
     /* Disallow funnies. */
     for (i=0; remote_host_name[i]; i++) {
@@ -739,16 +748,16 @@ doit(struct sockaddr *who, socklen_t who_len)
     /*
      * Set REMOTEHOST environment variable
      */
-    setproctitle("%s", host);
+//    setproctitle("%s", host);
     setenv("REMOTEHOST", host, 0);
 
     /*
      * Start up the login process on the slave side of the terminal
      */
     startslave(host, level, user_name);
-
+	syslog(LOG_INFO, "%s: Begin server processing\n", __FUNCTION__);
     telnet(net, pty);  /* begin server processing */
-
+	syslog(LOG_INFO, "%s: End server processing\n", __FUNCTION__);
     /*NOTREACHED*/
 }  /* end of doit */
 
@@ -761,7 +770,6 @@ void telnet(int f, int p)
     int on = 1;
     char *HE;
     const char *IM;
-
     /*
      * Initialize the slc mapping table.
      */
@@ -773,7 +781,7 @@ void telnet(int f, int p)
      * at once.
      */
     if (my_state_is_wont(TELOPT_SGA))
-    send_will(TELOPT_SGA, 1);
+        send_will(TELOPT_SGA, 1);
     /*
      * Is the client side a 4.2 (NOT 4.3) system?  We need to know this
      * because 4.2 clients are unable to deal with TCP urgent data.
@@ -909,7 +917,7 @@ void telnet(int f, int p)
     }
     }
 #endif
-
+    syslog(LOG_INFO, "%s: Getting login \n", __FUNCTION__);
     /*
      * Show banner that getty never gave.
      *
@@ -940,7 +948,7 @@ void telnet(int f, int p)
 #endif  /* LINEMODE */
 
     DIAG(TD_REPORT, netoprintf("td: Entering processing loop\r\n"););
-
+    syslog(LOG_INFO, "%s: Entering processing loop\n", __FUNCTION__);
     for (;;) {
     fd_set ibits, obits, xbits;
     int c, hifd;
@@ -986,7 +994,6 @@ void telnet(int f, int p)
         sleep(5);
         continue;
     }
-
     /*
      * Any urgent data?
      */
@@ -1069,7 +1076,6 @@ void telnet(int f, int p)
          netoprintf("td: netread %d chars\r\n", ncc););
         DIAG(TD_NETDATA, printdata("nd", netip, ncc));
     }
-
     /*
      * Something to read from the pty...
      */
@@ -1142,8 +1148,10 @@ void telnet(int f, int p)
         telrcv();
     if (FD_ISSET(p, &obits) && (pfrontp - pbackp) > 0)
         ptyflush();
+
     }
     cleanup(0);
+TR();
 }  /* end of telnet */
 
 #ifndef TCSIG

@@ -21,7 +21,9 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-add_definitions(-Wtrigraphs -DISSUE_FILE="/etc/issue.net" -Wchar-subscripts -DHAVE_TERMIOS_H)
+add_definitions(-Wtrigraphs -DISSUE_FILE="/etc/issue.net" -Wchar-subscripts -DHAVE_TERMIOS_H )
+add_definitions( -DNO_REVOKE -DKLUDGELINEMODE -DDIAGNOSTICS)
+# -DAUTHENTICATE
 #add_definitions(-DPATH_DEV="/dev/" -DPACKAGE_NAME="GNU inetutils" -DPACKAGE_VERSION="1.4.0" -DHAVE_TERMIOS_H)
 
 add_library(${MODULE_NAME} SHARED
@@ -29,8 +31,7 @@ add_library(${MODULE_NAME} SHARED
     RemoteAccessImplementation.cpp
     Module.cpp
 #    pty.c  slc.c  state.c  telnetd.c  term.c  termstat.c  utility.c)
-    global.c  telnetd.c sys_term.c termstat.c state.c )
-    #   utility.c
+    telnetd.c state.c termstat.c slc.c sys_term.c global.c setproctitle.c utility.c)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11

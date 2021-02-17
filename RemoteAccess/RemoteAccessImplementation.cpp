@@ -42,7 +42,7 @@ namespace Plugin {
 
         virtual ~RemoteAccessImplementation()
         {
-            SYSLOG(Logging::Startup, (_T("Inside %s:%d"), __FUNCTION__, __LINE__));
+            SYSLOG(Logging::Shutdown, (_T("Inside %s:%d"), __FUNCTION__, __LINE__));
         }
 
         uint32_t Configure(PluginHost::IShell* service)

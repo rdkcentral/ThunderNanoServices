@@ -39,6 +39,10 @@ char util_rcsid[] =
 
 #define PRINTOPTIONS
 
+#define __USE_GNU
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <libio.h>
 #include <stdarg.h>
 #include <sys/utsname.h>
 #include <sys/time.h>
