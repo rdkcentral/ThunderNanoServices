@@ -18,7 +18,7 @@
 set(PLUGIN_NAME DisplayInfo)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-set(PLUGIN_DISPLAYINFO_OUTOFPROCESS false CACHE BOOL "Enable monitor for the OutOfProcess plugin [true, false].")
+set(PLUGIN_DISPLAYINFO_OUTOFPROCESS false CACHE BOOL "Controls if the plugin should run in its own process [true, false].")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
