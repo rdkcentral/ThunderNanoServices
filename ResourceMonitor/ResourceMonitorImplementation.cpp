@@ -138,12 +138,9 @@ namespace Plugin {
                 , _uss(0)
                 , _rss(0)
                 , _pss(0)
-                , _vss(0)
-                , _userCpuTime(0)
-                , _systemCpuTime(0)
 
             {
-                _logfile.Append("Time[s]", "Name", "USS[KiB]", "PSS[KiB]", "RSS[KiB]", "VSS[KiB]", "UserCPU[%]", "SystemCPU[%]");
+                _logfile.Append("Time[s]", "Name", "USS[KiB]", "PSS[KiB]", "RSS[KiB]", "VSS[KiB]");
 
                 _interval = config.Interval.Value();
                 _filterName = config.FilterName.Value();
@@ -164,7 +161,7 @@ namespace Plugin {
                     is.ignore(std::numeric_limits<std::streamsize>::max(), delim);
                 }
             }
-            
+
             void Dispatch()
             {
 
@@ -252,10 +249,7 @@ namespace Plugin {
                 auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
                 string name = process.Name() + " (" + std::to_string(process.Id()) + ")";
 
-                uint64_t jiffies = process.Jiffies();
-                uint64_t totalJiffies = Core::SystemInfo::Instance().GetJiffies();
-
-                _logfile.Append(timestamp, name, _uss, _pss, _rss, _vss, _userCpuTime, _systemCpuTime);
+                _logfile.Append(timestamp, name, _uss, _pss, _rss, _vss);
                 _logfile.Store();
             }
 
@@ -273,11 +267,6 @@ namespace Plugin {
             uint64_t _rss;
             uint64_t _pss;
             uint64_t _vss;
-
-            uint64_t _userCpuTime;
-            uint64_t _systemCpuTime;
-
-        
         };
 
     private:
