@@ -48,6 +48,8 @@ namespace Plugin {
     void Svalbard::Deinitialize(PluginHost::IShell* service)  /* override */
     {
         ASSERT(_service == service);
+        
+        _service->Unregister(&_notification);
 
         _svalbard->Release();
 
