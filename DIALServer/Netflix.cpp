@@ -166,10 +166,10 @@ namespace DIALHandlers {
             ~Notification() = default;
 
         public:
-            void StateChange(PluginHost::IShell* shell) override
+            void StateChange(PluginHost::IShell* shell, const string& callsign) override
             {
                 ASSERT(shell != nullptr);
-                if (shell->Callsign() == _parent.Callsign()) {
+                if (callsign == _parent.Callsign()) {
                     if (shell->State() == PluginHost::IShell::ACTIVATED) {
                         _parent.Attach();
                     } else if (shell->State() == PluginHost::IShell::DEACTIVATION) {
