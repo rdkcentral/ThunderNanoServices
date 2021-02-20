@@ -163,6 +163,7 @@ private:
         CobaltWindow()
             : Core::Thread(0, _T("Cobalt"))
             , _url{"https://www.youtube.com/tv"}
+            , _language()
             , _debugListenIp("0.0.0.0")
             , _debugPort()
         {
@@ -248,8 +249,7 @@ private:
             }
 
             if (config.Language.IsSet() == true) {
-                Core::SystemInfo::SetEnvironment(_T("LANG"), config.Language.Value().c_str());
-                Core::SystemInfo::SetEnvironment(_T("LANGUAGE"), config.Language.Value().c_str());
+                Language(config.Language.Value());
             }
 
             if ( (config.Connection.IsSet() == true) && (config.Connection == CobaltImplementation::connection::WIRELESS) ) {
@@ -261,7 +261,7 @@ private:
             }
 
             if (config.Url.IsSet() == true) {
-              _url = config.Url.Value();
+                _url = config.Url.Value();
             }
 
             if (config.Inspector.Value().empty() == false) {
@@ -288,7 +288,13 @@ private:
             return (true);
         }
 
-        string Url() const { return _url; }
+        inline string Url() const { return _url; }
+        inline void Language(string& language) const { language = _language; }
+        inline void Language(const string& language) {
+            Core::SystemInfo::SetEnvironment(_T("LANG"), language.c_str());
+            Core::SystemInfo::SetEnvironment(_T("LANGUAGE"), language.c_str());
+            _language = language;
+        }
 
     private:
         uint32_t Initialize() override
@@ -299,7 +305,7 @@ private:
             sigaddset(&mask, SIGUSR1);
             sigaddset(&mask, SIGCONT);
             pthread_sigmask(SIG_UNBLOCK, &mask, nullptr);
-            return (Core::ERROR_NONE);
+            return Core::ERROR_NONE;
         }
         uint32_t Worker() override
         {
@@ -314,6 +320,7 @@ private:
         }
 
         string _url;
+        string _language;
         string _debugListenIp;
         uint16_t _debugPort;
     };
@@ -324,20 +331,31 @@ private:
 
 public:
     CobaltImplementation() :
+            _language(),
             _adminLock(),
             _state(PluginHost::IStateControl::UNINITIALIZED),
-            _cobaltClients(),
+            _cobaltBrowserClients(),
             _stateControlClients(),
-            _sink(*this) {
+            _sink(*this),
+            _service(nullptr) {
     }
 
     virtual ~CobaltImplementation() {
+        if (_service) {
+            _service->Release();
+            _service = nullptr;
+        }
     }
 
     virtual uint32_t Configure(PluginHost::IShell *service) {
         uint32_t result = _window.Configure(service);
         _window.Suspend(true);
         _state = PluginHost::IStateControl::SUSPENDED;
+
+        _service = service;
+        if (_service) {
+            _service->AddRef();
+        }
 
         return (result);
     }
@@ -361,11 +379,10 @@ public:
         _adminLock.Lock();
 
         // Make sure a sink is not registered multiple times.
-        ASSERT(
-                std::find(_cobaltClients.begin(), _cobaltClients.end(), sink)
-                        == _cobaltClients.end());
+        ASSERT(std::find(_cobaltBrowserClients.begin(), _cobaltBrowserClients.end(), sink)
+               == _cobaltBrowserClients.end());
 
-        _cobaltClients.push_back(sink);
+        _cobaltBrowserClients.push_back(sink);
         sink->AddRef();
 
         _adminLock.Unlock();
@@ -375,23 +392,102 @@ public:
         _adminLock.Lock();
 
         std::list<Exchange::IBrowser::INotification*>::iterator index(
-                std::find(_cobaltClients.begin(), _cobaltClients.end(), sink));
+                std::find(_cobaltBrowserClients.begin(), _cobaltBrowserClients.end(), sink));
 
         // Make sure you do not unregister something you did not register !!!
-        ASSERT(index != _cobaltClients.end());
+        ASSERT(index != _cobaltBrowserClients.end());
 
-        if (index != _cobaltClients.end()) {
+        if (index != _cobaltBrowserClients.end()) {
             (*index)->Release();
-            _cobaltClients.erase(index);
+            _cobaltBrowserClients.erase(index);
         }
 
         _adminLock.Unlock();
     }
 
-    virtual void Reset() { /*Not implemented yet!*/ }
+    void Register(Exchange::IApplication::INotification* sink) override {
+        // Kept empty since visibility change is not supported
+    }
 
-    virtual void DeepLink(const string& deepLink) {
-        third_party::starboard::wpe::shared::DeepLink(deepLink.c_str());
+    void Unregister(Exchange::IApplication::INotification* sink) override {
+        // Kept empty since visibility change is not supported
+    }
+
+    uint32_t Reset(const resettype type) override {
+
+        uint32_t status = Core::ERROR_GENERAL;
+        switch (type) {
+        case FACTORY:
+            if (third_party::starboard::wpe::shared::Reset(third_party::starboard::wpe::shared::ResetType::kFactory) == true) {
+                status = Core::ERROR_NONE;
+            }
+            break;
+        case CACHE:
+            if (third_party::starboard::wpe::shared::Reset(third_party::starboard::wpe::shared::ResetType::kCache) == true) {
+                status = Core::ERROR_NONE;
+            }
+            break;
+        case CREDENTIALS:
+            if (third_party::starboard::wpe::shared::Reset(third_party::starboard::wpe::shared::ResetType::kCredentials) == true) {
+                status = Core::ERROR_NONE;
+            }
+            break;
+        default:
+            status = Core::ERROR_NOT_SUPPORTED;
+            break;
+        }
+
+        return status;
+    }
+
+    uint32_t Identifier(string& id) const override {
+
+        const PluginHost::ISubSystem::IIdentifier* identifier(_service->SubSystems()->Get<PluginHost::ISubSystem::IIdentifier>());
+        if (identifier != nullptr) {
+            uint8_t buffer[64];
+
+            buffer[0] = static_cast<const PluginHost::ISubSystem::IIdentifier*>(identifier)
+                        ->Identifier(sizeof(buffer) - 1, &(buffer[1]));
+
+            if (buffer[0] != 0) {
+                id = Core::SystemInfo::Instance().Id(buffer, ~0);
+            }
+
+            identifier->Release();
+        }
+
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t ContentLink(const string& link) override {
+        third_party::starboard::wpe::shared::DeepLink(link.c_str());
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t LaunchPoint(launchpointtype& point) const override {
+        return Core::ERROR_UNAVAILABLE;
+    }
+
+    uint32_t LaunchPoint(const launchpointtype&) override {
+        return Core::ERROR_UNAVAILABLE;
+    }
+
+    uint32_t Visible(bool& visiblity) const override {
+        return Core::ERROR_UNAVAILABLE;
+    }
+
+    uint32_t Visible(const bool& visiblity) override {
+        return Core::ERROR_UNAVAILABLE;
+    }
+
+    uint32_t Language(string& language) const override {
+        _window.Language(language);
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t Language(const string& language) override {
+        _window.Language(language);
+        return Core::ERROR_NONE;
     }
 
     virtual void Register(PluginHost::IStateControl::INotification *sink) {
@@ -549,12 +645,14 @@ private:
     }
 
 private:
+    string _language;
     CobaltWindow _window;
     mutable Core::CriticalSection _adminLock;
     PluginHost::IStateControl::state _state;
-    std::list<Exchange::IBrowser::INotification*> _cobaltClients;
+    std::list<Exchange::IBrowser::INotification*> _cobaltBrowserClients;
     std::list<PluginHost::IStateControl::INotification*> _stateControlClients;
     NotificationSink _sink;
+    PluginHost::IShell* _service;
 };
 
 SERVICE_REGISTRATION(CobaltImplementation, 1, 0);
