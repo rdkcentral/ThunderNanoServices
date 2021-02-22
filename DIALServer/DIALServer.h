@@ -1046,42 +1046,43 @@ namespace Plugin {
             END_INTERFACE_MAP
 
         private:
-            void StateChange(PluginHost::IShell* shell, const string& callsign) override
+            void Activated(const string& callsign, PluginHost::IShell* shell) override
             {
                 if (callsign == _webServer) {
 
-                    if (shell->State() == PluginHost::IShell::ACTIVATED) {
-                        ASSERT(_webServerPtr == nullptr);
+                    ASSERT(_webServerPtr == nullptr);
 
-                        _webServerPtr = shell->QueryInterface<Exchange::IWebServer>();
+                    _webServerPtr = shell->QueryInterface<Exchange::IWebServer>();
 
-                        if (_webServerPtr != nullptr) {
-                            _parent.Activated(_webServerPtr);
-                        }
-                    } else if (shell->State() == PluginHost::IShell::DEACTIVATION) {
-
-                        if (_webServerPtr != nullptr) {
-                            _parent.Deactivated(_webServerPtr);
-                            _webServerPtr->Release();
-                            _webServerPtr = nullptr;
-                        }
+                    if (_webServerPtr != nullptr) {
+                        _parent.Activated(_webServerPtr);
                     }
+
                 } else if (callsign == _switchBoard) {
 
-                    if (shell->State() == PluginHost::IShell::ACTIVATED) {
+                    _switchBoardPtr = shell->QueryInterface<Exchange::ISwitchBoard>();
 
-                        _switchBoardPtr = shell->QueryInterface<Exchange::ISwitchBoard>();
+                    if (_switchBoardPtr != nullptr) {
+                        _parent.Activated(_switchBoardPtr);
+                    }
+                }
+            }
+            void Deactivated(const string& callsign, PluginHost::IShell* shell) override
+            {
+                if (callsign == _webServer) {
 
-                        if (_switchBoardPtr != nullptr) {
-                            _parent.Activated(_switchBoardPtr);
-                        }
-                    } else if (shell->State() == PluginHost::IShell::DEACTIVATION) {
+                    if (_webServerPtr != nullptr) {
+                        _parent.Deactivated(_webServerPtr);
+                        _webServerPtr->Release();
+                        _webServerPtr = nullptr;
+                    }
 
-                        if (_switchBoardPtr != nullptr) {
-                            _parent.Deactivated(_switchBoardPtr);
-                            _switchBoardPtr->Release();
-                            _switchBoardPtr = nullptr;
-                        }
+                } else if (callsign == _switchBoard) {
+
+                    if (_switchBoardPtr != nullptr) {
+                        _parent.Deactivated(_switchBoardPtr);
+                        _switchBoardPtr->Release();
+                        _switchBoardPtr = nullptr;
                     }
                 }
             }

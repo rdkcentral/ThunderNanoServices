@@ -261,33 +261,38 @@ namespace Plugin {
             PowerKey();
         }
     }
-    void Power::StateChange(PluginHost::IShell* plugin)
+    void Power::Activated(const string& callsign, PluginHost::IShell* plugin)
     {
-        const string callsign(plugin->Callsign());
+        PluginHost::IStateControl* stateControl(plugin->QueryInterface<PluginHost::IStateControl>());
 
+        if (stateControl != nullptr) {
+            _adminLock.Lock();
+
+            Clients::iterator index(_clients.find(callsign));
+
+            ASSERT (index == _clients.end());
+
+            if (index == _clients.end()) {
+                _clients.emplace(std::piecewise_construct,
+                    std::forward_as_tuple(callsign),
+                    std::forward_as_tuple(stateControl));
+                TRACE(Trace::Information, (_T("%s plugin is add to power control list"), callsign.c_str()));
+            }
+
+            _stateControl->Release();
+
+            _adminLock.Unlock();
+        }
+    }
+    void Power::Deactivated(const string& callsign, PluginHost::IShell* plugin)
+    {
         _adminLock.Lock();
 
         Clients::iterator index(_clients.find(callsign));
 
-        if (plugin->State() == PluginHost::IShell::ACTIVATED) {
-
-            if (index == _clients.end()) {
-                PluginHost::IStateControl* stateControl(plugin->QueryInterface<PluginHost::IStateControl>());
-
-                if (stateControl != nullptr) {
-                    _clients.emplace(std::piecewise_construct,
-                        std::forward_as_tuple(callsign),
-                        std::forward_as_tuple(stateControl));
-                    TRACE(Trace::Information, (_T("%s plugin is add to power control list"), callsign.c_str()));
-                    stateControl->Release();
-                }
-            }
-        } else if (plugin->State() == PluginHost::IShell::DEACTIVATION) {
-
-            if (index != _clients.end()) { // Remove from the list, if it is already there
-                _clients.erase(index);
-                TRACE(Trace::Information, (_T("%s plugin is removed from power control list"), plugin->Callsign().c_str()));
-            }
+        if (index != _clients.end()) { // Remove from the list, if it is already there
+            _clients.erase(index);
+            TRACE(Trace::Information, (_T("%s plugin is removed from power control list"), plugin->Callsign().c_str()));
         }
 
         _adminLock.Unlock();
