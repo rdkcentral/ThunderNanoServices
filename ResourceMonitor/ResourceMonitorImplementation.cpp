@@ -135,10 +135,6 @@ namespace Plugin {
                 : _logfile(config.Path.Value(), config.Seperator.Value())
                 , _interval(5)
                 , _worker(Core::ProxyType<Worker>::Create(this))
-                , _uss(0)
-                , _rss(0)
-                , _pss(0)
-
             {
                 _logfile.Append("Time[s]", "Name", "USS[KiB]", "PSS[KiB]", "RSS[KiB]", "VSS[KiB]");
 
@@ -154,14 +150,6 @@ namespace Plugin {
             }
 
         private:
-            void Skip(std::istream& is, uint32_t n, char delim)
-            {
-                // ignores n lines or words with max 300chars - stops ignoring after delim
-                for (uint32_t i = 0; i < n; i++) {
-                    is.ignore(std::numeric_limits<std::streamsize>::max(), delim);
-                }
-            }
-
             void Dispatch()
             {
 
@@ -169,79 +157,8 @@ namespace Plugin {
                 Core::ProcessInfo::FindByName(_filterName, false, processes);
 
                 for (const Core::ProcessInfo& process : processes) {
-                    if (Collect(process.Id())) {
-                        LogProcess(process);
-                    }
-                    _uss = 0;
-                    _pss = 0;
-                    _rss = 0;
-                    _vss = 0;
+                    LogProcess(process);
                 }
-            }
-
-            bool Collect(Core::process_t pid)
-            {
-
-                std::ostringstream pathToSmaps;
-                pathToSmaps << "/proc/" << pid << "/smaps";
-
-                std::ifstream smaps(pathToSmaps.str());
-                if (!smaps.is_open()) {
-                    TRACE(Trace::Error, (_T("Could not open %s. Skipping monitoring this pid in this iteration."), pathToSmaps.str()));
-                    return false;
-                }
-
-                std::istringstream iss;
-                std::string fieldName;
-                std::string line;
-                //values from single memory range in /proc/pid/smaps
-                uint64_t rss = 0;
-                uint64_t pss = 0;
-                uint64_t privateClean = 0;
-                uint64_t privateDirty = 0;
-                uint64_t vss = 0;
-
-                std::getline(smaps, line);
-                if (!smaps.good()) {
-                    TRACE(Trace::Error, (_T("Failed to read from %s. Skipping monitoring this pid in this iteration."), pathToSmaps.str()));
-                    return false;
-                }
-                do {
-                    std::getline(smaps, line);
-                    iss.str(line);
-                    iss >> fieldName >> vss;
-
-                    Skip(smaps, 2, '\n');
-
-                    std::getline(smaps, line);
-                    iss.str(line);
-                    iss >> fieldName >> rss;
-
-                    std::getline(smaps, line);
-                    iss.str(line);
-                    iss >> fieldName >> pss;
-
-                    Skip(smaps, 2, '\n');
-
-                    std::getline(smaps, line);
-                    iss.str(line);
-                    iss >> fieldName >> privateClean;
-
-                    std::getline(smaps, line);
-                    iss.str(line);
-                    iss >> fieldName >> privateDirty;
-
-                    _rss += rss;
-                    _pss += pss;
-                    _uss += privateDirty + privateClean;
-                    _vss += vss;
-
-                    Skip(smaps, 13, '\n');
-                    //try to read next memory range to set eof flag if not accessible
-                    std::getline(smaps, line);
-                } while (!smaps.eof());
-
-                return true;
             }
 
             void LogProcess(const Core::ProcessInfo& process)
@@ -249,7 +166,13 @@ namespace Plugin {
                 auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
                 string name = process.Name() + " (" + std::to_string(process.Id()) + ")";
 
-                _logfile.Append(timestamp, name, _uss, _pss, _rss, _vss);
+                process.MemoryStats();
+                uint64 uss = process.USS();
+                uint64 pss = process.PSS();
+                uint64 rss = process.RSS();
+                uint64 vss = process.VSS();
+
+                _logfile.Append(timestamp, name, uss, pss, rss, vss);
                 _logfile.Store();
             }
 
@@ -262,11 +185,6 @@ namespace Plugin {
             string _filterName;
 
             Core::ProxyType<Worker> _worker;
-
-            uint64_t _uss;
-            uint64_t _rss;
-            uint64_t _pss;
-            uint64_t _vss;
         };
 
     private:
