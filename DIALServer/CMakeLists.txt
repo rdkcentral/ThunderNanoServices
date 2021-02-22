@@ -19,7 +19,9 @@ set(PLUGIN_NAME DIALServer)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+
 
 option(PLUGIN_DIALSERVER_ENABLE_YOUTUBE "Enable YouTube support for DIAL server" OFF)
 option(PLUGIN_DIALSERVER_ENABLE_NETFLIX "Enable Netflix support for DIAL server" OFF)
@@ -37,6 +39,8 @@ set(PLUGIN_DIALSERVER_NETFLIX_CALLSIGN "" CACHE STRING "Callsign of the Netflix 
 set(PLUGIN_DIALSERVER_YOUTUBE_CALLSIGN "" CACHE STRING "Callsign of the Youtube plugin if used in active mode, leave empty to disable")
 set(PLUGIN_DIALSERVER_AMAZON_PRIME_CALLSIGN "" CACHE STRING "Callsign of the Youtube plugin if used in active mode, leave empty to disable")
 
+set(PLUGIN_DIALSERVER_NETFLIX_HIDE "false" CACHE STRING "Whether target service can be hidden")
+
 set(PLUGIN_DIALSERVER_NAME "${MODULE_NAME}" CACHE STRING "DIAL server name")
 set(PLUGIN_DIALSERVER_MODEL "Generic Platform" CACHE STRING "Model of the device")
 set(PLUGIN_DIALSERVER_MANUFACTURER "Metrological" CACHE STRING "Manufacturer of device")
@@ -53,23 +57,6 @@ if(PLUGIN_DIALSERVER_ENABLE_YOUTUBE AND "${PLUGIN_DIALSERVER_YOUTUBE_MODE}" STRE
             YouTube.cpp)
 endif()
 
-if(PLUGIN_DIALSERVER_ENABLE_NETFLIX AND "${PLUGIN_DIALSERVER_NETFLIX_MODE}" STREQUAL "active")
-target_sources(${MODULE_NAME}
-        PRIVATE
-            Netflix.cpp)
-            
-if (NETFLIX_VERSION_5_1)
-    target_compile_definitions(${MODULE_NAME} 
-        PRIVATE 
-            NETFLIX_VERSION_5_1=ON)
-endif()
-if(NETFLIX_VERSION_5_2)
-    target_compile_definitions(${MODULE_NAME}
-    PRIVATE
-        NETFLIX_VERSION_5_2=ON)
-endif()
-endif()
-
 if(PLUGIN_DIALSERVER_ENABLE_AMAZON_PRIME AND "${PLUGIN_DIALSERVER_AMAZON_PRIME_MODE}" STREQUAL "active")
 target_sources(${MODULE_NAME}
         PRIVATE
@@ -79,7 +66,8 @@ endif()
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
