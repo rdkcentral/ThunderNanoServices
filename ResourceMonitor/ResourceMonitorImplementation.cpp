@@ -165,14 +165,9 @@ namespace Plugin {
             {
                 auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
                 string name = process.Name() + " (" + std::to_string(process.Id()) + ")";
-
                 process.MemoryStats();
-                uint64 uss = process.USS();
-                uint64 pss = process.PSS();
-                uint64 rss = process.RSS();
-                uint64 vss = process.VSS();
 
-                _logfile.Append(timestamp, name, uss, pss, rss, vss);
+                _logfile.Append(timestamp, name, process.USS(), process.PSS(), process.RSS(), process.VSS());
                 _logfile.Store();
             }
 
