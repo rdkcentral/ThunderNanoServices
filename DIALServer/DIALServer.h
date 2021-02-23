@@ -947,7 +947,6 @@ namespace Plugin {
             }
             inline static IApplication::IFactory* Find(const string& name) {
                 ApplicationFactory& factory = Factory();
-                IApplication::IFactory* result = nullptr;
                 ApplicationFactory::iterator index(factory.find(name));
                 return (index != factory.end() ? index->second : nullptr);
             }

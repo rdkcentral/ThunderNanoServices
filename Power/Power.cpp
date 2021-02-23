@@ -279,7 +279,7 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("%s plugin is add to power control list"), callsign.c_str()));
             }
 
-            _stateControl->Release();
+            stateControl->Release();
 
             _adminLock.Unlock();
         }
