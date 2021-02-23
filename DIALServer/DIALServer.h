@@ -804,6 +804,9 @@ namespace Plugin {
             const string _appPath;
         };
         class AppInformation {
+        private:
+            using ApplicationFactory = std::map<string, IApplication::IFactory*>;
+
         public:
             AppInformation() = delete;
             AppInformation(const AppInformation&) = delete;
@@ -820,15 +823,15 @@ namespace Plugin {
 
                 if (info.Callsign.IsSet() == true) {
                     if ((info.Handler.IsSet() == true) && (info.Handler.Value().empty() == false)) {
-                        std::map<string, IApplication::IFactory*>::iterator index(_applicationFactory.find(info.Handler.Value()));
-                        if (index != _applicationFactory.end()) {
-                            _application = index->second->Create(service, info, parent);
+                        IApplication::IFactory* factory = Find(info.Handler.Value());
+                        if (factory != nullptr) {
+                            _application = factory->Create(service, info, parent);
                         }
                     }
                     if (_application == nullptr) {
-                        std::map<string, IApplication::IFactory*>::iterator index(_applicationFactory.find(info.Callsign.Value()));
-                        if (index != _applicationFactory.end()) {
-                            _application = index->second->Create(service, info, parent);
+                        IApplication::IFactory* factory = Find(info.Callsign.Value());
+                        if (factory != nullptr) {
+                            _application = factory->Create(service, info, parent);
                         }
                     }
                 }
@@ -921,23 +924,32 @@ namespace Plugin {
             {
                 _application->SwitchBoard(switchBoard);
             }
-            inline static void Announce(const string& name, IApplication::IFactory* factory)
+            inline static void Announce(const string& name, IApplication::IFactory* element)
             {
-                ASSERT(AppInformation::_applicationFactory.find(name) == AppInformation::_applicationFactory.end());
+                ApplicationFactory& factory = Factory();
 
-                AppInformation::_applicationFactory.insert(std::pair<string, IApplication::IFactory*>(name, factory));
+                ASSERT(factory.find(name) == factory.end());
+
+                factory.insert(std::pair<string, IApplication::IFactory*>(name, element));
             }
             inline static IApplication::IFactory* Revoke(const string& name)
             {
-                std::map<string, IApplication::IFactory*>::iterator index = AppInformation::_applicationFactory.find(name);
+                ApplicationFactory& factory = Factory();
+                ApplicationFactory::iterator index = factory.find(name);
 
-                ASSERT(index != AppInformation::_applicationFactory.end());
+                ASSERT(index != factory.end());
 
                 IApplication::IFactory* result = index->second;
 
-                AppInformation::_applicationFactory.erase(index);
+                factory.erase(index);
 
                 return (result);
+            }
+            inline static IApplication::IFactory* Find(const string& name) {
+                ApplicationFactory& factory = Factory();
+                IApplication::IFactory* result = nullptr;
+                ApplicationFactory::iterator index(factory.find(name));
+                return (index != factory.end() ? index->second : nullptr);
             }
             inline bool HasQueryParameter()
             {
@@ -952,6 +964,11 @@ namespace Plugin {
             void SetData(const string& data);
 
         private:
+            static ApplicationFactory& Factory() {
+                static ApplicationFactory applicationFactory;
+                return (applicationFactory);
+            }
+            
             string XMLEncode(const string& source) const
             {
                 string result;
@@ -989,8 +1006,6 @@ namespace Plugin {
             const string _url;
             string _origin;
             IApplication* _application;
-
-            static std::map<string, IApplication::IFactory*> _applicationFactory;
         };
         class Notification : public PluginHost::IPlugin::INotification {
         public:
