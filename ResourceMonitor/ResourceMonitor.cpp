@@ -31,7 +31,10 @@ namespace WPEFramework
             }
             else
             {
-                _monitor->Configure(service);
+                if(_monitor->Configure(service) == Core::ERROR_INCOMPLETE_CONFIG){
+                    _service = nullptr;
+                    message = _T("ResourceMonitor could not be instantiated.");
+                }
             }
 
             return message;
