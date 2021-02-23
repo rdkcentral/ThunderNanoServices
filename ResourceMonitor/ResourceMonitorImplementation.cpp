@@ -78,10 +78,10 @@ namespace Plugin {
 
             Config()
                 : Core::JSON::Container()
-                , Path()
-                , Seperator()
-                , Interval()
-                , FilterName()
+                , Path("/tmp/resource.csv")
+                , Seperator(";")
+                , Interval(5)
+                , FilterName("WPE")
             {
                 Add(_T("csv_filepath"), &Path);
                 Add(_T("csv_sep"), &Seperator);
@@ -204,21 +204,11 @@ namespace Plugin {
             Config config;
             config.FromString(service->ConfigLine());
 
-            if (config.Path.IsSet()) {
-                _csvFilePath = config.Path.Value().c_str();
-
-                if (!config.Interval.IsSet()) {
-                    TRACE(Trace::Error, (_T("Interval not specified!")));
-                } else {
-                    if (config.Interval.Value() == 0) {
-                        TRACE(Trace::Error, (_T("Interval must be greater than 0!")));
-                    } else {
-                        _processThread.reset(new StatCollecter(config));
-                        result = Core::ERROR_NONE;
-                    }
-                }
+            if (config.Interval.Value() <= 0) {
+                TRACE(Trace::Error, (_T("Interval must be greater than 0!")));
             } else {
-                TRACE(Trace::Error, (_T(".csv filepath not specified!")));
+                _processThread.reset(new StatCollecter(config));
+                result = Core::ERROR_NONE;
             }
 
             return (result);
@@ -238,15 +228,16 @@ namespace Plugin {
             }
             if (allLines.size() > lastMeasurementsHistory) {
 
-                result << allLines.front() << std::endl; //write header
+                result << allLines.front() << "\n"; //write header
 
                 for (auto currentLine = allLines.end() - lastMeasurementsHistory; currentLine != allLines.end(); ++currentLine) {
-                    result << *currentLine << std::endl;
+                    result << *currentLine << "\n";
                 }
             } else {
                 result << "Not enough measurements yet!" << std::endl;
             }
 
+            result.flush();
             return result.str();
         }
 
