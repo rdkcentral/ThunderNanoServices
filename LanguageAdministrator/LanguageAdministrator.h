@@ -34,9 +34,9 @@ namespace Plugin {
         LanguageAdministrator& operator=(const LanguageAdministrator&) = delete;
 
         LanguageAdministrator()
-            :_lock() 
-            , _skipURL(0)  
-            , _service(nullptr)                      
+            :_lock()
+            , _skipURL(0)
+            , _service(nullptr)
             ,_impl(nullptr)
             , _connectionId(0)
             , _sink(this)
@@ -80,12 +80,12 @@ namespace Plugin {
     private:
 
         class Config: public Core::JSON::Container {
-        private: 
+        private:
             Config(const Config&) = delete;
             Config& operator=(const Config&) = delete;
 
         public:
-            Config() : LanguageTag("en_US") 
+            Config() : LanguageTag("en_US")
             {
                 Add(_T("languagetag"), &LanguageTag);
             }
@@ -97,27 +97,6 @@ namespace Plugin {
         public:
             Core::JSON::String LanguageTag;
         };
-
-        /*class ApplicationEntry {
-        private:
-            ApplicationEntry() = delete;
-            ApplicationEntry(const ApplicationEntry &copy) = delete;
-            ApplicationEntry& operator=(const ApplicationEntry&) = delete;
-        public: 
-            ApplicationEntry(Exchange::Application* entry) 
-                             : _application(entry) 
-            {
-                ASSERT(entry != nullptr);
-                _application->AddRef();
-
-            }
-            ~ApplicationEntry() 
-            {
-                _application->Release();
-            }
-
-            Exchange::IApplication* _application;
-        };*/
 
         class Notification: public RPC::IRemoteConnection::INotification,
                             public PluginHost::IPlugin::INotification {
@@ -131,12 +110,11 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
-            
+
             ~Notification() override
             {
             }
 
-            
             //PluginHost::IPlugin::INotification
             void StateChange(PluginHost::IShell* plugin, const string& callsign) override
             {
@@ -153,10 +131,8 @@ namespace Plugin {
                 _parent.Deactivated(connection);
             }            
 
-
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
-            //INTERFACE_ENTRY(PluginHost::IStateControl::INotification)
             INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)            
             END_INTERFACE_MAP
 
@@ -197,22 +173,25 @@ namespace Plugin {
         
         void StateChange(PluginHost::IShell* plugin, const string& callsign);
         void Deactivated(RPC::IRemoteConnection* connection);
-        void ConnectionTermination(uint32_t connectionId);
-        std::string GetCurrentLanguageFromPersistentStore();
+
         void UpdateLanguageUsed(const string& language);
         void NotifyLanguageChangesToApps(const std::string& language);
+
+        void TerminateConnection(uint32_t connectionId);
+        std::string GetCurrentLanguageFromPersistentStore();
 
         Core::CriticalSection  _lock;
         uint32_t _skipURL;
         PluginHost::IShell* _service;
-        
+
         Exchange::ILanguageTag* _impl;
         uint32_t _connectionId;
         std::string _language;
+        std::string _langSettingsFileName;
         Core::Sink<Notification> _sink;
         Core::Sink<LanguageTagNotification> _LanguageTagNotification;
 
-        std::unordered_map<std::string, Exchange::IApplication*> _appMap; 
+        std::unordered_map<std::string, Exchange::IApplication*> _appMap;
     };
 } //namespace Plugin
 } //namespace WPEFramework

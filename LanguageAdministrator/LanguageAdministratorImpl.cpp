@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "LanguageAdministratorImpl.h"
 #include <unicode/uloc.h>
 
@@ -26,7 +26,7 @@ namespace Plugin {
     SERVICE_REGISTRATION(LanguageAdministratorImpl, 1, 0);
 
     LanguageAdministratorImpl::LanguageAdministratorImpl()
-        : _adminLock()      
+        : _adminLock()
 
     {
     }
@@ -64,8 +64,7 @@ namespace Plugin {
             bInitialize = true;
         }
 
-        //if ( (language != _language) && IsvalidLanguageTag(language) ){
-        if ( (language != _language) && ([&](const string& lang){   
+        if ( (language != _language) && ([&](const string& lang){
                     const char* langCode = uloc_getISO3Language(lang.c_str());
                     return (langCode[0] == '\0') ? false : true;}(language)) )
         {
@@ -85,7 +84,7 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
-    void LanguageAdministratorImpl::NotifyLanguageChanged(const string& language) 
+    void LanguageAdministratorImpl::NotifyLanguageChanged(const string& language)
     {
         _adminLock.Lock();
         for (auto* notification : _notifications) {

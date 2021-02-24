@@ -16,11 +16,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME LanguageAdministrator
+#define MODULE_NAME Plugin_LanguageAdministrator
 #endif
 
 #include <plugins/plugins.h>

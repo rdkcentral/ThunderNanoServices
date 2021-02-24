@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "LanguageAdministrator.h"
 
 namespace WPEFramework {
@@ -26,11 +26,14 @@ namespace Plugin {
 
     /* virtual */ const string LanguageAdministrator::Initialize(PluginHost::IShell* service)
     {
- 
         ASSERT(_service == nullptr);
         ASSERT(service != nullptr);
 
         _service = service;
+
+        if (Core::Directory(_service->PersistentPath().c_str()).CreatePath())
+            _langSettingsFileName = _service->PersistentPath() + "LanguageSettings.json";
+
         _language = GetCurrentLanguageFromPersistentStore();
         // Setup skip URL for right offset.
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
@@ -45,8 +48,8 @@ namespace Plugin {
             _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(&_sink));
             _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(&_sink));
             _service = nullptr;
-            ConnectionTermination(_connectionId);
-            
+            TerminateConnection(_connectionId);
+
             result = _T("Couldn't create instance of LanguageAdministratorImpl");
 
         } else {
@@ -70,7 +73,7 @@ namespace Plugin {
         _impl->Unregister(&_LanguageTagNotification);
 
         _impl->Release();
-        ConnectionTermination(_connectionId);
+        TerminateConnection(_connectionId);
 
         _service = nullptr;
         _impl = nullptr;
@@ -82,8 +85,8 @@ namespace Plugin {
         return {};
     }
 
-    
-    void LanguageAdministrator::Deactivated(RPC::IRemoteConnection* connection) 
+
+    void LanguageAdministrator::Deactivated(RPC::IRemoteConnection* connection)
     {
         if (connection->Id() == _connectionId) {
             ASSERT(_service != nullptr);
@@ -93,7 +96,7 @@ namespace Plugin {
         }
     }
 
-    void LanguageAdministrator::StateChange(PluginHost::IShell* plugin, const string& callsign) 
+    void LanguageAdministrator::StateChange(PluginHost::IShell* plugin, const string& callsign)
     {
         _lock.Lock();
 
@@ -107,16 +110,15 @@ namespace Plugin {
                         _appMap.emplace(make_pair(callsign, app));
                     }
                 }
-                break;	
-                
+                break;
+
             case PluginHost::IShell::DEACTIVATION:
                 TRACE(Trace::Information , (_T("LanguageAdministrator::StateChange Deactivation")));
                 if (_appMap.count(callsign)) {
                     _appMap[callsign]->Release();
                     _appMap.erase(callsign);
-                    
                 }
-                break;	
+                break;
 
             default:
                 break;
@@ -125,18 +127,19 @@ namespace Plugin {
         _lock.Unlock();
     }
 
-    void LanguageAdministrator::NotifyLanguageChangesToApps(const std::string& language) 
+    void LanguageAdministrator::NotifyLanguageChangesToApps(const std::string& language)
     {
-        _lock.Lock(); 
+        _lock.Lock();
+
         _language = language;
         for (const auto& val: _appMap) {
             (val.second)->Language(language);
         }
 
-        _lock.Unlock();   
+        _lock.Unlock();
     }
 
-    void LanguageAdministrator::ConnectionTermination(uint32_t connectionId)
+    void LanguageAdministrator::TerminateConnection(uint32_t connectionId)
     {
         if (connectionId != 0) {
             RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
@@ -149,19 +152,10 @@ namespace Plugin {
 
     std::string LanguageAdministrator::GetCurrentLanguageFromPersistentStore()
     {
-        std::string FileName;
-        //std::string language("en-US");
         Config config;
 
-        if (Core::Directory(_service->PersistentPath().c_str()).CreatePath())
-            FileName = _service->PersistentPath() + "LanguageSettings.json";
-        else {
-            SYSLOG(Logging::Startup, ("Config directory %s doesn't exist and could not be created!\n", _service->PersistentPath().c_str()));
-            // TBD: What to do here...throw exception
-        }
-
         //Check if the file exist
-        Core::File configFile(FileName);
+        Core::File configFile(_langSettingsFileName);
         if (configFile.Open(true) == true) {
             Core::OptionalType<Core::JSON::Error> error;
             config.IElement::FromFile(configFile, error);
@@ -170,26 +164,22 @@ namespace Plugin {
                 // Read default language from plugin config file
                 config.FromString(_service->ConfigLine());
             }
-            configFile.Close();
         }
         else {
             // Create an empty file. Settings will be updated and written to the file on deactivation.
             configFile.Create();
-            //configFile.Close();
         }
 
         return config.LanguageTag.Value();
     }
 
-    void LanguageAdministrator::UpdateLanguageUsed(const string& language) 
+    void LanguageAdministrator::UpdateLanguageUsed(const string& language)
     {
         Config config;
-        std::string FileName =  _service->PersistentPath() + "LanguageSettings.json";
-        Core::File configFile(FileName);
+        Core::File configFile(_langSettingsFileName);
         if (configFile.Open(false) == true) {
             config.LanguageTag=language;
             config.IElement::ToFile(configFile);
-            //configFile.Close();
         }
     }
 } //namespace Plugin
