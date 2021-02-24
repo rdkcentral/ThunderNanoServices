@@ -41,6 +41,7 @@ option(PLUGIN_INPUTSWITCH "Include InputSwitch plugin" OFF)
 option(PLUGIN_FIRMWARECONTROL "Include FirmwareControl Plugin" OFF)
 option(PLUGIN_FRONTPANEL "Include FrontPanel plugin" OFF)
 option(PLUGIN_PROCESSMONITOR "Include Process Monitor plugin" OFF)
+option(PLUGIN_LANGUAGEADMINISTRATOR "Include LanguageAdministrator plugin" OFF)
 option(PLUGIN_NETWORKCONTROL "Include NetworkControlplugin" OFF)
 option(PLUGIN_PERFORMANCEMONITOR "Include Performance Monitor" OFF)
 option(PLUGIN_PLAYERINFO "Include PlayerInfo plugin" OFF)
@@ -151,6 +152,10 @@ endif(PLUGIN_SICONTROL)
 
 if(PLUGIN_PROCESSMONITOR)
     add_subdirectory(ProcessMonitor)
+endif()
+
+if(PLUGIN_LANGUAGEADMINISTRATOR)
+    add_subdirectory(LanguageAdministrator)
 endif()
 
 if(PLUGIN_NETWORKCONTROL)
