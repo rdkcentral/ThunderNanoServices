@@ -80,22 +80,21 @@ namespace Plugin {
 
             Config()
                 : Core::JSON::Container()
-                , Path("/tmp/resource.csv")
-                , Seperator(";")
+                , Path(_T("/tmp/resource.csv"))
+                , Seperator(_T(";"))
                 , Interval(5)
-                , FilterName("WPEFramework") ////FIXME
             {
                 Add(_T("csv_filepath"), &Path);
                 Add(_T("csv_sep"), &Seperator);
                 Add(_T("interval"), &Interval);
-                Add(_T("name"), &FilterName);
+                Add(_T("names"), &FilterNames);
             }
 
             Config(const Config& copy)
                 : Core::JSON::Container()
                 , Path(copy.Path)
                 , Interval(copy.Interval)
-                , FilterName(copy.FilterName)
+                , FilterNames(copy.FilterNames)
             {
             }
 
@@ -107,7 +106,7 @@ namespace Plugin {
             Core::JSON::String Path;
             Core::JSON::String Seperator;
             Core::JSON::DecUInt32 Interval;
-            Core::JSON::String FilterName;
+            Core::JSON::ArrayType<Core::JSON::String> FilterNames;
         };
 
         class StatCollecter {
@@ -138,11 +137,19 @@ namespace Plugin {
                 , _systemCpuTime(0)
                 , _logfile(config.Path.Value(), config.Seperator.Value())
                 , _interval(config.Interval.Value())
-                , _filterName(config.FilterName.Value())
                 , _worker(Core::ProxyType<Worker>::Create(this))
 
             {
                 _logfile.Append("Time[s]", "Name", "USS[KiB]", "PSS[KiB]", "RSS[KiB]", "VSS[KiB]", "UserTotalCPU[%]", "SystemTotalCPU[%]");
+
+                if (config.FilterNames.Elements().Count() == 0) {
+                    _filterNames.push_back("WPE");
+                } else {
+                    auto filterIterator(config.FilterNames.Elements());
+                    while (filterIterator.Next()) {
+                        _filterNames.push_back(filterIterator.Current().Value());
+                    }
+                }
 
                 Core::IWorkerPool::Instance().Schedule(Core::Time::Now(), Core::ProxyType<Core::IDispatch>(_worker));
             }
@@ -212,12 +219,14 @@ namespace Plugin {
             void Dispatch()
             {
 
-                std::list<Core::ProcessInfo> processes;
-                Core::ProcessInfo::FindByName(_filterName, false, processes);
+                for (const auto& filterName : _filterNames) {
+                    std::list<Core::ProcessInfo> processes;
+                    Core::ProcessInfo::FindByName(filterName, false, processes);
 
-                for (const Core::ProcessInfo& process : processes) {
-                    CalculateCpuUsage(process.Id());
-                    LogProcess(process);
+                    for (const Core::ProcessInfo& process : processes) {
+                        CalculateCpuUsage(process.Id());
+                        LogProcess(process);
+                    }
                 }
             }
 
@@ -258,7 +267,7 @@ namespace Plugin {
 
             CSVFile _logfile;
             uint32_t _interval;
-            string _filterName;
+            std::list<std::string> _filterNames;
 
             Core::CriticalSection _guard;
             Core::ProxyType<Worker> _worker;

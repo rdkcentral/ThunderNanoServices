@@ -76,7 +76,7 @@ The table below lists configuration options of the plugin.
 | csv_filepath | string |<sup>*(optional)*</sup> Path where .csv file should be saved (default /tmp/resource.csv) |
 | csv_separator | string |<sup>*(optional)*</sup> separator between columns of .csv (default ';' )|
 | interval | number | <sup>*(optional)*</sup> Duration between measurements (default: 5) |
-|name | string | <sup>*(optional)*</sup> Process to monitor (options: WPE - monitors each process begining with "WPE"; WPEFramework-1.0.0; WPEProcess; WPEWebProcess; WPENetworkProcess etc. (default: WPE)
+|name | array | <sup>*(optional)*</sup> Names of processes to monitor. All processes which names begin with the entry will be monitored (case sensitive)  (default: "WPE" - will monitor WPEFramework, WPEProcess, etc.)
 
 # Methods
 
