@@ -156,7 +156,17 @@ namespace Plugin {
         return "### UNKNOWN ###";
     }
 
-    void OutOfProcessPlugin::PluginStateChanged(PluginHost::IShell* plugin, const string& callsign)
+    void OutOfProcessPlugin::Activated(const string& callsign, PluginHost::IShell* plugin)
+    {
+        ASSERT(plugin != nullptr);
+
+        const PluginHost::IShell::state state = plugin->State();
+        const char* stateStr = PluginStateStr(state);
+
+        TRACE(Trace::Information, (_T("OutOfProcessPlugin::PluginStateChanged: Got [%s] plugin [%s] event..."), callsign.c_str(), stateStr));
+    }
+
+    void OutOfProcessPlugin::Deactivated(const string& callsign, PluginHost::IShell* plugin)
     {
         ASSERT(plugin != nullptr);
 
@@ -165,7 +175,7 @@ namespace Plugin {
 
         TRACE(Trace::Information, (_T("OutOfProcessPlugin::PluginStateChanged: Got [%s] plugin [%s] event..."), callsign.c_str(), stateStr));
 
-        if ((callsign == "OutOfProcessPlugin") && (state == PluginHost::IShell::DEACTIVATION)) {
+        if (callsign == "OutOfProcessPlugin") {
             if(_state != nullptr) {
                 TRACE(Trace::Information, (_T("OutOfProcessPlugin::PluginStateChanged: Doing RPC call with IShell * ptr...")));
                 _state->Configure(plugin); //note this indeed does not make sense but is used to trigger an IShell* call to the OOP side to reproduce an issue there
