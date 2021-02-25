@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -30,8 +30,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from: @(#)ext.h	5.7 (Berkeley) 3/1/91
- *	$Id: ext.h,v 1.9 1999/12/12 14:59:44 dholland Exp $
+ *  from: @(#)ext.h 5.7 (Berkeley) 3/1/91
+ *  $Id: ext.h,v 1.9 1999/12/12 14:59:44 dholland Exp $
  */
 
 /*
@@ -40,26 +40,27 @@
 extern char options[256];
 extern char do_dont_resp[256];
 extern char will_wont_resp[256];
-extern int linemode;	/* linemode on/off */
+extern int linemode;    /* linemode on/off */
+extern int end_session;
 
 #ifdef LINEMODE
-extern int uselinemode;	/* what linemode to use (on/off) */
-extern int editmode;	/* edit modes in use */
-extern int useeditmode;	/* edit modes to use */
-extern int alwayslinemode;	/* command line option */
+extern int uselinemode; /* what linemode to use (on/off) */
+extern int editmode;    /* edit modes in use */
+extern int useeditmode; /* edit modes to use */
+extern int alwayslinemode;  /* command line option */
 #ifdef KLUDGELINEMODE
-extern int lmodetype;	/* Client support for linemode */
-#endif	/* KLUDGELINEMODE */
-#endif	/* LINEMODE */
+extern int lmodetype;   /* Client support for linemode */
+#endif  /* KLUDGELINEMODE */
+#endif  /* LINEMODE */
 
-extern int flowmode;	/* current flow control state */
+extern int flowmode;    /* current flow control state */
 
 #ifdef DIAGNOSTICS
-extern int diagnostic;	/* telnet diagnostic capabilities */
+extern int diagnostic;  /* telnet diagnostic capabilities */
 #endif /* DIAGNOSTICS */
 
 #ifdef BFTPDAEMON
-extern int bftpd;		/* behave as bftp daemon */
+extern int bftpd;       /* behave as bftp daemon */
 #endif /* BFTPDAEMON */
 
 #if defined(SecurID)
@@ -70,7 +71,7 @@ extern int require_SecurID;
 extern int auth_level;
 #endif
 
-extern slcfun slctab[NSLC + 1];	/* slc mapping table */
+extern slcfun slctab[NSLC + 1]; /* slc mapping table */
 
 extern char *terminaltype;
 
@@ -89,7 +90,7 @@ extern FILE *netfile;
 
 extern int pty, net;
 extern const char *line;
-extern int SYNCHing;		/* we are in TELNET SYNCH mode */
+extern int SYNCHing;        /* we are in TELNET SYNCH mode */
 
 void _termstat(void);
 void add_slc(int, int, int);
@@ -199,16 +200,16 @@ extern char *nclearto;
  */
 
 extern struct _clocks {
-    int system;			/* what the current time is */
-    int echotoggle;		/* last time user entered echo character */
-    int modenegotiated;		/* last time operating mode negotiated */
-    int didnetreceive;		/* last time we read data from network */
-    int ttypesubopt;		/* ttype subopt is received */
-    int tspeedsubopt;		/* tspeed subopt is received */
-    int environsubopt;		/* environ subopt is received */
-    int xdisplocsubopt;		/* xdisploc subopt is received */
-    int baseline;		/* time started to do timed action */
-    int gotDM;			/* when did we last see a data mark */
+    int system;         /* what the current time is */
+    int echotoggle;     /* last time user entered echo character */
+    int modenegotiated;     /* last time operating mode negotiated */
+    int didnetreceive;      /* last time we read data from network */
+    int ttypesubopt;        /* ttype subopt is received */
+    int tspeedsubopt;       /* tspeed subopt is received */
+    int environsubopt;      /* environ subopt is received */
+    int xdisplocsubopt;     /* xdisploc subopt is received */
+    int baseline;       /* time started to do timed action */
+    int gotDM;          /* when did we last see a data mark */
 } clocks;
 
-#define DEFAULT_IM	"%i\r\n%s %r (%h) (%t)\r\n\r\n"
+#define DEFAULT_IM  "%i\r\n%s %r (%h) (%t)\r\n\r\n"

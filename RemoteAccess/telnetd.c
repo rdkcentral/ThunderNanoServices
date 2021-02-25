@@ -74,6 +74,7 @@ int require_SecurID = 0;
 
 static void doit(struct sockaddr *who, socklen_t who_len);
 static int terminaltypeok(const char *s);
+int end_session = 0;
 
 /*
  * I/O data buffers,
@@ -498,7 +499,7 @@ getterminaltype(char *name)
        his_will_wont_is_changing(TELOPT_TTYPE) ||
        his_will_wont_is_changing(TELOPT_TSPEED) ||
        his_will_wont_is_changing(TELOPT_XDISPLOC) ||
-	   his_will_wont_is_changing(TELOPT_ENVIRON)) {
+       his_will_wont_is_changing(TELOPT_ENVIRON)) {
     ttloop();
     }
 #if defined(ENCRYPT)
@@ -755,9 +756,9 @@ doit(struct sockaddr *who, socklen_t who_len)
      * Start up the login process on the slave side of the terminal
      */
     startslave(host, level, user_name);
-	syslog(LOG_INFO, "%s: Begin server processing\n", __FUNCTION__);
+    syslog(LOG_INFO, "%s: Begin server processing\n", __FUNCTION__);
     telnet(net, pty);  /* begin server processing */
-	syslog(LOG_INFO, "%s: End server processing\n", __FUNCTION__);
+    syslog(LOG_INFO, "%s: End server processing\n", __FUNCTION__);
     /*NOTREACHED*/
 }  /* end of doit */
 
@@ -1128,7 +1129,7 @@ void telnet(int f, int p)
         }
     }
 
-    while (pcc > 0 && !netbuflen(0)) {
+    while (pcc > 0 && !netbuflen(0) && !end_session) {
         c = *ptyip++ & 0377, pcc--;
         if (c == IAC)
         putc(c, netfile);
