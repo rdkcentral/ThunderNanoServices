@@ -116,19 +116,14 @@ namespace Plugin {
             }
 
             //PluginHost::IPlugin::INotification
-            void StateChange(PluginHost::IShell* plugin, const string& callsign) override
-            {
-                _parent.StateChange(plugin, callsign);
-            }
-
             void Activated(const string& callsign, PluginHost::IShell* plugin) override
             {
-                _parent.Activated(plugin, callsign);
+                _parent.Activated(callsign, plugin);
 
             }
             void Deactivated(const string& callsign, PluginHost::IShell* plugin) override
             {
-                _parent.Deactivated(plugin, callsign);
+                _parent.Deactivated(callsign,plugin);
 
             }
 
@@ -182,7 +177,6 @@ namespace Plugin {
     
     private:
         
-        void StateChange(PluginHost::IShell* plugin, const string& callsign);
         void Activated(const string& callsign, PluginHost::IShell* plugin);
         void Deactivated(const string& callsign, PluginHost::IShell* plugin);
 
@@ -204,7 +198,7 @@ namespace Plugin {
         Core::Sink<Notification> _sink;
         Core::Sink<LanguageTagNotification> _LanguageTagNotification;
 
-        unordered_map<string, Exchange::IApplication*> _appMap;
+        std::unordered_map<string, Exchange::IApplication*> _appMap;
     };
 } //namespace Plugin
 } //namespace WPEFramework

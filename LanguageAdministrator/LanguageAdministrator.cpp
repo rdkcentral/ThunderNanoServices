@@ -96,38 +96,7 @@ namespace Plugin {
         }
     }
 
-    /*void LanguageAdministrator::StateChange(PluginHost::IShell* plugin, const string& callsign)
-    {
-        _lock.Lock();
-
-        switch(plugin->State() ) {
-            case PluginHost::IShell::ACTIVATED:
-                TRACE(Trace::Information , (_T("LanguageAdministrator::StateChange Activated")));
-                if (0 == _appMap.count(callsign)) {
-                    Exchange::IApplication * app(plugin->QueryInterface<Exchange::IApplication>());
-
-                    if (app != nullptr) {
-                        _appMap.emplace(make_pair(callsign, app));
-                    }
-                }
-                break;
-
-            case PluginHost::IShell::DEACTIVATION:
-                TRACE(Trace::Information , (_T("LanguageAdministrator::StateChange Deactivation")));
-                if (_appMap.count(callsign)) {
-                    _appMap[callsign]->Release();
-                    _appMap.erase(callsign);
-                }
-                break;
-
-            default:
-                break;
-        }
-
-        _lock.Unlock();
-    }*/
-
-    void Activated(const string& callsign, PluginHost::IShell* plugin)
+    void LanguageAdministrator::Activated(const string& callsign, PluginHost::IShell* plugin)
     {
         _lock.Lock();
         TRACE(Trace::Information , (_T("LanguageAdministrator::Activated Called")));
@@ -142,7 +111,7 @@ namespace Plugin {
 
     }
 
-    void Deactivated(const string& callsign, PluginHost::IShell* plugin)
+    void LanguageAdministrator::Deactivated(const string& callsign, PluginHost::IShell* plugin)
     {
         _lock.Lock();
         TRACE(Trace::Information , (_T("LanguageAdministrator::Deactivated Called")));
@@ -156,12 +125,10 @@ namespace Plugin {
     void LanguageAdministrator::NotifyLanguageChangesToApps(const string& language)
     {
         _lock.Lock();
-
         _language = language;
         for (const auto& val: _appMap) {
             (val.second)->Language(language);
         }
-
         _lock.Unlock();
     }
 
