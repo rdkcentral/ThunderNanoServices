@@ -40,7 +40,6 @@ namespace Plugin {
     static Core::ProxyPoolType<Web::TextBody> _textBodies(5);
 
     /* static */ const Core::NodeId DIALServer::DIALServerImpl::DialServerInterface(_T("239.255.255.250"), 1900);
-    /* static */ std::map<string, DIALServer::IApplication::IFactory*> DIALServer::AppInformation::_applicationFactory;
 
     class WebFlow {
     public:

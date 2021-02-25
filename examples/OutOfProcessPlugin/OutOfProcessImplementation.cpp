@@ -51,16 +51,16 @@ namespace Plugin {
             ~PluginMonitor() override = default;
 
         public:
-            void StateChange(PluginHost::IShell* service, const string& ) override
+            void Activated(const string&, PluginHost::IShell* service) override
             {
-				if (service->State() == PluginHost::Service::ACTIVATED) {
-
-                    Exchange::ITimeSync* time = service->QueryInterface<Exchange::ITimeSync>();
-					if (time != nullptr) {
-						TRACE(Trace::Information, (_T("Time interface supported")));
-						time->Release();
-					}
+                Exchange::ITimeSync* time = service->QueryInterface<Exchange::ITimeSync>();
+				if (time != nullptr) {
+					TRACE(Trace::Information, (_T("Time interface supported")));
+					time->Release();
 				}
+            }
+            void Deactivated(const string&, PluginHost::IShell*) override
+            {
             }
             BEGIN_INTERFACE_MAP(PluginMonitor)
                 INTERFACE_ENTRY(PluginHost::IPlugin::INotification)

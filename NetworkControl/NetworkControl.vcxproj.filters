@@ -12,13 +12,13 @@
     <ClCompile Include="Module.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DHCPClientImplementation.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="NetworkControl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="NetworkControlJsonRpc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DHCPClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -26,10 +26,10 @@
     <ClInclude Include="Module.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DHCPClientImplementation.h">
+    <ClInclude Include="NetworkControl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="NetworkControl.h">
+    <ClInclude Include="DHCPClient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

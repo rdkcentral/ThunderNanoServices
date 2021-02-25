@@ -126,6 +126,8 @@ namespace Player {
                 gst_element_set_state(_data._playbin, GST_STATE_NULL);
                 gst_object_unref(_data._playbin);
                 _data._playbin = nullptr;
+
+                return Core::ERROR_NONE;
             }
 
             void CENC::Callback(ICallback* callback)
@@ -272,10 +274,7 @@ namespace Player {
 
             const std::vector<int32_t>& CENC::Speeds() const
             {
-                _adminLock.Lock();
-                auto speeds = _vecSpeeds;
-                _adminLock.Unlock();
-                return speeds;
+                return (_vecSpeeds);
             }
 
             void CENC::Position(const uint64_t absoluteTime)
@@ -309,8 +308,10 @@ namespace Player {
 
             const Rectangle& CENC::Window() const
             {
+                static Rectangle result = { 0, 0, 0, 0 };
+
                 TRACE(Trace::Information, (_T("CENC window shape not supported")));
-                return Rectangle();
+                return result;
             }
 
             void CENC::Window(const Rectangle& rectangle)
@@ -331,8 +332,9 @@ namespace Player {
 
             const std::list<ElementaryStream>& CENC::Elements() const
             {
+                static std::list<ElementaryStream> emptyList;
                 TRACE(Trace::Information, (_T("CENC elementary streams not supported")));
-                return {};
+                return emptyList;
             }
         }
     }
