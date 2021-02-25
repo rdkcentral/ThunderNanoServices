@@ -319,7 +319,9 @@ namespace Plugin {
                     _leaseTime = 0;
                     _rebindingTime = 0;
                     _renewalTime = 0;
-                    _gateway = options.gateway;
+                    if (options.gateway.IsValid()) {
+                        _gateway = options.gateway;
+                    }
                     _broadcast = options.broadcast;
                     _dns = options.dns;
 
