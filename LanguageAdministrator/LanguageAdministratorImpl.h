@@ -43,17 +43,15 @@ namespace Plugin {
         void Register(Exchange::ILanguageTag::INotification* observer) override;
         void Unregister(const Exchange::ILanguageTag::INotification* observer) override;
 
-        virtual uint32_t Language(string& language /* @out */) const override;
-        virtual uint32_t Language(const string& language) override;
+        uint32_t Language(string& language /* @out */) const override;
+        uint32_t Language(const string& language) override;
 
     private:
-        std::string _language;
-        void NotifyLanguageChanged(const string& language);
-        //bool IsvalidLanguageTag(const string& language);
-
+        string _language;
         Core::CriticalSection _adminLock;
-        std::vector<Exchange::ILanguageTag::INotification*> _notifications;
+        vector<Exchange::ILanguageTag::INotification*> _notifications;
 
+        void NotifyLanguageChanged(const string& language);
     };
 
 }  // namespace Plugin

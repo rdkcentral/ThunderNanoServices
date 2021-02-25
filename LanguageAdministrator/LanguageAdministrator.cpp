@@ -55,7 +55,7 @@ namespace Plugin {
         } else {
             _impl->Register(&_LanguageTagNotification);
             Exchange::JLanguageTag::Register(*this, _impl);
-            _impl->Language((const std::string)(_language));
+            _impl->Language((const string)(_language));
         }
 
         return result;
@@ -96,7 +96,7 @@ namespace Plugin {
         }
     }
 
-    void LanguageAdministrator::StateChange(PluginHost::IShell* plugin, const string& callsign)
+    /*void LanguageAdministrator::StateChange(PluginHost::IShell* plugin, const string& callsign)
     {
         _lock.Lock();
 
@@ -125,9 +125,35 @@ namespace Plugin {
         }
 
         _lock.Unlock();
+    }*/
+
+    void Activated(const string& callsign, PluginHost::IShell* plugin)
+    {
+        _lock.Lock();
+        TRACE(Trace::Information , (_T("LanguageAdministrator::Activated Called")));
+        if (0 == _appMap.count(callsign)) {
+            Exchange::IApplication * app(plugin->QueryInterface<Exchange::IApplication>());
+
+            if (app != nullptr) {
+                _appMap.emplace(make_pair(callsign, app));
+            }
+        }
+        _lock.Unlock();
+
     }
 
-    void LanguageAdministrator::NotifyLanguageChangesToApps(const std::string& language)
+    void Deactivated(const string& callsign, PluginHost::IShell* plugin)
+    {
+        _lock.Lock();
+        TRACE(Trace::Information , (_T("LanguageAdministrator::Deactivated Called")));
+        if (_appMap.count(callsign)) {
+            _appMap[callsign]->Release();
+            _appMap.erase(callsign);
+        }
+        _lock.Unlock();
+    }
+
+    void LanguageAdministrator::NotifyLanguageChangesToApps(const string& language)
     {
         _lock.Lock();
 
@@ -150,7 +176,7 @@ namespace Plugin {
         }
     }
 
-    std::string LanguageAdministrator::GetCurrentLanguageFromPersistentStore()
+    string LanguageAdministrator::GetCurrentLanguageFromPersistentStore()
     {
         Config config;
 

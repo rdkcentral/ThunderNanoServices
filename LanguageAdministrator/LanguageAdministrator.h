@@ -121,6 +121,17 @@ namespace Plugin {
                 _parent.StateChange(plugin, callsign);
             }
 
+            void Activated(const string& callsign, PluginHost::IShell* plugin) override
+            {
+                _parent.Activated(plugin, callsign);
+
+            }
+            void Deactivated(const string& callsign, PluginHost::IShell* plugin) override
+            {
+                _parent.Deactivated(plugin, callsign);
+
+            }
+
             //RPC::IRemoteConnection::INotification
             void Activated(RPC::IRemoteConnection*) override
             {
@@ -172,13 +183,15 @@ namespace Plugin {
     private:
         
         void StateChange(PluginHost::IShell* plugin, const string& callsign);
-        void Deactivated(RPC::IRemoteConnection* connection);
+        void Activated(const string& callsign, PluginHost::IShell* plugin);
+        void Deactivated(const string& callsign, PluginHost::IShell* plugin);
 
+        void Deactivated(RPC::IRemoteConnection* connection);
         void UpdateLanguageUsed(const string& language);
-        void NotifyLanguageChangesToApps(const std::string& language);
+        void NotifyLanguageChangesToApps(const string& language);
 
         void TerminateConnection(uint32_t connectionId);
-        std::string GetCurrentLanguageFromPersistentStore();
+        string GetCurrentLanguageFromPersistentStore();
 
         Core::CriticalSection  _lock;
         uint32_t _skipURL;
@@ -186,12 +199,12 @@ namespace Plugin {
 
         Exchange::ILanguageTag* _impl;
         uint32_t _connectionId;
-        std::string _language;
-        std::string _langSettingsFileName;
+        string _language;
+        string _langSettingsFileName;
         Core::Sink<Notification> _sink;
         Core::Sink<LanguageTagNotification> _LanguageTagNotification;
 
-        std::unordered_map<std::string, Exchange::IApplication*> _appMap;
+        unordered_map<string, Exchange::IApplication*> _appMap;
     };
 } //namespace Plugin
 } //namespace WPEFramework

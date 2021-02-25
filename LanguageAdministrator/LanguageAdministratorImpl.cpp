@@ -46,8 +46,7 @@ namespace Plugin {
     {
         ASSERT(notification);
         _adminLock.Lock();
-        //TODO: Store the language code to file.
-        auto item = std::find(_notifications.begin(), _notifications.end(), notification);
+        auto item = find(_notifications.begin(), _notifications.end(), notification);
         ASSERT(item != _notifications.end());
         _notifications.erase(item);
         (*item)->Release();
@@ -92,11 +91,5 @@ namespace Plugin {
         }
         _adminLock.Unlock();
     }
-
-    /*bool LanguageAdministratorImpl::IsvalidLanguageTag(const string& language) {
-        const char* langCode = uloc_getISO3Language(language.c_str());
-        return (langCode[0] == '\0') ? false : true;
-    }*/
-
 }  // namespace Plugin
 }  // namespace WPEFramework
