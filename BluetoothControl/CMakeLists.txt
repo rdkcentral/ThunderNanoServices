@@ -14,9 +14,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+project(BluetoothControl VERSION 1.0.0)
+cmake_minimum_required(VERSION 3.3)
 
-set(PLUGIN_NAME BluetoothControl)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+find_package(WPEFramework)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 option(PLUGIN_BLUETOOTH_DEVELOPMENT "Enable verbose tracing" ON)
 

@@ -16,7 +16,7 @@
 # limitations under the License.
 
 set(TARGET GenericAdapter)
-message("Setup ${TARGET} v${VERSION}...")
+message("Setup ${TARGET} v${PROJECT_VERSION}...")
 
 find_package(WPEFramework)
 find_package(CompileSettingsDebug CONFIG REQUIRED)

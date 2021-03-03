@@ -14,9 +14,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+project(Compositor VERSION 1.0.0)
+cmake_minimum_required(VERSION 3.3)
 
-set(PLUGIN_NAME Compositor)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+find_package(WPEFramework)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
 set(PLATFORM_COMPOSITOR "compositorplugin")
 
 option(PLUGIN_COMPOSITOR_SYSTEM "Callsign to report information." "Controller")
@@ -32,12 +38,6 @@ option(PLUGIN_COMPOSITOR_TEST "Build a compositor test client" OFF)
 
 set(PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB "lib${PLATFORM_COMPOSITOR}.so" CACHE STRING "Specify a library with a compositor implentation." )
 set(PLUGIN_COMPOSITOR_RESOLUTION "720p" CACHE STRING "Specify the startup resolution")
-
-set(VERSION_MAJOR 1)
-set(VERSION_MINOR 0)
-set(VERSION_REVISION 0)
-
-set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_REVISION})
 
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)

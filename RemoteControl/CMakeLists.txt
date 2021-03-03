@@ -15,8 +15,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME RemoteControl)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(RemoteControl VERSION 1.0.0)
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(PLUGIN_REMOTECONTROL_RELEASE_TIMEOUT 30000 CACHE STRING "Remote control release timeout")
 set(PLUGIN_REMOTECONTROL_PASSON false CACHE STRING "Enable keys pass-through on default producer")

@@ -15,10 +15,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME DTV)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(DTV VERSION 1.0.0)
+cmake_minimum_required(VERSION 3.3)
 
-# set(PLUGIN_DTV_AUTOSTART false CACHE STRING true)
+find_package(WPEFramework)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
+option(PLUGIN_DTV_AUTOSTART "Automatic start this plugin" OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 

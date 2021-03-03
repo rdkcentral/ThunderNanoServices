@@ -15,8 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME RtspClient)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(RtspClient VERSION 1.0.0)
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_RTSPCLIENT_AUTOSTART true CACHE STRING true)
 set(PLUGIN_RTSPCLIENT_OOP true CACHE STRING true)

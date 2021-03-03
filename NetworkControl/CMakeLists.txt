@@ -15,8 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME NetworkControl)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(NetworkControl VERSION 1.0.0)
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_NETWORKCONTROL_DHCP_RESONSE_TIMEOUT 5 CACHE STRING "Timeout per request to get a DHCP lease")
 set(PLUGIN_NETWORKCONTROL_DHCP_RETRIES 4 CACHE STRING "Times to retry to get a DHCP lease")

@@ -1,5 +1,11 @@
-set(PLUGIN_NAME ResourceMonitor)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(ResourceMonitor VERSION 1.0.0)
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 
