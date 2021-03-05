@@ -46,4 +46,4 @@ install(TARGETS ${MODULE_NAME}
 set(PLUGIN_PROCESSMONITOR_AUTOSTART false CACHE STRING "Automatically start ProcessMonitor plugin")
 set(PLUGIN_PROCESSMONITOR_EXITTIMEOUT "2" CACHE STRING "Exit timeout for ProcessMonitor plugin")
 
-write_config(${PLUGIN_NAME})
+write_config(${PROJECT_NAME})

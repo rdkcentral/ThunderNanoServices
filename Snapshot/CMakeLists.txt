@@ -86,4 +86,4 @@ endif ()
 install(TARGETS ${MODULE_NAME} 
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
-write_config(${PLUGIN_NAME})
+write_config(${PROJECT_NAME})

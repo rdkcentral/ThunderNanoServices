@@ -56,6 +56,6 @@ install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE
 
 set(PLUGIN_WEBPA_AUTOSTART false CACHE STRING "Automatically start WebPA plugin")
 
-write_config(${PLUGIN_NAME})
+write_config(${PROJECT_NAME})
 
 add_subdirectory(Clients)

@@ -55,4 +55,4 @@ if(DSRESOLUTION_WITH_DUMMY_DSHAL)
 add_subdirectory(src)
 endif(DSRESOLUTION_WITH_DUMMY_DSHAL)
 
-write_config(${PLUGIN_NAME})
+write_config(${PROJECT_NAME})

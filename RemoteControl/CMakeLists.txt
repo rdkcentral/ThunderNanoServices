@@ -131,4 +131,4 @@ install(
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/RemoteControl
 	COMPONENT ${MODULE_NAME})
 
-write_config(${PLUGIN_NAME})
+write_config(${PROJECT_NAME})

@@ -62,4 +62,4 @@ install(
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 
-write_config(${PLUGIN_NAME})
+write_config(${PROJECT_NAME})

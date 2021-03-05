@@ -78,4 +78,4 @@ elseif(PLUGIN_COBALT_RESOLUTION EQUAL "2160p")
     set(PLUGIN_COBALT_WIDTH "3840")
 endif()
 
-write_config(${PLUGIN_NAME})
+write_config(${PROJECT_NAME})
