@@ -15,11 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(Examples VERSION 1.0.0)
+project(Examples)
+
 cmake_minimum_required(VERSION 3.3)
 
 find_package(WPEFramework)
 
+project_version(1.0.0)
 message("Setup ${PROJECT_NAME} v${PROJECT_VERSION}")
 
 option(EXAMPLE_COMRPCCLIENT"Include COMRPCClient example" OFF)

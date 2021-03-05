@@ -16,7 +16,8 @@
 # limitations under the License.
 
 cmake_minimum_required(VERSION 3.3)
-project(NanoServices VERSION 1.0.0)
+project(NanoServices)
+
 
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(PLUGIN_BLUETOOTHREMOTECONTROL "Include Bluetooth Remote Control plugin" OFF)

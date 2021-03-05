@@ -19,6 +19,9 @@ set(TARGET GenericAdapter)
 message("Setup ${TARGET} v${PROJECT_VERSION}...")
 
 find_package(WPEFramework)
+
+project_version(1.0.0)
+
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(WDMP-C REQUIRED)
 find_package(TinyXML REQUIRED)

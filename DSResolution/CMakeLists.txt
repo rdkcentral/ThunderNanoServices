@@ -15,10 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(DSResolution VERSION 1.0.0)
+project(DSResolution)
+
 cmake_minimum_required(VERSION 3.3)
 
 find_package(WPEFramework)
+
+project_version(1.0.0)
 
 set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
