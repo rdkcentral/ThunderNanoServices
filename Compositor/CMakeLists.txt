@@ -67,4 +67,4 @@ endif ()
 
 add_subdirectory(lib)
 
-write_config(${PROJECT_NAME})
+write_config()

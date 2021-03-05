@@ -109,4 +109,4 @@ elseif(PLUGIN_SPARK_RESOLUTION EQUAL "2160p")
     set(PLUGIN_SPARK_WIDTH "3840")
 endif()
 
-write_config(${PROJECT_NAME})
+write_config()

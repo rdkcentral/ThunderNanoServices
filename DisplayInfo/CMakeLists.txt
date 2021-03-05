@@ -114,4 +114,4 @@ endif ()
 install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
-write_config(${PROJECT_NAME})
+write_config()

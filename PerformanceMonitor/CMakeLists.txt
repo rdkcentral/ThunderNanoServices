@@ -48,4 +48,4 @@ install(TARGETS ${MODULE_NAME}
 
 set(PLUGIN_PROCESSMONITOR_AUTOSTART false CACHE STRING "Automatically start ProcessMonitor plugin")
 
-write_config(${PROJECT_NAME})
+write_config()
