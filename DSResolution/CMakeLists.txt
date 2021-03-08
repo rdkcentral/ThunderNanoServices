@@ -15,8 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME DSResolution)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(DSResolution)
+
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(PLUGIN_DSRESOLUTION_AUTOSTART false CACHE STRING "Automatically start DSResolution Plug-in")
 
@@ -47,4 +58,4 @@ if(DSRESOLUTION_WITH_DUMMY_DSHAL)
 add_subdirectory(src)
 endif(DSRESOLUTION_WITH_DUMMY_DSHAL)
 
-write_config(${PLUGIN_NAME})
+write_config()

@@ -1,0 +1,1 @@
+../../cmake/FindBcmPowerManager.cmake

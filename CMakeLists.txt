@@ -18,15 +18,9 @@
 cmake_minimum_required(VERSION 3.3)
 project(NanoServices)
 
-find_package(WPEFramework)
-
-# All packages that did not deliver a CMake Find script (and some deprecated scripts that need to be removed)
-# are located in the cmake directory. Include it in the search.
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(PLUGIN_BLUETOOTHREMOTECONTROL "Include Bluetooth Remote Control plugin" OFF)
-option(PLUGIN_SVALBARD "Include Svalbard plugin" OFF)
 option(PLUGIN_COBALT "Include Cobalt plugin" OFF)
 option(PLUGIN_COMMANDER "Include Commander plugin" OFF)
 option(PLUGIN_COMPOSITOR "Include Compsitor plugin" OFF)
@@ -52,6 +46,7 @@ option(PLUGIN_SECURESHELLSERVER "Include SecureShellServer plugin" OFF)
 option(PLUGIN_STREAMER "Include Streamer plugin" OFF)
 option(PLUGIN_SNAPSHOT "Include Snapshot plugin" OFF)
 option(PLUGIN_SPARK "Include SparkEngine plugin" OFF)
+option(PLUGIN_SVALBARD "Include Svalbard plugin" OFF)
 option(PLUGIN_SYSTEMCOMMANDS "Include SystemCommands plugin" OFF)
 option(PLUGIN_TIMESYNC "Include TimeSync plugin" OFF)
 option(PLUGIN_VOLUMECONTROL "Include VolumeControl plugin" OFF)
@@ -63,16 +58,6 @@ option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_DTV "Include DTV plugin" OFF)
 
-option(PLUGINS_CREATE_IPKG_TARGETS "Generate the CPack configuration for package generation" OFF)
-
-# Library installation section
-string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
-
-#include(CompileSettings)
-
-# for writing pc and config files
-include(CmakeHelperFunctions)
-
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
 endif()
@@ -83,10 +68,6 @@ endif()
 
 if(PLUGIN_BLUETOOTHREMOTECONTROL)
     add_subdirectory(BluetoothRemoteControl)
-endif()
-
-if(PLUGIN_SVALBARD)
-    add_subdirectory(Svalbard)
 endif()
 
 if(PLUGIN_COBALT)
@@ -197,6 +178,10 @@ if(PLUGIN_STREAMER)
     add_subdirectory(Streamer)
 endif()
 
+if(PLUGIN_SVALBARD)
+    add_subdirectory(Svalbard)
+endif()
+
 if(PLUGIN_SYSTEMCOMMANDS)
     add_subdirectory(SystemCommands)
 endif()
@@ -242,26 +227,3 @@ if(PLUGIN_DTV)
 endif()
 
 add_subdirectory(examples)
-
-if(PLUGINS_CREATE_IPKG_TARGETS)
-    set(CPACK_GENERATOR "DEB")
-    set(CPACK_DEB_COMPONENT_INSTALL ON)
-    set(CPACK_COMPONENTS_GROUPING IGNORE)
-
-    set(CPACK_DEBIAN_PACKAGE_NAME "${PLUGINS_OPKG_NAME}")
-    set(CPACK_DEBIAN_PACKAGE_VERSION "${PLUGINS_OPKG_VERSION}")
-    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${PLUGINS_OPKG_ARCHITECTURE}")
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${PLUGINS_OPKG_MAINTAINER}")
-    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${PLUGINS_OPKG_DESCRIPTION}")
-    set(CPACK_PACKAGE_FILE_NAME "${PLUGINS_OPKG_FILE_NAME}")
-
-    # list of components from which packages will be generated
-    set(CPACK_COMPONENTS_ALL
-        ${NAMESPACE}WebKitBrowser
-        WPEInjectedBundle
-    )
-
-    include(CPack)
-endif()
-
-
