@@ -219,12 +219,11 @@ void telnetd_main()
         setsockopt(0, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof (on)) < 0) {
         syslog(LOG_WARNING, "setsockopt (SO_KEEPALIVE): %m");
     }
-TR();
+
     net = 0;
     netopen();
-TR();
+
     doit((struct sockaddr *)&from, fromlen);
-TR();
 }
 #else
 int
@@ -950,7 +949,7 @@ void telnet(int f, int p)
 
     DIAG(TD_REPORT, netoprintf("td: Entering processing loop\r\n"););
     syslog(LOG_INFO, "%s: Entering processing loop\n", __FUNCTION__);
-    for (;;) {
+    while (!end_session) {
     fd_set ibits, obits, xbits;
     int c, hifd;
 
@@ -1151,8 +1150,8 @@ void telnet(int f, int p)
         ptyflush();
 
     }
-    cleanup(0);
-TR();
+    syslog(LOG_INFO, "%s: Exiting processing loop\n", __FUNCTION__);
+
 }  /* end of telnet */
 
 #ifndef TCSIG

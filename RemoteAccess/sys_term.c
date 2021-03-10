@@ -719,7 +719,7 @@ static void addarg(struct argv_stuff *avs, const char *val) {
  * This is the routine to call when we are all through, to
  * clean up anything that needs to be cleaned up.
  */
-void cleanup(int sig) { TR();
+void cleanup(int sig) {
     const char *p;
     (void)sig;
 
