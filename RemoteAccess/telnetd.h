@@ -44,7 +44,6 @@
 #else
 #define DIAG(a,b)
 #endif
-#define TR()    syslog(LOG_INFO, "--> %s:%d\n", __FUNCTION__, __LINE__);    //printf("--> %s:%d\n", __FUNCTION__, __LINE__);
 
 /* other external variables */
 extern  char **environ;

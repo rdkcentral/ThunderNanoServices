@@ -204,6 +204,7 @@ void telnetd_main()
     int on = 1;
     socklen_t fromlen;
 
+    end_session = 0;
     //initsetproctitle(0, NULL, NULL);
     pfrontp = pbackp = ptyobuf;
     netip = netibuf;
@@ -224,6 +225,7 @@ void telnetd_main()
     netopen();
 
     doit((struct sockaddr *)&from, fromlen);
+    closelog();
 }
 #else
 int
