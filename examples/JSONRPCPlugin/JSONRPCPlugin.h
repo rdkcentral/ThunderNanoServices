@@ -666,7 +666,10 @@ namespace Plugin {
         uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const override;
 
     private:
+        void RegisterAll();
+        void UnregisterAll();
         bool Validation(const string& token, const string& method, const string& parameters);
+
 
     private:
         Core::ProxyType<PeriodicSync> _job;
