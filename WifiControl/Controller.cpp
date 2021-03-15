@@ -54,7 +54,7 @@ namespace WPASupplicant {
         {
             va_list ap;
             va_start(ap, formatter);
-            Trace::Format(_text, formatter, ap);
+            Core::Format(_text, formatter, ap);
             va_end(ap);
         }
         inline Communication(const std::string& text)
