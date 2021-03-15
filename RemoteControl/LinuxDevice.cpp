@@ -223,6 +223,10 @@ namespace Plugin {
             {
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
             }
+            virtual ~PointerDevice()
+            {
+                Remotes::RemoteAdministrator::Instance().Revoke(*this);
+            }
 
             string Name() const override
             {
@@ -296,6 +300,10 @@ namespace Plugin {
             {
                 _abs_latch.fill(AbsInfo());
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
+            }
+            virtual ~TouchDevice()
+            {
+                Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
             string Name() const override
             {
