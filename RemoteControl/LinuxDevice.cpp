@@ -163,7 +163,7 @@ namespace Plugin {
             }
             virtual ~WheelDevice()
             {
-                //Remotes::RemoteAdministrator::Instance().Revoke(*this);
+                Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
             string Name() const override
             {
@@ -222,6 +222,10 @@ namespace Plugin {
                 , _callback(nullptr)
             {
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
+            }
+            virtual ~PointerDevice()
+            {
+                Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
 
             string Name() const override
@@ -296,6 +300,10 @@ namespace Plugin {
             {
                 _abs_latch.fill(AbsInfo());
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
+            }
+            virtual ~TouchDevice()
+            {
+                Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
             string Name() const override
             {
@@ -567,6 +575,7 @@ namespace Plugin {
 
             for (auto& device : _inputDevices) {
                 device->Teardown();
+                delete device;
             }
 
             _inputDevices.clear();
@@ -765,10 +774,10 @@ namespace Plugin {
         udev_monitor* _monitor;
         int _update;
         std::vector<IDevInputDevice*> _inputDevices;
-        static LinuxDevice* _singleton;
+        static LinuxDevice _singleton;
     };
 
-    /* static */ LinuxDevice* LinuxDevice::_singleton = new LinuxDevice();
+    /* static */ LinuxDevice LinuxDevice::_singleton;
 }
 
 ENUM_CONVERSION_BEGIN(Plugin::LinuxDevice::type)
