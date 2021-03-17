@@ -636,7 +636,9 @@ namespace Plugin {
                                 }
                             }
 
-                            _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, inputDevice)));
+                            if (inputDevice) {
+                                _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, inputDevice)));
+                            }
                         }
                     }
                 }
