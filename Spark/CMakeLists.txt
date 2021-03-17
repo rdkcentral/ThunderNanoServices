@@ -15,8 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME Spark)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(Spark)
+
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
@@ -101,4 +112,4 @@ elseif(PLUGIN_SPARK_RESOLUTION EQUAL "2160p")
     set(PLUGIN_SPARK_WIDTH "3840")
 endif()
 
-write_config(${PLUGIN_NAME})
+write_config()

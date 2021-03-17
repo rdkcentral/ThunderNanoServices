@@ -1,5 +1,14 @@
-set(PLUGIN_NAME ResourceMonitor)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(ResourceMonitor)
+
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
@@ -21,4 +30,4 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME} 
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
-write_config(${PLUGIN_NAME})
+write_config()

@@ -85,6 +85,15 @@ namespace Plugin {
             Exchange::JPlayerProperties::Unregister(*this);
             _player->Release();
         }
+
+        if (_audioCodecs != nullptr) {
+            _audioCodecs->Release();
+        }
+
+        if (_videoCodecs != nullptr) {
+            _videoCodecs->Release();
+        }
+
 #if DOLBY_SUPPORT
         if (_dolbyOut != nullptr) {
             _notification.Deinitialize();
