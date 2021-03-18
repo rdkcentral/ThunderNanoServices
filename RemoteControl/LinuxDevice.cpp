@@ -627,17 +627,13 @@ namespace Plugin {
                             ReadDeviceName(entry.Name(), deviceName);
                             std::transform(deviceName.begin(), deviceName.end(), deviceName.begin(), std::ptr_fun<int, int>(std::toupper));
 
-                            IDevInputDevice* inputDevice = nullptr;
                             for (auto& device : _inputDevices) {
                                 std::size_t found = deviceName.find(Core::EnumerateType<LinuxDevice::type>(device->Type()).Data());
                                 if (found != std::string::npos) {
-                                    inputDevice = device;
+                                    ASSERT(device != nullptr);
+                                    _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, device)));
                                     break;
                                 }
-                            }
-
-                            if (inputDevice) {
-                                _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, inputDevice)));
                             }
                         }
                     }
