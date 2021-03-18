@@ -197,24 +197,23 @@ public:
             }
         }
 
+        TRACE(Trace::Information, (_T("Display event; resolution: %dx%d; state: %s; audio: %s passthrough"), 
+                _width, _height, 
+                (_connected) ? "connected" : "disconnected",
+                (_audioPassthrough) ? "is" : "is not" )
+        );
 
         _adminLock.Lock();
 
         if (_connected == true) {
-            TRACE(Trace::Information, (_T("HDCP connected: [%d,%d]"), _width, _height));
-
             RetrieveEDID(_EDID, -1);
         }
         else {
             _EDID.Clear();
-            TRACE(Trace::Information, (_T("HDCP disconnected")));
         }
 
-
-        std::list<IConnectionProperties::INotification*>::const_iterator index = _observers.begin();
-
-        if (index != _observers.end()) {
-            (*index)->Updated(Exchange::IConnectionProperties::INotification::Source::HDMI_CHANGE);
+        for (auto const& index : _observers) {
+            index->Updated(Exchange::IConnectionProperties::INotification::Source::HDMI_CHANGE);
         }
 
         _adminLock.Unlock();
