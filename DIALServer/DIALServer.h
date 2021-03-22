@@ -704,9 +704,9 @@ namespace Plugin {
             {
                 _text = Core::ToString(string("OUT: ") + response);
             }
-            Protocol(const string& response, const Core::URL* url)
+            Protocol(const string& response, const string& url)
             {
-                _text = Core::ToString(string("OUT: [") + url->Text() + "] " + response);
+                _text = Core::ToString(string("OUT: [") + url + "] " + response);
             }
             ~Protocol()
             {
@@ -754,45 +754,66 @@ namespace Plugin {
             DIALServerImpl& operator=(const DIALServerImpl&) = delete;
 
         public:
-            DIALServerImpl(const string& MACAddress, const string& baseURL, const string& appPath);
+            DIALServerImpl(const string& MACAddress, const Core::URL& baseURL, const string& appPath, const bool dynamicInterface);
             virtual ~DIALServerImpl();
 
         public:
             // Notification of a Partial Request received, time to attach a body..
-            virtual void LinkBody(Core::ProxyType<Web::Request>& element);
+            void LinkBody(Core::ProxyType<Web::Request>& element) override;
 
             // Notification of a Request received.
-            virtual void Received(Core::ProxyType<Web::Request>& text);
+            void Received(Core::ProxyType<Web::Request>& text) override;
 
             // Notification of a Response send.
-            virtual void Send(const Core::ProxyType<Web::Response>& text);
+            void Send(const Core::ProxyType<Web::Response>& text) override;
 
             // Notification of a channel state change..
-            virtual void StateChange();
+            void StateChange() override;
 
-            inline string URL() const
+            string URL() const
             {
-                string result;
-
-                _lock.Lock();
-
-                result = _baseURL + '/' + _appPath;
-
-                _lock.Unlock();
-
-                return (result);
+                Core::SafeSyncType<Core::CriticalSection> scopedLock(_lock);
+                return (_baseURL);
             }
-            inline void URL(Core::URL& locator) const
+            void Locator(const string& locator)
             {
-                locator = Core::URL(URL());
+                Locator(Core::URL(locator));
             }
-            inline void Locator(const string& hostName)
+            void Locator(const Core::URL& locator)
             {
                 _lock.Lock();
-
-                _baseURL = hostName;
-
+                if (_dynamicInterface == false) {
+                    _locator.Host(locator.Host().Value());
+                }
+                _locator.Port(locator.Port().Value());
+                UpdateURL();
                 _lock.Unlock();
+            }
+
+        private:
+            void Host(const uint32_t interface)
+            {
+                if ((_dynamicInterface == true) && (interface != static_cast<uint32_t>(~0))) {
+                    Core::AdapterIterator adapter(interface);
+                    if ((adapter.IsValid() == true)) {
+                        Core::IPV4AddressIterator addresses(adapter.IPV4Addresses());
+                        while (addresses.Next() == true) {
+                            Core::NodeId current(addresses.Address());
+                            if ((current.IsMulticast() == false) && (current.IsLocalInterface() == false)) {
+                                if (_locator.Host().Value() != current.HostAddress()) {
+                                    _locator.Host(current.HostAddress());
+                                    UpdateURL();
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            void UpdateURL()
+            {
+                _baseURL = (_locator.Text() + '/' + _appPath);
+                TRACE(Trace::Information, (_T("Updated base URL: %s"), URL().c_str()));
             }
 
         private:
@@ -800,8 +821,10 @@ namespace Plugin {
             // This should be the "Response" as depicted by the parent/DIALserver.
             Core::ProxyType<Web::Response> _response;
             std::list<Core::NodeId> _destinations;
+            Core::URL _locator;
             string _baseURL;
             const string _appPath;
+            bool _dynamicInterface;
         };
         class AppInformation {
         public:
@@ -1148,7 +1171,6 @@ namespace Plugin {
             , _service(NULL)
             , _dialURL()
             , _dialPath()
-            , _webServerPort()
             , _dialServiceImpl(NULL)
             , _deviceInfo(Core::ProxyType<Web::TextBody>::Create())
             , _sink(this)
@@ -1228,8 +1250,8 @@ namespace Plugin {
         void event_hide(const string& application);
         void event_show(const string& application);
 
-        const uint16_t WebServerPort() const {
-            return _webServerPort;
+        string BaseURL() const {
+            return (_dialServiceImpl->URL());
         }
 
         bool DeprecatedAPI() const {
@@ -1243,7 +1265,6 @@ namespace Plugin {
         PluginHost::IShell* _service;
         Core::URL _dialURL;
         string _dialPath;
-        uint16_t _webServerPort;
         DIALServerImpl* _dialServiceImpl;
         Core::ProxyType<Web::TextBody> _deviceInfo;
         Core::Sink<Notification> _sink;

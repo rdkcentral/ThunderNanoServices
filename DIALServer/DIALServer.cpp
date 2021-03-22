@@ -111,17 +111,21 @@ namespace Plugin {
 
     /* virtual */ uint32_t DIALServer::Default::AdditionalDataURL(string& url) const
     {
-        const uint16_t port = _parent->WebServerPort();
-        url = (_T("http://localhost") + ((port == 80)? _T("") : _T(":") + Core::NumberType<uint16_t>(port).Text()) + _T("/Service/DIALServer/Apps/") + _callsign + _T("/") + _DefaultDataExtension);
+        Core::URL baseUrl(_parent->BaseURL());
+        baseUrl.Host(string(_T("localhost"))); // replace the host with "localhost"
+        baseUrl.Path(baseUrl.Path().Value() + _T("/") + _callsign + _T("/") + _DefaultDataExtension);
+        url = baseUrl.Text();
         return (Core::ERROR_NONE);
     }
 
-    DIALServer::DIALServerImpl::DIALServerImpl(const string& MACAddress, const string& baseURL, const string& appPath)
+    DIALServer::DIALServerImpl::DIALServerImpl(const string& MACAddress, const Core::URL& locator, const string& appPath, const bool dynamicInterface)
         : BaseClass(5, false, Core::NodeId(DialServerInterface.AnyInterface(), DialServerInterface.PortNumber()), DialServerInterface.AnyInterface(), 1024, 1024)
         , _response(Core::ProxyType<Web::Response>::Create())
         , _destinations()
-        , _baseURL(baseURL)
+        , _locator(locator)
+        , _baseURL()
         , _appPath(appPath)
+        , _dynamicInterface(dynamicInterface)
     {
         _response->ErrorCode = Web::STATUS_OK;
         _response->Message = _T("OK");
@@ -135,6 +139,8 @@ namespace Plugin {
         // where currently Device identifier is passed in MACAddress.
         // _response->WakeUp = _T("MAC=") + MACAddress + _T(";Timeout=10");
         _response->Mode(Web::MARSHAL_UPPERCASE);
+
+        UpdateURL();
 
         if (Link().Open(1000) != Core::ERROR_NONE) {
             ASSERT(false && "Seems we can not open the DIAL discovery port");
@@ -154,6 +160,7 @@ namespace Plugin {
     {
         // upnp requests are empty so no body needed...
     }
+
     // Notification of a Partial Request received, time to attach a body..
     // upnp requests are empty so no body needed...
     /* virtual */ void DIALServer::DIALServerImpl::Received(Core::ProxyType<Web::Request>& request)
@@ -165,7 +172,13 @@ namespace Plugin {
             if (request->ST.Value() == _SearchTarget) {
 
                 TRACE(Protocol, (&(*request)));
+
+                _lock.Lock();
+
+                Host(Link().ReceivedInterface());
+
                 _destinations.push_back(sourceNode);
+
                 // remember the NodeId where this comes from.
                 if (_destinations.size() == 1) {
 
@@ -175,6 +188,8 @@ namespace Plugin {
 
                     Submit(_response);
                 }
+
+                _lock.Unlock();
             }
         }
     }
@@ -186,10 +201,13 @@ namespace Plugin {
 
         TRACE(Protocol, (&(*response)));
 
+        _lock.Lock();
+
         // Drop the current destination.
         _destinations.pop_front();
 
         if (_destinations.size() > 0) {
+
             _response->Location = URL() + '/' + _DefaultAppInfoDevice;
 
             // Move on to notifying the next one.
@@ -197,6 +215,8 @@ namespace Plugin {
 
             Submit(response);
         }
+
+        _lock.Unlock();
     }
 
     // Notification of a channel state change..
@@ -299,12 +319,13 @@ namespace Plugin {
             _service = service;
             _dialURL = Core::URL(service->Accessor());
             _dialURL.Host(selectedNode.HostAddress());
-            _dialPath = '/' + _dialURL.Path().Value();
-            _webServerPort = _dialURL.Port().IsSet() ? _dialURL.Port().Value() : 80;
+            if (_dialURL.Port().IsSet() == false) {
+                _dialURL.Port(80);
+            }
 
             // TODO: THis used to be the MAC, but I think  it is just a unique number, otherwise, we need the MAC
             //       that goes with the selectedNode !!!!
-            _dialServiceImpl = new DIALServerImpl(deviceId, _dialURL.Text(), _DefaultAppInfoPath);
+            _dialServiceImpl = new DIALServerImpl(deviceId, _dialURL, _DefaultAppInfoPath, selectedNode.IsAnyInterface());
 
             ASSERT(_dialServiceImpl != nullptr);
 
@@ -513,11 +534,9 @@ namespace Plugin {
                     result->Body(_deviceInfo);
                     result->ContentType = Web::MIME_TEXT_XML;
 
-                    Core::URL newURL;
-                    _dialServiceImpl->URL(newURL);
-
-                    result->ApplicationURL = newURL;
-                    TRACE(Protocol, (static_cast<const string&>(*_deviceInfo), &newURL));
+                    const string url = _dialServiceImpl->URL();
+                    result->ApplicationURL = Core::URL(url);
+                    TRACE(Protocol, (static_cast<const string&>(*_deviceInfo), url));
                 }
             } else {
                 auto selectedApp(_appInfo.find(keyword));
@@ -638,6 +657,7 @@ namespace Plugin {
         }
 
         TRACE(Protocol, (&(*result)));
+
         return (result);
     }
 
@@ -659,18 +679,15 @@ namespace Plugin {
 
     void DIALServer::Activated(Exchange::IWebServer* pluginInterface)
     {
-        string remote(_dialURL.Host().Value() + ':' + (_dialURL.Port().IsSet() ? Core::NumberType<uint16_t>(_dialURL.Port().Value()).Text() : _T("80")));
-
         _adminLock.Lock();
 
         // Let's set the URL of the WebServer, as it is active :-)
-        _dialServiceImpl->Locator(pluginInterface->Accessor() + _dialPath);
-
-        Core::URL url = Core::URL(pluginInterface->Accessor());
-        _webServerPort = url.Port().IsSet() ? url.Port().Value() : 80;
+        _dialServiceImpl->Locator(pluginInterface->Accessor());
 
         // Redirect all calls to the DIALServer, via a proxy.
-        pluginInterface->AddProxy(_dialPath, _dialPath, remote);
+        const string remote = (_dialURL.Host().Value() + (_T(":") + _dialURL.Port().Value()));
+        const string path = (_T("/") + _dialURL.Path().Value());
+        pluginInterface->AddProxy(path, path, remote);
 
         _adminLock.Unlock();
     }
@@ -681,8 +698,8 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        _dialServiceImpl->Locator(_dialURL.Text());
-        pluginInterface->RemoveProxy(_dialPath);
+        _dialServiceImpl->Locator(_dialURL);
+        pluginInterface->RemoveProxy(_T("/") + _dialURL.Path().Value());
 
         _adminLock.Unlock();
     }
