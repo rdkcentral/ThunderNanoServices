@@ -389,6 +389,20 @@ namespace Plugin {
             return (Implementation::GetResolution());
         }
 
+        uint32_t Brightness(uint32_t& luminance) const override
+        {
+            TRACE(Trace::Information, (_T("Could not get Brightness. Not supported for Wayland")));
+            luminance = 0;
+            return (Core::ERROR_UNAVAILABLE);
+        }
+
+        uint32_t Brightness(const uint32_t luminance) override
+        {
+            TRACE(Trace::Information, (_T("Could not set Brightness to %d. Not supported for Wayland"), luminance));
+            return (Core::ERROR_UNAVAILABLE);
+        }
+
+
         // -------------------------------------------------------------------------------------------------------
         //   IProcess methods
         // -------------------------------------------------------------------------------------------------------

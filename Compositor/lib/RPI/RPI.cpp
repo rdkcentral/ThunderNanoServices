@@ -219,6 +219,19 @@ namespace Plugin {
             return Exchange::IComposition::ScreenResolution::ScreenResolution_720p;
         }
 
+        uint32_t Brightness(uint32_t& luminance) const override
+        {
+            TRACE(Trace::Information, (_T("Could not get Brightness. Not supported for Rapberry Pi compositor")));
+            luminance = 0;
+            return (Core::ERROR_UNAVAILABLE);
+        }
+
+        uint32_t Brightness(const uint32_t luminance) override
+        {
+            TRACE(Trace::Information, (_T("Could not set Brightness to %d. Not supported for Rapberry Pi compositor"), luminance));
+            return (Core::ERROR_UNAVAILABLE);
+        }
+
     private:
         using ClientDataContainer = std::map<string, ClientData>;
         using ConstClientDataIterator = ClientDataContainer::const_iterator;
