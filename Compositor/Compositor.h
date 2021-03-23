@@ -201,6 +201,8 @@ namespace Plugin {
         uint32_t ToTop(const string& callsign);
         uint32_t Select(const string& callsign);
         uint32_t PutBefore(const string& relative, const string& callsign);
+        uint32_t Brightness(uint32_t& luminance) const;
+        uint32_t Brightness(const uint32_t luminance);
 
         void ZOrder(std::list<string>& zOrderedList, const bool primary) const;
         Exchange::IComposition::IClient* InterfaceByCallsign(const string& callsign) const;
@@ -230,6 +232,8 @@ namespace Plugin {
         uint32_t set_geometry(const string& index, const JsonData::Compositor::GeometryData& param);
         uint32_t set_visiblity(const string& index, const Core::JSON::EnumType<JsonData::Compositor::VisiblityType>& param);
         uint32_t set_opacity(const string& index, const Core::JSON::DecUInt8& param);
+        uint32_t get_brightness(Core::JSON::DecUInt16& response) const;
+        uint32_t set_brightness(const Core::JSON::DecUInt16& param);
 
     private:
         mutable Core::CriticalSection _adminLock;

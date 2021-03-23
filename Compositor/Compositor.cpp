@@ -650,6 +650,26 @@ namespace Plugin {
         return (result);
     }
 
+    uint32_t Compositor::Brightness(uint32_t& luminance) const{
+        ASSERT(_composition != nullptr);
+        const auto constComposition = _composition;
+
+        if (constComposition != nullptr) {
+            return constComposition->Brightness(luminance);
+        }
+        return Core::ERROR_GENERAL;
+    }
+
+
+    uint32_t Compositor::Brightness(const uint32_t luminance){
+        ASSERT(_composition != nullptr);
+        
+        if (_composition != nullptr) {
+            return _composition->Brightness(luminance);
+        }
+        return Core::ERROR_GENERAL;
+    }
+
     uint32_t Compositor::ToTop(const string& callsign)
     {
         return PutBefore(EMPTY_STRING, callsign);
