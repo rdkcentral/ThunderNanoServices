@@ -269,8 +269,8 @@ namespace Plugin {
     uint32_t Compositor::get_brightness(Core::JSON::DecUInt16& response) const
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
-        uint32_t value = 0;
-        result = Brightness(value);
+        uint16_t value = 0;
+        result = GetBrightness(value);
         response = value;
         
         return result;
@@ -283,7 +283,7 @@ namespace Plugin {
     //  - ERROR_GENERAL: compositor implementation or nexus client not found
     uint32_t Compositor::set_brightness(const Core::JSON::DecUInt16& param)
     {
-        return Brightness(param.Value());
+        return SetBrightness(param.Value());
     }
 
 } // namespace Plugin

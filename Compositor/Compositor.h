@@ -144,6 +144,7 @@ namespace Plugin {
                 Add(_T("y"), &Y);
                 Add(_T("width"), &Width);
                 Add(_T("height"), &Height);
+                Add(_T("brightness"), &Brightness);
             }
 
             virtual ~Data()
@@ -157,6 +158,7 @@ namespace Plugin {
             Core::JSON::DecUInt32 Y;
             Core::JSON::DecUInt32 Width;
             Core::JSON::DecUInt32 Height;
+            Core::JSON::DecUInt16 Brightness;
         };
 
     public:
@@ -201,8 +203,8 @@ namespace Plugin {
         uint32_t ToTop(const string& callsign);
         uint32_t Select(const string& callsign);
         uint32_t PutBefore(const string& relative, const string& callsign);
-        uint32_t Brightness(uint32_t& luminance) const;
-        uint32_t Brightness(const uint32_t luminance);
+        uint32_t GetBrightness(uint16_t& luminance) const;
+        uint32_t SetBrightness(const uint16_t luminance);
 
         void ZOrder(std::list<string>& zOrderedList, const bool primary) const;
         Exchange::IComposition::IClient* InterfaceByCallsign(const string& callsign) const;
