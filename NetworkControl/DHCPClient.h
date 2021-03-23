@@ -205,19 +205,19 @@ namespace Plugin {
                     }
                     case OPTION_IPADDRESSLEASETIME: {
                         uint32_t value;
-                        ::memcpy(&value, &optionsData[used], sizeof(leaseTime));
+                        ::memcpy(&value, &optionsData[used], sizeof(value));
                         leaseTime = ntohl(value);
                         break;
                     }
                     case OPTION_RENEWALTIME: {
                         uint32_t value;
-                        ::memcpy(&value, &optionsData[used], sizeof(renewalTime));
+                        ::memcpy(&value, &optionsData[used], sizeof(value));
                         renewalTime = ntohl(value);
                         break;
                     }
                     case OPTION_REBINDINGTIME: {
                         uint32_t value;
-                        ::memcpy(&value, &optionsData[used], sizeof(rebindingTime));
+                        ::memcpy(&value, &optionsData[used], sizeof(value));
                         rebindingTime = ntohl(value);
                         break;
                     }
