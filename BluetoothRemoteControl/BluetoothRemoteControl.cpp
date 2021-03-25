@@ -126,7 +126,7 @@ namespace Plugin {
             _recordFile = _service->VolatilePath() + sequence;
         }
 
-        if (Core::File(_service->PersistentPath(), true).IsDirectory() == false) {
+        if (Core::File(_service->PersistentPath()).IsDirectory() == false) {
             if (Core::Directory(_service->PersistentPath().c_str()).CreatePath() == false) {
                 TRACE(Trace::Error, (_T("Failed to create persistent storage folder [%s]"), _service->PersistentPath().c_str()));
             }

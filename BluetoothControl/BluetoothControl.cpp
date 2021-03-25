@@ -600,7 +600,7 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_NONE;
 
-        if (Core::File(devicePath, true).Exists() == false) {
+        if (Core::File(devicePath).Exists() == false) {
             if (Core::Directory(devicePath.c_str()).CreatePath() == false) {
                 SYSLOG(Logging::Startup, (_T("Failed to create persistent storage folder '%s'\n"), devicePath.c_str()));
             }
