@@ -290,34 +290,6 @@ namespace Plugin {
                     result->Message = _T("Could not retrieve Geometry, Client not specified");
                 }
             }
-
-            // http://<ip>/Service/Compositor/Brightness
-            /*
-            else if (index.Current() == "Brightness")
-            {
-                uint16_t brightness = 0;
-
-                uint32_t errorCode = GetBrightness(brightness);
-                if(errorCode == Core::ERROR_GENERAL){
-                    result->ErrorCode = Web::STATUS_METHOD_NOT_ALLOWED;
-                    result->Message = _T("Could not retrieve Brightness, Implementation or Nexus Client is unavailable");
-                }
-                else if (errorCode == Core::ERROR_UNAVAILABLE)
-                {
-                    result->ErrorCode = Web::STATUS_SERVICE_UNAVAILABLE;
-                    result->Message = _T("Could not retrieve Brightness, property not available on this platform");
-                }
-                else
-                {
-                    Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
-                    response->Brightness = brightness;
-                    result->Body(Core::proxy_cast<Web::IBody>(response));
-                }
-                
-            }
-            */
-            
-
             result->ContentType = Web::MIMETypes::MIME_JSON;
         } else if (request.Verb == Web::Request::HTTP_POST) {
             Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
@@ -345,26 +317,6 @@ namespace Plugin {
                         }
                     }
                 } 
-                /*
-                else if (index.Current() == _T("Brightness")) {
-                    if (index.Next() == true) {
-                        uint16_t brightness(Core::NumberType<uint16_t>(index.Current()).Value());
-                        uint32_t errorCode = SetBrightness(brightness);
-                        if (errorCode == Core::ERROR_GENERAL) {
-                            result->ErrorCode = Web::STATUS_METHOD_NOT_ALLOWED;
-                            result->Message = _T("Could not set Brightness, Implementation or Nexus Client is unavailable");
-                        } else if (errorCode == Core::ERROR_UNAVAILABLE) {
-                            result->ErrorCode = Web::STATUS_SERVICE_UNAVAILABLE;
-                            result->Message = _T("Could not set Brightness, property not available on this platform");
-                        }
-
-                    } else {
-                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                        result->Message = _T("Brightness not specified!");
-                    }
-
-                } 
-                */
                 else {
                     string clientName(index.Current().Text());
 
@@ -698,9 +650,10 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t Compositor::GetBrightness(Exchange::IComposition::Brightness& brightness) const{
+    uint32_t Compositor::GetBrightness(Exchange::IComposition::Brightness& brightness) const {
         ASSERT(_composition != nullptr);
-        const auto constComposition = _composition;
+        const WPEFramework::Exchange::IComposition* constComposition = _composition;
+        //const auto constComposition = _composition;
 
         if (constComposition != nullptr) {
             return constComposition->SdrToHdrGraphicsBrightness(brightness);

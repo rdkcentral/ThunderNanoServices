@@ -276,8 +276,10 @@ namespace Plugin {
             switch (brightness) {
             case Exchange::IComposition::SdrToHdrGraphicsBrightness_Max:
                 response = BrightnessType::MAX;
+                break;
             case Exchange::IComposition::SdrToHdrGraphicsBrightness_MatchVideo:
                 response = BrightnessType::MATCH_VIDEO;
+                break;
             case Exchange::IComposition::SdrToHdrGraphicsBrightness_Default:
             default:
                 response = BrightnessType::DEFAULT;
@@ -300,8 +302,10 @@ namespace Plugin {
         switch (param) {
         case BrightnessType::MAX:
             brightness = Exchange::IComposition::SdrToHdrGraphicsBrightness_Max;
+            break;
         case BrightnessType::MATCH_VIDEO:
             brightness = Exchange::IComposition::SdrToHdrGraphicsBrightness_MatchVideo;
+            break;
         case BrightnessType::DEFAULT:
         default:
             brightness = Exchange::IComposition::SdrToHdrGraphicsBrightness_Default;
