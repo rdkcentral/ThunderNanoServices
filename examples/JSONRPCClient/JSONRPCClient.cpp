@@ -17,11 +17,8 @@
  * limitations under the License.
  */
  
-#define MODULE_NAME JSONRPC_Test
+#include "Module.h"
 
-#include <core/core.h>
-#include <tracing/tracing.h>
-#include <websocket/websocket.h>
 #ifdef ENABLE_SECURITY_AGENT
 #include <securityagent/securityagent.h>
 #endif
