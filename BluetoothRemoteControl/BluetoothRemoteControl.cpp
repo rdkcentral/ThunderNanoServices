@@ -145,7 +145,7 @@ namespace Plugin {
 
                     if (address.IsValid() == true)  {
                         Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename);
-                        Core::File fileData(storageDir.Current().c_str(), true);
+                        Core::File fileData(storageDir.Current().c_str());
 
                         if (device != nullptr) {
                             if (fileData.Open(true) == true) {
