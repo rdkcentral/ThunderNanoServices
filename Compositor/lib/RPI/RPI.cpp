@@ -219,16 +219,15 @@ namespace Plugin {
             return Exchange::IComposition::ScreenResolution::ScreenResolution_720p;
         }
 
-        uint32_t Brightness(uint32_t& luminance) const override
+        uint32_t SdrToHdrGraphicsBrightness(Exchange::IComposition::Brightness& brightness) const override
         {
             TRACE(Trace::Information, (_T("Could not get Brightness. Not supported for Rapberry Pi compositor")));
-            luminance = 0;
             return (Core::ERROR_UNAVAILABLE);
         }
 
-        uint32_t Brightness(const uint32_t luminance) override
+        uint32_t SdrToHdrGraphicsBrightness(const Exchange::IComposition::Brightness& brightness) override
         {
-            TRACE(Trace::Information, (_T("Could not set Brightness to %d. Not supported for Rapberry Pi compositor"), luminance));
+            TRACE(Trace::Information, (_T("Could not set Brightness to %s. Not supported for Rapberry Pi compositor"), Core::EnumerateType<Exchange::IComposition::Brightness>(brightness).Data()));
             return (Core::ERROR_UNAVAILABLE);
         }
 

@@ -389,16 +389,15 @@ namespace Plugin {
             return (Implementation::GetResolution());
         }
 
-        uint32_t Brightness(uint32_t& luminance) const override
+        uint32_t Brightness(Exchange::IComposition::Brightness& brightness) const override
         {
-            TRACE(Trace::Information, (_T("Could not get Brightness. Not supported for Wayland")));
-            luminance = 0;
+            TRACE(Trace::Information, (_T("Could not get Brightness. Not supported for Rapberry Pi compositor")));
             return (Core::ERROR_UNAVAILABLE);
         }
 
-        uint32_t Brightness(const uint32_t luminance) override
+        uint32_t Brightness(const Exchange::IComposition::Brightness& brightness) override
         {
-            TRACE(Trace::Information, (_T("Could not set Brightness to %d. Not supported for Wayland"), luminance));
+            TRACE(Trace::Information, (_T("Could not set Brightness to %s. Not supported for Rapberry Pi compositor"), Core::EnumerateType<Exchange::IComposition::Brightness>(brightness).Data()));
             return (Core::ERROR_UNAVAILABLE);
         }
 

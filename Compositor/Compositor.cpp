@@ -292,6 +292,7 @@ namespace Plugin {
             }
 
             // http://<ip>/Service/Compositor/Brightness
+            /*
             else if (index.Current() == "Brightness")
             {
                 uint16_t brightness = 0;
@@ -314,6 +315,7 @@ namespace Plugin {
                 }
                 
             }
+            */
             
 
             result->ContentType = Web::MIMETypes::MIME_JSON;
@@ -342,7 +344,9 @@ namespace Plugin {
                             result->Message = _T("invalid parameter for resolution: ") + index.Current().Text();
                         }
                     }
-                } else if (index.Current() == _T("Brightness")) {
+                } 
+                /*
+                else if (index.Current() == _T("Brightness")) {
                     if (index.Next() == true) {
                         uint16_t brightness(Core::NumberType<uint16_t>(index.Current()).Value());
                         uint32_t errorCode = SetBrightness(brightness);
@@ -359,7 +363,9 @@ namespace Plugin {
                         result->Message = _T("Brightness not specified!");
                     }
 
-                } else {
+                } 
+                */
+                else {
                     string clientName(index.Current().Text());
 
                     if (clientName.empty() == true) {
@@ -692,25 +698,25 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t Compositor::GetBrightness(uint16_t& luminance) const{
+    uint32_t Compositor::GetBrightness(Exchange::IComposition::Brightness& brightness) const{
         ASSERT(_composition != nullptr);
         const auto constComposition = _composition;
 
         if (constComposition != nullptr) {
-            return constComposition->Brightness(luminance);
+            return constComposition->SdrToHdrGraphicsBrightness(brightness);
         }
-        return Core::ERROR_GENERAL;
+        return Core::ERROR_UNAVAILABLE;
     }
 
 
-    uint32_t Compositor::SetBrightness(const uint16_t luminance){
+    uint32_t Compositor::SetBrightness(const Exchange::IComposition::Brightness& brightness){
 
         ASSERT(_composition != nullptr);
         
         if (_composition != nullptr) {
-            return _composition->Brightness(luminance);
+            return _composition->SdrToHdrGraphicsBrightness(brightness);
         }
-        return Core::ERROR_GENERAL;
+        return Core::ERROR_UNAVAILABLE;
     }
 
     uint32_t Compositor::ToTop(const string& callsign)

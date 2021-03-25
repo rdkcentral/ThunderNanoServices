@@ -41,7 +41,7 @@ namespace Plugin {
         Property<Core::JSON::EnumType<VisiblityType>>(_T("visiblity"), nullptr, &Compositor::set_visiblity, this);
         Property<Core::JSON::DecUInt8>(_T("opacity"), nullptr, &Compositor::set_opacity, this);
 
-        Property<Core::JSON::DecUInt16>(_T("brightness"), &Compositor::get_brightness, &Compositor::set_brightness, this);
+        Property<Core::JSON::EnumType<BrightnessType>>(_T("brightness"), &Compositor::get_brightness, &Compositor::set_brightness, this);
 
 
         // Deprecated call, not documented, to be removed if the ThunderUI is adapted!!!
@@ -261,29 +261,53 @@ namespace Plugin {
         return Opacity(index, param.Value());
     }
 
-    // Property: brightness - platform luminance
+    // Property: brightness - Brightness of SDR graphics in HDR display
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_UNAVAILABLE: get brightness not supported
-    //  - ERROR_GENERAL: compositor implementation or nexus client not found
-    uint32_t Compositor::get_brightness(Core::JSON::DecUInt16& response) const
+    //  - ERROR_UNAVAILABLE: Set brightness is not supported or failed
+    //  - ERROR_GENERAL: Failed to set brightness
+    uint32_t Compositor::get_brightness(Core::JSON::EnumType<BrightnessType>& response) const
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
-        uint16_t value = 0;
-        result = GetBrightness(value);
-        response = value;
-        
+        Exchange::IComposition::Brightness brightness = Exchange::IComposition::SdrToHdrGraphicsBrightness_Default;
+
+        result = GetBrightness(brightness);
+        if (result == Core::ERROR_NONE) {
+            switch (brightness) {
+            case Exchange::IComposition::SdrToHdrGraphicsBrightness_Max:
+                response = BrightnessType::MAX;
+            case Exchange::IComposition::SdrToHdrGraphicsBrightness_MatchVideo:
+                response = BrightnessType::MATCH_VIDEO;
+            case Exchange::IComposition::SdrToHdrGraphicsBrightness_Default:
+            default:
+                response = BrightnessType::DEFAULT;
+                break;
+            }
+        }
+
         return result;
     }
 
-    // Property: brightness - platform luminance
+    // Property: brightness - Brightness of SDR graphics in HDR display
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_UNAVAILABLE: set brightness not supported
-    //  - ERROR_GENERAL: compositor implementation or nexus client not found
-    uint32_t Compositor::set_brightness(const Core::JSON::DecUInt16& param)
+    //  - ERROR_UNKNOWN_KEY: Unknown brightness
+    //  - ERROR_UNAVAILABLE: Set brightness is not supported or failed
+    //  - ERROR_GENERAL: Failed to set brightness
+    uint32_t Compositor::set_brightness(const Core::JSON::EnumType<BrightnessType>& param)
     {
-        return SetBrightness(param.Value());
+        Exchange::IComposition::Brightness brightness = Exchange::IComposition::SdrToHdrGraphicsBrightness_Default;
+        switch (param) {
+        case BrightnessType::MAX:
+            brightness = Exchange::IComposition::SdrToHdrGraphicsBrightness_Max;
+        case BrightnessType::MATCH_VIDEO:
+            brightness = Exchange::IComposition::SdrToHdrGraphicsBrightness_MatchVideo;
+        case BrightnessType::DEFAULT:
+        default:
+            brightness = Exchange::IComposition::SdrToHdrGraphicsBrightness_Default;
+            break;
+        }
+        return SetBrightness(brightness);
     }
 
 } // namespace Plugin
