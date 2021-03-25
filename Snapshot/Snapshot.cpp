@@ -140,7 +140,7 @@ namespace Plugin {
 
         protected:
             FileBodyExtended(Core::BinairySemaphore* semLock, const string& path)
-                : Web::FileBody(path, false)
+                : Web::FileBody(path)
                 , _semLock(*semLock)
             {
                 // Already exist, due to unexpected termination!

@@ -280,7 +280,7 @@ namespace Plugin {
 
             if (newLink != nullptr) {
                 _connectionMap.insert(std::pair<uint32_t, Connector*>(channel.Id(), newLink));
-                TRACE(Trace::Information, (Trace::Format(_T("Proxy connection channel ID [%d] to %s"), channel.Id(), newLink->RemoteId().c_str()).c_str()));
+                TRACE(Trace::Information, (Core::Format(_T("Proxy connection channel ID [%d] to %s"), channel.Id(), newLink->RemoteId().c_str()).c_str()));
                 added = true;
 
                 newLink->Attach();

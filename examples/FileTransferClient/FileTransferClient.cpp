@@ -209,7 +209,7 @@ int main(int argc, char** argv)
         (config.Source.Binding.IsSet() == false) ||
         (config.FilePath.IsSet() == false)) {
 
-        Core::File configFile("FileTransferClient.json", false);
+        Core::File configFile("FileTransferClient.json");
         if (configFile.Exists() && configFile.Open(true)) {
             config.IElement::FromFile(configFile);
             printf(_T("Get configuration from config file\n"));

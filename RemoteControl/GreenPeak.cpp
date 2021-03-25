@@ -777,9 +777,9 @@ void gpRf4ceBindAuto_cbRecipientBindConfirm(UInt8 bindingId, gpRf4ce_Result_t st
     string text;
 
     if (status == gpRf4ce_ResultSuccess) {
-        text = Trace::Format(_T("Pairing successfull. ID: [%d]"), static_cast<uint16_t>(bindingId));
+        text = Core::Format(_T("Pairing successfull. ID: [%d]"), static_cast<uint16_t>(bindingId));
     } else {
-        text = Trace::Format(_T("Pairing Failed. Error: [%X]"), static_cast<uint16_t>(status));
+        text = Core::Format(_T("Pairing Failed. Error: [%X]"), static_cast<uint16_t>(status));
     }
 
     Plugin::GreenPeak::Report(text);
