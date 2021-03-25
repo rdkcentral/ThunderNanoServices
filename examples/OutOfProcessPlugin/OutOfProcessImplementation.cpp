@@ -605,7 +605,7 @@ namespace OutOfProcessPlugin {
         {
             return (IsOperational() ? 1 : 0);
         }
-        virtual const bool IsOperational() const
+        virtual bool IsOperational() const
         {
             return (_main.IsActive());
         }
