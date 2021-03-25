@@ -614,7 +614,7 @@ namespace Plugin {
             Core::Directory dir(Locator);
             while (dir.Next() == true) {
 
-                Core::File entry(dir.Current(), false);
+                Core::File entry(dir.Current());
                 if ((entry.IsDirectory() == false) && (entry.FileName().substr(0, 5) == _T("event"))) {
 
                     TRACE(Trace::Information, (_T("Opening input device: %s"), entry.Name().c_str()));
