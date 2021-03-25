@@ -72,7 +72,7 @@ namespace Plugin {
         return message;
     }
 
-    /* virtual */ void DisplayInfo::Deinitialize(PluginHost::IShell* service)
+    void DisplayInfo::Deinitialize(PluginHost::IShell*) /* override */
     {
         ASSERT(_connectionProperties != nullptr);
 
@@ -100,7 +100,7 @@ namespace Plugin {
         _connectionId = 0;
     }
 
-    /* virtual */ string DisplayInfo::Information() const
+    string DisplayInfo::Information() const /* override */
     {
         // No additional info to report.
         return (string());

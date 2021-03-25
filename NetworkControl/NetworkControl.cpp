@@ -198,7 +198,7 @@ namespace Plugin
         return (result);
     }
 
-    /* virtual */ void NetworkControl::Deinitialize(PluginHost::IShell * service)
+    /* virtual */ void NetworkControl::Deinitialize(PluginHost::IShell*)
     {
         // Stop observing.
         _observer.Close();

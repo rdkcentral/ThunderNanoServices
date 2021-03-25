@@ -88,7 +88,7 @@ namespace Plugin {
         return (result);
     }
 
-    /* virtual */ void DHCPServer::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void DHCPServer::Deinitialize(PluginHost::IShell*)
     {
         std::map<const string, DHCPServerImplementation>::iterator index(_servers.begin());
 
