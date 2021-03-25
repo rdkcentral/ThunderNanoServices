@@ -14,11 +14,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+project(SecureShellServer)
+
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
-set(PLUGIN_NAME SecureShellServer)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
@@ -52,4 +60,4 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME} 
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
-write_config(${PLUGIN_NAME})
+write_config()

@@ -246,8 +246,13 @@ namespace Plugin {
 
     /* virtual */ void WebProxy::Deinitialize(PluginHost::IShell* service)
     {
-
         service->DisableWebServer();
+
+        for (auto connection: _connectionMap) {
+            connection.second->Detach();
+            delete connection.second;
+        }
+        _connectionMap.clear();
     }
 
     // Whenever a Channel (WebSocket connection) is created to the plugin that will be reported via the Attach.
