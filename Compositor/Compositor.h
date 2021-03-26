@@ -144,7 +144,6 @@ namespace Plugin {
                 Add(_T("y"), &Y);
                 Add(_T("width"), &Width);
                 Add(_T("height"), &Height);
-                Add(_T("brightness"), &Brightness);
             }
 
             virtual ~Data()
@@ -158,7 +157,6 @@ namespace Plugin {
             Core::JSON::DecUInt32 Y;
             Core::JSON::DecUInt32 Width;
             Core::JSON::DecUInt32 Height;
-            Core::JSON::DecUInt16 Brightness;
         };
 
     public:
