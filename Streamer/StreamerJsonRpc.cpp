@@ -17,9 +17,9 @@
  * limitations under the License.
  */
  
+#include "Module.h"
 #include <interfaces/json/JsonData_Streamer.h>
 #include "Streamer.h"
-#include "Module.h"
 
 namespace WPEFramework {
 
