@@ -138,11 +138,11 @@ public:
         codec = (Core::Service<VideoIteratorImplementation>::Create<Exchange::IPlayerProperties::IVideoCodecIterator>(_videoCodecs));
         return (codec != nullptr ? Core::ERROR_NONE : Core::ERROR_GENERAL);
     }
-    uint32_t Resolution(PlaybackResolution& res) const override
+    uint32_t Resolution(PlaybackResolution&) const override
     {
         return (Core::ERROR_NONE);
     }
-    uint32_t IsAudioEquivalenceEnabled(bool& ae) const override
+    uint32_t IsAudioEquivalenceEnabled(bool&) const override
     {
         return (Core::ERROR_NONE);
     }
