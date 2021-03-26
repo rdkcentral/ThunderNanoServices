@@ -158,15 +158,15 @@ public:
         height = _EDID.HeightInCentimeters();
         return height ? (Core::ERROR_NONE) : Core::ERROR_UNAVAILABLE;
     }
-    uint32_t PortName(string& name) const override
+    uint32_t PortName(string&) const override
     {
         return (Core::ERROR_UNAVAILABLE);
     }
-    uint32_t TVCapabilities(IHDRIterator*& type) const override
+    uint32_t TVCapabilities(IHDRIterator*&) const override
     {
         return (Core::ERROR_UNAVAILABLE);
     }
-    uint32_t STBCapabilities(IHDRIterator*& type) const override
+    uint32_t STBCapabilities(IHDRIterator*&) const override
     {
         return (Core::ERROR_UNAVAILABLE);
     }

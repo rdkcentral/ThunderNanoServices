@@ -212,9 +212,8 @@ namespace Plugin {
         return (result);
     }
 
-    /* virtual */ void Snapshot::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void Snapshot::Deinitialize(PluginHost::IShell*)
     {
-
         ASSERT(_device != nullptr);
 
         if (_device != nullptr) {

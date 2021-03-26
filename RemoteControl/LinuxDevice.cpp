@@ -51,7 +51,7 @@ namespace Plugin {
             virtual bool Setup() { return true; }
             virtual bool Teardown() { return true; }
             virtual bool HandleInput(uint16_t code, uint16_t type, int32_t value) = 0;
-            virtual void ProducerEvent(const Exchange::ProducerEvents event) { }
+            virtual void ProducerEvent(const Exchange::ProducerEvents) { }
         };
 
         class KeyDevice : public Exchange::IKeyProducer, public IDevInputDevice {
@@ -594,7 +594,7 @@ namespace Plugin {
 
             return (true);
         }
-        bool Unpair(string bindingId)
+        bool Unpair(string)
         {
             // Make sure we are not processing anything.
             Block();

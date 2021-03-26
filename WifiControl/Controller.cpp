@@ -346,7 +346,7 @@ namespace WPASupplicant {
         _networks[bssid] = entry;
         Reevaluate();
     }
-    void Controller::Add(const string& ssid, const bool current, const uint64_t& bssid)
+    void Controller::Add(const string& ssid)
     {
         TRACE(Communication, (_T("Added Network: %s"), ssid.c_str()));
 

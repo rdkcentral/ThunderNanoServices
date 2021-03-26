@@ -78,7 +78,7 @@ namespace Plugin {
         return message;
     }
 
-    /* virtual */ void PlayerInfo::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void PlayerInfo::Deinitialize(PluginHost::IShell*)
     {
         ASSERT(_player != nullptr);
         if (_player != nullptr) {

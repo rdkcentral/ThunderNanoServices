@@ -281,7 +281,7 @@ namespace Plugin {
         return (result);
     }
 
-    /* virtual */ void RemoteControl::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void RemoteControl::Deinitialize(PluginHost::IShell*)
     {
 
         _inputHandler->Unregister(&_feedback);
