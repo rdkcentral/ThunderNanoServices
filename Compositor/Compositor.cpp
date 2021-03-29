@@ -652,15 +652,12 @@ namespace Plugin {
 
     uint32_t Compositor::GetBrightness(Exchange::IComposition::Brightness& brightness) const {
         ASSERT(_composition != nullptr);
-        const WPEFramework::Exchange::IComposition* constComposition = _composition;
-        //const auto constComposition = _composition;
 
-        if (constComposition != nullptr) {
-            return constComposition->SdrToHdrGraphicsBrightness(brightness);
+        if (_composition != nullptr) {
+            return (static_cast<const Exchange::IComposition*>(_composition)->SdrToHdrGraphicsBrightness(brightness));
         }
         return Core::ERROR_UNAVAILABLE;
     }
-
 
     uint32_t Compositor::SetBrightness(const Exchange::IComposition::Brightness& brightness){
 
