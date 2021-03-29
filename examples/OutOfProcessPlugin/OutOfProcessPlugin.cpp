@@ -19,6 +19,10 @@
  
 #include "OutOfProcessPlugin.h"
 
+#ifdef __CORE_EXCEPTION_CATCHING__
+#include <stdexcept>
+#endif
+
 namespace WPEFramework {
 
 namespace OutOfProcessPlugin {
@@ -156,17 +160,26 @@ namespace Plugin {
         return "### UNKNOWN ###";
     }
 
-    void OutOfProcessPlugin::PluginStateChanged(PluginHost::IShell* plugin)
+    void OutOfProcessPlugin::Activated(const string& callsign, PluginHost::IShell* plugin)
     {
         ASSERT(plugin != nullptr);
 
-        const string callsign = plugin->Callsign();
+        const PluginHost::IShell::state state = plugin->State();
+        const char* stateStr = PluginStateStr(state);
+
+        TRACE(Trace::Information, (_T("OutOfProcessPlugin::PluginStateChanged: Got [%s] plugin [%s] event..."), callsign.c_str(), stateStr));
+    }
+
+    void OutOfProcessPlugin::Deactivated(const string& callsign, PluginHost::IShell* plugin)
+    {
+        ASSERT(plugin != nullptr);
+
         const PluginHost::IShell::state state = plugin->State();
         const char* stateStr = PluginStateStr(state);
 
         TRACE(Trace::Information, (_T("OutOfProcessPlugin::PluginStateChanged: Got [%s] plugin [%s] event..."), callsign.c_str(), stateStr));
 
-        if ((callsign == "OutOfProcessPlugin") && (state == PluginHost::IShell::DEACTIVATION)) {
+        if (callsign == "OutOfProcessPlugin") {
             if(_state != nullptr) {
                 TRACE(Trace::Information, (_T("OutOfProcessPlugin::PluginStateChanged: Doing RPC call with IShell * ptr...")));
                 _state->Configure(plugin); //note this indeed does not make sense but is used to trigger an IShell* call to the OOP side to reproduce an issue there
@@ -261,6 +274,16 @@ namespace Plugin {
                     _subscriber->Submit(Core::proxy_cast<Core::JSON::IElement>(info));
                 } else if ((index.Remainder() == _T("URL")) && (request.HasBody() == true) && (request.Body<Web::TextBody>()->empty() == false)) {
                     _browser->SetURL(*(request.Body<Web::TextBody>()));
+                #ifdef __CORE_EXCEPTION_CATCHING__
+                } else if (index.Remainder() == _T("ThunderException")) {
+                    throw(std::domain_error(_T("TestException")));
+                } else if (index.Current() == _T("ProcessException")) {
+                    string message(_T("ThrowException"));
+                    if (index.Next() == true) {
+                        message = message + ':' + index.Remainder().Text();
+                    }
+                    _browser->SetURL(message);
+		#endif
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
                     result->Message = "Unknown error";

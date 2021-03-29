@@ -54,7 +54,7 @@ namespace WPASupplicant {
         {
             va_list ap;
             va_start(ap, formatter);
-            Trace::Format(_text, formatter, ap);
+            Core::Format(_text, formatter, ap);
             va_end(ap);
         }
         inline Communication(const std::string& text)
@@ -346,7 +346,7 @@ namespace WPASupplicant {
         _networks[bssid] = entry;
         Reevaluate();
     }
-    void Controller::Add(const string& ssid, const bool current, const uint64_t& bssid)
+    void Controller::Add(const string& ssid)
     {
         TRACE(Communication, (_T("Added Network: %s"), ssid.c_str()));
 

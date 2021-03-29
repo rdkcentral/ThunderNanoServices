@@ -7,8 +7,10 @@ uninstall.cmake
 install_manifest.txt
 CTestTestfile.cmake
 output/
+build/
 .DS_Store
 .vscode
 /.vs
 /artifacts
 */*.so
+*/config

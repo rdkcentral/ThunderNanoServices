@@ -15,8 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME Power)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(Power)
+
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME}) VERSION 1.0.0
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(PLUGIN_POWER_AUTOSTART true CACHE STRING true)
 set(PLUGIN_POWER_GPIOPIN "" CACHE STRING "GPIO pin number")
@@ -75,17 +86,15 @@ if(BCM_PM_FOUND)
             target_sources(${MODULE_NAME}
                 PRIVATE
                     ${POWER_IMPLEMENTATION_PATH}/PowerImplementation.cpp)
-        elseif (CODE_FROM_EXTERNAL_REPOSITORY)
-            include(GetExternalCode)
-            GetExternalCode(
-                GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Power"
-                GIT_TAG "master"
-                SOURCE_DIR "PowerImplementation/BroadcomExt"
-            )
-            target_sources(${MODULE_NAME}
-                PRIVATE
-                    PowerImplementation/BroadcomExt/PowerImplementation.cpp)
         else()
+            include(GetExternalCode)
+            set(POWER_IMPLEMENTATION_VERSION "master" CACHE STRING "Power implementation version")
+            set(POWER_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Power" CACHE STRING "Power implementation repository")
+            GetExternalCode(
+                GIT_REPOSITORY ${POWER_IMPLEMENTATION_REPOSITORY}
+                GIT_TAG ${POWER_IMPLEMENTATION_VERSION}
+                SOURCE_DIR "PowerImplementation/Broadcom"
+            )
             target_sources(${MODULE_NAME}
                 PRIVATE
                     PowerImplementation/Broadcom/PowerImplementation.cpp)
@@ -113,4 +122,4 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
-write_config(${PLUGIN_NAME})
+write_config()

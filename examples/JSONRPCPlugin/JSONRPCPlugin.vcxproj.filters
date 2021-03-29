@@ -9,22 +9,22 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="JSONRPCPlugin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Module.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Data.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{9f1fa2e3-24c1-4449-8832-ff82ce5f038a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{bd712c0f-a79f-46cd-964c-8373178de660}</UniqueIdentifier>
+      <UniqueIdentifier>{8e1157ac-fa7d-4dc6-9862-d3e78b117b16}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{54eb59ca-d6e6-480b-8249-bd017b3b606a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

@@ -15,8 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME RemoteControl)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(RemoteControl)
+
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(PLUGIN_REMOTECONTROL_RELEASE_TIMEOUT 30000 CACHE STRING "Remote control release timeout")
 set(PLUGIN_REMOTECONTROL_PASSON false CACHE STRING "Enable keys pass-through on default producer")
@@ -61,20 +72,18 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
             target_sources(${MODULE_NAME}
                 PRIVATE
                     ${REMOTECONTROL_IMPLEMENTATION_PATH}/IRRemote.cpp)
-        elseif (CODE_FROM_EXTERNAL_REPOSITORY)
+        else()
             include(GetExternalCode)
+            set(REMOTECONTROL_IMPLEMENTATION_VERSION "master" CACHE STRING "RemoteControl implementation version")
+            set(REMOTECONTROL_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/RemoteControl" CACHE STRING "RemoteControl implementation repository")
             GetExternalCode(
-                GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/RemoteControl"
-                GIT_TAG "master"
-                SOURCE_DIR "NexusExt"
+                GIT_REPOSITORY ${REMOTECONTROL_IMPLEMENTATION_REPOSITORY}
+                GIT_TAG ${REMOTECONTROL_IMPLEMENTATION_VERSION}
+                SOURCE_DIR "Nexus"
             )
             target_sources(${MODULE_NAME}
                 PRIVATE
-                    NexusExt/IRRemote.cpp)
-        else()
-            target_sources(${MODULE_NAME}
-                PRIVATE
-                    IRRemote.cpp)
+                    Nexus/IRRemote.cpp)
         endif()
         target_link_libraries(${MODULE_NAME} 
             PRIVATE 
@@ -125,4 +134,4 @@ install(
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/RemoteControl
 	COMPONENT ${MODULE_NAME})
 
-write_config(${PLUGIN_NAME})
+write_config()

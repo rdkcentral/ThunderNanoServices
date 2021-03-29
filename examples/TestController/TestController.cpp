@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "TestController.h"
 
 namespace WPEFramework {
@@ -39,13 +39,13 @@ namespace TestController {
         public:
             virtual uint64_t Resident() const { return _main.Resident(); }
 
-            virtual uint64_t Allocated() const { return _main.Allocated(); } 
+            virtual uint64_t Allocated() const { return _main.Allocated(); }
 
             virtual uint64_t Shared() const { return _main.Shared(); }
 
             virtual uint8_t Processes() const { return (IsOperational() ? 1 : 0); }
 
-            virtual const bool IsOperational() const { return _main.IsActive(); }
+            virtual bool IsOperational() const { return _main.IsActive(); }
 
             BEGIN_INTERFACE_MAP(MemoryObserverImpl)
             INTERFACE_ENTRY(Exchange::IMemory)
@@ -115,7 +115,7 @@ namespace Plugin {
         _testControllerImp->TearDown();
 
 
-        _testControllerImp->Release();  
+        _testControllerImp->Release();
         if (_connection != 0) {
             ProcessTermination(_connection);
         }

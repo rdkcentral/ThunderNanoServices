@@ -15,8 +15,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME DisplayInfo)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(DisplayInfo)
+
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+set(PLUGIN_DISPLAYINFO_OUTOFPROCESS false CACHE BOOL "Controls if the plugin should run in its own process [true, false].")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
@@ -24,7 +37,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(BCM_HOST QUIET)
 find_package(NEXUS QUIET)
 find_package(NXCLIENT QUIET)
-find_package(LibDRM)
+find_package(LibDRM QUIET)
 find_path (STAGING_INCDIR glib-2.0)
 include_directories(include)
 include_directories(${STAGING_INCDIR})
@@ -64,17 +77,15 @@ elseif (NXCLIENT_FOUND AND NEXUS_FOUND)
         target_sources(${MODULE_NAME}
             PRIVATE
                 ${DISPLAYINFO_IMPLEMENTATION_PATH}/PlatformImplementation.cpp)
-    elseif (CODE_FROM_EXTERNAL_REPOSITORY)
-        include(GetExternalCode)
-        GetExternalCode(
-            GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/DisplayInfo"
-            GIT_TAG "master"
-            SOURCE_DIR "NexusExt"
-        )
-        target_sources(${MODULE_NAME}
-            PRIVATE
-                NexusExt/PlatformImplementation.cpp)
     else()
+        include(GetExternalCode)
+        set(DISPLAYINFO_IMPLEMENTATION_VERSION "master" CACHE STRING "DisplayInfo implementation version")
+        set(DISPLAYINFO_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/DisplayInfo" CACHE STRING "DisplayInfo implementation repository")
+        GetExternalCode(
+            GIT_REPOSITORY ${DISPLAYINFO_IMPLEMENTATION_REPOSITORY}
+            GIT_TAG ${DISPLAYINFO_IMPLEMENTATION_VERSION}
+            SOURCE_DIR "Nexus"
+        )
         target_sources(${MODULE_NAME}
             PRIVATE
                 Nexus/PlatformImplementation.cpp)
@@ -106,4 +117,4 @@ endif ()
 install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
-write_config(${PLUGIN_NAME})
+write_config()
