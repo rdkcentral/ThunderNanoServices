@@ -126,7 +126,7 @@ namespace Plugin {
             _recordFile = _service->VolatilePath() + sequence;
         }
 
-        if (Core::File(_service->PersistentPath(), true).IsDirectory() == false) {
+        if (Core::File(_service->PersistentPath()).IsDirectory() == false) {
             if (Core::Directory(_service->PersistentPath().c_str()).CreatePath() == false) {
                 TRACE(Trace::Error, (_T("Failed to create persistent storage folder [%s]"), _service->PersistentPath().c_str()));
             }
@@ -145,7 +145,7 @@ namespace Plugin {
 
                     if (address.IsValid() == true)  {
                         Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename);
-                        Core::File fileData(storageDir.Current().c_str(), true);
+                        Core::File fileData(storageDir.Current().c_str());
 
                         if (device != nullptr) {
                             if (fileData.Open(true) == true) {

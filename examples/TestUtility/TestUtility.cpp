@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "TestUtility.h"
 
 namespace WPEFramework {
@@ -45,7 +45,7 @@ namespace TestUtility {
 
             virtual uint8_t Processes() const { return (IsOperational() ? 1 : 0); }
 
-            virtual const bool IsOperational() const { return _main.IsActive(); }
+            virtual bool IsOperational() const { return _main.IsActive(); }
 
             BEGIN_INTERFACE_MAP(MemoryObserverImpl)
             INTERFACE_ENTRY(Exchange::IMemory)
@@ -119,7 +119,7 @@ namespace Plugin {
             TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
         }
         _memory = nullptr;
-        
+
         _testUtilityImp->Release();
 
         if (_connection != 0) {
@@ -187,7 +187,7 @@ namespace Plugin {
     }
 
     void TestUtility::Deactivated(RPC::IRemoteConnection* process)
-    { 
+    {
         if (_connection == process->Id()) {
             ASSERT(_service != nullptr);
             Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));

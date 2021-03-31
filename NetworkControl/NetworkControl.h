@@ -197,7 +197,7 @@ namespace Plugin {
             {
                 return (_broadcast);
             }
-            inline const uint32_t Xid() const
+            inline uint32_t Xid() const
             {
                 return (_xid);
             }
@@ -448,7 +448,7 @@ namespace Plugin {
                 else {
                     ClearLease();
                     _job.Schedule(Core::Time::Now().Add(_handleTime));
-                    result = _client.Discover(preferred);
+                    result = _client.Discover();
                 }
 
                 return (result);
@@ -473,7 +473,7 @@ namespace Plugin {
                             // Tried extending the lease but we did not get a response. Rediscover
                             _retries = 0;
                             ClearLease();
-                            _client.Discover(Core::NodeId());
+                            _client.Discover();
                             _job.Schedule(Core::Time::Now().Add(_handleTime));
                         }
                         else {
@@ -498,7 +498,7 @@ namespace Plugin {
                     // Looks like the Discovers did not discover anything, should we retry ?
                     if (_retries++ < _maxRetries) {
                         ClearLease();
-                        _client.Discover(Core::NodeId());
+                        _client.Discover();
                         _job.Schedule(Core::Time::Now().Add(_handleTime));
                     }
                     else {

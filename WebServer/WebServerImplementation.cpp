@@ -622,7 +622,7 @@ namespace Plugin {
             {
                 return (_accessor);
             }
-            void Close(IncomingChannel& data)
+            void Close(IncomingChannel&)
             {
             }
             inline void AddProxy(const string& path, const string& subst, const string& address)
@@ -638,7 +638,7 @@ namespace Plugin {
                 return (_prefixPath.empty() == false);
             }
         private:
-            uint64_t Timed(const uint64_t scheduledTime)
+            uint64_t Timed(const uint64_t)
             {
                 Core::Time NextTick(Core::Time::Now());
 
@@ -707,7 +707,7 @@ namespace Plugin {
         {
             return (PluginHost::IStateControl::RESUMED);
         }
-        virtual uint32_t Request(const PluginHost::IStateControl::command state)
+        virtual uint32_t Request(const PluginHost::IStateControl::command)
         {
             // No state can be set, we can only move from ININITIALIZED to RUN...
             return (Core::ERROR_NONE);
@@ -840,23 +840,23 @@ namespace WebServer {
         }
 
     public:
-        virtual uint64_t Resident() const
+        uint64_t Resident() const override
         {
             return _main.Resident();
         }
-        virtual uint64_t Allocated() const
+        uint64_t Allocated() const override
         {
             return _main.Allocated();
         }
-        virtual uint64_t Shared() const
+        uint64_t Shared() const override
         {
             return _main.Shared();
         }
-        virtual uint8_t Processes() const
+        uint8_t Processes() const override
         {
             return (IsOperational() ? 1 : 0);
         }
-        virtual const bool IsOperational() const
+        bool IsOperational() const override
         {
             return _main.IsActive();
         }

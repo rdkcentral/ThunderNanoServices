@@ -56,7 +56,7 @@ namespace Plugin
     public:
         inline IOState(const GPIO::Pin* pin)
         {
-            Trace::Format(_text, _T("IO Activity on pin: %d, current state: %s"), (pin->Identifier() & 0xFFFF), (pin->Get() ? _T("true") : _T("false")));
+            Core::Format(_text, _T("IO Activity on pin: %d, current state: %s"), (pin->Identifier() & 0xFFFF), (pin->Get() ? _T("true") : _T("false")));
         }
         ~IOState()
         {
@@ -332,7 +332,7 @@ namespace Plugin
         return (result);
     }
 
-    void IOConnector::GetMethod(Web::Response & result, Core::TextSegmentIterator & index, GPIO::Pin & pin)
+    void IOConnector::GetMethod(Web::Response& result, Core::TextSegmentIterator&, GPIO::Pin& pin)
     {
         Core::ProxyType<Web::JSONBodyType<IOConnector::Data>> element = jsonBodyDataFactory.Element();
         if (element.IsValid() == true) {
@@ -345,7 +345,7 @@ namespace Plugin
         }
     }
 
-    void IOConnector::PostMethod(Web::Response & result, Core::TextSegmentIterator & index, GPIO::Pin & pin)
+    void IOConnector::PostMethod(Web::Response& result, Core::TextSegmentIterator& index, GPIO::Pin& pin)
     {
         int32_t value(Core::NumberType<int32_t>(index.Current()));
         pin.Set(value);

@@ -205,19 +205,19 @@ namespace Plugin {
                     }
                     case OPTION_IPADDRESSLEASETIME: {
                         uint32_t value;
-                        ::memcpy(&value, &optionsData[used], sizeof(leaseTime));
+                        ::memcpy(&value, &optionsData[used], sizeof(value));
                         leaseTime = ntohl(value);
                         break;
                     }
                     case OPTION_RENEWALTIME: {
                         uint32_t value;
-                        ::memcpy(&value, &optionsData[used], sizeof(renewalTime));
+                        ::memcpy(&value, &optionsData[used], sizeof(value));
                         renewalTime = ntohl(value);
                         break;
                     }
                     case OPTION_REBINDINGTIME: {
                         uint32_t value;
-                        ::memcpy(&value, &optionsData[used], sizeof(rebindingTime));
+                        ::memcpy(&value, &optionsData[used], sizeof(value));
                         rebindingTime = ntohl(value);
                         break;
                     }
@@ -509,7 +509,7 @@ namespace Plugin {
             _udpFrame.SourceMAC(buffer);
         }
         /* Ask DHCP servers for offers. */
-        inline uint32_t Discover(const Core::NodeId& preferredAddres)
+        inline uint32_t Discover()
         {
             uint32_t result = Core::ERROR_OPENING_FAILED;
 
@@ -648,8 +648,9 @@ namespace Plugin {
 
         uint16_t Message(uint8_t stream[], const uint16_t length) const
         {
-
             CoreMessage& frame(*reinterpret_cast<CoreMessage*>(stream));
+
+            ASSERT (length >= sizeof(CoreMessage));
 
             /* clear the packet data structure */
             ::memset(&frame, 0, sizeof(CoreMessage));

@@ -600,7 +600,7 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_NONE;
 
-        if (Core::File(devicePath, true).Exists() == false) {
+        if (Core::File(devicePath).Exists() == false) {
             if (Core::Directory(devicePath.c_str()).CreatePath() == false) {
                 SYSLOG(Logging::Startup, (_T("Failed to create persistent storage folder '%s'\n"), devicePath.c_str()));
             }
@@ -637,7 +637,7 @@ namespace Plugin {
 
     void BluetoothControl::LoadController(const string& pathName, Data& data) const
     {
-        Core::File file(pathName + _T("Controller.json"), true);
+        Core::File file(pathName + _T("Controller.json"));
         if (file.Open(true) == true) {
             data.IElement::FromFile(file);
             file.Close();
@@ -646,7 +646,7 @@ namespace Plugin {
 
     void BluetoothControl::SaveController(const string& pathName, const Data& data)
     {
-        Core::File file(pathName + _T("Controller.json"), true);
+        Core::File file(pathName + _T("Controller.json"));
         if (file.Create() == true) {
             data.IElement::ToFile(file);
             file.Close();
@@ -660,7 +660,7 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_OPENING_FAILED;
 
-        Core::File file(fileName, true);
+        Core::File file(fileName);
 
         if (file.Open(true) == true) {
             Bluetooth::Address address(file.FileName().c_str());

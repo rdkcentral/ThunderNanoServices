@@ -218,13 +218,13 @@ namespace Plugin {
             }
 
         private:
-            void Activated (const string& callsign, PluginHost::IShell* plugin)
+            void Activated (const string& callsign, PluginHost::IShell*)
             {
                 if ((_config.Callsign.Value() == callsign) && (_config.Active.Value() == true)) {
                     _waitEvent.SetEvent();
                 }
             }
-            void Deactivated (const string& callsign, PluginHost::IShell* plugin)
+            void Deactivated (const string& callsign, PluginHost::IShell*)
             {
                 if ((_config.Callsign.Value() == callsign) && (_config.Active.Value() == false)) {
                     _waitEvent.SetEvent();
