@@ -219,17 +219,6 @@ namespace Plugin {
             return Exchange::IComposition::ScreenResolution::ScreenResolution_720p;
         }
 
-        uint32_t SdrToHdrGraphicsBrightness(Exchange::IComposition::Brightness& brightness) const override
-        {
-            TRACE(Trace::Information, (_T("Could not get Brightness. Not supported for Rapberry Pi compositor")));
-            return (Core::ERROR_UNAVAILABLE);
-        }
-
-        uint32_t SdrToHdrGraphicsBrightness(const Exchange::IComposition::Brightness& brightness) override
-        {
-            TRACE(Trace::Information, (_T("Could not set Brightness to %s. Not supported for Rapberry Pi compositor"), Core::EnumerateType<Exchange::IComposition::Brightness>(brightness).Data()));
-            return (Core::ERROR_UNAVAILABLE);
-        }
 
     private:
         using ClientDataContainer = std::map<string, ClientData>;

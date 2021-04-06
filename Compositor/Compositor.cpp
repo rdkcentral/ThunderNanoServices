@@ -145,6 +145,7 @@ namespace Plugin {
         , _skipURL()
         , _notification(this)
         , _composition(nullptr)
+        , _brightness(nullptr)
         , _service(nullptr)
         , _connectionId()
         , _inputSwitch(nullptr)
@@ -194,6 +195,8 @@ namespace Plugin {
 
             _inputSwitch = _composition->QueryInterface<Exchange::IInputSwitch>();
             _inputSwitchCallsign = config.InputSwitch.Value();
+
+            _brightness = _composition->QueryInterface<Exchange::IBrightness>();
         }
 
         // On succes return empty, to indicate there is no error text.
@@ -217,6 +220,10 @@ namespace Plugin {
         if (_inputSwitch != nullptr) {
             _inputSwitch->Release();
             _inputSwitch = nullptr;
+        }
+        if (_brightness != nullptr) {
+            _brightness->Release();
+            _brightness = nullptr;
         }
         if (_composition != nullptr) {
             _composition->Release();
@@ -650,21 +657,18 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t Compositor::GetBrightness(Exchange::IComposition::Brightness& brightness) const {
-        ASSERT(_composition != nullptr);
-
-        if (_composition != nullptr) {
-            return (static_cast<const Exchange::IComposition*>(_composition)->SdrToHdrGraphicsBrightness(brightness));
+    uint32_t Compositor::GetBrightness(Exchange::IBrightness::Brightness& brightness) const
+    {
+        if (_brightness != nullptr) {
+            return (static_cast<const Exchange::IBrightness*>(_brightness)->SdrToHdrGraphicsBrightness(brightness));
         }
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t Compositor::SetBrightness(const Exchange::IComposition::Brightness& brightness){
-
-        ASSERT(_composition != nullptr);
-        
-        if (_composition != nullptr) {
-            return _composition->SdrToHdrGraphicsBrightness(brightness);
+    uint32_t Compositor::SetBrightness(const Exchange::IBrightness::Brightness& brightness)
+    {
+        if (_brightness != nullptr) {
+            return _brightness->SdrToHdrGraphicsBrightness(brightness);
         }
         return Core::ERROR_UNAVAILABLE;
     }

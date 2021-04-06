@@ -172,6 +172,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(Exchange::IComposition, _composition)
+        INTERFACE_AGGREGATE(Exchange::IBrightness, _brightness)
         END_INTERFACE_MAP
 
     public:
@@ -201,8 +202,8 @@ namespace Plugin {
         uint32_t ToTop(const string& callsign);
         uint32_t Select(const string& callsign);
         uint32_t PutBefore(const string& relative, const string& callsign);
-        uint32_t GetBrightness(Exchange::IComposition::Brightness& brightness) const;
-        uint32_t SetBrightness(const Exchange::IComposition::Brightness& brightness);
+        uint32_t GetBrightness(Exchange::IBrightness::Brightness& brightness) const;
+        uint32_t SetBrightness(const Exchange::IBrightness::Brightness& brightness);
 
         void ZOrder(std::list<string>& zOrderedList, const bool primary) const;
         Exchange::IComposition::IClient* InterfaceByCallsign(const string& callsign) const;
@@ -240,6 +241,7 @@ namespace Plugin {
         uint8_t _skipURL;
         Core::Sink<Notification> _notification;
         Exchange::IComposition* _composition;
+        Exchange::IBrightness* _brightness;
         PluginHost::IShell* _service;
         uint32_t _connectionId;
         Clients _clients;

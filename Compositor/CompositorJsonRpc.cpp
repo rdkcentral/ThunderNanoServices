@@ -269,18 +269,18 @@ namespace Plugin {
     uint32_t Compositor::get_brightness(Core::JSON::EnumType<BrightnessType>& response) const
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
-        Exchange::IComposition::Brightness brightness = Exchange::IComposition::SdrToHdrGraphicsBrightness_Default;
+        Exchange::IBrightness::Brightness brightness = Exchange::IBrightness::SdrToHdrGraphicsBrightness_Default;
 
         result = GetBrightness(brightness);
         if (result == Core::ERROR_NONE) {
             switch (brightness) {
-            case Exchange::IComposition::SdrToHdrGraphicsBrightness_Max:
+            case Exchange::IBrightness::SdrToHdrGraphicsBrightness_Max:
                 response = BrightnessType::MAX;
                 break;
-            case Exchange::IComposition::SdrToHdrGraphicsBrightness_MatchVideo:
+            case Exchange::IBrightness::SdrToHdrGraphicsBrightness_MatchVideo:
                 response = BrightnessType::MATCH_VIDEO;
                 break;
-            case Exchange::IComposition::SdrToHdrGraphicsBrightness_Default:
+            case Exchange::IBrightness::SdrToHdrGraphicsBrightness_Default:
             default:
                 response = BrightnessType::DEFAULT;
                 break;
@@ -298,17 +298,17 @@ namespace Plugin {
     //  - ERROR_GENERAL: Failed to set brightness
     uint32_t Compositor::set_brightness(const Core::JSON::EnumType<BrightnessType>& param)
     {
-        Exchange::IComposition::Brightness brightness = Exchange::IComposition::SdrToHdrGraphicsBrightness_Default;
+        Exchange::IBrightness::Brightness brightness = Exchange::IBrightness::SdrToHdrGraphicsBrightness_Default;
         switch (param) {
         case BrightnessType::MAX:
-            brightness = Exchange::IComposition::SdrToHdrGraphicsBrightness_Max;
+            brightness = Exchange::IBrightness::SdrToHdrGraphicsBrightness_Max;
             break;
         case BrightnessType::MATCH_VIDEO:
-            brightness = Exchange::IComposition::SdrToHdrGraphicsBrightness_MatchVideo;
+            brightness = Exchange::IBrightness::SdrToHdrGraphicsBrightness_MatchVideo;
             break;
         case BrightnessType::DEFAULT:
         default:
-            brightness = Exchange::IComposition::SdrToHdrGraphicsBrightness_Default;
+            brightness = Exchange::IBrightness::SdrToHdrGraphicsBrightness_Default;
             break;
         }
         return SetBrightness(brightness);
