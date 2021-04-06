@@ -139,9 +139,13 @@ namespace Plugin {
                 }
 
             public:
-                virtual void StateChange(PluginHost::IShell* plugin)
+                void Activated (const string& callsign, PluginHost::IShell* plugin) override
                 {
-                    _parent.StateChange(plugin);
+                    _parent.Activated(callsign, plugin);
+                }
+                void Deactivated (const string& callsign, PluginHost::IShell* plugin) override
+                {
+                    _parent.Deactivated(callsign, plugin);
                 }
 
                 BEGIN_INTERFACE_MAP(Observer)
@@ -214,16 +218,19 @@ namespace Plugin {
             }
 
         private:
-            void StateChange(PluginHost::IShell* plugin)
+            void Activated (const string& callsign, PluginHost::IShell*)
             {
-
-                if (_config.Callsign.Value() == plugin->Callsign()) {
-
-                    if (((_config.Active.Value() == true) && (plugin->State() == PluginHost::IShell::ACTIVATED)) || ((_config.Active.Value() == false) && (plugin->State() == PluginHost::IShell::DEACTIVATED))) {
-                        _waitEvent.SetEvent();
-                    }
+                if ((_config.Callsign.Value() == callsign) && (_config.Active.Value() == true)) {
+                    _waitEvent.SetEvent();
                 }
             }
+            void Deactivated (const string& callsign, PluginHost::IShell*)
+            {
+                if ((_config.Callsign.Value() == callsign) && (_config.Active.Value() == false)) {
+                    _waitEvent.SetEvent();
+                }
+            }
+
 
         private:
             Config _config;

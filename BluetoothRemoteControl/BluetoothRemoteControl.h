@@ -88,7 +88,7 @@ namespace Plugin {
                 {
                     va_list ap;
                     va_start(ap, formatter);
-                    Trace::Format(_text, formatter, ap);
+                    Core::Format(_text, formatter, ap);
                     va_end(ap);
                 }
                 explicit Flow(const string& text)
@@ -796,9 +796,9 @@ namespace Plugin {
                     }
                 }
             }
-            bool Initialize() override
+            uint32_t Initialize() override
             {
-                return (Security(BT_SECURITY_LOW));
+                return (Security(BT_SECURITY_LOW) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
             }
             void Operational() override
             {

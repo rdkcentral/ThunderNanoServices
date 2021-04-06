@@ -83,9 +83,13 @@ namespace Plugin {
             {
             }
 
-            void StateChange(PluginHost::IShell* plugin) override
+            void Activated(const string& callsign, PluginHost::IShell* plugin) override
             {
-                _parent.PluginStateChanged(plugin);
+                _parent.Activated(callsign, plugin);
+            }
+            void Deactivated(const string& callsign, PluginHost::IShell* plugin) override
+            {
+                _parent.Deactivated(callsign, plugin);
             }
 
             BEGIN_INTERFACE_MAP(Notification)
@@ -240,7 +244,8 @@ namespace Plugin {
         void Deactivated(RPC::IRemoteConnection* connection);
 
         static const char* PluginStateStr(const PluginHost::IShell::state state);
-        void PluginStateChanged(PluginHost::IShell* plugin);
+        void Activated(const string& callsign, PluginHost::IShell* plugin);
+        void Deactivated(const string& callsign, PluginHost::IShell* plugin);
 
     private:
         Core::CriticalSection _adminLock;

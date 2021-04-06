@@ -100,7 +100,7 @@ namespace Plugin {
         UDPv4Frame udpFrame;
 
         // The load should take place at the IPFrame level, so at the base of the UDP4Frame...
-        uint16_t result = static_cast<UDPv4Frame::Base&>(udpFrame).Load(dataFrame, receivedSize);
+        uint16_t VARIABLE_IS_NOT_USED result = static_cast<UDPv4Frame::Base&>(udpFrame).Load(dataFrame, receivedSize);
 
         // Make sure the package fits...       
         ASSERT(result == receivedSize);

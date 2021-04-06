@@ -81,10 +81,53 @@
 
 #include <core/core.h>
 #include <com/com.h>
+#include <plugins/Types.h>
 #include <interfaces/IDictionary.h>
 #include <iostream>
 
 namespace Thunder = WPEFramework;
+
+class Dictionary : public Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary > {
+private:
+    using BaseClass = Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary >;
+public:
+    Dictionary(const uint32_t waitTime, const Thunder::Core::NodeId& node, const string& callsign)
+        : BaseClass() {
+        BaseClass::Open(waitTime, node, callsign);
+    }
+    ~Dictionary() {
+        BaseClass::Close(Thunder::Core::infinite);
+    }
+
+public:
+    bool Get(const string& nameSpace, const string& key, string& value ) const {
+        bool result = false;
+        const Thunder::Exchange::IDictionary* impl = BaseClass::Interface();
+
+        if (impl != nullptr) {
+            result = impl->Get(nameSpace, key, value);
+            impl->Release();
+        }
+
+        return (result);
+    }
+    bool Set(const string& nameSpace, const string& key, const string& value) {
+        bool result = false;
+        Thunder::Exchange::IDictionary* impl = BaseClass::Interface();
+
+        if (impl != nullptr) {
+            result = impl->Set(nameSpace, key, value);
+            impl->Release();
+        }
+
+        return (result);
+    }
+
+private:
+    void Operational(const bool upAndRunning) {
+        printf("Operational state of Dictionary: %s\n", upAndRunning ? _T("true") : _T("false"));
+    }
+};
 
 int main(int argc, char* argv[])
 {
@@ -103,13 +146,13 @@ int main(int argc, char* argv[])
     // throttle.
     // The 1 paramater indicates the number of threads that this engine will create to
     // handle the work. So it holds a threadpool of 1 thread.
-    Thunder::Core::ProxyType< Thunder::RPC::InvokeServerType<1, 0, 4> > engine(
-        Thunder::Core::ProxyType<Thunder::RPC::InvokeServerType<1, 0, 4>>::Create());
+    // Thunder::Core::ProxyType< Thunder::RPC::InvokeServerType<1, 0, 4> > engine(
+    //    Thunder::Core::ProxyType<Thunder::RPC::InvokeServerType<1, 0, 4>>::Create());
 
-    Thunder::Core::ProxyType<Thunder::RPC::CommunicatorClient> client(
-        Thunder::Core::ProxyType<Thunder::RPC::CommunicatorClient>::Create(
-            nodeId,
-            Thunder::Core::ProxyType< Thunder::Core::IIPCServer >(engine)));
+    // Thunder::Core::ProxyType<Thunder::RPC::CommunicatorClient> client(
+    //    Thunder::Core::ProxyType<Thunder::RPC::CommunicatorClient>::Create(
+    //        nodeId,
+    //        Thunder::Core::ProxyType< Thunder::Core::IIPCServer >(engine)));
 
     // Once the socket is opened the first exchange between client and server is an 
     // announce message. This announce message hold information the otherside requires
@@ -120,7 +163,7 @@ int main(int argc, char* argv[])
     // over socket, the announce message could be handled on the communication thread
     // or better, if possible, it can be run on the thread of the engine we have just 
     // created.
-    engine->Announcements(client->Announcement());
+    // engine->Announcements(client->Announcement());
 
     // Since the COMRPC, in comparison to the JSONRPC framework, is host/process/plugin 
     // agnostic, the COMRPC mechanism can only "connect" to a port (Thunder application)
@@ -161,42 +204,56 @@ int main(int argc, char* argv[])
     // client->Open<Thunder::Exchange::IDictionary>("Dictionary");
 
 
-    // Two options to do this:
+    // Three options to do this:
     // 1) 
-    Thunder::PluginHost::IShell* controller = client->Open<Thunder::PluginHost::IShell>(_T("Dictionary"), ~0, 3000);
-
-    // Or option 
+    //    Thunder::PluginHost::IShell* controller = client->Open<Thunder::PluginHost::IShell>(_T("Dictionary"), ~0, 3000);
+    //
+    // Or 
     // 2)
-    // if (client->Open(3000) == Thunder::Core::ERROR_NONE) {
-    //    controller = client->Aquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
-    //}
+    //    if (client->Open(3000) == Thunder::Core::ERROR_NONE) {
+    //        controller = client->Aquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
+    //
+    // Or
+    // 3)
+    {
+        Dictionary  dictionary(3000, nodeId, _T("Dictionary"));
+        char keyPress;
+        uint32_t counter = 8;
 
-    // Once we have the controller interface, we can use this interface to navigate through tho other interfaces.
-    if (controller != nullptr) {
+        // chip.PCD_Init();
+        do {
+            keyPress = toupper(getchar());
+            
+            switch (keyPress) {
+            case 'O': {
+                printf("Operations state issue: %s\n", dictionary.IsOperational() ? _T("true") : _T("false"));
+                break;
+            }
+            case 'S': {
 
-        Thunder::Exchange::IDictionary* dictionary = controller->QueryInterface<Thunder::Exchange::IDictionary>();
+                string value = Thunder::Core::NumberType<int32_t>(counter++).Text();
+                if (dictionary.Set(_T("/name"), _T("key"), value) == true) {
+                    printf("Set value: %s\n", value.c_str());
+                }
+                break;
+            }
+            case 'G': {
+                string value;
+                if (dictionary.Get(_T("/name"), _T("key"), value) == true) {
+                    printf("Get value: %s\n", value.c_str());
+                }
+                break;
 
-        // Do whatever you want to do on Thunder::Exchange::IDictionary*
-        std::cout << "client.IsValid:" << client.IsValid() << std::endl;
-        std::cout << "client.IsOpen :" << client->IsOpen() << std::endl;
-
-        if (dictionary == nullptr)
-        {
-            std::cout << "failed to get dictionary proxy" << std::endl;
-            return -1;
-        }
-        else
-        {
-            std::cout << "have proxy to dictionary" << std::endl;
-            dictionary->Release();
-            dictionary = nullptr;
-        }
+            }
+            case 'Q': break;
+            default: break;
+            };
+        } while (keyPress != 'Q');
     }
 
-    // You can do this explicitely but it should not be nessecary as the destruction of the Client will close the link anyway.
-    client->Close(1000);
-
+    printf("Prior to the call Dispose\n");
     Thunder::Core::Singleton::Dispose();
+    printf("Completed the call Dispose\n");
 
     return 0;
 }

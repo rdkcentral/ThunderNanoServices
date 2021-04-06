@@ -200,7 +200,8 @@ namespace Plugin {
                     Add(_T("handlers"), &Handlers);
                 }
                 Pin(const Pin& copy)
-                    : Id(copy.Id)
+                    : Core::JSON::Container()
+                    , Id(copy.Id)
                     , Mode(copy.Mode)
                     , ActiveLow(copy.ActiveLow)
                     , Handlers(copy.Handlers)
@@ -296,6 +297,7 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         void Register(ICatalog::INotification* sink) override;
         void Unregister(ICatalog::INotification* sink) override;
+        Exchange::IExternal* Resource(const uint32_t id) override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------

@@ -16,13 +16,8 @@
 # limitations under the License.
 
 cmake_minimum_required(VERSION 3.3)
-find_package(WPEFramework)
+project(NanoServices)
 
-# All packages that did not deliver a CMake Find script (and some deprecated scripts that need to be removed)
-# are located in the cmake directory. Include it in the search.
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
-
-option(CODE_FROM_EXTERNAL_REPOSITORY "Include code from External Repository" ON)
 
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(PLUGIN_BLUETOOTHREMOTECONTROL "Include Bluetooth Remote Control plugin" OFF)
@@ -40,6 +35,7 @@ option(PLUGIN_INPUTSWITCH "Include InputSwitch plugin" OFF)
 option(PLUGIN_FIRMWARECONTROL "Include FirmwareControl Plugin" OFF)
 option(PLUGIN_FRONTPANEL "Include FrontPanel plugin" OFF)
 option(PLUGIN_PROCESSMONITOR "Include Process Monitor plugin" OFF)
+option(PLUGIN_LANGUAGEADMINISTRATOR "Include LanguageAdministrator plugin" OFF)
 option(PLUGIN_NETWORKCONTROL "Include NetworkControlplugin" OFF)
 option(PLUGIN_PERFORMANCEMONITOR "Include Performance Monitor" OFF)
 option(PLUGIN_PLAYERINFO "Include PlayerInfo plugin" OFF)
@@ -51,10 +47,10 @@ option(PLUGIN_SECURESHELLSERVER "Include SecureShellServer plugin" OFF)
 option(PLUGIN_STREAMER "Include Streamer plugin" OFF)
 option(PLUGIN_SNAPSHOT "Include Snapshot plugin" OFF)
 option(PLUGIN_SPARK "Include SparkEngine plugin" OFF)
+option(PLUGIN_SVALBARD "Include Svalbard plugin" OFF)
 option(PLUGIN_SYSTEMCOMMANDS "Include SystemCommands plugin" OFF)
 option(PLUGIN_TIMESYNC "Include TimeSync plugin" OFF)
 option(PLUGIN_VOLUMECONTROL "Include VolumeControl plugin" OFF)
-option(PLUGIN_WEBKITBROWSER "Include WebKitBrowser plugin" OFF)
 option(PLUGIN_WEBPA "Include WebPA plugin" OFF)
 option(PLUGIN_WEBPROXY "Include WebProxy plugin" OFF)
 option(PLUGIN_WEBSERVER "Include WebServer plugin" OFF)
@@ -62,16 +58,6 @@ option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_DTV "Include DTV plugin" OFF)
-
-option(WPEFRAMEWORK_CREATE_IPKG_TARGETS "Generate the CPack configuration for package generation" OFF)
-
-# Library installation section
-string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
-
-#include(CompileSettings)
-
-# for writing pc and config files
-include(CmakeHelperFunctions)
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
@@ -149,6 +135,10 @@ if(PLUGIN_PROCESSMONITOR)
     add_subdirectory(ProcessMonitor)
 endif()
 
+if(PLUGIN_LANGUAGEADMINISTRATOR)
+    add_subdirectory(LanguageAdministrator)
+endif()
+
 if(PLUGIN_NETWORKCONTROL)
     add_subdirectory(NetworkControl)
 endif()
@@ -193,6 +183,10 @@ if(PLUGIN_STREAMER)
     add_subdirectory(Streamer)
 endif()
 
+if(PLUGIN_SVALBARD)
+    add_subdirectory(Svalbard)
+endif()
+
 if(PLUGIN_SYSTEMCOMMANDS)
     add_subdirectory(SystemCommands)
 endif()
@@ -207,10 +201,6 @@ endif()
 
 if(PLUGIN_VOLUMECONTROL)
     add_subdirectory(VolumeControl)
-endif()
-
-if(PLUGIN_WEBKITBROWSER)
-    add_subdirectory(WebKitBrowser)
 endif()
 
 if(PLUGIN_WEBPA)
@@ -242,26 +232,3 @@ if(PLUGIN_DTV)
 endif()
 
 add_subdirectory(examples)
-
-if(WPEFRAMEWORK_CREATE_IPKG_TARGETS)
-    set(CPACK_GENERATOR "DEB")
-    set(CPACK_DEB_COMPONENT_INSTALL ON)
-    set(CPACK_COMPONENTS_GROUPING IGNORE)
-
-    set(CPACK_DEBIAN_PACKAGE_NAME "${WPEFRAMEWORK_PLUGINS_OPKG_NAME}")
-    set(CPACK_DEBIAN_PACKAGE_VERSION "${WPEFRAMEWORK_PLUGINS_OPKG_VERSION}")
-    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${WPEFRAMEWORK_PLUGINS_OPKG_ARCHITECTURE}")
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${WPEFRAMEWORK_PLUGINS_OPKG_MAINTAINER}")
-    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${WPEFRAMEWORK_PLUGINS_OPKG_DESCRIPTION}")
-    set(CPACK_PACKAGE_FILE_NAME "${WPEFRAMEWORK_PLUGINS_OPKG_FILE_NAME}")
-
-    # list of components from which packages will be generated
-    set(CPACK_COMPONENTS_ALL
-        ${NAMESPACE}WebKitBrowser
-        WPEInjectedBundle
-    )
-
-    include(CPack)
-endif()
-
-

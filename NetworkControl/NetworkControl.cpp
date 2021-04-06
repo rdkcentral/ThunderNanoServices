@@ -96,7 +96,7 @@ namespace Plugin
         _dnsFile = config.DNSFile.Value();
 
         // We will only "open" the DNS resolve file, so of ot does not exist yet, create an empty file.
-        Core::File dnsFile(_dnsFile, true);
+        Core::File dnsFile(_dnsFile);
         if (dnsFile.Exists() == false) {
             if (dnsFile.Create() == false) {
                 SYSLOG(Logging::Startup, (_T("Could not create DNS configuration file [%s]"), _dnsFile.c_str()));
@@ -198,7 +198,7 @@ namespace Plugin
         return (result);
     }
 
-    /* virtual */ void NetworkControl::Deinitialize(PluginHost::IShell * service)
+    /* virtual */ void NetworkControl::Deinitialize(PluginHost::IShell*)
     {
         // Stop observing.
         _observer.Close();

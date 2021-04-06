@@ -15,8 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME Snapshot)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(Snapshot)
+
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Tracing REQUIRED)
@@ -47,20 +58,18 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
         target_sources(${MODULE_NAME}
             PRIVATE
                 ${SNAPSHOT_IMPLEMENTATION_PATH}/NexusCapture.cpp)
-    elseif (CODE_FROM_EXTERNAL_REPOSITORY)
+    else()
         include(GetExternalCode)
+        set(SNAPSHOT_IMPLEMENTATION_VERSION "master" CACHE STRING "Snapshot implementation version")
+        set(SNAPSHOT_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Snapshot" CACHE STRING "Snapshot implementation repository")
         GetExternalCode(
-            GIT_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Snapshot"
-            GIT_TAG "master"
-            SOURCE_DIR "NexusExt"
+            GIT_REPOSITORY ${SNAPSHOT_IMPLEMENTATION_REPOSITORY}
+            GIT_TAG ${SNAPSHOT_IMPLEMENTATION_VERSION}
+            SOURCE_DIR "Nexus"
         )
         target_sources(${MODULE_NAME}
             PRIVATE
-                NexusExt/NexusCapture.cpp)
-    else()
-        target_sources(${MODULE_NAME} 
-            PRIVATE 
-                Device/NexusCapture.cpp)
+                Nexus/NexusCapture.cpp)
     endif()
     target_link_libraries(${MODULE_NAME} 
         PRIVATE 
@@ -80,4 +89,4 @@ endif ()
 install(TARGETS ${MODULE_NAME} 
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
-write_config(${PLUGIN_NAME})
+write_config()

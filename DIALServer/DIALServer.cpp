@@ -40,7 +40,6 @@ namespace Plugin {
     static Core::ProxyPoolType<Web::TextBody> _textBodies(5);
 
     /* static */ const Core::NodeId DIALServer::DIALServerImpl::DialServerInterface(_T("239.255.255.250"), 1900);
-    /* static */ std::map<string, DIALServer::IApplication::IFactory*> DIALServer::AppInformation::_applicationFactory;
 
     class WebFlow {
     public:
@@ -109,12 +108,23 @@ namespace Plugin {
         return (index);
     }
 
-    DIALServer::DIALServerImpl::DIALServerImpl(const string& MACAddress, const string& baseURL, const string& appPath)
+    /* virtual */ uint32_t DIALServer::Default::AdditionalDataURL(string& url) const
+    {
+        Core::URL baseUrl(_parent->BaseURL());
+        baseUrl.Host(string(_T("localhost"))); // replace the host with "localhost"
+        baseUrl.Path(baseUrl.Path().Value() + _T("/") + _callsign + _T("/") + _DefaultDataExtension);
+        url = baseUrl.Text();
+        return (Core::ERROR_NONE);
+    }
+
+    DIALServer::DIALServerImpl::DIALServerImpl(const string& MACAddress, const Core::URL& locator, const string& appPath, const bool dynamicInterface)
         : BaseClass(5, false, Core::NodeId(DialServerInterface.AnyInterface(), DialServerInterface.PortNumber()), DialServerInterface.AnyInterface(), 1024, 1024)
         , _response(Core::ProxyType<Web::Response>::Create())
         , _destinations()
-        , _baseURL(baseURL)
+        , _locator(locator)
+        , _baseURL()
         , _appPath(appPath)
+        , _dynamicInterface(dynamicInterface)
     {
         _response->ErrorCode = Web::STATUS_OK;
         _response->Message = _T("OK");
@@ -128,6 +138,8 @@ namespace Plugin {
         // where currently Device identifier is passed in MACAddress.
         // _response->WakeUp = _T("MAC=") + MACAddress + _T(";Timeout=10");
         _response->Mode(Web::MARSHAL_UPPERCASE);
+
+        UpdateURL();
 
         if (Link().Open(1000) != Core::ERROR_NONE) {
             ASSERT(false && "Seems we can not open the DIAL discovery port");
@@ -147,6 +159,7 @@ namespace Plugin {
     {
         // upnp requests are empty so no body needed...
     }
+
     // Notification of a Partial Request received, time to attach a body..
     // upnp requests are empty so no body needed...
     /* virtual */ void DIALServer::DIALServerImpl::Received(Core::ProxyType<Web::Request>& request)
@@ -158,7 +171,13 @@ namespace Plugin {
             if (request->ST.Value() == _SearchTarget) {
 
                 TRACE(Protocol, (&(*request)));
+
+                _lock.Lock();
+
+                Host(Link().ReceivedInterface());
+
                 _destinations.push_back(sourceNode);
+
                 // remember the NodeId where this comes from.
                 if (_destinations.size() == 1) {
 
@@ -168,6 +187,8 @@ namespace Plugin {
 
                     Submit(_response);
                 }
+
+                _lock.Unlock();
             }
         }
     }
@@ -179,10 +200,13 @@ namespace Plugin {
 
         TRACE(Protocol, (&(*response)));
 
+        _lock.Lock();
+
         // Drop the current destination.
         _destinations.pop_front();
 
         if (_destinations.size() > 0) {
+
             _response->Location = URL() + '/' + _DefaultAppInfoDevice;
 
             // Move on to notifying the next one.
@@ -190,6 +214,8 @@ namespace Plugin {
 
             Submit(response);
         }
+
+        _lock.Unlock();
     }
 
     // Notification of a channel state change..
@@ -206,13 +232,20 @@ namespace Plugin {
 
         // 2.1 spec adds "hidden" state. It also introduces "installable" state.
         // We may consider adding support for it at some point - thanks to the Packager.
-        string state(((isAtLeast2_1 == true) && (HasHide() == true) && (IsHidden() == true) ? _T("hidden") : ((running == true) ? _T("running") : _T("stopped"))));
+        string state;
+        if ((HasHide() == true) && (IsHidden() == true)) {
+            state = (isAtLeast2_1? _T("hidden") : _T("stopped"));
+        } else if (running == true) {
+            state = _T("running");
+        } else {
+            state = _T("stopped");
+        }
 
         // allowStop is mandatory to be true starting from 2.1
         string allowStop((isAtLeast2_1 == true) || (HasStartAndStop() == true) ? "true" : "false");
 
         // <link> element is DEPRECATED starting from 2.1!!!!
-        // Although it is deperecated some Cobalt tests are still checking for the presence of this element. Keep on adding it. It does not hurt.... 
+        // Although it is deperecated some Cobalt tests are still checking for the presence of this element. Keep on adding it. It does not hurt....
 
         data = _T("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
             _T("<service xmlns=\"urn:dial-multiscreen-org:schemas:dial\"") + dialVersion + _T(">")
@@ -285,12 +318,13 @@ namespace Plugin {
             _service = service;
             _dialURL = Core::URL(service->Accessor());
             _dialURL.Host(selectedNode.HostAddress());
-            _dialPath = '/' + _dialURL.Path().Value();
-            _webServerPort = _dialURL.Port();
+            if (_dialURL.Port().IsSet() == false) {
+                _dialURL.Port(80);
+            }
 
             // TODO: THis used to be the MAC, but I think  it is just a unique number, otherwise, we need the MAC
             //       that goes with the selectedNode !!!!
-            _dialServiceImpl = new DIALServerImpl(deviceId, _dialURL.Text(), _DefaultAppInfoPath);
+            _dialServiceImpl = new DIALServerImpl(deviceId, _dialURL, _DefaultAppInfoPath, selectedNode.IsAnyInterface());
 
             ASSERT(_dialServiceImpl != nullptr);
 
@@ -308,7 +342,7 @@ namespace Plugin {
                                      _T("<friendlyName>") + _config.Name.Value() + _T("</friendlyName>")
                                      _T("<manufacturer>") + _config.Manufacturer.Value() + _T("</manufacturer>") +
                                        ( _config.ManufacturerURL.IsSet() == true ? _T("<manufacturerURL>") + _config.ManufacturerURL.Value() + _T("</manufacturerURL>") : _T("") ) +
-                                     _T("<modelDescription>") + _config.Description.Value() + _T("</modelDescription>") 
+                                     _T("<modelDescription>") + _config.Description.Value() + _T("</modelDescription>")
                                      _T("<modelName>") + _config.Model.Value() + _T("</modelName>") +
                                        ( _config.ModelNumber.IsSet() == true ? _T("<modelNumber>") + _config.ModelNumber.Value() + _T("</modelNumber>") : _T("") ) +
                                        ( _config.ModelURL.IsSet() == true ? _T("<modelURL>") + _config.ModelURL.Value() + _T("</modelURL>") : _T("") ) +
@@ -334,6 +368,8 @@ namespace Plugin {
             _sink.Register(service, _config.WebServer.Value(), _config.SwitchBoard.Value());
 
             _adminLock.Unlock();
+
+            RegisterAll();
         }
 
         // On succes return NULL, to indicate there is no error text.
@@ -344,6 +380,8 @@ namespace Plugin {
     {
         ASSERT(_service != NULL);
         ASSERT(_dialServiceImpl != NULL);
+
+        UnregisterAll();
 
         _adminLock.Lock();
 
@@ -378,15 +416,17 @@ namespace Plugin {
             response->ErrorCode = Web::STATUS_REQUEST_ENTITY_TOO_LARGE;
             response->Message = _T("Payload too long");
         } else {
-            // FIXME: At the moment part of additionalDataUrl parameter is hardcoded, localhost is obligatory by Netflix 
-            // but rest of the path can be created dynamically or should be retrived from configuration    
-            const string additionalDataUrl = (_T("http://localhost") + ((_webServerPort != 80)? _T("") : _T(":") + Core::NumberType<uint16_t>(_webServerPort).Text()) + _T("/Service/DIALServer/Apps/") + app.Name() + _T("/") + _DefaultDataExtension);
-            const uint16_t maxEncodedSize = static_cast<uint16_t>(additionalDataUrl.length() * 3 * sizeof(TCHAR));
-            TCHAR* encodedDataUrl = reinterpret_cast<TCHAR*>(ALLOCA(maxEncodedSize)); 
-            uint16_t dialpayload = Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, maxEncodedSize);
-            const string parameters = (app.AppURL() + (app.HasQueryParameter() ? _T("&") : _T("?")) + ((DeprecatedAPI() == true) ? (_T("dialpayload=") + std::to_string(dialpayload) + _T("&")) : _T("")) + _T("additionalDataUrl=") + encodedDataUrl);
+            string additionalDataUrl;
+            app.Application()->AdditionalDataURL(additionalDataUrl);
+            TRACE(Trace::Information, (_T("Additional data URL for %s: '%s'"), app.Name().c_str(), additionalDataUrl.c_str()));
 
-            TRACE(Trace::Information, (_T("Launch Application [%s] with params: %s, payload: %s"), app.Name().c_str(), parameters.c_str(), payload.c_str()));
+            const uint16_t maxEncodedSize = static_cast<uint16_t>(additionalDataUrl.length() * 3 * sizeof(TCHAR));
+            TCHAR* encodedDataUrl = reinterpret_cast<TCHAR*>(ALLOCA(maxEncodedSize));
+            Core::URL::Encode(additionalDataUrl.c_str(), static_cast<uint16_t>(additionalDataUrl.length()), encodedDataUrl, maxEncodedSize);
+
+            const string parameters = (app.AppURL() + (app.HasQueryParameter() ? _T("&") : _T("?")) + _T("additionalDataUrl=") + encodedDataUrl);
+
+            TRACE(Trace::Information, (_T("Launch Application [%s] with params: '%s', payload: '%s'"), app.Name().c_str(), parameters.c_str(), payload.c_str()));
 
             // See if we can find the plugin..
             ASSERT(_service != NULL);
@@ -409,7 +449,7 @@ namespace Plugin {
             } else {
                 // Make sure that there is connection between DIAL handler and application
                 if (app.IsConnected() == false && app.Connect() == false) {
-                    
+
                     TRACE(Trace::Information, (_T("Cannot connect DIAL handler to application %s"), app.Name().c_str()));
                 } else if (app.HasHide() == true && app.IsHidden() == true) {
                     uint32_t result = (DeprecatedAPI() == true) ? app.Show() : app.Start(parameters, payload);
@@ -493,11 +533,9 @@ namespace Plugin {
                     result->Body(_deviceInfo);
                     result->ContentType = Web::MIME_TEXT_XML;
 
-                    Core::URL newURL;
-                    _dialServiceImpl->URL(newURL);
-
-                    result->ApplicationURL = newURL;
-                    TRACE(Protocol, (static_cast<const string&>(*_deviceInfo), &newURL));
+                    const string url = _dialServiceImpl->URL();
+                    result->ApplicationURL = Core::URL(url);
+                    TRACE(Protocol, (static_cast<const string&>(*_deviceInfo), url));
                 }
             } else {
                 auto selectedApp(_appInfo.find(keyword));
@@ -596,7 +634,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_OK;
                         result->Message = _T("OK");
                         selectedApp->second.Hidden(request.Verb == Web::Request::HTTP_POST);
-                    }    
+                    }
                 } else if (index.Current() == _DefaultDataExtension) {
                     result->ErrorCode = Web::STATUS_OK;
                     result->Message = _T("OK");
@@ -618,6 +656,7 @@ namespace Plugin {
         }
 
         TRACE(Protocol, (&(*result)));
+
         return (result);
     }
 
@@ -639,20 +678,15 @@ namespace Plugin {
 
     void DIALServer::Activated(Exchange::IWebServer* pluginInterface)
     {
-        string remote(_dialURL.Host().Value() + ':' + (_dialURL.Port().IsSet() ? Core::NumberType<uint16_t>(_dialURL.Port().Value()).Text() : _T("80")));
-
         _adminLock.Lock();
 
         // Let's set the URL of the WebServer, as it is active :-)
-        _dialServiceImpl->Locator(pluginInterface->Accessor() + _dialPath);
-
-        Core::URL url = Core::URL(pluginInterface->Accessor());
-        if (url.Port().IsSet() == true) {
-            _webServerPort = Core::NumberType<uint16_t>(url.Port().Value());
-        }
+        _dialServiceImpl->Locator(pluginInterface->Accessor());
 
         // Redirect all calls to the DIALServer, via a proxy.
-        pluginInterface->AddProxy(_dialPath, _dialPath, remote);
+        const string remote = (_dialURL.Host().Value() + (_T(":") + _dialURL.Port().Value()));
+        const string path = (_T("/") + _dialURL.Path().Value());
+        pluginInterface->AddProxy(path, path, remote);
 
         _adminLock.Unlock();
     }
@@ -663,8 +697,8 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        _dialServiceImpl->Locator(_dialURL.Text());
-        pluginInterface->RemoveProxy(_dialPath);
+        _dialServiceImpl->Locator(_dialURL);
+        pluginInterface->RemoveProxy(_T("/") + _dialURL.Path().Value());
 
         _adminLock.Unlock();
     }
@@ -697,6 +731,22 @@ namespace Plugin {
         }
 
         _adminLock.Unlock();
+    }
+
+    Exchange::IDIALServer::IApplication* DIALServer::Application(const string& name)
+    {
+        Exchange::IDIALServer::IApplication* application = nullptr;
+
+        auto app(_appInfo.find(name));
+        if (app != _appInfo.end()) {
+            application = app->second.Application();
+            application->AddRef();
+        } else {
+            TRACE(Trace::Error, (_T("Application %s not available"), name.c_str()));
+        }
+
+        return (application);
+
     }
 }
 }
