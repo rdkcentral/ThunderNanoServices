@@ -219,6 +219,7 @@ namespace Plugin {
             return Exchange::IComposition::ScreenResolution::ScreenResolution_720p;
         }
 
+
     private:
         using ClientDataContainer = std::map<string, ClientData>;
         using ConstClientDataIterator = ClientDataContainer::const_iterator;
