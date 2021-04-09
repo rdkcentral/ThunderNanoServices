@@ -667,8 +667,6 @@ namespace WPASupplicant {
                                     freq = Core::NumberType<uint32_t>(index.Current());
                                 } else if (name == _T("level")) {
                                     signal = Core::NumberType<int32_t>(index.Current());
-                                } else if (name == _T("level")) {
-                                    signal = Core::NumberType<int32_t>(index.Current());
                                 } else if (name == _T("flags")) {
                                     pair = KeyPair(index.Current(), keys);
                                 }
