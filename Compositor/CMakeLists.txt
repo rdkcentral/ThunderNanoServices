@@ -24,6 +24,8 @@ project_version(1.0.0)
 
 set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLATFORM_COMPOSITOR "compositorplugin")
