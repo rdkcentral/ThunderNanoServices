@@ -160,8 +160,9 @@ private:
         CobaltWindow& operator=(const CobaltWindow&) = delete;
 
     public:
-        CobaltWindow()
+        CobaltWindow(CobaltImplementation &parent)
             : Core::Thread(0, _T("Cobalt"))
+            , _parent(parent)
             , _url{"https://www.youtube.com/tv"}
             , _language()
             , _debugListenIp("0.0.0.0")
@@ -313,12 +314,16 @@ private:
             const std::string cmdDebugListenIp = "--dev_servers_listen_ip=" + _debugListenIp;
             const std::string cmdDebugPort = "--remote_debugging_port=" + std::to_string(_debugPort);
             const char* argv[] = {"Cobalt", cmdURL.c_str(), cmdDebugListenIp.c_str(), cmdDebugPort.c_str()};
-            while (IsRunning() == true) {
+            if (IsRunning() == true) {
                 StarboardMain(4, const_cast<char**>(argv));
             }
+            Block();
+            // Do plugin de-activation
+            _parent.StateChangeCompleted(false, static_cast<PluginHost::IStateControl::command>(~0));
             return (Core::infinite);
         }
 
+        CobaltImplementation &_parent;
         string _url;
         string _language;
         string _debugListenIp;
@@ -332,6 +337,7 @@ private:
 public:
     CobaltImplementation() :
             _language(),
+            _window(*this),
             _adminLock(),
             _state(PluginHost::IStateControl::UNINITIALIZED),
             _cobaltBrowserClients(),

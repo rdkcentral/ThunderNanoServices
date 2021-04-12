@@ -78,6 +78,7 @@ The table below lists configuration options of the plugin.
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration?.hardwareready | number | <sup>*(optional)*</sup> Hardware delay (Nexus) |
 | configuration?.resolution | string | <sup>*(optional)*</sup> Screen resolution (Nexus) |
+| configuration?.brightness | string | <sup>*(optional)*</sup> Brightness of SDR graphics in HDR display (Nexus) |
 | configuration?.allowedclients | array | <sup>*(optional)*</sup> List of allowed clients (Nexus) |
 | configuration?.allowedclients[#] | string | <sup>*(optional)*</sup>  |
 | configuration?.connector | enum | <sup>*(optional)*</sup> Resolution (Wayland) |
@@ -273,6 +274,7 @@ Compositor interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [resolution](#property.resolution) | Screen resolution |
+| [brightness](#property.brightness) | Brightness of SDR graphics in HDR display |
 | [zorder](#property.zorder) <sup>RO</sup> | List of compositor clients sorted by z-order |
 | [geometry](#property.geometry) | Client surface geometry |
 | [visiblity](#property.visiblity) <sup>WO</sup> | Client surface visibility |
@@ -332,6 +334,72 @@ Use this property to set or retrieve the current resolution of the screen.
     "id": 1234567890,
     "method": "Compositor.1.resolution",
     "params": "1080p24"
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": "null"
+}
+```
+
+<a name="property.brightness"></a>
+## *brightness <sup>property</sup>*
+
+Provides access to the screen brightness.
+
+### Description
+
+Use this property to set or retrieve the current brightness of the screen.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | string | Screen brightness (must be one of the following: *default*, *match_video*, *max*) |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown brightness |
+| 2 | ```ERROR_UNAVAILABLE``` | Set brightness is not supported or failed |
+| 1 | ```ERROR_GENERAL``` | Failed to set brightness |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Compositor.1.brightness"
+}
+```
+
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "result": "match_video"
+}
+```
+
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1234567890,
+    "method": "Compositor.1.brightness",
+    "params": "max"
 }
 ```
 
