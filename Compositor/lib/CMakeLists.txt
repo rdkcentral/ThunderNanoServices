@@ -16,6 +16,10 @@
 # limitations under the License.
 
 if("${PLUGIN_COMPOSITOR_IMPLEMENTATION}" STREQUAL "Nexus")
+    if (NOT PLUGIN_COMPOSITOR_NXSERVER)
+        set(NEXUS_SERVER_EXTERNAL ON CACHE STRING "Enable external nxserver")
+    endif()
+
     if (COMPOSITOR_IMPLEMENTATION_PATH)
         add_subdirectory(${COMPOSITOR_IMPLEMENTATION_PATH})
     else()
@@ -28,9 +32,6 @@ if("${PLUGIN_COMPOSITOR_IMPLEMENTATION}" STREQUAL "Nexus")
             SOURCE_DIR "Nexus"
         )
         add_subdirectory(Nexus)
-    endif()
-    if (NOT PLUGIN_COMPOSITOR_NXSERVER)
-        NEXUS_SERVER_EXTERNAL=ON
     endif()
 else()
     add_subdirectory (${PLUGIN_COMPOSITOR_IMPLEMENTATION})
