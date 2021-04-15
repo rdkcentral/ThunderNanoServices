@@ -296,7 +296,7 @@ class BluetoothControl : public PluginHost::IPlugin
             void Scan(const uint16_t scanTime, const uint32_t type, const uint8_t flags)
             {
                 if (IsOpen() == true) {
-                    parent->RemoveDevices([](DeviceImpl* device) -> bool {
+                    _parent->RemoveDevices([](DeviceImpl* device) -> bool {
                         if ((device->IsBonded() == false) && (device->IsConnected() == false))
                         {
                             device->Clear();
@@ -315,7 +315,7 @@ class BluetoothControl : public PluginHost::IPlugin
             void Scan(const uint16_t scanTime, const bool limited, const bool passive)
             {
                 if (IsOpen() == true) {
-                    parent->RemoveDevices([](DeviceImpl* device) -> bool {
+                    _parent->RemoveDevices([](DeviceImpl* device) -> bool {
                         if ((device->IsBonded() == false) && (device->IsConnected() == false))
                         {
                             device->Clear();
