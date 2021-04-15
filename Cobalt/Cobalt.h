@@ -127,7 +127,9 @@ public:
     BEGIN_INTERFACE_MAP (Cobalt)
     INTERFACE_ENTRY (PluginHost::IPlugin)
     INTERFACE_ENTRY (PluginHost::IWeb)
-    INTERFACE_ENTRY (PluginHost::IDispatcher)INTERFACE_AGGREGATE(PluginHost::IStateControl, _cobalt)
+    INTERFACE_ENTRY (PluginHost::IDispatcher)
+    INTERFACE_AGGREGATE(PluginHost::IStateControl, _cobalt)
+    INTERFACE_AGGREGATE(Exchange::IApplication, _application)
     INTERFACE_AGGREGATE(Exchange::IBrowser, _cobalt)
     INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
     END_INTERFACE_MAP
