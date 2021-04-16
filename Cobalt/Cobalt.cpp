@@ -133,6 +133,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
 
     // Deinitialize what we initialized..
     _memory = nullptr;
+    _application = nullptr;
     _cobalt = nullptr;
     _service = nullptr;
 }
