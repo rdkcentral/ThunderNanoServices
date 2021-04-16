@@ -23,7 +23,7 @@ find_package(WPEFramework)
 
 project_version(1.0.0)
 
-set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME}) VERSION 1.0.0
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
