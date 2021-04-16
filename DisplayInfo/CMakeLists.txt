@@ -29,6 +29,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+set(PLUGIN_DISPLAYINFO_AUTOSTART true CACHE STRING "Automatically start DisplayInfo plugin")
 set(PLUGIN_DISPLAYINFO_OUTOFPROCESS false CACHE BOOL "Controls if the plugin should run in its own process [true, false].")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
