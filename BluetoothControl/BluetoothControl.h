@@ -296,6 +296,15 @@ class BluetoothControl : public PluginHost::IPlugin
             void Scan(const uint16_t scanTime, const uint32_t type, const uint8_t flags)
             {
                 if (IsOpen() == true) {
+                    _parent->RemoveDevices([](DeviceImpl* device) -> bool {
+                        if ((device->IsBonded() == false) && (device->IsConnected() == false))
+                        {
+                            device->Clear();
+                            return (true);
+                        }
+                        return (false);
+                    });
+
                     _scanJob.Submit([this, scanTime, type, flags]() {
                         TRACE(ControlFlow, (_T("Start BT classic scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
                         Bluetooth::HCISocket::Scan(scanTime, type, flags);
@@ -306,6 +315,15 @@ class BluetoothControl : public PluginHost::IPlugin
             void Scan(const uint16_t scanTime, const bool limited, const bool passive)
             {
                 if (IsOpen() == true) {
+                    _parent->RemoveDevices([](DeviceImpl* device) -> bool {
+                        if ((device->IsBonded() == false) && (device->IsConnected() == false))
+                        {
+                            device->Clear();
+                            return (true);
+                        }
+                        return (false);
+                    });
+
                     _scanJob.Submit([this, scanTime, limited, passive]() {
                         TRACE(ControlFlow, (_T("Start BT LowEnergy scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
                         Bluetooth::HCISocket::Scan(scanTime, limited, passive);

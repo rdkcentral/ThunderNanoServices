@@ -469,7 +469,9 @@ namespace WPASupplicant {
 
                 // And last but not least, we will find the SSID
                 index = infoLine.ForwardSkip(_T(" \t"), end);
-                source.Set(Core::TextFragment(infoLine, index, infoLine.Length() - index).Text(), frequency, signal, pairs, keys);
+                string ssid(Core::TextFragment(infoLine, index, infoLine.Length() - index).Text());
+                _parent.TrimEscapeSequence(ssid);
+                source.Set(ssid, frequency, signal, pairs, keys);
 
                 return (bssid);
             }
@@ -571,6 +573,7 @@ namespace WPASupplicant {
                                     _bssid = Controller::BSSID(Core::TextFragment(index.Current(), end, ~0).Text());
                                 } else if (name == Config::SSIDKEY) {
                                     _ssid = index.Current().Text();
+                                    _parent.TrimEscapeSequence(_ssid);
                                 } else if (name == Config::KEY) {
                                     _pair = KeyPair(index.Current(), _key);
                                 } else if (name == _T("mode")) {
@@ -667,8 +670,6 @@ namespace WPASupplicant {
                                     freq = Core::NumberType<uint32_t>(index.Current());
                                 } else if (name == _T("level")) {
                                     signal = Core::NumberType<int32_t>(index.Current());
-                                } else if (name == _T("level")) {
-                                    signal = Core::NumberType<int32_t>(index.Current());
                                 } else if (name == _T("flags")) {
                                     pair = KeyPair(index.Current(), keys);
                                 }
@@ -677,7 +678,7 @@ namespace WPASupplicant {
                         marker = (markerEnd < data.Length() ? markerEnd + 1 : markerEnd);
                         markerEnd = data.ForwardFind('\n', marker);
                     }
-
+                    _parent.TrimEscapeSequence(ssid);
                     _parent.Update(_bssid, ssid, id, freq, signal, pair, keys, throughput);
                 }
             }
@@ -1954,6 +1955,18 @@ namespace WPASupplicant {
             }
 
             return status;
+        }
+
+        inline void TrimEscapeSequence(string& str) {
+            string escapeSequence("\\\\");
+
+            std::size_t pos = 0;
+            do {
+                pos = str.find(escapeSequence, pos + 1);
+                if (pos != std::string::npos) {
+                    str.replace(pos, escapeSequence.length(), "\\");
+                }
+            } while (pos != std::string::npos);
         }
 
     private:
