@@ -23,8 +23,32 @@ find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 
-add_library(${TARGET}
+find_package(BCM_HOST QUIET)
+
+if (BCM_HOST_FOUND)
+    add_library(${TARGET}
         RPI.cpp)
+else()
+    find_package(GBM REQUIRED)
+    find_package(LibDRM REQUIRED)
+
+    if(NOT GBM_FOUND)
+        message(FATAL_ERROR "The GBM library and its headers cannot be found.")
+    endif()
+
+    if(NOT LIBDRM_FOUND)
+        message(FATAL_ERROR "The libDRM library and its headers cannot be found.")
+    endif()
+
+    add_library(${TARGET}
+        ModeSet.cpp
+        RPI.cpp)
+
+    target_compile_definitions(${TARGET} PRIVATE VC6)
+
+    target_link_libraries(${TARGET} PRIVATE libdrm::libdrm)
+
+endif()
 
 target_link_libraries(${TARGET}
     PRIVATE

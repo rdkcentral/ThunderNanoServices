@@ -21,12 +21,16 @@
 
 #include <interfaces/IComposition.h>
 
+#ifdef VC6
+#include "ModeSet.h"
+#endif
+
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class CompositorImplementation : public Exchange::IComposition {
+    class CompositorImplementation : public Exchange::IComposition, public Exchange::IComposition::IDisplay {
     private:
         CompositorImplementation(const CompositorImplementation&) = delete;
         CompositorImplementation& operator=(const CompositorImplementation&) = delete;
@@ -59,9 +63,16 @@ namespace Plugin {
                 }
             }
 
-            virtual ~ExternalAccess() override = default;
+            ~ExternalAccess() override = default;
 
         private:
+            #ifdef VC6
+            void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t version) override
+            {
+                // Use the className to check for multiple HDMI's. 
+                return (_parent.QueryInterface(interfaceId));
+            }
+            #endif
             void Offer(Core::IUnknown* element, const uint32_t interfaceID) override
             {
                 Exchange::IComposition::IClient* result = element->QueryInterface<Exchange::IComposition::IClient>();
@@ -89,9 +100,11 @@ namespace Plugin {
             , _externalAccess(nullptr)
             , _observers()
             , _clients()
+            #ifdef VC6
+            , _platform()
+            #endif
         {
         }
-
         ~CompositorImplementation()
         {
             if (_externalAccess != nullptr) {
@@ -102,6 +115,7 @@ namespace Plugin {
 
         BEGIN_INTERFACE_MAP(CompositorImplementation)
         INTERFACE_ENTRY(Exchange::IComposition)
+        INTERFACE_ENTRY(Exchange::IComposition::IDisplay)
         END_INTERFACE_MAP
 
     private:
@@ -114,8 +128,10 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , Connector(_T("/tmp/compositor"))
+                , Port(_T("HDMI0"))
             {
                 Add(_T("connector"), &Connector);
+                Add(_T("port"), &Port);
             }
 
             ~Config()
@@ -124,6 +140,7 @@ namespace Plugin {
 
         public:
             Core::JSON::String Connector;
+            Core::JSON::String Port;
         };
 
         struct ClientData {
@@ -153,6 +170,9 @@ namespace Plugin {
         };
 
     public:
+        //
+        // Echange::IComposition
+        // ==================================================================================================================
         uint32_t Configure(PluginHost::IShell* service) override
         {
             uint32_t result = Core::ERROR_NONE;
@@ -165,9 +185,9 @@ namespace Plugin {
             _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
             _externalAccess = new ExternalAccess(*this, Core::NodeId(config.Connector.Value().c_str()), service->ProxyStubPath(), _engine);
 
-            if (_externalAccess->IsListening() == true) {
+            if ((_externalAccess->IsListening() == true) && (_platform.Open(config.Port.Value()) == Core::ERROR_NONE)) {
+                _port = config.Port.Value();
                 PlatformReady();
-                
             } else {
                 delete _externalAccess;
                 _externalAccess = nullptr;
@@ -177,13 +197,10 @@ namespace Plugin {
             }
             return result;
         }
-
         void Register(Exchange::IComposition::INotification* notification) override
         {
             _adminLock.Lock();
-            ASSERT(std::find(_observers.begin(),
-                       _observers.end(), notification)
-                == _observers.end());
+            ASSERT(std::find(_observers.begin(), _observers.end(), notification) == _observers.end());
             notification->AddRef();
             _observers.push_back(notification);
             auto index(_clients.begin());
@@ -193,12 +210,10 @@ namespace Plugin {
             }
             _adminLock.Unlock();
         }
-
         void Unregister(Exchange::IComposition::INotification* notification) override
         {
             _adminLock.Lock();
-            std::list<Exchange::IComposition::INotification*>::iterator index(
-                std::find(_observers.begin(), _observers.end(), notification));
+            std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
             ASSERT(index != _observers.end());
             if (index != _observers.end()) {
                 _observers.erase(index);
@@ -206,17 +221,38 @@ namespace Plugin {
             }
             _adminLock.Unlock();
         }
-
-    public:
         uint32_t Resolution(const Exchange::IComposition::ScreenResolution format) override
         {
             TRACE(Trace::Information, (_T("Could not set screenresolution to %s. Not supported for Rapberry Pi compositor"), Core::EnumerateType<Exchange::IComposition::ScreenResolution>(format).Data()));
             return (Core::ERROR_UNAVAILABLE);
         }
-
         Exchange::IComposition::ScreenResolution Resolution() const override
         {
             return Exchange::IComposition::ScreenResolution::ScreenResolution_720p;
+        }
+
+        //
+        // Echange::IComposition::IDisplay
+        // ==================================================================================================================
+        string Port() const override {
+            return (_port);
+        }
+        IClient* CreateClient(const string& name, const uint32_t width, const uint32_t height) override {
+            IClient* client = nullptr;
+
+            #ifdef VC6
+            struct gbm_surface* surface = _platform.CreateRenderTarget(width, height);
+            if (surface != nullptr) {
+                client = Core::Service<ClientSurface>::Create<IClient>(
+                             _platform,
+                             name,
+                             reinterpret_cast<EGLSurface>(surface),
+                             width,
+                             height);
+            }
+            #endif
+
+            return (client);
         }
 
     private:
@@ -227,7 +263,6 @@ namespace Plugin {
         {
             return _clients.find(callsign);
         }
-
         void NewClientOffered(Exchange::IComposition::IClient* client)
         {
             ASSERT(client != nullptr);
@@ -265,7 +300,6 @@ namespace Plugin {
                 }
             }
         }
-
         void ClientRevoked(const IUnknown* client)
         {
             // note do not release by looking up the name, client might live in another process and the name call might fail if the connection is gone
@@ -292,8 +326,6 @@ namespace Plugin {
 
             TRACE(Trace::Information, (_T("Client detached completed")));
         }
-
-
         void PlatformReady()
         {
             PluginHost::ISubSystem* subSystems(_service->SubSystems());
@@ -304,7 +336,6 @@ namespace Plugin {
                 subSystems->Release();
             }
         }
-
         Exchange::IComposition::Rectangle FindClientRectangle(const string& name) const
         {
             Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
@@ -321,7 +352,6 @@ namespace Plugin {
 
             return rectangle;
         }
-
         uint32_t SetClientRectangle(const string& name, const Exchange::IComposition::Rectangle& rectangle)
         {
 
@@ -337,7 +367,6 @@ namespace Plugin {
 
             return (clientdata != nullptr ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
         }
-
         IClient* FindClient(const string& name) const
         {
             IClient* client = nullptr;
@@ -356,7 +385,10 @@ namespace Plugin {
 
             return client;
         }
-
+        ClientData* FindClientData(const string& name)
+        {
+            return const_cast<ClientData*>(static_cast<const CompositorImplementation&>(*this).FindClientData(name));
+        }
         const ClientData* FindClientData(const string& name) const
         {
             const ClientData* clientdata = nullptr;
@@ -367,17 +399,18 @@ namespace Plugin {
             return clientdata;
         }
 
-        ClientData* FindClientData(const string& name)
-        {
-            return const_cast<ClientData*>(static_cast<const CompositorImplementation&>(*this).FindClientData(name));
-        }
-
+    private:
         mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         Core::ProxyType<RPC::InvokeServer> _engine;
         ExternalAccess* _externalAccess;
         std::list<Exchange::IComposition::INotification*> _observers;
         ClientDataContainer _clients;
+        string _port;
+
+        #ifdef VC6
+        ModeSet _platform;
+        #endif
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);

@@ -172,6 +172,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(Exchange::IComposition, _composition)
+        INTERFACE_AGGREGATE(Exchange::IComposition::IDisplay, _composition)
         END_INTERFACE_MAP
 
     public:
