@@ -782,9 +782,6 @@ namespace Plugin {
             void Locator(const Core::URL& locator)
             {
                 _lock.Lock();
-                if (_dynamicInterface == false) {
-                    _locator.Host(locator.Host().Value());
-                }
                 _locator.Port(locator.Port().Value());
                 UpdateURL();
                 _lock.Unlock();
