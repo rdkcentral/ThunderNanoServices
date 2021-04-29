@@ -29,7 +29,6 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 option(PLUGIN_BLUETOOTH_DEVELOPMENT "Enable verbose tracing" ON)
 
 set(PLUGIN_BLUETOOTH_AUTOSTART true CACHE STRING true)
-set(PLUGIN_BLUETOOTH_OOP false CACHE STRING true)
 
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
