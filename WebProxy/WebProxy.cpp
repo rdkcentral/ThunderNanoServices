@@ -246,8 +246,13 @@ namespace Plugin {
 
     /* virtual */ void WebProxy::Deinitialize(PluginHost::IShell* service)
     {
-
         service->DisableWebServer();
+
+        for (auto connection: _connectionMap) {
+            connection.second->Detach();
+            delete connection.second;
+        }
+        _connectionMap.clear();
     }
 
     // Whenever a Channel (WebSocket connection) is created to the plugin that will be reported via the Attach.
@@ -275,7 +280,7 @@ namespace Plugin {
 
             if (newLink != nullptr) {
                 _connectionMap.insert(std::pair<uint32_t, Connector*>(channel.Id(), newLink));
-                TRACE(Trace::Information, (Trace::Format(_T("Proxy connection channel ID [%d] to %s"), channel.Id(), newLink->RemoteId().c_str()).c_str()));
+                TRACE(Trace::Information, (Core::Format(_T("Proxy connection channel ID [%d] to %s"), channel.Id(), newLink->RemoteId().c_str()).c_str()));
                 added = true;
 
                 newLink->Attach();
@@ -385,8 +390,22 @@ namespace Plugin {
 
                     parity = (configInfo.Parity.Value());
                     stopBits = (configInfo.Stop.Value() == 2 ? Core::SerialPort::StopBits::BITS_2 : Core::SerialPort::StopBits::BITS_1);
-                    baudRate = (configInfo.Data.Value() == 110 ? Core::SerialPort::BaudRate::BAUDRATE_110 : configInfo.Data.Value() == 300 ? Core::SerialPort::BaudRate::BAUDRATE_300 : configInfo.Data.Value() == 600 ? Core::SerialPort::BaudRate::BAUDRATE_600 : configInfo.Data.Value() == 1200 ? Core::SerialPort::BaudRate::BAUDRATE_1200 : configInfo.Data.Value() == 2400 ? Core::SerialPort::BaudRate::BAUDRATE_2400 : configInfo.Data.Value() == 4800 ? Core::SerialPort::BaudRate::BAUDRATE_4800 : configInfo.Data.Value() == 9600 ? Core::SerialPort::BaudRate::BAUDRATE_9600 : configInfo.Data.Value() == 19200 ? Core::SerialPort::BaudRate::BAUDRATE_19200 : configInfo.Data.Value() == 38400 ? Core::SerialPort::BaudRate::BAUDRATE_38400 : configInfo.Data.Value() == 57600 ? Core::SerialPort::BaudRate::BAUDRATE_57600 : configInfo.Data.Value() == 115200 ? Core::SerialPort::BaudRate::BAUDRATE_115200 : Core::SerialPort::BaudRate::BAUDRATE_9600);
-                    dataBits = (configInfo.Data.Value() == 5 ? Core::SerialPort::DataBits::BITS_5 : configInfo.Data.Value() == 6 ? Core::SerialPort::DataBits::BITS_6 : configInfo.Data.Value() == 7 ? Core::SerialPort::DataBits::BITS_6 : Core::SerialPort::DataBits::BITS_8);
+                    baudRate = (configInfo.Baudrate.Value() == 110    ? Core::SerialPort::BaudRate::BAUDRATE_110    : 
+                                configInfo.Baudrate.Value() == 300    ? Core::SerialPort::BaudRate::BAUDRATE_300    : 
+                                configInfo.Baudrate.Value() == 600    ? Core::SerialPort::BaudRate::BAUDRATE_600    : 
+                                configInfo.Baudrate.Value() == 1200   ? Core::SerialPort::BaudRate::BAUDRATE_1200   : 
+                                configInfo.Baudrate.Value() == 2400   ? Core::SerialPort::BaudRate::BAUDRATE_2400   : 
+                                configInfo.Baudrate.Value() == 4800   ? Core::SerialPort::BaudRate::BAUDRATE_4800   : 
+                                configInfo.Baudrate.Value() == 9600   ? Core::SerialPort::BaudRate::BAUDRATE_9600   : 
+                                configInfo.Baudrate.Value() == 19200  ? Core::SerialPort::BaudRate::BAUDRATE_19200  : 
+                                configInfo.Baudrate.Value() == 38400  ? Core::SerialPort::BaudRate::BAUDRATE_38400  : 
+                                configInfo.Baudrate.Value() == 57600  ? Core::SerialPort::BaudRate::BAUDRATE_57600  : 
+                                configInfo.Baudrate.Value() == 115200 ? Core::SerialPort::BaudRate::BAUDRATE_115200 : 
+                                                                    Core::SerialPort::BaudRate::BAUDRATE_9600);
+                    dataBits = (configInfo.Data.Value() == 5 ? Core::SerialPort::DataBits::BITS_5 : 
+                                configInfo.Data.Value() == 6 ? Core::SerialPort::DataBits::BITS_6 : 
+                                configInfo.Data.Value() == 7 ? Core::SerialPort::DataBits::BITS_7 : 
+                                Core::SerialPort::DataBits::BITS_8);
                 }
             }
         }

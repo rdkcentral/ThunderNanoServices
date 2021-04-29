@@ -19,9 +19,9 @@
  
 // Note: This code is inherently not thread safe. If required, proper synchronisation must be added.
 
+#include "Module.h"
 #include <interfaces/json/JsonData_SecureShellServer.h>
 #include "SecureShellServer.h"
-#include "Module.h"
 
 namespace WPEFramework {
 namespace Plugin {

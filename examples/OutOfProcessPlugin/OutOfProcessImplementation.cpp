@@ -21,6 +21,9 @@
 #include "OutOfProcessPlugin.h"
 #include <interfaces/ITimeSync.h>
 
+#ifdef __CORE_EXCEPTION_CATCHING__
+#include <stdexcept>
+#endif
 
 namespace WPEFramework {
 namespace Plugin {
@@ -51,16 +54,16 @@ namespace Plugin {
             ~PluginMonitor() override = default;
 
         public:
-            void StateChange(PluginHost::IShell* service, const string& ) override
+            void Activated(const string&, PluginHost::IShell* service) override
             {
-				if (service->State() == PluginHost::Service::ACTIVATED) {
-
-                    Exchange::ITimeSync* time = service->QueryInterface<Exchange::ITimeSync>();
-					if (time != nullptr) {
-						TRACE(Trace::Information, (_T("Time interface supported")));
-						time->Release();
-					}
+                Exchange::ITimeSync* time = service->QueryInterface<Exchange::ITimeSync>();
+				if (time != nullptr) {
+					TRACE(Trace::Information, (_T("Time interface supported")));
+					time->Release();
 				}
+            }
+            void Deactivated(const string&, PluginHost::IShell*) override
+            {
             }
             BEGIN_INTERFACE_MAP(PluginMonitor)
                 INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
@@ -87,7 +90,7 @@ namespace Plugin {
 
         public:
             Config()
-                : Sleep(90)
+                : Sleep(4)
                 , Init(100)
                 , Crash(false)
                 , Destruct(1000)
@@ -217,6 +220,24 @@ namespace Plugin {
             Exchange::IBrowser* _parentInterface;
         };
 
+        class Dispatcher : public Core::ThreadPool::IDispatcher {
+        public:
+            Dispatcher(const Dispatcher&) = delete;
+            Dispatcher& operator=(const Dispatcher&) = delete;
+
+            Dispatcher() = default;
+            ~Dispatcher() override = default;
+
+        private:
+            void Initialize() override {
+            }
+            void Deinitialize() override {
+            }
+            void Dispatch(Core::IDispatch* job) override {
+                job->Dispatch();
+            }
+        };
+
         #ifdef __WINDOWS__
         #pragma warning(disable : 4355)
         #endif
@@ -226,13 +247,13 @@ namespace Plugin {
             , _setURL()
             , _fps(0)
             , _hidden(false)
-            , _executor(1, 0, 4)
+            , _dispatcher()
+            , _executor(1, 0, 4, &_dispatcher)
             , _sink(*this)
             , _service(nullptr)
             , _engine()
             , _externalAccess(nullptr)
         {
-            TRACE(Trace::Information, (_T("---------------- Constructing the OutOfProcessImplementation ----------------------")));
             TRACE(Trace::Information, (_T("Constructed the OutOfProcessImplementation")));
         }
         #ifdef __WINDOWS__
@@ -240,80 +261,91 @@ namespace Plugin {
         #endif
         ~OutOfProcessImplementation() override
         {
-            TRACE(Trace::Information, (_T("---------------- Destructing the OutOfProcessImplementation ----------------------")));
+            TRACE(Trace::Information, (_T("Destructing the OutOfProcessImplementation")));
             Block();
 
-            if (Wait(Core::Thread::STOPPED | Core::Thread::BLOCKED, _config.Destruct.Value()) == false)
+            if (Wait(Core::Thread::STOPPED | Core::Thread::BLOCKED, _config.Destruct.Value()) == false) {
                 TRACE(Trace::Information, (_T("Bailed out before the thread signalled completion. %d ms"), _config.Destruct.Value()));
+            }
 
-            TRACE(Trace::Information, (_T("---------------- Destructed the OutOfProcessImplementation -----------------------")));
+            TRACE(Trace::Information, (_T("Destructed the OutOfProcessImplementation")));
 
-        if (_externalAccess != nullptr) {
+            if (_externalAccess != nullptr) {
 
-            TRACE(Trace::Information, (_T("OutOfProcessImplementation::Destructor() : delete instance")));
-            delete _externalAccess;
-            _engine.Release();
-        }
+                TRACE(Trace::Information, (_T("Destructing _externalAccess")));
+                delete _externalAccess;
+                _engine.Release();
+                TRACE(Trace::Information, (_T("Destructed _externalAccess")));
+            }
 
             if (_service) {
-                TRACE(Trace::Information, (_T("OutOfProcessImplementation::DTor: Release service")));
+                TRACE(Trace::Information, (_T("Releasing service")));
                 _service->Release();
-              _service = nullptr;
+                _service = nullptr;
+                TRACE(Trace::Information, (_T("Released service")));
             }
+            TRACE(Trace::Information, (_T("Destructed the OutOfProcessImplementation")));
         }
 
     public:
         void SetURL(const string& URL) override
         {
-            _requestedURL = URL;
-            TRACE(Trace::Information, (_T("New URL [%d]: [%s]"), URL.length(), URL.c_str()));
+            #ifdef __CORE_EXCEPTION_CATCHING__
+            static const string exceptionPrefix (_T("ThrowException"));
+
+            if (URL.compare(0, exceptionPrefix.length(), exceptionPrefix) == 0) {
+                string message = _T("BlankException");
+                if (URL[exceptionPrefix.length()] == ':') {
+                    message = URL.substr(exceptionPrefix.length() + 1, string::npos);
+                }
+                throw(std::domain_error(message));
+            }
+            else {
+            #endif
+                _requestedURL = URL;
+                TRACE(Trace::Information, (_T("New URL [%d]: [%s]"), URL.length(), URL.c_str()));
+            #ifdef __CORE_EXCEPTION_CATCHING__
+            }
+            #endif
         }
         uint32_t Configure(PluginHost::IShell* service) override
         {
-                   uint32_t result = Core::ERROR_NONE;
+            uint32_t result = Core::ERROR_NONE;
 
             TRACE(Trace::Information, (_T("Configuring: [%s]"), service->Callsign().c_str()));
 
-        TRACE(Trace::Information, (_T("OutOfProcessImplementation::Configure: Entry")));
+            _service = service;
 
-        if (_externalAccess != nullptr) {
-            TRACE(Trace::Information, (_T("OutOfProcessImplementation::Configure: Test Configure...")));
-            TRACE(Trace::Information, (_T("OutOfProcessImplementation::Configure: Test Configure...DONE")));
-            return result;
-        }
-
-        TRACE(Trace::Information, (_T("OutOfProcessImplementation::Configure: Normal Configure")));
-
-        _service = service;
-        if (_service) {
-            TRACE(Trace::Information, (_T("OutOfProcessImplementation::Configure: AddRef service")));
-            _service->AddRef();
-        }
-
-        _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
-        _externalAccess = new ExternalAccess(Core::NodeId("/tmp/oopexample"), this, service->ProxyStubPath(), _engine);
-
-        result = Core::ERROR_OPENING_FAILED;
-        if (_externalAccess != nullptr) {
-            if (_externalAccess->IsListening() == false) {
-                delete _externalAccess;
-                _externalAccess = nullptr;
-                _engine.Release();
-            } 
-        }
-
-        if(result == Core::ERROR_NONE) {
-
-           _dataPath = service->DataPath();
-            _config.FromString(service->ConfigLine());
-            _endTime = Core::Time::Now();
-
-            if (_config.Init.Value() > 0) {
-                TRACE(Trace::Information, (_T("Configuration requested to take [%d] mS"), _config.Init.Value()));
-                _endTime.Add(_config.Init.Value());
+            if (_service) {
+                TRACE(Trace::Information, (_T("OutOfProcessImplementation::Configure: AddRef service")));
+                _service->AddRef();
             }
-            Run();
-          }
+
+            _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
+            _externalAccess = new ExternalAccess(Core::NodeId("/tmp/oopexample"), this, service->ProxyStubPath(), _engine);
+
+            result = Core::ERROR_OPENING_FAILED;
+            if (_externalAccess != nullptr) {
+                if (_externalAccess->IsListening() == false) {
+                    TRACE(Trace::Information, (_T("Deleting the External Server, it is not listening!")));
+                    delete _externalAccess;
+                    _externalAccess = nullptr;
+                    _engine.Release();
+                } 
+            }
+
+            if (result == Core::ERROR_NONE) {
+
+                _dataPath = service->DataPath();
+                _config.FromString(service->ConfigLine());
+
+                if (_config.Init.Value() > 0) {
+                    TRACE(Trace::Information, (_T("Configuration requested to take [%d] mS"), _config.Init.Value()));
+                    SleepMs(_config.Init.Value());
+                }
+                Run();
+            }
+
             return (result);
         }
         string GetURL() const override
@@ -524,10 +556,10 @@ namespace Plugin {
         string _dataPath;
         mutable uint32_t _fps;
         bool _hidden;
-        Core::Time _endTime;
         std::list<PluginHost::IStateControl::INotification*> _notificationClients;
         std::list<Exchange::IBrowser::INotification*> _browserClients;
         PluginHost::IStateControl::state _state;
+        Dispatcher _dispatcher;
         Core::ThreadPool _executor;
         Core::Sink<PluginMonitor> _sink;
         PluginHost::IShell* _service;
@@ -573,7 +605,7 @@ namespace OutOfProcessPlugin {
         {
             return (IsOperational() ? 1 : 0);
         }
-        virtual const bool IsOperational() const
+        virtual bool IsOperational() const
         {
             return (_main.IsActive());
         }

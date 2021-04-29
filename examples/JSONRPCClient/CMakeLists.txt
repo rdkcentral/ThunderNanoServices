@@ -19,7 +19,7 @@ find_package(${NAMESPACE}Protocols REQUIRED)
 find_package(securityagent QUIET)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-add_executable(JSONRPCClient JSONRPCClient.cpp)
+add_executable(JSONRPCClient Module.cpp JSONRPCClient.cpp)
 
 set_target_properties(JSONRPCClient PROPERTIES
         CXX_STANDARD 11

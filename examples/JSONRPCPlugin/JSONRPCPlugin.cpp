@@ -52,6 +52,18 @@ namespace Plugin
         , _jsonServer(nullptr)
         , _msgServer(nullptr)
     {
+        RegisterAll();
+    }
+    #ifdef __WINDOWS__
+    #pragma warning(default : 4355)
+    #endif
+    /* virtual */ JSONRPCPlugin::~JSONRPCPlugin()
+    {
+        UnregisterAll();
+    }
+
+    void JSONRPCPlugin::RegisterAll()
+    {
         // PluginHost::JSONRPC method to register a JSONRPC method invocation for the method "time".
         Register<void, Core::JSON::String>(_T("time"), &JSONRPCPlugin::time, this);
         Register<void, void>(_T("clueless"), &JSONRPCPlugin::clueless, this);
@@ -87,17 +99,35 @@ namespace Plugin
 
         // Methods for a "legaccy" version of the interfaces, the last parameter makes sure that all handlers are copied from the 
         // base interface to this "legacy" one...
-        Core::JSONRPC::Handler& legacyVersion = JSONRPC::CreateHandler({ 1 }, *this); 
+        Core::JSONRPC::Handler& legacyVersion = JSONRPC::CreateHandler({ 1 }, *this);
 
         // The only method that is really differnt in version "1" needs to be registered and replace the vother version one. That is done by the next line.
         legacyVersion.Register<Core::JSON::String, Core::JSON::String>(_T("clueless"), &JSONRPCPlugin::clueless2, this);
     }
-    #ifdef __WINDOWS__
-    #pragma warning(default : 4355)
-    #endif
-
-    /* virtual */ JSONRPCPlugin::~JSONRPCPlugin()
+    void JSONRPCPlugin::UnregisterAll()
     {
+        Unregister(_T("time"));
+        Unregister(_T("clueless"));
+        Unregister(_T("input"));
+        Unregister(_T("extended"));
+        Unregister(_T("postmessage"));
+        Unregister(_T("geometry"));
+        Unregister(_T("data"));
+        Unregister(_T("status"));
+        Unregister(_T("value"));
+        Unregister(_T("swap"));
+        Unregister(_T("window"));
+        Unregister(_T("async"));
+        Unregister(_T("send"));
+        Unregister(_T("receive"));
+        Unregister(_T("exchange"));
+        Unregister(_T("array"));
+        Unregister(_T("lookup"));
+        Unregister(_T("store"));
+        Unregister(_T("checkvalidation"));
+
+        Core::JSONRPC::Handler& legacyVersion = JSONRPC::CreateHandler({ 1 }, *this);
+        legacyVersion.Unregister(_T("clueless"));
     }
 
     /* virtual */ const string JSONRPCPlugin::Initialize(PluginHost::IShell * service)

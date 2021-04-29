@@ -72,23 +72,17 @@ namespace Plugin {
             }
             Iterator(const BufferList& rhs)
                 : _segments(&rhs)
-                , _index(rhs.begin())
+                , _index()
                 , _reset(true) {
             }
             Iterator(const Iterator& copy)
                 : _segments(copy._segments)
                 , _index()
                 , _reset(true) {
-                if (_segments != nullptr) {
-                    _index = _segments->cbegin();
-                }
             }
             ~Iterator() = default;
 
-            Iterator& operator= (const Iterator& rhs) {
-
-                return (*this);
-            }
+            Iterator& operator= (const Iterator&) = delete;
 
         public:
             bool IsValid() const {
@@ -96,13 +90,14 @@ namespace Plugin {
             }
             void Reset() {
                 _reset = true;
-                if (_segments != nullptr) {
-                    _index = _segments->cbegin();
-                }
             }
             bool Next() {
                 if (_reset == true) {
                     _reset = false;
+
+                    if (_segments != nullptr) {
+                        _index = _segments->cbegin();
+                    }
                 }
                 else if ((_segments != nullptr) && (_index != _segments->cend())) {
                     _index++;

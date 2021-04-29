@@ -24,12 +24,14 @@ namespace WPEFramework {
 namespace DIALHandlers {
 
     class AmazonPrime : public Plugin::DIALServer::Default {
-    private:
+    public:
         AmazonPrime() = delete;
         AmazonPrime(const AmazonPrime&) = delete;
         AmazonPrime& operator=(const AmazonPrime&) = delete;
 
-    public:
+        #ifdef __WINDOWS__
+        #pragma warning(disable : 4355)
+        #endif
         AmazonPrime(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config, Plugin::DIALServer* parent)
             : Default(service, config, parent)
             , _prime(nullptr)
@@ -41,6 +43,9 @@ namespace DIALHandlers {
             ASSERT(parent != nullptr);
             service->Register(&_notification);
         }
+        #ifdef __WINDOWS__
+        #pragma warning(default : 4355)
+        #endif
 
         ~AmazonPrime() override
         {
@@ -131,15 +136,18 @@ namespace DIALHandlers {
             ~Notification() = default;
 
         public:
-            void StateChange(PluginHost::IShell* shell) override
+            void Activated(const string& callsign, PluginHost::IShell* shell) override
             {
                 ASSERT(shell != nullptr);
-                if (shell->Callsign() == _parent.Callsign()) {
-                    if (shell->State() == PluginHost::IShell::ACTIVATED) {
-                        _parent.Attach();
-                    } else if (shell->State() == PluginHost::IShell::DEACTIVATED) {
-                        _parent.Detach();
-                    }
+                if (callsign == _parent.Callsign()) {
+                    _parent.Attach();
+                }
+            }
+            void Deactivated(const string& callsign, PluginHost::IShell* shell) override
+            {
+                ASSERT(shell != nullptr);
+                if (callsign == _parent.Callsign()) {
+                    _parent.Detach();
                 }
             }
 

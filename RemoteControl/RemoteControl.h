@@ -115,6 +115,7 @@ namespace Plugin {
                     Add(_T("mapfile"), &MapFile);
                 }
                 Link(const Link&)
+                   : Core::JSON::Container()
                 {
                     Add(_T("name"), &Name);
                     Add(_T("mapfile"), &MapFile);

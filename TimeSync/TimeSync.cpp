@@ -84,6 +84,7 @@ namespace Plugin {
         _sink.Deinitialize();
 
         ASSERT(_service != nullptr);
+        ASSERT(_service == service);
         _service->Release();
         _service = nullptr;
     }

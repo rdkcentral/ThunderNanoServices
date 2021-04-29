@@ -89,7 +89,7 @@ private:
         static inline FeatureList GstRegistryGetElementForMediaType(GList* elementsFactories, MediaTypes&& mediaTypes) {
             FeatureList candidates{gst_element_factory_list_filter(elementsFactories, mediaTypes.get(), GST_PAD_SINK, false)};
 
-            return std::move(candidates);
+            return (candidates);
         }
 
     };
@@ -138,11 +138,11 @@ public:
         codec = (Core::Service<VideoIteratorImplementation>::Create<Exchange::IPlayerProperties::IVideoCodecIterator>(_videoCodecs));
         return (codec != nullptr ? Core::ERROR_NONE : Core::ERROR_GENERAL);
     }
-    uint32_t Resolution(PlaybackResolution& res) const override
+    uint32_t Resolution(PlaybackResolution&) const override
     {
         return (Core::ERROR_NONE);
     }
-    uint32_t IsAudioEquivalenceEnabled(bool& ae) const override
+    uint32_t IsAudioEquivalenceEnabled(bool&) const override
     {
         return (Core::ERROR_NONE);
     }

@@ -49,4 +49,4 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
  install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
- write_config(${PLUGIN_NAME})
+ write_config(PLUGINS ${PLUGIN_NAME})

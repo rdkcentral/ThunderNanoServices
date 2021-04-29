@@ -51,7 +51,7 @@ public:
 
         printf ("Opened file for: codec: %d, channels: %d, sampleRate: %d, bitsPerSample: %d\n", type, channels, sampleRate, bitsPerSample);
 
-        _file = Core::File(fileName, false);
+        _file = Core::File(fileName);
 
         if (_file.Create() == true) {
 

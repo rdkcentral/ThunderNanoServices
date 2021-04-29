@@ -203,18 +203,24 @@ namespace Plugin {
                         broadcast = rInfo;
                         break;
                     }
-                    case OPTION_IPADDRESSLEASETIME:
-                        ::memcpy(&leaseTime, &optionsData[used], sizeof(leaseTime));
-                        leaseTime = ntohl(leaseTime);
+                    case OPTION_IPADDRESSLEASETIME: {
+                        uint32_t value;
+                        ::memcpy(&value, &optionsData[used], sizeof(value));
+                        leaseTime = ntohl(value);
                         break;
-                    case OPTION_RENEWALTIME:
-                        ::memcpy(&renewalTime, &optionsData[used], sizeof(renewalTime));
-                        renewalTime = ntohl(renewalTime);
+                    }
+                    case OPTION_RENEWALTIME: {
+                        uint32_t value;
+                        ::memcpy(&value, &optionsData[used], sizeof(value));
+                        renewalTime = ntohl(value);
                         break;
-                    case OPTION_REBINDINGTIME:
-                        ::memcpy(&rebindingTime, &optionsData[used], sizeof(rebindingTime));
-                        rebindingTime = ntohl(rebindingTime);
+                    }
+                    case OPTION_REBINDINGTIME: {
+                        uint32_t value;
+                        ::memcpy(&value, &optionsData[used], sizeof(value));
+                        rebindingTime = ntohl(value);
                         break;
+                    }
                     }
 
                     /* move on to the next option. */
@@ -313,7 +319,9 @@ namespace Plugin {
                     _leaseTime = 0;
                     _rebindingTime = 0;
                     _renewalTime = 0;
-                    _gateway = options.gateway;
+                    if (options.gateway.IsValid()) {
+                        _gateway = options.gateway;
+                    }
                     _broadcast = options.broadcast;
                     _dns = options.dns;
 
@@ -501,7 +509,7 @@ namespace Plugin {
             _udpFrame.SourceMAC(buffer);
         }
         /* Ask DHCP servers for offers. */
-        inline uint32_t Discover(const Core::NodeId& preferredAddres)
+        inline uint32_t Discover()
         {
             uint32_t result = Core::ERROR_OPENING_FAILED;
 
@@ -640,8 +648,9 @@ namespace Plugin {
 
         uint16_t Message(uint8_t stream[], const uint16_t length) const
         {
-
             CoreMessage& frame(*reinterpret_cast<CoreMessage*>(stream));
+
+            ASSERT (length >= sizeof(CoreMessage));
 
             /* clear the packet data structure */
             ::memset(&frame, 0, sizeof(CoreMessage));

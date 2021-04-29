@@ -48,20 +48,22 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
-            ~Notification()
-            {
-            }
+            ~Notification() override = default;
 
         public:
-            virtual void Dispatch(const IVirtualInput::KeyData::type type, const uint32_t code) override
+            void Dispatch(const IVirtualInput::KeyData::type type, const uint32_t code) override
             {
                 if (type == IVirtualInput::KeyData::RELEASED) {
                     _parent.KeyEvent(code);
                 }
             }
-            virtual void StateChange(PluginHost::IShell* plugin)
+            void Activated(const string& callsign, PluginHost::IShell* plugin) override
             {
-                _parent.StateChange(plugin);
+                _parent.Activated(callsign, plugin);
+            }
+            void Deactivated(const string& callsign, PluginHost::IShell* plugin) override
+            {
+                _parent.Deactivated(callsign, plugin);
             }
 
             BEGIN_INTERFACE_MAP(Notification)
@@ -245,7 +247,8 @@ namespace Plugin {
 
     private:
         void KeyEvent(const uint32_t keyCode);
-        void StateChange(PluginHost::IShell* plugin);
+        void Activated(const string& callsign, PluginHost::IShell* plugin);
+        void Deactivated(const string& callsign, PluginHost::IShell* plugin);
         void ControlClients(Exchange::IPower::PCState state);
 
         void RegisterAll();

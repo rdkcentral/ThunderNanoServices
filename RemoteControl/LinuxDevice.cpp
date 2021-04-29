@@ -51,7 +51,7 @@ namespace Plugin {
             virtual bool Setup() { return true; }
             virtual bool Teardown() { return true; }
             virtual bool HandleInput(uint16_t code, uint16_t type, int32_t value) = 0;
-            virtual void ProducerEvent(const Exchange::ProducerEvents event) { }
+            virtual void ProducerEvent(const Exchange::ProducerEvents) { }
         };
 
         class KeyDevice : public Exchange::IKeyProducer, public IDevInputDevice {
@@ -163,7 +163,7 @@ namespace Plugin {
             }
             virtual ~WheelDevice()
             {
-                //Remotes::RemoteAdministrator::Instance().Revoke(*this);
+                Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
             string Name() const override
             {
@@ -222,6 +222,10 @@ namespace Plugin {
                 , _callback(nullptr)
             {
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
+            }
+            virtual ~PointerDevice()
+            {
+                Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
 
             string Name() const override
@@ -296,6 +300,10 @@ namespace Plugin {
             {
                 _abs_latch.fill(AbsInfo());
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
+            }
+            virtual ~TouchDevice()
+            {
+                Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
             string Name() const override
             {
@@ -567,6 +575,7 @@ namespace Plugin {
 
             for (auto& device : _inputDevices) {
                 device->Teardown();
+                delete device;
             }
 
             _inputDevices.clear();
@@ -585,7 +594,7 @@ namespace Plugin {
 
             return (true);
         }
-        bool Unpair(string bindingId)
+        bool Unpair(string)
         {
             // Make sure we are not processing anything.
             Block();
@@ -605,7 +614,7 @@ namespace Plugin {
             Core::Directory dir(Locator);
             while (dir.Next() == true) {
 
-                Core::File entry(dir.Current(), false);
+                Core::File entry(dir.Current());
                 if ((entry.IsDirectory() == false) && (entry.FileName().substr(0, 5) == _T("event"))) {
 
                     TRACE(Trace::Information, (_T("Opening input device: %s"), entry.Name().c_str()));
@@ -618,16 +627,14 @@ namespace Plugin {
                             ReadDeviceName(entry.Name(), deviceName);
                             std::transform(deviceName.begin(), deviceName.end(), deviceName.begin(), std::ptr_fun<int, int>(std::toupper));
 
-                            IDevInputDevice* inputDevice = nullptr;
                             for (auto& device : _inputDevices) {
                                 std::size_t found = deviceName.find(Core::EnumerateType<LinuxDevice::type>(device->Type()).Data());
                                 if (found != std::string::npos) {
-                                    inputDevice = device;
+                                    ASSERT(device != nullptr);
+                                    _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, device)));
                                     break;
                                 }
                             }
-
-                            _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, inputDevice)));
                         }
                     }
                 }
@@ -765,10 +772,10 @@ namespace Plugin {
         udev_monitor* _monitor;
         int _update;
         std::vector<IDevInputDevice*> _inputDevices;
-        static LinuxDevice* _singleton;
+        static LinuxDevice _singleton;
     };
 
-    /* static */ LinuxDevice* LinuxDevice::_singleton = new LinuxDevice();
+    /* static */ LinuxDevice LinuxDevice::_singleton;
 }
 
 ENUM_CONVERSION_BEGIN(Plugin::LinuxDevice::type)

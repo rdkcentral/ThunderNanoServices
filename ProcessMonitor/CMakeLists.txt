@@ -15,8 +15,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME ProcessMonitor)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(ProcessMonitor)
+
+cmake_minimum_required(VERSION 3.3)
+
+find_package(WPEFramework)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
@@ -40,4 +49,4 @@ install(TARGETS ${MODULE_NAME}
 set(PLUGIN_PROCESSMONITOR_AUTOSTART false CACHE STRING "Automatically start ProcessMonitor plugin")
 set(PLUGIN_PROCESSMONITOR_EXITTIMEOUT "2" CACHE STRING "Exit timeout for ProcessMonitor plugin")
 
-write_config(${PLUGIN_NAME})
+write_config()

@@ -267,8 +267,9 @@ namespace Plugin {
                 _adminLock.Lock();
                 WPASupplicant::Controller::reasons reason = _controller->DisconnectReason();
 
-                if ((reason == WPASupplicant::Controller::WLAN_REASON_NOINFO_GIVEN)
-                        && (_state == states::IDLE) && (_attempts > 0)) {
+                if (((reason == WPASupplicant::Controller::WLAN_REASON_NOINFO_GIVEN) ||
+                     (reason == WPASupplicant::Controller::WLAN_REASON_DEAUTH_LEAVING)) &&
+                    (_state == states::IDLE) && (_attempts > 0)) {
                     Scan();
                 }
                 _adminLock.Unlock();

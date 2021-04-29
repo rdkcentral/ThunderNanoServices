@@ -45,7 +45,7 @@ namespace Plugin {
 
     public:
         KeyActivity(const string& mapName, const uint32_t code, const bool pressed)
-            : _text(Core::ToString(Trace::Format(_T("Inserted Code: [%s:%08X] state %s."), mapName.c_str(), code, (pressed ? _T("pressed") : _T("released")))))
+            : _text(Core::ToString(Core::Format(_T("Inserted Code: [%s:%08X] state %s."), mapName.c_str(), code, (pressed ? _T("pressed") : _T("released")))))
         {
         }
         ~KeyActivity()
@@ -84,9 +84,9 @@ namespace Plugin {
             const TCHAR* text(pressed ? _T("pressed") : _T("released"));
 
             if (result == Core::ERROR_UNKNOWN_TABLE) {
-                _text = Core::ToString(Trace::Format(_T("Invalid table: [%s,%08X]"), mapName.c_str(), code));
+                _text = Core::ToString(Core::Format(_T("Invalid table: [%s,%08X]"), mapName.c_str(), code));
             } else if (result == Core::ERROR_UNKNOWN_KEY) {
-                _text = Core::ToString(Trace::Format(_T("Unknown: [%s:%08X] state %s, blocked."), mapName.c_str(), code, text));
+                _text = Core::ToString(Core::Format(_T("Unknown: [%s:%08X] state %s, blocked."), mapName.c_str(), code, text));
             }
         }
         ~UnknownKey()
@@ -281,7 +281,7 @@ namespace Plugin {
         return (result);
     }
 
-    /* virtual */ void RemoteControl::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void RemoteControl::Deinitialize(PluginHost::IShell*)
     {
 
         _inputHandler->Unregister(&_feedback);

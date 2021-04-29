@@ -151,7 +151,7 @@ namespace WPASupplicant {
             , _key(key)
             , _ssid(ssid)
             , _id(id)
-            , _throughput(~0)
+            , _throughput(throughPut)
             , _hidden(hidden)
         {
         }

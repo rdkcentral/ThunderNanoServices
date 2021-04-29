@@ -15,13 +15,13 @@
     <ClCompile Include="DIALServer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Netflix.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="YouTube.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DIALServerJsonRpc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AmazonPrime.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

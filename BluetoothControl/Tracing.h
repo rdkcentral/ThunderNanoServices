@@ -50,7 +50,7 @@ namespace Plugin {
                 string temp;
                 va_list ap;
                 va_start(ap, format);
-                Trace::Format(temp, format, ap);
+                Core::Format(temp, format, ap);
                 va_end(ap);
                 _text += (_text.empty()? "" : ", ") + temp;
             }
@@ -102,7 +102,7 @@ namespace Plugin {
             {
                 va_list ap;
                 va_start(ap, format);
-                Trace::Format(_text, format, ap);
+                Core::Format(_text, format, ap);
                 va_end(ap);
             }
 
@@ -223,7 +223,7 @@ namespace Plugin {
             {
                 va_list ap;
                 va_start(ap, formatter);
-                Trace::Format(_text, formatter, ap);
+                Core::Format(_text, formatter, ap);
                 va_end(ap);
             }
 
@@ -439,7 +439,7 @@ namespace Plugin {
             {
                 va_list ap;
                 va_start(ap, formatter);
-                Trace::Format(_text, formatter, ap);
+                Core::Format(_text, formatter, ap);
                 va_end(ap);
             }
             explicit DeviceFlow(const string& text)

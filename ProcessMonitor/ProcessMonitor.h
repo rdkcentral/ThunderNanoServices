@@ -145,29 +145,31 @@ public:
 
             _processMap.clear();
         }
-        void StateChange(PluginHost::IShell* service) override
+
+        void Activated(const string& callsign, PluginHost::IShell* plugin) override 
         {
-            PluginHost::IShell::state currentState(service->State());
-            if (currentState == PluginHost::IShell::DEACTIVATION) {
-
-                uint64_t exitTime = 0;
-
-                _adminLock.Lock();
-
-                std::unordered_map<string, ProcessObject>::iterator itr(
-                        _processMap.find(service->Callsign()));
-                if (itr != _processMap.end()) {
-                    exitTime = Core::Time::Now().Ticks() + _exittimeout;
-                    itr->second.SetExitTime(exitTime);
-                }
-
-                if (exitTime != 0) {
-                    ScheduleJob();
-                }
-
-                _adminLock.Unlock();
-            }
         }
+
+        void Deactivated(const string& callsign, PluginHost::IShell* plugin) override 
+        {
+            uint64_t exitTime = 0;
+
+            _adminLock.Lock();
+
+            std::unordered_map<string, ProcessObject>::iterator itr(
+                    _processMap.find(callsign));
+            if (itr != _processMap.end()) {
+                exitTime = Core::Time::Now().Ticks() + _exittimeout;
+                itr->second.SetExitTime(exitTime);
+            }
+
+            if (exitTime != 0) {
+                ScheduleJob();
+            }
+
+            _adminLock.Unlock();
+        }
+
         void AddProcess(const string callsign, const uint32_t processId)
         {
             _adminLock.Lock();

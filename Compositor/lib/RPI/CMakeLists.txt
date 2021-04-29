@@ -17,7 +17,7 @@
 
 set(TARGET ${PLATFORM_COMPOSITOR})
 
-message("Setting up ${TARGET} for RPI platfrom")
+message(STATUS "Setting up ${TARGET} for RPI platfrom")
 
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)

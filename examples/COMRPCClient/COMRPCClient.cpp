@@ -251,7 +251,9 @@ int main(int argc, char* argv[])
         } while (keyPress != 'Q');
     }
 
+    printf("Prior to the call Dispose\n");
     Thunder::Core::Singleton::Dispose();
+    printf("Completed the call Dispose\n");
 
     return 0;
 }

@@ -18,63 +18,73 @@
  */
 #include "ResourceMonitor.h"
 
-namespace WPEFramework {
+namespace WPEFramework
+{
 
-namespace Plugin {
-
-    SERVICE_REGISTRATION(ResourceMonitor, 1, 0);
-
-    const string ResourceMonitor::Initialize(PluginHost::IShell* service)
+    namespace Plugin
     {
-        string message;
-        _connectionId = 0;
 
-        ASSERT(_service == nullptr);
-        ASSERT(_monitor == nullptr);
+        SERVICE_REGISTRATION(ResourceMonitor, 1, 0);
 
-        _service = service;
+        const string ResourceMonitor::Initialize(PluginHost::IShell *service)
+        {
+            string message;
+            _connectionId = 0;
 
-        Config config;
-        config.FromString(_service->ConfigLine());
-        _skipURL = static_cast<uint32_t>(_service->WebPrefix().length());
+            ASSERT(_service == nullptr);
+            ASSERT(_monitor == nullptr);
 
-        _monitor = _service->Root<Exchange::IResourceMonitor>(_connectionId, 2000, _T("ResourceMonitorImplementation"));
+            _service = service;
 
-        if (_monitor == nullptr) {
-            _service = nullptr;
-            message = _T("ResourceMonitor could not be instantiated.");
-        } else {
-            _monitor->Configure(service);
-        }
+            Config config;
+            config.FromString(_service->ConfigLine());
+            _skipURL = static_cast<uint32_t>(_service->WebPrefix().length());
 
-        return message;
-    }
+            _monitor = _service->Root<Exchange::IResourceMonitor>(_connectionId, 2000, _T("ResourceMonitorImplementation"));
 
-    void ResourceMonitor::Deinitialize(PluginHost::IShell* service)
-    {
-        ASSERT(_service == _service);
-
-        _monitor->Release();
-        
-        if (_connectionId != 0) {
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-
-            // The process can disappear in the meantime...
-            if (connection != nullptr) {
-                // Connection is still there.
-                connection->Terminate();
-                connection->Release();
+            if (_monitor == nullptr)
+            {
+                _service = nullptr;
+                message = _T("ResourceMonitor could not be instantiated.");
             }
+            else
+            {
+                if(_monitor->Configure(service) == Core::ERROR_INCOMPLETE_CONFIG){
+                    _service = nullptr;
+                    message = _T("ResourceMonitor could not be instantiated.");
+                }
+            }
+
+            return message;
         }
 
-        _service = nullptr;
-    }
+        void ResourceMonitor::Deinitialize(PluginHost::IShell *service)
+        {
+            ASSERT(_service == _service);
 
-    string ResourceMonitor::Information() const
-    {
-        return "";
-    }
+            _monitor->Release();
 
-    /* static */ Core::ProxyPoolType<Web::TextBody> ResourceMonitor::webBodyFactory(4);
-}
-}
+            if (_connectionId != 0)
+            {
+                RPC::IRemoteConnection *connection(_service->RemoteConnection(_connectionId));
+
+                // The process can disappear in the meantime...
+                if (connection != nullptr)
+                {
+                    // Connection is still there.
+                    connection->Terminate();
+                    connection->Release();
+                }
+            }
+
+            _service = nullptr;
+        }
+
+        string ResourceMonitor::Information() const
+        {
+            return "";
+        }
+
+        /* static */ Core::ProxyPoolType<Web::TextBody> ResourceMonitor::webBodyFactory(4);
+    } // namespace Plugin
+} // namespace WPEFramework

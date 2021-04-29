@@ -140,7 +140,7 @@ namespace Plugin {
 
         protected:
             FileBodyExtended(Core::BinairySemaphore* semLock, const string& path)
-                : Web::FileBody(path, false)
+                : Web::FileBody(path)
                 , _semLock(*semLock)
             {
                 // Already exist, due to unexpected termination!
@@ -212,9 +212,8 @@ namespace Plugin {
         return (result);
     }
 
-    /* virtual */ void Snapshot::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void Snapshot::Deinitialize(PluginHost::IShell*)
     {
-
         ASSERT(_device != nullptr);
 
         if (_device != nullptr) {

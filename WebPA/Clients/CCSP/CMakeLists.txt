@@ -16,9 +16,12 @@
 # limitations under the License.
 
 set(TARGET CCSP)
-message("Setup ${TARGET} v${VERSION}...")
+message("Setup ${TARGET} v${PROJECT_VERSION}...")
 
 find_package(WPEFramework)
+
+project_version(1.0.0)
+
 find_package(CJSON REQUIRED)
 find_package(WDMP-C REQUIRED)
 find_package(LibParodus REQUIRED)
