@@ -29,6 +29,8 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+set(PLUGIN_SYSTEMDCONNECTOR_AUTOSTART true CACHE STRING "Automatically start SystemdConnector plugin")
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(Systemd REQUIRED)
