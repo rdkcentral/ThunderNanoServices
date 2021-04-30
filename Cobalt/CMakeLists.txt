@@ -29,8 +29,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_COBALT_WEBINSPECTOR_ADDRESS 0.0.0.0:9222 CACHE STRING "IP:Port for WebInspector of Cobalt")
-
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(Cobalt REQUIRED)
 
@@ -68,6 +66,7 @@ install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE
 set(PLUGIN_COBALT_AUTOSTART false CACHE STRING "Automatically start Cobalt plugin")
 set(PLUGIN_COBALT_OUTOFPROCESS false CACHE STRING "Controls if the plugin should run in its own process")
 set(PLUGIN_COBALT_RESOLUTION "720p" CACHE STRING "Browser resolution")
+set(PLUGIN_COBALT_WEBINSPECTOR_ADDRESS 0.0.0.0:9222 CACHE STRING "IP:Port for WebInspector of Cobalt")
 
 # resolution handling
 if(PLUGIN_COBALT_RESOLUTION EQUAL "720p")
