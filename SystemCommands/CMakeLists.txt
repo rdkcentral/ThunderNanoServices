@@ -27,6 +27,8 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
+set(PLUGIN_SYSTEMCOMMANDS_AUTOSTART true CACHE STRING "Automatically start SystemCommands plugin")
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
