@@ -10,6 +10,10 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
+set(PLUGIN_RESOURCEMONITOR_AUTOSTART false CACHE STRING "Automatically start ResourceMonitor plugin")
+set(PLUGIN_RESOURCEMONITOR_RESUMED true CACHE STRING "Set ResourceMonitor plugin resume state")
+set(PLUGIN_RESOURCEMONITOR_OUTOFPROCESS true CACHE STRING "Controls if the plugin should run in its own process")
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
