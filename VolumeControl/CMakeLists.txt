@@ -30,6 +30,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(PLAFORM_VOLUMECONTROL volumectrlplatform)
+set(PLUGIN_VOLUMECONTROL_AUTOSTART true CACHE STRING "Automatically start VolumeControl plugin")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)

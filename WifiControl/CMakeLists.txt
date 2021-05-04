@@ -28,6 +28,8 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_WIFICONTROL_AUTOSTART true CACHE STRING "Automatically start WifiControl plugin")
+set(PLUGIN_WIFICONTROL_AUTOCONNECT true CACHE STRING "Automatically start to connect with configured SSID")
+set(PLUGIN_WIFICONTROL_AUTOCONNECT_RETRYINTERVAL 30 CACHE STRING "Autoconnect Retry interval in seconds")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
