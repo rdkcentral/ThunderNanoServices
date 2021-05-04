@@ -27,8 +27,8 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_DHCPSERVER_AUTOSTART false CACHE STRING "Automatically start DHCPServer plugin")
-set(PLUGIN_DHCPSERVER_OUTOFPROCESS true CACHE BOOL "Controls if the plugin should run in its own process [true, false].")
+set(PLUGIN_DHCPSERVER_AUTOSTART "false" CACHE STRING "Automatically start DHCPServer plugin")
+set(PLUGIN_DHCPSERVER_OUTOFPROCESS "true" CACHE STRING "Controls if the plugin should run in its own process [true, false].")
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
