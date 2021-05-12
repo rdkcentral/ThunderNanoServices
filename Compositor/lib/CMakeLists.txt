@@ -30,7 +30,9 @@ if("${PLUGIN_COMPOSITOR_IMPLEMENTATION}" STREQUAL "Nexus")
         add_subdirectory(Nexus)
     endif()
     if (NOT PLUGIN_COMPOSITOR_NXSERVER)
-        NEXUS_SERVER_EXTERNAL=ON
+        target_compile_definitions(${MODULE_NAME} 
+            PRIVATE
+                NEXUS_SERVER_EXTERNAL=ON)
     endif()
 else()
     add_subdirectory (${PLUGIN_COMPOSITOR_IMPLEMENTATION})
