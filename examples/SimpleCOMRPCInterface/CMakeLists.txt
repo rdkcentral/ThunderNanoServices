@@ -22,12 +22,10 @@ add_library(${TARGET} SHARED
         Module.cpp
         )
 
-
 target_link_libraries(${TARGET}
-		PRIVATE
-		  ${NAMESPACE}WebSocket::${NAMESPACE}WebSocket
-		  ${NAMESPACE}COM::${NAMESPACE}COM
-            )
+        PRIVATE
+                ${NAMESPACE}COM::${NAMESPACE}COM
+        )
 
 target_link_libraries(${TARGET}
         PRIVATE
