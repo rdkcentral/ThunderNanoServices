@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find_package(${NAMESPACE}Protocols REQUIRED)
+find_package(${NAMESPACE}COM REQUIRED)
 find_package(securityagent QUIET)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
@@ -28,7 +28,7 @@ set_target_properties(JSONRPCClient PROPERTIES
 
 target_link_libraries(JSONRPCClient 
         PRIVATE
-        ${NAMESPACE}Protocols::${NAMESPACE}Protocols
+        ${NAMESPACE}COM::${NAMESPACE}COM
         CompileSettingsDebug::CompileSettingsDebug
     )
 

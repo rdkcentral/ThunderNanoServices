@@ -27,6 +27,8 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
+set(PLUGIN_FILETRANSFER_AUTOSTART false CACHE STRING "Automatically start FileTransfer plugin")
+
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 

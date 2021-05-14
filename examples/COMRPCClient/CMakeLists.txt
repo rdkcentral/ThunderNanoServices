@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find_package(${NAMESPACE}Protocols REQUIRED)
+find_package(${NAMESPACE}COM REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_executable(COMRPCClient COMRPCClient.cpp)
@@ -27,7 +27,7 @@ set_target_properties(COMRPCClient PROPERTIES
 
 target_link_libraries(COMRPCClient 
         PRIVATE
-        ${NAMESPACE}Protocols::${NAMESPACE}Protocols
+        ${NAMESPACE}COM::${NAMESPACE}COM
         CompileSettingsDebug::CompileSettingsDebug
     )
 

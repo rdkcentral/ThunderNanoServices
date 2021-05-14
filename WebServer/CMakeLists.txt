@@ -27,6 +27,13 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
+set(PLUGIN_WEBSERVER_AUTOSTART true CACHE STRING "Automatically start WebServer plugin")
+set(PLUGIN_WEBSERVER_RESUMED true CACHE STRING "Set WebServer plugin resume state")
+set(PLUGIN_WEBSERVER_OUTOFPROCESS true CACHE STRING "Controls if the plugin should run in its own process")
+
+option(PLUGIN_WEBSERVER_PROXY_DEVICEINFO "Enable proxy for DeviceInfo" ${PLUGIN_DEVICEINFO})
+option(PLUGIN_WEBSERVER_PROXY_DIALSERVER "Enable proxy for DIALServer" ${PLUGIN_DIALSERVER})
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 

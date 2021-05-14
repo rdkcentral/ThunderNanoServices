@@ -25,8 +25,9 @@ project_version(1.0.0)
 
 set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
-
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
+set(PLUGIN_TIMESYNC_AUTOSTART true CACHE STRING "Automatically start TimeSync plugin")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)

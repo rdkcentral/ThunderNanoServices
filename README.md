@@ -8,11 +8,9 @@
 * [DIALServer](DIALServer/doc/DIALServerPlugin.md)
 * Dictionary
 * [DisplayInfo](DisplayInfo/doc/DisplayInfoPlugin.md)
-* DSResolution
 * [DTV](DTV/doc/DTVPlugin.md)
 * FileTransfer
 * [FirmwareControl](FirmwareControl/doc/FirmwareControlPlugin.md)
-* FrontPanel
 * [InputSwitch](InputSwitch/doc/InputSwitchPlugin.md)
 * [IOConnector](IOConnector/doc/IOConnectorPlugin.md)
 * [NetworkControl](NetworkControl/doc/NetworkControlPlugin.md)
@@ -20,7 +18,6 @@
 * [Power](Power/doc/PowerPlugin.md)
 * [ProcessMonitor](ProcessMonitor/doc/ProcessMonitorPlugin.md)
 * [RemoteControl](RemoteControl/doc/RemoteControlPlugin.md)
-* RtspClient
 * SecureShellServer
 * Snapshot
 * [Spark](Spark/doc/SparkPlugin.md)
