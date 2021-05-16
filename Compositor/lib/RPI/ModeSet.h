@@ -22,11 +22,6 @@ namespace WPEFramework {
 class ModeSet
 {
     public:
-        struct ICallback {
-            virtual ~ICallback() = default;
-            virtual void PageFlip(unsigned int frame, unsigned int sec, unsigned int usec) = 0;
-            virtual void VBlank(unsigned int frame, unsigned int sec, unsigned int usec) = 0;
-        };
         struct BufferInfo {
             struct gbm_surface* _surface;
             struct gbm_bo* _bo;
@@ -43,6 +38,10 @@ class ModeSet
     public:
         uint32_t Open(const string& name);
         uint32_t Close();
+
+        const struct gbm_device* UnderlyingHandle() const {
+            return _device;
+        }
 
         static constexpr uint32_t SupportedBufferType()
         {
@@ -83,60 +82,6 @@ class ModeSet
         struct gbm_device* _device;
         struct gbm_bo* _buffer;
         int _fd;
-};
-
-class ClientSurface : public Exchange::IComposition::IClient {
-public:
-    ClientSurface() = delete;
-    ClientSurface(const ClientSurface&) = delete;
-    ClientSurface& operator= (const ClientSurface&) = delete;
-
-    ClientSurface(ModeSet& modeSet, const string& name, const EGLSurface& surface, const uint32_t width, const uint32_t height)
-        : _modeSet(modeSet)
-        , _name(name)
-        , _nativeSurface(surface)
-        , _opacity(Exchange::IComposition::maxOpacity)
-        , _layer(0)
-        , _destination( { 0, 0, width, height } ) {
-    }
-    ~ClientSurface() override = default;
-
-public:
-    inline const EGLSurface& Surface() const
-    {
-        return (_nativeSurface);
-    }
-    inline int32_t Width() const
-    {
-            return _destination.width;
-    }
-    inline int32_t Height() const
-    {
-            return _destination.height;
-    }
-    string Name() const override
-    {
-            return _name;
-    }
-    void Opacity(const uint32_t value) override;
-    uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override;
-    Exchange::IComposition::Rectangle Geometry() const override;
-    uint32_t ZOrder(const uint16_t zorder) override;
-    uint32_t ZOrder() const override;
-
-    BEGIN_INTERFACE_MAP(ClientSurface)
-        INTERFACE_ENTRY(Exchange::IComposition::IClient)
-    END_INTERFACE_MAP
-
-private:
-    ModeSet& _modeSet;
-    const std::string _name;
-    EGLSurface _nativeSurface;
-
-    uint32_t _opacity;
-    uint32_t _layer;
-
-    Exchange::IComposition::Rectangle _destination;
 };
 
 }

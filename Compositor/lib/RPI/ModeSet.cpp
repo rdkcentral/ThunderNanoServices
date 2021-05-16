@@ -300,7 +300,9 @@ ModeSet::ModeSet()
 
 ModeSet::~ModeSet()
 {
-    Close();
+    if (_buffer != nullptr) {
+        Close();
+    }
 }
 
 uint32_t ModeSet::Open (const string& /* name */) {

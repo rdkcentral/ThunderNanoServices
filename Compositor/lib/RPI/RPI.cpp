@@ -21,14 +21,65 @@
 
 #include <interfaces/IComposition.h>
 
-#ifdef VC6
 #include "ModeSet.h"
-#endif
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace WPEFramework {
 namespace Plugin {
+
+class CompositorImplementation;
+
+    class ClientSurface : public Exchange::IComposition::IClient {
+    public:
+        ClientSurface() = delete;
+        ClientSurface(const ClientSurface&) = delete;
+        ClientSurface& operator= (const ClientSurface&) = delete;
+
+        ClientSurface(ModeSet& modeSet, CompositorImplementation& compositor, const string& name, const EGLSurface& surface, const uint32_t width, const uint32_t height);
+        ~ClientSurface() override;
+
+    public:
+        RPC::instance_id Native() const override {
+                return reinterpret_cast<RPC::instance_id>(_nativeSurface);
+        }
+        string Name() const override
+        {
+                return _name;
+        }
+        void Opacity(const uint32_t value) override {
+            TRACE(Trace::Error, (_T("Opacity is currently not supported for Surface %s"), _name.c_str()));
+        }
+        uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override {
+            TRACE(Trace::Error, (_T("Geometry is currently not supported for Surface %s"), _name.c_str()));
+            return Core::ERROR_UNAVAILABLE;
+        }
+        Exchange::IComposition::Rectangle Geometry() const override {
+            return _destination;
+        }
+        uint32_t ZOrder(const uint16_t zorder) override {
+            TRACE(Trace::Error, (_T("ZOrder is currently not supported for Surface %s"), _name.c_str()));
+            return Core::ERROR_UNAVAILABLE;
+        }
+        uint32_t ZOrder() const override {
+            return _layer;
+        }
+
+        BEGIN_INTERFACE_MAP(ClientSurface)
+            INTERFACE_ENTRY(Exchange::IComposition::IClient)
+        END_INTERFACE_MAP
+
+    private:
+        ModeSet& _modeSet;
+        CompositorImplementation& _compositor; 
+        const std::string _name;
+        EGLSurface _nativeSurface;
+
+        uint32_t _opacity;
+        uint32_t _layer;
+
+        Exchange::IComposition::Rectangle _destination;
+    };
 
     class CompositorImplementation : public Exchange::IComposition, public Exchange::IComposition::IDisplay {
     private:
@@ -66,26 +117,10 @@ namespace Plugin {
             ~ExternalAccess() override = default;
 
         private:
-            #ifdef VC6
             void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t version) override
             {
                 // Use the className to check for multiple HDMI's. 
                 return (_parent.QueryInterface(interfaceId));
-            }
-            #endif
-            void Offer(Core::IUnknown* element, const uint32_t interfaceID) override
-            {
-                Exchange::IComposition::IClient* result = element->QueryInterface<Exchange::IComposition::IClient>();
-
-                if (result != nullptr) {
-                    _parent.NewClientOffered(result);
-                    result->Release();
-                }
-            }
-
-            void Revoke(const Core::IUnknown* element, const uint32_t interfaceID) override
-            {
-                _parent.ClientRevoked(element);
             }
 
         private:
@@ -100,13 +135,12 @@ namespace Plugin {
             , _externalAccess(nullptr)
             , _observers()
             , _clients()
-            #ifdef VC6
             , _platform()
-            #endif
         {
         }
         ~CompositorImplementation()
         {
+            _clients.Clear();
             if (_externalAccess != nullptr) {
                 delete _externalAccess;
                 _engine.Release();
@@ -143,32 +177,6 @@ namespace Plugin {
             Core::JSON::String Port;
         };
 
-        struct ClientData {
-            ClientData()
-                : currentRectangle()
-                , clientInterface(nullptr)
-            {
-            }
-            ClientData(Exchange::IComposition::IClient* client, Exchange::IComposition::ScreenResolution resolution)
-                : currentRectangle()
-                , clientInterface(client)
-            {
-                clientInterface->AddRef();
-                currentRectangle.x = 0;
-                currentRectangle.y = 0;
-                currentRectangle.width = Exchange::IComposition::WidthFromResolution(resolution);
-                currentRectangle.height = Exchange::IComposition::HeightFromResolution(resolution);
-            }
-            ~ClientData() {
-                if (clientInterface != nullptr) {
-                    clientInterface->Release();
-                }
-            }
-
-            Exchange::IComposition::Rectangle currentRectangle;
-            Exchange::IComposition::IClient* clientInterface;
-        };
-
     public:
         //
         // Echange::IComposition
@@ -187,6 +195,7 @@ namespace Plugin {
 
             if ((_externalAccess->IsListening() == true) && (_platform.Open(config.Port.Value()) == Core::ERROR_NONE)) {
                 _port = config.Port.Value();
+                _platform.Open(_port);
                 PlatformReady();
             } else {
                 delete _externalAccess;
@@ -203,11 +212,11 @@ namespace Plugin {
             ASSERT(std::find(_observers.begin(), _observers.end(), notification) == _observers.end());
             notification->AddRef();
             _observers.push_back(notification);
-            auto index(_clients.begin());
-            while (index != _clients.end()) {
-                notification->Attached(index->first, index->second.clientInterface);
-                index++;
-            }
+
+            _clients.Visit([=](const string& name, const Core::ProxyType<ClientSurface>& element){
+                notification->Attached(name, &(*element));
+            });
+
             _adminLock.Unlock();
         }
         void Unregister(Exchange::IComposition::INotification* notification) override
@@ -221,111 +230,81 @@ namespace Plugin {
             }
             _adminLock.Unlock();
         }
-        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format) override
-        {
-            TRACE(Trace::Information, (_T("Could not set screenresolution to %s. Not supported for Rapberry Pi compositor"), Core::EnumerateType<Exchange::IComposition::ScreenResolution>(format).Data()));
-            return (Core::ERROR_UNAVAILABLE);
+        void Attached(const string& name, IClient* client) {
+            _adminLock.Lock();
+            for(auto& observer : _observers) {
+                observer->Attached(name, client);
+            }
+            _adminLock.Unlock();
         }
-        Exchange::IComposition::ScreenResolution Resolution() const override
-        {
-            return Exchange::IComposition::ScreenResolution::ScreenResolution_720p;
+        void Detached(const string& name) {
+            _adminLock.Lock();
+            for(auto& observer : _observers) {
+                observer->Detached(name);
+            }
+            _adminLock.Unlock();
         }
 
         //
         // Echange::IComposition::IDisplay
         // ==================================================================================================================
+        RPC::instance_id Native() const override {
+            EGLNativeDisplayType result (static_cast<EGLNativeDisplayType>(EGL_DEFAULT_DISPLAY));
+
+            const struct gbm_device* pointer = _platform.UnderlyingHandle();
+
+            if(pointer != nullptr) {
+                result = reinterpret_cast<EGLNativeDisplayType>(const_cast<struct gbm_device*>(pointer));
+            }
+            else {
+                TRACE(Trace::Error, (_T("The native display (id) might be invalid / unsupported. Using the EGL default display instead!")));
+            }
+
+            return reinterpret_cast<RPC::instance_id>(result);
+        }
+
         string Port() const override {
             return (_port);
         }
         IClient* CreateClient(const string& name, const uint32_t width, const uint32_t height) override {
             IClient* client = nullptr;
 
-            #ifdef VC6
             struct gbm_surface* surface = _platform.CreateRenderTarget(width, height);
             if (surface != nullptr) {
-                client = Core::Service<ClientSurface>::Create<IClient>(
+
+                Core::ProxyType<ClientSurface> object = _clients. template Instance(
+                             name,
                              _platform,
+                             *this,
                              name,
                              reinterpret_cast<EGLSurface>(surface),
                              width,
                              height);
+
+                ASSERT(object.IsValid() == true);
+
+                if( object.IsValid() == true ) {
+                    client = &(*object);
+                }
+            } 
+
+            if(client == nullptr) {
+                TRACE(Trace::Error, (_T("Could not create the Surface with name %s"), name.c_str()));
             }
-            #endif
 
             return (client);
         }
+        Exchange::IComposition::ScreenResolution Resolution() const override
+        {
+            return Exchange::IComposition::ResolutionFromHeightWidth(_platform.Height(), _platform.Width());
+        }
+        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format) override
+        {
+            TRACE(Trace::Error, (_T("Could not set screenresolution to %s. Not supported for Rapberry Pi compositor"), Core::EnumerateType<Exchange::IComposition::ScreenResolution>(format).Data()));
+            return (Core::ERROR_UNAVAILABLE);
+        }
 
     private:
-        using ClientDataContainer = std::map<string, ClientData>;
-        using ConstClientDataIterator = ClientDataContainer::const_iterator;
-
-        ConstClientDataIterator GetClientIterator(const string& callsign) const
-        {
-            return _clients.find(callsign);
-        }
-        void NewClientOffered(Exchange::IComposition::IClient* client)
-        {
-            ASSERT(client != nullptr);
-            if (client != nullptr) {
-
-                const string name(client->Name());
-                if (name.empty() == true) {
-                    ASSERT(false);
-                    TRACE(Trace::Information, (_T("Registration of a nameless client.")));
-                } else {
-                    _adminLock.Lock();
-
-                    ClientDataContainer::iterator element (_clients.find(name));
-
-                    if (element != _clients.end()) {
-                        // as the old one may be dangling becayse of a crash let's remove that one, this is the most logical thing to do
-                        ClientRevoked(element->second.clientInterface);
-
-                        TRACE(Trace::Information, (_T("Replace client %s."), name.c_str()));
-                    }
-                    else {
-                        TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
-
-                    }
-
-                    _clients.emplace(std::piecewise_construct,
-                                         std::forward_as_tuple(name),
-                                         std::forward_as_tuple(client, Resolution()));
-
-                    for (auto&& index : _observers) {
-                        index->Attached(name, client);
-                    }
-
-                    _adminLock.Unlock();
-                }
-            }
-        }
-        void ClientRevoked(const IUnknown* client)
-        {
-            // note do not release by looking up the name, client might live in another process and the name call might fail if the connection is gone
-            ASSERT(client != nullptr);
-
-            _adminLock.Lock();
-            auto it = _clients.begin();
-            while ( (it != _clients.end()) && (it->second.clientInterface != client) ) { ++it; }
-
-            if (it != _clients.end()) {
-                string name (it->first);
-                TRACE(Trace::Information, (_T("Remove client %s."), name.c_str()));
-                for (auto index : _observers) {
-                    // note as we have the name here, we could more efficiently pass the name to the
-                    // caller as it is not allowed to get it from the pointer passes, but we are going
-                    // to restructure the interface anyway
-                    index->Detached(name.c_str());
-                }
-
-                _clients.erase(it);
-            }
-
-            _adminLock.Unlock();
-
-            TRACE(Trace::Information, (_T("Client detached completed")));
-        }
         void PlatformReady()
         {
             PluginHost::ISubSystem* subSystems(_service->SubSystems());
@@ -336,84 +315,40 @@ namespace Plugin {
                 subSystems->Release();
             }
         }
-        Exchange::IComposition::Rectangle FindClientRectangle(const string& name) const
-        {
-            Exchange::IComposition::Rectangle rectangle = Exchange::IComposition::Rectangle();
-
-            _adminLock.Lock();
-
-            const ClientData* clientdata = FindClientData(name);
-
-            if (clientdata != nullptr) {
-                rectangle = clientdata->currentRectangle;
-            }
-
-            _adminLock.Unlock();
-
-            return rectangle;
-        }
-        uint32_t SetClientRectangle(const string& name, const Exchange::IComposition::Rectangle& rectangle)
-        {
-
-            _adminLock.Lock();
-
-            ClientData* clientdata = FindClientData(name);
-
-            if (clientdata != nullptr) {
-                clientdata->currentRectangle = rectangle;
-            }
-
-            _adminLock.Unlock();
-
-            return (clientdata != nullptr ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
-        }
-        IClient* FindClient(const string& name) const
-        {
-            IClient* client = nullptr;
-
-            _adminLock.Lock();
-
-            const ClientData* clientdata = FindClientData(name);
-
-            if (clientdata != nullptr) {
-                client = clientdata->clientInterface;
-                ASSERT(client != nullptr);
-                client->AddRef();
-            }
-
-            _adminLock.Unlock();
-
-            return client;
-        }
-        ClientData* FindClientData(const string& name)
-        {
-            return const_cast<ClientData*>(static_cast<const CompositorImplementation&>(*this).FindClientData(name));
-        }
-        const ClientData* FindClientData(const string& name) const
-        {
-            const ClientData* clientdata = nullptr;
-            auto iterator = GetClientIterator(name);
-            if (iterator != _clients.end()) {
-                clientdata = &(iterator->second);
-            }
-            return clientdata;
-        }
 
     private:
+        using ClientContainer = Core::ProxyMapType<string, ClientSurface>;
+
         mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         Core::ProxyType<RPC::InvokeServer> _engine;
         ExternalAccess* _externalAccess;
         std::list<Exchange::IComposition::INotification*> _observers;
-        ClientDataContainer _clients;
+        ClientContainer _clients;
         string _port;
-
-        #ifdef VC6
         ModeSet _platform;
-        #endif
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
+
+    ClientSurface::ClientSurface(ModeSet& modeSet, CompositorImplementation& compositor, const string& name, const EGLSurface& surface, const uint32_t width, const uint32_t height)
+        : _modeSet(modeSet)
+        , _compositor(compositor)
+        , _name(name)
+        , _nativeSurface(surface)
+        , _opacity(Exchange::IComposition::maxOpacity)
+        , _layer(0)
+        , _destination( { 0, 0, width, height } ) {
+
+        _compositor.Attached(_name, this);
+
+    }
+
+    ClientSurface::~ClientSurface() {
+
+        _compositor.Detached(_name);
+        
+    }
 
 } // namespace Plugin
 } // namespace WPEFramework
