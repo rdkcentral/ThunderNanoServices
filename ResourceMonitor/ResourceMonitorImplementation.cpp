@@ -16,7 +16,7 @@ namespace Plugin {
         class CSVFile {
         public:
             CSVFile(string filepath, string seperator)
-                : _file(filepath, false)
+                : _file(filepath)
                 , _seperator()
             {
                 _file.Create();
