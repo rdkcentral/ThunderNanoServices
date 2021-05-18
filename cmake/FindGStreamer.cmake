@@ -1,8 +1,8 @@
-# - Try to find gstreamer-1.0.
+# - Try to find bcm_host.
 # Once done, this will define
 #
-#  GSTREAMER_FOUND - the gstreamer-1.0 is available
-#  GStreamer::GStreamer - The gstreamer-1.0 library and all its dependecies
+#  BCM_HOST_FOUND - the bcm_host is available
+#  BCM_HOST::BCM_HOST - The bcm_host library and all its dependecies
 #
 # Copyright (C) 2019 Metrological B.V
 #
@@ -35,26 +35,28 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(PC_GSTREAMER DEFAULT_MSG PC_GSTREAMER_FOUND)
 
 mark_as_advanced(PC_GSTREAMER_INCLUDE_DIRS PC_GSTREAMER_LIBRARIES PC_GSTREAMER_LIBRARY_DIRS)
 
-if(${PC_GSTREAMER_FOUND})
-    find_library(GSTREAMER_LIBRARY gstreamer-1.0
-        HINTS ${PC_GSTREAMER_LIBRARY_DIRS}
-    )
+set(ALL_GSTREAMER_LIBS "")
+foreach(libraryName ${PC_GSTREAMER_LIBRARIES})
+find_library(${libraryName}_GSTREAMER_SINGLE_LIB ${libraryName} HINTS ${PC_GSTREAMER_LIBRARY_DIRS})
+list(APPEND ALL_GSTREAMER_LIBS "${${libraryName}_GSTREAMER_SINGLE_LIB}")
+endforeach(libraryName)
 
-    set(GSTREAMER_LIBRARIES ${PC_GSTREAMER_LIBRARIES})
+if(${PC_GSTREAMER_FOUND})
+    set(GSTREAMER_LIBRARIES ${ALL_GSTREAMER_LIBS})
     set(GSTREAMER_INCLUDES ${PC_GSTREAMER_INCLUDE_DIRS})
     set(GSTREAMER_FOUND ${PC_GSTREAMER_FOUND})
 
-    if(NOT TARGET GStreamer::GStreamer)
-        add_library(GStreamer::GStreamer UNKNOWN IMPORTED)
+    if(NOT TARGET GSTREAMER::GSTREAMER)
+        add_library(GSTREAMER::GSTREAMER UNKNOWN IMPORTED)
 
-        set_target_properties(GStreamer::GStreamer
+        set_target_properties(GSTREAMER::GSTREAMER
                 PROPERTIES
                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                IMPORTED_LOCATION "${GSTREAMER_LIBRARY}"
+                IMPORTED_LOCATION "${PC_GSTREAMER_LIBRARY_DIRS}"
                 INTERFACE_COMPILE_DEFINITIONS "GSTREAMER"
                 INTERFACE_COMPILE_OPTIONS "${PC_GSTREAMER_CFLAGS_OTHER}"
                 INTERFACE_INCLUDE_DIRECTORIES "${PC_GSTREAMER_INCLUDE_DIRS}"
-                INTERFACE_LINK_LIBRARIES "${PC_GSTREAMER_LIBRARIES}"
+                INTERFACE_LINK_LIBRARIES "${ALL_GSTREAMER_LIBS}"
                 )
     endif()
 endif()
