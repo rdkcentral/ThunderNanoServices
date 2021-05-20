@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's license file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 RDK Management
+# Copyright 2020 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the License);
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find_package(${NAMESPACE}Protocols REQUIRED)
+find_package(${NAMESPACE}COM REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_executable(SimpleCOMRPCServer SimpleCOMRPCServer.cpp)
@@ -27,7 +27,7 @@ set_target_properties(COMRPCClient PROPERTIES
 
 target_link_libraries(SimpleCOMRPCServer
         PRIVATE
-        ${NAMESPACE}Protocols::${NAMESPACE}Protocols
+        ${NAMESPACE}COM::${NAMESPACE}COM
         CompileSettingsDebug::CompileSettingsDebug
     )
 
