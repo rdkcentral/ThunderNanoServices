@@ -17,8 +17,7 @@
  * limitations under the License.
  */
  
-#ifndef IOCONNECTOR_MODULE_H
-#define IOCONNECTOR_MODULE_H
+#pragma once
 
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_IOConnector
@@ -28,5 +27,3 @@
 
 #undef EXTERNAL
 #define EXTERNAL
-
-#endif // IOCONNECTOR_MODULE_H
