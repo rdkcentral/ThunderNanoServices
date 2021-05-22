@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-#ifndef DHCPSERVER_MODULE_H
-#define DHCPSERVER_MODULE_H
+#pragma
 
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_DHCPServer
@@ -28,5 +27,3 @@
 
 #undef EXTERNAL
 #define EXTERNAL
-
-#endif // DHCPSERVER_MODULE_H

@@ -17,8 +17,7 @@
  * limitations under the License.
  */
  
-#ifndef __MODULE_PLUGIN_WEBPROXY_H
-#define __MODULE_PLUGIN_WEBPROXY_H
+#pragma once
 
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_WebProxy
@@ -28,5 +27,3 @@
 
 #undef EXTERNAL
 #define EXTERNAL
-
-#endif // __MODULE_PLUGIN_WEBPROXY_H

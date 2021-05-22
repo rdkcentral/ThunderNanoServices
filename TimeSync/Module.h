@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-#ifndef TIMESYNC_MODULE_H
-#define TIMESYNC_MODULE_H
+#pragma once
 
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_TimeSync
@@ -28,5 +27,3 @@
 
 #undef EXTERNAL
 #define EXTERNAL
-
-#endif // TIMESYNC_MODULE_H

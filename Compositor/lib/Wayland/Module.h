@@ -17,8 +17,7 @@
  * limitations under the License.
  */
  
-#ifndef __MODULE_COMPOSITOR_IMPL_H
-#define __MODULE_COMPOSITOR_IMPL_H
+#pragma
 
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_Compositor_Implementation
@@ -29,5 +28,3 @@
 
 #undef EXTERNAL
 #define EXTERNAL
-
-#endif // __MODULE_COMPOSITOR_IMPL_H

@@ -17,16 +17,13 @@
  * limitations under the License.
  */
  
-#ifndef OPENPLUGIN_DEVICEINFO_MODULE_H
-#define OPENPLUGIN_DEVICEINFO_MODULE_H
+#pragma
 
 #ifndef MODULE_NAME
-#define MODULE_NAME Plugin_DeviceInfo
+#define MODULE_NAME Plugin_InputSwitch
 #endif
 
 #include <plugins/plugins.h>
 
 #undef EXTERNAL
 #define EXTERNAL
-
-#endif // OPENPLUGIN_DEVICEINFO_MODULE_H

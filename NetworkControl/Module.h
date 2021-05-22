@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-#ifndef NETWORKCONTROL_MODULE_H
-#define NETWORKCONTROL_MODULE_H
+#pragma once
 
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_NetworkControl
@@ -30,5 +29,3 @@
 
 #undef EXTERNAL
 #define EXTERNAL
-
-#endif // NETWORKCONTROL_MODULE_H

@@ -17,8 +17,7 @@
  * limitations under the License.
  */
  
-#ifndef DICTIONARY_MODULE_H
-#define DICTIONARY_MODULE_H
+#pragma once
 
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_Dictionary
@@ -28,5 +27,3 @@
 
 #undef EXTERNAL
 #define EXTERNAL
-
-#endif // DICTIONARY_MODULE_H
