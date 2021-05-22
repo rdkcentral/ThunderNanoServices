@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-#ifndef PLUGIN_WIFICONTROL_MODULE_H
-#define PLUGIN_WIFICONTROL_MODULE_H
+#pragma once
 
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_WifiControl
@@ -30,5 +29,3 @@
 
 #undef EXTERNAL
 #define EXTERNAL
-
-#endif // PLUGIN_WIFICONTROL_MODULE_H

@@ -17,10 +17,10 @@
  * limitations under the License.
  */
 
-#pragma once 
+#pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME Plugin_Containers
+#define MODULE_NAME Plugin_ProcessContainers
 #endif
 
 #include <plugins/plugins.h>
