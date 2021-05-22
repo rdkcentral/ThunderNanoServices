@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-#ifndef __MODULE_PLUGIN_REMOTECONTROL_H
-#define __MODULE_PLUGIN_REMOTECONTROL_H
+#pragma once
 
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_RemoteControl
@@ -31,5 +30,3 @@
 
 #undef EXTERNAL
 #define EXTERNAL
-
-#endif // __MODULE_PLUGIN_REMOTECONTROL_H

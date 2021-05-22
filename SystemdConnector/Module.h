@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-#ifndef SYSTEMDCONNECTOR_MODULE_H
-#define SYSTEMDCONNECTOR_MODULE_H
+#pragma once
 
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_SystemdConnector
@@ -28,5 +27,3 @@
 
 #undef EXTERNAL
 #define EXTERNAL
-
-#endif // SYSTEMDCONNECTOR_MODULE_H

@@ -20,7 +20,7 @@
 #pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME Plugin_OutOfProcessPlugin
+#define MODULE_NAME Plugin_OutOfProcess
 #endif
 
 #include <plugins/plugins.h>
