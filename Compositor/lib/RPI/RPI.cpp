@@ -40,8 +40,8 @@ class CompositorImplementation;
         ~ClientSurface() override;
 
     public:
-        RPC::instance_id Native() const override {
-                return reinterpret_cast<RPC::instance_id>(_nativeSurface);
+        instance_id Native() const override {
+                return reinterpret_cast<instance_id>(_nativeSurface);
         }
         string Name() const override
         {
@@ -248,7 +248,7 @@ class CompositorImplementation;
         //
         // Echange::IComposition::IDisplay
         // ==================================================================================================================
-        RPC::instance_id Native() const override {
+        instance_id Native() const override {
             EGLNativeDisplayType result (static_cast<EGLNativeDisplayType>(EGL_DEFAULT_DISPLAY));
 
             const struct gbm_device* pointer = _platform.UnderlyingHandle();
@@ -260,7 +260,7 @@ class CompositorImplementation;
                 TRACE(Trace::Error, (_T("The native display (id) might be invalid / unsupported. Using the EGL default display instead!")));
             }
 
-            return reinterpret_cast<RPC::instance_id>(result);
+            return reinterpret_cast<instance_id>(result);
         }
 
         string Port() const override {

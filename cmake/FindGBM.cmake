@@ -58,7 +58,7 @@ if(${PKG_CONFIG_FOUND})
         message(FATAL_ERROR "Some required variable(s) is (are) not found / set! Does gbm.pc exist?")
     endif()
 
-    mark_as_advanced(LIBDRM_INCLUDE_DIRS LIBDRM_LIBRARIES)
+    mark_as_advanced(LIBGBM_INCLUDE_DIRS LIBGBM_LIBRARIES)
 
 else()
 

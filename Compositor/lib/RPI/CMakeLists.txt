@@ -46,7 +46,11 @@ else()
 
     target_compile_definitions(${TARGET} PRIVATE VC6)
 
-    target_link_libraries(${TARGET} PRIVATE libdrm::libdrm)
+    target_link_libraries(${TARGET} 
+        PRIVATE 
+            libdrm::libdrm
+            libgbm::libgbm
+    )
 
 endif()
 
