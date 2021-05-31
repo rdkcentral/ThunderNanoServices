@@ -32,17 +32,16 @@ add_library(${LIB_NAME} STATIC
 target_include_directories(${LIB_NAME}
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../../
-        ${GLIB_INCLUDE_DIRS}
-        ${GSTREAMER_INCLUDES})
+        ${GLIB_INCLUDE_DIRS})
 
 target_link_libraries(${LIB_NAME}
     PRIVATE
         AAMP::AAMP
+        GStreamer::GStreamer
         GStreamerVideo::GStreamerVideo
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${GLIB_GIO_LIBRARIES}
-        ${GLIB_LIBRARIES}
-        ${GSTREAMER_LIBRARIES})
+        ${GLIB_LIBRARIES})
 
 install(TARGETS ${LIB_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/)
