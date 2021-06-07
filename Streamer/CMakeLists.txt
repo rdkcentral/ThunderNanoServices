@@ -76,6 +76,6 @@ target_link_libraries(${MODULE_NAME}
         -Wl,--whole-archive ${PLAYER_LIBS} -Wl,--no-whole-archive)
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config()
