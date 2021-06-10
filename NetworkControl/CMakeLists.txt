@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 RDK Management
+# Copyright 2020 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
+set(PLUGIN_NETWORKCONTROL_AUTOSTART true CACHE STRING "Automatically start NetworkControl plugin")
 set(PLUGIN_NETWORKCONTROL_DHCP_RESONSE_TIMEOUT 5 CACHE STRING "Timeout per request to get a DHCP lease")
 set(PLUGIN_NETWORKCONTROL_DHCP_RETRIES 4 CACHE STRING "Times to retry to get a DHCP lease")
 

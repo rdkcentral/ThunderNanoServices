@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 RDK Management
+# Copyright 2020 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 option(PLUGIN_BLUETOOTH_DEVELOPMENT "Enable verbose tracing" ON)
 
 set(PLUGIN_BLUETOOTH_AUTOSTART true CACHE STRING true)
-set(PLUGIN_BLUETOOTH_OOP false CACHE STRING true)
 
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)

@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2020 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,7 +127,9 @@ public:
     BEGIN_INTERFACE_MAP (Cobalt)
     INTERFACE_ENTRY (PluginHost::IPlugin)
     INTERFACE_ENTRY (PluginHost::IWeb)
-    INTERFACE_ENTRY (PluginHost::IDispatcher)INTERFACE_AGGREGATE(PluginHost::IStateControl, _cobalt)
+    INTERFACE_ENTRY (PluginHost::IDispatcher)
+    INTERFACE_AGGREGATE(PluginHost::IStateControl, _cobalt)
+    INTERFACE_AGGREGATE(Exchange::IApplication, _application)
     INTERFACE_AGGREGATE(Exchange::IBrowser, _cobalt)
     INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
     END_INTERFACE_MAP

@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's license file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 RDK Management
+# Copyright 2020 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,8 +35,6 @@ set(DS_LIBRARIES ${DS_LIBRARIES} ${DSHAL_LIBRARIES})
 set(DS_LIBRARIES ${DS_LIBRARIES} CACHE PATH "Path to DS library")
 set(DS_INCLUDE_DIRS ${DS_INCLUDE_DIRS} ${DSHAL_INCLUDE_DIRS} ${DSRPC_INCLUDE_DIRS})
 set(DS_INCLUDE_DIRS ${DS_INCLUDE_DIRS} CACHE PATH "Path to DS include")
-
-
 
 include(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(DS DEFAULT_MSG DS_INCLUDE_DIRS DS_LIBRARIES)

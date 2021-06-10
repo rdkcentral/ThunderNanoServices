@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 RDK Management
+# Copyright 2020 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(ICU COMPONENTS uc i18n REQUIRED)
+
+set(PLUGIN_LANGUAGEADMINISTRATOR_AUTOSTART true CACHE STRING "Automatically start LanguageAdministrator plugin")
 
 add_library(${MODULE_NAME} SHARED
     LanguageAdministrator.cpp

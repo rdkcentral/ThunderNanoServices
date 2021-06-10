@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 RDK Management
+# Copyright 2020 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,8 +32,7 @@ find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set(PLUGIN_BLUETOOTHREMOTECONTROL_SUPPORT_ADPCM_HQ true CACHE BOOL "Support adpcm-hq audio profile")
-set(PLUGIN_BLUETOOTHREMOTECONTROL_SUPPORT_PCM true CACHE BOOL "Support pcm audio profile")
+set(PLUGIN_BLUETOOTHREMOTECONTROL_AUTOSTART true CACHE STRING true)
 
 add_library(${MODULE_NAME} SHARED
     BluetoothRemoteControl.cpp
@@ -60,7 +59,7 @@ install(TARGETS ${MODULE_NAME}
 
 install(
 	DIRECTORY keymaps/
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/${PLUGIN_NAME}
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/${PROJECT_NAME}
 	FILES_MATCHING PATTERN "*.json")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")

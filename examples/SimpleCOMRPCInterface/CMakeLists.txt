@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's license file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 RDK Management
+# Copyright 2020 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the License);
 # you may not use this file except in compliance with the License.
@@ -22,12 +22,10 @@ add_library(${TARGET} SHARED
         Module.cpp
         )
 
-
 target_link_libraries(${TARGET}
-		PRIVATE
-		  ${NAMESPACE}WebSocket::${NAMESPACE}WebSocket
-		  ${NAMESPACE}COM::${NAMESPACE}COM
-            )
+        PRIVATE
+                ${NAMESPACE}COM::${NAMESPACE}COM
+        )
 
 target_link_libraries(${TARGET}
         PRIVATE
