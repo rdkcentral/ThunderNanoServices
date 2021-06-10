@@ -35,6 +35,7 @@ option(PLUGIN_COMPOSITOR_HARDWAREREADY "Manual overrule of the time it takes to 
 option(PLUGIN_COMPOSITOR_OUTOFPROCESS "Controls if the plugin should run in its own process. [true, false]." true)
 option(PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (Nexus only).")
 option(PLUGIN_COMPOSITOR_GRAPHICS_HEAP_SIZE "Change graphic heap of driver (Nexus only).")
+set(PLUGIN_COMPOSITOR_FAIL_SAFE_HDR OFF CACHE BOOL "Enable fail safe HDR values")
 
 option(PLUGIN_COMPOSITOR_TEST "Build a compositor test client" OFF)
 option(PLUGIN_COMPOSITOR_NXSERVER "Allow to use external nexus server" OFF)

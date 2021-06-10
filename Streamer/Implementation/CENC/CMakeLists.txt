@@ -17,7 +17,7 @@
 
 set(PLAYER_NAME CENC)
 
-find_library(GSTCENCDECRYPTOR gstcencdecrypt)
+find_library(GSTCENCDECRYPTOR gstcencdecrypt PATH_SUFFIXES lib/gstreamer-1.0)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(PkgConfig REQUIRED)
 
