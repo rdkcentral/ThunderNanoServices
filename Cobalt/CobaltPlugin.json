@@ -48,40 +48,10 @@
             "description": "An identifier, used during the surface creation as additional information",
             "example": "2"
           },
-          "manufacturername": {
-            "type": "string",
-            "description": "The name of the hardware manufacturer on which this software is running",
-            "example": "Metrological"
-          },
-          "chipmodelnumber": {
-            "type": "string",
-            "description": "The number/string defining the SOC in this device",
-            "example": "BCM2467"
-          },
-          "firmwareversion": {
-            "type": "string",
-            "description": "The firmwareversion defining the Board Support Package (BSP) in this device",
-            "example": "24.22.347a"
-          },
-          "modelname": {
-            "type": "string",
-            "description": "Name of the model on which this software is running",
-            "example": "X5"
-          },
-          "modelyear": {
-            "type": "string",
-            "description": "The year this device is manufactured",
-            "example": "2020"
-          },
           "operatorname": {
             "type": "string",
             "description": "The name of the operator that owns the infrastructure on which this device is running",
             "example": "Comcast"
-          },
-          "friendlyname": {
-            "type": "string",
-            "description": "A user friendly name given to this device",
-            "example": "Xfinity 2"
           },
           "language": {
             "type": "string",

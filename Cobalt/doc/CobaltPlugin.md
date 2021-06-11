@@ -83,13 +83,7 @@ The table below lists configuration options of the plugin.
 | configuration?.repeatstart | number | <sup>*(optional)*</sup> The number of milliseconds a key should be pressed to start reapeating (set max to adhere to Thunder) |
 | configuration?.repeatinterval | number | <sup>*(optional)*</sup> The number of milliseconds the repeated key is send after it started repeating (set max to adhere to Thunder) |
 | configuration?.clientidentifier | string | <sup>*(optional)*</sup> An identifier, used during the surface creation as additional information |
-| configuration?.manufacturername | string | <sup>*(optional)*</sup> The name of the hardware manufacturer on which this software is running |
-| configuration?.chipmodelnumber | string | <sup>*(optional)*</sup> The number/string defining the SOC in this device |
-| configuration?.firmwareversion | string | <sup>*(optional)*</sup> The firmwareversion defining the Board Support Package (BSP) in this device |
-| configuration?.modelname | string | <sup>*(optional)*</sup> Name of the model on which this software is running |
-| configuration?.modelyear | string | <sup>*(optional)*</sup> The year this device is manufactured |
 | configuration?.operatorname | string | <sup>*(optional)*</sup> The name of the operator that owns the infrastructure on which this device is running |
-| configuration?.friendlyname | string | <sup>*(optional)*</sup> A user friendly name given to this device |
 | configuration?.language | string | <sup>*(optional)*</sup> The language to be used to for user interaction |
 | configuration?.connection | string | <sup>*(optional)*</sup> The type of connection that is used for internet connectivity (must be one of the following: *cable*, *wireless*) |
 | configuration?.playbackrates | boolean | <sup>*(optional)*</sup> If enabled, Cobalt supports different rates, otherwise, it supports only 0 and 1 (default: true) |
