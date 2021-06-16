@@ -27,6 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 option(PLUGIN_BLUETOOTH_DEVELOPMENT "Enable verbose tracing" ON)
+option(PLUGIN_BLUETOOTH_KERNEL_CONNECION_CONTROL "Enable kernel connection control" OFF)
 
 set(PLUGIN_BLUETOOTH_AUTOSTART true CACHE STRING true)
 
@@ -48,6 +49,12 @@ if(PLUGIN_BLUETOOTH_DEVELOPMENT)
     target_compile_definitions(${MODULE_NAME}
         PRIVATE
             BLUETOOTH_DEVELOPMENT)
+endif()
+
+if(PLUGIN_BLUETOOTH_KERNEL_CONNECION_CONTROL)
+    target_compile_definitions(${MODULE_NAME}
+        PRIVATE
+            USE_KERNEL_CONNECION_CONTROL)
 endif()
 
 target_link_libraries(${MODULE_NAME}

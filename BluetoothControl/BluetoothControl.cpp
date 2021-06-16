@@ -145,6 +145,12 @@ namespace Plugin {
                     subSystems->Set(PluginHost::ISubSystem::BLUETOOTH, nullptr);
                     subSystems->Release();
                 }
+
+                if (_config.ContinuousBackgroundScan.IsSet() == true) {
+                    Connector().ContinuousBackgroundScan(_config.ContinuousBackgroundScan.Value());
+                }
+
+                Connector().BackgroundScan(true); // Maybe enable background scan already
             }
         }
 
@@ -520,6 +526,8 @@ namespace Plugin {
         DeviceImpl* impl = Find(address, lowEnergy);
 
         if (impl == nullptr) {
+            TRACE(Trace::Information, (_T("New device discovered %s"), address.ToString().c_str()));
+
             if (lowEnergy == true) {
                 impl = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address);
             } else {
@@ -559,7 +567,7 @@ namespace Plugin {
             entry->Capabilities(capability, authentication, oob_data);
         }
         else {
-            TRACE(Trace::Information, (_T("Could not set the capabilities for device %s"), device.ToString()));
+            TRACE(Trace::Error, (_T("Could not set the capabilities for device %s"), device.ToString()));
         }
 
         _adminLock.Unlock();
