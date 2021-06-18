@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 set(PLUGIN_POWER_AUTOSTART true CACHE STRING true)
 set(PLUGIN_POWER_GPIOPIN "" CACHE STRING "GPIO pin number")
@@ -61,7 +61,7 @@ target_link_libraries(${MODULE_NAME}
 
 target_include_directories( ${MODULE_NAME}
         PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>)
 
 find_package(BcmPowerManager QUIET)
 find_package(MFRPwrMgrLibs QUIET)

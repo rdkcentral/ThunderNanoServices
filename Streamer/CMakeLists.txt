@@ -29,7 +29,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_STREAMER_AUTOSTART "true" CACHE STRING "Automatically start Streamer plugin")
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
@@ -61,7 +61,7 @@ include_directories(${PLAYER_DIRS})
 
 target_include_directories(${MODULE_NAME}
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR})
+        ${CMAKE_CURRENT_LIST_DIR})
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
