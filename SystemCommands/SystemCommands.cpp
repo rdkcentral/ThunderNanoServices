@@ -31,7 +31,7 @@ namespace Plugin {
         return string();
     }
 
-    void SystemCommands::Deinitialize(PluginHost::IShell* service)
+    void SystemCommands::Deinitialize(PluginHost::IShell*)
     {
     }
 

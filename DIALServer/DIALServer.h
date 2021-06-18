@@ -1101,7 +1101,7 @@ namespace Plugin {
                     }
                 }
             }
-            void Deactivated(const string& callsign, PluginHost::IShell* shell) override
+            void Deactivated(const string& callsign, PluginHost::IShell*) override
             {
                 if (callsign == _webServer) {
 

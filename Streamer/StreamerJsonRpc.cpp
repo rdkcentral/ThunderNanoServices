@@ -137,7 +137,6 @@ namespace Plugin {
             }
 
             if (result == Core::ERROR_NONE) {
-                stream->second->Callback(nullptr);
                 stream->second->Release();
                 _streams.erase(stream);
             }

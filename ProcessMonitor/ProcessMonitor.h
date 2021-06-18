@@ -146,11 +146,11 @@ public:
             _processMap.clear();
         }
 
-        void Activated(const string& callsign, PluginHost::IShell* plugin) override 
+        void Activated(const string&, PluginHost::IShell*) override
         {
         }
 
-        void Deactivated(const string& callsign, PluginHost::IShell* plugin) override 
+        void Deactivated(const string& callsign, PluginHost::IShell*) override
         {
             uint64_t exitTime = 0;
 
@@ -234,7 +234,7 @@ public:
                 proc->Release();
             }
         }
-        void Deactivated(RPC::IRemoteConnection* connection) override
+        void Deactivated(RPC::IRemoteConnection*) override
         {
         }
 

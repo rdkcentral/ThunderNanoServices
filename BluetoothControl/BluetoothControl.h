@@ -1776,7 +1776,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 cmd->pscan_rep_mode = 0x02;
                 cmd->clock_offset = 0x0000;
 
-                _parent->Connector().Execute<Bluetooth::HCISocket::Command::RemoteName>(MAX_ACTION_TIMEOUT, cmd, [&](Bluetooth::HCISocket::Command::RemoteName& cmd, const uint32_t error) {
+                _parent->Connector().Execute<Bluetooth::HCISocket::Command::RemoteName>(MAX_ACTION_TIMEOUT, cmd, [&](Bluetooth::HCISocket::Command::RemoteName&, const uint32_t error) {
                     if (error != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Failed to request remote name [%d]"), error));
                     }
@@ -1938,7 +1938,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
         public:
             // ILowEnergy overrides
-            bool IsUUIDSupported(const string& uuid) const override
+            bool IsUUIDSupported(const string&) const override
             {
                 return false;
             }
@@ -2039,7 +2039,8 @@ class BluetoothControl : public PluginHost::IPlugin
                     }
                 }
                 Property(const Property& copy)
-                    : Name(copy.Name)
+                    : Core::JSON::Container()
+                    , Name(copy.Name)
                     , Supported(copy.Supported)
                     , Enabled(copy.Enabled)
                 {

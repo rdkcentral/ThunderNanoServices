@@ -44,7 +44,7 @@ namespace PluginHost {
         DownloadEngine(const DownloadEngine&) = delete;
         DownloadEngine& operator=(const DownloadEngine&) = delete;
 
-        DownloadEngine(INotifier* notifier, const string& hashKey, const uint16_t interval)
+        DownloadEngine(INotifier* notifier, const string&, const uint16_t interval)
             : BaseClass(false, Core::NodeId(_T("0.0.0.0")), Core::NodeId(), 1024, ((64 * 1024) - 1))
             , _adminLock()
             , _notifier(notifier)
