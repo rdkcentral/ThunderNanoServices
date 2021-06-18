@@ -783,7 +783,8 @@ namespace Plugin {
                     if (_device->IsConnected() == true) {
                         uint32_t result = GATTSocket::Open(5000);
                         if (result != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, (_T("Failed to open GATT socket [%s]"), _device->RemoteId().c_str()));
+                            TRACE(Trace::Error, (_T("Failed to open GATT socket [%s] [%i]"), _device->RemoteId().c_str(), result));
+                            GATTSocket::Close(Core::infinite);
                         }
                         else {
                             TRACE(Flow, (_T("The device is not configured. Read the device configuration.")));
@@ -1127,11 +1128,12 @@ namespace Plugin {
                 _adminLock.Lock();
                 if (_device != nullptr) {
                     if (_device->IsConnected() == true) {
-                        if (IsOpen() == false) {
+                        if ((IsOpen() == false) && (GATTSocket::IsConnecting() == false)) {
                             TRACE(Trace::Information, (_T("Connecting GATT socket [%s]"), _device->RemoteId().c_str()));
                             uint32_t result = GATTSocket::Open(5000);
                             if (result != Core::ERROR_NONE) {
-                                TRACE(Trace::Error, (_T("Failed to open GATT socket [%s]"), _device->RemoteId().c_str()));
+                                TRACE(Trace::Error, (_T("Failed to open GATT socket [%s] [%i]"), _device->RemoteId().c_str(), result));
+                                GATTSocket::Close(Core::infinite);
                             }
                         }
                     } else if (_device->IsValid() == true) {
