@@ -148,7 +148,8 @@ namespace Plugin {
                         Add(_T("end"), &End);
                     }
                     Handler(const Handler& copy)
-                        : Name(copy.Name)
+                        : Core::JSON::Container()
+                        , Name(copy.Name)
                         , Config(copy.Config)
                         , Start(copy.Start)
                         , End(copy.End)

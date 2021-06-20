@@ -342,18 +342,6 @@ namespace Player {
                 _adminLock.Unlock();
                 return (_decoder);
             }
-            void Callback(IStream::ICallback* callback) override
-            {
-                _adminLock.Lock();
-                if (_callback != nullptr) {
-                    _callback->Release();
-                }
-                if (callback != nullptr) {
-                    callback->AddRef();
-                }
-                _callback = callback;
-                _adminLock.Unlock();
-            }
             void Attach(IStream::ICallback* callback) override
             {
                 _adminLock.Lock();
