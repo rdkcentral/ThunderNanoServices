@@ -42,7 +42,7 @@ add_library(${TARGET}
 
 target_include_directories(${TARGET}
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_LIST_DIR}
         Adapter
         Adapter/DataModel
         Handler

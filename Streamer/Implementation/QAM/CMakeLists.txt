@@ -38,7 +38,7 @@ endif(PLUGIN_STREAMER_TS_SCANNING)
 
 target_include_directories(${LIB_NAME}
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../)
+        ${CMAKE_CURRENT_LIST_DIR}/../../)
 
 target_link_libraries(${LIB_NAME}
     PRIVATE
