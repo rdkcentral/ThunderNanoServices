@@ -24,9 +24,6 @@
   <ItemGroup>
     <ClCompile Include="COMRPCClient.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="..\SimpleCOMRPCClient\SimpleCOMRPCClient.vcxproj" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{DFA83275-7232-423B-912A-BD362AA228B3}</ProjectGuid>

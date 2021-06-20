@@ -79,11 +79,15 @@
 // Since lower levels 
 // #define _TRACE_LEVEL 5
 
+#define MODULE_NAME COMRPCClient
+
 #include <core/core.h>
 #include <com/com.h>
 #include <plugins/Types.h>
 #include <interfaces/IDictionary.h>
 #include <iostream>
+
+MODULE_NAME_DECLARATION(BUILD_REFERENCE);
 
 namespace Thunder = WPEFramework;
 
