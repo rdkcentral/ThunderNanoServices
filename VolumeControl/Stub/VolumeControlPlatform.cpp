@@ -29,7 +29,7 @@ class VolumeControlPlatformStub : public VolumeControlPlatform {
 public:
   ~VolumeControlPlatformStub() override = default;
 
-  uint32_t Muted(bool muted) override
+  uint32_t Muted(bool) override
   {
       return Core::ERROR_NONE;
   }
@@ -39,7 +39,7 @@ public:
       return false;
   }
 
-  uint32_t Volume(uint8_t volume) override
+  uint32_t Volume(uint8_t) override
   {
       return Core::ERROR_NONE;
   }
@@ -55,8 +55,8 @@ public:
 
 // static
 std::unique_ptr<VolumeControlPlatform> VolumeControlPlatform::Create(
-    VolumeControlPlatform::VolumeChangedCallback&& volumeChanged,
-    VolumeControlPlatform::MutedChangedCallback&& mutedChanged)
+    VolumeControlPlatform::VolumeChangedCallback&&,
+    VolumeControlPlatform::MutedChangedCallback&&)
 {
     return std::unique_ptr<VolumeControlPlatform>{new VolumeControlPlatformStub};
 }

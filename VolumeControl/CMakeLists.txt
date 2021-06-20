@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 set(PLAFORM_VOLUMECONTROL volumectrlplatform)
 set(PLUGIN_VOLUMECONTROL_AUTOSTART true CACHE STRING "Automatically start VolumeControl plugin")
@@ -104,7 +104,6 @@ else ()
             Stub/VolumeControlPlatform.cpp)
 
 endif ()
-
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)

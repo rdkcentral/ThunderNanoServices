@@ -48,7 +48,7 @@ namespace Plugin {
             }
 
         public:
-            virtual void Activated(RPC::IRemoteConnection* connection)
+            virtual void Activated(RPC::IRemoteConnection*)
             {
             }
             virtual void Deactivated(RPC::IRemoteConnection* connection)
@@ -116,7 +116,6 @@ namespace Plugin {
                 , _streamSink(this)
             {
                 ASSERT (_implementation != nullptr);
-                _implementation->Callback(&_streamSink);
             }
             ~StreamProxy()
             {
@@ -195,7 +194,6 @@ namespace Plugin {
                 , _implementation(implementation)
                 , _controlSink(this) {
                 ASSERT (_implementation != nullptr);
-                _implementation->Callback(&_controlSink);
             }
             ~ControlProxy() {
             }

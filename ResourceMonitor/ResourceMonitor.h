@@ -62,7 +62,7 @@ namespace WPEFramework
             {
             }
 
-            void Inbound(Web::Request &request) override
+            void Inbound(Web::Request&) override
             {
             }
 

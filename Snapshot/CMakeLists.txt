@@ -29,7 +29,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_SNAPSHOT_AUTOSTART true CACHE STRING "Automatically start Snapshot plugin")
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Tracing REQUIRED)

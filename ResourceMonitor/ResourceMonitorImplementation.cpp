@@ -82,7 +82,7 @@ namespace Plugin {
                 Append(dummy, rest...);
             }
 
-            void Append(bool dummy)
+            void Append(bool)
             {
                 _stringstream << std::endl;
             }
