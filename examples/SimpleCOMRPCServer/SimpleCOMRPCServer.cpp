@@ -17,9 +17,13 @@
  * limitations under the License.
  */
 
+#define MODULE_NAME SimpleCOMRPCServer
+
 #include <core/core.h>
 #include <com/com.h>
 #include "../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
+
+MODULE_NAME_DECLARATION(BUILD_REFERENCE);
 
 using namespace WPEFramework;
 
