@@ -23,6 +23,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="JSONRPCClient.cpp" />
+    <ClCompile Include="Module.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Module.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
