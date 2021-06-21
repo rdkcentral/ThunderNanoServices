@@ -662,16 +662,23 @@ namespace Plugin {
     bool DIALServer::SafeOrigin(const Web::Request& request, const AppInformation& app) const {
         bool safe = true;
 
-        if ((request.Origin.IsSet() == true) && (app.Origin().empty() == false)) {
+        if ((request.Origin.IsSet() == true) && (app.Origin().empty() == false)) { // Origin is set in the request
             Core::OptionalType<string> hostPortion (Core::URL(request.Origin.Value().c_str()).Host());
-
-            if (hostPortion.IsSet() == true) {
-                Core::NodeId source(hostPortion.Value().c_str());
-
-                safe = (source.IsLocalInterface() == true) || (hostPortion.Value().find(app.Origin()) != string::npos);
+            Core::NodeId source(hostPortion.Value().c_str());
+            if (source.IsLocalInterface() == true) {
+                safe = true;
+            } else {
+                if (request.Origin.Value().find("https") == 0) { // Valid format: https://www.youtube.com, https://dial.youtube.com
+                    safe = (request.Origin.Value().find(app.Origin()) != string::npos);
+            } else if (request.Origin.Value().find("package") == 0) { // Valid format: package: com.youtube.app, package: com.google.ios.youtube
+                    safe = (request.Origin.Value().find(app.Origin().substr(0,app.Origin().find("."))) != string::npos);
+                } else {
+                    safe = false;
+                }
             }
+        } else if ((request.Origin.IsSet() == false) && (app.Origin().empty() == false)) { // Origin is not set in the request but is manadatory
+            safe = false;
         }
-
         return (safe);
     }
 
