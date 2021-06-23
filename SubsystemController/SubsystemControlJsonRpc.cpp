@@ -33,12 +33,33 @@ namespace Plugin {
 
     uint32_t SubsystemControl::activate(const JsonData::SubsystemControl::ActivateParamsData& parameter, Core::JSON::DecUInt32& response) {
 
-        return (Core::ERROR_NONE);
+        PluginHost::ISubSystem::subsystem system;
+
+        if (_subsystemFactory.Lookup(parameter.System.Value(), system) == true) {
+            Core::IUnknown* metadata = _subsystemFactory.Metadata(parameter.System.Value(), parameter.Configuration.Value());
+            _service->Set(system, metadata);
+
+            if (metadata != nullptr) {
+                metadata->Release();
+            }
+            return (Core::ERROR_NONE);
+        }
+
+        return (Core::ERROR_UNKNOWN_KEY);
     }
 
     uint32_t SubsystemControl::deactivate(const Core::JSON::EnumType<JsonData::SubsystemControl::SubsystemType>& parameter) {
 
-        return (Core::ERROR_NONE);        
+        PluginHost::ISubSystem::subsystem system;
+
+        if (_subsystemFactory.Lookup(parameter.Value(), system) == true) {
+            system = static_cast<PluginHost::ISubSystem::subsystem>(system | PluginHost::ISubSystem::subsystem::NEGATIVE_START);
+            _service->Set(system, nullptr);
+
+            return (Core::ERROR_NONE);
+        }
+
+        return (Core::ERROR_UNKNOWN_KEY);
     }
 
     // Event: activity - Notifies about device activity

@@ -225,7 +225,7 @@ namespace Plugin {
             : Core::JSON::Container()
             , _storage()
             , _systems()
-            , _index(-1)
+            , _index(~0)
             , _current() {
             Add(_T("storage"), &_storage);
             Add(_T("systems"), &_systems);
@@ -311,7 +311,7 @@ namespace Plugin {
         JDecryption()
             : Core::JSON::Container()
             , _systems()
-            , _index(-1)
+            , _index(~0)
             , _current() {
             Add(_T("systems"), &_systems);
         }
@@ -380,6 +380,32 @@ namespace Plugin {
         uint32_t _index;
         string _current;
     };
+
+    #ifdef __WINDOWS__
+    #pragma warning(disable: 4355)
+    #endif
+    SubsystemControl::SubsystemControl()
+        : _subsystemFactory()
+        , _service(nullptr)
+        , _notification(*this) {
+        _subsystemFactory.Announce<JSecurity>    (JsonData::SubsystemControl::SubsystemType::SECURITY);
+        _subsystemFactory.Announce<JInternet>    (JsonData::SubsystemControl::SubsystemType::INTERNET);
+        _subsystemFactory.Announce<JLocation>    (JsonData::SubsystemControl::SubsystemType::LOCATION);
+        _subsystemFactory.Announce<JIdentifier>  (JsonData::SubsystemControl::SubsystemType::IDENTIFIER);
+        _subsystemFactory.Announce<JTime>        (JsonData::SubsystemControl::SubsystemType::TIME);
+        _subsystemFactory.Announce<JProvisioning>(JsonData::SubsystemControl::SubsystemType::PROVISIONING);
+        _subsystemFactory.Announce<JDecryption>  (JsonData::SubsystemControl::SubsystemType::DECRYPTION);
+        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::BLUETOOTH, PluginHost::ISubSystem::subsystem::BLUETOOTH);
+        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::GRAPHICS,  PluginHost::ISubSystem::subsystem::GRAPHICS);
+        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::NETWORK,   PluginHost::ISubSystem::subsystem::NETWORK);
+        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::PLATFORM,  PluginHost::ISubSystem::subsystem::PLATFORM);
+        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::STREAMING, PluginHost::ISubSystem::subsystem::STREAMING);
+        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::WEBSOURCE, PluginHost::ISubSystem::subsystem::WEBSOURCE);
+    }
+    #ifdef __WINDOWS__
+    #pragma warning(default: 4355)
+    #endif
+
 
     const string SubsystemControl::Initialize(PluginHost::IShell* service) /* override */
     {
