@@ -358,45 +358,36 @@ namespace Plugin {
 
         _adminLock.Lock();
 
-        switch (_state) {
-        case SENDREQUEST: {
+        if (_state == SENDREQUEST) {
             // This case means that nothing has started yet, let reset the list of servers and start at the beginning...
             _serverIndex.Reset(0);
             _state = INPROGRESS;
             _currentAttempt = _retryAttempts;
         }
-        case INPROGRESS: {
+
+        if (_state == INPROGRESS) {
             // If we end up here in this state, it means that the package was send but no response was received,
             // or a response was received but is was not properly formatted...
             // Lets move to the next server in the list, see if that one responds correctly, if we tried all servers let's
             // start at the first one again, this time it might work
             if (FireRequest() == true) {
               result = WaitForResponse;
+            } 
+            else if (_currentAttempt-- != 0) {
+
+                // Looks like there is no network connectivity, Just sleep and retry later
+                result = _WaitForNetwork;
+
             } else {
-                if (_currentAttempt-- != 0) {
 
-                    // Looks like there is no network connectivity, Just sleep and retry later
-                    result = _WaitForNetwork;
-                } else {
-
-                    // Looks like there is no valid server anymore that we could use. There where servers
-                    // that did resolve correctly, so it is not a network connectivity problem.
-                    _state = FAILED;
-
-                    // Report the failure. Always report back when we are finished.
-                    Update();
-                }
+                // Looks like there is no valid server anymore that we could use. There where servers
+                // that did resolve correctly, so it is not a network connectivity problem.
+                _state = FAILED;
             }
-            break;
         }
-        case FAILED:
-        case SUCCESS: {
+
+        if ((_state == FAILED) || (_state == SUCCESS)) {
             Update();
-            break;
-        }
-        default:
-            // New state, probably needs some action???
-       ASSERT(false);
         }
 
         _adminLock.Unlock();

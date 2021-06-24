@@ -154,7 +154,7 @@ namespace Plugin {
     }
 
     // Notification of a Partial Request received, time to attach a body..
-    /* virtual */ void DIALServer::DIALServerImpl::LinkBody(Core::ProxyType<Web::Request>& element)
+    /* virtual */ void DIALServer::DIALServerImpl::LinkBody(Core::ProxyType<Web::Request>&)
     {
         // upnp requests are empty so no body needed...
     }
@@ -482,7 +482,7 @@ namespace Plugin {
         }
     }
 
-    void DIALServer::StopApplication(const Web::Request& request, Core::ProxyType<Web::Response>& response, AppInformation& app)
+    void DIALServer::StopApplication(const Web::Request&, Core::ProxyType<Web::Response>& response, AppInformation& app)
     {
         if (app.IsRunning() == false) {
             response->ErrorCode = Web::STATUS_NOT_FOUND;

@@ -29,7 +29,7 @@ enum WPEFramework::Exchange::IPower::PCState power_get_persisted_state()
     return (WPEFramework::Exchange::IPower::PCState::On);
 }
 
-void power_set_persisted_state(const enum WPEFramework::Exchange::IPower::PCState persistedState)
+void power_set_persisted_state(const enum WPEFramework::Exchange::IPower::PCState)
 {
     /* Nothing to do here. */
 }

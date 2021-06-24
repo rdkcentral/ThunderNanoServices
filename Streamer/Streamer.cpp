@@ -313,7 +313,7 @@ namespace Plugin {
         return result;
     }
 
-    Core::ProxyType<Web::Response> Streamer::PostMethod(Core::TextSegmentIterator& index, const Web::Request& request)
+    Core::ProxyType<Web::Response> Streamer::PostMethod(Core::TextSegmentIterator& index, const Web::Request&)
     {
         Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;

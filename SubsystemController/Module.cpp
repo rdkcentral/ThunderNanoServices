@@ -16,17 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+ 
+#include "Module.h"
 
-#pragma once
-
-#ifndef MODULE_NAME
-#define MODULE_NAME JSONRPCCLIENT_Test
-#endif
-
-#include <core/core.h>
-#include <tracing/tracing.h>
-#include <com/com.h>
-#include <websocket/websocket.h>
-
-#undef EXTERNAL
-#define EXTERNAL
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)

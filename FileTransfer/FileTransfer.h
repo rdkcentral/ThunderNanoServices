@@ -434,7 +434,7 @@ namespace Plugin
 
                         return (result);
                     }
-                    uint16_t ReceiveData(uint8_t *dataFrame, const uint16_t receivedSize) override
+                    uint16_t ReceiveData(uint8_t*, const uint16_t receivedSize) override
                     {
                         // No clue what to do with the data that we receive
                         return (receivedSize);

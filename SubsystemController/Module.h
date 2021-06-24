@@ -16,17 +16,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+ 
 #pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME JSONRPCCLIENT_Test
+#define MODULE_NAME Plugin_SubsystemConttrol
 #endif
 
-#include <core/core.h>
-#include <tracing/tracing.h>
-#include <com/com.h>
-#include <websocket/websocket.h>
+#include <plugins/plugins.h>
+#include <definitions/definitions.h>
 
 #undef EXTERNAL
 #define EXTERNAL
