@@ -434,8 +434,8 @@ namespace Plugin {
                 Add(_T("preferred"), &Preferred);
                 Add(_T("autoconnect"), &AutoConnect);
                 Add(_T("retryinterval"), &RetryInterval);
-                Add(_T("wpasupplicant_wait_time"), &WaitTime);
-                Add(_T("wpasupplicant_logfile"), &LogFile);
+                Add(_T("waittime"), &WaitTime);
+                Add(_T("logfile"), &LogFile);
             }
             virtual ~Config()
             {
