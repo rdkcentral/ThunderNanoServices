@@ -471,13 +471,11 @@ class BluetoothControl : public PluginHost::IPlugin
                 BT_TRACE(ControlFlow, info);
 
                 if ((Application() != nullptr) && (info.bdaddr_type == 0 /* public */)) {
-                    DeviceImpl* device = nullptr;
-
-                    const uint8_t UNDIRECTED = 0;
-                    const uint8_t DIRECTED = 1;
+                    const uint8_t CONNECTABLE_UNDIRECTED = 0;
+                    const uint8_t CONNECTABLE_DIRECTED = 1;
                     const uint8_t SCAN_RESPONSE = 4;
 
-                    if ((info.evt_type == SCAN_RESPONSE) || (info.evt_type == UNDIRECTED) || (info.evt_type == DIRECTED)) {
+                    if ((info.evt_type == SCAN_RESPONSE) || (info.evt_type == CONNECTABLE_UNDIRECTED) || (info.evt_type == CONNECTABLE_DIRECTED)) {
                         const Bluetooth::Address address(info.bdaddr);
                         DeviceImpl* device = Application()->Find(address);
 
@@ -487,18 +485,17 @@ class BluetoothControl : public PluginHost::IPlugin
                         }
 
                         if (device != nullptr) {
-                            if (info.length > 0) {
-                                // Let's see if the adv packet contains extra information we could update our data with.
-                                Bluetooth::EIR eir(info.data, info.length);
-                                if (device->Update(eir) == false) {
-                                    device->UpdateListener();
-                                }
+                            // Let's see if the adv packet contains extra information we could update our data with.
+                            Bluetooth::EIR eir(info.data, info.length);
+                            if ((device->Update(eir, false) == true) || (info.evt_type == CONNECTABLE_UNDIRECTED)) {
+                                // The device broadcasts undirected connection requests, give the listener a choice to connect.
+                                device->UpdateListener();
                             }
 
 #if !defined(USE_KERNEL_CONNECTION_CONTROL)
-                            if (info.evt_type == DIRECTED) {
-                                // The remote device wants us to connect to it.
+                            if (info.evt_type == CONNECTABLE_DIRECTED) {
                                 if ((device->IsAutoConnectable() == true) && (device->IsBonded() == true)) {
+                                    // The device broadcasts directed connection requests, let's connect now.
                                     _reconnectJob.Submit([device, this]() {
                                         TRACE(ControlFlow, (_T("Reconnecting to %s..."), device->RemoteId().c_str()));
                                         if (device->Connect() != Core::ERROR_NONE) {
@@ -1494,11 +1491,6 @@ class BluetoothControl : public PluginHost::IPlugin
                 _handle = ~0;
                 _state.Unlock();
 
-               _autoConnectJob.Submit([this]() {
-                    // Each time a device disconnects evalute whether background scan is needed.
-                    EvaluateBackgroundScan();
-                }, 250);
-
                 JsonData::BluetoothControl::DevicestatechangeParamsData::DisconnectreasonType disconnReason;
                 if (reason == HCI_CONNECTION_TIMEOUT) {
                     disconnReason = JsonData::BluetoothControl::DevicestatechangeParamsData::DisconnectreasonType::CONNECTIONTIMEOUT;
@@ -1516,6 +1508,11 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 UpdateListener();
                 _parent->event_devicestatechange(Address().ToString(), JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::DISCONNECTED, disconnReason);
+
+               _autoConnectJob.Submit([this]() {
+                    // Each time a device disconnects evalute whether background scan is needed.
+                    EvaluateBackgroundScan();
+                }, 250);
             }
             bool Class(const uint32_t classId, bool notifyListener = true)
             {
@@ -1555,7 +1552,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 return (updated);
             }
-            bool Update(const Bluetooth::EIR& eir)
+            bool Update(const Bluetooth::EIR& eir, bool notifyListener = true)
             {
                 bool updated = false;
 
@@ -1578,7 +1575,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 _state.Unlock();
 
-                if (updated == true) {
+                if ((updated == true) && (notifyListener == false)) {
                     UpdateListener();
                 }
 
@@ -1816,6 +1813,7 @@ protected:
                         result = Core::ERROR_ALREADY_CONNECTED;
                         TRACE(Trace::Information, (_T("Device already connected!")));
                     }
+
                     ClearState(CONNECTING);
                 } else {
                     result = Core::ERROR_INPROGRESS;
