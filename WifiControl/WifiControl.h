@@ -73,12 +73,12 @@ namespace Plugin {
             }
 
         public:
-            uint32_t Launch(const string& connector, const string& interfaceName, const uint16_t waitTime)
+            uint32_t Launch(const string& application, const string& connector, const string& interfaceName, const uint16_t waitTime, const string& logFile)
             {
                 _interfaceName = interfaceName;
                 _connector = connector;
 
-                Core::Process::Options options(_T("/usr/sbin/wpa_supplicant"));
+                Core::Process::Options options(_T(application));
                 /* interface name *mandatory */
                 options.Add(_T("-i")+ _interfaceName);
 
@@ -91,11 +91,11 @@ namespace Plugin {
                 /* global ctrl_interface group */
                 options.Add(_T("-G0"));
 
-#ifdef __DEBUG__
-                options.Add(_T("-dd"));
-                options.Add(_T("-f/tmp/wpasupplicant.log"));
-#endif
-
+                if (!logFile.empty()) {
+                    options.Add(_T("-dd"));
+                    options.Add(_T("-f") + logFile);
+                }
+                
                 TRACE(Trace::Information, (_T("Launching %s."), options.Command().c_str()));
                 uint32_t result = _process.Launch(options, &_pid);
 
@@ -425,6 +425,8 @@ namespace Plugin {
                 , Preferred()
                 , AutoConnect(false)
                 , RetryInterval(30)
+                , WaitTime(15)
+                , LogFile()
             {
                 Add(_T("connector"), &Connector);
                 Add(_T("interface"), &Interface);
@@ -432,6 +434,8 @@ namespace Plugin {
                 Add(_T("preferred"), &Preferred);
                 Add(_T("autoconnect"), &AutoConnect);
                 Add(_T("retryinterval"), &RetryInterval);
+                Add(_T("wpasupplicant_wait_time"), &WaitTime);
+                Add(_T("wpasupplicant_logfile"), &LogFile);
             }
             virtual ~Config()
             {
@@ -444,6 +448,8 @@ namespace Plugin {
             Core::JSON::String Preferred;
             Core::JSON::Boolean AutoConnect;
             Core::JSON::DecUInt8 RetryInterval;
+            Core::JSON::DecUInt8 WaitTime;
+            Core::JSON::String LogFile;
         };
 
         static void FillNetworkInfo(const WPASupplicant::Network& info, JsonData::WifiControl::NetworkInfo& net)
