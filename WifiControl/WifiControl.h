@@ -78,7 +78,7 @@ namespace Plugin {
                 _interfaceName = interfaceName;
                 _connector = connector;
 
-                Core::Process::Options options(_T(application));
+                Core::Process::Options options(application);
                 /* interface name *mandatory */
                 options.Add(_T("-i")+ _interfaceName);
 
