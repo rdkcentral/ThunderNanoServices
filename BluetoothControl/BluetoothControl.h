@@ -1203,13 +1203,13 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (result == Core::ERROR_INPROGRESS) {
                         TRACE(Trace::Information, (_T("Aborting pairing of device %s in progress..."), Address().ToString().c_str()));
                     } else if (result != Core::ERROR_NONE) {
-                        ClearState(PAIRING); // Hope for the best anyway...
                         TRACE(Trace::Error, (_T("Failed to abort pairing [%d]"), result));
                     }
                 } else {
-                    ClearState(PAIRING);
                     TRACE(Trace::Information, (_T("Not currently pairing to this device")));
                 }
+
+                ClearState(PAIRING);
 
                 return (result);
             }
