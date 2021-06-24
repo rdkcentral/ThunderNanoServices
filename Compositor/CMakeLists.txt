@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 RDK Management
+# Copyright 2020 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,25 +24,24 @@ project_version(1.0.0)
 
 set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLATFORM_COMPOSITOR "compositorplugin")
 
-option(PLUGIN_COMPOSITOR_SYSTEM "Callsign to report information." "Controller")
 option(PLUGIN_COMPOSITOR_IMPLEMENTATION "Defines which implementation is used." "None")
 option(PLUGIN_COMPOSITOR_HARDWAREREADY "Manual overrule of the time it takes to initialisize all hardware (s) [0 - UINT16_MAX]." 0)
-option(PLUGIN_COMPOSITOR_SERVICE "Defines where to get resouce handles. [internal, external]." external)
 option(PLUGIN_COMPOSITOR_OUTOFPROCESS "Controls if the plugin should run in its own process. [true, false]." true)
-option(PLUGIN_COMPOSITOR_AUTOTRACE "Contols if the plugin should automatically start tracing. [ON, OFF]." OFF)
 option(PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (Nexus only).")
 option(PLUGIN_COMPOSITOR_GRAPHICS_HEAP_SIZE "Change graphic heap of driver (Nexus only).")
+set(PLUGIN_COMPOSITOR_FAIL_SAFE_HDR OFF CACHE BOOL "Enable fail safe HDR values")
 
 option(PLUGIN_COMPOSITOR_TEST "Build a compositor test client" OFF)
+option(PLUGIN_COMPOSITOR_NXSERVER "Allow to use external nexus server" OFF)
 
 set(PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB "lib${PLATFORM_COMPOSITOR}.so" CACHE STRING "Specify a library with a compositor implentation." )
 set(PLUGIN_COMPOSITOR_RESOLUTION "720p" CACHE STRING "Specify the startup resolution")
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)

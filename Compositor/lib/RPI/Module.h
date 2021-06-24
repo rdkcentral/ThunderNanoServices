@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2020 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,12 @@
  * limitations under the License.
  */
  
-#ifndef __MODULE_COMPOSITION_IMPLEMENTATION_H
-#define __MODULE_COMPOSITION_IMPLEMENTATION_H
+#pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME Compositor_Implementation
+#define MODULE_NAME Plugin_Compositor_Implementation
 #endif
 
 #include <core/core.h>
 #include <tracing/tracing.h>
 #include <com/com.h>
-
-#endif // __MODULE_COMPOSITION_IMPLEMENTATION_H

@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2020 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ enum WPEFramework::Exchange::IPower::PCState power_get_persisted_state()
     return (WPEFramework::Exchange::IPower::PCState::On);
 }
 
-void power_set_persisted_state(const enum WPEFramework::Exchange::IPower::PCState persistedState)
+void power_set_persisted_state(const enum WPEFramework::Exchange::IPower::PCState)
 {
     /* Nothing to do here. */
 }

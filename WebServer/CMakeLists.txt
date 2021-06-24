@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 RDK Management
+# Copyright 2020 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,6 +26,13 @@ project_version(1.0.0)
 set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
+set(PLUGIN_WEBSERVER_AUTOSTART true CACHE STRING "Automatically start WebServer plugin")
+set(PLUGIN_WEBSERVER_RESUMED true CACHE STRING "Set WebServer plugin resume state")
+set(PLUGIN_WEBSERVER_OUTOFPROCESS true CACHE STRING "Controls if the plugin should run in its own process")
+
+option(PLUGIN_WEBSERVER_PROXY_DEVICEINFO "Enable proxy for DeviceInfo" ${PLUGIN_DEVICEINFO})
+option(PLUGIN_WEBSERVER_PROXY_DIALSERVER "Enable proxy for DIALServer" ${PLUGIN_DIALSERVER})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)

@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 RDK Management
+# Copyright 2020 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ add_library(PlayerInfoDolby STATIC "")
 
 target_include_directories(PlayerInfoDolby
     PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    ${CMAKE_CURRENT_LIST_DIR}/include)
 
 if(${DOLBY_IMPLEMENTATION} STREQUAL "AMLogic")
 
@@ -32,7 +32,7 @@ if(${DOLBY_IMPLEMENTATION} STREQUAL "AMLogic")
 
     target_sources(PlayerInfoDolby
         PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}/AMLogic/Implementation.cpp)
+            ${CMAKE_CURRENT_LIST_DIR}/AMLogic/Implementation.cpp)
 
     target_link_libraries(PlayerInfoDolby
         PRIVATE

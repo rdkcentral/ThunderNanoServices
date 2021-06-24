@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 RDK Management
+# Copyright 2020 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@ option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
 option(PLUGIN_STATECONTROLLER "Include StateController plugin" OFF)
-option(EXAMPLE_EGLCLIENT "Include EGL ClientLibrary example" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
@@ -62,6 +61,3 @@ if(PLUGIN_STATECONTROLLER)
     add_subdirectory(StateController)
 endif()
 
-#if(EXAMPLE_EGLCLIENT)
-#    add_subdirectory(SimpleEGL)
-#endif()

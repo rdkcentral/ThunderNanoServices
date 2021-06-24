@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2020 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -296,6 +296,15 @@ class BluetoothControl : public PluginHost::IPlugin
             void Scan(const uint16_t scanTime, const uint32_t type, const uint8_t flags)
             {
                 if (IsOpen() == true) {
+                    _parent->RemoveDevices([](DeviceImpl* device) -> bool {
+                        if ((device->IsBonded() == false) && (device->IsConnected() == false))
+                        {
+                            device->Clear();
+                            return (true);
+                        }
+                        return (false);
+                    });
+
                     _scanJob.Submit([this, scanTime, type, flags]() {
                         TRACE(ControlFlow, (_T("Start BT classic scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
                         Bluetooth::HCISocket::Scan(scanTime, type, flags);
@@ -306,6 +315,15 @@ class BluetoothControl : public PluginHost::IPlugin
             void Scan(const uint16_t scanTime, const bool limited, const bool passive)
             {
                 if (IsOpen() == true) {
+                    _parent->RemoveDevices([](DeviceImpl* device) -> bool {
+                        if ((device->IsBonded() == false) && (device->IsConnected() == false))
+                        {
+                            device->Clear();
+                            return (true);
+                        }
+                        return (false);
+                    });
+
                     _scanJob.Submit([this, scanTime, limited, passive]() {
                         TRACE(ControlFlow, (_T("Start BT LowEnergy scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
                         Bluetooth::HCISocket::Scan(scanTime, limited, passive);
@@ -1758,7 +1776,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 cmd->pscan_rep_mode = 0x02;
                 cmd->clock_offset = 0x0000;
 
-                _parent->Connector().Execute<Bluetooth::HCISocket::Command::RemoteName>(MAX_ACTION_TIMEOUT, cmd, [&](Bluetooth::HCISocket::Command::RemoteName& cmd, const uint32_t error) {
+                _parent->Connector().Execute<Bluetooth::HCISocket::Command::RemoteName>(MAX_ACTION_TIMEOUT, cmd, [&](Bluetooth::HCISocket::Command::RemoteName&, const uint32_t error) {
                     if (error != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Failed to request remote name [%d]"), error));
                     }
@@ -1920,7 +1938,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
         public:
             // ILowEnergy overrides
-            bool IsUUIDSupported(const string& uuid) const override
+            bool IsUUIDSupported(const string&) const override
             {
                 return false;
             }
@@ -2021,7 +2039,8 @@ class BluetoothControl : public PluginHost::IPlugin
                     }
                 }
                 Property(const Property& copy)
-                    : Name(copy.Name)
+                    : Core::JSON::Container()
+                    , Name(copy.Name)
                     , Supported(copy.Supported)
                     , Enabled(copy.Enabled)
                 {

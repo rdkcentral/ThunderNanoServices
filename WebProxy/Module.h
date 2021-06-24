@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2020 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,7 @@
  * limitations under the License.
  */
  
-#ifndef __MODULE_PLUGIN_WEBPROXY_H
-#define __MODULE_PLUGIN_WEBPROXY_H
+#pragma once
 
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_WebProxy
@@ -28,5 +27,3 @@
 
 #undef EXTERNAL
 #define EXTERNAL
-
-#endif // __MODULE_PLUGIN_WEBPROXY_H

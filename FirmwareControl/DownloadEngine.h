@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2020 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ namespace PluginHost {
         DownloadEngine(const DownloadEngine&) = delete;
         DownloadEngine& operator=(const DownloadEngine&) = delete;
 
-        DownloadEngine(INotifier* notifier, const string& hashKey, const uint16_t interval)
+        DownloadEngine(INotifier* notifier, const string&, const uint16_t interval)
             : BaseClass(false, Core::NodeId(_T("0.0.0.0")), Core::NodeId(), 1024, ((64 * 1024) - 1))
             , _adminLock()
             , _notifier(notifier)

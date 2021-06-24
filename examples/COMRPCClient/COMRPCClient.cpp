@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2020 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,11 +79,15 @@
 // Since lower levels 
 // #define _TRACE_LEVEL 5
 
+#define MODULE_NAME COMRPCClient
+
 #include <core/core.h>
 #include <com/com.h>
 #include <plugins/Types.h>
 #include <interfaces/IDictionary.h>
 #include <iostream>
+
+MODULE_NAME_DECLARATION(BUILD_REFERENCE);
 
 namespace Thunder = WPEFramework;
 

@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2020 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
-#include "Module.h"
+
 #include "Compositor.h"
+#include "Module.h"
 #include <interfaces/json/JsonData_Compositor.h>
 
 namespace WPEFramework {
@@ -32,14 +32,17 @@ namespace Plugin {
 
     void Compositor::RegisterAll()
     {
-        Register<PutontopParamsInfo,void>(_T("putontop"), &Compositor::endpoint_putontop, this);
-        Register<PutontopParamsInfo,void>(_T("select"), &Compositor::endpoint_select, this);
-        Register<PutbelowParamsData,void>(_T("putbelow"), &Compositor::endpoint_putbelow, this);
+        Register<PutontopParamsInfo, void>(_T("putontop"), &Compositor::endpoint_putontop, this);
+        Register<PutontopParamsInfo, void>(_T("select"), &Compositor::endpoint_select, this);
+        Register<PutbelowParamsData, void>(_T("putbelow"), &Compositor::endpoint_putbelow, this);
         Property<Core::JSON::EnumType<ResolutionType>>(_T("resolution"), &Compositor::get_resolution, &Compositor::set_resolution, this);
         Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("zorder"), &Compositor::get_zorder, nullptr, this);
         Property<GeometryData>(_T("geometry"), &Compositor::get_geometry, &Compositor::set_geometry, this);
         Property<Core::JSON::EnumType<VisiblityType>>(_T("visiblity"), nullptr, &Compositor::set_visiblity, this);
         Property<Core::JSON::DecUInt8>(_T("opacity"), nullptr, &Compositor::set_opacity, this);
+
+        Property<Core::JSON::EnumType<BrightnessType>>(_T("brightness"), &Compositor::get_brightness, &Compositor::set_brightness, this);
+
 
         // Deprecated call, not documented, to be removed if the ThunderUI is adapted!!!
         Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("clients"), &Compositor::get_zorder, nullptr, this);
@@ -48,7 +51,7 @@ namespace Plugin {
     void Compositor::UnregisterAll()
     {
         // Deprecated call, not documented, to be removed if the ThunderUI is adapted!!!
-        Unregister(_T("clients"));  
+        Unregister(_T("clients"));
 
         Unregister(_T("opacity"));
         Unregister(_T("visiblity"));
@@ -58,6 +61,7 @@ namespace Plugin {
         Unregister(_T("putbelow"));
         Unregister(_T("select"));
         Unregister(_T("putontop"));
+        Unregister(_T("brightness"));
     }
 
     // API implementation
@@ -85,7 +89,6 @@ namespace Plugin {
         return Select(client);
     }
 
-
     // Method: putbelow - Puts client surface below another surface
     // Return codes:
     //  - ERROR_NONE: Success
@@ -105,38 +108,38 @@ namespace Plugin {
     uint32_t Compositor::get_resolution(Core::JSON::EnumType<ResolutionType>& response) const
     {
         switch (Resolution()) {
-            case Exchange::IComposition::ScreenResolution_480i:
-                response = ResolutionType::E480I;
-                break;
-            case Exchange::IComposition::ScreenResolution_480p:
-                response = ResolutionType::E480P;
-                break;
-            case Exchange::IComposition::ScreenResolution_720p:
-                response = ResolutionType::E720P60;
-                break;
-            case Exchange::IComposition::ScreenResolution_720p50Hz:
-                response = ResolutionType::E720P50;
-                break;
-            case Exchange::IComposition::ScreenResolution_1080p24Hz:
-                response = ResolutionType::E1080P24;
-                break;
-            case Exchange::IComposition::ScreenResolution_1080i50Hz:
-                response = ResolutionType::E1080I50;
-                break;
-            case Exchange::IComposition::ScreenResolution_1080p50Hz:
-                response = ResolutionType::E1080P50;
-                break;
-            case Exchange::IComposition::ScreenResolution_1080p60Hz:
-                response = ResolutionType::E1080P60;
-                break;
-            case Exchange::IComposition::ScreenResolution_2160p50Hz:
-                response = ResolutionType::E2160P50;
-                break;
-            case Exchange::IComposition::ScreenResolution_2160p60Hz:
-                response = ResolutionType::E2160P60;
-                break;
-            default:
-                response = ResolutionType::UNKNOWN;
+        case Exchange::IComposition::ScreenResolution_480i:
+            response = ResolutionType::E480I;
+            break;
+        case Exchange::IComposition::ScreenResolution_480p:
+            response = ResolutionType::E480P;
+            break;
+        case Exchange::IComposition::ScreenResolution_720p:
+            response = ResolutionType::E720P60;
+            break;
+        case Exchange::IComposition::ScreenResolution_720p50Hz:
+            response = ResolutionType::E720P50;
+            break;
+        case Exchange::IComposition::ScreenResolution_1080p24Hz:
+            response = ResolutionType::E1080P24;
+            break;
+        case Exchange::IComposition::ScreenResolution_1080i50Hz:
+            response = ResolutionType::E1080I50;
+            break;
+        case Exchange::IComposition::ScreenResolution_1080p50Hz:
+            response = ResolutionType::E1080P50;
+            break;
+        case Exchange::IComposition::ScreenResolution_1080p60Hz:
+            response = ResolutionType::E1080P60;
+            break;
+        case Exchange::IComposition::ScreenResolution_2160p50Hz:
+            response = ResolutionType::E2160P50;
+            break;
+        case Exchange::IComposition::ScreenResolution_2160p60Hz:
+            response = ResolutionType::E2160P60;
+            break;
+        default:
+            response = ResolutionType::UNKNOWN;
         }
 
         return Core::ERROR_NONE;
@@ -154,7 +157,7 @@ namespace Plugin {
         Exchange::IComposition::ScreenResolution resolution = Exchange::IComposition::ScreenResolution_Unknown;
 
         if (param != ResolutionType::UNKNOWN) {
-            switch(param) {
+            switch (param) {
             case ResolutionType::E480I:
                 resolution = Exchange::IComposition::ScreenResolution_480i;
                 break;
@@ -258,6 +261,58 @@ namespace Plugin {
         return Opacity(index, param.Value());
     }
 
-} // namespace Plugin
+    // Property: brightness - Brightness of SDR graphics in HDR display
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNAVAILABLE: Set brightness is not supported or failed
+    //  - ERROR_GENERAL: Failed to set brightness
+    uint32_t Compositor::get_brightness(Core::JSON::EnumType<BrightnessType>& response) const
+    {
+        uint32_t result = Core::ERROR_UNAVAILABLE;
+        Exchange::IBrightness::Brightness brightness = Exchange::IBrightness::SdrToHdrGraphicsBrightness_Default;
 
+        result = GetBrightness(brightness);
+        if (result == Core::ERROR_NONE) {
+            switch (brightness) {
+            case Exchange::IBrightness::SdrToHdrGraphicsBrightness_Max:
+                response = BrightnessType::MAX;
+                break;
+            case Exchange::IBrightness::SdrToHdrGraphicsBrightness_MatchVideo:
+                response = BrightnessType::MATCH_VIDEO;
+                break;
+            case Exchange::IBrightness::SdrToHdrGraphicsBrightness_Default:
+            default:
+                response = BrightnessType::DEFAULT;
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    // Property: brightness - Brightness of SDR graphics in HDR display
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNKNOWN_KEY: Unknown brightness
+    //  - ERROR_UNAVAILABLE: Set brightness is not supported or failed
+    //  - ERROR_GENERAL: Failed to set brightness
+    uint32_t Compositor::set_brightness(const Core::JSON::EnumType<BrightnessType>& param)
+    {
+        Exchange::IBrightness::Brightness brightness = Exchange::IBrightness::SdrToHdrGraphicsBrightness_Default;
+        switch (param) {
+        case BrightnessType::MAX:
+            brightness = Exchange::IBrightness::SdrToHdrGraphicsBrightness_Max;
+            break;
+        case BrightnessType::MATCH_VIDEO:
+            brightness = Exchange::IBrightness::SdrToHdrGraphicsBrightness_MatchVideo;
+            break;
+        case BrightnessType::DEFAULT:
+        default:
+            brightness = Exchange::IBrightness::SdrToHdrGraphicsBrightness_Default;
+            break;
+        }
+        return SetBrightness(brightness);
+    }
+
+} // namespace Plugin
 }

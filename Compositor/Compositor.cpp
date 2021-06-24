@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2020 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -145,6 +145,7 @@ namespace Plugin {
         , _skipURL()
         , _notification(this)
         , _composition(nullptr)
+        , _brightness(nullptr)
         , _service(nullptr)
         , _connectionId()
         , _inputSwitch(nullptr)
@@ -194,6 +195,8 @@ namespace Plugin {
 
             _inputSwitch = _composition->QueryInterface<Exchange::IInputSwitch>();
             _inputSwitchCallsign = config.InputSwitch.Value();
+
+            _brightness = _composition->QueryInterface<Exchange::IBrightness>();
         }
 
         // On succes return empty, to indicate there is no error text.
@@ -217,6 +220,10 @@ namespace Plugin {
         if (_inputSwitch != nullptr) {
             _inputSwitch->Release();
             _inputSwitch = nullptr;
+        }
+        if (_brightness != nullptr) {
+            _brightness->Release();
+            _brightness = nullptr;
         }
         if (_composition != nullptr) {
             _composition->Release();
@@ -290,7 +297,6 @@ namespace Plugin {
                     result->Message = _T("Could not retrieve Geometry, Client not specified");
                 }
             }
-
             result->ContentType = Web::MIMETypes::MIME_JSON;
         } else if (request.Verb == Web::Request::HTTP_POST) {
             Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
@@ -317,7 +323,8 @@ namespace Plugin {
                             result->Message = _T("invalid parameter for resolution: ") + index.Current().Text();
                         }
                     }
-                } else {
+                } 
+                else {
                     string clientName(index.Current().Text());
 
                     if (clientName.empty() == true) {
@@ -648,6 +655,22 @@ namespace Plugin {
         _adminLock.Unlock();
  
         return (result);
+    }
+
+    uint32_t Compositor::GetBrightness(Exchange::IBrightness::Brightness& brightness) const
+    {
+        if (_brightness != nullptr) {
+            return (static_cast<const Exchange::IBrightness*>(_brightness)->SdrToHdrGraphicsBrightness(brightness));
+        }
+        return Core::ERROR_UNAVAILABLE;
+    }
+
+    uint32_t Compositor::SetBrightness(const Exchange::IBrightness::Brightness& brightness)
+    {
+        if (_brightness != nullptr) {
+            return _brightness->SdrToHdrGraphicsBrightness(brightness);
+        }
+        return Core::ERROR_UNAVAILABLE;
     }
 
     uint32_t Compositor::ToTop(const string& callsign)

@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2020 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -117,7 +117,7 @@ namespace Plugin {
         return (Core::ERROR_NONE);
     }
 
-    DIALServer::DIALServerImpl::DIALServerImpl(const string& MACAddress, const Core::URL& locator, const string& appPath, const bool dynamicInterface)
+    DIALServer::DIALServerImpl::DIALServerImpl(const string& deviceId, const Core::URL& locator, const string& appPath, const bool dynamicInterface)
         : BaseClass(5, false, Core::NodeId(DialServerInterface.AnyInterface(), DialServerInterface.PortNumber()), DialServerInterface.AnyInterface(), 1024, 1024)
         , _response(Core::ProxyType<Web::Response>::Create())
         , _destinations()
@@ -131,11 +131,10 @@ namespace Plugin {
         _response->CacheControl = _T("max-age=1800");
         _response->Server = _T("Linux/2.6 UPnP/1.0 quick_ssdp/1.0");
         _response->ST = _SearchTarget;
-        _response->USN = _T("uuid:UniqueIdentifier::") + _SearchTarget;
+        _response->USN = _T("uuid:") + deviceId + _T("::") + _SearchTarget;
         // FIXME: Uncomment when adding WoL/WoWLAN support.
         // This SHALL NOT be present if neither WoL nor WoWLAN is supported.
-        // Moreover real MAC address of the network iface (either wired or wireless one) should be passed
-        // where currently Device identifier is passed in MACAddress.
+        // Moreover real MAC address of the network interface (either wired or wireless one) should be passed
         // _response->WakeUp = _T("MAC=") + MACAddress + _T(";Timeout=10");
         _response->Mode(Web::MARSHAL_UPPERCASE);
 
@@ -155,7 +154,7 @@ namespace Plugin {
     }
 
     // Notification of a Partial Request received, time to attach a body..
-    /* virtual */ void DIALServer::DIALServerImpl::LinkBody(Core::ProxyType<Web::Request>& element)
+    /* virtual */ void DIALServer::DIALServerImpl::LinkBody(Core::ProxyType<Web::Request>&)
     {
         // upnp requests are empty so no body needed...
     }
@@ -483,7 +482,7 @@ namespace Plugin {
         }
     }
 
-    void DIALServer::StopApplication(const Web::Request& request, Core::ProxyType<Web::Response>& response, AppInformation& app)
+    void DIALServer::StopApplication(const Web::Request&, Core::ProxyType<Web::Response>& response, AppInformation& app)
     {
         if (app.IsRunning() == false) {
             response->ErrorCode = Web::STATUS_NOT_FOUND;
