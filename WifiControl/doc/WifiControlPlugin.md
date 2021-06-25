@@ -83,6 +83,9 @@ The table below lists configuration options of the plugin.
 | configuration?.preferred | string | <sup>*(optional)*</sup> Preferred |
 | configuration?.autoconnect | string | <sup>*(optional)*</sup> Enable autoconnect |
 | configuration?.retryinterval | string | <sup>*(optional)*</sup> Retry interval |
+| configuration?.waittime | number | <sup>*(optional)*</sup> Waiting time for the real wifi app to connect |
+| configuration?.logfile | string | <sup>*(optional)*</sup> File name to save debug info from the wifi app. Will be created in /tmp/WifiControl/ directory. Debug will be turned on if this is set |
+
 
 <a name="head.Methods"></a>
 # Methods

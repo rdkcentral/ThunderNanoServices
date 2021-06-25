@@ -66,10 +66,11 @@ namespace Plugin
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
         _service = service;
 
-        if (Core::Directory(service->PersistentPath().c_str()).CreatePath())
+        if (Core::Directory(service->PersistentPath().c_str()).CreatePath()) {
             _configurationStore = service->PersistentPath() + "wpa_supplicant.conf";
-        else
+        } else {
             SYSLOG(Logging::Startup, ("Config directory %s doesn't exist and could not be created!\n", service->PersistentPath().c_str()));
+        }
 
         TRACE(Trace::Information, (_T("Starting the application for wifi called: [%s]"), config.Application.Value().c_str()));
 #ifdef USE_WIFI_HAL
@@ -78,10 +79,36 @@ namespace Plugin
             _controller->Scan();
         }
 #else
+        string logFile;
+        if(config.LogFile.IsSet()){
+            logFile = service->VolatilePath() + config.LogFile.Value();
+        }
+
         if ((config.Application.Value().empty() == false) && (::strncmp(config.Application.Value().c_str(), _TXT("null")) != 0)) {
-            if ((Core::Directory(config.Connector.Value().c_str()).CreatePath() != true) || (_wpaSupplicant.Launch(config.Connector.Value(), config.Interface.Value(), 15) != Core::ERROR_NONE)) {
-                result = _T("Could not start WPA_SUPPLICANT");
+            if (!config.Connector.Value().empty()) {
+                if(Core::File(config.Connector.Value()).IsDirectory()){
+                    //if directory exists remove it to clear data (eg. sockets) that can remain after previous plugin run
+                    Core::Directory(config.Connector.Value().c_str()).Destroy(false);
+                }
+
+                if (Core::Directory(config.Connector.Value().c_str()).CreatePath()) {
+                    if (!config.Interface.Value().empty() && config.WaitTime.Value() > 0) {
+
+                        if (_wpaSupplicant.Launch(config.Application.Value(), config.Connector.Value(),
+                                                  config.Interface.Value(), config.WaitTime.Value(), logFile) != Core::ERROR_NONE) {
+                            result = _T("Could not start WPA_SUPPLICANT");
+                        }
+                    }
+                } else {
+                    result = _T("Could not create connector path");
+                }
             }
+            else{
+                result = _T("WPA_SUPPLICANT connector path is not set");
+            }
+        }
+        else{
+            result = _T("WPA_SUPPLICANT application path is not set");
         }
 
         if (result.empty() == true) {

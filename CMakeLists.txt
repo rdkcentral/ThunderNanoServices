@@ -44,6 +44,7 @@ option(PLUGIN_SECURESHELLSERVER "Include SecureShellServer plugin" OFF)
 option(PLUGIN_STREAMER "Include Streamer plugin" OFF)
 option(PLUGIN_SNAPSHOT "Include Snapshot plugin" OFF)
 option(PLUGIN_SPARK "Include SparkEngine plugin" OFF)
+option(PLUGIN_SUBSYSTEMCONTROLLER "Include SubsystemController plugin" OFF)
 option(PLUGIN_SVALBARD "Include Svalbard plugin" OFF)
 option(PLUGIN_SYSTEMCOMMANDS "Include SystemCommands plugin" OFF)
 option(PLUGIN_TIMESYNC "Include TimeSync plugin" OFF)
@@ -162,6 +163,10 @@ endif()
 
 if(PLUGIN_STREAMER)
     add_subdirectory(Streamer)
+endif()
+
+if(PLUGIN_SUBSYSTEMCONTROLLER)
+    add_subdirectory(SubsystemController)
 endif()
 
 if(PLUGIN_SVALBARD)
