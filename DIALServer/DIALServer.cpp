@@ -668,9 +668,9 @@ namespace Plugin {
             if (source.IsLocalInterface() == true) {
                 safe = true;
             } else {
-                if (request.Origin.Value().find("https") == 0) { // Valid format: https://www.youtube.com, https://dial.youtube.com
-                    safe = (request.Origin.Value().find(app.Origin()) != string::npos);
-            } else if (request.Origin.Value().find("package") == 0) { // Valid format: package: com.youtube.app, package: com.google.ios.youtube
+                if (request.Origin.Value().find("https:") == 0) { // Valid format: https://www.youtube.com, https://dial.youtube.com
+                    safe = ((hostPortion.Value().length() >= app.Origin().length()) && (hostPortion.Value().substr(hostPortion.Value().length() - app.Origin().length()) == app.Origin()));
+            } else if (request.Origin.Value().find("package:") == 0) { // Valid format: package: com.youtube.app, package: com.google.ios.youtube
                     safe = (request.Origin.Value().find(app.Origin().substr(0,app.Origin().find("."))) != string::npos);
                 } else {
                     safe = false;
