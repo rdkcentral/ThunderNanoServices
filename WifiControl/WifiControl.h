@@ -419,7 +419,7 @@ namespace Plugin {
             Config& operator=(const Config&) = delete;
 
             Config()
-                : Connector(_T("/var/run/wpa_supplicant"))
+                : ConnectorDirectory(_T("wpa_supplicant"))
                 , Interface(_T("wlan0"))
                 , Application(_T("/usr/sbin/wpa_supplicant"))
                 , Preferred()
@@ -428,7 +428,7 @@ namespace Plugin {
                 , WaitTime(15)
                 , LogFile()
             {
-                Add(_T("connector"), &Connector);
+                Add(_T("connector"), &ConnectorDirectory);
                 Add(_T("interface"), &Interface);
                 Add(_T("application"), &Application);
                 Add(_T("preferred"), &Preferred);
@@ -442,7 +442,7 @@ namespace Plugin {
             }
 
         public:
-            Core::JSON::String Connector;
+            Core::JSON::String ConnectorDirectory;
             Core::JSON::String Interface;
             Core::JSON::String Application;
             Core::JSON::String Preferred;

@@ -80,21 +80,23 @@ namespace Plugin
         }
 #else
         string logFile;
+        string connectorFullDirectory;
         if(config.LogFile.IsSet()){
             logFile = service->VolatilePath() + config.LogFile.Value();
         }
 
         if ((config.Application.Value().empty() == false) && (::strncmp(config.Application.Value().c_str(), _TXT("null")) != 0)) {
-            if (!config.Connector.Value().empty()) {
-                if(Core::File(config.Connector.Value()).IsDirectory()){
+            if (!config.ConnectorDirectory.Value().empty()) {
+                connectorFullDirectory = service->VolatilePath() + config.ConnectorDirectory.Value();
+                if(Core::File(connectorFullDirectory).IsDirectory()){
                     //if directory exists remove it to clear data (eg. sockets) that can remain after previous plugin run
-                    Core::Directory(config.Connector.Value().c_str()).Destroy(false);
+                    Core::Directory(connectorFullDirectory.c_str()).Destroy(false);
                 }
 
-                if (Core::Directory(config.Connector.Value().c_str()).CreatePath()) {
+                if (Core::Directory(connectorFullDirectory.c_str()).CreatePath()) {
                     if (!config.Interface.Value().empty() && config.WaitTime.Value() > 0) {
 
-                        if (_wpaSupplicant.Launch(config.Application.Value(), config.Connector.Value(),
+                        if (_wpaSupplicant.Launch(config.Application.Value(), connectorFullDirectory,
                                                   config.Interface.Value(), config.WaitTime.Value(), logFile) != Core::ERROR_NONE) {
                             result = _T("Could not start WPA_SUPPLICANT");
                         }
@@ -112,7 +114,7 @@ namespace Plugin
         }
 
         if (result.empty() == true) {
-            _controller = WPASupplicant::Controller::Create(config.Connector.Value(), config.Interface.Value(), 10);
+            _controller = WPASupplicant::Controller::Create(connectorFullDirectory, config.Interface.Value(), 10);
 
             if (_controller.IsValid() == true) {
                 if (_controller->IsOperational() == false) {
