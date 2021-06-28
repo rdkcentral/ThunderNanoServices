@@ -551,15 +551,18 @@ namespace Plugin {
 
             virtual ~GATTRemote()
             {
+                if (_device != nullptr) {
+                    if (_device->Callback(static_cast<Exchange::IBluetooth::IDevice::ICallback*>(nullptr)) != Core::ERROR_NONE) {
+                        TRACE(Trace::Fatal, (_T("Could not remove the callback from the device")));
+                    }
+                }
+
                 if (GATTSocket::IsOpen() == true) {
                     GATTSocket::Close(Core::infinite);
                 }
 
                 if (_device != nullptr) {
-                    if (_device->Callback(static_cast<Exchange::IBluetooth::IDevice::ICallback*>(nullptr)) != Core::ERROR_NONE) {
-                        TRACE(Trace::Fatal, (_T("Could not remove the callback from the device")));
-                    }
-
+                    _device->Disconnect();
                     _device->Release();
                     _device = nullptr;
                 }
@@ -683,7 +686,7 @@ namespace Plugin {
                         config.Resolution.Value());
                 }
             }
-            void Discover() 
+            void Discover()
             {
                 _profile->Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
                     if (result == Core::ERROR_NONE) {
@@ -775,27 +778,28 @@ namespace Plugin {
                 }
 
                 if (_profile == nullptr) {
-                    TRACE(Flow, (_T("The HoG device is ready for operation")));
-
                     SetDecoder(config.AudioProfile);
                 }
-                else {
-                    if (_device->IsConnected() == true) {
-                        uint32_t result = GATTSocket::Open(5000);
-                        if (result != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, (_T("Failed to open GATT socket [%s] [%i]"), _device->RemoteId().c_str(), result));
-                            GATTSocket::Close(Core::infinite);
-                        }
-                        else {
+
+                if (_device->IsConnected() == true) {
+                    uint32_t result = GATTSocket::Open(5000);
+                    if (result != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Failed to open GATT socket [%s] [%i]"), _device->RemoteId().c_str(), result));
+                        GATTSocket::Close(Core::infinite);
+                    } else {
+                        if (_profile == nullptr) {
+                            TRACE(Flow, (_T("The HoG device is ready for operation")));
+                        } else {
                             TRACE(Flow, (_T("The device is not configured. Read the device configuration.")));
                             Discover();
                         }
                     }
-                    else {
-                        TRACE(Flow, (_T("The device is not configured. Connect to it, so we can read the config.")));
-                        _device->Connect();
-                    }
+                } else {
+                    TRACE(Flow, (_T("The device is not configured. Connect to it, so we can read the config.")));
                 }
+
+                // Try to connect or mark for autoconnection if already connected.
+                _device->Connect();
             }
             uint32_t Initialize() override
             {
@@ -807,7 +811,7 @@ namespace Plugin {
                     TRACE(Flow, (_T("The received MTU: %d, no need for discovery, we know it all"), MTU()));
 
                     // No need to do service discovery if device knows the Handles to use. If so, DeviceDiscovery has
-                    // already been done and the only thing we need to do is get the startingvalues :-)
+                    // already been done and the only thing we need to do is get the starting values :-)
                     ReadSoftwareRevision();
                 }
                 else {
@@ -1143,10 +1147,6 @@ namespace Plugin {
                             if (result != Core::ERROR_NONE) {
                                 TRACE(Trace::Error, (_T("Failed to close GATT socket [%s]"), _device->RemoteId().c_str()));
                             }
-                        } else if (_device->IsBonded() == true) {
-                            // Looks like the device is in range again, how about trying a connect?
-                            TRACE(Trace::Information, (_T("Trying to re-establish a connection [%s]"), _device->RemoteId().c_str()));
-                            _device->Connect();
                         }
                     } else {
                         TRACE(Flow, (_T("Releasing device")));
