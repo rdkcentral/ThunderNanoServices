@@ -54,7 +54,7 @@ endif()
 if(PLUGIN_BLUETOOTH_KERNEL_CONNECION_CONTROL)
     target_compile_definitions(${MODULE_NAME}
         PRIVATE
-            USE_KERNEL_CONNECION_CONTROL)
+            USE_KERNEL_CONNECTION_CONTROL)
 endif()
 
 target_link_libraries(${MODULE_NAME}
