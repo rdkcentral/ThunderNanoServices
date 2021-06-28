@@ -1007,6 +1007,7 @@ namespace WPASupplicant {
             , _networkRequest(*this)
             , _statusRequest(*this)
             , _connectRequest(*this)
+            , _isScanningCompleted(false, true)
         {
             string remoteName(Core::Directory::Normalize(supplicantBase) + interfaceName);
 
@@ -1118,13 +1119,23 @@ namespace WPASupplicant {
             _adminLock.Unlock();
 
             if (activated == true) {
+                _isScanningCompleted.ResetEvent();
                 result = Core::ERROR_NONE;
 
                 CustomRequest exchange(string(_TXT("SCAN")));
 
                 Submit(&exchange);
 
-                if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
+                bool toAbort = false;
+                if (exchange.Wait(MaxConnectionTime)) {
+                    if (exchange.Response() != _T("OK")) {
+                        toAbort = true;
+                    }
+                } else {
+                    toAbort = true;
+                }
+
+                if (toAbort) {
                     _adminLock.Lock();
                     _scanRequest.Aborted();
                     _adminLock.Unlock();
@@ -1439,6 +1450,13 @@ namespace WPASupplicant {
 
             uint32_t result = Core::ERROR_UNKNOWN_KEY;
 
+            if(!IsScanning()){
+                //if not scanning start it
+                Scan();
+            }
+
+            //let scanning finish
+            _isScanningCompleted.Lock();            
             _adminLock.Lock();
 
             EnabledContainer::iterator index(_enabled.find(SSID));
@@ -1473,6 +1491,7 @@ namespace WPASupplicant {
                 _adminLock.Unlock();
             }
 
+            _isScanningCompleted.ResetEvent();
             return (result);
         }
         inline uint32_t Connect(const string& SSID, const uint64_t& bssid)
@@ -1520,7 +1539,12 @@ namespace WPASupplicant {
         inline uint32_t Disconnect(const string& SSID)
         {
             uint32_t result = Core::ERROR_UNKNOWN_KEY;
+            
+            if(!IsScanning()){
+                Scan();
+            }
 
+            _isScanningCompleted.Lock();
             _adminLock.Lock();
 
             EnabledContainer::iterator index(_enabled.find(SSID));
@@ -1547,6 +1571,7 @@ namespace WPASupplicant {
                 _adminLock.Unlock();
             }
 
+            _isScanningCompleted.ResetEvent();
             return (result);
         }
 
@@ -1565,6 +1590,9 @@ namespace WPASupplicant {
             }
             else if (value == WPASupplicant::Controller::CTRL_EVENT_CONNECTED) {
                 _connectRequest.Completed(Core::ERROR_NONE);
+            }
+            else if(value == WPASupplicant::Controller::CTRL_EVENT_SCAN_RESULTS){
+                _isScanningCompleted.SetEvent();
             }
 
             _adminLock.Lock();
@@ -1972,6 +2000,7 @@ namespace WPASupplicant {
     private:
         mutable Core::CriticalSection _adminLock;
         mutable std::list<Request*> _requests;
+        mutable Core::Event _isScanningCompleted;
         NetworkInfoContainer _networks;
         EnabledContainer _enabled;
         uint32_t _error;

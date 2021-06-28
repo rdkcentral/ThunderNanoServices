@@ -124,7 +124,6 @@ namespace Plugin {
     uint32_t WifiControl::endpoint_connect(const DeleteParamsInfo& params)
     {
         const string& ssid = params.Ssid.Value();
-
         return Connect(ssid);
     }
 

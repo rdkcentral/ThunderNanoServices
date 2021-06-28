@@ -71,6 +71,7 @@ namespace Plugin
         } else {
             SYSLOG(Logging::Startup, ("Config directory %s doesn't exist and could not be created!\n", service->PersistentPath().c_str()));
         }
+        std::cerr << "\nCONFIG STORE: " << _configurationStore << std::endl;
 
         TRACE(Trace::Information, (_T("Starting the application for wifi called: [%s]"), config.Application.Value().c_str()));
 #ifdef USE_WIFI_HAL
