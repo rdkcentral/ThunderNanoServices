@@ -1540,13 +1540,6 @@ namespace WPASupplicant {
         {
             uint32_t result = Core::ERROR_UNKNOWN_KEY;
             
-            if(!IsScanning()){
-                Scan();
-            }
-
-            _isScanningCompleted.Lock();
-            _adminLock.Lock();
-
             EnabledContainer::iterator index(_enabled.find(SSID));
 
             if ((index != _enabled.end()) && (index->second.IsEnabled() == true)) {
@@ -1571,7 +1564,6 @@ namespace WPASupplicant {
                 _adminLock.Unlock();
             }
 
-            _isScanningCompleted.ResetEvent();
             return (result);
         }
 
