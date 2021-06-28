@@ -2036,6 +2036,23 @@ protected:
                                     }
                                 } else {
                                     TRACE(Trace::Error, (_T("Failed to connect [%d]"), result));
+
+                                    if (result == Core::ERROR_TIMEDOUT) {
+                                        // The device is not nearby or active, but we just whitelisted it, so keep searching...
+                                        Bluetooth::HCISocket::Command::ConnectLECancel connectCancel;
+                                        connectCancel.Clear();
+
+                                        result = Connector().Exchange(MAX_ACTION_TIMEOUT, connectCancel, connectCancel);
+                                        if ((result != Core::ERROR_NONE) || (connectCancel.Result() != 0)) {
+                                            TRACE(Trace::Error, (_T("Failed to cancel connection")));
+                                        } else if (connectCancel.Response() != 0) {
+                                            TRACE(Trace::Error, (_T("Controller failed to cancel connection (%i)"), connectCancel.Response()));
+                                        } else {
+                                            TRACE(Trace::Information, (_T("Canceled connection attempt")));
+                                        }
+
+                                        BackgroundScan(true);
+                                    }
                                 }
                             } else {
                                 result = Core::ERROR_ILLEGAL_STATE;
