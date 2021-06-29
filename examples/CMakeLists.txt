@@ -24,6 +24,8 @@ find_package(WPEFramework)
 project_version(1.0.0)
 message("Setup ${PROJECT_NAME} v${PROJECT_VERSION}")
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+
 option(EXAMPLE_COMRPCCLIENT"Include COMRPCClient example" OFF)
 option(PLUGIN_JSONRPC "Include JSONRPCExamplePlugin plugin" OFF)
 option(PLUGIN_TESTUTILITY "Include TestUtility plugin" OFF)
@@ -31,6 +33,7 @@ option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
 option(PLUGIN_STATECONTROLLER "Include StateController plugin" OFF)
+option(PLUGIN_SIMPLEEGL "Include SimpleEGL plugin" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
@@ -61,3 +64,6 @@ if(PLUGIN_STATECONTROLLER)
     add_subdirectory(StateController)
 endif()
 
+if(PLUGIN_SIMPLEEGL)
+    add_subdirectory(SimpleEGL)
+endif()
