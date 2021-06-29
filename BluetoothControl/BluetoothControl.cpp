@@ -157,7 +157,7 @@ namespace Plugin {
         return result;
     }
 
-    /*virtual*/ void BluetoothControl::Deinitialize(PluginHost::IShell* service)
+    /*virtual*/ void BluetoothControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
 
@@ -366,7 +366,7 @@ namespace Plugin {
         return result;
     }
 
-    Core::ProxyType<Web::Response> BluetoothControl::PostMethod(Core::TextSegmentIterator&, const Web::Request&)
+    Core::ProxyType<Web::Response> BluetoothControl::PostMethod(Core::TextSegmentIterator& /* index */, const Web::Request& /* request */)
     {
         Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;

@@ -102,6 +102,7 @@ namespace USB {
                     , _size(size)
                     , _logicalMin(logicalMin)
                     , _logicalMax(logicalMax)
+                    , _flags(flags)
                 {
                 }
                 ~Element() = default;
@@ -111,7 +112,7 @@ namespace USB {
                 {
                     return (_report);
                 }
-                const category Type() const
+                category Type() const
                 {
                     return (_type);
                 }
@@ -135,6 +136,10 @@ namespace USB {
                 {
                     return (_logicalMax);
                 }
+                uint8_t Flags() const
+                {
+                    return (_flags);
+                }
 
             private:
                 Report& _report;
@@ -144,6 +149,7 @@ namespace USB {
                 uint16_t _size;
                 uint32_t _logicalMin;
                 uint32_t _logicalMax;
+                uint8_t _flags;
             }; // class Element
 
         public:

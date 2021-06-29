@@ -172,7 +172,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     BT_TRACE(ManagementFlow, info);
                     if (info.opcode == MGMT_OP_PAIR_DEVICE) {
                         const mgmt_rp_pair_device* payload = reinterpret_cast<const mgmt_rp_pair_device*>(info.data);
-                        _parent.PairingComplete(payload->addr.bdaddr, static_cast<const Bluetooth::Address::type>(payload->addr.type), info.status);
+                        _parent.PairingComplete(payload->addr.bdaddr, static_cast<Bluetooth::Address::type>(payload->addr.type), info.status);
                     }
                 }
                 void Update(const mgmt_ev_controller_error& info)
@@ -198,23 +198,23 @@ class BluetoothControl : public PluginHost::IPlugin
                 void Update(const mgmt_ev_pin_code_request& info)
                 {
                     BT_TRACE(ManagementFlow, info);
-                    _parent.RequestPINCode(info.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.addr.type));
+                    _parent.RequestPINCode(info.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.addr.type));
                 }
                 void Update(const mgmt_ev_user_passkey_request& info)
                 {
                     BT_TRACE(ManagementFlow, info);
-                    _parent.RequestPasskey(info.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.addr.type));
+                    _parent.RequestPasskey(info.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.addr.type));
                 }
                 void Update(const mgmt_ev_user_confirm_request& info)
                 {
                     BT_TRACE(ManagementFlow, info);
-                    _parent.RequestPasskeyConfirm(info.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.addr.type), btohl(info.value));
+                    _parent.RequestPasskeyConfirm(info.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.addr.type), btohl(info.value));
                 }
                 void Update(const mgmt_ev_new_link_key& info)
                 {
                     BT_TRACE(ManagementFlow, info);
                     if (info.store_hint != 0) {
-                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.key.addr.type),
+                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.key.addr.type),
                                                 Bluetooth::LinkKey(info.key.addr.bdaddr, info.key.val, info.key.pin_len, info.key.addr.type)) != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Failed to store link key")));
                         }
@@ -226,7 +226,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 {
                     BT_TRACE(ManagementFlow, info);
                     if (info.store_hint != 0) {
-                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.key.addr.type),
+                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.key.addr.type),
                                                 Bluetooth::IdentityKey(info.key.addr.bdaddr, info.key.addr.type, info.key.val)) != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Failed to store IRK")));
                         }
@@ -243,7 +243,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 {
                     BT_TRACE(ManagementFlow, info);
                     if (info.store_hint != 0) {
-                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.key.addr.type),
+                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.key.addr.type),
                                                 Bluetooth::LongTermKey(info.key.addr.bdaddr, info.key.addr.type, info.key.type,
                                                                        info.key.master, info.key.enc_size, btohs(info.key.ediv),
                                                                        btohll(info.key.rand), info.key.val)) != Core::ERROR_NONE) {
@@ -394,7 +394,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 TRACE(ControlFlow, (_T("Scan completed: %s"), Core::Time::Now().ToRFC1123().c_str()));
                 Application()->event_scancomplete();
             }
-            void PairingComplete(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const uint8_t status)
+            void PairingComplete(const Bluetooth::Address& /* remote */, const Bluetooth::Address::type /* type */, const uint8_t /* status */)
             {
                 // Pairing is considered successful only if the appropriate keys are exchanged.
             }
@@ -1888,7 +1888,7 @@ protected:
                 cmd->pscan_rep_mode = 0x02;
                 cmd->clock_offset = 0x0000;
 
-                _parent->Connector().Execute<Bluetooth::HCISocket::Command::RemoteName>(MAX_ACTION_TIMEOUT, cmd, [&](Bluetooth::HCISocket::Command::RemoteName&, const uint32_t error) {
+                _parent->Connector().Execute<Bluetooth::HCISocket::Command::RemoteName>(MAX_ACTION_TIMEOUT, cmd, [&](Bluetooth::HCISocket::Command::RemoteName& /* cmd */, const uint32_t error) {
                     if (error != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Failed to request remote name [%d]"), error));
                     }
@@ -2075,7 +2075,7 @@ protected:
 
         public:
             // ILowEnergy overrides
-            bool IsUUIDSupported(const string&) const override
+            bool IsUUIDSupported(const string& /* uuid */) const override
             {
                 return false;
             }

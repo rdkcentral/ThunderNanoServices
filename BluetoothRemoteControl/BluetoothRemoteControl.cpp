@@ -173,7 +173,7 @@ namespace Plugin {
         return (string());
     }
 
-    void BluetoothRemoteControl::Deinitialize(PluginHost::IShell* service)
+    void BluetoothRemoteControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
 
@@ -200,7 +200,7 @@ namespace Plugin {
         return { };
     }
 
-    void BluetoothRemoteControl::Inbound(WPEFramework::Web::Request& request)
+    void BluetoothRemoteControl::Inbound(WPEFramework::Web::Request& /* request */)
     {
         // Not needed
     }
@@ -229,7 +229,7 @@ namespace Plugin {
         return (response);
     }
 
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::GetMethod(Core::TextSegmentIterator& index)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::GetMethod(Core::TextSegmentIterator& /* index */)
     {
         Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -238,7 +238,7 @@ namespace Plugin {
         return (response);
     }
 
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::PutMethod(Core::TextSegmentIterator& index, const Web::Request& request)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::PutMethod(Core::TextSegmentIterator& index, const Web::Request& /* request */)
     {
         Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -274,7 +274,7 @@ namespace Plugin {
         return (response);
     }
 
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::PostMethod(Core::TextSegmentIterator& index, const Web::Request& request)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::PostMethod(Core::TextSegmentIterator& index, const Web::Request& /* request */)
     {
         Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -305,7 +305,7 @@ namespace Plugin {
         return (response);
     }
 
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& /* request */)
     {
         Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;

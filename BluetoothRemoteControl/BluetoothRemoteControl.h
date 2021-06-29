@@ -646,7 +646,7 @@ namespace Plugin {
                     }
                     else {
                         uint32_t outcome = result;
-                        result = (result == Core::ERROR_NONE ? (cmd.Error() == Core::ERROR_NONE ? Core::ERROR_PRIVILIGED_REQUEST : cmd.Error()) : result);
+                        result = (result == Core::ERROR_NONE ? (cmd.Error() == Core::ERROR_NONE ? (uint32_t)Core::ERROR_PRIVILIGED_REQUEST : cmd.Error()) : result);
                         TRACE(Trace::Error, (_T("Failed to enable voice (handle 0x%04X), error: %d [%d]"), _voiceCommandHandle, outcome, result == Core::ERROR_PRIVILIGED_REQUEST ? cmd.Result().Error() : 0));
                     }
                 }
