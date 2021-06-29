@@ -20,6 +20,7 @@
 #include "Module.h"
 
 #include <interfaces/IComposition.h>
+#include <com/com.h>
 
 #include "ModeSet.h"
 
@@ -40,8 +41,8 @@ class CompositorImplementation;
         ~ClientSurface() override;
 
     public:
-        instance_id Native() const override {
-                return reinterpret_cast<instance_id>(_nativeSurface);
+        RPC::instance_id Native() const override {
+                return reinterpret_cast<RPC::instance_id>(_nativeSurface);
         }
         string Name() const override
         {
@@ -248,7 +249,7 @@ class CompositorImplementation;
         //
         // Echange::IComposition::IDisplay
         // ==================================================================================================================
-        instance_id Native() const override {
+        RPC::instance_id Native() const override {
             EGLNativeDisplayType result (static_cast<EGLNativeDisplayType>(EGL_DEFAULT_DISPLAY));
 
             const struct gbm_device* pointer = _platform.UnderlyingHandle();
@@ -260,7 +261,7 @@ class CompositorImplementation;
                 TRACE(Trace::Error, (_T("The native display (id) might be invalid / unsupported. Using the EGL default display instead!")));
             }
 
-            return reinterpret_cast<instance_id>(result);
+            return reinterpret_cast<RPC::instance_id>(result);
         }
 
         string Port() const override {
