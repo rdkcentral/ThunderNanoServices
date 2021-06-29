@@ -317,6 +317,7 @@ namespace Plugin {
                 TRACE(Trace::Error, (_T("Interval must be greater than 0!")));
             } else {
                 _processThread.reset(new StatCollecter(config));
+                _csvFilePath = config.Path.Value();
                 result = Core::ERROR_NONE;
             }
 
