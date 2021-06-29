@@ -671,8 +671,6 @@ namespace Plugin {
                 }
 
                 _decoder = Decoders::IDecoder::Instance(_manufacturerName.c_str(), enumValue.Value(), config.Configuration.Value());
-
-
                 if (_decoder == nullptr) {
                     TRACE(Trace::Error, (_T("Failed to create a decoder for %s type: [%s]"), _manufacturerName.c_str(), enumValue.Data()));
                     _audioProfile = nullptr;
@@ -807,6 +805,8 @@ namespace Plugin {
             }
             void Operational() override
             {
+                _parent->Connected(_name);
+
                 if (_profile == nullptr) {
                     TRACE(Flow, (_T("The received MTU: %d, no need for discovery, we know it all"), MTU()));
 
@@ -1345,6 +1345,7 @@ namespace Plugin {
         // Bluetooth Remote Control implementation
         uint32_t Assign(const string& address);
         uint32_t Revoke();
+        void Connected(const string& name);
         void Operational(const GATTRemote::Data& settings);
         void VoiceData(Exchange::IVoiceProducer::IProfile* profile);
         void VoiceData(const uint32_t seq, const uint16_t length, const uint8_t dataBuffer[]);
