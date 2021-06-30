@@ -90,25 +90,36 @@ set_target_properties(${TARGET} PROPERTIES
         DEFINE_SYMBOL WPEFRAMEWORK_PLATFORM_PLUGIN
 )
 
-find_package(WesterosServer)
-if(WESTEROS_SERVER_FOUND)
-    target_sources(${TARGET} 
-        PRIVATE 
-            Westeros.cpp
-    )
-    target_link_libraries(${TARGET} 
+find_package(WestonServer)
+if(WESTON_SERVER_FOUND)
+    target_sources(${TARGET}
         PRIVATE
-            WesterosServer::WesterosServer
+            Weston.cpp
     )
-
-    find_package(BCM_HOST QUIET)
-    if (NOT BCM_HOST_FOUND)
-        target_compile_definitions(${TARGET}
+    target_link_libraries(${TARGET}
+        PRIVATE
+            WestonServer::WestonServer
+    )
+else()
+    find_package(WesterosServer)
+    if(WESTEROS_SERVER_FOUND)
+        target_sources(${TARGET}
+             PRIVATE
+                Westeros.cpp
+        )
+        target_link_libraries(${TARGET}
             PRIVATE
-                RESOLUTION_SUPPORT=1)
-    endif(NOT BCM_HOST_FOUND)
+                WesterosServer::WesterosServer
+        )
 
-endif(WESTEROS_SERVER_FOUND)
+        find_package(BCM_HOST QUIET)
+        if (NOT BCM_HOST_FOUND)
+            target_compile_definitions(${TARGET}
+                PRIVATE
+                    RESOLUTION_SUPPORT=1)
+        endif(NOT BCM_HOST_FOUND)
+    endif(WESTEROS_SERVER_FOUND)
+endif()
 
 if(PLUGIN_COMPOSITOR_VIRTUALINPUT)
     find_package(${NAMESPACE}VirtualInput REQUIRED)
