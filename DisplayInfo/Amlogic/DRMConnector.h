@@ -92,7 +92,7 @@ namespace Plugin {
             drmModeModeInfoPtr BestMode(uint32_t modeCount, drmModeModeInfoPtr modes) const
             {
                 drmModeModeInfoPtr result = nullptr;
-                for (int index = 0; index < modeCount; ++index) {
+                for (uint32_t index = 0; index < modeCount; ++index) {
                     if (result == nullptr) {
                         result = modes + index;
                     } else {
@@ -105,7 +105,7 @@ namespace Plugin {
             drmModeModeInfoPtr PreferredMode(uint32_t modeCount, drmModeModeInfoPtr modes) const
             {
                 drmModeModeInfoPtr result = nullptr;
-                for (int index = 0; index < modeCount; ++index) {
+                for (uint32_t index = 0; index < modeCount; ++index) {
                     if (modes[index].type & DRM_MODE_TYPE_PREFERRED) {
                         result = modes + index;
                     }
