@@ -147,7 +147,17 @@ namespace Weston {
             Core::File _logFile;
         };
 
-        class DRMBackend {
+        class IBackend {
+        public:
+            IBackend(const IBackend&) = delete;
+            IBackend& operator=(const IBackend&)= delete;
+            IBackend() = default;
+            ~IBackend() = default;
+        public:
+            virtual bool Forced() const = 0;
+            virtual void Load(struct weston_compositor* compositor) = 0;
+        };
+        class DRM : public IBackend{
         private:
             class Config : public Core::JSON::Container {
             private:
@@ -158,8 +168,10 @@ namespace Weston {
                 Config()
                     : Core::JSON::Container()
                     , TTY(1)
+                    , Forced(false)
                 {
                     Add(_T("tty"), &TTY);
+                    Add(_T("forces"), &Forced);
                 }
                 ~Config()
                 {
@@ -167,38 +179,87 @@ namespace Weston {
 
             public:
                 Core::JSON::DecUInt8 TTY;
+                Core::JSON::Boolean Forced;
             };
 
         public:
-            DRMBackend() = delete;
-            DRMBackend(const DRMBackend&) = delete;
-            DRMBackend& operator=(const DRMBackend&)= delete;
-            DRMBackend(PluginHost::IShell* service)
+            DRM() = delete;
+            DRM(const DRM&) = delete;
+            DRM& operator=(const DRM&)= delete;
+            DRM(PluginHost::IShell* service)
                 : _tty()
+                , _forced(false)
                 , _listener()
             {
                 Config config;
                 config.FromString(service->ConfigLine());
                 _tty = config.TTY.Value();
+                _forced = config.Forced.Value();
             }
-            void Load(struct weston_compositor* compositor) {
+
+        public:
+            inline bool Forced() const override
+            {
+                return _forced;
+            }
+            void Load(struct weston_compositor* compositor) override
+            {
                 struct weston_drm_backend_config config = {{ 0, }};
 
                 config.tty = _tty;
                 config.base.struct_version = WESTON_DRM_BACKEND_CONFIG_VERSION;
                 config.base.struct_size = sizeof(struct weston_drm_backend_config);
 
-                //listener.notify = drm_heads_changed;
+                _listener.notify = DRMHeadsChanged;
                 weston_compositor_add_heads_changed_listener(compositor, &_listener);
 
                 weston_compositor_load_backend(compositor, WESTON_BACKEND_DRM, &config.base);
             }
         private:
+            static void DRMHeadsChanged(struct wl_listener* listener, void* argument)
+            {
+                 struct weston_compositor* compositor = static_cast<weston_compositor*>(argument);
+                 Compositor* parent = static_cast<Compositor*>(weston_compositor_get_user_data(compositor));
+                 struct weston_head* head = nullptr;
+
+                 while ((head = weston_compositor_iterate_heads(compositor, head))) {
+                     bool connected = weston_head_is_connected(head);
+                     bool enabled = weston_head_is_enabled(head);
+                     bool changed = weston_head_is_device_changed(head);
+                     bool forced = parent->Backend()->Forced();
+
+                     if ((connected || forced) && !enabled) {
+                        //drm_head_prepare_enable(wet, head);
+                        //LayOutputAddHead(parent, head);
+                     } else if (!(connected || forced) && enabled) {
+                        //drm_head_disable(head);
+                     } else if (enabled && changed) {
+                        weston_log("Detected a monitor change on head '%s', "
+                                   "not bothering to do anything about it.\n",
+                                   weston_head_get_name(head));
+                     }
+                     weston_head_reset_device_changed(head);
+                }
+
+                /*if (DrmProcessLayOutputs(parent) >= 0) {
+                    parent->Initialized(true);
+                }*/
+            }
+        private:
             uint8_t _tty;
+            bool _forced;
             struct wl_listener _listener;
         };
 
+    public:
+        struct LayOutput {
+            string Name;
+            struct wl_list CompositorLink;
+            struct wl_list OutputList;
+            std::list<struct weston_head*> Clones;
+        };
     private:
+        static constexpr const uint8_t MaxCloneHeads = 16;
         static constexpr const TCHAR* DesktopShell = _T("desktop-shell.so");
         static constexpr const TCHAR* ShellInitEntryName = _T("wet_shell_init");
 
@@ -209,7 +270,7 @@ namespace Weston {
 
         Compositor(PluginHost::IShell* service)
             : _logger(service)
-            , _backend(service)
+            , _initialized(false)
             , _display(nullptr)
             , _compositor(nullptr)
         {
@@ -239,8 +300,10 @@ namespace Weston {
                     int err = weston_compositor_set_xkb_rule_names(_compositor, &xkb_names);
                     ASSERT(err == 0);
                     if (err != 0) {
-                        _backend.Load(_compositor);
-                         weston_compositor_flush_heads_changed(_compositor);
+                        _backend = Create<DRM>(service);
+                        _backend->Load(_compositor);
+                        weston_compositor_flush_heads_changed(_compositor);
+                        ASSERT(_initialized == true);
 
                         _compositor->idle_time = 300;
                         _compositor->default_pointer_grab = NULL;
@@ -269,6 +332,12 @@ namespace Weston {
             _instance = nullptr;
         }
 
+        template <class BACKEND>
+        IBackend* Create(PluginHost::IShell* service)
+        {
+            IBackend* backend = new BACKEND(service);
+            return backend;
+        }
         static Compositor* Create(PluginHost::IShell* service)
         {
             return _instance == nullptr ? new Weston::Compositor(service) : _instance;
@@ -278,10 +347,42 @@ namespace Weston {
         }
 
     public:
+        inline IBackend* Backend() {
+            return _backend;
+        }
+        inline struct wl_list& LayOutputList() {
+            return _layOutputList;
+        }
+        inline void Initialized(const bool success) {
+            _initialized = success;
+        }
         void SetInput(const char name[]) override
         {
         }
 
+        static LayOutput* FindLayoutput(Compositor* compositor, const string& name)
+        {
+            LayOutput* layOutput;
+
+            wl_list_for_each(layOutput, &compositor->LayOutputList(), CompositorLink) {
+                if (layOutput->Name == name) {
+                    break;
+                }
+            }
+            return layOutput;
+        }
+        static void LayOutputAddHead(Compositor* compositor, struct weston_head* head)
+        {
+            const char *outputName = weston_head_get_name(head);
+            LayOutput* layOutput = FindLayoutput(compositor, outputName);
+            if (layOutput == nullptr) {
+                // Create LayOutput
+            }
+            if (layOutput->Clones.size() < MaxCloneHeads) {
+                layOutput->Clones.push_back(head);
+            }
+            return;
+        }
     private:
         static void HandleExit(struct weston_compositor* compositor)
         {
@@ -305,10 +406,13 @@ namespace Weston {
 
     private:
         Logger _logger;
-        DRMBackend _backend;
+        IBackend* _backend;
+
+        bool _initialized;
         struct wl_display* _display;
         struct weston_compositor* _compositor;
 
+        struct wl_list _layOutputList;
         static Weston::Compositor* _instance;
     };
 
