@@ -47,9 +47,7 @@ namespace Weston {
                     Add(_T("logfilename"), &LogFileName);
                     Add(_T("logfilepath"), &LogFilePath);
                 }
-                ~Config()
-                {
-                }
+                ~Config() = default;
 
             public:
                 Core::JSON::String LogFileName;
@@ -148,14 +146,149 @@ namespace Weston {
         };
 
         class IBackend {
+        private:
+            class Connector : public Core::JSON::Container {
+            private:
+                Connector& operator=(const Connector&) = delete;
+
+            public:
+                Connector()
+                    : Core::JSON::Container()
+                    , Name()
+                    , Mode()
+                    , Transform()
+                {
+                    Add(_T("name"), &Name);
+                    Add(_T("mode"), &Mode);
+                    Add(_T("transform"), &Transform);
+                }
+                Connector(const Connector& copy)
+                    : Core::JSON::Container()
+                    , Name(copy.Name)
+                    , Mode(copy.Mode)
+                    , Transform(copy.Transform)
+                {
+                    Add(_T("name"), &Name);
+                    Add(_T("mode"), &Mode);
+                    Add(_T("transform"), &Transform);
+                }
+                ~Connector() = default;
+            public:
+                Core::JSON::String Name;
+                Core::JSON::String Mode;
+                Core::JSON::String Transform;
+            };
+            class Config : public Core::JSON::Container {
+            private:
+                Config(const Config&) = delete;
+                Config& operator=(const Config&) = delete;
+
+            public:
+                Config()
+                    : Core::JSON::Container()
+                    , Forced(false)
+                    , Connectors()
+                {
+                    Add(_T("forces"), &Forced);
+                    Add(_T("outputs"), &Connectors);
+                }
+                ~Config() = default;
+
+            public:
+                Core::JSON::Boolean Forced;
+                Core::JSON::ArrayType<Connector> Connectors;
+            };
+
+        public:
+            class Output {
+            public:
+                Output()
+                    : _name()
+                    , _mode()
+                    , _transform()
+                {
+                }
+                Output(const string& name, const string& mode, const string& transform)
+                    : _name(name)
+                    , _mode(mode)
+                    , _transform(transform)
+                {
+
+                }
+                Output(const Output& copy)
+                    : _name(copy._name)
+                    , _mode(copy._mode)
+                    , _transform(copy._transform)
+                {
+                }
+                Output& operator=(const Output& ref)
+                {
+                    _name = ref._name;
+                    _mode = ref._mode;
+                    _transform = ref._transform;
+                    return (*this);
+                }
+                ~Output() = default;
+            public:
+                string Name() const
+                {
+                    return _name;
+                }
+                string Mode() const
+                {
+                    return _mode;
+                }
+                string Transform() const
+                {
+                    return _transform;
+                }
+
+            private:
+                string _name;
+                string _mode;
+                string _transform;
+            };
         public:
             IBackend(const IBackend&) = delete;
             IBackend& operator=(const IBackend&)= delete;
-            IBackend() = default;
-            ~IBackend() = default;
+            IBackend() = delete;
+            IBackend(PluginHost::IShell* service)
+                : _forced(false)
+                , _outputs()
+            {
+                Config config;
+                config.FromString(service->ConfigLine());
+
+                auto index(config.Connectors.Elements());
+                while (index.Next() == true) {
+                    if (index.Current().Name.IsSet() == true) {
+                        _outputs.emplace(std::piecewise_construct,
+                        std::make_tuple(index.Current().Name.Value()),
+                        std::make_tuple(
+                            index.Current().Name.Value(),
+                            index.Current().Mode.Value(),
+                            index.Current().Transform.Value()));
+                    }
+                }
+
+                _forced = config.Forced.Value();
+            }
+            ~IBackend() {
+                  _outputs.clear();
+            }
         public:
-            virtual bool Forced() const = 0;
+            bool Forced() const
+            {
+                return _forced;
+            }
+            Output OutputConfig(const string& name){
+                auto output(_outputs.find(name));
+                return output->second;
+            } 
             virtual void Load(struct weston_compositor* compositor) = 0;
+        protected:
+            bool _forced;
+            std::map<const string, Output> _outputs;
         };
         class DRM : public IBackend{
         private:
@@ -168,10 +301,8 @@ namespace Weston {
                 Config()
                     : Core::JSON::Container()
                     , TTY(1)
-                    , Forced(false)
                 {
                     Add(_T("tty"), &TTY);
-                    Add(_T("forces"), &Forced);
                 }
                 ~Config()
                 {
@@ -179,7 +310,6 @@ namespace Weston {
 
             public:
                 Core::JSON::DecUInt8 TTY;
-                Core::JSON::Boolean Forced;
             };
 
         public:
@@ -187,21 +317,16 @@ namespace Weston {
             DRM(const DRM&) = delete;
             DRM& operator=(const DRM&)= delete;
             DRM(PluginHost::IShell* service)
-                : _tty()
-                , _forced(false)
+                : IBackend(service)
+                , _tty()
                 , _listener()
             {
                 Config config;
                 config.FromString(service->ConfigLine());
                 _tty = config.TTY.Value();
-                _forced = config.Forced.Value();
             }
 
         public:
-            inline bool Forced() const override
-            {
-                return _forced;
-            }
             void Load(struct weston_compositor* compositor) override
             {
                 struct weston_drm_backend_config config = {{ 0, }};
@@ -216,6 +341,12 @@ namespace Weston {
                 weston_compositor_load_backend(compositor, WESTON_BACKEND_DRM, &config.base);
             }
         private:
+            void DRMHeadPrepareEnable(Compositor* compositor, struct weston_head* head)
+            {
+                 const char *outputName = weston_head_get_name(head);
+                 Output output = OutputConfig(outputName);
+                 compositor->LayoutputAddHead(head, output);
+            }
             static void DRMHeadsChanged(struct wl_listener* listener, void* argument)
             {
                  struct weston_compositor* compositor = static_cast<weston_compositor*>(argument);
@@ -229,8 +360,7 @@ namespace Weston {
                      bool forced = parent->Backend()->Forced();
 
                      if ((connected || forced) && !enabled) {
-                        //drm_head_prepare_enable(wet, head);
-                        //LayOutputAddHead(parent, head);
+                        static_cast<DRM*>(parent->Backend())->DRMHeadPrepareEnable(parent, head);
                      } else if (!(connected || forced) && enabled) {
                         //drm_head_disable(head);
                      } else if (enabled && changed) {
@@ -241,22 +371,22 @@ namespace Weston {
                      weston_head_reset_device_changed(head);
                 }
 
-                /*if (DrmProcessLayOutputs(parent) >= 0) {
+                /*if (DrmProcessLayoutputs(parent) >= 0) {
                     parent->Initialized(true);
                 }*/
             }
         private:
             uint8_t _tty;
-            bool _forced;
             struct wl_listener _listener;
         };
 
     public:
-        struct LayOutput {
+        struct Layoutput {
             string Name;
             struct wl_list CompositorLink;
             struct wl_list OutputList;
             std::list<struct weston_head*> Clones;
+            IBackend::Output Config;
         };
     private:
         static constexpr const uint8_t MaxCloneHeads = 16;
@@ -350,9 +480,6 @@ namespace Weston {
         inline IBackend* Backend() {
             return _backend;
         }
-        inline struct wl_list& LayOutputList() {
-            return _layOutputList;
-        }
         inline void Initialized(const bool success) {
             _initialized = success;
         }
@@ -360,26 +487,38 @@ namespace Weston {
         {
         }
 
-        static LayOutput* FindLayoutput(Compositor* compositor, const string& name)
+        Layoutput* FindLayoutput(const string& name)
         {
-            LayOutput* layOutput;
+            Layoutput* layoutput;
 
-            wl_list_for_each(layOutput, &compositor->LayOutputList(), CompositorLink) {
-                if (layOutput->Name == name) {
+            wl_list_for_each(layoutput, &_layoutputList, CompositorLink) {
+                if (layoutput->Name == name) {
                     break;
                 }
             }
-            return layOutput;
+            return layoutput;
         }
-        static void LayOutputAddHead(Compositor* compositor, struct weston_head* head)
+        Layoutput* CreateLayoutput(const string& name, const IBackend::Output& output)
         {
-            const char *outputName = weston_head_get_name(head);
-            LayOutput* layOutput = FindLayoutput(compositor, outputName);
-            if (layOutput == nullptr) {
-                // Create LayOutput
+            Layoutput* layoutput = new Layoutput;
+            ASSERT(layoutput);
+            if (layoutput) {
+                wl_list_insert(_layoutputList.prev, &layoutput->CompositorLink);
+                wl_list_init(&layoutput->OutputList);
+                layoutput->Name = name;
+                layoutput->Config = output;
             }
-            if (layOutput->Clones.size() < MaxCloneHeads) {
-                layOutput->Clones.push_back(head);
+            return layoutput;
+        }
+        void LayoutputAddHead(struct weston_head* head, const IBackend::Output& output)
+        {
+                  const char *outputName = weston_head_get_name(head);
+            Layoutput* layoutput = FindLayoutput(outputName);
+            if (layoutput == nullptr) {
+                CreateLayoutput(outputName, output);
+            }
+            if (layoutput->Clones.size() < MaxCloneHeads) {
+                layoutput->Clones.push_back(head);
             }
             return;
         }
@@ -412,7 +551,7 @@ namespace Weston {
         struct wl_display* _display;
         struct weston_compositor* _compositor;
 
-        struct wl_list _layOutputList;
+        struct wl_list _layoutputList;
         static Weston::Compositor* _instance;
     };
 
