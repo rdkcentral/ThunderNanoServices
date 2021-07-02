@@ -118,12 +118,12 @@ namespace Weston {
             {
                 return weston_log_scope_vprintf(_logScope, format, argp);
             }
-            static int Log(const char *format, va_list argp)
+            static int Log(const char* format, va_list argp)
             {
                 int length = 0;
 
                 if (weston_log_scope_is_enabled(_logScope)) {
-                    char *str;
+                    char* str;
                     Core::Time now(Core::Time::Now());
                     string timestamp(now.ToRFC1123(true));
                     length = vasprintf(&str, format, argp);
@@ -264,9 +264,6 @@ namespace Weston {
                 struct Layoutput* Layoutput;
                 struct wl_list Link;
             };
-            struct HeadTracker {
-                struct wl_listener HeadDestroyListener;
-                };
 
         public:
             IBackend(const IBackend&) = delete;
@@ -298,15 +295,6 @@ namespace Weston {
             }
 
         protected:
-            void CreateHeadTracker(struct weston_head* head)
-            {
-                HeadTracker* tracker = new HeadTracker();
-                   ASSERT(tracker);
-                if (tracker) {
-                    tracker->HeadDestroyListener.notify = 0;//handle_head_destroy;
-                    weston_head_add_destroy_listener(head, &tracker->HeadDestroyListener);
-                }
-            }
             void OutputDestroy(OutputData* output)
             {
                 if (output->Output) {
@@ -320,7 +308,7 @@ namespace Weston {
             }
             static void OutputHandleDestroy(struct wl_listener* listener, void* data)
             {
-                OutputData *outputData;
+                OutputData* outputData;
                 outputData = wl_container_of(listener, outputData, DestroyListener);
                 assert(outputData->Output == static_cast<struct weston_output*>(data));
                 outputData->Output = nullptr;
@@ -366,6 +354,10 @@ namespace Weston {
             public:
                 Core::JSON::DecUInt8 TTY;
             };
+        public:
+            struct HeadTracker {
+                struct wl_listener HeadDestroyListener;
+            };
 
         public:
             DRM() = delete;
@@ -399,6 +391,40 @@ namespace Weston {
                 weston_compositor_load_backend(compositor, WESTON_BACKEND_DRM, &config.base);
             }
         private:
+            static uint16_t CountRemainingHeads(struct weston_output* output, struct weston_head* remaining)
+            {
+                uint16_t count = 0;
+                struct weston_head* index = nullptr;
+                while ((index = weston_output_iterate_heads(output, index)) != nullptr) {
+                    if (index != remaining) {
+                        count++;
+                    }
+                }
+                return count;
+            }
+            void CreateHeadTracker(struct weston_head* head)
+            {
+                HeadTracker* tracker = new HeadTracker();
+                ASSERT(tracker);
+                if (tracker) {
+                    tracker->HeadDestroyListener.notify = HandleHeadDestroy;
+                    weston_head_add_destroy_listener(head, &tracker->HeadDestroyListener);
+                }
+            }
+            HeadTracker* GetHeadTracker(struct weston_head* head)
+            {
+                HeadTracker* tracker = nullptr;
+                struct wl_listener* listener = weston_head_get_destroy_listener(head, HandleHeadDestroy);
+                if (listener) {
+//                    tracker = container_of(listener, HeadTracker, HeadDestroyListener);
+                }
+                return tracker;
+            }
+            static void DestroyHeadTracker(HeadTracker* track)
+            {
+                wl_list_remove(&track->HeadDestroyListener.link);
+                delete(track);
+            }
             Layoutput* FindLayoutput(const string& name)
             {
                 Layoutput* layoutput;
@@ -424,7 +450,7 @@ namespace Weston {
             }
             void LayoutputAddHead(struct weston_head* head, const IBackend::Output& output)
             {
-                const char *outputName = weston_head_get_name(head);
+                const char* outputName = weston_head_get_name(head);
                 Layoutput* layoutput = FindLayoutput(outputName);
                 if (layoutput == nullptr) {
                     CreateLayoutput(outputName, output);
@@ -436,9 +462,25 @@ namespace Weston {
             }
             void HeadPrepareEnable(struct weston_head* head)
             {
-                 const char *outputName = weston_head_get_name(head);
+                 const char* outputName = weston_head_get_name(head);
                  Output output = OutputConfig(outputName);
                  LayoutputAddHead(head, output);
+            }
+            static void HandleHeadDestroy(struct wl_listener* listener, void* data)
+            {
+                struct weston_head* head = static_cast<struct weston_head*>(data);
+                HeadTracker* track;// = container_of(listener, HeadTracker, HeadDestroyListener);
+
+                DestroyHeadTracker(track);
+
+                struct weston_output* output = weston_head_get_output(head);
+
+                if (output) {
+                    if (CountRemainingHeads(output, head) <= 0) {
+                        weston_output_destroy(output);
+                    }
+                }
+                return;
             }
             uint32_t OutputConfigure(struct weston_output* output)
             {
@@ -461,11 +503,39 @@ namespace Weston {
                 }
 
                 return status;
+
+            }
+            OutputData* GetOutputFromWeston(struct weston_output* base)
+            {
+                OutputData* output = nullptr;
+                struct wl_listener* listener = weston_output_get_destroy_listener(base, OutputHandleDestroy);
+                if (listener) {
+//                    output = container_of(listener, OutputData, DestroyListener);
+                }
+                return output;
             }
             void TryAttach(struct weston_output* output, std::list<struct weston_head*>& Clones, std::list<struct weston_head*>& failedClones) {
+                for (std::list<struct weston_head*>::iterator clone; clone != Clones.begin(); clone++) {
+                    if (weston_output_attach_head(output,* clone) < 0) {
+
+                        failedClones.push_back(*clone);
+                        Clones.erase(clone);
+                    }
+                }
             }
             uint32_t TryEnable(struct weston_output* output, std::list<struct weston_head*>& Clones, std::list<struct weston_head*>& failedClones) {
-                uint32_t status = Core::ERROR_NONE;
+                uint32_t status = Core::ERROR_GENERAL;
+                std::list<struct weston_head*>::reverse_iterator clone = Clones.rbegin();
+                while (!output->enabled && (clone != Clones.rend())) {
+                    if (weston_output_enable(output) == 0) {
+                        status = Core::ERROR_NONE;
+                        break;
+                    }
+
+                    weston_head_detach(*clone);
+                    failedClones.push_back(*clone);
+                    Clones.erase(std::next(clone).base());
+                }
                 return status;
             }
             uint32_t TryAttachEnable(struct weston_output* output, IBackend::Layoutput* layoutput)
@@ -581,6 +651,21 @@ namespace Weston {
 
                 return status;
             }
+            void HeadDisable(struct weston_head* head)
+            {
+                HeadTracker* track = GetHeadTracker(head);
+                if (track) {
+                    DestroyHeadTracker(track);
+                }
+
+                struct weston_output* outputBase = weston_head_get_output(head);
+                struct OutputData* output = GetOutputFromWeston(outputBase);
+
+                weston_head_detach(head);
+                if (CountRemainingHeads(output->Output, nullptr) == 0) {
+                    OutputDestroy(output);
+                }
+            }
             static void HeadsChanged(struct wl_listener* listener, void* argument)
             {
                  struct weston_compositor* compositor = static_cast<weston_compositor*>(argument);
@@ -596,7 +681,7 @@ namespace Weston {
                      if ((connected || forced) && !enabled) {
                         static_cast<DRM*>(parent->Backend())->HeadPrepareEnable(head);
                      } else if (!(connected || forced) && enabled) {
-                        //drm_head_disable(head);
+                        static_cast<DRM*>(parent->Backend())->HeadDisable(head);
                      } else if (enabled && changed) {
                         weston_log("Detected a monitor change on head '%s', "
                                    "not bothering to do anything about it.\n",
@@ -666,7 +751,7 @@ namespace Weston {
                         _compositor->default_pointer_grab = NULL;
                         _compositor->exit = HandleExit;
 
-                        const char *socketName = wl_display_add_socket_auto(_display);
+                        const char* socketName = wl_display_add_socket_auto(_display);
                         ASSERT(socketName);
                         if (socketName) {
                             Core::SystemInfo::SetEnvironment(_T("WAYLAND_DISPLAY"), socketName);
