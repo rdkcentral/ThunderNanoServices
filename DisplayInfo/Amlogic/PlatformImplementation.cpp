@@ -92,7 +92,7 @@ namespace Plugin {
 
         void Unregister(const std::string& devtype) 
         {
-            auto result = _callbacks.erase(std::remove_if(_callbacks.begin(), _callbacks.end(), [&](CallbackDescriptor& pair) {
+            _callbacks.erase(std::remove_if(_callbacks.begin(), _callbacks.end(), [&](CallbackDescriptor& pair) {
                 return pair.second == devtype;
             }));
         }
@@ -113,8 +113,6 @@ namespace Plugin {
 
         uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
         {
-            bool foundAll = false;
-
             udev_monitor_netlink_header* header = reinterpret_cast<udev_monitor_netlink_header*>(dataFrame);
 
             if (header->filter_tag_bloom_hi == 0 && header->filter_tag_bloom_lo == 0) {
@@ -166,7 +164,7 @@ namespace Plugin {
         std::vector<std::string> GetMessageValues(char* values, uint32_t size)
         {
             std::vector<std::string> output;
-            for (int i = 0, output_index = 0; i < size; ++output_index) {
+            for (uint32_t i = 0, output_index = 0; i < size; ++output_index) {
                 char* data = &values[i];
                 output.push_back(std::string(data));
                 i += (strlen(data) + 1);
@@ -290,6 +288,7 @@ namespace Plugin {
                 TRACE(Trace::Warning, (_T("Received unknown HDR10 value. Falling back to HDR10.")));
                 hdrType = Exchange::IHDRProperties::HDRType::HDR_10;
             } else {
+                hdrType = Exchange::IHDRProperties::HDRType::HDR_OFF;
                 TRACE(Trace::Error, (_T("Received unknown HDR value %s. Falling back to SDR."), hdrStr.c_str()));
             }
 
@@ -310,8 +309,8 @@ namespace Plugin {
             const std::string& edidFilepath,
             const std::string& hdcpLevelFilepath,
             bool usePreferredMode = false)
-            : _drmDevice(drmDeviceName)
-            , _usePreferredMode(usePreferredMode)
+            : _usePreferredMode(usePreferredMode)
+            , _drmDevice(drmDeviceName)
             , _edidNode(edidFilepath)
             , _hdcpLevelNode(hdcpLevelFilepath)
             , _propertiesLock()
