@@ -145,6 +145,8 @@ namespace Weston {
             Core::File _logFile;
         };
 
+
+    private:
         class IBackend {
         private:
             class Connector : public Core::JSON::Container {
@@ -249,6 +251,24 @@ namespace Weston {
                 string _transform;
             };
         public:
+            struct Layoutput {
+                string Name;
+                struct wl_list CompositorLink;
+                struct wl_list OutputList;
+                std::list<struct weston_head*> Clones;
+                Output Config;
+            };
+            struct OutputData {
+                struct weston_output* Output;
+                struct wl_listener DestroyListener;
+                struct Layoutput* Layoutput;
+                struct wl_list Link;
+            };
+            struct HeadTracker {
+                struct wl_listener HeadDestroyListener;
+                };
+
+        public:
             IBackend(const IBackend&) = delete;
             IBackend& operator=(const IBackend&)= delete;
             IBackend() = delete;
@@ -276,21 +296,56 @@ namespace Weston {
             ~IBackend() {
                   _outputs.clear();
             }
+
+        protected:
+            void CreateHeadTracker(struct weston_head* head)
+            {
+                HeadTracker* tracker = new HeadTracker();
+                   ASSERT(tracker);
+                if (tracker) {
+                    tracker->HeadDestroyListener.notify = 0;//handle_head_destroy;
+                    weston_head_add_destroy_listener(head, &tracker->HeadDestroyListener);
+                }
+            }
+            void OutputDestroy(OutputData* output)
+            {
+                if (output->Output) {
+                    struct weston_output* save = output->Output;
+                    OutputHandleDestroy(&output->DestroyListener, save);
+                    weston_output_destroy(save);
+                }
+
+                wl_list_remove(&output->Link);
+                free(output);
+            }
+            static void OutputHandleDestroy(struct wl_listener* listener, void* data)
+            {
+                OutputData *outputData;
+                outputData = wl_container_of(listener, outputData, DestroyListener);
+                assert(outputData->Output == static_cast<struct weston_output*>(data));
+                outputData->Output = nullptr;
+                wl_list_remove(&outputData->DestroyListener.link);
+            }
         public:
             bool Forced() const
             {
                 return _forced;
             }
-            Output OutputConfig(const string& name){
+            Output OutputConfig(const string& name)
+            {
                 auto output(_outputs.find(name));
                 return output->second;
-            } 
-            virtual void Load(struct weston_compositor* compositor) = 0;
+            }
+            virtual void Load(Compositor*) = 0;
         protected:
             bool _forced;
             std::map<const string, Output> _outputs;
+            struct wl_list _layoutputList;
         };
+
         class DRM : public IBackend{
+        private:
+            static constexpr const TCHAR* OutputModePreferred = _T("preferred");
         private:
             class Config : public Core::JSON::Container {
             private:
@@ -320,6 +375,7 @@ namespace Weston {
                 : IBackend(service)
                 , _tty()
                 , _listener()
+                , _parent(nullptr)
             {
                 Config config;
                 config.FromString(service->ConfigLine());
@@ -327,7 +383,7 @@ namespace Weston {
             }
 
         public:
-            void Load(struct weston_compositor* compositor) override
+            void Load(Compositor* parent) override
             {
                 struct weston_drm_backend_config config = {{ 0, }};
 
@@ -335,19 +391,197 @@ namespace Weston {
                 config.base.struct_version = WESTON_DRM_BACKEND_CONFIG_VERSION;
                 config.base.struct_size = sizeof(struct weston_drm_backend_config);
 
-                _listener.notify = DRMHeadsChanged;
+                _listener.notify = HeadsChanged;
+                _parent = parent;
+                struct weston_compositor* compositor = parent->PlatformCompositor();
                 weston_compositor_add_heads_changed_listener(compositor, &_listener);
 
                 weston_compositor_load_backend(compositor, WESTON_BACKEND_DRM, &config.base);
             }
         private:
-            void DRMHeadPrepareEnable(Compositor* compositor, struct weston_head* head)
+            Layoutput* FindLayoutput(const string& name)
+            {
+                Layoutput* layoutput;
+
+                wl_list_for_each(layoutput, &_layoutputList, CompositorLink) {
+                    if (layoutput->Name == name) {
+                        break;
+                    }
+                }
+                return layoutput;
+            }
+            Layoutput* CreateLayoutput(const string& name, const IBackend::Output& output)
+            {
+                Layoutput* layoutput = new Layoutput;
+                ASSERT(layoutput);
+                if (layoutput) {
+                    wl_list_insert(_layoutputList.prev, &layoutput->CompositorLink);
+                    wl_list_init(&layoutput->OutputList);
+                    layoutput->Name = name;
+                    layoutput->Config = output;
+                }
+               return layoutput;
+            }
+            void LayoutputAddHead(struct weston_head* head, const IBackend::Output& output)
+            {
+                const char *outputName = weston_head_get_name(head);
+                Layoutput* layoutput = FindLayoutput(outputName);
+                if (layoutput == nullptr) {
+                    CreateLayoutput(outputName, output);
+                }
+                if (layoutput->Clones.size() < MaxCloneHeads) {
+                    layoutput->Clones.push_back(head);
+                }
+                return;
+            }
+            void HeadPrepareEnable(struct weston_head* head)
             {
                  const char *outputName = weston_head_get_name(head);
                  Output output = OutputConfig(outputName);
-                 compositor->LayoutputAddHead(head, output);
+                 LayoutputAddHead(head, output);
             }
-            static void DRMHeadsChanged(struct wl_listener* listener, void* argument)
+            uint32_t OutputConfigure(struct weston_output* output)
+            {
+                uint32_t status = Core::ERROR_NONE;
+                const struct weston_drm_output_api* api = weston_drm_output_get_api(_parent->PlatformCompositor());
+                if (api) {
+                    if (!api->set_mode(output, WESTON_DRM_BACKEND_OUTPUT_PREFERRED, OutputModePreferred)) {
+                        api->set_gbm_format(output, NULL);
+                        api->set_seat(output, "");
+                        weston_output_set_scale(output, 1);
+                        weston_output_set_transform(output, WL_OUTPUT_TRANSFORM_NORMAL);
+                        weston_output_allow_protection(output, true);
+                    } else {
+                        weston_log("Cannot configure an output using weston_drm_output_api.\n");
+                        status = Core::ERROR_NOT_SUPPORTED;
+                    }
+                } else {
+                    weston_log("Cannot use weston_drm_output_api.\n");
+                    status = Core::ERROR_NOT_SUPPORTED;
+                }
+
+                return status;
+            }
+            void TryAttach(struct weston_output* output, std::list<struct weston_head*>& Clones, std::list<struct weston_head*>& failedClones) {
+            }
+            uint32_t TryEnable(struct weston_output* output, std::list<struct weston_head*>& Clones, std::list<struct weston_head*>& failedClones) {
+                uint32_t status = Core::ERROR_NONE;
+                return status;
+            }
+            uint32_t TryAttachEnable(struct weston_output* output, IBackend::Layoutput* layoutput)
+            {
+                std::list<struct weston_head*> failedClones;
+                uint32_t status = Core::ERROR_NONE;
+
+                TryAttach(output, layoutput->Clones, failedClones);
+                status = OutputConfigure(output);
+                if (status != Core::ERROR_NONE) {
+
+                    status = TryEnable(output, layoutput->Clones, failedClones);
+                    if (status != Core::ERROR_NONE) {
+
+                        /* For all successfully attached/enabled heads */
+                        for (auto& clone : layoutput->Clones) {
+                            CreateHeadTracker(clone);
+                        }
+                        /* Push failed heads to the next round. */
+                        layoutput->Clones.clear();
+                        layoutput->Clones = failedClones;
+                    }
+                }
+                return status;
+            }
+            struct OutputData* LayoutputCreateOutput(IBackend::Layoutput* layoutput, const string& name)
+            {
+                OutputData* output = new OutputData();
+
+                ASSERT(output);
+                if (output) {
+                    output->Output = weston_compositor_create_output(_parent->PlatformCompositor(), name.c_str());
+                    ASSERT(output->Output);
+                    if (output->Output) {
+                        output->Layoutput = layoutput;
+                        wl_list_insert(layoutput->OutputList.prev, &output->Link);
+                        output->DestroyListener.notify = OutputHandleDestroy;
+                        weston_output_add_destroy_listener(output->Output, &output->DestroyListener);
+                    } else {
+                       delete output;
+                       output = nullptr;
+                    }
+                }
+                return output;
+            }
+            uint32_t ProcessLayoutput(IBackend::Layoutput* layoutput)
+            {
+                uint32_t status = Core::ERROR_NOT_SUPPORTED;
+                IBackend::OutputData* tmp;
+                IBackend::OutputData* output;
+
+                wl_list_for_each_safe(output, tmp, &layoutput->OutputList, Link) {
+                    std::list<struct weston_head*> failedClones;
+
+                    if (!output->Output) {
+                        /* Clean up left-overs from destroyed heads. */
+                        OutputDestroy(output);
+                        continue;
+                    }
+
+                    TryAttach(output->Output, layoutput->Clones, failedClones);
+                    layoutput->Clones = failedClones;
+                    if (failedClones.size() == 0) {
+                        status = Core::ERROR_NONE;
+                        break;
+                    }
+                }
+                if (status != Core::ERROR_NONE) {
+                    string name;
+                    if (weston_compositor_find_output_by_name(_parent->PlatformCompositor(), layoutput->Name.c_str()) == 0) {
+                        name = layoutput->Name;
+                    }
+                    while (layoutput->Clones.size()) {
+                        if (!wl_list_empty(&layoutput->OutputList)) {
+                            weston_log("Error: independent-CRTC clone mode is not implemented.\n");
+                            break;
+                        }
+
+                        if (name.empty() == true) {
+                            name = layoutput->Name + ":" + string(weston_head_get_name(layoutput->Clones.front()));
+                        }
+
+                        output = LayoutputCreateOutput(layoutput, name);
+
+                        if (!output) {
+                            break;
+                        }
+
+                        if (TryAttachEnable(output->Output, layoutput) < 0) {
+                            OutputDestroy(output);
+                            break;
+                        }
+
+                        status = Core::ERROR_NONE;
+                    }
+                }
+                return status;
+            }
+            uint32_t ProcessLayoutputs()
+            {
+                IBackend::Layoutput* layoutput;
+                uint32_t status = Core::ERROR_NONE;
+
+                wl_list_for_each(layoutput, &_layoutputList, CompositorLink) {
+                    if (layoutput->Clones.size()) {
+
+                        if (ProcessLayoutput(layoutput) != Core::ERROR_NONE) {
+                            layoutput->Clones.clear();
+                            status = Core::ERROR_GENERAL;
+                        }
+                    }
+                }
+
+                return status;
+            }
+            static void HeadsChanged(struct wl_listener* listener, void* argument)
             {
                  struct weston_compositor* compositor = static_cast<weston_compositor*>(argument);
                  Compositor* parent = static_cast<Compositor*>(weston_compositor_get_user_data(compositor));
@@ -360,7 +594,7 @@ namespace Weston {
                      bool forced = parent->Backend()->Forced();
 
                      if ((connected || forced) && !enabled) {
-                        static_cast<DRM*>(parent->Backend())->DRMHeadPrepareEnable(parent, head);
+                        static_cast<DRM*>(parent->Backend())->HeadPrepareEnable(head);
                      } else if (!(connected || forced) && enabled) {
                         //drm_head_disable(head);
                      } else if (enabled && changed) {
@@ -371,23 +605,16 @@ namespace Weston {
                      weston_head_reset_device_changed(head);
                 }
 
-                /*if (DrmProcessLayoutputs(parent) >= 0) {
+                if (static_cast<DRM*>(parent->Backend())->ProcessLayoutputs() != Core::ERROR_NONE) {
                     parent->Initialized(true);
-                }*/
+                }
             }
         private:
             uint8_t _tty;
             struct wl_listener _listener;
+            Compositor* _parent;
         };
 
-    public:
-        struct Layoutput {
-            string Name;
-            struct wl_list CompositorLink;
-            struct wl_list OutputList;
-            std::list<struct weston_head*> Clones;
-            IBackend::Output Config;
-        };
     private:
         static constexpr const uint8_t MaxCloneHeads = 16;
         static constexpr const TCHAR* DesktopShell = _T("desktop-shell.so");
@@ -431,7 +658,7 @@ namespace Weston {
                     ASSERT(err == 0);
                     if (err != 0) {
                         _backend = Create<DRM>(service);
-                        _backend->Load(_compositor);
+                        _backend->Load(this);
                         weston_compositor_flush_heads_changed(_compositor);
                         ASSERT(_initialized == true);
 
@@ -472,55 +699,26 @@ namespace Weston {
         {
             return _instance == nullptr ? new Weston::Compositor(service) : _instance;
         }
-        static Compositor* Instance() {
+        static Compositor* Instance()
+        {
             return (_instance);
         }
 
     public:
-        inline IBackend* Backend() {
+        inline struct weston_compositor* PlatformCompositor()
+        {
+            return _compositor;
+        }
+        inline IBackend* Backend()
+               {
             return _backend;
         }
-        inline void Initialized(const bool success) {
+        inline void Initialized(const bool success)
+        {
             _initialized = success;
         }
         void SetInput(const char name[]) override
         {
-        }
-
-        Layoutput* FindLayoutput(const string& name)
-        {
-            Layoutput* layoutput;
-
-            wl_list_for_each(layoutput, &_layoutputList, CompositorLink) {
-                if (layoutput->Name == name) {
-                    break;
-                }
-            }
-            return layoutput;
-        }
-        Layoutput* CreateLayoutput(const string& name, const IBackend::Output& output)
-        {
-            Layoutput* layoutput = new Layoutput;
-            ASSERT(layoutput);
-            if (layoutput) {
-                wl_list_insert(_layoutputList.prev, &layoutput->CompositorLink);
-                wl_list_init(&layoutput->OutputList);
-                layoutput->Name = name;
-                layoutput->Config = output;
-            }
-            return layoutput;
-        }
-        void LayoutputAddHead(struct weston_head* head, const IBackend::Output& output)
-        {
-                  const char *outputName = weston_head_get_name(head);
-            Layoutput* layoutput = FindLayoutput(outputName);
-            if (layoutput == nullptr) {
-                CreateLayoutput(outputName, output);
-            }
-            if (layoutput->Clones.size() < MaxCloneHeads) {
-                layoutput->Clones.push_back(head);
-            }
-            return;
         }
     private:
         static void HandleExit(struct weston_compositor* compositor)
@@ -551,7 +749,6 @@ namespace Weston {
         struct wl_display* _display;
         struct weston_compositor* _compositor;
 
-        struct wl_list _layoutputList;
         static Weston::Compositor* _instance;
     };
 
