@@ -126,6 +126,11 @@ namespace Plugin {
             _recordFile = _service->VolatilePath() + sequence;
         }
 
+        if (config.KeyIngest.Value() == true) {
+            _inputHandler = PluginHost::InputHandler::Handler();
+            ASSERT(_inputHandler != nullptr);
+        }
+
         if (Core::File(_service->PersistentPath()).IsDirectory() == false) {
             if (Core::Directory(_service->PersistentPath().c_str()).CreatePath() == false) {
                 TRACE(Trace::Error, (_T("Failed to create persistent storage folder [%s]"), _service->PersistentPath().c_str()));
@@ -155,6 +160,7 @@ namespace Plugin {
                                 // Seems we have a "real" device, load it..
                                 _gattRemote = new GATTRemote(this, device, _configLine, data);
                             }
+
                             device->Release();
                         }
                     }
@@ -164,15 +170,10 @@ namespace Plugin {
             }
         }
 
-        if (config.KeyIngest.Value() == true) {
-            _inputHandler = PluginHost::InputHandler::Handler();
-            ASSERT(_inputHandler != nullptr);
-        }
-
         return (string());
     }
 
-    void BluetoothRemoteControl::Deinitialize(PluginHost::IShell* service)
+    void BluetoothRemoteControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
 
@@ -184,10 +185,12 @@ namespace Plugin {
             delete _gattRemote;
             _gattRemote = nullptr;
         }
+
         if (_voiceHandler != nullptr) {
             _voiceHandler->Release();
             _voiceHandler = nullptr;
         }
+
         _service->Release();
         _service = nullptr;
     }
@@ -197,7 +200,7 @@ namespace Plugin {
         return { };
     }
 
-    void BluetoothRemoteControl::Inbound(WPEFramework::Web::Request& request)
+    void BluetoothRemoteControl::Inbound(WPEFramework::Web::Request& /* request */)
     {
         // Not needed
     }
@@ -226,7 +229,7 @@ namespace Plugin {
         return (response);
     }
 
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::GetMethod(Core::TextSegmentIterator& index)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::GetMethod(Core::TextSegmentIterator& /* index */)
     {
         Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -235,7 +238,7 @@ namespace Plugin {
         return (response);
     }
 
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::PutMethod(Core::TextSegmentIterator& index, const Web::Request& request)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::PutMethod(Core::TextSegmentIterator& index, const Web::Request& /* request */)
     {
         Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -271,7 +274,7 @@ namespace Plugin {
         return (response);
     }
 
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::PostMethod(Core::TextSegmentIterator& index, const Web::Request& request)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::PostMethod(Core::TextSegmentIterator& index, const Web::Request& /* request */)
     {
         Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -302,7 +305,7 @@ namespace Plugin {
         return (response);
     }
 
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& /* request */)
     {
         Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
         response->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -380,33 +383,39 @@ namespace Plugin {
         return (result);
     }
 
+    void BluetoothRemoteControl::Connected(const string& name)
+    {
+        _name = name;
+
+        if (_inputHandler != nullptr) {
+            // Load the keyMap for this remote
+            string keyMapFile(_service->DataPath() + (_keyMap.empty() ? name : _keyMap) + _T(".json"));
+            TRACE(Trace::Information, (_T("Loading keymap file [%s] for remote [%s]"), keyMapFile.c_str(), _name.c_str()));
+
+            if (Core::File(keyMapFile).Exists() == true) {
+                PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(name));
+
+                uint32_t result = map.Load(keyMapFile);
+                if (result != Core::ERROR_NONE) {
+                    TRACE(Trace::Error, (_T("Failed to load keymap file [%s]"), keyMapFile.c_str()));
+                }
+            } else {
+                TRACE(Trace::Information, (_T("Keymap file [%s] not available"), keyMapFile.c_str()));
+            }
+        }
+    }
+
     void BluetoothRemoteControl::Operational(const GATTRemote::Data& settings)
     {
         ASSERT (_gattRemote != nullptr);
 
-        _name = _gattRemote->Name();
+        _gattRemote->Decoder(_configLine);
 
         // Store the settings, if not already done..
         Core::File settingsFile(_service->PersistentPath() + _gattRemote->Address() + _T(".json"));
         if ( (settingsFile.Exists() == false) && (settingsFile.Create() == true) ) {
             settings.IElement::ToFile(settingsFile);
             settingsFile.Close();
-        }
-
-       _gattRemote->Decoder(_configLine); 
-
-        if (_inputHandler != nullptr) {
-            // Load the keyMap for this remote
-            string keyMapFile(_service->DataPath() + (_keyMap.empty() ? _name : _keyMap) + _T(".json"));
-            if (Core::File(keyMapFile).Exists() == true) {
-                TRACE(Trace::Information, (_T("Loading keymap file [%s] for remote [%s]"), keyMapFile.c_str(), _name.c_str()));
-                PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(_name));
-
-                uint32_t result = map.Load(keyMapFile);
-                if (result != Core::ERROR_NONE) {
-                    TRACE(Trace::Error, (_T("Failed to load keymap file [%s]"), keyMapFile.c_str()));
-                }
-            }
         }
     }
 
@@ -508,8 +517,7 @@ namespace Plugin {
                 TRACE(Trace::Information, ("Unknown key send: %d (%s)", keyCode, pressed ? "pressed": "released"))
             }
         }
-        else {
-        }
+
         _adminLock.Unlock();
     }
 

@@ -145,13 +145,19 @@ namespace Plugin {
                     subSystems->Set(PluginHost::ISubSystem::BLUETOOTH, nullptr);
                     subSystems->Release();
                 }
+
+                if (_config.ContinuousBackgroundScan.IsSet() == true) {
+                    Connector().ContinuousBackgroundScan(_config.ContinuousBackgroundScan.Value());
+                }
+
+                Connector().BackgroundScan(true); // Maybe enable background scan already
             }
         }
 
         return result;
     }
 
-    /*virtual*/ void BluetoothControl::Deinitialize(PluginHost::IShell* service)
+    /*virtual*/ void BluetoothControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
 
@@ -332,7 +338,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Device not found.");
                     } else if (pair == true) {
-                        uint32_t res = device->Pair(IBluetooth::DISPLAY_YES_NO, 20);
+                        uint32_t res = device->Pair(IBluetooth::NO_INPUT_NO_OUTPUT, 20);
                         if (res == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Paired device.");
@@ -360,7 +366,7 @@ namespace Plugin {
         return result;
     }
 
-    Core::ProxyType<Web::Response> BluetoothControl::PostMethod(Core::TextSegmentIterator&, const Web::Request&)
+    Core::ProxyType<Web::Response> BluetoothControl::PostMethod(Core::TextSegmentIterator& /* index */, const Web::Request& /* request */)
     {
         Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -520,6 +526,8 @@ namespace Plugin {
         DeviceImpl* impl = Find(address, lowEnergy);
 
         if (impl == nullptr) {
+            TRACE(Trace::Information, (_T("New device discovered %s"), address.ToString().c_str()));
+
             if (lowEnergy == true) {
                 impl = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address);
             } else {
@@ -559,7 +567,7 @@ namespace Plugin {
             entry->Capabilities(capability, authentication, oob_data);
         }
         else {
-            TRACE(Trace::Information, (_T("Could not set the capabilities for device %s"), device.ToString()));
+            TRACE(Trace::Error, (_T("Could not set the capabilities for device %s"), device.ToString()));
         }
 
         _adminLock.Unlock();

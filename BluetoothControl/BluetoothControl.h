@@ -58,8 +58,8 @@ class BluetoothControl : public PluginHost::IPlugin
                 Core::ProxyType<Core::IDispatch> handler(Aquire());
 
                _lock.Lock();
-                if (handler.IsValid() == true) {
 
+                if (handler.IsValid() == true) {
                     _job = job;
 
                     if (defer == 0) {
@@ -172,7 +172,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     BT_TRACE(ManagementFlow, info);
                     if (info.opcode == MGMT_OP_PAIR_DEVICE) {
                         const mgmt_rp_pair_device* payload = reinterpret_cast<const mgmt_rp_pair_device*>(info.data);
-                        _parent.PairingComplete(payload->addr.bdaddr, static_cast<const Bluetooth::Address::type>(payload->addr.type), info.status);
+                        _parent.PairingComplete(payload->addr.bdaddr, static_cast<Bluetooth::Address::type>(payload->addr.type), info.status);
                     }
                 }
                 void Update(const mgmt_ev_controller_error& info)
@@ -198,23 +198,23 @@ class BluetoothControl : public PluginHost::IPlugin
                 void Update(const mgmt_ev_pin_code_request& info)
                 {
                     BT_TRACE(ManagementFlow, info);
-                    _parent.RequestPINCode(info.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.addr.type));
+                    _parent.RequestPINCode(info.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.addr.type));
                 }
                 void Update(const mgmt_ev_user_passkey_request& info)
                 {
                     BT_TRACE(ManagementFlow, info);
-                    _parent.RequestPasskey(info.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.addr.type));
+                    _parent.RequestPasskey(info.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.addr.type));
                 }
                 void Update(const mgmt_ev_user_confirm_request& info)
                 {
                     BT_TRACE(ManagementFlow, info);
-                    _parent.RequestPasskeyConfirm(info.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.addr.type), btohl(info.value));
+                    _parent.RequestPasskeyConfirm(info.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.addr.type), btohl(info.value));
                 }
                 void Update(const mgmt_ev_new_link_key& info)
                 {
                     BT_TRACE(ManagementFlow, info);
                     if (info.store_hint != 0) {
-                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.key.addr.type),
+                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.key.addr.type),
                                                 Bluetooth::LinkKey(info.key.addr.bdaddr, info.key.val, info.key.pin_len, info.key.addr.type)) != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Failed to store link key")));
                         }
@@ -226,7 +226,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 {
                     BT_TRACE(ManagementFlow, info);
                     if (info.store_hint != 0) {
-                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.key.addr.type),
+                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.key.addr.type),
                                                 Bluetooth::IdentityKey(info.key.addr.bdaddr, info.key.addr.type, info.key.val)) != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Failed to store IRK")));
                         }
@@ -243,7 +243,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 {
                     BT_TRACE(ManagementFlow, info);
                     if (info.store_hint != 0) {
-                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<const Bluetooth::Address::type>(info.key.addr.type),
+                        if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.key.addr.type),
                                                 Bluetooth::LongTermKey(info.key.addr.bdaddr, info.key.addr.type, info.key.type,
                                                                        info.key.master, info.key.enc_size, btohs(info.key.ediv),
                                                                        btohll(info.key.rand), info.key.val)) != Core::ERROR_NONE) {
@@ -265,7 +265,16 @@ class BluetoothControl : public PluginHost::IPlugin
                 : Bluetooth::HCISocket()
                 , _parent(nullptr)
                 , _administrator(*this)
+                , _continuousBackgroundScan(false)
+                , _reconnectJob()
             {
+#if defined(USE_KERNEL_CONNECTION_CONTROL)
+                // Scanning will fail if autoconnection is enabled with kernel connection control,
+                // so at least allow picking up nearby devices during the background scan.
+                // This will also work for non-kernel connection mode, but by default it's disabled,
+                // since active scan will be then available.
+                _continuousBackgroundScan = true;
+#endif
             }
             ~ControlSocket() = default;
 
@@ -280,6 +289,10 @@ class BluetoothControl : public PluginHost::IPlugin
             BluetoothControl* Application()
             {
                 return (_parent);
+            }
+            void ContinuousBackgroundScan(const bool enable)
+            {
+                _continuousBackgroundScan = enable;
             }
             uint32_t Pair(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const Bluetooth::ManagementSocket::capabilities caps)
             {
@@ -307,8 +320,10 @@ class BluetoothControl : public PluginHost::IPlugin
 
                     _scanJob.Submit([this, scanTime, type, flags]() {
                         TRACE(ControlFlow, (_T("Start BT classic scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
+                        BackgroundScan(false);
                         Bluetooth::HCISocket::Scan(scanTime, type, flags);
                         ScanComplete();
+                        BackgroundScan(true);
                     });
                 }
             }
@@ -325,11 +340,38 @@ class BluetoothControl : public PluginHost::IPlugin
                     });
 
                     _scanJob.Submit([this, scanTime, limited, passive]() {
+                        BackgroundScan(false);
                         TRACE(ControlFlow, (_T("Start BT LowEnergy scan: %s"), Core::Time::Now().ToRFC1123().c_str()));
                         Bluetooth::HCISocket::Scan(scanTime, limited, passive);
                         ScanComplete();
+                        BackgroundScan(true);
                     });
                 }
+            }
+            void BackgroundScan(const bool evaluate)
+            {
+#if !defined(USE_KERNEL_CONNECTION_CONTROL)
+                if (IsOpen() == true) {
+                    bool start = false;
+
+                    if (evaluate == true) {
+                        if (_continuousBackgroundScan == true) {
+                            start = true;
+                        } else {
+                            _parent->IterateDevices([this, &start](DeviceImpl& device) {
+                                if ((device.IsAutoConnectable() == true) && (device.IsConnected() == false)) {
+                                    start = true;
+                                    return (true);
+                                }
+                                return (false);
+                            });
+                        }
+                    }
+
+                    TRACE(ControlFlow, (_T("%s background scan..."),  (start? "Restarting": "Stopping")));
+                    Bluetooth::HCISocket::Discovery(start);
+                }
+#endif // !defined(USE_KERNEL_CONNECTION_CONTROL)
             }
             uint32_t Open(BluetoothControl& parent)
             {
@@ -352,11 +394,9 @@ class BluetoothControl : public PluginHost::IPlugin
                 TRACE(ControlFlow, (_T("Scan completed: %s"), Core::Time::Now().ToRFC1123().c_str()));
                 Application()->event_scancomplete();
             }
-            void PairingComplete(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const uint8_t status)
+            void PairingComplete(const Bluetooth::Address& /* remote */, const Bluetooth::Address::type /* type */, const uint8_t /* status */)
             {
-                UpdateDevice<DeviceImpl>(remote, (type != Bluetooth::Address::BREDR_ADDRESS), [&](DeviceImpl* device) {
-                    device->PairingComplete(status);
-                });
+                // Pairing is considered successful only if the appropriate keys are exchanged.
             }
             template<typename KEYTYPE>
             uint32_t SecurityKey(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const KEYTYPE& key)
@@ -428,23 +468,46 @@ class BluetoothControl : public PluginHost::IPlugin
             void Update(const le_advertising_info& info) override
             {
                 BT_TRACE(ControlFlow, info);
+
                 if ((Application() != nullptr) && (info.bdaddr_type == 0 /* public */)) {
-                    Bluetooth::EIR eir(info.data, info.length);
-                    DeviceImpl* device = nullptr;
-
+                    const uint8_t CONNECTABLE_UNDIRECTED = 0;
+                    const uint8_t CONNECTABLE_DIRECTED = 1;
                     const uint8_t SCAN_RESPONSE = 4;
-                    const uint8_t UNDIRECTED_CONNECTABLE_ADVERTISMENT = 0;
 
-                    if ((info.evt_type == SCAN_RESPONSE) || (info.evt_type == UNDIRECTED_CONNECTABLE_ADVERTISMENT)) {
-                        device = Application()->Find(Bluetooth::Address(info.bdaddr));
+                    if ((info.evt_type == SCAN_RESPONSE) || (info.evt_type == CONNECTABLE_UNDIRECTED) || (info.evt_type == CONNECTABLE_DIRECTED)) {
+                        const Bluetooth::Address address(info.bdaddr);
+                        DeviceImpl* device = Application()->Find(address);
 
-                        if (device == nullptr) {
+                        if ((device == nullptr) && ((info.evt_type == SCAN_RESPONSE) || (_continuousBackgroundScan == true))) {
+                            // New device discovered
                             device = Application()->Discovered(true, info.bdaddr);
                         }
 
                         if (device != nullptr) {
-                            if ((device->Update(eir) == false) && (info.evt_type == UNDIRECTED_CONNECTABLE_ADVERTISMENT)) {
-                                device->UpdateListener();
+                            // Let's see if the adv packet contains extra information we could update our data with.
+                            if (info.length > 0) {
+                                Bluetooth::EIR eir(info.data, info.length);
+                                device->Update(eir);
+                            }
+
+#if defined(USE_KERNEL_CONNECTION_CONTROL)
+                            // Kernel autoconnects on directed advertisment
+                            if (info.evt_type == CONNECTABLE_UNDIRECTED)
+#else
+                            if ((info.evt_type == CONNECTABLE_DIRECTED) || (info.evt_type == CONNECTABLE_UNDIRECTED))
+#endif
+                            {
+                                if ((device->IsAutoConnectable() == true) && (device->IsBonded() == true)) {
+                                    // The device broadcasts connection requests, let's connect now.
+                                    _reconnectJob.Submit([device, this]() {
+                                        TRACE(ControlFlow, (_T("Reconnecting to %s..."), device->RemoteId().c_str()));
+                                        if (device->Connect() != Core::ERROR_NONE) {
+                                            TRACE(Trace::Error, (_T("Failed reconnecting to %s"), device->RemoteId().c_str()));
+                                        };
+                                    });
+                                } else {
+                                    TRACE(ControlFlow, (_T("Won't reconnect to %s - not whitelisted"), device->RemoteId().c_str()));
+                                }
                             }
                         }
                     }
@@ -689,6 +752,8 @@ class BluetoothControl : public PluginHost::IPlugin
             BluetoothControl* _parent;
             DecoupledJob _scanJob;
             ManagementSocket _administrator;
+            bool _continuousBackgroundScan;
+            DecoupledJob _reconnectJob;
         }; // class ControlSocket
 
         class Config : public Core::JSON::Container {
@@ -700,12 +765,14 @@ class BluetoothControl : public PluginHost::IPlugin
                 , Interface(0)
                 , Name(_T("Thunder BT Control"))
                 , Class(0)
+                , ContinuousBackgroundScan()
                 , AutoPasskeyConfirm(false)
                 , PersistMAC(false)
             {
                 Add(_T("interface"), &Interface);
                 Add(_T("name"), &Name);
                 Add(_T("class"), &Class);
+                Add(_T("continuousbackgroundscan"), &ContinuousBackgroundScan);
                 Add(_T("autopasskeyconfirm"), &AutoPasskeyConfirm);
                 Add(_T("persistmac"), &PersistMAC);
             }
@@ -717,6 +784,7 @@ class BluetoothControl : public PluginHost::IPlugin
             Core::JSON::DecUInt16 Interface;
             Core::JSON::String Name;
             Core::JSON::HexUInt32 Class;
+            Core::JSON::Boolean ContinuousBackgroundScan;
             Core::JSON::Boolean AutoPasskeyConfirm;
             Core::JSON::Boolean PersistMAC;
         }; // class Config
@@ -745,7 +813,7 @@ class BluetoothControl : public PluginHost::IPlugin
             static constexpr uint16_t ACTION_MASK = 0x00FF;
 
         public:
-            static constexpr uint32_t MAX_ACTION_TIMEOUT = 2000; /* 2S to setup a connection ? */
+            static constexpr uint32_t MAX_ACTION_TIMEOUT = 2000;
 
             enum state : uint16_t {
                 CONNECTING    = 0x0001,
@@ -983,7 +1051,10 @@ class BluetoothControl : public PluginHost::IPlugin
                 , _interval(0)
                 , _latency(0)
                 , _timeout(0)
+#if defined(USE_KERNEL_CONNECTION_CONTROL)
                 , _autoConnectionSubmitted(false)
+#endif
+                , _autoConnect(false)
                 , _callback(nullptr)
                 , _securityCallback(nullptr)
                 , _deviceUpdateJob()
@@ -1052,13 +1123,19 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 return (_handle != static_cast<uint16_t>(~0));
             }
+            bool IsAutoConnectable() const
+            {
+                return (_autoConnect);
+            }
             uint32_t Disconnect() override
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
 
-                if (SetState(DISCONNECTING) == Core::ERROR_NONE) {
-                    Bluetooth::HCISocket::Command::Disconnect disconnect;
+                AutoConnect(false);
 
+                if (SetState(DISCONNECTING) == Core::ERROR_NONE) {
+
+                    Bluetooth::HCISocket::Command::Disconnect disconnect;
                     disconnect->handle = htobs(ConnectionId());
                     disconnect->reason = HCI_CONNECTION_TERMINATED;
 
@@ -1069,6 +1146,7 @@ class BluetoothControl : public PluginHost::IPlugin
                             case HCI_NO_CONNECTION:
                                 result = Core::ERROR_ALREADY_RELEASED;
                                 TRACE(ControlFlow, (_T("Device not connected")));
+                                BackgroundScan(true);
                                 break;
                             default:
                                 result = Core::ERROR_ASYNC_FAILED;
@@ -1125,13 +1203,13 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (result == Core::ERROR_INPROGRESS) {
                         TRACE(Trace::Information, (_T("Aborting pairing of device %s in progress..."), Address().ToString().c_str()));
                     } else if (result != Core::ERROR_NONE) {
-                        ClearState(PAIRING); // Hope for the best anyway...
                         TRACE(Trace::Error, (_T("Failed to abort pairing [%d]"), result));
                     }
                 } else {
-                    ClearState(PAIRING);
                     TRACE(Trace::Information, (_T("Not currently pairing to this device")));
                 }
+
+                ClearState(PAIRING);
 
                 return (result);
             }
@@ -1152,7 +1230,6 @@ class BluetoothControl : public PluginHost::IPlugin
                     }
 
                     ClearState(UNPAIRING);
-                    _autoConnectionSubmitted = false;
                     UpdateListener();
                 } else {
                     TRACE(Trace::Information, (_T("Device is currently busy")));
@@ -1316,8 +1393,7 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 _abortPairingJob.Revoke();
                 if (status == 0) {
-                    // Pairing is considered successful only if the appropriate keys are exchanged.
-                    if (!IsBonded()) {
+                    if (IsBonded() == true) {
                         TRACE(Trace::Information, (_T("Device %s pairing successful"), _remote.ToString().c_str()));
                     }
                 } else {
@@ -1393,6 +1469,11 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 _state.Unlock();
 
+                _autoConnectJob.Submit([this]() {
+                    // Each time a device connects evalute whether background scan is needed.
+                    BackgroundScan(true);
+                });
+
                 if (updated == true) {
                     UpdateListener();
                     _parent->event_devicestatechange(Address().ToString(), JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::CONNECTED);
@@ -1403,20 +1484,9 @@ class BluetoothControl : public PluginHost::IPlugin
                 TRACE(DeviceFlow, (_T("Disconnected connection %d, reason: %d"), _handle, reason));
 
                 _state.Lock();
-
                 ClearState(CONNECTING);
                 ClearState(DISCONNECTING);
                 _handle = ~0;
-
-                if (IsBonded() && (_autoConnectionSubmitted == false)) {
-                    // Setting autoconnection can only be done when the device is disconnected.
-                    // The whitelist is not cleared on subsequent connections/disconnections, so this only needs to be done once.
-                    // Kernel will disable autoconnection on it's own when unbinding, no need to call RemoveDevice then.
-                    _autoConnectJob.Submit([this](){
-                        AutoConnect(true);
-                    });
-                }
-
                 _state.Unlock();
 
                 JsonData::BluetoothControl::DevicestatechangeParamsData::DisconnectreasonType disconnReason;
@@ -1436,6 +1506,11 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 UpdateListener();
                 _parent->event_devicestatechange(Address().ToString(), JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::DISCONNECTED, disconnReason);
+
+               _autoConnectJob.Submit([this]() {
+                    // Each time a device disconnects evalute whether background scan is needed.
+                    BackgroundScan(true);
+                });
             }
             bool Class(const uint32_t classId, bool notifyListener = true)
             {
@@ -1475,7 +1550,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 return (updated);
             }
-            bool Update(const Bluetooth::EIR& eir)
+            bool Update(const Bluetooth::EIR& eir, bool notifyListener = true)
             {
                 bool updated = false;
 
@@ -1498,7 +1573,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 _state.Unlock();
 
-                if (updated == true) {
+                if ((updated == true) && (notifyListener == true)) {
                     UpdateListener();
                 }
 
@@ -1524,25 +1599,28 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             void AutoConnect(bool enable)
             {
-                if (enable == true) {
-                    uint32_t result = _parent->Connector().Control().AddDevice(AddressType(), Address(), AutoConnectMode());
-                    if (result != Core::ERROR_NONE) {
-                        TRACE(DeviceFlow, (_T("Could not add device %s [%d]"), Address().ToString().c_str(), result));
-                    } else {
-                        TRACE(DeviceFlow, (_T("Enabled autoconnect of device %s"), Address().ToString().c_str()));
-                        _autoConnectionSubmitted = true;
-                    }
-                } else {
-                    uint32_t result = _parent->Connector().Control().RemoveDevice(AddressType(), Address());
-                    if (result != Core::ERROR_NONE) {
-                        TRACE(DeviceFlow, (_T("Could not remove device [%d]"), Address().ToString().c_str(), result));
-                    }
-                    else {
-                        TRACE(DeviceFlow, (_T("Disabled autoconnect of device %s"), Address().ToString().c_str()));
-                    }
+                _state.Lock();
 
-                   _autoConnectionSubmitted = false;
+                if (_autoConnect != enable) {
+                    _autoConnect = enable;
+                    TRACE(ControlFlow, (_T("Device %swhitelisted for autoconnection"), (enable? "" : "un")));
                 }
+
+                _state.Unlock();
+            }
+
+protected:
+            void BackgroundScan(bool evaluate)
+            {
+#if defined(USE_KERNEL_CONNECTION_CONTROL)
+                // Won't stop discovery explicitly in kernel mode,
+                // simply Add/Remove device when requested to evaluate background scan.
+                if ((evaluate == true) && (IsConnected() == false)) {
+                    SetAutoConnect(IsBonded() && IsAutoConnectable());
+                }
+#else
+                _parent->Connector().BackgroundScan(evaluate);
+#endif
             }
 
         private:
@@ -1553,7 +1631,9 @@ class BluetoothControl : public PluginHost::IPlugin
             virtual uint32_t SecurityKey(const Bluetooth::IdentityKey& key) = 0;
             virtual void PurgeSecurityKeys() = 0;
 
+#if defined(USE_KERNEL_CONNECTION_CONTROL)
             virtual Bluetooth::ManagementSocket::autoconnmode AutoConnectMode() const = 0;
+#endif
 
             void UpdateListener()
             {
@@ -1563,6 +1643,35 @@ class BluetoothControl : public PluginHost::IPlugin
                     });
                 });
             }
+#if defined(USE_KERNEL_CONNECTION_CONTROL)
+            void SetAutoConnect(const bool enable)
+            {
+                _state.Lock();
+
+                if (enable == true) {
+                    if (_autoConnectionSubmitted == false) {
+                        uint32_t result = _parent->Connector().Control().AddDevice(AddressType(), Address(), AutoConnectMode());
+                        if (result != Core::ERROR_NONE) {
+                            TRACE(DeviceFlow, (_T("Could not add device %s [%d]"), Address().ToString().c_str(), result));
+                        } else {
+                            TRACE(DeviceFlow, (_T("Enabled autoconnect of device %s"), Address().ToString().c_str()));
+                            _autoConnectionSubmitted = true;
+                        }
+                    }
+                } else {
+                    uint32_t result = _parent->Connector().Control().RemoveDevice(AddressType(), Address());
+                    if (result != Core::ERROR_NONE) {
+                        TRACE(DeviceFlow, (_T("Could not remove device %s [%d]"), Address().ToString().c_str(), result));
+                    } else {
+                        TRACE(DeviceFlow, (_T("Disabled autoconnect of device %s"), Address().ToString().c_str()));
+                    }
+
+                    _autoConnectionSubmitted = false;
+                }
+
+                _state.Unlock();
+            }
+#endif // defined(USE_KERNEL_CONNECTION_CONTROL)
 
             template<typename ICALLBACK>
             void Callback(ICALLBACK* callbackInstance, const std::function<void(ICALLBACK* cb)>& action)
@@ -1611,7 +1720,10 @@ class BluetoothControl : public PluginHost::IPlugin
             uint16_t _interval;
             uint16_t _latency;
             uint16_t _timeout;
+#if defined(USE_KERNEL_CONNECTION_CONTROL)
             bool _autoConnectionSubmitted;
+#endif
+            bool _autoConnect;
             IBluetooth::IDevice::ICallback* _callback;
             IBluetooth::IDevice::ISecurityCallback* _securityCallback;
             DecoupledJob _deviceUpdateJob;
@@ -1649,10 +1761,6 @@ class BluetoothControl : public PluginHost::IPlugin
                 Name(config->Name.Value());
                 Class(config->Class.Value());
                 config->Get(config->LinkKeys, address, Bluetooth::Address::BREDR_ADDRESS, _linkKeys);
-
-                if (IsBonded() == true) {
-                    AutoConnect(true);
-                }
             }
             ~DeviceRegular() = default;
 
@@ -1666,11 +1774,14 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
 
+                AutoConnect(true);
+
                 if (SetState(CONNECTING) == Core::ERROR_NONE) {
                     if (IsConnected() == false) {
                         if (IsBonded() == true) {
-                            Bluetooth::HCISocket::Command::Connect connect;
+                            BackgroundScan(false);
 
+                            Bluetooth::HCISocket::Command::Connect connect;
                             connect.Clear();
                             connect->bdaddr = *(Locator().Data());
                             connect->pkt_type = htobs(HCI_DM1 | HCI_DM3 | HCI_DM5 | HCI_DH1 | HCI_DH3 | HCI_DH5);
@@ -1697,6 +1808,7 @@ class BluetoothControl : public PluginHost::IPlugin
                         result = Core::ERROR_ALREADY_CONNECTED;
                         TRACE(Trace::Information, (_T("Device already connected!")));
                     }
+
                     ClearState(CONNECTING);
                 } else {
                     result = Core::ERROR_INPROGRESS;
@@ -1776,7 +1888,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 cmd->pscan_rep_mode = 0x02;
                 cmd->clock_offset = 0x0000;
 
-                _parent->Connector().Execute<Bluetooth::HCISocket::Command::RemoteName>(MAX_ACTION_TIMEOUT, cmd, [&](Bluetooth::HCISocket::Command::RemoteName&, const uint32_t error) {
+                _parent->Connector().Execute<Bluetooth::HCISocket::Command::RemoteName>(MAX_ACTION_TIMEOUT, cmd, [&](Bluetooth::HCISocket::Command::RemoteName& /* cmd */, const uint32_t error) {
                     if (error != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Failed to request remote name [%d]"), error));
                     }
@@ -1809,8 +1921,10 @@ class BluetoothControl : public PluginHost::IPlugin
                     _linkKeys.Add(lk);
                     if (IsBonded() ^ isBonded) {
                         BondedChange();
+                        if (IsBonded() == true) {
+                            PairingComplete();
+                        }
                     }
-                    PairingComplete();
                 }
                 return (result);
             }
@@ -1832,10 +1946,12 @@ class BluetoothControl : public PluginHost::IPlugin
                     BondedChange();
                 }
             }
+#if defined(USE_KERNEL_CONNECTION_CONTROL)
             Bluetooth::ManagementSocket::autoconnmode AutoConnectMode() const override
             {
                 return (Bluetooth::ManagementSocket::DIRECT);
             }
+#endif
             IBluetooth::IClassic::ISecurityCallback* SecurityCallback() const
             {
                 return (_securityCallback);
@@ -1872,10 +1988,6 @@ class BluetoothControl : public PluginHost::IPlugin
                 Name(config->Name.Value());
                 Class(config->Class.Value());
                 _irk = Bluetooth::IdentityKey(Address(), AddressType(), config->IdentityKey.Value());
-
-                if (IsBonded() == true) {
-                    AutoConnect(true);
-                }
             }
             ~DeviceLowEnergy() override
             {
@@ -1891,46 +2003,71 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
 
-                if (SetState(CONNECTING) == Core::ERROR_NONE) {
-                    if (IsConnected() == false) {
-                        if (IsBonded() == true) {
-                            Bluetooth::HCISocket::Command::ConnectLE connect;
-                            connect.Clear();
-                            connect->interval = htobs(0x0004);
-                            connect->window = htobs(0x0004);
-                            connect->initiator_filter = 0;
-                            connect->peer_bdaddr_type = LE_PUBLIC_ADDRESS;
-                            connect->peer_bdaddr = *(Locator().Data());
-                            connect->own_bdaddr_type = LE_PUBLIC_ADDRESS;
-                            connect->min_interval = htobs(0x000F);
-                            connect->max_interval = htobs(0x000F);
-                            connect->latency = htobs(0x0000);
-                            connect->supervision_timeout = htobs(0x0C80)/4;
-                            connect->min_ce_length = htobs(0x0001);
-                            connect->max_ce_length = htobs(0x0001);
+                AutoConnect(true);
 
-                            result = Connector().Exchange(MAX_ACTION_TIMEOUT, connect, connect);
-                            if (result == Core::ERROR_NONE) {
-                                if (connect.Result() == 0) {
-                                    Connection(btohs(connect.Response().handle));
+                if (_parent->Connector().IsScanning() == false) {
+                    if (SetState(CONNECTING) == Core::ERROR_NONE) {
+                        if (IsConnected() == false) {
+                            if (IsBonded() == true) {
+                                BackgroundScan(false);
+
+                                Bluetooth::HCISocket::Command::ConnectLE connect;
+                                connect.Clear();
+                                connect->interval = htobs(0x0004);
+                                connect->window = htobs(0x0004);
+                                connect->initiator_filter = 0;
+                                connect->peer_bdaddr_type = LE_PUBLIC_ADDRESS;
+                                connect->peer_bdaddr = *(Locator().Data());
+                                connect->own_bdaddr_type = LE_PUBLIC_ADDRESS;
+                                connect->min_interval = htobs(0x000F);
+                                connect->max_interval = htobs(0x000F);
+                                connect->latency = htobs(0x0000);
+                                connect->supervision_timeout = htobs(8000/10); // in centiseconds
+                                connect->min_ce_length = htobs(0x0001);
+                                connect->max_ce_length = htobs(0x0001);
+
+                                result = Connector().Exchange(MAX_ACTION_TIMEOUT, connect, connect);
+                                if (result == Core::ERROR_NONE) {
+                                    if (connect.Result() == 0) {
+                                        Connection(btohs(connect.Response().handle));
+                                    } else {
+                                        result = Core::ERROR_ASYNC_FAILED;
+                                        TRACE(ControlFlow, (_T("ConnectLE command failed [%d]"), connect.Result()));
+                                    }
                                 } else {
-                                    result = Core::ERROR_ASYNC_FAILED;
-                                    TRACE(ControlFlow, (_T("ConnectLE command failed [%d]"), connect.Result()));
+                                    TRACE(Trace::Error, (_T("Failed to connect [%d]"), result));
+
+                                    if (result == Core::ERROR_TIMEDOUT) {
+                                        // The device is not nearby or active, but we just whitelisted it, so keep searching...
+                                        Bluetooth::HCISocket::Command::ConnectLECancel connectCancel;
+                                        connectCancel.Clear();
+
+                                        result = Connector().Exchange(MAX_ACTION_TIMEOUT, connectCancel, connectCancel);
+                                        if ((result != Core::ERROR_NONE) || (connectCancel.Result() != 0)) {
+                                            TRACE(Trace::Error, (_T("Failed to cancel connection")));
+                                        } else if (connectCancel.Response() != 0) {
+                                            TRACE(Trace::Error, (_T("Controller failed to cancel connection (%i)"), connectCancel.Response()));
+                                        } else {
+                                            TRACE(Trace::Information, (_T("Canceled connection attempt")));
+                                        }
+
+                                        BackgroundScan(true);
+                                    }
                                 }
                             } else {
-                                TRACE(Trace::Error, (_T("Failed to connect [%d]"), result));
+                                result = Core::ERROR_ILLEGAL_STATE;
+                                TRACE(Trace::Information, (_T("Device is not paired")));
                             }
                         } else {
-                            result = Core::ERROR_ILLEGAL_STATE;
-                            TRACE(Trace::Information, (_T("Device is not paired")));
+                            result = Core::ERROR_ALREADY_CONNECTED;
+                            TRACE(Trace::Information, (_T("Device is already connected!")));
                         }
+                        ClearState(CONNECTING);
                     } else {
-                        result = Core::ERROR_ALREADY_CONNECTED;
-                        TRACE(Trace::Information, (_T("Device is already connected!")));
+                        TRACE(Trace::Information, (_T("Device already connected!")));
                     }
-                    ClearState(CONNECTING);
                 } else {
-                    TRACE(Trace::Information, (_T("Device already connected!")));
+                    TRACE(Trace::Information, (_T("Controller is busy")));
                 }
 
                 return (result);
@@ -1938,7 +2075,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
         public:
             // ILowEnergy overrides
-            bool IsUUIDSupported(const string&) const override
+            bool IsUUIDSupported(const string& /* uuid */) const override
             {
                 return false;
             }
@@ -1976,8 +2113,10 @@ class BluetoothControl : public PluginHost::IPlugin
                     _ltks.Add(ltk);
                     if (IsBonded() ^ isBonded) {
                         BondedChange();
+                        if (IsBonded() == true) {
+                            PairingComplete();
+                        }
                     }
-                    PairingComplete();
                 }
                 return (result);
             }
@@ -1999,10 +2138,12 @@ class BluetoothControl : public PluginHost::IPlugin
                     BondedChange();
                 }
             }
+#if defined(USE_KERNEL_CONNECTION_CONTROL)
             Bluetooth::ManagementSocket::autoconnmode AutoConnectMode() const override
             {
                 return (Bluetooth::ManagementSocket::DIRECT);
             }
+#endif
 
         private:
             Bluetooth::LongTermKeys _ltks;
@@ -2168,9 +2309,16 @@ class BluetoothControl : public PluginHost::IPlugin
         void BondedChange(const DeviceImpl* device) {
             if (device->IsBonded() == true) {
                 SaveDevice(device);
-            }
-            else {
+            } else {
                 ForgetDevice(device);
+            }
+        }
+
+        void IterateDevices(std::function<bool(DeviceImpl&)> fn) {
+            for (auto device : _devices) {
+                if (fn(*device) == true) {
+                    break;
+                }
             }
         }
 

@@ -200,14 +200,14 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_ILLEGAL_STATE: No remote has been assigned
     //  - ERROR_UNAVAILABLE: The unit does not support voice functionality
-    uint32_t BluetoothRemoteControl::get_audioprofiles(Core::JSON::ArrayType<Core::JSON::String>& response) const
+    uint32_t BluetoothRemoteControl::get_audioprofiles(Core::JSON::ArrayType<Core::JSON::String>& /* response */) const
     {
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
         if (_gattRemote != nullptr) {
-            result = Core::ERROR_NONE;
+            // todo
+            result = Core::ERROR_GENERAL;
         }
-
         return result;
     }
 
@@ -216,16 +216,13 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_ILLEGAL_STATE: No remote has been assigned
     //  - ERROR_UNKNOWN_KEY: The supplied audio profile is unknown
-    uint32_t BluetoothRemoteControl::get_audioprofile(const string& index, AudioprofileData& response) const
+    uint32_t BluetoothRemoteControl::get_audioprofile(const string& /* index */, AudioprofileData& /* response */) const
     {
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
-        if(_gattRemote != nullptr) {
-            result = Core::ERROR_UNKNOWN_KEY;
-            Exchange::IVoiceProducer::IProfile* profile = _gattRemote->SelectedProfile();
 
-            if (profile != nullptr) {
-                profile->Release();
-            }
+        if (_gattRemote != nullptr) {
+            // todo
+            result = Core::ERROR_GENERAL;
         }
 
         return (result);
