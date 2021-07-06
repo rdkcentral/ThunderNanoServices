@@ -693,6 +693,20 @@ namespace Plugin {
 
             return _controller->Disconnect(ssid);
         }
+
+        inline uint32_t UpdateStoredConfigList()
+        {   
+            uint32_t result = Core::ERROR_NONE;
+            Core::File configFile(_configurationStore);
+            if (configFile.Destroy()) {
+                result = Store();
+            } else {
+                result = Core::ERROR_UNAVAILABLE;
+            }
+
+            return result;
+        }
+
         inline uint32_t Store() {
             uint32_t result = Core::ERROR_NONE;
 
