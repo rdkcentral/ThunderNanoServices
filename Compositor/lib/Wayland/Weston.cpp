@@ -71,7 +71,7 @@ namespace Weston {
                 config.FromString(service->ConfigLine());
                 string logFilePath =
                     (config.LogFilePath.IsSet() == true) ? config.LogFilePath.Value() : service->VolatilePath();
-                _logFile = Core::File(Core::Directory::Normalize(logFilePath) + config.LogFileName.Value());
+                CreateLogFile(string(Core::Directory::Normalize(logFilePath) + config.LogFileName.Value()));
 
                 _context = weston_log_ctx_compositor_create();
                 ASSERT(_context);
@@ -87,7 +87,7 @@ namespace Weston {
                 weston_compositor_log_scope_destroy(_logScope);
                 _logScope = nullptr;
                 UnSubscribeLogger();
-                _logFile.Close();
+                fclose(_logFile);
             }
             struct weston_log_context* Context() const
             {
@@ -95,9 +95,31 @@ namespace Weston {
             }
 
         private:
+            static void CustomHandler(const char *format, va_list argument)
+            {
+                Core::Time now(Core::Time::Now());
+                string timeStamp(now.ToRFC1123(true));
+                weston_log_scope_printf(_logScope, "%s libwayland: ", timeStamp.c_str());
+                weston_log_scope_vprintf(_logScope, format, argument);
+            }
+
+            void CreateLogFile(const string& logName)
+            {
+                wl_log_set_handler_server(CustomHandler);
+                if (logName.empty() != true) {
+                    _logFile = fopen(logName.c_str(), "a");
+                    if (_logFile != nullptr) {
+                        int fd = fileno(_logFile);
+                        int flags = fcntl(fd, F_GETFD);
+                        if (flags >= 0) {
+                            fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+                        }
+                    }
+                }
+            }
             inline void SetHandler()
             {
-                if (_logFile.Create() == true) {
+                if (_logFile != nullptr) {
                     weston_log_set_handler(Log, LogContinue);
                 }
             }
@@ -115,27 +137,33 @@ namespace Weston {
                 weston_log_subscriber_destroy_log(_logger);
                 weston_log_subscriber_destroy_flight_rec(_flightRec);
             }
-            static int LogContinue(const char* format, va_list argp)
-            {
-                return weston_log_scope_vprintf(_logScope, format, argp);
-            }
-            static int Log(const char* format, va_list argp)
+            static int Log(const string& timeStamp, const char* format, va_list argp)
             {
                 int length = 0;
 
                 if (weston_log_scope_is_enabled(_logScope)) {
                     char* str;
-                    Core::Time now(Core::Time::Now());
-                    string timestamp(now.ToRFC1123(true));
                     length = vasprintf(&str, format, argp);
                     if (length >= 0) {
-                        length = weston_log_scope_printf(_logScope, "%s %s", timestamp.c_str(), str);
+                        length = weston_log_scope_printf(_logScope, "%s%s", timeStamp.c_str(), str);
                         free(str);
                     } else {
-                        length = weston_log_scope_printf(_logScope, "%s Out of memory", timestamp.c_str());
+                        length = weston_log_scope_printf(_logScope, "%sOut of memory", timeStamp.c_str());
                     }
+                    fflush(_logFile);
                 }
                 return length;
+            }
+            static int LogContinue(const char* format, va_list argp)
+            {
+                return Log("", format, argp);
+            }
+            static int Log(const char* format, va_list argp)
+            {
+                Core::Time now(Core::Time::Now());
+                string timeStamp = now.ToRFC1123(true) + " ";
+
+                return Log(timeStamp, format, argp);
             }
         private:
             struct weston_log_context* _context;
@@ -143,7 +171,7 @@ namespace Weston {
             struct weston_log_subscriber* _flightRec;
             static struct weston_log_scope* _logScope;
 
-            Core::File _logFile;
+            static FILE* _logFile;
         };
 
 
@@ -189,7 +217,7 @@ namespace Weston {
             public:
                 Config()
                     : Core::JSON::Container()
-                    , Forced(false)
+                    , Forced(true)
                     , Connectors()
                 {
                     Add(_T("forces"), &Forced);
@@ -436,10 +464,12 @@ namespace Weston {
             }
             Layoutput* FindLayoutput(const string& name)
             {
-                Layoutput* layoutput;
+                Layoutput* layoutput = nullptr;
+                Layoutput* tmpLayoutput = nullptr;
 
-                wl_list_for_each(layoutput, &_layoutputList, CompositorLink) {
+                wl_list_for_each(tmpLayoutput, &_layoutputList, CompositorLink) {
                     if (layoutput->Name == name) {
+                        layoutput = tmpLayoutput;
                         break;
                     }
                 }
@@ -455,14 +485,14 @@ namespace Weston {
                     layoutput->Name = name;
                     layoutput->Config = output;
                 }
-               return layoutput;
+                return layoutput;
             }
             void LayoutputAddHead(struct weston_head* head, const IBackend::Output& output)
             {
                 const char* outputName = weston_head_get_name(head);
                 Layoutput* layoutput = FindLayoutput(outputName);
                 if (layoutput == nullptr) {
-                    CreateLayoutput(outputName, output);
+                    layoutput = CreateLayoutput(outputName, output);
                 }
                 if (layoutput->Clones.size() < MaxCloneHeads) {
                     layoutput->Clones.push_back(head);
@@ -524,11 +554,10 @@ namespace Weston {
                 return output;
             }
             void TryAttach(struct weston_output* output, std::list<struct weston_head*>& Clones, std::list<struct weston_head*>& failedClones) {
-                for (std::list<struct weston_head*>::iterator clone; clone != Clones.begin(); clone++) {
-                    if (weston_output_attach_head(output,* clone) < 0) {
-
-                        failedClones.push_back(*clone);
+                for (std::list<struct weston_head*>::iterator clone = Clones.begin(); clone != Clones.end(); clone++) {
+                    if (weston_output_attach_head(output, *clone) < 0) {
                         Clones.erase(clone);
+                        failedClones.push_back(*clone);
                     }
                 }
             }
@@ -554,10 +583,10 @@ namespace Weston {
 
                 TryAttach(output, layoutput->Clones, failedClones);
                 status = OutputConfigure(output);
-                if (status != Core::ERROR_NONE) {
+                if (status == Core::ERROR_NONE) {
 
                     status = TryEnable(output, layoutput->Clones, failedClones);
-                    if (status != Core::ERROR_NONE) {
+                    if (status == Core::ERROR_NONE) {
 
                         /* For all successfully attached/enabled heads */
                         for (auto& clone : layoutput->Clones) {
@@ -816,6 +845,7 @@ namespace Weston {
             weston_log_ctx_compositor_destroy(_compositor);
             weston_compositor_destroy(_compositor);
             wl_display_destroy(_display);
+            Stop();
             Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
             _instance = nullptr;
         }
@@ -856,6 +886,7 @@ namespace Weston {
             while (IsRunning() == true) {
                 wl_display_run(_display);
             }
+
             return (Core::infinite);
         }
         static void HandleExit(struct weston_compositor* compositor)
@@ -869,7 +900,6 @@ namespace Weston {
 
             string shellFileName = string(Core::Directory::Normalize(shellFileLocation) + DesktopShell);
             Core::Library library(shellFileName.c_str());
-            void* handle = dlopen(shellFileName.c_str(), RTLD_LAZY);
             if (library.IsLoaded() == true) {
                 ShellInit shellInit = reinterpret_cast<ShellInit>(library.LoadFunction(ShellInitEntryName));
                 if (shellInit != nullptr) {
@@ -894,6 +924,7 @@ namespace Weston {
     };
 
     /*static*/ Weston::Compositor* Weston::Compositor::_instance = nullptr;
+    /*static*/ FILE* Weston::Compositor::Logger::_logFile = nullptr;
     /*static*/ struct weston_log_scope* Weston::Compositor::Logger::_logScope = nullptr;
 
 } // namespace Weston
