@@ -429,9 +429,6 @@ namespace Plugin {
             // First Sleep the expected time..
             SleepMs(_config.Sleep.Value() * 1000);
 
-            // Just do nothing :-)
-            Block();
-
                 while (IsRunning() == true) {
 
                     SleepMs(200);
