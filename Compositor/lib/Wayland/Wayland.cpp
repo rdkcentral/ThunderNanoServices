@@ -528,18 +528,23 @@ namespace Plugin {
                 // This C++ wayland Compositor abstraction instance, will in-fact, call the server, we just
                 // instantiated a few lines above.
                 _controller = &(Wayland::Display::Instance(_config.Display.Value()));
-                // OK ready to receive new connecting surfaces.
-                _controller->Callback(&_sink);
-                // We also want to be know the current surfaces.
-                _controller->LoadSurfaces();
-                // Firing up the compositor controllerr.
-                _job.Run();
+                if (_controller != nullptr) {
+                    // OK ready to receive new connecting surfaces.
+                    _controller->Callback(&_sink);
 
-                TRACE(Trace::Information, (_T("Compositor initialized\n")));
+                    // We also want to be know the current surfaces.
+                    _controller->LoadSurfaces();
 
-                if (subSystems != nullptr) {
-                    // Set Graphics event. We need to set up a handler for this at a later moment
-                    subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
+                    // Firing up the compositor controllerr.
+                    _job.Run();
+
+                    TRACE(Trace::Information, (_T("Compositor initialized\n")));
+                    if (subSystems != nullptr) {
+                        // Set Graphics event. We need to set up a handler for this at a later moment
+                        subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
+                    }
+                } else {
+                    delete _server;
                 }
             }
 
