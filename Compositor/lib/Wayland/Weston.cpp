@@ -82,10 +82,13 @@ namespace Weston {
                 }
             }
             ~Logger() {
-                weston_compositor_log_scope_destroy(_logScope);
-                _logScope = nullptr;
                 UnSubscribeLogger();
                 fclose(_logFile);
+            }
+            void DestroyLogScope()
+            {
+                weston_compositor_log_scope_destroy(_logScope);
+                _logScope = nullptr;
             }
             struct weston_log_context* Context() const
             {
@@ -183,9 +186,9 @@ namespace Weston {
             public:
                 Connector()
                     : Core::JSON::Container()
-                    , Name()
-                    , Mode()
-                    , Transform()
+                    , Name("")
+                    , Mode("preferred")
+                    , Transform("normal")
                 {
                     Add(_T("name"), &Name);
                     Add(_T("mode"), &Mode);
@@ -218,7 +221,7 @@ namespace Weston {
                     , Forced(false)
                     , Connectors()
                 {
-                    Add(_T("forces"), &Forced);
+                    Add(_T("forced"), &Forced);
                     Add(_T("outputs"), &Connectors);
                 }
                 ~Config() = default;
@@ -363,8 +366,6 @@ namespace Weston {
         };
 
         class DRM : public IBackend{
-        private:
-            static constexpr const TCHAR* OutputModePreferred = _T("preferred");
         private:
             class Config : public Core::JSON::Container {
             private:
@@ -519,22 +520,26 @@ namespace Weston {
                 }
                 return;
             }
-            uint32_t OutputConfigure(struct weston_output* output)
+            uint32_t ConfigureOutput(struct weston_output* output, const IBackend::Output& config)
             {
                 uint32_t status = Core::ERROR_NONE;
                 const struct weston_drm_output_api* api = weston_drm_output_get_api(_parent->PlatformCompositor());
+
                 if (api) {
-                    char *modeline = nullptr; //TODO make it proper
-                    if (!api->set_mode(output, WESTON_DRM_BACKEND_OUTPUT_PREFERRED, modeline)) {
+                    if (!api->set_mode(output, WESTON_DRM_BACKEND_OUTPUT_PREFERRED, config.Mode().c_str())) {
                         api->set_gbm_format(output, NULL);
                         api->set_seat(output, "");
                         weston_output_set_scale(output, 1);
-                        weston_output_set_transform(output, WL_OUTPUT_TRANSFORM_NORMAL);
+                        uint32_t transform = 0;
+                        weston_parse_transform(config.Transform().c_str(), &transform);
+                        weston_output_set_transform(output, transform);
                         weston_output_allow_protection(output, true);
+
                     } else {
                         weston_log("Cannot configure an output using weston_drm_output_api.\n");
                         status = Core::ERROR_NOT_SUPPORTED;
                     }
+
                 } else {
                     weston_log("Cannot use weston_drm_output_api.\n");
                     status = Core::ERROR_NOT_SUPPORTED;
@@ -581,7 +586,7 @@ namespace Weston {
                 uint32_t status = Core::ERROR_NONE;
 
                 TryAttach(output, layoutput->Clones, failedClones);
-                status = OutputConfigure(output);
+                status = ConfigureOutput(output, layoutput->Config);
                 if (status == Core::ERROR_NONE) {
 
                     status = TryEnable(output, layoutput->Clones, failedClones);
@@ -850,6 +855,7 @@ namespace Weston {
         ~Compositor() {
             TRACE(Trace::Information, (_T("Destructing the compositor")));
             weston_compositor_tear_down(_compositor);
+            _logger.DestroyLogScope();
             weston_log_ctx_compositor_destroy(_compositor);
             weston_compositor_destroy(_compositor);
             wl_display_destroy(_display);
