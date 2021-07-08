@@ -760,7 +760,7 @@ namespace Weston {
             Config()
                 : Core::JSON::Container()
                 , Shell(_T("/usr/lib/weston/desktop-shell.so"))
-                , ConfigLocation(_T("/etc"))
+                , ConfigLocation(_T(""))
             {
                 Add(_T("shellfilelocation"), &Shell);
                 Add(_T("configlocation"), &ConfigLocation);
@@ -838,8 +838,9 @@ namespace Weston {
                             if (socketName) {
                                 Config config;
                                 config.FromString(_service->ConfigLine());
-                                Core::SystemInfo::SetEnvironment(_T("XDG_CONFIG_DIRS"),
-                                    Core::Directory::Normalize(config.ConfigLocation.Value()));
+                                string configLocation = (config.ConfigLocation.IsSet() == true) ?
+                                    config.ConfigLocation.Value() : _service->DataPath();
+                                Core::SystemInfo::SetEnvironment(_T("XDG_CONFIG_DIRS"), configLocation);
                                 Core::SystemInfo::SetEnvironment(_T("WAYLAND_DISPLAY"), socketName);
 
                                 status = LoadShell(config.Shell.Value());
