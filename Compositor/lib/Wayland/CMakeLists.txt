@@ -16,6 +16,7 @@
 # limitations under the License.
 
 set(TARGET ${PLATFORM_COMPOSITOR})
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 message(STATUS "Setup ${TARGET} v${PROJECT_VERSION}...")
 
@@ -111,9 +112,7 @@ if ("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston")
                 WestonServer::WestonServer
         )
     endif (WESTON_SERVER_FOUND)
-endif (Weston)
-
-if ("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
+elseif ("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
     find_package(WesterosServer)
     if (WESTEROS_SERVER_FOUND)
         target_sources(${TARGET}
@@ -132,7 +131,7 @@ if ("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
                     RESOLUTION_SUPPORT=1)
         endif (NOT BCM_HOST_FOUND)
     endif (WESTEROS_SERVER_FOUND)
-endif (Westeros)
+endif ()
 
 if(PLUGIN_COMPOSITOR_VIRTUALINPUT)
     find_package(${NAMESPACE}VirtualInput REQUIRED)
