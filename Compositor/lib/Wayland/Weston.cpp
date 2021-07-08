@@ -759,19 +759,21 @@ namespace Weston {
         public:
             Config()
                 : Core::JSON::Container()
-                , ShellFileLocation(_T("/usr/lib/weston"))
+                , Shell(_T("/usr/lib/weston/desktop-shell.so"))
+                , ConfigLocation(_T("/etc"))
             {
-                Add(_T("shellfilelocation"), &ShellFileLocation);
+                Add(_T("shellfilelocation"), &Shell);
+                Add(_T("configlocation"), &ConfigLocation);
             }
             ~Config() = default;
 
         public:
-            Core::JSON::String ShellFileLocation;
+            Core::JSON::String Shell;
+            Core::JSON::String ConfigLocation;
         };
 
     private:
         static constexpr const uint8_t MaxCloneHeads = 16;
-        static constexpr const TCHAR* DesktopShell = _T("desktop-shell.so");
         static constexpr const TCHAR* ShellInitEntryName = _T("wet_shell_init");
 
     public:
@@ -834,11 +836,13 @@ namespace Weston {
                             const char* socketName = wl_display_add_socket_auto(_display);
                             ASSERT(socketName);
                             if (socketName) {
-                                Core::SystemInfo::SetEnvironment(_T("WAYLAND_DISPLAY"), socketName);
                                 Config config;
                                 config.FromString(_service->ConfigLine());
+                                Core::SystemInfo::SetEnvironment(_T("XDG_CONFIG_DIRS"),
+                                    Core::Directory::Normalize(config.ConfigLocation.Value()));
+                                Core::SystemInfo::SetEnvironment(_T("WAYLAND_DISPLAY"), socketName);
 
-                                status = LoadShell(config.ShellFileLocation.Value());
+                                status = LoadShell(config.Shell.Value());
                                 ASSERT(status == Core::ERROR_NONE)
                                 if (status == Core::ERROR_NONE) {
                                     weston_compositor_wake(_compositor);
@@ -909,13 +913,12 @@ namespace Weston {
         {
             wl_display_terminate(compositor->wl_display);
         }
-        uint32_t LoadShell(const string& shellFileLocation)
+        uint32_t LoadShell(const string& shell)
         {
             uint32_t status = Core::ERROR_GENERAL;
             typedef int (*ShellInit)(struct weston_compositor*, int*, char*[]);
 
-            string shellFileName = string(Core::Directory::Normalize(shellFileLocation) + DesktopShell);
-            Core::Library library(shellFileName.c_str());
+            Core::Library library(shell.c_str());
             _library = library;
             if (library.IsLoaded() == true) {
                 ShellInit shellInit = reinterpret_cast<ShellInit>(library.LoadFunction(ShellInitEntryName));
