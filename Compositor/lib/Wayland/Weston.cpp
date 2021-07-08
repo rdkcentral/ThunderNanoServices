@@ -325,7 +325,7 @@ namespace Weston {
             }
 
         protected:
-            void OutputDestroy(OutputData* output)
+            void DestroyOutput(OutputData* output)
             {
                 if (output->Output) {
                     struct weston_output* save = output->Output;
@@ -358,6 +358,7 @@ namespace Weston {
                 }
                 return output;
             }
+
             virtual void Load(Compositor*) = 0;
         protected:
             bool _forced;
@@ -407,6 +408,10 @@ namespace Weston {
                 _tty = config.TTY.Value();
 
                 wl_list_init(&_layoutputList);
+            }
+            virtual ~DRM()
+            {
+                DestroyLayoutputList();
             }
 
         public:
@@ -476,7 +481,7 @@ namespace Weston {
             }
             Layoutput* CreateLayoutput(const string& name, const IBackend::Output& output)
             {
-                Layoutput* layoutput = new Layoutput;
+                Layoutput* layoutput = new Layoutput();
                 ASSERT(layoutput);
                 if (layoutput) {
                     wl_list_insert(_layoutputList.prev, &layoutput->CompositorLink);
@@ -486,6 +491,22 @@ namespace Weston {
                 }
                 return layoutput;
             }
+            void DestroyLayoutputList()
+            {
+                Layoutput* layoutput;
+                Layoutput* templayoutput;
+                IBackend::OutputData* output;
+                IBackend::OutputData* tempOutput;
+
+                wl_list_for_each_safe(layoutput,  templayoutput, &_layoutputList, CompositorLink) {
+                    wl_list_for_each_safe(output, tempOutput, &layoutput->OutputList, Link) {
+                        DestroyOutput(output);
+                    }
+                        wl_list_remove(&layoutput->CompositorLink);
+                    delete layoutput;
+                }
+            }
+
             void LayoutputAddHead(struct weston_head* head, const IBackend::Output& output)
             {
                 const char* outputName = weston_head_get_name(head);
@@ -634,7 +655,7 @@ namespace Weston {
 
                     if (!output->Output) {
                         /* Clean up left-overs from destroyed heads. */
-                        OutputDestroy(output);
+                        DestroyOutput(output);
                         continue;
                     }
 
@@ -667,7 +688,7 @@ namespace Weston {
                         }
 
                         if (TryAttachEnable(output->Output, layoutput) != Core::ERROR_NONE) {
-                            OutputDestroy(output);
+                            DestroyOutput(output);
                             break;
                         }
 
@@ -705,7 +726,7 @@ namespace Weston {
 
                 weston_head_detach(head);
                 if (CountRemainingHeads(output->Output, nullptr) == 0) {
-                    OutputDestroy(output);
+                    DestroyOutput(output);
                 }
             }
             static void HeadsChanged(struct wl_listener* listener, void* argument)
@@ -735,7 +756,7 @@ namespace Weston {
                 }
 
                 if (static_cast<DRM*>(parent->Backend())->ProcessLayoutputs() == Core::ERROR_NONE) {
-                    parent->Initialized(true);
+                    parent->Loaded(true);
                 }
             }
         private:
@@ -783,7 +804,7 @@ namespace Weston {
 
         Compositor(PluginHost::IShell* service)
             : _logger(service)
-            , _initialized(false)
+            , _loaded(false)
             , _service(nullptr)
             , _userData()
             , _display(nullptr)
@@ -807,6 +828,19 @@ namespace Weston {
             Run();
 
         }
+        ~Compositor() {
+            TRACE(Trace::Information, (_T("Destructing the compositor")));
+            _logger.DestroyLogScope();
+            weston_compositor_tear_down(_compositor);
+            weston_log_ctx_compositor_destroy(_compositor);
+            weston_compositor_destroy(_compositor);
+            wl_display_destroy(_display);
+            Stop();
+            Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
+            _instance = nullptr;
+            _service = nullptr;
+        }
+
         uint32_t StartComposition() {
             uint32_t status = Core::ERROR_GENERAL;
             _display = wl_display_create();
@@ -823,12 +857,7 @@ namespace Weston {
                     int err = weston_compositor_set_xkb_rule_names(_compositor, &xkb_names);
                     ASSERT(err == 0);
                     if (err == 0) {
-                        _backend = Create<DRM>(_service);
-                        _backend->Load(this);
-                        weston_compositor_flush_heads_changed(_compositor);
-                        ASSERT(_initialized == true);
-                        if (_initialized == true) {
-
+                        if (LoadBackend(_service) == Core::ERROR_NONE) {
                             _compositor->idle_time = 300;
                             _compositor->default_pointer_grab = NULL;
                             _compositor->exit = HandleExit;
@@ -838,16 +867,11 @@ namespace Weston {
                             if (socketName) {
                                 Config config;
                                 config.FromString(_service->ConfigLine());
-                                string configLocation = (config.ConfigLocation.IsSet() == true) ?
-                                    config.ConfigLocation.Value() : _service->DataPath();
-                                Core::SystemInfo::SetEnvironment(_T("XDG_CONFIG_DIRS"), configLocation);
-                                Core::SystemInfo::SetEnvironment(_T("WAYLAND_DISPLAY"), socketName);
-
-                                status = LoadShell(config.Shell.Value());
-                                ASSERT(status == Core::ERROR_NONE)
-                                if (status == Core::ERROR_NONE) {
+                                SetEnvironments(config, socketName);
+                                if (LoadShell(config.Shell.Value()) == Core::ERROR_NONE) {
                                     weston_compositor_wake(_compositor);
                                     wl_display_run(_display);
+                                    status = Core::ERROR_NONE;
                                 }
                             }
                         }
@@ -856,18 +880,23 @@ namespace Weston {
             }
             return status;
         }
-
-        ~Compositor() {
-            TRACE(Trace::Information, (_T("Destructing the compositor")));
-            weston_compositor_tear_down(_compositor);
-            _logger.DestroyLogScope();
-            weston_log_ctx_compositor_destroy(_compositor);
-            weston_compositor_destroy(_compositor);
-            wl_display_destroy(_display);
-            Stop();
-            Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
-            _instance = nullptr;
-            _service = nullptr;
+        inline bool LoadBackend(PluginHost::IShell* service)
+        {
+            _backend = Create<DRM>(_service);
+            _backend->Load(this);
+            weston_compositor_flush_heads_changed(_compositor);
+            ASSERT(_loaded == true);
+            return ((_loaded == true) ? Core::ERROR_NONE : Core::ERROR_GENERAL);
+        }
+        inline void SetEnvironments(const Config& config, const string& socketName)
+        {
+            string configLocation = (config.ConfigLocation.IsSet() == true) ?
+                   config.ConfigLocation.Value() : _service->DataPath();
+            Core::SystemInfo::SetEnvironment(_T("XDG_CONFIG_DIRS"), configLocation);
+            Core::SystemInfo::SetEnvironment(_T("WAYLAND_DISPLAY"), socketName);
+        }
+        bool IsLoaded() {
+            return _loaded;
         }
         template <class BACKEND>
         IBackend* Create(PluginHost::IShell* service)
@@ -893,9 +922,9 @@ namespace Weston {
         {
             return _backend;
         }
-        inline void Initialized(const bool success)
+        inline void Loaded(const bool success)
         {
-            _initialized = success;
+            _loaded = success;
         }
         void SetInput(const char name[]) override
         {
@@ -929,6 +958,7 @@ namespace Weston {
                     }
                 }
             }
+            ASSERT(status == Core::ERROR_NONE)
             return status;
         }
 
@@ -936,7 +966,7 @@ namespace Weston {
         Logger _logger;
         IBackend* _backend;
 
-        bool _initialized;
+        bool _loaded;
         Core::Library _library;
         PluginHost::IShell* _service;
 
