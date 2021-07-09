@@ -858,6 +858,7 @@ namespace Weston {
             weston_compositor_tear_down(_compositor);
             weston_log_ctx_compositor_destroy(_compositor);
             weston_compositor_destroy(_compositor);
+            wl_display_terminate(_compositor->wl_display); //FIXME: revisit exti sequence
             wl_display_destroy(_display);
 
             Stop();
