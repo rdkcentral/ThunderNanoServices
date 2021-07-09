@@ -20,9 +20,15 @@
 #include "Wayland.h"
 
 #include <libweston/libweston.h>
-#include <libweston/weston-log.h>
+#include <libweston/backend.h>
 #include <libweston/backend-drm.h>
+#include <libweston/weston-log.h>
 #include <weston/shared/helpers.h>
+
+extern "C" {
+void weston_init_process_list();
+void weston_compositor_shutdown(struct weston_compositor* compositor);
+}
 
 namespace WPEFramework {
 namespace Implementation {
@@ -320,8 +326,8 @@ namespace Weston {
 
                 _forced = config.Forced.Value();
             }
-            ~IBackend() {
-                  _outputs.clear();
+            virtual ~IBackend() {
+                _outputs.clear();
             }
 
         protected:
@@ -376,7 +382,7 @@ namespace Weston {
             public:
                 Config()
                     : Core::JSON::Container()
-                    , TTY(1)
+                    , TTY()
                 {
                     Add(_T("tty"), &TTY);
                 }
@@ -385,7 +391,7 @@ namespace Weston {
                 }
 
             public:
-                Core::JSON::DecUInt8 TTY;
+                Core::JSON::ArrayType<Core::JSON::DecUInt8> TTY;
             };
         public:
             struct HeadTracker {
@@ -405,11 +411,17 @@ namespace Weston {
                 TRACE(Trace::Information, (_T("Starting DRM Backend")));
                 Config config;
                 config.FromString(service->ConfigLine());
-                _tty = config.TTY.Value();
+
+                auto index(config.TTY.Elements());
+                while (index.Next() == true) {
+                    if (index.Current().IsSet() == true) {
+                        _tty.push_back(index.Current().Value());
+                    }
+                }
 
                 wl_list_init(&_layoutputList);
             }
-            virtual ~DRM()
+            ~DRM() override
             {
                 DestroyLayoutputList();
             }
@@ -418,9 +430,8 @@ namespace Weston {
             void Load(Compositor* parent) override
             {
                 TRACE(Trace::Information, (_T("Loading DRM Backend")));
-                struct weston_drm_backend_config config = {{ 0, }};
+                struct weston_drm_backend_config config = {{ 0 }};
 
-                config.tty = _tty;
                 config.base.struct_version = WESTON_DRM_BACKEND_CONFIG_VERSION;
                 config.base.struct_size = sizeof(struct weston_drm_backend_config);
 
@@ -429,7 +440,18 @@ namespace Weston {
                 struct weston_compositor* compositor = parent->PlatformCompositor();
                 weston_compositor_add_heads_changed_listener(compositor, &_listener);
 
-                weston_compositor_load_backend(compositor, WESTON_BACKEND_DRM, &config.base);
+                auto tty = _tty.begin();
+                for (;tty != _tty.end();++tty) {
+                    config.tty = *tty;
+                    if (weston_compositor_load_backend(compositor, WESTON_BACKEND_DRM, &config.base) >= 0) {
+                        break;
+                    }
+                }
+
+                if (tty == _tty.end()) {
+                    weston_compositor_shutdown(compositor);
+                    TRACE(Trace::Error, (_T("Failed to load DRM backend using all configured tty")));
+                }
             }
         private:
             static uint16_t CountRemainingHeads(struct weston_output* output, struct weston_head* remaining)
@@ -731,7 +753,7 @@ namespace Weston {
             }
             static void HeadsChanged(struct wl_listener* listener, void* argument)
             {
-                TRACE_GLOBAL(Trace::Information, (_T("Loading DRM Backend")));
+                TRACE_GLOBAL(Trace::Information, (_T("DRM Backend Loading in progress")));
                 struct weston_compositor* compositor = static_cast<weston_compositor*>(argument);
                 Compositor::WestonUserData* userData = static_cast<Compositor::WestonUserData*>(weston_compositor_get_user_data(compositor));
                 Compositor* parent = userData->Parent;
@@ -760,7 +782,7 @@ namespace Weston {
                 }
             }
         private:
-            uint8_t _tty;
+            std::list<uint8_t> _tty;
             struct wl_listener _listener;
             Compositor* _parent;
         };
@@ -830,11 +852,14 @@ namespace Weston {
         }
         ~Compositor() {
             TRACE(Trace::Information, (_T("Destructing the compositor")));
+            delete _backend;
             _logger.DestroyLogScope();
+
             weston_compositor_tear_down(_compositor);
             weston_log_ctx_compositor_destroy(_compositor);
             weston_compositor_destroy(_compositor);
             wl_display_destroy(_display);
+
             Stop();
             Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
             _instance = nullptr;
@@ -857,6 +882,7 @@ namespace Weston {
                     int err = weston_compositor_set_xkb_rule_names(_compositor, &xkb_names);
                     ASSERT(err == 0);
                     if (err == 0) {
+                        weston_init_process_list();
                         if (LoadBackend(_service) == Core::ERROR_NONE) {
                             _compositor->idle_time = 300;
                             _compositor->default_pointer_grab = NULL;

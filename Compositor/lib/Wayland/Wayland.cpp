@@ -265,14 +265,14 @@ namespace Plugin {
                 delete _surface;
             }
 
-            if (_server != nullptr) {
-                delete _server;
-            }
-
             if (_controller != nullptr) {
                 // Exit Wayland loop
                 _controller->Signal();
                 _controller->Release();
+            }
+
+            if (_server != nullptr) {
+                delete _server;
             }
 
 #ifdef ENABLE_NXSERVER
