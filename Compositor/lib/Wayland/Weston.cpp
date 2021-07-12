@@ -74,8 +74,9 @@ namespace Weston {
                 Config config;
                 config.FromString(service->ConfigLine());
                 string logFilePath =
-                    (config.LogFilePath.IsSet() == true) ? config.LogFilePath.Value() : service->VolatilePath();
-                CreateLogFile(string(Core::Directory::Normalize(logFilePath) + config.LogFileName.Value()));
+                    (config.LogFilePath.IsSet() == true) ?
+                    Core::Directory::Normalize(config.LogFilePath.Value()) : service->VolatilePath();
+                CreateLogFile(string(logFilePath + config.LogFileName.Value()));
 
                 _context = weston_log_ctx_compositor_create();
                 ASSERT(_context);
@@ -89,7 +90,7 @@ namespace Weston {
             }
             ~Logger() {
                 UnSubscribeLogger();
-                fclose(_logFile);
+                _logFile.Close();
             }
             void DestroyLogScope()
             {
@@ -113,10 +114,11 @@ namespace Weston {
             void CreateLogFile(const string& logName)
             {
                 wl_log_set_handler_server(CustomHandler);
-                if (logName.empty() != true) {
-                    _logFile = fopen(logName.c_str(), "a");
-                    if (_logFile != nullptr) {
-                        int fd = fileno(_logFile);
+                _logFile = Core::File(logName);
+                if (_logFile.Append() == true) {
+                    FILE* handle = _logFile;
+                    if (handle != nullptr) {
+                        int fd = fileno(handle);
                         int flags = fcntl(fd, F_GETFD);
                         if (flags >= 0) {
                             fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
@@ -157,7 +159,7 @@ namespace Weston {
                     } else {
                         length = weston_log_scope_printf(_logScope, "%sOut of memory", timeStamp.c_str());
                     }
-                    fflush(_logFile);
+                    fflush(0);
                 }
                 return length;
             }
@@ -178,7 +180,7 @@ namespace Weston {
             struct weston_log_subscriber* _flightRec;
             static struct weston_log_scope* _logScope;
 
-            static FILE* _logFile;
+            static Core::File _logFile;
         };
 
 
@@ -1004,8 +1006,8 @@ namespace Weston {
         static Weston::Compositor* _instance;
     };
 
+    /*static*/ Core::File Weston::Compositor::Logger::_logFile;
     /*static*/ Weston::Compositor* Weston::Compositor::_instance = nullptr;
-    /*static*/ FILE* Weston::Compositor::Logger::_logFile = nullptr;
     /*static*/ struct weston_log_scope* Weston::Compositor::Logger::_logScope = nullptr;
 
 } // namespace Weston
