@@ -366,8 +366,8 @@ namespace Weston {
                 }
                 return output;
             }
-
             virtual void Load(Compositor*) = 0;
+            virtual uint32_t UpdateResolution(const string&) = 0;
         protected:
             bool _forced;
             std::map<const string, Output> _outputs;
@@ -530,7 +530,6 @@ namespace Weston {
                     delete layoutput;
                 }
             }
-
             void LayoutputAddHead(struct weston_head* head, const IBackend::Output& output)
             {
                 const char* outputName = weston_head_get_name(head);
@@ -783,6 +782,29 @@ namespace Weston {
                     parent->Loaded(true);
                 }
             }
+            uint32_t UpdateResolution(const string& mode) override {
+                uint32_t status = Core::ERROR_UNAVAILABLE;
+                struct weston_head* head = nullptr;
+                while ((head = weston_compositor_iterate_heads(_parent->PlatformCompositor(), head))) {
+                    bool connected = weston_head_is_connected(head);
+                    if (connected) {
+                        struct weston_output *output = weston_head_get_output(head);
+                        string name = weston_head_get_name(head);
+                        Output config = OutputConfig(name);
+                        if (config.Name().empty() != true) {
+                            Output newConfig = Output(config.Name(), mode, config.Transform());
+
+                            weston_output_disable(output);
+                            output->scale = 0;
+                            ConfigureOutput(output, newConfig);
+                            weston_output_enable(output);
+                            status = Core::ERROR_NONE;
+                        }
+                    }
+                }
+                return status;
+            }
+
         private:
             std::list<uint8_t> _tty;
             struct wl_listener _listener;
@@ -833,6 +855,7 @@ namespace Weston {
             , _userData()
             , _display(nullptr)
             , _compositor(nullptr)
+            , _resolution(Exchange::IComposition::ScreenResolution_1080i50Hz)
         {
             TRACE(Trace::Information, (_T("Starting Compositor")));
 
@@ -958,7 +981,34 @@ namespace Weston {
         void SetInput(const char name[]) override
         {
         }
+        uint32_t SetResolution(const Exchange::IComposition::ScreenResolution value) {
+            uint32_t result = Core::ERROR_UNAVAILABLE;
 
+            const char* request = nullptr;
+            switch(value) {
+                case Exchange::IComposition::ScreenResolution_480i:      request = "720x480@60.0";       break;
+                case Exchange::IComposition::ScreenResolution_480p:      request = "720x480@60.0 16:9";  break;
+                case Exchange::IComposition::ScreenResolution_720p:      request = "1280x720@60.0 16:9"; break;
+                case Exchange::IComposition::ScreenResolution_720p50Hz:  request = "1280x720@50.0";      break;
+                case Exchange::IComposition::ScreenResolution_1080p24Hz: request = "1920x1080@24.0";     break;
+                case Exchange::IComposition::ScreenResolution_1080i50Hz: request = "1920x1080@50.0";     break;
+                case Exchange::IComposition::ScreenResolution_1080p50Hz: request = "1920x1080@50.0";     break;
+                case Exchange::IComposition::ScreenResolution_1080p60Hz: request = "1920x1080@60.0";     break;
+                case Exchange::IComposition::ScreenResolution_2160p50Hz: request = "3840x2160@50.0";     break;
+                case Exchange::IComposition::ScreenResolution_2160p60Hz: request = "3840x2160@60.0";     break;
+                default: break;
+            }
+            if (request != nullptr) {
+                 result = _backend->UpdateResolution(request);
+                _resolution = value;
+            } else {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
+            return (result);
+        }
+        Exchange::IComposition::ScreenResolution GetResolution() const {
+            return (_resolution);
+        }
     private:
         uint32_t Worker() override
         {
@@ -1002,6 +1052,7 @@ namespace Weston {
         WestonUserData _userData;
         struct wl_display* _display;
         struct weston_compositor* _compositor;
+        Exchange::IComposition::ScreenResolution _resolution;
 
         static Weston::Compositor* _instance;
     };
@@ -1012,6 +1063,12 @@ namespace Weston {
 
 } // namespace Weston
 
+    Exchange::IComposition::ScreenResolution GetResolution() {
+        return (Weston::Compositor::Instance()->GetResolution());
+    }
+    uint32_t SetResolution(Exchange::IComposition::ScreenResolution value) {
+        return (Weston::Compositor::Instance()->SetResolution(value));
+    }
     IServer* Create(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
