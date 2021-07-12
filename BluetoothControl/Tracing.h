@@ -290,17 +290,25 @@ namespace Plugin {
                     Format(_T("data=%s"), data.c_str());
                 }
             }
-            ControlFlow(const extended_inquiry_info& info)
+            ControlFlow(const inquiry_info& info)
             {
-                FORMAT_EVENT(EVT_EXTENDED_INQUIRY_RESULT, info.bdaddr);
-                Format(_T("dev_class=0x%06X, pscan_rep_mode=%d, pscan_period_mode=%d, clock_offset=%d, rssi=%d"),
-                       UnpackDeviceClass(info.dev_class), info.pscan_rep_mode, info.pscan_period_mode, btohs(info.clock_offset), info.rssi);
+                FORMAT_EVENT(EVT_INQUIRY_RESULT, info.bdaddr);
+                Format(_T("dev_class=0x%06X, pscan_rep_mode=%d, pscan_period_mode=%d, pscan_mode=%d, clock_offset=%d"),
+                       UnpackDeviceClass(info.dev_class), info.pscan_rep_mode, info.pscan_period_mode, info.pscan_mode, btohs(info.clock_offset));
             }
             ControlFlow(const inquiry_info_with_rssi& info)
             {
                 FORMAT_EVENT(EVT_INQUIRY_RESULT_WITH_RSSI, info.bdaddr);
                 Format(_T("dev_class=0x%06X, pscan_rep_mode=%d, pscan_period_mode=%d, clock_offset=%d, rssi=%d"),
                        UnpackDeviceClass(info.dev_class), info.pscan_rep_mode, info.pscan_period_mode, btohs(info.clock_offset), info.rssi);
+            }
+            ControlFlow(const extended_inquiry_info& info)
+            {
+                FORMAT_EVENT(EVT_EXTENDED_INQUIRY_RESULT, info.bdaddr);
+                string data;
+                Core::ToHexString(info.data, sizeof(info.data), data);
+                Format(_T("dev_class=0x%06X, pscan_rep_mode=%d, pscan_period_mode=%d, clock_offset=%d, rssi=%d, data=%s"),
+                       UnpackDeviceClass(info.dev_class), info.pscan_rep_mode, info.pscan_period_mode, btohs(info.clock_offset), info.rssi, data.c_str());
             }
             ControlFlow(const evt_conn_request& info)
             {
