@@ -103,7 +103,7 @@ namespace Plugin {
                 , Interval(5)
             {
                 Add(_T("csv_filepath"), &Path);
-                Add(_T("csv_sep"), &Seperator);
+                Add(_T("csv_separator"), &Seperator);
                 Add(_T("interval"), &Interval);
                 Add(_T("names"), &FilterNames);
             }

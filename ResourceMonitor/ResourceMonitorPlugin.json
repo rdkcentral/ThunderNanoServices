@@ -15,22 +15,22 @@
         "type": "object",
         "required": [],
         "properties": {
-          "path": {
+          "csv_filepath": {
             "type": "string",
             "description": "Path of resource."
+          },
+          "csv_separator": {
+            "type": "string",
+            "description": "Separator."
           },
           "interval": {
             "type": "number",
             "size": "32",
             "description": "Duration between measurements (default: 5)"
           },
-          "mode": {
-            "type": "string",
-            "description": "Mode (options: \"single\", \"multiple\", \"callsign\", \"classname\")"
-          },
-          "parent-name": {
-            "type": "string",
-            "description": "Name of parent process."
+          "names": {
+            "type": "array",
+            "description": "Names of processes."
           }
         }
       }
