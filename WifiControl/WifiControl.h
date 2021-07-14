@@ -391,7 +391,14 @@ namespace Plugin {
                     MoveState(states::IDLE);
 
                     _ssidList.clear();
-                }
+                } 
+                else if (result == Core::ERROR_UNKNOWN_KEY) {
+                    // Remove network with SSID causing this error 
+                    // It has wrong WPA so we can't do anything here - proper error will be returned to user
+                    // Do not try to connect to this network in next iteration
+                     _ssidList.pop_front();
+                    _job.Submit();
+                } 
                 else {
                     MoveState(states::CONNECTING);
 
@@ -670,8 +677,8 @@ namespace Plugin {
         void event_networkchange();
         void event_connectionchange(const string& ssid);
 
-        inline uint32_t Connect(const string& ssid) {
-
+        inline uint32_t Connect(const string& ssid)
+        {
             if (_autoConnectEnabled == true) {
                 _autoConnect.Revoke();
             }
@@ -679,10 +686,9 @@ namespace Plugin {
             uint32_t result = _controller->Connect(ssid);
 
             if ((result != Core::ERROR_INPROGRESS) && (_autoConnectEnabled == true)) {
-                _autoConnect.SetPreferred(ssid, _retryInterval, ~0);
+                _autoConnect.SetPreferred(result == Core::ERROR_UNKNOWN_KEY ? _T("") : ssid, _retryInterval, ~0);
                 _autoConnect.UpdateStatus(result);
             }
-
             return result;
         }
         inline uint32_t Disconnect(const string& ssid) {

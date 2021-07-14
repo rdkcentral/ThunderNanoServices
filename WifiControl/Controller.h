@@ -1437,7 +1437,7 @@ namespace WPASupplicant {
         inline uint32_t Connect(const string& SSID)
         {
 
-            uint32_t result = Core::ERROR_UNKNOWN_KEY;
+            uint32_t result = Core::ERROR_NOT_EXIST;
 
             _adminLock.Lock();
 
