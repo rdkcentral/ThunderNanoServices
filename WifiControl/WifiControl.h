@@ -345,6 +345,7 @@ namespace Plugin {
                         if (_attempts != static_cast<uint32_t>(~0)) {
                             --_attempts;
                         }
+                        std::cerr << "ATTEMPTS: " << _attempts << std::endl;
                         _state = states::SCANNING;
                         _controller->Scan();
 
@@ -432,6 +433,7 @@ namespace Plugin {
                 , Preferred()
                 , AutoConnect(false)
                 , RetryInterval(30)
+                , MaxRetries(-1)
                 , WaitTime(15)
                 , LogFile()
             {
@@ -441,6 +443,7 @@ namespace Plugin {
                 Add(_T("preferred"), &Preferred);
                 Add(_T("autoconnect"), &AutoConnect);
                 Add(_T("retryinterval"), &RetryInterval);
+                Add(_T("maxretries"), &MaxRetries);
                 Add(_T("waittime"), &WaitTime);
                 Add(_T("logfile"), &LogFile);
             }
@@ -455,6 +458,7 @@ namespace Plugin {
             Core::JSON::String Preferred;
             Core::JSON::Boolean AutoConnect;
             Core::JSON::DecUInt8 RetryInterval;
+            Core::JSON::DecSInt32 MaxRetries;
             Core::JSON::DecUInt8 WaitTime;
             Core::JSON::String LogFile;
         };
@@ -686,7 +690,9 @@ namespace Plugin {
             uint32_t result = _controller->Connect(ssid);
 
             if ((result != Core::ERROR_INPROGRESS) && (_autoConnectEnabled == true)) {
-                _autoConnect.SetPreferred(result == Core::ERROR_UNKNOWN_KEY ? _T("") : ssid, _retryInterval, ~0);
+                _autoConnect.SetPreferred(result == Core::ERROR_UNKNOWN_KEY ? 
+                                                    _T("") : 
+                                                    ssid, _retryInterval, _maxRetries);
                 _autoConnect.UpdateStatus(result);
             }
             return result;
@@ -734,6 +740,7 @@ namespace Plugin {
     private:
         uint8_t _skipURL;
         uint8_t _retryInterval;
+        uint32_t _maxRetries;
         PluginHost::IShell* _service;
         string _configurationStore;
         Sink _sink;
