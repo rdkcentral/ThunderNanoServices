@@ -345,7 +345,6 @@ namespace Plugin {
                         if (_attempts != static_cast<uint32_t>(~0)) {
                             --_attempts;
                         }
-                        std::cerr << "ATTEMPTS: " << _attempts << std::endl;
                         _state = states::SCANNING;
                         _controller->Scan();
 
