@@ -36,7 +36,7 @@ namespace Plugin {
 
 class CompositorImplementation;
 
-    class ClientSurface : public Exchange::IComposition::IClient {
+    class ClientSurface : public Exchange::IComposition::IClient, Exchange::IComposition::IRender {
     public:
         ClientSurface() = delete;
         ClientSurface(const ClientSurface&) = delete;
@@ -71,8 +71,13 @@ class CompositorImplementation;
             return _layer;
         }
 
-        BEGIN_INTERFACE_MAP(ClientSurface)
-            INTERFACE_ENTRY(Exchange::IComposition::IClient)
+        void ScanOut () override {
+            TRACE (Trace::Error, (_T ("ScanOut is currently not supported.")));
+        }
+
+        BEGIN_INTERFACE_MAP (ClientSurface)
+            INTERFACE_ENTRY (Exchange::IComposition::IClient)
+            INTERFACE_ENTRY (Exchange::IComposition::IRender)
         END_INTERFACE_MAP
 
     private:
