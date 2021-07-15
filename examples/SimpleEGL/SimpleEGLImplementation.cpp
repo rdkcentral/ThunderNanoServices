@@ -423,18 +423,322 @@ namespace Plugin {
 
     private:
 
+        class Natives {
+            private :
+
+                Compositor::IDisplay * _dpy = nullptr;
+                Compositor::IDisplay::ISurface * _surf = nullptr;
+
+                bool _valid = false;
+
+            public :
+
+                using dpy_t = decltype (_dpy);
+                using surf_t = decltype (_surf);
+                using valid_t = decltype (_valid);
+
+                Natives () : _valid { Initialize () } {}
+                ~Natives () {
+                    _valid = false;
+                    DeInitialize ();
+                }
+
+                dpy_t Display () const { return _dpy; }
+                surf_t Surface () const { return _surf; }
+
+                static_assert ( (std::is_convertible < decltype (_dpy->Native ()), EGLNativeDisplayType > :: value) != false);
+                static_assert ( (std::is_convertible < decltype (_surf->Native ()), EGLNativeWindowType > :: value) != false);
+
+                valid_t Valid () const { return _valid; }
+
+            private :
+
+                bool Initialize () {
+                    constexpr char const * Name  = "SimpleEGL::Worker";
+
+                    bool _ret = false;
+
+                    if (_dpy != nullptr) {
+                        _ret = false;
+
+                        if (_dpy->Release () == Core::ERROR_NONE) {
+                            _ret = true;
+                        }
+                    }
+                    else {
+                        _ret = true;
+                    }
+
+                    if (_ret != false) {
+                        // Trigger the creation of the display.
+                        _dpy = Compositor::IDisplay::Instance (std::string (Name).append (":Display"));
+                        _ret = _dpy != nullptr;
+                    }
+
+                    using height_t = decltype (_surf->Height ());
+                    using width_t = decltype (_surf->Width ());
+
+                    // Just here to support surface creation, the exact values are probably changed by the underlying platform
+                    constexpr height_t _height = 0;
+                    constexpr width_t _width = 0;
+
+                    if (_ret != false) {
+                        /* void */ _dpy->AddRef ();
+
+                        // Trigger the creation of the surface
+                        _surf = _dpy->Create (std::string (Name).append (":Surface"), _width, _height);
+                        _ret = _surf != nullptr;
+                    }
+
+                    if (_ret != false) {
+                        /* void */ _surf->AddRef ();
+
+                        width_t _realWidth = _surf->Width ();
+                        height_t _realHeight = _surf->Height ();
+
+                        if (_realWidth == 0 || _realWidth != _width) {
+                            TRACE (Trace::Information, (_T ("Real surface width is (%d) invalid or differs from requested width (%d))."), _realWidth, _width));
+                        }
+
+                        if (_realHeight == 0 || _realHeight != _height) {
+                            TRACE (Trace::Information, (_T ("Real surface height is (%d) invalid or differs from requested height (%d)."), _realHeight, _height));
+                        }
+
+                        _ret = _realHeight > 0 && _realWidth > 0;
+                    }
+
+                    return _ret;
+                }
+
+                void DeInitialize () {
+                    _valid = false;
+
+                    if (_surf != nullptr) {
+                        _surf->Release ();
+                    }
+
+                    if (_dpy != nullptr) {
+                        _dpy->Release ();
+                    }
+                }
+        };
+
+        class GLES {
+            private :
+
+                uint16_t _degree = 0;
+
+            public :
+
+                GLES () = default;
+                ~GLES () = default;
+
+                bool Render () {
+                    constexpr decltype (_degree) const ROTATION = 360;
+
+                    constexpr float const OMEGA = 3.14159265 / 180;
+
+                    bool _ret = false;
+
+                    // Here, for C(++) these type should be identical
+                    // Type information: https://www.khronos.org/opengl/wiki/OpenGL_Type
+                    static_assert (std::is_same <float, GLfloat>::value);
+
+                    GLfloat _rad = static_cast <GLfloat> (cos (_degree * OMEGA));
+
+                    // The function clamps the input to [0, 1]
+                    /* void */ glClearColor (_rad, _rad, _rad, 1.0);
+
+                    _ret = glGetError () == GL_NO_ERROR;
+
+                    if (_ret != false) {
+                        /* void */ glClear (GL_COLOR_BUFFER_BIT);
+                        _ret = glGetError () == GL_NO_ERROR;
+                    }
+
+                    if (_ret != false) {
+                        /* void */ glFlush ();
+                        _ret = glGetError () == GL_NO_ERROR;
+                    }
+
+                    _degree = (_degree + 1) % ROTATION;
+
+                    return _ret;
+                }
+        };
+
+        class EGL  {
+            private :
+
+                // Define the 'invalid' value
+                static_assert (std::is_pointer <EGLConfig>::value != false);
+                static constexpr void * const EGL_NO_CONFIG = nullptr;
+
+                EGLDisplay _dpy = EGL_NO_DISPLAY;
+                EGLConfig _conf = EGL_NO_CONTEXT;
+                EGLContext _cont = EGL_NO_CONFIG;
+                EGLSurface _surf = EGL_NO_SURFACE;
+
+                EGLint _width = 0;
+                EGLint _height = 0;
+
+                Natives const & _natives;
+
+                bool _valid = false;
+
+            public :
+
+                using dpy_t = decltype (_dpy);
+                using surf_t = decltype (_surf);
+                using height_t = decltype (_height);
+                using width_t = decltype (_width);
+                using valid_t = decltype (_valid);
+
+                EGL () = delete;
+                EGL (Natives const & natives) : _natives { natives }, _valid { Initialize () } {}
+                ~EGL () {
+                    _valid = false;
+                    DeInitialize ();
+                }
+
+                dpy_t Display () const { return _dpy; }
+                surf_t Surface () const { return _surf; }
+
+                height_t Height () const { return _height; }
+                width_t Width () const { return _width; }
+
+                valid_t Valid () const { return _valid; }
+
+            private :
+
+                bool Initialize () {
+                    bool _ret = _natives.Valid ();
+
+                    if (_ret != false) {
+
+                        if (_dpy != EGL_NO_DISPLAY) {
+                            _ret = false;
+
+                            if (eglTerminate (_dpy) != EGL_FALSE) {
+                                _ret = true;
+                            }
+                        }
+                    }
+
+                    if (_ret != false) {
+                        _dpy = eglGetDisplay (_natives.Display ()->Native ());
+                        _ret = _dpy != EGL_NO_DISPLAY;
+                    }
+
+                    if (_ret != false) {
+                        EGLint _major = 0, _minor = 0;
+                        _ret = eglInitialize (_dpy, &_major, &_minor) != EGL_FALSE;
+
+                        // Just take the easy approach (for now)
+                        static_assert ((std::is_same <decltype (_major), int> :: value) != false);
+                        static_assert ((std::is_same <decltype (_minor), int> :: value) != false);
+                        TRACE (Trace::Information, (_T ("EGL version : %d.%d"), static_cast <int> (_major), static_cast <int> (_minor)));
+                    }
+
+                    if (_ret != false) {
+                        constexpr EGLint const _attr [] = {
+                            EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+                            EGL_RED_SIZE    , 8,
+                            EGL_GREEN_SIZE  , 8,
+                            EGL_BLUE_SIZE   , 8,
+                            EGL_ALPHA_SIZE  , 8,
+                            EGL_BUFFER_SIZE , 32,
+                            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+                            EGL_NONE
+                        };
+
+                        EGLint _count = 0;
+
+                        if (eglGetConfigs (_dpy, nullptr, 0, &_count) != EGL_TRUE) {
+                            _count = 1;
+                        }
+
+                        std::vector <EGLConfig> _confs (_count, EGL_NO_CONFIG);
+
+                        /* EGLBoolean */ eglChooseConfig (_dpy, &_attr [0], _confs.data (), _confs.size (), &_count);
+
+                        _conf = _confs [0];
+
+                        _ret = _conf != EGL_NO_CONFIG;
+                    }
+
+                    if (_ret != false) {
+                        constexpr EGLint const _attr [] = {
+                            EGL_CONTEXT_CLIENT_VERSION, 2,
+                            EGL_NONE
+                        };
+
+                        _cont = eglCreateContext (_dpy, _conf, EGL_NO_CONTEXT, _attr);
+                        _ret = _cont != EGL_NO_CONTEXT;
+                    }
+
+                    if (_ret != false) {
+                        constexpr EGLint const _attr [] = {
+                            EGL_NONE
+                        };
+
+                        _surf = eglCreateWindowSurface (_dpy, _conf, _natives.Surface ()->Native (), &_attr [0]);
+                        _ret = _surf != EGL_NO_SURFACE;
+                    }
+
+                    if (_ret != true) {
+                        DeInitialize ();
+                    }
+
+                    return _ret;
+                }
+
+                void DeInitialize () {
+                    _valid = false;
+                    /* EGLBoolean */ eglTerminate (_dpy);
+                }
+
+            public :
+
+                bool Render (GLES & gles) {
+                    bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _cont) != EGL_FALSE;
+
+                    if (_ret != false) {
+                        _ret = gles.Render () != false && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
+
+                        // Avoid any memory leak if the worker is stopped (by another thread)
+                        _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
+                    }
+
+                    return _ret;
+                }
+        };
+
         virtual uint32_t Worker()
         {
             TRACE(Trace::Information, (_T("Main task of execution reached. Starting with a Sleep of [%d] S"), _config.Sleep.Value()));
+
             // First Sleep the expected time..
             SleepMs(_config.Sleep.Value() * 1000);
 
-                while (IsRunning() == true) {
+            Natives _natives;
 
+            EGL _egl (_natives);
+
+            if (_egl.Valid () != false) {
+                GLES _gles;
+
+                TRACE (Trace::Information, (_T ("Hardware accelerated rendering properly set up!")));
+
+                while (IsRunning() == true && _egl.Render (_gles) != false) {
                     SleepMs(200);
                 }
+            }
+            else {
+                TRACE (Trace::Information, (_T ("Hardware accelerated rendering NOT properly set up!")));
+            }
 
-            TRACE(Trace::Information, (_T("Leaving the main task of execution, we are done.")));
+            TRACE (Trace::Information, (_T("Leaving the main task of execution, we are done.")));
 
             return (Core::infinite);
         }
@@ -456,8 +760,10 @@ namespace Plugin {
         PluginHost::IShell* _service;
     };
 
-    SERVICE_REGISTRATION(SimpleEGLImplementation, 1, 0);
+    // As a result of ODR use
+    void * const SimpleEGLImplementation::EGL::EGL_NO_CONFIG;
 
+    SERVICE_REGISTRATION(SimpleEGLImplementation, 1, 0);
 } // namespace Plugin
 
 } // namespace WPEFramework::SimpleEGL
