@@ -350,6 +350,7 @@ class CompositorImplementation;
 
                 if( object.IsValid() == true ) {
                     client = &(*object);
+                    Attached (name, client);
                 }
             } 
 
@@ -464,8 +465,6 @@ class CompositorImplementation;
         , _opacity(Exchange::IComposition::maxOpacity)
         , _layer(0)
         , _destination( { 0, 0, width, height } ) {
-
-        _compositor.Attached(_name, this);
 
     }
 
