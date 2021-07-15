@@ -192,7 +192,7 @@ static bool FindProperDisplay(int fd, uint32_t& crtc, uint32_t& encoder, uint32_
     return (found);
 }
 
-static bool CreateBuffer(int fd, const uint32_t connector, gbm_device*& device, uint32_t& modeIndex, uint32_t& id, struct gbm_bo*& buffer)
+static bool CreateBuffer(int fd, const uint32_t connector, gbm_device*& device, uint32_t& modeIndex, uint32_t& id, struct gbm_bo*& buffer, uint32_t & vrefresh)
 {
     assert(fd != -1);
 
@@ -220,6 +220,7 @@ static bool CreateBuffer(int fd, const uint32_t connector, gbm_device*& device, 
                 if (DRM_MODE_TYPE_PREFERRED == (DRM_MODE_TYPE_PREFERRED & type))
                 {
                     modeIndex = index;
+                    vrefresh = pconnector->modes [modeIndex].vrefresh;
 
                     // Found a suitable mode; break the loop
                     found = true;
@@ -239,6 +240,7 @@ static bool CreateBuffer(int fd, const uint32_t connector, gbm_device*& device, 
                                (pconnector->modes[index].vrefresh > pconnector->modes[modeIndex].vrefresh) ) )
                         {
                             modeIndex = index;
+                            vrefresh = pconnector->modes [modeIndex].vrefresh;
                         }
                     }
                 }
@@ -292,6 +294,7 @@ ModeSet::ModeSet()
     , _encoder(0)
     , _connector(0)
     , _mode(0)
+    , _vrefresh (0)
     , _device(nullptr)
     , _buffer(nullptr)
     , _fd(-1)
@@ -329,7 +332,7 @@ uint32_t ModeSet::Open (const string& /* name */) {
                     printf("Test Card: %s\n", index->c_str());
                     if ( (FindProperDisplay(_fd, _crtc, _encoder, _connector, _fb) == true) && 
                          /* TODO: Changes the original fb which might not be what is intended */
-                         (CreateBuffer(_fd, _connector, _device, _mode, _fb, _buffer) == true) && 
+                         (CreateBuffer(_fd, _connector, _device, _mode, _fb, _buffer, _vrefresh) == true) &&
                          (drmSetMaster(_fd) == 0) ) {
 
                         drmModeConnectorPtr pconnector = drmModeGetConnector(_fd, _connector);
@@ -408,6 +411,19 @@ uint32_t ModeSet::Height() const
     }
 
     return height;
+}
+
+uint32_t ModeSet::RefreshRate () const {
+    // Derived from modinfo if CreateBuffer was called prior to this
+
+    return _vrefresh;
+}
+
+bool ModeSet::Interlaced () const {
+// TODO: For now assume interlaced is always false
+    bool _ret = false;
+
+    return _ret;
 }
 
 // These created resources are automatically destroyed if gbm_device is destroyed

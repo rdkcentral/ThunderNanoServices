@@ -26,6 +26,11 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
+// Suppress compiler warnings of unused (parameters)
+// Omitting the name is sufficient but a search on this keyword provides easy access to the location
+template <typename T>
+void silence (T &&) {}
+
 namespace WPEFramework {
 namespace Plugin {
 
@@ -182,6 +187,60 @@ class CompositorImplementation;
         //
         // Echange::IComposition
         // ==================================================================================================================
+
+        static uint32_t WidthFromResolution(const ScreenResolution resolution) {
+            // Asumme an invalid width equals 0
+            uint32_t _width = 0;
+
+            switch (resolution) {
+                case ScreenResolution_480p      : // 720x480
+                                                    _width = 720; break;
+                case ScreenResolution_720p      : // 1280x720 progressive
+                case ScreenResolution_720p50Hz  : // 1280x720 @ 50 Hz
+                                                    _width = 720; break;
+                case ScreenResolution_1080p24Hz : // 1920x1080 progressive @ 24 Hz
+                case ScreenResolution_1080i50Hz : // 1920x1080 interlaced  @ 50 Hz
+                case ScreenResolution_1080p50Hz : // 1920x1080 progressive @ 50 Hz
+                case ScreenResolution_1080p60Hz : // 1920x1080 progressive @ 60 Hz
+                                                    _width = 1080; break;
+                case ScreenResolution_2160p50Hz : // 4K, 3840x2160 progressive @ 50 Hz
+                case ScreenResolution_2160p60Hz : // 4K, 3840x2160 progressive @ 60 Hz
+                                                    _width = 2160; break;
+                case ScreenResolution_480i      : // Unknown according to the standards (?)
+                case ScreenResolution_Unknown   :
+                default                         : _width = 0;
+            }
+
+            return _width;
+        }
+
+        static uint32_t HeightFromResolution(const ScreenResolution resolution) {
+            // Asumme an invalid height equals 0
+            uint32_t _height = 0;
+
+            switch (resolution) {
+                case ScreenResolution_480i      :
+                case ScreenResolution_480p      : _height = 480; break;
+                case ScreenResolution_720p      :
+                case ScreenResolution_720p50Hz  : _height =720; break;
+                case ScreenResolution_1080p24Hz :
+                case ScreenResolution_1080i50Hz :
+                case ScreenResolution_1080p50Hz :
+                case ScreenResolution_1080p60Hz : _height = 1080; break;
+                case ScreenResolution_2160p50Hz :
+                case ScreenResolution_2160p60Hz : _height = 2160; break;
+                case ScreenResolution_Unknown   :
+                default                         : _height = 0;
+            }
+
+            return _height;
+        }
+
+        static ScreenResolution ResolutionFromHeightWidth(const uint32_t height, const uint32_t width) {
+            // Given the options, the refresh rate is also important so the only sensible value is 'unknown'
+            return Exchange::IComposition::ScreenResolution_Unknown;
+        }
+
         uint32_t Configure(PluginHost::IShell* service) override
         {
             uint32_t result = Core::ERROR_NONE;
@@ -295,9 +354,69 @@ class CompositorImplementation;
 
             return (client);
         }
+
         Exchange::IComposition::ScreenResolution Resolution() const override
         {
-            return Exchange::IComposition::ResolutionFromHeightWidth(_platform.Height(), _platform.Width());
+            Exchange::IComposition::ScreenResolution _resolution = WPEFramework::Exchange::IComposition::ScreenResolution_Unknown;
+
+            decltype ( std::declval <ModeSet> ().Width () ) _width = _platform.Width (); silence (_width);
+            decltype ( std::declval <ModeSet> ().Height () ) _height = _platform.Height ();
+
+// TODO: This might not be the whole story to determine progressive versus interlaced
+
+            decltype ( std::declval <ModeSet> ().RefreshRate () ) _vrefresh = _platform.RefreshRate ();
+            decltype ( std::declval <ModeSet> ().Interlaced () ) _interlaced = _platform.Interlaced ();
+
+            if (_interlaced != true) {
+                switch (_height) {
+                    case 480    :   {
+                                        _resolution = ScreenResolution_480p;
+                                        break;
+                                    }
+                    case 720    :   {
+                                        _resolution = _vrefresh != 50 ? ScreenResolution_720p : ScreenResolution_720p50Hz;
+                                        break;
+                                    }
+                    case 1080   :   {
+                                        switch (_vrefresh) {
+                                            case 24 : _resolution = ScreenResolution_1080p24Hz; break;
+                                            case 50 : _resolution = ScreenResolution_1080p50Hz; break;
+                                            case 60 : _resolution = ScreenResolution_1080p60Hz; break;
+                                            default : _resolution = ScreenResolution_Unknown;
+                                        }
+                                        break;
+                                    }
+                    case 2160   :   {
+                                        switch (_vrefresh) {
+                                            case 50 : _resolution = ScreenResolution_2160p50Hz; break;
+                                            case 60 : _resolution = ScreenResolution_2160p60Hz; break;
+                                            default : _resolution = ScreenResolution_Unknown;
+                                        }
+                                        break;
+                                    }
+                    default     :   {
+                                        _resolution = ScreenResolution_Unknown;
+                                    }
+                }
+            }
+            else {
+                switch (_height) {
+                    case 480    :   {
+                                        _resolution = ScreenResolution_480i;
+                                        break;
+                                    }
+                    case 1080   :   {
+                                        _resolution = _vrefresh != 50 ? ScreenResolution_Unknown : ScreenResolution_1080i50Hz;
+                                        break;
+                                    }
+                    default     :   {
+                                        _resolution = ScreenResolution_Unknown;
+                                    }
+                }
+            }
+
+            return _resolution;
+
         }
         uint32_t Resolution(const Exchange::IComposition::ScreenResolution format) override
         {

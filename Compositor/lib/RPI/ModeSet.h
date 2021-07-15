@@ -67,6 +67,8 @@ class ModeSet
         }
         uint32_t Width() const;
         uint32_t Height() const;
+        uint32_t RefreshRate () const;
+        bool Interlaced () const;
         struct gbm_surface* CreateRenderTarget(const uint32_t width, const uint32_t height);
         void DestroyRenderTarget(struct BufferInfo& buffer);
         void Swap(struct BufferInfo& buffer);
@@ -78,6 +80,7 @@ class ModeSet
 
         uint32_t _fb;
         uint32_t _mode;
+        uint32_t _vrefresh;
 
         struct gbm_device* _device;
         struct gbm_bo* _buffer;
