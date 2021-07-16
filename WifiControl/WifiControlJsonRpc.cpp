@@ -88,10 +88,11 @@ namespace Plugin {
     // Method: delete - Forgets configuration of the specified network
     // Return codes:
     //  - ERROR_NONE: Success
+    //  - ERROR_UNAVAILABLE: Returned when unable to update config list stored on disk
     uint32_t WifiControl::endpoint_delete(const DeleteParamsInfo& params)
     {
         _controller->Destroy(params.Ssid.Value());
-        return Core::ERROR_NONE;
+        return UpdateStoredConfigList();
     }
 
     // Method: store - Stores the configurations in persistent storage
