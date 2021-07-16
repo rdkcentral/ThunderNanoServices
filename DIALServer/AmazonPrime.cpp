@@ -150,6 +150,9 @@ namespace DIALHandlers {
                     _parent.Detach();
                 }
             }
+            void Unavailable(const string&, PluginHost::IShell*) override
+            {
+            }
 
         public:
             BEGIN_INTERFACE_MAP(Notification)

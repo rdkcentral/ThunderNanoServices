@@ -1120,6 +1120,9 @@ namespace Plugin {
                     }
                 }
             }
+            void Unavailable(const string&, PluginHost::IShell*) override
+            {
+            }
 
         private:
             DIALServer& _parent;

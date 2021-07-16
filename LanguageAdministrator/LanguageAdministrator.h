@@ -126,6 +126,9 @@ namespace Plugin {
                 _parent.Deactivated(callsign,plugin);
 
             }
+            void Unavailable(const string&, PluginHost::IShell*) override
+            {
+            }
 
             //RPC::IRemoteConnection::INotification
             void Activated(RPC::IRemoteConnection*) override
