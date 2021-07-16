@@ -34,6 +34,7 @@ namespace Plugin {
     void BluetoothControl::RegisterAll()
     {
         JSONRPC::Register<ScanParamsData,void>(_T("scan"), &BluetoothControl::endpoint_scan, this);
+        JSONRPC::Register<void,void>(_T("stopscanning"), &BluetoothControl::endpoint_stopscanning, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("connect"), &BluetoothControl::endpoint_connect, this);
         JSONRPC::Register<ConnectParamsInfo,void>(_T("disconnect"), &BluetoothControl::endpoint_disconnect, this);
         JSONRPC::Register<PairParamsData,void>(_T("pair"), &BluetoothControl::endpoint_pair, this);
@@ -59,6 +60,7 @@ namespace Plugin {
         JSONRPC::Unregister(_T("disconnect"));
         JSONRPC::Unregister(_T("connect"));
         JSONRPC::Unregister(_T("scan"));
+        JSONRPC::Unregister(_T("stopscanning"));
         JSONRPC::Unregister(_T("device"));
         JSONRPC::Unregister(_T("devices"));
         JSONRPC::Unregister(_T("adapter"));
@@ -75,26 +77,20 @@ namespace Plugin {
     //  - ERROR_INPROGRES: Scan already in progress
     uint32_t BluetoothControl::endpoint_scan(const ScanParamsData& params)
     {
-        uint32_t result = Core::ERROR_NONE;
+        const DevicetypeType& type = params.Type.Value();
+        const uint32_t& duration = (params.Duration.IsSet()? params.Duration.Value() : (params.Timeout.IsSet()? params.Timeout.Value() : 10));
 
-        if (_application.IsScanning() == false) {
-            const DevicetypeType& type = params.Type.Value();
-            const uint32_t& timeout = params.Timeout.Value();
+        return (Scan((type == DevicetypeType::LOWENERGY), duration));
+    }
 
-            if (type == DevicetypeType::LOWENERGY) {
-                _application.Scan((timeout == 0? 10 : timeout), false, false);
-            } else if (type == DevicetypeType::CLASSIC) {
-                uint32_t type = 0x338B9E;
-                uint8_t flags = 0;
-                _application.Scan((timeout == 0? 10 : timeout), type, flags);
-            } else {
-                result = Core::ERROR_BAD_REQUEST;
-            }
-        } else {
-            result = Core::ERROR_INPROGRESS;
-        }
-
-        return (result);
+    // Method: stopscanning - Stops scanning procedure
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_GENERAL: Failed to scan
+    //  - ERROR_ILLEGALSTATE: No scan in progress
+    uint32_t BluetoothControl::endpoint_stopscanning()
+    {
+        return (StopScanning());
     }
 
     // Method: connect - Connects to a Bluetooth device
@@ -102,6 +98,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown device
     //  - ERROR_ALREADY_CONNECTED: Device already connected
+    //  - ERROR_REQUEST_SUBMITTED: Device was has not been connected but will be connected as soon as it becomes available
     //  - ERROR_GENERAL: Failed to connect the device
     uint32_t BluetoothControl::endpoint_connect(const ConnectParamsInfo& params)
     {
@@ -121,6 +118,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_UNKNOWN_KEY: Unknown device
     //  - ERROR_ALREADY_RELEASED: Device not connected
+    //  - ERROR_REQUEST_SUBMITTED: Device is currently not connected but its autoconnection mode has been disabled
     uint32_t BluetoothControl::endpoint_disconnect(const ConnectParamsInfo& params)
     {
         uint32_t result = Core::ERROR_UNKNOWN_KEY;
@@ -327,6 +325,12 @@ namespace Plugin {
         }
 
         return (result);
+    }
+
+    // Event: scancomplete - Notifies about started scaning
+    void BluetoothControl::event_scanstarted()
+    {
+        Notify(_T("scanstarted"));
     }
 
     // Event: scancomplete - Notifies about scan completion
