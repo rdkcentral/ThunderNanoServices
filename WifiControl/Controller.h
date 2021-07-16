@@ -1396,7 +1396,6 @@ namespace WPASupplicant {
                 _adminLock.Unlock();
                 result = Config(Core::ProxyType<Controller>(*this), SSID);
 
-                // We have bo entry for this SSID, lets create one.
                 CustomRequest exchange(string(_TXT("REMOVE_NETWORK ")) + Core::NumberType<uint32_t>(entry->second.Id()).Text());
 
                 Submit(&exchange);
