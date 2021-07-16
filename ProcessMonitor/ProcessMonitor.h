@@ -170,6 +170,10 @@ public:
             _adminLock.Unlock();
         }
 
+        void Unavailable(const string&, PluginHost::IShell*) override
+        {
+        }
+
         void AddProcess(const string callsign, const uint32_t processId)
         {
             _adminLock.Lock();

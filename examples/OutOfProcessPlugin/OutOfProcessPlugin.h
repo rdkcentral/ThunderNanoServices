@@ -91,6 +91,9 @@ namespace Plugin {
             {
                 _parent.Deactivated(callsign, plugin);
             }
+            void Unavailable(const string&, PluginHost::IShell*) override
+            {
+            }
 
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(Exchange::IBrowser::INotification)

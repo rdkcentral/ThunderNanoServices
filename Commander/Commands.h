@@ -147,6 +147,9 @@ namespace Plugin {
                 {
                     _parent.Deactivated(callsign, plugin);
                 }
+                void Unavailable(const string&, PluginHost::IShell*) override
+                {
+                }
 
                 BEGIN_INTERFACE_MAP(Observer)
                 INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
