@@ -20,7 +20,6 @@
 #include "Wayland.h"
 
 extern "C" {
-
 #include <libweston/libweston.h>
 #include <libweston/backend.h>
 #include <libweston/backend-drm.h>
@@ -197,6 +196,66 @@ namespace Weston {
             static Core::File _logFile;
         };
 
+    private:
+        class SurfaceData : public WPEFramework::Compositor::IDisplay::ISurface {
+        private:
+            SurfaceData() = delete;
+            SurfaceData(const SurfaceData&) = delete;
+            SurfaceData& operator=(const SurfaceData&) = delete;
+
+        public:
+            SurfaceData(Compositor* parent, const uint32_t id, const string& name, struct weston_surface* surface)
+                : _parent(parent)
+                , _id(id)
+                , _name(name)
+                , _surface(surface)
+            {
+            }
+            virtual ~SurfaceData()=  default;
+
+        public:
+            uint32_t Id() const
+            {
+                return _id;
+            }
+            void AddRef() const override
+            {
+            }
+            uint32_t Release() const override
+            {
+                return 0;
+            }
+            EGLNativeWindowType Native() const override
+            {
+                return 0;
+            }
+            std::string Name() const override
+            {
+                return _name;
+            }
+            int32_t Height() const override
+            {
+                return (_height);
+            }
+            int32_t Width() const override
+            {
+                return (_width);
+            }
+            struct weston_surface* WestonSurface() const
+            {
+                return _surface;
+            }
+
+        private:
+            Compositor* _parent;
+
+            uint32_t _id;
+            int32_t _width;
+            int32_t _height;
+            std::string _name;
+            struct weston_surface* _surface;
+        };
+        typedef std::map<const uint32_t, SurfaceData*> SurfaceMap;
 
     private:
         class IBackend {
@@ -808,7 +867,7 @@ namespace Weston {
                         if (config.Name().empty() != true) {
                             Output newConfig = Output(config.Name(), mode, config.Transform());
 
-                            weston_output_disable(output);
+                             weston_output_disable(output);
                             output->scale = 0;
                             ConfigureOutput(output, newConfig);
                             weston_output_enable(output);
@@ -873,6 +932,8 @@ namespace Weston {
             : _logger(service)
             , _backend(nullptr)
             , _virtualInputHandle(nullptr)
+            , _controller(nullptr)
+            , _callback(nullptr)
             , _loaded(false)
             , _service(nullptr)
             , _userData()
@@ -902,10 +963,7 @@ namespace Weston {
             if (_virtualInputHandle == nullptr) {
                 TRACE(Trace::Information, (_T("Constructing virtual keyboard")));
 
-                _virtualInputHandle = virtualinput_open(listenerName, connectorName,
-                                                        VirtualKeyboardCallback,
-                                                        nullptr /*callback for mouse*/,
-                                                        nullptr /*callback for touch*/);
+                _virtualInputHandle = virtualinput_open(listenerName, connectorName, VirtualKeyboardCallback, nullptr /*callback for mouse*/, nullptr /*callback for touch*/);
                 if (_virtualInputHandle == nullptr) {
                     TRACE(Trace::Information, (_T("Failed to construct virtual keyboard")));
                 }
@@ -920,7 +978,7 @@ namespace Weston {
             weston_compositor_tear_down(_compositor);
             weston_log_ctx_compositor_destroy(_compositor);
             weston_compositor_destroy(_compositor);
-            wl_display_terminate(_compositor->wl_display); //FIXME: revisit exit sequence
+            wl_display_terminate(_compositor->wl_display); //FIXME: revisit exti sequence
             wl_display_destroy(_display);
 
             if (_virtualInputHandle != nullptr) {
@@ -967,6 +1025,10 @@ namespace Weston {
                                     wl_list_for_each(seat, &_compositor->seat_list, link) {
                                         _seats.push_back(seat);
                                     }
+                                    _surfaceCreationListener.notify = NotifySurfaceCreation;
+                                    wl_signal_add(&_compositor->create_surface_signal, &_surfaceCreationListener);
+                                    _surfaceActivateListener.notify = NotifySurfaceActivate;
+                                    wl_signal_add(&_compositor->activate_signal, &_surfaceActivateListener);
                                     wl_display_run(_display);
                                     status = Core::ERROR_NONE;
                                 }
@@ -1023,8 +1085,43 @@ namespace Weston {
         {
             _loaded = success;
         }
-        void SetInput(const char name[]) override
+        void Get(const uint32_t id, Wayland::Display::Surface& surface) override
         {
+            SurfaceMap::iterator index(_surfaces.find(id));
+
+            if (index != _surfaces.end()) {
+
+                surface = Wayland::Display::Surface(index->second);
+            } else {
+                surface.Release();
+            }
+        }
+        void Process(Wayland::Display::IProcess* processloop) override
+        {
+            _controller->Process(processloop);
+        }
+        void SetInput(const string& name) override
+        {
+            struct weston_surface* surface = GetSurface(name);
+            if (surface) {
+                for (const auto& seat: _seats) {
+                    weston_seat_set_keyboard_focus(seat, surface);
+                }
+            }
+        }
+        bool CreateController(const string& name, Wayland::Display::ICallback *callback) override
+        {
+            bool status = false;
+            _controller = &(Wayland::Display::Instance(name));
+            if (_controller != nullptr) {
+                // OK ready to receive new connecting surfaces.
+                _callback = callback;
+
+                // We also want to be know the current surfaces.
+                _controller->LoadSurfaces();
+                status = true;
+            }
+            return status;
         }
         uint32_t SetResolution(const Exchange::IComposition::ScreenResolution value) {
             uint32_t result = Core::ERROR_UNAVAILABLE;
@@ -1084,10 +1181,11 @@ namespace Weston {
             wl_event_source_remove(key->Timer);
             parent->_keys.remove(key);
             delete key;
+
             return 1;
         }
-
         static void SendModifiers(struct weston_seat *seat, uint32_t modifiers) {
+
             struct weston_keyboard *keyboard = weston_seat_get_keyboard(seat);
             if (keyboard) {
                 xkb_mod_mask_t depressed = 0;
@@ -1111,6 +1209,30 @@ namespace Weston {
             }
         }
 
+        static void NotifySurfaceCreation(struct wl_listener* listener, void* data)
+        {
+            struct weston_surface* surface = static_cast<struct weston_surface*>(data);
+            char label[100];
+            if (surface->get_label) {
+                int status =  surface->get_label(surface, label, sizeof(label));
+                if (status >=0) {
+                }
+            }
+        }
+        static void NotifySurfaceActivate(struct wl_listener* listener, void* data)
+        {
+            struct weston_surface_activation_data* activationData = static_cast<struct weston_surface_activation_data*>(data);
+            struct weston_surface* surface = activationData->surface;
+            char label[100];
+            if (surface->get_label) {
+                int status =  surface->get_label(surface, label, sizeof(label));
+                if (status >=0) {
+                    uint32_t id = wl_resource_get_id(surface->resource);
+                    Compositor::WestonUserData* userData = static_cast<Compositor::WestonUserData*>(weston_compositor_get_user_data(surface->compositor));
+                    userData->Parent->AddSurface(id, label, surface);
+                }
+            }
+        }
     private:
         inline void FlushInputs()
         {
@@ -1190,6 +1312,11 @@ namespace Weston {
                 break;
 
             default: {
+                if (type == KEY_PRESSED)
+                    keyModifiers |= KeyModifiers::KeyShift;
+                else
+                    keyModifiers &= ~KeyModifiers::KeyShift;
+
                 switch (type) {
                 case KEY_RELEASED:
                     keyState = KeyState::WestonKeyReleased;
@@ -1210,13 +1337,70 @@ namespace Weston {
             }
         }
 
+        struct weston_surface* GetSurface(const string& name)
+        {
+            struct weston_surface* surface = nullptr;
+            for (const auto& index: _surfaces) {
+                if (index.second->Name() == name) {
+                    surface = index.second->WestonSurface();
+                    break;
+                }
+            }
+            return surface;
+        }
+
+        struct weston_view* GetView(const string& name) {
+            weston_view* clientView = nullptr;
+            struct weston_layer *layer = nullptr;
+            wl_list_for_each(layer, &_compositor->layer_list, link) {
+                uint32_t layer_idx = 0;
+                printf("Layer %d (pos 0x%lx):\n", layer_idx++,
+                        (unsigned long) layer->position);
+
+                if (!weston_layer_mask_is_infinite(layer)) {
+                        printf("\t[mask: (%d, %d) -> (%d,%d)]\n\n",
+                                layer->mask.x1, layer->mask.y1,
+                                layer->mask.x2, layer->mask.y2);
+                }
+
+                struct weston_view *view;
+                uint16_t index = 0;
+                wl_list_for_each(view, &layer->view_list.link, layer_link.link) {
+                    char label[512];
+                    if (view->surface->get_label) {
+                        int status =  view->surface->get_label(view->surface, label, sizeof(label));
+                        if (status >=0) {
+                             if (strncmp(name.c_str(), label, name.size()) == 0) {
+                                 clientView = view;
+                                 break;
+                             }
+                        }
+                    }
+                    index++;
+                }
+            }
+            return clientView;
+        }
+
+        void AddSurface(const uint32_t id, const string& name, struct weston_surface* westonSurface)
+        {
+            SurfaceMap::iterator index(_surfaces.find(id));
+            if (index == _surfaces.end()) {
+                SurfaceData* surface = new SurfaceData(this, id, name, westonSurface);
+                _surfaces.insert(std::pair<uint32_t, SurfaceData*>(id, surface));
+                    _callback->Attached(id);
+            }
+        }
     public:
         std::list<WestonKeyData*> _keys;
         std::list<struct weston_seat*> _seats;
     private:
         Logger _logger;
         IBackend* _backend;
+        SurfaceMap _surfaces;
         void* _virtualInputHandle;
+        Wayland::Display* _controller;
+        Wayland::Display::ICallback* _callback;
 
         bool _loaded;
         Core::Library _library;
@@ -1225,6 +1409,8 @@ namespace Weston {
         WestonUserData _userData;
         struct wl_display* _display;
         struct weston_compositor* _compositor;
+        struct wl_listener _surfaceCreationListener;
+        struct wl_listener _surfaceActivateListener;
         Exchange::IComposition::ScreenResolution _resolution;
 
         static Weston::Compositor* _instance;

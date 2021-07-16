@@ -35,6 +35,7 @@ namespace Westeros {
             , _virtualInputHandle(nullptr)
             , _cursor(nullptr)
             , _xPos(0), _yPos(0)
+            , _controller(nullptr)
         {
             TRACE(Trace::Information, (_T("Starting Compositor renderModule=%s display=%s"), renderModule.c_str(), display.c_str()));
 
@@ -105,6 +106,13 @@ namespace Westeros {
             if (_virtualInputHandle != nullptr) {
                 virtualinput_close(_virtualInputHandle);
             }
+
+            if (_controller != nullptr) {
+                // Exit Wayland loop
+                _controller->Signal();
+                _controller->Release();
+            }
+
             _instance = nullptr;
         }
 
@@ -151,9 +159,34 @@ namespace Westeros {
             }
         }
 
-        /*virtual*/ void SetInput(const char name[])
+        void Get(const uint32_t id, Wayland::Display::Surface& surface) override
         {
-            WstCompositorFocusClientByName(_compositor, name);
+            _controller->Get(id, surface);
+        }
+
+        void Process(Wayland::Display::IProcess* processloop) override
+        {
+            _controller->Process(processloop);
+        }
+
+        void SetInput(const string& name) override
+        {
+            WstCompositorFocusClientByName(_compositor, name.c_str());
+        }
+
+        bool CreateController(const string& name, Wayland::Display::ICallback *callback) override
+        {
+            bool status = false;
+            _controller = &(Wayland::Display::Instance(name));
+            if (_controller != nullptr) {
+                // OK ready to receive new connecting surfaces.
+                _controller->Callback(callback);
+
+                // We also want to be know the current surfaces.
+                _controller->LoadSurfaces();
+                status = true;
+            }
+            return status;
         }
 
     private:
@@ -378,6 +411,7 @@ namespace Westeros {
         unsigned char* _cursor;
         int _xPos;
         int _yPos;
+        Wayland::Display* _controller;
         Exchange::IComposition::ScreenResolution _resolution;
         static Westeros::Compositor* _instance;
     };
