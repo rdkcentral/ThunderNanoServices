@@ -117,7 +117,8 @@ namespace Plugin {
     // Method: connect - Attempts connection to a network
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_UNKNOWN_KEY: Returned when the network with a the given SSID or security type doesn't exists
+    //  - ERROR_NOT_EXIST: Returned when the network with a the given SSID doesn't exists
+    //  - ERROR_UNKNOWN_KEY: Returned when the network with a the given security type doesn't exists 
     //  - ERROR_UNAVAILABLE: Returned when connection fails if there is no associated bssid to connect and not defined as AccessPoint. Rescan and try to connect"
     //  - ERROR_INVALID_SIGNATURE: Returned when connection is attempted with wrong password
     //  - ERROR_ALREADY_CONNECTED: Returned when there is already a connection
