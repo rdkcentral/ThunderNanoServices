@@ -521,7 +521,7 @@ namespace Plugin {
                 // This C++ wayland Compositor abstraction instance, will in-fact, call the server, we just
                 // instantiated a few lines above.
 
-                if (_server->CreateController(_config.Display.Value(), &_sink) == true) {
+                if (_server->StartController(_config.Display.Value(), &_sink) == true) {
                    // Firing up the compositor controller.
                     _job.Run();
 

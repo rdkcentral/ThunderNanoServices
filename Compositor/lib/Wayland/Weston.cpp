@@ -33,9 +33,6 @@ void weston_compositor_shutdown(struct weston_compositor*);
 namespace WPEFramework {
 namespace Implementation {
 namespace Weston {
-
-    static const char* connectorName = "/tmp/keyhandler";
-
     class Compositor : public Implementation::IServer, Core::Thread {
     private:
         enum KeyState {
@@ -197,13 +194,214 @@ namespace Weston {
         };
 
     private:
-        class SurfaceData : public WPEFramework::Compositor::IDisplay::ISurface {
+        class InputController {
         private:
+            struct KeyData {
+                uint32_t Code;
+                uint32_t Modifiers;
+                wl_keyboard_key_state State;
+                struct wl_event_source* Timer;
+                InputController* Parent;
+            };
+            static constexpr const char* connectorName = "/tmp/keyhandler";
+
+        public:
+            InputController() = delete;
+            InputController(const  InputController&) = delete;
+            InputController& operator=(const InputController&) = delete;
+
+            InputController(Compositor* parent)
+                : _parent(parent)
+                , _keys()
+                , _seats()
+                , _virtualInputHandle(nullptr)
+            {
+
+                if (_instance == nullptr) {
+                    _instance = this;
+                }
+
+                ASSERT(_virtualInputHandle == nullptr);
+                const char* listenerName = "Weston";
+                if (_virtualInputHandle == nullptr) {
+                    TRACE(Trace::Information, (_T("Constructing virtual keyboard")));
+
+                    _virtualInputHandle = virtualinput_open(listenerName, connectorName, VirtualKeyboardCallback, nullptr /*callback for mouse*/, nullptr /*callback for touch*/);
+                    if (_virtualInputHandle == nullptr) {
+                        TRACE(Trace::Information, (_T("Failed to construct virtual keyboard")));
+                    }
+                }
+            }
+            ~InputController()
+            {
+                FlushInputs();
+                if (_virtualInputHandle != nullptr) {
+                    virtualinput_close(_virtualInputHandle);
+                }
+                _instance = nullptr;
+            }
+
+        public:
+            inline void CollectInputHandlers()
+            {
+                struct weston_seat* seat;
+                struct weston_compositor* compositor = _parent->PlatformCompositor();
+                wl_list_for_each(seat, &compositor->seat_list, link) {
+                    _seats.push_back(seat);
+                }
+            }
+            inline void SetInput(struct weston_surface* surface) {
+                for (const auto& seat: _seats) {
+                    weston_seat_set_keyboard_focus(seat, surface);
+                }
+            }
+
+        private:
+            inline std::list<struct weston_seat*>& Seats()
+            {
+                return _seats;
+            }
+            inline void RemoveKey(KeyData* key)
+            {
+                _keys.remove(key);
+            }
+            inline void FlushInputs()
+            {
+                for (auto& key: _keys) {
+                    wl_event_source_remove(key->Timer);
+                    _keys.remove(key);
+                     delete key;
+                }
+                _seats.clear();
+            }
+            void KeyEvent(uint32_t keyCode, wl_keyboard_key_state keyState, const unsigned int keyModifiers)
+            {
+                struct weston_compositor* compositor = _parent->PlatformCompositor();
+
+                if (compositor != nullptr) {
+                    TRACE(Trace::Information, (_T("Insert key into Westeros code=0x%04x, state=0x%04x, modifiers=0x%04x"), keyCode, keyState, keyModifiers));
+                    struct wl_event_loop* loop = wl_display_get_event_loop(compositor->wl_display);
+                    KeyData* key = new KeyData();
+                    key->Code = keyCode;
+                    key->Modifiers = keyModifiers;
+                    key->State = keyState;
+                    key->Parent = this;
+                    key->Timer = wl_event_loop_add_timer(loop, SendKey, key);
+
+                    _keys.push_back(key);
+                }
+            }
+            static int SendKey(void* data) {
+                KeyData* key = static_cast<KeyData*>(data);
+                InputController* parent = key->Parent;
+                for (const auto& seat: parent->Seats()) {
+                    SendModifiers(seat, key->Modifiers);
+                    struct timespec time = { 0 };
+                    weston_compositor_get_time(&time);
+                    notify_key(seat, &time, key->Code, key->State, STATE_UPDATE_AUTOMATIC);
+                }
+                wl_event_source_remove(key->Timer);
+                parent->RemoveKey(key);
+                delete key;
+
+                return 1;
+            }
+            static void SendModifiers(struct weston_seat *seat, uint32_t modifiers)
+            {
+                struct weston_keyboard *keyboard = weston_seat_get_keyboard(seat);
+                if (keyboard) {
+                    xkb_mod_mask_t depressed = 0;
+                    xkb_mod_mask_t latched = xkb_state_serialize_mods(keyboard->xkb_state.state,
+                                             static_cast<xkb_state_component>(XKB_STATE_LATCHED));
+                    xkb_mod_mask_t locked = xkb_state_serialize_mods(keyboard->xkb_state.state,
+                                             static_cast<xkb_state_component>(XKB_STATE_LOCKED));
+                    xkb_mod_mask_t group = xkb_state_serialize_group(keyboard->xkb_state.state,
+                                             static_cast<xkb_state_component>(XKB_STATE_EFFECTIVE));
+
+                    if (modifiers & KeyModifiers::KeyShift) {
+                        depressed |= (1 << keyboard->xkb_info->shift_mod);
+                    }
+                    if (modifiers & KeyModifiers::KeyAlt) {
+                        depressed |= (1 << keyboard->xkb_info->alt_mod);
+                    }
+                    if (modifiers & KeyModifiers::KeyCtrl) {
+                        depressed |= (1 << keyboard->xkb_info->ctrl_mod);
+                    }
+                    xkb_state_update_mask(keyboard->xkb_state.state, depressed, latched, locked, 0, 0, group);
+                }
+            }
+            static void VirtualKeyboardCallback(keyactiontype type, unsigned int code)
+            {
+                TRACE_GLOBAL(Trace::Information, (_T("VirtualKeyboardCallback keycode 0x%04x is %s."), code, type == KEY_PRESSED ? "pressed" : type == KEY_RELEASED ? "released" : type == KEY_REPEAT ? "repeated" : type == KEY_COMPLETED ? "completed" : "unknown"));
+
+                uint32_t keyCode = static_cast<uint32_t>(code);
+                KeyState keyState;
+                static uint32_t keyModifiers = 0;
+
+                switch (keyCode) {
+                case KEY_LEFTSHIFT:
+                case KEY_RIGHTSHIFT:
+                    TRACE_GLOBAL(Trace::Information, (_T("[ SHIFT ] was detected, current keyModifiers 0x%02x"), keyModifiers));
+                    if (type == KEY_PRESSED)
+                        keyModifiers |= KeyModifiers::KeyShift;
+                    else
+                       keyModifiers &= ~KeyModifiers::KeyShift;
+                    break;
+
+                case KEY_LEFTCTRL:
+                case KEY_RIGHTCTRL:
+                    TRACE_GLOBAL(Trace::Information, (_T("[ CTRL ] was detected, current keyModifiers 0x%02x"), keyModifiers));
+                    if (type == KEY_PRESSED)
+                        keyModifiers |= KeyModifiers::KeyCtrl;
+                    else
+                        keyModifiers &= ~KeyModifiers::KeyCtrl;
+                    break;
+
+                case KEY_LEFTALT:
+                case KEY_RIGHTALT:
+                    TRACE_GLOBAL(Trace::Information, (_T("[ ALT ] was detected, current keyModifiers 0x%02x"), keyModifiers));
+                    if (type == KEY_PRESSED)
+                        keyModifiers |= KeyModifiers::KeyAlt;
+                    else
+                        keyModifiers &= ~KeyModifiers::KeyAlt;
+                    break;
+
+                default: {
+                    switch (type) {
+                    case KEY_RELEASED:
+                        keyState = KeyState::WestonKeyReleased;
+                        break;
+                    case KEY_PRESSED:
+                        keyState = KeyState::WestonKeyPressed;
+                        break;
+                    default:
+                        keyState = KeyState::WestonKeyNone;
+                        break;
+                    }
+
+                    if (keyState != KeyState::WestonKeyNone) {
+                        _instance->KeyEvent(keyCode, static_cast<wl_keyboard_key_state>(keyState), keyModifiers);
+                    }
+                    break;
+                }
+                }
+            }
+
+        private:
+            Compositor* _parent;
+            std::list<KeyData*> _keys;
+            std::list<struct weston_seat*> _seats;
+            void* _virtualInputHandle;
+            static InputController* _instance;
+        };
+
+    private:
+        class SurfaceData : public WPEFramework::Compositor::IDisplay::ISurface {
+        public:
             SurfaceData() = delete;
             SurfaceData(const SurfaceData&) = delete;
             SurfaceData& operator=(const SurfaceData&) = delete;
 
-        public:
             SurfaceData(Compositor* parent, const uint32_t id, const string& name, struct weston_surface* surface)
                 : _parent(parent)
                 , _id(id)
@@ -447,6 +645,7 @@ namespace Weston {
             struct wl_list _layoutputList;
         };
 
+     private:
         class DRM : public IBackend{
         private:
             class Config : public Core::JSON::Container {
@@ -829,7 +1028,7 @@ namespace Weston {
             {
                 TRACE_GLOBAL(Trace::Information, (_T("DRM Backend Loading in progress")));
                 struct weston_compositor* compositor = static_cast<weston_compositor*>(argument);
-                Compositor::WestonUserData* userData = static_cast<Compositor::WestonUserData*>(weston_compositor_get_user_data(compositor));
+                Compositor::UserData* userData = static_cast<Compositor::UserData*>(weston_compositor_get_user_data(compositor));
                 Compositor* parent = userData->Parent;
 
                 struct weston_head* head = nullptr;
@@ -867,7 +1066,7 @@ namespace Weston {
                         if (config.Name().empty() != true) {
                             Output newConfig = Output(config.Name(), mode, config.Transform());
 
-                             weston_output_disable(output);
+                            weston_output_disable(output);
                             output->scale = 0;
                             ConfigureOutput(output, newConfig);
                             weston_output_enable(output);
@@ -885,16 +1084,9 @@ namespace Weston {
         };
 
     public:
-        struct WestonUserData {
+        struct UserData {
             struct weston_compositor *WestonCompositor;
             struct weston_config *Config;
-            Compositor* Parent;
-        };
-        struct WestonKeyData {
-            uint32_t Code;
-            uint32_t Modifiers;
-            wl_keyboard_key_state State;
-            struct wl_event_source* Timer;
             Compositor* Parent;
         };
     private:
@@ -930,13 +1122,13 @@ namespace Weston {
 
         Compositor(PluginHost::IShell* service)
             : _logger(service)
+            , _userData()
             , _backend(nullptr)
-            , _virtualInputHandle(nullptr)
-            , _controller(nullptr)
+            , _inputController(this)
+            , _displayController(nullptr)
             , _callback(nullptr)
             , _loaded(false)
             , _service(nullptr)
-            , _userData()
             , _display(nullptr)
             , _compositor(nullptr)
             , _resolution(Exchange::IComposition::ScreenResolution_1080i50Hz)
@@ -957,33 +1149,17 @@ namespace Weston {
                 TRACE(Trace::Information, (_T("Created XDG_RUNTIME_DIR: %s\n"), path.Name().c_str()));
             }
             Run();
-            ASSERT(_virtualInputHandle == nullptr);
-
-            const char* listenerName = "Weston";
-            if (_virtualInputHandle == nullptr) {
-                TRACE(Trace::Information, (_T("Constructing virtual keyboard")));
-
-                _virtualInputHandle = virtualinput_open(listenerName, connectorName, VirtualKeyboardCallback, nullptr /*callback for mouse*/, nullptr /*callback for touch*/);
-                if (_virtualInputHandle == nullptr) {
-                    TRACE(Trace::Information, (_T("Failed to construct virtual keyboard")));
-                }
-            }
         }
         ~Compositor() {
             TRACE(Trace::Information, (_T("Destructing the compositor")));
             delete _backend;
             _logger.DestroyLogScope();
 
-            FlushInputs();
             weston_compositor_tear_down(_compositor);
             weston_log_ctx_compositor_destroy(_compositor);
             weston_compositor_destroy(_compositor);
             wl_display_terminate(_compositor->wl_display); //FIXME: revisit exti sequence
             wl_display_destroy(_display);
-
-            if (_virtualInputHandle != nullptr) {
-                virtualinput_close(_virtualInputHandle);
-            }
 
             Stop();
             Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
@@ -1020,15 +1196,9 @@ namespace Weston {
                                 config.FromString(_service->ConfigLine());
                                 SetEnvironments(config, socketName);
                                 if (LoadShell(config.Shell.Value()) == Core::ERROR_NONE) {
+                                    RegisterSurfaceActivateListener();
+                                    _inputController.CollectInputHandlers();
                                     weston_compositor_wake(_compositor);
-                                    struct weston_seat* seat;
-                                    wl_list_for_each(seat, &_compositor->seat_list, link) {
-                                        _seats.push_back(seat);
-                                    }
-                                    _surfaceCreationListener.notify = NotifySurfaceCreation;
-                                    wl_signal_add(&_compositor->create_surface_signal, &_surfaceCreationListener);
-                                    _surfaceActivateListener.notify = NotifySurfaceActivate;
-                                    wl_signal_add(&_compositor->activate_signal, &_surfaceActivateListener);
                                     wl_display_run(_display);
                                     status = Core::ERROR_NONE;
                                 }
@@ -1098,27 +1268,25 @@ namespace Weston {
         }
         void Process(Wayland::Display::IProcess* processloop) override
         {
-            _controller->Process(processloop);
+            _displayController->Process(processloop);
         }
         void SetInput(const string& name) override
         {
             struct weston_surface* surface = GetSurface(name);
             if (surface) {
-                for (const auto& seat: _seats) {
-                    weston_seat_set_keyboard_focus(seat, surface);
-                }
+                _inputController.SetInput(surface);
             }
         }
-        bool CreateController(const string& name, Wayland::Display::ICallback *callback) override
+        bool StartController(const string& name, Wayland::Display::ICallback *callback) override
         {
             bool status = false;
-            _controller = &(Wayland::Display::Instance(name));
-            if (_controller != nullptr) {
+            _displayController = &(Wayland::Display::Instance(name));
+            if (_displayController != nullptr) {
                 // OK ready to receive new connecting surfaces.
                 _callback = callback;
 
                 // We also want to be know the current surfaces.
-                _controller->LoadSurfaces();
+                _displayController->LoadSurfaces();
                 status = true;
             }
             return status;
@@ -1152,72 +1320,18 @@ namespace Weston {
             return (_resolution);
         }
 
-        void KeyEvent(uint32_t keyCode, wl_keyboard_key_state keyState, const unsigned int keyModifiers)
+    private:
+        uint32_t Worker() override
         {
-            ASSERT(_compositor != nullptr);
-
-            if (_compositor != nullptr) {
-                TRACE(Trace::Information, (_T("Insert key into Westeros code=0x%04x, state=0x%04x, modifiers=0x%04x"), keyCode, keyState, keyModifiers));
-                 struct wl_event_loop* loop = wl_display_get_event_loop(_compositor->wl_display);
-                 WestonKeyData* key = new WestonKeyData();
-                 key->Code = keyCode;
-                 key->Modifiers = keyModifiers;
-                 key->State = keyState;
-                 key->Parent = this;
-                 key->Timer = wl_event_loop_add_timer(loop, SendKey, key);
-
-                 _keys.push_back(key);
+            if (IsRunning() == true) {
+                StartComposition();
             }
+            Block();
+            return (Core::infinite);
         }
-        static int SendKey(void* data) {
-            WestonKeyData* key = static_cast<WestonKeyData*>(data);
-            Compositor* parent = key->Parent;
-            for (const auto& seat: parent->_seats) {
-                 SendModifiers(seat, key->Modifiers);
-                 struct timespec time = { 0 };
-                 weston_compositor_get_time(&time);
-                 notify_key(seat, &time, key->Code, key->State, STATE_UPDATE_AUTOMATIC);
-            }
-            wl_event_source_remove(key->Timer);
-            parent->_keys.remove(key);
-            delete key;
-
-            return 1;
-        }
-        static void SendModifiers(struct weston_seat *seat, uint32_t modifiers) {
-
-            struct weston_keyboard *keyboard = weston_seat_get_keyboard(seat);
-            if (keyboard) {
-                xkb_mod_mask_t depressed = 0;
-                xkb_mod_mask_t latched = xkb_state_serialize_mods(keyboard->xkb_state.state,
-                                                static_cast<xkb_state_component>(XKB_STATE_LATCHED));
-                xkb_mod_mask_t locked = xkb_state_serialize_mods(keyboard->xkb_state.state,
-                                                static_cast<xkb_state_component>(XKB_STATE_LOCKED));
-                xkb_mod_mask_t group = xkb_state_serialize_group(keyboard->xkb_state.state,
-                                      static_cast<xkb_state_component>(XKB_STATE_EFFECTIVE));
-
-                if (modifiers & KeyModifiers::KeyShift) {
-                    depressed |= (1 << keyboard->xkb_info->shift_mod);
-                }
-                if (modifiers & KeyModifiers::KeyAlt) {
-                    depressed |= (1 << keyboard->xkb_info->alt_mod);
-                }
-                if (modifiers & KeyModifiers::KeyCtrl) {
-                    depressed |= (1 << keyboard->xkb_info->ctrl_mod);
-                }
-                xkb_state_update_mask(keyboard->xkb_state.state, depressed, latched, locked, 0, 0, group);
-            }
-        }
-
-        static void NotifySurfaceCreation(struct wl_listener* listener, void* data)
-        {
-            struct weston_surface* surface = static_cast<struct weston_surface*>(data);
-            char label[100];
-            if (surface->get_label) {
-                int status =  surface->get_label(surface, label, sizeof(label));
-                if (status >=0) {
-                }
-            }
+        inline void RegisterSurfaceActivateListener() {
+            _surfaceActivateListener.notify = NotifySurfaceActivate;
+            wl_signal_add(&_compositor->activate_signal, &_surfaceActivateListener);
         }
         static void NotifySurfaceActivate(struct wl_listener* listener, void* data)
         {
@@ -1228,115 +1342,13 @@ namespace Weston {
                 int status =  surface->get_label(surface, label, sizeof(label));
                 if (status >=0) {
                     uint32_t id = wl_resource_get_id(surface->resource);
-                    Compositor::WestonUserData* userData = static_cast<Compositor::WestonUserData*>(weston_compositor_get_user_data(surface->compositor));
+                    Compositor::UserData* userData = static_cast<Compositor::UserData*>(weston_compositor_get_user_data(surface->compositor));
                     userData->Parent->AddSurface(id, label, surface);
-                }
+                SurfaceData* surface = new SurfaceData(this, id, name, westonSurface);
+                _surfaces.insert(std::pair<uint32_t, SurfaceData*>(id, surface));
+                _callback->Attached(id);
             }
         }
-    private:
-        inline void FlushInputs()
-        {
-            for (auto& key: _keys) {
-                 wl_event_source_remove(key->Timer);
-                 _keys.remove(key);
-                 delete key;
-            }
-            _seats.clear();
-        }
-        uint32_t Worker() override
-        {
-            if (IsRunning() == true) {
-                StartComposition();
-            }
-            Block();
-            return (Core::infinite);
-        }
-        static void HandleExit(struct weston_compositor* compositor)
-        {
-            wl_display_terminate(compositor->wl_display);
-        }
-        uint32_t LoadShell(const string& shell)
-        {
-            uint32_t status = Core::ERROR_GENERAL;
-            typedef int (*ShellInit)(struct weston_compositor*, int*, char*[]);
-
-            Core::Library library(shell.c_str());
-            _library = library;
-            if (library.IsLoaded() == true) {
-                ShellInit shellInit = reinterpret_cast<ShellInit>(library.LoadFunction(ShellInitEntryName));
-                if (shellInit != nullptr) {
-                    if (shellInit(_compositor, 0, NULL) == 0) {
-                        status = Core::ERROR_NONE;
-                    }
-                }
-            }
-            ASSERT(status == Core::ERROR_NONE)
-            return status;
-        }
-        static void VirtualKeyboardCallback(keyactiontype type, unsigned int code)
-        {
-            TRACE_GLOBAL(Trace::Information, (_T("VirtualKeyboardCallback keycode 0x%04x is %s."), code, type == KEY_PRESSED ? "pressed" : type == KEY_RELEASED ? "released" : type == KEY_REPEAT ? "repeated" : type == KEY_COMPLETED ? "completed" : "unknown"));
-
-            // TODO: no key repeat handled by westeros.
-
-            uint32_t keyCode = static_cast<uint32_t>(code);
-            KeyState keyState;
-            static uint32_t keyModifiers = 0;
-
-            switch (keyCode) {
-            case KEY_LEFTSHIFT:
-            case KEY_RIGHTSHIFT:
-                TRACE_GLOBAL(Trace::Information, (_T("[ SHIFT ] was detected, current keyModifiers 0x%02x"), keyModifiers));
-                if (type == KEY_PRESSED)
-                    keyModifiers |= KeyModifiers::KeyShift;
-                else
-                    keyModifiers &= ~KeyModifiers::KeyShift;
-                break;
-
-            case KEY_LEFTCTRL:
-            case KEY_RIGHTCTRL:
-                TRACE_GLOBAL(Trace::Information, (_T("[ CTRL ] was detected, current keyModifiers 0x%02x"), keyModifiers));
-                if (type == KEY_PRESSED)
-                    keyModifiers |= KeyModifiers::KeyCtrl;
-                else
-                    keyModifiers &= ~KeyModifiers::KeyCtrl;
-                break;
-
-            case KEY_LEFTALT:
-            case KEY_RIGHTALT:
-                TRACE_GLOBAL(Trace::Information, (_T("[ ALT ] was detected, current keyModifiers 0x%02x"), keyModifiers));
-                if (type == KEY_PRESSED)
-                    keyModifiers |= KeyModifiers::KeyAlt;
-                else
-                    keyModifiers &= ~KeyModifiers::KeyAlt;
-                break;
-
-            default: {
-                if (type == KEY_PRESSED)
-                    keyModifiers |= KeyModifiers::KeyShift;
-                else
-                    keyModifiers &= ~KeyModifiers::KeyShift;
-
-                switch (type) {
-                case KEY_RELEASED:
-                    keyState = KeyState::WestonKeyReleased;
-                    break;
-                case KEY_PRESSED:
-                    keyState = KeyState::WestonKeyPressed;
-                    break;
-                default:
-                    keyState = KeyState::WestonKeyNone;
-                    break;
-                }
-
-                if (keyState != KeyState::WestonKeyNone) {
-                    _instance->KeyEvent(keyCode, static_cast<wl_keyboard_key_state>(keyState), keyModifiers);
-                }
-                break;
-            }
-            }
-        }
-
         struct weston_surface* GetSurface(const string& name)
         {
             struct weston_surface* surface = nullptr;
@@ -1348,7 +1360,6 @@ namespace Weston {
             }
             return surface;
         }
-
         struct weston_view* GetView(const string& name) {
             weston_view* clientView = nullptr;
             struct weston_layer *layer = nullptr;
@@ -1382,34 +1393,21 @@ namespace Weston {
             return clientView;
         }
 
-        void AddSurface(const uint32_t id, const string& name, struct weston_surface* westonSurface)
-        {
-            SurfaceMap::iterator index(_surfaces.find(id));
-            if (index == _surfaces.end()) {
-                SurfaceData* surface = new SurfaceData(this, id, name, westonSurface);
-                _surfaces.insert(std::pair<uint32_t, SurfaceData*>(id, surface));
-                    _callback->Attached(id);
-            }
-        }
-    public:
-        std::list<WestonKeyData*> _keys;
-        std::list<struct weston_seat*> _seats;
     private:
         Logger _logger;
+        UserData _userData;
         IBackend* _backend;
         SurfaceMap _surfaces;
-        void* _virtualInputHandle;
-        Wayland::Display* _controller;
+        InputController _inputController;
+        Wayland::Display* _displayController;
         Wayland::Display::ICallback* _callback;
 
         bool _loaded;
         Core::Library _library;
         PluginHost::IShell* _service;
 
-        WestonUserData _userData;
         struct wl_display* _display;
         struct weston_compositor* _compositor;
-        struct wl_listener _surfaceCreationListener;
         struct wl_listener _surfaceActivateListener;
         Exchange::IComposition::ScreenResolution _resolution;
 
@@ -1419,6 +1417,7 @@ namespace Weston {
     /*static*/ Core::File Weston::Compositor::Logger::_logFile;
     /*static*/ Weston::Compositor* Weston::Compositor::_instance = nullptr;
     /*static*/ struct weston_log_scope* Weston::Compositor::Logger::_logScope = nullptr;
+    /*static*/ Weston::Compositor::InputController* Weston::Compositor::InputController::_instance = nullptr;
 
 } // namespace Weston
 

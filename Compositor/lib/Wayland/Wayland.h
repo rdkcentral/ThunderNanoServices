@@ -47,7 +47,7 @@ namespace WPEFramework {
             virtual void SetInput(const string&) = 0;
             virtual void Get(const uint32_t, Wayland::Display::Surface&) = 0;
             virtual void Process(Wayland::Display::IProcess*) = 0;
-            virtual bool CreateController(const string&, Wayland::Display::ICallback*)  = 0;
+            virtual bool StartController(const string&, Wayland::Display::ICallback*)  = 0;
             virtual ~IServer(){};
         };
 

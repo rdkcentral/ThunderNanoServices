@@ -174,7 +174,7 @@ namespace Westeros {
             WstCompositorFocusClientByName(_compositor, name.c_str());
         }
 
-        bool CreateController(const string& name, Wayland::Display::ICallback *callback) override
+        bool StartController(const string& name, Wayland::Display::ICallback *callback) override
         {
             bool status = false;
             _controller = &(Wayland::Display::Instance(name));
@@ -268,25 +268,25 @@ namespace Westeros {
                 keyState = WstKeyboard_keyState_depressed;
                 KEY_EVENT_CODE(button, keyCode);
                 _instance->MouseClickEvent(keyCode, keyState);
-                    break;
+                break;
             case MOUSE_RELEASED:
                 keyState = WstKeyboard_keyState_released;
                 KEY_EVENT_CODE(button, keyCode);
                 _instance->MouseClickEvent(keyCode, keyState);
-                    break;
+                break;
             case MOUSE_SCROLL:
                 /* TODO - to handle mouse  scroll events */
                 if (vertical == 1) { /* Scroll up */
                 }
                 else if (vertical == -1) { /* Scroll down */
                 }
-                    break;
+                reak;
             case MOUSE_MOTION:
                 _instance->MouseMoveEvent(horizontal, vertical);
-                    break;
+                break;
             default:
                 keyState= WstKeyboard_keyState_none;
-                    break;
+                break;
             }
         }
 
