@@ -24,6 +24,7 @@ extern "C" {
 #include <libweston/backend.h>
 #include <libweston/backend-drm.h>
 #include <libweston/weston-log.h>
+#include <libweston-desktop/libweston-desktop.h>
 #include <weston/shared/helpers.h>
 
 void weston_init_process_list();
@@ -287,6 +288,7 @@ namespace Weston {
                     key->State = keyState;
                     key->Parent = this;
                     key->Timer = wl_event_loop_add_timer(loop, SendKey, key);
+                    wl_event_source_timer_update(key->Timer, 1);
 
                     _keys.push_back(key);
                 }
@@ -294,6 +296,7 @@ namespace Weston {
             static int SendKey(void* data) {
                 KeyData* key = static_cast<KeyData*>(data);
                 InputController* parent = key->Parent;
+
                 for (const auto& seat: parent->Seats()) {
                     SendModifiers(seat, key->Modifiers);
                     struct timespec time = { 0 };
@@ -301,6 +304,7 @@ namespace Weston {
                     notify_key(seat, &time, key->Code, key->State, STATE_UPDATE_AUTOMATIC);
                 }
                 wl_event_source_remove(key->Timer);
+
                 parent->RemoveKey(key);
                 delete key;
 
@@ -406,10 +410,14 @@ namespace Weston {
                 : _parent(parent)
                 , _id(id)
                 , _name(name)
+                , _timer(nullptr)
                 , _surface(surface)
             {
             }
-            virtual ~SurfaceData()=  default;
+            virtual ~SurfaceData()
+            {
+                RemoveTimer();
+            }
 
         public:
             uint32_t Id() const
@@ -439,9 +447,56 @@ namespace Weston {
             {
                 return (_width);
             }
-            struct weston_surface* WestonSurface() const
+            static int SetOrder(void* data)
+            {
+                SurfaceData* surfaceData = static_cast<SurfaceData*>(data);
+                struct weston_surface* surface = surfaceData->WestonSurface();
+                if (surface) {
+                    struct weston_desktop_surface *desktop_surface = weston_surface_get_desktop_surface(surface);
+                    if (desktop_surface) {
+                        char label[100] = {};
+
+                        if (!surfaceData->ZOrder()) {
+                            weston_desktop_surface_get_activated(desktop_surface);
+                            surfaceData->WestonSurfaceSetTopAPI();
+                        }
+                    }
+                }
+                surfaceData->RemoveTimer();
+                return 1;
+            }
+            void ZOrder(const uint32_t zorder) override
+            {
+                if (_timer == nullptr) {
+                    _zorder = zorder;
+                    struct weston_compositor* compositor = _parent->PlatformCompositor();
+                    struct wl_event_loop* loop = wl_display_get_event_loop(compositor->wl_display);
+                    _timer = wl_event_loop_add_timer(loop, SetOrder, this);
+                    wl_event_source_timer_update(_timer, 1);
+                }
+            }
+            inline void RemoveTimer()
+            {
+                wl_event_source_remove(_timer);
+                _timer = nullptr;
+            }
+            inline struct weston_surface* WestonSurface() const
             {
                 return _surface;
+            }
+            inline uint32_t ZOrder() const
+            {
+                return _zorder;
+            }
+            inline struct weston_compositor* WestonCompositor() const
+            {
+                return _parent->PlatformCompositor();
+            }
+            inline void WestonSurfaceSetTopAPI() const
+            {
+                if (_parent->_surfaceSetTopAPI) {
+                    _parent->_surfaceSetTopAPI(_surface);
+                }
             }
 
         private:
@@ -450,10 +505,13 @@ namespace Weston {
             uint32_t _id;
             int32_t _width;
             int32_t _height;
+            uint32_t _zorder;
             std::string _name;
+            struct wl_event_source* _timer;
             struct weston_surface* _surface;
         };
         typedef std::map<const uint32_t, SurfaceData*> SurfaceMap;
+        typedef void (*ShellSurfaceSetTop)(struct weston_surface*);
 
     private:
         class IBackend {
@@ -1114,6 +1172,7 @@ namespace Weston {
     private:
         static constexpr const uint8_t MaxCloneHeads = 16;
         static constexpr const TCHAR* ShellInitEntryName = _T("wet_shell_init");
+        static constexpr const TCHAR* ShellSurfaceSetTopAPIName = _T("wet_shell_surface_update_layer");
 
     public:
         Compositor() = delete;
@@ -1121,7 +1180,8 @@ namespace Weston {
         Compositor& operator= (const Compositor&) = delete;
 
         Compositor(PluginHost::IShell* service)
-            : _logger(service)
+            : _surfaceSetTopAPI(nullptr)
+            , _logger(service)
             , _userData()
             , _backend(nullptr)
             , _inputController(this)
@@ -1340,10 +1400,40 @@ namespace Weston {
             char label[100];
             if (surface->get_label) {
                 int status =  surface->get_label(surface, label, sizeof(label));
-                if (status >=0) {
+                if (status >= 0) {
                     uint32_t id = wl_resource_get_id(surface->resource);
                     Compositor::UserData* userData = static_cast<Compositor::UserData*>(weston_compositor_get_user_data(surface->compositor));
                     userData->Parent->AddSurface(id, label, surface);
+                }
+            }
+        }
+        static void HandleExit(struct weston_compositor* compositor)
+        {
+            wl_display_terminate(compositor->wl_display);
+        }
+        uint32_t LoadShell(const string& shell)
+        {
+            uint32_t status = Core::ERROR_GENERAL;
+            typedef int (*ShellInit)(struct weston_compositor*, int*, char*[]);
+
+            Core::Library library(shell.c_str());
+            _library = library;
+            if (library.IsLoaded() == true) {
+                ShellInit shellInit = reinterpret_cast<ShellInit>(library.LoadFunction(ShellInitEntryName));
+                if (shellInit != nullptr) {
+                    if (shellInit(_compositor, 0, NULL) == 0) {
+                        _surfaceSetTopAPI = reinterpret_cast<ShellSurfaceSetTop>(library.LoadFunction(ShellSurfaceSetTopAPIName));
+                        status = Core::ERROR_NONE;
+                    }
+                }
+            }
+            ASSERT(status == Core::ERROR_NONE)
+            return status;
+        }
+        void AddSurface(const uint32_t id, const string& name, struct weston_surface* westonSurface)
+        {
+            SurfaceMap::iterator index(_surfaces.find(id));
+            if (index == _surfaces.end()) {
                 SurfaceData* surface = new SurfaceData(this, id, name, westonSurface);
                 _surfaces.insert(std::pair<uint32_t, SurfaceData*>(id, surface));
                 _callback->Attached(id);
@@ -1392,6 +1482,8 @@ namespace Weston {
             }
             return clientView;
         }
+    public:
+        ShellSurfaceSetTop _surfaceSetTopAPI;
 
     private:
         Logger _logger;
