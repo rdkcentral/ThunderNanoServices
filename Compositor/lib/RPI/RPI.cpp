@@ -24,6 +24,37 @@
 
 #include "ModeSet.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <EGL/egl.h>
+#include <GLES2/gl2.h>
+
+#ifdef __cplusplus
+}
+#endif
+
+template <class T>
+struct _remove_const {
+    typedef T type;
+};
+
+template <class T>
+struct _remove_const <T const> {
+    typedef T type;
+};
+
+template <class T>
+struct _remove_const <T *> {
+    typedef T * type;
+};
+
+template <class T>
+struct _remove_const <T const *>{
+    typedef T * type;
+};
+
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 // Suppress compiler warnings of unused (parameters)
@@ -42,12 +73,13 @@ class CompositorImplementation;
         ClientSurface(const ClientSurface&) = delete;
         ClientSurface& operator= (const ClientSurface&) = delete;
 
-        ClientSurface(ModeSet& modeSet, CompositorImplementation& compositor, const string& name, const EGLSurface& surface, const uint32_t width, const uint32_t height);
+        ClientSurface(ModeSet& modeSet, CompositorImplementation& compositor, const string& name, const uint32_t width, const uint32_t height);
         ~ClientSurface() override;
 
     public:
-        RPC::instance_id Native() const override {
-                return reinterpret_cast<RPC::instance_id>(_nativeSurface);
+        RPC::instance_id Native () const override {
+            // Sharing this handle does not imply its underlying contents can be accessed!
+            return reinterpret_cast < RPC::instance_id > ( _nativeSurface );
         }
         string Name() const override
         {
@@ -71,9 +103,7 @@ class CompositorImplementation;
             return _layer;
         }
 
-        void ScanOut () override {
-            TRACE (Trace::Error, (_T ("ScanOut is currently not supported.")));
-        }
+        void ScanOut () override;
 
         BEGIN_INTERFACE_MAP (ClientSurface)
             INTERFACE_ENTRY (Exchange::IComposition::IClient)
@@ -84,7 +114,9 @@ class CompositorImplementation;
         ModeSet& _modeSet;
         CompositorImplementation& _compositor; 
         const std::string _name;
-        EGLSurface _nativeSurface;
+
+        // The buffer acts as a surface for the remote site
+        struct gbm_bo * _nativeSurface;
 
         uint32_t _opacity;
         uint32_t _layer;
@@ -138,6 +170,271 @@ class CompositorImplementation;
             CompositorImplementation& _parent;
         };
 
+        class Natives {
+            private :
+
+                ModeSet /*const*/ & _set;
+
+                using dpy_return_t = decltype ( std::declval < ModeSet > ().UnderlyingHandle () );
+                using surf_return_t = decltype ( std::declval < ModeSet > ().CreateRenderTarget (0, 0) );
+
+                static_assert (std::is_pointer < surf_return_t > ::value != false);
+                surf_return_t _surf = nullptr;
+
+                bool _valid = false;
+
+            public :
+
+                using dpy_t = dpy_return_t;
+                using surf_t = decltype (_surf);
+                using valid_t = decltype (_valid);
+
+                Natives () = delete;
+                Natives (ModeSet /*const*/ & set) : _set { set }, _valid { Initialize () } {}
+                ~Natives () {
+                    _valid = false;
+                    DeInitialize ();
+                }
+
+                dpy_t Display () const { return _set.UnderlyingHandle (); }
+                surf_t Surface () const { return _surf; }
+
+                valid_t Valid () const { return _valid; }
+
+            private :
+
+                bool Initialize () {
+                    bool _ret = false;
+
+                    // The argument to Open is unused, any suffices
+                    static_assert (std::is_pointer < dpy_t > ::value != false);
+                    _ret =_set.Open ("") == Core::ERROR_NONE && Display () != nullptr;
+
+                    using width_t = decltype ( std::declval < ModeSet > ().Width () );
+                    using height_t = decltype ( std::declval < ModeSet > ().Height () );
+
+                    width_t _width = _set.Width ();
+                    height_t _height = _set.Height ();
+
+                    if (_ret != false) {
+                        _surf = _set.CreateRenderTarget (_width, _height);
+                        _ret = _surf != nullptr;
+                    }
+
+                    if (_ret != true) {
+                        static_assert (( std::is_integral < width_t >::value && std::is_integral < height_t >::value ) != false);
+                        TRACE (Trace::Error, (_T ("Unable to create a compositor surface of dimensions: %d x %d [width, height]))."), _width, _height));
+                    }
+
+                    return _ret;
+                }
+
+                void DeInitialize () {
+                    _valid = false;
+
+                    if (_surf != nullptr) {
+                        _set.DestroyRenderTarget (_surf);
+                    }
+                }
+        };
+
+        class GLES {
+            private :
+
+                uint16_t _degree = 0;
+
+            public :
+
+                GLES () = default;
+                ~GLES () = default;
+
+                bool Render () {
+                    constexpr decltype (_degree) const ROTATION = 360;
+
+                    constexpr float const OMEGA = 3.14159265 / 180;
+
+                    bool _ret = false;
+
+                    // Here, for C(++) these type should be identical
+                    // Type information: https://www.khronos.org/opengl/wiki/OpenGL_Type
+                    static_assert (std::is_same <float, GLfloat>::value);
+
+                    GLfloat _rad = static_cast <GLfloat> (cos (_degree * OMEGA));
+
+                    // The function clamps the input to [0, 1]
+                    /* void */ glClearColor (_rad, _rad, _rad, 0.0);
+
+                    _ret = glGetError () == GL_NO_ERROR;
+
+                    if (_ret != false) {
+                        /* void */ glClear (GL_COLOR_BUFFER_BIT);
+                        _ret = glGetError () == GL_NO_ERROR;
+                    }
+
+                    if (_ret != false) {
+                        /* void */ glFlush ();
+                        _ret = glGetError () == GL_NO_ERROR;
+                    }
+
+                    _degree = (_degree + 1) % ROTATION;
+
+                    return _ret;
+                }
+        };
+
+//                static_assert ( (std::is_convertible < decltype (_dpy->Native ()), EGLNativeDisplayType > :: value) != false);
+//                static_assert ( (std::is_convertible < decltype (_surf->Native ()), EGLNativeWindowType > :: value) != false);
+
+       class EGL  {
+            private :
+
+                // Define the 'invalid' value
+                static_assert (std::is_pointer <EGLConfig>::value != false);
+                static constexpr void * const EGL_NO_CONFIG = nullptr;
+
+                EGLDisplay _dpy = EGL_NO_DISPLAY;
+                EGLConfig _conf = EGL_NO_CONTEXT;
+                EGLContext _cont = EGL_NO_CONFIG;
+                EGLSurface _surf = EGL_NO_SURFACE;
+
+                EGLint _width = 0;
+                EGLint _height = 0;
+
+                Natives const & _natives;
+
+                bool _valid = false;
+
+            public :
+
+                using dpy_t = decltype (_dpy);
+                using surf_t = decltype (_surf);
+                using height_t = decltype (_height);
+                using width_t = decltype (_width);
+                using valid_t = decltype (_valid);
+
+                EGL () = delete;
+                EGL (Natives const & natives) : _natives { natives }, _valid { Initialize () } {}
+                ~EGL () {
+                    _valid = false;
+                    DeInitialize ();
+                }
+
+                dpy_t Display () const { return _dpy; }
+                surf_t Surface () const { return _surf; }
+
+                height_t Height () const { return _height; }
+                width_t Width () const { return _width; }
+
+                valid_t Valid () const { return _valid; }
+
+            private :
+
+                bool Initialize () {
+                    bool _ret = _natives.Valid ();
+
+                    if (_ret != false) {
+
+                        if (_dpy != EGL_NO_DISPLAY) {
+                            _ret = false;
+
+                            if (eglTerminate (_dpy) != EGL_FALSE) {
+                                _ret = true;
+                            }
+                        }
+                    }
+
+                    if (_ret != false) {
+                        using native_dpy_no_const =  _remove_const < Natives::dpy_t > :: type;
+
+                        // Again. EGL does use const sparsely
+                        _dpy = eglGetDisplay (const_cast < native_dpy_no_const > (_natives.Display ()) );
+                        _ret = _dpy != EGL_NO_DISPLAY;
+                    }
+
+                    if (_ret != false) {
+                        EGLint _major = 0, _minor = 0;
+                        _ret = eglInitialize (_dpy, &_major, &_minor) != EGL_FALSE;
+
+                        // Just take the easy approach (for now)
+                        static_assert ((std::is_same <decltype (_major), int> :: value) != false);
+                        static_assert ((std::is_same <decltype (_minor), int> :: value) != false);
+                        TRACE (Trace::Information, (_T ("EGL version : %d.%d"), static_cast <int> (_major), static_cast <int> (_minor)));
+                    }
+
+                    if (_ret != false) {
+                        constexpr EGLint const _attr [] = {
+                            EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+                            EGL_RED_SIZE    , 8,
+                            EGL_GREEN_SIZE  , 8,
+                            EGL_BLUE_SIZE   , 8,
+                            EGL_ALPHA_SIZE  , 8,
+                            EGL_BUFFER_SIZE , 32,
+                            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+                            EGL_NONE
+                        };
+
+                        EGLint _count = 0;
+
+                        if (eglGetConfigs (_dpy, nullptr, 0, &_count) != EGL_TRUE) {
+                            _count = 1;
+                        }
+
+                        std::vector <EGLConfig> _confs (_count, EGL_NO_CONFIG);
+
+                        /* EGLBoolean */ eglChooseConfig (_dpy, &_attr [0], _confs.data (), _confs.size (), &_count);
+
+                        _conf = _confs [0];
+
+                        _ret = _conf != EGL_NO_CONFIG;
+                    }
+
+                    if (_ret != false) {
+                        constexpr EGLint const _attr [] = {
+                            EGL_CONTEXT_CLIENT_VERSION, 2,
+                            EGL_NONE
+                        };
+
+                        _cont = eglCreateContext (_dpy, _conf, EGL_NO_CONTEXT, _attr);
+                        _ret = _cont != EGL_NO_CONTEXT;
+                    }
+
+                    if (_ret != false) {
+                        constexpr EGLint const _attr [] = {
+                            EGL_NONE
+                        };
+
+                        _surf = eglCreateWindowSurface (_dpy, _conf, _natives.Surface (), &_attr [0]);
+                        _ret = _surf != EGL_NO_SURFACE;
+                    }
+
+                    if (_ret != true) {
+                        DeInitialize ();
+                    }
+
+                    return _ret;
+                }
+
+                void DeInitialize () {
+                    _valid = false;
+                    /* EGLBoolean */ eglTerminate (_dpy);
+                }
+
+            public :
+
+                bool Render (GLES & gles) {
+                    bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _cont) != EGL_FALSE;
+
+                    if (_ret != false) {
+                        _ret = gles.Render () != false && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
+
+                        // Avoid any memory leak if the local thread is stopped (by another thread)
+                        _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
+                    }
+
+                    return _ret;
+                }
+        };
+
     public:
         CompositorImplementation()
             : _adminLock()
@@ -147,6 +444,8 @@ class CompositorImplementation;
             , _observers()
             , _clients()
             , _platform()
+            , _natives (_platform)
+            , _egl (_natives)
         {
         }
         ~CompositorImplementation()
@@ -189,6 +488,35 @@ class CompositorImplementation;
         };
 
     public:
+
+        bool CompositeFor (std::string const & name) {
+            bool _ret = false;
+
+            TRACE (Trace::Error, (_T ("%s requested an update. Update is currently not supported."), name.c_str ()));
+
+            /* ProxyType <> */ auto _client = _clients.Find (name);
+
+            if (name.compare (_client->Name ()) != 0) {
+                TRACE (Trace::Error, (_T ("%s does not appear to be a valid client."), name.c_str ()));
+            }
+            else {
+//                /* RPC::instance_id */ _client->Native ();
+
+                static GLES _gles;
+
+                _ret = _egl.Valid () != false &&  _egl.Render ( _gles );
+
+                if (_ret != false) {
+                    ModeSet::BufferInfo _bufferInfo = { _natives.Surface (), nullptr, 0 };
+                    /* void */ _platform.Swap (_bufferInfo);
+                }
+
+
+            }
+
+            return _ret;
+        }
+
         //
         // Echange::IComposition
         // ==================================================================================================================
@@ -258,9 +586,8 @@ class CompositorImplementation;
             _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
             _externalAccess = new ExternalAccess(*this, Core::NodeId(config.Connector.Value().c_str()), service->ProxyStubPath(), _engine);
 
-            if ((_externalAccess->IsListening() == true) && (_platform.Open(config.Port.Value()) == Core::ERROR_NONE)) {
+            if ((_externalAccess->IsListening() == true)) {
                 _port = config.Port.Value();
-                _platform.Open(_port);
                 PlatformReady();
             } else {
                 delete _externalAccess;
@@ -313,19 +640,29 @@ class CompositorImplementation;
         //
         // Echange::IComposition::IDisplay
         // ==================================================================================================================
-        RPC::instance_id Native() const override {
-            EGLNativeDisplayType result (static_cast<EGLNativeDisplayType>(EGL_DEFAULT_DISPLAY));
+        RPC::instance_id Native () const override {
+            using class_t = std::remove_reference < decltype (_natives) > ::type;
+            using return_t = decltype ( std::declval < class_t > ().Display () );
 
-            const struct gbm_device* pointer = _platform.UnderlyingHandle();
+            // The EGL API uses const very sparsely, and here, a const is also not expected
+            using return_no_const_t  = _remove_const < return_t > :: type;
 
-            if(pointer != nullptr) {
-                result = reinterpret_cast<EGLNativeDisplayType>(const_cast<struct gbm_device*>(pointer));
+            static_assert ( (std::is_convertible < return_no_const_t, EGLNativeDisplayType > :: value) != false);
+            static_assert ( (std::is_convertible < decltype (EGL_DEFAULT_DISPLAY), EGLNativeDisplayType > :: value) != false);
+            // Likely to almost always fail
+//            static_assert ( (std::is_convertible < return_no_const_t, RPC::instance_id > :: value) != false);
+
+            EGLNativeDisplayType result ( static_cast < EGLNativeDisplayType > ( EGL_DEFAULT_DISPLAY ) );
+
+            if (_natives.Valid () != false) {
+            // Just remove the unexpected const if it exist
+                result = static_cast < EGLNativeDisplayType > (const_cast < return_no_const_t > ( _natives.Display () ));
             }
             else {
-                TRACE(Trace::Error, (_T("The native display (id) might be invalid / unsupported. Using the EGL default display instead!")));
+                TRACE (Trace::Error, (_T ("The native display (id) might be invalid / unsupported. Using the EGL default display instead!")));
             }
 
-            return reinterpret_cast<RPC::instance_id>(result);
+            return reinterpret_cast < RPC::instance_id > ( result );
         }
 
         string Port() const override {
@@ -334,15 +671,11 @@ class CompositorImplementation;
         IClient* CreateClient(const string& name, const uint32_t width, const uint32_t height) override {
             IClient* client = nullptr;
 
-            struct gbm_surface* surface = _platform.CreateRenderTarget(width, height);
-            if (surface != nullptr) {
-
                 Core::ProxyType<ClientSurface> object = _clients. template Instance(
                              name,
                              _platform,
                              *this,
                              name,
-                             reinterpret_cast<EGLSurface>(surface),
                              width,
                              height);
 
@@ -352,7 +685,6 @@ class CompositorImplementation;
                     client = &(*object);
                     Attached (name, client);
                 }
-            } 
 
             if(client == nullptr) {
                 TRACE(Trace::Error, (_T("Could not create the Surface with name %s"), name.c_str()));
@@ -443,6 +775,7 @@ class CompositorImplementation;
         }
 
     private:
+
         using ClientContainer = Core::ProxyMapType<string, ClientSurface>;
 
         mutable Core::CriticalSection _adminLock;
@@ -453,25 +786,52 @@ class CompositorImplementation;
         ClientContainer _clients;
         string _port;
         ModeSet _platform;
+
+        Natives _natives;
+        EGL _egl;
     };
+
+    // ODR-use
+    /* static */ constexpr void * const CompositorImplementation::EGL::EGL_NO_CONFIG;
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
 
-    ClientSurface::ClientSurface(ModeSet& modeSet, CompositorImplementation& compositor, const string& name, const EGLSurface& surface, const uint32_t width, const uint32_t height)
+    ClientSurface::ClientSurface(ModeSet& modeSet, CompositorImplementation& compositor, const string& name, const uint32_t width, const uint32_t height)
         : _modeSet(modeSet)
         , _compositor(compositor)
         , _name(name)
-        , _nativeSurface(surface)
+        , _nativeSurface { nullptr }
         , _opacity(Exchange::IComposition::maxOpacity)
         , _layer(0)
         , _destination( { 0, 0, width, height } ) {
+
+        using surface_t = decltype (_nativeSurface);
+        using class_t = std::remove_reference < decltype (_modeSet) > ::type;
+        using return_t = decltype ( std::declval < class_t > ().CreateBufferObject (width, height) );
+
+        static_assert (std::is_same < surface_t, return_t> :: value != false);
+
+// TODO: The internal scan out flag might not be appropriate
+        _nativeSurface = _modeSet.CreateBufferObject (width, height);
+
+        if (_nativeSurface == nullptr) {
+            TRACE (Trace::Error, (_T ("A sharing buffer/surface cannot be created for %s"), name.c_str ()));
+        }
 
     }
 
     ClientSurface::~ClientSurface() {
 
         _compositor.Detached(_name);
-        
+
+        if (_nativeSurface != nullptr) {
+            _modeSet.DestroyBufferObject (_nativeSurface);
+        }
+
+    }
+
+    void ClientSurface::ScanOut () {
+        _compositor.CompositeFor (_name);
     }
 
 } // namespace Plugin

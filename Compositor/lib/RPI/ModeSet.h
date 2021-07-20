@@ -3,13 +3,21 @@
 #include <cstdint>
 #include <limits>
 #include <ctime>
-#include <drm/drm_fourcc.h>
 
 #ifdef VC6
 #define __GBM__
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <drm/drm_fourcc.h>
 #include <EGL/egl.h>
+
+#ifdef __cplusplus
+}
+#endif
 
 #include "Module.h"
 #include <interfaces/IComposition.h>
@@ -69,8 +77,15 @@ class ModeSet
         uint32_t Height() const;
         uint32_t RefreshRate () const;
         bool Interlaced () const;
-        struct gbm_surface* CreateRenderTarget(const uint32_t width, const uint32_t height);
+        struct gbm_surface* CreateRenderTarget(const uint32_t width, const uint32_t height) const;
         void DestroyRenderTarget(struct BufferInfo& buffer);
+
+        // For objects not included in Swap ()
+        void DestroyRenderTarget(struct gbm_surface * surface) const;
+
+        struct gbm_bo * CreateBufferObject (uint32_t const width, uint32_t const height);
+        void DestroyBufferObject (struct gbm_bo * bo);
+
         void Swap(struct BufferInfo& buffer);
 
     private:

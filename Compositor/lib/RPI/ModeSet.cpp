@@ -427,7 +427,7 @@ bool ModeSet::Interlaced () const {
 }
 
 // These created resources are automatically destroyed if gbm_device is destroyed
-struct gbm_surface* ModeSet::CreateRenderTarget(const uint32_t width, const uint32_t height)
+struct gbm_surface* ModeSet::CreateRenderTarget(const uint32_t width, const uint32_t height) const
 {
     struct gbm_surface* result = nullptr;
 
@@ -453,16 +453,41 @@ void ModeSet::DestroyRenderTarget(struct BufferInfo& buffer)
 
     if (nullptr != buffer._surface)
     {
-        gbm_surface_destroy(buffer._surface);
+        DestroyRenderTarget (buffer._surface);
     }
 }
 
-static void PageFlip (int, unsigned int, unsigned int, unsigned int, void* data) {
+void ModeSet::DestroyRenderTarget (struct gbm_surface * surface) const {
+    if (surface != nullptr) {
+        /* void */ gbm_surface_destroy (surface);
+    }
 
+    surface = nullptr;
+}
+
+struct gbm_bo * ModeSet::CreateBufferObject (uint32_t const width, uint32_t const height) {
+    return _device != nullptr ? gbm_bo_create (_device, width, height, SupportedBufferType (), GBM_BO_USE_SCANOUT /* presented on a screen */ | GBM_BO_USE_RENDERING /* used for rendering */) : nullptr;
+}
+
+void ModeSet::DestroyBufferObject (struct gbm_bo * bo) {
+    if (bo != nullptr) {
+        /* void */ gbm_bo_destroy (bo);
+    }
+}
+
+using data_t = std::atomic < bool >;
+
+static void PageFlip (int, unsigned int, unsigned int, unsigned int, void* data) {
     assert (data != nullptr);
 
-    reinterpret_cast<std::mutex*> (data)->unlock();
-};
+    if (data != nullptr) {
+        data_t * _data = reinterpret_cast <data_t *>  (data);
+        * _data = false;
+    }
+    else {
+//        TRACE (Trace::Error, (_T ("Invalid callback data.")));
+    }
+}
 
 void ModeSet::Swap(struct BufferInfo& buffer) {
     assert (_fd > 0);
@@ -479,18 +504,20 @@ void ModeSet::Swap(struct BufferInfo& buffer) {
         uint32_t handle = gbm_bo_get_handle (buffer._bo).u32;
 
         if (drmModeAddFB (_fd, width, height, format != DRM_FORMAT_ARGB8888 ? bpp - BPP () + ColorDepth () : bpp, bpp, stride, handle, &(buffer._id)) != 0) {
-            buffer._id = ~0;
+            buffer._id = 0;
+
+            TRACE (Trace::Error, (_T ("Unable to contruct a frame buffer for scan out.")));
         }
         else {
-            std::mutex signal; 
-            signal.lock();
+            static data_t _cdata (true);
+            _cdata = true;
 
-            int err = drmModePageFlip (_fd, _crtc, buffer._id, DRM_MODE_PAGE_FLIP_EVENT, &signal);
-
+            int err = drmModePageFlip (_fd, _crtc, buffer._id, DRM_MODE_PAGE_FLIP_EVENT, &_cdata);
             // Many causes, but the most obvious is a busy resource or a missing drmModeSetCrtc
             // Probably a missing drmModeSetCrtc or an invalid _crtc
             // See ModeSet::Create, not recovering here
-            assert (err != EINVAL);
+            assert (err != -EINVAL);
+            assert (err != -EBUSY);
 
             if (err == 0) {
                 // No error
@@ -500,13 +527,17 @@ void ModeSet::Swap(struct BufferInfo& buffer) {
                 struct timespec timeout = { .tv_sec = 1, .tv_nsec = 0 };
                 fd_set fds;
 
-                while (signal.try_lock() == false) {
+                // Going fast could trigger an (unrecoverable) EBUSY
+                bool _waiting = _cdata;
+
+                while (_waiting != false) {
                     FD_ZERO(&fds);
                     FD_SET(_fd, &fds);
 
                     // Race free
                     if ((err = pselect(_fd + 1, &fds, nullptr, nullptr, &timeout, nullptr)) < 0) {
                         // Error; break the loop
+                        TRACE (Trace::Error, (_T ("Event processing for page flip failed.")));
                         break;
                     }
                     else if (err == 0) {
@@ -514,6 +545,8 @@ void ModeSet::Swap(struct BufferInfo& buffer) {
                         // TODO: add an additional condition to break the loop to limit the 
                         // number of retries, but then deal with the asynchronous nature of 
                         // the callback
+
+                        TRACE (Trace::Information, (_T ("Unable to execute a timely page flip. Trying again.")));
                     }
                     else if (FD_ISSET (_fd, &fds) != 0) {
                         // Node is readable
@@ -523,15 +556,35 @@ void ModeSet::Swap(struct BufferInfo& buffer) {
                         }
                         // Flip probably occured already otherwise it loops again
                     }
+
+                    _waiting = _cdata;
+
+                    if (_waiting != true) {
+                        // Do not prematurely remove the FB to prevent an EBUSY
+                        static BufferInfo _binfo = {nullptr, nullptr, 0};
+                        std::swap (_binfo, buffer);
+                    }
                 }
             }
+            else {
+                TRACE (Trace::Error, (_T ("Unable to execute a page flip.")));
+            }
 
-            drmModeRmFB(_fd, buffer._id);
+            if (_fd <= 0 && buffer._id == 0 && drmModeRmFB(_fd, buffer._id) != 0) {
+                TRACE (Trace::Error, (_T ("Unable to remove (old) frame buffer.")));
+            }
         }
 
-        // Release the current active buffer.
-        gbm_surface_release_buffer(buffer._surface, buffer._bo);
-        buffer._bo = nullptr;
+        if (buffer._surface != nullptr && buffer._bo != nullptr) {
+            gbm_surface_release_buffer(buffer._surface, buffer._bo);
+            buffer._bo = nullptr;
+        }
+        else {
+            TRACE (Trace::Error, (_T ("Unable to release (old) buffer.")));
+        }
+    }
+    else {
+        TRACE (Trace::Error, (_T ("Unable to obtain a buffer to support scan out.")));
     }
 }
 
