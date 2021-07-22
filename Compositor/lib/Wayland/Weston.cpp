@@ -413,6 +413,7 @@ namespace Weston {
                 , _timer(nullptr)
                 , _surface(surface)
             {
+                RegisterSurfaceDestroyListener(surface);
             }
             virtual ~SurfaceData()
             {
@@ -450,13 +451,12 @@ namespace Weston {
             static int SetOrder(void* data)
             {
                 SurfaceData* surfaceData = static_cast<SurfaceData*>(data);
-                struct weston_surface* surface = surfaceData->WestonSurface();
-                if (surface) {
-                    struct weston_desktop_surface *desktop_surface = weston_surface_get_desktop_surface(surface);
-                    if (desktop_surface) {
-                        char label[100] = {};
+                if (!surfaceData->ZOrder()) {
+                    struct weston_surface* surface = surfaceData->WestonSurface();
+                    if (surface) {
+                        struct weston_desktop_surface *desktop_surface = weston_surface_get_desktop_surface(surface);
+                        if (desktop_surface) {
 
-                        if (!surfaceData->ZOrder()) {
                             weston_desktop_surface_get_activated(desktop_surface);
                             surfaceData->WestonSurfaceSetTopAPI();
                         }
@@ -480,10 +480,6 @@ namespace Weston {
                 wl_event_source_remove(_timer);
                 _timer = nullptr;
             }
-            inline struct weston_surface* WestonSurface() const
-            {
-                return _surface;
-            }
             inline uint32_t ZOrder() const
             {
                 return _zorder;
@@ -492,11 +488,29 @@ namespace Weston {
             {
                 return _parent->PlatformCompositor();
             }
+            inline struct weston_surface* WestonSurface() const
+            {
+                return _surface;
+            }
             inline void WestonSurfaceSetTopAPI() const
             {
                 if (_parent->_surfaceSetTopAPI) {
                     _parent->_surfaceSetTopAPI(_surface);
                 }
+            }
+            inline void RemoveSurface() const
+            {
+                _parent->RemoveSurface(_surface);
+            }
+            inline void RegisterSurfaceDestroyListener(struct weston_surface* surface) {
+                _surfaceDestroyListener.notify = NotifySurfaceDestroy;
+                wl_signal_add(&surface->destroy_signal, &_surfaceDestroyListener);
+            }
+            static void NotifySurfaceDestroy(struct wl_listener* listener, void* data)
+            {
+                SurfaceData* surfaceData;
+                 surfaceData = wl_container_of(listener, surfaceData, _surfaceDestroyListener);
+                surfaceData->RemoveSurface();
             }
 
         private:
@@ -509,8 +523,9 @@ namespace Weston {
             std::string _name;
             struct wl_event_source* _timer;
             struct weston_surface* _surface;
+            struct wl_listener _surfaceDestroyListener;
         };
-        typedef std::map<const uint32_t, SurfaceData*> SurfaceMap;
+        typedef std::map<const string, SurfaceData*> SurfaceMap;
         typedef void (*ShellSurfaceSetTop)(struct weston_surface*);
 
     private:
@@ -1317,13 +1332,11 @@ namespace Weston {
         }
         void Get(const uint32_t id, Wayland::Display::Surface& surface) override
         {
-            SurfaceMap::iterator index(_surfaces.find(id));
-
-            if (index != _surfaces.end()) {
-
-                surface = Wayland::Display::Surface(index->second);
-            } else {
-                surface.Release();
+            for (const auto& index: _surfaces) {
+                if (index.second->Id() == id) {
+                    surface = Wayland::Display::Surface(index.second);
+                    break;
+                }
             }
         }
         void Process(Wayland::Display::IProcess* processloop) override
@@ -1401,9 +1414,9 @@ namespace Weston {
             if (surface->get_label) {
                 int status =  surface->get_label(surface, label, sizeof(label));
                 if (status >= 0) {
-                    uint32_t id = wl_resource_get_id(surface->resource);
-                    Compositor::UserData* userData = static_cast<Compositor::UserData*>(weston_compositor_get_user_data(surface->compositor));
-                    userData->Parent->AddSurface(id, label, surface);
+                    Compositor::UserData* userData =
+                            static_cast<Compositor::UserData*>(weston_compositor_get_user_data(surface->compositor));
+                    userData->Parent->AddSurface(label, surface);
                 }
             }
         }
@@ -1430,57 +1443,44 @@ namespace Weston {
             ASSERT(status == Core::ERROR_NONE)
             return status;
         }
-        void AddSurface(const uint32_t id, const string& name, struct weston_surface* westonSurface)
+        string ClientName(const string& label)
         {
-            SurfaceMap::iterator index(_surfaces.find(id));
+            size_t first = label.find_first_of("\'");
+            size_t last = label.find_last_of("\'");
+
+            string clientName = label.substr(first + 1, last - (first + 1));
+            return clientName;
+        }
+        void AddSurface(const string& label, struct weston_surface* westonSurface)
+        {
+            string name = ClientName(label);
+            SurfaceMap::iterator index(_surfaces.find(name));
             if (index == _surfaces.end()) {
+                uint16_t id = random();
                 SurfaceData* surface = new SurfaceData(this, id, name, westonSurface);
-                _surfaces.insert(std::pair<uint32_t, SurfaceData*>(id, surface));
+                _surfaces.insert(std::pair<const string, SurfaceData*>(name, surface));
                 _callback->Attached(id);
+            }
+        }
+        void RemoveSurface(struct weston_surface* westonSurface)
+        {
+            for (const auto& index: _surfaces) {
+                if (index.second->WestonSurface() == westonSurface) {
+                    _callback->Detached(index.second->Id());
+                    _surfaces.erase(index.first);
+                    break;
+                }
             }
         }
         struct weston_surface* GetSurface(const string& name)
         {
             struct weston_surface* surface = nullptr;
-            for (const auto& index: _surfaces) {
-                if (index.second->Name() == name) {
-                    surface = index.second->WestonSurface();
-                    break;
-                }
+            const auto& index(_surfaces.find(name));
+            if (index != _surfaces.end()) {
+                surface = index->second->WestonSurface();
             }
+
             return surface;
-        }
-        struct weston_view* GetView(const string& name) {
-            weston_view* clientView = nullptr;
-            struct weston_layer *layer = nullptr;
-            wl_list_for_each(layer, &_compositor->layer_list, link) {
-                uint32_t layer_idx = 0;
-                printf("Layer %d (pos 0x%lx):\n", layer_idx++,
-                        (unsigned long) layer->position);
-
-                if (!weston_layer_mask_is_infinite(layer)) {
-                        printf("\t[mask: (%d, %d) -> (%d,%d)]\n\n",
-                                layer->mask.x1, layer->mask.y1,
-                                layer->mask.x2, layer->mask.y2);
-                }
-
-                struct weston_view *view;
-                uint16_t index = 0;
-                wl_list_for_each(view, &layer->view_list.link, layer_link.link) {
-                    char label[512];
-                    if (view->surface->get_label) {
-                        int status =  view->surface->get_label(view->surface, label, sizeof(label));
-                        if (status >=0) {
-                             if (strncmp(name.c_str(), label, name.size()) == 0) {
-                                 clientView = view;
-                                 break;
-                             }
-                        }
-                    }
-                    index++;
-                }
-            }
-            return clientView;
         }
     public:
         ShellSurfaceSetTop _surfaceSetTopAPI;
