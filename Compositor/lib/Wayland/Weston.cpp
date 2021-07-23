@@ -410,6 +410,7 @@ namespace Weston {
                 : _parent(parent)
                 , _id(id)
                 , _name(name)
+                , _refCount(0)
                 , _timer(nullptr)
                 , _surface(surface)
             {
@@ -427,10 +428,16 @@ namespace Weston {
             }
             void AddRef() const override
             {
+                Core::InterlockedIncrement(_refCount);
             }
             uint32_t Release() const override
             {
-                return 0;
+                uint32_t result = Core::ERROR_NONE;
+                if (Core::InterlockedDecrement(_refCount) == 0) {
+                    delete this;
+                    result = Core::ERROR_DESTRUCTION_SUCCEEDED;
+                }
+                return (result);
             }
             EGLNativeWindowType Native() const override
             {
@@ -477,8 +484,10 @@ namespace Weston {
             }
             inline void RemoveTimer()
             {
-                wl_event_source_remove(_timer);
-                _timer = nullptr;
+                if (_timer) {
+                    wl_event_source_remove(_timer);
+                    _timer = nullptr;
+                }
             }
             inline uint32_t ZOrder() const
             {
@@ -509,7 +518,7 @@ namespace Weston {
             static void NotifySurfaceDestroy(struct wl_listener* listener, void* data)
             {
                 SurfaceData* surfaceData;
-                 surfaceData = wl_container_of(listener, surfaceData, _surfaceDestroyListener);
+                surfaceData = wl_container_of(listener, surfaceData, _surfaceDestroyListener);
                 surfaceData->RemoveSurface();
             }
 
@@ -521,6 +530,7 @@ namespace Weston {
             int32_t _height;
             uint32_t _zorder;
             std::string _name;
+            mutable uint32_t _refCount;
             struct wl_event_source* _timer;
             struct weston_surface* _surface;
             struct wl_listener _surfaceDestroyListener;
@@ -1186,8 +1196,9 @@ namespace Weston {
 
     private:
         static constexpr const uint8_t MaxCloneHeads = 16;
-        static constexpr const TCHAR* ShellInitEntryName = _T("wet_shell_init");
-        static constexpr const TCHAR* ShellSurfaceSetTopAPIName = _T("wet_shell_surface_update_layer");
+        static constexpr const uint32_t MaxLoadingTime = 3000;
+        static constexpr const TCHAR* ShellInitEntryAPI = _T("wet_shell_init");
+        static constexpr const TCHAR* ShellSurfaceUpdateLayerAPI = _T("wet_shell_surface_update_layer");
 
     public:
         Compositor() = delete;
@@ -1202,11 +1213,13 @@ namespace Weston {
             , _inputController(this)
             , _displayController(nullptr)
             , _callback(nullptr)
-            , _loaded(false)
+            , _backendLoaded(false)
             , _service(nullptr)
             , _display(nullptr)
             , _compositor(nullptr)
             , _resolution(Exchange::IComposition::ScreenResolution_1080i50Hz)
+            , _loadedSignal(false, true)
+            , _adminLock()
         {
             TRACE(Trace::Information, (_T("Starting Compositor")));
 
@@ -1223,13 +1236,24 @@ namespace Weston {
                 Core::Directory(path.Name().c_str()).CreatePath();
                 TRACE(Trace::Information, (_T("Created XDG_RUNTIME_DIR: %s\n"), path.Name().c_str()));
             }
+
+            // Start compositor loading
             Run();
+
+            // Wait till it get loaded successfully
+            bool compositorLoaded = WaitForLoading();
+
+            ASSERT(compositorLoaded == true);
+            if (compositorLoaded == false) {
+                TRACE(Trace::Error, (_T("Failed to load Weston Compositor")));
+            }
         }
         ~Compositor() {
             TRACE(Trace::Information, (_T("Destructing the compositor")));
             delete _backend;
             _logger.DestroyLogScope();
 
+            ClearSignal();
             weston_compositor_tear_down(_compositor);
             weston_log_ctx_compositor_destroy(_compositor);
             weston_compositor_destroy(_compositor);
@@ -1259,7 +1283,7 @@ namespace Weston {
                     ASSERT(err == 0);
                     if (err == 0) {
                         weston_init_process_list();
-                        if (LoadBackend(_service) == Core::ERROR_NONE) {
+                        if (LoadBackend(_service) == true) {
                             _compositor->idle_time = 300;
                             _compositor->default_pointer_grab = NULL;
                             _compositor->exit = HandleExit;
@@ -1274,6 +1298,7 @@ namespace Weston {
                                     RegisterSurfaceActivateListener();
                                     _inputController.CollectInputHandlers();
                                     weston_compositor_wake(_compositor);
+                                    NotifyLoaded();
                                     wl_display_run(_display);
                                     status = Core::ERROR_NONE;
                                 }
@@ -1289,8 +1314,8 @@ namespace Weston {
             _backend = Create<DRM>(_service);
             _backend->Load(this);
             weston_compositor_flush_heads_changed(_compositor);
-            ASSERT(_loaded == true);
-            return ((_loaded == true) ? Core::ERROR_NONE : Core::ERROR_GENERAL);
+            ASSERT(_backendLoaded == true);
+            return (_backendLoaded);
         }
         inline void SetEnvironments(const Config& config, const string& socketName)
         {
@@ -1298,9 +1323,6 @@ namespace Weston {
                    config.ConfigLocation.Value() : _service->DataPath();
             Core::SystemInfo::SetEnvironment(_T("XDG_CONFIG_DIRS"), configLocation);
             Core::SystemInfo::SetEnvironment(_T("WAYLAND_DISPLAY"), socketName);
-        }
-        bool IsLoaded() {
-            return _loaded;
         }
         template <class BACKEND>
         IBackend* Create(PluginHost::IShell* service)
@@ -1328,16 +1350,29 @@ namespace Weston {
         }
         inline void Loaded(const bool success)
         {
-            _loaded = success;
+            _backendLoaded = success;
+        }
+        inline void NotifyLoaded()
+        {
+            _loadedSignal.SetEvent();
+        }
+        inline void ClearSignal()
+        {
+            _loadedSignal.ResetEvent();
+        }
+        inline bool WaitForLoading() {
+            return (_loadedSignal.Lock(MaxLoadingTime) == Core::ERROR_NONE ? true : false);
         }
         void Get(const uint32_t id, Wayland::Display::Surface& surface) override
         {
+            _adminLock.Lock();
             for (const auto& index: _surfaces) {
                 if (index.second->Id() == id) {
                     surface = Wayland::Display::Surface(index.second);
                     break;
                 }
             }
+            _adminLock.Unlock();
         }
         void Process(Wayland::Display::IProcess* processloop) override
         {
@@ -1432,10 +1467,10 @@ namespace Weston {
             Core::Library library(shell.c_str());
             _library = library;
             if (library.IsLoaded() == true) {
-                ShellInit shellInit = reinterpret_cast<ShellInit>(library.LoadFunction(ShellInitEntryName));
+                ShellInit shellInit = reinterpret_cast<ShellInit>(library.LoadFunction(ShellInitEntryAPI));
                 if (shellInit != nullptr) {
                     if (shellInit(_compositor, 0, NULL) == 0) {
-                        _surfaceSetTopAPI = reinterpret_cast<ShellSurfaceSetTop>(library.LoadFunction(ShellSurfaceSetTopAPIName));
+                        _surfaceSetTopAPI = reinterpret_cast<ShellSurfaceSetTop>(library.LoadFunction(ShellSurfaceUpdateLayerAPI));
                         status = Core::ERROR_NONE;
                     }
                 }
@@ -1454,31 +1489,39 @@ namespace Weston {
         void AddSurface(const string& label, struct weston_surface* westonSurface)
         {
             string name = ClientName(label);
+            _adminLock.Lock();
             SurfaceMap::iterator index(_surfaces.find(name));
             if (index == _surfaces.end()) {
                 uint16_t id = random();
                 SurfaceData* surface = new SurfaceData(this, id, name, westonSurface);
                 _surfaces.insert(std::pair<const string, SurfaceData*>(name, surface));
                 _callback->Attached(id);
+                surface->AddRef();
             }
+            _adminLock.Unlock();
         }
         void RemoveSurface(struct weston_surface* westonSurface)
         {
+            _adminLock.Lock();
             for (const auto& index: _surfaces) {
                 if (index.second->WestonSurface() == westonSurface) {
                     _callback->Detached(index.second->Id());
                     _surfaces.erase(index.first);
+                    index.second->Release();
                     break;
                 }
             }
+            _adminLock.Unlock();
         }
         struct weston_surface* GetSurface(const string& name)
         {
             struct weston_surface* surface = nullptr;
+            _adminLock.Lock();
             const auto& index(_surfaces.find(name));
             if (index != _surfaces.end()) {
                 surface = index->second->WestonSurface();
             }
+            _adminLock.Unlock();
 
             return surface;
         }
@@ -1494,7 +1537,7 @@ namespace Weston {
         Wayland::Display* _displayController;
         Wayland::Display::ICallback* _callback;
 
-        bool _loaded;
+        bool _backendLoaded;
         Core::Library _library;
         PluginHost::IShell* _service;
 
@@ -1502,6 +1545,9 @@ namespace Weston {
         struct weston_compositor* _compositor;
         struct wl_listener _surfaceActivateListener;
         Exchange::IComposition::ScreenResolution _resolution;
+
+        mutable Core::Event _loadedSignal;
+        mutable Core::CriticalSection _adminLock;
 
         static Weston::Compositor* _instance;
     };
