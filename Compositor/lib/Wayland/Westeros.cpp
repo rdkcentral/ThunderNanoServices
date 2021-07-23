@@ -280,7 +280,7 @@ namespace Westeros {
                 }
                 else if (vertical == -1) { /* Scroll down */
                 }
-                reak;
+                break;
             case MOUSE_MOTION:
                 _instance->MouseMoveEvent(horizontal, vertical);
                 break;
