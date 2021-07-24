@@ -31,6 +31,9 @@ option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
 option(PLUGIN_STATECONTROLLER "Include StateController plugin" OFF)
+option(PLUGIN_COMRPCPLUGINSERVER "Include SimpleCOMRPCPluginServer" OFF)
+option(EXAMPLE_SIMPLECOMRPCCLIENT "Include Simple COMRPC Client" OFF)
+option(EXAMPLE_SIMPLECOMRPCINTERFACE "Include Simple COMRPC Interface" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
@@ -60,4 +63,18 @@ endif()
 if(PLUGIN_STATECONTROLLER)
     add_subdirectory(StateController)
 endif()
+
+if(EXAMPLE_SIMPLECOMRPCCLIENT)
+    add_subdirectory(SimpleCOMRPCPluginServer)
+endif()
+
+if(PLUGIN_COMRPCPLUGINSERVER)
+    add_subdirectory(SimpleCOMRPCClient)
+endif()
+
+if(EXAMPLE_SIMPLECOMRPCINTERFACE)
+    add_subdirectory(SimpleCOMRPCInterface)
+endif()
+
+
 
