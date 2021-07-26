@@ -145,13 +145,19 @@ namespace Plugin {
                     subSystems->Set(PluginHost::ISubSystem::BLUETOOTH, nullptr);
                     subSystems->Release();
                 }
+
+                if (_config.ContinuousBackgroundScan.IsSet() == true) {
+                    Connector().ContinuousBackgroundScan(_config.ContinuousBackgroundScan.Value());
+                }
+
+                Connector().BackgroundScan(true); // Maybe enable background scan already
             }
         }
 
         return result;
     }
 
-    /*virtual*/ void BluetoothControl::Deinitialize(PluginHost::IShell* service)
+    /*virtual*/ void BluetoothControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
 
@@ -304,21 +310,11 @@ namespace Plugin {
             if (index.Next()) {
                 if (index.Current() == _T("Scan")) {
                     Core::URL::KeyValue options(request.Query.Value());
-
                     bool lowEnergy = options.Boolean(_T("LowEnergy"), true);
-                    bool limited = options.Boolean(_T("Limited"), false);
-                    bool passive = options.Boolean(_T("Passive"), false);
                     uint16_t duration = options.Number<uint16_t>(_T("ScanTime"), 10);
-                    uint8_t flags = 0;
-                    uint32_t type = 0x338B9E;
-
-                    if (lowEnergy == true) {
-                        _application.Scan(duration, limited, passive);
-                    } else {
-                        _application.Scan(duration, type, flags);
-                    }
+                    Scan(lowEnergy, duration);
                     result->ErrorCode = Web::STATUS_OK;
-                    result->Message = _T("Scan started.");
+                    result->Message = _T("Requested scan start.");
                 } else if ((index.Current() == _T("Pair")) || (index.Current() == _T("Connect"))) {
                     bool pair = (index.Current() == _T("Pair"));
                     string destination;
@@ -332,7 +328,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Device not found.");
                     } else if (pair == true) {
-                        uint32_t res = device->Pair(IBluetooth::DISPLAY_YES_NO, 20);
+                        uint32_t res = device->Pair(IBluetooth::NO_INPUT_NO_OUTPUT, 20);
                         if (res == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Paired device.");
@@ -360,7 +356,7 @@ namespace Plugin {
         return result;
     }
 
-    Core::ProxyType<Web::Response> BluetoothControl::PostMethod(Core::TextSegmentIterator&, const Web::Request&)
+    Core::ProxyType<Web::Response> BluetoothControl::PostMethod(Core::TextSegmentIterator& /* index */, const Web::Request& /* request */)
     {
         Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
         result->ErrorCode = Web::STATUS_BAD_REQUEST;
@@ -378,9 +374,9 @@ namespace Plugin {
         if (index.IsValid() == true) {
             if (index.Next()) {
                 if (index.Current() == _T("Scan")) {
-                    _application.Abort();
+                    StopScanning();
                     result->ErrorCode = Web::STATUS_OK;
-                    result->Message = _T("Scan stopped.");
+                    result->Message = _T("Requested scan stop.");
                 } else if ((index.Current() == _T("Pair")) || (index.Current() == _T("Connect"))) {
                     bool pair = (index.Current() == _T("Pair"));
                     string address;
@@ -426,10 +422,6 @@ namespace Plugin {
 
     //  IBluetooth methods
     // -------------------------------------------------------------------------------------------------------
-    /* virtual */ bool BluetoothControl::IsScanning() const
-    {
-        return (_application.IsScanning());
-    }
     /* virtual */ uint32_t BluetoothControl::Register(IBluetooth::INotification* notification)
     {
         _adminLock.Lock();
@@ -467,34 +459,33 @@ namespace Plugin {
 
         return (Core::ERROR_NONE);
     }
-    /* virtual */ bool BluetoothControl::Scan(const bool enable)
+    /* virtual */ bool BluetoothControl::IsScanning() const
     {
-        if ((_application.IsScanning() == false) && (enable == true)) {
-            // Clearing previously discovered devices.
-            RemoveDevices([](DeviceImpl* device) -> bool { if ((device->IsBonded() == false) && (device->IsConnected() == false)) device->Clear(); return(false); });
+        return (_application.IsScanning());
+    }
+    /* virtual */ uint32_t BluetoothControl::Scan(const bool lowEnergy, const uint16_t duration)
+    {
+        uint32_t result;
 
-            bool lowEnergy = true;
-            bool limited = false;
-            bool passive = false;
-            uint16_t duration = 10;
-            uint8_t flags = 0;
-            uint32_t type = 0x338B9E;
-
-            if (lowEnergy == true) {
-                TRACE(Trace::Information, ("Start Low-Energy Bluetooth Scan"));
-                _application.Scan(duration, limited, passive);
-            } else {
-                TRACE(Trace::Information, ("Start Regular Bluetooth Scan"));
-                _application.Scan(duration, type, flags);
-            }
-        } else if ((_application.IsScanning() == true) && (enable == false)) {
-
-            TRACE(Trace::Information, ("Stop Bluetooth Scan"));
-
-            _application.Abort();
+        if (lowEnergy == true) {
+            result = _application.Scan(duration, false, false);
+        } else {
+            result = _application.Scan(duration, false);
         }
 
-        return (_application.IsScanning() == enable);
+        return (result);
+    }
+    /* virtual */ uint32_t BluetoothControl::StopScanning()
+    {
+        uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+        if (_application.IsScanning() == true) {
+            TRACE(Trace::Information, ("Stop Bluetooth Scan"));
+            _application.Abort();
+            result = Core::ERROR_NONE;
+        }
+
+        return (result);
     }
     /* virtual */ Exchange::IBluetooth::IDevice* BluetoothControl::Device(const string& address)
     {
@@ -520,6 +511,8 @@ namespace Plugin {
         DeviceImpl* impl = Find(address, lowEnergy);
 
         if (impl == nullptr) {
+            TRACE(Trace::Information, (_T("New device discovered %s"), address.ToString().c_str()));
+
             if (lowEnergy == true) {
                 impl = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address);
             } else {
@@ -528,6 +521,7 @@ namespace Plugin {
 
             ASSERT(impl != nullptr);
             _devices.push_back(impl);
+            Update(impl);
         }
 
         _adminLock.Unlock();
@@ -559,7 +553,7 @@ namespace Plugin {
             entry->Capabilities(capability, authentication, oob_data);
         }
         else {
-            TRACE(Trace::Information, (_T("Could not set the capabilities for device %s"), device.ToString()));
+            TRACE(Trace::Error, (_T("Could not set the capabilities for device %s"), device.ToString()));
         }
 
         _adminLock.Unlock();

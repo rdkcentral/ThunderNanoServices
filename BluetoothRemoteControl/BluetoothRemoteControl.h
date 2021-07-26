@@ -551,15 +551,18 @@ namespace Plugin {
 
             virtual ~GATTRemote()
             {
+                if (_device != nullptr) {
+                    if (_device->Callback(static_cast<Exchange::IBluetooth::IDevice::ICallback*>(nullptr)) != Core::ERROR_NONE) {
+                        TRACE(Trace::Fatal, (_T("Could not remove the callback from the device")));
+                    }
+                }
+
                 if (GATTSocket::IsOpen() == true) {
                     GATTSocket::Close(Core::infinite);
                 }
 
                 if (_device != nullptr) {
-                    if (_device->Callback(static_cast<Exchange::IBluetooth::IDevice::ICallback*>(nullptr)) != Core::ERROR_NONE) {
-                        TRACE(Trace::Fatal, (_T("Could not remove the callback from the device")));
-                    }
-
+                    _device->Disconnect();
                     _device->Release();
                     _device = nullptr;
                 }
@@ -643,7 +646,7 @@ namespace Plugin {
                     }
                     else {
                         uint32_t outcome = result;
-                        result = (result == Core::ERROR_NONE ? (cmd.Error() == Core::ERROR_NONE ? Core::ERROR_PRIVILIGED_REQUEST : cmd.Error()) : result);
+                        result = (result == Core::ERROR_NONE ? (cmd.Error() == Core::ERROR_NONE ? (uint32_t)Core::ERROR_PRIVILIGED_REQUEST : cmd.Error()) : result);
                         TRACE(Trace::Error, (_T("Failed to enable voice (handle 0x%04X), error: %d [%d]"), _voiceCommandHandle, outcome, result == Core::ERROR_PRIVILIGED_REQUEST ? cmd.Result().Error() : 0));
                     }
                 }
@@ -668,8 +671,6 @@ namespace Plugin {
                 }
 
                 _decoder = Decoders::IDecoder::Instance(_manufacturerName.c_str(), enumValue.Value(), config.Configuration.Value());
-
-
                 if (_decoder == nullptr) {
                     TRACE(Trace::Error, (_T("Failed to create a decoder for %s type: [%s]"), _manufacturerName.c_str(), enumValue.Data()));
                     _audioProfile = nullptr;
@@ -683,7 +684,7 @@ namespace Plugin {
                         config.Resolution.Value());
                 }
             }
-            void Discover() 
+            void Discover()
             {
                 _profile->Discover(CommunicationTimeOut * 20, *this, [&](const uint32_t result) {
                     if (result == Core::ERROR_NONE) {
@@ -775,38 +776,42 @@ namespace Plugin {
                 }
 
                 if (_profile == nullptr) {
-                    TRACE(Flow, (_T("The HoG device is ready for operation")));
-
                     SetDecoder(config.AudioProfile);
                 }
-                else {
-                    if (_device->IsConnected() == true) {
-                        uint32_t result = GATTSocket::Open(5000);
-                        if (result != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, (_T("Failed to open GATT socket [%s]"), _device->RemoteId().c_str()));
-                        }
-                        else {
+
+                if (_device->IsConnected() == true) {
+                    uint32_t result = GATTSocket::Open(5000);
+                    if (result != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Failed to open GATT socket [%s] [%i]"), _device->RemoteId().c_str(), result));
+                        GATTSocket::Close(Core::infinite);
+                    } else {
+                        if (_profile == nullptr) {
+                            TRACE(Flow, (_T("The HoG device is ready for operation")));
+                        } else {
                             TRACE(Flow, (_T("The device is not configured. Read the device configuration.")));
                             Discover();
                         }
                     }
-                    else {
-                        TRACE(Flow, (_T("The device is not configured. Connect to it, so we can read the config.")));
-                        _device->Connect();
-                    }
+                } else {
+                    TRACE(Flow, (_T("The device is not configured. Connect to it, so we can read the config.")));
                 }
+
+                // Try to connect or mark for autoconnection if already connected.
+                _device->Connect();
             }
             uint32_t Initialize() override
             {
-                return (Security(BT_SECURITY_LOW) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
+                return (Security(BT_SECURITY_MEDIUM) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
             }
             void Operational() override
             {
+                _parent->Connected(_name);
+
                 if (_profile == nullptr) {
                     TRACE(Flow, (_T("The received MTU: %d, no need for discovery, we know it all"), MTU()));
 
                     // No need to do service discovery if device knows the Handles to use. If so, DeviceDiscovery has
-                    // already been done and the only thing we need to do is get the startingvalues :-)
+                    // already been done and the only thing we need to do is get the starting values :-)
                     ReadSoftwareRevision();
                 }
                 else {
@@ -1127,11 +1132,12 @@ namespace Plugin {
                 _adminLock.Lock();
                 if (_device != nullptr) {
                     if (_device->IsConnected() == true) {
-                        if (IsOpen() == false) {
+                        if ((IsOpen() == false) && (GATTSocket::IsConnecting() == false)) {
                             TRACE(Trace::Information, (_T("Connecting GATT socket [%s]"), _device->RemoteId().c_str()));
                             uint32_t result = GATTSocket::Open(5000);
                             if (result != Core::ERROR_NONE) {
-                                TRACE(Trace::Error, (_T("Failed to open GATT socket [%s]"), _device->RemoteId().c_str()));
+                                TRACE(Trace::Error, (_T("Failed to open GATT socket [%s] [%i]"), _device->RemoteId().c_str(), result));
+                                GATTSocket::Close(Core::infinite);
                             }
                         }
                     } else if (_device->IsValid() == true) {
@@ -1141,11 +1147,6 @@ namespace Plugin {
                             if (result != Core::ERROR_NONE) {
                                 TRACE(Trace::Error, (_T("Failed to close GATT socket [%s]"), _device->RemoteId().c_str()));
                             }
-                        }
-                        else {
-                            // Looks like the device is in range again, how about trying a connect?
-                            TRACE(Trace::Information, (_T("Trying to re-establish a connection [%s]"), _device->RemoteId().c_str()));
-                            _device->Connect();
                         }
                     } else {
                         TRACE(Flow, (_T("Releasing device")));
@@ -1344,6 +1345,7 @@ namespace Plugin {
         // Bluetooth Remote Control implementation
         uint32_t Assign(const string& address);
         uint32_t Revoke();
+        void Connected(const string& name);
         void Operational(const GATTRemote::Data& settings);
         void VoiceData(Exchange::IVoiceProducer::IProfile* profile);
         void VoiceData(const uint32_t seq, const uint16_t length, const uint8_t dataBuffer[]);

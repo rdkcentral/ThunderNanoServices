@@ -68,7 +68,15 @@ namespace Plugin {
             }
 
         public:
-            void StateChange(PluginHost::IShell* plugin) override
+            void Activated(const string&, PluginHost::IShell* plugin) override
+            {
+                _parent.StateChange(plugin);
+            }
+            void Deactivated(const string&, PluginHost::IShell* plugin) override
+            {
+                _parent.StateChange(plugin);;
+            }
+            void Unavailable(const string&, PluginHost::IShell* plugin) override
             {
                 _parent.StateChange(plugin);
             }

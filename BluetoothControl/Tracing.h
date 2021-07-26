@@ -241,7 +241,7 @@ namespace Plugin {
             }
             ControlFlow(const hci_event_hdr& info, const evt_le_meta_event& leinfo)
             {
-                Format(_T("<UNKNOWN CONTROL LE EVENT>"), leinfo.subevent);
+                FormatEvt(_T("<UNKNOWN CONTROL LE EVENT>"), leinfo.subevent);
                 uint16_t len = (btohs(info.plen) - sizeof(evt_le_meta_event));
                 Format(_T("len=%d"), len);
                 if (len > 0) {
@@ -266,7 +266,7 @@ namespace Plugin {
             }
             ControlFlow(const evt_cmd_status& info)
             {
-                FORMAT_EVENT(EVT_CMD_COMPLETE);
+                FORMAT_EVENT(EVT_CMD_STATUS);
                 const char* group;
                 const uint16_t opcode = UnpackOpcode(btohs(info.opcode), &group);
                 Format(_T("group=%s, opcode=0x%03X, status=%d"), group, opcode, info.status);
@@ -276,31 +276,39 @@ namespace Plugin {
                 FORMAT_EVENT(EVT_LE_ADVERTISING_REPORT, info.bdaddr, (info.bdaddr_type + 1 /* not for classic devices */));
                 const char* typeStr;
                 switch (info.evt_type) {
-                    case 0: typeStr = "Connectable-undirected"; break;
-                    case 1: typeStr = "Connectable-directed"; break;
-                    case 2: typeStr = "Scannable-undirected"; break;
-                    case 3: typeStr = "Non-connectable-undirected"; break;
-                    case 4: typeStr = "Scan-response"; break;
+                    case 0: typeStr = "connectable-undirected"; break;
+                    case 1: typeStr = "connectable-directed"; break;
+                    case 2: typeStr = "scannable-undirected"; break;
+                    case 3: typeStr = "non-connectable-undirected"; break;
+                    case 4: typeStr = "scan-response"; break;
                     default: typeStr = "<unknown>"; break;
                 }
-                Format(_T("evt_type=%d=%s, length=%d"), info.evt_type, typeStr, info.length);
+                Format(_T("evt_type=%d(%s), length=%d"), info.evt_type, typeStr, info.length);
                 if (info.length > 0) {
                     string data;
                     Core::ToHexString(info.data, info.length, data);
                     Format(_T("data=%s"), data.c_str());
                 }
             }
-            ControlFlow(const extended_inquiry_info& info)
+            ControlFlow(const inquiry_info& info)
             {
-                FORMAT_EVENT(EVT_EXTENDED_INQUIRY_RESULT, info.bdaddr);
-                Format(_T("dev_class=0x%06X, pscan_rep_mode=%d, pscan_period_mode=%d, clock_offset=%d, rssi=%d"),
-                       UnpackDeviceClass(info.dev_class), info.pscan_rep_mode, info.pscan_period_mode, btohs(info.clock_offset), info.rssi);
+                FORMAT_EVENT(EVT_INQUIRY_RESULT, info.bdaddr);
+                Format(_T("dev_class=0x%06X, pscan_rep_mode=%d, pscan_period_mode=%d, pscan_mode=%d, clock_offset=%d"),
+                       UnpackDeviceClass(info.dev_class), info.pscan_rep_mode, info.pscan_period_mode, info.pscan_mode, btohs(info.clock_offset));
             }
             ControlFlow(const inquiry_info_with_rssi& info)
             {
                 FORMAT_EVENT(EVT_INQUIRY_RESULT_WITH_RSSI, info.bdaddr);
                 Format(_T("dev_class=0x%06X, pscan_rep_mode=%d, pscan_period_mode=%d, clock_offset=%d, rssi=%d"),
                        UnpackDeviceClass(info.dev_class), info.pscan_rep_mode, info.pscan_period_mode, btohs(info.clock_offset), info.rssi);
+            }
+            ControlFlow(const extended_inquiry_info& info)
+            {
+                FORMAT_EVENT(EVT_EXTENDED_INQUIRY_RESULT, info.bdaddr);
+                string data;
+                Core::ToHexString(info.data, sizeof(info.data), data);
+                Format(_T("dev_class=0x%06X, pscan_rep_mode=%d, pscan_period_mode=%d, clock_offset=%d, rssi=%d, data=%s"),
+                       UnpackDeviceClass(info.dev_class), info.pscan_rep_mode, info.pscan_period_mode, btohs(info.clock_offset), info.rssi, data.c_str());
             }
             ControlFlow(const evt_conn_request& info)
             {
@@ -328,7 +336,7 @@ namespace Plugin {
                     case HCI_INSUFFICIENT_SECURITY: reasonStr = "INSUFFICIENT_SECURITY"; break;
                     default: reasonStr = "<unknown>"; break;
                 }
-                Format(_T("status=%d, reason=0x%02X=%s"), info.status, info.reason, reasonStr);
+                Format(_T("status=%d, reason=0x%02X(%s)"), info.status, info.reason, reasonStr);
             }
             ControlFlow(const evt_le_connection_complete& info)
             {

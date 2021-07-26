@@ -65,6 +65,9 @@ namespace Plugin {
             void Deactivated(const string&, PluginHost::IShell*) override
             {
             }
+            void Unavailable(const string&, PluginHost::IShell*) override
+            {
+            }
             BEGIN_INTERFACE_MAP(PluginMonitor)
                 INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
             END_INTERFACE_MAP

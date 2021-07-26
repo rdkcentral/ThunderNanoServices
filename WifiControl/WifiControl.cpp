@@ -43,6 +43,7 @@ namespace Plugin
     WifiControl::WifiControl()
         : _skipURL(0)
         , _retryInterval(0)
+        , _maxRetries(Core::NumberType<uint32_t>::Max())
         , _service(nullptr)
         , _configurationStore()
         , _sink(*this)
@@ -152,7 +153,10 @@ namespace Plugin
                     else {
                         _autoConnectEnabled = true;
                         _retryInterval = config.RetryInterval.Value();
-                        _autoConnect.Connect(config.Preferred.Value(), _retryInterval, ~0);
+                        _maxRetries = config.MaxRetries.Value() == -1 ? 
+                                      Core::NumberType<uint32_t>::Max() : 
+                                      config.MaxRetries.Value();
+                        _autoConnect.Connect(config.Preferred.Value(), _retryInterval, _maxRetries);
                     }
                 }
             }
