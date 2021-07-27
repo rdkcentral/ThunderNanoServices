@@ -18,7 +18,6 @@ find_package(${NAMESPACE}Core)
 find_package(${NAMESPACE}COM)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set(ProxyStubGenerator_DIR "/home/lukasz/Desktop/builds/rpi3b+_vc4/build1/buildroot/output/build/wpeframework-custom/Tools/cmake" ${ProxyStubGenerator_DIR})
 find_package(ProxyStubGenerator REQUIRED)
 
 
@@ -40,6 +39,8 @@ add_library(${TARGET} SHARED
         Module.cpp
         )
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 target_link_libraries(${TARGET}
         PRIVATE
                 ${NAMESPACE}COM::${NAMESPACE}COM
@@ -57,6 +58,8 @@ set_target_properties(${TargetMarshalling} PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
         )
+
+string(TOLOWER ${NAMESPACE} NAMESPACE_LIB)
 
 install(
         TARGETS ${TARGET}  EXPORT ${TARGET}Targets  # for downstream dependencies
