@@ -23,9 +23,45 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class SimpleCOMRPCPluginServer : public PluginHost::IPlugin, public Exchange::IWallClock {
+    class SimpleCOMRPCPluginServer : public PluginHost::IPlugin {
         //Inner private classes
     private:
+        class WallClock : public Exchange::IWallClock {
+        public:
+            WallClock() = delete;
+            WallClock(const WallClock&) = delete;
+            WallClock& operator= (const WallClock&) = delete;
+
+            WallClock(SimpleCOMRPCPluginServer& parent)
+                : _adminLock()
+                , _parent(&parent) {
+                printf("Constructing WallClock\n");
+            }
+            ~WallClock() override {
+                printf("Destructing WallClock\n");
+            }
+
+        public:
+            //  IWallClock methods
+            uint32_t Arm(const uint16_t seconds, Exchange::IWallClock::ICallback*) override;
+            uint32_t Disarm(const Exchange::IWallClock::ICallback*) override;
+            uint64_t Now() const override;
+
+            void Decouple() {
+                _adminLock.Lock();
+                _parent = nullptr;
+                _adminLock.Unlock();
+            }
+            
+            BEGIN_INTERFACE_MAP(WallClock)
+                INTERFACE_ENTRY(Exchange::IWallClock)
+            END_INTERFACE_MAP
+
+        private:
+            Core::CriticalSection _adminLock;
+            SimpleCOMRPCPluginServer* _parent;
+        };
+
         class ComNotificationSink : public PluginHost::IShell::ICOMLink::INotification {
         public:
             ComNotificationSink() = delete;
@@ -125,9 +161,15 @@ namespace Plugin {
             #ifdef __WINDOWS__
             #pragma warning(default: 4355)
             #endif
-            ~WallClockNotifier() = default;
+            ~WallClockNotifier() {
+                Clear();
+            }
 
         public:
+            void Clear() {
+                _job.Revoke();
+                _notifiers.clear();
+            }
             uint32_t Arm(const uint16_t seconds, Exchange::IWallClock::ICallback* callback)
             {
                 uint32_t result = Core::ERROR_ALREADY_CONNECTED;
@@ -230,25 +272,23 @@ namespace Plugin {
         #endif
         SimpleCOMRPCPluginServer()
             : _notifier()
+            , _wallclock(nullptr)
             , _comNotificationSink(*this)
         {
         }
         #ifdef __WINDOWS__
         #pragma warning(default: 4355)
         #endif
-        ~SimpleCOMRPCPluginServer() override = default;
+        ~SimpleCOMRPCPluginServer() override {
+            printf("Shutting down\n");
+        }
 
     public:
         //Service Registration
         BEGIN_INTERFACE_MAP(SimpleCOMRPCPluginServer)
             INTERFACE_ENTRY(IPlugin)
-            INTERFACE_ENTRY(Exchange::IWallClock)
+            INTERFACE_AGGREGATE(Exchange::IWallClock, _wallclock)
         END_INTERFACE_MAP
-
-        //  IWallClock methods
-        uint32_t Arm(const uint16_t seconds, Exchange::IWallClock::ICallback*) override;
-        uint32_t Disarm(const Exchange::IWallClock::ICallback*) override;
-        uint64_t Now() const override;
 
         //  IPlugin methods
         // First time initialization. Whenever a plugin is loaded, it is offered a Service object with relevant
@@ -274,6 +314,7 @@ namespace Plugin {
 
     private:
         WallClockNotifier _notifier;
+        WallClock* _wallclock;
         Core::Sink<ComNotificationSink> _comNotificationSink;
     };
 }

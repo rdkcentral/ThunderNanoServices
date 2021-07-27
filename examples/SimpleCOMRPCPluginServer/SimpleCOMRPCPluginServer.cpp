@@ -34,12 +34,16 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
         service->Register(&_comNotificationSink);
+        _wallclock = Core::Service<WallClock>::Create<WallClock>(*this);
         return (EMPTY_STRING);
     }
 
     void SimpleCOMRPCPluginServer::Deinitialize(PluginHost::IShell* service)  /* override */
     {
         ASSERT(service != nullptr);
+        _wallclock->Decouple();
+        _wallclock->Release();
+        _notifier.Clear();
         service->Unregister(&_comNotificationSink);
     }
 
@@ -50,27 +54,46 @@ namespace Plugin {
     //Private methods
 
     //IWallClock
-    uint32_t SimpleCOMRPCPluginServer::Arm(const uint16_t seconds, ICallback* callback)
+    uint32_t SimpleCOMRPCPluginServer::WallClock::Arm(const uint16_t seconds, ICallback* callback)
     {   
-        uint32_t result = _notifier.Arm(seconds, callback);
-        TRACE(Trace::Information, (_T("Armed a callback, it fires in %d seconds. Result: %d"), seconds, result));
+        uint32_t result = Core::ERROR_BAD_REQUEST;
+
+        _adminLock.Lock();
+
+        if (_parent != nullptr) {
+            result = _parent->_notifier.Arm(seconds, callback);
+            TRACE(Trace::Information, (_T("Armed a callback, it fires in %d seconds. Result: %d"), seconds, result));
+        }
+        _adminLock.Unlock();
+
         return (result);
     }
-    uint32_t SimpleCOMRPCPluginServer::Disarm(const Exchange::IWallClock::ICallback* callback)
+    uint32_t SimpleCOMRPCPluginServer::WallClock::Disarm(const Exchange::IWallClock::ICallback* callback)
     {
-        uint32_t result = _notifier.Disarm(callback);
-        TRACE(Trace::Information, (_T("Disarmed a callback, it will not fire anymore. Result: %d"), result));
+        uint32_t result = Core::ERROR_BAD_REQUEST;
+
+        _adminLock.Lock();
+
+        if (_parent != nullptr) {
+            result = _parent->_notifier.Disarm(callback);
+            TRACE(Trace::Information, (_T("Disarmed a callback, it will not fire anymore. Result: %d"), result));
+        }
+
+        _adminLock.Unlock();
+
         return (result);
     }
-    uint64_t SimpleCOMRPCPluginServer::Now() const
+    uint64_t SimpleCOMRPCPluginServer::WallClock::Now() const
     {
         Core::Time result = Core::Time::Now();
         TRACE(Trace::Information, (_T("The time has been requested, we return a clock time of: %s"), result.ToRFC1123().c_str()));
-        return result.Ticks();
+
+        return (_parent == nullptr ? 0 : result.Ticks());
     }
 
     void SimpleCOMRPCPluginServer::OnRevoke(const Exchange::IWallClock::ICallback* remote) {
         // Looks like we need to stop the callback from being called, it is a dead object now anyway :-)
+        TRACE(Trace::Information, (_T("Revoking a callback, it will not fire anymore")));
         _notifier.Disarm(remote);
     }
 

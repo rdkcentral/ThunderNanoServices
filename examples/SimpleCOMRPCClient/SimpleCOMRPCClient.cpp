@@ -21,6 +21,7 @@
 
 #include <core/core.h>
 #include <com/com.h>
+#include <plugins/plugins.h>
 #include "../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
 
 #ifdef __WINDOWS__
@@ -65,8 +66,13 @@ public:
     Sink(const Sink&) = delete;
     Sink& operator= (const Sink&) = delete;
 
-    Sink(const uint16_t period) : _period(period) {};
-    ~Sink() override = default;
+    Sink(const uint16_t period) 
+        : _period(period) {
+        printf("Sink constructed!!\n");
+    };
+    ~Sink() override {
+        printf("Sink destructed!!\n");
+    }
 
 public:
     BEGIN_INTERFACE_MAP(Sink)
@@ -143,9 +149,8 @@ int main(int argc, char* argv[])
     else
     {
         int element;
-        bool subscribed(false);
         Exchange::IWallClock* clock(nullptr);
-        Core::Sink<Sink> sink(10); // Fire each 10 Seconds
+        Sink* sink = nullptr; 
         Core::ProxyType<RPC::CommunicatorClient> client(Core::ProxyType<RPC::CommunicatorClient>::Create(comChannel));
         Math* outbound = Core::Service<Math>::Create<Math>();
         printf("Channel: %s:[%d]\n\n", comChannel.HostAddress().c_str(), comChannel.PortNumber());
@@ -179,23 +184,28 @@ int main(int argc, char* argv[])
                 if (clock != nullptr) {
                     printf("There is no need to create a clock, we already have one!\n");
                 } else {
-                    if (type == ServerType::STANDALONE_SERVER) {
-                        if (client->IsOpen() == false) {
-                            client->Open(2000);
-                        }
+                    if (client->IsOpen() == false) {
+                        client->Open(2000);
+                    }
 
-                        if (client->IsOpen() == false) {
-                            printf("Could not open a connection to the server. No exchange of interfaces happened!\n");
-                            break;
-                        } else {
+                    if (client->IsOpen() == false) {
+                        printf("Could not open a connection to the server. No exchange of interfaces happened!\n");
+                        break;
+                    } else {
+                        if (type == ServerType::STANDALONE_SERVER) {
                             clock = client->Aquire<Exchange::IWallClock>(3000, _T("WallClockImplementation"), ~0);
                         }
-                    }
-                    else if (type == ServerType::PLUGIN_SERVER) {
-                        clock = client->Open<Exchange::IWallClock>(callsign);
+                        else {
+                            WPEFramework::PluginHost::IShell* controller = client->Aquire<WPEFramework::PluginHost::IShell>(10000, _T("Controller"), ~0);
+                            if (controller != nullptr) {
+                                clock = controller->QueryInterfaceByCallsign<Exchange::IWallClock>(callsign);
+                                controller->Release();
+                            }
+                        }
                     }
 
                     if (clock == nullptr) {
+                        client->Close(Core::infinite);
                         printf("Tried aquiring the IWallclock, but it is not available\n");
                     } else {
                         printf("Aquired the IWallclock, ready for use\n");
@@ -224,9 +234,10 @@ int main(int argc, char* argv[])
                 if (clock == nullptr) {
                     printf("We do not have a clock interface, so we can not register the callback\n");
                 }
-                else if (subscribed == true) {
-                    subscribed = false;
-                    uint32_t result = clock->Disarm(&sink);
+                else if (sink != nullptr) {
+                    uint32_t result = clock->Disarm(sink);
+                    sink->Release();
+                    sink = nullptr;
                     if (result == Core::ERROR_NONE) {
                         printf("We removed the callback from the wallclock. We will nolonger be updated\n");
                     }
@@ -238,13 +249,14 @@ int main(int argc, char* argv[])
                     }
                 }
                 else {
-                    uint32_t result = clock->Arm(10, &sink);
+                    sink = Core::Service<Sink>::Create<Sink>(10); // Fire each 10 Seconds
+                    uint32_t result = clock->Arm(10, sink);
                     if (result == Core::ERROR_NONE) {
-                        subscribed = true;
                         printf("We set the callback on the wallclock. We will be updated\n");
                     }
                     else {
                         printf("Something went wrong, the imlementation reports: %d\n", result);
+                        sink->Release();
                     }
                 }
                 break;
@@ -265,6 +277,15 @@ int main(int argc, char* argv[])
             }
 
         } while (element != 'Q');
+
+        if (sink != nullptr) {
+            clock->Disarm(sink);
+            sink->Release();
+            sink = nullptr;
+        }
+        if (client->IsOpen() == true) {
+            client->Close(Core::infinite);
+        }
 
         if (outbound != nullptr) {
             outbound->Release();
