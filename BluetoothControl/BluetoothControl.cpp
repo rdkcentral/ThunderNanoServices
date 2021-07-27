@@ -239,12 +239,16 @@ namespace Plugin {
             result->Message = _T("Current status.");
 
             response->Scanning = IsScanning();
-            std::list<DeviceImpl*>::const_iterator loop = _devices.begin();
 
+           _adminLock.Lock();
+
+            std::list<DeviceImpl*>::const_iterator loop = _devices.begin();
             while (loop != _devices.end()) {
                 response->Devices.Add().Set(*loop);
                 loop++;
             }
+
+            _adminLock.Unlock();
 
             result->Body(response);
         } else {
