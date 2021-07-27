@@ -171,8 +171,19 @@ namespace Plugin {
         // Deinitialize what we initialized..
         _service = nullptr;
 
+        for (auto device : _devices) {
+            device->AbortPairing();
+        }
+
+        Connector().BackgroundScan(false);
+
         // We bring the interface up, so we should bring it down as well..
-        _application.Close();
+        Connector().Close();
+
+        Bluetooth::ManagementSocket& administrator = Connector().Control();
+        Bluetooth::ManagementSocket::Down(administrator.DeviceId());
+        administrator.DeviceId(HCI_DEV_NONE);
+
         ::destruct_bluetooth_driver();
     }
 
