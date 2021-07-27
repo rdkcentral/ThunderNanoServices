@@ -32,9 +32,9 @@ namespace Exchange {
 #endif
 
     enum example_ids {
-        ID_WALLCLOCK = 0x00001000,
-        ID_WALLCLOCK_CALLBACK = 0x00001001,
-        ID_MATH = 0x00001002
+        ID_WALLCLOCK = 0x80001000,
+        ID_WALLCLOCK_CALLBACK = 0x80001001,
+        ID_MATH = 0x80001002
     };
 
     struct IWallClock : virtual public Core::IUnknown {
