@@ -28,12 +28,16 @@
 extern "C" {
 #endif
 
+#include <gbm.h>
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
+#include <sys/socket.h>
 
 #ifdef __cplusplus
 }
 #endif
+
+#include <mutex>
 
 template <class T>
 struct _remove_const {
@@ -55,12 +59,12 @@ struct _remove_const <T const *>{
     typedef T * type;
 };
 
-MODULE_NAME_DECLARATION(BUILD_REFERENCE)
-
 // Suppress compiler warnings of unused (parameters)
 // Omitting the name is sufficient but a search on this keyword provides easy access to the location
 template <typename T>
 void silence (T &&) {}
+
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace WPEFramework {
 namespace Plugin {
@@ -78,9 +82,14 @@ class CompositorImplementation;
 
     public:
         RPC::instance_id Native () const override {
-            // Sharing this handle does not imply its underlying contents can be accessed!
-            return reinterpret_cast < RPC::instance_id > ( _nativeSurface );
+            // Sharing this handle does not imply its contents can be accessed!
+
+            static_assert ((std::is_convertible < decltype (_nativeSurface._fd), RPC::instance_id > :: value) != false);
+            static_assert (sizeof (decltype (_nativeSurface._fd) ) <= sizeof (RPC::instance_id));
+
+            return static_cast < RPC::instance_id > ( _nativeSurface._fd );
         }
+
         string Name() const override
         {
                 return _name;
@@ -116,7 +125,10 @@ class CompositorImplementation;
         const std::string _name;
 
         // The buffer acts as a surface for the remote site
-        struct gbm_bo * _nativeSurface;
+        struct {
+            struct gbm_bo * _buf;
+            int _fd;
+        } _nativeSurface;
 
         uint32_t _opacity;
         uint32_t _layer;
@@ -170,10 +182,417 @@ class CompositorImplementation;
             CompositorImplementation& _parent;
         };
 
+        class DMATransfer : public Core::Thread {
+
+            private :
+
+                CompositorImplementation & _compositor;
+
+                // Waiting for connection requests
+                int _listen;
+                // Actual socket for communication
+                int _transfer;
+
+                struct sockaddr_un const _addr;
+
+                bool _valid;
+
+                using valid_t = decltype (_valid);
+
+            public :
+
+                DMATransfer () = delete;
+                DMATransfer (CompositorImplementation & compositor) : Core::Thread (/*0, _T ("")*/), _compositor (compositor), _listen { -1 }, _transfer { -1 }, _addr { AF_UNIX, "/tmp/Compositor/DMA" }, _valid { _Initialize () } {}
+                ~DMATransfer () {
+                    Stop ();
+                    /* valid_t */ _Deinitialize ();
+                }
+
+                DMATransfer (DMATransfer const &) = delete;
+                DMATransfer & operator = (DMATransfer const &) = delete;
+
+            private :
+
+                using timeout_t = _remove_const < decltype (Core::infinite) > :: type;
+//                static constexpr timeout_t _timeout = 1000;
+
+            public :
+
+                timeout_t Worker () override {
+                    // Never call 'us' again, delay the next call an infinite amount of time if the state is not 'stopped'
+                    timeout_t _ret = Core::infinite;
+
+                    if (IsRunning () != false) {
+
+                        // Blocking
+                        _transfer = accept (_listen, nullptr, nullptr);
+
+                        // Do some processing on the clients
+
+                        std::string _msg;
+                        int _fd = -1;
+
+                        if (Receive (_msg, _fd) && _compositor.FDFor (_msg, _fd) && Send (_msg, _fd) != false) {
+                            // Just wait for the remote peer to close the connection
+                            ssize_t _size = read (_transfer, nullptr, 0);
+
+                            decltype (errno) _err = errno;
+
+                            switch (_size) {
+                                case -1 :   // Error
+                                            TRACE (Trace::Error, (_T ("Error after DMA transfer : %d."), _err));
+                                            break;
+                                case 0  :   // remote has closed the connection
+                                            TRACE (Trace::Information, (_T ("Remote has closed the DMA connection.")));
+                                            break;
+                                default :   // Unexpected data available
+                                            TRACE (Trace::Error, (_T ("Unexpected data read after DMA transfer.")));
+                            }
+
+                            /* int */ close (_transfer);
+
+                            _transfer = -1;
+                        }
+                        else {
+                            TRACE (Trace::Error, (_T ("Failed to exchange DMA information for %s."),  _msg.length () > 0 ? _msg.c_str () : "'<no name provided>'"));
+                        }
+                    }
+
+                    return _ret;
+                }
+
+                valid_t Valid () const { return _valid; }
+
+                // Receive file descriptor with additional message
+                valid_t Receive (std::string & msg, int & fd) {
+                    valid_t _ret = Valid () && Connect (Core::infinite);
+
+                    if (_ret != true) {
+                        TRACE (Trace::Information, (_T ("Unable to receive (DMA) data.")));
+                    }
+                    else {
+                        _ret = _Receive (msg, fd);
+                        _ret = Disconnect (Core::infinite) && _ret;
+                    }
+
+                    return _ret;
+                }
+
+                // Send file descriptor with additional message
+                valid_t Send (std::string const & msg, int fd) {
+                    valid_t _ret = Valid () && Connect (Core::infinite);
+
+                    if (_ret != true) {
+                        TRACE (Trace::Information, (_T ("Unable to send (DMA) data.")));
+                    }
+                    else {
+                        _ret = _Send (msg, fd) && Disconnect (Core::infinite);
+                        _ret = Disconnect (Core::infinite) && _ret;
+                    }
+
+                    return _ret;
+                }
+
+            private :
+
+                valid_t _Initialize () {
+                    valid_t _ret = false;
+
+                    // Just a precaution
+                    /* int */ unlink (_addr.sun_path);
+
+                    _listen = socket (_addr.sun_family /* domain */, SOCK_STREAM /* type */, 0 /* protocol */);
+                    _ret = _listen != -1;
+
+                    if (_ret != false) {
+                        _ret = bind (_listen, reinterpret_cast < struct sockaddr const * > (&_addr), sizeof (_addr)) == 0;
+                    }
+
+                    if (_ret != false) {
+// TODO: Derive it from maximum number of supported clients
+                        // Number of pending requests for accept to handle
+                        constexpr int queue_size = 1;
+                        _ret = listen (_listen, queue_size) == 0;
+                    }
+
+                    return _ret;
+                }
+
+                valid_t _Deinitialize () {
+                    valid_t _ret = false;
+
+                    _ret = close (_listen) == 0 && close (_transfer) == 0;
+
+                    // Delete the (bind) socket in the file system if no reference exist (anymore)
+                    _ret = unlink (_addr.sun_path) == 0 && _ret;
+
+                    return _ret;
+                }
+
+                valid_t Connect (timeout_t timeout) {
+                    silence (timeout);
+
+                    valid_t _ret = false;
+
+                    decltype (errno) _err = errno;
+
+                    _ret = _transfer > -1 && _err == 0;
+
+                    return _ret;
+                }
+
+                valid_t Disconnect (timeout_t timeout) {
+                    silence (timeout);
+
+                    valid_t _ret = false;
+
+                    decltype (errno) _err = errno;
+
+                    _ret = _transfer > -1 && _err == 0;
+
+                    return _ret;
+                }
+
+                valid_t _Send (std::string const & msg, int fd) {
+                    valid_t _ret = false;
+
+                    // Logical const
+                    static_assert ((std::is_same <char *, _remove_const  < decltype ( & msg [0] ) > :: type >:: value) != false);
+                    char * _buf  = const_cast <char *> ( & msg [0] );
+
+                    size_t const _bufsize = msg.size ();
+
+                    if (_bufsize > 0) {
+
+                        // Scatter array for vector I/O
+                        struct iovec _iov;
+
+                        // Starting address
+                        _iov.iov_base = reinterpret_cast <void *> (_buf);
+                        // Number of bytes to transfer
+                        _iov.iov_len = _bufsize;
+
+                        // Actual message
+                        struct msghdr _msgh {};
+
+                        // Optional address
+                        _msgh.msg_name = nullptr;
+                        // Size of address
+                        _msgh.msg_namelen = 0;
+                        // Scatter array
+                        _msgh.msg_iov = &_iov;
+                        // Elements in msg_iov
+                        _msgh.msg_iovlen = 1;
+
+                        // Ancillary data
+                        // The macro returns the number of bytes an ancillary element with payload of the passed in data length, eg size of ancillary data to be sent
+                        char _control [CMSG_SPACE (sizeof ( decltype ( fd) ))];
+
+                        if (fd > -1) {
+                            // Contruct ancillary data to be added to the transfer via the control message
+
+                            // Ancillary data, pointer
+                            _msgh.msg_control = _control;
+
+                            // Ancillary data buffer length
+                            _msgh.msg_controllen = sizeof ( _control );
+
+                            // Ancillary data should be access via cmsg macros
+                            // https://linux.die.net/man/2/recvmsg
+                            // https://linux.die.net/man/3/cmsg
+                            // https://linux.die.net/man/2/setsockopt
+                            // https://www.man7.org/linux/man-pages/man7/unix.7.html
+
+                            // Control message
+
+                            // Pointer to the first cmsghdr in the ancillary data buffer associated with the passed msgh
+                            struct cmsghdr * _cmsgh = CMSG_FIRSTHDR ( &_msgh );
+
+                            if (_cmsgh != nullptr) {
+                                // Originating protocol
+                                // To manipulate options at the sockets API level
+                                _cmsgh->cmsg_level = SOL_SOCKET;
+
+                                // Protocol specific type
+                                // Option at the API level, send or receive a set of open file descriptors from another process
+                                _cmsgh->cmsg_type = SCM_RIGHTS;
+
+                                // The value to store in the cmsg_len member of the cmsghdr structure, taking into account any necessary alignmen, eg byte count of control message including header
+                                _cmsgh->cmsg_len = CMSG_LEN (sizeof ( decltype ( fd ) ));
+
+                                // Initialize the payload
+                                // Pointer to the data portion of a cmsghdr, ie unsigned char []
+                                * reinterpret_cast < decltype (fd) * > ( CMSG_DATA ( _cmsgh ) ) = fd;
+
+                                _ret = true;
+                            }
+                            else {
+                                // Error
+                            }
+                        }
+                        else {
+                            // No extra payload, ie  file descriptor(s), to include
+                            _msgh.msg_control = nullptr;
+                            _msgh.msg_controllen = 0;
+
+                            _ret = true;
+                        }
+
+                        if (_ret != false) {
+                            // Configuration succeeded
+
+                            // https://linux.die.net/man/2/sendmsg
+                            // https://linux.die.net/man/2/write
+                            // Zero flags is equivalent to write
+
+                            ssize_t _size = -1;
+                            socklen_t _len = sizeof (_size);
+
+                            // Only send data if the buffer is large enough to contain all data
+                            if (getsockopt (_transfer, SOL_SOCKET, SO_SNDBUF, &_size, &_len) == 0) {
+                                // Most options use type int, ssize_t was just a placeholder
+                                static_assert (sizeof (int) <= sizeof (ssize_t));
+                                TRACE (Trace::Information, (_T ("The sending buffer capacity equals %d bytes."), _size));
+
+// TODO: do not send if the sending buffer is too small
+                                _size = sendmsg (_transfer, &_msgh, 0);
+                            }
+                            else {
+                                // Unable to determine buffer capacity
+                            }
+
+                            _ret = _size != -1;
+
+                            if (_ret != false) {
+                                // Ancillary data is not included
+                                TRACE (Trace::Information, (_T ("Send %d bytes out of %d."), _size, _bufsize));
+                            }
+                            else {
+                                TRACE (Trace::Error, (_T ("Failed to send data.")));
+                            }
+                        }
+
+                    }
+                    else {
+                        TRACE (Trace::Error, (_T ("A data message to be send cannot be empty!")));
+                    }
+
+                    return _ret;
+                }
+
+                valid_t _Receive (std::string & msg, int & fd) {
+                    bool _ret = false;
+
+                    msg.clear ();
+                    fd = -1;
+
+                    ssize_t _size = -1;
+                    socklen_t _len = sizeof (_size);
+
+                    if (getsockopt (_transfer, SOL_SOCKET, SO_RCVBUF, &_size, &_len) == 0) {
+                        TRACE (Trace::Information, (_T ("The receiving buffer maximum capacity equals %d bytes."), _size));
+
+                        // Most options use type int, ssize_t was just a placeholder
+                        static_assert (sizeof (int) <= sizeof (ssize_t));
+                        msg.reserve (static_cast < int > (_size));
+                    }
+                    else {
+                        TRACE (Trace::Information, (_T ("Unable to determine buffer maximum cpacity. Using %d bytes instead."), msg.capacity ()));
+                    }
+
+                    size_t const _bufsize = msg.capacity ();
+
+                    if (_bufsize > 0) {
+                        using fd_t = std::remove_reference < decltype (fd) > :: type;
+
+                        static_assert ((std::is_same <char *, _remove_const  < decltype ( & msg [0] ) > :: type >:: value) != false);
+                        char _buf [_bufsize];
+
+                        // Scatter array for vector I/O
+                        struct iovec _iov;
+
+                        // Starting address
+                        _iov.iov_base = reinterpret_cast <void *> (&_buf [0]);
+                        // Number of bytes to transfer
+                        _iov.iov_len = _bufsize;
+
+                        // Actual message
+                        struct msghdr _msgh {};
+
+                        // Optional address
+                        _msgh.msg_name = nullptr;
+                        // Size of address
+                        _msgh.msg_namelen = 0;
+                        // Elements in msg_iov
+                        _msgh.msg_iovlen = 1;
+                        // Scatter array
+                        _msgh.msg_iov = &_iov;
+
+                        // Ancillary data
+                        // The macro returns the number of bytes an ancillary element with payload of the passed in data length, eg size of ancillary data to be sent
+                        char _control [CMSG_SPACE (sizeof ( fd_t ))];
+
+                        // Ancillary data, pointer
+                        _msgh.msg_control = _control;
+
+                        // Ancillery data buffer length
+                        _msgh.msg_controllen = sizeof (_control);
+
+// TODO: do not receive if the receiving buffer is too small
+                        // No flags set
+                        _size = recvmsg (_transfer, &_msgh, 0);
+
+                        _ret = _size > 0;
+
+                        switch (_size) {
+                            case -1 :   // Error
+                                        {
+                                           TRACE (Trace::Error, (_T ("Error receiving remote (DMA) data.")));
+                                           break;
+                                        }
+                            case 0  :   // Peer has done an orderly shutdown, before any data was received
+                                        {
+                                            TRACE (Trace::Error, (_T ("Error receiving remote (DMA) data. Compositorclient may have become unavailable.")));
+                                            break;
+                                        }
+                            default :   // Data
+                                        {
+                                            // Extract the file descriptor information
+                                            TRACE (Trace::Information, (_T ("Received %d bytes."), _size));
+
+                                            // Pointer to the first cmsghdr in the ancillary data buffer associated with the passed msgh
+                                            // Assume a single cmsgh was sent
+                                            struct cmsghdr * _cmsgh = CMSG_FIRSTHDR ( &_msgh );
+
+                                            // Check for the expected properties the client should have set
+                                            if (_cmsgh != nullptr
+                                                && _cmsgh->cmsg_level == SOL_SOCKET
+                                                && _cmsgh->cmsg_type == SCM_RIGHTS) {
+
+                                                // The macro returns a pointer to the data portion of a cmsghdr.
+                                                fd = * reinterpret_cast < fd_t * > ( CMSG_DATA ( _cmsgh ) );
+                                            }
+                                            else {
+                                                TRACE (Trace::Information, (_T ("No (valid) ancillary data received.")));
+                                            }
+
+                                            msg.assign (_buf, _size);
+                                        }
+                        }
+                    }
+                    else {
+                        // Error
+                        TRACE (Trace::Error, (_T ("A receiving data buffer (message) cannot be empty!")));
+                    }
+
+                    return _ret;
+                }
+        };
+
         class Natives {
             private :
 
-                ModeSet /*const*/ & _set;
+                ModeSet & _set;
 
                 using dpy_return_t = decltype ( std::declval < ModeSet > ().UnderlyingHandle () );
                 using surf_return_t = decltype ( std::declval < ModeSet > ().CreateRenderTarget (0, 0) );
@@ -206,7 +625,7 @@ class CompositorImplementation;
                 bool Initialize () {
                     bool _ret = false;
 
-                    // The argument to Open is unused, any suffices
+                    // The argument to Open is unused, an empty string suffices
                     static_assert (std::is_pointer < dpy_t > ::value != false);
                     _ret =_set.Open ("") == Core::ERROR_NONE && Display () != nullptr;
 
@@ -444,12 +863,19 @@ class CompositorImplementation;
             , _observers()
             , _clients()
             , _platform()
+            , _dma { nullptr }
             , _natives (_platform)
             , _egl (_natives)
         {
         }
         ~CompositorImplementation()
         {
+            if (_dma != nullptr) {
+                delete _dma;
+            }
+
+            _dma = nullptr;
+
             _clients.Clear();
             if (_externalAccess != nullptr) {
                 delete _externalAccess;
@@ -489,18 +915,49 @@ class CompositorImplementation;
 
     public:
 
-        bool CompositeFor (std::string const & name) {
+        bool FDFor (std::string const & name, int & fd) {
+            std::lock_guard < decltype (_clientLock) > const lock (_clientLock);
+
             bool _ret = false;
 
-            TRACE (Trace::Error, (_T ("%s requested an update. Update is currently not supported."), name.c_str ()));
+            TRACE (Trace::Information, (_T ("%s requested a DMA transfer."), name.c_str ()));
 
             /* ProxyType <> */ auto _client = _clients.Find (name);
 
-            if (name.compare (_client->Name ()) != 0) {
+            if (_client.IsValid () != true ||  name.compare (_client->Name ()) != 0) {
+                TRACE (Trace::Error, (_T ("%s does not appear to be a valid client."), name.length () > 0 ? name.c_str () : "'<no name provided>'"));
+            }
+            else {
+                if (_dma != nullptr) {
+                    using fd_t = std::remove_reference < decltype (fd) > :: type;
+                    using class_t = decltype (_client);
+                    using return_t = decltype ( std::declval < class_t > ().operator-> ()->Native () );
+
+                    static_assert ((std::is_convertible < return_t, fd_t > :: value) != false);
+                    // Likely to almost always fail
+//                    static_assert ((sizeof ( return_t ) <= sizeof ( fd_t )) != false);
+
+                    fd = static_cast < fd_t > ( _client->Native () );
+
+                    _ret = fd > -1;
+                }
+            }
+
+            return _ret;
+        }
+
+        bool CompositeFor (std::string const & name) {
+            std::lock_guard < decltype (_clientLock) > const lock (_clientLock);
+
+            bool _ret = false;
+
+            /* ProxyType <> */ auto _client = _clients.Find (name);
+
+            if (_client.IsValid () != true ||  name.compare (_client->Name ()) != 0) {
                 TRACE (Trace::Error, (_T ("%s does not appear to be a valid client."), name.c_str ()));
             }
             else {
-//                /* RPC::instance_id */ _client->Native ();
+//              /* RPC::instance_id */ _client->Native ();
 
                 static GLES _gles;
 
@@ -510,8 +967,6 @@ class CompositorImplementation;
                     ModeSet::BufferInfo _bufferInfo = { _natives.Surface (), nullptr, 0 };
                     /* void */ _platform.Swap (_bufferInfo);
                 }
-
-
             }
 
             return _ret;
@@ -655,7 +1110,7 @@ class CompositorImplementation;
             EGLNativeDisplayType result ( static_cast < EGLNativeDisplayType > ( EGL_DEFAULT_DISPLAY ) );
 
             if (_natives.Valid () != false) {
-            // Just remove the unexpected const if it exist
+                // Just remove the unexpected const if it exist
                 result = static_cast < EGLNativeDisplayType > (const_cast < return_no_const_t > ( _natives.Display () ));
             }
             else {
@@ -686,8 +1141,21 @@ class CompositorImplementation;
                     Attached (name, client);
                 }
 
-            if(client == nullptr) {
-                TRACE(Trace::Error, (_T("Could not create the Surface with name %s"), name.c_str()));
+            if (client == nullptr) {
+                TRACE(Trace::Error, (_T("Unable to create the ClientSurface with name %s"), name.c_str()));
+            }
+            else {
+                _dma = new DMATransfer (* this);
+
+                if (_dma == nullptr || _dma->Valid () != true) {
+                    TRACE (Trace::Error, (_T ("DMA transfers are not supported.")));
+
+                    delete _dma;
+                    _dma = nullptr;
+                }
+                else {
+                    _dma->Run ();
+                }
             }
 
             return (client);
@@ -787,8 +1255,10 @@ class CompositorImplementation;
         string _port;
         ModeSet _platform;
 
+        DMATransfer * _dma;
         Natives _natives;
         EGL _egl;
+        std::mutex _clientLock;
     };
 
     // ODR-use
@@ -800,33 +1270,45 @@ class CompositorImplementation;
         : _modeSet(modeSet)
         , _compositor(compositor)
         , _name(name)
-        , _nativeSurface { nullptr }
+        , _nativeSurface { nullptr, -1 }
         , _opacity(Exchange::IComposition::maxOpacity)
         , _layer(0)
         , _destination( { 0, 0, width, height } ) {
 
-        using surface_t = decltype (_nativeSurface);
+        using surface_t = decltype (_nativeSurface._buf);
         using class_t = std::remove_reference < decltype (_modeSet) > ::type;
         using return_t = decltype ( std::declval < class_t > ().CreateBufferObject (width, height) );
 
         static_assert (std::is_same < surface_t, return_t> :: value != false);
 
 // TODO: The internal scan out flag might not be appropriate
-        _nativeSurface = _modeSet.CreateBufferObject (width, height);
+        _nativeSurface._buf = _modeSet.CreateBufferObject (width, height);
 
-        if (_nativeSurface == nullptr) {
-            TRACE (Trace::Error, (_T ("A sharing buffer/surface cannot be created for %s"), name.c_str ()));
+        if (_nativeSurface._buf == nullptr) {
+            TRACE (Trace::Error, (_T ("A ClientSurface cannot be created for %s"), name.c_str ()));
         }
+        else {
+            _nativeSurface._fd = gbm_bo_get_fd (_nativeSurface._buf);
 
+            if (_nativeSurface._fd == -1) {
+                TRACE (Trace::Error, (_T ("The created ClientSurface for %s is not suitable for DMA."), name.c_str ()));
+            }
+        }
     }
 
     ClientSurface::~ClientSurface() {
 
         _compositor.Detached(_name);
 
-        if (_nativeSurface != nullptr) {
-            _modeSet.DestroyBufferObject (_nativeSurface);
+        if (_nativeSurface._fd != -1) {
+            /* int */ close (_nativeSurface._fd);
         }
+
+        if (_nativeSurface._buf != nullptr) {
+            _modeSet.DestroyBufferObject (_nativeSurface._buf);
+        }
+
+        _nativeSurface = { nullptr, -1 };
 
     }
 
