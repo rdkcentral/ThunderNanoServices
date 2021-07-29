@@ -474,13 +474,14 @@ namespace Weston {
             }
             void ZOrder(const uint32_t zorder) override
             {
-                if (_timer == nullptr) {
-                    _zorder = zorder;
-                    struct weston_compositor* compositor = _parent->PlatformCompositor();
-                    struct wl_event_loop* loop = wl_display_get_event_loop(compositor->wl_display);
-                    _timer = wl_event_loop_add_timer(loop, SetOrder, this);
-                    wl_event_source_timer_update(_timer, 1);
+                if (_timer != nullptr) {
+                    wl_event_source_remove(_timer);
                 }
+                _zorder = zorder;
+                struct weston_compositor* compositor = _parent->PlatformCompositor();
+                struct wl_event_loop* loop = wl_display_get_event_loop(compositor->wl_display);
+                _timer = wl_event_loop_add_timer(loop, SetOrder, this);
+                wl_event_source_timer_update(_timer, 1);
             }
             inline void RemoveTimer()
             {
@@ -1495,8 +1496,20 @@ namespace Weston {
                 uint16_t id = random();
                 SurfaceData* surface = new SurfaceData(this, id, name, westonSurface);
                 _surfaces.insert(std::pair<const string, SurfaceData*>(name, surface));
-                _callback->Attached(id);
                 surface->AddRef();
+                _callback->Attached(id);
+                if (name == "video-surface") {
+                    SurfaceMap::iterator index = _surfaces.begin();
+                    if (index != _surfaces.end()) {
+                        _callback->Detached(index->second->Id());
+                        _callback->Attached(index->second->Id());
+                        SetInput(index->second->Name());
+                    }
+                }
+
+            } else {
+                _surfaces.erase(index);
+                _surfaces.insert(std::pair<const string, SurfaceData*>(name, index->second));
             }
             _adminLock.Unlock();
         }
