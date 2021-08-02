@@ -336,11 +336,11 @@ namespace Plugin {
             while (std::getline(csvFile, line)) {
                 allLines.push_back(line);
             }
-            if (allLines.size() > lastMeasurementsHistory) {
+            if (allLines.size()) {
 
                 result << allLines.front() << "\n"; //write header
-
-                for (auto currentLine = allLines.end() - lastMeasurementsHistory; currentLine != allLines.end(); ++currentLine) {
+                uint8_t max = (allLines.size() > lastMeasurementsHistory) ? allLines.size() - lastMeasurementsHistory : allLines.size()-1;
+                for (auto currentLine = allLines.end() - max; currentLine != allLines.end(); ++currentLine) {
                     result << *currentLine << "\n";
                 }
             } else {
