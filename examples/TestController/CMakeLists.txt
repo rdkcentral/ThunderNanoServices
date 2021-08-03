@@ -18,6 +18,8 @@
 set(PLUGIN_NAME TestController)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
+set(PLUGIN_TESTCONTROLLER_OUTOFPROCESS "true" CACHE STRING "Controls if the plugin should run in its own process [true, false].")
+
 message("Setting up ${PLUGIN_NAME}")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
