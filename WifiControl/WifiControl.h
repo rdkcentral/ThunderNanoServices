@@ -391,7 +391,14 @@ namespace Plugin {
                     MoveState(states::IDLE);
 
                     _ssidList.clear();
-                }
+                } 
+                else if (result == Core::ERROR_UNKNOWN_KEY) {
+                    // Remove network with SSID causing this error 
+                    // It has wrong WPA so we can't do anything here - proper error will be returned to user
+                    // Do not try to connect to this network in next iteration
+                     _ssidList.pop_front();
+                    _job.Submit();
+                } 
                 else {
                     MoveState(states::CONNECTING);
 
@@ -425,6 +432,7 @@ namespace Plugin {
                 , Preferred()
                 , AutoConnect(false)
                 , RetryInterval(30)
+                , MaxRetries(-1)
                 , WaitTime(15)
                 , LogFile()
             {
@@ -434,6 +442,7 @@ namespace Plugin {
                 Add(_T("preferred"), &Preferred);
                 Add(_T("autoconnect"), &AutoConnect);
                 Add(_T("retryinterval"), &RetryInterval);
+                Add(_T("maxretries"), &MaxRetries);
                 Add(_T("waittime"), &WaitTime);
                 Add(_T("logfile"), &LogFile);
             }
@@ -448,6 +457,7 @@ namespace Plugin {
             Core::JSON::String Preferred;
             Core::JSON::Boolean AutoConnect;
             Core::JSON::DecUInt8 RetryInterval;
+            Core::JSON::DecSInt32 MaxRetries;
             Core::JSON::DecUInt8 WaitTime;
             Core::JSON::String LogFile;
         };
@@ -670,8 +680,8 @@ namespace Plugin {
         void event_networkchange();
         void event_connectionchange(const string& ssid);
 
-        inline uint32_t Connect(const string& ssid) {
-
+        inline uint32_t Connect(const string& ssid)
+        {
             if (_autoConnectEnabled == true) {
                 _autoConnect.Revoke();
             }
@@ -679,10 +689,11 @@ namespace Plugin {
             uint32_t result = _controller->Connect(ssid);
 
             if ((result != Core::ERROR_INPROGRESS) && (_autoConnectEnabled == true)) {
-                _autoConnect.SetPreferred(ssid, _retryInterval, ~0);
+                _autoConnect.SetPreferred(result == Core::ERROR_UNKNOWN_KEY ? 
+                                                    _T("") : 
+                                                    ssid, _retryInterval, _maxRetries);
                 _autoConnect.UpdateStatus(result);
             }
-
             return result;
         }
         inline uint32_t Disconnect(const string& ssid) {
@@ -693,6 +704,20 @@ namespace Plugin {
 
             return _controller->Disconnect(ssid);
         }
+
+        inline uint32_t UpdateStoredConfigList()
+        {   
+            uint32_t result = Core::ERROR_NONE;
+            Core::File configFile(_configurationStore);
+            if (configFile.Destroy()) {
+                result = Store();
+            } else {
+                result = Core::ERROR_UNAVAILABLE;
+            }
+
+            return result;
+        }
+
         inline uint32_t Store() {
             uint32_t result = Core::ERROR_NONE;
 
@@ -728,6 +753,7 @@ namespace Plugin {
     private:
         uint8_t _skipURL;
         uint8_t _retryInterval;
+        uint32_t _maxRetries;
         PluginHost::IShell* _service;
         string _configurationStore;
         Sink _sink;
