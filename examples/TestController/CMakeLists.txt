@@ -18,13 +18,13 @@
 set(PLUGIN_NAME TestController)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
- message("Setting up ${PLUGIN_NAME}")
+message("Setting up ${PLUGIN_NAME}")
 
- find_package(${NAMESPACE}Plugins REQUIRED)
- find_package(${NAMESPACE}Definitions REQUIRED)
- find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 
- add_library(${MODULE_NAME} SHARED
+add_library(${MODULE_NAME} SHARED
         Module.cpp
         TestController.cpp
         TestControllerJsonRpc.cpp
@@ -36,17 +36,17 @@ set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
         Examples/Test4.cpp
 )
 
- set_target_properties(${MODULE_NAME} PROPERTIES
+set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
- target_link_libraries(${MODULE_NAME}
+target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
- install(TARGETS ${MODULE_NAME}
+install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
- write_config(PLUGINS ${PLUGIN_NAME})
+write_config(PLUGINS ${PLUGIN_NAME})
