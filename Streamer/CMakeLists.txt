@@ -28,6 +28,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_STREAMER_AUTOSTART "true" CACHE STRING "Automatically start Streamer plugin")
+set(PLUGIN_STREAMER_OUTOFPROCESS "true" CACHE STRING "Controls if the plugin should run in its own process [true, false].")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 

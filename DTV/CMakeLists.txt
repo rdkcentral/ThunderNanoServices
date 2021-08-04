@@ -27,7 +27,8 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-option(PLUGIN_DTV_AUTOSTART "Automatic start this plugin" OFF)
+set(PLUGIN_DTV_AUTOSTART "true" CACHE STRING "Automatically start DTV plugin")
+set(PLUGIN_DTV_OUTOFPROCESS "true" CACHE STRING "Controls if the plugin should run in its own process [true, false].")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
