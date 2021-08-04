@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="testconsole" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="../../artifacts/debug/testconsole" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="../../artifacts/debug/" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option parameters="127.0.0.1" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-D__DEBUG__" />
+				</Compiler>
+				<Linker>
+					<Add directory="../../artifacts/debug/" />
+				</Linker>
+			</Target>
+			<Target title="Release">
+				<Option output="../../artifacts/release/testconsole" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="../../artifacts/release/" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add directory="../../artifacts/release/" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add directory="../../../WPEFramework" />
+		</Compiler>
+		<Linker>
+			<Add library="websocket" />
+			<Add library="generics" />
+		</Linker>
+		<Unit filename="../testserver/DataContainer.cpp" />
+		<Unit filename="Protocols.h" />
+		<Unit filename="testconsole.cpp" />
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
