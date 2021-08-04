@@ -1,11 +1,6 @@
 #ifndef __ECHOPROTOCOL_H
 #define __ECHOPROTOCOL_H
 
-#include <generics/generics.h>
-#include <cryptalgo/cryptalgo.h>
-#include <generics/Sync.h>
-#include <websocket/websocket.h>
-
 #include "DataContainer.h"
 
 namespace WPEFramework {
@@ -107,27 +102,37 @@ namespace TestSystem {
     // -----------------------------------------------------------------------------------------------
     // Create a resource allocator for all JSON objects used in these tests
     // -----------------------------------------------------------------------------------------------
-    class JSONObjectFactory : public Core::FactoryType<Core::JSON::IElement, string> {
-    private:
+    template <typename INTERFACE>
+    class JSONObjectFactory : public Core::FactoryType<INTERFACE, string> {
+    public:
         inline JSONObjectFactory()
-            : Core::FactoryType<Core::JSON::IElement, string>()
+            : Core::FactoryType<INTERFACE, string>()
+            , _jsonRPCFactory(5)
         {
         }
         JSONObjectFactory(const JSONObjectFactory&);
         JSONObjectFactory& operator=(const JSONObjectFactory&);
 
-    public:
-        static JSONObjectFactory& Instance()
-        {
-            static JSONObjectFactory _singleton;
-
-            return (_singleton);
-        }
         virtual ~JSONObjectFactory()
         {
         }
-    };
+    public:
+        static JSONObjectFactory& Instance()
+        {
+            static JSONObjectFactory<INTERFACE> _singleton;
 
+            return (_singleton);
+        }
+
+        Core::ProxyType<INTERFACE> Element(const string& identifier)
+        {
+            (void)identifier;
+            Core::ProxyType<Web::JSONBodyType<Core::JSONRPC::Message>> message = _jsonRPCFactory.Element();
+            return Core::ProxyType<INTERFACE>(message);
+        }
+    private:
+        Core::ProxyPoolType<Web::JSONBodyType<Core::JSONRPC::Message>> _jsonRPCFactory;
+    };
     // -----------------------------------------------------------------------------------------------
     // TEST SET 1
     // ----------
@@ -148,7 +153,7 @@ namespace TestSystem {
             , _dataPending(false, false)
         {
         }
-        TextConnector(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<TextConnector>&)
+        TextConnector(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<TextConnector>*)
             : BaseClass(false, connector, remoteId, 1024, 1024)
             , _serverSocket(true)
             , _dataPending(false, false)
@@ -228,9 +233,10 @@ namespace TestSystem {
     // ----------
     // Direct connection for transfering JSON in an echo fashion.
     // -----------------------------------------------------------------------------------------------
-    class JSONConnector : public Core::StreamJSONType<Core::SocketStream, JSONObjectFactory&> {
+    template <typename INTERFACE>
+    class JSONConnector : public Core::StreamJSONType<Core::SocketStream, JSONObjectFactory<INTERFACE>&, INTERFACE> {
     private:
-        typedef Core::StreamJSONType<Core::SocketStream, JSONObjectFactory&> BaseClass;
+        typedef Core::StreamJSONType<Core::SocketStream, JSONObjectFactory<INTERFACE>&, INTERFACE> BaseClass;
 
         JSONConnector();
         JSONConnector(const JSONConnector& copy);
@@ -238,40 +244,48 @@ namespace TestSystem {
 
     public:
         JSONConnector(const WPEFramework::Core::NodeId& remoteNode)
-            : BaseClass(5, JSONObjectFactory::Instance(), false, remoteNode.AnyInterface(), remoteNode, 1024, 1024)
+            : BaseClass(5, JSONObjectFactory<INTERFACE>::Instance(), false, remoteNode.AnyInterface(), remoteNode, 1024, 1024)
             , _serverSocket(false)
             , _dataPending(false, false)
         {
         }
-        JSONConnector(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<JSONConnector>&)
-            : BaseClass(5, JSONObjectFactory::Instance(), false, connector, remoteId, 1024, 1024)
+        JSONConnector(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<JSONConnector>*)
+            : BaseClass(5, JSONObjectFactory<INTERFACE>::Instance(), false, connector, remoteId, 1024, 1024)
             , _serverSocket(true)
             , _dataPending(false, false)
         {
         }
         virtual ~JSONConnector()
         {
-            Close(WPEFramework::Core::infinite);
+            this->Close(WPEFramework::Core::infinite);
         }
 
     public:
-        virtual void Received(Core::ProxyType<Core::JSON::IElement>& newElement)
+        virtual void Received(Core::ProxyType<INTERFACE>& jsonObject)
         {
-            string textElement;
-            newElement->ToString(textElement);
-
-            printf(_T("   Bytes: %d\n"), static_cast<uint32_t>(textElement.size()));
-            printf(_T("Received: %s\n"), textElement.c_str());
-
-            // prevent singing around, only sockets created in a serve context should reply!!
-            if (_serverSocket == true) {
-                // As this is the server, send back the Element we received...
-                Submit(newElement);
+            if (jsonObject.IsValid() == false) {
+                printf("Invalid Json object Received\n");
             }
             else {
-                _dataReceived = textElement;
-                _dataPending.SetEvent();
+                Core::ProxyType<Core::JSON::IElement> newElement = Core::ProxyType<Core::JSON::IElement>(jsonObject);
+                string textElement;
+                newElement->ToString(textElement);
+
+                printf(_T("   Bytes: %d\n"), static_cast<uint32_t>(textElement.size()));
+                printf(_T("Received: %s\n"), textElement.c_str());
+
+                // prevent singing around, only sockets created in a serve context should reply!!
+                if (_serverSocket == true) {
+                    // As this is the server, send back the Element we received...
+                    this->Submit(newElement);
+                }
+                else {
+                    _dataReceived = textElement;
+                    _dataPending.SetEvent();
+                }
             }
+
+
         }
 
         int Wait(unsigned int milliseconds) const
@@ -288,22 +302,29 @@ namespace TestSystem {
             return !isEmpty;
         }
 
-        virtual void Send(Core::ProxyType<Core::JSON::IElement>& newElement)
+        virtual void Send(Core::ProxyType<INTERFACE>& jsonObject)
         {
-            string textElement;
-            newElement->ToString(textElement);
+            if (jsonObject.IsValid() == false) {
+                printf("Invalid Json object Received\n");
+            }
+            else {
+                Core::ProxyType<Core::JSON::IElement> newElement = Core::ProxyType<Core::JSON::IElement>(jsonObject);
+                string textElement;
+                newElement->ToString(textElement);
 
-            printf(_T("Bytes: %d\n"), static_cast<uint32_t>(textElement.size()));
-            printf(_T(" Send: %s\n"), textElement.c_str());
+                printf(_T("Bytes: %d\n"), static_cast<uint32_t>(textElement.size()));
+                printf(_T(" Send: %s\n"), textElement.c_str());
+            }
+
         }
         virtual void StateChange()
         {
             printf(_T("State change: "));
-            if (IsOpen()) {
+            if (this->IsOpen()) {
                 printf(_T("[2] Open - OK\n"));
             }
             else {
-                printf(_T("[2] Closed - %s\n"), (IsSuspended() ? _T("SUSPENDED") : _T("OK")));
+                printf(_T("[2] Closed - %s\n"), (this->IsSuspended() ? _T("SUSPENDED") : _T("OK")));
             }
         }
         virtual bool IsIdle() const
@@ -332,7 +353,7 @@ namespace TestSystem {
         WebServer& operator=(const WebServer&);
 
     public:
-        WebServer(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<WebServer>&)
+        WebServer(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<WebServer>*)
             : BaseClass(5, false, connector, remoteId, 2048, 2048)
         {
         }
@@ -466,7 +487,7 @@ namespace TestSystem {
         JSONWebServer& operator=(const JSONWebServer&);
 
     public:
-        JSONWebServer(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<JSONWebServer>&)
+        JSONWebServer(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<JSONWebServer>*)
             : BaseClass(5, _requestFactory, false, connector, remoteId, 2048, 2048)
         {
         }
@@ -574,7 +595,7 @@ namespace TestSystem {
         EchoWebSocketServer& operator=(const EchoWebSocketServer&);
 
     public:
-        EchoWebSocketServer(const SOCKET& socket, const WPEFramework::Core::NodeId& remoteNode, WPEFramework::Core::SocketServerType<EchoWebSocketServer>&)
+        EchoWebSocketServer(const SOCKET& socket, const WPEFramework::Core::NodeId& remoteNode, WPEFramework::Core::SocketServerType<EchoWebSocketServer>*)
             : BaseClass(false, true, false, socket, remoteNode, 1024, 1024)
         {
         }
@@ -614,8 +635,8 @@ namespace TestSystem {
         EchoWebSocketClient& operator=(const EchoWebSocketClient&);
 
     public:
-        EchoWebSocketClient(const Core::NodeId& remoteNode)
-            : BaseClass(_T("/"), _T("echo"), false, true, false, remoteNode, 1024, 1024)
+        EchoWebSocketClient(const Core::NodeId& remoteNode) //TODO: Pass correct value for 3rd & 4th params
+            : BaseClass(_T("/"), _T("echo"), _T(""), _T(""), false, true, false, Core::NodeId(_T("0.0.0.0")), remoteNode, 1024, 1024)
         {
         }
         virtual ~EchoWebSocketClient()
@@ -648,17 +669,18 @@ namespace TestSystem {
     // ----------
     // WebSocket Echo service (JSON), send back what we got.
     // -----------------------------------------------------------------------------------------------
-    class JSONWebSocketServer : public Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory&> {
+    template <typename INTERFACE>
+    class JSONWebSocketServer : public Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory<INTERFACE>&, INTERFACE> {
     private:
-        typedef Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, WPEFramework::TestSystem::JSONObjectFactory&> BaseClass;
+        typedef Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>&, INTERFACE> BaseClass;
 
     private:
         JSONWebSocketServer(const JSONWebSocketServer&);
         JSONWebSocketServer& operator=(const JSONWebSocketServer&);
 
     public:
-        JSONWebSocketServer(const SOCKET& socket, const WPEFramework::Core::NodeId& remoteNode, WPEFramework::Core::SocketServerType<JSONWebSocketServer>&)
-            : BaseClass(5, WPEFramework::TestSystem::JSONObjectFactory::Instance(), false, true, false, socket, remoteNode, 256, 256)
+        JSONWebSocketServer(const SOCKET& socket, const WPEFramework::Core::NodeId& remoteNode, WPEFramework::Core::SocketServerType<JSONWebSocketServer>*)
+            : BaseClass(5, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>::Instance(), false, true, false, socket, remoteNode, 256, 256)
         {
         }
         virtual ~JSONWebSocketServer()
@@ -666,44 +688,54 @@ namespace TestSystem {
         }
 
     public:
-        virtual void Received(Core::ProxyType<Core::JSON::IElement>& jsonObject)
+        virtual void Received(Core::ProxyType<INTERFACE>& jsonObject)
         {
             if (jsonObject.IsValid() == false) {
                 printf("Oops");
             }
             else {
+                Core::ProxyType<Core::JSON::IElement> element = Core::ProxyType<Core::JSON::IElement>(jsonObject);
                 string textElement;
-                jsonObject->ToString(textElement);
+                element->ToString(textElement);
 
                 printf(_T("   Bytes: %d\n"), static_cast<uint32_t>(textElement.size()));
                 printf(_T("Received: %s\n"), textElement.c_str());
 
                 // As this is the server, send back the Element we received...
-                Submit(jsonObject);
+                this->Submit(jsonObject);
             }
         }
-        virtual void Send(Core::ProxyType<Core::JSON::IElement>& jsonObject)
-        {
-            string textElement;
-            jsonObject->ToString(textElement);
 
-            printf(_T("Bytes: %d\n"), static_cast<uint32_t>(textElement.size()));
-            printf(_T(" Send: %s\n"), textElement.c_str());
+        virtual void Send(Core::ProxyType<INTERFACE>& jsonObject)
+        {
+            if (jsonObject.IsValid() == false) {
+                printf("Oops");
+            }
+            else {
+                Core::ProxyType<Core::JSON::IElement> element = Core::ProxyType<Core::JSON::IElement>(jsonObject);
+
+                string textElement;
+                element->ToString(textElement);
+
+                printf(_T("Bytes: %d\n"), static_cast<uint32_t>(textElement.size()));
+                printf(_T(" Send: %s\n"), textElement.c_str());
+            }
         }
         virtual void StateChange()
         {
             printf(_T("State change: "));
-            if (IsOpen()) {
+            if (this->IsOpen()) {
                 printf(_T("[6] Open - OK\n"));
             }
             else {
-                printf(_T("[6] Closed - %s\n"), (IsSuspended() ? _T("SUSPENDED") : _T("OK")));
+                printf(_T("[6] Closed - %s\n"), (this->IsSuspended() ? _T("SUSPENDED") : _T("OK")));
             }
         }
     };
-    class JSONWebSocketClient : public Core::StreamJSONType<Web::WebSocketClientType<Core::SocketStream>, WPEFramework::TestSystem::JSONObjectFactory&> {
+    template <typename INTERFACE>
+    class JSONWebSocketClient : public Core::StreamJSONType<Web::WebSocketClientType<Core::SocketStream>, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>&, INTERFACE> {
     private:
-        typedef Core::StreamJSONType<Web::WebSocketClientType<Core::SocketStream>, WPEFramework::TestSystem::JSONObjectFactory&> BaseClass;
+        typedef Core::StreamJSONType<Web::WebSocketClientType<Core::SocketStream>, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>&, INTERFACE> BaseClass;
 
     private:
         JSONWebSocketClient(const JSONWebSocketClient&);
@@ -711,7 +743,7 @@ namespace TestSystem {
 
     public:
         JSONWebSocketClient(const Core::NodeId& remoteNode)
-            : BaseClass(5, WPEFramework::TestSystem::JSONObjectFactory::Instance(), _T("/"), _T("echo"), false, true, false, remoteNode, 256, 256)
+            : BaseClass(5, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>::Instance(), _T("/"), _T("echo"), _T(""), _T(""), false, true, false, remoteNode, remoteNode, 256, 256)
         {
         }
         virtual ~JSONWebSocketClient()
@@ -719,30 +751,44 @@ namespace TestSystem {
         }
 
     public:
-        virtual void Received(Core::ProxyType<Core::JSON::IElement>& jsonObject)
+        virtual void Received(Core::ProxyType<INTERFACE>& jsonObject)
         {
-            string textElement;
-            jsonObject->ToString(textElement);
+            if (jsonObject.IsValid() == false) {
+                printf("Oops");
+            }
+            else {
+                Core::ProxyType<Core::JSON::IElement> element = Core::ProxyType<Core::JSON::IElement>(jsonObject);
 
-            printf(_T("   Bytes: %d\n"), static_cast<uint32_t>(textElement.size()));
-            printf(_T("Received: %s\n"), textElement.c_str());
+                string textElement;
+                element->ToString(textElement);
+
+                printf(_T("   Bytes: %d\n"), static_cast<uint32_t>(textElement.size()));
+                printf(_T("Received: %s\n"), textElement.c_str());
+            }
         }
-        virtual void Send(Core::ProxyType<Core::JSON::IElement>& jsonObject)
+        virtual void Send(Core::ProxyType<INTERFACE>& jsonObject)
         {
-            string textElement;
-            jsonObject->ToString(textElement);
+            if (jsonObject.IsValid() == false) {
+                printf("Oops");
+            }
+            else {
+                Core::ProxyType<Core::JSON::IElement> element = Core::ProxyType<Core::JSON::IElement>(jsonObject);
 
-            printf(_T("Bytes: %d\n"), static_cast<uint32_t>(textElement.size()));
-            printf(_T(" Send: %s\n"), textElement.c_str());
+                string textElement;
+                element->ToString(textElement);
+
+		printf(_T("Bytes: %d\n"), static_cast<uint32_t>(textElement.size()));
+		printf(_T(" Send: %s\n"), textElement.c_str());
+            }
         }
         virtual void StateChange()
         {
             printf(_T("State change: "));
-            if (IsOpen()) {
+            if (this->IsOpen()) {
                 printf(_T("[6] Open - OK\n"));
             }
             else {
-                printf(_T("[6] Closed - %s\n"), (IsSuspended() ? _T("SUSPENDED") : _T("OK")));
+                printf(_T("[6] Closed - %s\n"), (this->IsSuspended() ? _T("SUSPENDED") : _T("OK")));
             }
         }
         virtual bool IsIdle() const
@@ -775,7 +821,7 @@ namespace TestSystem {
             , _messagesSend(0)
         {
         }
-        StressTextConnector(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<StressTextConnector>&)
+        StressTextConnector(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<StressTextConnector>*)
             : BaseClass(false, connector, remoteId, 1024, 1024)
             , _serverSocket(true)
             , _pending(0)
@@ -900,16 +946,17 @@ namespace TestSystem {
     // ----------
     // Offer a file client to the server
     // -----------------------------------------------------------------------------------------------
-    class FileClientConnector : public Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256HMAC> > {
+    //class FileClientConnector : public Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256HMAC>> {
+    class FileClientConnector : public Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> {
     private:
-        typedef Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256HMAC> > BaseClass;
+        typedef Web::ClientTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256>> BaseClass;
 
         FileClientConnector(const FileClientConnector&);
         FileClientConnector& operator=(const FileClientConnector&);
 
     public:
         FileClientConnector()
-            : BaseClass(string(_T("MySecretTestKey")), false, 1024, 1024)
+            : BaseClass(false, Core::NodeId(_T("0.0.0.0")), Core::NodeId(), 1024, 1024) //TODO: Check this!
         {
         }
         virtual ~FileClientConnector()
@@ -917,32 +964,38 @@ namespace TestSystem {
         }
 
     private:
-        virtual bool Setup(const Core::URL& remote)
+        bool Setup(const Core::URL& remote) override
         {
             bool result = false;
 
             if (remote.Host().IsSet() == true) {
                 uint16_t portNumber(remote.Port().IsSet() ? remote.Port().Value() : 80);
 
-                BaseClass::Link().RemoteNode(Core::NodeId(remote.Host().Value().Text().c_str(), portNumber));
+                BaseClass::Link().RemoteNode(Core::NodeId(remote.Host().Value().c_str(), portNumber));
 
                 result = true;
             }
             return (result);
         }
-        virtual void Transfered(const uint32_t result, Core::File& file)
+        void Transferred(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
         {
+            (void)destination;
             printf(_T("Transfered file with result: %d\n"), result);
-            file.Close();
+        }
+
+        void InfoCollected(const uint32_t result, const Core::ProxyType<Web::Response>& info) override
+        {
+            (void)result;
+            (void)info;
         }
     };
-
+    
     // -----------------------------------------------------------------------------------------------
     // FILE SERVER TEST SET 9
     // ----------
     // Offer a file server
     // -----------------------------------------------------------------------------------------------
-    class FileServerConnector : public Web::ServerTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256HMAC> > {
+    class FileServerConnector : public Web::ServerTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256> > {
     private:
         inline static const string& PathPrefix()
         {
@@ -964,7 +1017,7 @@ namespace TestSystem {
 
     public:
         FileServerConnector(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<FileServerConnector>&)
-            : Web::ServerTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256HMAC> >(PathPrefix(), HashKey(), false, connector, remoteId, 1024, 1024)
+            : Web::ServerTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256> >(PathPrefix(), false, connector, remoteId, 1024, 1024)
         {
         }
         virtual ~FileServerConnector()

@@ -1,13 +1,8 @@
-include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
-
-set (WPEFRAMEWORK_TEST_TESTSERVER_LIBS 
-        ${CMAKE_THREAD_LIBS_INIT}
-        ${CMAKE_DL_LIBS}
-        cryptalgo
-        websocket 
-        generics
-        devices
-)
+find_package(${NAMESPACE}Core REQUIRED)
+find_package(${NAMESPACE}Cryptalgo REQUIRED)
+find_package(${NAMESPACE}WebSocket REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 set (WPEFRAMEWORK_TEST_TESTSERVER_SOURCES
         testserver.cpp
@@ -15,6 +10,17 @@ set (WPEFRAMEWORK_TEST_TESTSERVER_SOURCES
 )
 
 add_executable(testserver ${WPEFRAMEWORK_TEST_TESTSERVER_SOURCES})
-target_link_libraries(testserver ${WPEFRAMEWORK_TEST_TESTSERVER_LIBS})
+
+set_target_properties(${MODULE_NAME} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
+
+target_link_libraries(testserver
+    PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}Cryptalgo::${NAMESPACE}Cryptalgo
+        ${NAMESPACE}WebSocket::${NAMESPACE}WebSocket
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS testserver DESTINATION bin)

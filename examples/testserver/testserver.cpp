@@ -1,7 +1,3 @@
-#include <generics/generics.h>
-#include <websocket/websocket.h>
-#include <devices/devices.h>
-
 #include "EchoProtocol.h"
 
 namespace WPEFramework {
@@ -102,7 +98,7 @@ namespace TestSystem {
             Core::File newFile(ConfigFile);
             newFile.Append();
 
-            jsonTestCommand.ToFile(newFile);
+            jsonTestCommand.IElement::ToFile(newFile);
         }
 
         jsonTestCommand.Clear();
@@ -114,16 +110,16 @@ namespace TestSystem {
             readFile.Open(true);
 
             number3.Clear();
-            jsonTestCommand.FromFile(readFile);
-            number2.FromFile(readFile);
-            number3.FromFile(readFile);
+            jsonTestCommand.IElement::FromFile(readFile);
+            number2.IElement::FromFile(readFile);
+            number3.IElement::FromFile(readFile);
         }
 
         // ------------------------------------------------------------------------------------
         // Factories
         // ------------------------------------------------------------------------------------
         // Factories for JSON objects..
-        WPEFramework::TestSystem::JSONObjectFactory::Instance().CreateFactory<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command> >(5);
+        WPEFramework::TestSystem::JSONObjectFactory<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command>>::Instance().CreateFactory<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command>>(5);
 
         //-------------------------------------------------------------------------------------------
         // [1] BASE TEXT SOCKETS !!!!!
@@ -142,7 +138,7 @@ namespace TestSystem {
         fprintf(stderr, "[2] Building Base JSON Socket\n");
 
         // Build a SocketServer
-        WPEFramework::Core::SocketServerType<JSONConnector> _JSONSocketServer(WPEFramework::Core::NodeId(address, 12342));
+        WPEFramework::Core::SocketServerType<JSONConnector<Core::JSON::IElement>> _JSONSocketServer(WPEFramework::Core::NodeId(address, 12342));
 
         // Start lisening !!!!
         _JSONSocketServer.Open(0);
@@ -182,7 +178,7 @@ namespace TestSystem {
         //-------------------------------------------------------------------------------------------
         fprintf(stderr, "[6] Building Web Sockets for JSON\n");
 
-        Core::SocketServerType<JSONWebSocketServer> _JSONWebSocketServer(WPEFramework::Core::NodeId(address, 12346));
+        Core::SocketServerType<JSONWebSocketServer<Core::JSON::IElement>> _JSONWebSocketServer(WPEFramework::Core::NodeId(address, 12346));
 
         // Start listening
         _JSONWebSocketServer.Open(0);
@@ -201,16 +197,16 @@ namespace TestSystem {
         //-------------------------------------------------------------------------------------------
         // [9] FILE SERVER SOCKET !!!!!
         //-------------------------------------------------------------------------------------------
-        WPEFramework::Core::SocketServerType<FileServerConnector> _fileServer(WPEFramework::Core::NodeId(address, 12349));
+//        WPEFramework::Core::SocketServerType<FileServerConnector> _fileServer(WPEFramework::Core::NodeId(address, 12349));
 
-        _fileServer.Open(0);
+//        _fileServer.Open(0);
 
         //-------------------------------------------------------------------------------------------
         // USB to SERIAL bridge  !!!!!
         //-------------------------------------------------------------------------------------------
-        fprintf(stderr, "Building a USB/Serial bridge\n");
+//        fprintf(stderr, "Building a USB/Serial bridge\n");
 
-        WPEFramework::SerialUSB::PIC18F2550 usbToSerial(SerialUSBPort);
+//        WPEFramework::SerialUSB::PIC18F2550 usbToSerial(SerialUSBPort);
 
         //-------------------------------------------------------------------------------------------
         // Other testing stuff !!!!!
@@ -252,6 +248,7 @@ namespace TestSystem {
             keyPress = toupper(getchar());
 
             switch (keyPress) {
+#if 0
             case '1': {
                 for (uint32_t teller = 0; teller < 100000; teller++) {
                     flagState = !flagState;
@@ -298,6 +295,7 @@ namespace TestSystem {
 
                 break;
             }
+#endif
             default:
                 printf("you pressed %c, only q and s have a meaning here\n", keyPress);
                 break;

@@ -225,7 +225,8 @@ typedef enum {
 
 } CommandType;
 
-ENUM_CONVERSION_BEGIN(CommandType)
+namespace WPEFramework {
+    ENUM_CONVERSION_BEGIN(CommandType)
 
     { ExecuteShell, _TXT("ExecuteShell") },
     { WiFiSettings, _TXT("WiFiSettings") },
@@ -233,8 +234,9 @@ ENUM_CONVERSION_BEGIN(CommandType)
     { PlayerControl, _TXT("PlayerControl") },
 
     ENUM_CONVERSION_END(CommandType)
+}
 
-        class CommandParameters : public Core::JSON::Container {
+class CommandParameters : public Core::JSON::Container {
 private:
     CommandParameters(const CommandParameters&);
     CommandParameters& operator=(const CommandParameters&);
@@ -266,7 +268,7 @@ private:
 public:
     CommandRequest()
     {
-        Add(_T("id"), &Id);
+        Add(_T("id"), &_Id);
         Add(_T("name"), &Name);
         Add(_T("baseAddress"), &BaseAddress);
         Add(_T("trickFlag"), &TrickFlag);
@@ -277,7 +279,7 @@ public:
     }
 
 public:
-    Core::JSON::DecUInt32 Id;
+    Core::JSON::DecUInt32 _Id;
     Core::JSON::String Name;
     Core::JSON::HexUInt32 BaseAddress;
     Core::JSON::Boolean TrickFlag;
@@ -289,7 +291,7 @@ void TestParser1()
     Core::ProxyType<Core::JSON::LabelType<CommandRequest> > command = Core::ProxyType<Core::JSON::LabelType<CommandRequest> >::Create();
     Core::ProxyType<Core::JSON::LabelType<CommandRequest> > received = Core::ProxyType<Core::JSON::LabelType<CommandRequest> >::Create();
 
-    command->Id = 35;
+    command->_Id = 35;
     command->Name = _T("PoepChinees");
     command->BaseAddress = 0x567;
     command->TrickFlag = true;
@@ -395,7 +397,7 @@ int main(int argc, char** argv)
         string message;
 
         // Factories for JSON objects..
-        WPEFramework::TestSystem::JSONObjectFactory::Instance().CreateFactory<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command> >(5);
+        WPEFramework::TestSystem::JSONObjectFactory<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command>>::Instance().CreateFactory<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command>>(5);
 
         // ------------------------------------------------------------------------------------
         // [1] BASE TEXT client
@@ -405,7 +407,7 @@ int main(int argc, char** argv)
         // ------------------------------------------------------------------------------------
         // [2] BASE JSON client
         // ------------------------------------------------------------------------------------
-        WPEFramework::TestSystem::JSONConnector JSONConnector(WPEFramework::Core::NodeId(options.Command(), 12342));
+        WPEFramework::TestSystem::JSONConnector<Core::JSON::IElement> JSONConnector(WPEFramework::Core::NodeId(options.Command(), 12342));
 
         // ------------------------------------------------------------------------------------
         // [3] WEB Client
@@ -431,7 +433,7 @@ int main(int argc, char** argv)
         // ------------------------------------------------------------------------------------
         // [6] WEB SOCKET JSON LOCAL client
         // ------------------------------------------------------------------------------------
-        WPEFramework::TestSystem::JSONWebSocketClient webSocketJSONConnection(WPEFramework::Core::NodeId(options.Command(), 12346));
+        WPEFramework::TestSystem::JSONWebSocketClient<Core::JSON::IElement> webSocketJSONConnection(WPEFramework::Core::NodeId(options.Command(), 12346));
 
         // ------------------------------------------------------------------------------------
         // [7] WEB SOCKET TEXT REMOTE client
@@ -491,6 +493,7 @@ int main(int argc, char** argv)
             switch (keyPress) {
             case 'A': {
                 provisioningClient.Provision();
+                /* falls throgh */
             }
             case 'B': {
                 if (openState == true) {
@@ -590,7 +593,7 @@ int main(int argc, char** argv)
                 Core::File file("F:/windows/TestArea/download/test.lib");
                 if (file.Create() == true) {
                     Core::URL urlTarget(_T("http://127.0.0.1:12349/test/test.lib"));
-                    transferFileConnection.Download(urlTarget, file);
+                    transferFileConnection.Download(urlTarget, file,0);
                 }
                 else {
                     printf(_T("Error [%d] creating file [%s]"), file.ErrorCode(), file.Name().c_str());
@@ -616,6 +619,7 @@ int main(int argc, char** argv)
                     printf("Pending message size:    %d\n", stressEngines[engine]->Pending());
                     printf("Error count:             %d\n", stressEngines[engine]->Errors());
                 }
+                /* falls through */
             }
             case 'T': {
                 printf("Total status: %s\n", WPEFramework::Core::Time::Now().ToRFC1123(true).c_str());
@@ -658,7 +662,7 @@ int main(int argc, char** argv)
     }
 
     // Clear the factory we created..
-    WPEFramework::TestSystem::JSONObjectFactory::Instance().DestroyFactory(WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command>::Id());
+    WPEFramework::TestSystem::JSONObjectFactory<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command>>::Instance().DestroyFactory(WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command>::Id());
     WPEFramework::Core::Singleton::Dispose();
 
     printf("\nLeaving the main App !!!\n");

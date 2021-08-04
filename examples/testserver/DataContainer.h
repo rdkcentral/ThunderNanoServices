@@ -1,7 +1,7 @@
 #ifndef __DATACONTAINER_H
 #define __DATACONTAINER_H
 
-#include <generics/generics.h>
+#include "Module.h"
 
 namespace WPEFramework {
 namespace DataContainer {

@@ -1,14 +1,8 @@
-include_directories( ${WPEFRAMEWORK_GENERICS_INCLUDE_DIR} )
-include_directories( ${WPEFRAMEWORK_WEBSOCKET_INCLUDE_DIR} )
-include_directories( ${WPEFRAMEWORK_CRYPTALGO_INCLUDE_DIR} )
-
-set (WPEFRAMEWORK_TEST_TESTCONSOLE_LIBS 
-        ${CMAKE_THREAD_LIBS_INIT}
-        ${CMAKE_DL_LIBS}
-        cryptalgo
-        websocket 
-        generics
-)
+find_package(${NAMESPACE}Core REQUIRED)
+find_package(${NAMESPACE}Cryptalgo REQUIRED)
+find_package(${NAMESPACE}WebSocket REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 set (WPEFRAMEWORK_TEST_TESTCONSOLE_SOURCES
         testconsole.cpp
@@ -16,6 +10,17 @@ set (WPEFRAMEWORK_TEST_TESTCONSOLE_SOURCES
 )
 
 add_executable(testconsole ${WPEFRAMEWORK_TEST_TESTCONSOLE_SOURCES})
-target_link_libraries(testconsole ${WPEFRAMEWORK_TEST_TESTCONSOLE_LIBS})
+
+set_target_properties(${MODULE_NAME} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
+
+target_link_libraries(testconsole
+    PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}Cryptalgo::${NAMESPACE}Cryptalgo
+        ${NAMESPACE}WebSocket::${NAMESPACE}WebSocket
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS testconsole DESTINATION bin)
