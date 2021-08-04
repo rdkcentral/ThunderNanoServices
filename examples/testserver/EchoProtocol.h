@@ -989,7 +989,7 @@ namespace TestSystem {
             (void)info;
         }
     };
-    
+#if 0 // TODO: Fix Me !
     // -----------------------------------------------------------------------------------------------
     // FILE SERVER TEST SET 9
     // ----------
@@ -1037,7 +1037,7 @@ namespace TestSystem {
             return (EMPTY_STRING);
         }
     };
-
+#endif
     template <typename CONNECTOR>
     class StressInstanceType : public Core::Thread {
     private:
