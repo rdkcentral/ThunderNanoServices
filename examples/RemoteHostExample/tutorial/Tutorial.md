@@ -1,4 +1,3 @@
-# Remote Invocation Tutorial
 
 Remote host invocation can be used to access an out-of-process nanoservice from remote device as it was running on local device. 
 
@@ -48,7 +47,7 @@ with example config of
  "configuration":{
   "name":"Local",
   "root":{
-   "mode":"local"
+   "mode":"Local"
   }
  }
 }
@@ -68,7 +67,7 @@ the only difference is in config. It will look like this:
  "configuration":{
   "name":"Remote",
   "root":{
-   "mode":"distributed",
+   "mode":"Distributed",
    "remoteaddress":"10.5.0.112:5797"
   }
  }
