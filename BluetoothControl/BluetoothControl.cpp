@@ -171,8 +171,19 @@ namespace Plugin {
         // Deinitialize what we initialized..
         _service = nullptr;
 
+        for (auto device : _devices) {
+            device->AbortPairing();
+        }
+
+        Connector().BackgroundScan(false);
+
         // We bring the interface up, so we should bring it down as well..
-        _application.Close();
+        Connector().Close();
+
+        Bluetooth::ManagementSocket& administrator = Connector().Control();
+        Bluetooth::ManagementSocket::Down(administrator.DeviceId());
+        administrator.DeviceId(HCI_DEV_NONE);
+
         ::destruct_bluetooth_driver();
     }
 
@@ -239,12 +250,16 @@ namespace Plugin {
             result->Message = _T("Current status.");
 
             response->Scanning = IsScanning();
-            std::list<DeviceImpl*>::const_iterator loop = _devices.begin();
 
+           _adminLock.Lock();
+
+            std::list<DeviceImpl*>::const_iterator loop = _devices.begin();
             while (loop != _devices.end()) {
                 response->Devices.Add().Set(*loop);
                 loop++;
             }
+
+            _adminLock.Unlock();
 
             result->Body(response);
         } else {
