@@ -604,7 +604,7 @@ int main(int argc, char** argv)
                 Core::File file("F:/windows/TestArea/test/test.lib");
                 if (file.Open(true) == true) {
                     Core::URL urlTarget(_T("http://127.0.0.1:12349/upload/test.lib"));
-                    //transferFileConnection.Upload(urlTarget, file); //TODO: Fix Me !
+                    transferFileConnection.Upload(urlTarget, file);
                 }
                 else {
                     printf(_T("Error [%d] creating file [%s]"), file.ErrorCode(), file.Name().c_str());

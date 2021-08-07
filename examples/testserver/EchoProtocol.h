@@ -635,8 +635,8 @@ namespace TestSystem {
         EchoWebSocketClient& operator=(const EchoWebSocketClient&);
 
     public:
-        EchoWebSocketClient(const Core::NodeId& remoteNode) //TODO: Pass correct value for 3rd & 4th params
-            : BaseClass(_T("/"), _T("echo"), _T(""), _T(""), false, true, false, Core::NodeId(_T("0.0.0.0")), remoteNode, 1024, 1024)
+        EchoWebSocketClient(const Core::NodeId& remoteNode) //TODO: Fix Me ! Pass correct value for 3rd & 4th params
+            : BaseClass(_T("/"), _T("echo"), _T(""), _T(""), false, true, false, remoteNode.AnyInterface(), remoteNode, 1024, 1024)
         {
         }
         virtual ~EchoWebSocketClient()
@@ -743,7 +743,7 @@ namespace TestSystem {
 
     public:
         JSONWebSocketClient(const Core::NodeId& remoteNode)
-            : BaseClass(5, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>::Instance(), _T("/"), _T("echo"), _T(""), _T(""), false, true, false, remoteNode, remoteNode, 256, 256)
+            : BaseClass(5, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>::Instance(), _T("/"), _T("echo"), _T(""), _T(""), false, true, false, remoteNode.AnyInterface(), remoteNode, 256, 256)
         {
         }
         virtual ~JSONWebSocketClient()
@@ -989,7 +989,6 @@ namespace TestSystem {
             (void)info;
         }
     };
-#if 0 // TODO: Fix Me !
     // -----------------------------------------------------------------------------------------------
     // FILE SERVER TEST SET 9
     // ----------
@@ -1016,7 +1015,7 @@ namespace TestSystem {
         FileServerConnector& operator=(const FileServerConnector&);
 
     public:
-        FileServerConnector(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<FileServerConnector>&)
+        FileServerConnector(const SOCKET& connector, const Core::NodeId& remoteId, Core::SocketServerType<FileServerConnector>*)
             : Web::ServerTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256> >(PathPrefix(), false, connector, remoteId, 1024, 1024)
         {
         }
@@ -1037,7 +1036,7 @@ namespace TestSystem {
             return (EMPTY_STRING);
         }
     };
-#endif
+
     template <typename CONNECTOR>
     class StressInstanceType : public Core::Thread {
     private:

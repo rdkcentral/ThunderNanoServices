@@ -197,16 +197,16 @@ namespace TestSystem {
         //-------------------------------------------------------------------------------------------
         // [9] FILE SERVER SOCKET !!!!!
         //-------------------------------------------------------------------------------------------
-//        WPEFramework::Core::SocketServerType<FileServerConnector> _fileServer(WPEFramework::Core::NodeId(address, 12349));
+        WPEFramework::Core::SocketServerType<FileServerConnector> _fileServer(WPEFramework::Core::NodeId(address, 12349));
 
-//        _fileServer.Open(0);
+        _fileServer.Open(0);
 
         //-------------------------------------------------------------------------------------------
         // USB to SERIAL bridge  !!!!!
         //-------------------------------------------------------------------------------------------
-//        fprintf(stderr, "Building a USB/Serial bridge\n");
+        fprintf(stderr, "Building a USB/Serial bridge\n");
 
-//        WPEFramework::SerialUSB::PIC18F2550 usbToSerial(SerialUSBPort);
+//        WPEFramework::SerialUSB::PIC18F2550 usbToSerial(SerialUSBPort); //TODO: Enable this after including device specific code in this build
 
         //-------------------------------------------------------------------------------------------
         // Other testing stuff !!!!!
@@ -248,7 +248,7 @@ namespace TestSystem {
             keyPress = toupper(getchar());
 
             switch (keyPress) {
-#if 0
+#if 0   // Todo: Fix Me: Enable this after including device specific module in the build system
             case '1': {
                 for (uint32_t teller = 0; teller < 100000; teller++) {
                     flagState = !flagState;
