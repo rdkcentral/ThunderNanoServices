@@ -488,23 +488,12 @@ namespace Weston {
             }
             void Visibility(const bool visible)
             {
-                struct weston_view* view = View();
-
-                if (view != nullptr) {
-                    view->alpha = (visible == true) ? 1 : 0;
-                    weston_view_geometry_dirty(view);
-                    weston_surface_damage(view->surface);
-                }
-            }
-            void Opacity(const uint32_t opacity)
-            {
-                struct weston_view* view = View();
-                if (view != nullptr) {
-                    view->alpha = static_cast<float>(opacity)/MaxOpacityRange;
-                    weston_view_geometry_dirty(view);
-                    weston_surface_damage(view->surface);
-                }
-            }
+		UpdateOpacity((visible == true) ? 1 : 0);
+	    }
+	    void Opacity(const uint32_t opacity)
+	    {
+		UpdateOpacity(static_cast<float>(opacity)/MaxOpacityRange);
+	    }
             void BringToFront()
             {
             }
@@ -537,16 +526,34 @@ namespace Weston {
             {
                 _parent->RemoveSurface(_surface);
             }
+
        private:
-            inline struct weston_view* View() {
+	    inline void UpdateViewOpacity(struct weston_surface* surface, float opacity)
+	    {
                 struct weston_view* view = nullptr;
-                wl_list_for_each(view, &_surface->views, surface_link) {
-                    if (weston_view_is_mapped(view)) {
-                        break;;
+                wl_list_for_each(view, &surface->views, surface_link) {
+		    view->alpha = opacity;
+                    weston_view_geometry_dirty(view);
+                    weston_surface_damage(view->surface);
+                }
+	    }
+	    inline void UpdateSubSurfacesOpacity(struct weston_surface* surface, float opacity)
+	    {
+                struct weston_subsurface* subsurface = nullptr;
+                wl_list_for_each(subsurface, &surface->subsurface_list, parent_link) {
+                    if (subsurface->surface != nullptr) {
+                        UpdateViewOpacity(subsurface->surface, alpha);
+			if (surface != subsurface->surface) {
+			    UpdateSubSurfacesOpacity(subsurface->surface, opacity);
+			}
                     }
                 }
-                return view;
             }
+	    inline void UpdateOpacity(float opacity)
+	    {
+                UpdateViewOpacity(_surface, opacity);
+                UpdateSubSurfacesOpacity(_surface, opacity);
+	    }
             inline void RegisterSurfaceDestroyListener(struct weston_surface* surface) {
                 _surfaceDestroyListener.notify = NotifySurfaceDestroy;
                 wl_signal_add(&surface->destroy_signal, &_surfaceDestroyListener);
