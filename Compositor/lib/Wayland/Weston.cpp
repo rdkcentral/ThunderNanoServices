@@ -483,6 +483,31 @@ namespace Weston {
                 _timer = wl_event_loop_add_timer(loop, SetOrder, this);
                 wl_event_source_timer_update(_timer, 1);
             }
+            void Resize(const int x, const int y, const int w, const int h)
+            {
+            }
+            void Visibility(const bool visible)
+            {
+                struct weston_view* view = View();
+
+                if (view != nullptr) {
+                    view->alpha = (visible == true) ? 1 : 0;
+                    weston_view_geometry_dirty(view);
+                    weston_surface_damage(view->surface);
+                }
+            }
+            void Opacity(const uint32_t opacity)
+            {
+                struct weston_view* view = View();
+                if (view != nullptr) {
+                    view->alpha = static_cast<float>(opacity)/MaxOpacityRange;
+                    weston_view_geometry_dirty(view);
+                    weston_surface_damage(view->surface);
+                }
+            }
+            void BringToFront()
+            {
+            }
             inline void RemoveTimer()
             {
                 if (_timer) {
@@ -511,6 +536,16 @@ namespace Weston {
             inline void RemoveSurface() const
             {
                 _parent->RemoveSurface(_surface);
+            }
+       private:
+            inline struct weston_view* View() {
+                struct weston_view* view = nullptr;
+                wl_list_for_each(view, &_surface->views, surface_link) {
+                    if (weston_view_is_mapped(view)) {
+                        break;;
+                    }
+                }
+                return view;
             }
             inline void RegisterSurfaceDestroyListener(struct weston_surface* surface) {
                 _surfaceDestroyListener.notify = NotifySurfaceDestroy;
@@ -1198,6 +1233,7 @@ namespace Weston {
     private:
         static constexpr const uint8_t MaxCloneHeads = 16;
         static constexpr const uint32_t MaxLoadingTime = 3000;
+        static constexpr const uint32_t MaxOpacityRange = 250;
         static constexpr const TCHAR* ShellInitEntryAPI = _T("wet_shell_init");
         static constexpr const TCHAR* ShellSurfaceUpdateLayerAPI = _T("wet_shell_surface_update_layer");
 
