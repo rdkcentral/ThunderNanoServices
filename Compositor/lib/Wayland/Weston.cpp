@@ -1498,14 +1498,6 @@ namespace Weston {
                 _surfaces.insert(std::pair<const string, SurfaceData*>(name, surface));
                 surface->AddRef();
                 _callback->Attached(id);
-                if (name == "video-surface") {
-                    SurfaceMap::iterator index = _surfaces.begin();
-                    if (index != _surfaces.end()) {
-                        _callback->Detached(index->second->Id());
-                        _callback->Attached(index->second->Id());
-                        SetInput(index->second->Name());
-                    }
-                }
 
             } else {
                 _surfaces.erase(index);
