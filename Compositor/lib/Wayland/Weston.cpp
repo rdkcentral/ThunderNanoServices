@@ -455,7 +455,7 @@ namespace Weston {
             {
                 return (_width);
             }
-            static int SetOrder(void* data)
+            static int SetZOrder(void* data)
             {
                 SurfaceData* surfaceData = static_cast<SurfaceData*>(data);
                 if (!surfaceData->ZOrder()) {
@@ -469,6 +469,7 @@ namespace Weston {
                         }
                     }
                 }
+                surfaceData->UpdateZOrder(surfaceData->Name(), surfaceData->ZOrder());
                 surfaceData->RemoveTimer();
                 return 1;
             }
@@ -480,7 +481,7 @@ namespace Weston {
                 _zorder = zorder;
                 struct weston_compositor* compositor = _parent->PlatformCompositor();
                 struct wl_event_loop* loop = wl_display_get_event_loop(compositor->wl_display);
-                _timer = wl_event_loop_add_timer(loop, SetOrder, this);
+                _timer = wl_event_loop_add_timer(loop, SetZOrder, this);
                 wl_event_source_timer_update(_timer, 1);
             }
             void Resize(const int x, const int y, const int w, const int h)
@@ -488,14 +489,11 @@ namespace Weston {
             }
             void Visibility(const bool visible)
             {
-		UpdateOpacity((visible == true) ? 1 : 0);
-	    }
-	    void Opacity(const uint32_t opacity)
-	    {
-		UpdateOpacity(static_cast<float>(opacity)/MaxOpacityRange);
-	    }
-            void BringToFront()
+                UpdateOpacity(visible);
+            }
+            void Opacity(const uint32_t opacity)
             {
+                UpdateOpacity(static_cast<float>(opacity)/MaxOpacityRange);
             }
             inline void RemoveTimer()
             {
@@ -526,34 +524,38 @@ namespace Weston {
             {
                 _parent->RemoveSurface(_surface);
             }
-
+            inline void UpdateZOrder(const string& name, const uint32_t zorder)
+            {
+                _parent->UpdateZOrder(name, zorder);
+            }
        private:
-	    inline void UpdateViewOpacity(struct weston_surface* surface, float opacity)
-	    {
+            inline void UpdateViewOpacity(struct weston_surface* surface, float opacity)
+            {
                 struct weston_view* view = nullptr;
                 wl_list_for_each(view, &surface->views, surface_link) {
-		    view->alpha = opacity;
+                    view->alpha = opacity;
                     weston_view_geometry_dirty(view);
                     weston_surface_damage(view->surface);
                 }
-	    }
-	    inline void UpdateSubSurfacesOpacity(struct weston_surface* surface, float opacity)
-	    {
+            }
+            inline void UpdateSubSurface(struct weston_surface* surface, float opacity)
+            {
                 struct weston_subsurface* subsurface = nullptr;
                 wl_list_for_each(subsurface, &surface->subsurface_list, parent_link) {
                     if (subsurface->surface != nullptr) {
-                        UpdateViewOpacity(subsurface->surface, alpha);
-			if (surface != subsurface->surface) {
-			    UpdateSubSurfacesOpacity(subsurface->surface, opacity);
-			}
+                        UpdateViewOpacity(subsurface->surface, opacity);
+
+                        if (surface != subsurface->surface) {
+                            UpdateSubSurface(subsurface->surface, opacity);
+                        }
                     }
                 }
             }
-	    inline void UpdateOpacity(float opacity)
-	    {
+            inline void UpdateOpacity(float opacity)
+            {
                 UpdateViewOpacity(_surface, opacity);
-                UpdateSubSurfacesOpacity(_surface, opacity);
-	    }
+                UpdateSubSurface(_surface, opacity);
+            }
             inline void RegisterSurfaceDestroyListener(struct weston_surface* surface) {
                 _surfaceDestroyListener.notify = NotifySurfaceDestroy;
                 wl_signal_add(&surface->destroy_signal, &_surfaceDestroyListener);
@@ -578,7 +580,7 @@ namespace Weston {
             struct weston_surface* _surface;
             struct wl_listener _surfaceDestroyListener;
         };
-        typedef std::map<const string, SurfaceData*> SurfaceMap;
+        typedef std::vector<SurfaceData*> SurfaceList;
         typedef void (*ShellSurfaceSetTop)(struct weston_surface*);
 
     private:
@@ -1000,7 +1002,9 @@ namespace Weston {
                 return output;
             }
             void TryAttach(struct weston_output* output, std::list<struct weston_head*>& Clones, std::list<struct weston_head*>& failedClones) {
-                for (std::list<struct weston_head*>::iterator clone = Clones.begin(); clone != Clones.end(); clone++) {
+                for (std::list<struct weston_head*>::iterator clone = Clones.begin();
+                    clone != Clones.end(); clone++) {
+
                     if (weston_output_attach_head(output, *clone) < 0) {
                         Clones.erase(clone);
                         failedClones.push_back(*clone);
@@ -1009,8 +1013,9 @@ namespace Weston {
             }
             uint32_t TryEnable(struct weston_output* output, std::list<struct weston_head*>& Clones, std::list<struct weston_head*>& failedClones) {
                 uint32_t status = Core::ERROR_GENERAL;
-                std::list<struct weston_head*>::reverse_iterator clone = Clones.rbegin();
-                while (!output->enabled && (clone != Clones.rend())) {
+                for (std::list<struct weston_head*>::reverse_iterator clone = Clones.rbegin();
+                    !output->enabled && (clone != Clones.rend()); ++clone) {
+
                     if (weston_output_enable(output) == 0) {
                         status = Core::ERROR_NONE;
                         break;
@@ -1411,8 +1416,8 @@ namespace Weston {
         {
             _adminLock.Lock();
             for (const auto& index: _surfaces) {
-                if (index.second->Id() == id) {
-                    surface = Wayland::Display::Surface(index.second);
+                if (index->Id() == id) {
+                    surface = Wayland::Display::Surface(index);
                     break;
                 }
             }
@@ -1534,28 +1539,70 @@ namespace Weston {
         {
             string name = ClientName(label);
             _adminLock.Lock();
-            SurfaceMap::iterator index(_surfaces.find(name));
+            UpdateZOrder();
+            auto index = _surfaces.begin();
+            while (index != _surfaces.end()) {
+                if ((*index)->Name() == name) {
+                    break;
+                }
+                index++;
+            }
             if (index == _surfaces.end()) {
                 uint16_t id = random();
                 SurfaceData* surface = new SurfaceData(this, id, name, westonSurface);
-                _surfaces.insert(std::pair<const string, SurfaceData*>(name, surface));
+                _surfaces.push_back(surface);
                 surface->AddRef();
                 _callback->Attached(id);
+            }
+            _adminLock.Unlock();
+        }
+        inline void UpdateZOrder() {
+            for (const auto& index: _surfaces) {
+                 uint32_t zorder = index->ZOrder();
+                 index->ZOrder(zorder++);
+            }
+        }
+        inline void UpdateZOrder(const string& name, const uint32_t zorder) {
+            _adminLock.Lock();
 
-            } else {
-                _surfaces.erase(index);
-                _surfaces.insert(std::pair<const string, SurfaceData*>(name, index->second));
+            /* Remove from the existing list */
+            SurfaceData* surface = nullptr;
+            auto index = _surfaces.begin();
+            while (index != _surfaces.end()) {
+                if (name == (*index)->Name()) {
+                    surface = *index;
+                    _surfaces.erase(index);
+                    break;
+                }
+                index++;
+            }
+
+            /* Reinsert based on ZOrder given */
+            index = _surfaces.begin();
+            while (index != _surfaces.end()) {
+                if (zorder < (*index)->ZOrder()) {
+                    break;
+                }
+                index++;
+            }
+
+            if (surface != nullptr) {
+                surface->ZOrder(zorder);
+                _surfaces.insert(index, surface);
+            }
+            for(const auto& index: _surfaces) {
             }
             _adminLock.Unlock();
         }
         void RemoveSurface(struct weston_surface* westonSurface)
         {
             _adminLock.Lock();
-            for (const auto& index: _surfaces) {
-                if (index.second->WestonSurface() == westonSurface) {
-                    _callback->Detached(index.second->Id());
-                    _surfaces.erase(index.first);
-                    index.second->Release();
+
+            for (auto index = _surfaces.begin(); index != _surfaces.end(); index++) {
+                if ((*index)->WestonSurface() == westonSurface) {
+                    _callback->Detached((*index)->Id());
+                    _surfaces.erase(index);
+                    (*index)->Release();
                     break;
                 }
             }
@@ -1565,10 +1612,14 @@ namespace Weston {
         {
             struct weston_surface* surface = nullptr;
             _adminLock.Lock();
-            const auto& index(_surfaces.find(name));
-            if (index != _surfaces.end()) {
-                surface = index->second->WestonSurface();
+
+            for (const auto& index: _surfaces) {
+                if (name == index->Name()) {
+                    surface = index->WestonSurface();
+                    break;
+                }
             }
+
             _adminLock.Unlock();
 
             return surface;
@@ -1580,7 +1631,7 @@ namespace Weston {
         Logger _logger;
         UserData _userData;
         IBackend* _backend;
-        SurfaceMap _surfaces;
+        SurfaceList _surfaces;
         InputController _inputController;
         Wayland::Display* _displayController;
         Wayland::Display::ICallback* _callback;
