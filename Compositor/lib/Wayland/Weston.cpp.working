@@ -91,7 +91,7 @@ namespace Weston {
 
                 _context = weston_log_ctx_compositor_create();
                 ASSERT(_context);
-                if (_context != nullptr) {
+                if (_context) {
                     _logScope = weston_compositor_add_log_scope(_context, "log",
                                 "Weston and Wayland logger\n", nullptr, nullptr, nullptr);
 
@@ -313,7 +313,7 @@ namespace Weston {
             static void SendModifiers(struct weston_seat *seat, uint32_t modifiers)
             {
                 struct weston_keyboard *keyboard = weston_seat_get_keyboard(seat);
-                if (keyboard != nullptr) {
+                if (keyboard) {
                     xkb_mod_mask_t depressed = 0;
                     xkb_mod_mask_t latched = xkb_state_serialize_mods(keyboard->xkb_state.state,
                                              static_cast<xkb_state_component>(XKB_STATE_LATCHED));
@@ -458,19 +458,20 @@ namespace Weston {
             static int SetZOrder(void* data)
             {
                 SurfaceData* surfaceData = static_cast<SurfaceData*>(data);
+    	            printf("%s:%s:%d %s %d \n", __FILE__, __func__, __LINE__, surfaceData->Name().c_str(), surfaceData->ZOrder());
                 if (!surfaceData->ZOrder()) {
                     struct weston_surface* surface = surfaceData->WestonSurface();
-                    if (surface != nullptr) {
-                        struct weston_desktop_surface *desktop_surface =
-                               weston_surface_get_desktop_surface(surface);
-                        if (desktop_surface != nullptr) {
+                    if (surface) {
+                        struct weston_desktop_surface *desktop_surface = weston_surface_get_desktop_surface(surface);
+                        if (desktop_surface) {
 
                             weston_desktop_surface_get_activated(desktop_surface);
                             surfaceData->WestonSurfaceSetTopAPI();
                         }
                     }
+    	            printf("%s:%s:%d %s %d \n", __FILE__, __func__, __LINE__, surfaceData->Name().c_str(), surfaceData->ZOrder());
                 }
-                surfaceData->UpdateZOrder(surfaceData->Name(), surfaceData->ZOrder());
+		surfaceData->UpdateZOrder(surfaceData->Name(), surfaceData->ZOrder());
                 surfaceData->RemoveTimer();
                 return 1;
             }
@@ -479,20 +480,17 @@ namespace Weston {
                 if (_timer != nullptr) {
                     wl_event_source_remove(_timer);
                 }
+                printf("%s::%s:%d Name = %s ZOrder = %d \n", __FILE__, __func__, __LINE__, _name.c_str(), zorder);
                 _zorder = zorder;
                 struct weston_compositor* compositor = _parent->PlatformCompositor();
                 struct wl_event_loop* loop = wl_display_get_event_loop(compositor->wl_display);
+                //printf("%s::%s:%d Name = %s ZOrder = %d \n", __FILE__, __func__, __LINE__, _name.c_str(), zorder);
                 _timer = wl_event_loop_add_timer(loop, SetZOrder, this);
                 wl_event_source_timer_update(_timer, 1);
+            //    printf("%s::%s:%d Name = %s ZOrder = %d \n", __FILE__, __func__, __LINE__, _name.c_str(), zorder);
             }
             void Resize(const int x, const int y, const int w, const int h)
             {
-                struct weston_view* view = nullptr;
-                wl_list_for_each(view, &_surface->views, surface_link) {
-                    weston_view_set_position(view, x, y);
-                    weston_view_set_mask(view, 0, 0, w, h);
-                    weston_surface_damage(view->surface);
-                }
             }
             void Visibility(const bool visible)
             {
@@ -504,7 +502,7 @@ namespace Weston {
             }
             inline void RemoveTimer()
             {
-                if (_timer != nullptr) {
+                if (_timer) {
                     wl_event_source_remove(_timer);
                     _timer = nullptr;
                 }
@@ -523,7 +521,7 @@ namespace Weston {
             }
             inline void WestonSurfaceSetTopAPI() const
             {
-                if (_parent->_surfaceSetTopAPI != nullptr) {
+                if (_parent->_surfaceSetTopAPI) {
                     _parent->_surfaceSetTopAPI(_surface);
                 }
             }
@@ -531,37 +529,51 @@ namespace Weston {
             {
                 _parent->RemoveSurface(_surface);
             }
-            inline void UpdateZOrder(const string& name, const uint32_t zorder)
-            {
-                _parent->UpdateZOrder(name, zorder);
-            }
+	    inline void UpdateZOrder(const string& name, const uint32_t zorder)
+	    {
+	        _parent->UpdateZOrder(name, zorder);
+	    }
        private:
-            inline void UpdateViewOpacity(struct weston_surface* surface, float opacity)
-            {
+             inline struct weston_view* View(struct weston_surface* surface) {
                 struct weston_view* view = nullptr;
                 wl_list_for_each(view, &surface->views, surface_link) {
-                    view->alpha = opacity;
+                    if (weston_view_is_mapped(view)) {
+                        break;;
+                    }
+                }
+                return view;
+            }
+            inline void UpdateViewAlpha(struct weston_surface* surface, float alpha)
+            {
+printf("%s:%s:%d alpha  %f\n", __FILE__, __func__, __LINE__, alpha);
+                struct weston_view* view = nullptr;
+                wl_list_for_each(view, &surface->views, surface_link) {
+                    view->alpha = alpha;
                     weston_view_geometry_dirty(view);
                     weston_surface_damage(view->surface);
                 }
             }
-            inline void UpdateSubSurface(struct weston_surface* surface, float opacity)
+            inline void UpdateSubSurface(struct weston_surface* surface, float alpha)
             {
                 struct weston_subsurface* subsurface = nullptr;
                 wl_list_for_each(subsurface, &surface->subsurface_list, parent_link) {
+printf("%s:%s:%d Susurface alpha  %f\n", __FILE__, __func__, __LINE__, alpha);
                     if (subsurface->surface != nullptr) {
-                        UpdateViewOpacity(subsurface->surface, opacity);
+printf("%s:%s:%d Subsurface View alpha  %f surface = %p parent = %p subsurface->surface = %p\n", __FILE__, __func__, __LINE__, alpha, surface, subsurface->parent, subsurface->surface);
+                        UpdateViewAlpha(subsurface->surface, alpha);
+                        //UpdateViewAlpha(subsurface->parent, alpha);
 
                         if (surface != subsurface->surface) {
-                            UpdateSubSurface(subsurface->surface, opacity);
+                            UpdateSubSurface(subsurface->surface, alpha);
                         }
                     }
                 }
             }
-            inline void UpdateOpacity(float opacity)
+            inline void UpdateOpacity(float alpha)
             {
-                UpdateViewOpacity(_surface, opacity);
-                UpdateSubSurface(_surface, opacity);
+printf("%s:%s:%d alpha  %f\n", __FILE__, __func__, __LINE__, alpha);
+                UpdateViewAlpha(_surface, alpha);
+                UpdateSubSurface(_surface, alpha);
             }
             inline void RegisterSurfaceDestroyListener(struct weston_surface* surface) {
                 _surfaceDestroyListener.notify = NotifySurfaceDestroy;
@@ -997,6 +1009,7 @@ namespace Weston {
                 }
 
                 return status;
+
             }
             OutputData* GetOutputFromWeston(struct weston_output* base)
             {
@@ -1271,7 +1284,6 @@ namespace Weston {
             , _backendLoaded(false)
             , _service(nullptr)
             , _display(nullptr)
-            , _exitTimer(nullptr)
             , _compositor(nullptr)
             , _resolution(Exchange::IComposition::ScreenResolution_1080i50Hz)
             , _loadedSignal(false, true)
@@ -1310,25 +1322,19 @@ namespace Weston {
             _logger.DestroyLogScope();
 
             ClearSignal();
-            struct wl_event_loop *loop = wl_display_get_event_loop(_compositor->wl_display);
-            _exitTimer = wl_event_loop_add_timer(loop, TerminateCallback, _compositor);
-            wl_event_source_timer_update(_exitTimer, 1);
-            _displayController->Release();
-            Block();
-            Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
-
-            wl_event_source_remove(_exitTimer);
             weston_compositor_tear_down(_compositor);
             weston_log_ctx_compositor_destroy(_compositor);
-
             weston_compositor_destroy(_compositor);
+            wl_display_terminate(_compositor->wl_display); //FIXME: revisit exti sequence
             wl_display_destroy(_display);
 
+            Stop();
+            Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
             _instance = nullptr;
             _service = nullptr;
         }
-        uint32_t StartComposition()
-               {
+
+        uint32_t StartComposition() {
             uint32_t status = Core::ERROR_GENERAL;
             _display = wl_display_create();
 
@@ -1352,7 +1358,7 @@ namespace Weston {
 
                             const char* socketName = wl_display_add_socket_auto(_display);
                             ASSERT(socketName);
-                            if (socketName != nullptr) {
+                            if (socketName) {
                                 Config config;
                                 config.FromString(_service->ConfigLine());
                                 SetEnvironments(config, socketName);
@@ -1443,7 +1449,7 @@ namespace Weston {
         void SetInput(const string& name) override
         {
             struct weston_surface* surface = GetSurface(name);
-            if (surface != nullptr) {
+            if (surface) {
                 _inputController.SetInput(surface);
             }
         }
@@ -1479,7 +1485,7 @@ namespace Weston {
                 default: break;
             }
             if (request != nullptr) {
-                result = _backend->UpdateResolution(request);
+                 result = _backend->UpdateResolution(request);
                 _resolution = value;
             } else {
                 result = Core::ERROR_UNKNOWN_KEY;
@@ -1499,29 +1505,20 @@ namespace Weston {
             Block();
             return (Core::infinite);
         }
-        static int TerminateCallback(void *data)
-        {
-            struct weston_compositor* compositor = static_cast<struct weston_compositor*>(data);
-            wl_display_terminate(compositor->wl_display);
-            return 1;
-        }
         inline void RegisterSurfaceActivateListener() {
             _surfaceActivateListener.notify = NotifySurfaceActivate;
             wl_signal_add(&_compositor->activate_signal, &_surfaceActivateListener);
         }
         static void NotifySurfaceActivate(struct wl_listener* listener, void* data)
         {
-            struct weston_surface_activation_data* activationData =
-                   static_cast<struct weston_surface_activation_data*>(data);
-
+            struct weston_surface_activation_data* activationData = static_cast<struct weston_surface_activation_data*>(data);
             struct weston_surface* surface = activationData->surface;
             char label[100];
             if (surface->get_label) {
                 int status =  surface->get_label(surface, label, sizeof(label));
                 if (status >= 0) {
-
-                    Compositor::UserData* userData = static_cast<Compositor::UserData*>
-                            (weston_compositor_get_user_data(surface->compositor));
+                    Compositor::UserData* userData =
+                            static_cast<Compositor::UserData*>(weston_compositor_get_user_data(surface->compositor));
                     userData->Parent->AddSurface(label, surface);
                 }
             }
@@ -1541,8 +1538,7 @@ namespace Weston {
                 ShellInit shellInit = reinterpret_cast<ShellInit>(library.LoadFunction(ShellInitEntryAPI));
                 if (shellInit != nullptr) {
                     if (shellInit(_compositor, 0, NULL) == 0) {
-                        _surfaceSetTopAPI = reinterpret_cast<ShellSurfaceSetTop>(
-                                            library.LoadFunction(ShellSurfaceUpdateLayerAPI));
+                        _surfaceSetTopAPI = reinterpret_cast<ShellSurfaceSetTop>(library.LoadFunction(ShellSurfaceUpdateLayerAPI));
                         status = Core::ERROR_NONE;
                     }
                 }
@@ -1562,15 +1558,17 @@ namespace Weston {
         {
             string name = ClientName(label);
             _adminLock.Lock();
+            printf("%s::%s:%d Name = %s \n", __FILE__, __func__, __LINE__, name.c_str());
             UpdateZOrder();
-            auto index = _surfaces.begin();
-            while (index != _surfaces.end()) {
+	    auto index = _surfaces.begin();
+	    while (index != _surfaces.end()) {
                 if ((*index)->Name() == name) {
                     break;
                 }
-                index++;
+		index++;
             }
             if (index == _surfaces.end()) {
+            printf("%s::%s:%d Name = %s \n", __FILE__, __func__, __LINE__, name.c_str());
                 uint16_t id = random();
                 SurfaceData* surface = new SurfaceData(this, id, name, westonSurface);
                 _surfaces.push_back(surface);
@@ -1586,34 +1584,39 @@ namespace Weston {
             }
         }
         inline void UpdateZOrder(const string& name, const uint32_t zorder) {
-            _adminLock.Lock();
+	    printf("%s:%s:%d %s %d \n", __FILE__, __func__, __LINE__, name.c_str(), zorder);
+	    _adminLock.Lock();
 
             /* Remove from the existing list */
-            SurfaceData* surface = nullptr;
+	    SurfaceData* surface = nullptr;
             auto index = _surfaces.begin();
             while (index != _surfaces.end()) {
-                if (name == (*index)->Name()) {
+		if (name == (*index)->Name()) {
                     surface = *index;
                     _surfaces.erase(index);
-                    break;
-                }
-                index++;
+		    break;
+		}
+		index++;
             }
 
             /* Reinsert based on ZOrder given */
             index = _surfaces.begin();
-            while (index != _surfaces.end()) {
+	    while (index != _surfaces.end()) {
+	        printf("%s:%s:%d %s %d \n", __FILE__, __func__, __LINE__, (*index)->Name().c_str(), (*index)->ZOrder());
                 if (zorder < (*index)->ZOrder()) {
+	            printf("%s:%s:%d %s %d \n", __FILE__, __func__, __LINE__, name.c_str(), zorder);
                     break;
                 }
-                index++;
+		index++;
             }
 
-            if (surface != nullptr) {
+	    if (surface != nullptr) {
                 surface->ZOrder(zorder);
                 _surfaces.insert(index, surface);
             }
-
+            for(const auto& index: _surfaces) {
+                printf("%s:%s:%d name = %s order = %d\n", __FILE__, __func__, __LINE__, index->Name().c_str(), index->ZOrder());
+            }
             _adminLock.Unlock();
         }
         void RemoveSurface(struct weston_surface* westonSurface)
@@ -1636,10 +1639,10 @@ namespace Weston {
             _adminLock.Lock();
 
             for (const auto& index: _surfaces) {
-                if (name == index->Name()) {
+		if (name == index->Name()) {
                     surface = index->WestonSurface();
-                    break;
-                }
+		    break;
+		}
             }
 
             _adminLock.Unlock();
@@ -1663,7 +1666,6 @@ namespace Weston {
         PluginHost::IShell* _service;
 
         struct wl_display* _display;
-        struct wl_event_source* _exitTimer;
         struct weston_compositor* _compositor;
         struct wl_listener _surfaceActivateListener;
         Exchange::IComposition::ScreenResolution _resolution;
