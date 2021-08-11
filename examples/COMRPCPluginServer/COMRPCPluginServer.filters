@@ -24,7 +24,7 @@
     <ClCompile Include="OutOfProcessImplementation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SimpleCOMRPCPluginServer.cpp">
+    <ClCompile Include="COMRPCPluginServer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -32,7 +32,7 @@
     <ClInclude Include="Module.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SimpleCOMRPCPluginServer.h">
+    <ClInclude Include="COMRPCPluginServer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

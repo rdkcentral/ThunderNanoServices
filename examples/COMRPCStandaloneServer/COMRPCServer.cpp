@@ -17,11 +17,11 @@
  * limitations under the License.
  */
 
-#define MODULE_NAME SimpleCOMRPCServer
+#define MODULE_NAME COMRPCStandaloneServer
 
 #include <core/core.h>
 #include <com/com.h>
-#include "../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
+#include "../COMRPCInterface/ICOMRPCInterface.h"
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE);
 

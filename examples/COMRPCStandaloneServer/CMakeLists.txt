@@ -18,17 +18,17 @@
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-add_executable(SimpleCOMRPCClient SimpleCOMRPCClient.cpp)
+add_executable(COMRPCStandaloneServer COMRPCStandaloneServer.cpp)
 
-set_target_properties(SimpleCOMRPCClient PROPERTIES
+set_target_properties(COMRPCClientReference PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         )     
 
-target_link_libraries(SimpleCOMRPCClient 
+target_link_libraries(COMRPCStandaloneServer
         PRIVATE
         ${NAMESPACE}COM::${NAMESPACE}COM
         CompileSettingsDebug::CompileSettingsDebug
     )
 
-install(TARGETS SimpleCOMRPCClient DESTINATION bin)
+install(TARGETS COMRPCStandaloneServer DESTINATION bin)

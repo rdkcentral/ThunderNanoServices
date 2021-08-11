@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME SimpleCOMRPCPluginServer)
+set(PLUGIN_NAME COMRPCPluginServer)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 message("Setting up ${PLUGIN_NAME}")
@@ -26,10 +26,10 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     Module.cpp
-    SimpleCOMRPCPluginServer.cpp
+    COMRPCPluginServer.cpp
 )
 
-#set_source_files_properties( SimpleCOMRPCPluginServer.cpp PROPERTIES COMPILE_FLAGS "-fexceptions" )
+#set_source_files_properties( COMRPCPluginServer.cpp PROPERTIES COMPILE_FLAGS "-fexceptions" )
 #set_source_files_properties( OutOfProcessImplementation.cpp PROPERTIES COMPILE_FLAGS "-fexceptions" )
 
 set_target_properties(${MODULE_NAME} PROPERTIES

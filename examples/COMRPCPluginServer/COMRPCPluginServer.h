@@ -23,7 +23,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class SimpleCOMRPCPluginServer : public PluginHost::IPlugin {
+    class COMRPCPluginServer : public PluginHost::IPlugin {
         //Inner private classes
     private:
         class WallClock : public Exchange::IWallClock {
@@ -32,7 +32,7 @@ namespace Plugin {
             WallClock(const WallClock&) = delete;
             WallClock& operator= (const WallClock&) = delete;
 
-            WallClock(SimpleCOMRPCPluginServer& parent)
+            WallClock(COMRPCPluginServer& parent)
                 : _adminLock()
                 , _parent(&parent) {
                 printf("Constructing WallClock\n");
@@ -59,13 +59,13 @@ namespace Plugin {
 
         private:
             Core::CriticalSection _adminLock;
-            SimpleCOMRPCPluginServer* _parent;
+            COMRPCPluginServer* _parent;
         };
 
         class ComNotificationSink : public PluginHost::IShell::ICOMLink::INotification {
         public:
             ComNotificationSink() = delete;
-            ComNotificationSink(SimpleCOMRPCPluginServer& parent)
+            ComNotificationSink(COMRPCPluginServer& parent)
                 : _parent(parent)
             {
             }
@@ -104,7 +104,7 @@ namespace Plugin {
             }
 
         private:
-            SimpleCOMRPCPluginServer& _parent;
+            COMRPCPluginServer& _parent;
         };
         class WallClockNotifier {
         private:
@@ -264,13 +264,13 @@ namespace Plugin {
 
     public:
         //Constructors
-        SimpleCOMRPCPluginServer(const SimpleCOMRPCPluginServer&) = delete;
-        SimpleCOMRPCPluginServer& operator=(const SimpleCOMRPCPluginServer&) = delete;
+        COMRPCPluginServer(const COMRPCPluginServer&) = delete;
+        COMRPCPluginServer& operator=(const COMRPCPluginServer&) = delete;
 
         #ifdef __WINDOWS__
         #pragma warning(disable: 4355)
         #endif
-        SimpleCOMRPCPluginServer()
+        COMRPCPluginServer()
             : _notifier()
             , _wallclock(nullptr)
             , _comNotificationSink(*this)
@@ -279,13 +279,13 @@ namespace Plugin {
         #ifdef __WINDOWS__
         #pragma warning(default: 4355)
         #endif
-        ~SimpleCOMRPCPluginServer() override {
+        ~COMRPCPluginServer() override {
             printf("Shutting down\n");
         }
 
     public:
         //Service Registration
-        BEGIN_INTERFACE_MAP(SimpleCOMRPCPluginServer)
+        BEGIN_INTERFACE_MAP(COMRPCPluginServer)
             INTERFACE_ENTRY(IPlugin)
             INTERFACE_AGGREGATE(Exchange::IWallClock, _wallclock)
         END_INTERFACE_MAP

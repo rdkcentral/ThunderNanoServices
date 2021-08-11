@@ -18,7 +18,7 @@
     <Text Include="CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="SimpleCOMRPCClient.cpp">
+    <ClCompile Include="COMRPCClientReference.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -4,7 +4,7 @@
  *
  * Copyright 2020 Metrological
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
@@ -16,248 +16,338 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
-// COMRPCApp.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
-
-#include <iostream>
-
-
-// Thunder is build up, out of modules. There are no circular dependencies. The dependencies are listed 
-// here from top to bottom, so all modules depend on core atc...
-// At the time of this writing, Thunder has the following modules:
-// core:          Platform abstraction layer, this layer exposes a uniform set of C++ interfaces which 
-//                should be used in the respective higher layers. This layer is responsible for making 
-//                sure that Thunder can run on Windows, Linux and OS-X.
-//                This core library contains a JSON parser.
-// cryptalgo:     Layer containing C++ interfaces towards cryptographic operations, like SHA/HMAC, random
-//                AES encryption/decryption
-// tracing:       This module is the runtime tracing system used throughout the modules. This tracing can 
-//                be turned on/off @ runtime and allows for creating custom trace classes. Trace classses
-//                can be enabled @module (plugin) level or @tracecategory level. This tracing is picked up
-//                by the TraceControl plugin that will place the traces in the right sequence again (even 
-//                over process boundaries)
-// com:           This is the implementation of the Microsoft COM-like framework which allows for process
-//                transparent development. It can run over domain socket (only on linux) and over TCP 
-//                sockets. The ProxysStub code required is derived/generated using tools from the regular 
-//                C headerfiles.
-// websocket:     This module exposes a C++ WebSocket class and has the C++ classes for HTPP communication.
-//                This module also implements a C++ representation for URL parsing.
-// protocols:     This is the combination of com + websocket module!
-// plugins:       This module contains all the functionality required to build a plugin. It contains helper 
-//                classes and the base interfaces (IPlugin, IShell, ISubsystem) for plugin development and 
-//                a helper class to do "easy" development of JSONRPC interfaces.
-// WPEProcess:    The is an application (no need to include it anywhere) to host COMRPC objects out-of-process.
-//                This is the application that is instantiated as a seperate process in case that a plugin is run
-//                out-of-process.
-// WPEFramework:  This is the Thunder application and Controller Plugin. This is the Application that needs
-//                to be started.
-//
-// To include any of the modules in your project, each module, offers a module header file. The module header 
-// file is consistently constructed by <module location name>/<module name>.h. Since the Module location name 
-// is equal to the module name, the inclusion of a module is done with WPEFramework/<Module Name>/<Module Name>.h
-// 
-// Logging versus Tracing (internal/module)
-// Thunder makes a distinction between the Logging concept and the Tracing concept. 
-// The audience for Logging is expected to be Testers and Operators. The audience for tracing is expected to 
-// be the developper. Tracing, by default, is not enabled. Logging is enabled by default. 
-// Since the tracing module is not the "lowest layer (it requires core), some kind of tracing is required 
-// for the core module. The core module uses (Trace.h/TRACE_LX pre-processor statement) for its trace 
-// definitions. These traces are enabled at compile time (only in DEBUG builds) and only have the levels (1..5). 
-// These Traces can thus not be turned on/off @ runtime and thus might, if enabled, generate large log files. 
-// The Tracing module adds another type of traces (TRACE() pre-processor statement). These traces are "advanced" 
-// traces. They are enabled in the code in DEBUG/RELEASE builds, not in PRODUCTION builds. These Traces are off 
-// by default (unless configured differently in the Thunder config file). These traces can be turned on/off at
-// runtime, by the Thunder UI, pane Tracing, to enable categories. Once enabled, depending on the configuration 
-// of the TraceControl plugin, these traces are send to the console, syslog or to a network port. The TraceControl
-// plugin will also reconstruct the traces out of a different process without mixing up parts of the trace.
-// Logging is on by default, in all build flavors and report serious issues that are related to exceptional 
-// situations observed in the software that can be correctd by a tester/operator.
-//
-
-
-// Since lower levels 
-// #define _TRACE_LEVEL 5
 
 #define MODULE_NAME COMRPCClient
 
-#include <core/core.h>
+#include "../COMRPCInterface/ICOMRPCInterface.h"
 #include <com/com.h>
+#include <core/core.h>
 #include <plugins/Types.h>
-#include <interfaces/IDictionary.h>
-#include <iostream>
+#include <plugins/plugins.h>
 
+#ifdef __WINDOWS__
+static constexpr TCHAR SimpleTestAddress[] = _T("127.0.0.1:62000");
+#else
+static constexpr TCHAR SimpleTestAddress[] = _T("/tmp/comserver");
+#endif
 MODULE_NAME_DECLARATION(BUILD_REFERENCE);
 
-namespace Thunder = WPEFramework;
+using namespace WPEFramework;
 
-class Dictionary : public Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary > {
-private:
-    using BaseClass = Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary >;
+class Math : public Exchange::IMath {
 public:
-    Dictionary(const uint32_t waitTime, const Thunder::Core::NodeId& node, const string& callsign)
-        : BaseClass() {
-        BaseClass::Open(waitTime, node, callsign);
+    Math(const Math&) = delete;
+    Math& operator=(const Math&) = delete;
+
+    Math()
+    {
     }
-    ~Dictionary() {
-        BaseClass::Close(Thunder::Core::infinite);
+    ~Math() override
+    {
     }
 
 public:
-    bool Get(const string& nameSpace, const string& key, string& value ) const {
-        bool result = false;
-        const Thunder::Exchange::IDictionary* impl = BaseClass::Interface();
-
-        if (impl != nullptr) {
-            result = impl->Get(nameSpace, key, value);
-            impl->Release();
-        }
-
-        return (result);
+    // Inherited via IMath
+    uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum) const override
+    {
+        sum = A + B;
+        return (Core::ERROR_NONE);
     }
-    bool Set(const string& nameSpace, const string& key, const string& value) {
-        bool result = false;
-        Thunder::Exchange::IDictionary* impl = BaseClass::Interface();
-
-        if (impl != nullptr) {
-            result = impl->Set(nameSpace, key, value);
-            impl->Release();
-        }
-
-        return (result);
+    uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum) const override
+    {
+        sum = A - B;
+        return (Core::ERROR_NONE);
     }
 
-private:
-    void Operational(const bool upAndRunning) {
-        printf("Operational state of Dictionary: %s\n", upAndRunning ? _T("true") : _T("false"));
+    BEGIN_INTERFACE_MAP(Math)
+    INTERFACE_ENTRY(Exchange::IMath)
+    END_INTERFACE_MAP
+};
+
+class Sink : public Exchange::IWallClock::ICallback {
+public:
+    Sink(const Sink&) = delete;
+    Sink& operator=(const Sink&) = delete;
+
+    Sink()
+    {
+        printf("Sink constructed!!\n");
+    };
+    ~Sink() override
+    {
+        printf("Sink destructed!!\n");
+    }
+
+public:
+    BEGIN_INTERFACE_MAP(Sink)
+    INTERFACE_ENTRY(Exchange::IWallClock::ICallback)
+    END_INTERFACE_MAP
+
+    uint16_t Elapsed(const uint16_t seconds) override
+    {
+        printf("The wallclock reports that %d seconds have elapsed since we where armed\n", seconds);
+        return seconds;
     }
 };
+
+class SmartWallClockClient : protected RPC::SmartInterfaceType<Exchange::IWallClock> {
+private:
+    using BaseClass = RPC::SmartInterfaceType<Exchange::IWallClock>;
+
+public:
+    SmartWallClockClient(const uint32_t waitTime, const Core::NodeId& node, const string& callsign, uint32_t wallClockUpdateTime)
+        : BaseClass()
+        , _wallClockUpdateTime(wallClockUpdateTime)
+    {
+        BaseClass::Open(waitTime, node, callsign);
+    }
+    ~SmartWallClockClient()
+    {
+        BaseClass::Close(Core::infinite);
+    }
+
+private:
+    void Operational(const bool upAndRunning)
+    {
+        printf("Operational state of WallClock implementation: %s\n", upAndRunning ? _T("true") : _T("false"));
+
+        if (upAndRunning) {
+            _interface = BaseClass::Interface();
+            if (_interface != nullptr) {
+
+                uint32_t result = _interface->Arm(_wallClockUpdateTime, &_sink);
+                if (result == Core::ERROR_NONE) {
+                    printf("We set the callback on the wallclock. We will be updated every %d second(s)\n", _wallClockUpdateTime);
+                } else {
+                    printf("Something went wrong, the imlementation reports: %d\n", result);
+                }
+            }
+        } else {
+            if (_interface != nullptr) {
+
+                uint32_t result = _interface->Disarm(&_sink);
+                if (result == Core::ERROR_NONE) {
+                    printf("We removed the callback from the wallclock. We will no longer be updated\n");
+                } else if (result == Core::ERROR_NOT_EXIST) {
+                    printf("Looks like it was not Armed, or it fired already!\n");
+                } else {
+                    printf("Something went wrong, the imlementation reports: %d\n", result);
+                }
+                _interface->Release();
+            }
+        }
+    }
+
+private:
+    uint32_t _wallClockUpdateTime;
+    Exchange::IWallClock* _interface;
+    Core::Sink<Sink> _sink;
+};
+
+enum class ServerType {
+    PLUGIN_SERVER,
+    STANDALONE_SERVER
+};
+
+bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel, ServerType& type, string& callsign)
+{
+    int index = 1;
+    bool showHelp = false;
+    comChannel = Core::NodeId(SimpleTestAddress);
+
+    while ((index < argc) && (!showHelp)) {
+        if (strcmp(argv[index], "-connect") == 0) {
+            comChannel = Core::NodeId(argv[index + 1]);
+            type = ServerType::STANDALONE_SERVER;
+            index++;
+        } else if (strcmp(argv[index], "-plugin") == 0) {
+#ifdef __WINDOWS__
+            comChannel = Core::NodeId("127.0.0.1:62000");
+#else
+            comChannel = Core::NodeId("/tmp/communicator");
+#endif
+            type = ServerType::PLUGIN_SERVER;
+            if ((index + 1) < argc) {
+                callsign = string(argv[index + 1]);
+            } else {
+                callsign = _T("COMRPCPluginServer");
+            }
+            index++;
+        } else if (strcmp(argv[index], "-h") == 0) {
+            showHelp = true;
+        }
+        index++;
+    }
+
+    return (showHelp);
+}
 
 int main(int argc, char* argv[])
 {
     // The core::NodeId can hold an IPv4, IPv6, domain, HCI, L2CAP or netlink address
     // Here we create a domain socket address
-    #ifdef __WINDOWS__
-    Thunder::Core::NodeId nodeId("127.0.0.1:62000");
-    #else
-    Thunder::Core::NodeId nodeId("/tmp/communicator");
-    #endif
+    Core::NodeId comChannel;
+    ServerType type;
+    string callsign;
 
-    // Create an engine that can deserialize the invoke COMRPC messages that have been 
-    // received. The parameters her <4,1> stand for the queue length, 4 which means that
-    // if 4 elements have been queued, the submission of the 5th element will be a 
-    // blocking call, untill there is a free spot again. Which will cuase the system to
-    // throttle.
-    // The 1 paramater indicates the number of threads that this engine will create to
-    // handle the work. So it holds a threadpool of 1 thread.
-    // Thunder::Core::ProxyType< Thunder::RPC::InvokeServerType<1, 0, 4> > engine(
-    //    Thunder::Core::ProxyType<Thunder::RPC::InvokeServerType<1, 0, 4>>::Create());
+    printf("\nCOMRPCClient is the counterpart for the COMRPCStandaloneServer or COMRPCPluginServer (but does not support offering IMath interface)\n");
 
-    // Thunder::Core::ProxyType<Thunder::RPC::CommunicatorClient> client(
-    //    Thunder::Core::ProxyType<Thunder::RPC::CommunicatorClient>::Create(
-    //        nodeId,
-    //        Thunder::Core::ProxyType< Thunder::Core::IIPCServer >(engine)));
+    if (ParseOptions(argc, argv, comChannel, type, callsign) == true) {
+        printf("Options:\n");
+        printf("-connect <IP/FQDN>:<port> [default: %s]\n", SimpleTestAddress);
+        printf("-plugin <callsign> [use plugin server and not the stand-alone version]\n");
+        printf("-h This text\n\n");
+    } else {
+        int element;
+        Exchange::IWallClock* clock(nullptr);
+        Sink* sink = nullptr;
+        Core::ProxyType<RPC::CommunicatorClient> client(Core::ProxyType<RPC::CommunicatorClient>::Create(comChannel));
+        Math* outbound = Core::Service<Math>::Create<Math>();
+        std::unique_ptr<SmartWallClockClient> _smartClient;
+        printf("Channel: %s:[%d]\n\n", comChannel.HostAddress().c_str(), comChannel.PortNumber());
 
-    // Once the socket is opened the first exchange between client and server is an 
-    // announce message. This announce message hold information the otherside requires
-    // like, where can I find the ProxyStubs that I need to load, what Trace categories
-    // need to be enabled.
-    // Extensibility allows to be "in the middle" of these messages and to chose on 
-    // which thread this message should be executes. Since the message is coming in 
-    // over socket, the announce message could be handled on the communication thread
-    // or better, if possible, it can be run on the thread of the engine we have just 
-    // created.
-    // engine->Announcements(client->Announcement());
-
-    // Since the COMRPC, in comparison to the JSONRPC framework, is host/process/plugin 
-    // agnostic, the COMRPC mechanism can only "connect" to a port (Thunder application)
-    // and request an existing interface or create an object.
-    // 
-    // Plugins (like OCDM server) that support specific functionality will host there 
-    // own COMRPC connection point (server). If the OCDM client attaches to this instance
-    // it can creat a new interface instance (OCDMDecryptSession) or it can request an 
-    // existing interface with a specific functionality. It is up to the implementation
-    // behind this COMRPC connection point what happens.
-    //
-    // As for the Thunder framework, the only service offered on this connection point
-    // at the time of this writing is to "offer an interface (created on client side) 
-    // and return it to the process that requested this interface for out-of-process.
-    // The calls in the plugins (WebKitBrowser plugin):
-    // service->Root<Exchange::IBrowser>(_connectionId, 2000, _T("WebKitImplementation"));
-    // will trigger the fork of a new process, that starts WPEProcess, WPEProcess, will 
-    // load a plugin (libWebKitBrowser.so), instantiate an object called 
-    // "WebKitImplementation" and push the interface that resides on this object 
-    // (Exchange::IBrowser) back over the opened COMRPC channel to the Thunder Framework.
-    // Since the Thunder Framework initiated this, it knows the sequenceId issued with 
-    // this request and it will forward the interface (which is now actually a Proxy) 
-    // to the call that started this fork.
-    //
-    // So that means that currently there is no possibility to request an interface 
-    // on this end-poiunt however since it might be interesting to request at least 
-    // the IShell interface of the ControllerPlugin (from there one could navigate 
-    // to any other plugin) and to explore areas which where not required yet, I will
-    // prepare this request to be demoed next week when we are on side and then walk 
-    // with you through the flow of events. So what you are doing here, accessing
-    // the Thunder::Exchange::IDictionary* from an executable outside of the Thunder
-    // is available on the master, as of next week :-)
-    // The code that follows now is pseudo code (might still require some changes) but 
-    // will be operational next week
-
-    SleepMs(4000);
-
-    // client->Open<Thunder::Exchange::IDictionary>("Dictionary");
-
-
-    // Three options to do this:
-    // 1) 
-    //    Thunder::PluginHost::IShell* controller = client->Open<Thunder::PluginHost::IShell>(_T("Dictionary"), ~0, 3000);
-    //
-    // Or 
-    // 2)
-    //    if (client->Open(3000) == Thunder::Core::ERROR_NONE) {
-    //        controller = client->Aquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
-    //
-    // Or
-    // 3)
-    {
-        Dictionary  dictionary(3000, nodeId, _T("Dictionary"));
-        char keyPress;
-        uint32_t counter = 8;
-
-        // chip.PCD_Init();
         do {
-            keyPress = toupper(getchar());
-            
-            switch (keyPress) {
-            case 'O': {
-                printf("Operations state issue: %s\n", dictionary.IsOperational() ? _T("true") : _T("false"));
-                break;
-            }
-            case 'S': {
+            printf("\n>");
+            element = toupper(getchar());
 
-                string value = Thunder::Core::NumberType<int32_t>(counter++).Text();
-                if (dictionary.Set(_T("/name"), _T("key"), value) == true) {
-                    printf("Set value: %s\n", value.c_str());
+            switch (element) {
+            case 'O':
+                printf("Offering our IMath interface to te otherside..!\n");
+                if (client->IsOpen() == false) {
+                    client->Open(2000);
+                }
+
+                if (client->IsOpen() == false) {
+                    printf("Could not open a connection to the server. No exchange of interfaces happened!\n");
+                } else {
+                    uint32_t result = client->Offer<Exchange::IMath>(outbound);
+
+                    if (result == Core::ERROR_NONE) {
+                        printf("Our IMath nterface has been offered to the other side!\n");
+                    } else {
+                        printf("Our offer has not been accepted, Error: %d!\n", result);
+                    }
                 }
                 break;
-            }
-            case 'G': {
-                string value;
-                if (dictionary.Get(_T("/name"), _T("key"), value) == true) {
-                    printf("Get value: %s\n", value.c_str());
+            case 'C':
+                if (clock != nullptr) {
+                    printf("There is no need to create a clock, we already have one!\n");
+                } else {
+                    if (client->IsOpen() == false) {
+                        client->Open(2000);
+                    }
+
+                    if (client->IsOpen() == false) {
+                        printf("Could not open a connection to the server. No exchange of interfaces happened!\n");
+                        break;
+                    } else {
+                        if (type == ServerType::STANDALONE_SERVER) {
+                            clock = client->Aquire<Exchange::IWallClock>(3000, _T("WallClockImplementation"), ~0);
+                        } else {
+                            WPEFramework::PluginHost::IShell* controller = client->Aquire<WPEFramework::PluginHost::IShell>(10000, _T("Controller"), ~0);
+                            if (controller != nullptr) {
+                                clock = controller->QueryInterfaceByCallsign<Exchange::IWallClock>(callsign);
+                                controller->Release();
+                            }
+                        }
+                    }
+
+                    if (clock == nullptr) {
+                        client->Close(Core::infinite);
+                        printf("Tried aquiring the IWallclock, but it is not available\n");
+                    } else {
+                        printf("Aquired the IWallclock, ready for use\n");
+                    }
                 }
                 break;
+            case 'S':
+                if (_smartClient == nullptr) {
+                    printf("Starting getting notifications using smart interface client\n");
+                    _smartClient.reset(new SmartWallClockClient(Core::infinite, comChannel, "COMRPCPluginServer", 10));
+                } else {
+                    printf("Stop getting notifications using smart interface client\n");
+                    _smartClient.reset(nullptr);
+                }
 
+                break;
+            case 'D':
+                if (clock == nullptr) {
+                    printf("We can not destroy the clock, because we have no clock :-)\n");
+                } else {
+                    clock->Release();
+                    clock = nullptr;
+                    printf("Released the IWallclock, no more service available\n");
+                }
+                break;
+            case 'I':
+                if (clock == nullptr) {
+                    printf("We do not have a clock interface, so we can not get the time\n");
+                } else {
+                    printf("The Ticker is at: %llu\n", clock->Now());
+                }
+                break;
+            case 'T':
+                if (clock == nullptr) {
+                    printf("We do not have a clock interface, so we can not register the callback\n");
+                } else if (sink != nullptr) {
+                    uint32_t result = clock->Disarm(sink);
+                    sink->Release();
+                    sink = nullptr;
+                    if (result == Core::ERROR_NONE) {
+                        printf("We removed the callback from the wallclock. We will nolonger be updated\n");
+                    } else if (result == Core::ERROR_NOT_EXIST) {
+                        printf("Looks like it was not Armed, or it fired already!\n");
+                    } else {
+                        printf("Something went wrong, the imlementation reports: %d\n", result);
+                    }
+                } else {
+                    sink = Core::Service<Sink>::Create<Sink>();
+                    uint32_t result = clock->Arm(10, sink); // Fire each 10 Seconds
+                    if (result == Core::ERROR_NONE) {
+                        printf("We set the callback on the wallclock. We will be updated\n");
+                    } else {
+                        printf("Something went wrong, the imlementation reports: %d\n", result);
+                        sink->Release();
+                    }
+                }
+                break;
+            case 'E':
+                exit(0);
+                break;
+            case 'Q':
+                break;
+            case '?':
+                printf("Options available:\n");
+                printf("=======================================================================\n");
+                printf("<O> Offer the IMath interface to the server, for calculating.\n");
+                printf("<C> Create the clock interface, usefull for telling the time.\n");
+                printf("<D> Destroy the clock interface, we are nolonger interested in the time.\n");
+                printf("<I> Information required, tell  me the current time.\n");
+                printf("<T> Toggle subscription for continous updates.\n");
+                printf("<Q> We are done playing around, eave the application properly.\n");
+                printf("<E> Eject, this is an emergency, bail out, just kill the app.\n");
+                printf("<?> Have no clue what I can do, tell me.\n");
+            default:
+                break;
             }
-            case 'Q': break;
-            default: break;
-            };
-        } while (keyPress != 'Q');
+
+        } while (element != 'Q');
+
+        if (sink != nullptr) {
+            clock->Disarm(sink);
+            sink->Release();
+            sink = nullptr;
+        }
+        if (client->IsOpen() == true) {
+            client->Close(Core::infinite);
+        }
+
+        if (outbound != nullptr) {
+            outbound->Release();
+        }
     }
 
-    printf("Prior to the call Dispose\n");
-    Thunder::Core::Singleton::Dispose();
-    printf("Completed the call Dispose\n");
+    Core::Singleton::Dispose();
 
     return 0;
 }

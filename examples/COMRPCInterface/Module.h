@@ -20,7 +20,7 @@
 #pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME ISimpleCOMRPCInterface
+#define MODULE_NAME ICOMRPCInterface
 #endif
 
 #include <core/core.h>

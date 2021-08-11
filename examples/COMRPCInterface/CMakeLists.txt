@@ -32,7 +32,7 @@ list(APPEND INTERFACES_HEADERS Module.h)
 
 file(GLOB PROXY_STUB_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/generated/ProxyStubs*.cpp")
 
-set(TARGET ${NAMESPACE}SimpleCOMRPCInterface)
+set(TARGET ${NAMESPACE}COMRPCInterface)
 
 add_library(${TARGET} SHARED
         ${PROXY_STUB_SOURCES}        

@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-#include "SimpleCOMRPCPluginServer.h"
+#include "COMRPCPluginServer.h"
 
 #ifdef __CORE_EXCEPTION_CATCHING__
 #include <stdexcept>
@@ -27,10 +27,10 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(SimpleCOMRPCPluginServer, 1, 0);
+    SERVICE_REGISTRATION(COMRPCPluginServer, 1, 0);
 
     //IPlugin
-    const string SimpleCOMRPCPluginServer::Initialize(PluginHost::IShell* service)  /* override */
+    const string COMRPCPluginServer::Initialize(PluginHost::IShell* service)  /* override */
     {
         ASSERT(service != nullptr);
         service->Register(&_comNotificationSink);
@@ -38,7 +38,7 @@ namespace Plugin {
         return (EMPTY_STRING);
     }
 
-    void SimpleCOMRPCPluginServer::Deinitialize(PluginHost::IShell* service)  /* override */
+    void COMRPCPluginServer::Deinitialize(PluginHost::IShell* service)  /* override */
     {
         ASSERT(service != nullptr);
         _wallclock->Decouple();
@@ -47,14 +47,14 @@ namespace Plugin {
         service->Unregister(&_comNotificationSink);
     }
 
-    string SimpleCOMRPCPluginServer::Information() const /* override */
+    string COMRPCPluginServer::Information() const /* override */
     {
         return (EMPTY_STRING);
     }
     //Private methods
 
     //IWallClock
-    uint32_t SimpleCOMRPCPluginServer::WallClock::Arm(const uint16_t seconds, ICallback* callback)
+    uint32_t COMRPCPluginServer::WallClock::Arm(const uint16_t seconds, ICallback* callback)
     {   
         uint32_t result = Core::ERROR_BAD_REQUEST;
 
@@ -68,7 +68,7 @@ namespace Plugin {
 
         return (result);
     }
-    uint32_t SimpleCOMRPCPluginServer::WallClock::Disarm(const Exchange::IWallClock::ICallback* callback)
+    uint32_t COMRPCPluginServer::WallClock::Disarm(const Exchange::IWallClock::ICallback* callback)
     {
         uint32_t result = Core::ERROR_BAD_REQUEST;
 
@@ -83,7 +83,7 @@ namespace Plugin {
 
         return (result);
     }
-    uint64_t SimpleCOMRPCPluginServer::WallClock::Now() const
+    uint64_t COMRPCPluginServer::WallClock::Now() const
     {
         Core::Time result = Core::Time::Now();
         TRACE(Trace::Information, (_T("The time has been requested, we return a clock time of: %s"), result.ToRFC1123().c_str()));
@@ -91,7 +91,7 @@ namespace Plugin {
         return (_parent == nullptr ? 0 : result.Ticks());
     }
 
-    void SimpleCOMRPCPluginServer::OnRevoke(const Exchange::IWallClock::ICallback* remote) {
+    void COMRPCPluginServer::OnRevoke(const Exchange::IWallClock::ICallback* remote) {
         // Looks like we need to stop the callback from being called, it is a dead object now anyway :-)
         TRACE(Trace::Information, (_T("Revoking a callback, it will not fire anymore")));
         _notifier.Disarm(remote);

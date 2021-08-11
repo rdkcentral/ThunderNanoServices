@@ -4,7 +4,7 @@
     <ClCompile Include="Module.cpp">
       <Filter>Base Files</Filter>
     </ClCompile>
-    <ClCompile Include="ProxyStubs_SimpleCOMRPCInterface.cpp">
+    <ClCompile Include="ProxyStubs_COMRPCInterface.cpp">
       <Filter>Generated Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -23,7 +23,7 @@
     <ClInclude Include="Module.h">
       <Filter>Base Files</Filter>
     </ClInclude>
-    <ClInclude Include="ISimpleCOMRPCInterface.h">
+    <ClInclude Include="ICOMRPCInterface.h">
       <Filter>Interface FIles</Filter>
     </ClInclude>
   </ItemGroup>
