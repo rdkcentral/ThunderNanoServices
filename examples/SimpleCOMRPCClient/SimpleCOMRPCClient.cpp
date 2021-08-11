@@ -22,6 +22,7 @@
 #include <core/core.h>
 #include <com/com.h>
 #include <plugins/plugins.h>
+#include <plugins/Types.h>
 #include "../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
 
 #ifdef __WINDOWS__
@@ -66,8 +67,7 @@ public:
     Sink(const Sink&) = delete;
     Sink& operator= (const Sink&) = delete;
 
-    Sink(const uint16_t period) 
-        : _period(period) {
+    Sink() {
         printf("Sink constructed!!\n");
     };
     ~Sink() override {
@@ -81,11 +81,64 @@ public:
 
     uint16_t Elapsed(const uint16_t seconds) override {
         printf("The wallclock reports that %d seconds have elapsed since we where armed\n", seconds);
-        return(_period);
+        return seconds;
+    }
+
+};
+
+
+class SmartWallClockClient : protected RPC::SmartInterfaceType<Exchange::IWallClock> {
+private:
+    using BaseClass = RPC::SmartInterfaceType<Exchange::IWallClock>;
+
+public:
+    SmartWallClockClient(const uint32_t waitTime, const Core::NodeId& node, const string& callsign, uint32_t wallClockUpdateTime)
+        : BaseClass()
+        , _wallClockUpdateTime(wallClockUpdateTime)
+    {
+        BaseClass::Open(waitTime, node, callsign);
+    }
+    ~SmartWallClockClient()
+    {
+        BaseClass::Close(Core::infinite);
     }
 
 private:
-    const uint16_t _period;
+    void Operational(const bool upAndRunning)
+    {
+        printf("Operational state of WallClock implementation: %s\n", upAndRunning ? _T("true") : _T("false"));
+
+        if (upAndRunning) {
+            _interface = BaseClass::Interface();
+            if (_interface != nullptr) {
+
+                uint32_t result = _interface->Arm(_wallClockUpdateTime, &_sink);
+                if (result == Core::ERROR_NONE) {
+                    printf("We set the callback on the wallclock. We will be updated every %d second(s)\n", _wallClockUpdateTime);
+                } else {
+                    printf("Something went wrong, the imlementation reports: %d\n", result);
+                }
+            }
+        } else {
+            if (_interface != nullptr) {
+
+                uint32_t result = _interface->Disarm(&_sink);
+                if (result == Core::ERROR_NONE) {
+                    printf("We removed the callback from the wallclock. We will no longer be updated\n");
+                } else if (result == Core::ERROR_NOT_EXIST) {
+                    printf("Looks like it was not Armed, or it fired already!\n");
+                } else {
+                    printf("Something went wrong, the imlementation reports: %d\n", result);
+                }
+                _interface->Release();
+            }
+        }
+    }
+
+private:
+    uint32_t _wallClockUpdateTime;
+    Exchange::IWallClock* _interface;
+    Core::Sink<Sink> _sink;
 };
 
 enum class ServerType{
@@ -153,6 +206,7 @@ int main(int argc, char* argv[])
         Sink* sink = nullptr; 
         Core::ProxyType<RPC::CommunicatorClient> client(Core::ProxyType<RPC::CommunicatorClient>::Create(comChannel));
         Math* outbound = Core::Service<Math>::Create<Math>();
+        std::unique_ptr<SmartWallClockClient> _smartClient;
         printf("Channel: %s:[%d]\n\n", comChannel.HostAddress().c_str(), comChannel.PortNumber());
 
         do {
@@ -212,6 +266,16 @@ int main(int argc, char* argv[])
                     }
                 }
                 break;
+            case 'S':
+                if (_smartClient == nullptr) {
+                    printf("Starting getting notifications using smart interface client\n");
+                    _smartClient.reset(new SmartWallClockClient(Core::infinite, comChannel, "SimpleCOMRPCPluginServer", 10));
+                } else {
+                    printf("Stop getting notifications using smart interface client\n");
+                    _smartClient.reset(nullptr);
+                }
+
+                break;
             case 'D':
                 if (clock == nullptr) {
                     printf("We can not destroy the clock, because we have no clock :-)\n");
@@ -249,8 +313,8 @@ int main(int argc, char* argv[])
                     }
                 }
                 else {
-                    sink = Core::Service<Sink>::Create<Sink>(10); // Fire each 10 Seconds
-                    uint32_t result = clock->Arm(10, sink);
+                    sink = Core::Service<Sink>::Create<Sink>(); 
+                    uint32_t result = clock->Arm(10, sink); // Fire each 10 Seconds
                     if (result == Core::ERROR_NONE) {
                         printf("We set the callback on the wallclock. We will be updated\n");
                     }
