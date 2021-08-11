@@ -18,7 +18,7 @@
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-add_executable(COMRPCClient COMRPCClient.cpp)
+add_executable(COMRPCClient COMRPCClient.cpp Module.cpp)
 
 set_target_properties(COMRPCClient PROPERTIES
         CXX_STANDARD 11

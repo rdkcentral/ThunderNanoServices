@@ -17,138 +17,21 @@
  * limitations under the License.
  */
 
-#define MODULE_NAME COMRPCClient
-
-#include "../COMRPCInterface/ICOMRPCInterface.h"
-#include <com/com.h>
-#include <core/core.h>
-#include <plugins/Types.h>
-#include <plugins/plugins.h>
+#include "Module.h"
+#include "Math.h"
+#include "SmartSink.h"
+#include "Sink.h"
 
 #ifdef __WINDOWS__
 static constexpr TCHAR SimpleTestAddress[] = _T("127.0.0.1:62000");
 #else
 static constexpr TCHAR SimpleTestAddress[] = _T("/tmp/comserver");
 #endif
-MODULE_NAME_DECLARATION(BUILD_REFERENCE);
+
+
 
 using namespace WPEFramework;
 
-class Math : public Exchange::IMath {
-public:
-    Math(const Math&) = delete;
-    Math& operator=(const Math&) = delete;
-
-    Math()
-    {
-    }
-    ~Math() override
-    {
-    }
-
-public:
-    // Inherited via IMath
-    uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum) const override
-    {
-        sum = A + B;
-        return (Core::ERROR_NONE);
-    }
-    uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum) const override
-    {
-        sum = A - B;
-        return (Core::ERROR_NONE);
-    }
-
-    BEGIN_INTERFACE_MAP(Math)
-    INTERFACE_ENTRY(Exchange::IMath)
-    END_INTERFACE_MAP
-};
-
-class Sink : public Exchange::IWallClock::ICallback {
-public:
-    Sink(const Sink&) = delete;
-    Sink& operator=(const Sink&) = delete;
-
-    Sink()
-    {
-        printf("Sink constructed!!\n");
-    };
-    ~Sink() override
-    {
-        printf("Sink destructed!!\n");
-    }
-
-public:
-    BEGIN_INTERFACE_MAP(Sink)
-    INTERFACE_ENTRY(Exchange::IWallClock::ICallback)
-    END_INTERFACE_MAP
-
-    uint16_t Elapsed(const uint16_t seconds) override
-    {
-        printf("The wallclock reports that %d seconds have elapsed since we where armed\n", seconds);
-        return seconds;
-    }
-};
-
-class SmartWallClockClient : protected RPC::SmartInterfaceType<Exchange::IWallClock> {
-private:
-    using BaseClass = RPC::SmartInterfaceType<Exchange::IWallClock>;
-
-public:
-    SmartWallClockClient(const uint32_t waitTime, const Core::NodeId& node, const string& callsign, uint32_t wallClockUpdateTime)
-        : BaseClass()
-        , _wallClockUpdateTime(wallClockUpdateTime)
-        , _sink(nullptr)
-    {
-        BaseClass::Open(waitTime, node, callsign);
-    }
-    ~SmartWallClockClient()
-    {
-        BaseClass::Close(Core::infinite);
-    }
-
-private:
-    void Operational(const bool upAndRunning)
-    {
-        printf("Operational state of WallClock implementation: %s\n", upAndRunning ? _T("true") : _T("false"));
-
-        if (upAndRunning) {
-            _interface = BaseClass::Interface();
-            if (_interface != nullptr && _sink == nullptr) {
-                
-                _sink = Core::Service<Sink>::Create<Sink>();
-                uint32_t result = _interface->Arm(_wallClockUpdateTime, _sink);
-                
-                if (result == Core::ERROR_NONE) {
-                    printf("We set the callback on the wallclock. We will be updated every %d second(s)\n", _wallClockUpdateTime);
-                } else {
-                    printf("Something went wrong, the imlementation reports: %d\n", result);
-                }
-            }
-        } else {
-            if (_interface != nullptr && _sink != nullptr) {
-                
-                uint32_t result = _interface->Disarm(_sink);
-                _sink->Release();
-                _sink = nullptr;
-                
-                if (result == Core::ERROR_NONE) {
-                    printf("We removed the callback from the wallclock. We will no longer be updated\n");
-                } else if (result == Core::ERROR_NOT_EXIST) {
-                    printf("Looks like it was not Armed, or it fired already!\n");
-                } else {
-                    printf("Something went wrong, the imlementation reports: %d\n", result);
-                }
-                _interface->Release();
-            }
-        }
-    }
-
-private:
-    uint32_t _wallClockUpdateTime;
-    Exchange::IWallClock* _interface;
-    Sink* _sink;
-};
 
 enum class ServerType {
     PLUGIN_SERVER,
