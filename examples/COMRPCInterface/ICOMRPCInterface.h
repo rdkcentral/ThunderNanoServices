@@ -26,9 +26,11 @@ namespace WPEFramework {
 namespace Exchange {
 
 #ifdef __WINDOWS__
-    static constexpr TCHAR SimpleTestAddress[] = _T("127.0.0.1:63000");
+    static constexpr TCHAR StandaloneServerAddress[] = _T("127.0.0.1:63000");
+    static constexpr TCHAR PluginServerAddress[] = _T("127.0.0.1:62000");
 #else
-    static constexpr TCHAR SimpleTestAddress[] = _T("/tmp/comserver");
+    static constexpr TCHAR StandaloneServerAddress[] = _T("/tmp/comserver");
+    static constexpr TCHAR PluginServerAddress[] = _T("/tmp/communicator");
 #endif
 
     enum example_ids {

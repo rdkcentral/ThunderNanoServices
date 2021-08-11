@@ -298,7 +298,7 @@ bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel, string& psPat
 {
     int index = 1;
     bool showHelp = false;
-    comChannel = Core::NodeId(Exchange::SimpleTestAddress);
+    comChannel = Core::NodeId(Exchange::StandaloneServerAddress);
     psPath = _T("./PS");
 
     while ((index < argc) && (!showHelp)) {
