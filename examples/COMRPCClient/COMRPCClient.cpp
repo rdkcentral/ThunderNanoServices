@@ -98,6 +98,7 @@ public:
     SmartWallClockClient(const uint32_t waitTime, const Core::NodeId& node, const string& callsign, uint32_t wallClockUpdateTime)
         : BaseClass()
         , _wallClockUpdateTime(wallClockUpdateTime)
+        , _sink(nullptr)
     {
         BaseClass::Open(waitTime, node, callsign);
     }
@@ -113,9 +114,11 @@ private:
 
         if (upAndRunning) {
             _interface = BaseClass::Interface();
-            if (_interface != nullptr) {
-
-                uint32_t result = _interface->Arm(_wallClockUpdateTime, &_sink);
+            if (_interface != nullptr && _sink == nullptr) {
+                
+                _sink = Core::Service<Sink>::Create<Sink>();
+                uint32_t result = _interface->Arm(_wallClockUpdateTime, _sink);
+                
                 if (result == Core::ERROR_NONE) {
                     printf("We set the callback on the wallclock. We will be updated every %d second(s)\n", _wallClockUpdateTime);
                 } else {
@@ -123,9 +126,12 @@ private:
                 }
             }
         } else {
-            if (_interface != nullptr) {
-
-                uint32_t result = _interface->Disarm(&_sink);
+            if (_interface != nullptr && _sink != nullptr) {
+                
+                uint32_t result = _interface->Disarm(_sink);
+                _sink->Release();
+                _sink = nullptr;
+                
                 if (result == Core::ERROR_NONE) {
                     printf("We removed the callback from the wallclock. We will no longer be updated\n");
                 } else if (result == Core::ERROR_NOT_EXIST) {
@@ -141,7 +147,7 @@ private:
 private:
     uint32_t _wallClockUpdateTime;
     Exchange::IWallClock* _interface;
-    Core::Sink<Sink> _sink;
+    Sink* _sink;
 };
 
 enum class ServerType {
