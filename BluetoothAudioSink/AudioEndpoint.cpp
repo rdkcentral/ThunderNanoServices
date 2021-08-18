@@ -19,7 +19,7 @@
 
 #include "Module.h"
 #include "AudioEndpoint.h"
-#include "AudioCodec.h"
+#include "IAudioCodec.h"
 #include "AudioCodecSBC.h"
 
 namespace WPEFramework {

@@ -38,10 +38,10 @@ namespace A2DP {
         virtual uint32_t SerializeConfiguration(Bluetooth::Buffer& output) const = 0;
 
         virtual uint32_t Protect(const uint16_t inBufferSize, const uint8_t inBuffer[],
-                                    const uint16_t maxOutBufferSize, uint8_t outBuffer) const = 0;
+                                 const uint16_t maxOutBufferSize, uint8_t outBuffer) const = 0;
 
         virtual uint32_t Unprotect(const uint16_t inBufferSize, const uint8_t inBuffer[],
-                                    const uint16_t maxOutBufferSize, uint8_t outBuffer) const = 0;
+                                   const uint16_t maxOutBufferSize, uint8_t outBuffer) const = 0;
     };
 
 } // namespace A2DP

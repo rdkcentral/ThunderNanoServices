@@ -20,8 +20,8 @@
 #pragma once
 
 #include "Module.h"
-#include "AudioCodec.h"
-#include "AudioContentProtection.h"
+#include "IAudioCodec.h"
+#include "IAudioContentProtection.h"
 
 #include <interfaces/IBluetoothAudio.h>
 

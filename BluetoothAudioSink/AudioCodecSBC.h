@@ -20,6 +20,7 @@
 #pragma once
 
 #include "Module.h"
+#include "IAudioCodec.h"
 
 namespace WPEFramework {
 
