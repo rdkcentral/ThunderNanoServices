@@ -55,7 +55,6 @@ namespace A2DP {
         Format::channelmode channelMode = Format::CM_INVALID;
         uint8_t maxBitpool = _supported.MinBitpool();
 
-
         if (config.Profile.IsSet() == true) {
             // Profile requested in config, this will now be the target quality.
             if (config.Profile.Value() != COMPATIBLE) {

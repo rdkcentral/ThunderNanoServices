@@ -50,7 +50,7 @@ namespace Plugin {
 
         Exchange::JBluetoothAudioSink::Unregister(*this);
 
-        _service->Release();
+        service->Release();
         _service = nullptr;
     }
 
@@ -68,6 +68,7 @@ namespace Plugin {
                         Updated();
                     });
                     if (_sink != nullptr) {
+                        TRACE(Trace::Information, (_T("Assigned [%s] to Bluetooth audio sink"), address.c_str()));
                         result = Core::ERROR_NONE;
                     } else {
                         TRACE(Trace::Error, (_T("Failed to create audio sink")));
@@ -90,18 +91,23 @@ namespace Plugin {
         return (result);
     }
 
-    /* virtual */ uint32_t BluetoothAudioSink::Revoke(const string& device)
+    /* virtual */ uint32_t BluetoothAudioSink::Revoke(const string& address)
     {
         uint32_t result = Core::ERROR_ALREADY_RELEASED;
 
         if (_sink != nullptr) {
-            delete _sink;
-            _sink = nullptr;
-            result = Core::ERROR_NONE;
+            if (_sink->Address() == address) {
+                delete _sink;
+                _sink = nullptr;
+                TRACE(Trace::Information, (_T("Revoked [%s] from Bluetooth audio sink"), address.c_str()));
+                result = Core::ERROR_NONE;
+            } else {
+                TRACE(Trace::Error, (_T("Device [%s] not assigned"), address.c_str()));
+            }
         } else {
             TRACE(Trace::Error, (_T("Sink not assigned, assign first")));
         }
-        // TODO
+
         return (result);
     }
 

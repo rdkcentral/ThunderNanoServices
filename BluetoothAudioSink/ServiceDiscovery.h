@@ -199,12 +199,12 @@ namespace A2DP {
         ~ServiceDiscovery() = default;
 
     private:
-        bool Initialize() override
+        uint32_t Initialize() override
         {
             _lock.Lock();
             _audioServices.clear();
             _lock.Unlock();
-            return (true);
+            return (Core::ERROR_NONE);
         }
 
         void Operational() override

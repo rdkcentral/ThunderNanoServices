@@ -24,7 +24,6 @@
 #include "AudioContentProtection.h"
 
 #include <interfaces/IBluetoothAudio.h>
-#include <interfaces/JBluetoothAudioSink.h>
 
 namespace WPEFramework {
 
@@ -123,7 +122,7 @@ namespace A2DP {
             uint32_t result = Core::ERROR_NONE;
             _command.GetConfiguration(SEID());
             if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
-                _command.Result().ReadConfiguration([this](const uint8_t category, const Bluetooth::Buffer& data) {
+                _command.Result().ReadConfiguration([this](const uint8_t category, const Bluetooth::Buffer& /* data */) {
                     switch(category) {
                     case Bluetooth::AVDTPProfile::StreamEndPoint::ServiceCapabilities::CONTENT_PROTECTION:
                         // TODO

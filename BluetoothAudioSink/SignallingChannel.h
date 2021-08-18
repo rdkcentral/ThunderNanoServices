@@ -26,7 +26,6 @@
 #include "AudioEndpoint.h"
 
 #include <interfaces/IBluetoothAudio.h>
-#include <interfaces/JBluetoothAudioSink.h>
 
 namespace WPEFramework {
 
@@ -99,9 +98,9 @@ namespace A2DP {
         }
 
     private:
-        bool Initialize() override
+        uint32_t Initialize() override
         {
-            return (true);
+            return (Core::ERROR_NONE);
         }
         void Operational() override
         {
@@ -184,7 +183,7 @@ namespace A2DP {
 
             if (_status != newStatus) {
                 _status = newStatus;
-                Core::EnumerateType<JsonData::BluetoothAudioSink::StatusType> value(static_cast<Exchange::IBluetoothAudioSink::status>(_status));
+                Core::EnumerateType<Exchange::IBluetoothAudioSink::status> value(_status);
                 TRACE(Trace::Information, (_T("Audio sink status: %s"), (value.IsSet()? value.Data() : "(undefined)")));
                 _updatedCb();
             }

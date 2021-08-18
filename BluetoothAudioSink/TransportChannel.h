@@ -83,9 +83,9 @@ namespace A2DP {
         ~TransportChannel() = default;
 
     private:
-        bool Initialize() override
+        uint32_t Initialize() override
         {
-            return (true);
+            return (Core::ERROR_NONE);
         }
         void Operational() override
         {

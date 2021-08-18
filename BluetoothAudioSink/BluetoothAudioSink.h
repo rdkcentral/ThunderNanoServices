@@ -25,7 +25,7 @@
 
 #include <interfaces/IBluetooth.h>
 #include <interfaces/IBluetoothAudio.h>
-#include <interfaces/JBluetoothAudioSink.h>
+#include <interfaces/json/JBluetoothAudioSink.h>
 
 #include "ServiceDiscovery.h"
 #include "SignallingChannel.h"
@@ -213,6 +213,8 @@ namespace Plugin {
             }
             ~A2DPSink()
             {
+                ASSERT(_device != nullptr);
+
                 if (_device->Callback(static_cast<Exchange::IBluetooth::IDevice::ICallback*>(nullptr)) != Core::ERROR_NONE) {
                     TRACE(Trace::Error, (_T("Could not remove the callback from the device")));
                 }
@@ -291,10 +293,16 @@ namespace Plugin {
                 }
                 return (result);
             }
+            const string Address() const
+            {
+                ASSERT(_device != nullptr);
+                return (_device->RemoteId());
+            }
 
         public:
             void OnDeviceUpdated()
             {
+                ASSERT(_device != nullptr);
                 if (_device->IsBonded() == true) {
                     _lock.Lock();
 
@@ -387,17 +395,24 @@ namespace Plugin {
             {
                 _lock.Lock();
 
+                A2DP::AudioEndpoint* sbcEndpoint = nullptr;
+
                 // Endpoints have been discovered, but the AVDTP signalling channel remains open!
                 for (auto& ep : endpoints) {
-                    // TODO: If there are any, it will be the SBC codec, so pick up the first one anyway.
-                    //       If more codecs become supported this will have to be revisited!
                     if (ep.Codec() != nullptr) {
-                        _endpoint = &ep;
-                        break;
+                       switch (ep.Codec()->Type()) {
+                       case A2DP::IAudioCodec::SBC:
+                           sbcEndpoint = &ep;
+                           break;
+                       default:
+                           break;
+                       }
                     }
                 }
 
-                if (_endpoint != nullptr) {
+                if (sbcEndpoint != nullptr) {
+                    // For now always choose SBC endpoint.
+                    _endpoint = sbcEndpoint;
                     _job.Submit([this](){
                         Configure(R"({ "profile":"xq", "samplerate": 44100, "channels": "stereo" })");
                     });
@@ -465,8 +480,6 @@ namespace Plugin {
 
             return (result);
         }
-        uint32_t Assign(const string& device) override;
-        uint32_t Revoke(const string& device) override;
         uint32_t Status(Exchange::IBluetoothAudioSink::status& sinkStatus) const
         {
             if (_sink) {
@@ -474,8 +487,12 @@ namespace Plugin {
             } else {
                 sinkStatus = Exchange::IBluetoothAudioSink::UNASSIGNED;
             }
+
             return (Core::ERROR_NONE);
         }
+
+        uint32_t Assign(const string& device) override;
+        uint32_t Revoke(const string& device) override;
 
     public:
         Exchange::IBluetooth* Controller() const
