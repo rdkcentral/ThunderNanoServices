@@ -67,9 +67,10 @@ namespace A2DP {
 
                         if (codecType == a2dp_audiocodec::SBC) {
                             _codec = new AudioCodecSBC(caps.Data());
-                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x uses LC-SBC codec! [0x%02x]"), SEID()));
+                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x uses LC-SBC codec [0x%02x]"), SEID()));
                         } else {
-                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x uses an unsupported audio codec! [0x%02x]"),
+                            // TODO?
+                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x uses an unknown audio codec! [0x%02x]"),
                                                        SEID(), static_cast<uint8_t>(codecType)));
                         }
                     } else {
@@ -88,8 +89,17 @@ namespace A2DP {
                         a2dp_contentprotection cpType{};
                         caps.Pop(cpType);
 
-                        // TODO...
+                        if (cpType == a2dp_contentprotection::NONE) {
+                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x uses no copy protection"),
+                                                       SEID(), static_cast<uint8_t>(cpType)));
+                        } else {
+                            // TODO?
+                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x supports unknown copy protection! [0x%02x]"),
+                                                       SEID(), static_cast<uint8_t>(cpType)));
+                        }
                     }
+                } else {
+                    TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x uses no copy protection"), SEID()));
                 }
             }
         } else {
