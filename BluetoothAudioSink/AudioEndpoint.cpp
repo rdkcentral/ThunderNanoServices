@@ -57,7 +57,7 @@ namespace A2DP {
             if (mcIt != sep.Capabilities().end()) {
                 const ServiceCapabilities& caps = (*mcIt).second;
                 if (caps.Data().size() >= 5) {
-                    Bluetooth::Record config(caps.Data());
+                    Bluetooth::DataRecord config(caps.Data());
                     a2dp_mediatype mediaType{};
                     config.Pop(mediaType);
 
@@ -84,7 +84,7 @@ namespace A2DP {
                 if (cpIt != sep.Capabilities().end()) {
                     const ServiceCapabilities& caps = (*cpIt).second;
                     if (caps.Data().size() >= 2) {
-                        Bluetooth::RecordLE caps(caps.Data());
+                        Bluetooth::DataRecordLE caps(caps.Data());
                         a2dp_contentprotection cpType{};
                         caps.Pop(cpType);
 

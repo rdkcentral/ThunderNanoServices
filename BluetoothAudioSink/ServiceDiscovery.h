@@ -301,7 +301,7 @@ namespace A2DP {
                     for (auto const& protocol : service.Protocols()) {
                         TRACE(DiscoveryFlow, (_T("    - %s '%s', parameters: %s"),
                                               protocol.Type().ToString().c_str(), protocol.Name().c_str(),
-                                              Bluetooth::Record(protocol.Parameters()).ToString().c_str()));
+                                              Bluetooth::DataRecord(protocol.Parameters()).ToString().c_str()));
                     }
                 }
                 if (service.Attributes().empty() == false) {
@@ -309,7 +309,7 @@ namespace A2DP {
                     for (auto const& attribute : service.Attributes()) {
                         TRACE(DiscoveryFlow, (_T("    - %04x '%s', value: %s"),
                                               attribute.second.Type(), attribute.second.Name().c_str(),
-                                              Bluetooth::Record(attribute.second.Value()).ToString().c_str()));
+                                              Bluetooth::DataRecord(attribute.second.Value()).ToString().c_str()));
                     }
                 }
             }

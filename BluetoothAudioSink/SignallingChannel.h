@@ -208,7 +208,7 @@ namespace A2DP {
                     TRACE(SignallingFlow, (_T("  Capabilities:")));
                     for (auto const& caps : sep.Capabilities()) {
                         TRACE(SignallingFlow, (_T("    - %02x '%s', parameters[%d]: %s"), caps.first, caps.second.Name().c_str(),
-                                            caps.second.Data().size(), Bluetooth::Record(caps.second.Data()).ToString().c_str()));
+                                            caps.second.Data().size(), Bluetooth::DataRecord(caps.second.Data()).ToString().c_str()));
                     }
                 }
             }

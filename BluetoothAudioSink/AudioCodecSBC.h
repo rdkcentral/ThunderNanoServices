@@ -128,7 +128,7 @@ namespace A2DP {
             {
                 uint8_t octet;
                 uint8_t scratchpad[16];
-                Bluetooth::Record data(scratchpad, sizeof(scratchpad));
+                Bluetooth::DataRecord data(scratchpad, sizeof(scratchpad));
 
                 data.Push(IAudioCodec::MEDIA_TYPE);
                 data.Push(CODEC_TYPE);
@@ -146,7 +146,7 @@ namespace A2DP {
             }
             void Deserialize(const Bluetooth::Buffer& config)
             {
-                Bluetooth::Record data(config);
+                Bluetooth::DataRecord data(config);
 
                 uint8_t octet{};
                 data.Pop(octet); // AUDIO, already checked
