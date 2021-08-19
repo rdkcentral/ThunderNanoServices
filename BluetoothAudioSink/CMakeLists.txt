@@ -18,11 +18,15 @@
 set(PLUGIN_NAME BluetoothAudioSink)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(SBC REQUIRED)
 
+set(PLUGIN_BLUETOOTHAUDIOSINK_AUTOSTART true CACHE STRING true)
 
 add_library(${MODULE_NAME} SHARED
     BluetoothAudioSink.cpp
@@ -36,15 +40,15 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
-        sbc
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        ${NAMESPACE}Bluetooth::${NAMESPACE}Bluetooth)
+        ${NAMESPACE}Bluetooth::${NAMESPACE}Bluetooth
+        ${SBC_LIBRARIES})
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 
-write_config(${PLUGIN_NAME})
+write_config()
