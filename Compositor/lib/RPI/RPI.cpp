@@ -99,17 +99,23 @@ MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 namespace WPEFramework {
 namespace Plugin {
 
-// TODO: EGL and GLES (type and) extentions support
-
 class CompositorImplementation;
 
     // Some compilers might struggle with identical names for class and namespace, but for now it simplifies a lot
     namespace EGL {
+#ifdef EGL_VERSION_1_5
+        using img_t = EGLImage;
+#else
         using img_t = EGLImageKHR;
+#endif
         using width_t = EGLint;
         using height_t = EGLint;
 
+#ifdef EGL_VERSION_1_5
+        static constexpr img_t InvalidImage () { return EGL_NO_IMAGE; }
+#else
         static constexpr img_t InvalidImage () { return EGL_NO_IMAGE_KHR; }
+#endif
     }
 
     class ClientSurface : public Exchange::IComposition::IClient, Exchange::IComposition::IRender {
@@ -291,7 +297,9 @@ class CompositorImplementation;
                         std::string _msg;
                         int _fd = -1;
 
-                        if (Receive (_msg, _fd) && _compositor.FDFor (_msg, _fd) && Send (_msg, _fd) != false) {
+                        std::string _props;
+
+                        if (Receive (_msg, _fd) && _compositor.FDFor (_msg, _fd, _props) && Send (_msg + _props, _fd) != false) {
                             // Just wait for the remote peer to close the connection
                             ssize_t _size = read (_transfer, nullptr, 0);
 
@@ -866,19 +874,27 @@ class CompositorImplementation;
                             _ret = glGetError () == GL_NO_ERROR;
                         }
 
-                        // Requires EGL 1.2 and either the EGL_OES_image or EGL_OES_image_base
-                        // Use eglGetProcAddress, or dlsym for the function pointer of this GL extenstion
-                        // https://www.khronos.org/registry/OpenGL/extensions/OES/OES_EGL_image_external.txt
-                        static void (* _EGLImageTargetTexture2DOES) (GLenum, GLeglImageOES) = reinterpret_cast < void (*) (GLenum, GLeglImageOES) > (eglGetProcAddress ("glEGLImageTargetTexture2DOES"));
 
-                        if (_ret != false && _EGLImageTargetTexture2DOES != nullptr) {
-                            // Logical const
-                            using no_const_img_t = _remove_const < decltype (img) > :: type;
-                            _EGLImageTargetTexture2DOES (_tgt, reinterpret_cast <GLeglImageOES> (const_cast < no_const_img_t  >(img)));
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
-                        else {
-                            _ret = false;
+                        // A valid GL context should exist for GLES::Supported ()
+                        EGL::ctx_t _ctx = eglGetCurrentContext ();
+                        EGL::dpy_t _dpy = _ctx != EGL::InvalidCtx () ? eglGetCurrentDisplay () : EGL::InvalidDpy ();
+
+                        _ret = _ret && eglGetError () == EGL_SUCCESS && _ctx != EGL::InvalidCtx ();
+
+
+                        if ( _ret && ( Supported ("GL_OES_EGL_image") && ( EGL::Supported (_dpy, "EGL_KHR_image") || EGL::Supported (_dpy, "EGL_KHR_image_base") ) ) != false) {
+                            // Take storage for the texture from the EGLImage; Pixel data becomes undefined
+                            static void (* _EGLImageTargetTexture2DOES) (GLenum, GLeglImageOES) = reinterpret_cast < void (*) (GLenum, GLeglImageOES) > (eglGetProcAddress ("glEGLImageTargetTexture2DOES"));
+
+                            if (_ret != false && _EGLImageTargetTexture2DOES != nullptr) {
+                                // Logical const
+                                using no_const_img_t = _remove_const < decltype (img) > :: type;
+                                _EGLImageTargetTexture2DOES (_tgt, reinterpret_cast <GLeglImageOES> (const_cast < no_const_img_t  >(img)));
+                                _ret = glGetError () == GL_NO_ERROR;
+                            }
+                            else {
+                                _ret = false;
+                            }
                         }
 
                         if (_ret != false) {
@@ -913,7 +929,6 @@ class CompositorImplementation;
 
             private :
 
-// TODO:  Add extention support
                 valid_t Initialize () {
                     valid_t _ret = false;
                     _ret = true;
@@ -1017,34 +1032,36 @@ class CompositorImplementation;
                     };
 
 
-                    bool _ret = glGetError () == GL_NO_ERROR;
+                    bool _ret = glGetError () == GL_NO_ERROR && Supported ("GL_OES_EGL_image_external") != false;
 
-                    constexpr char const _vtx_src [] =
-                        "#version 100                               \n"
-                        "attribute vec3 position;                   \n"
-                        "varying vec2 coordinates;                  \n"
-                        "void main () {                             \n"
-                            "gl_Position = vec4 (position.xyz, 1);  \n"
-                            "coordinates = position.xy;             \n"
-                        "}                                          \n"
-                    ;
+                    if (_ret != false) {
+                        constexpr char const _vtx_src [] =
+                            "#version 100                               \n"
+                            "attribute vec3 position;                   \n"
+                            "varying vec2 coordinates;                  \n"
+                            "void main () {                             \n"
+                                "gl_Position = vec4 (position.xyz, 1);  \n"
+                                "coordinates = position.xy;             \n"
+                            "}                                          \n"
+                        ;
 
-                    constexpr char  const _frag_src [] =
-                        "#version 100                                                           \n"
-                        "#extension GL_OES_EGL_image_external : require                         \n"
-                        "precision mediump float;                                               \n"
-                        "uniform samplerExternalOES sampler;                                    \n"
-                        "varying vec2 coordinates;                                              \n"
-                        "void main () {                                                         \n"
-                            "gl_FragColor = vec4 (texture2D (sampler, coordinates).rgb, 1.0f);  \n"
-                        "}                                                                      \n"
-                    ;
+                        constexpr char const _frag_src [] =
+                            "#version 100                                                           \n"
+                            "#extension GL_OES_EGL_image_external : require                         \n"
+                            "precision mediump float;                                               \n"
+                            "uniform samplerExternalOES sampler;                                    \n"
+                            "varying vec2 coordinates;                                              \n"
+                            "void main () {                                                         \n"
+                                "gl_FragColor = vec4 (texture2D (sampler, coordinates).rgb, 1.0f);  \n"
+                            "}                                                                      \n"
+                        ;
 
-                    GLuint _vtxShader = LoadShader (GL_VERTEX_SHADER, _vtx_src);
-                    GLuint _fragShader = LoadShader (GL_FRAGMENT_SHADER, _frag_src);
+                        GLuint _vtxShader = LoadShader (GL_VERTEX_SHADER, _vtx_src);
+                        GLuint _fragShader = LoadShader (GL_FRAGMENT_SHADER, _frag_src);
 
 // TODO: inefficient on every call, reuse compiled program
-                    _ret = ShadersToProgram(_vtxShader, _fragShader);
+                        _ret = ShadersToProgram(_vtxShader, _fragShader);
+                    }
 
                     // Blend pixels with pixels already present in the frame buffer
 
@@ -1060,8 +1077,9 @@ class CompositorImplementation;
 
                     // Color on error
                     if (_ret != true) {
+// TODO: might not have effect due to ripple
                         glClearColor (1.0f, 0.0f, 0.0f, 0.5f);
-                        _ret = glGetError () == GL_NO_ERROR;
+                        //_ret = glGetError () == GL_NO_ERROR;
                     }
 
                     return _ret;
@@ -1110,19 +1128,114 @@ class CompositorImplementation;
 
                     return _ret;
                 }
+
+                bool Supported (std::string const & name) {
+                    bool _ret = false;
+
+                    using string_t = std::string::value_type;
+                    using ustring_t = std::make_unsigned < string_t > :: type;
+
+                    // Identical underlying types except for signedness
+                    static_assert (std::is_same < ustring_t, GLubyte > :: value != false);
+
+                    string_t const * _ext = reinterpret_cast <string_t const *> ( glGetString (GL_EXTENSIONS) );
+
+                    _ret = _ext != nullptr
+                           && name.size () > 0
+                           && ( std::string (_ext).find (name)
+                                != std::string::npos );
+
+                    return _ret;
+                }
+
+
+
        };
 
 //                static_assert ( (std::is_convertible < decltype (_dpy->Native ()), EGLNativeDisplayType > :: value) != false);
 //                static_assert ( (std::is_convertible < decltype (_surf->Native ()), EGLNativeWindowType > :: value) != false);
 
        class EGL  {
+
+#define XSTRINGIFY(X) STRINGIFY(X)
+#define STRINGIFY(X) #X
+
+#ifdef EGL_VERSION_1_5
+#define KHRFIX(name) name
+#define _EGL_SYNC_FENCE EGL_SYNC_FENCE
+#define _EGL_NO_SYNC EGL_NO_SYNC
+#define _EGL_FOREVER EGL_FOREVER
+#define _EGL_NO_IMAGE EGL_NO_IMAGE
+#define _EGL_NATIVE_PIXMAP EGL_NATIVE_PIXMAP_KHR
+#else
+#define _KHRFIX(left, right) left ## right
+#define KHRFIX(name) _KHRFIX(name, KHR)
+#define _EGL_SYNC_FENCE EGL_SYNC_FENCE_KHR
+#define _EGL_NO_SYNC EGL_NO_SYNC_KHR
+#define _EGL_FOREVER EGL_FOREVER_KHR
+#define _EGL_NO_IMAGE EGL_NO_IMAGE_KHR
+#define _EGL_NATIVE_PIXMAP EGL_NATIVE_PIXMAP_KHR
+using EGLAttrib = EGLint;
+#endif
+
+                class Sync final {
+
+                    public :
+
+                        using dpy_t = EGLDisplay;
+                        using sync_t = KHRFIX (EGLSync);
+
+                    private :
+
+                        sync_t _sync;
+                        dpy_t _dpy;
+
+                    public :
+// TODO: calling Supported is expensive, sync objects are heavily used
+                        explicit Sync (dpy_t & dpy) : _dpy {dpy} {
+                            assert (dpy != InvalidDpy ());
+
+                            _sync = ( EGL::Supported (dpy, "EGL_KHR_fence_sync") && dpy != InvalidDpy () ) != false ? KHRFIX (eglCreateSync) (dpy, _EGL_SYNC_FENCE, nullptr) : InvalidSync ();
+                        }
+
+                        ~Sync () {
+
+                            if (_sync == InvalidSync ()) {
+                                // Error creating sync object or unable to create one
+                                glFinish ();
+                            }
+                            else {
+                                glFlush ();
+
+                                EGLint _val = KHRFIX (eglClientWaitSync) (_dpy, _sync, 0 /* no flags */ , _EGL_FOREVER);
+
+                                if (_val != EGL_TRUE) {
+                                    // Error
+                                }
+
+                                // Consume the (possible) error
+                                /* ELGint */ eglGetError ();
+                            }
+                        }
+
+                        static constexpr dpy_t InvalidDpy () { return EGL_NO_DISPLAY; }
+                        static constexpr sync_t InvalidSync () { return _EGL_NO_SYNC; }
+
+                    private :
+
+                        void * operator new (size_t) = delete;
+                        void * operator new [] (size_t) = delete;
+                        void operator delete (void *) = delete;
+                        void operator delete [] (void *) = delete;
+                };
+
             private :
 
                 // Define the 'invalid' value
                 static_assert (std::is_pointer <EGLConfig>::value != false);
                 static constexpr void * const EGL_NO_CONFIG = nullptr;
 
-                EGLDisplay _dpy = EGL_NO_DISPLAY;
+                Sync::dpy_t _dpy = Sync::InvalidDpy ();
                 EGLConfig _conf = EGL_NO_CONFIG;
                 EGLContext _ctx = EGL_NO_CONTEXT;
                 EGLSurface _surf = EGL_NO_SURFACE;
@@ -1153,6 +1266,8 @@ class CompositorImplementation;
                 }
 
                 static constexpr img_t InvalidImage () { return WPEFramework::Plugin::EGL::InvalidImage (); }
+                static constexpr dpy_t InvalidDpy () { return Sync::InvalidDpy (); }
+                static constexpr ctx_t InvalidCtx () { return EGL_NO_CONTEXT; }
 
                 dpy_t Display () const { return _dpy; }
                 surf_t Surface () const { return _surf; }
@@ -1163,12 +1278,15 @@ class CompositorImplementation;
                 static img_t CreateImage (EGL const & egl, ClientSurface::surf_t const & surf) {
                     img_t _ret = InvalidImage ();
 
-                    if (egl.Valid () != false) {
+                    if (egl.Valid () && ( Supported (egl.Display (), "EGL_KHR_image") && Supported (egl.Display (), "EGL_KHR_image_base")  && Supported (egl.Display (), "EGL_KHR_image_pixmap") ) != false ) {
 
-                            static_assert ((std::is_same <dpy_t, EGLDisplay> :: value && std::is_same <ctx_t, EGLContext> :: value && std::is_same <img_t, EGLImageKHR> :: value ) != false);
-                        static EGLImageKHR (* _eglCreateImageKHR) (EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLint const * ) = reinterpret_cast < EGLImageKHR (*) (EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLint const * ) > (eglGetProcAddress ("eglCreateImageKHR"));
+                        static_assert ((std::is_same <dpy_t, EGLDisplay> :: value && std::is_same <ctx_t, EGLContext> :: value && std::is_same <img_t, KHRFIX (EGLImage)> :: value ) != false);
 
-                        if (_eglCreateImageKHR != nullptr) {
+                        constexpr char _methodName [] = XSTRINGIFY ( KHRFIX (eglCreateImage) );
+
+                        static KHRFIX (EGLImage) (* _eglCreateImage) (EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLAttrib const * ) = reinterpret_cast < KHRFIX (EGLImage) (*) (EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLAttrib const * ) > (eglGetProcAddress ( _methodName ));
+
+                        if (_eglCreateImage != nullptr) {
 
                             auto _width = gbm_bo_get_width (surf._buf);
                             auto _height = gbm_bo_get_height (surf._buf);
@@ -1183,23 +1301,23 @@ class CompositorImplementation;
                             constexpr bool _enable = false;
 
                             // (Almost) all will fail!
-                            if (_narrowing < width_t, EGLint, _enable > :: value != false
-                                && _narrowing < height_t, EGLint, _enable > :: value != false) {
+                            if (_narrowing < width_t, EGLAttrib, _enable > :: value != false
+                                && _narrowing < height_t, EGLAttrib, _enable > :: value != false) {
                                 TRACE_WITHOUT_THIS (Trace::Information, (_T ("Possible narrowing detected!")));
                             }
 
-                            EGLint const _attrs [] = {
-                                EGL_WIDTH, static_cast <EGLint> (_width),
-                                EGL_HEIGHT, static_cast <EGLint> (_height),
+                            EGLAttrib const _attrs [] = {
+                                EGL_WIDTH, static_cast <EGLAttrib> (_width),
+                                EGL_HEIGHT, static_cast <EGLAttrib> (_height),
                                 EGL_NONE
                             };
 
                             static_assert (std::is_convertible < decltype (surf._buf), EGLClientBuffer > :: value != false);
-                            _ret = _eglCreateImageKHR (egl.Display (), EGL_NO_CONTEXT, EGL_NATIVE_PIXMAP_KHR, surf._buf, _attrs);
+                            _ret = _eglCreateImage (egl.Display (), EGL_NO_CONTEXT, _EGL_NATIVE_PIXMAP, surf._buf, _attrs);
                         }
                         else {
                             // Error
-                            TRACE_WITHOUT_THIS (Trace::Error, (_T ("eglCreateImageKHR is unavailable or invalid parameters.")));
+                            TRACE_WITHOUT_THIS (Trace::Error, (_T ("%s is unavailable or invalid parameters."), _methodName));
                         }
                     }
                     else {
@@ -1212,16 +1330,21 @@ class CompositorImplementation;
                 static img_t DestroyImage (EGL const & egl, ClientSurface::surf_t const & surf) {
                     img_t _ret = surf._khr;
 
-                    if (egl.Valid () != false ) {
-                        static EGLBoolean (* _eglDestroyImageKHR) (EGLDisplay, EGLImageKHR) = reinterpret_cast < EGLBoolean (*) (EGLDisplay, EGLImageKHR) > (eglGetProcAddress ("eglDestroyImageKHR"));
+                    if (egl.Valid () && Supported (egl.Display (), "EGL_KHR_image") && Supported (egl.Display (), "EGL_KHR_image_base") != false ) {
 
-                        if (_eglDestroyImageKHR != nullptr && surf.RenderComplete () != false) {
+                        static_assert ((std::is_same <dpy_t, EGLDisplay> :: value && std::is_same <ctx_t, EGLContext> :: value && std::is_same <img_t, KHRFIX (EGLImage)> :: value ) != false);
+
+                        constexpr char _methodName [] = XSTRINGIFY ( KHRFIX (eglDestroyImage) );
+
+                        static EGLBoolean (* _eglDestroyImage) (EGLDisplay, KHRFIX (EGLImage)) = reinterpret_cast < EGLBoolean (*) (EGLDisplay, KHRFIX (EGLImage)) > (eglGetProcAddress ( KHRFIX ("eglDestroyImage") ));
+
+                        if (_eglDestroyImage != nullptr && surf.RenderComplete () != false) {
 // TODO: Leak?
-                            _ret = _eglDestroyImageKHR (egl.Display (), surf._khr) != EGL_FALSE ? EGL::InvalidImage () : _ret;
+                            _ret = _eglDestroyImage (egl.Display (), surf._khr) != EGL_FALSE ? EGL::InvalidImage () : _ret;
                         }
                         else {
                             // Error
-                            TRACE_WITHOUT_THIS (Trace::Error, (_T ("eglDestroyImageKHR is unavailablei or invalid paramters.")));
+                            TRACE_WITHOUT_THIS (Trace::Error, (_T ("%s is unavailable or invalid parameters are provided."), _methodName));
                         }
                     }
                     else {
@@ -1235,7 +1358,6 @@ class CompositorImplementation;
 
             private :
 
-// TODO: extension support
                 bool Initialize () {
                     bool _ret = _natives.Valid ();
 
@@ -1330,6 +1452,35 @@ class CompositorImplementation;
 
             public :
 
+                    // Although compile / build time may succeed, runtime checks are also mandatory
+                    static bool Supported (dpy_t const dpy, std::string const & name) {
+                        bool _ret = false;
+
+                        static_assert ((std::is_same <dpy_t, EGLDisplay> :: value) != false);
+
+#ifdef EGL_VERSION_1_5
+                        // KHR extentions that have become part of the standard
+
+                        // Sync capability
+                        _ret = name.find ("EGL_KHR_fence_sync") != std::string::npos
+                               /* CreateImage / DestroyImage */
+                               || name.find ("EGL_KHR_image") != std::string::npos
+                               || name.find ("EGL_KHR_image_base") != std::string::npos;
+#endif
+
+                        if (_ret != true) {
+                            static_assert (std::is_same <std::string::value_type, char> :: value != false);
+                            char const * _ext = eglQueryString (dpy, EGL_EXTENSIONS);
+
+                            _ret =  _ext != nullptr
+                                    && name.size () > 0
+                                    && ( std::string (_ext).find (name)
+                                         != std::string::npos );
+                        }
+
+                        return _ret;
+                    }
+
                 bool Render (GLES & gles) {
                     bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE;
 
@@ -1338,6 +1489,12 @@ class CompositorImplementation;
 
                         // Avoid any memory leak if the local thread is stopped (by another thread)
                         _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
+                    }
+
+                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync::sync_t _sync (_dpy);
+
+                    if (_ret != true) {
+                        TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
                     }
 
                     return _ret;
@@ -1353,8 +1510,25 @@ class CompositorImplementation;
                         _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
                     }
 
+                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync::sync_t _sync (_dpy);
+
+                    if (_ret != true) {
+                        TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
+                    }
+
                     return _ret;
                 }
+
+#undef STRINGIFY
+#ifdef _KHRFIX
+#undef _KHRFIX
+#endif
+#undef KHRFIX
+#undef _EGL_SYNC_FENCE
+#undef _EGL_NO_SYNC
+#undef _EGL_FOREVER
+#undef _EGL_NO_IMAGE
+#undef _EGL_NATIVE_PIXMAP
         };
 
     public:
@@ -1430,6 +1604,15 @@ class CompositorImplementation;
     public:
 
         bool FDFor (std::string const & name, int & fd) {
+
+            std::string _prop;
+
+            bool _ret = FDFor (name, fd, _prop);
+
+            return _ret;
+        }
+
+        bool FDFor (std::string const & name, int & fd, std::string & properties) {
             std::lock_guard < decltype (_clientLock) > const lock (_clientLock);
 
             bool _ret = false;
@@ -1457,8 +1640,29 @@ class CompositorImplementation;
                 }
             }
 
+            ClientSurface::surf_t _surf;
+
             if (_ret != false) {
-                /* surf_t */ _client->Surface ( EGL::CreateImage (_egl, _client->Surface () ));
+                _surf = _client->Surface ( EGL::CreateImage (_egl, _client->Surface () ));
+
+                _ret = (_surf.Valid () != false);
+            }
+
+            if (_ret != false) {
+                    properties.clear ();
+
+                    auto _width = gbm_bo_get_width (_surf._buf);
+                    auto _height = gbm_bo_get_height (_surf._buf);
+                    auto _stride = gbm_bo_get_stride (_surf._buf);
+                    auto _format = gbm_bo_get_format (_surf._buf);
+
+                    constexpr char _spacer [] = ":";
+
+                    properties = std::string (_spacer)
+                                + std::to_string (_width).append (_spacer)
+                                + std::to_string (_height).append (_spacer)
+                                + std::to_string (_stride).append (_spacer)
+                                + std::to_string (_format);
             }
 
             return _ret;
