@@ -1623,8 +1623,8 @@ namespace Weston {
             for (auto index = _surfaces.begin(); index != _surfaces.end(); index++) {
                 if ((*index)->WestonSurface() == westonSurface) {
                     _callback->Detached((*index)->Id());
-                    _surfaces.erase(index);
                     (*index)->Release();
+                    _surfaces.erase(index);
                     break;
                 }
             }
