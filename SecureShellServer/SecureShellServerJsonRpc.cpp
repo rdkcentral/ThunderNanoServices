@@ -32,15 +32,15 @@ namespace Plugin {
     void SecureShellServer::RegisterAll()
     {
 	Register<void, Core::JSON::DecUInt32>(_T("getactivesessionscount"), &SecureShellServer::endpoint_getactivesessionscount, this);
-	Register<void, Core::JSON::ArrayType<SessioninfoResultData>>(_T("getactivesessionsinfo"), &SecureShellServer::endpoint_getactivesessionsinfo, this);
-	Register<SessioninfoResultData,void>(_T("closeclientsession"), &SecureShellServer::endpoint_closeclientsession, this);
+	Register<void, Core::JSON::ArrayType<SessioninfoInfo>>(_T("getactivesessionsinfo"), &SecureShellServer::endpoint_getactivesessionsinfo, this);
+	Register<SessioninfoInfo,void>(_T("closeclientsession"), &SecureShellServer::endpoint_closeclientsession, this);
     }
 
     void SecureShellServer::UnregisterAll()
     {
-        Unregister(_T("closeclientsession"));
         Unregister(_T("getactivesessionsinfo"));
         Unregister(_T("getactivesessionscount"));
+        Unregister(_T("closeclientsession"));
     }
 
     // API implementation
@@ -54,15 +54,15 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_NONE;
 
-	Exchange::ISecureShellServer::IClient::IIterator* iter = SessionsInfo();
-	if (iter != nullptr)
-	{
-            response = GetSessionsCount(iter);
+        Exchange::ISecureShellServer::IClient::IIterator* iter = SessionsInfo();
+        if (iter != nullptr)
+        {
+                response = GetSessionsCount(iter);
 
-            iter->Reset();
-            iter->Next();
-            iter->Release();
-	}
+                iter->Reset();
+                iter->Next();
+                iter->Release();
+        }
 
         return result;
     }
@@ -72,7 +72,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_INCORRECT_URL: Incorrect URL given
     // Get details of each active SSH client sessions managed by Dropbear Service.
-    uint32_t SecureShellServer::endpoint_getactivesessionsinfo(Core::JSON::ArrayType<SessioninfoResultData>& response)
+    uint32_t SecureShellServer::endpoint_getactivesessionsinfo(Core::JSON::ArrayType<SessioninfoInfo>& response)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -86,19 +86,17 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_INCORRECT_URL: Incorrect URL given
     // Close a SSH client session.
-    uint32_t SecureShellServer::endpoint_closeclientsession(const JsonData::SecureShellServer::SessioninfoResultData& params)
+    uint32_t SecureShellServer::endpoint_closeclientsession(const JsonData::SecureShellServer::SessioninfoInfo& params)
     {
         uint32_t result = Core::ERROR_NONE;
-	ClientImpl* client =
-		Core::Service<SecureShellServer::ClientImpl>::Create<ClientImpl>(params.IpAddress.Value(), params.TimeStamp.Value(), params.Pid.Value());
+	    ClientImpl* client = Core::Service<SecureShellServer::ClientImpl>::Create<ClientImpl>(params.Ipaddress.Value(), params.Timestamp.Value(), params.Pid.Value());
 
         if(params.Pid.IsSet() == true) {
-            TRACE(Trace::Information, (_T("closing client session with pid: %s"), params.Pid.Value()));
+            TRACE(Trace::Information, (_T("closing client session with pid: %u"), params.Pid.Value()));
             result = CloseClientSession(client);
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
-
 
         return result;
     }

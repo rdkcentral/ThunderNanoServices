@@ -104,9 +104,9 @@ namespace Plugin {
                 if (index.Current().Text() == "CloseClientSession") {
                         // DELETE       <-CloseClientSession
 		        ISecureShellServer::IClient* client = Core::Service<ClientImpl>::Create<ISecureShellServer::IClient>(
-							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->IpAddress.Value(),
-							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->TimeStamp.Value(),
-							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->Pid.Value());
+							request.Body<const JsonData::SecureShellServer::SessioninfoInfo>()->Ipaddress.Value(),
+							request.Body<const JsonData::SecureShellServer::SessioninfoInfo>()->Timestamp.Value(),
+							request.Body<const JsonData::SecureShellServer::SessioninfoInfo>()->Pid.Value());
                         uint32_t status = SecureShellServer::CloseClientSession(client);
                         if (status != Core::ERROR_NONE) {
                                result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
@@ -150,7 +150,7 @@ namespace Plugin {
                                             count, i, info[i].pid, info[i].ipaddress, info[i].timestamp));
 
                 local_clients.push_back(Core::Service<SecureShellServer::ClientImpl>::Create<ClientImpl>(info[i].ipaddress,
-                                        info[i].timestamp, std::to_string(info[i].pid)));
+                                        info[i].timestamp, info[i].pid));
             }
             ::free(info);
 
@@ -164,7 +164,7 @@ namespace Plugin {
 	return iter;
      }
 
-    uint32_t SecureShellServer::GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& sessioninfo)
+    uint32_t SecureShellServer::GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoInfo>& sessioninfo)
     {
         uint32_t result = Core::ERROR_NONE;
 	Exchange::ISecureShellServer::IClient::IIterator* iter = SessionsInfo();
@@ -176,17 +176,16 @@ namespace Plugin {
 	    iter->Reset();
             while(iter->Next())
             {
-                TRACE(Trace::Information, (_T("Count: %d index:%d pid: %s IP: %s Timestamp: %s"),
-                                         iter->Count(), index++, iter->Current()->RemoteId().c_str(), iter->Current()->IpAddress().c_str(),
+                TRACE(Trace::Information, (_T("Count: %d index:%d pid: %u IP: %s Timestamp: %s"),
+                                         iter->Count(), index++, iter->Current()->RemoteId(), iter->Current()->IpAddress().c_str(),
 					 iter->Current()->TimeStamp().c_str()));
 
-                JsonData::SecureShellServer::SessioninfoResultData newElement;
+                JsonData::SecureShellServer::SessioninfoInfo newElement;
 
-                newElement.IpAddress = iter->Current()->IpAddress();
+                newElement.Ipaddress = iter->Current()->IpAddress();
                 newElement.Pid = iter->Current()->RemoteId();
-                newElement.TimeStamp = iter->Current()->TimeStamp();
+                newElement.Timestamp = iter->Current()->TimeStamp();
 
-                JsonData::SecureShellServer::SessioninfoResultData& element(sessioninfo.Add(newElement));
             }
 	    iter->Release();
 	}
@@ -205,7 +204,7 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_NONE;
 
-        TRACE(Trace::Information, (_T("closing client session with PID1: %s"), client->RemoteId().c_str()));
+        TRACE(Trace::Information, (_T("closing client session with PID1: %u"),client->RemoteId()));
 
 	client->Close();
 

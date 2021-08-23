@@ -47,7 +47,7 @@ namespace Plugin {
             }
 
         public:
-            Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData> SessionInfo;
+            Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoInfo> SessionInfo;
 	    Core::JSON::DecUInt32 ActiveCount;
         };
 
@@ -105,7 +105,7 @@ namespace Plugin {
                 }
 
             public:
-		virtual uint32_t Count()
+		        virtual uint32_t Count() const override
                 {
                    return (static_cast<uint32_t>(_list.size()));
                 }
@@ -148,7 +148,7 @@ namespace Plugin {
                 std::list<ISecureShellServer::IClient*>::iterator _iterator;
             };
         public:
-            ClientImpl(const string& ipaddress, const string& timestamp, const string& remoteid)
+            ClientImpl(const string& ipaddress, const string& timestamp, const uint64_t remoteid)
                 : _ipaddress(ipaddress)
                 , _timestamp(timestamp)
                 , _remoteid(remoteid)
@@ -167,14 +167,14 @@ namespace Plugin {
             {
                 return (_timestamp);
             }
-            virtual string RemoteId() const
+            virtual uint64_t RemoteId() const
             {
                 return (_remoteid);
             }
             virtual void Close()
             {
-                TRACE(Trace::Information, (_T("closing client session with _remoteid: %s"), _remoteid.c_str()));
-                close_client_session(std::stoi(_remoteid));
+                TRACE(Trace::Information, (_T("closing client session with _remoteid: %u"), _remoteid));
+                close_client_session(_remoteid);
             }
 
             BEGIN_INTERFACE_MAP(ClientImpl)
@@ -184,7 +184,7 @@ namespace Plugin {
         private:
             std::string _ipaddress;
             std::string _timestamp;
-            std::string _remoteid;
+            uint64_t _remoteid;
         };
 
     public:
@@ -221,7 +221,7 @@ namespace Plugin {
 
         // SecureShellServer methods
         uint32_t GetSessionsCount(ISecureShellServer::IClient::IIterator* iter);
-        uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& sessioninfo);
+        uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoInfo>& sessioninfo);
         uint32_t CloseClientSession(ISecureShellServer::IClient* client);
 
     private:
@@ -234,8 +234,8 @@ namespace Plugin {
         void UnregisterAll();
         
         uint32_t endpoint_getactivesessionscount(Core::JSON::DecUInt32& response);
-        uint32_t endpoint_getactivesessionsinfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& response);
-        uint32_t endpoint_closeclientsession(const JsonData::SecureShellServer::SessioninfoResultData& params);
+        uint32_t endpoint_getactivesessionsinfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoInfo>& response);
+        uint32_t endpoint_closeclientsession(const JsonData::SecureShellServer::SessioninfoInfo& params);
 
         uint8_t _skipURL;
         std::string _InputParameters;
