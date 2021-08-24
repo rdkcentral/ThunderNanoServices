@@ -31,15 +31,15 @@ namespace Plugin {
     // Registration
     void SecureShellServer::RegisterAll()
     {
-	Register<void, Core::JSON::DecUInt32>(_T("getactivesessionscount"), &SecureShellServer::endpoint_getactivesessionscount, this);
-	Register<void, Core::JSON::ArrayType<SessioninfoInfo>>(_T("getactivesessionsinfo"), &SecureShellServer::endpoint_getactivesessionsinfo, this);
+	Register<void, Core::JSON::DecUInt32>(_T("activesessionscount"), &SecureShellServer::endpoint_activesessionscount, this);
+	Register<void, Core::JSON::ArrayType<SessioninfoInfo>>(_T("activesessionsinfo"), &SecureShellServer::endpoint_activesessionsinfo, this);
 	Register<SessioninfoInfo,void>(_T("closeclientsession"), &SecureShellServer::endpoint_closeclientsession, this);
     }
 
     void SecureShellServer::UnregisterAll()
     {
-        Unregister(_T("getactivesessionsinfo"));
-        Unregister(_T("getactivesessionscount"));
+        Unregister(_T("activesessionsinfo"));
+        Unregister(_T("activesessionscount"));
         Unregister(_T("closeclientsession"));
     }
 
@@ -50,7 +50,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_INCORRECT_URL: Incorrect URL given
     // Get total active SSH client sessions managed by Dropbear Service.
-    uint32_t SecureShellServer::endpoint_getactivesessionscount(Core::JSON::DecUInt32& response)
+    uint32_t SecureShellServer::endpoint_activesessionscount(Core::JSON::DecUInt32& response)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -72,7 +72,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_INCORRECT_URL: Incorrect URL given
     // Get details of each active SSH client sessions managed by Dropbear Service.
-    uint32_t SecureShellServer::endpoint_getactivesessionsinfo(Core::JSON::ArrayType<SessioninfoInfo>& response)
+    uint32_t SecureShellServer::endpoint_activesessionsinfo(Core::JSON::ArrayType<SessioninfoInfo>& response)
     {
         uint32_t result = Core::ERROR_NONE;
 

@@ -186,6 +186,8 @@ namespace Plugin {
                 newElement.Pid = iter->Current()->RemoteId();
                 newElement.Timestamp = iter->Current()->TimeStamp();
 
+                sessioninfo.Add(newElement);
+
             }
 	    iter->Release();
 	}
