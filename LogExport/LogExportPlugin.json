@@ -1,0 +1,16 @@
+{
+    "$schema": "plugin.schema.json",
+    "info": {
+      "title": "LogExport Plugin",
+      "callsign": "LogExport",
+      "locator": "libWPEFrameworkLogExport.so",
+      "status": "development",
+      "description": [
+        "The LogExport plugin provides functionality for sending log messages in a file over websocket."
+      ],
+      "version": "1.0"
+    },
+    "interface": {
+        "$ref": "{interfacedir}/LogExport.json#"
+    }
+}

@@ -56,6 +56,7 @@ option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_DTV "Include DTV plugin" OFF)
+option(PLUGIN_LOGEXPORT "Include LogExport plugin" OFF)
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
@@ -215,6 +216,10 @@ endif()
 
 if(PLUGIN_DTV)
     add_subdirectory(DTV)
+endif()
+
+if(PLUGIN_LOGEXPORT)
+    add_subdirectory(LogExport)
 endif()
 
 add_subdirectory(examples)
