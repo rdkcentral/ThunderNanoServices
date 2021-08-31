@@ -18,6 +18,8 @@
 set(PLUGIN_NAME TestUtility)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
+set(PLUGIN_TESTUTILITY_OUTOFPROCESS "true" CACHE STRING "Controls if the plugin should run in its own process [true, false].")
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)

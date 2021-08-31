@@ -24,7 +24,7 @@
 #include "DHCPClient.h"
 
 #include <interfaces/IIPNetwork.h>
-#include <interfaces/json/JsonData_NetworkControl.h> 
+#include <interfaces/json/JsonData_NetworkControl.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -264,7 +264,7 @@ namespace Plugin {
                 _address = Core::IPNode();
                 _gateway = Core::NodeId();
                 _broadcast = Core::NodeId();
-            } 
+            }
 
         private:
             uint32_t _xid;
@@ -415,7 +415,7 @@ namespace Plugin {
                     if (source.IsValid() == true) {
                         // Extract the DNS that where associated with this DHCP..
                         std::list<Core::NodeId> dns;
-                       
+
                         Core::JSON::ArrayType<Core::JSON::String>::ConstIterator entries(info.DNS.Elements());
 
                         while (entries.Next() == true) {
@@ -433,7 +433,7 @@ namespace Plugin {
 #ifdef __WINDOWS__
 #pragma warning(default : 4355)
 #endif
-           ~DHCPEngine() = default; 
+           ~DHCPEngine() = default;
 
         public:
             inline uint32_t Discover(const Core::NodeId& preferred)
@@ -453,7 +453,7 @@ namespace Plugin {
 
                 return (result);
             }
-            inline void UpdateMAC(const uint8_t buffer[], const uint8_t size) 
+            inline void UpdateMAC(const uint8_t buffer[], const uint8_t size)
             {
                 _client.UpdateMAC(buffer, size);
             }
@@ -639,6 +639,8 @@ namespace Plugin {
         void Save(const string& filename);
         bool Load(const string& filename, std::map<const string, const Entry>& info);
 
+        DHCPEngine& AddInterface(const string& interfaceName, const Entry& entry);
+
         uint32_t Reload(const string& interfaceName, const bool dynamic);
         uint32_t SetIP(Core::AdapterIterator& adapter, const Core::IPNode& ipAddress, const Core::NodeId& gateway, const Core::NodeId& broadcast, bool clearOld = false);
 
@@ -674,6 +676,8 @@ namespace Plugin {
 
     private:
         mutable Core::CriticalSection _adminLock;
+        Config _config;
+        std::map<const string, const Entry> _info;
         uint16_t _skipURL;
         PluginHost::IShell* _service;
         string _dnsFile;

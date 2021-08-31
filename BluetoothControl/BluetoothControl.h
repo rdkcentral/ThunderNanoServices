@@ -551,7 +551,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     DeviceImpl* device = Application()->Find(address);
 
                     if (device == nullptr) {
-                        device = Application()->Discovered(true, info.bdaddr);
+                        device = Application()->Discovered(false, info.bdaddr);
                     }
 
                     if (device != nullptr) {
@@ -568,7 +568,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     DeviceImpl* device = Application()->Find(address);
 
                     if (device == nullptr) {
-                        device = Application()->Discovered(true, info.bdaddr);
+                        device = Application()->Discovered(false, info.bdaddr);
                     }
 
                     if (device != nullptr) {
@@ -585,7 +585,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     DeviceImpl* device = Application()->Find(address);
 
                     if (device == nullptr) {
-                        device = Application()->Discovered(true, info.bdaddr);
+                        device = Application()->Discovered(false, info.bdaddr);
                     }
 
                     if (device != nullptr) {
