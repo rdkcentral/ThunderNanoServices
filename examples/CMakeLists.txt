@@ -31,7 +31,7 @@ option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
 option(PLUGIN_STATECONTROLLER "Include StateController plugin" OFF)
-option(EXAMPLE_CLIENT_SERVER "Include Client Server Echo test suite" ON)
+option(EXAMPLE_CLIENT_SERVER "Include Client Server Echo test suite" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
