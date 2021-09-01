@@ -21,6 +21,7 @@
 #include "../ExtendedDisplayIdentification.h"
 
 #include <interfaces/IDisplayInfo.h>
+#include <interfaces/IConfiguration.h>
 
 #include <bcm_host.h>
 #include <fstream>
@@ -28,7 +29,10 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : public Exchange::IHDRProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
+class DisplayInfoImplementation : public Exchange::IHDRProperties,
+                                  public Exchange::IGraphicsProperties,
+                                  public Exchange::IConnectionProperties,
+                                  public Exchange::IConfiguration {
 
 public:
     DisplayInfoImplementation(const DisplayInfoImplementation&) = delete;
@@ -43,7 +47,8 @@ public:
         , _EDID()
         , _value(HDCP_Unencrypted)
         , _adminLock()
-        , _activity(*this) {
+        , _activity(*this)
+        , _config() {
 
         bcm_host_init();
 
@@ -56,6 +61,21 @@ public:
     virtual ~DisplayInfoImplementation()
     {
         bcm_host_deinit();
+    }
+
+    uint32_t Configure(PluginHost::IShell* framework) override
+    {
+        _config.FromString(framework->ConfigLine());
+
+        string hdcpFromConfig = Config::GetValue(_config.hdcpLevel);
+        if(hdcpFromConfig == "HDCP_2X") {
+            _value = HDCP_2X;
+        } else if (hdcpFromConfig == "HDCP_1X") {
+            _value = HDCP_1X;
+        } else {
+            _value = HDCP_Unencrypted;
+        }
+        return Core::ERROR_NONE;
     }
 
 public:
@@ -131,13 +151,11 @@ public:
         vf = ~0;
         return (Core::ERROR_NONE);
     }
-    // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
     uint32_t HDCPProtection(HDCPProtectionType& value) const override
     {
-        value = HDCPProtectionType::HDCP_Unencrypted;
+        value = _value;
         return (Core::ERROR_NONE);
     }
-    // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
     uint32_t HDCPProtection(const HDCPProtectionType value) override
     {
         _value = value;
@@ -223,9 +241,38 @@ public:
         INTERFACE_ENTRY(Exchange::IHDRProperties)
         INTERFACE_ENTRY(Exchange::IGraphicsProperties)
         INTERFACE_ENTRY(Exchange::IConnectionProperties)
+        INTERFACE_ENTRY(Exchange::IConfiguration)
     END_INTERFACE_MAP
 
 private:
+
+    class Config : public Core::JSON::Container {
+        public:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+
+            Config()
+                : Core::JSON::Container()
+                , hdcpLevel()
+            {
+                Add(_T("hdcpLevel"), &hdcpLevel);
+            }
+
+            static std::string GetValue(const Core::JSON::String& jsonValue) {
+                return jsonValue.IsSet() ? jsonValue.Value() : "";
+            }
+
+            static bool GetValue(const Core::JSON::Boolean& jsonValue) {
+                return jsonValue.IsSet() ? jsonValue.Value() : false;
+            }
+
+            static int32_t GetValue(const Core::JSON::DecUInt32& jsonValue) {
+                return jsonValue.IsSet() ? jsonValue.Value() : 0;
+            }
+
+            Core::JSON::String hdcpLevel;
+        };
+
     inline void UpdateTotalGpuRam(uint64_t& totalRam) const
     {
         Command("get_mem reloc_total ", totalRam);
@@ -350,6 +397,7 @@ private:
     mutable Core::CriticalSection _adminLock;
 
     Core::WorkerPool::JobType< DisplayInfoImplementation& > _activity;
+    Config _config;
 };
 
     SERVICE_REGISTRATION(DisplayInfoImplementation, 1, 0);
