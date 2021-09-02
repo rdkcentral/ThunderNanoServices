@@ -47,8 +47,7 @@ public:
         , _EDID()
         , _value(HDCP_Unencrypted)
         , _adminLock()
-        , _activity(*this)
-        , _config() {
+        , _activity(*this) {
 
         bcm_host_init();
 
@@ -65,16 +64,10 @@ public:
 
     uint32_t Configure(PluginHost::IShell* framework) override
     {
-        _config.FromString(framework->ConfigLine());
+        Config config;
+        config.FromString(framework->ConfigLine());
+        _value = config.hdcpLevel.Value();
 
-        string hdcpFromConfig = Config::GetValue(_config.hdcpLevel);
-        if(hdcpFromConfig == "HDCP_2X") {
-            _value = HDCP_2X;
-        } else if (hdcpFromConfig == "HDCP_1X") {
-            _value = HDCP_1X;
-        } else {
-            _value = HDCP_Unencrypted;
-        }
         return Core::ERROR_NONE;
     }
 
@@ -253,25 +246,13 @@ private:
 
             Config()
                 : Core::JSON::Container()
-                , hdcpLevel()
+                , hdcpLevel(Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted)
             {
                 Add(_T("hdcpLevel"), &hdcpLevel);
             }
 
-            static std::string GetValue(const Core::JSON::String& jsonValue) {
-                return jsonValue.IsSet() ? jsonValue.Value() : "";
-            }
-
-            static bool GetValue(const Core::JSON::Boolean& jsonValue) {
-                return jsonValue.IsSet() ? jsonValue.Value() : false;
-            }
-
-            static int32_t GetValue(const Core::JSON::DecUInt32& jsonValue) {
-                return jsonValue.IsSet() ? jsonValue.Value() : 0;
-            }
-
-            Core::JSON::String hdcpLevel;
-        };
+            Core::JSON::EnumType<Exchange::IConnectionProperties::HDCPProtectionType> hdcpLevel;
+    };
 
     inline void UpdateTotalGpuRam(uint64_t& totalRam) const
     {
@@ -397,7 +378,6 @@ private:
     mutable Core::CriticalSection _adminLock;
 
     Core::WorkerPool::JobType< DisplayInfoImplementation& > _activity;
-    Config _config;
 };
 
     SERVICE_REGISTRATION(DisplayInfoImplementation, 1, 0);
