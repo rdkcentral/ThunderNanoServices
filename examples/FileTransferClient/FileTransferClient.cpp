@@ -25,6 +25,7 @@
 #include <iostream>
 #include <fstream>
 
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 using namespace WPEFramework;
 
 namespace WPEFramework {
